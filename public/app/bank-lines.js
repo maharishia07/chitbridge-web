@@ -22,9 +22,6 @@
   function T(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
-  function esc(value) {
-    return typeof root.esc === 'function' ? root.esc(value) : String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; });
-  }
   /** the controller's one standing for a line → the status the row shows */
   function statusOfStanding(standing) {
     if (standing === 'in') return 'in';
@@ -168,7 +165,7 @@
     var kit = root.CBLabKit,
       onlyBooks = cfg.rows().some(function (row) { return row.status === 'books'; }); /* "Not on the statement": a chip only where the page has such lines (the owner's page) */
     var chip = function (key, label, status) {
-      return { key: key, label: T(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', labelHtml: '<span class="bl-chip-l"><span class="bl-lg">' + esc(T(label)) + '</span><span class="bl-sh">' + esc(T(SHORT[key] || label)) + '</span></span>', filt: status ? { status: status } : {}, tip: '' };
+      return { key: key, label: T(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', labelHtml: '<span class="bl-chip-l"><span class="bl-lg">' + root.esc(T(label)) + '</span><span class="bl-sh">' + root.esc(T(SHORT[key] || label)) + '</span></span>', filt: status ? { status: status } : {}, tip: '' };
     };
     return { merge: true, tid: 'bank-status', items: [chip('all', 'All', ''), chip('in', STATUS.in, 'in'), chip('ready', STATUS.ready, 'ready'), chip('need', STATUS.need, 'need')].concat(onlyBooks ? [chip('books', STATUS.books, 'books')] : []) };
   }
@@ -182,7 +179,7 @@
       extra = cfg.extra || {};
     var amountCell = function (outSide) {
       return function (row) {
-        return row.out === outSide && row.amount_minor ? '<span class="bl-amt bl-' + (outSide ? 'out' : 'in') + '">' + esc(cfg.fmt(row.amount_minor)) + '</span>' : '';
+        return row.out === outSide && row.amount_minor ? '<span class="bl-amt bl-' + (outSide ? 'out' : 'in') + '">' + root.esc(cfg.fmt(row.amount_minor)) + '</span>' : '';
       };
     };
     return Object.assign(
@@ -199,7 +196,7 @@
         columns: [
           { key: 'status', label: T('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { var icon = kit.statusIcon({ status: row.status, name: T(STATUS[row.status]) }); return extra.wrapStatus ? extra.wrapStatus(row, icon) : icon; } },
           { key: 'date', label: T('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },
-          { key: 'payee', label: T('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + esc(row.narration) + '</span>'; } },
+          { key: 'payee', label: T('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + root.esc(row.narration) + '</span>'; } },
           { key: 'out', label: T('Out'), prio: 4, keep: true, num: true, w: 140, sort: 'amount', html: true, cell: amountCell(true) },
           { key: 'in', label: T('In'), prio: 4, keep: true, num: true, w: 140, html: true, cell: amountCell(false) }
         ].concat(extra.columns || []),

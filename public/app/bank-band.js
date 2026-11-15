@@ -11,11 +11,7 @@
  */
 (function (root) {
   'use strict';
-  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var NO_PLURAL = { yen: 1, yuan: 1, won: 1, baht: 1, renminbi: 1 };
-  function esc(value) {
-    return typeof root.esc === 'function' ? root.esc(value) : String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; });
-  }
   function T(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
@@ -25,7 +21,7 @@
   /** '2026-10-02' → '2 Oct 2026' */
   function dayText(iso) {
     var parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
-    return parts ? +parts[3] + ' ' + MONTHS[+parts[2] - 1] + ' ' + parts[1] : String(iso || '');
+    return parts ? +parts[3] + ' ' + monthNames('short')[+parts[2] - 1] + ' ' + parts[1] : String(iso || '');
   }
   /** the period as a person says it: "2 Oct to 31 Oct 2026" (the year once when both ends share it) */
   function periodText(from, to) {
@@ -118,17 +114,17 @@
     var bad = items.some(function (one) { return one.state === 'bad'; }),
       agree = items.filter(function (one) { return one.state === 'ok'; }).length,
       open = items.length - agree;
-    return '<button type="button" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + esc(tid) + '-toggle">' + esc(T('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
+    return '<button type="button" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + root.esc(tid) + '-toggle">' + root.esc(T('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
   }
   function rightHtml(items, tid, act) {
     var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
       open = items.filter(function (one) { return one.state === 'none'; }).length;
     return (
-      '<div class="bb-right' + (items.some(function (one) { return one.state === 'bad'; }) ? ' bb-has-bad' : '') + '"' + (items.some(function (one) { return one.state === 'bad'; }) ? '' : ' hidden') + ' data-cbsid="CMP065-D02" data-testid="' + esc(tid) + '" role="group" aria-label="' + esc(T('Right account?')) + '"><b>' + esc(T('Right account?')) + '</b>' +
-      (agree ? '<span class="bb-sum bb-ok" data-testid="' + esc(tid) + '-agree">' + MARK.ok + ' ' + agree + ' ' + esc(T('agree')) + '</span>' : '') +
-      (open ? '<span class="bb-sum bb-none" data-testid="' + esc(tid) + '-open">' + MARK.none + ' ' + open + ' ' + esc(T('not in the file')) + '</span>' : '') +
+      '<div class="bb-right' + (items.some(function (one) { return one.state === 'bad'; }) ? ' bb-has-bad' : '') + '"' + (items.some(function (one) { return one.state === 'bad'; }) ? '' : ' hidden') + ' data-cbsid="CMP065-D02" data-testid="' + root.esc(tid) + '" role="group" aria-label="' + root.esc(T('Right account?')) + '"><b>' + root.esc(T('Right account?')) + '</b>' +
+      (agree ? '<span class="bb-sum bb-ok" data-testid="' + root.esc(tid) + '-agree">' + MARK.ok + ' ' + agree + ' ' + root.esc(T('agree')) + '</span>' : '') +
+      (open ? '<span class="bb-sum bb-none" data-testid="' + root.esc(tid) + '-open">' + MARK.none + ' ' + open + ' ' + root.esc(T('not in the file')) + '</span>' : '') +
       items.map(function (one) {
-        return '<span class="bb-chk bb-' + one.state + '" data-check="' + esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + esc(one.text) + '</span>';
+        return '<span class="bb-chk bb-' + one.state + '" data-check="' + root.esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + root.esc(one.text) + '</span>';
       }).join('') + (act || '') + '</div>'
     );
   }
@@ -145,7 +141,7 @@
       tiles = '';
     if (f.statement != null && label && label.figure) {
       tiles =
-        '<div class="bb-tiles" data-testid="' + esc(tid) + '-tiles">' +
+        '<div class="bb-tiles" data-testid="' + root.esc(tid) + '-tiles">' +
         label.figure({ label: T('Statement'), value: f.statement, line: true }) +
         label.figure({ label: T('Your books'), value: f.books, line: true }) +
         label.figure({ label: T('Difference'), value: f.difference, line: true, loud: true, good: nil }) +
@@ -156,19 +152,19 @@
         : many(f.toGo || 0, 'line to go', 'lines to go'),
       progress =
         f.total
-          ? '<div class="bb-progress"><div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + f.total + '" aria-valuenow="' + (f.inBooks || 0) + '" aria-label="' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '"><i style="width:' + Math.round(((f.inBooks || 0) / f.total) * 100) + '%"></i></div><span class="bb-pnote" data-testid="' + esc(tid) + '-progress">' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '</span></div>'
+          ? '<div class="bb-progress"><div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + f.total + '" aria-valuenow="' + (f.inBooks || 0) + '" aria-label="' + root.esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '"><i style="width:' + Math.round(((f.inBooks || 0) / f.total) * 100) + '%"></i></div><span class="bb-pnote" data-testid="' + root.esc(tid) + '-progress">' + root.esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '</span></div>'
           : '';
-    var curHtml = '<span class="bb-cur" data-testid="' + esc(tid) + '-currency">' + esc(currencyLine(f.currency || '')) + '</span>';
+    var curHtml = '<span class="bb-cur" data-testid="' + root.esc(tid) + '-currency">' + root.esc(currencyLine(f.currency || '')) + '</span>';
     return (
-      '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + esc(tid) + '" data-tied="' + nil + '" aria-label="' + esc(T('Bank statement')) + '">' +
-      '<div class="bb-head"><h2 class="bb-name" data-testid="' + esc(tid) + '-account">' + esc(f.account || '') + '</h2>' +
-      '<span class="bb-period" data-testid="' + esc(tid) + '-period">' + esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
+      '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + root.esc(tid) + '" data-tied="' + nil + '" aria-label="' + root.esc(T('Bank statement')) + '">' +
+      '<div class="bb-head"><h2 class="bb-name" data-testid="' + root.esc(tid) + '-account">' + root.esc(f.account || '') + '</h2>' +
+      '<span class="bb-period" data-testid="' + root.esc(tid) + '-period">' + root.esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + root.esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
       (f.change || '') + toggleHtml(f.right, tid) +
       (tiles ? '' : curHtml) +
       (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' +
       ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right', f.rightAct) : '') +
       (tiles ? '<div class="bb-row2">' : '') + tiles +
-      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + '</div>' + curHtml + '</div>' : '') +
+      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + root.esc(tid) + '-togo" aria-live="polite">' + root.esc(go) + (f.unexplained ? ' · ' + root.esc(T('Unexplained')) + ' ' + root.esc(f.unexplained) : '') + '</span>' + progress + '</div>' + curHtml + '</div>' : '') +
       '</section>'
     );
   }
