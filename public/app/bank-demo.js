@@ -64,7 +64,7 @@
     view = 'lines',
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
-    ask = null,
+    askPanel = null,
     report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
 
@@ -247,26 +247,33 @@
     var again = doc.querySelector('#bd_gst [data-choice-value="' + value + '"]');
     if (again && again.focus) again.focus();
   }
+  /** the words of the Account column: what the engine proposed, the ask for a line nothing explains, nothing for a line already in the books */
+  function accountWords(item, state) {
+    if (state === 'in' || state === 'posted') return '';
+    return accountOf(item) || (state === 'need' ? 'Choose what this is' : '');
+  }
+  /** one money cell: the carried amount in its currency, or an empty cell; which is 'out' (spent) or 'in' (received) */
+  function moneyCell(minor, which) {
+    return '<span class="bd-m bd-' + which + ' bd-cell' + which + '">' + (minor ? esc(amountText(minor)) : '') + '</span>';
+  }
+  /** the payee, with the date (shown on a phone only) and the bank's own words under it */
+  function whoCell(item) {
+    var line = item.line;
+    return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span></span>';
+  }
   function lineRow(item, results, opensPanel) {
     var line = item.line,
       result = results[item.key],
       state = standing(item, result),
       chip = CHIPS[state],
-      account = state === 'in' || state === 'posted' ? '' : accountOf(item) || (state === 'need' ? 'Choose what this is' : '');
-    var out = line.debit_minor ? esc(amountText(line.debit_minor)) : '',
-      received = line.credit_minor ? esc(amountText(line.credit_minor)) : '';
-    var reason = result && !result.ok ? '<span class="bd-why">' + esc(result.why) + '</span>' : '';
+      reason = result && !result.ok ? '<span class="bd-why">' + esc(result.why) + '</span>' : '';
     var inner =
-      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' +
-      '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span>' +
-      '</span><span class="bd-acc">' + esc(account) + '</span>' +
-      '<span class="bd-m bd-out bd-cellout">' + out + '</span><span class="bd-m bd-in bd-cellin">' + received + '</span>' +
+      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' + whoCell(item) + '<span class="bd-acc">' + esc(accountWords(item, state)) + '</span>' +
+      moneyCell(line.debit_minor, 'out') + moneyCell(line.credit_minor, 'in') +
       '<span class="bd-status">' + tag(chip[0], chip[1]) + reason + '</span><span class="bd-chev" aria-hidden="true">' + (opensPanel ? '›' : '') + '</span>';
     var rowClass = 'bd-row bd-s-' + (state === 'need' ? 'needs_you' : state);
-    if (opensPanel) {
-      return '<li><button type="button" class="' + rowClass + '" data-act="open" data-key="' + esc(item.key) + '" data-cbsid="BKS017-R01" aria-label="' + esc(payeeOf(item) + ', ' + line.narration + '. Needs you. Open') + '">' + inner + '</button></li>';
-    }
-    return '<li><div class="' + rowClass + '">' + inner + '</div></li>';
+    if (!opensPanel) return '<li><div class="' + rowClass + '">' + inner + '</div></li>';
+    return '<li><button type="button" class="' + rowClass + '" data-act="open" data-key="' + esc(item.key) + '" data-cbsid="BKS017-R01" aria-label="' + esc(payeeOf(item) + ', ' + line.narration + '. Needs you. Open') + '">' + inner + '</button></li>';
   }
   function paintLines(model) {
     var rows = model.items
@@ -283,7 +290,7 @@
   function paintEmpty() {
     ['bd_figs', 'bd_gst'].forEach(function (id) { el(id).hidden = true; });
     el('bd_sub').textContent = '';
-    el('bd_lines').innerHTML = report.problemCard(loadRefusal) + (loadRefusal && loadRefusal.mapping ? ask.mapCard(loadRefusal.text) || report.emptyCard() : report.emptyCard());
+    el('bd_lines').innerHTML = report.problemCard(loadRefusal) + (loadRefusal && loadRefusal.mapping ? askPanel.mapCard(loadRefusal.text) || report.emptyCard() : report.emptyCard());
     el('bd_books').innerHTML = '';
     el('bd_brs').innerHTML = '';
     paintBar(null);
@@ -324,6 +331,7 @@
     loadRefusal = null;
     el('bd_sub').textContent = (model.name || 'Statement') + ' · ' + plural(model.items.length, 'line', 'lines');
     figures(model);
+    paintCheck();
     gstStrip(model);
     paintLines(model);
     report.paintBooks(model, posted, books.opening_minor);
@@ -331,7 +339,14 @@
     paintBar(model);
     paintView();
   }
-  var msg = '',
+  /** the slot before the figures for what the engine says about the FILE: its warnings now (for example no description column was read); the statement-check panel (refuse, confirm, already done) goes here */
+  function paintCheck() {
+    var slot = el('bd_check');
+    slot.hidden = !warnings.length;
+    slot.innerHTML = warnings.map(function (words) { return '<p>' + esc(typeof words === 'string' ? words : words.why || words.words || 'Check this file.') + '</p>'; }).join('');
+  }
+  var warnings = [],
+    msg = '',
     msgOk = false,
     gstBasis = null;
   function setMessage(words, good) {
@@ -346,9 +361,11 @@
 
   /* ── actions ── */
   function loadStatement(text, name) {
+    warnings = [];
     var said = controller.load(text, name);
     if (said.ok) {
       loadRefusal = null;
+      warnings = said.warnings || [];
       setMessage('');
     } else {
       loadRefusal = { why: plainRefusal(said.why), text: /header|column|mapping|preset/i.test(said.why) ? text : '', name: name };
@@ -377,7 +394,7 @@
     var text = controller.confirmText();
     if (!text) return void (setMessage('The engine sent no figures for this press, so nothing was added.'), paint());
     var title = 'Add ' + plural(controller.readyCount(), 'line', 'lines') + ' to the demo books?';
-    labKit.confirm(title, confirmBody(text), function () {
+    labKit.confirm(title, askPanel.confirmBody(text), function () {
       controller.postReady().then(function (said) {
         var model = controller.view(),
           counts = countsOf(model);
@@ -414,7 +431,7 @@
     var text = loadRefusal.text,
       name = loadRefusal.name;
     resetBooks();
-    makeController({ country: COUNTRY, currency: CURRENCY, mapping: ask.mapping() });
+    makeController({ country: COUNTRY, currency: CURRENCY, mapping: askPanel.mapping() });
     loadStatement(text, name);
   }
   function toggleMore(open) {
@@ -428,7 +445,7 @@
       view = 'lines';
       added = null;
       paint();
-      var next = ask.firstNeedKey(),
+      var next = askPanel.firstNeedKey(),
         node = next && doc.querySelector('[data-key="' + next + '"]');
       if (node) node.focus();
       return true;
@@ -449,13 +466,13 @@
       if (!event.target.closest('.bd-more')) toggleMore(false);
       return;
     }
-    var handler = ACTIONS[target.getAttribute('data-act')] || ask.actions[target.getAttribute('data-act')];
+    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')];
     if (handler && handler(target, target.getAttribute('data-key'))) return;
     paint();
   }
   function onChange(event) {
     var action = event.target.getAttribute && event.target.getAttribute('data-act');
-    if (action === 'pname' || action === 'pkind') ask.editPayee(event.target);
+    if (action === 'pname' || action === 'pkind') askPanel.editPayee(event.target);
   }
   /** what the other modules of the page may use: the page's own readers and painters, never its state */
   function hostFor() {
@@ -477,7 +494,7 @@
   }
   function start() {
     mountHeader();
-    ask = root.CBBankDemoAsk.create(hostFor());
+    askPanel = root.CBBankDemoAsk.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });

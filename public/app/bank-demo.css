@@ -30,6 +30,9 @@ body{display:flex;flex-direction:column;background:var(--page,#fcfaf5);color:var
 .bd-gst.bd-answered{background:var(--card,#fff);color:var(--muted,#5e594d)}
 .bd-gst b{font-weight:600}
 .bd-gst .cbui-choice button{min-height:36px}
+.bd-check{flex:none;margin:4px 24px 0;padding:6px 14px;border-radius:12px;background:var(--ask-t,#fdf3dc);color:var(--ask-i,#7a5205);border:1px solid var(--line,#ddd6c6)}
+.bd-check[hidden]{display:none}
+.bd-check p{margin:2px 0}
 .bd-msg{flex:none;margin:0;padding:0 24px;color:var(--bad-i,#8e3517);font-size:13px}
 .bd-msg:not(:empty){padding-top:6px;padding-bottom:2px}
 .bd-msg.bd-okmsg{color:var(--ok-d,#0d4a2b);font-weight:600}
@@ -133,7 +136,7 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 .lk-confirm-text .bd-note{padding:8px 0 0}
 @media (max-width:900px){
   .bd-head,.bd-banner,.bd-figs,.bd-tabs,.bd-bar,.bd-msg{padding-left:12px;padding-right:12px}
-  .bd-gst{margin-left:12px;margin-right:12px}
+  .bd-gst,.bd-check{margin-left:12px;margin-right:12px}
   .bd-main{padding:8px 12px}
 }
 @media (max-width:700px){
