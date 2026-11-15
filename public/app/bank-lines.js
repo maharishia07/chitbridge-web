@@ -5,7 +5,7 @@
  * FLOW      a host turns its statement lines into rows (rowOfItem) → options({ rows, panel, … }) → CBList.mount(host, options) → a press opens the panel → the host's controller takes the answer → afterAnswer(id) opens the next line that needs one.
  * ⭐ NO MONEY IS COMPUTED HERE. Amounts, the entry, the tax and each line's standing are the controller's (bank-preview.js, bank-project.js); the filters group CARRIED figures (a band is a comparison against a fixed edge, never a sum).
  * CARD      16-finance/bank-reconciliation-and-bank-rail
- * CONTROLS  CMP064 the status icon (CBLabKit.statusIcon) · CMP036 the status chips (the list's views, merged with the filters) · CMP033/CMP035 the Filters · BKS018-R01 the open panel
+ * CONTROLS  CMP064 the status icon (CBLabKit.statusIcon) · CMP036 the status chips (the list's views, merged with the filters) · CMP033/CMP035 the Filters
  */
 (function (root) {
   'use strict';
@@ -151,7 +151,7 @@
       });
     };
     return [
-      { key: 'status', label: 'Status', all: 'All', options: function () { return ['need', 'ready', 'in'].map(function (key) { return { v: key, label: T(STATUS[key]) }; }); }, match: function (row, value) { return row.status === value || (value === 'in' && row.status === 'done'); } },
+      { key: 'status', label: 'Status', all: 'All', options: function (rows) { return ['need', 'ready', 'in', 'books'].filter(function (key) { return key !== 'books' || rows.some(function (row) { return row.status === 'books'; }); }).map(function (key) { return { v: key, label: T(STATUS[key]) }; }); }, match: function (row, value) { return row.status === value || (value === 'in' && row.status === 'done'); } },
       { key: 'dir', label: 'Money', all: 'In and out', options: function (rows) { return distinct(rows, function (row) { return row.out ? 'out' : 'in'; }, function (value) { return T(value === 'out' ? 'Money out' : 'Money in'); }); }, match: function (row, value) { return (row.out ? 'out' : 'in') === value; } },
       { key: 'week', label: 'Date', all: 'Any date', options: weeks, match: function (row, value) { return weekOf(row.date) === value; } },
       { key: 'band', label: 'Amount', all: 'Any amount', options: function (rows) { return BANDS.filter(function (band) { return rows.some(function (row) { return band[2](row.amount_minor); }); }).map(function (band) { return { v: band[0], label: T(band[1]) }; }); }, match: function (row, value) { return bandOf(row.amount_minor) === value; } },
@@ -162,12 +162,13 @@
     ].map(function (def) { return filterOf(cfg, def); });
   }
   /** the status chips: the list's own saved views, merged with the filters, each with its icon and its count (CMP036) */
-  function viewsOf() {
-    var kit = root.CBLabKit;
+  function viewsOf(cfg) {
+    var kit = root.CBLabKit,
+      onlyBooks = cfg.rows().some(function (row) { return row.status === 'books'; }); /* "Not on the statement": a chip only where the page has such lines (the owner's page) */
     var chip = function (key, label, status) {
       return { key: key, label: T(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', filt: status ? { status: status } : {}, tip: '' };
     };
-    return { merge: true, tid: 'bank-status', items: [chip('all', 'All', ''), chip('in', STATUS.in, 'in'), chip('ready', STATUS.ready, 'ready'), chip('need', STATUS.need, 'need')] };
+    return { merge: true, tid: 'bank-status', items: [chip('all', 'All', ''), chip('in', STATUS.in, 'in'), chip('ready', STATUS.ready, 'ready'), chip('need', STATUS.need, 'need')].concat(onlyBooks ? [chip('books', STATUS.books, 'books')] : []) };
   }
   /**
    * options(cfg) → the options of CBList.mount
@@ -191,7 +192,7 @@
         rowTid: cfg.tid || function (row) { return 'bank-row-' + row.id; },
         oneOpen: true,
         defaultCols: ['status', 'date', 'payee', 'out', 'in'],
-        views: viewsOf(),
+        views: viewsOf(cfg),
         columns: [
           { key: 'status', label: T('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { return kit.statusIcon({ status: row.status, name: T(STATUS[row.status]) }); } },
           { key: 'date', label: T('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },

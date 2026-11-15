@@ -342,15 +342,21 @@ function bkshItemOf(row) {
   const ref = BKSH.refs[row.i];
   return (BKSH.ctl.view().items || []).filter((one) => one.key === ref)[0] || null;
 }
-/** the standing ('in' · 'ready' · 'wait' · 'need' · 'posted' …) the controller gives a page row, or null */
-function bkshStandingOf(row) {
-  const item = bkshItemOf(row);
-  return item ? CBBankPreview.standing(item, BKSH.ctl.view().results[item.key]) : null;
-}
 /** the party the books matched to a line, by name, or '' (the statement's own words stay under it) */
 function bkshPartyOf(row) {
   const item = bkshItemOf(row);
   return item && item.party && item.party.status === 'existing' && item.party.name ? item.party.name : '';
+}
+/**
+ * the answers under a line on the Bank page's own list (W15-14): the SAME painter the sheet uses, on the same controller, mounted on the list's host (a press on a button of an open row is heard there).
+ * `changed(key, 'answered'|'asked')` repaints what reads the lines. Null until the controller has read this statement.
+ */
+function bkshPageUi(host, changed) {
+  if (!BKSH.ctl || BKSH.key !== bkshKey()) return null;
+  return CBBankPreviewUI.mount({
+    host, controller: () => BKSH.ctl, accountName: bkshAccountName, only: () => '', currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: bkshAmountText, addedWords: tx('Added to your books'),
+    say: (words) => { if (words) toast(words); }, changed
+  });
 }
 /** open the sheet for the statement on screen, or for ONE line of it (Add missing on a line: that line alone) */
 async function bankSheetOpen(row) {

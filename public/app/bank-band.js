@@ -7,7 +7,7 @@
  *   do not carry is said as "not in this file" (never assumed, never defaulted): an unknown stays unknown.
  * ⭐ THE ENGINE'S CHECK IS THE SOURCE where it ran (CBBankStatementCheck: account, opening against the books and against the last closing, overlap, gap); this file only words its items. Without it the host passes the plain facts.
  * CARD      16-finance/bank-reconciliation-and-bank-rail
- * CONTROLS  BKS018-N01 the band · BKS018-N02 the right-account line · BKS018-N03 the lines-to-go line (CMP060 the tiles, CMP021 the bar)
+ * CONTROLS  CMP065 the bank band: D01 the band · D02 the right-account line · D03 the lines-to-go line (CMP060 the tiles, CMP021 the bar)
  */
 (function (root) {
   'use strict';
@@ -115,7 +115,7 @@
   function rightHtml(items, tid) {
     var agree = items.filter(function (one) { return one.state === 'ok'; }).length;
     return (
-      '<div class="bb-right" data-cbsid="BKS018-N02" data-testid="' + esc(tid) + '" role="group" aria-label="' + esc(T('Right account?')) + '"><b>' + esc(T('Right account?')) + '</b>' +
+      '<div class="bb-right" data-cbsid="CMP065-D02" data-testid="' + esc(tid) + '" role="group" aria-label="' + esc(T('Right account?')) + '"><b>' + esc(T('Right account?')) + '</b>' +
       (agree ? '<span class="bb-sum bb-ok" data-testid="' + esc(tid) + '-agree">' + MARK.ok + ' ' + agree + ' ' + esc(T('agree')) + '</span>' : '') +
       items.map(function (one) {
         return '<span class="bb-chk bb-' + one.state + '" data-check="' + esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + esc(one.text) + '<span class="lk-sr"> (' + esc(T(STATE_WORD[one.state])) + ')</span></span>';
@@ -149,7 +149,7 @@
           ? '<div class="bb-progress"><div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + f.total + '" aria-valuenow="' + (f.inBooks || 0) + '" aria-label="' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '"><i style="width:' + Math.round(((f.inBooks || 0) / f.total) * 100) + '%"></i></div><span class="bb-pnote" data-testid="' + esc(tid) + '-progress">' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '</span></div>'
           : '';
     return (
-      '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="BKS018-N01" data-testid="' + esc(tid) + '" aria-label="' + esc(T('Bank statement')) + '">' +
+      '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + esc(tid) + '" aria-label="' + esc(T('Bank statement')) + '">' +
       '<div class="bb-head"><h2 class="bb-name" data-testid="' + esc(tid) + '-account">' + esc(f.account || '') + '</h2>' +
       '<span class="bb-period" data-testid="' + esc(tid) + '-period">' + esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
       (f.change || '') +
@@ -157,7 +157,7 @@
       (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' +
       ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right') : '') +
       tiles +
-      (tiles ? '<div class="bb-go" data-cbsid="BKS018-N03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</div>' + progress : '') +
+      (tiles ? '<div class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</div>' + progress : '') +
       '</section>'
     );
   }

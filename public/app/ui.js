@@ -182,7 +182,8 @@ var CBUi = (function () {
        a commit confirms first like every other commit. It takes over CMP042 Books action as an alias. */
     command: { code: 'CMP057', element: 'CMP057-B01', label: 'Command', verb: 'OPEN', effect: null, effectFixed: false, tone: 'quiet', own: true },
     figure: { code: 'CMP060', element: 'CMP060-D01', label: 'Figure card', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }, badge: { code: 'CMP061', element: 'CMP061-D01', label: 'Initials badge', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
-    statusicon: { code: 'CMP064', element: 'CMP064-D01', label: 'Status icon', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
+    statusicon: { code: 'CMP064', element: 'CMP064-D01', label: 'Status icon', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bankband: { code: 'CMP065', element: 'CMP065-D01', elements: ['D01', 'D02', 'D03'], label: 'Bank statement band', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;
