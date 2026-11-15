@@ -100,6 +100,7 @@
     var cols = [['date', 'Date'], ['entry_no', 'Entry'], ['what', 'What it was'], ['party', 'Party'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY], ['running_minor', 'Balance', MONEY]];
     ctx.mountList($('bd_list'), {
       key: 'books-grant-ledger',
+      defaultCols: cols.map(function (c) { return c[0]; }),
       rows: function () { return rows; },
       id: function (row) { return row._n; },
       rowTid: function (row) { return 'bd-line-' + row._n; },
@@ -137,6 +138,7 @@
     var cols = [['account', 'Account'], ['party', 'Party'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]];
     ctx.mountList($('bd_list'), {
       key: 'books-grant-entry',
+      defaultCols: cols.map(function (c) { return c[0]; }),
       rows: function () { return rows; },
       id: function (row) { return row._n; },
       rowTid: function (row) { return 'bd-jl-' + row._n; },
