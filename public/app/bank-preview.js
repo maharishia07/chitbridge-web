@@ -31,7 +31,7 @@
     refused: 'The books refused this entry',
     bank_leg_mismatch: "Entry does not match the bank line's amount",
     tax_kind: 'Tax needed',
-    not_here: 'Record it as a payment in Dues, or ask the party',
+    not_here: 'Not added from a bank line yet: record it in Books, then load the statement again',
     no_entry: 'Needs you'
   };
   /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
@@ -184,7 +184,7 @@
   }
   /**
    * what THIS host cannot post from a line, set on the PROPOSAL as the one `needs` code the engine already turns into a blocker, so the engine's own counts and totals (the confirm popup) leave the line out (opt-in: the demo passes neither option).
-   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a payment between parties) says where it is recorded instead (not_here)
+   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a tax payment, a loan, a taxed receipt) says it is not added from here yet (not_here)
    *   opts.taxRegistered true when the shop SAID it is registered for tax (unknown is not true, SET-49): a money-out line the bank's words proposed carries no tax until the owner says what kind
    *                      it is, so it is asked (tax_kind), never defaulted and never posted without. A need the engine already set (the tick, the tax basis) comes first.
    */
@@ -259,15 +259,26 @@
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
     try {
-      var reply = await opts.post(item);
+      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key] }));
       preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
     }
   }
+  /** a ready line that repeats an earlier ready line of THIS statement (same party, same side, same figure, same day) is marked twin: the bank itself shows two payments, so the host may answer the server's "already paid?" for it */
+  function markTwins_(todo) {
+    var seen = {};
+    return todo.map(function (item) {
+      var line = item.line || {}, party = item.party && (item.party.id || item.party.name);
+      var sign = [party, line.date, line.credit_minor, line.debit_minor].join('|');
+      var twin = !!party && !!seen[sign];
+      seen[sign] = true;
+      return twin ? Object.assign({}, item, { twin: true }) : item;
+    });
+  }
   /** post every ready line in order, tell the page after each (onLine(item, result)), then read the books again so the preview is the truth */
   async function postReady(opts, preview, onLine) {
-    var todo = readyItems(preview);
+    var todo = markTwins_(readyItems(preview));
     for (var position = 0; position < todo.length; position++) {
       await postOne(opts, preview, todo[position]);
       if (onLine) onLine(todo[position], preview.results[todo[position].key]);

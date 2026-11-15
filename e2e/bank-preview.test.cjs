@@ -260,10 +260,32 @@ const make = (over) => {
   assert.deepStrictEqual(taxed, { kind: 'expense', date: '2026-10-23', amount: 20, narration: 'Bank statement 2026-10-23: Account fee', client_ref: 'bank:t', class: 'bank_charges', paid_from: 'card', input_tax_minor: 200 });
   const contra = POST.bodyOf({ ref: 'bank:c', event: { type: 'contra', from: 'bank', to: 'cash', date: '2026-10-29', amount: 500, narration: 'ATM' } });
   assert.deepStrictEqual(Object.keys(contra).sort(), ['amount', 'client_ref', 'date', 'from', 'kind', 'narration', 'to']);
-  const dues = await POST.adapter({ api: async () => assert.fail('nothing is sent'), who: { role: 'owner' } })({ ref: 'bank:p', event: { type: 'payment_received', amount: 5 }, party: { status: 'new', name: 'Z', kind: 'customer' } });
-  assert.strictEqual(dues.ok, false);
-  assert.ok(/Dues/.test(dues.why));
-  ok('app adapter body: kind not type, only the closed keys, the tax inside the bank figure as input_tax_minor, a payment between parties is refused before any party is made');
+  /* the loan / tax-payment answers have no api door yet: refused in words before any party is made or anything sent */
+  const guard = POST.adapter({ api: async () => assert.fail('nothing is sent'), who: { role: 'owner' } });
+  for (const type of ['tax_payment', 'loan_taken', 'loan_repaid']) {
+    const refused = await guard({ ref: 'bank:n', event: { type, amount: 5 }, party: { status: 'new', name: 'Z', kind: 'supplier' } });
+    assert.ok(refused.ok === false && /cannot be added from a bank line yet/.test(refused.why), type);
+  }
+  /* item 1: tax_invoice 'held' rides with the tax; a new customer answers customer_identity_id */
+  const held = POST.bodyOf({ ref: 'bank:h', event: { type: 'expense', class: 'x', paid_from: 'bank', date: '2026-10-23', amount: 100, narration: 'n' }, tax: { tax_minor: 1000, invoice_answer: 'held' } });
+  assert.strictEqual(held.tax_invoice, 'held');
+  assert.ok(!('tax_invoice' in POST.bodyOf({ ref: 'bank:u', event: { type: 'expense', amount: 1 }, tax: { tax_minor: 100 } })));
+  assert.strictEqual(POST.idOfParty({ customer: { customer_identity_id: 'c-1', customer_list_id: 'l-1' } }), 'c-1');
+  /* items 2 and 5: money in / out for a party goes to POST /payments (booksPayRecord), the line's own figure and ref; same_again only for a ticked or twin line */
+  const paid = [];
+  const payApi = async (key, o) => { paid.push([key, o.body]); return key === 'custAdd' ? { customer: { customer_identity_id: 'c-1' } } : { payment: { duplicate: false }, posted: { entry_no: 'RC-1' } }; };
+  const payPost = POST.adapter({ api: payApi, who: { role: 'owner' }, modeOf: (b) => Object.assign({}, b, { paid_from: 'bank' }) });
+  const recv = { ref: 'bank:r1', event: { type: 'payment_received', mode: 'bank', date: '2026-10-05' }, line: { date: '2026-10-05', credit_minor: 165000, debit_minor: 0 }, party: { status: 'new', name: 'Smith', kind: 'customer' } };
+  const r1 = await payPost(recv);
+  assert.strictEqual(r1.ok, true);
+  assert.deepStrictEqual(paid.map((x) => x[0]), ['custAdd', 'booksPayRecord']);
+  assert.deepStrictEqual(paid[1][1], { party_id: 'c-1', direction: 'in', amount_minor: 165000, mode: 'bank', received_at: '2026-10-05', reference: 'bank:r1', allocate: 'none', client_ref: 'bank:r1' });
+  await payPost(Object.assign({}, recv, { ref: 'bank:r2', twin: true }));
+  assert.deepStrictEqual(paid[paid.length - 1][1].acknowledge, ['same_again']);
+  await payPost(Object.assign({}, recv, { ref: 'bank:r3', ticked: true, event: { type: 'payment_made', date: '2026-10-05' }, line: { date: '2026-10-05', credit_minor: 0, debit_minor: 500 } }));
+  assert.strictEqual(paid[paid.length - 1][1].direction, 'out');
+  assert.strictEqual(paid[paid.length - 1][1].amount_minor, 500);
+  ok('app adapter body: kind not type, only the closed keys, the tax inside the bank figure as input_tax_minor, a party line goes to POST /payments with its own figure and ref; tax_payment / loan lines are refused in words');
 
   /* FIN-118: the shared-record line never carries the server's raw sentence (it named a route); and the lines painter is the one both pages use */
   const store = fs.readFileSync(pub('app/cap-bank-store.js'), 'utf8');
