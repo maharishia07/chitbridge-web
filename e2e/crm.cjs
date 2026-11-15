@@ -1002,14 +1002,12 @@ async function route(S, r) {
   ok(threw.length === 0, 'no page error anywhere' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   ok(offHost.length === 0, 'no request left for any host but the stand-in' + (offHost.length ? ': ' + offHost.slice(0, 3).join(' ') : ''));
 
-  /* L16 CRM UX (15 Nov): the timeline in the document's words · one Receive · Receive opens filled · Remind tells the truth · the root is not a party · phone + keyboard */
+  /* L16 CRM UX (15 Nov): the timeline in the document's words · one Receive · Receive opens filled · Remind tells the truth · phone + keyboard */
   {
     const SH = path.join('C:/dev/shots/l16-crm-ux'); try { fs.mkdirSync(SH, { recursive: true }); } catch (_) {}
     for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
       const w = vp.width, S = standIn();
       S.list.forEach((q) => { if (q.party_no === 'P-0002') Object.assign(q, { roles: ['customer'], phone: null, email: null, on_chitbridge: false, kind: 'local', why_not: 'local' }); });
-      S.list.push(Object.assign({}, S.list[0], { party_id: 'pid-root', party_no: 'P-0099', display_name: 'cbau01-root', roles: ['supplier'], balance_minor: 0, dues_overdue: false, }));
-      S.fx.records['pid-root'] = { supplier: { added_via: 'system' } };
       const record = crmApi.record(S.list, 'pid-0002', S.fx.records['pid-0002'], []);
       const now = Date.now(), timeline = { party_id: 'pid-0002', next_before: null, migrated: true, total: 1, page: 1, limit: 100, entries: [
         { kind: 'ledger', at: new Date(now - 3600e3).toISOString(), ref: 'HP-INV-2', ledger_kind: 'bill', source: null, amount_minor: 275000, currency: 'INR', doc_date: '2026-10-08' }] };
@@ -1036,9 +1034,6 @@ async function route(S, r) {
       ok(/no phone or e-mail/i.test(ph) && !/sees this/.test(ph), 'L16-4 @' + w + ': Remind to a party with no channel says "' + ph + '"');
       await p.screenshot({ path: path.join(SH, 'remind-' + w + '.png') }).catch(() => {});
       await ctx.close();
-      const o3 = await open(S, { viewport: vp }); await o3.p.waitForSelector('#crm_list [data-row]', { timeout: 15000 }); await o3.p.waitForTimeout(400);
-      ok(!/cbau01-root/.test(await text(o3.p, '#crm_list')), 'L16-5 @' + w + ': the installation root (a system supplier) is not in the party list');
-      await o3.ctx.close();
     }
   }
   await b.close(); srv.close();

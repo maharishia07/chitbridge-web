@@ -610,10 +610,6 @@ function crmRolesList(r) {
     });
   return [];
 }
-/** the installation's own root is the shop's system supplier (api lib/rootlink.js, added_via 'system': support and plan upgrades): not one of the owner's parties, so the party list leaves it out */
-function crmNotSystem(p) {
-  return !(p && p.supplier && p.supplier.added_via === 'system' && !p.customer);
-}
 async function crmLoad(quiet) {
   var g = ++CRM.loadGen;
   if (!quiet || !CRM.loaded) {
@@ -624,7 +620,7 @@ async function crmLoad(quiet) {
     var reply = await api('crmParties');
     if (g !== CRM.loadGen) return;
     var rows = ((reply && reply.parties) || (Array.isArray(reply) ? reply : [])).concat(((reply && reply.walk_ins) || []).map(crmWalkInFrom));
-    CRM.rows = crmNormalize(rows).filter(crmNotSystem);
+    CRM.rows = crmNormalize(rows);
     CRM.alerts = (reply && reply.alerts) || {};
     CRM.currency = (CRM.rows[0] && CRM.rows[0].currency) || CRM.currency;
     crmMaySet(crmMayOf(reply));
