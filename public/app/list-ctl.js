@@ -682,7 +682,7 @@
       return over;
     };
     var over = squeeze(false);
-    while (over > 0 && !I.card) { /* a card is not a row of columns: it never leaves a field out for width */
+    while (over > 0 && !I.card && !I.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
       var leave = null;
       live.forEach(function (c) {
         if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
