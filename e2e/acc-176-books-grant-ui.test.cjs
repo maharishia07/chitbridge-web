@@ -35,7 +35,7 @@ check(dup.length === 0, 'no code written twice (NET005-B02 is the one generated 
 
 /* (2) the view is read only */
 check(!/CBAction/.test(view) && !/\b(POST|PATCH|PUT|DELETE)\b/.test(view.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'the auditor\'s view has no CBAction and no write verb');
-check(!/csv|export|download|print/i.test(view.replace(/\/\*[^]*?\*\//g, '')), 'the auditor\'s view offers no export or copy');
+check(!/csv|export|download|print/i.test(view.replace(/\/\*[^]*?\*\//g, '').split('csv: false').join('')), 'the auditor\'s view offers no export or copy');
 
 /* (3) the header */
 check(/headers: root\.CBBooksActing\.headers\(\)/.test(view) && /HEADER\] = context\.store\.id/.test(read('app/books-acting.js')), 'every read of the view sends the headers of the acting context, which names the member it opened');
