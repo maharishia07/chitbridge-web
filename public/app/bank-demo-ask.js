@@ -136,20 +136,19 @@
     closePanel(firstNeedKey());
   }
 
-  /** the confirm popup: the reach first, then each line with its payee, account and the Dr and Cr lines the engine composed, each entry's own totals */
+  /** the confirm popup: the reach first, then each line with its payee, account and the Dr and Cr lines the engine composed, each entry's own balanced flag */
   function confirmBody(text) {
     var model = host.controller().view(),
       ready = model.items.filter(function (item) { return host.standing(item, model.results[item.key]) === 'ready'; });
     var money = function (minor) { return esc(host.amountText({ amount_minor: minor, currency: host.CURRENCY })); };
     var cards = ready.map(function (item) {
-      var entry = item.entry || { lines: [], totals: null },
-        t = entry.totals;
+      var entry = item.entry || { lines: [] };
       var legs = (entry.lines || []).map(function (leg) {
         var dr = (leg.dr_minor || 0) > 0;
         return '<tr><td>' + (dr ? 'Dr' : 'Cr') + '</td><td>' + esc(host.nameOf(leg.account)) + '</td><td class="bd-r">' + money(dr ? leg.dr_minor : leg.cr_minor) + '</td></tr>';
       }).join('');
       return '<li><div class="bd-lp-top"><span>' + esc(host.payeeOf(item)) + '</span><span>' + esc(host.preview.dateText(item.line.date)) + '</span></div><div class="bd-lp-sub">' + esc(host.accountOf(item)) + (item.party && item.party.status === 'new' ? ' · new payee made first' : '') + '</div><table class="bd-jt"><tbody>' + legs + '</tbody></table>' +
-        (t ? '<div class="bd-lp-sub">Dr ' + money(t.dr_minor) + ' = Cr ' + money(t.cr_minor) + (t.dr_minor === t.cr_minor ? ' ✓' : '') + '</div>' : '') + '</li>';
+        (entry.balanced ? '<div class="bd-lp-sub">Dr = Cr ✓</div>' : '') + '</li>';
     }).join('');
     var facts = text.lines.map(function (words) { return esc(words.replace(/new part(y|ies)/g, function (_, tail) { return tail === 'y' ? 'new payee' : 'new payees'; })); });
     return '<p class="lk-reach">' + facts.slice(0, 2).join(' · ') + '</p><p>' + facts.slice(2).join('</p><p>') + '</p><ul class="bd-lines-pop">' + cards + '</ul><p class="bd-note">Demo: only the books on this page change. Nothing is sent or saved.</p>';

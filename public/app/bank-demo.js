@@ -31,7 +31,6 @@
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
     askPanel = null,
-    checkPanel = null,
     report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
 
@@ -151,7 +150,8 @@
   ];
   function payeeOf(item) {
     var named = item.party && item.party.name && item.party.status === 'existing' ? item.party.name : '';
-    return named || String(item.line.narration || '').replace(/^(EFT|Cheque|Card)\s+/i, '').trim() || 'This line';
+    var said = named || String(item.line.narration || '').replace(/^(EFT|Cheque)\s+/i, '').trim() || 'This line';
+    return said.charAt(0).toUpperCase() + said.slice(1);
   }
   function badgeOf(item) {
     var words = item.line.narration + ' ' + payeeOf(item),
@@ -181,8 +181,8 @@
     var closed = preview.minorOf(recon.difference_before) === 0 && !open;
     el('bd_figs').hidden = false;
     el('bd_figs').innerHTML =
-      labKit.figure({ label: 'Statement balance, ' + dateWords(recon.statement_date || lastDate(model)), value: amountText(recon.closing_statement) }) +
-      labKit.figure({ label: 'Balance in the books', value: amountText(recon.closing_books_before) }) +
+      labKit.figure({ label: 'Statement balance, ' + dateWords(recon.statement_date || lastDate(model)), value: amountText(recon.closing_statement), note: 'Closing balance on the file' }) +
+      labKit.figure({ label: 'Balance in the books', value: amountText(recon.closing_books_before), note: 'Before anything is added' }) +
       labKit.figure({ label: 'Difference', value: amountText(recon.difference_before), done: held, total: total, good: closed, note: closed ? 'All ' + total + ' lines are in the books' : plural(open, 'statement line is', 'statement lines are') + ' not in the books' });
   }
   function lastDate(model) {
@@ -327,14 +327,9 @@
   }
 
   /* ── actions ── */
-  /** a file goes through the statement check first (when the engine has one); the books page reads it only when the verdict allows */
+  /** the slot #bd_check is left for the statement check (web #718's bank-preview-check.js and bank-preview-ui.js, engines #146): refuse, confirm, already done; it clears here when a file is loaded */
   function loadStatement(text, name) {
-    var slot = el('bd_check');
-    slot.hidden = true;
-    slot.innerHTML = '';
-    checkPanel.checkFile(text, name, function () { return readStatement(text, name); });
-  }
-  function readStatement(text, name) {
+    el('bd_check').hidden = true;
     warnings = [];
     var said = controller.load(text, name);
     if (said.ok) {
@@ -442,7 +437,7 @@
       if (!event.target.closest('.bd-more')) toggleMore(false);
       return;
     }
-    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')] || checkPanel.actions[target.getAttribute('data-act')];
+    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')];
     if (handler && handler(target, target.getAttribute('data-key'))) return;
     paint();
   }
@@ -453,7 +448,6 @@
   /** what the other modules of the page may use: the page's own readers and painters, never its state */
   function hostFor() {
     return {
-      openingMinor: function () { return books.opening_minor; }, parseOpts: function () { return { country: COUNTRY, currency: CURRENCY }; },
       doc: doc, el: el, labKit: labKit, preview: preview, CURRENCY: CURRENCY, ACCOUNT: ACCOUNT, controller: function () { return controller; },
       itemOf: itemOf, paint: paint, standing: standing, countsOf: countsOf, payeeOf: payeeOf, accountOf: accountOf, nameOf: nameOf, chartOf: chartOf, whatIsThis: whatIsThis,
       amountText: amountText, plural: plural, tag: tag, dateWords: dateWords, lastDate: lastDate,
@@ -472,7 +466,6 @@
   function start() {
     mountHeader();
     askPanel = root.CBBankDemoAsk.create(hostFor());
-    checkPanel = root.CBBankDemoCheck.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });

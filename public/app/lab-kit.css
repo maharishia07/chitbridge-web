@@ -67,9 +67,9 @@ html.cbsk body{background:var(--page,#fcfaf5);color:var(--ink,#1d1b16);font-fami
 .lk-fig-good{background:var(--green-t,#e8f4ed);border-color:var(--green-b,#a9d3bc)}
 .lk-fig-good .lk-fig-v{color:var(--green-d,#0d4a2b)}
 /* the placement variant of the popup (CMP002): a panel at the side on a wide screen, a sheet at the bottom on a phone */
-.lk-pop-back.lk-side-back{justify-content:flex-end;align-items:stretch;padding:0;background:rgba(0,0,0,.28)}
-.lk-pop.lk-side{width:min(400px,100%);height:100%;border-radius:0}
-@media (max-width:700px){.lk-pop-back.lk-side-back{align-items:flex-end}.lk-pop.lk-side{width:100%;height:auto;max-height:88vh;border-radius:16px 16px 0 0}}
+.lk-pop-back.lk-side-back,.lk-pop-back:has(.lk-side){justify-content:flex-end;align-items:stretch;padding:0;background:rgba(0,0,0,.28)}
+.lk-pop.lk-side{width:min(400px,100%);height:100%;border-radius:0;margin-left:auto}
+@media (max-width:700px){.lk-pop-back.lk-side-back,.lk-pop-back:has(.lk-side){align-items:flex-end}.lk-pop.lk-side{width:100%;height:auto;max-height:88vh;border-radius:16px 16px 0 0}}
 .lk-pop:focus-visible,.lk-btn:focus-visible,.lk-pop-x:focus-visible{outline:3px solid var(--accent,#1f5f5b);outline-offset:2px}
 /* the tag variant that is a plain outline: "Ready to add" */
 .lk-tag.go{background:var(--card,#fff);color:var(--accent-text,var(--accent,#1f5f5b));border-color:var(--accent,#1f5f5b)}
