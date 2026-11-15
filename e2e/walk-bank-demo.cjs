@@ -208,7 +208,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   await page.focus('#bd_add');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.lk-confirm');
-  const popup = await text('.lk-confirm-text');
+  const popup = await page.innerText('.lk-confirm-text');
   check(new RegExp('Add ' + ready + ' lines').test(await text('.lk-pop header')) && popup.includes(resolved ? 'AUD 892.50' : 'AUD 12.50') && popup.includes('AUD 984.00'), tag + ': popup: ' + ready + ' lines, in ' + (resolved ? '892.50' : '12.50') + ', out 984.00');
   check(/\bDr\b/.test(popup) && /\bCr\b/.test(popup) && /Dr AUD [\d,.]+ = Cr AUD [\d,.]+/.test(popup), tag + ': popup lists every line with its Dr and Cr and each entry\'s Dr = Cr');
   await fits('popup');
