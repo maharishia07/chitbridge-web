@@ -186,7 +186,8 @@ W.run('marks', async (w) => {
     await page.setViewportSize(NARROW); await page.waitForTimeout(400); await shot('06d-owner-bell-thread-phone');
     const fits = await page.evaluate(() => { const d = document.querySelector('dialog.mk-sheet').getBoundingClientRect(); return d.left >= 0 && d.right <= window.innerWidth + 1 && d.bottom <= window.innerHeight + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth; }); await page.setViewportSize(WIDE);
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-    return { ok: !off && fits && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
+    const byDay = S.calls.some((c) => c.p === '/api/marks' && /open=1/.test(c.q) && /from=2026-11-04&to=2026-11-04/.test(c.q)); /* an older entry's Query is found by its OWN day, not the current month */
+    return { ok: !off && fits && byDay && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
   });
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
