@@ -31,7 +31,7 @@ W.run('marks', async (w) => {
   const KIND = { checked: ['clear', 'Checked'], query: ['open', 'Query'], on_hold: ['hold', 'On hold'] };
   const NOT_AUDITOR = 'Only the auditor can mark a record. You can read the marks and answer a query.';
   const auditor = (h) => !!h['x-books-for'] && h['x-books-role'] !== 'adviser';
-  const acts = (h, open) => ({ set: auditor(h) ? { ok: true, why: null } : { ok: false, why: NOT_AUDITOR }, reply: auditor(h) ? { ok: false, why: 'Only the owner and the adviser answer a question.' } : open === false ? { ok: false, why: 'This question is closed.' } : { ok: true, why: null } });
+  const acts = (h, open) => ({ set: auditor(h) ? { ok: true, why: null } : { ok: false, why: NOT_AUDITOR }, reply: open === false ? { ok: false, why: 'This question is closed.' } : { ok: true, why: null } }); /* the auditor raised it: auditor, owner and adviser reply; only the auditor sets */
   const mark = (id, h) => {
     const m = S.marks[id]; if (!m) return null;
     const open = m.class === 'open' || m.class === 'hold';
@@ -103,7 +103,8 @@ W.run('marks', async (w) => {
   await w.step('A3', 'the auditor · "?" on a row opens the sheet; Ask a question with no words is refused in plain words and sends nothing', async () => {
     await page.click(chip(1) + ' button[data-mk="ask"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 });
     const before = sets().length;
-    await page.click(T('mk-set-open')); await page.waitForTimeout(300);
+    /* the Ask button is aria-disabled while the box is empty (Playwright will not click it); a press still answers in plain words, so press it by force */
+    await page.click(T('mk-set-open'), { force: true }); await page.waitForTimeout(300);
     const out = await txt(T('mk-out')), hint = await txt(T('mk-sheet'));
     return { ok: /Write your question first/.test(out) && sets().length === before && /The owner sees this/.test(hint), saw: out + ' · owner-sees-this hint ' + /The owner sees this/.test(hint) };
   });
@@ -143,11 +144,11 @@ W.run('marks', async (w) => {
   await w.step('A6', 'the auditor · opens the Query: the owner\'s reply is in the thread; Mark checked clears it (one write), the bar says 2 of 3, no open queries', async () => {
     await openDaybook();
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector('[data-testid="rt-row"]', { timeout: 8000 });
-    const thread = await txt(T('mk-thread')); await shot('08-auditor-sees-reply');
+    const thread = await txt(T('mk-thread')), composer = await page.locator(T('msg-body')).count(); await shot('08-auditor-sees-reply');
     await page.click(T('mk-set-clear')); await page.waitForSelector(T('mk-sheet'), { state: 'detached', timeout: 8000 }); await page.waitForTimeout(500);
     const bar = await txt(T('mk-count')), f = await txt(T('mk-filter')), c = await txt(chip(1));
     await shot('09-auditor-cleared');
-    return { ok: /lease/.test(thread) && /Checked/.test(c) && /2 of 3/.test(bar) && /All queries · 0/.test(f) && sets().slice(-1)[0].b.kind === 'checked', saw: thread.slice(0, 80) + ' · ' + c + ' · ' + bar + ' · ' + f };
+    return { ok: composer === 1 && !/View only/.test(thread) && /lease/.test(thread) && /Checked/.test(c) && /2 of 3/.test(bar) && /All queries · 0/.test(f) && sets().slice(-1)[0].b.kind === 'checked', saw: thread.slice(0, 80) + ' · ' + c + ' · ' + bar + ' · ' + f };
   });
   await w.step('A7', 'the auditor · On hold takes an optional reason; a changed entry reads "Changed after review"', async () => {
     await page.click(chip(2) + ' button[data-mk="ask"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.click(T('mk-set-hold')); await page.waitForSelector(T('mk-sheet'), { state: 'detached', timeout: 8000 }); await page.waitForTimeout(300);
