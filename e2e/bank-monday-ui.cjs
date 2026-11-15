@@ -101,12 +101,12 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const m = await p.evaluate(() => {
       const main = document.querySelector('.main'), list = document.querySelector('[data-testid="bank-list"] .cbl-list'), first = list && list.querySelector('[data-row]');
       const top = first ? first.getBoundingClientRect().top : 0;
-      const above = Array.prototype.filter.call(document.querySelectorAll('.main button,.main input,.main select,.main a[href]'), (n) => { const r = n.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom <= top; }).length;
+      const above = Array.prototype.filter.call(document.querySelectorAll('.pe-bank button,.pe-bank input,.pe-bank select'), (n) => { const r = n.getBoundingClientRect(); return !n.closest('.cbl') && r.width > 0 && r.height > 0 && r.bottom <= top; }).length;
       return { pageScroll: document.documentElement.scrollHeight - innerHeight, mainScroll: main.scrollHeight - main.clientHeight, listH: list ? Math.round(list.getBoundingClientRect().height) : 0, bottom: list ? Math.round(list.getBoundingClientRect().bottom) : 0, vh: innerHeight, above, sticky: list ? getComputedStyle(list.querySelector('.cbl-hdr')).position : '' };
     });
     ok(m.pageScroll <= 1 && m.mainScroll <= 1, tag + ': the page does not scroll (page +' + m.pageScroll + ', main +' + m.mainScroll + ')');
     ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 240), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
-    ok(m.above <= 10, tag + ': ' + m.above + ' controls above the first line (was 17)');
+    ok(m.above <= 3, tag + ': ' + m.above + ' controls above the list besides its own toolbar (was 17 in all)');
     ok(m.sticky === 'sticky', tag + ': the column header stays put');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-lines.png') });
     /* the One menu: Grid / Lines / Columns / CSV / Expand under View */

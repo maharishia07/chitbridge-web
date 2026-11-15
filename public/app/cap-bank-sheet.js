@@ -12,7 +12,9 @@
 const bkshBook = () => BKB;
 /** the shop's own login (the page's isOwner: a co-assist is not the owner); false where the page has none */
 const bkshIsOwner = () => typeof isOwner === 'function' && isOwner();
-const BKSH = { ctl: null, ui: null, taxRegistered: null, posting: false };
+const BKSH = { ctl: null, ui: null, key: '', taxRegistered: null, posting: false };
+/** the statement the answers belong to: the account and the file's hash; the controller (and every answer on it) is kept for this key, so closing the sheet never loses them */
+const bkshKey = () => String(bkshBook().stmtAcct || bkshBook().acct) + ':' + ((bkshBook().file && bkshBook().file.hash) || '');
 /** the engine parts the sheet needs, or null when the page did not load them */
 function bkshEngine() {
   const parts = { recon: window.CBBankRecon, project: window.CBBankProject, entry: window.CBBankEntry, statementCheck: window.CBBankStatementCheck };
@@ -141,7 +143,7 @@ async function bkshAdd(btn) {
   bkshPaint();
   try {
     const done = await BKSH.ctl.postReady(() => {});
-    await bankLedger();
+    await bankRun(); /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
     bkshEl('bks_say').textContent = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
   } catch (failure) {
@@ -171,20 +173,25 @@ async function bankSheetOpen() {
   if (!bkbBound()) return;
   if (!bkshReady()) return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
-  const unread = BKSH.taxRegistered === 'unread';
-  BKSH.ctl = bkshController();
+  const unread = BKSH.taxRegistered === 'unread',
+    kept = !!BKSH.ctl && BKSH.key === bkshKey();
+  if (!kept) {
+    BKSH.ctl = bkshController();
+    BKSH.key = bkshKey();
+  }
   ui.dialog({
     mount: 'BKS014-U03', pop: 'POP092', titleTestid: 'bank-sheet-title',
-    titleText: tx('Add to your books'),
+    titleText: tx('Add to your books'), wide: true,
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body: '<div class="pe-note" id="bks_strip" data-testid="bank-sheet-strip" aria-live="polite"></div><div class="pe-bad" id="bks_say" data-testid="bank-sheet-say" role="status"></div><div id="bks_lines" class="bks-lines" data-testid="bank-sheet-lines"></div>',
-    footerHtml: '<button data-cbsid="BKS014-B17" type="button" data-testid="bank-sheet-close" onclick="bkshClose()">' + bkbE(tx('Close')) + '</button>' +
+    footerHtml: '<span class="bks-keep" data-testid="bank-sheet-kept">' + bkbE(tx('Your answers are kept if you close this. They clear when you load another statement.')) + '</span><button data-cbsid="BKS014-B17" type="button" data-testid="bank-sheet-close" onclick="bkshClose()">' + bkbE(tx('Close')) + '</button>' +
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
     host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
-  bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);
+  if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
+  else bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);
   bkshPaint();
 }

@@ -225,6 +225,11 @@ const bankStorePanel = () =>
 function bankStorePaintLine() {
   const host = document.getElementById('bk_store'),
     slot = document.getElementById('bk_primary');
+  const quiet = document.querySelector('.bk-store');
   if (host) host.outerHTML = bankStorePanel();
+  else if (quiet) {
+    quiet.textContent = bankStoreLine();
+    quiet.setAttribute('data-mode', bankStoreState.mode);
+  }
   if (slot && typeof bankPrimaryHtml === 'function') slot.innerHTML = bankPrimaryHtml(bankFigures());
 }

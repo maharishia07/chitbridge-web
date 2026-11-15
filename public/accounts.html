@@ -210,6 +210,14 @@ dialog.sheet .mfoot{padding:10px 20px 16px;display:flex;gap:8px;justify-content:
 dialog.sheet .mfoot button{min-height:40px;padding:0 16px;border:1px solid var(--line-3);border-radius:9px;background:transparent;color:var(--ink);font-weight:600}
 dialog.sheet .mfoot button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 dialog.sheet .mfoot button[disabled]{opacity:.6}
+/* a WIDE sheet (ui.dialog wide:true) takes the screen: head and foot stay, only the body scrolls; on a phone it is the whole screen. The code chip sits clear of the close cross. */
+dialog.sheet.wide{width:min(1240px,98vw);height:min(94vh,920px);max-height:94vh}
+dialog.sheet.wide[open]{display:flex;flex-direction:column}
+dialog.sheet.wide .mhd{padding-inline-end:56px}
+dialog.sheet.wide .mbody{flex:1 1 auto;min-height:0;max-height:none}
+dialog.sheet.wide .bks-lines{max-height:none;flex:1 1 auto}
+dialog.sheet .mfoot .bks-keep{margin-inline-end:auto;align-self:center;font-size:12.5px;color:var(--muted)}
+@media (max-width:700px){dialog.sheet.wide{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0}dialog.sheet.wide .mfoot .bks-keep{flex:1 1 100%}}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow-toast)}
 #toast .toast.err{background:var(--red-i)}
@@ -234,6 +242,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .bk-line{display:none}
 .pe-bank.bk-loaded .bk-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
 .pe-bank.bk-loaded .bk-name{font-size:15px}
+.pe-bank.bk-loaded .bk-store{color:var(--muted);font-size:13px}
 .pe-bank.bk-loaded .bk-file{color:var(--muted);font-size:13.5px;flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
 .pe-bank.bk-loaded .pe-card{padding:8px 14px;margin:0;max-width:none;gap:8px}
 .bk-band{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;padding:10px 16px;border:1px solid var(--amber-b,var(--line));border-radius:12px;background:var(--amber-t,var(--surface))}
@@ -293,7 +302,10 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
 .bks-lines .bd-table th{position:sticky;top:0;background:var(--sub);text-align:left;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .bks-lines .bd-table td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .bks-lines .bd-m{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.bks-lines .bd-sub{margin-top:3px;font-size:12px;color:var(--muted-2)}
+.bks-lines .bd-sub{margin-top:3px;font-size:12.5px;color:var(--muted-2);display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.bks-lines .bd-sub .bd-party,.bks-lines .bd-sub .bd-ask{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.bks-lines .bd-table{table-layout:auto}.bks-lines .bd-n{min-width:200px;max-width:340px;overflow-wrap:anywhere}.bks-lines .bd-st{min-width:300px}
+.bks-lines .bd-inp{max-width:200px}
 .bks-lines .bd-tag{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;border:1px solid var(--line);white-space:nowrap}
 .bks-lines .bd-ask{background:var(--sub);color:var(--ink)}
 .bks-lines .bd-bad{color:var(--ink);border-color:var(--ink)}
@@ -605,8 +617,9 @@ function openChit(id) {
 /* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */
 const confirmAsk = CBConfirm;
 /* a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (as crm.html), so cap-books.js's Pay and Remind open here unchanged */
-function modal(html) {
+function modal(html, wide) {
   const node = document.getElementById('acc_sheet');
+  node.classList.toggle('wide', !!wide); /* ui.dialog({ wide }): a sheet that takes the screen (the Bank view's Add to your books) */
   node.innerHTML = '<button data-cbsid="CMP005" class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
   if (!node.open) {
     try {

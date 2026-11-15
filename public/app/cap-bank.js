@@ -261,6 +261,7 @@ async function bankPick(input) {
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
+  if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* a statement read again starts the sheet's answers afresh */
   BKB.file = { name: file.name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
@@ -274,11 +275,12 @@ async function bankPick(input) {
 }
 /** B5-05: the file does not say its currency, so ask once; the statement is not read against the books until the person answers */
 function bankCurrencyAsk() {
+  const shopCurrency = String(bkCur() || '').toUpperCase(); /* the one fact the shop already states, shown filled in: one press confirms it, the field changes it */
   bkbEl('bk_res').innerHTML = '';
   bkbEl('bk_out').innerHTML =
     '<div class="pe-note" data-testid="bank-currency-ask">' +
-    bkbE(tx('Which currency is this statement in? Nothing is assumed.')) +
-    ' <input class="inp" id="bk_cur" type="text" maxlength="3" size="4" autocomplete="off" data-testid="bank-currency" data-cbsid="BKS014-S01" aria-label="' + bkbE(tx('Statement currency, three capital letters')) + '"> <button data-cbsid="BKS014-B09" type="button" class="act" data-testid="bank-currency-go" onclick="bankCurrencyUse()">' +
+    bkbE(tx(shopCurrency ? 'This statement is in the currency below (your shop\'s). Change it if the file is in another.' : 'Which currency is this statement in? Nothing is assumed.')) +
+    ' <input class="inp" id="bk_cur" type="text" maxlength="3" size="4" autocomplete="off" value="' + bkbE(shopCurrency) + '" data-testid="bank-currency" data-cbsid="BKS014-S01" aria-label="' + bkbE(tx('Statement currency, three capital letters')) + '"> <button data-cbsid="BKS014-B09" type="button" class="act" data-testid="bank-currency-go" onclick="bankCurrencyUse()">' +
     bkbE(tx('Read this statement')) +
     '</button></div>';
 }
@@ -478,11 +480,14 @@ function bankLayout(loaded, fill) {
   document.body.classList.toggle('bk-on', !!(loaded && fill));
 }
 /** the one line the load form folds to: which account, which file, how many lines, and the way back to the form */
-function bankLineHtml() {
+function bankLineHtml(withStore) {
   const acct = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct))[0] || {};
   return (
     '<span class="bk-name"><b>' + bkbE(tx('Bank')) + '</b> · ' + bkbE(acct.name || BKB.stmtAcct) + '</span><span class="bk-file">' +
     bkbE((BKB.file && BKB.file.name) || '') + ' · ' + bkbE(txn('{count} line', '{count} lines', BKB.parsed.lines.length)) + '</span>' +
+    (withStore && typeof bankStoreLine === 'function'
+      ? '<span class="bk-store" id="bk_store_line" data-testid="bank-store-line" data-mode="' + bankStoreState.mode + '">' + bkbE(bankStoreLine()) + '</span>'
+      : '') +
     '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Change statement')) + '</button>'
   );
 }
@@ -556,7 +561,7 @@ function bankPaint() {
       : '<div class="supacts"><button data-cbsid="BKS014-B01" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
         bkbE(tx('Back to the lines')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
   const line = bkbEl('bk_line');
-  if (line) line.innerHTML = bankLineHtml();
+  if (line) line.innerHTML = bankLineHtml(lines);
   bankLayout(true, lines);
   if (lines) bankList();
   else bankBrsPaint();

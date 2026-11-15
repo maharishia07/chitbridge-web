@@ -165,6 +165,7 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   ok('F3', !!note && note.note === 'Cheque seen at the branch', 'the note travels as the owner\'s own text');
 
   /* ── F5 · the exceptions ── */
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]'); /* the exceptions and the signed list live on the Statement view */
   const ex = await p.textContent('[data-testid="bank-exceptions"]').catch(() => '');
   ok('F5', /MJ\/26-27\/0009/.test(ex) && /1,234\.00/.test(ex), 'the posted-not-accepted line is a named row: ' + ex.replace(/\s+/g, ' ').trim().slice(0, 90));
 
