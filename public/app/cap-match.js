@@ -72,7 +72,7 @@ function matchScreen() {
   var chip = function (key, label) {
     var on = MATCH.only === key;
     return (
-      '<button class="pill' +
+      '<button data-cbsid="BUS003-B01" class="pill' +
       (on ? ' on' : '') +
       '" data-testid="match-chip-' +
       key +
@@ -100,7 +100,7 @@ function matchScreen() {
     chip('awaited', tx('Not arrived')) +
     chip('all', tx('Everything')) +
     '<span style="flex:1"></span>' +
-    '<select class="pill" data-testid="match-days" onchange="MATCH.days=Number(this.value);matchLoad(true)">' +
+    '<select data-cbsid="BUS003-S01" class="pill" data-testid="match-days" onchange="MATCH.days=Number(this.value);matchLoad(true)">' +
     [30, 90, 180, 365]
       .map(function (item) {
         return '<option value="' + item + '"' + (MATCH.days === item ? ' selected' : '') + '>' + txf('last {n} days', { n: String(item) }) + '</option>';
@@ -128,7 +128,7 @@ function matchCard(o) {
   var open = MATCH.open === o.chit_id;
   return (
     '<div style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden" data-testid="match-order">' +
-    '<div role="button" tabindex="0" aria-expanded="' +
+    '<div data-cbsid="BUS003-B02" role="button" tabindex="0" aria-expanded="' +
     (open ? 'true' : 'false') +
     '" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" onclick="MATCH.open=' +
     (open ? 'null' : "'" + esc(o.chit_id) + "'") +
@@ -290,13 +290,13 @@ function matchDetail(o) {
       : '') +
     '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
     (o.verdict === 'differs'
-      ? '<button class="composebtn" data-testid="match-dispute" onclick="matchDispute(\'' +
+      ? '<button data-cbsid="BUS003-B03" class="composebtn" data-testid="match-dispute" onclick="matchDispute(\'' +
         esc(o.chit_id) +
         '\')">⚑ ' +
         esc(tx('Raise a dispute')) +
         '</button>'
       : '') +
-    '<button class="pill" onclick="openChit(\'' +
+    '<button data-cbsid="BUS003-B04" class="pill" onclick="openChit(\'' +
     esc(o.chit_id) +
     '\')">' +
     esc(tx('Open the order')) +
@@ -413,7 +413,7 @@ function matchDispute(chit_id) {
       '<label>' +
       esc(tx('What is wrong')) +
       '</label>' +
-      '<textarea id="match_reason" rows="6" style="width:100%" data-testid="match-dispute-reason">' +
+      '<textarea data-cbsid="BUS003-T01" id="match_reason" rows="6" style="width:100%" data-testid="match-dispute-reason">' +
       esc(draft) +
       '</textarea>' +
       '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:8px">' +
@@ -422,7 +422,7 @@ function matchDispute(chit_id) {
       '<div class="mfoot"><button data-cbsid="CMP003" class="pill" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button>' +
-      '<button class="composebtn" data-testid="match-dispute-send" onclick="matchDisputeSend(\'' +
+      '<button data-cbsid="BUS003-B05" class="composebtn" data-testid="match-dispute-send" onclick="matchDisputeSend(\'' +
       esc(chit_id) +
       '\')">' +
       esc(tx('Raise it')) +
