@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DEV = path.join(__dirname, '..', '..');
-const REG = path.join(DEV, 'SCREENS.json');
+const REG = process.env.SCREENS_JSON || path.join(DEV, 'SCREENS.json'); /* SCREENS_JSON: check against another copy (a docs worktree) */
 const JS = path.join(__dirname, '..', 'public', 'app', 'screens.js');
 
 let pass = 0;
@@ -58,6 +58,21 @@ ok('none is missing' + (missing.length ? ': ' + missing.slice(0, 4).join(' · ')
 const retired = Object.entries(reg.screens).filter(([, s]) => s.retired).map(([, s]) => s.code);
 const leaked = retired.filter((c) => codes.has(c));
 ok('no retired screen is offered' + (leaked.length ? ': ' + leaked.join(' · ') : ''), leaked.length === 0);
+
+/* ⚠️ A RETIRED CONTROL CODE MUST NOT COME BACK ON AN ELEMENT (UX-137 wave 0b). A control row retired with an alias_of was replaced by a library
+   component; a data-cbsid that still names the retired row would count one element under two codes. Reads every public page and script. */
+{
+  const retiredControls = new Set(Object.values(reg.screens).filter((s) => s.retired && s.alias_of).map((s) => s.code));
+  const back = [];
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory()) return walk(f);
+    if (!/\.(html|js)$/.test(e.name)) return;
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/data-cbsid=["']([A-Z]{3}[0-9]{3}-[A-Z][0-9]{2,3}|CTL[0-9]+)["']/g)) if (retiredControls.has(m[1])) back.push(m[1] + ' in ' + path.relative(process.cwd(), f));
+  });
+  walk(path.join(__dirname, '..', 'public'));
+  ok('no retired control code is on an element (' + retiredControls.size + ' retired)' + (back.length ? ': ' + back.slice(0, 4).join(' · ') : ''), back.length === 0);
+}
 
 /* ⚠️ THE SHAPE IS THE STANDARD: three letters, three digits, six characters. A code that does not fit is a code
    somebody typed by hand into a register that is supposed to be generated. */
