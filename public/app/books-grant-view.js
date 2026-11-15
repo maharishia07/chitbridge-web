@@ -24,6 +24,8 @@
   var MONEY = 'money'; /* a column kind: the server's minor units, painted in the answer's currency */
   var ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
+  /* the Day book's seven columns fit one 1366 screen beside the menu (Entry · Date · Kind · Party · ref · Amount · Evidence · Mark) */
+  var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170 };
   var REPORTS = [
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
@@ -316,10 +318,10 @@
           html: column[2] === 'mark' || column[2] === 'evidence',
           key: column[0],
           label: words(column[1]),
-          prio: i === 0 || column[0] === 'name' || column[2] === MONEY ? 1 : 2,
+          prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === MONEY ? 1 : 2,
           num: column[2] === MONEY,
-          keep: column[2] === 'mark' || column[2] === 'evidence', /* the Mark and Evidence chips are never cut to make room (list-ctl keep) */
-          w: column[2] === 'mark' ? 190 : column[2] === 'evidence' ? 170 : column[2] === MONEY ? 140 : 180,
+          keep: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
+          w: DAYBOOK_W[column[0]] || (column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180),
           cell: function (row) {
             return figure(row, column);
           },
