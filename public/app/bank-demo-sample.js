@@ -40,7 +40,9 @@
   var TAUGHT = { date: '2026-09-01', narration: 'taught in the sample books', by: 'sample' };
   var LEARNED = [
     { id: 'out:origin_energy', has: 'ORIGIN ENERGY', side: 'out', party: null, party_name: 'Origin Energy', label: 'Electricity', event: { type: 'expense', class: 'electricity', paid_from: 'bank', tax_kind: 'taxable' }, source: TAUGHT },
-    { id: 'out:bunnings', has: 'BUNNINGS', side: 'out', party: null, party_name: 'Bunnings', label: 'Repairs and maintenance', event: { type: 'expense', class: 'repairs', paid_from: 'bank', tax_kind: 'taxable' }, source: TAUGHT }
+    { id: 'out:bunnings', has: 'BUNNINGS', side: 'out', party: null, party_name: 'Bunnings', label: 'Repairs and maintenance', event: { type: 'expense', class: 'repairs', paid_from: 'bank', tax_kind: 'taxable' }, source: TAUGHT },
+    { id: 'out:account_fee', has: 'ACCOUNT FEE', side: 'out', party: null, party_name: 'Bank', label: 'Bank fees', event: { type: 'expense', class: 'bank_charges', paid_from: 'bank' }, source: TAUGHT },
+    { id: 'in:credit_interest', has: 'CREDIT INTEREST', side: 'in', party: null, party_name: 'Bank', label: 'Interest received', event: { type: 'other_income', class: 'interest_received', into: 'bank' }, source: TAUGHT }
   ];
   root.CBBankDemoSample = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS, OPENING_MINOR: OPENING_MINOR, PARTIES: PARTIES, LEARNED: LEARNED };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

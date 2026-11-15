@@ -20,7 +20,7 @@
     labKit = root.CBLabKit;
   var COUNTRY = 'AU',
     CURRENCY = 'AUD',
-    ACCOUNT = 'Demo bank account';
+    ACCOUNT = 'Business bank account';
   var SAMPLE_CSV = root.CBBankDemoSample.SAMPLE_CSV,
     SAMPLE_BOOKS = root.CBBankDemoSample.SAMPLE_BOOKS,
     LEARNED = root.CBBankDemoSample.LEARNED,
