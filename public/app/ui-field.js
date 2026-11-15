@@ -4,7 +4,7 @@
  *
  * OWNS       ui.field(options) -> one HTML string (label, control, hint, error) · ui.field.read / set / error / focusFirstError (repaint locally, never rebuild the form) ·
  *            ui.field.parse (the one number reader: typed text + shop locale -> canonical ASCII decimal) · the one delegated input / change / focusout listener.
- * NOT YET    kind 'money' (own PR after this one: the cap-books helper move needs the M36 owners). It is refused here, never faked.
+ * PLUGS      kind 'money' is drawn, read and settled by app/ui-money.js (CMP055-I05) through field.plug; without that file loaded it is refused, never faked.
  * CALLED BY  a page that draws a field: shop.html first. Loaded AFTER app/ui.js (it reads ui.words, ui.escape, ui.style and ui.components from it).
  * KEYBOARD   a native control: Tab reaches it, the ring is 2 px --accent; a checkbox is a 44 px row; Enter in a text field commits nothing (a commit is a Save, which confirms).
  * REGISTER   CMP055; elements I01 text-like · I02 date and time · I03 checkbox · I04 file · T01 long text. The element carries data-cbsid, data-cbname="field", data-cbmount.
@@ -17,7 +17,7 @@
 var CBUiField = (function () {
   var MOUNT_CODE = /^[A-Z]{3}\d{3}(?:-D\d{2})?-U\d{2,3}$/;
   var ALLOWED = ['mount', 'kind', 'label', 'id', 'name', 'key', 'value', 'hint', 'error', 'required', 'readonly', 'role', 'min', 'max', 'step', 'maxlength', 'accept', 'rows',
-    'autocomplete', 'inputmode', 'placeholder', 'testid', 'cls', 'data', 'attrs', 'onInput', 'onChange'];
+    'autocomplete', 'inputmode', 'placeholder', 'testid', 'cls', 'data', 'attrs', 'onInput', 'onChange', 'currency', 'minor'];
   /* the long tail a page may still pass: a closed name list, never free HTML (no on*, style, id, type, value, data-cbsid) */
   var ATTRS = ['list', 'pattern', 'spellcheck', 'autocapitalize', 'enterkeyhint', 'size', 'multiple', 'capture'];
   var KINDS = {
@@ -26,8 +26,11 @@ var CBUiField = (function () {
     number: { type: 'text', el: 'I01', dir: 'ltr', mode: 'decimal', auto: 'off', decimal: true },
     percent: { type: 'text', el: 'I01', dir: 'ltr', mode: 'decimal', auto: 'off', decimal: true, suffix: '%' },
     date: { type: 'date', el: 'I02' }, time: { type: 'time', el: 'I02' }, checkbox: { type: 'checkbox', el: 'I03' },
-    file: { type: 'file', el: 'I04' }, long: { tag: 'textarea', el: 'T01', auto: 'off' }
+    file: { type: 'file', el: 'I04' }, long: { tag: 'textarea', el: 'T01', auto: 'off' },
+    money: { type: 'text', el: 'I05', dir: 'ltr', mode: 'decimal', auto: 'off', plug: true }
   };
+  /* a kind drawn by another file (money: app/ui-money.js): { draw, read, settle, input } */
+  var PLUGS = {};
   var DIGITS = [['٠', '٩'], ['۰', '۹'], ['०', '९']]; /* Arabic-Indic, Extended Arabic-Indic, Devanagari: each ten code points in a row */
   var HANDLERS = {};
   /* the error colour: the theme has no danger TEXT token (the page's own #b4453f is 2.98:1 on Dark), so it is the red pulled 30% toward the theme's --ink: dark red on Cream, light red on Dark, AA on both (the walk measures it) */
@@ -147,7 +150,7 @@ var CBUiField = (function () {
   /* ---------- the mark-up ---------- */
   function checkOptions(options) {
     if (!options || typeof options !== 'object') refuse('options are required');
-    if (options.kind === 'money') refuse('kind "money" is its own part (after the M36 owners confirm); it is not drawn here');
+    checkPlugged(options);
     Object.keys(options).forEach(function (name) { if (ALLOWED.indexOf(name) < 0) refuse('"' + name + '" is not a property of the field'); });
     if (!MOUNT_CODE.test(options.mount || '')) refuse('mount must be a screen mount code like SHP001-U03');
     if (!KINDS[options.kind]) refuse('kind must be ' + Object.keys(KINDS).join(', '));
@@ -159,6 +162,16 @@ var CBUiField = (function () {
     ['onInput', 'onChange'].forEach(function (name) { if (options[name] !== undefined && typeof options[name] !== 'function') refuse(name + ' must be a function, never inline JavaScript'); });
     var names = options.attrs ? (typeof options.attrs === 'object' ? Object.keys(options.attrs) : [null]) : [];
     if (names.some(function (name) { return ATTRS.indexOf(name) < 0; })) refuse('attrs is an object of ' + ATTRS.join(', ') + ' only');
+  }
+  /** a plugged kind (money) needs its file loaded; its own properties (currency, minor) belong to it alone */
+  function checkPlugged(options) {
+    if (options.kind === 'money' && !PLUGS.money) refuse('kind "money" is drawn by app/ui-money.js; load it after this file');
+    if ((options.currency !== undefined || options.minor !== undefined) && options.kind !== 'money') refuse('currency and minor belong to kind "money" only');
+  }
+  /** the part another file plugged in for this field's kind (money), or null for a kind drawn here */
+  function plugOf(el) {
+    var kind = el.getAttribute('data-cbkind');
+    return KINDS[kind] && KINDS[kind].plug ? PLUGS[kind] : null;
   }
   function idOf(options) {
     if (options.id) return String(options.id);
@@ -236,12 +249,17 @@ var CBUiField = (function () {
     var required = options.required ? '<span class="cbf-req">' + esc(words('Required', 'required')) + '</span>' : '';
     return '<div class="cbf-row"><label class="cbf-l" for="' + id + '">' + labelText(options) + '</label>' + required + '</div>';
   }
+  /** a page handler (onInput, onChange) is kept under the field's id for the one delegated listener */
+  function keepHandlers(options, id) {
+    if (options.onInput || options.onChange) HANDLERS[id] = { input: options.onInput, change: options.onChange };
+  }
   /** the part: ui.field({ mount, kind, label, ... }) -> HTML */
   function field(options) {
     checkOptions(options);
     var shape = KINDS[options.kind], id = idOf(options), reason = readonlyReason(options);
     ensureStyle();
-    if (options.onInput || options.onChange) HANDLERS[id] = { input: options.onInput, change: options.onChange };
+    keepHandlers(options, id);
+    if (shape.plug) return PLUGS[options.kind].draw(options, id, reason, { label: labelHtml, note: noteHtml, error: errorHtml, pairs: pairs, describedBy: describedBy });
     var tail = noteHtml(options, id, reason) + errorHtml(options, id);
     var control = controlHtml(options, id, reason);
     if (shape.type === 'checkbox') return '<div class="cbf"><label class="cbf-c" for="' + id + '">' + control + '<span>' + labelText(options) + '</span></label>' + tail + '</div>';
@@ -261,6 +279,7 @@ var CBUiField = (function () {
     var kind = el.getAttribute('data-cbkind');
     if (kind === 'checkbox') return { value: !!el.checked };
     if (kind === 'file') return { value: el.files && el.files[0] ? el.files[0].name : '' };
+    if (plugOf(el)) return plugOf(el).read(el);
     return KINDS[kind].decimal ? readNumber(el) : { value: el.value };
   }
   /** a number field: '' when empty, the canonical ASCII decimal, or NaN and the sentence to show */
@@ -298,7 +317,7 @@ var CBUiField = (function () {
     var box = document.createElement('div');
     box.id = el.id + '-e';
     box.className = 'cbf-e';
-    (noteOf(el, 'h') || (el.closest('.cbf-suf') || el).parentNode).insertAdjacentElement('afterend', box);
+    (noteOf(el, 'h') || (el.closest('.cbf-suf, .mi') || el).parentNode).insertAdjacentElement('afterend', box);
     return box;
   }
   /** the locale echo: a date as words ("13 Nov 2026"), a number grouped the shop's way, so a mismatched browser still shows what the app understood */
@@ -315,7 +334,7 @@ var CBUiField = (function () {
     return part ? CBLocale.date(Date.UTC(+part[1], +part[2] - 1, +part[3], 12), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
   }
   /** when the person leaves a number field: read it, say what was understood, or say what to fix; a good number is written back canonical so a page's own .value reader agrees */
-  function settle(el) {
+  function settleOwn(el) {
     var echo = noteOf(el, 'x');
     var decimal = !!KINDS[el.getAttribute('data-cbkind')].decimal;
     if (decimal && String(el.value).trim()) {
@@ -326,6 +345,10 @@ var CBUiField = (function () {
     /* written only when it changed: a rewrite of the same words is still a DOM mutation, and the sheet-keys observer reads it while focus is mid-move and pulls focus back, so Tab never left the box */
     var echoWords = echo ? echoOf(el) : '';
     if (echo && echo.textContent !== echoWords) echo.textContent = echoWords;
+  }
+  /** leaving a field: a plugged kind (money) settles itself, the rest are settled here */
+  function settle(el) {
+    return plugOf(el) ? plugOf(el).settle(el) : settleOwn(el);
   }
   function set(target, value) {
     var el = elementOf(target);
@@ -348,7 +371,8 @@ var CBUiField = (function () {
   function onInput(event) {
     var el = fieldOf(event);
     if (!el) return;
-    if (KINDS[el.getAttribute('data-cbkind')].decimal) {
+    if (plugOf(el)) plugOf(el).input(el);
+    else if (KINDS[el.getAttribute('data-cbkind')].decimal) {
       var mapped = asciiDigits(el.value, marksOf());
       if (mapped !== el.value) el.value = mapped;
     }
@@ -383,6 +407,9 @@ var CBUiField = (function () {
   field.error = showError;
   field.focusFirstError = focusFirstError;
   field.parse = parse;
+  field.marks = marksOf;
+  field.ascii = asciiDigits;
+  field.plug = function (kind, part) { PLUGS[kind] = part; };
   field.kinds = KINDS;
   if (typeof window !== 'undefined' && window.ui) window.ui.field = field;
   return field;

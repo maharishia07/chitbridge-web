@@ -44,15 +44,15 @@ of file each thing is; this says what already does the job.
 | 56 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 55 | `toast` | `accounts-shell.js` |  |
 | 55 | `rows` | `cap-settings.js` |  |
-| 54 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 55 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 54 | `view` | `books-payables.js` | group: |
 | 54 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 54 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 54 | `count` | `money-check.js` | the count /health reads |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
+| 51 | `read` | `cap-print.js` |  |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
-| 50 | `read` | `cap-print.js` |  |
-| 48 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 49 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
@@ -69,10 +69,10 @@ of file each thing is; this says what already does the job.
 | 41 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 41 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 41 | `missing` | `variant.browser.js` | refusing with no reason. |
+| 40 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 40 | `page` | `cap-catalogue.js` |  |
 | 40 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 40 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
-| 39 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 39 | `shell` | `pick.js` |  |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 38 | `closeModal` | `app.html` |  |
@@ -102,13 +102,13 @@ of file each thing is; this says what already does the job.
 | 32 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 32 | `owner` | `books.js` |  |
 | 31 | `modal` | `app.html` |  |
+| 31 | `money` | `cart.js` |  |
 | 31 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 31 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
 | 30 | `load` | `books-grant-view.js` |  |
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
-| 29 | `money` | `cart.js` |  |
 | 29 | `group` | `identity.js` | again in a different costume. |
 | 28 | `opts` | `cap-stock.js` |  |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
@@ -124,11 +124,11 @@ of file each thing is; this says what already does the job.
 | 25 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 25 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
 | 24 | `form` | `accounts-shell.js` |  |
+| 24 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 24 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 24 | `update` | `folder-rules.js` |  |
 | 24 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 24 | `match` | `itemmatch.js` | actually state. |
-| 23 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 23 | `next` | `cap-stock.js` | the next level: |
 | 23 | `says` | `adopt.js` |  |
 | 23 | `entries` | `books-store.js` |  |
@@ -151,6 +151,7 @@ of file each thing is; this says what already does the job.
 | 21 | `move` | `rail.js` | Order = the order the server refused in: |
 | 20 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 20 | `chip` | `screen-id.js` | var S = { app: |
+| 20 | `field` | `ui-field.js` | the part: |
 | 20 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 20 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 20 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
@@ -159,7 +160,7 @@ of file each thing is; this says what already does the job.
 | 19 | `send` | `cap-quotes.js` |  |
 | 19 | `step` | `cart.js` |  |
 | 19 | `later` | `signin-ui.js` |  |
-| 19 | `field` | `ui-field.js` | the part: |
+| 19 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 19 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 19 | `shown` | `bank-rec-log.js` | a stored row → what the caller reads: |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
@@ -181,6 +182,7 @@ of file each thing is; this says what already does the job.
 | 18 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
 | 17 | `done` | `attach-ui.js` |  |
 | 17 | `message` | `cap-print.js` | the one message: |
+| 17 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 17 | `confirm` | `lab-kit.js` | opts: |
 | 17 | `verdict` | `rail-thread.js` |  |
 | 17 | `dialog` | `ui.js` | caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialo |
@@ -192,7 +194,6 @@ of file each thing is; this says what already does the job.
 | 16 | `bkMoney` | `cap-books.js` |  |
 | 16 | `bkDate` | `cap-books.js` |  |
 | 16 | `frame` | `cap-settings.js` |  |
-| 16 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 16 | `fmtMoney` | `helpers.js` |  |
 | 16 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 16 | `validate` | `bill-use.js` | Only lines the copy has; only the three words; at least one thing said. |
@@ -208,4 +209,3 @@ of file each thing is; this says what already does the job.
 | 15 | `offers` | `network-app.js` |  |
 | 15 | `check` | `network-app.js` |  |
 | 15 | `post` | `books-manual.js` | POST /events — |
-| 15 | `payment` | `books-store.js` |  |

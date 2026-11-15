@@ -193,20 +193,12 @@ function bkCss() {
 bkCss();
 
 /* ── money and dates: through the engines, never by hand ── */
+/* the ledger's currency and its decimals: the money field's own (app/ui-money.js, CMP055-I05) — N1: none known -> undefined, never INR */
 function bkCur(c) {
-  return (
-    c ||
-    (typeof SESSION !== 'undefined' && SESSION.currency) ||
-    (typeof BK !== 'undefined' && BK.cur) ||
-    ((typeof shopReg === 'function' && shopReg()) || {}).currency
-  );
-} /* N1: none known -> undefined, never INR. the ledger's own money (BK.cur, GET /health — WX-R2R), else the PACK's (CX0); INR only when no country is known */
+  return CBUiMoney.currency(c);
+}
 function bkDec(c) {
-  try {
-    return CBMoney.decimals(bkCur(c));
-  } catch (failure) {
-    return bkQuiet('decimals', failure, 2);
-  }
+  return CBUiMoney.decimals(c);
 }
 function bkMoney(minor, c) {
   var n = Number(minor || 0) / Math.pow(10, bkDec(c));
@@ -232,83 +224,32 @@ function bkToMinor(v, c) {
 }
 /**
  * ⭐⭐ THE ONE MONEY INPUT (M36 · R16 · T16): every amount a person TYPES goes through bkMoneyInput, and every amount SHOWN goes through bkMoney / bkDrCr / bkOwes.
+ * The input and its readers LIVE in app/ui-money.js (CMP055-I05; ui.field({ kind: 'money' }) draws the same field); these names are one-line wrappers so no caller changed.
  * The unit owns three things and does no money arithmetic: the SYMBOL (CBLocale.symbol), the DECIMALS (CBMoney.decimals via bkDec — 2 for INR, 0 for JPY, 3 for OMR) and
- * MINOR UNITS out (bkMoneyRead — digits are joined as text, never multiplied). The field holds plain decimal text, so a screen's own reader (bkToMinor) still agrees with it.
+ * MINOR UNITS out (bkMoneyRead — digits are joined as text, never multiplied). A typed amount is KEPT as typed and REFUSED with a sentence when it is a wrong mark, an extra place, a sign or too large (ACC-347).
  * A bare <input inputmode="decimal"> anywhere in CB Accounts or CB CRM fails the build (e2e/money-input-guard.cjs).
  *   o: { id, tid?, minor? | text?, cur?, ph?, on? (inline js run on input), extra? (raw attrs on the input), w? (css width of the whole field) }
  */
 function bkMinorText(minor, c) {
-  var d = bkDec(c),
-    n = Math.trunc(Number(minor || 0)),
-    text = String(Math.abs(n));
-  if (!d) return (n < 0 ? '-' : '') + text;
-  text = text.padStart(d + 1, '0');
-  return (n < 0 ? '-' : '') + text.slice(0, -d) + '.' + text.slice(-d);
+  return CBUiMoney.minorText(minor, c);
 }
-/* keep a money input to digits and one decimal point, no more places than its currency allows */
 function bkMoneyClamp(el) {
-  var d = bkDec(el.getAttribute('data-cur')),
-    text = String(el.value || '').replace(/[^0-9.]/g, ''),
-    i = text.indexOf('.');
-  if (i >= 0)
-    text =
-      text.slice(0, i + 1) +
-      text
-        .slice(i + 1)
-        .replace(/\./g, '')
-        .slice(0, d);
-  if (d === 0) text = text.replace(/\./g, '');
-  if (text !== el.value) el.value = text;
+  return CBUiMoney.clamp(el);
 }
-/** the currency's symbol for an input; none stated -> no symbol (N1) */
 function bkSymbol(code) {
-  try {
-    return code ? CBLocale.symbol(code) : '';
-  } catch (_) {
-    return code || '';
-  }
+  return CBUiMoney.symbol(code);
 }
-/* the HTML of one money input: currency symbol, amount text, the currency kept on the field */
 function bkMoneyInput(o) {
-  var c = bkCur(o.cur),
-    tid = o.tid || o.id,
-    v = o.text != null ? o.text : o.minor != null && o.minor !== '' ? bkMinorText(o.minor, c) : '';
-  var sym = bkSymbol(c);
-  return (
-    '<span class="mi"' +
-    (o.w ? ' style="width:' + o.w + '"' : '') +
-    '><span class="mi-sym" aria-hidden="true">' +
-    esc(sym) +
-    '</span>' +
-    '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="mi-in" id="' +
-    o.id +
-    '" data-testid="' +
-    esc(tid) +
-    '" data-money="1" data-cur="' +
-    esc(c) +
-    '" inputmode="decimal" autocomplete="off" placeholder="' +
-    esc(o.ph != null ? o.ph : bkMinorText(0, c)) +
-    '"' +
-    ' value="' +
-    esc(v) +
-    '" oninput="bkMoneyClamp(this);' +
-    (o.on || '') +
-    '"' +
-    (o.extra ? ' ' + o.extra : '') +
-    '></span>'
-  );
+  return CBUiMoney.input(o);
 }
-/** the text a money field holds → minor units: an integer, or NaN when it is empty, not a number, or has more decimals than the currency */
+/** the text a money field holds → minor units: an integer, or NaN when it is empty or REFUSED (a wrong mark, an extra place, a sign, above 2^53) */
 function bkMoneyMinor(text, c) {
-  var d = bkDec(c),
-    m = /^(\d*)(?:\.(\d*))?$/.exec(String(text == null ? '' : text).replace(/[,\s]/g, ''));
-  if (!m || (!m[1] && !m[2]) || (m[2] || '').length > d) return NaN;
-  return Number((m[1] || '0') + (m[2] || '').padEnd(d, '0'));
+  return CBUiMoney.minor(text, c);
 }
-/** the minor units a money field (by id or element) holds — its own currency, read from the field */
+/** the minor units a money field (by id or element) holds — its own currency, read from the field. Quiet on purpose (the pay line reads it on every key): the refusal sentence is said under the field when focus leaves it */
 function bkMoneyRead(idOrEl) {
   var el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
-  return el ? bkMoneyMinor(el.value, el.getAttribute('data-cur')) : NaN;
+  return el ? CBUiMoney.read(el).value : NaN;
 }
 /** the bill's own number for a row; a bill that has none says "Bill of 24 Oct" (its date) or "Bill", never its id (R123) */
 function bkBillNo(no, ref, date) {
