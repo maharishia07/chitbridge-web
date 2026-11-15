@@ -32,7 +32,8 @@
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
   var MONTH_STATE = { open: 'Open', soft_locked: 'Closed', hard_locked: 'Closed for good' };
   function monthRows(answer) {
-    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && p.start_date; }).map(function (p) {
+    var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
+    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null });
     });
@@ -55,7 +56,7 @@
   }
   /** a figure in the answer's currency, the way the books screens paint it (CBBooksActing.money) */
   function minorWords(minor) {
-    return root.CBBooksActing.figure(minor, viewState.answer && viewState.answer.currency);
+    return root.CBBooksActing.figure(minor, (viewState.answer && viewState.answer.currency) || (root.CBBooksActing.current() || {}).currency);
   }
   /** a group key (trade_debtors, gst_and_statutory) as words */
   function groupWords(key) {
@@ -103,10 +104,16 @@
       viewState.range = last ? { from: String(last.start_date).slice(0, 10), to: String(last.end_date).slice(0, 10) } : null;
     }, function () { viewState.range = null; });
   }
+  /** GET /periods names no currency: a month's sales would print as a dash. The store's currency is learned once from the Day book's own answer (the period it opens on) */
+  function knowCurrency() {
+    var acting = root.CBBooksActing.current() || {};
+    if (current().k !== 'periods' || acting.currency || !viewState.range) return Promise.resolve();
+    return root.CBBooksGrantApi.run(viewState.o.call, 'readDaybook', { query: { from: viewState.range.from, to: viewState.range.to }, headers: root.CBBooksActing.headers() }).then(function (a) { root.CBBooksActing.setCurrency(a && a.currency); }, function () { /* no currency learned: the figures show a dash, never a wrong symbol */ });
+  }
   function load() {
     if (onActions()) return Promise.resolve();
     var report = current();
-    return (report.k === 'daybook' ? findMonth() : Promise.resolve()).then(function () { return readReport(report); });
+    return (report.k === 'daybook' || report.k === 'periods' ? findMonth() : Promise.resolve()).then(knowCurrency).then(function () { return readReport(report); });
   }
   function readReport(report) {
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
