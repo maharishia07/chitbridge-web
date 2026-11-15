@@ -193,7 +193,6 @@
         id: function (row) { return row.id; },
         rowTid: cfg.tid || function (row) { return 'bank-row-' + row.id; },
         oneOpen: true,
-        view: root.matchMedia && root.matchMedia('(max-width:700px)').matches ? 'lines' : 'grid' /* a phone: the compact lines, not a card per row */,
         foldHead: true /* View · Grid / Lines · Columns · CSV · Expand under ONE menu: the head stays short */,
         defaultCols: ['status', 'date', 'payee', 'out', 'in'],
         views: viewsOf(cfg),

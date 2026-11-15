@@ -62,3 +62,13 @@
 .bb-row2 .bb-cur{margin-left:auto;white-space:nowrap}
 .bb-row2 .bb-progress{flex-basis:60px}.bb-row2 .bb-gorow{flex:1 1 220px}
 .cbl[data-cbl^="bank"] .bl-amt{white-space:nowrap}
+
+/* a phone: a card per line is two short lines (icon, date and amount; the payee under), not a tall record */
+@media (max-width:700px){
+.cbl[data-cbl^="bank"] .cbl-row{margin:0 4px!important;padding:2px 8px!important;gap:0 8px!important;border-radius:0!important;border-width:0 0 1px!important}
+.cbl[data-cbl^="bank"] .cbl-row .cbl-cell::before{display:none!important}
+.cbl[data-cbl^="bank"] .cbl-row .cbl-cell.first{width:auto!important}
+.cbl[data-cbl^="bank"] .cbl-row .cbl-cell:nth-child(3){order:5;flex:1 1 100%}
+.cbl[data-cbl^="bank"] .bb-tiles .lk-fig-v{overflow:visible}
+}
+.bb-row2 .bb-tiles{flex:0 1 640px}
