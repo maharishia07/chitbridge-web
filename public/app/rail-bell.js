@@ -401,12 +401,19 @@
       }
     }
     /** W15-54: the owner's bell row for a Query opens the Query thread sheet through the Day book's own opener (CBMark's sheet: one thread, one composer) */
+    /** the page's endpoint table is a lexical const (not window.EP), so cap-mark cannot fill it: the two mark reads are added here, from cap-mark's own list */
+    function markEndpoints() {
+      if (typeof EP !== 'undefined' && root.CB_MARK_EP)
+        Object.keys(root.CB_MARK_EP).forEach(function (key) {
+          if (!EP[key]) EP[key] = root.CB_MARK_EP[key];
+        });
+    }
     function openMark(row) {
-      root.__mkerr += ' open';
       var ctl = bell.mk || (bell.mk = root.CBMark.use({
           adopter: 'acc.audit',
           call: function (key, o) {
-            return api(key, o).catch(function (e) { root.__mkerr += ' APIERR ' + (e && (e.message || e.status)); throw e; }); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
+            markEndpoints();
+            return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
           }
         })),
         title = row.getAttribute('data-mark-title') || '',
@@ -416,10 +423,8 @@
         if (subject) ctl.sheet(subject, { title: title });
         else if (typeof root.toast === 'function') root.toast(T(W.markFail));
       };
-      root.__mkerr += ' id=' + id + ' no=' + no;
       if (id) return ctl.load([id]).then(function () { show(id); });
       return ctl.summary().then(function (sum) {
-        root.__mkerr += ' sum=' + (sum && sum.open && sum.open.length);
         var hit = ((sum && sum.open) || []).filter(function (m) {
           return no && String(m.subject_label || '').indexOf(no) === 0;
         })[0];
@@ -449,15 +454,13 @@
         else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
         return;
       }
-      root.__mkerr = 'click ' + !!node.closest('[data-testid="bell-row"]') + ' ' + !!root.CBMark;
       var mk = node.closest('[data-testid="bell-row"]');
       if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null) && root.CBMark) {
         bell.open = false;
         paint();
         new Promise(function (done) {
           done(openMark(mk));
-        }).catch(function (e) {
-          root.__mkerr = e && e.message;
+        }).catch(function () {
           if (typeof root.toast === 'function') root.toast(T(W.markFail));
         });
         return;
