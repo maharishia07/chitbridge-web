@@ -116,7 +116,7 @@ var CBIdDocs = (function () {
           : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(editable ? 'Not added' : 'Nothing on file yet') + '</div>') +
         '</div>' +
         (editable
-          ? '<input class="inp" id="idoc_' +
+          ? '<input data-cbsid="SCR005-I01" class="inp" id="idoc_' +
             sc +
             '" placeholder="' +
             esc(h.eg) +
@@ -195,7 +195,7 @@ var CBIdDocs = (function () {
       self || !hasAadhaar
         ? ''
         : '<label class="fl" style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:8px">' +
-          '<input type="checkbox" id="idoc_consent" style="width:auto;margin:0">' +
+          '<input data-cbsid="SCR005-I02" type="checkbox" id="idoc_consent" style="width:auto;margin:0">' +
           '<span style="font-weight:400">They have agreed to this being recorded ' +
           '<span style="color:var(--grey);font-size:var(--fs-1)">— required for Aadhaar</span></span></label>';
 
@@ -204,7 +204,7 @@ var CBIdDocs = (function () {
     var Q = String.fromCharCode(39);
     var btn = o.noButton
       ? ''
-      : '<button class="composebtn" style="margin-top:6px" onclick="CBIdDocs.save(' +
+      : '<button data-cbsid="SCR005-B01" class="composebtn" style="margin-top:6px" onclick="CBIdDocs.save(' +
         (o.subject ? Q + esc(o.subject) + Q : 'null') +
         ')">' +
         (self ? 'Submit for verification' : 'Save documents') +
