@@ -28,8 +28,9 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   let bd = await band(p);
   ok(/Statement\s*18,280\.75/.test(bd) && /Books\s*19,963\.00/.test(bd) && /Difference\s*1,682\.25/.test(bd) && !/A\$/.test(bd), 'ITEM 5: the band reads plain figures, statement 18,280.75, books 19,963.00, difference 1,682.25, no A$ (' + bd.slice(0, 160) + ')');
   ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the account has its currency on record, so no currency question');
-  const head = flat(await p.textContent('[data-testid="bank-line"]'));
-  ok(/AUD/.test(head) && /Load another statement/.test(head), 'ITEM 5: the currency is said once, in the header line; ITEM 1: Load another statement is the secondary action (' + head.slice(0, 120) + ')');
+  /* CHANGED ON PURPOSE (W15-18, W15-20): the currency is said once in the band, large (IAS 1 para 51); Load another statement is the band's secondary button */
+  const head = flat(await p.textContent('[data-testid="bank-finish"]'));
+  ok(/All amounts in Australian dollars (AUD)/.test(head) && (await p.locator('[data-testid="bank-change"]').count()) === 1, 'ITEM 5: the currency is said once, in the band; ITEM 1: Load another statement is the secondary action (' + head.slice(0, 120) + ')');
   ok(!/A\$/.test(await p.textContent('[data-testid="bank-list"]')), 'ITEM 5: no A$ on any row');
   ok(/Add 10 lines to your books/.test(bd), 'the primary carries the count: "Add 10 lines to your books"');
   await p.screenshot({ path: path.join(OUT, 'r3-01-before-1366.png') });
@@ -61,18 +62,18 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(shown === 1, 'ITEM 2: the sheet shows the ONE line, not all of them (' + shown + ' rows)');
   const sheetText = flat(await p.locator('[data-testid="bank-sheet-lines"]').innerText());
   ok(!/say which account|from the list for/i.test(sheetText) && (sheetText.match(/What is this\?/g) || []).length === 1, 'ITEM 2: one short question, said once: "What is this?"');
-  ok(await p.locator('[data-testid="bd-looks-transfer"]').count() === 1 && !/New party|New supplier|New customer|Savings.*Use this party/i.test(sheetText), 'l16-bank-rules: the Savings line leads with "Looks like: Moved between my own accounts" and proposes no new party (' + sheetText.slice(0, 160) + ')');
+  ok(await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-looks-transfer"]').count() === 1 && !/New party|New supplier|New customer|Savings.*Use this party/i.test(sheetText), 'l16-bank-rules: the Savings line leads with "Looks like: Moved between my own accounts" and proposes no new party (' + sheetText.slice(0, 160) + ')');
   const ownList = flat(await p.locator('[data-testid="bank-sheet-lines"] select[data-act^=kindacct-transfer]').first().innerText().catch(() => ''));
-  ok(/Looks like a transfer to your own account\. Which one\?/.test(sheetText) && !/Savings account/.test(ownList) && await p.locator('[data-testid="bd-addown-name"]').count() === 1, 'l16-bank-rules (CLEAN Harbour: no savings account yet): the line says "Looks like a transfer to your own account. Which one?" and offers "+ add a savings account" (list: ' + ownList.slice(0, 80) + ')');
-  const stacked = await p.$$eval('.bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
+  ok(/Looks like a transfer to your own account\. Which one\?/.test(sheetText) && !/Savings account/.test(ownList) && await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-addown-name"]').count() === 1, 'l16-bank-rules (CLEAN Harbour: no savings account yet): the line says "Looks like a transfer to your own account. Which one?" and offers "+ add a savings account" (list: ' + ownList.slice(0, 80) + ')');
+  const stacked = await p.$$eval('[data-testid="bank-sheet-lines"] .bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
   ok(stacked, 'ITEM 2: each choice that has a list carries it right under its own button');
   ok(await p.locator('[data-testid="bank-sheet-lines"] input[data-act=pname]').count() === 0 && await p.locator('[data-testid="bank-sheet-lines"] select[data-act=acct]').count() === 0, 'ITEM 2: the New party and Or an account boxes are not under the question from the start');
   const asks = await p.locator('[data-testid="bank-sheet-lines"] [data-act=kind]').count();
   console.log('   choices as buttons: ' + asks);
   ok(asks >= 2, 'ITEM 2: the choices are buttons (' + asks + ')');
   await p.screenshot({ path: path.join(OUT, 'b9-02-one-line-answer-1366.png') });
-  await p.locator('[data-testid="bd-addown-name"]').fill('Savings account 4411');
-  await p.locator('[data-testid="bd-addown"]').click();
+  await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-addown-name"]').fill('Savings account 4411');
+  await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-addown"]').click();
   await p.waitForTimeout(2500);
   const one = flat(await p.locator('[data-testid="bank-sheet-lines"] .bd-row').first().innerText());
   ok(/Ready to add/.test(one) && /Savings account 4411/.test(one), 'the one line is Ready to add, Dr Savings account 4411 (' + one.slice(-90) + ')');
