@@ -22,7 +22,7 @@
  * title row is drawn — a page with no chrome of its own mounts CBAvatar there, and the head stays three rows. The unit draws the span
  * and reads nothing from the page: what goes in it is the page's business.
  *
- * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · sort · cell(row)), its grouping, filters, sorts, notices,
+ * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · keep · sort · cell(row)); keep:true = never left out for width (a status, a code, the row's action), its grouping, filters, sorts, notices,
  * period, what a row opens to (`next`), row actions and bulk operations. WHAT THE UNIT OWNS, FOR EVERY LIST, AND NO LIST
  * CAN OPT OUT OF: the three-row head, ADJUSTABLE COLUMNS (drag, touch, ← → in 8 px, double-click resets, never narrower than
  * the label, remembered), ONLY THE ROWS SCROLL (the head is fixed, the rows fill the rest of the window, the column header
@@ -244,7 +244,7 @@
     '.cbl .cbl-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
     /* a phone, or any narrow pane: one card per row, label : value, nothing sideways (a container query, not the page width) */
     '@container list (max-width: 620px){',
-    '.cbl .cbl-grid{min-width:0}.cbl .cbl-hdr{display:none}',
+    '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
     '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
     '.cbl .cbl-row .cbl-cell{padding:2px 0}',
     '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
@@ -590,7 +590,7 @@
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
-  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
@@ -598,7 +598,77 @@
   function stretchable(c) {
     return !c.num && !c.money && !c.mono && c.pin !== 'end' && c.type !== 'num' && c.type !== 'money' && !/^(code|status|state|date|id|no|ref|type)$/i.test(String(c.label || c.key).trim());
   }
-  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }.
+  /** what a short column really needs: its three longest cells set on one line in the list's own font (the character estimate runs wide, Age took 242 px for a date and a few words). Returns { key: px }. */
+  function inkWidths(list, cols, sample) {
+    var host = list.el.querySelector(".cbl-list") || list.el,
+      probe = document.createElement('div'),
+      out = {};
+    probe.className = 'cbl-row';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:absolute;visibility:hidden;display:block;width:4000px;white-space:nowrap;left:0;top:0';
+    host.appendChild(probe);
+    cols.forEach(function (c) {
+      var longest = sample
+        .map(function (row) { return cellOf(list, c, row); })
+        .sort(function (first, second) { return plainText(second).length - plainText(first).length; })
+        .slice(0, 3);
+      out[c.key] = longest.reduce(function (widest, html) {
+        probe.innerHTML = '<div class="cbl-cell" style="display:inline-block;width:auto">' + html + '</div>';
+        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 2);
+      }, 0);
+    });
+    host.removeChild(probe);
+    return out;
+  }
+  /** the R47 half of autoFit: squeeze `auto` (width per key) into `avail`; returns the keys left out. */
+  function fitWidths(list, cols, auto, chars, avail) {
+    /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
+       Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
+       3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
+    var fixed = 0, free = [], natural = {}, sc = null;
+    cols.forEach(function (c) {
+      if (typeof list.s.widths[c.key] === 'number') fixed += widthOf(list, c);
+      else { free.push(c); natural[c.key] = auto[c.key]; }
+      if (c.key === auto.stretch) sc = c;
+    });
+    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
+    var live = free.slice(), hide = [];
+    var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
+    var squeeze = function (shrink) {
+      live.forEach(function (c) { auto[c.key] = natural[c.key]; });
+      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
+      if (sc && auto[sc.key] != null && over > 0) {
+        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
+        over = need() - avail;
+      }
+      for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
+        var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(list, c)); }, 0);
+        if (room <= 0) break;
+        var cut = Math.min(over, room);
+        others.forEach(function (c) {
+          var share = Math.max(0, auto[c.key] - minW(list, c));
+          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+        });
+        over = need() - avail;
+      }
+      return over;
+    };
+    var over = squeeze(false);
+    while (over > 0 && !list.card && !list.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
+      var leave = null;
+      live.forEach(function (c) {
+        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
+      });
+      if (!leave) break;
+      hide.push(leave.key);
+      live = live.filter(function (c) { return c !== leave; });
+      over = squeeze(false);
+    }
+    if (over > 0) over = squeeze(true);
+    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(list, sc), auto[sc.key] - over); /* last resort: below its floor */
+    return hide;
+  }
+  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows, avail) {
     var auto = {},
@@ -621,35 +691,24 @@
         if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
       });
     auto.stretch = named ? named.key : best ? best.key : null;
+    var shortPx = inkWidths(I, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') return;
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
       auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
+      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(I, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
     });
-    /* R47: a list always fits its box. Over the width: the stretch column gives way first (it wraps), then the others shrink toward their minimum. A width the person dragged is theirs and is not touched. */
-    var fixed = 0, free = [];
-    cols.forEach(function (c) {
-      if (typeof I.s.widths[c.key] === 'number') fixed += widthOf(I, c);
-      else free.push(c);
-    });
-    var need = function () { return free.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
-    var over = avail > 0 ? need() - avail : 0;
-    if (over > 0 && auto.stretch && auto[auto.stretch] != null) {
-      var sc = cols.filter(function (c) { return c.key === auto.stretch; })[0];
-      auto[sc.key] = Math.max(minW(I, sc), auto[sc.key] - over);
-      over = need() - avail;
-    }
-    for (var pass = 0; over > 0 && pass < 4; pass++) {
-      var room = free.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(I, c)); }, 0);
-      if (room <= 0) break;
-      var cut = Math.min(over, room);
-      free.forEach(function (c) {
-        var share = Math.max(0, auto[c.key] - minW(I, c));
-        auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
-      });
-      over = need() - avail;
-    }
+    var hide = fitWidths(I, cols, auto, chars, avail);
     I.auto = sample.length ? auto : null;
+    I.leftOut = hide;
+    return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
+  }
+  /** autoFit, then the toolbar says so when the number of columns left out changed (the "+2" cue) */
+  function fitCols(list, cols, rows, box) {
+    var before = leftOutKeys(list).length,
+      shown = autoFit(list, cols, rows, box.clientWidth - (leadOn(list) ? 34 : 0) - 2);
+    if (before !== leftOutKeys(list).length) paintTools(list);
+    return shown;
   }
   function widthOf(I, c) {
     var w = I.s.widths[c.key];
@@ -1175,7 +1234,7 @@
       '" aria-haspopup="dialog" aria-expanded="' +
       (list.pop === 'cols') +
       '">⚙' +
-      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span></button>' +
+      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span>' + leftOutCue(list, keyText) + '</button>' +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>';
     if (listOptions.csv !== false && toolOptions.csv !== false)
@@ -1635,6 +1694,16 @@
       '</button></div></div>'
     );
   }
+  /** the small "+2 columns" cue on the Columns button: columns the row had no room for are named, never dropped silently (the chooser tags each one) */
+  function leftOutKeys(I) {
+    return I.card ? [] : I.leftOut || [];
+  }
+  function leftOutCue(list, keyText) {
+    var left = leftOutKeys(list).length;
+    if (!left) return '';
+    var words = T(list, '+{n} columns hidden — no room', { n: left });
+    return ' <span class="cbl-noroom" data-testid="cols-more-' + keyText + '" title="' + esc(words) + '" aria-label="' + esc(words) + '">+' + left + '</span>';
+  }
   function colsPop(I) {
     var all = choosable(I),
       shown = shownKeys(I),
@@ -1647,7 +1716,7 @@
         return shown.indexOf(item.key) < 0;
       }),
       k = esc(I.key),
-      nr = noRoomKeys(I);
+      nr = noRoomKeys(I).concat(leftOutKeys(I)); /* no room: a card's extra fields, and the columns the last paint left out (autoFit) */
     function row(c, i, on) {
       return (
         '<div class="cbl-colrow">' +
@@ -1820,7 +1889,7 @@
     var m = matched(I),
       items = itemsOf(I, m.rows);
     if (m.rows.length && s.view === 'grid') {
-      autoFit(I, cols, m.rows, box.clientWidth - (leadOn(I) ? 34 : 0) - 2);
+      cols = fitCols(I, cols, m.rows, box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
       I.fitW = box.clientWidth;
       tpl = template(I, cols);
       hdr = headerHTML(I, cols, tpl, false);
