@@ -4646,7 +4646,7 @@ async function bkRemindTarget(pid) {
   var reach = null;
   try {
     var rec = await api('crmParty', { params: { id: pid } });
-    if (rec) reach = !!(rec.phone || rec.email || rec.on_chitbridge || rec.user_id);
+    if (rec) reach = !!(rec.phone || rec.email || rec.on_chitbridge);
   } catch (failure) {
     bkQuiet('remind-reach', failure);
   }
