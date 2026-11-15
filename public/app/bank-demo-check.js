@@ -2,7 +2,7 @@
  * OWNS      calling CBBankStatementCheck.check (engines #146) on the parsed statement with the demo's own sample state (one demo bank account, no earlier statements, nothing posted), and painting its answer
  *           into the page's check slot: a refusal stops with the reason; each "confirm" item gets a tick the owner presses before line work; an "already done" file says so, line by line in the engine's words.
  * CALLED BY public/app/bank-demo.js (CBBankDemoCheck.create(host)); loaded before it by public/bank-demo.html.
- * FLOW      load → run(text, name, go) → check() → verdict refuse: show the reasons, stop · confirm: show the ticks, wait · go: go() reads the statement into the books page
+ * FLOW      load → checkFile(text, name, go) → check() → verdict refuse: show the reasons, stop · confirm: show the ticks, wait · go: go() reads the statement into the books page
  * ⭐ NO WORDS OF OUR OWN FOR A FINDING: items[].why is the engine's sentence, shown as given. With no CBBankStatementCheck on the page (the engines adopt has not landed) the check is skipped and go() runs at once.
  * ⭐ AN ACCOUNT NUMBER IS NEVER SHOWN: only the masked tail the engine returns. NO MONEY IS COMPUTED HERE.
  * CARD      16-finance/bank-reconciliation-and-bank-rail
@@ -47,8 +47,8 @@
     slot.hidden = false;
     slot.innerHTML = (result.items || []).filter(function (item) { return item.level !== 'info' || item.why; }).map(itemHtml).join('') + alreadyHtml(result.already);
   }
-  /** run the check for a file: go() is called with the result when the verdict allows line work, never before */
-  function run(text, name, go) {
+  /** check a file: go() is called with the result when the verdict allows line work, never before */
+  function checkFile(text, name, go) {
     var parsed = root.CBBankRecon && root.CBBankRecon.parse(text, host.parseOpts());
     if (!root.CBBankStatementCheck || !parsed || !parsed.ok) return go(null);
     pending = { text: text, name: name, go: go, confirmed: [], parsed: parsed };
@@ -66,7 +66,7 @@
   }
   function create(pageHost) {
     host = pageHost;
-    return { run: run, actions: { checkconfirm: function (target) { if (pending) confirmCode(target); return true; } } };
+    return { checkFile: checkFile, actions: { checkconfirm: function (target) { if (pending) confirmCode(target); return true; } } };
   }
   root.CBBankDemoCheck = { create: create };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
