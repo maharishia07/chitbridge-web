@@ -43,28 +43,28 @@ of file each thing is; this says what already does the job.
 | 59 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 58 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 56 | `toast` | `accounts-shell.js` |  |
+| 56 | `read` | `books-grant-drill.js` |  |
 | 56 | `view` | `books-payables.js` | group: |
 | 56 | `pack` | `books-store.js` |  |
 | 56 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 56 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
-| 55 | `read` | `books-grant-drill.js` |  |
 | 55 | `host` | `chit-sheet.js` |  |
 | 54 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 54 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 54 | `count` | `money-check.js` | the count /health reads |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
-| 48 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 50 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 48 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
 | 47 | `facts` | `bill-steps.js` | MY state_log — |
 | 46 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
+| 45 | `button` | `bank-preview-ui.js` | var escapeHtml = ctx.escapeHtml; |
 | 45 | `body` | `books-acting.js` | a write's body: |
 | 45 | `rules` | `docnumber.js` | the rule set for a country — |
 | 44 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
-| 44 | `button` | `bank-preview-ui.js` | var escapeHtml = ctx.escapeHtml; |
 | 44 | `holds` | `bounds.js` | holds(fragment, figure) → true when a figure is a finite number inside the fragment's min / max (the derived f |
 | 44 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
@@ -198,6 +198,7 @@ of file each thing is; this says what already does the job.
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 17 | `asks` | `readiness.js` | asks(origin, vertical) → { asked: |
 | 17 | `pick` | `scalecode.js` | pull out the digits one letter marks, as a string, in order |
+| 16 | `facts` | `books-grant-view.js` |  |
 | 16 | `bkMoney` | `cap-books.js` |  |
 | 16 | `bkDate` | `cap-books.js` |  |
 | 16 | `when` | `cap-mark.js` |  |
@@ -208,4 +209,3 @@ of file each thing is; this says what already does the job.
 | 16 | `terms` | `books-store.js` | the party's credit terms, from whichever list holds them (a customer's for a sale, a supplier's for a purchase |
 | 16 | `where` | `istest.js` | READING is_test is fine and stays — |
 | 16 | `decimals` | `money.js` | No Intl fallback and no silent 2: |
-| 16 | `close` | `person-session.js` | When device_id is null the jti is looked for under every device (an owner revoking a jti from the list). |
