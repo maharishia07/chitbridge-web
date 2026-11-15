@@ -182,7 +182,7 @@
     el('bd_figs').hidden = false;
     el('bd_figs').innerHTML =
       labKit.figure({ label: 'Statement balance, ' + dateWords(recon.statement_date || lastDate(model)), value: amountText(recon.closing_statement), note: 'Closing balance on the file' }) +
-      labKit.figure({ label: 'Balance in the books', value: amountText(recon.closing_books_before), note: 'Before anything is added' }) +
+      labKit.figure({ label: 'Balance in the books', value: amountText(recon.closing_books_before), note: 'In the demo bank account' }) +
       labKit.figure({ label: 'Difference', value: amountText(recon.difference_before), done: held, total: total, good: closed, note: closed ? 'All ' + total + ' lines are in the books' : plural(open, 'statement line is', 'statement lines are') + ' not in the books' });
   }
   function lastDate(model) {
