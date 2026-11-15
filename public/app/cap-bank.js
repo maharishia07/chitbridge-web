@@ -51,8 +51,8 @@ const bkbStatus = {
   settled: ['green', 'Settled by chit'],
   told: ['blue', 'Party told us'],
   accepted: ['green', 'Accepted'],
-  matched: ['green', 'Matched'],
-  suggested: ['amber', 'Suggested'],
+  matched: ['green', 'In your books'],
+  suggested: ['amber', 'Ready to add'],
   'bank-only': ['red', 'Needs you'],
   asked: ['blue', 'Asked'],
   check: ['amber', 'Check'],
@@ -261,6 +261,7 @@ async function bankPick(input) {
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
+  BKB.postedLocal = {};
   if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* a statement read again starts the sheet's answers afresh */
   BKB.file = { name: file.name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
@@ -484,14 +485,11 @@ function bankLayout(loaded, fill) {
   document.body.classList.toggle('bk-on', !!(loaded && fill));
 }
 /** the one line the load form folds to: which account, which file, how many lines, and the way back to the form */
-function bankLineHtml(withStore) {
+function bankLineHtml() {
   const acct = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct))[0] || {};
   return (
     '<span class="bk-name"><b>' + bkbE(tx('Bank')) + '</b> · ' + bkbE(acct.name || BKB.stmtAcct) + '</span><span class="bk-file">' +
     bkbE((BKB.file && BKB.file.name) || '') + ' · ' + bkbE(txn('{count} line', '{count} lines', BKB.parsed.lines.length)) + '</span>' +
-    (withStore && typeof bankStoreLine === 'function'
-      ? '<span class="bk-store" id="bk_store_line" data-testid="bank-store-line" data-mode="' + bankStoreState.mode + '">' + bkbE(bankStoreLine()) + '</span>'
-      : '') +
     '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Change statement')) + '</button>'
   );
 }
@@ -507,7 +505,7 @@ function bankChange(btn) {
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
 const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
 /** the More menu: the Statement view and the file of the reconciliation; one button opens it, Esc and a press outside close it */
-function bankMoreHtml(worked) {
+function bankMoreHtml(worked, withStore) {
   const download =
     worked && worked.ok
       ? '<button data-cbsid="BKS014-B02" type="button" role="menuitem" class="bk-mi" data-testid="bank-brs-download" onclick="bankMoreToggle(false);bankBrsDownload()">' + bkbE(tx('Download the reconciliation')) + '</button>'
@@ -515,6 +513,9 @@ function bankMoreHtml(worked) {
   return (
     '<span class="bk-menu"><button data-cbsid="BKS014-B19" type="button" class="act" id="bk_more" data-testid="bank-more" aria-haspopup="menu" aria-expanded="false" onclick="bankMoreToggle()">' +
     bkbE(tx('More')) + ' ▾</button><div class="bk-pop" id="bk_pop" role="menu" data-testid="bank-more-menu" hidden>' +
+    (withStore && typeof bankStoreLine === 'function'
+      ? '<div class="bk-note" id="bk_store_line" data-testid="bank-store-line" data-mode="' + bankStoreState.mode + '">' + bkbE(bankStoreLine()) + '</div>'
+      : '') +
     '<button data-cbsid="BKS014-B01" type="button" role="menuitem" class="bk-mi" data-testid="bank-tab-brs" onclick="bankMoreToggle(false);BKB.tab=\'brs\';bankPaint()">' + bkbE(tx('The statement and sign-off')) + '</button>' +
     download + '</div></span>'
   );
@@ -566,7 +567,7 @@ function bankPaint() {
       : '<div class="supacts"><button data-cbsid="BKS014-B22" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
         bkbE(tx('Back to the lines')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
   const line = bkbEl('bk_line');
-  if (line) line.innerHTML = bankLineHtml(lines);
+  if (line) line.innerHTML = bankLineHtml();
   bankLayout(true, lines);
   if (lines) bankList();
   else bankBrsPaint();
@@ -608,7 +609,7 @@ function bankFinish() {
   const fig = bankFigures();
   const part = (label, text, testId, sub) =>
     '<div class="bk-fig" data-testid="' + testId + '"><span class="bk-l">' + bkbE(tx(label)) + '</span><b>' + bkbE(text) + '</b>' + (sub ? '<span class="bk-sub">= ' + bkbE(sub) + '</span>' : '') + '</div>';
-  const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs) + '</div>';
+  const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
     return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</span>' + acts + '</div>';
   return (
@@ -671,7 +672,7 @@ function bankList() {
         label: tx('Status'),
         prio: 1,
         sort: 'status',
-        w: 190,
+        w: 150,
         html: true,
         cell: (r) =>
           '<span class="step ' +
@@ -700,14 +701,24 @@ function bankList() {
           '</div>'
       },
       {
-        key: 'amount',
-        label: tx('Amount'),
+        key: 'out',
+        label: tx('Out'),
         prio: 3,
         sort: 'amount',
         num: true,
-        w: 160,
+        w: 120,
         html: true,
-        cell: (r) => bkbE(tx(r.in ? 'In' : 'Out') + ' ' + bkMoney(r.amount_minor))
+        cell: (r) => bkbAmountCell(r, true)
+      },
+      {
+        key: 'in',
+        label: tx('In'),
+        prio: 3,
+        sort: 'amount',
+        num: true,
+        w: 120,
+        html: true,
+        cell: (r) => bkbAmountCell(r, false)
       },
       {
         key: 'party',
@@ -765,7 +776,7 @@ function bankList() {
       },
       {
         id: 'record',
-        icon: '₹',
+        icon: bkSymbol(bkCur()) || '¤',
         label: 'Record from the chit',
         tid: 'bank-record',
         when: (r) => r.status === 'told',
@@ -792,7 +803,7 @@ function bankList() {
       },
       {
         id: 'dues',
-        icon: '₹',
+        icon: bkSymbol(bkCur()) || '¤',
         label: 'Record it in Dues',
         tid: 'bank-dues',
         when: (r) => own && r.status !== 'told' && bankIsParty(r),
@@ -812,6 +823,8 @@ function bankList() {
     empty: { title: tx('Nothing in that file') }
   });
 }
+/** one money cell of the Out | In pair: the amount in the UI face, only in the column its side belongs to */
+const bkbAmountCell = (r, outSide) => (!r.in === outSide ? '<span style="font-family:var(--cl-ui);font-variant-numeric:tabular-nums">' + bkbE(bkMoney(r.amount_minor)) + '</span>' : '');
 const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|payment_made|cheque_dishonoured)$/.test(r.sugg.event.type));
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */

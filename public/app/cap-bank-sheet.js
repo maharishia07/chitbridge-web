@@ -87,6 +87,9 @@ function bkshPairing(lines) {
   (bankStoreState.posted || []).forEach((row) => {
     if (row.ref && row.entry_no) posted[row.ref] = row.entry_no;
   });
+  Object.keys(bkshBook().postedLocal || {}).forEach((ref) => {
+    posted[ref] = bkshBook().postedLocal[ref]; /* what this very session posted: its reply named the entry, so the pairing never waits for the log */
+  });
   const acct = bkshStatementAccount();
   return { line_refs: engine.project.refsOf(lines, acct.name || String(bkshBook().acct), lines), posted };
 }
@@ -200,8 +203,12 @@ function bkshEntry(key) {
 function bkshNoteAdded() {
   const results = (BKSH.ctl && BKSH.ctl.view().results) || {};
   BKSH.added = BKSH.added || {};
+  bkshBook().postedLocal = bkshBook().postedLocal || {};
   Object.keys(results).forEach((ref) => {
-    if (results[ref] && results[ref].ok) BKSH.added[ref] = true;
+    if (results[ref] && results[ref].ok) {
+      BKSH.added[ref] = true;
+      if (results[ref].entry_no) bkshBook().postedLocal[ref] = results[ref].entry_no;
+    }
   });
 }
 /** accept each added line that now reads as matched, by its own client_ref (one to one by occurrence) */

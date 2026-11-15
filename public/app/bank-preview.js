@@ -300,7 +300,7 @@
         'Dated: ' + dateText(reach.from) + (reach.to && reach.to !== reach.from ? ' to ' + dateText(reach.to) : ''),
         'Currency: ' + reach.currency,
         parties,
-        reach.needs_you + ' still need you. They are not added.' + held
+        reach.needs_you + ' still need you; they are left out for now.' + held
       ].filter(Boolean)
     };
   }

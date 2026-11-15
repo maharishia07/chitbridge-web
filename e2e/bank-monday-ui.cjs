@@ -72,6 +72,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, who || OWNER);
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' || /bank-quiet|quiet/i.test(m.text())) threw.push('console: ' + m.text().slice(0, 200)); });
     await p.goto(base + '/accounts.html#bank');
     await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p };
