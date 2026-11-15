@@ -108,12 +108,13 @@ const NOT_WEB_CODE = /(^|\/)(vendor|_design|fixture|node_modules)\//; /* over th
 function addWebCode(webRoot, addFile) {
   const publicDir = path.join(webRoot, 'public');
   const isOwnCode = (filePath) => !NOT_WEB_CODE.test(path.relative(webRoot, filePath).split(path.sep).join('/'));
-  walk(publicDir, (filePath) => /\.html$/.test(filePath) && isOwnCode(filePath) && (path.dirname(filePath) === publicDir || /\/cmdb\//.test(filePath)))
+  const posix = (filePath) => filePath.split(path.sep).join('/'); /* the folder tests below read forward slashes; on Windows the walk returns backslashes, which dropped public/cmdb/record.html and tagged engine copies as scripts (R2 D6, 15 Nov) */
+  walk(publicDir, (filePath) => /\.html$/.test(filePath) && isOwnCode(filePath) && (path.dirname(filePath) === publicDir || /\/cmdb\//.test(posix(filePath))))
     .sort()
     .forEach((filePath) => addFile('web', filePath, 'page'));
   walk(publicDir, (filePath) => /\.js$/.test(filePath) && !/\.min\.js$/.test(filePath) && isOwnCode(filePath))
     .sort()
-    .forEach((filePath) => addFile('web', filePath, /\/engine\//.test(filePath) ? 'web-engine' : 'web-script'));
+    .forEach((filePath) => addFile('web', filePath, /\/engine\//.test(posix(filePath)) ? 'web-engine' : 'web-script'));
   for (const dir of ['tools', 'scripts'])
     walk(path.join(webRoot, dir), (filePath) => /\.(cjs|js|mjs)$/.test(filePath) && !/\.test\.(cjs|js|mjs)$/.test(filePath) && isOwnCode(filePath))
       .sort()
@@ -459,7 +460,7 @@ function build() {
     if (f.kind !== 'route-file') continue;
     const code = f.scan.code;
     /* router.post('/x', …)  — and routes/books.js's own helper  route('post', '/x', …) */
-    const re = /\b(?:router\.(get|post|put|patch|delete|all)\s*\(\s*(['"`])|route\s*\(\s*(['"])(?=\s*['"]\s*,\s*['"]))/g;
+    const re = /\b(?:router\.(get|post|put|patch|delete|options|all)\s*\(\s*(['"`])|route\s*\(\s*(['"])(?=\s*['"]\s*,\s*['"]))/g;
     const found = [];
     let m;
     while ((m = re.exec(code))) {
