@@ -159,7 +159,16 @@ W.run('marks', async (w) => {
     await page.waitForSelector('[data-mark] button[data-mk]', { timeout: 15000 });
     const checked = await txt(chip(0)), query = await txt(chip(1)), ghosts = await page.locator('[data-mark] button[data-mk="check"]').count();
     await shot('06-owner-daybook-chips');
-    return { ok: /Checked/.test(checked) && /Query/.test(query) && ghosts === 0, saw: checked + ' · ' + query + ' · check chips ' + ghosts };
+    return { ok: /Checked/.test(checked) && /Question from Harbour Audit/.test(query) && !/^Query/.test(query) && ghosts === 0, saw: checked + ' · ' + query + ' · check chips ' + ghosts };
+  });
+  await w.step('O1b', 'the owner · W15-25: the queried row has a coloured bar on its LEFT edge; "Waiting for you · 1" shows only the Query still waiting for his answer; pressed again it shows all', async () => {
+    const bar = await page.evaluate((id) => { const h = document.querySelector('[data-mark*="' + id + '"]'), r = h && h.closest('.cbl-row'); return r ? { cls: r.className, shadow: getComputedStyle(r).boxShadow } : null; }, E[1]);
+    const chipTxt = await txt(T('mk-chip-waiting'));
+    await page.click(T('mk-chip-waiting')); await page.waitForTimeout(400);
+    const rowsOn = await page.locator('[data-mark] button[data-mk]').count(), pressed = await page.getAttribute(T('mk-chip-waiting'), 'aria-pressed'); await shot('06c-owner-waiting-filter');
+    await page.click(T('mk-chip-waiting')); await page.waitForTimeout(400);
+    const rowsAll = await page.locator('[data-mark] button[data-mk]').count();
+    return { ok: !!bar && /mk-wait/.test(bar.cls) && /rgb/.test(bar.shadow) && /Waiting for you · 1/.test(chipTxt) && pressed === 'true' && rowsOn === 1 && rowsAll === 2, saw: JSON.stringify(bar) + ' · ' + chipTxt + ' · pressed ' + pressed + ' · rows ' + rowsOn + ' → ' + rowsAll };
   });
   await w.step('B1', 'the owner bell rings for the auditor Query and names the entry (number · day · amount)', async () => {
     S.bellFor = 'owner'; await page.reload(); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
@@ -171,9 +180,25 @@ W.run('marks', async (w) => {
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
     const q = await txt(T('mk-question')), setBtns = await page.locator(T('mk-set-clear')).count(), composers = await page.locator('dialog.mk-sheet [data-rt-act="text"]').count();
+    const focusInComposer = await page.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-testid') === 'msg-body');
     await page.fill(T('msg-body'), 'Posted to 4100 because it is a lease.'); await shot('07-owner-sheet-reply');
-    await page.click(T('msg-send')); await page.waitForTimeout(800);
-    return { ok: /Why was rent posted/.test(q) && setBtns === 0 && composers === 1 && S.replies.length === 1 && S.replies[0].b.message_text === 'Posted to 4100 because it is a lease.' && !S.replies[0].b.thread_type, saw: q + ' · set buttons ' + setBtns + ' · composers ' + composers + ' · replies ' + S.replies.length };
+    await page.press(T('msg-body'), 'Enter'); await page.waitForTimeout(800); /* Enter sends (W15-26) */
+    return { ok: focusInComposer && /Why was rent posted/.test(q) && setBtns === 0 && composers === 1 && S.replies.length === 1 && S.replies[0].b.message_text === 'Posted to 4100 because it is a lease.' && !S.replies[0].b.thread_type, saw: q + ' · set buttons ' + setBtns + ' · composers ' + composers + ' · replies ' + S.replies.length };
+  });
+  await w.step('O3', 'the owner sheet is a chat (W15-26/28): the auditor\'s question on the LEFT, his reply on the RIGHT, name and time on each, newest at the bottom, the list opens on the newest, the reply box pinned under it; Shift+Enter is a new line and sends nothing', async () => {
+    await page.waitForSelector('dialog.mk-sheet [data-testid="rt-row"]', { timeout: 8000 });
+    const g = await page.evaluate(() => {
+      const d = document.querySelector('dialog.mk-sheet'), list = d.querySelector('.rt-list'), comp = d.querySelector('[data-testid="rt-composer"]');
+      const bubbles = Array.from(list.querySelectorAll('.rt-m')).map((b) => ({ side: b.getAttribute('data-side'), head: b.querySelector('.rt-h').innerText.replace(/\s+/g, ' ').trim(), top: b.getBoundingClientRect().top, left: b.getBoundingClientRect().left, right: b.getBoundingClientRect().right }));
+      const lr = list.getBoundingClientRect(), cr = comp.getBoundingClientRect(), dr = d.getBoundingClientRect();
+      return { bubbles, listAboveComposer: lr.bottom <= cr.top + 1, atNewest: list.scrollTop + list.clientHeight >= list.scrollHeight - 2, composerInside: cr.bottom <= dr.bottom + 1, sideways: d.scrollWidth <= d.clientWidth + 1, twice: (d.innerText.match(/cannot be unsent/g) || []).length, actionAbove: !!d.querySelector('[data-testid="rt-above"]') };
+    });
+    const before = S.replies.length;
+    await page.fill(T('msg-body'), 'first line'); await page.press(T('msg-body'), 'Shift+Enter'); await page.keyboard.type('second line');
+    const val = await page.inputValue(T('msg-body')), noPost = S.replies.length === before; await shot('07b-owner-chat-sheet');
+    await page.fill(T('msg-body'), '');
+    const b = g.bubbles;
+    return { ok: b.length === 2 && b[0].side === 'theirs' && b[1].side === 'mine' && b[0].top < b[1].top && b[0].left < b[1].left && /Harbour|A\. Auditor/.test(b[0].head) && /\d{1,2}:\d{2}|\d{4}/.test(b[0].head) && /You/.test(b[1].head) && g.listAboveComposer && g.atNewest && g.composerInside && g.sideways && g.twice <= 1 && val === 'first line\nsecond line' && noPost, saw: JSON.stringify(g) + ' · value ' + JSON.stringify(val) + ' · no post ' + noPost };
   });
   await page.keyboard.press('Escape');
 
@@ -188,10 +213,12 @@ W.run('marks', async (w) => {
     await openDaybook();
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector('[data-testid="rt-row"]', { timeout: 8000 });
     const thread = await txt(T('mk-thread')), composer = await page.locator(T('msg-body')).count(); await shot('08-auditor-sees-reply');
+    const aud = await page.evaluate(() => { const d = document.querySelector('dialog.mk-sheet'), bs = Array.from(d.querySelectorAll('.rt-list .rt-m')).map((b) => b.getAttribute('data-side')), act = d.querySelector('[data-testid="mk-actbar"]'), comp = d.querySelector('[data-testid="rt-composer"]'), list = d.querySelector('.rt-list'); return { bs, above: !!act && !list.contains(act) && act.getBoundingClientRect().bottom <= comp.getBoundingClientRect().top + 1 && act.getBoundingClientRect().top >= list.getBoundingClientRect().bottom - 1 }; });
+    await shot('08d-auditor-chat-sheet');
     await page.click(T('mk-set-clear')); await page.waitForSelector(T('mk-sheet'), { state: 'detached', timeout: 8000 }); await page.waitForTimeout(500);
     const bar = await txt(T('mk-count')), f = await txt(T('mk-filter')), c = await txt(chip(1));
     await shot('09-auditor-cleared');
-    return { ok: composer === 1 && !/View only/.test(thread) && /lease/.test(thread) && /Checked/.test(c) && /2 of 3/.test(bar) && /All queries · 0/.test(f) && sets().slice(-1)[0].b.kind === 'checked', saw: thread.slice(0, 80) + ' · ' + c + ' · ' + bar + ' · ' + f };
+    return { ok: aud.bs.join() === 'mine,theirs' && aud.above && composer === 1 && !/View only/.test(thread) && /lease/.test(thread) && /Checked/.test(c) && /2 of 3/.test(bar) && /All queries · 0/.test(f) && sets().slice(-1)[0].b.kind === 'checked', saw: thread.slice(0, 80) + ' · ' + c + ' · ' + bar + ' · ' + f };
   });
   await w.step('Q2', 'a NEW Query on the same entry: the thread opens clean, the old reply stays behind', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 });
@@ -216,8 +243,10 @@ W.run('marks', async (w) => {
     const a = await noScroll(); await shot('11-phone-daybook');
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForTimeout(400);
     const b = await noScroll(), box = await page.evaluate(() => { const r = document.querySelector('dialog.mk-sheet').getBoundingClientRect(); return { w: r.width <= window.innerWidth + 1, h: r.height <= window.innerHeight + 1 }; });
+    await page.waitForSelector('dialog.mk-sheet [data-testid="msg-body"]', { timeout: 8000 }).catch(() => {});
+    const full = await page.evaluate(() => { const d = document.querySelector('dialog.mk-sheet').getBoundingClientRect(), c = document.querySelector('dialog.mk-sheet [data-testid="rt-composer"]'), r = c && c.getBoundingClientRect(); return { tall: d.height >= window.innerHeight - 2, composer: !!r && r.bottom <= window.innerHeight + 1 && r.top >= 0 }; });
     await shot('12-phone-sheet'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-    return { ok: a.y && a.x && b.y && b.x && box.w && box.h, saw: 'list ' + a.y + '/' + a.x + ' · with sheet ' + b.y + '/' + b.x + ' · sheet inside ' + box.w + '/' + box.h };
+    return { ok: a.y && a.x && b.y && b.x && box.w && box.h && full.tall && full.composer, saw: 'full height ' + full.tall + ' · composer on screen ' + full.composer + ' · ' + 'list ' + a.y + '/' + a.x + ' · with sheet ' + b.y + '/' + b.x + ' · sheet inside ' + box.w + '/' + box.h };
   });
   await w.step('K1', 'keyboard only · focus a chip, Enter opens the sheet, Escape closes it and focus returns to the chip', async () => {
     await page.setViewportSize(WIDE); await page.waitForTimeout(300);
