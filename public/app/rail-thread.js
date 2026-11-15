@@ -92,6 +92,8 @@
     audDispute: '⚑ Dispute — only its members see this',
     send: 'Send',
     write: 'Write a reply',
+    count1: '1 message',
+    countN: '{n} messages',
     sending: 'Sending…',
     sentInt: '🔒 Note added — team only',
     sentExt: '↔ Sent — {party} notified',
@@ -168,7 +170,7 @@
     '.rt-no{border:1px dashed var(--line,#DDD6C6);border-radius:9px;padding:9px 11px;color:var(--grey,#5E594D);font-size:var(--fs-2,14px)}' +
     '.rt-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
     '.rt-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;max-height:var(--rt-max,min(46vh,380px));min-height:64px;padding:4px 2px;overscroll-behavior:contain}' +
-    '.rt.fill{height:100%;min-height:0}.rt.fill .rt-list{flex:1 1 auto;max-height:none}.rt-n{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+    '.rt.fill{height:100%;min-height:0}.rt.fill .rt-list{flex:1 1 auto;max-height:none}.rt-n{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);align-self:center}' +
     '.rt-above{display:flex;flex-direction:column;gap:6px}.rt-above:empty{display:none}' +
     '.rt-box{display:flex;gap:8px;align-items:flex-end}.rt-box textarea{flex:1 1 auto;min-width:0;min-height:44px;max-height:140px;resize:none}.rt-box .rt-send{flex:0 0 auto;min-height:44px}' +
     '.rt-m{border:1px solid var(--line,#DDD6C6);border-radius:14px 14px 14px 4px;padding:8px 12px;background:var(--card,#fff);max-width:86%;align-self:flex-start;box-sizing:border-box;overflow-wrap:anywhere}' +
@@ -477,7 +479,7 @@
     if (!m.rows.length) return lead + (o.lead ? '' : '<div class="rt-empty" data-testid="rt-empty">' + esc(T(o.line_id ? W.noneLine : W.none)) + '</div>');
     return (
       '<div class="rt-n" data-testid="rt-count">' +
-      m.rows.length +
+      esc(fill(T(m.rows.length === 1 ? W.count1 : W.countN), { n: m.rows.length })) +
       '</div>' +
       lead +
       m.rows
