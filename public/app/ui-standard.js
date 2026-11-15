@@ -360,9 +360,7 @@ var CBUiStandard = (function () {
     ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column'],
     ['bookfield', 'CMP040-I01 text, I02 date, I03 tick, T01 free text'], ['bookselect', 'CMP041-S01 select'], ['bookaction', 'CMP042-B01..B23 the books commands, P01 row tools'],
     ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal'],
-    ['field', 'CMP055-I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text (ui.field; CMP040 and CMP045 are aliases)'],
-    ['figure', 'CMP056-D01 figure card: a label, one figure with its currency, an optional progress line', 'CBLabKit.figure (lab-kit.js)'],
-    ['badge', 'CMP057-D01 initials badge: a named payee\'s initials on one of six tints, or a category icon', 'CBLabKit.badge (lab-kit.js)']
+    ['field', 'CMP055-I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text (ui.field; CMP040 and CMP045 are aliases)'], ['figure', 'CMP056-D01 figure card: a label, one figure with its currency, an optional progress line', 'CBLabKit.figure (lab-kit.js)'], ['badge', 'CMP057-D01 initials badge: a named payee\'s initials on one of six tints, or a category icon', 'CBLabKit.badge (lab-kit.js)']
   ];
   function listRows() {
     return LIST_ROWS.map(function (entry) {
