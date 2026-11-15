@@ -722,8 +722,7 @@ console.log('\n17 · no platform host in the site');
   else pass(files.length + ' site files name no *.railway.app / *.vercel.app host outside public/config.js');
   const pagesNeed = walk(WEB).filter((f) => /\.html$/.test(f) && /window\.CB_API\b|CBShell\.apiBase|app\/shell\.js/.test(fs.readFileSync(f, 'utf8')))
     .concat([path.join(ROOT, 'index.html')])
-    .filter((f) => !/bank-demo.html$/.test(f)) /* the no-login bank demo mounts the header anonymous (no api base is read, connect-src 'none'): it must NOT load config.js (e2e/bank-preview.test.cjs pins that) */
-    .filter((f) => !/<script src="\/config\.js"><\/script>/.test(fs.readFileSync(f, 'utf8')));
+    .filter((f) => !/bank-demo.html$/.test(f) /* the no-login bank page mounts the header anonymous: no api base is read, and it must NOT load config.js */ && !/<script src="\/config\.js"><\/script>/.test(fs.readFileSync(f, 'utf8')));
   if (pagesNeed.length) fail('page(s) read the api base but do not load /config.js first: ' + pagesNeed.map((f) => path.relative(ROOT, f)).join(', '));
   else pass('every page that reads the api base loads /config.js');
 
