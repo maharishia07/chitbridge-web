@@ -33,6 +33,7 @@
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
     askPanel = null,
+    rowPainter = null,
     report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
 
@@ -248,57 +249,10 @@
     var line = item.line;
     return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span></span>';
   }
-  /** the entry a ready line will make, in an accountant's terms: "Dr Trade creditors 880.00 · Cr Business bank account 880.00" (the legs the engine composed) */
-  function entryWords(item) {
-    return ((item.entry && item.entry.lines) || []).map(function (leg) {
-      var debit = (leg.dr_minor || 0) > 0;
-      return (debit ? 'Dr ' : 'Cr ') + nameOf(leg.account) + ' ' + amountText({ amount_minor: debit ? leg.dr_minor : leg.cr_minor, currency: CURRENCY });
-    }).join(' \u00b7 ');
-  }
-  /** the tax the engine says this line claims, in words: "8.80 GST" */
-  function taxWords(item) {
-    return item.tax && item.tax.tax_minor ? amountText({ amount_minor: item.tax.tax_minor, currency: CURRENCY }) + ' GST' : 'GST';
-  }
-  /** what a line that needs you asks, inline: the tax invoice first, then who it is, else a way to say what it is */
-  function questionHtml(item) {
-    var key = esc(item.key),
-      more = '<button type="button" class="bd-link" data-act="open" data-key="' + key + '" data-cbsid="BKS017-R01">Choose what this is</button>';
-    if (item.needs === 'tax_invoice') {
-      return '<span class="bd-question"><span class="bd-q">This claims ' + esc(taxWords(item)) + ' and needs a tax invoice. Do you hold it?</span>' +
-        '<button type="button" class="bd-btn" data-act="taxinvoice" data-v="held" data-cbsid="BKS017-B10">Yes, I hold it</button>' +
-        '<button type="button" class="bd-btn" data-act="taxinvoice" data-v="none" data-cbsid="BKS017-B11">No: book it without the GST credit</button></span>';
-    }
-    if (item.party && item.party.status === 'new') {
-      return '<span class="bd-question"><span class="bd-q">Who is this?</span><button type="button" class="bd-btn" data-act="newparty" data-key="' + key + '" data-cbsid="BKS017-B07">New ' + esc(item.party.kind) + ': ' + esc(item.party.name) + '</button>' + more + '</span>';
-    }
-    return '<span class="bd-question">' + more + '</span>';
-  }
-  /** the right-hand column of a line, under its chip: the entry it matched, the entry it will make, or the question it asks */
-  function detailHtml(item, state, matched) {
-    if (state === 'in') return '<span class="bd-detail">' + esc(matched || '') + '</span>';
-    if (state === 'ready' || state === 'posted') return '<span class="bd-detail">' + esc(entryWords(item)) + '</span>';
-    return state === 'need' ? questionHtml(item) : '';
-  }
-  /** one money cell: the carried amount as digits (the currency is in the column heading), or an empty cell; which is 'out' (spent) or 'in' (received) */
-  function moneyCell(minor, which) {
-    return '<span class="bd-m bd-' + which + ' bd-cell' + which + '">' + (minor ? esc(amountText(minor)) : '') + '</span>';
-  }
-  function lineRow(item, results, matched) {
-    var line = item.line,
-      result = results[item.key],
-      state = standing(item, result),
-      chip = CHIPS[state],
-      reason = result && !result.ok ? '<span class="bd-why">' + esc(result.why) + '</span>' : '';
-    var inner =
-      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' + whoCell(item) +
-      moneyCell(line.debit_minor, 'out') + moneyCell(line.credit_minor, 'in') +
-      '<span class="bd-status">' + tag(chip[0], chip[1]) + reason + detailHtml(item, state, matched) + '</span>';
-    return '<li><div class="bd-row bd-s-' + (state === 'need' ? 'needs_you' : state) + '">' + inner + '</div></li>';
-  }
   function paintLines(model, names) {
     var rows = model.items
       .map(function (item) {
-        return lineRow(item, model.results, names[item.i]);
+        return rowPainter.lineRow(item, model.results, names[item.i]);
       })
       .join('');
     el('bd_lines').innerHTML =
@@ -371,12 +325,10 @@
     msg = words || '';
     msgOk = !!good;
   }
-
   /* ── the "What is this?" panel: the lab-kit popup in its side / sheet placement (CMP002 variant) ── */
   function itemOf(key) {
     return controller.view().items.filter(function (one) { return one.key === key; })[0] || null;
   }
-
   /* ── actions ── */
   /** the slot #bd_check is left for the statement check (web #718's bank-preview-check.js and bank-preview-ui.js, engines #146): refuse, confirm, already done; it clears here when a file is loaded */
   function loadStatement(text, name) {
@@ -450,7 +402,6 @@
     readFile(event.target.files && event.target.files[0]);
     event.target.value = '';
   }
-
   /* ── the column map: a file whose first row names columns we do not know (a "Narrative" header) ── */
   function readWithMap() {
     var text = loadRefusal.text,
@@ -514,6 +465,7 @@
     return {
       doc: doc, el: el, labKit: labKit, preview: preview, CURRENCY: CURRENCY, ACCOUNT: ACCOUNT, controller: function () { return controller; },
       itemOf: itemOf, paint: paint, standing: standing, countsOf: countsOf, payeeOf: payeeOf, accountOf: accountOf, nameOf: nameOf, chartOf: chartOf, whatIsThis: whatIsThis,
+      CHIPS: CHIPS, whoCell: whoCell, nameOf: nameOf, tag: tag,
       amountText: amountText, plural: plural, tag: tag, dateWords: dateWords, lastDate: lastDate,
       onResolved: function () {
         added = null;
@@ -530,6 +482,7 @@
   function start() {
     mountHeader();
     askPanel = root.CBBankDemoAsk.create(hostFor());
+    rowPainter = root.CBBankDemoRows.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });

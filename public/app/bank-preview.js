@@ -60,6 +60,10 @@
       })[0] || null
     );
   }
+  /** the blocker the person answers as a question: the tax basis, or whether the tax invoice is held (B5-03); null when none */
+  function needsOf_(blockers) {
+    return ['gst_basis', 'tax_invoice'].filter(function (code) { return blockers.indexOf(code) >= 0; })[0] || null;
+  }
   /** the statement line (index i) joined to what the engine said about it, ready to paint and to post */
   function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate) {
     var blockers = projected.blockers || [],
@@ -73,7 +77,7 @@
       entry: projected.entry || null,
       tax: projected.tax || null /* the tax the engine says this line claims { kind, rate, tax_minor, … }, for the tax-invoice question */,
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
-      needs: blockers.indexOf('gst_basis') >= 0 ? 'gst_basis' : blockers.indexOf('tax_invoice') >= 0 ? 'tax_invoice' : null, /* tax_invoice: the engine asks whether the tax invoice is held (B5-03) */
+      needs: needsOf_(blockers),
       blockers: blockers,
       closed: closed,
       party: projected.party ? Object.assign({}, projected.party) : null,

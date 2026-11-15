@@ -243,7 +243,7 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
   .bd-row .bd-names{grid-column:2;min-width:0}
   .bd-row .bd-cellout,.bd-row .bd-cellin{grid-column:3;grid-row:1;justify-self:end}
   .bd-row .bd-cellout:empty,.bd-row .bd-cellin:empty{display:none}
-  .bd-row .bd-status{grid-column:2 / -1;grid-row:2}
+  .bd-row .bd-status{grid-column:2 / -1;grid-row:2;justify-self:stretch}
   .bd-row .lk-bd{width:32px;height:32px}
   .bd-question .bd-btn{min-height:40px}
 }
