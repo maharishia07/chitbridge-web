@@ -2752,7 +2752,7 @@ function bkDvMount(el) {
 function bkMarksIngest(r, list) {
   if (typeof CBMark === 'undefined') return;
   if (!BK.mk) {
-    BK.mk = CBMark.use({ adopter: 'acc.audit', call: api });
+    BK.mk = CBMark.use({ adopter: 'acc.audit', call: api, period: function () { return BK.dv && BK.dv.range; } }); /* the Checked n of m counts the range the list shows */
     BK.mk.onChange(function () {
       if (BK.dv && BK.dv.api) BK.dv.api.refresh();
       if (BK.lt && BK.lt.api) BK.lt.api.refresh();
