@@ -212,7 +212,7 @@ function ftSentences(effective, currency) {
   var lines = [];
   lines.push(
     effective.days == null
-      ? tx('No credit days are set, so a bill has no due date.')
+      ? tx('No credit days are set, so a bill is due on its own date.')
       : effective.days === 0
         ? tx('Due the day the bill is made.')
         : txf('Due {n} days after the bill date.', { n: effective.days })
