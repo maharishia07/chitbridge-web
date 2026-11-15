@@ -91,7 +91,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (77)
+## Shared (78)
 
 | file | loading | what it is |
 |---|---|---|
@@ -111,6 +111,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `books-grant-drill.js` | — |  |
 | `books-grant-member.js` | — |  |
 | `books-grant-view.js` | — |  |
+| `books-grant-words.js` | — |  |
 | `cart.js` | eager |  |
 | `catalogue-lines.js` | eager |  |
 | `catalogue-model.js` | eager | catalogue-model.js — THE canonical catalogue model (single source of truth) |
@@ -212,7 +213,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `list-lab.html` | 10 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 10 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 8 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 21 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 22 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 10 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 16 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
@@ -236,4 +237,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*148 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*149 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

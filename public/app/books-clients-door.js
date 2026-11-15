@@ -3,7 +3,7 @@
  *
  * OWNS      one card on Home, "Your clients · N · Open ›", for a login that holds live received books grants; it links to My network (the client list). Nothing is drawn for a login without a grant.
  * CALLED BY public/app.html (script tag, after books-grant-api.js)
- * FLOW      wait for the Home shell → CBBooksGrantApi.held(call) → count → insert the card before the areas
+ * FLOW      every second: a token not yet read → CBBooksGrantApi.held(call) → count; the Home shell present without the card → insert it before the areas (a login after page load, or a Home repaint, still gets it)
  * CARD      04-network/ACC-176B-ADVISER-REQUIREMENT
  *
  * Decides nothing: the count is the server's list of live grants (CBBooksGrantApi.held).
@@ -51,16 +51,20 @@
     areas.parentNode.insertBefore(card, areas);
     return true;
   }
+  var seen = { token: null, count: 0 };
+  /** one beat: a new sign-in reads the grants once; while the Home shell exists without the card (Home repaints, a sign-in after load) the card is drawn again */
+  function tick() {
+    var t = token();
+    if (!t || !root.CBBooksGrantApi) return;
+    if (seen.token !== t) {
+      seen.token = t;
+      seen.count = 0;
+      root.CBBooksGrantApi.held(call).then(function (held) { seen.count = Object.keys(held).length; tick(); }, function (failure) { root.console.warn('books-clients-door', failure); });
+    } else if (seen.count) draw(seen.count);
+  }
   function start() {
-    if (!token() || !root.CBBooksGrantApi) return;
-    root.CBBooksGrantApi.held(call).then(function (held) {
-      var count = Object.keys(held).length;
-      if (!count) return;
-      var tries = 0;
-      var timer = root.setInterval(function () {
-        if (draw(count) || ++tries > 40) root.clearInterval(timer);
-      }, 500);
-    });
+    tick();
+    if (!seen.timer) seen.timer = root.setInterval(tick, 1000);
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();

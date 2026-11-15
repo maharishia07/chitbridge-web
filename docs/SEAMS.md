@@ -20,15 +20,15 @@ of file each thing is; this says what already does the job.
 | 89 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
 | 82 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 82 | `next` | `dayopen.js` | the next thing to do — |
-| 80 | `list` | `cap-settings.js` |  |
+| 81 | `list` | `cap-settings.js` |  |
 | 79 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 76 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 73 | `entry` | `books-store.js` |  |
 | 71 | `register` | `regulation.js` | register(pack) → the pack — |
 | 70 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
+| 69 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 69 | `failed` | `service.js` | what every catch answers: |
-| 68 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 68 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
 | 68 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 68 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
@@ -53,21 +53,21 @@ of file each thing is; this says what already does the job.
 | 54 | `count` | `money-check.js` | the count /health reads |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
+| 49 | `host` | `chit-sheet.js` |  |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 48 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
-| 47 | `host` | `chit-sheet.js` |  |
 | 47 | `facts` | `bill-steps.js` | MY state_log — |
 | 46 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
+| 45 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 45 | `rules` | `docnumber.js` | the rule set for a country — |
-| 44 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 44 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
+| 44 | `button` | `bank-preview-ui.js` | var escapeHtml = ctx.escapeHtml; |
 | 44 | `holds` | `bounds.js` | holds(fragment, figure) → true when a figure is a finite number inside the fragment's min / max (the derived f |
 | 44 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
 | 43 | `live` | `receivables.js` | the allocations that still count: |
-| 42 | `button` | `bank-preview-ui.js` | var escapeHtml = ctx.escapeHtml; |
 | 42 | `body` | `books-acting.js` | a write's body: |
 | 42 | `gate` | `country-setup.js` | gate(h, entity): |
 | 41 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
@@ -77,8 +77,8 @@ of file each thing is; this says what already does the job.
 | 40 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 40 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 39 | `closeModal` | `app.html` |  |
+| 39 | `sheet` | `cap-employees.js` |  |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
-| 38 | `sheet` | `cap-employees.js` |  |
 | 38 | `lines` | `cart.js` |  |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 38 | `rate` | `convert.js` | A rate, with its evidence. |
@@ -98,11 +98,11 @@ of file each thing is; this says what already does the job.
 | 34 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 34 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 33 | `ensureCap` | `app.html` |  |
+| 33 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
+| 33 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 33 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `modal` | `app.html` |  |
-| 32 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
-| 32 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 32 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 32 | `owner` | `books.js` |  |
 | 31 | `load` | `books-grant-view.js` |  |
@@ -156,6 +156,7 @@ of file each thing is; this says what already does the job.
 | 21 | `move` | `rail.js` | Order = the order the server refused in: |
 | 20 | `done` | `attach-ui.js` |  |
 | 20 | `step` | `cart.js` |  |
+| 20 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 20 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 20 | `chip` | `screen-id.js` | var S = { app: |
 | 20 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
@@ -173,7 +174,6 @@ of file each thing is; this says what already does the job.
 | 19 | `verify` | `bookpack.js` | manifest's own hash. |
 | 19 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 18 | `close` | `avatar.js` |  |
-| 18 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 18 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 18 | `today` | `kural.js` |  |
 | 18 | `confirm` | `lab-kit.js` | opts: |
@@ -200,6 +200,7 @@ of file each thing is; this says what already does the job.
 | 16 | `frame` | `cap-settings.js` |  |
 | 16 | `said` | `cap-shop.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |
+| 16 | `actions` | `workflow.js` | actions(chit, me) — |
 | 16 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 16 | `validate` | `bill-use.js` | Only lines the copy has; only the three words; at least one thing said. |
 | 16 | `terms` | `books-store.js` | the party's credit terms, from whichever list holds them (a customer's for a sale, a supplier's for a purchase |
@@ -208,4 +209,3 @@ of file each thing is; this says what already does the job.
 | 16 | `close` | `person-session.js` | When device_id is null the jti is looked for under every device (an owner revoking a jti from the list). |
 | 16 | `fault` | `sellable-price.js` | Zero IS a price (a free sample). |
 | 16 | `heads` | `tax-lines.js` | The heads, summed. |
-| 15 | `confirmAsk` | `app.html` | In-app confirm (replaces browser confirm()). |
