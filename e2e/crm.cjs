@@ -963,6 +963,7 @@ async function route(S, r) {
       await ctx.close();
       const o2 = await open(standIn(), { hash: '#/party/P-0002' }); await recReady(o2.p); await openAll(o2.p);
       ok(await o2.p.locator('[data-testid="crm-act-pay"]').count() === 0 && await o2.p.locator('[data-testid="crm-next-pay"]').count() === 1 && /Receive/.test(await text(o2.p, '[data-testid="crm-next-pay"]')), 'C16/L16-2: a party who owes you late has ONE Receive, on the amount owed (the Next band), none in the action row');
+      await o2.p.route('**/api/books/payments/preview', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ currency: 'INR', open_minor: 0, proposal: [], warnings: [] }) }));
       await o2.p.click('[data-testid="crm-next-pay"]'); await o2.p.waitForTimeout(500);
       ok(await o2.p.evaluate(() => !!document.querySelector('.modal, #modal, [role="dialog"], dialog[open]')) || true, 'C16: Receive opens the same Pay / Receive popup the list uses');
       await o2.ctx.close();
@@ -1007,7 +1008,8 @@ async function route(S, r) {
     for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
       const w = vp.width, S = standIn();
       S.list.forEach((q) => { if (q.party_no === 'P-0002') Object.assign(q, { roles: ['customer'], phone: null, email: null, on_chitbridge: false, kind: 'local', why_not: 'local' }); });
-      S.list.push(Object.assign({}, S.list[0], { party_id: 'pid-root', party_no: 'P-0099', display_name: 'cbau01-root', roles: ['supplier'], balance_minor: 0, dues_overdue: false, supplier: { list_id: 's1', added_via: 'system' }, customer: null }));
+      S.list.push(Object.assign({}, S.list[0], { party_id: 'pid-root', party_no: 'P-0099', display_name: 'cbau01-root', roles: ['supplier'], balance_minor: 0, dues_overdue: false, }));
+      S.fx.records['pid-root'] = { supplier: { added_via: 'system' } };
       const record = crmApi.record(S.list, 'pid-0002', S.fx.records['pid-0002'], []);
       const now = Date.now(), timeline = { party_id: 'pid-0002', next_before: null, migrated: true, total: 1, page: 1, limit: 100, entries: [
         { kind: 'ledger', at: new Date(now - 3600e3).toISOString(), ref: 'HP-INV-2', ledger_kind: 'bill', source: null, amount_minor: 275000, currency: 'INR', doc_date: '2026-10-08' }] };
@@ -1027,8 +1029,7 @@ async function route(S, r) {
       ok(/12,?450.00/.test(amt) && mode === 'bank', 'L16-3 @' + w + ': Receive opens filled - amount ' + amt + ' (the dues figure, carried), How = ' + mode);
       ok(await p.locator('[data-testid="pay_bills"] table').count() === 1, 'L16-3 @' + w + ': the bills table is visible at once');
       await p.screenshot({ path: path.join(SH, 'receive-' + w + '.png') }).catch(() => {});
-      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
-      if (await p.locator('[data-testid="pay_title"]').count()) await p.click('text=Cancel').catch(() => {});
+      await p.getByRole('button', { name: 'Cancel' }).first().click(); await p.waitForSelector('[data-testid="pay_title"]', { state: 'detached', timeout: 5000 }).catch(() => {});
       await p.focus('[data-testid="crm-next-remind"]'); await p.keyboard.press('Enter'); await p.waitForSelector('[data-testid="remind_title"]', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(900);
       const ph = await p.getAttribute('[data-testid="msg-body"]', 'placeholder').catch(() => '') || '';
       ok(/no phone or e-mail/i.test(ph) && !/sees this/.test(ph), 'L16-4 @' + w + ': Remind to a party with no channel says "' + ph + '"');
