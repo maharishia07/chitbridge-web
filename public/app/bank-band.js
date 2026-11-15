@@ -157,16 +157,17 @@
         f.total
           ? '<div class="bb-progress"><div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + f.total + '" aria-valuenow="' + (f.inBooks || 0) + '" aria-label="' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '"><i style="width:' + Math.round(((f.inBooks || 0) / f.total) * 100) + '%"></i></div><span class="bb-pnote" data-testid="' + esc(tid) + '-progress">' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '</span></div>'
           : '';
+    var curHtml = '<span class="bb-cur" data-testid="' + esc(tid) + '-currency">' + esc(currencyLine(f.currency || '')) + '</span>';
     return (
       '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + esc(tid) + '" data-tied="' + nil + '" aria-label="' + esc(T('Bank statement')) + '">' +
       '<div class="bb-head"><h2 class="bb-name" data-testid="' + esc(tid) + '-account">' + esc(f.account || '') + '</h2>' +
       '<span class="bb-period" data-testid="' + esc(tid) + '-period">' + esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
       (f.change || '') + toggleHtml(f.right, tid) +
-      '<span class="bb-cur" data-testid="' + esc(tid) + '-currency">' + esc(currencyLine(f.currency || '')) + '</span>' +
+      (tiles ? '' : curHtml) +
       (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' +
       ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right', f.rightAct) : '') +
       (tiles ? '<div class="bb-row2">' : '') + tiles +
-      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + '</div></div>' : '') +
+      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + '</div>' + curHtml + '</div>' : '') +
       '</section>'
     );
   }

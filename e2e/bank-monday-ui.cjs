@@ -117,6 +117,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(m.above <= 4, tag + ': ' + m.above + ' controls above the list besides its own toolbar and its chips (was 17 in all)');
     /* Fiori density (Athi 15 Nov): rows about 32 px, the head one line; at least 12 statement lines show at 1366x768 with no page scroll */
     const rowsShown = await p.evaluate(() => { const l = document.querySelector('[data-testid="bank-list"] .cbl-list'), lr = l.getBoundingClientRect(); return [...l.querySelectorAll('[data-row]')].filter((n) => { const r = n.getBoundingClientRect(); return r.top >= lr.top - 1 && r.bottom <= lr.bottom + 1; }).length; });
+    console.log('  ROWDBG ' + JSON.stringify(await p.evaluate(() => { const r = document.querySelector('[data-testid="bank-list"] [data-row]'); return [r.getBoundingClientRect().height].concat([...r.children].map((c) => c.tagName + '.' + c.className + ':' + Math.round(c.getBoundingClientRect().height) + ' pad ' + getComputedStyle(c).paddingTop + ' lh ' + getComputedStyle(c).lineHeight + ' fs ' + getComputedStyle(c).fontSize)); })));
     console.log('  ROWS-VISIBLE ' + tag + ' ' + rowsShown);
     ok(vp.width > 700 ? rowsShown >= 12 : rowsShown >= 2, tag + ': ' + rowsShown + ' statement lines show without scrolling' + (vp.width > 700 ? ' (target 12, Fiori compact density)' : ''));
     ok(m.sticky === 'sticky', tag + ': the column header stays put');

@@ -59,3 +59,6 @@
 .cbl[data-cbl^="bank"] .cbl-row .cbl-cell{padding-block:2px;font-size:14px}
 .cbl[data-cbl^="bank"] .cbl-tw{min-height:24px;margin-block:0}
 .cbl[data-cbl^="bank"] .lk-st{height:20px}
+.bb-row2 .bb-cur{margin-left:auto;white-space:nowrap}
+.bb-row2 .bb-progress{flex-basis:60px}.bb-row2 .bb-gorow{flex:1 1 220px}
+.cbl[data-cbl^="bank"] .bl-amt{white-space:nowrap}
