@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (71)
+## Capabilities (72)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -61,6 +61,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake'). · CARD 22-channels-capture-and-messaging/intake-screen |
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve". · CARD 20-settings-governance-and-plan/capability-legend |
+| `cap-mark.js` | — |  |
 | `cap-marketing.js` | — | cap-marketing.js - THE MARKETING FACE of the CRM small app (MKT first slice, 22 Oct 2026; critic MKT-critic-2026-10-22 change 1) |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
@@ -191,7 +192,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 40 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 41 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 37 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 12 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 5 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the reconciliation, then "add" into |
@@ -213,7 +214,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `list-lab.html` | 10 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 10 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 8 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 22 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 24 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 10 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 16 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
@@ -237,4 +238,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*149 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*150 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
