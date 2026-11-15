@@ -6,7 +6,7 @@
  * OWNS      the proof that every control of network-app.js, cap-suppliers.js, catalogue-lines.js, chit-sheet.js, rail-thread.js, rail-advice.js,
  *           register-form.js, signin-ui.js, signin-lab.html and the Copy-the-key button of cap-settings.js carries a data-cbsid, that each code sits
  *           INSIDE its own tag (the tag name and the text that follows the code are pinned, so a swap of two codes fails), that no code is written
- *           twice, and that the counts per file hold (60 coded elements in all).
+ *           twice, and that the counts per file hold (56 coded elements in all).
  *           Known limit: SCR054-B04 and SCR054-B08 are the same Back button drawn in two steps, so a swap of those two is not told apart.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-w2-net.test.cjs   (W2NET_MUTATE=remove or W2NET_MUTATE=swap must fail it)
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/screen-library
@@ -50,12 +50,8 @@ const WANT = [
   ["SCR052-B02","app/rail-advice.js","button","type=\"button\" class=\"ra-b\" data-ra-act=\"copy\" data-testid=\"adv-c"],
   ["SCR052-B03","app/rail-advice.js","button","type=\"button\" class=\"ra-b off\" aria-disabled=\"true\" data-testid="],
   ["SCR053-S01","app/register-form.js","select","class=\"inp\" data-testid=\"reg-country\" style=\"width:auto;max-widt"],
-  ["SCR053-I01","app/register-form.js","input","type=\"checkbox\" id=\"r_agree\" data-testid=\"reg-agree\"' + (REG.agr"],
-  ["SCR053-I02","app/register-form.js","input","class=\"inp\" id=\"r_name\" data-testid=\"reg-name\" placeholder=\"acme"],
-  ["SCR053-I03","app/register-form.js","input","class=\"inp\" id=\"r_email\" data-testid=\"reg-email\" placeholder=\"yo"],
   ["SCR053-B01","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy ? '"],
   ["SCR053-C01","app/register-form.js","a","onclick=\"regReset()\">${esc(tx('change'))}</a></div> ${regVertica"],
-  ["SCR053-I04","app/register-form.js","input","class=\"inp\" id=\"r_otp\" data-testid=\"reg-otp\" placeholder=\"6-digi"],
   ["SCR053-B02","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy || "],
   ["SCR053-C02","app/register-form.js","a","onclick=\"go('#/login')\">${tx('Sign in')}</a></div> </div> </div>"],
   ["SCR053-C03","app/register-form.js","div","data-testid=\"reg-vertical-' + esc(item.key) + '\" onclick=\"REG.co"],
@@ -115,8 +111,8 @@ for (const file of FILES) {
   check(dup.length === 0, file + ' writes no code twice' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
 }
 const perFile = (file) => source(file).match(/data-cbsid=\\?"(?:NET00[123]|SCR05[0-5]|SLB001)-[A-Z][0-9]{2}\\?"/g) || [];
-check(WANT.length === 60, 'the table holds 60 coded elements: ' + WANT.length);
-check(perFile('app/signin-ui.js').length === 14 && perFile('app/register-form.js').length === 12, 'signin-ui.js has 14 coded elements and register-form.js 12');
+check(WANT.length === 56, 'the table holds 56 coded elements: ' + WANT.length);
+check(perFile('app/signin-ui.js').length === 14 && perFile('app/register-form.js').length === 8, 'signin-ui.js has 14 coded elements and register-form.js 8 (its four fields are ui.field mounts, UX-137 wave 3)');
 
 /** the register */
 let reg = null;
