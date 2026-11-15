@@ -454,6 +454,7 @@ const NAV = [
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
   ['movein', 'Move in', 'M4 12h12M12 8l4 4-4 4M20 4v16'] /* IM1: move in from Xero / QuickBooks — the five exports, each file → columns → preview → import */,
+  ['access', 'Who can see my books', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 .01'] /* the second door: the owner gives, changes or ends an adviser's view (network.html#books) */,
   ['rates', 'Rates', 'M4 7h13l-3-3M20 17H7l3 3'] /* FX1: exchange rates — a foreign bill posts at its day's rate (cap-fx.js) */
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
@@ -481,6 +482,7 @@ const KURAL_OF = {
   accounts: 'accounts',
   movein: 'accounts',
   rates: 'accounts',
+  access: 'accounts',
   compare: 'reports'
 };
 const TITLES = { ledgers: 'Ledgers', todo: 'To do' }; /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
@@ -513,7 +515,7 @@ const NAV_GROUPS = [
   /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Dues is the two sides together and has its button, lit while open (ACC-175) */
   ['Outstandings', ['dues', 'receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
-  ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates']]
+  ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates', 'access']]
 ];
 const navFolded = () => {
   try {
@@ -691,7 +693,10 @@ BK.views = {
   bank: (b) => (CBBooksActing.hides('bank') ? CBBooksActing.hiddenView(b) : bankView(b)),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
-  rates: (b) => fxView(b)
+  rates: (b) => fxView(b),
+  access: () => {
+    location.href = CB_HOMES.network + '#books';
+  }
 }; /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view) {
   if (!ON) {

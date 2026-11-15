@@ -181,7 +181,8 @@
         esc(T('Not in a network yet')) +
         '</div><div>' +
         esc(T('When a brand adds this shop to its network, it shows here.')) +
-        '</div></div>';
+        '</div></div>' + booksDoor();
+      if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
       return;
     }
     host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
@@ -192,11 +193,9 @@
     N.tab = 'books';
     paint();
   }
-  /** the door to the member's own screen, "Who can see my books": shown when this store sits in a network */
+  /** the door to the member's own screen, "Who can see my books": always drawn: a shop linked to a firm only by a books grant sits in no network */
   function booksDoor() {
-    return N.networks.length
-      ? '<div class="nw-acts"><button data-cbsid="NET001-B05" type="button" class="act quiet" id="nw_books_door" data-testid="nw-books-door">' + esc(T('Who can see my books')) + '</button></div>'
-      : '';
+    return '<div class="nw-acts"><button data-cbsid="NET001-B05" type="button" class="act quiet" id="nw_books_door" data-testid="nw-books-door">' + esc(T('Who can see my books')) + '</button></div>';
   }
   /** one network this store sits in: the brand, where this store stands, who its parent is */
   function netCard(item) {
@@ -646,6 +645,7 @@
   function mount(el, o) {
     N.el = el;
     N.o = o || {};
+    if (N.o.tab) N.tab = N.o.tab;
     start();
     return { reload: reload, go: go };
   }
