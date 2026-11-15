@@ -90,7 +90,7 @@ check(core.includes('CBBooksActing.guard(ep)') && accounts.includes('CBBooksActi
 /* (11) round 2: an acting adviser prepares, hides the bank, is named right; the switch lists every client */
 A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
 check(A2.refusals([{ message: 'Only the owner may record this.' }, { message: 'Date is locked' }]).length === 1 && entry.includes('CBBooksActing.refusals(r.refusals)'), 'an acting adviser is not stopped by the owner-only preview sentence; the sheet asks CBBooksActing');
-check(!A2.hides('bank') && !A2.hides('tb') && A2.hides('compare') && /not open to an adviser/.test(A2.refusedFor()), 'acting: the bank is open to an adviser (the auditor keeps it hidden: e2e/adviser-bank.test.cjs); the refusal names an adviser');
+check(!A2.hides('bank') && !A2.hides('tb') && A2.hides('compare') && /not open to an accountant/.test(A2.refusedFor()), 'acting: the bank is open to an adviser (the auditor keeps it hidden: e2e/adviser-bank.test.cjs); the refusal names an adviser');
 A2.enter({ id: 's2', name: 'Two' }, 'auditor');
 check(A2.hides('bank') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor');
 const heldBy = { s1: { preset: 'adviser', grantor_name: 'One' }, s2: { preset: 'auditor', grantor_name: 'Two' } };

@@ -168,7 +168,7 @@
 
   /* ── the banner: frozen at the top of every screen that acts for a store ── */
   function roleWord(role) {
-    return words(role === 'adviser' ? 'adviser' : 'auditor');
+    return words(role === 'adviser' ? 'accountant' : 'auditor');
   }
   function switchBox(stores) {
     if (!stores || stores.length < 2) return '';
@@ -204,7 +204,7 @@
   }
   /** an adviser's Save: POST /api/books-actions { store_id, kind: 'journal', body, client_ref, working_month } through the screen's own api; the journal's date is required; under the grant's adviser_posts the server posts it at once (state accepted, with its entry), otherwise it waits for review and the owner's accept */
   async function prepare(api, tx, entry, month) {
-    if (entry.event !== 'journal') throw new Error(tx('An adviser prepares journals. Pick Journal.'));
+    if (entry.event !== 'journal') throw new Error(tx('An accountant prepares journals. Pick Journal.'));
     if (!entry.date) throw new Error(tx('Give the journal its date.'));
     var journal = Object.assign({}, entry);
     delete journal.event;
@@ -275,7 +275,7 @@
   }
   /** the refusal sentence names the real role */
   function refusedFor() {
-    return words(context && context.role === 'adviser' ? 'This part of the books is not open to an adviser.' : 'This part of the books is not open to an auditor.');
+    return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
   root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };

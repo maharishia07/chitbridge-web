@@ -371,7 +371,7 @@
       sheet('<h2 data-testid="nw-seat-title">' + esc(T('How do you want to open')) + ' ' + esc(name) + '?</h2>' +
         '<p class="sub">' + esc(T('Your firm holds two kinds of access. Pick the one you are acting as now; it is remembered for this client.')) + '</p>' +
         '<div class="nw-acts"><button data-cbsid="NET001-B07" type="button" class="act" data-seat="auditor" data-testid="nw-seat-auditor">' + esc(T('Open as auditor')) + '</button>' +
-        '<button data-cbsid="NET001-B08" type="button" class="act quiet" data-seat="adviser" data-testid="nw-seat-adviser">' + esc(T('Open as adviser')) + '</button></div>');
+        '<button data-cbsid="NET001-B08" type="button" class="act quiet" data-seat="adviser" data-testid="nw-seat-adviser">' + esc(T('Open as accountant')) + '</button></div>');
       Array.prototype.forEach.call($('nw_sheet').querySelectorAll('[data-seat]'), function (b) {
         b.onclick = function () { closeSheet(); sitAs(id, name, b.getAttribute('data-seat')); };
       });

@@ -115,7 +115,7 @@ function stand(pending) {
   const gaps = await p.locator('.bks-miss').count();
   ok(gaps === 6 && /Nov missing/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months, every month reads "<Mon> missing" (' + gaps + ')');
   ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
-  ok(/Kept on our server for the record period; visible to the adviser or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
+  ok(/Kept on our server for the record period; visible to the accountant or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
   ok(/never uploaded/.test(await p.textContent('[data-testid="bank-private"]')), 'the plain picker keeps its own device-only sentence');
   ok(await sideways(p), '1366 px: nothing scrolls sideways');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-box-laptop.png') });

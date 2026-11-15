@@ -75,7 +75,7 @@ function bankStmtPaint() {
     '<div class="bks-bar"><b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
     (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Show')) + '</button>' : '') +
     '</div>' +
-    (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the adviser or auditor you give access.')) + '</div>' : '');
+    (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div>' : '');
 }
 function bankStmtToggle() {
   const open = BKST.open === null ? !(BKB.rows && BKB.rows.length) : BKST.open;
