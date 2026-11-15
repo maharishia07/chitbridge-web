@@ -249,8 +249,9 @@
     var opener = doc.activeElement; /* the sheet gives focus back to where the person was */
     sheetNode = doc.createElement('dialog');
     sheetNode.className = 'cbsc-d';
+    sheetNode.setAttribute('data-pop', 'POP144');
     sheetNode.setAttribute('aria-label', title);
-    var close = root.CBUi ? root.CBUi.action('close', { mount: 'HOM001-U01', surface: 'dialog', tone: 'primary' }) : '<button type="button" class="pri">' + esc(tr('Close')) + '</button>';
+    var close = root.CBUi ? root.CBUi.action('close', { mount: 'HOM001-U01', surface: 'dialog', tone: 'primary' }) : '<button data-cbsid="CMP005" type="button" class="pri">' + esc(tr('Close')) + '</button>';
     sheetNode.innerHTML = sheetHead(title) + '<div class="mbody">' + body + '</div><div class="mfoot">' + close + '</div>';
     sheetNode.addEventListener('click', function (event) {
       if (event.target.closest && event.target.closest('.mfoot button')) sheetNode.close();

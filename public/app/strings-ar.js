@@ -810,7 +810,10 @@
     'List column header': 'رأس عمود القائمة',
     'CMP040.label': 'حقل الدفاتر',
     'CMP055.label': 'حقل',
+    'CMP056.label': 'اختيار',
+    'CMP057.label': 'أمر',
     'Field': 'حقل',
+    'Command': 'أمر',
     'CMP055.required': 'مطلوب',
     'Required': 'مطلوب',
     'CMP055.badnumber': 'هذا ليس رقمًا. اكتب أرقامًا فقط، مثل 1234.5',
@@ -819,6 +822,14 @@
     'Use a {mark} before the decimals, like 1{mark}5': 'استخدم {mark} قبل الكسور العشرية، مثل 1{mark}5',
     'CMP055.badgroup': 'تحقق من الفواصل في هذا الرقم',
     'Check the commas in that number': 'تحقق من الفواصل في هذا الرقم',
+    'CMP055.moneyplaces': 'هذه العملة لها {n} من الكسور العشرية كحد أقصى، مثل {example}',
+    'This currency has {n} decimals at most, for example {example}': 'هذه العملة لها {n} من الكسور العشرية كحد أقصى، مثل {example}',
+    'CMP055.moneywhole': 'هذه العملة بلا كسور عشرية. اكتب مبلغًا صحيحًا، مثل 150',
+    'This currency has no decimals. Type a whole amount, like 150': 'هذه العملة بلا كسور عشرية. اكتب مبلغًا صحيحًا، مثل 150',
+    'CMP055.moneyminus': 'اكتب المبلغ بلا علامة ناقص',
+    'Type the amount without a minus sign': 'اكتب المبلغ بلا علامة ناقص',
+    'CMP055.moneybig': 'هذا المبلغ كبير جدًا ولا يمكن قراءته بدقة. تحقق من الأرقام',
+    'That amount is too large to read exactly. Check the digits': 'هذا المبلغ كبير جدًا ولا يمكن قراءته بدقة. تحقق من الأرقام',
     'Books field': 'حقل الدفاتر',
     'CMP041.label': 'اختيار الدفاتر',
     'Books select': 'اختيار الدفاتر',
@@ -1030,7 +1041,21 @@
   var pack = {
     '{count} bill could not be read and is left out of this month\u0005one': '{count} فاتورة تعذرت قراءتها وتم استبعادها من هذا الشهر',
     '{count} bill could not be read and is left out of this month\u0005other': '{count} فواتير تعذرت قراءتها وتم استبعادها من هذا الشهر',
-    'Open bill {n}': 'فتح الفاتورة {n}'
+    'Open bill {n}': 'فتح الفاتورة {n}',
+    'Clear this payment?': 'مسح هذه الدفعة؟',
+    'Clear payment': 'مسح الدفعة',
+    'This clears the recorded payment. The log keeps both entries.': 'سيؤدي هذا إلى مسح الدفعة المسجّلة. يحتفظ السجل بالإدخالين معًا.',
+    'Add to this offer?': 'الإضافة إلى هذا العرض؟',
+    'will be priced by this offer': 'ستُسعَّر بهذا العرض',
+    'This offer': 'هذا العرض',
+    'This offer will apply to ALL products': 'سيُطبَّق هذا العرض على جميع المنتجات',
+    'Apply to all': 'تطبيق على الكل',
+    'Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.': 'عند إزالة آخر منتج لا يبقى ما يحدّ من هذا العرض، فسيُطبَّق على جميع المنتجات.',
+    'This offer changed while you were confirming; check and try again': 'تغيّر هذا العرض أثناء التأكيد؛ تحقّق وحاول مرة أخرى',
+    'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'هذا القيد لم يعد على الشاشة، لذا لم تُمسح دفعته. أعد فتحه وحاول مرة أخرى.',
+    'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'هذا القيد لا يحمل مبلغ دفعته وعملتها، لذا لم تُمسح. أعد فتحه وحاول مرة أخرى.',
+    '{count} product\u0005one': '{count} منتج',
+    '{count} product\u0005other': '{count} منتجات'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

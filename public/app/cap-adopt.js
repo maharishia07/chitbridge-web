@@ -31,7 +31,7 @@ var ADO = { chit_id: null, data: null, edits: {} };
  */
 async function adoptOpen(chit_id) {
   ADO = { chit_id: chit_id, data: null, edits: {} };
-  modal('<div style="padding:24px;text-align:center;color:var(--grey)"><span class="spin"></span> ' + tx('Reading the delivery…') + '</div>', false);
+  modal('<div style="padding:24px;text-align:center;color:var(--grey)"><span class="spin"></span> ' + tx('Reading the delivery…') + '</div>', false, { pop: 'POP012' });
   try {
     ADO.data = await api('adoptRead', { params: { id: chit_id } });
     adoptPaint();
@@ -46,7 +46,7 @@ async function adoptOpen(chit_id) {
         '<div style="display:flex;margin-top:16px"><button data-cbsid="CMP005" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
         tx('Close') +
         '</button></div></div>',
-      false
+      false, { pop: 'POP012' }
     );
   }
 }
@@ -80,7 +80,7 @@ function adoptPaint() {
       '<button data-cbsid="CMP015" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Not now') +
       '</button>' +
-      '<button class="composebtn pri" style="flex:1" data-testid="adopt-accept" ' +
+      '<button data-cbsid="SCR001-B01" class="composebtn pri" style="flex:1" data-testid="adopt-accept" ' +
       (ready ? '' : 'disabled ') +
       'onclick="adoptAccept()">' +
       (ready ? txf('Add {n} to my catalogue', { n: ready }) : tx('Nothing ready yet')) +
@@ -115,7 +115,7 @@ function adoptRow(r, i) {
       esc(r.why) +
       '</div>' +
       '<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:var(--fs-2);cursor:pointer">' +
-      '<input type="checkbox" data-testid="adopt-override" onchange="adoptSet(' +
+      '<input data-cbsid="SCR001-I01" type="checkbox" data-testid="adopt-override" onchange="adoptSet(' +
       r.line +
       ",'override',this.checked)\">" +
       '<b>' +
@@ -167,7 +167,7 @@ function adoptFields(r, refused) {
   var e = ADO.edits[r.line] || {};
   return (
     '<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">' +
-    '<input class="inp" data-testid="adopt-name" placeholder="' +
+    '<input data-cbsid="SCR001-I02" class="inp" data-testid="adopt-name" placeholder="' +
     tx('Your name for it') +
     '" style="flex:1;min-width:150px" ' +
     'value="' +
@@ -175,7 +175,7 @@ function adoptFields(r, refused) {
     '" oninput="adoptSet(' +
     r.line +
     ",'name',this.value)\">" +
-    '<input class="inp" data-testid="adopt-sku" placeholder="' +
+    '<input data-cbsid="SCR001-I03" class="inp" data-testid="adopt-sku" placeholder="' +
     tx('Your SKU') +
     '" style="width:120px" ' +
     'value="' +
@@ -183,7 +183,7 @@ function adoptFields(r, refused) {
     '" oninput="adoptSet(' +
     r.line +
     ",'sku',this.value)\">" +
-    '<input class="inp" type="number" data-testid="adopt-price" placeholder="' +
+    '<input data-cbsid="SCR001-I04" class="inp" type="number" data-testid="adopt-price" placeholder="' +
     tx('Sell at') +
     '" style="width:100px" ' +
     'value="' +

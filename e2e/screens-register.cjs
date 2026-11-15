@@ -20,8 +20,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEV = path.join(__dirname, '..', '..');
-const REG = path.join(DEV, 'SCREENS.json');
+const DEV = process.env.CB_DOCS_DIR || path.join(__dirname, '..', '..');
+const REG = process.env.SCREENS_JSON || path.join(DEV, 'SCREENS.json'); /* SCREENS_JSON: check against another copy (a docs worktree) */
 const JS = path.join(__dirname, '..', 'public', 'app', 'screens.js');
 
 let pass = 0;
@@ -47,10 +47,16 @@ catch (e) { console.error('  ✗ the generated copy does not evaluate: ' + e.mes
 const CB = sandbox.window.CBSCREENS || {};
 const rows = CB.rows || [];
 
-ok('every live screen reaches the browser (' + live.length + ')', rows.length === live.length);
+/* one home per row: the register rows the browser copy carries are decided by ONE predicate, the docs repo's
+   toolset/ui-identity/browser-keeps.cjs (the writer, screens.cjs --browser-from-register, uses the same). Without that file
+   (docs not beside this repo) nothing is excluded. */
+let keeps = () => true;
+try { keeps = require(path.join(DEV, 'toolset', 'ui-identity', 'browser-keeps.cjs')).browserKeeps(path.join(__dirname, '..')); } catch (e) { /* docs checkout without the module: the old rule */ }
+const carried = live.filter(([, sc]) => keeps(sc));
+ok('every live screen the browser reads reaches it (' + carried.length + ' of ' + live.length + ' live; the rest are screen-id.js families and ui-stamp rows)', rows.length === carried.length);
 
 const codes = new Set(rows.map((r) => r.code));
-const missing = live.filter(([, s]) => !codes.has(s.code)).map(([k, s]) => s.code + ' ' + k);
+const missing = carried.filter(([, s]) => !codes.has(s.code)).map(([k, s]) => s.code + ' ' + k);
 ok('none is missing' + (missing.length ? ': ' + missing.slice(0, 4).join(' · ') : ''), missing.length === 0);
 
 /* ⚠️ A RETIRED SCREEN MUST NOT BE OFFERED. Its code stays reserved forever, but showing it would say the screen
@@ -58,6 +64,21 @@ ok('none is missing' + (missing.length ? ': ' + missing.slice(0, 4).join(' · ')
 const retired = Object.entries(reg.screens).filter(([, s]) => s.retired).map(([, s]) => s.code);
 const leaked = retired.filter((c) => codes.has(c));
 ok('no retired screen is offered' + (leaked.length ? ': ' + leaked.join(' · ') : ''), leaked.length === 0);
+
+/* ⚠️ A RETIRED CONTROL CODE MUST NOT COME BACK ON AN ELEMENT (UX-137 wave 0b). A control row retired with an alias_of was replaced by a library
+   component; a data-cbsid that still names the retired row would count one element under two codes. Reads every public page and script. */
+{
+  const retiredControls = new Set(Object.values(reg.screens).filter((s) => s.retired && s.alias_of).map((s) => s.code));
+  const back = [];
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const f = path.join(dir, e.name);
+    if (e.isDirectory()) return walk(f);
+    if (!/\.(html|js)$/.test(e.name)) return;
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/data-cbsid=["']([A-Z]{3}[0-9]{3}-[A-Z][0-9]{2,3}|CTL[0-9]+)["']/g)) if (retiredControls.has(m[1])) back.push(m[1] + ' in ' + path.relative(process.cwd(), f));
+  });
+  walk(path.join(__dirname, '..', 'public'));
+  ok('no retired control code is on an element (' + retiredControls.size + ' retired)' + (back.length ? ': ' + back.slice(0, 4).join(' · ') : ''), back.length === 0);
+}
 
 /* ⚠️ THE SHAPE IS THE STANDARD: three letters, three digits, six characters. A code that does not fit is a code
    somebody typed by hand into a register that is supposed to be generated. */
@@ -232,17 +253,19 @@ ok('screens are reachable by nav key, or the code can never be shown on the scre
 
   /* ⭐ A GAP MUST BE ABLE TO ANSWER FOR ITSELF. Athi asked "which one is DTL002?" within hours of it being
      withdrawn, and a mute gap is the only thing that makes this rule expensive to live with. */
+  /* the withdrawn list is filtered by the same predicate as the live rows */
+  const goneKept = gone.filter(([, v]) => keeps(v));
   const mute = gone.filter(([, v]) => !v.retired_why).map(([, v]) => v.code);
   ok('every withdrawn code says why it went (' + gone.length + ')'
      + (mute.length ? ': ' + mute.slice(0, 4).join(' · ') : ''), mute.length === 0);
   ok('the withdrawn codes reach the browser, so the question can be asked there',
-     Array.isArray(CB.withdrawn) && CB.withdrawn.length === gone.length);
+     Array.isArray(CB.withdrawn) && CB.withdrawn.length === goneKept.length);
 
   /* the lookup itself, driven rather than read: it is the thing a person actually uses */
   let answered = null;
-  try { answered = sandbox.window.cbScreenBy(gone.length ? gone[0][1].code : 'NONE00'); } catch (_) {}
+  try { answered = sandbox.window.cbScreenBy(goneKept.length ? goneKept[0][1].code : 'NONE00'); } catch (_) {}
   ok('a withdrawn code still resolves, and says it names nothing now',
-     !gone.length || !!(answered && answered.live === false && answered.why));
+     !goneKept.length || !!(answered && answered.live === false && answered.why));
 }
 
 /**

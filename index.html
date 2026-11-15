@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+ OWNS      the site home page: the Home alerts and the rail widget; CBShell (public/app/shell.js) draws the header and the cards from public/app/manifest.json
+ CALLED BY the browser at / (the repo-root index.html is the site root); e2e/index-page.cjs (reads it and drives it at 1366 and 390)
+ FLOW      loads device-id, config and helpers, CBShell.mount draws the shell, then this page paints the alerts and the rail from one budgeted read each
+ CARD      26-reporting-mis-and-bi/home-facts
+-->
 <html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">

@@ -780,7 +780,10 @@
     'List column header': 'En-tête de colonne de liste',
     'CMP040.label': 'Champ des livres',
     'CMP055.label': 'Champ',
+    'CMP056.label': 'Sélection',
+    'CMP057.label': 'Commande',
     'Field': 'Champ',
+    'Command': 'Commande',
     'CMP055.required': 'Obligatoire',
     'Required': 'Obligatoire',
     'CMP055.badnumber': 'Ce n\'est pas un nombre. Tapez des chiffres seulement, comme 1234.5',
@@ -789,6 +792,14 @@
     'Use a {mark} before the decimals, like 1{mark}5': 'Utilisez « {mark} » avant les décimales, comme 1{mark}5',
     'CMP055.badgroup': 'Vérifiez les virgules de ce nombre',
     'Check the commas in that number': 'Vérifiez les virgules de ce nombre',
+    'CMP055.moneyplaces': 'Cette devise a {n} décimales au maximum, par exemple {example}',
+    'This currency has {n} decimals at most, for example {example}': 'Cette devise a {n} décimales au maximum, par exemple {example}',
+    'CMP055.moneywhole': 'Cette devise n\'a pas de décimales. Tapez un montant entier, comme 150',
+    'This currency has no decimals. Type a whole amount, like 150': 'Cette devise n\'a pas de décimales. Tapez un montant entier, comme 150',
+    'CMP055.moneyminus': 'Tapez le montant sans signe moins',
+    'Type the amount without a minus sign': 'Tapez le montant sans signe moins',
+    'CMP055.moneybig': 'Ce montant est trop grand pour être lu exactement. Vérifiez les chiffres',
+    'That amount is too large to read exactly. Check the digits': 'Ce montant est trop grand pour être lu exactement. Vérifiez les chiffres',
     'Books field': 'Champ des livres',
     'CMP041.label': 'Sélecteur des livres',
     'Books select': 'Sélecteur des livres',
@@ -926,7 +937,21 @@
   var pack = {
     '{count} bill could not be read and is left out of this month\u0005one': '{count} facture illisible, exclue de ce mois',
     '{count} bill could not be read and is left out of this month\u0005other': '{count} factures illisibles, exclues de ce mois',
-    'Open bill {n}': 'Ouvrir la facture {n}'
+    'Open bill {n}': 'Ouvrir la facture {n}',
+    'Clear this payment?': 'Effacer ce paiement ?',
+    'Clear payment': 'Effacer le paiement',
+    'This clears the recorded payment. The log keeps both entries.': 'Cela efface le paiement enregistré. Le journal garde les deux entrées.',
+    'Add to this offer?': 'Ajouter à cette offre ?',
+    'will be priced by this offer': 'seront tarifés par cette offre',
+    'This offer': 'Cette offre',
+    'This offer will apply to ALL products': 'Cette offre s’appliquera à TOUS les produits',
+    'Apply to all': 'Appliquer à tous',
+    'Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.': 'En retirant le dernier produit, plus rien ne limite cette offre : elle s’appliquera à TOUS les produits.',
+    'This offer changed while you were confirming; check and try again': 'Cette offre a changé pendant votre confirmation ; vérifiez et réessayez',
+    'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'Cette pièce n’est plus à l’écran, son paiement n’a donc pas été effacé. Rouvrez-la et réessayez.',
+    'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'Cette pièce n’indique pas le montant et la devise de son paiement, il n’a donc pas été effacé. Rouvrez-la et réessayez.',
+    '{count} product\u0005one': '{count} produit',
+    '{count} product\u0005other': '{count} produits'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

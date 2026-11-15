@@ -337,7 +337,7 @@ function c2PaneMsg(d) {
       '</div>';
     if (origin.length) {
       out +=
-        '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' +
+        '<div style="margin-top:8px"><span data-cbsid="DTL006-C01" onclick="openLightbox(\'chit2\',' +
         atts.indexOf(origin[0]) +
         ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">' +
         tx('📄 open the full original') +
@@ -453,7 +453,7 @@ function c2PaneOrd(d) {
   );
   out +=
     '<div style="padding:9px 16px;border-bottom:1px solid var(--line)">' +
-    '<button class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>' +
+    '<button data-cbsid="DTL006-B01" class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>' +
     '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">shows what would change before anything is written</span></div>';
 
   /**
@@ -467,7 +467,7 @@ function c2PaneOrd(d) {
   if (c2IsReceipt(d)) {
     out +=
       '<div style="padding:9px 16px;border-bottom:1px solid var(--line)">' +
-      '<button class="btn" data-testid="c2-adopt" onclick="c2Adopt()">🗂️ Add new products to my catalogue</button>' +
+      '<button data-cbsid="DTL006-B02" class="btn" data-testid="c2-adopt" onclick="c2Adopt()">🗂️ Add new products to my catalogue</button>' +
       '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">shows what is new before anything is added</span></div>';
   }
 
@@ -577,7 +577,7 @@ function c2PaneOrd(d) {
                   : '') +
                 (e.removed
                   ? ''
-                  : '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' +
+                  : '<span data-cbsid="DTL006-C02" data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' +
                     i +
                     ')" title="Fix this line" style="cursor:pointer;font-size:var(--fs-3);color:var(--grey);padding:0 6px">✎</span>')
               );
@@ -699,7 +699,7 @@ function c2RepriceScope(v) {
 function c2RepricePaint() {
   if (C2R.busy && !C2R.plan)
     return modal(
-      '<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking the catalogue…</div>'
+      '<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking the catalogue…</div>', false, { pop: 'POP020' }
     );
   var p = C2R.plan || {};
   if (p.error)
@@ -708,7 +708,7 @@ function c2RepricePaint() {
         esc(p.error) +
         '</div><button data-cbsid="CMP005" class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP020' }
     );
 
   if (!p.has_catalogue) {
@@ -719,7 +719,7 @@ function c2RepricePaint() {
         ' and this will fill them in.</div>' +
         '<button data-cbsid="CMP005" class="btn" style="width:100%" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP020' }
     );
   }
 
@@ -728,14 +728,14 @@ function c2RepricePaint() {
   var body =
     '<div style="display:flex;gap:6px;margin-bottom:12px">' +
     [
-      '<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' +
+      '<span data-cbsid="DTL006-C03" onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' +
         (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') +
         ';' +
         (C2R.only_unpriced ? '' : 'background:var(--blue);color:var(--on-accent);font-weight:700;') +
         'border-radius:9px;padding:4px 11px;font-size:var(--fs-2)">' +
         tx('Every line') +
         '</span>',
-      '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' +
+      '<span data-cbsid="DTL006-C04" onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' +
         (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') +
         ';' +
         (C2R.only_unpriced ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') +
@@ -802,8 +802,8 @@ function c2RepricePaint() {
       '<button data-cbsid="CMP003" class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      (will.length ? '<button class="btn pri" style="flex:1" onclick="c2RepriceApply()">Apply ' + will.length + '</button>' : '') +
-      '</div>'
+      (will.length ? '<button data-cbsid="DTL006-B03" class="btn pri" style="flex:1" onclick="c2RepriceApply()">Apply ' + will.length + '</button>' : '') +
+      '</div>', false, { pop: 'POP020' }
   );
 }
 
@@ -951,7 +951,7 @@ function c2PaneDel(d) {
          delivery but never make one, which meant the whole tab was a demo. Recording is the point; it is the
          action he performs twenty times a day, so it is one tap from the line rather than behind a menu. */
         '<div style="margin-top:9px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">' +
-        '<input id="c2dq_' +
+        '<input data-cbsid="DTL006-I01" id="c2dq_' +
         e.line_id +
         '" data-testid="c2-dq" inputmode="decimal" placeholder="' +
         (p.pending ? String(p.pending) : 'qty') +
@@ -959,10 +959,10 @@ function c2PaneDel(d) {
         '<span style="font-size:var(--fs-2);color:var(--grey)">' +
         esc(l.unit || '') +
         '</span>' +
-        '<input id="c2dr_' +
+        '<input data-cbsid="DTL006-I02" id="c2dr_' +
         e.line_id +
         '" placeholder="reference (optional)" style="flex:1;min-width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
-        '<button class="btn pri" data-testid="c2-delivered" onclick="c2Deliver(\'' +
+        '<button data-cbsid="DTL006-B04" class="btn pri" data-testid="c2-delivered" onclick="c2Deliver(\'' +
         e.line_id +
         "','" +
         esc(l.unit || '') +
@@ -1139,7 +1139,7 @@ function c2WorkTabs() {
       .map(function (item) {
         var on = (C2.work || 'line') === item[0];
         return (
-          '<span onclick="c2WorkView(&quot;' +
+          '<span data-cbsid="DTL006-C05" onclick="c2WorkView(&quot;' +
           item[0] +
           '&quot;)" data-testid="work-' +
           item[0] +
@@ -1364,7 +1364,7 @@ function c2WorkRow(e, asg, prog, ctx) {
    * destination, it did not lose one.
    */
   return (
-    '<div data-testid="c2-work-row" data-line="' +
+    '<div data-cbsid="DTL006-C06" data-testid="c2-work-row" data-line="' +
     e.line_id +
     '" onclick="openLineCard(C2.id,\'' +
     e.line_id +
@@ -1374,7 +1374,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     /* ⭐  so the phone can wrap it: the description takes the first line, and the status, money and
          controls sit underneath. On a laptop it stays the single row it has always been. */
     '<div class="c2wrow" style="display:flex;align-items:baseline;gap:8px">' +
-    '<input type="checkbox" data-testid="c2-pick-' +
+    '<input data-cbsid="DTL006-I03" type="checkbox" data-testid="c2-pick-' +
     e.line_id +
     '"' +
     (_ticked ? ' checked' : '') +
@@ -1432,7 +1432,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     '\')">' +
     esc(tx('Open')) +
     '</a>' +
-    '<span data-testid="c2-work-assign" title="' +
+    '<span data-cbsid="DTL006-C07" data-testid="c2-work-assign" title="' +
     esc(tx('Assign this line')) +
     '"' +
     ' onclick="event.stopPropagation();c2AssignOpen(\'' +
@@ -1505,7 +1505,7 @@ function c2AssignOpen(line_id) {
         '</div>' +
         '<button data-cbsid="CMP005" class="btn" style="width:100%" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP019' }
     );
   }
   var opts = roster
@@ -1525,7 +1525,7 @@ function c2AssignOpen(line_id) {
       '<label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' +
       tx('ASSIGN TO') +
       '</label>' +
-      '<select id="c2a_' +
+      '<select data-cbsid="DTL006-S01" id="c2a_' +
       line_id +
       '" data-testid="c2-assign-who" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3);margin-bottom:10px"><option value="">' +
       tx('Unassigned') +
@@ -1536,7 +1536,7 @@ function c2AssignOpen(line_id) {
       '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' +
       tx('TASK') +
       '</label>' +
-      '<input id="c2t_' +
+      '<input data-cbsid="DTL006-I04" id="c2t_' +
       line_id +
       '" data-testid="c2-assign-task" value="' +
       esc(a.task || '') +
@@ -1544,7 +1544,7 @@ function c2AssignOpen(line_id) {
       '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' +
       tx('DUE') +
       '</label>' +
-      '<input id="c2d_' +
+      '<input data-cbsid="DTL006-I05" id="c2d_' +
       line_id +
       '" data-testid="c2-assign-due" type="date" value="' +
       esc(a.due_date ? String(a.due_date).slice(0, 10) : '') +
@@ -1563,11 +1563,11 @@ function c2AssignOpen(line_id) {
       '<div style="display:flex;gap:8px"><button data-cbsid="CMP003" class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button class="btn pri" data-testid="c2-assign-do" style="flex:1" onclick="c2Assign(\'' +
+      '<button data-cbsid="DTL006-B05" class="btn pri" data-testid="c2-assign-do" style="flex:1" onclick="c2Assign(\'' +
       line_id +
       '\')">' +
       tx('Assign') +
-      '</button></div>'
+      '</button></div>', false, { pop: 'POP019' }
   );
 }
 /**
@@ -1692,7 +1692,7 @@ function c2MatRowHTML(line_id) {
      the control would read as the feature being missing. */
   var srcSel =
     srcs.length > 1
-      ? '<select data-testid="c2-mat-src" onchange="c2MatSetSrc(this.value)" style="padding:6px 8px;' +
+      ? '<select data-cbsid="DTL006-S02" data-testid="c2-mat-src" onchange="c2MatSetSrc(this.value)" style="padding:6px 8px;' +
         'border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">' +
         srcs
           .map(function (item) {
@@ -1704,7 +1704,7 @@ function c2MatRowHTML(line_id) {
   return (
     '<div style="flex-basis:100%;height:0"></div>' +
     srcSel +
-    '<button class="btn" data-testid="c2-take-material" onclick="c2TakeMaterial(\'' +
+    '<button data-cbsid="DTL006-B06" class="btn" data-testid="c2-take-material" onclick="c2TakeMaterial(\'' +
     line_id +
     '\')"' +
     ' title="' +
@@ -1864,11 +1864,11 @@ function c2PickBarHTML() {
     '<b style="font-size:var(--fs-2)">' +
     esc(txf('{n} selected', { n: n })) +
     '</b>' +
-    '<select id="c2pick_actor" style="flex:1;min-width:150px;padding:6px 9px;border:1px solid var(--line);' +
+    '<select data-cbsid="DTL006-S03" id="c2pick_actor" style="flex:1;min-width:150px;padding:6px 9px;border:1px solid var(--line);' +
     'border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">' +
     opts +
     '</select>' +
-    '<button class="btn pri" data-testid="c2-assign-many" onclick="c2AssignMany()" style="padding:6px 14px">' +
+    '<button data-cbsid="DTL006-B07" class="btn pri" data-testid="c2-assign-many" onclick="c2AssignMany()" style="padding:6px 14px">' +
     esc(tx('Assign together')) +
     '</button>' +
     '<button data-cbsid="CMP014" onclick="c2PickClear()" style="border:1px solid var(--line);background:var(--card);' +
@@ -2091,7 +2091,8 @@ function c2SpendHTML(reply, header, delivery) {
           delivery_summary: delivery,
           line_delivery: reply.line_delivery,
           line_assignment: reply.line_assignment,
-          order_billed: reply.order_billed /* W36: "Not billed yet" on an order */
+          order_billed: reply.order_billed /* W36: "Not billed yet" on an order */,
+          _status: header.current_status /* a cancelled or rejected bill shows Mark paid disabled (chitNoPayWhy reads it) */
         }) +
         '</div>'
       : '';
@@ -2118,7 +2119,7 @@ function chit2Screen() {
     .map(function (item) {
       var on = C2.side === item;
       return (
-        '<button data-testid="c2-side-' +
+        '<button data-cbsid="DTL006-B08" data-testid="c2-side-' +
         item +
         '" onclick="c2Side(\'' +
         item +
@@ -2145,7 +2146,7 @@ function chit2Screen() {
     .map(function (item) {
       var on = C2.tab === item[0];
       return (
-        '<button data-testid="c2-tab-' +
+        '<button data-cbsid="DTL006-B09" data-testid="c2-tab-' +
         item[0] +
         '" onclick="c2Tab(\'' +
         item[0] +
@@ -2194,7 +2195,7 @@ function chit2Screen() {
      * door. Athi: *"design 2 and design 1 can be switchable, right?"* Two readings of ONE chit; the way to the
      * other reading belongs on the reading you are in.
      */
-    '<button type="button" data-testid="c2-to-design1" onclick="c2Back()"' +
+    '<button data-cbsid="DTL006-B10" type="button" data-testid="c2-to-design1" onclick="c2Back()"' +
     ' title="' +
     esc(tx('Read this chit as one unit of work instead of line by line')) +
     '"' +
@@ -2229,7 +2230,7 @@ function chit2Screen() {
      */
     (C2.side === 'us'
       ? '<div style="padding:6px 16px 0;text-align:center">' +
-        '<span data-testid="c2-service-clock" onclick="openServiceClock(\'' +
+        '<span data-cbsid="DTL006-C08" data-testid="c2-service-clock" onclick="openServiceClock(\'' +
         C2.id +
         '\')"' +
         ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">⏱ Service clock &amp; SLA</span></div>'

@@ -189,7 +189,7 @@ function _erpReceiptsHTML() {
         esc(oc) +
         '</span>' +
         (item.chit_id
-          ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="openChit(\'' +
+          ? '<button data-cbsid="SCR002-B01" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="openChit(\'' +
             esc(item.chit_id) +
             '\')">' +
             tx('Open chit') +
@@ -224,7 +224,7 @@ function piCockpit(x) {
     : '<span class="optchip" style="background:var(--purple-tint);color:var(--blue);border-color:#ddcff2">' + tx('🔌 ERP') + '</span>';
   var ico = function (t, title, on) {
     return (
-      '<button title="' +
+      '<button data-cbsid="SCR002-B02" title="' +
       title +
       '" onclick="' +
       on +
@@ -235,7 +235,7 @@ function piCockpit(x) {
   };
   var header =
     '<div style="position:sticky;top:0;background:var(--card);z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line);color:var(--on-card)">' +
-    '<button class="dback" onclick="backToList()">‹ Co-assists</button>' +
+    '<button data-cbsid="SCR002-B03" class="dback" onclick="backToList()">‹ Co-assists</button>' +
     '<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:var(--fs-4);font-weight:700">' +
     esc(x.name) +
     '</span> ' +
@@ -329,7 +329,7 @@ function piCockpit(x) {
           (det ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px">' + esc(det) + '</div>' : '') +
           '</div>' +
           _sig(item.enabled === false ? 'silent' : item.signal) +
-          '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="acToggleDevice(\'' +
+          '<button data-cbsid="SCR002-B04" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="acToggleDevice(\'' +
           x.id +
           "'," +
           item.connection_id +
@@ -344,7 +344,7 @@ function piCockpit(x) {
   // Obvious, labelled installer button (the bare 📦 header icon was too easy to miss) + an inline caution: this DOWNLOAD
   // reissues the key, so any device already running this gateway goes silent until reflashed. The confirm gates it too.
   var installerBtn = iot
-    ? '<button class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acCreatePackage(\'' +
+    ? '<button data-cbsid="SCR002-B05" class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acCreatePackage(\'' +
       x.id +
       '\')">' +
       tx('📦 Get the Pi installer') +
@@ -356,7 +356,7 @@ function piCockpit(x) {
     : '';
   // ERP has no installer; its one-tap live-run is a sample document through the real process-then-forget cycle.
   var erpTestBtn = !iot
-    ? '<button class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acErpTest(\'' +
+    ? '<button data-cbsid="SCR002-B06" class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acErpTest(\'' +
       x.id +
       '\')">' +
       tx('📄 Send a test document') +
@@ -369,7 +369,7 @@ function piCockpit(x) {
       '</div>'
     : '';
   var govLink = iot
-    ? '<button class="composebtn" style="width:100%;margin:2px 0 9px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:var(--fs-2)" onclick="if(typeof openBlueprint===\'function\')openBlueprint(\'iot-signal\')">🔒 What governs this signal — licence · sealed · open <span class=arw>→</span></button>'
+    ? '<button data-cbsid="SCR002-B07" class="composebtn" style="width:100%;margin:2px 0 9px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:var(--fs-2)" onclick="if(typeof openBlueprint===\'function\')openBlueprint(\'iot-signal\')">🔒 What governs this signal — licence · sealed · open <span class=arw>→</span></button>'
     : '';
   return (
     header +
@@ -409,7 +409,7 @@ function _provPanel(iot, aid) {
       : '';
   var regen =
     iot && aid
-      ? '<div style="margin-top:9px"><button class="composebtn" onclick="acRegenKey(\'' +
+      ? '<div style="margin-top:9px"><button data-cbsid="SCR002-B08" class="composebtn" onclick="acRegenKey(\'' +
         esc(aid) +
         '\')">' +
         tx('♻ Reissue raw key (advanced)') +
@@ -481,31 +481,31 @@ function _addDeviceForm(x, iot) {
   var spec = iot
     ? '<label class="fl">' +
       tx('Topic') +
-      '</label><input class="inp" id="ad_topic" data-testid="conn-topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">' +
+      '</label><input data-cbsid="SCR002-I01" class="inp" id="ad_topic" data-testid="conn-topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">' +
       tx('Device id') +
-      '</label><input class="inp" id="ad_dev" data-testid="conn-device-id" placeholder="edge-gw-01" style="width:100%">'
+      '</label><input data-cbsid="SCR002-I02" class="inp" id="ad_dev" data-testid="conn-device-id" placeholder="edge-gw-01" style="width:100%">'
     : '<label class="fl">' +
       tx('Resource path') +
-      '</label><input class="inp" id="ad_path" data-testid="conn-path" placeholder="/odata/PurchaseOrders" style="width:100%">';
+      '</label><input data-cbsid="SCR002-I03" class="inp" id="ad_path" data-testid="conn-path" placeholder="/odata/PurchaseOrders" style="width:100%">';
   return (
     '<div style="border:1px dashed #c9d2dd;border-radius:9px;padding:12px;margin:10px 0;background:var(--blue-tint-bg);color:var(--on-card)"><div style="font-weight:700;font-size:var(--fs-2);margin-bottom:2px">Add ' +
     (iot ? 'device' : 'endpoint') +
     '</div>' +
     '<label class="fl">' +
     tx('Name') +
-    '</label><input class="inp" id="ad_ref" data-testid="conn-device-name" placeholder="' +
+    '</label><input data-cbsid="SCR002-I04" class="inp" id="ad_ref" data-testid="conn-device-name" placeholder="' +
     (iot ? 'Cold-store temp' : 'PO inbound') +
     '" style="width:100%">' +
     spec +
     (iot
-      ? '<label class="fl">Folder — file its exceptions here <span style="font-weight:400;color:var(--grey)">(a name you choose, under this entity)</span></label><input class="inp" id="ad_folder" placeholder="e.g. Gate log" style="width:100%">' +
-        '<label class="fl">Keep — exception classes <span style="font-weight:400;color:var(--grey)">(comma-sep · blank = all; group / count by these)</span></label><input class="inp" id="ad_classes" placeholder="lorry, tanker" style="width:100%">' +
-        '<label class="fl">Default assignee <span style="font-weight:400;color:var(--grey)">(who this device\'s signals are assigned to — blank = entity default)</span></label><select class="inp" id="ad_assignee" style="width:100%">' +
+      ? '<label class="fl">Folder — file its exceptions here <span style="font-weight:400;color:var(--grey)">(a name you choose, under this entity)</span></label><input data-cbsid="SCR002-I05" class="inp" id="ad_folder" placeholder="e.g. Gate log" style="width:100%">' +
+        '<label class="fl">Keep — exception classes <span style="font-weight:400;color:var(--grey)">(comma-sep · blank = all; group / count by these)</span></label><input data-cbsid="SCR002-I06" class="inp" id="ad_classes" placeholder="lorry, tanker" style="width:100%">' +
+        '<label class="fl">Default assignee <span style="font-weight:400;color:var(--grey)">(who this device\'s signals are assigned to — blank = entity default)</span></label><select data-cbsid="SCR002-S01" class="inp" id="ad_assignee" style="width:100%">' +
         _asgOpts +
         '</select>' +
-        '<label class="fl">External email <span style="font-weight:400;color:var(--grey)">(optional — notify someone OUTSIDE the system by email; a notice, not the data)</span></label><input class="inp" id="ad_notifyemail" type="email" placeholder="name@example.com" style="width:100%">'
+        '<label class="fl">External email <span style="font-weight:400;color:var(--grey)">(optional — notify someone OUTSIDE the system by email; a notice, not the data)</span></label><input data-cbsid="SCR002-I07" class="inp" id="ad_notifyemail" type="email" placeholder="name@example.com" style="width:100%">'
       : '') +
-    '<label class="fl">CC <span style="font-weight:400;color:var(--grey)">(optional — another entity id who also co-holds the proof)</span></label><input class="inp" id="ad_cp" placeholder="another entity id" style="width:100%">' +
+    '<label class="fl">CC <span style="font-weight:400;color:var(--grey)">(optional — another entity id who also co-holds the proof)</span></label><input data-cbsid="SCR002-I08" class="inp" id="ad_cp" placeholder="another entity id" style="width:100%">' +
     '<div class="err" id="ad_err" style="margin-top:6px"></div>' +
     '<div style="display:flex;gap:8px;margin-top:10px"><button data-cbsid="CMP007" class="composebtn pri" onclick="acAddDevice(\'' +
     x.id +
@@ -679,16 +679,16 @@ function acReissueGate(id, mode) {
         { newkey: '<b>' + tx('new key') + '</b>', stops: '<b>' + tx('stops') + '</b>' }
       ) +
       '</div>' +
-      '<label class="fl">1 · Type the gateway\'s exact name</label><input class="inp" id="rg_name" placeholder="gateway name" style="width:100%;margin-bottom:12px">' +
+      '<label class="fl">1 · Type the gateway\'s exact name</label><input data-cbsid="SCR002-I09" class="inp" id="rg_name" placeholder="gateway name" style="width:100%;margin-bottom:12px">' +
       '<label class="fl">' +
       tx('2 · One-time code (sent to the account email)') +
-      '</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><input class="inp" id="rg_otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" style="flex:1"><button class="composebtn" onclick="acReissueSendCode()">' +
+      '</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><input data-cbsid="SCR002-I10" class="inp" id="rg_otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" style="flex:1"><button data-cbsid="SCR002-B09" class="composebtn" onclick="acReissueSendCode()">' +
       tx('Send code') +
       '</button></div>' +
       '<div id="rg_msg" style="font-size:var(--fs-1);color:var(--blue-2);min-height:15px;margin-bottom:10px"></div>' +
       '<div style="display:flex;gap:10px"><button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="composebtn pri" style="flex:1" onclick="acReissueSubmit()">' +
+      '</button><button data-cbsid="SCR002-B10" class="composebtn pri" style="flex:1" onclick="acReissueSubmit()">' +
       tx('Reissue') +
       '</button></div>' +
       '</div>',

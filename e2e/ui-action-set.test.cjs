@@ -36,7 +36,7 @@ vm.runInContext(read('app/ui.js'), sandbox);
 const ui = sandbox.ui;
 
 console.log('the set');
-const names = Object.keys(ui.components).filter((name) => name !== 'dialog' && !ui.components[name].nonButton);
+const names = Object.keys(ui.components).filter((name) => name !== 'dialog' && !ui.components[name].nonButton && !ui.components[name].own); /* CMP057 takes its own label and verb: e2e/ui-select-command.test.cjs */
 check(names.length === 24, 'twenty-four actions: ' + names.join(' '));
 const codes = Object.values(ui.components).map((component) => component.code);
 check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'twenty-four distinct CMP codes (twenty-four actions and the dialog)');

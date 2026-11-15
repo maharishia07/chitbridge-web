@@ -202,6 +202,7 @@ jobs:
           node e2e/net-24-shop-no-fx-table.test.cjs
           node e2e/ux-109-reach-sweep.test.cjs
           node e2e/ux-109-categories-attach-confirm.test.cjs
+          node e2e/l15-confirm-money-actions.test.cjs
           node e2e/ctry-18-starter-price-follows-country.test.cjs
           node e2e/ctry-23-governance-no-localstorage.test.cjs
           node e2e/ctry-70-india-compared-with.test.cjs
@@ -230,6 +231,7 @@ jobs:
           node e2e/ui-action-set.test.cjs
           node e2e/field-edge.test.cjs
           node e2e/ui-field.test.cjs
+          node e2e/ui-select-command.test.cjs
           node e2e/ui-dialog-widen.test.cjs
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
@@ -244,20 +246,28 @@ jobs:
           node e2e/ui-codes-g2.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
+          node e2e/ui-codes-g3.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
           node e2e/ui-codes-employees.test.cjs
           node e2e/ui-codes-app-catalogue.test.cjs
           node e2e/ui-codes-app-platform.test.cjs
           node e2e/retired-routes-absent.test.cjs
+          node e2e/screens-register.cjs
           node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
           node tests/price-moved-ui.test.cjs
           node e2e/ui-codes-chit-price-moved.test.cjs
+          node e2e/ui-codes-popups-green.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
           node e2e/ui-codes-shop.test.cjs
+          node e2e/ui-codes-g4.test.cjs
+          node e2e/ui-field-g4.test.cjs
+          node e2e/ui-field-dense.test.cjs
+          node e2e/ui-field-w3.test.cjs
           node e2e/ui-codes-w2-net.test.cjs
+          node e2e/ui-codes-g5.test.cjs
           node e2e/ui-codes-intake.test.cjs
           node e2e/intake-page-checks.test.cjs
           node e2e/ui-codes-authority-forms.test.cjs
@@ -276,6 +286,8 @@ jobs:
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs
           node e2e/ui-codes-promo.test.cjs
+          node e2e/ui-codes-g1.test.cjs
+          node e2e/ui-codes-sweep.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs

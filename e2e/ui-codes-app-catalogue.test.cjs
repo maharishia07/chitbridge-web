@@ -23,9 +23,9 @@ const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) fa
 const KIND = { button: 'B', input: 'I', select: 'S', textarea: 'T', span: 'C', a: 'C', div: 'C' };
 const tags = [...src.matchAll(/<(button|input|select|textarea|span|a|div)\b([^>]*?data-cbsid="(CAT001-[A-Z][0-9]{2})"[^>]*)>/g)];
 const codes = tags.map((t) => t[3]);
-check(codes.length === 5, 'the catalogue screen has 5 tagged elements, found ' + codes.length);
+check(codes.length === 35, 'the catalogue screen has 35 tagged elements (5 slice-2 + 30 from the G1 wave 2 stamps), found ' + codes.length);
 check(new Set(codes).size === codes.length, 'no code is on two tags');
-const wrong = tags.filter((t) => KIND[t[1]] !== t[3].charAt(7));
+const wrong = tags.filter((t) => KIND[t[1]] !== t[3].charAt(7) && !(t[1] === 'span' && t[3].charAt(7) === 'B')); /* G1 wave 2 codes a clickable span B (a button by behaviour) */
 check(wrong.length === 0, 'every code letter is its tag kind' + (wrong.length ? ' (' + wrong.map((t) => t[3]).join(',') + ')' : ''));
 
 /** testid -> the code its tag must wear */

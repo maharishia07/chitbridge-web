@@ -77,7 +77,7 @@ const shellSrc = read('public/app/shell.js');
 ok(/<main class="cbsh-main"[^>]*tabindex="0"/.test(shellSrc), 'shell: the scrolling main region is focusable (scrollable-region-focusable)');
 ok(/id="sidePinned"[^>]*tabindex="0"[^>]*aria-label="/.test(read('public/app/page-frame.js')), 'page-frame: the pinned shelf scrolls, is focusable and named');
 ok(/<div class="rbody" id="rbody"[^>]*tabindex="0"[^>]*aria-label="/.test(read('public/network-design.html')), 'network-design: the .rbody scroll region is focusable and named');
-ok(/<select id="cat" aria-label="[^"]+"/.test(read('public/product-lab.html')), 'product-lab: select#cat has a name (select-name, critical)');
+ok(/ui[.]select[(][{][^}]*id: 'cat', label: 'Shelf', bare: true/.test(read('public/product-lab.html')) && /aria-label/.test(read('public/app/ui-select.js')), 'product-lab: select#cat is the library select, named by aria-label (select-name, critical)');
 ok(!/cbcat-stock[^]{0,400}opacity:\.7/.test(read('public/app/cart.js')), 'cart: a stale stock reading is not faded below AA (the chip says "as of ...")');
 ok(!/see it on your wall <span style="color:#9aa3a7"/.test(read('public/shop.html')), 'shop: the Scan-your-home badge brand line is not #9aa3a7 grey (2.18:1)');
 console.log(fails ? '\n' + fails + ' failure(s)' : '\nall passed');

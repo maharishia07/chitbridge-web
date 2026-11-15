@@ -780,7 +780,10 @@
     'List column header': 'பட்டியல் நெடுவரிசைத் தலைப்பு',
     'CMP040.label': 'கணக்கு புலம்',
     'CMP055.label': 'புலம்',
+    'CMP056.label': 'தேர்வு',
+    'CMP057.label': 'கட்டளை',
     'Field': 'புலம்',
+    'Command': 'கட்டளை',
     'CMP055.required': 'தேவை',
     'Required': 'தேவை',
     'CMP055.badnumber': 'இது எண் அல்ல. இலக்கங்கள் மட்டும் எழுதுங்கள், எ.கா. 1234.5',
@@ -789,6 +792,14 @@
     'Use a {mark} before the decimals, like 1{mark}5': 'தசமத்திற்கு முன் {mark} இடுங்கள், எ.கா. 1{mark}5',
     'CMP055.badgroup': 'இந்த எண்ணின் காற்புள்ளிகளைச் சரிபார்க்கவும்',
     'Check the commas in that number': 'இந்த எண்ணின் காற்புள்ளிகளைச் சரிபார்க்கவும்',
+    'CMP055.moneyplaces': 'இந்த நாணயத்தில் அதிகபட்சம் {n} தசமங்கள் உண்டு, எ.கா. {example}',
+    'This currency has {n} decimals at most, for example {example}': 'இந்த நாணயத்தில் அதிகபட்சம் {n} தசமங்கள் உண்டு, எ.கா. {example}',
+    'CMP055.moneywhole': 'இந்த நாணயத்தில் தசமம் இல்லை. முழுத் தொகையை எழுதுங்கள், எ.கா. 150',
+    'This currency has no decimals. Type a whole amount, like 150': 'இந்த நாணயத்தில் தசமம் இல்லை. முழுத் தொகையை எழுதுங்கள், எ.கா. 150',
+    'CMP055.moneyminus': 'தொகையை கழித்தல் குறி இல்லாமல் எழுதுங்கள்',
+    'Type the amount without a minus sign': 'தொகையை கழித்தல் குறி இல்லாமல் எழுதுங்கள்',
+    'CMP055.moneybig': 'இந்தத் தொகை துல்லியமாகப் படிக்க முடியாத அளவு பெரியது. இலக்கங்களைச் சரிபார்க்கவும்',
+    'That amount is too large to read exactly. Check the digits': 'இந்தத் தொகை துல்லியமாகப் படிக்க முடியாத அளவு பெரியது. இலக்கங்களைச் சரிபார்க்கவும்',
     'Books field': 'கணக்கு புலம்',
     'CMP041.label': 'கணக்கு தேர்வு',
     'Books select': 'கணக்கு தேர்வு',
@@ -926,7 +937,21 @@
   var pack = {
     '{count} bill could not be read and is left out of this month\u0005one': '{count} பில்லைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டது',
     '{count} bill could not be read and is left out of this month\u0005other': '{count} பில்களைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டன',
-    'Open bill {n}': 'பில் {n} ஐத் திற'
+    'Open bill {n}': 'பில் {n} ஐத் திற',
+    'Clear this payment?': 'இந்தக் கட்டணத்தை நீக்கவா?',
+    'Clear payment': 'கட்டணத்தை நீக்கு',
+    'This clears the recorded payment. The log keeps both entries.': 'இது பதிவு செய்த கட்டணத்தை நீக்கும். பதிவேடு இரண்டு உள்ளீடுகளையும் வைத்திருக்கும்.',
+    'Add to this offer?': 'இந்தச் சலுகையில் சேர்க்கவா?',
+    'will be priced by this offer': 'இந்தச் சலுகையால் விலை பெறும்',
+    'This offer': 'இந்தச் சலுகை',
+    'This offer will apply to ALL products': 'இந்தச் சலுகை எல்லாப் பொருட்களுக்கும் பொருந்தும்',
+    'Apply to all': 'எல்லாவற்றிற்கும் பொருத்து',
+    'Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.': 'கடைசிப் பொருளை நீக்கினால் இந்தச் சலுகையைக் கட்டுப்படுத்த எதுவும் இருக்காது, எனவே இது எல்லாப் பொருட்களுக்கும் பொருந்தும்.',
+    'This offer changed while you were confirming; check and try again': 'நீங்கள் உறுதிசெய்யும்போது இந்தச் சலுகை மாறிவிட்டது; சரிபார்த்து மீண்டும் முயலவும்',
+    'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'இந்தச் சீட்டு திரையில் இல்லை, எனவே கட்டணம் நீக்கப்படவில்லை. மீண்டும் திறந்து முயலவும்.',
+    'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'இந்தச் சீட்டில் கட்டணத் தொகையும் நாணயமும் இல்லை, எனவே நீக்கப்படவில்லை. மீண்டும் திறந்து முயலவும்.',
+    '{count} product\u0005one': '{count} பொருள்',
+    '{count} product\u0005other': '{count} பொருட்கள்'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

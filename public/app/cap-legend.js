@@ -1009,7 +1009,7 @@ function _stackTabHtml() {
 function _lbTabBar() {
   const tab = typeof _lbTab !== 'undefined' ? _lbTab : 'subject';
   const btn = (id, label) =>
-    `<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:var(--fs-3);font-weight:${tab === id ? '700' : '500'};color:${tab === id ? 'var(--ink)' : 'var(--grey)'};border-bottom:2px solid ${tab === id ? 'var(--accent,var(--blue))' : 'transparent'}">${label}</button>`;
+    `<button data-cbsid="SCR006-B01" onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:var(--fs-3);font-weight:${tab === id ? '700' : '500'};color:${tab === id ? 'var(--ink)' : 'var(--grey)'};border-bottom:2px solid ${tab === id ? 'var(--accent,var(--blue))' : 'transparent'}">${label}</button>`;
   return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject', '📜 The subject')}${btn('stories', '📖 The Life of…')}${btn('found', '🧱 Foundations')}${btn('stack', '🏛️ Governance stack')}${btn('work', '⬡ Work patterns')}${btn('std', '📐 Standards')}${btn('cap', '⬢ Capabilities')}${btn('edge', '🎯 The edge')}${btn('life', '🔀 Lifecycle')}${btn('sec', '🔒 Security')}${btn('real', '🔬 Reality')}</div>`;
 }
 function setLbTab(t) {

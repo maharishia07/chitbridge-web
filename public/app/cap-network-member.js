@@ -221,7 +221,7 @@ function _netAvailBody() {
     .map(function (item) {
       var open = one || UI._avOpen === item.key;
       var head =
-        '<div onclick="netAvailToggle(\'' +
+        '<div data-cbsid="SCR031-C01" onclick="netAvailToggle(\'' +
         item.key +
         '\')" style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;' +
         'padding:11px 2px;border-bottom:1px solid var(--line);background:' +
@@ -321,7 +321,7 @@ function _netAvailBody() {
       // else. Nothing new is invented for "internal" transfers: a store asking a sibling is still two parties.
       (r.is_me
         ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">This is your own stock.</div>'
-        : '<div style="margin-top:7px"><button onclick="netAskFor(\'' +
+        : '<div style="margin-top:7px"><button data-cbsid="SCR031-B01" onclick="netAskFor(\'' +
           esc(r.entity_id) +
           "','" +
           esc(r.store) +
@@ -609,25 +609,25 @@ function _netStepDetails() {
     esc((UI._brSel && UI._brSel.name) || '') +
     '</div>' +
     '<label class="fl">Subject <span style="color:var(--disp)">*</span></label>' +
-    '<input class="inp" data-testid="net-subject" value="' +
+    '<input data-cbsid="SCR031-I01" class="inp" data-testid="net-subject" value="' +
     esc(o.subject) +
     '" oninput="UI._netOrder.subject=this.value;UI._netFlow&&UI._netFlow.paintFoot()">' +
     '<div style="display:flex;gap:10px"><div style="flex:1"><label class="fl">' +
     tx('Needed by') +
     '</label>' +
-    '<input class="inp" type="date" data-testid="net-by" value="' +
+    '<input data-cbsid="SCR031-I02" class="inp" type="date" data-testid="net-by" value="' +
     esc(o.by) +
     '" oninput="UI._netOrder.by=this.value"></div>' +
     '<div style="flex:1"><label class="fl">' +
     tx('Deliver to') +
     '</label>' +
-    '<input class="inp" data-testid="net-addr" value="' +
+    '<input data-cbsid="SCR031-I03" class="inp" data-testid="net-addr" value="' +
     esc(o.addr) +
     '" placeholder="site / address" oninput="UI._netOrder.addr=this.value"></div></div>' +
     '<label class="fl">' +
     tx('Note') +
     '</label>' +
-    '<input class="inp" data-testid="net-note" value="' +
+    '<input data-cbsid="SCR031-I04" class="inp" data-testid="net-note" value="' +
     esc(o.note) +
     '" placeholder="instructions" oninput="UI._netOrder.note=this.value">' +
     /* The same rail as any other chit — nothing separate is invented for "internal" movement, or it stops being
@@ -663,7 +663,7 @@ function _netStepReview() {
       '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">' +
       h +
       (edit != null
-        ? '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:var(--fs-1)" onclick="UI._netFlow.go(' +
+        ? '<span data-cbsid="SCR031-C02" style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:var(--fs-1)" onclick="UI._netFlow.go(' +
           edit +
           ')">' +
           tx('Change') +
@@ -847,7 +847,7 @@ function _netBrowseBody() {
     /* THE CHIP — who you are ordering from, and the one warning that must never hide behind a tap. */
     var head =
       '<div style="padding-bottom:10px;border-bottom:1px solid var(--line)">' +
-      '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ all stores</span>' +
+      '<span data-cbsid="SCR031-C03" onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ all stores</span>' +
       '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:var(--card);margin-inline-start:8px;color:var(--on-card)">' +
       '<b style="font-size:var(--fs-3)">' +
       esc(s.name) +
@@ -899,7 +899,7 @@ function _netBrowseBody() {
       '</div>' +
       (f.isLast()
         ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? ' +
-          '<span data-testid="net-open-compose" onclick="netOpenInCompose()" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>'
+          '<span data-cbsid="SCR031-C04" data-testid="net-open-compose" onclick="netOpenInCompose()" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>'
         : '')
     );
   }
@@ -913,7 +913,7 @@ function _netBrowseBody() {
   return stores
     .map(function (item) {
       return (
-        '<div onclick="netBrowse(\'' +
+        '<div data-cbsid="SCR031-C05" onclick="netBrowse(\'' +
         esc(item.entity_id) +
         "','" +
         esc(String(item.name).replace(/'/g, '')) +
@@ -976,7 +976,7 @@ function _netAvailScreen() {
     'what it has. The answer carries the quantity, the system it came from and when it was last true.</div>' +
     /* ⚠️ THIS BOX IS THE SCREEN'S SEARCH and it had no testid — so nothing could drive it and e2e/list-controls
        could not see it either, recording a gap against a control that has worked since August. */
-    '<input data-testid="net-avail-search" value="' +
+    '<input data-cbsid="SCR031-I05" data-testid="net-avail-search" value="' +
     esc(UI._avQ || '') +
     '" oninput="netAvailSearch(this.value)" placeholder="a product name or code — e.g. impeller, IMP-90"' +
     ' style="width:100%;margin-top:13px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-3);box-sizing:border-box">' +

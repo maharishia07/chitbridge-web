@@ -41,7 +41,7 @@ const OPTIONS_FOR = { home: { href: '/' }, save: { effect: 'preference' }, remov
 function keyFailures(source) {
   const failures = [];
   const library = loadLibrary(source);
-  Object.keys(library.components).filter((name) => name !== 'dialog' && !library.components[name].nonButton).forEach((name) => {
+  Object.keys(library.components).filter((name) => name !== 'dialog' && !library.components[name].nonButton && !library.components[name].own).forEach((name) => {
     const component = library.components[name];
     const plain = library.action(name, Object.assign({ mount: 'TST001-U01' }, OPTIONS_FOR[name] || {}));
     const named = library.action(name, Object.assign({ mount: 'TST001-U01', object: 'thing' }, OPTIONS_FOR[name] || {}));
@@ -59,7 +59,7 @@ function packFailures(library) {
     const component = library.components[name];
     keys.push(component.code + '.label');
     if (component.shown && /\w/.test(component.shown)) keys.push(component.code + '.shown');
-    if (name !== 'dialog' && !component.nonButton) keys.push(component.code + '.aria');
+    if (name !== 'dialog' && !component.nonButton && !component.own) keys.push(component.code + '.aria'); /* CMP057 names itself from its own label */
     if (name === 'progress') ['working', 'step', 'count', 'finished', 'failed'].forEach((part) => keys.push(component.code + '.' + part));
   });
   LANGS.forEach((lang) => {
@@ -78,7 +78,7 @@ function callSiteFailures() {
   const failures = [];
   const files = fs.readdirSync(path.join(publicDir, 'app')).filter((file) => /\.js$/.test(file) && file !== 'ui.js').map((file) => 'app/' + file)
     .concat(fs.readdirSync(publicDir).filter((file) => /\.html$/.test(file)));
-  const rawTextOption = /\bui\.action\(\s*'[a-z]+'\s*,\s*\{[^}]*\b(?:label|text|title|shown)\s*:/;
+  const rawTextOption = /\bui\.action\(\s*'(?!command')[a-z]+'\s*,\s*\{[^}]*\b(?:label|text|title|shown)\s*:/;
   files.forEach((file) => {
     if (rawTextOption.test(fs.readFileSync(path.join(publicDir, file), 'utf8'))) failures.push(file + ': ui.action is given a text of its own; a component draws its keyed text');
   });

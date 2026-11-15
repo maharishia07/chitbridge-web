@@ -142,7 +142,7 @@ var CBPick = (function () {
       '<div class="mbody" style="padding:11px 12px">' +
       body +
       '</div>' +
-      '<div class="mfoot"><button data-testid="pick-cancel" onclick="CBPick.cancel()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" data-testid="pick-cancel" onclick="CBPick.cancel()">' +
       esc(tx_('Cancel')) +
       '</button>' +
       '<button class="pri" data-testid="pick-confirm" onclick="CBPick.confirm()">' +
@@ -171,7 +171,7 @@ var CBPick = (function () {
           '</div>' +
           skel
       ),
-      true
+      true, { pop: 'POP210' }
     );
   }
 
@@ -199,7 +199,7 @@ var CBPick = (function () {
           }
         })
       ),
-      true
+      true, { pop: 'POP210' }
     );
   }
 
@@ -268,7 +268,7 @@ var CBPick = (function () {
                   esc(typeof MSG !== 'undefined' && MSG.fail ? MSG.fail('read the catalogue', e) : tx_('Could not read the catalogue.')) +
                   '</div>'
               ),
-              true
+              true, { pop: 'POP210' }
             );
           });
       });

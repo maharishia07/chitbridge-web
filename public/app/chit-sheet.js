@@ -1472,6 +1472,9 @@
     use: function (u) {
       return acceptBill(u); /* the goods' use chosen (Accept or Goods in on a bill) — R102: the accept asks first */
     },
+    isDead: function (s) {
+      return stepIn(s, 'dead'); /* the rail's two dead ends (cancelled, rejected): the one list, read by the Mark-paid button */
+    },
     actionsFor: actionsFor,
     model: model,
     shortAsk: shortAsk /* R106: the Waiting row asks the same question the sheet asks */,

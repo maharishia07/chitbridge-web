@@ -91,7 +91,7 @@ function rgTabs() {
     list
       .map(function (item) {
         return (
-          '<button data-testid="register-tab-' +
+          '<button data-cbsid="SCR007-B01" data-testid="register-tab-' +
           item[0] +
           '" class="' +
           (RG.view === item[0] ? 'on' : '') +
@@ -168,7 +168,7 @@ async function openRegister(force) {
         '',
         true
       ),
-      true
+      true, { pop: 'POP067' }
     );
     await rgLoad(force);
   }
@@ -208,7 +208,7 @@ function rgPaint() {
       '<br><span style="color:var(--grey)">' +
       tx('This does NOT mean there is nothing on the register.') +
       '</span></div>';
-    modal(rgShell(body), true);
+    modal(rgShell(body), true, { pop: 'POP067' });
     return;
   }
   if (r && r.migrated === false) {
@@ -218,7 +218,7 @@ function rgPaint() {
           tx('The register is not switched on for this environment yet (b182).') +
           '</div>'
       ),
-      true
+      true, { pop: 'POP067' }
     );
     return;
   }
@@ -227,7 +227,7 @@ function rgPaint() {
     ? r.open + ' ' + tx('open') + ' · ' + r.closed + ' ' + tx('closed') + (r.closed_by_order ? ' · ' + r.closed_by_order + ' ' + tx('with the order') : '')
     : '';
   body = RG.view === 'closure' ? rgClosure() : RG.view === 'impact' ? rgImpact() : rgLive();
-  modal(rgShell(rgTabs() + body, head), true);
+  modal(rgShell(rgTabs() + body, head), true, { pop: 'POP067' });
   rgWiden();
   rgSyncFields();
 }
@@ -380,7 +380,7 @@ function rgRegisterRail() {
   };
   var chip = function (id, name, n, closed) {
     return (
-      '<button data-testid="register-subject" class="' +
+      '<button data-cbsid="SCR007-B02" data-testid="register-subject" class="' +
       (RG.sel === id ? 'on' : '') +
       '"' +
       ' onclick="rgSel(' +
@@ -410,7 +410,7 @@ function rgRegisterRail() {
         return chip(item.subject_id, item.name, countFor(item.subject_id), !!item.closed_at);
       })
       .join('') +
-    '<button onclick="rgQuickAdd()" data-testid="register-new" title="' +
+    '<button data-cbsid="SCR007-B03" onclick="rgQuickAdd()" data-testid="register-new" title="' +
     esc(tx('Record something in a new register')) +
     '">＋ ' +
     tx('New') +
@@ -445,7 +445,7 @@ function rgLinkTo(e) {
   if (!e.chit_id) return '<span style="color:var(--grey)">' + tx('standalone') + '</span>';
   var label = e.particulars || e.subject || tx('the order');
   return (
-    '<a href="#" class="rg-link" data-testid="raida-chit-link"' +
+    '<a data-cbsid="SCR007-C01" href="#" class="rg-link" data-testid="raida-chit-link"' +
     ' onclick="event.preventDefault();event.stopPropagation();closeModal();openChit(&quot;' +
     e.chit_id +
     '&quot;);return false"' +
@@ -526,7 +526,7 @@ function rgTr(e) {
           '&quot;)">' +
           tx('Edit') +
           '</button> ' +
-          '<button class="rg-act" data-testid="raida-close" onclick="rgCloseAsk(&quot;' +
+          '<button data-cbsid="SCR007-B04" class="rg-act" data-testid="raida-close" onclick="rgCloseAsk(&quot;' +
           e.raida_id +
           '&quot;)">' +
           tx('End →') +
@@ -687,14 +687,14 @@ function rgAddPanel(opt) {
     })
     .join('');
   var newFields =
-    '<select id="rgNewType" class="inp" data-testid="register-new-type" style="flex:0 0 40%">' +
+    '<select data-cbsid="SCR007-S01" id="rgNewType" class="inp" data-testid="register-new-type" style="flex:0 0 40%">' +
     (RG.attach || [])
       .map(function (item) {
         return '<option value="' + item.type_key + '"' + (item.type_key === 'chit' ? ' selected' : '') + '>' + esc(item.label) + '</option>';
       })
       .join('') +
     '</select>' +
-    '<input id="rgNewName" class="inp" data-testid="register-new-name" style="flex:1"' +
+    '<input data-cbsid="SCR007-I01" id="rgNewName" class="inp" data-testid="register-new-name" style="flex:1"' +
     ' placeholder="' +
     esc(tx('Name the register')) +
     '">';
@@ -713,7 +713,7 @@ function rgAddPanel(opt) {
       '</div>';
   } else {
     where =
-      '<select id="rgInto" class="inp" data-testid="raida-into" onchange="rgIntoChanged()"' +
+      '<select data-cbsid="SCR007-S02" id="rgInto" class="inp" data-testid="raida-into" onchange="rgIntoChanged()"' +
       ' style="width:100%;margin-bottom:6px">' +
       subs
         .map(function (item) {
@@ -744,33 +744,33 @@ function rgAddPanel(opt) {
   return (
     '<div class="raidadd" data-testid="raida-form" style="padding:8px 0;max-width:560px">' +
     where +
-    '<select id="rgKind" class="inp" data-testid="raida-kind" onchange="rgKindChanged()" style="width:100%;margin-bottom:6px">' +
+    '<select data-cbsid="SCR007-S03" id="rgKind" class="inp" data-testid="raida-kind" onchange="rgKindChanged()" style="width:100%;margin-bottom:6px">' +
     kinds +
     '</select>' +
-    '<input id="rgBody" class="inp" data-testid="raida-body" style="width:100%;margin-bottom:6px"' +
+    '<input data-cbsid="SCR007-I02" id="rgBody" class="inp" data-testid="raida-body" style="width:100%;margin-bottom:6px"' +
     ' placeholder="' +
     esc(tx('What is it? Say it in one line.')) +
     '">' +
     '<div style="display:flex;gap:6px;margin-bottom:6px">' +
-    '<input id="rgOwner" class="inp" style="flex:1" placeholder="' +
+    '<input data-cbsid="SCR007-I03" id="rgOwner" class="inp" style="flex:1" placeholder="' +
     esc(tx('Owner')) +
     '">' +
-    '<input id="rgDue" class="inp" type="date" style="flex:1">' +
+    '<input data-cbsid="SCR007-I04" id="rgDue" class="inp" type="date" style="flex:1">' +
     '</div>' +
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
     '<span style="font-size:var(--fs-1);color:var(--grey)">' +
     tx('Likelihood') +
     '</span>' +
-    '<input id="rgL" class="inp" type="number" min="1" max="5" style="width:64px">' +
+    '<input data-cbsid="SCR007-I05" id="rgL" class="inp" type="number" min="1" max="5" style="width:64px">' +
     '<span style="font-size:var(--fs-1);color:var(--grey)">' +
     tx('Severity') +
     '</span>' +
-    '<input id="rgS" class="inp" type="number" min="1" max="5" style="width:64px">' +
+    '<input data-cbsid="SCR007-I06" id="rgS" class="inp" type="number" min="1" max="5" style="width:64px">' +
     '</div>' +
     rgRespFields() +
     rgEdgeFields() +
     '<div style="display:flex;gap:6px">' +
-    '<button class="btn" data-testid="raida-save" style="flex:1" onclick="rgSave()">' +
+    '<button data-cbsid="SCR007-B05" class="btn" data-testid="raida-save" style="flex:1" onclick="rgSave()">' +
     tx('Record it') +
     '</button>' +
     (opt.bare ? '' : '<button data-cbsid="CMP003" class="btn ghost" style="flex:1" onclick="rgAdd(false)">' + tx('Cancel') + '</button>') +
@@ -789,7 +789,7 @@ function rgAddBar() {
   if (!rgEntries().length && !(RG.subjects || []).length) return rgAddPanel({ bare: true });
   if (!RG.adding) {
     return (
-      '<div style="padding:8px 0"><button class="msglink" data-testid="raida-add-open"' +
+      '<div style="padding:8px 0"><button data-cbsid="SCR007-B06" class="msglink" data-testid="raida-add-open"' +
       ' onclick="rgAdd(true)">＋ ' +
       tx('Record something') +
       '</button></div>'
@@ -813,7 +813,7 @@ function rgRespFields() {
   if (!RG.report || !RG.report.resp) return '';
   return (
     '<div id="rgRespWrap" style="display:none;margin-bottom:6px">' +
-    '<select id="rgResp" class="inp" data-testid="raida-response" style="width:100%">' +
+    '<select data-cbsid="SCR007-S04" id="rgResp" class="inp" data-testid="raida-response" style="width:100%">' +
     '<option value="">' +
     esc(tx('— response not decided —')) +
     '</option>' +
@@ -848,7 +848,7 @@ function rgEdgeFields() {
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">' +
     tx('What does it wait on? Leave blank and it stays a note, not a link.') +
     '</div>' +
-    '<select id="rgTo" class="inp" data-testid="raida-to" style="width:100%;margin-bottom:6px">' +
+    '<select data-cbsid="SCR007-S05" id="rgTo" class="inp" data-testid="raida-to" style="width:100%;margin-bottom:6px">' +
     '<option value="">' +
     esc(tx('— nothing named —')) +
     '</option>' +
@@ -859,14 +859,14 @@ function rgEdgeFields() {
       .join('') +
     '</select>' +
     '<div style="display:flex;gap:6px">' +
-    '<select id="rgRel" class="inp" style="flex:1">' +
+    '<select data-cbsid="SCR007-S06" id="rgRel" class="inp" style="flex:1">' +
     rels
       .map(function (item) {
         return '<option value="' + item[0] + '">' + item[1] + '</option>';
       })
       .join('') +
     '</select>' +
-    '<input id="rgNeed" class="inp" type="date" style="flex:1" title="' +
+    '<input data-cbsid="SCR007-I07" id="rgNeed" class="inp" type="date" style="flex:1" title="' +
     esc(tx('Needed by')) +
     '">' +
     '</div></div>'
@@ -1054,13 +1054,13 @@ function rgScopeFields() {
     '</b></div>' +
     (c.line_id
       ? '<div class="raidtoggle" style="padding:0 0 6px">' +
-        '<button type="button" data-testid="raida-scope-line" class="' +
+        '<button data-cbsid="SCR007-B07" type="button" data-testid="raida-scope-line" class="' +
         (RG.ctxWhole ? '' : 'on') +
         '"' +
         ' onclick="rgScope(false)">' +
         esc(lineLabel) +
         '</button>' +
-        '<button type="button" data-testid="raida-scope-order" class="' +
+        '<button data-cbsid="SCR007-B08" type="button" data-testid="raida-scope-order" class="' +
         (RG.ctxWhole ? 'on' : '') +
         '"' +
         ' onclick="rgScope(true)">' +
@@ -1108,7 +1108,7 @@ async function rgQuickAdd(opt) {
         '<span class="spin"></span> ' +
         tx('opening…') +
         '</div>',
-      false
+      false, { pop: 'POP068' }
     );
   }
   if (!RG.report) {
@@ -1119,7 +1119,7 @@ async function rgQuickAdd(opt) {
       '<div class="mbody" data-testid="raida-quickadd" style="padding:8px 16px 16px">' +
       rgAddPanel({ into: opt.into, kind: opt.kind, bare: true }) +
       '</div>',
-    false
+    false, { pop: 'POP068' }
   );
   rgSyncFields();
 }
@@ -1160,7 +1160,7 @@ function rgEditPaint(id) {
     })[0] || {};
   var resp =
     RG.report && RG.report.resp
-      ? '<select id="rgEResp" class="inp" data-testid="raida-edit-response" style="min-width:150px">' +
+      ? '<select data-cbsid="SCR007-S07" id="rgEResp" class="inp" data-testid="raida-edit-response" style="min-width:150px">' +
         '<option value="">' +
         esc(tx('response — unchanged')) +
         '</option>' +
@@ -1178,38 +1178,38 @@ function rgEditPaint(id) {
     '<span style="font-size:var(--fs-1);color:var(--grey)">' +
     tx('Change only what moved:') +
     '</span>' +
-    '<input id="rgEOwner" class="inp" data-testid="raida-edit-owner" style="min-width:130px"' +
+    '<input data-cbsid="SCR007-I08" id="rgEOwner" class="inp" data-testid="raida-edit-owner" style="min-width:130px"' +
     ' placeholder="' +
     esc(tx('owner')) +
     (e.owner ? ' · ' + esc(e.owner) : '') +
     '">' +
-    '<input id="rgEL" class="inp" type="number" min="1" max="5" style="width:72px"' +
+    '<input data-cbsid="SCR007-I09" id="rgEL" class="inp" type="number" min="1" max="5" style="width:72px"' +
     ' placeholder="' +
     esc(tx('L')) +
     (e.likelihood ? ' ' + e.likelihood : '') +
     '">' +
-    '<input id="rgES" class="inp" type="number" min="1" max="5" style="width:72px"' +
+    '<input data-cbsid="SCR007-I10" id="rgES" class="inp" type="number" min="1" max="5" style="width:72px"' +
     ' placeholder="' +
     esc(tx('S')) +
     (e.severity ? ' ' + e.severity : '') +
     '">' +
-    '<input id="rgERL" class="inp" type="number" min="1" max="5" style="width:96px"' +
+    '<input data-cbsid="SCR007-I11" id="rgERL" class="inp" type="number" min="1" max="5" style="width:96px"' +
     ' placeholder="' +
     esc(tx('resid L')) +
     '">' +
-    '<input id="rgERS" class="inp" type="number" min="1" max="5" style="width:96px"' +
+    '<input data-cbsid="SCR007-I12" id="rgERS" class="inp" type="number" min="1" max="5" style="width:96px"' +
     ' placeholder="' +
     esc(tx('resid S')) +
     '">' +
     resp +
-    '<input id="rgETreat" class="inp" data-testid="raida-edit-treatment" style="flex:1;min-width:180px"' +
+    '<input data-cbsid="SCR007-I13" id="rgETreat" class="inp" data-testid="raida-edit-treatment" style="flex:1;min-width:180px"' +
     ' placeholder="' +
     esc(tx('treatment')) +
     '">' +
-    '<input id="rgEDue" class="inp" type="date" style="min-width:140px" title="' +
+    '<input data-cbsid="SCR007-I14" id="rgEDue" class="inp" type="date" style="min-width:140px" title="' +
     esc(tx('due')) +
     '">' +
-    '<button class="btn" data-testid="raida-edit-save" onclick="rgEditSave(&quot;' +
+    '<button data-cbsid="SCR007-B09" class="btn" data-testid="raida-edit-save" onclick="rgEditSave(&quot;' +
     id +
     '&quot;)">' +
     tx('Save change') +
@@ -1285,7 +1285,7 @@ function rgClosePaint(id) {
   row.innerHTML =
     '' +
     '<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;padding:4px 0">' +
-    '<select id="rgDisp" class="inp" data-testid="raida-disposition" onchange="rgDispChanged()"' +
+    '<select data-cbsid="SCR007-S08" id="rgDisp" class="inp" data-testid="raida-disposition" onchange="rgDispChanged()"' +
     ' style="min-width:230px">' +
     opts +
     '</select>' +
@@ -1293,7 +1293,7 @@ function rgClosePaint(id) {
      * ⭐⭐ "CARRIED FORWARD" MUST NAME WHERE IT WENT, and the server refuses without it — *"we will deal with it
      * later" without a later is how a finding disappears while looking dispositioned*.
      */
-    '<select id="rgCarry" class="inp" data-testid="raida-carry" style="min-width:190px;display:none">' +
+    '<select data-cbsid="SCR007-S09" id="rgCarry" class="inp" data-testid="raida-carry" style="min-width:190px;display:none">' +
     '<option value="">' +
     esc(tx('— which register? —')) +
     '</option>' +
@@ -1303,11 +1303,11 @@ function rgClosePaint(id) {
       })
       .join('') +
     '</select>' +
-    '<input id="rgNote" class="inp" data-testid="raida-close-note" style="flex:1;min-width:200px"' +
+    '<input data-cbsid="SCR007-I15" id="rgNote" class="inp" data-testid="raida-close-note" style="flex:1;min-width:200px"' +
     ' placeholder="' +
     esc(tx('What happened? One line.')) +
     '">' +
-    '<button class="btn" data-testid="raida-close-save"' +
+    '<button data-cbsid="SCR007-B10" class="btn" data-testid="raida-close-save"' +
     ' onclick="rgCloseSave(&quot;' +
     id +
     '&quot;)">' +
@@ -1406,7 +1406,7 @@ function rgClosure() {
       rows
         .map(function (e) {
           return (
-            '<div class="raidrow" data-testid="closure-item"' +
+            '<div data-cbsid="SCR007-C02" class="raidrow" data-testid="closure-item"' +
             (e.chit_id ? ' style="cursor:pointer" onclick="closeModal();openChit(&quot;' + e.chit_id + '&quot;)"' : '') +
             '><div class="rl"><span class="mtype ' +
             e.kind +
@@ -1454,7 +1454,7 @@ function rgClosure() {
         .join('') +
       '</div></div>'
     : RG.sel
-      ? '<div style="margin-top:12px"><button class="btn" data-testid="register-close"' +
+      ? '<div style="margin-top:12px"><button data-cbsid="SCR007-B11" class="btn" data-testid="register-close"' +
         ' onclick="rgSubjectClose()">' +
         tx('Close this register') +
         '</button></div>'
@@ -1711,12 +1711,12 @@ function rgImpact() {
     '<div class="rg-body">' +
     rgRegisterRail() +
     '<div class="raidtoggle" style="padding:6px 0">' +
-    '<button class="' +
+    '<button data-cbsid="SCR007-B12" class="' +
     (RG.walkBack ? 'on' : '') +
     '" data-testid="walk-back" onclick="rgWalkDir()">' +
     tx('What this waits on') +
     '</button>' +
-    '<button class="' +
+    '<button data-cbsid="SCR007-B13" class="' +
     (RG.walkBack ? '' : 'on') +
     '" onclick="rgWalkDir()">' +
     tx('What waits on this') +
@@ -1726,7 +1726,7 @@ function rgImpact() {
         starts
           .map(function (item) {
             return (
-              '<button class="' +
+              '<button data-cbsid="SCR007-B14" class="' +
               (RG.walkFrom === item.id ? 'on' : '') +
               '"' +
               ' onclick="rgWalkFrom(&quot;' +

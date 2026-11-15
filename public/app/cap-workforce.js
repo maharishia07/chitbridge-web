@@ -52,7 +52,7 @@ function acTypeInfo(t) {
   var lbl = (reg.label || t).split(/[ /]/)[0];
   var extra =
     t === 'iot'
-      ? '<div style="margin-top:12px"><button class="composebtn" onclick="closeModal();openShowcase(\'/iot-howitworks.html\',\'How IoT works\')">See the full walkthrough <span class=arw>→</span></button></div>'
+      ? '<div style="margin-top:12px"><button data-cbsid="BUS005-B01" class="composebtn" onclick="closeModal();openShowcase(\'/iot-howitworks.html\',\'How IoT works\')">See the full walkthrough <span class=arw>→</span></button></div>'
       : '';
   modal(
     '<div style="padding:2px 2px"><div style="font-size:var(--fs-6)">' +
@@ -233,7 +233,7 @@ function aiSlotInfo(key) {
       '</div>' +
       '<div style="display:flex;gap:10px;margin-top:16px">' +
       (st.enabled && s.status === 'live' && s.invoke
-        ? '<button class="composebtn pri" style="flex:1" onclick="closeModal();' + esc(s.invoke) + '()">' + tx('▶ Invoke') + '</button>'
+        ? '<button data-cbsid="BUS005-B02" class="composebtn pri" style="flex:1" onclick="closeModal();' + esc(s.invoke) + '()">' + tx('▶ Invoke') + '</button>'
         : '') +
       '<button data-cbsid="CMP005" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
@@ -290,7 +290,7 @@ function aiRowsHTML() {
           esc(item.desc) +
           '</div>' +
           '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">' +
-          '<button class="composebtn' +
+          '<button data-cbsid="BUS005-B03" class="composebtn' +
           (on ? ' pri' : '') +
           '" style="padding:5px 12px;font-size:var(--fs-2)" onclick="aiToggle(\'' +
           esc(item.key) +
@@ -300,7 +300,7 @@ function aiRowsHTML() {
           '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · ' +
           esc(item.rung) +
           '</span>' +
-          '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select onchange="aiSetGate(\'' +
+          '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select data-cbsid="BUS005-S01" onchange="aiSetGate(\'' +
           esc(item.key) +
           '\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:var(--fs-1)"' +
           (on ? '' : ' disabled') +
@@ -310,17 +310,17 @@ function aiRowsHTML() {
           '</div>' +
           '<div style="margin-top:8px;display:flex;gap:6px;align-items:center">' +
           (canInvoke
-            ? '<button class="composebtn pri" style="padding:6px 12px;font-size:var(--fs-2)" onclick="' +
+            ? '<button data-cbsid="BUS005-B04" class="composebtn pri" style="padding:6px 12px;font-size:var(--fs-2)" onclick="' +
               esc(item.invoke) +
               '()">' +
               tx('▶ Invoke') +
               '</button>'
-            : '<button class="composebtn" style="padding:6px 12px;font-size:var(--fs-2);opacity:.55;cursor:not-allowed" disabled title="' +
+            : '<button data-cbsid="BUS005-B05" class="composebtn" style="padding:6px 12px;font-size:var(--fs-2);opacity:.55;cursor:not-allowed" disabled title="' +
               (!on ? 'Enable it first' : !live ? 'Shaped — not runnable yet' : 'Not invokable') +
               '">' +
               tx('▶ Invoke') +
               '</button>') +
-          '<button class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\'' +
+          '<button data-cbsid="BUS005-B06" class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\'' +
           esc(item.key) +
           '\')">' +
           tx('How it works') +
@@ -364,7 +364,7 @@ function openShowcase(url, title) {
   var host = document.getElementById('showcaseHost') || document.createElement('div');
   host.id = 'showcaseHost';
   host.innerHTML =
-    '<div style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>' +
+    '<div data-cbsid="BUS005-C01" style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>' +
     '<div style="position:fixed;' +
     f.css +
     ';border-radius:' +
@@ -391,22 +391,22 @@ function coassistsScreen() {
   const _title = _tf !== 'all' && _treg ? (_treg.icon ? _treg.icon + ' ' : '') + esc(_shortLbl) + ' · co-assists' : '🧑‍🤝‍🧑 Co-assists';
   const _typeInfoBtn =
     _tf !== 'all' && (window.AC_TYPE_HOW || {})[_tf]
-      ? `<button onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
+      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
       : '';
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${_title}</span><button data-cbsid="CMP016" onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${_typeInfoBtn}</div>
-      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
-      <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ || '')}" oninput="UI.acQ=this.value;paintAcList()"></div>
+      <div style="display:flex;gap:7px"><input data-cbsid="BUS005-I01" class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button data-cbsid="BUS005-B08" class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
+      <div class="srch" style="margin-top:8px">🔍 <input data-cbsid="BUS005-I02" placeholder="Search name, role, key" value="${esc(UI.acQ || '')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active', 'inactive', 'all'].map((item) => `<button onclick="setAcFlt('${item}')" style="border:0;background:${acFlt() === item ? 'var(--blue)' : 'var(--card)'};color:${acFlt() === item ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${item}</button>`).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active', 'inactive', 'all'].map((item) => `<button data-cbsid="BUS005-B09" onclick="setAcFlt('${item}')" style="border:0;background:${acFlt() === item ? 'var(--blue)' : 'var(--card)'};color:${acFlt() === item ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${item}</button>`).join('')}</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all']
           .concat(Object.keys(window.ACTOR_TYPES || {}))
           .map((item) => {
             var reg = (window.ACTOR_TYPES || {})[item] || {};
             var on = (UI.acTypeF || 'all') === item;
             var lbl = item === 'all' ? 'All' : (reg.icon ? reg.icon + ' ' : '') + (reg.label || item).split(/[ /]/)[0];
-            return `<button onclick="setAcTypeF('${item}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';font-weight:400;cursor:not-allowed;outline:1px dashed var(--grey);outline-offset:-3px' : ''}"${reg.comingSoon ? ' aria-disabled="true"' : ''}>${lbl}</button>`;
+            return `<button data-cbsid="BUS005-B10" onclick="setAcTypeF('${item}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';font-weight:400;cursor:not-allowed;outline:1px dashed var(--grey);outline-offset:-3px' : ''}"${reg.comingSoon ? ' aria-disabled="true"' : ''}>${lbl}</button>`;
           })
           .join('')}</span>
         <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span>${acSortSelect()}</div>
@@ -463,6 +463,7 @@ function awHost() {
   if (!node) {
     node = document.createElement('div');
     node.id = 'actorwiz';
+    node.setAttribute('data-pop', 'POP018');
     document.body.appendChild(node);
   }
   return node;
@@ -664,7 +665,7 @@ async function awFinish() {
         (UI.awInstaller
           ? '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">' +
             txf('Its one-drop installer is {ready} (key inside). Download it when you are ready to set up the Pi:', { ready: '<b>' + tx('ready') + '</b>' }) +
-            '</div><button class="composebtn pri" style="margin-top:12px" onclick="awDownloadPkg()">' +
+            '</div><button data-cbsid="BUS005-B11" class="composebtn pri" style="margin-top:12px" onclick="awDownloadPkg()">' +
             tx('📦 Download install package') +
             '</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px">Then run <span style="background:var(--chrome);color:var(--blue-tint-line);border-radius:6px;padding:1px 6px;font:11px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span> on the Pi, and add its <b>devices</b> here.<br><b>Didn\'t download, or lost it?</b> Open the gateway <span class=arw>→</span> <b>' +
             tx('📦 Create package') +
@@ -714,7 +715,7 @@ function awRender() {
     return (
       '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">' +
       label +
-      '</label><input class="inp" id="' +
+      '</label><input data-cbsid="BUS005-I10" class="inp" id="' +
       id +
       '" data-testid="' +
       id +
@@ -729,7 +730,7 @@ function awRender() {
     return (
       '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">' +
       label +
-      '</label><select class="inp" id="' +
+      '</label><select data-cbsid="BUS005-S06" class="inp" id="' +
       id +
       '" style="width:100%">' +
       opts
@@ -767,7 +768,7 @@ function awRender() {
         .map(function (item) {
           var nestedRdy = _awReady(item[0]);
           return (
-            '<div data-testid="coassist-type-' +
+            '<div data-cbsid="BUS005-C02" data-testid="coassist-type-' +
             item[0] +
             '" onclick="awPick(\'' +
             item[0] +
@@ -865,9 +866,9 @@ function awRender() {
           ]) + how('Governed: it can only do what your rules allow.');
       sub = UI.awStep + 1 + ' of ' + steps.length;
       if (UI.awErr) body += '<div style="color:var(--disp);font-size:var(--fs-2);margin-top:10px">' + esc(UI.awErr) + '</div>';
-      var nextLbl = UI.awStep === steps.length - 1 ? (rdy ? 'Create' : 'See result') : 'Next ›';
+      var nextLbl = UI.awStep === steps.length - 1 ? tx(rdy ? 'Create' : 'See result') : tx('Next ›');
       foot =
-        '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
+        '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button data-cbsid="BUS005-B23" class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
         nextLbl +
         '</button>';
     }
@@ -993,7 +994,7 @@ function acSortKey() {
 }
 function acSortSelect() {
   return (
-    '<select class="inp" data-testid="coassist-sort" aria-label="' +
+    '<select data-cbsid="BUS005-S02" class="inp" data-testid="coassist-sort" aria-label="' +
     esc(tx('Sort order')) +
     '" title="' +
     esc(tx('Sort order')) +
@@ -1047,7 +1048,7 @@ function _iotRowHTML(x) {
     ';border-color:transparent">' +
     (iot ? '🛰️ IoT' : '🔌 ERP') +
     '</span>';
-  return `<div class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago ? ' · ' + esc(ago) : ''}</span></div>
       <div class="l2">📍 ${esc(info.site || x.site || 'no site')} · <b>${cnt}</b> ${iot ? (cnt === 1 ? 'device' : 'devices') : cnt === 1 ? 'endpoint' : 'endpoints'}</div></div>
@@ -1069,7 +1070,7 @@ function acRowHTML(x) {
         (coversNames.length ? '🤝 Covers for <b style="color:var(--ink);font-weight:600">' + coversNames.join(', ') + '</b>' : '') +
         '</div>'
       : '';
-  return `<div class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift === 'on_shift' ? 'var(--ok-3)' : x.shift === 'on_break' ? 'var(--warn-2)' : 'var(--grey-2)'}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet ? '' : x.invite ? '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>' : ''}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max || '∞'}</span></div>
       <div class="l2">${esc(x.role || '—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status !== 'active' ? '<span class="optchip off">' + esc(x.status) + '</span>' : ''}${x.shift !== 'on_shift' && x.returnDate ? ' · returns ' + acDate(x.returnDate) : ''}</div>${coverLines}</div>
@@ -1099,7 +1100,7 @@ function acRowsHTML() {
         '🛰️',
         tx('No IoT devices yet'),
         tx('A Pi on the rail in one drop.') +
-          ' <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">' +
+          ' <a data-cbsid="BUS005-C05" href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">' +
           tx('see how it works') +
           ' <span class=arw>→</span></a>',
         { label: tx('+ New co-assist'), onclick: 'openActorWiz()' }
@@ -1210,7 +1211,7 @@ function _acTierSummary(x) {
   var cnt = info.count != null ? info.count : 0;
   return (
     '<div style="padding:16px">' +
-    '<button class="dback" onclick="backToList()">‹ Co-assists</button>' +
+    '<button data-cbsid="BUS005-B12" class="dback" onclick="backToList()">‹ Co-assists</button>' +
     '<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:var(--fs-6)">' +
     (reg.icon || '🔌') +
     '</span>' +
@@ -1242,7 +1243,7 @@ function _acTierSummary(x) {
     esc(h) +
     '</div></div>' +
     '</div>' +
-    '<button class="composebtn pri" style="width:100%;padding:13px;font-size:var(--fs-3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\'' +
+    '<button data-cbsid="BUS005-B13" class="composebtn pri" style="width:100%;padding:13px;font-size:var(--fs-3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\'' +
     x.id +
     '\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the ' +
     esc(reg.label || '') +
@@ -1254,7 +1255,7 @@ function _acTierLoader(x) {
   var _t = typeof acTypeOf === 'function' ? acTypeOf(x) : '';
   var reg = (window.ACTOR_TYPES || {})[_t] || {};
   return (
-    '<div style="padding:16px"><button class="dback" onclick="backToList()">‹ Co-assists</button>' +
+    '<div style="padding:16px"><button data-cbsid="BUS005-B14" class="dback" onclick="backToList()">‹ Co-assists</button>' +
     '<div style="padding:46px 16px;text-align:center;color:var(--grey)"><span class="spin" style="display:inline-block;margin-bottom:12px"></span><div>Loading ' +
     esc(reg.label || '') +
     ' cockpit…</div>' +
@@ -1281,20 +1282,20 @@ function acDetailHTML() {
     if (UI.acManageLoading || typeof _mh !== 'function') return _acTierLoader(x);
     return _mh(x);
   } // TWO-TIER: instant summary, management loads on drill
-  const back = `<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
+  const back = `<button data-cbsid="BUS005-B15" class="dback" onclick="backToList()">‹ Co-assists</button>`;
   /* ⚠️ `--ink` IS TEXT, NOT A SURFACE — same bug as the catalogue View/Edit segment. In dark it inverts to
      near-white and the selected segment becomes white-on-white (1.21:1). Selected = --accent + --on-accent. */
   const seg = (m, l) =>
-    `<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
+    `<button data-cbsid="BUS005-B16" onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle = `<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view', 'View')}${seg('edit', 'Edit')}</div>`;
   const head = `<div class="dh">${back}<div class="dt">${esc(x.name)} <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span></div><div class="ds">${esc(x.role || '—')} · <span class="mono">${acLogin(x)}</span></div>${toggle}</div>`;
   let body, bar;
   if (UI.acMode === 'edit') {
     body = `<div class="sec">${tx('Edit — co-assist profile')}</div>
-      <label class="fl">${tx('Display name')}</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
-      <label class="fl">${tx('Role')} <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— ${tx('a label; it grants nothing')}</span></label><input class="inp" id="ac_erole" value="${esc(x.role || '')}" placeholder="e.g. Dispatch, Accounts">
+      <label class="fl">${tx('Display name')}</label><input data-cbsid="BUS005-I03" class="inp" id="ac_ename" value="${esc(x.name)}">
+      <label class="fl">${tx('Role')} <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— ${tx('a label; it grants nothing')}</span></label><input data-cbsid="BUS005-I04" class="inp" id="ac_erole" value="${esc(x.role || '')}" placeholder="e.g. Dispatch, Accounts">
       <label class="fl">Access <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— only an Editor can be assigned work</span></label>
-      <select class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map((item) => '<option value="' + item[0] + '"' + (accessLevelOf(x) === item[0] ? ' selected' : '') + '>' + esc(item[1]) + '</option>').join('')}</select>
+      <select data-cbsid="BUS005-S03" class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map((item) => '<option value="' + item[0] + '"' + (accessLevelOf(x) === item[0] ? ' selected' : '') + '>' + esc(item[1]) + '</option>').join('')}</select>
       ${
         /* ⭐ REACH IS A SEPARATE SWITCH, NOT A LEVEL. Five hat names could never express "an editor who
             sees every branch" — there was no sixth name, and adding one is how five becomes eight.
@@ -1307,17 +1308,17 @@ function acDetailHTML() {
             Same failure mode as self_copy_pref: declared, visible, inert. */ ''
       }
       <label class="fl" style="display:flex;align-items:center;gap:7px;cursor:pointer">
-        <input type="checkbox" id="ac_ewhole" ${x.whole_entity ? 'checked' : ''} style="width:auto;margin:0">
+        <input data-cbsid="BUS005-I05" type="checkbox" id="ac_ewhole" ${x.whole_entity ? 'checked' : ''} style="width:auto;margin:0">
         <span>Sees the whole business <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— everyone does today; recorded for when branches are scoped</span></span>
       </label>
-      <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(
+      <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select data-cbsid="BUS005-S04" class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(
         UI.acts || []
       )
         .filter((item) => item.id !== x.id && hatAssignable(item.hat))
         .map((item) => '<option value="' + esc(item.id) + '"' + (x.del === item.id ? ' selected' : '') + '>' + esc(item.name) + '</option>')
         .join('')}</select>
-      <label class="fl">${tx('Max concurrent tasks')}</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max || ''}" style="width:120px">
-      <label class="fl">${tx('Phone')}</label><input class="inp" id="ac_ephone" value="${esc(x.phone || '')}" placeholder="optional">
+      <label class="fl">${tx('Max concurrent tasks')}</label><input data-cbsid="BUS005-I06" class="inp" id="ac_emax" inputmode="numeric" value="${x.max || ''}" style="width:120px">
+      <label class="fl">${tx('Phone')}</label><input data-cbsid="BUS005-I07" class="inp" id="ac_ephone" value="${esc(x.phone || '')}" placeholder="optional">
       ${
         /* ⭐⭐ THE IDENTITY RECORD, FROM THE SHARED MODULE. Athi, 2026-08-20: *"we have to add as part of
             coassist registration and it has to be visible here… as a separate module to update." The very same
@@ -1455,14 +1456,14 @@ function acDetailHTML() {
       bar =
         (x.type === 'human'
           ? x.pinSet
-            ? `<button onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
+            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
             : isConn
               ? ''
-              : `<button onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
+              : `<button data-cbsid="BUS005-B18" onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
           : '') +
-        `<button class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
+        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
     } else {
-      bar = `<button class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
+      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
     }
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
