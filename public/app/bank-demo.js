@@ -64,7 +64,7 @@
     view = 'lines',
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
-    ask = null,
+    askPanel = null,
     report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
 
@@ -283,7 +283,7 @@
   function paintEmpty() {
     ['bd_figs', 'bd_gst'].forEach(function (id) { el(id).hidden = true; });
     el('bd_sub').textContent = '';
-    el('bd_lines').innerHTML = report.problemCard(loadRefusal) + (loadRefusal && loadRefusal.mapping ? ask.mapCard(loadRefusal.text) || report.emptyCard() : report.emptyCard());
+    el('bd_lines').innerHTML = report.problemCard(loadRefusal) + (loadRefusal && loadRefusal.mapping ? askPanel.mapCard(loadRefusal.text) || report.emptyCard() : report.emptyCard());
     el('bd_books').innerHTML = '';
     el('bd_brs').innerHTML = '';
     paintBar(null);
@@ -414,7 +414,7 @@
     var text = loadRefusal.text,
       name = loadRefusal.name;
     resetBooks();
-    makeController({ country: COUNTRY, currency: CURRENCY, mapping: ask.mapping() });
+    makeController({ country: COUNTRY, currency: CURRENCY, mapping: askPanel.mapping() });
     loadStatement(text, name);
   }
   function toggleMore(open) {
@@ -428,7 +428,7 @@
       view = 'lines';
       added = null;
       paint();
-      var next = ask.firstNeedKey(),
+      var next = askPanel.firstNeedKey(),
         node = next && doc.querySelector('[data-key="' + next + '"]');
       if (node) node.focus();
       return true;
@@ -449,13 +449,13 @@
       if (!event.target.closest('.bd-more')) toggleMore(false);
       return;
     }
-    var handler = ACTIONS[target.getAttribute('data-act')] || ask.actions[target.getAttribute('data-act')];
+    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')];
     if (handler && handler(target, target.getAttribute('data-key'))) return;
     paint();
   }
   function onChange(event) {
     var action = event.target.getAttribute && event.target.getAttribute('data-act');
-    if (action === 'pname' || action === 'pkind') ask.editPayee(event.target);
+    if (action === 'pname' || action === 'pkind') askPanel.editPayee(event.target);
   }
   /** what the other modules of the page may use: the page's own readers and painters, never its state */
   function hostFor() {
@@ -477,7 +477,7 @@
   }
   function start() {
     mountHeader();
-    ask = root.CBBankDemoAsk.create(hostFor());
+    askPanel = root.CBBankDemoAsk.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
