@@ -69,8 +69,8 @@ of file each thing is; this says what already does the job.
 | 44 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
 | 43 | `live` | `receivables.js` | the allocations that still count: |
+| 42 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 42 | `gate` | `country-setup.js` | gate(h, entity): |
-| 41 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 41 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 41 | `missing` | `variant.browser.js` | refusing with no reason. |
 | 40 | `sheet` | `cap-employees.js` |  |
@@ -139,6 +139,7 @@ of file each thing is; this says what already does the job.
 | 23 | `side` | `books-grant-view.js` |  |
 | 23 | `note` | `device-id.js` | note(where, problem) — |
 | 23 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
+| 23 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 23 | `entries` | `books-store.js` |  |
 | 23 | `chart` | `fx-rates.js` |  |
 | 23 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
@@ -149,7 +150,6 @@ of file each thing is; this says what already does the job.
 | 22 | `reason` | `lab-kit.js` | W9: |
 | 22 | `chip` | `screen-id.js` | var S = { app: |
 | 22 | `field` | `ui-field.js` | the part: |
-| 22 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 22 | `keep` | `signin.js` | see. |
 | 21 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
@@ -188,7 +188,6 @@ of file each thing is; this says what already does the job.
 | 18 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
 | 18 | `report` | `raida.js` | register at the one moment it must not. |
 | 18 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
-| 17 | `bkMoney` | `cap-books.js` |  |
 | 17 | `cols` | `cap-catalogue.js` |  |
 | 17 | `message` | `cap-print.js` | the one message: |
 | 17 | `said` | `cap-shop.js` |  |
@@ -199,6 +198,7 @@ of file each thing is; this says what already does the job.
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 17 | `asks` | `readiness.js` | asks(origin, vertical) → { asked: |
 | 17 | `pick` | `scalecode.js` | pull out the digits one letter marks, as a string, in order |
+| 16 | `bkMoney` | `cap-books.js` |  |
 | 16 | `bkDate` | `cap-books.js` |  |
 | 16 | `when` | `cap-mark.js` |  |
 | 16 | `frame` | `cap-settings.js` |  |
