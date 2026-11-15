@@ -69,11 +69,11 @@
       ['help', 'Needs help', b.health.help, { status: 'help' }],
       ['watch', 'Watch', b.health.watch, { status: 'watch' }],
       ['good', 'Doing well', b.health.good, { status: 'good' }],
-      ['queries', 'Open queries', b.queries.clients, { queries: 'open' }, b.queries.on_client + ' ' + tx('waiting on the client') + ' · ' + b.queries.on_us + ' ' + tx('waiting on us')],
-      ['bas', 'Return due in 30 days', b.bas_due_30, { bas: 'soon' }],
-      ['months', 'Months not locked', b.months_unlocked, { unlocked: 'yes' }],
-      ['checked', 'Entries checked', b.checked.clients_behind, { checked: 'behind' }, b.checked.n + ' ' + tx('of') + ' ' + b.checked.of + ' ' + tx('checked')],
-      ['ending', 'Access ending in 30 days', b.grants_ending_30, { ending: 'soon' }]
+      ['queries', 'Clients with open queries', b.queries.clients, { queries: 'open' }, b.queries.on_client + ' ' + tx('waiting on the client') + ' · ' + b.queries.on_us + ' ' + tx('waiting on us')],
+      ['bas', 'Clients with a return due in 30 days', b.bas_due_30, { bas: 'soon' }],
+      ['months', 'Clients with months not locked', b.months_unlocked, { unlocked: 'yes' }],
+      ['checked', 'Clients with entries to check', b.checked.clients_behind, { checked: 'behind' }, b.checked.n + ' ' + tx('of') + ' ' + b.checked.of + ' ' + tx('entries checked')],
+      ['ending', 'Clients whose access ends in 30 days', b.grants_ending_30, { ending: 'soon' }]
     ];
   }
   function bandHTML(data) {
@@ -87,7 +87,7 @@
           '<b>' + esc(t[2]) + '</b><span>' + esc(tx(t[1])) + '</span>' + (t[4] ? '<i>' + esc(t[4]) + '</i>' : '') + '</button>'
         );
       }).join('') +
-      '<div class="bp-tile held" data-testid="practice-tile-bank"><b>—</b><span>' + esc(tx('Bank not reconciled')) + '</span><i>' + esc(tx('Not shown yet: the finance owner has not agreed it may be read across clients.')) + '</i></div>' +
+      '<div class="bp-tile held" data-testid="practice-tile-bank" title="' + esc(tx('The bank figure waits for the finance owner to agree it may be read across clients.')) + '"><b>—</b><span>' + esc(tx('Bank not reconciled')) + '</span><i>' + esc(tx('Not shown yet')) + '</i></div>' +
       '</div>'
     );
   }
@@ -117,21 +117,21 @@
       return Object.assign({ key: key, label: tx(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: tx('Client'), prio: 1, w: 200, keep: true, sort: 'name', cell: function (r) { return r.name || r.entity_id.slice(0, 8); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', 210, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
-      num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, { hfilter: 'role' }),
-      num('bank', 'Bank', 120, function () { return '<span class="sub">' + esc(tx('Not shown yet')) + '</span>'; }, function () { return ''; }),
-      num('queries', 'Queries open', 130, queriesCell, function (r) { return r.queries.open; }, { hfilter: 'queries' }),
-      num('bas', 'Return due', 150, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('checked', 'Checked', 90, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, { hfilter: 'checked' }),
-      num('unlocked', 'Months not locked', 110, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked' }),
-      num('sales', 'Sales vs 3-month average', 150, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
-      num('margin', 'Gross margin', 110, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }),
-      num('cash', 'Cash in bank', 130, function (r) { return esc(money(r.health.cash_minor, r.currency)); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }),
-      num('profit', 'Profit this quarter', 140, function (r) { return esc(money(r.health.profit_quarter_minor, r.currency)); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }),
-      num('ending', 'Access ends', 120, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending' }),
-      num('look', 'Last look', 120, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
-      { key: 'books', label: tx('Books'), prio: 1, w: 120, keep: true, html: true, cell: function (r) { return '<button type="button" class="act quiet" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(tx('Open books')) + '</button>'; }, value: function () { return 'open'; } }
+      { key: 'name', label: tx('Client'), prio: 1, w: 150, keep: true, sort: 'name', cell: function (r) { return r.name || r.entity_id.slice(0, 8); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', 200, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
+      num('role', 'Role', 80, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, { hfilter: 'role' }),
+      num('bank', 'Bank', 70, function () { return '<span class="sub" title="' + esc(tx('Not shown yet')) + '">—</span>'; }, function () { return ''; }),
+      num('queries', 'Queries open', 110, queriesCell, function (r) { return r.queries.open; }, { hfilter: 'queries' }),
+      num('bas', 'Return due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
+      num('checked', 'Checked', 70, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, { hfilter: 'checked' }),
+      num('unlocked', 'Months not locked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
+      num('sales', 'Sales vs 3-month average', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
+      num('margin', 'Gross margin', 80, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
+      num('cash', 'Cash in bank', 110, function (r) { return esc(money(r.health.cash_minor, r.currency)); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
+      num('profit', 'Profit this quarter', 110, function (r) { return esc(money(r.health.profit_quarter_minor, r.currency)); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
+      num('ending', 'Access ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
+      num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
+      { key: 'books', label: tx('Books'), prio: 1, w: 110, keep: true, html: true, cell: function (r) { return '<button type="button" class="act quiet" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(tx('Open books')) + '</button>'; }, value: function () { return 'open'; } }
     ];
   }
   function sorts() {
@@ -201,7 +201,7 @@
     s.textContent =
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
-      '.bp-tile b{font-size:22px;line-height:1.1}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
+      '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(2,1fr)}.bp-tile{padding:6px 8px}}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '#bp_list{height:min(70vh,640px);min-height:320px}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
     root.document.head.appendChild(s);
@@ -217,6 +217,8 @@
       section.setAttribute('data-testid', 'practice');
       areas.parentNode.insertBefore(section, areas);
     }
+    var door = root.document.getElementById('bcd_card');
+    if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
       '<h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + ruleHTML(P.data.rule) + bandHTML(P.data) +
       (P.filter ? '<button type="button" class="act quiet bp-clear" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') +

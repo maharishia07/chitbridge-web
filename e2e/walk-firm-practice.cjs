@@ -77,6 +77,10 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       console.log(tag + ' first row: ' + inline);
       ok(tag + ' status and Open books are in the first row (never dropped)', /Needs help|Watch|Doing well|Not enough/.test(inline) && /Open books/.test(inline), inline);
       await page.screenshot({ path: path.join(OUT, firm + '-home-' + vp.tag + '.png') });
+      await page.evaluate(() => { const m = document.querySelector('.cbsh-main'); const l = document.getElementById('bp_list'); if (m && l) m.scrollTop = l.offsetTop - 60; });
+      await pause(800);
+      await page.screenshot({ path: path.join(OUT, firm + '-list-' + vp.tag + '.png') });
+      ok(tag + ' the practice section replaced the Your clients card', (await page.locator('[data-testid="home-your-clients"]').count()) === 0);
       /* a band tile is a filter: its count equals the rows it leaves (when the rows fit one page) */
       if (vp.tag === '1366') {
         for (const key of ['help', 'queries', 'months', 'ending']) {
