@@ -1041,7 +1041,21 @@
   var pack = {
     '{count} bill could not be read and is left out of this month\u0005one': '{count} فاتورة تعذرت قراءتها وتم استبعادها من هذا الشهر',
     '{count} bill could not be read and is left out of this month\u0005other': '{count} فواتير تعذرت قراءتها وتم استبعادها من هذا الشهر',
-    'Open bill {n}': 'فتح الفاتورة {n}'
+    'Open bill {n}': 'فتح الفاتورة {n}',
+    'Clear this payment?': 'مسح هذه الدفعة؟',
+    'Clear payment': 'مسح الدفعة',
+    'This clears the recorded payment. The log keeps both entries.': 'سيؤدي هذا إلى مسح الدفعة المسجّلة. يحتفظ السجل بالإدخالين معًا.',
+    'Add to this offer?': 'الإضافة إلى هذا العرض؟',
+    'will be priced by this offer': 'ستُسعَّر بهذا العرض',
+    'This offer': 'هذا العرض',
+    'This offer will apply to ALL products': 'سيُطبَّق هذا العرض على جميع المنتجات',
+    'Apply to all': 'تطبيق على الكل',
+    'Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.': 'عند إزالة آخر منتج لا يبقى ما يحدّ من هذا العرض، فسيُطبَّق على جميع المنتجات.',
+    'This offer changed while you were confirming; check and try again': 'تغيّر هذا العرض أثناء التأكيد؛ تحقّق وحاول مرة أخرى',
+    'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'هذا القيد لم يعد على الشاشة، لذا لم تُمسح دفعته. أعد فتحه وحاول مرة أخرى.',
+    'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'هذا القيد لا يحمل مبلغ دفعته وعملتها، لذا لم تُمسح. أعد فتحه وحاول مرة أخرى.',
+    '{count} product\u0005one': '{count} منتج',
+    '{count} product\u0005other': '{count} منتجات'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

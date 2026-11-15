@@ -866,7 +866,7 @@ function awRender() {
           ]) + how('Governed: it can only do what your rules allow.');
       sub = UI.awStep + 1 + ' of ' + steps.length;
       if (UI.awErr) body += '<div style="color:var(--disp);font-size:var(--fs-2);margin-top:10px">' + esc(UI.awErr) + '</div>';
-      var nextLbl = UI.awStep === steps.length - 1 ? (rdy ? 'Create' : 'See result') : 'Next ›';
+      var nextLbl = UI.awStep === steps.length - 1 ? tx(rdy ? 'Create' : 'See result') : tx('Next ›');
       foot =
         '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button data-cbsid="BUS005-B23" class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
         nextLbl +
