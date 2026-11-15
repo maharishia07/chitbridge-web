@@ -79,9 +79,40 @@
   }
 
   /* ── words ── */
-  /** the short id people type: the stored grammar (asha01@mayur-restaurant.br) is added behind the scenes (2026-10-08) and never shown */
-  function shortId(u) {
-    return String(u == null ? '' : u).replace(/@[^@]*$/, '');
+  /** the sign-in name AS TYPED at the sign-in screen, whole (asha01@mayur-restaurant.br): W15-59 - the short form failed when typed as shown, so it is never cut. */
+  function signInName(u) {
+    return String(u == null ? '' : u);
+  }
+  /** the sign-in name and its Copy control (library button, code EMP001-B14); the name's own element keeps its test id so it reads as the plain name */
+  function nameWithCopy(u, idTid, cls) {
+    var name = signInName(u);
+    return (
+      '<span class="' + cls + '" data-testid="' + idTid + '">' + esc(name) + '</span> ' +
+      (name ? '<button data-cbsid="EMP001-B14" type="button" class="act emp-copy" id="emp_copy" data-testid="emp-copy" data-copy="' + esc(name) + '">' + esc(T('Copy')) + '</button>' : '')
+    );
+  }
+  /** Copy: the whole sign-in name to the clipboard, said on the button itself (no toast to miss) */
+  function wireCopy() {
+    var b = $('emp_copy');
+    if (!b) return;
+    b.onclick = function () {
+      var text = b.getAttribute('data-copy') || '',
+        say = function (ok) {
+          b.textContent = T(ok ? 'Copied' : 'Select the name and copy it');
+        };
+      try {
+        root.navigator.clipboard.writeText(text).then(
+          function () {
+            say(true);
+          },
+          function () {
+            say(false);
+          }
+        );
+      } catch (_) {
+        say(false);
+      }
+    };
   }
   function sinceWord(iso) {
     if (!iso) return T('Not yet');
@@ -211,7 +242,7 @@
         w: 230,
         mono: true,
         cell: function (p) {
-          return shortId(p.user_id) || '—';
+          return signInName(p.user_id) || '—';
         }
       },
       {
@@ -363,6 +394,7 @@
       }
     }
     $('emp_x').onclick = closeSheet;
+    wireCopy();
   }
   function closeSheet() {
     var node = $('emp_sheet');
@@ -383,9 +415,9 @@
       '<h2 data-testid="emp-name">' +
         esc(node.name) +
         '</h2>' +
-        '<div class="emp-sub"><span class="mono" data-testid="emp-userid">' +
-        esc(shortId(node.user_id)) +
-        '</span> ' +
+        '<div class="emp-sub">' +
+        nameWithCopy(node.user_id, 'emp-userid', 'mono') +
+        ' ' +
         stateTag(node) +
         '</div>' +
         '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>' +
@@ -693,6 +725,7 @@
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
         '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
+        '<div class="sub" data-testid="emp-add-keyhint">' + esc(T('4 to 12 letters or numbers')) + '</div>' +
         '<div class="sub" id="emp_kn" data-testid="emp-add-keynote"></div>' +
         '<label for="emp_l">' +
         esc(T('What they can do')) +
@@ -795,7 +828,7 @@
       : '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(reply)) + '</div>';
     return (
       '<h2 data-testid="emp-added">' + esc(T('Added')) + '</h2><div class="emp-sub"><b>' + esc(name) + '</b></div>' +
-      '<div class="mono" data-testid="emp-added-id">' + esc(shortId((person && person.user_id) || (reply.actor && reply.actor.login_format))) + '</div>' +
+      '<div>' + nameWithCopy((person && person.user_id) || (reply.actor && reply.actor.login_format), 'emp-added-id', 'mono') + '</div>' +
       codePart +
       '<button data-cbsid="EMP001-B13" type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>'
     );

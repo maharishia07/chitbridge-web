@@ -177,6 +177,14 @@ W.run('marks', async (w) => {
     await page.keyboard.press('Escape');
     return { ok: dot === '1' && /asked a question about/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
   });
+  await w.step('B1b', 'W15-54 · the owner bell row for the Query is NOT disabled: pressing it opens the Query thread sheet on that entry (the same opener as the Day book chip)', async () => {
+    await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
+    const off = await page.$eval(T('bell-row'), (b) => b.disabled);
+    await page.click(T('bell-row')); await page.waitForSelector(T('mk-sheet'), { timeout: 8000 }); await shot('06c-owner-bell-opens-thread');
+    const q = await txt(T('mk-question')), title = await txt(T('mk-title'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    return { ok: !off && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
+  });
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
     const q = await txt(T('mk-question')), setBtns = await page.locator(T('mk-set-clear')).count(), composers = await page.locator('dialog.mk-sheet [data-rt-act="text"]').count();

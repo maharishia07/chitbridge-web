@@ -21,7 +21,7 @@ const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) fa
 
 /** marker (testid or id) -> the code the tag that carries it must wear */
 const WANT = { 'emp-retry': 'EMP001-B01', 'id="emp_x"': 'EMP001-B03', 'name="emp_lvl"': 'EMP001-I01', 'emp-access-go': 'EMP001-B09', 'emp-email-in': 'EMP001-I02',
-  'emp-email-go': 'EMP001-B10', 'emp-cover-sel': 'EMP001-S01', 'emp-cover-go': 'EMP001-B11', 'emp-add-name': 'EMP001-I03', 'emp-add-key"': 'EMP001-I04',
+  'emp-email-go': 'EMP001-B10', 'emp-cover-sel': 'EMP001-S01', 'emp-cover-go': 'EMP001-B11', 'emp-add-name': 'EMP001-I03', 'emp-add-key"': 'EMP001-I04', 'emp-copy': 'EMP001-B14',
   'emp-add-level': 'EMP001-S02', 'emp-add-role': 'EMP001-I05', 'emp-add-phone': 'EMP001-I06', 'emp-add-email': 'EMP001-I07', 'emp-add-go': 'EMP001-B12', 'emp-done': 'EMP001-B13' };
 /** the actRow call sites pass their code as the last argument */
 const CALLS = ['EMP001-B02', 'EMP001-B04', 'EMP001-B05', 'EMP001-B06', 'EMP001-B07', 'EMP001-B08'];

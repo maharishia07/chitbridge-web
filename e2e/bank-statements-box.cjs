@@ -116,7 +116,10 @@ function stand(pending) {
   ok(gaps === 6 && /Nov missing/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months, every month reads "<Mon> missing" (' + gaps + ')');
   ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
   ok(/Kept on our server for the record period; visible to the adviser or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
-  ok(/never uploaded/.test(await p.textContent('[data-testid="bank-private"]')), 'the plain picker keeps its own device-only sentence');
+  /* W15-62: ONE door - the plain picker's file field and its sentence step aside; the quiet secondary lives in the box */
+  ok(!(await p.locator('label:has([data-testid="bank-file"])').isVisible()) && !(await p.isVisible('[data-testid="bank-private"]')) && await p.locator('[data-testid="bank-stmts-add-go"]').isVisible(), 'W15-62: one "Add statement" door - the old picker (and its "never uploaded" line) is not a second door');
+  ok(/Just read a file, don't keep it/.test(await p.textContent('[data-testid="bank-stmts-justread"]')) && /Not sent to our server/.test(await p.textContent('[data-testid="bank-stmts-justread"]')), 'W15-62: the quiet choice says what it does');
+  { const [fc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null), p.click('[data-testid="bank-stmts-justread-go"]')]); ok(!!fc, 'W15-62: it opens the file picker (the one reader of the page)'); }
   ok(await sideways(p), '1366 px: nothing scrolls sideways');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-box-laptop.png') });
 
@@ -172,7 +175,7 @@ function stand(pending) {
   await c2.ctx.close();
 
   /* ── 7 · IDS · NO ERROR ── */
-  const ids = ['BKS014-I12', 'BKS014-I13', 'BKS014-B41', 'BKS014-B42', 'BKS014-B43', 'BKS014-B44'];
+  const ids = ['BKS014-I12', 'BKS014-I13', 'BKS014-B41', 'BKS014-B42', 'BKS014-B43', 'BKS014-B44', 'BKS014-B45'];
   const src = fs.readFileSync(path.join(PUB, 'app', 'cap-bank-statements.js'), 'utf8');
   ok(ids.every((id) => src.indexOf('data-cbsid="' + id + '"') >= 0), 'every control the box draws wears its id (' + ids.join(' ') + ')');
   ok(!/\.parse\(/.test(src.replace(/CBBankRecon\.parse\(text, \{ format: 'auto'[^\n]*\n/, '')), 'the box holds no second parser: its only parse call is the reader\'s own, for the period');

@@ -98,7 +98,7 @@ W.run('employees', async (w) => {
 
   await w.step('E1', 'Employees -> the list has one line per person, the count says 2 on · 1 off, and the sign-in name is the short one', async () => {
     const n = await rows(), cnt = await txt('[data-testid="emp-count"]'), list = await txt('[data-testid="emp-list"]');
-    return { ok: n === 3 && /2\s*on/.test(cnt) && /1\s*off/.test(cnt) && /asha01\b/.test(list) && !/@walk-shop/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the long sign-in form is showing' : 'short sign-in names only') };
+    return { ok: n === 3 && /2\s*on/.test(cnt) && /1\s*off/.test(cnt) && /asha01@walk-shop.br/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the whole sign-in name is showing' : 'the sign-in name is cut') };
   });
   await w.step('E2', 'Employees -> type "ravi" in the search box -> only Ravi Nair is left', async () => {
     await page.fill('[data-testid="listctl-search-employees"]', 'ravi'); await page.waitForTimeout(400);
@@ -158,7 +158,7 @@ W.run('employees', async (w) => {
     await page.click('#emp_add'); await page.waitForSelector('[data-testid="emp-add-name"]', { timeout: 6000 });
     await page.fill('[data-testid="emp-add-name"]', 'Kavya Rao'); await page.waitForTimeout(900);
     const key = await page.inputValue('[data-testid="emp-add-key"]'), note = await txt('[data-testid="emp-add-keynote"]');
-    return { ok: /^kavya/.test(key) && /They sign in as/.test(note), saw: 'suggested "' + key + '"; "' + note + '"' };
+    return { ok: /^kavya/.test(key) && /They sign in as/.test(note) && /4 to 12 letters or numbers/.test(await txt('[data-testid="emp-add-keyhint"]')), saw: 'suggested "' + key + '"; "' + note + '"' };
   });
   await w.step('E12', 'Add a person -> a sign-in name that is too short -> told in words, nothing sent', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kr'); await page.click('[data-testid="emp-add-go"]'); await page.waitForTimeout(300);
@@ -170,7 +170,7 @@ W.run('employees', async (w) => {
     const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]');
     await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(400);
     const n = await rows();
-    return { ok: id === 'kavya04' && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+    return { ok: id === 'kavya04@walk-shop.br' && (await page.locator('[data-testid="emp-copy"]').count()) === 1 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
   });
   await w.step('E18', 'SEC2 · Asha -> E-mail -> type her address -> Save -> "Saved." and the sheet shows it (codes go there, never on screen)', async () => {
     await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_email', { timeout: 6000 });
