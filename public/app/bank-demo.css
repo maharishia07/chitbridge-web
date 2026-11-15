@@ -83,11 +83,11 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 .bd-d{white-space:nowrap}
 .bd-note{margin:0;padding:10px 16px;color:var(--muted,#5e594d);font-size:13px}
 .bd-report{background:#e9e4d6;padding:16px;min-height:100%}
-.bd-sheet{max-width:780px;margin:0 auto;padding:24px 32px;background:#fff;color:#111;border:1px solid #cfc8b6;font-family:Georgia,'Times New Roman',serif}
+.bd-sheet{max-width:780px;margin:0 auto;padding:24px 32px;background:#fff;color:#111;border:1px solid #cfc8b6}
 .bd-sheet .bd-sheet-h{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid #111;padding-bottom:10px}
 .bd-sheet h2{margin:0;font-size:20px}
-.bd-sheet .bd-sheet-sub{margin:4px 0 0;font-size:12px;font-family:system-ui,sans-serif;color:#333}
-.bd-sheet .bd-btn{min-height:36px;background:#fff;color:#111;border-color:#888}
+.bd-sheet .bd-sheet-sub{margin:4px 0 0;font-size:12px;font-family:inherit;color:#333}
+.bd-sheet .lk-btn{min-height:36px}
 .bd-sheet table{width:100%;border-collapse:collapse;margin-top:8px}
 .bd-sheet td{padding:6px 4px;border-bottom:1px solid #ddd;font-size:14px;color:#111;font-variant-numeric:tabular-nums}
 .bd-sheet .bd-r{text-align:right;white-space:nowrap}
@@ -96,10 +96,10 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 .bd-sheet tr.bd-i td:first-child{padding-left:16px}
 .bd-sheet tr.bd-none td{font-style:italic;color:#444}
 .bd-sheet tr.bd-res td{font-size:16px;font-weight:700;border-top:3px double #111;border-bottom:0;padding-top:10px}
-.bd-sheet .bd-tick{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0d4a2b;color:#fff;vertical-align:middle;font-family:system-ui,sans-serif}
+.bd-sheet .bd-tick{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0d4a2b;color:#fff;vertical-align:middle;font-family:inherit}
 .bd-sheet .bd-pending{font:700 12px system-ui,sans-serif;color:#7a5205;background:#fdf3dc;border:1px solid #efd39a;border-radius:99px;padding:2px 10px;margin-left:6px}
 .bd-sheet .bd-foot{font:13px system-ui,sans-serif;margin:12px 0 0}
-.bd-sign{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font:12px system-ui,sans-serif;color:#333}
+.bd-sign{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font-size:12px;color:#333}
 .bd-edges{max-width:780px;margin:12px auto 0;padding:10px 14px;background:var(--card,#fff);border:1px solid var(--line,#ddd6c6);border-radius:12px;font-size:13px;color:var(--muted,#5e594d)}
 .bd-edges h3{margin:0 0 4px;font-size:13px;color:var(--ink,#1d1b16)}.bd-edges ul{margin:0 0 6px;padding-left:18px}
 /* the cards before a statement is loaded, after the add, and when a file cannot be read */
@@ -247,3 +247,7 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
   .bd-row .lk-bd{width:32px;height:32px}
   .bd-question .bd-btn{min-height:40px}
 }
+
+.bd-sheet-acts{flex-wrap:nowrap;align-items:center;gap:14px;white-space:nowrap}
+.bd-sheet .bd-link{color:#1f5f5b}
+.bd-add-wrap[hidden],#bd_add[hidden]{display:none}

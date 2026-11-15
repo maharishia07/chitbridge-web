@@ -197,7 +197,7 @@
     el('bd_figs').innerHTML =
       labKit.figure({ label: 'Statement', value: amountText(recon.closing_statement) }) +
       labKit.figure({ label: 'Your books', value: amountText(recon.closing_books_before) }) +
-      labKit.figure({ label: 'Difference', value: amountText(recon.difference_before), good: closed, note: closed ? 'Reconciled to the statement of ' + dateWords(recon.statement_date || lastDate(model)) : plural(open, 'line', 'lines') + ' to go' });
+      labKit.figure({ label: 'Difference', value: amountText(recon.difference_before).replace(/^-/, ''), good: closed, note: closed ? 'Reconciled to the statement of ' + dateWords(recon.statement_date || lastDate(model)) : plural(open, 'line', 'lines') + ' to go' });
   }
   function lastDate(model) {
     var dates = model.items.map(function (item) { return item.line.date; }).sort();
@@ -284,6 +284,7 @@
     if (counts.wait) parts.push('<b>' + counts.wait + '</b> ' + (counts.wait === 1 ? 'waits' : 'wait') + ' for your GST answer');
     parts.push('<b>' + counts.need + '</b> ' + (counts.need === 1 ? 'needs' : 'need') + ' you');
     count.innerHTML = parts.join(' \u00b7 ');
+    addButton.hidden = !readyCount && !counts.need && !counts.wait; /* everything is in the books: no dead button */
     addButton.disabled = !readyCount;
     addButton.setAttribute('data-ready', String(readyCount));
     addButton.textContent = readyCount ? 'Add ' + plural(readyCount, 'line', 'lines') + ' to the books' : 'Nothing ready to add';
