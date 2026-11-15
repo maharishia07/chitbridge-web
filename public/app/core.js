@@ -213,8 +213,7 @@ function unwrap(j, _key) {
 }
 
 // --- shared in-flight feedback (every panel goes through api(), so this is uniform) ---
-let _inflight = 0;
-const _lockKeys = new Set();
+let _inflight = 0; const _lockKeys = new Set();
 /**
  * ⭐ SAY IT IN WORDS (Athi, 2026-08-16: *"we have to show explicit inprogress bar while reading the data, what
  * you are showing as part of the browser is not good enough"*).
@@ -226,7 +225,6 @@ const _lockKeys = new Set();
  *
  * Now it is a labelled pill — "Reading data…" plus the count when several reads are in flight — beside a thicker
  * sweep. Driven from the one place every panel already funnels through, so no screen has to remember to show it.
- *
  * ⚠️ A SHORT DELAY BEFORE IT APPEARS. A read that returns in 80ms should not flash a banner; a spinner that
  * blinks on every keystroke-driven fetch is worse than none. It waits ~180ms, so only reads a person can
  * actually perceive get announced.
@@ -1363,6 +1361,8 @@ function answerWords(body) {
   var answer = body || {};
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
+/** ACC-176b: the headers of a page acting for a store; none on any other page */
+const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {});
 async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
   const ep = epOf(key);
   if (!ep) throw new Error('no endpoint ' + key);
@@ -1439,7 +1439,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
             'Content-Type': 'application/json',
             'X-Request-Id': _rid,
             ...(idemKey ? { 'Idempotency-Key': idemKey } : {}),
-            ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}), ...(typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}) /* ACC-176b: a page acting for a store names it on every request */
+            ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}), ...actingHeaders() /* ACC-176b: a page acting for a store names it on every request */
           },
           body: body ? JSON.stringify(body) : undefined
         }).then((answer) => settleAttempt(ep, attempt, answer));

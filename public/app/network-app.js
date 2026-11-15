@@ -158,8 +158,7 @@
     try {
       node.close();
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    node.innerHTML = '';
-    node.className = 'sheet';
+    node.innerHTML = ''; node.className = 'sheet';
   }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) {

@@ -163,7 +163,11 @@
     var rows = report.rows(viewState.answer || {}).map(function (row, n) {
       return Object.assign({ _n: n }, row);
     });
-    viewState.o.mountList(host, {
+    viewState.o.mountList(host, listConfig(report, rows));
+  }
+  /** the list's configuration for one report: its columns, search, drill and empty state */
+  function listConfig(report, rows) {
+    return {
       key: 'books-grant-' + report.k,
       csv: false /* read only: no copy of the books leaves this screen */,
       defaultCols: report.cols.map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
@@ -199,7 +203,7 @@
       },
       onOpen: report.drill ? function (row) { drill(report, row); } : undefined,
       empty: { title: words('Nothing to show here'), body: words('These books have no entries for this day.') }
-    });
+    };
   }
   /** a row opens what is behind it (ACC-176c): an account's ledger (a code on the row), or the journal entry a Day book row is; books-grant-drill.js paints both, read only */
   function drill(report, row) {

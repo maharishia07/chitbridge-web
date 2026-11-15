@@ -70,7 +70,7 @@ const pub = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf
 const entry = pub('app/cap-entry.js'), core = pub('app/core.js'), accounts = pub('accounts.html');
 check(entry.includes("enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost'"), 'Save under an adviser grant prepares; any other login posts as before');
 check(acting.includes("body({ kind: 'journal', body: journal, client_ref: entry.client_ref, working_month: month })") && acting.includes('if (!entry.date) throw'), 'prepare sends store_id, kind journal, the body, client_ref and working_month, and needs the date');
-check(core.includes("typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}") && core.includes('CBBooksActing.headers()'), 'every request of a page acting for a store carries its headers; other pages send none');
+check(core.includes("typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}") && core.includes('...actingHeaders()'), 'every request of a page acting for a store carries its headers; other pages send none');
 check(accounts.includes('CBBooksActing.fromAddress(location.search)') && acting.includes("band.id = 'acting-band'") && accounts.includes('CBBooksActing.startPage(') && view.includes("'Prepare a journal'"), 'the books page reads the store from its address and shows the banner; the workspace offers Prepare a journal');
 /* (8) the header names live in one file */
 check(![acting, actions, member, view].some((src) => /X-Books-(For|Role)/.test(src.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/^ \*.*$/gm, ''))), 'no literal header name outside books-grant-api.js');
