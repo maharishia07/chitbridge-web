@@ -105,7 +105,7 @@
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
     if (!asked || !entry || !entry.resolve) return proposal;
-    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
+    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, kind: asked.kind, account: asked.account, tax_kind: asked.tax_kind };
     var resolved = entry.resolve(line, answers, suggestOpts);
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
@@ -236,6 +236,8 @@
       if (!projectAgain(opts, preview)) read.refusal = preview.refusal;
     }
     if (read.refusal) {
+      /* a file that cannot be read leaves NO old statement on screen: the page must not show lines the visitor thinks are the new file's */
+      Object.assign(preview, { parsed: null, projection: null, items: [], proposals: [], name: '' });
       preview.refusal = read.refusal;
       return { ok: false, why: read.refusal };
     }
@@ -253,7 +255,7 @@
   }
   /** the answers the owner gave for a line, as resolve() takes them: the party (new or existing), or an account from the chart (+ the tax kind on money out); or the words for what is missing */
   function answersOf(item, key, given) {
-    if (given && given.account) return { answers: { account: given.account, tax_kind: given.tax_kind || undefined } };
+    if (given && (given.account || given.kind)) return { answers: { kind: given.kind || undefined, account: given.account || undefined, tax_kind: given.tax_kind || undefined } }; /* kind = an id of CBBankEntry.whatIsThis() ("What is this?") */
     if (given) return { why: 'Pick an account from the list first.' };
     if (!item.party) return { why: 'Say who this is first.' };
     var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };

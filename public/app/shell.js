@@ -15,6 +15,7 @@
  *
  *   CBShell.mount(el, { manifest, area, host, person, apiBase, token, avatar, kural, homeHref }) → shell
  *     manifest  an object { entries:[…] } or its URL (default /app/manifest.json)
+ *     anonymous true = no stored session is read (a public page that must keep its "nothing is stored or sent" promise); fonts false = no Google Fonts link
  *     area      home · selling · running · labs · setup — the area shown first (Home: also read from location.hash)
  *     host      null            → HOME: the five areas, a side rail (a phone: bottom tabs, one area at a time)
  *               { app: 'id' }   → INSIDE AN APP: the rail collapses to a switcher in the bar; the app draws in shell.slots.work
@@ -911,11 +912,11 @@
     if (!el) return null;
     o = o || {};
     addCss();
-    addFonts();
+    if (o.fonts !== false) addFonts(); /* fonts:false = a page whose CSP allows no third-party call (the no-login bank demo): the system faces */
     var host = o.host || null,
       mode = host && host.bar ? 'bar' : host ? 'app' : 'home';
     var appId = host && host.app ? String(host.app) : ''; /* bar mode too (SHELL-ONE): the storefront and the labs name their app for the chip */
-    var sess = session();
+    var sess = o.anonymous ? null : session(); /* anonymous: this page reads no stored session and makes no call (bank-demo.html) */
     var person = o.person !== undefined ? o.person : root.CBAvatar && root.CBAvatar.sessionPerson ? root.CBAvatar.sessionPerson() : null;
     var token = o.token || (sess && sess.token) || '';
     var base = o.apiBase != null ? o.apiBase : apiBase();
