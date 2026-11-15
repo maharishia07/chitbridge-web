@@ -450,7 +450,9 @@
       if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null) && root.CBMark) {
         bell.open = false;
         paint();
-        Promise.resolve(openMark(mk)).catch(function (e) {
+        new Promise(function (done) {
+          done(openMark(mk));
+        }).catch(function (e) {
           root.__mkerr = e && e.message;
           if (typeof root.toast === 'function') root.toast(T(W.markFail));
         });
