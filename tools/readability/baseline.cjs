@@ -82,81 +82,106 @@ const topBy = (rows, key, count) =>
     .map(describe);
 const percent = (part, whole) => (whole ? +((part / whole) * 100).toFixed(1) : 0);
 
+/** R1: the cryptic-name counts and the commonest offenders */
+function crypticMetrics(allFacts, top) {
+  const names = nameRows(allFacts);
+  const conventional = conventionalRows(allFacts);
+  const crypticTotal = names.reduce((total, row) => total + row.decl, 0);
+  const conventionalTotal = Object.values(conventional).reduce((total, count) => total + count, 0);
+  return {
+    cryptic_declarations: crypticTotal,
+    distinct: names.length,
+    incl_conventional_declarations: crypticTotal + conventionalTotal,
+    conventional_dropped: Object.keys(conventional).join(' '),
+    top: names.slice(0, top || TOP_DEFAULT)
+  };
+}
+
+/** R2: named functions over the what-line threshold and how many carry no comment above */
+function whatLineMetrics(named) {
+  const namedLong = named.filter((fn) => fn.len > WHAT_LINE_FROM);
+  const uncommented = namedLong.filter((fn) => !fn.hasAbove);
+  return {
+    named_over_10: namedLong.length,
+    without_comment: uncommented.length,
+    share: percent(uncommented.length, namedLong.length),
+    worst: uncommented
+      .slice()
+      .sort((left, right) => right.len - left.len)
+      .slice(0, 10)
+      .map(describe)
+  };
+}
+
+/** R3: function length and nesting */
+function sizeMetrics(realFunctions) {
+  return {
+    over_40: realFunctions.filter((fn) => fn.len > LONG).length,
+    over_80: realFunctions.filter((fn) => fn.len > VERY_LONG).length,
+    depth_over_4: realFunctions.filter((fn) => fn.depth > DEEP).length,
+    longest: topBy(realFunctions, 'len'),
+    deepest: topBy(realFunctions, 'depth')
+  };
+}
+
+/** R5: comment volume, narrative share and the longest comment blocks */
+function commentMetrics(allFacts) {
+  const comments = sumComments(allFacts);
+  return {
+    comment_lines: comments.lines,
+    short: comments.short,
+    narrative: comments.narrative,
+    commented_out_code: comments.code,
+    narrative_share: percent(comments.narrative, comments.lines),
+    narrative_blocks: comments.narBlocks,
+    story_lines: comments.story,
+    longest: comments.longest
+      .sort((left, right) => right.n - left.n)
+      .slice(0, 8)
+      .map((block) => `${block.file}:${block.line} ${block.n} lines${block.story ? ' ⭐/⚠️' : ''}`)
+  };
+}
+
+/** R6: values repeated as literals */
+function literalMetrics(allFacts) {
+  const literals = literalRows(allFacts);
+  return {
+    repeated_values: literals.length,
+    numbers: literals.filter((row) => row.k.startsWith('num:')).length,
+    strings: literals.filter((row) => row.k.startsWith('str:')).length,
+    top: literals.slice(0, 25)
+  };
+}
+
 /** the R1–R6 metrics of one repo */
 function metrics(repo, root, top) {
   const { files, skipped } = measure.collect(repo, root);
   const allFacts = files.map(measure.fileFacts);
   const parseFail = allFacts.filter((facts) => facts.parseFail).map((facts) => ({ file: facts.file, err: facts.parseFail }));
   const functions = allFacts.flatMap((facts) => facts.functions);
-  const wrappers = functions.filter((fn) => fn.wrapper).length;
   const realFunctions = functions.filter((fn) => !fn.wrapper);
   const named = realFunctions.filter((fn) => !fn.anon);
-  const namedLong = named.filter((fn) => fn.len > WHAT_LINE_FROM);
-  const uncommented = namedLong.filter((fn) => !fn.hasAbove);
   const headers = allFacts.map((facts) => facts.header);
-  const names = nameRows(allFacts),
-    conventional = conventionalRows(allFacts);
-  const literals = literalRows(allFacts),
-    comments = sumComments(allFacts);
-  const crypticTotal = names.reduce((total, row) => total + row.decl, 0);
-  const conventionalTotal = Object.values(conventional).reduce((total, count) => total + count, 0);
   return {
     repo,
     files: files.length,
-    module_wrappers_excluded: wrappers,
+    module_wrappers_excluded: functions.length - realFunctions.length,
     skipped,
     parseFail,
     functions: realFunctions.length,
     namedFunctions: named.length,
-    R1: {
-      cryptic_declarations: crypticTotal,
-      distinct: names.length,
-      incl_conventional_declarations: crypticTotal + conventionalTotal,
-      conventional_dropped: Object.keys(conventional).join(' '),
-      top: names.slice(0, top || TOP_DEFAULT)
-    },
-    R2: {
-      named_over_10: namedLong.length,
-      without_comment: uncommented.length,
-      share: percent(uncommented.length, namedLong.length),
-      worst: uncommented
-        .slice()
-        .sort((left, right) => right.len - left.len)
-        .slice(0, 10)
-        .map(describe)
-    },
-    R3: {
-      over_40: realFunctions.filter((fn) => fn.len > LONG).length,
-      over_80: realFunctions.filter((fn) => fn.len > VERY_LONG).length,
-      depth_over_4: realFunctions.filter((fn) => fn.depth > DEEP).length,
-      longest: topBy(realFunctions, 'len'),
-      deepest: topBy(realFunctions, 'depth')
-    },
+    R1: crypticMetrics(allFacts, top),
+    R2: whatLineMetrics(named),
+    R3: sizeMetrics(realFunctions),
     R4: headerMetrics(headers),
-    R5: {
-      comment_lines: comments.lines,
-      short: comments.short,
-      narrative: comments.narrative,
-      commented_out_code: comments.code,
-      narrative_share: percent(comments.narrative, comments.lines),
-      narrative_blocks: comments.narBlocks,
-      story_lines: comments.story,
-      longest: comments.longest
-        .sort((left, right) => right.n - left.n)
-        .slice(0, 8)
-        .map((block) => `${block.file}:${block.line} ${block.n} lines${block.story ? ' ⭐/⚠️' : ''}`)
-    },
-    R6: {
-      repeated_values: literals.length,
-      numbers: literals.filter((row) => row.k.startsWith('num:')).length,
-      strings: literals.filter((row) => row.k.startsWith('str:')).length,
-      top: literals.slice(0, 25)
-    },
+    R5: commentMetrics(allFacts),
+    R6: literalMetrics(allFacts),
     _headers: headers,
     _fns: realFunctions
   };
 }
 
+/** R4: how many files carry a header, and which of OWNS, CALLED BY, FLOW and CARD it names */
 function headerMetrics(headers) {
   const incomplete = headers.filter((header) => !(header.owns && header.callers && header.flow));
   return {

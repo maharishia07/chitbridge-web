@@ -1,5 +1,10 @@
 /* app/pick.js — CBPick: open the catalogue over any screen and hand the selection back. · CARD 06-catalogue-pim/catalogue-picker
  *
+ * OWNS      CBPick.open / confirm / cancel: the catalogue picker shown over any screen, resolving with the chosen lines
+ * CALLED BY public/app.html (script tag); public/app/cap-chit2.js, public/app/cap-worklist.js (CBPick.open)
+ * FLOW      CBPick.open(opts) -> CBCatUI.pickerHTML in a dialog -> confirm -> Promise of lines, or null on cancel
+ * CARD      06-catalogue-pim/catalogue-picker
+ *
  *
  * Athi, 2026-08-23: *"if it is a module, we should be able to call it on top of any other screen on its own and
  * pass the selection back to the calling system, can't we?"* — after the worklist's picker came up with no

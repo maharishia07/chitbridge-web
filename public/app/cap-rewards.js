@@ -10,6 +10,8 @@
  
  * CARD 08-rewards-and-loyalty/customer-s-rewards-view
  * CALLED BY public/app.html, public/app/cap-crm-record.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      CBRewardsPane.html(r, o) and .load(host, o): the customer rewards pane, painted from the server answer; adds nothing up
+ * FLOW      load(host, o) -> GET customers/:id/rewards -> html(r, o) -> host.innerHTML
  */
 (function (root) {
   'use strict';

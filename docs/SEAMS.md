@@ -52,7 +52,7 @@ of file each thing is; this says what already does the job.
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
 | 50 | `read` | `cap-print.js` |  |
-| 48 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 49 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
@@ -110,10 +110,10 @@ of file each thing is; this says what already does the job.
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
 | 29 | `money` | `cart.js` |  |
 | 29 | `group` | `identity.js` | again in a different costume. |
-| 28 | `opts` | `cap-stock.js` |  |
+| 28 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
 | 27 | `call` | `cap-assist.js` |  |
-| 27 | `names` | `shortcuts.js` |  |
+| 28 | `names` | `shortcuts.js` |  |
 | 27 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 27 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 27 | `customer` | `mintuserid.js` | silently becomes a second identity. |

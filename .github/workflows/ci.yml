@@ -109,6 +109,7 @@ jobs:
           node e2e/cart-page-needs.cjs
           node e2e/chart-smoke.cjs
           node e2e/crm-groups-guard.cjs
+          node e2e/messages-threads.test.cjs
           node e2e/currency-distinct.cjs
           node e2e/defs-batch.test.cjs
           node e2e/developer-words.cjs
@@ -240,6 +241,7 @@ jobs:
           node e2e/ui-codes-w2-fin.test.cjs
           node e2e/ui-codes-crm.test.cjs
           node e2e/ui-codes-w2-crm.test.cjs
+          node e2e/ui-codes-g2.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs

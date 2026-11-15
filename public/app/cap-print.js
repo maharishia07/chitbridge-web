@@ -354,6 +354,7 @@ var CBPrint = (function () {
   function alwaysHeading() {
     return groupHeadHTML(tx('Always on a tax invoice'), 'pr-always', requiredCite());
   }
+  /** the paper-size row of the editor: a label and the paper select */
   function paperRowHTML() {
     var options = PAPERS.map(function (paper) {
       return '<option value="' + paper[0] + '"' + (held.model.paper === paper[0] ? ' selected' : '') + '>' + esc(tx(paper[1])) + '</option>';
@@ -648,6 +649,7 @@ var CBPrint = (function () {
     held.host.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(tx('Reading…')) + '</div>';
     return readAll().then(null, readFailed);
   }
+  /** open the editor for this host: clear the held state, guard unsaved changes, then read the saved layout */
   function mount(host) {
     held.host = host;
     held.model = null;

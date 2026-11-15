@@ -419,7 +419,7 @@ function matchDispute(chit_id) {
       '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:8px">' +
       esc(tx('This goes to them as a quantity dispute against this order. Nothing you counted is changed by raising it.')) +
       '</div>' +
-      '<div class="mfoot"><button class="pill" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" class="pill" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button>' +
       '<button class="composebtn" data-testid="match-dispute-send" onclick="matchDisputeSend(\'' +

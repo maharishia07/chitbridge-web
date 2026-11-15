@@ -111,6 +111,7 @@ function enDlg() {
   if (node) return node;
   enCss();
   node = document.createElement('dialog');
+  node.setAttribute('data-pop', 'POP120');
   node.id = 'entrysheet';
   node.setAttribute('aria-label', tx('New entry'));
   node.innerHTML =

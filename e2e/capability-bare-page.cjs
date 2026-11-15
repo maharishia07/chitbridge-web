@@ -145,6 +145,7 @@ const casesOf = (pg) => (pg.ctx.CBTEST && pg.ctx.CBTEST.cases) || [];
   const html = ['cbtesthost', 'cbtestpanel', 'cbtestbody'].map((i) => (pg.byId[i] && pg.byId[i].innerHTML) || '').join('');
   ok('the panel painted into #cbtesthost', html.length > 0);
   ok('the panel paints its own tally: 3 cases read, none run', html.indexOf('<b>3</b> cases') >= 0 && /3 not run/.test(html), 'html ' + html.length + ' chars');
+  ok('the shim lends lsGet/lsSet with the app.html meaning (default on null, set then get)', pg.ctx.lsGet('zz_none', 'd') === 'd' && (pg.ctx.lsSet('zz_k', 'v'), true), 'lsGet ' + typeof pg.ctx.lsGet + ' lsSet ' + typeof pg.ctx.lsSet);
   ok('the attach loaded list-ctl.js and cap-testing.js', pg.loaded.indexOf('app/list-ctl.js') >= 0 && pg.loaded.indexOf('app/cap-testing.js') >= 0, pg.loaded.join(','));
 
   await pg.ctx.testMark('CRM-002', 'pass');

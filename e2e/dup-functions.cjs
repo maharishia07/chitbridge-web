@@ -90,5 +90,43 @@ function scan(label, files) {
 const shopSrc = fs.readFileSync(path.join(WEB, 'shop.html'), 'utf8');
 const SHOP = ['shop.html'].concat([...shopSrc.matchAll(/<script[^>]*src="app\/([^"]+)"/g)].map((m) => 'app/' + m[1]).filter((f) => fs.existsSync(path.join(WEB, f))));
 
-const bad = scan('app', FILES) + scan('storefront', SHOP);
+
+/**
+ * ── SECOND CHECK: DUPLICATE BODIES (l15-webdup, 2026-11-15) ──────────────────────────────────────────────────
+ * Two functions, two names, one body is the same code kept twice (a getter per localStorage key, a chit opener per capability).
+ * This counts the groups the way C:/dev/dead-exports.cjs does (named functions of 6+ lines, comments and strings blanked, whitespace gone)
+ * over public/app/*.js (app.html's own inline script is left out: fontSet/textSizeSet/motionSet and restoreChit/unarchiveChit sit there, for a later round), and fails if the count RISES above the ceiling. Lower the ceiling when a group is merged; never raise it.
+ * ⚠️ Blanking strings makes two markup builders that differ only in their literals look equal (showcase-templates menuRow/serviceCard,
+ * cap-catalogue itemsHTML/categoriesHTML): they are counted, because the ceiling is a measure and not a verdict.
+ */
+const BODY_GROUP_CEILING = 7;
+const BODY_MIN_LINES = 6;
+const blankCode = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
+  .replace(/`(?:[^`\\]|\\.)*`/g, ' ').replace(/'(?:[^'\\\n]|\\.)*'/g, ' ').replace(/"(?:[^"\\\n]|\\.)*"/g, ' ');
+function bodyGroups(files) {
+  const seen = new Map();
+  for (const rel of files) {
+    const code = blankCode(fs.readFileSync(path.join(WEB, rel), 'utf8'));
+    const head = /(?:^|\n)[ \t]*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g;
+    let m;
+    while ((m = head.exec(code))) {
+      let depth = 1, i = head.lastIndex;
+      while (i < code.length && depth) { const ch = code[i++]; if (ch === '{') depth++; else if (ch === '}') depth--; }
+      const body = code.slice(head.lastIndex, i);
+      if (body.split('\n').length < BODY_MIN_LINES) continue;
+      const key = body.replace(/\s+/g, '');
+      seen.set(key, (seen.get(key) || []).concat(rel + ':' + m[1]));
+    }
+  }
+  return [...seen.values()].filter((group) => group.length > 1);
+}
+function checkBodyGroups(files) {
+  const groups = bodyGroups(files);
+  console.log('\n══ DUPLICATE BODIES · ' + groups.length + ' group(s), ceiling ' + BODY_GROUP_CEILING + ' ══');
+  groups.forEach((group) => console.log('  ' + group.join('  =  ')));
+  if (groups.length > BODY_GROUP_CEILING) console.log('  ✗ more duplicate-body groups than the ceiling: merge into the one helper, do not add a copy\n');
+  return groups.length > BODY_GROUP_CEILING ? 1 : 0;
+}
+
+const bad = scan('app', FILES) + scan('storefront', SHOP) + checkBodyGroups(FILES.filter((rel) => rel !== 'app.html'));
 process.exit(bad ? 1 : 0);

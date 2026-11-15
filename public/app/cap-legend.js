@@ -5,6 +5,9 @@
  * feature's status (done / partial / backlog). Core keeps only the gated stub (openLegend/closeLegend/_legendOpen).
  * Update this whenever a capability or feature lands. Mirrors the catalogue in project-capability-modularisation.
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      CAP_CATALOGUE (capability -> features) and the legend panel: _openLegendImpl and its tab painters; Core keeps only the gated stub
+ * FLOW      openLegend (app.html) -> ensureCap(legend) -> _openLegendImpl paints the tabs from CAP_CATALOGUE + live CAP_LOADED
+ * CARD      20-settings-governance-and-plan/capability-legend
  */
 
 // TWO AXES per capability (SPEC-governance-in-legend.md):
@@ -1657,7 +1660,7 @@ function _openLegendImpl() {
       <span style="font-size:var(--fs-5)">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab] || titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
-        <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
+        <button data-cbsid="CMP005" onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>
     </div>
     <div style="flex:none">${_lbTabBar()}</div>

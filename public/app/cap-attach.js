@@ -91,6 +91,9 @@
       return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) { return '&#' + char.charCodeAt(0) + ';'; });
     };
   }
+  /* app.html's lsGet/lsSet */
+  if (typeof win.lsGet !== 'function') win.lsGet = function (k, d) { try { var v = win.localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } };
+  if (typeof win.lsSet !== 'function') win.lsSet = function (k, v) { try { win.localStorage.setItem(k, v); } catch (e) { win.console.warn('lsSet ' + k + ': ' + e.message); } };
   if (typeof win.ensureCap !== 'function') win.ensureCap = function (name) { return loadScript('/app/cap-' + name + '.js'); };
 
   (win.CBList ? Promise.resolve() : loadScript('/app/list-ctl.js'))

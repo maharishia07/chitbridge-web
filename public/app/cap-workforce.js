@@ -63,7 +63,7 @@ function acTypeInfo(t) {
       esc(h.how) +
       '</div>' +
       extra +
-      '<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' +
+      '<div style="display:flex;margin-top:16px"><button data-cbsid="CMP004" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
       tx('Got it') +
       '</button></div></div>',
     false
@@ -235,7 +235,7 @@ function aiSlotInfo(key) {
       (st.enabled && s.status === 'live' && s.invoke
         ? '<button class="composebtn pri" style="flex:1" onclick="closeModal();' + esc(s.invoke) + '()">' + tx('▶ Invoke') + '</button>'
         : '') +
-      '<button class="composebtn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP005" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
       '</button></div></div>',
     false
@@ -372,7 +372,7 @@ function openShowcase(url, title) {
     ';background:var(--card);z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;color:var(--on-card)">' +
     '<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:var(--fs-3)">' +
     esc(title || 'How it works') +
-    '</b><button onclick="closeShowcase()" title="Close" style="margin-inline-start:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>' +
+    '</b><button data-cbsid="CMP005" onclick="closeShowcase()" title="Close" style="margin-inline-start:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>' +
     '<iframe src="' +
     esc(url) +
     '" title="' +
@@ -395,7 +395,7 @@ function coassistsScreen() {
       : '';
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${_title}</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${_typeInfoBtn}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${_title}</span><button data-cbsid="CMP016" onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${_typeInfoBtn}</div>
       <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ || '')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
@@ -788,7 +788,7 @@ function awRender() {
         })
         .join('') +
       '</div>';
-    foot = '<button class="composebtn" style="flex:1" onclick="awClose()">' + tx('Cancel') + '</button>';
+    foot = '<button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="awClose()">' + tx('Cancel') + '</button>';
   } else {
     var steps = AW_STEPS[UI.awType] || [],
       rdy = _awReady(UI.awType);
@@ -813,8 +813,8 @@ function awRender() {
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and
       // make a 2nd connector). Only Done. Explore/preview created nothing, so Back is safe there.
       foot = rdy
-        ? '<button class="composebtn pri" data-testid="coassist-wiz-done" style="flex:1" onclick="awClose()">' + tx('Done') + '</button>'
-        : '<button class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" data-testid="coassist-wiz-done" style="flex:1" onclick="awClose()">' +
+        ? '<button data-cbsid="CMP004" class="composebtn pri" data-testid="coassist-wiz-done" style="flex:1" onclick="awClose()">' + tx('Done') + '</button>'
+        : '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button data-cbsid="CMP004" class="composebtn pri" data-testid="coassist-wiz-done" style="flex:1" onclick="awClose()">' +
           tx('Got it') +
           '</button>';
     } else {
@@ -867,7 +867,7 @@ function awRender() {
       if (UI.awErr) body += '<div style="color:var(--disp);font-size:var(--fs-2);margin-top:10px">' + esc(UI.awErr) + '</div>';
       var nextLbl = UI.awStep === steps.length - 1 ? (rdy ? 'Create' : 'See result') : 'Next ›';
       foot =
-        '<button class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
+        '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
         nextLbl +
         '</button>';
     }
@@ -882,7 +882,7 @@ function awRender() {
     title +
     '</div>' +
     (sub ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:3px">' + sub + '</div>' : '') +
-    '</div><button onclick="awClose()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:none;color:var(--on-card)">✕</button></div>' +
+    '</div><button data-cbsid="CMP005" onclick="awClose()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:none;color:var(--on-card)">✕</button></div>' +
     (dots ? '<div style="max-width:520px;margin:0 auto">' + dots + '</div>' : '') +
     '</div>';
   var mid = '<div style="flex:1;overflow:auto;padding:22px 18px"><div style="max-width:520px;margin:0 auto">' + body + '</div></div>';
@@ -1261,7 +1261,7 @@ function _acTierLoader(x) {
     (UI.acManageErr
       ? '<div style="color:var(--disp);margin-top:12px;font-size:var(--fs-2)">' +
         esc(UI.acManageErr) +
-        ' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acOpenManage(\'' +
+        ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acOpenManage(\'' +
         x.id +
         '\')">' +
         tx('Retry') +
@@ -1335,7 +1335,7 @@ function acDetailHTML() {
        "already loaded" flag would show Ravi's record under Priya's name. That is the worst possible failure
        for this particular screen. */
     acLoadDocs(x.id);
-    bar = `<button class="pri" onclick="saveActor('${x.id}')">${tx('Save')}</button><button onclick="setAcMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor('${x.id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
   } else {
     const pct = x.max ? Math.min(100, Math.round((x.load / x.max) * 100)) : 0;
     const kv = (l, v) =>

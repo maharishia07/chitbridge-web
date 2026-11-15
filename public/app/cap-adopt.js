@@ -43,7 +43,7 @@ async function adoptOpen(chit_id) {
         '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">' +
         esc((e && e.message) || '') +
         '</div>' +
-        '<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' +
+        '<div style="display:flex;margin-top:16px"><button data-cbsid="CMP005" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
         tx('Close') +
         '</button></div></div>',
       false
@@ -77,7 +77,7 @@ function adoptPaint() {
       head +
       body +
       '<div style="display:flex;gap:8px;margin-top:16px;position:sticky;bottom:0;background:var(--card);color:var(--on-card);padding-top:10px">' +
-      '<button class="composebtn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP015" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Not now') +
       '</button>' +
       '<button class="composebtn pri" style="flex:1" data-testid="adopt-accept" ' +
