@@ -26,10 +26,17 @@ function bkshLedger() {
     lines = (bkshBook().ledger || []).map((item) => Object.assign({}, item, { currency: cur }));
   return { lines, opening_minor: Number((bkshBook().ledgerRaw || {}).opening_minor) || 0, posted_refs: lines.map((item) => item.ref).filter(Boolean) };
 }
-/** the parties the books know, in the shape the engine compares names against */
+/** the parties the books know, in the shape the engine compares names against: every customer and supplier of the shop (GET /bank/rail books), else the rail's own list */
 function bkshParties() {
+  const all = (bkshBook().rail && bkshBook().rail.books && bkshBook().rail.books.parties) || [];
+  if (all.length) return all.filter((item) => item.id && item.name);
   const known = (bkshBook().rail && bkshBook().rail.parties) || [];
   return known.map((item) => ({ id: item.party_id, name: item.name || '', kind: item.kind || item.role || undefined })).filter((item) => item.id && item.name);
+}
+/** the shop's own bank-group ledgers other than this statement's (a savings account it added): the 'moved between my own accounts' answer may name them; the engine knows the pack's own already */
+function bkshOwnAccounts() {
+  const own = String(bkshStatementAccount().code || bkshBook().acct);
+  return bkbBanks(bkshBook().accts || []).filter((item) => String(item.code) !== own).map((item) => ({ code: String(item.code), name: item.name }));
 }
 /** true / false as the shop said, null when it did not say (SET-49: unknown is not false, nothing is claimed on it); 'unread' when the read failed: the sheet then ASKS the tax kind and says so, so a registered shop's charge is never posted untaxed by a failed read */
 async function bkshRegistered() {
@@ -69,6 +76,20 @@ function bkshPostedFeed() {
   });
   return feed;
 }
+/**
+ * B5: the pairing of a statement line with the entry it made, ONE TO ONE BY OCCURRENCE: the line's own client_ref (the engine's refsOf: bank:<fingerprint>-<n>) and the posted record (ref → entry_no).
+ * Two equal lines on one day carry two refs, so after posting each is paired with its own entry (never by amount and date alone). Nothing is worked out here: the engine's match() reads both.
+ */
+function bkshPairing(lines) {
+  const engine = bkshEngine(),
+    posted = {};
+  if (!engine || !engine.project.refsOf || !lines || !lines.length) return { line_refs: undefined, posted: undefined };
+  (bankStoreState.posted || []).forEach((row) => {
+    if (row.ref && row.entry_no) posted[row.ref] = row.entry_no;
+  });
+  const acct = bkshStatementAccount();
+  return { line_refs: engine.project.refsOf(lines, acct.name || String(bkshBook().acct), lines), posted };
+}
 /** the carried figures the statement check compares: this account, the books' balance before the statement (the ledger read, never summed here), the reconciled statements and the posted feed */
 function bkshCheckInput() {
   const acct = bkshStatementAccount(),
@@ -98,7 +119,8 @@ function bkshController() {
     checkInput: bkshCheckInput,
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
-    suggestOpts: { country, learned: bkbRules(), parties: bkshParties() },
+    pairing: bkshPairing,
+    suggestOpts: { country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), own_accounts: bkshOwnAccounts() },
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
@@ -143,7 +165,10 @@ async function bkshAdd(btn) {
   bkshPaint();
   try {
     const done = await BKSH.ctl.postReady(() => {});
-    await bankRun(); /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
+    bkshNoteAdded();
+    await bankRun();
+    bkshAcceptAdded(); /* the owner's own adds read as accepted at once, whichever way the sheet is closed later */
+    /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
     bkshEl('bks_say').textContent = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
   } catch (failure) {
@@ -168,10 +193,32 @@ function bkshEntry(key) {
   enOpen(preset);
   return { ok: true };
 }
-/** the sheet closed: the Bank view reads the books again so the lines that were added show as matched */
+/**
+ * BNK-new-10: the lines the owner just added from the sheet were CONFIRMED by the owner (the press named what it reached), so each is accepted as it comes back matched: the accept mark names the entry
+ * it made, and the bank log no longer lists it as posted-not-accepted. The refs added in this sheet session are remembered here; nothing is accepted that the sheet did not post.
+ */
+function bkshNoteAdded() {
+  const results = (BKSH.ctl && BKSH.ctl.view().results) || {};
+  BKSH.added = BKSH.added || {};
+  Object.keys(results).forEach((ref) => {
+    if (results[ref] && results[ref].ok) BKSH.added[ref] = true;
+  });
+}
+/** accept each added line that now reads as matched, by its own client_ref (one to one by occurrence) */
+function bkshAcceptAdded() {
+  const added = BKSH.added || {},
+    parsed = bkshBook().parsed;
+  if (!parsed || !Object.keys(added).length) return;
+  const refs = bkshPairing(parsed.lines).line_refs || [];
+  (bkshBook().rows || []).forEach((row) => {
+    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(row, true);
+  });
+  BKSH.added = {};
+}
+/** the sheet closed: the Bank view reads the books again so the lines that were added show as matched, and the owner's own adds are accepted */
 function bkshClose() {
   closeModal();
-  if (typeof bankRun === 'function' && bkshBook().parsed) bankRun().catch((failure) => bkQuiet('bank-sheet-close', failure));
+  if (typeof bankRun === 'function' && bkshBook().parsed) bankRun().then(bkshAcceptAdded).catch((failure) => bkQuiet('bank-sheet-close', failure));
 }
 /** the statement, the engine and the three scripts the sheet needs are all there */
 function bkshReady() {
@@ -203,7 +250,7 @@ async function bankSheetOpen() {
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */

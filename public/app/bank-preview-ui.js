@@ -6,7 +6,7 @@
  * FLOW      mount({ host, controller, currency, country, say, changed }) → paint(model, results) → a click or change on host → the controller's answer method → say(words) if refused → changed()
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account · BKS017-B09 yes, this is right
- *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-I02 new party name · BKS017-S04 new party kind
+ *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-B19 what this line is (one step) · BKS017-S10 which account that answer names · BKS017-I02 new party name · BKS017-S04 new party kind
  *           BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
  * ⭐ Written for pages with no inline script (the demo's CSP): everything is data-act on a button, one delegated listener on the host.
  */
@@ -175,11 +175,32 @@
         '<button data-cbsid="BKS017-B08" type="button" class="bd-btn" data-act="useacct" data-key="' + key + '">Use this account</button></span>'
       );
     }
-    Object.assign(ctx, { partyBox, accountBox });
+    /**
+     * "What is this?" ON THE LINE, for a line nothing explained: one step each from the engine's own closed list (CBBankEntry.whatIsThis, the same list resolve() uses): moved between my own accounts
+     * (asks which account when the shop has more than one), card takings paid to the bank, cash, tax paid to the tax office, a loan. The screen lists nothing of its own; an answer goes to resolveLine(key, { kind, account }).
+     */
+    function kindBox(item) {
+      var engine = root.CBBankEntry;
+      if (item.state !== 'needs_you' || item.entry || !engine || !engine.whatIsThis) return '';
+      var out = item.line.debit_minor > 0,
+        key = escapeHtml(item.key),
+        listed = engine.whatIsThis({ country: cfg.country, own_accounts: cfg.ownAccounts ? cfg.ownAccounts() : [] }).items || [];
+      var buttons = listed
+        .filter(function (one) {
+          return one.id !== 'expense' && one.id !== 'other_income' && (one.side === 'both' || one.side === (out ? 'out' : 'in'));
+        })
+        .map(function (one) {
+          var pick = one.ask === 'account' && one.accounts.length > 1;
+          if (!pick) return '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '"' + (one.ask === 'account' ? ' data-acct="' + escapeHtml(one.accounts[0].role || one.accounts[0].code) + '"' : '') + '>' + escapeHtml(one.words) + '</button>';
+          return '<span class="bd-party"><select data-cbsid="BKS017-S10" class="bd-inp" aria-label="' + escapeHtml(one.words) + '" data-act="kindacct-' + escapeHtml(one.id) + '" data-key="' + key + '">' + optionsOf(one.accounts, function (entry) { return entry.role || entry.code; }, function (entry) { return entry.name; }) + '</select> <button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '">' + escapeHtml(one.words) + '</button></span>';
+        });
+      return buttons.length ? '<span class="bd-party"><b>What is this?</b> ' + buttons.join(' ') + '</span>' : '';
+    }
+    Object.assign(ctx, { partyBox, accountBox, kindBox });
   }
   /** one table row, and the box for the rows the file lost; each function lands on the one shared `ctx` */
   function addRows(ctx) {
-    var escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, tag = ctx.tag, partyBox = ctx.partyBox, accountBox = ctx.accountBox, lineNote = ctx.lineNote;
+    var escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, tag = ctx.tag, partyBox = ctx.partyBox, accountBox = ctx.accountBox, kindBox = ctx.kindBox, lineNote = ctx.lineNote;
     /** the state a row is painted in: what happened to it when added, else its state; a proposal something still holds back is never painted "Ready to add" */
     function stateKeyOf(item, result) {
       if (result) return result.ok ? 'posted' : 'failed';
@@ -193,7 +214,7 @@
         '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
         '<td class="bd-m">' + (line.debit_minor ? escapeHtml(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? escapeHtml(amountText(line.credit_minor)) : '') + '</td>' +
         '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') +
-        '<div class="bd-sub">' + partyBox(item) + accountBox(item) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
+        '<div class="bd-sub">' + partyBox(item) + accountBox(item) + kindBox(item) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
       );
     }
     /** B5-06: every row the file lost, by its row number, and every other warning the reader made; never hidden */
@@ -289,6 +310,12 @@
       inv: function (key, target) { return cfg.controller().invoice(key, target.getAttribute('data-v')); },
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
       notmatch: function (key) { return cfg.controller().notMatch(key); },
+      kind: function (key, target) {
+        var id = target.getAttribute('data-kind'),
+          account = target.getAttribute('data-acct') || chosenFor('kindacct-' + id, key);
+        var said = cfg.controller().resolveLine(key, { kind: id, account: account || undefined });
+        return said && said.ok === false ? Object.assign({ line: true }, said) : said; /* a refusal is said on the line, in its words */
+      },
       entry: function (key) { return cfg.entry ? cfg.entry(key) : { ok: false, why: 'This starts after an update.' }; },
       chk: function (code) { return cfg.controller().confirmCheck(code) ? { ok: true } : { ok: false, why: 'Could not read this statement again.' }; }
     };

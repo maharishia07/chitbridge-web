@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.97.0 · bank-recon · sha256 893588afdd4887fd219d7d654c7e73a63d8dd8ad413a835dac095ce080c62254 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-bankmonday.2 · bank-recon · sha256 8417eb327137c9866c3fafb0ab4e80862255e559c329837d568e4641b4bd31e4 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -881,6 +881,7 @@
     var list = statementRows_(stmtLines);
     var ledgerRows = ledgerRowsOf_(ledgerLines);
     var matched = [];
+    matchByPostedRef_(list, ledgerRows, matched, opts);
     matchByRef_(list, ledgerRows, matched);
     var ambiguous = matchByAmountDate_(list, ledgerRows, matched, win);
     matchOneToMany_(list, ledgerRows, matched, win);
@@ -941,6 +942,25 @@
   function daysNearestFirst_(byDay, dayNumber) {
     return Object.keys(byDay).sort(function (first, second) {
       return Math.abs(dayNo_(first) - dayNumber) - Math.abs(dayNo_(second) - dayNumber) || (first < second ? -1 : 1);
+    });
+  }
+  /**
+   * (0) v1.98.0 (B5 / Fable 30-SECONDS): a line that was ADDED from this very statement is paired with the entry it made, ONE TO ONE BY OCCURRENCE. opts.line_refs = the line's own client_ref per statement line
+   * (bank-project refsOf: 'bank:<fingerprint>-<n>', n = its place among identical lines) and opts.posted = { <client_ref>: <entry_no> } (the books' own record of what each ref posted). Two equal lines on
+   * one day (Bunnings 96.80 twice) carry two refs and made two entries: each pairs with its own, so neither is left 'missing in the bank' nor 'missing in the books'. Same amount and side only (a
+   * mismatch is left to the later passes and the statement check); a ref with no entry in the ledger given changes nothing.
+   */
+  function matchByPostedRef_(list, ledgerRows, matched, opts) {
+    var refs = opts && opts.line_refs,
+      posted = opts && opts.posted;
+    if (!refs || !posted) return;
+    list.forEach(function (item) {
+      var entryNo = posted[refs[item.i]];
+      if (item.used || entryNo == null) return;
+      var hit = ledgerRows.filter(function (x) {
+        return !x.used && x.side === item.side && x.m === item.m && String(x.line.entry_no) === String(entryNo);
+      })[0];
+      if (hit) takeMatch_(matched, [item], [hit], 'posted');
     });
   }
   /** (a) the same reference and amount */
@@ -1199,7 +1219,7 @@
    * B5-01: a PARTY is tried before the words ("SMITH LEGAL PROFESSIONAL FEE" is a payment to Smith, not a bank charge); a proposal that only the words made is never ready on its own (see basisOf_).
    */
   function ruleSuggestion_(situation) {
-    return learnedSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation));
+    return learnedSuggestion_(situation) || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation));
   }
   /** BR1: a rule a person taught (learn()) is tried first — still only a PROPOSAL, shown with where it came from */
   function learnedSuggestion_(situation) {
@@ -1271,6 +1291,46 @@
       { needs: ['party', 'reverses'] }
     );
   }
+
+  /** the letters and digits of a document number, upper case: "HP-INV-2" → "HPINV2" */
+  function docKey_(text) {
+    return String(text || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+  /** the narration names this document: its whole number ("HP-INV-2"), or "INV 2" / "INVOICE 2" / "BILL 2" with the number the document ends in */
+  function namesDocument_(text, billNo) {
+    var key = docKey_(billNo),
+      tail = /([0-9]+)$/.exec(key);
+    if (!key) return false;
+    if (docKey_(text).indexOf(key) >= 0) return true;
+    return !!tail && new RegExp('(^|[^A-Z0-9])(INV|INVOICE|BILL|DOC|REF)[\\s#.:\\-]*0*' + String(+tail[1]) + '([^0-9]|$)').test(String(text).toUpperCase());
+  }
+  /** the open documents (options.open_items: { ref, bill_no, party, side: 'customer'|'supplier', open_minor, currency? }) this line could be paying: this side, this very amount, this currency */
+  function openCandidates_(situation) {
+    var want = situation.out ? 'supplier' : 'customer';
+    return (situation.options.open_items || []).filter(function (item) {
+      return item && item.side === want && +item.open_minor === situation.minor && (!item.currency || item.currency === situation.pack.currency);
+    });
+  }
+  /**
+   * v1.98.0 (BNK-new-8 / M4): money in or out that is EXACTLY one open invoice (bill) of the party it names — or of the party whose document number it names — is proposed as a payment against that document
+   * (proposal.against = [{ against_ref, bill_no, amount_minor }]), the way a bank reconciliation suggests a match. More than one fit, or none, is no proposal here: the party rule below still speaks.
+   * Nothing is guessed: the party must be named in the narration (by name, VPA or account) or the document number must be; the amount must be the document's open amount to the minor unit.
+   */
+  function openItemSuggestion_(situation) {
+    var found = openCandidates_(situation);
+    if (!found.length) return null;
+    var hit = partyIn_(situation.line.narration, situation.options.parties),
+      byParty = hit && hit !== 'many' ? found.filter(function (item) { return String(item.party) === String(hit.p.id || hit.p.name); }) : [],
+      byDoc = found.filter(function (item) { return namesDocument_(situation.text, item.bill_no); });
+    var pick = byDoc.length === 1 ? byDoc[0] : byDoc.length === 0 && byParty.length === 1 ? byParty[0] : null;
+    if (!pick) return null;
+    var event = { type: situation.out ? 'payment_made' : 'payment_received', mode: 'bank', party: pick.party },
+      answer = situation.base(event, 'open_item', 'high', 'the amount is exactly the open ' + (situation.out ? 'bill ' : 'invoice ') + (pick.bill_no || pick.ref) + ' — ' + (byDoc.length === 1 ? 'the narration names it' : 'the narration names its party'));
+    answer.against = [{ against_ref: pick.ref, bill_no: pick.bill_no || null, amount_minor: situation.minor }];
+    return answer;
+  }
   /** a transfer naming a party: 'many' parties is no proposal; one party gives a received / paid proposal; null when the narration names none */
   function partySuggestion_(situation) {
     var options = situation.options;
@@ -1305,7 +1365,7 @@
    * Taught and party proposals may be ready; a 'words' proposal is a guess about WHICH account, so it waits for the person's tick (bank-project: needs_tick).
    */
   function basisOf_(rule) {
-    return rule === 'learned' ? 'taught' : rule === 'party_credit' || rule === 'party_debit' ? 'party' : 'words';
+    return rule === 'learned' ? 'taught' : rule === 'party_credit' || rule === 'party_debit' || rule === 'open_item' ? 'party' : 'words';
   }
   /** B5-03: a tax credit is claimed on this line, the pack says a tax invoice is required for it, and the person has not said whether they hold one */
   function taxInvoiceUnanswered_(tax) {
@@ -1582,7 +1642,7 @@
       win = options.window_days != null ? Math.max(0, +options.window_days) : 3;
     var lines = stmtLines || [],
       list = ledgerLines || [],
-      matchResult = match(lines, list, { window_days: win });
+      matchResult = match(lines, list, { window_days: win, line_refs: options.line_refs, posted: options.posted });
     var keys = lineKeys_(lines);
     var statementRows = explainStatementRows_(lines);
     var railRows = railRowsOf_(railPays);
@@ -1807,7 +1867,7 @@
   }
   /** nothing explains the line: asked (the other party was asked), suggested (a rule's proposal) or unexplained */
   function setOpenState_(row, item, options) {
-    var suggestion = suggest(item, { parties: options.parties, learned: options.learned, bank: options.bank, rules: options.rules, pack: options.pack, country: options.country });
+    var suggestion = suggest(item, { parties: options.parties, open_items: options.open_items, learned: options.learned, bank: options.bank, rules: options.rules, pack: options.pack, country: options.country });
     row.suggestion = suggestion && suggestion.event ? suggestion : null;
     if (row.asked) {
       row.state = 'asked';

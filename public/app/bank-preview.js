@@ -97,6 +97,7 @@
       i: projected.i,
       line: statementLine,
       entry: projected.entry || null,
+      against: (proposal && proposal.against) || null, /* the open invoice or bill the engine found this line to be (bank-recon open_item) */
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
       needs: askedNeedOf_(blockers),
       blockers: blockers,
@@ -123,7 +124,8 @@
    */
   function booksPass(opts, preview, lines, refs, bookLines) {
     var recon = opts.engine.recon,
-      found = recon.match(lines, bookLines, { window_days: MATCH_WINDOW_DAYS }),
+      pairing = opts.pairing ? opts.pairing(lines) : {},
+      found = recon.match(lines, bookLines, { window_days: MATCH_WINDOW_DAYS, line_refs: pairing.line_refs, posted: pairing.posted }),
       held = {},
       taken = {};
     found.matched.forEach(function (pair) {
@@ -153,7 +155,7 @@
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
-    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
+    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, kind: asked.kind, account: asked.account, tax_kind: asked.tax_kind };
     var resolved = entry.resolve(line, answers, suggestOpts); /* engines #147: a payee-less line composes once with learned:false and no taught rule — nothing is stored on the device either way */
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
@@ -217,10 +219,9 @@
     if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
     return proposal;
   }
-  /** the host cannot post this proposal: its kind is not on the host's list, or the engine split a taxed receipt into net + output tax (POST /events carries input tax only, so the bank leg would be short) */
+  /** the host cannot post this proposal: its kind is not on the host's list (a taxed receipt is posted since l16-bankmatch-fix: POST /events other_income carries output_tax_minor) */
   function cannotPostHere_(proposal, type, opts) {
-    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0;
-    return !!outputTax || (!!opts.postable && opts.postable.indexOf(type) < 0);
+    return !!opts.postable && opts.postable.indexOf(type) < 0;
   }
   /** what the statement check says of this line already being done (who, when), or null */
   function alreadyOf_(preview, index) {
@@ -382,7 +383,7 @@
   }
   /** the answers the owner gave for a line, as resolve() takes them: the party (new or existing), or an account from the chart (+ the tax kind on money out); or the words for what is missing */
   function answersOf(item, key, given) {
-    if (given && given.account) return { answers: { account: given.account, tax_kind: given.tax_kind || undefined } };
+    if (given && (given.kind || given.account)) return { answers: { kind: given.kind || undefined, account: given.account || undefined, tax_kind: given.tax_kind || undefined } }; /* kind = an id of CBBankEntry.whatIsThis (transfer, card_settlement, tax_payment ...) */
     if (given) return { why: 'Pick an account from the list first.' };
     if (!item.party) return { why: 'Say who this is first.' };
     var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };
