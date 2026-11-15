@@ -47,7 +47,11 @@ const CONTRAST_IN_PAGE = () => {
     const v = rgb.map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
   };
-  const parse = (css) => { const m = css.match(/[\d.]+/g).map(Number); return { rgb: m.slice(0, 3), a: m.length > 3 ? m[3] : 1 }; };
+  /* a computed colour is rgb(...) or, for a colour-mix() the list control uses for its zebra, color(srgb 0.9 0.9 0.9 / 1): channels 0 to 1 */
+  const parse = (css) => {
+    const wide = /^color\(/.test(css), m = css.replace(/^color\([a-z-]+/, '').match(/[0-9.]+/g).map(Number);
+    return { rgb: wide ? m.slice(0, 3).map((c) => c * 255) : m.slice(0, 3), a: m.length > 3 ? m[3] : 1 };
+  };
   const backdrop = (node) => {
     for (let n = node; n; n = n.parentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c.a > 0.9) return c.rgb; }
     return [255, 255, 255];
@@ -128,7 +132,7 @@ async function walkOne(browser, base, scheme, width, height, signedIn) {
 
 /** the counts that must agree: the "Ready to add" chip, the ready icons on the rows and the button all read one standing per line (CHANGED ON PURPOSE, W15-15: the chips are the list's status chips; the sticky count text is gone) */
 async function countsAgree(page, tag, when) {
-  const chip = Number(((await page.textContent('[data-testid="bank-status-ready"]')).match(/(d+)s*$/) || [])[1] || 0);
+  const chip = Number(((await page.textContent('[data-testid="bank-status-ready"]')).match(/([0-9]+)[ \t\r\n]*$/) || [])[1] || 0);
   const icons = await page.locator('#bd_list [data-row] [data-state="ready"]').count();
   const button = (await page.getAttribute('#bd_add', 'data-ready')) || '0';
   check(String(icons) === button && button === String(chip), tag + ' ' + when + ': ' + icons + ' ready icons = the "Ready to add" chip (' + chip + ') = the button (' + button + ')');
@@ -168,7 +172,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   check(figs.includes('18,280.75') && figs.includes('19,963.00') && figs.includes('1,682.25') && !/AUD \d/.test(figs), tag + ': frame 0: statement 18,280.75, books 19,963.00, difference 1,682.25 (the figures of the product for the October file), AUD not on a figure');
   check((await page.locator('#bd_list [data-row]').count()) === 12, tag + ': the twelve lines of the October file are listed in the one list');
   check((await text('#bd_lines')).includes('8 Oct 2026') && /KENSINGTON/.test(await text('#bd_lines')) && (await openLine(page, 'KENSINGTON')) && (await text('#bd_lines .bd-openrow')).includes('Invoice INV-1'), tag + ': dates read "8 Oct 2026", the payee is as the bank wrote it, and an in-books line names the entry it matched when it opens (W15-13)');
-  check(/Business bank account/.test(figs) && /2 Oct to 31 Oct 2026 · 12 lines/.test(figs) && /All amounts in Australian dollars (AUD)/.test(figs) && /Right account?/.test(figs) && /10 lines to go/.test(figs) && /2 of 12 in your books/.test(figs), tag + ': the band names the account, the period and the lines, says the currency once, asks "Right account?" and counts "10 lines to go" with "2 of 12 in your books" (W15-18, W15-20 to W15-23, W15-27)');
+  check(/Business bank account/.test(figs) && /2 Oct to 31 Oct 2026 · 12 lines/.test(figs) && figs.includes('All amounts in Australian dollars (AUD)') && figs.includes('Right account?') && /10 lines to go/.test(figs) && /2 of 12 in your books/.test(figs), tag + ': the band names the account, the period and the lines, says the currency once, asks "Right account?" and counts "10 lines to go" with "2 of 12 in your books" (W15-18, W15-20 to W15-23, W15-27)');
   check((await page.locator('#bd_list .cbl-vtab').count()) === 4 && (await page.locator('#bd_list [data-row] [data-state]').count()) === 12 && (await page.locator('#bd_list [data-row] [data-state]').first().getAttribute('aria-label')) !== null, tag + ': four status chips and a status ICON on every row, each with its name for a screen reader (W15-13, W15-15)');
   check(!(await page.locator('#bd_tabs, .bd-tabs').first().isVisible()) && !(await page.locator('#bd_gst').isVisible()), tag + ': no tabs and no setup question on the opening frame');
   await countsAgree(page, tag, 'at the start');
