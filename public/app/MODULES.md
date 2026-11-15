@@ -158,7 +158,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `their-bill.js` | — | their-bill.js — DOES THEIR BILL AGREE WITH WHAT WAS COUNTED? One rule, every host (FX-F10W2, QA-W1 F10) |
-| `ui-field.js` | — |  |
+| `ui-field.js` | eager |  |
 | `ui-standard.js` | — |  |
 | `ui.js` | eager |  |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
