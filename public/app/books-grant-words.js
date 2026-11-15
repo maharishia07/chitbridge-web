@@ -84,7 +84,7 @@
         col('ref', 'Client ref', 3, 160, function (a) { return a.client_ref || '—'; })
       ],
       search: function (a) { return [by(a), a.client_ref, a.kind].join(' '); },
-      empty: { title: tell('Nothing was posted for you this week'), body: tell('Entries your adviser posts are listed here.') }
+      empty: { title: tell('Nothing was posted for you this week'), body: tell('Entries your accountant posts are listed here.') }
     });
   }
 

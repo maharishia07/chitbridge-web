@@ -43,12 +43,12 @@
     ACTION_DUPLICATE: 'This was already posted. Nothing was posted again.',
     ACTION_CLOSED: 'This action has already moved on. Open the queue again.',
     ACTION_REASON_NEEDED: 'Say why in 3 to 300 characters. Nothing was sent back.',
-    ACTION_FIRM_ONLY: 'Only the adviser firm prepares and reviews. The owner accepts.',
-    ACTION_NOT_FOR_YOU: 'Only the owner and the adviser firm work on these actions.',
+    ACTION_FIRM_ONLY: 'Only the accountant\'s firm prepares and reviews. The owner accepts.',
+    ACTION_NOT_FOR_YOU: 'Only the owner and the accountant\'s firm work on these actions.',
     OWNER_ONLY: 'Only the owner accepts an action. You can send it back.',
     STORE_MISMATCH: 'This page is open on another store than the one you are working in. Nothing was saved. Open the store again.',
     PREVIEW_TOTAL_DIFFERS: 'The total changed since it was prepared. Nothing was posted. Open it again.',
-    BOOKS_ACTION_NOT_SWITCHED_ON: 'Adviser actions are not switched on yet. Nothing was changed.'
+    BOOKS_ACTION_NOT_SWITCHED_ON: 'Accountant actions are not switched on yet. Nothing was changed.'
   };
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -107,7 +107,7 @@
   function held(call) {
     return heldSplit(call).then(function (split) { return split.live || {}; });
   }
-  var ROLE_NAME = { adviser: 'Adviser', auditor: 'Auditor' };
+  var ROLE_NAME = { adviser: 'Accountant', auditor: 'Auditor' };
   function dayOf(value) {
     return root.shopDay(value);
   }

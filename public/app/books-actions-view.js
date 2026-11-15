@@ -121,7 +121,7 @@
   /** one sentence under the tabs: whose move it is in this queue (the server still decides) */
   function noteWords() {
     if (view.queue === 'accept' && view.o.mode !== 'owner') return words('The owner accepts these. You can see them here.');
-    if (view.queue === 'review' && view.o.mode === 'owner') return words('The adviser firm reviews these. You can send one back.');
+    if (view.queue === 'review' && view.o.mode === 'owner') return words('The accountant\'s firm reviews these. You can send one back.');
     if (view.total > view.rows.length) return words('Showing the first') + ' ' + view.rows.length + ' ' + words('of') + ' ' + view.total + '.';
     return '';
   }

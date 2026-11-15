@@ -16,8 +16,8 @@
 (function (root) {
   'use strict';
   var panel = { host: null, o: {}, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
-  var ROLE = { auditor: 'Auditor: reads only', adviser: 'Adviser: acts for you' };
-  var ROLE_NAME = { adviser: 'Adviser', auditor: 'Auditor' };
+  var ROLE = { auditor: 'Auditor: reads only', adviser: 'Accountant: acts for you' };
+  var ROLE_NAME = { adviser: 'Accountant', auditor: 'Auditor' };
   var LOOKED = {
     allowed: 'Looked',
     no_grant: 'Refused: no access',
@@ -73,7 +73,7 @@
   function whatWords(pattern) {
     return root.CBBooksGrantWords.route(pattern);
   }
-  var POSTING = { adviser_posts: 'Your adviser posts for you', owner_approves: 'You approve each post' };
+  var POSTING = { adviser_posts: 'Your accountant posts for you', owner_approves: 'You approve each post' };
   function isOpen(grant) {
     return grant.state === 'live' || grant.state === 'edge_off';
   }

@@ -115,7 +115,7 @@ function stand(pending) {
   const gaps = await p.locator('.bks-miss').count();
   ok(gaps === 6 && /Nov missing/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months, every month reads "<Mon> missing" (' + gaps + ')');
   ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
-  ok(/Kept on our server for the record period; visible to the adviser or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
+  ok(/Kept on our server for the record period; visible to the accountant or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
   /* W15-62: ONE door - the plain picker's file field and its sentence step aside; the quiet secondary lives in the box */
   ok(!(await p.locator('label:has([data-testid="bank-file"])').isVisible()) && !(await p.isVisible('[data-testid="bank-private"]')) && await p.locator('[data-testid="bank-stmts-add-go"]').isVisible(), 'W15-62: one "Add statement" door - the old picker (and its "never uploaded" line) is not a second door');
   ok(/Just read a file, don't keep it/.test(await p.textContent('[data-testid="bank-stmts-justread"]')) && /Not sent to our server/.test(await p.textContent('[data-testid="bank-stmts-justread"]')), 'W15-62: the quiet choice says what it does');

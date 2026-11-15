@@ -4,7 +4,7 @@
  * FLOW      bankStmtMount → GET /bank/statement-files (the page's own bank list names the accounts) → grid + files · Add → the reader's own period and currency → POST (the sha256 of the UTF-8 text, bkbHash: the ONE hash) · Read → GET …/file?use=read → bankTake(text, name, false)
  * ⭐ NO SECOND PARSER AND NO MONEY: the period is what CBBankRecon.parse already returned (bankStmtPeriod); Read hands the text to bankTake, which parses, hashes, projects and posts as it always did. A file with no period is refused, never guessed.
  * ⭐ EVERY FILE IS FILED AGAINST AN ACCOUNT AND A PERIOD (Athi, 15 Nov): the account is required; "Oct missing" is a cell of the grid, with a shortcut that picks that account.
- * ⭐ THE WORDS: "Kept on our server for the record period; visible to the adviser or auditor you give access." is the box's own line (cb-compliance owns the final text). The plain picker above keeps its own, still-true device-only sentence.
+ * ⭐ THE WORDS: "Kept on our server for the record period; visible to the accountant or auditor you give access." is the box's own line (cb-compliance owns the final text). The plain picker above keeps its own, still-true device-only sentence.
  * IDS       BKS014-B45 (Just read a file, do not keep it) · BKS014-B41 (Show/Hide the box) · BKS014-I12 (the account label) · BKS014-I13 (the statement file) · BKS014-B42 (Read) · BKS014-B43 (Download) · BKS014-B44 (a missing month: add for it); the account select and Add button are the page's library builders (peSel BKS016-S01, peBtn BKS016-B02).
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
@@ -95,7 +95,7 @@ function bankStmtPaint() {
   host.style.display = '';
   host.innerHTML =
     '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' +
-    (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + bkstJustReadHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the adviser or auditor you give access.')) + '</div>' : '');
+    (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + bkstJustReadHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div>' : '');
 }
 /** W15-62: while the box is the door, the plain picker's file field and its sentence step aside (one "Add statement" door); the file input stays for "Just read a file", the quiet choice inside the box. Box not ready (503, error): the picker is the only door and stays. */
 function bkstOneDoor(ready) {

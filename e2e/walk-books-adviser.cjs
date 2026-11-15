@@ -205,7 +205,7 @@ W.run('books-adviser', async (w) => {
   await page.setViewportSize(WIDE);
   await w.step('F13', 'the firm · adviser actions not switched on yet (503) is said in a plain sentence, not an empty table', async () => {
     S.fail.off = true; await page.click(T('ba-q-team')); await page.waitForSelector(T('ba-why'), { timeout: 5000 }); const why = await txt(T('ba-why')); S.fail.off = false;
-    return { ok: why === 'Adviser actions are not switched on yet. Nothing was changed.' && !(await has(T('ba-row-' + idOf(S2, 1)))), saw: why };
+    return { ok: why === 'Accountant actions are not switched on yet. Nothing was changed.' && !(await has(T('ba-row-' + idOf(S2, 1)))), saw: why };
   });
 
   /* ═══ the owner ═══ */
