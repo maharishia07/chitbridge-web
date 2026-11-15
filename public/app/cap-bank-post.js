@@ -5,7 +5,7 @@
  * CALLED BY public/app/cap-bank-sheet.js (the in-app Bank sheet, FIN-117); loaded by public/accounts.html after bank-preview.js. The body it sends is the one POST /events reads (kind, never type; no key the closed EVENT_BODY lacks).
  * FLOW      bank-preview.postReady → post(item) → [party door] → api('booksEventPost') → { ok, duplicate?, entry_no? } | { ok:false, why }
  * CARD      16-finance/bank-reconciliation-and-bank-rail
- * ⚠️ POST /events is OWNER-ONLY: an accountant login is told up front (ownerRefusal), not once per line. A closed month answers 409 PERIOD_LOCKED / YEAR_CLOSED; the
+ * ⚠️ POST /events is the OWNER's, and an acting ADVISER's only when the grant posts (CBBooksActing.posts(); then no new party: the owner adds it first). Anyone else is told up front (ownerRefusal), not once per line. A closed month answers 409 PERIOD_LOCKED / YEAR_CLOSED; the
  *   server's own words are shown on the line. bank-preview.js pre-checks the months, so the popup already counted them.
  */
 (function (root) {
@@ -14,7 +14,16 @@
 
   /** why this login may not post (the server decides; this only says it first, once); null when it may */
   function ownerRefusal(who) {
-    return who && who.role && who.role !== 'owner' ? 'Adding entries is for the owner. Ask the owner to confirm this statement.' : null;
+    if (who && who.role === 'adviser') return who.posts ? null : txt('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.'); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
+    return who && who.role && who.role !== 'owner' ? txt('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
+  }
+  /** one catalogue sentence: the page's tx() when it has one */
+  function txt(s) {
+    return typeof root.tx === 'function' ? root.tx(s) : s;
+  }
+  /** an adviser never makes a party (those doors are outside /api/books and refused): a line that needs a new one waits for the owner to add it */
+  function newPartyRefusal(who, name) {
+    return who && who.role === 'adviser' ? (typeof root.txf === 'function' ? root.txf('Ask the owner to add {name} to the party list first, then add this line.', { name: name || txt('this party') }) : 'Ask the owner to add ' + (name || 'this party') + ' to the party list first, then add this line.') : null;
   }
   /** the id of the party a party door answered with, whichever shape that door uses; null when it sent none */
   function idOfParty(reply) {
@@ -85,6 +94,8 @@
   /** the id of the party this line's entry names: an existing one as picked, a new one made FIRST (once per name and kind in this run); { ok, id } or the reason it could not be made */
   async function partyOf(deps, made, party) {
     if (!party) return { ok: true, id: null };
+    var noNew = party.status === 'new' && newPartyRefusal(deps.who, party.name);
+    if (noNew) return { ok: false, why: noNew };
     if (party.status !== 'new') return { ok: true, id: party.status === 'existing' ? party.id : null };
     var tag = String(party.name).toLowerCase() + '|' + party.kind;
     if (!made[tag]) {
@@ -121,7 +132,9 @@
     if (!party.ok) return party;
     if (!PAYMENT_DIRECTION[item.event.type]) return postEntry(deps, item, party.id);
     var partyId = party.id || namedPartyId(item.event);
-    return partyId ? postPayment(deps, item, partyId) : { ok: false, why: 'Pick who this payment is with, then try again.' };
+    if (partyId) return postPayment(deps, item, partyId);
+    var needs = newPartyRefusal(deps.who, (item.party && item.party.name) || '');
+    return { ok: false, why: needs || 'Pick who this payment is with, then try again.' };
   }
   /** why this kind of line is not added from here (in words); null when it is */
   function refusalOf(type) {

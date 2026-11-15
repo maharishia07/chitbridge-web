@@ -127,6 +127,10 @@
   /** the acting page shows only what is read and written through /api/books*: the tabs that call anything else are taken out of the menu, so no request outside it carries the store's header */
   var OWNER_SENTENCE = 'Only the owner may record this.';
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
+  /** the Bank tab opens for an acting ADVISER only (the api holds bank/log back from an auditor): it reads and posts through /api/books/bank/*, /events and /payments */
+  function tabOpen(tab) {
+    return TABS.indexOf(tab) >= 0 || (tab === 'bank' && !!context && context.role === 'adviser');
+  }
   function mayCall(path) {
     return !context || context.role === 'owner' || path.indexOf('/api/books') === 0;
   }
@@ -155,9 +159,9 @@
   }
   function keepTabs(menu, groups) {
     if (!context || context.role === 'owner') return;
-    for (var i = menu.length - 1; i >= 0; i--) if (TABS.indexOf(menu[i][0]) < 0) menu.splice(i, 1);
+    for (var i = menu.length - 1; i >= 0; i--) if (!tabOpen(menu[i][0])) menu.splice(i, 1);
     for (var g = groups.length - 1; g >= 0; g--) {
-      groups[g][1] = groups[g][1].filter(function (t) { return TABS.indexOf(t) >= 0; });
+      groups[g][1] = groups[g][1].filter(tabOpen);
       if (!groups[g][1].length) groups.splice(g, 1);
     }
   }
@@ -248,9 +252,22 @@
     if (!isAdviser()) return list;
     return (list || []).filter(function (item) { return String(item && item.message ? item.message : item) !== OWNER_SENTENCE; });
   }
-  /** a tab this page does not offer while acting for a client (the bank: nothing of it is read or written through /api/books for a client) */
+  /** one sentence out of the catalogue with its {holes} filled */
+  function fill(sentence, holes) {
+    var text = words(sentence);
+    Object.keys(holes).forEach(function (key) { text = text.split('{' + key + '}').join(holes[key]); });
+    return text;
+  }
+  /** who an adviser posted an entry for, as the api stamps it (posted_by { name, firm } | null): the adviser sees "by Pat Lee for <client>", the owner "Posted by Pat Lee, <firm>"; '' for an entry nobody posted for the client */
+  function postedByWords(entry, short) {
+    var who = entry && entry.posted_by;
+    if (!who || !who.name) return '';
+    if (context && context.role === 'adviser') return short ? fill('by {name}', { name: who.name }) : fill('by {name} for {client}', { name: who.name, client: context.store.name });
+    return who.firm && who.firm !== who.name ? fill('Posted by {name}, {firm}', { name: who.name, firm: who.firm }) : fill('Posted by {name}', { name: who.name });
+  }
+  /** a tab this page does not offer while acting for a client (the bank, for an auditor: the api holds bank/log back from it) */
   function hides(tab) {
-    return !!context && context.role !== 'owner' && TABS.indexOf(tab) < 0;
+    return !!context && context.role !== 'owner' && !tabOpen(tab);
   }
   /** what a hidden tab shows if it is reached by an address anyway: one sentence, nothing is read or sent */
   function hiddenView(host) {
@@ -261,5 +278,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an adviser.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

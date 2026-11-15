@@ -134,7 +134,7 @@
   /* ── a journal entry ── */
   /** entry = one Day book entry (lines carry code, name, party_name, dr_minor, cr_minor) · back = how to return to the ledger it was opened from (or null) */
   function openEntry(ctx, entry, currency, back) {
-    var shown = currency || ctx.currency, debit = amountOf(entry), credit = crOf(entry), madeBy = madeByWords(entry.source || {});
+    var shown = currency || ctx.currency, debit = amountOf(entry), credit = crOf(entry), madeBy = [madeByWords(entry.source || {}), root.CBBooksActing.postedByWords(entry)].filter(Boolean).join(' · ');
     var reversal = entry.reversed_by ? '<div class="nw-why" role="status" data-testid="bd-reversed">' + esc(words('Reversed by') + ' ' + entry.reversed_by) + '</div>' : '';
     show(ctx,
       (back ? '<button data-cbsid="NET005-B04" type="button" class="act quiet" id="bd_back" data-testid="bd-back">← ' + esc(words('Back to the ledger')) + '</button>' : '') +
