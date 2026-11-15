@@ -117,6 +117,7 @@
     var tab = null;
     try {
       tab = root.open('about:blank', '_blank'); /* opened inside the press, so a pop-up blocker lets it through */
+      if (tab) tab.opener = null; /* noopener: the file's tab can never reach back to the books page */
     } catch (_) { /* best effort */ }
     function fail(text) {
       if (tab) try { tab.close(); } catch (_) { /* gone already */ }
