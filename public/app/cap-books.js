@@ -768,9 +768,9 @@ function statementHTML(r, partyId) {
       return (
         '<tr' +
         (item.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(item.source_chit_id) + '\')"' : '') +
-        '><td>' +
+        '><td data-l="' + esc(tx('Date')) + '">' +
         esc(bkDate(item.date)) +
-        '</td><td data-testid="stmt-what-' +
+        '</td><td data-l="' + esc(tx('What')) + '" data-testid="stmt-what-' +
         index +
         '">' +
         bkEntryHead(item, 'stmt-src-' + index, c, bkPartyLabel(item.party_id || partyId || (r && r.party_id), item.party_name)) +
@@ -778,11 +778,11 @@ function statementHTML(r, partyId) {
         bkLineChips(item, 'stmt-' + index) +
         rev +
         '</td>' +
-        '<td class="num">' +
+        '<td class="num" data-l="' + esc(tx('Debit')) + '">' +
         (item.dr_minor ? esc(bkMoney(item.dr_minor, c)) : '') +
-        '</td><td class="num">' +
+        '</td><td class="num" data-l="' + esc(tx('Credit')) + '">' +
         (item.cr_minor ? esc(bkMoney(item.cr_minor, c)) : '') +
-        '</td><td class="num"><b>' +
+        '</td><td class="num" data-l="' + esc(tx('Balance')) + '"><b>' +
         esc(bkDrCr(item.running_minor, c)) +
         '</b></td></tr>'
       );
@@ -802,13 +802,13 @@ function statementHTML(r, partyId) {
     '</th></tr></thead><tbody>' +
     '<tr><td></td><td><i>' +
     tx('Opening') +
-    '</i></td><td></td><td></td><td class="num" data-testid="stmt-opening">' +
+    '</i></td><td></td><td></td><td class="num" data-l="' + esc(tx('Balance')) + '" data-testid="stmt-opening">' +
     esc(bkDrCr(r && r.opening_minor, c)) +
     '</td></tr>' +
     rows +
     '<tr><td></td><td><b>' +
     tx('Closing') +
-    '</b></td><td></td><td></td><td class="num" data-testid="stmt-closing"><b>' +
+    '</b></td><td></td><td></td><td class="num" data-l="' + esc(tx('Balance')) + '" data-testid="stmt-closing"><b>' +
     esc(bkDrCr(r && r.closing_minor, c)) +
     '</b></td></tr></tbody></table>'
   );

@@ -298,6 +298,15 @@ dialog.sheet::backdrop{background:var(--scrim)}
   .idblk .c{border-right:0;border-bottom:1px solid var(--line-2)}
   .tabs{margin-left:12px;margin-right:12px}
 }
+/* l16 crm-2: the party's statement (cap-books statementHTML, a table.bktab) is one card per row on a phone, each cell named by its column: it fits, never a sideways scroll (the same fold as accounts.html) */
+@media (max-width:620px){
+  [data-testid="party-statement"] table.bktab,[data-testid="party-statement"] table.bktab tbody,[data-testid="party-statement"] table.bktab tr,[data-testid="party-statement"] table.bktab td{display:block;width:100%}
+  [data-testid="party-statement"] table.bktab thead{display:none}
+  [data-testid="party-statement"] table.bktab tr{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:8px 12px;margin-bottom:8px}
+  [data-testid="party-statement"] table.bktab td{border:0;padding:3px 0;display:flex;gap:10px;justify-content:space-between;text-align:right;overflow-wrap:anywhere}
+  [data-testid="party-statement"] table.bktab td[data-l]::before{content:attr(data-l);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);text-align:left;flex-shrink:0}
+  [data-testid="party-statement"] table.bktab td:empty{display:none}
+}
 @media (max-width:620px){
   .shop{display:none}
   .rec h1{font-size:23px}
