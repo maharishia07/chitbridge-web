@@ -594,6 +594,10 @@
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
+  /** a column that may take the free width: text that reads on, never a number, money, code, status, date or id */
+  function stretchable(c) {
+    return !c.num && !c.money && !c.mono && c.pin !== 'end' && c.type !== 'num' && c.type !== 'money' && !/^(code|status|state|date|id|no|ref|type)$/i.test(String(c.label || c.key).trim());
+  }
   /** measure the rows once per paint: I.auto = { width per column key, stretch: key }.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows) {
@@ -605,12 +609,17 @@
     cols.forEach(function (c) {
       var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
       sample.forEach(function (row) {
-        var len = plainText(cellOf(I, c, row)).trim().length;
+        var cell = cellOf(I, c, row),
+          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[s>]/g) || []).length * 4 : 0); /* a button in the cell is wider than its words: its padding counts */
         if (len > n) n = len;
       });
       chars[c.key] = n;
-      if (!named && !c.num && c.pin !== 'end' && (!best || n > chars[best.key])) best = c;
+      if (!named && stretchable(c) && (!best || n > chars[best.key])) best = c;
     });
+    if (!named && !best)
+      cols.forEach(function (c) {
+        if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
+      });
     auto.stretch = named ? named.key : best ? best.key : null;
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') return;
@@ -2002,7 +2011,7 @@
         .map(function (item) {
           var id = sortId(item),
             sorted = !!(st && id && st.key === id),
-            r = !!(item.num || item.pin === 'end'),
+            r = !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end'),
             label = esc(item.label || item.key);
           return (
             '<div class="cbl-hc lhcell' +
@@ -2077,7 +2086,7 @@
           '<div class="cbl-cell lcell' +
           (index === 0 ? ' first' : '') +
           (amt ? ' r mono strong amt' : '') +
-          (item.num && !amt ? ' r mono' : '') +
+          ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
           (item.mono ? ' mono' : '') +
           '" data-l="' +
           esc(index === 0 ? '' : item.label || '') +
