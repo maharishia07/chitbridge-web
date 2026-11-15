@@ -67,8 +67,8 @@ of file each thing is; this says what already does the job.
 | 44 | `holds` | `bounds.js` | holds(fragment, figure) → true when a figure is a finite number inside the fragment's min / max (the derived f |
 | 44 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
+| 43 | `body` | `books-acting.js` | a write's body: |
 | 43 | `live` | `receivables.js` | the allocations that still count: |
-| 42 | `body` | `books-acting.js` | a write's body: |
 | 42 | `gate` | `country-setup.js` | gate(h, entity): |
 | 41 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 41 | `status` | `books-engines.js` | what the health screen says about the engines — |
@@ -95,11 +95,11 @@ of file each thing is; this says what already does the job.
 | 35 | `account` | `home-facts.js` | OMITTED: |
 | 35 | `hold` | `orders.js` |  |
 | 34 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
+| 34 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 34 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 34 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 33 | `ensureCap` | `app.html` |  |
 | 33 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
-| 33 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 33 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `modal` | `app.html` |  |
