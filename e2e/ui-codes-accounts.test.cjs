@@ -29,7 +29,7 @@ const SET = {
 const NEAR = [
   ['accounts.html', 'id="toggleNav"', 'BKS001-B01'], ['accounts.html', 'acc-switch-on', 'BKS001-B07'], ['accounts.html', 'close-first-go', 'BKS001-B06'],
   ['app/cap-period.js', 'data-testid="py-close"', 'BKS016-B09'], ['app/cap-period.js', 'id="pdp_run"', 'BKS016-B03'],
-  ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-file"', 'BKS014-I03'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B28'],
+  ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-file"', 'BKS014-I13'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B42'],
   ['app/cap-move-in.js', 'id="mi-asat"', 'BKS024-I01'], ['app/cap-move-in.js', 'data-testid="mi-again"', 'BKS024-B02'],
   ['app/cap-compare.js', 'data-testid="cmp-pick"', 'BKS007-S01'], ['app/cap-compare.js', 'data-testid="cmp-new"', 'BKS007-B08'], ['app/cap-compare.js', 'id="cmp-label"', 'BKS007-I02'],
   ['app/cap-fx.js', 'data-testid="fx-add"', 'BKS025-B01'], ['app/cap-fx.js', 'id="fx_cur"', 'BKS025-I02'], ['app/cap-fx.js', 'data-testid="lk-fx-revalue"', 'BKS025-B04']
