@@ -76,10 +76,11 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p };
   }
+  let prefill = null;
   const load = async (p) => {
     await p.setInputFiles('[data-testid="bank-file"]', { name: 'Harbour-Oct2026.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
     await p.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
-    if (await p.locator('[data-testid="bank-currency"]').count()) { await p.fill('[data-testid="bank-currency"]', 'AUD'); await p.click('[data-testid="bank-currency-go"]'); }
+    if (await p.locator('[data-testid="bank-currency"]').count()) { prefill = await p.inputValue('[data-testid="bank-currency"]'); await p.click('[data-testid="bank-currency-go"]'); }
     await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
     await p.waitForTimeout(400);
   };
@@ -88,6 +89,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const { ctx, p } = await open(vp);
     await load(p);
     const tag = vp.tag;
+    ok(prefill === 'AUD', tag + ': the currency question arrives filled with the shop\'s currency (' + prefill + '), not an empty box');
     /* M3 · ONE truth in the band */
     const band = (await p.textContent('[data-testid="bank-finish"]')).replace(/\s+/g, ' ');
     ok(/18,280\.75/.test(band) && !/18,280\.75 Dr/.test(band) && /19,963\.00/.test(band), tag + ': the band gives the statement and the books figures, no "Dr" on the statement (' + band.slice(0, 120) + ')');
@@ -123,6 +125,32 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-statement.png') });
     ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), tag + ': the Statement view does not scroll sideways');
     await p.click('[data-testid="bank-tab-lines"]'); await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]');
+    /* M2 · the Add sheet is a wide sheet; a press outside keeps the answers */
+    await p.click('[data-testid="bank-sheet-open"]');
+    await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
+    await p.waitForTimeout(300);
+    const sh = await p.evaluate(() => {
+      const d = document.getElementById('acc_sheet'), r = d.getBoundingClientRect(), body = d.querySelector('.mbody'), x = d.querySelector('.mx'), chip = d.querySelector('[data-testid="popup-code"]');
+      const overlap = x && chip ? !(chip.getBoundingClientRect().right <= x.getBoundingClientRect().left || chip.getBoundingClientRect().left >= x.getBoundingClientRect().right) : false;
+      return { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight, sideways: body.scrollWidth > body.clientWidth + 1, overlap, strip: document.querySelector('[data-testid="bank-sheet-strip"]').textContent };
+    });
+    ok(sh.w >= sh.vw * 0.9 && sh.h >= sh.vh * 0.85, tag + ': the Add sheet takes the screen (' + sh.w + 'x' + sh.h + ' of ' + sh.vw + 'x' + sh.vh + ')');
+    ok(!sh.sideways, tag + ': the sheet does not scroll sideways');
+    ok(!sh.overlap, tag + ': the code chip does not sit over the close cross');
+    ok(/Difference\s*A?\$?1,682\.25 = 10 lines not yet in your books/.test(sh.strip) && /Unexplained/.test(sh.strip) && !/Difference now/.test(sh.strip), tag + ': the sheet says the same one truth as the band (' + sh.strip.slice(0, 140) + ')');
+    await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet.png') });
+    const before = await p.evaluate(() => { const d = document.querySelector('#acc_sheet [data-act="tick"],#acc_sheet [data-act="gst"][data-v="cash"],#acc_sheet [data-act="resolve"]'); if (d) d.click(); return { ready: BKSH.ctl.readyCount(), clicked: !!d }; });
+    await p.mouse.click(4, Math.floor(vp.height / 2)); /* a press outside the sheet */
+    await p.waitForTimeout(300);
+    const closed = await p.evaluate(() => !document.getElementById('acc_sheet').open);
+    if (vp.width > 700) ok(closed, tag + ': a press outside closes the sheet');
+    if (closed) {
+      await p.click('[data-testid="bank-sheet-open"]');
+      await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
+      const after = await p.evaluate(() => BKSH.ctl.readyCount());
+      ok(after === before.ready, tag + ': reopened, the answers are still there (ready ' + before.ready + ' then ' + after + ')');
+      await p.click('[data-testid="bank-sheet-close"]');
+    } else await p.click('[data-testid="bank-sheet-close"]');
     await ctx.close();
   }
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
