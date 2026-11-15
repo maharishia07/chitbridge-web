@@ -1,21 +1,22 @@
 /**
  * books-grant-member.js — ACC-176, THE MEMBER'S SIDE: "Who can see my books".
  *
- * OWNS      the member's screen of the books grant: the access it gave (CBList), Give access (purpose, end date, the plain-words consent, a confirm that names the reach), Change the end date, End access, and who looked (CBList)
+ * OWNS      the member's screen of the books grant: the access it gave (CBList, each row with its role), Give access (the role auditor or adviser, purpose, end date, the plain-words consent of that role, a confirm that names the reach), the server's warnings, Change the end date, End access (and how many waiting actions it withdrew), who looked (CBList) and the owner's "To accept" queue (books-actions-view.js)
  * CALLED BY network-app.js (the "My books" section of the Network page)
- * FLOW      mount(host, o) → GET /api/books-grants → paint → Give access → GET /api/books-grants/consent → confirm (CBAction) → POST /api/books-grants → reload; End access → confirm → POST …/revoke; Who looked → GET …/log
- * CARD      04-network/ACC-176-AUDITOR-GRANT
+ * FLOW      mount(host, o) → GET /api/books-grants → paint → Give access → GET /api/books-grants/consent?preset= → confirm (CBAction) → POST /api/books-grants → reload (warnings said); End access → confirm → POST …/revoke; Who looked → GET …/log; To accept → the queue as the owner
+ * CARD      04-network/ACC-176-AUDITOR-GRANT · 04-network/ACC-176B-ADVISER-REQUIREMENT
  *
- * The grant is a deliberate act: nothing is sent until the owner has read the consent, ticked yes and answered the confirm that says WHO, UNTIL WHEN and READ ONLY.
+ * The grant is a deliberate act: nothing is sent until the owner has read the consent, ticked yes and answered the confirm that says WHO, WHICH ROLE, UNTIL WHEN and what that role may do.
  * The server decides who may (the owner of the books only) and why not; a refusal is shown in its own words. Nothing is worked out here.
- *   CBBooksGrantMember.mount(host, { call, parents, sheet, closeSheet, mountList }) → Promise<{ reload }>
- *   call(method, path, body, headers) is the page's (token, base) · parents() → [{ id, name }] the network parents this store may open its books to
+ *   CBBooksGrantMember.mount(host, { call, parents, ownStore, sheet, closeSheet, mountList }) → Promise<{ reload }>
+ *   call(method, path, body, headers) is the page's (token, base) · parents() → [{ id, name }] the network parents this store may open its books to · ownStore → { id, name } this business, for the owner's queue
  *
- * REUSE (named in the PR): CBList (via mountList) · CBAction.run (confirm, busy, outcome) · the page's sheet · CBBooksGrantApi (the endpoints)
+ * REUSE (named in the PR): CBList (via mountList) · CBAction.run (confirm, busy, outcome) · the page's sheet · CBBooksGrantApi (the endpoints) · CBBooksActionsView (the owner's queue) · CBBooksActing (the owner's store)
  */
 (function (root) {
   'use strict';
-  var panel = { host: null, o: {}, given: [], looks: [], view: 'given', why: null };
+  var panel = { host: null, o: {}, given: [], looks: [], view: 'given', why: null, notice: [] };
+  var ROLE = { auditor: 'Auditor: reads only', adviser: 'Adviser: acts for you' };
   var LOOKED = {
     allowed: 'Looked',
     no_grant: 'Refused: no access',
@@ -91,6 +92,8 @@
   /* ── the reads ── */
   /** read the list or the log, whichever view is on; a refusal becomes the sentence shown above the list */
   function readView() {
+    panel.notice = [];
+    if (panel.view === 'accept') return Promise.resolve(); /* the queue reads itself, as the owner */
     var read = panel.view === 'looks' ? api('grantsLog', { query: { limit: 100 } }) : api('grantsList');
     return read.then(
       function (answer) {
@@ -110,7 +113,8 @@
   function segButtons() {
     return [
       ['given', words('Access I gave'), 'NET004-B01'],
-      ['looks', words('Who looked'), 'NET004-B02']
+      ['looks', words('Who looked'), 'NET004-B02'],
+      ['accept', words('To accept'), 'NET004-B10']
     ]
       .map(function (item) {
         return (
@@ -125,7 +129,8 @@
     panel.host.innerHTML =
       backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
       '<button data-cbsid="NET004-B03" type="button" class="act" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
-      '<div class="sub" data-testid="bg-note">' + esc(words('Read only. You choose who and until when; every look is recorded.')) + '</div>' +
+      '<div class="sub" data-testid="bg-note">' + esc(words('You choose who, in which role, and until when. Every look and every step is recorded.')) + '</div>' +
+      noticeHtml() +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
       '<div class="nw-list" id="bg_list" data-testid="bg-list"></div>';
     Array.prototype.forEach.call(panel.host.querySelectorAll('[data-view]'), function (button) {
@@ -137,7 +142,16 @@
     if ($('bg_back')) $('bg_back').onclick = panel.o.onBack;
     greyGive();
     $('bg_give').onclick = openGive;
-    (panel.view === 'looks' ? paintLooks : paintGiven)($('bg_list'));
+    ({ looks: paintLooks, given: paintGiven, accept: paintAccept })[panel.view]($('bg_list'));
+  }
+  /** what the server said beside its answer (a warning on a new grant, the actions a revoke withdrew), kept until the next read */
+  function noticeHtml() {
+    return panel.notice.length ? '<div class="nw-why" id="bg_notice" role="status" data-testid="bg-notice">' + panel.notice.map(esc).join(' ') + '</div>' : '';
+  }
+  /** the owner's queue: the owner works in his own books, so no header and his own entity as the store */
+  function paintAccept(host) {
+    root.CBBooksActing.enter(panel.o.ownStore, 'owner');
+    root.CBBooksActionsView.mount(host, { call: panel.o.call, mode: 'owner', mountList: panel.o.mountList, sheet: panel.o.sheet, closeSheet: panel.o.closeSheet });
   }
   /** a way back to My network, when the page gives one */
   function backButton() {
@@ -170,6 +184,7 @@
       },
       columns: [
         col('who', words('Who'), 1, 200, function (g) { return nameOf(g.grantee_entity); }),
+        col('role', words('Role'), 2, 170, function (g) { return words(ROLE[g.preset] || ROLE.auditor); }),
         col('purpose', words('Why'), 2, 260, function (g) { return g.purpose || '—'; }),
         col('until', words('Until'), 2, 130, function (g) { return dayWords(g.expires_at); }, function (g) { return g.expires_at || ''; }),
         col('costs', words('Costs'), 4, 110, function (g) { return g.can_see_costs ? words('Seen') : words('Hidden'); }),
@@ -215,7 +230,9 @@
   /** the Give access form: who, why, until, costs, the consent words and the yes */
   function giveForm(parents) {
     return (
-      '<h2>' + esc(words('Let your network parent read your books')) + '</h2><div class="bg-form" data-testid="bg-form">' +
+      '<h2>' + esc(words('Give access to your books')) + '</h2><div class="bg-form" data-testid="bg-form">' +
+      '<label class="sub" for="bg_preset">' + esc(words('Role')) + '</label><select data-cbsid="NET004-S02" id="bg_preset" class="inp" data-testid="bg-preset">' +
+      Object.keys(ROLE).map(function (k) { return '<option value="' + k + '">' + esc(words(ROLE[k])) + '</option>'; }).join('') + '</select>' +
       '<label class="sub" for="bg_who">' + esc(words('Who')) + '</label><select data-cbsid="NET004-S01" id="bg_who" class="inp" data-testid="bg-who">' +
       parents.map(function (item) { return '<option value="' + esc(item.id) + '">' + esc(item.name) + '</option>'; }).join('') + '</select>' +
       '<label class="sub" for="bg_purpose">' + esc(words('Why (optional)')) + '</label><input data-cbsid="NET004-I01" id="bg_purpose" class="inp" maxlength="300" data-testid="bg-purpose" autocomplete="off" placeholder="' + esc(words('For example: year-end audit')) + '">' +
@@ -238,6 +255,7 @@
     panel.o.sheet(giveForm(parents));
     $('bg_cancel').onclick = panel.o.closeSheet;
     $('bg_costs').onchange = readConsent;
+    $('bg_preset').onchange = readConsent;
     $('bg_yes').onchange = tickYes;
     $('bg_go').onclick = askGive;
     readConsent();
@@ -255,20 +273,27 @@
   function readConsent() {
     $('bg_yes').checked = false;
     tickYes();
-    api('grantsConsent', { query: { can_see_costs: $('bg_costs').checked ? 'true' : 'false' } }).then(
+    api('grantsConsent', { query: { can_see_costs: $('bg_costs').checked ? 'true' : 'false', preset: $('bg_preset').value } }).then(
       function (consent) {
-        $('bg_consent').innerHTML =
-          '<b>' + esc(consent.headline) + '</b><div>' + esc(words('They can read')) + ': ' + esc((consent.can_read || []).join(', ')) + '.</div>' +
-          '<div>' + esc(words('They cannot')) + ': ' + esc((consent.cannot || []).join(', ')) + '.</div><div>' + esc(consent.costs) + '</div><div>' + esc(consent.rights) + '</div>';
+        $('bg_consent').innerHTML = consentHtml(consent);
       },
       function (failure) {
         $('bg_consent').textContent = failure.message || words("Couldn't load the words. Try again.");
       }
     );
   }
-  /** what the form sends: the parent, the purpose, the end day, costs, and the yes */
+  /** one line of the consent: its label and the server's list, left out when the role has none (an auditor has no "can do") */
+  function consentLine(label, list) {
+    return list && list.length ? '<div>' + esc(words(label)) + ': ' + esc(list.join(', ')) + '.</div>' : '';
+  }
+  /** the consent in the server's own words, for the role chosen */
+  function consentHtml(consent) {
+    return '<b>' + esc(consent.headline) + '</b>' + consentLine('They can read', consent.can_read) + consentLine('They can do', consent.can_do) + consentLine('They cannot', consent.cannot) + '<div>' + esc(consent.costs) + '</div><div>' + esc(consent.rights) + '</div>';
+  }
+  /** what the form sends: the role, the parent, the purpose, the end day, costs, and the yes */
   function giveBody() {
     return {
+      preset: $('bg_preset').value,
       grantee: $('bg_who').value,
       purpose: $('bg_purpose').value.trim() || undefined,
       expires_at: $('bg_until').value || undefined,
@@ -276,11 +301,23 @@
       consent: $('bg_yes').checked
     };
   }
-  /** send the grant once the owner confirms who, until when and read only */
+  /** the confirm's sentence: who, which role and what it may do, until when */
+  function giveQuestion(who, adviser, until) {
+    var when = '<b>' + esc(until ? dayWords(until + 'T12:00:00') : words('12 months from today')) + '</b>. ';
+    return adviser
+      ? '<b>' + esc(who) + '</b> ' + esc(words('will be able to prepare entries in your books until')) + ' ' + when + esc(words('Nothing is posted until you accept it. Every step is recorded.'))
+      : '<b>' + esc(who) + '</b> ' + esc(words('will be able to read your books until')) + ' ' + when + esc(words('Read only: they cannot change anything. Every look is recorded.'));
+  }
+  /** the server's warnings on a new grant, each in the server's words */
+  function warningsOf(answer) {
+    return ((answer && answer.warnings) || []).map(function (w) { return w.words; });
+  }
+  /** send the grant once the owner confirms who, which role, until when and what that role may do */
   function askGive() {
     var parentBox = $('bg_who');
     var until = $('bg_until').value;
     var body = giveBody();
+    var adviser = body.preset === 'adviser';
     root.CBAction.run(
       $('bg_go'),
       function () {
@@ -289,18 +326,19 @@
       {
         key: 'bg-give',
         confirm: {
-          title: words('Give read-only access?'),
-          body:
-            '<b>' + esc(parentBox.options[parentBox.selectedIndex].text) + '</b> ' + esc(words('will be able to read your books until')) + ' <b>' +
-            esc(until ? dayWords(until + 'T12:00:00') : words('12 months from today')) + '</b>. ' + esc(words('Read only: they cannot change anything. Every look is recorded.')),
+          title: words(adviser ? 'Let this firm act in your books?' : 'Give read-only access?'),
+          body: giveQuestion(parentBox.options[parentBox.selectedIndex].text, adviser, until),
           yes: words('Give access')
         },
         failed: words("Couldn't give access"),
         out: 'bg_out',
-        outcome: function () {
+        outcome: function (answer) {
           panel.o.closeSheet();
           panel.view = 'given';
-          reload();
+          reload().then(function () {
+            panel.notice = warningsOf(answer);
+            paint();
+          });
         }
       }
     );
@@ -336,6 +374,11 @@
       );
     };
   }
+  /** what ending an access did to the actions still waiting under it (the server counts them) */
+  function withdrawnWords(ended) {
+    var n = (ended && ended.actions_withdrawn) || 0;
+    return n ? [n + ' ' + words(n === 1 ? 'waiting action was withdrawn. Nothing was posted.' : 'waiting actions were withdrawn. Nothing was posted.')] : [];
+  }
   /** end an access now, after a confirm that names who */
   function askEnd(grant) {
     root.CBAction.run(
@@ -353,7 +396,12 @@
         },
         failed: words("Couldn't end the access"),
         done: words('Access ended.'),
-        outcome: reload
+        outcome: function (ended) {
+          reload().then(function () {
+            panel.notice = withdrawnWords(ended);
+            paint();
+          });
+        }
       }
     );
   }
