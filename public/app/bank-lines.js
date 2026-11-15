@@ -193,6 +193,7 @@
         id: function (row) { return row.id; },
         rowTid: cfg.tid || function (row) { return 'bank-row-' + row.id; },
         oneOpen: true,
+        view: root.matchMedia && root.matchMedia('(max-width:700px)').matches ? 'lines' : 'grid' /* a phone: the compact lines, not a card per row */,
         foldHead: true /* View · Grid / Lines · Columns · CSV · Expand under ONE menu: the head stays short */,
         defaultCols: ['status', 'date', 'payee', 'out', 'in'],
         views: viewsOf(cfg),
@@ -200,8 +201,8 @@
           { key: 'status', label: T('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { var icon = kit.statusIcon({ status: row.status, name: T(STATUS[row.status]) }); return extra.wrapStatus ? extra.wrapStatus(row, icon) : icon; } },
           { key: 'date', label: T('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },
           { key: 'payee', label: T('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + esc(row.narration) + '</span>'; } },
-          { key: 'out', label: T('Out'), prio: 4, keep: true, num: true, w: 124, sort: 'amount', html: true, cell: amountCell(true) },
-          { key: 'in', label: T('In'), prio: 4, keep: true, num: true, w: 124, html: true, cell: amountCell(false) }
+          { key: 'out', label: T('Out'), prio: 4, keep: true, num: true, w: 140, sort: 'amount', html: true, cell: amountCell(true) },
+          { key: 'in', label: T('In'), prio: 4, keep: true, num: true, w: 140, html: true, cell: amountCell(false) }
         ].concat(extra.columns || []),
         filters: filtersOf(cfg),
         search: function (row) { return [row.narration, root.CBBankPreview.dateText(row.date), cfg.fmt(row.amount_minor), row.kind, T(STATUS[row.status])].join(' '); },

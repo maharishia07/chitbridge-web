@@ -37,7 +37,7 @@
 .cbl[data-cbl^="bank"] .cbl-views{flex-wrap:wrap;overflow:visible}
 
 .cbl[data-cbl^="bank"] .bl-sh{display:none}
-@media (max-width:700px){.cbl[data-cbl^="bank"] .bl-lg{display:none}.cbl[data-cbl^="bank"] .bl-sh{display:inline}.cbl[data-cbl^="bank"] .cbl-vtab{padding:4px 10px}}
+@media (max-width:700px){.cbl[data-cbl^="bank"] .bl-lg{display:none}.cbl[data-cbl^="bank"] .bl-sh{display:inline}.cbl[data-cbl^="bank"] .cbl-vtab{padding:2px 8px}.cbl[data-cbl^="bank"] .cbl-views{gap:4px}}
 .bb-head .act{min-height:32px}
 @media (min-width:701px){.bb-head .act{padding-block:0}}
 .bb-right.bb-has-bad{background:var(--red-t,#fbeae3);border-color:var(--red-b,#e7b9a8)}
