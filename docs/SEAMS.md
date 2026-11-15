@@ -122,10 +122,10 @@ of file each thing is; this says what already does the job.
 | 26 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 26 | `shown` | `country-compare.js` | one side's value for the line: |
 | 26 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
+| 25 | `form` | `accounts-shell.js` |  |
 | 25 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 25 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
-| 24 | `form` | `accounts-shell.js` |  |
 | 24 | `next` | `cap-stock.js` | the next level: |
 | 24 | `says` | `adopt.js` |  |
 | 24 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |

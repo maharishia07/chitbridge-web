@@ -85,6 +85,7 @@
     var route = String(pattern || '').replace(/^[A-Z]+ /, '');
     return words(WHAT[route] || route || '—');
   }
+  var POSTING = { adviser_posts: 'Your adviser posts for you', owner_approves: 'You approve each post' };
   function isOpen(grant) {
     return grant.state === 'live' || grant.state === 'edge_off';
   }
@@ -100,6 +101,7 @@
         panel.why = null;
         if (panel.view === 'looks') panel.looks = (answer && answer.looks) || [];
         else panel.given = (answer && answer.given) || [];
+        return weekly();
       },
       function (failure) {
         panel.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
@@ -108,6 +110,17 @@
     );
   }
 
+/** what the adviser posted for the owner in the last 7 days: the same queue, filtered (accepted, delegated, since): a line to read, never a list to clear */
+  function weekly() {
+    if (panel.view !== 'given' || !(panel.given || []).some(function (g) { return g.preset === 'adviser'; })) return Promise.resolve();
+    var since = dayValue(new Date(Date.now() - 7 * 864e5));
+    return api('actionsList', { query: { state: 'accepted', delegated: 'true', since: since, limit: 100 } }).then(function (answer) {
+      var n = (answer && answer.total) || 0;
+      var firms = {};
+      ((answer && answer.actions) || []).forEach(function (a) { if (a.prepared && a.prepared.firm) firms[a.prepared.firm] = 1; });
+      if (n) panel.notice = [words('Posted for you this week') + ': ' + n + ' ' + words(n === 1 ? 'entry or action by' : 'entries and actions by') + ' ' + Object.keys(firms).join(', ') + '.'];
+    }, function () {});
+  }
   /* ── the screen ── */
   /** the two view buttons, the one in use marked pressed */
   function segButtons() {
@@ -187,6 +200,7 @@
         col('role', words('Role'), 2, 170, function (g) { return words(ROLE[g.preset] || ROLE.auditor); }),
         col('purpose', words('Why'), 2, 260, function (g) { return g.purpose || '—'; }),
         col('until', words('Until'), 2, 130, function (g) { return dayWords(g.expires_at); }, function (g) { return g.expires_at || ''; }),
+        col('posting', words('Who posts'), 3, 150, function (g) { return g.preset === 'adviser' ? words(POSTING[g.posting] || 'Not chosen: you approve') : '—'; }),
         col('costs', words('Costs'), 4, 110, function (g) { return g.can_see_costs ? words('Seen') : words('Hidden'); }),
         col('state', words('State'), 1, 170, function (g) { return root.CBBooksGrantApi.stateWords(g.state); })
       ],
@@ -239,6 +253,7 @@
       '<label class="sub" for="bg_until">' + esc(words('Until')) + '</label><input data-cbsid="NET004-I02" id="bg_until" class="inp" type="date" value="' + inAYear() + '" data-testid="bg-until">' +
       '<label class="bg-tick"><input data-cbsid="NET004-I03" id="bg_costs" type="checkbox" checked data-testid="bg-costs"> ' + esc(words('They can see my costs and margins')) + '</label>' +
       '<div id="bg_consent" class="bg-consent" role="status" data-testid="bg-consent"><span class="spin"></span></div>' +
+      '<div id="bg_posting" class="bg-consent" role="group" hidden data-testid="bg-posting"></div>' +
       '<label class="bg-tick"><input data-cbsid="NET004-I04" id="bg_yes" type="checkbox" data-testid="bg-yes"> ' + esc(words('I have read this, and I say yes')) + '</label>' +
       '<div class="nw-out" id="bg_out" data-testid="bg-out" role="status"></div>' +
       '<div class="nw-acts"><button data-cbsid="NET004-B04" type="button" class="act" id="bg_go" data-testid="bg-go" disabled aria-disabled="true" title="' + esc(words('Tick yes to go on.')) + '">' + esc(words('Give access')) + '</button>' +
@@ -265,9 +280,10 @@
   function tickYes() {
     var go = $('bg_go');
     var yes = $('bg_yes').checked;
-    go.disabled = !yes;
-    go.setAttribute('aria-disabled', String(!yes));
-    go.title = yes ? '' : words('Tick yes to go on.');
+    var picked = $('bg_preset').value !== 'adviser' || !!pickedPosting('bg_post');
+    go.disabled = !(yes && picked);
+    go.setAttribute('aria-disabled', String(!(yes && picked)));
+    go.title = !picked ? words('Say who posts, then tick yes.') : yes ? '' : words('Tick yes to go on.');
   }
   /** read the consent words for the costs choice and clear the yes, so it is said again */
   function readConsent() {
@@ -276,11 +292,32 @@
     api('grantsConsent', { query: { can_see_costs: $('bg_costs').checked ? 'true' : 'false', preset: $('bg_preset').value } }).then(
       function (consent) {
         $('bg_consent').innerHTML = consentHtml(consent);
+        paintPosting(consent);
       },
       function (failure) {
         $('bg_consent').textContent = failure.message || words("Couldn't load the words. Try again.");
       }
     );
+  }
+/** the owner's choice of who posts, drawn from the server's words, NOTHING pre-selected: the owner must pick one (the form is held until he does) */
+  function postingHtml(choices, name, current) {
+    return '<b>' + esc(words('Who posts?')) + '</b>' + choices.map(function (c, i) {
+      return '<label class="bg-tick"><input data-cbsid="NET004-R0' + (i + 1) + '" type="radio" name="' + name + '" value="' + esc(c.value) + '" data-testid="bg-post-' + esc(c.value) + '"' + (current === c.value ? ' checked' : '') + '> ' + esc(c.words) + '</label>';
+    }).join('');
+  }
+  /** show the choice for the adviser role only; picking one releases Give access */
+  function paintPosting(consent) {
+    var box = $('bg_posting');
+    var choices = (consent && consent.posting_choices) || [];
+    box.hidden = !choices.length;
+    box.innerHTML = choices.length ? postingHtml(choices, 'bg_post') : '';
+    Array.prototype.forEach.call(box.querySelectorAll('input'), function (radio) { radio.onchange = tickYes; });
+    tickYes();
+  }
+  /** the posting value picked on this form (null: none yet) */
+  function pickedPosting(name) {
+    var found = panel.host.ownerDocument.querySelector('input[name="' + name + '"]:checked');
+    return found ? found.value : null;
   }
   /** one line of the consent: its label and the server's list, left out when the role has none (an auditor has no "can do") */
   function consentLine(label, list) {
@@ -298,13 +335,16 @@
       purpose: $('bg_purpose').value.trim() || undefined,
       expires_at: $('bg_until').value || undefined,
       can_see_costs: $('bg_costs').checked,
+      posting: $('bg_preset').value === 'adviser' ? pickedPosting('bg_post') || undefined : undefined,
       consent: $('bg_yes').checked
     };
   }
   /** the confirm's sentence: who, which role and what it may do, until when */
-  function giveQuestion(who, adviser, until) {
+  function giveQuestion(who, adviser, until, posting) {
     var when = '<b>' + esc(until ? dayWords(until + 'T12:00:00') : words('12 months from today')) + '</b>. ';
-    return adviser
+    return adviser && posting === 'adviser_posts'
+      ? '<b>' + esc(who) + '</b> ' + esc(words('will be able to post, lock, unlock and close the year in your books until')) + ' ' + when + esc(words('You do not approve each one and nobody else checks it first. Every action is recorded, you are told at once of an unlock or a year close, and you can switch this back or end it any time.'))
+      : adviser
       ? '<b>' + esc(who) + '</b> ' + esc(words('will be able to prepare entries in your books until')) + ' ' + when + esc(words('Nothing is posted until you accept it. Every step is recorded.'))
       : '<b>' + esc(who) + '</b> ' + esc(words('will be able to read your books until')) + ' ' + when + esc(words('Read only: they cannot change anything. Every look is recorded.'));
   }
@@ -327,7 +367,7 @@
         key: 'bg-give',
         confirm: {
           title: words(adviser ? 'Let this firm act in your books?' : 'Give read-only access?'),
-          body: giveQuestion(parentBox.options[parentBox.selectedIndex].text, adviser, until),
+          body: giveQuestion(parentBox.options[parentBox.selectedIndex].text, adviser, until, body.posting),
           yes: words('Give access')
         },
         failed: words("Couldn't give access"),
@@ -350,6 +390,7 @@
     panel.o.sheet(
       '<h2>' + esc(words('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + '</div>' +
         '<label class="sub" for="bg_until2">' + esc(words('Until')) + '</label><input data-cbsid="NET004-I05" id="bg_until2" class="inp" type="date" value="' + esc(dayValue(new Date(grant.expires_at))) + '" data-testid="bg-until2">' +
+        (grant.preset === 'adviser' ? '<div class="bg-consent" role="group" data-testid="bg-post2">' + postingHtml([{ value: 'adviser_posts', words: words(POSTING.adviser_posts) }, { value: 'owner_approves', words: words(POSTING.owner_approves) }], 'bg_post2', grant.posting) + '</div>' : '') +
         '<div class="nw-out" id="bg_out2" data-testid="bg-out2" role="status"></div>' +
         '<div class="nw-acts"><button data-cbsid="NET004-B06" type="button" class="act" id="bg_save" data-testid="bg-save">' + esc(words('Save')) + '</button>' +
         '<button data-cbsid="NET004-B07" type="button" class="act quiet" id="bg_cancel2" data-testid="bg-cancel2">' + esc(words('Cancel')) + '</button></div></div>'
@@ -360,7 +401,7 @@
       root.CBAction.run(
         $('bg_save'),
         function () {
-          return api('grantsChange', { params: { id: grant.grant_id }, body: { expires_at: $('bg_until2').value } });
+          return api('grantsChange', { params: { id: grant.grant_id }, body: { expires_at: $('bg_until2').value, posting: pickedPosting('bg_post2') || undefined } });
         },
         {
           key: 'bg-change-' + grant.grant_id,
