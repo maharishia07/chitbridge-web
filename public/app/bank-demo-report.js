@@ -96,14 +96,14 @@
     });
     var carried = recon.not_in_books || {},
       done = !outside.length && host.preview.minorOf(recon.difference_before) === 0;
-    var money = function (value) { return esc(host.amountText(value)); };
+    var amountMarkup = function (value) { return esc(host.amountText(value)); };
     var leftOut = outside.length ? '<tr class="bd-g"><td colspan="3">Statement lines not yet in the books</td></tr>' + outsideRows(outside, 'credit_minor').concat(outsideRows(outside, 'debit_minor')).join('') + totalRow('Receipts', carried.in) + totalRow('Payments', carried.out) : '';
     host.el('bd_brs').innerHTML =
       '<div class="bd-report"><article class="bd-sheet" data-cbsid="BKS017-R90">' + reportHead(recon, model) +
-      '<table><tbody><tr class="bd-k"><td colspan="2">Balance as per bank statement</td><td class="bd-r">' + money(recon.closing_statement) + '</td></tr>' +
+      '<table><tbody><tr class="bd-k"><td colspan="2">Balance as per bank statement</td><td class="bd-r">' + amountMarkup(recon.closing_statement) + '</td></tr>' +
       groupRows('Add: receipts not yet on the statement', ledgerRows(ledger, 'dr_minor')) +
       groupRows('Less: payments not yet on the statement', ledgerRows(ledger, 'cr_minor')) + leftOut +
-      '<tr class="bd-k"><td colspan="2">Balance as per books</td><td class="bd-r">' + money(recon.closing_books_before) + '</td></tr>' + differenceRow(recon, outside.length, done) + '</tbody></table>' +
+      '<tr class="bd-k"><td colspan="2">Balance as per books</td><td class="bd-r">' + amountMarkup(recon.closing_books_before) + '</td></tr>' + differenceRow(recon, outside.length, done) + '</tbody></table>' +
       '<p class="bd-foot">' + (done ? 'Reconciled to the statement of ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + '.' : 'Not reconciled yet. The tick appears when no statement line is left outside the books.') + '</p>' +
       '<div class="bd-sign"><span>Prepared by: sample</span></div></article></div>';
   }
