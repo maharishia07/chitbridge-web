@@ -41,7 +41,7 @@ of file each thing is; this says what already does the job.
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
 | 59 | `rows` | `cap-settings.js` |  |
 | 59 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
-| 56 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 57 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 56 | `toast` | `accounts-shell.js` |  |
 | 56 | `view` | `books-payables.js` | group: |
 | 56 | `pack` | `books-store.js` |  |
@@ -99,14 +99,14 @@ of file each thing is; this says what already does the job.
 | 34 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 34 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 33 | `ensureCap` | `app.html` |  |
+| 33 | `load` | `books-grant-view.js` |  |
 | 33 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 33 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `modal` | `app.html` |  |
-| 32 | `load` | `books-grant-view.js` |  |
 | 32 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 32 | `owner` | `books.js` |  |
-| 31 | `call` | `books-clients-door.js` |  |
+| 31 | `call` | `books-clients-door.js` | a read the api turned away as busy (503 SERVER_BUSY, over its in-flight cap while Home loads) is asked again a |
 | 31 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
 | 31 | `money` | `cart.js` |  |
 | 31 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
