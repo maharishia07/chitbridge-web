@@ -376,6 +376,7 @@ function fcHead() {
     else chips.push({ tid: 'fc-words', text: reply.words });
     if (reply.uncounted && reply.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: reply.uncounted.words });
     if (reply.gst && Number(reply.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(reply.gst, reply.currency) });
+    if (reply.gst && reply.gst.earlier && Number(reply.gst.earlier.payable_minor) > 0) chips.push({ tid: 'fc-gst-earlier', text: fcEarlierChip(reply.gst, reply.currency) });
   }
   return { title: tx('Cash position'), notices: notices, chips: chips };
 }
@@ -383,6 +384,11 @@ function fcHead() {
 function fcReturnChip(g, cur) {
   var when = g.due_date ? bkDate(g.due_date) + (g.counted ? '' : ' · ' + tx('after this window')) : g.why || tx('due date not known');
   return g.short + ' ' + bkMoney(g.payable_minor, cur) + ' · ' + when;
+}
+/** ONE-FIGURE: what the ledgers owe from BEFORE the return's period (an opening balance or earlier periods) — its own line, the server's figure, no due date made up for it */
+function fcEarlierChip(g, cur) {
+  var e = g.earlier;
+  return (g.short === 'BAS' ? 'GST' : g.short) + ' ' + tx('owing from before') + ' ' + (e.before ? shopDay(e.before) : tx('this period')) + ' · ' + bkMoney(e.payable_minor, cur) + ' · ' + tx('due date not recorded');
 }
 /** mount the Cash tab into the screen */
 function fcMount(frame) {
