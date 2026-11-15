@@ -281,13 +281,22 @@
     var asks = pack && typeof pack.supplyKindOf === 'function' && Array.isArray(pack.taxHeads) && pack.taxHeads.length === 1;
     return event && (event.type === 'expense' || event.type === 'other_income') && asks && !answers.tax_kind ? "say the tax kind for this line, from the pack's own list; it is never assumed" : null;
   }
+  /** a line with no word that names a payee ("Account fee") cannot teach a rule, but the answer is still the owner's: the entry is composed through suggest by a ONE-LINE rule made of the narration's own words, never kept; the result says learned: false and why */
+  function composeOnce_(recon, line, event, why, opts) {
+    var words = (String(line.narration || '').match(/[A-Za-z0-9]+/g) || []).join(' ');
+    if (!words) return { ok: false, why: why };
+    var once = { id: 'once', has: words, side: null, party: null, party_name: null, label: null, event: JSON.parse(JSON.stringify(event)), source: null };
+    var made = recon.suggest(line, Object.assign({}, opts, { learned: [once] }));
+    if (made.event) made.why = 'your answer for this line, used once: nothing in its words names a payee to remember it by';
+    return Object.assign({ taught: null, learned: false, learned_why: why }, made);
+  }
   /**
    * resolve(line, answers, opts) → the proposal for a line the engine could not explain, once the owner has answered:
    *   answers { party?: id, party_name?, kind?: an id of whatIsThis(), account?: a class or account of the chart that item lists (never a new account), tax_kind?: the supply kind the owner codes it (with an account on money out) }
    *   opts    the same as suggest(): { country | pack, parties, learned, gst_basis, ... }
    * NO second calculation: the answers become ONE taught rule (bank-recon.learn) and the line goes through bank-recon.suggest, so the entry is composed by posting.post and its tax split by
    * withTax exactly as every other proposal. The result is that proposal plus `taught` (the rule to keep on the device so the next line like it is explained), or { ok: false, why } when the
-   * answers name no party and no account, or the narration has no word to teach by.
+   * answers name no party and no account. A narration with no word to teach by ("Account fee") with an account answered is composed the same way but teaches nothing: learned: false, learned_why.
    */
   function resolve(line, answers, opts) {
     var recon = dep_('./bank-recon', 'CBBankRecon'),
@@ -301,8 +310,8 @@
     var missing = taxKindMissing_(given, event, pack);
     if (missing) return { ok: false, why: missing };
     var taught = recon.learn(line, { party: given.party, party_name: given.party_name, event: event }, Object.assign({ at: (opts && opts.at) || null, by: (opts && opts.by) || null }, opts));
-    if (!taught.ok) return { ok: false, why: taught.why };
-    return Object.assign({ taught: taught.rule }, recon.suggest(line, Object.assign({}, opts, { learned: [taught.rule].concat((opts && opts.learned) || []) })));
+    if (!taught.ok) return given.party ? { ok: false, why: taught.why } : composeOnce_(recon, line, event, taught.why, opts);
+    return Object.assign({ taught: taught.rule, learned: true }, recon.suggest(line, Object.assign({}, opts, { learned: [taught.rule].concat((opts && opts.learned) || []) })));
   }
   var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_ };
   /* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page takes window.CBBankEntry. */
