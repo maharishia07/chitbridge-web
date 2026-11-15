@@ -2058,9 +2058,7 @@ function bkDvTotal(e) {
   }, 0);
 }
 function bkDvParty(e) {
-  var l = ((e && e.lines) || []).filter(function (x) {
-    return x.party_name || x.party_id;
-  })[0];
+  var l = dayBookPartyLine(e);
   return l ? bkPartyLabel(l.party_id, l.party_name) : '';
 }
 function bkDvTenders(e) {
@@ -2632,6 +2630,8 @@ function bkDvMount(el) {
     };
   };
   var cols = bkDvCols(c);
+  if (BK.ev)
+    cols.splice(cols.length - 1, 0, { key: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = e.evidence && CBEvidence.stateOf(e.evidence); return s ? s.word : ''; } }); /* CMP062: never cut to make room */
   if (BK.mk && BK.mk.state().may)
     cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
   return CBList.mount(el, {
@@ -2766,6 +2766,17 @@ function bkMarksIngest(r, list) {
   }
   BK.mk.ingest(list || r.entries, r);
 }
+/** CMP062 (cap-evidence.js): each Day book entry arrives with its evidence; the chip says what is held, a press opens the sheet, a file opens through the seat's own headers (the adviser's X-Books-For rides in CBBooksActing) */
+function bkEvidenceIngest(list) {
+  if (typeof CBEvidence === 'undefined') return;
+  if (!BK.ev)
+    BK.ev = CBEvidence.use({
+      raw: function (path) {
+        return fetch(CFG.API_BASE + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + SESSION.token }, typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}) });
+      }
+    });
+  BK.ev.ingest(list);
+}
 /** the Day book tab: one date range of entries, the strip and the to-do read together */
 async function bkDaybook(body) {
   var q = bkRange('db');
@@ -2776,6 +2787,7 @@ async function bkDaybook(body) {
     bkDuesStore(rr[1]); /* the same read names each entry's party (bkPartyLabel) */
     BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
     bkMarksIngest(r);
+    bkEvidenceIngest(r.entries); /* CMP062: what stands behind each entry */
     body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
     BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
   } catch (e) {

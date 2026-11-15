@@ -28,7 +28,7 @@
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['narration', 'What it was'], ['amount_minor', 'Amount', MONEY], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
+    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
@@ -71,6 +71,7 @@
     var v = row[column[0]];
     if (column[2] === MONEY) return moneyCell(row, column[0], v);
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
+    if (column[2] === 'evidence') return viewState.ev ? viewState.ev.chip(row) : '—'; /* CMP062: what stands behind the row (cap-evidence.js) */
     if (v == null || v === '') return row._total ? '' : '—';
     if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return root.shopDay(v); /* any day, whatever the column is called */
     return /^[a-z]+(_[a-z]+)+$/.test(String(v)) && column[0] !== 'name' ? groupWords(v) : String(v); /* a key (payment_received, soft_locked) as words */
@@ -125,6 +126,7 @@
         viewState.answer = answer;
         viewState.why = null;
         if (report.k === 'daybook' && viewState.mk) viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
+        if (report.k === 'daybook' && viewState.ev) viewState.ev.ingest(answer && answer.entries); /* CMP062: and its evidence */
         root.CBBooksActing.setCurrency(answer && answer.currency);
       },
       function (failure) {
@@ -216,7 +218,12 @@
     if (!markBar) return;
     markBar.refresh().then(function () { if (viewState.queriesOnly) paintList(current()); });
   }
+  /** the evidence chips (cap-evidence.js): a file is read through the page's own token and base, with the seat's headers */
+  function newEvidence() {
+    viewState.ev = root.CBEvidence && viewState.o.raw ? root.CBEvidence.use({ raw: function (path) { return viewState.o.raw(path, root.CBBooksActing.headers()); } }) : null;
+  }
   function newMarks() {
+    newEvidence();
     if (viewState.mk) viewState.mk.destroy();
     viewState.queriesOnly = false;
     if (!root.CBMark || onActions()) { viewState.mk = null; return; }
@@ -306,13 +313,13 @@
       },
       columns: shownCols(report).map(function (column, i) {
         return {
-          html: column[2] === 'mark',
+          html: column[2] === 'mark' || column[2] === 'evidence',
           key: column[0],
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[2] === MONEY ? 1 : 2,
           num: column[2] === MONEY,
-          keep: column[2] === 'mark', /* the Mark chip is never cut to make room (list-ctl keep) */
-          w: column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180,
+          keep: column[2] === 'mark' || column[2] === 'evidence', /* the Mark and Evidence chips are never cut to make room (list-ctl keep) */
+          w: column[2] === 'mark' ? 190 : column[2] === 'evidence' ? 170 : column[2] === MONEY ? 140 : 180,
           cell: function (row) {
             return figure(row, column);
           },
@@ -334,7 +341,7 @@
   }
   /** a row opens what is behind it (ACC-176c): an account's ledger (a code on the row), or the journal entry a Day book row is; books-grant-drill.js paints both, read only */
   function drill(report, row) {
-    var ctx = { mk: viewState.mk, call: viewState.o.call, sheet: viewState.o.sheet, mountList: viewState.o.mountList, day: viewState.day, currency: viewState.answer && viewState.answer.currency };
+    var ctx = { mk: viewState.mk, ev: viewState.ev, call: viewState.o.call, sheet: viewState.o.sheet, mountList: viewState.o.mountList, day: viewState.day, currency: viewState.answer && viewState.answer.currency };
     if (report.drill === 'entry') root.CBBooksGrantDrill.openEntry(ctx, row, ctx.currency, null);
     else if (row.code) root.CBBooksGrantDrill.openLedger(ctx, { code: row.code, name: row.name });
   }

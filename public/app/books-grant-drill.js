@@ -122,6 +122,11 @@
     if (!ctx.mk || !ctx.mk.state().may) return '';
     return '<div class="nw-acts" data-testid="bd-mark">' + ctx.mk.chip(entry.entry_id) + '</div>';
   }
+  /** CMP062: the entry's evidence chip (the source document and its files), from the drill; nothing when the page has no evidence control */
+  function evidenceLine(ctx, entry) {
+    var chip = ctx.ev && ctx.ev.chip(entry);
+    return chip ? '<div class="nw-acts" data-testid="bd-evidence">' + chip + '</div>' : '';
+  }
   /** who made an entry and when: the source the server carried, in words */
   function madeByWords(src) {
     return [src.by ? words('Made by') + ' ' + src.by : '', src.recorded_at ? words('recorded') + ' ' + whenWords(src.recorded_at) : '', src.doc_at ? words('bill') + ' ' + whenWords(src.doc_at) : ''].filter(Boolean).join(' · ');
@@ -134,7 +139,7 @@
     show(ctx,
       (back ? '<button data-cbsid="NET005-B04" type="button" class="act quiet" id="bd_back" data-testid="bd-back">← ' + esc(words('Back to the ledger')) + '</button>' : '') +
       '<h2 data-testid="bd-title">' + esc(entry.entry_no) + '</h2><p class="sub">' + esc(root.shopDay(entry.posting_date) + ' · ' + entry.narration) + '</p>' +
-      (madeBy ? '<p class="sub" data-testid="bd-who">' + esc(madeBy) + '</p>' : '') + reversal + markLine(ctx, entry) +
+      (madeBy ? '<p class="sub" data-testid="bd-who">' + esc(madeBy) + '</p>' : '') + reversal + evidenceLine(ctx, entry) + markLine(ctx, entry) +
       '<div class="nw-acts" data-testid="bd-facts">' + fact('Amount', root.CBBooksActing.figure(debit, shown), 'amount') + fact('Total debit', root.CBBooksActing.figure(debit, shown), 'dr') + fact('Total credit', root.CBBooksActing.figure(credit, shown), 'cr') +
       (debit === credit ? '' : '<span class="tag" data-testid="bd-unbalanced">' + esc(words('Debit and credit differ')) + '</span>') + '</div>' +
       '<div class="nw-list bd-list" id="bd_list" data-testid="bd-list"></div>');
