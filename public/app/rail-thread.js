@@ -35,6 +35,7 @@
  *     party?, me?,                   // the other party's name (the audience line) · my display name (my rows read "You")
  *     signature?,                    // appended to a dispute message ("— name@shop", the acting co-assist's provenance)
  *     decorate?(row) → { by, body, kind },   // a host's byline/prefix reader (cap-dispute's disputeByline)
+ *     subject?: { type: 'mark', id },  // CAP-25: a mark's thread instead of a chit (chit_id then not needed); transport?(method, path, body): a host with its own headers (the auditor grant)
  *     readOnly?,                     // list only (a resolved dispute's room)
  *     ids?: { text, send },          // test ids for the box and the button when a host's spec drives them by other names
  *     context: { host, source? },    // who mounted it (rides on cb:rail)
@@ -60,13 +61,25 @@
    line gets them at mount (ensureEP) — the attach-ui.js pattern. ── */
   var CB_THREAD_EP = {
     messages: { m: 'GET', p: '/api/chits/:id/messages', ok: 'y' }, // ?thread_type= &line_id= &dispute=1
-    sendMsg: { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' } // the ONE composer's route
+    sendMsg: { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' }, // the ONE composer's route
+    marksMessages: { m: 'GET', p: '/api/marks/:id/messages', ok: 'y' }, // CAP-25: the same list, for a mark's thread (mount option `subject`)
+    marksSend: { m: 'POST', p: '/api/marks/:id/messages', ok: 'y', idem: true } // the same composer, the mark's reply door
   };
   root.CB_THREAD_EP = CB_THREAD_EP;
   function ensureEP() {
     if (typeof EP === 'undefined' || !EP) return false;
     for (var k in CB_THREAD_EP) if (!EP[k]) EP[k] = CB_THREAD_EP[k];
     return true;
+  }
+
+  /** CAP-25: the ONE transport. A mount with `subject` reads and sends through the mark pair; a host with its own headers (the auditor's books grant) hands `transport(method, path, body)`; else the page's api() */
+  function viaApi(o, key, opts) {
+    if (o.subject) key = key === 'messages' ? 'marksMessages' : key === 'sendMsg' ? 'marksSend' : key;
+    if (!o.transport) return api(key, opts);
+    var ep = CB_THREAD_EP[key],
+      path = ep.p.replace(':id', encodeURIComponent(opts.params.id)),
+      q = Object.keys(opts.query || {}).map(function (n) { return encodeURIComponent(n) + '=' + encodeURIComponent(opts.query[n]); }).join('&');
+    return o.transport(ep.m, path + (q ? '?' + q : ''), opts.body);
   }
 
   /* ── the words, one place (copy budget: a label, a verb, a sentence) ── */
@@ -111,7 +124,7 @@
   function sentWords(thread, body, reply) {
     var held = reply && reply.ctp && (reply.ctp.queued || reply.ctp.why);
     if (thread.dispute_id) return T(W.sentDisp);
-    if (body.thread_type !== 'external') return T(W.sentInt);
+    if (body.thread_type && body.thread_type !== 'external') return T(W.sentInt);
     if (held) return reply.ctp.why || fill(T(W.sentWait), { where: thread.where || thread.party || T('the other side') });
     return fill(T(W.sentExt), { party: thread.party || T('the other party') });
   }
@@ -172,7 +185,7 @@
   /* ── drafts: the typed text survives a repaint (and a reload when CBOffline is on the page) ── */
   var DRAFTS = {};
   function dkey(o) {
-    return 'rt.' + o.chit_id + '.' + (o.line_id || '') + '.' + (o.dispute_id || '');
+    return 'rt.' + (o.subject ? o.subject.type + '.' : '') + o.chit_id + '.' + (o.line_id || '') + '.' + (o.dispute_id || '');
   }
   function draftGet(o) {
     var k = dkey(o);
@@ -217,7 +230,7 @@
 
   /* ── the list: what the server handed this copy, filtered to the subject (line · dispute) ── */
   async function load(m) {
-    if (!ensureEP()) {
+    if (!ensureEP() && !m.o.transport) {
       m.err = 'no EP';
       paint(m);
       return;
@@ -228,9 +241,10 @@
     q.thread_type = ch === 'both' || o.dispute_id ? 'all' : ch;
     if (o.line_id) q.line_id = o.line_id;
     if (o.dispute_id) q.dispute = '1';
+    if (o.subject) q = {}; /* the mark's list takes no filter */
     m.err = null;
     try {
-      var reply = await api('messages', { params: { id: o.chit_id }, query: q });
+      var reply = await viaApi(o, 'messages', { params: { id: o.chit_id }, query: q });
       var list = (reply && (reply.messages || reply.items || (Array.isArray(reply) ? reply : []))) || [];
       /* ⚠️ FILTERED AGAIN CLIENT-SIDE, the subject's rows only: a line's thread never absorbs the chit's (pre-b155 servers ignore
        line_id); a dispute room shows ITS dispute's rows; the general thread shows NO dispute row — those live in the room, for
@@ -239,7 +253,7 @@
         if (o.dispute_id) return x.is_dispute && String(x.dispute_id) === String(o.dispute_id);
         if (x.is_dispute) return false;
         if (o.line_id && x.line_id && String(x.line_id) !== String(o.line_id)) return false;
-        if (ch !== 'both' && x.thread_type !== ch) return false;
+        if (!o.subject && ch !== 'both' && x.thread_type !== ch) return false; /* a mark's thread has one channel and its rows carry no thread_type */
         return true;
       });
       list.sort(function (first, second) {
@@ -258,7 +272,7 @@
   }
   /** the chit's actions when the host did not hand them over — one GET through the page's `chit` row, deduped by core */
   async function readActions(m) {
-    if (m.actions || typeof EP === 'undefined' || !EP || !EP.chit) return;
+    if (m.actions || m.o.subject || typeof EP === 'undefined' || !EP || !EP.chit) return;
     try {
       var reply = await api('chit', { params: { id: m.o.chit_id } });
       if (reply && reply.actions) {
@@ -279,7 +293,7 @@
     }
     var body = dec && dec.body != null ? dec.body : x.message_text || '';
     var mine =
-      !!(o.me && x.sender_display_name && String(x.sender_display_name) === String(o.me)) || (m.sent && String(m.sent.message_id) === String(x.message_id));
+      !!(o.me && x.sender_display_name && String(x.sender_display_name) === String(o.me)) || (m.sent && String(m.sent.message_id) === String(x.message_id)) || x.mine === true;
     var cls = x.is_dispute ? 'disp' : x.thread_type === 'external' ? 'ext' : 'int';
     var tag = x.is_dispute
       ? '<span class="rt-tag disp">' + T('⚑ Dispute') + '</span>'
@@ -473,6 +487,7 @@
   /* ── the one send ── */
   function bodyFor(o, text, ch, extra) {
     extra = extra || {};
+    if (o.subject) return { message_text: text, msg_type: extra.msg_type || 'info' }; /* the mark's reply door takes these two and nothing else */
     var b = { thread_type: o.dispute_id ? 'external' : ch, message_text: text, msg_type: extra.msg_type || 'info' };
     var line = extra.line_id !== undefined ? extra.line_id : o.line_id;
     if (line) b.line_id = line;
@@ -497,7 +512,7 @@
     return CBAction.run(
       btn,
       function () {
-        return api('sendMsg', { params: { id: o.chit_id }, body: body });
+        return viaApi(o, 'sendMsg', { params: { id: o.chit_id }, body: body });
       },
       {
         key: 'rt:' + o.chit_id + ':' + (o.line_id || '') + ':' + (o.dispute_id || ''),
@@ -528,6 +543,7 @@
   /* ── mount ── */
   function mount(el, o) {
     el = typeof el === 'string' ? doc.getElementById(el) : el;
+    if (o && o.subject && o.subject.id && !o.chit_id) o = Object.assign({}, o, { chit_id: o.subject.id, channel: 'external' }); /* CAP-25: a mark's thread: one channel, the subject id keys the drafts */
     if (!el || !o || !o.chit_id) return null;
     addCss();
     ensureEP();

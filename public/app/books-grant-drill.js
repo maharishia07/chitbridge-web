@@ -66,9 +66,11 @@
       state.next = answer.next || null;
       var ids = (answer.lines || []).map(function (line) { return line.entry_id; }).filter(Boolean);
       state.lines = state.lines.concat(answer.lines || []);
+      if (ctx.mk) ctx.mk.ingest(answer.lines, answer); /* ACC-358: each ledger line carries its entry's mark */
       if (!ids.length) return null;
       return read(ctx, 'readDaybook', {}, { entries: ids.join(','), from: answer.from, to: answer.to }).then(function (book) {
         (book.entries || []).forEach(function (entry) { state.entries[entry.entry_id] = entry; });
+        if (ctx.mk) ctx.mk.ingest(book.entries, book);
       });
     });
   }
@@ -92,6 +94,7 @@
     };
     var rows = state.lines.map(function (line, n) { return Object.assign({ _n: n, party: partyOf(state, line) }, line); });
     var cols = [['date', 'Date'], ['entry_no', 'Entry'], ['what', 'What it was'], ['party', 'Party'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY], ['running_minor', 'Balance', MONEY]];
+    if (ctx.mk && state.answer.mark_actions) cols.push(['mark', 'Mark', 'mark']); /* ACC-358: the marker chip (cap-mark.js); absent when marking is not switched on */
     ctx.mountList($('bd_list'), {
       key: 'books-grant-ledger',
       csv: false,
@@ -101,8 +104,8 @@
       rowTid: function (row) { return 'bd-line-' + row._n; },
       columns: cols.map(function (c, i) {
         return {
-          key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, w: c[2] ? 120 : c[0] === 'what' ? 200 : 110,
-          cell: function (row) { return c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
+          key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, w: c[2] ? 120 : c[0] === 'what' ? 200 : 110, html: c[2] === 'mark',
+          cell: function (row) { return c[2] === 'mark' ? ctx.mk.chip(row.entry_id) : c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
           value: function (row) { return row[c[0]] == null ? '' : String(row[c[0]]); }
         };
       }),
@@ -115,6 +118,11 @@
     });
   }
 
+  /** ACC-358: the entry's mark chip and the one way to ask a question about it, from the drill (not drawn when marking is not switched on) */
+  function markLine(ctx, entry) {
+    if (!ctx.mk || !ctx.mk.state().may) return '';
+    return '<div class="nw-acts" data-testid="bd-mark">' + ctx.mk.chip(entry.entry_id) + '</div>';
+  }
   /** who made an entry and when: the source the server carried, in words */
   function madeByWords(src) {
     return [src.by ? words('Made by') + ' ' + src.by : '', src.recorded_at ? words('recorded') + ' ' + whenWords(src.recorded_at) : '', src.doc_at ? words('bill') + ' ' + whenWords(src.doc_at) : ''].filter(Boolean).join(' · ');
@@ -127,7 +135,7 @@
     show(ctx,
       (back ? '<button data-cbsid="NET005-B04" type="button" class="act quiet" id="bd_back" data-testid="bd-back">← ' + esc(words('Back to the ledger')) + '</button>' : '') +
       '<h2 data-testid="bd-title">' + esc(entry.entry_no) + '</h2><p class="sub">' + esc(entry.posting_date + ' · ' + entry.narration) + '</p>' +
-      (madeBy ? '<p class="sub" data-testid="bd-who">' + esc(madeBy) + '</p>' : '') + reversal +
+      (madeBy ? '<p class="sub" data-testid="bd-who">' + esc(madeBy) + '</p>' : '') + reversal + markLine(ctx, entry) +
       '<div class="nw-acts" data-testid="bd-facts">' + fact('Amount', root.CBBooksActing.figure(debit, shown), 'amount') + fact('Total debit', root.CBBooksActing.figure(debit, shown), 'dr') + fact('Total credit', root.CBBooksActing.figure(credit, shown), 'cr') +
       (debit === credit ? '' : '<span class="tag" data-testid="bd-unbalanced">' + esc(words('Debit and credit differ')) + '</span>') + '</div>' +
       '<div class="nw-list bd-list" id="bd_list" data-testid="bd-list"></div>');
