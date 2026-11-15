@@ -53,14 +53,10 @@
   }
   /** a day as a person reads it, from the server's moment */
   function dayWords(value) {
-    var d = new Date(value);
-    var fmt = { day: 'numeric', month: 'short', year: 'numeric' };
-    return isNaN(d.getTime()) ? '—' : root.CBLocale ? root.CBLocale.date(value, fmt) : d.toLocaleDateString(undefined, fmt); /* the shop's own order and month names */
+    return root.shopDay(value);
   }
   function whenWords(value) {
-    var d = new Date(value);
-    var fmt = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
-    return isNaN(d.getTime()) ? '—' : root.CBLocale ? root.CBLocale.datetime(value, fmt) : d.toLocaleString(undefined, fmt);
+    return root.shopStamp(value);
   }
   /** the value a date box takes: the day in the browser's own calendar */
   function dayValue(d) {

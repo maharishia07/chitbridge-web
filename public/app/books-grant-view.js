@@ -58,6 +58,7 @@
     var v = row[column[0]];
     if (column[2] === MONEY) return moneyCell(row, column[0], v);
     if (v == null || v === '') return row._total ? '' : '—';
+    if (/(^|_)date$/.test(column[0]) && /^d{4}-d{2}-d{2}$/.test(String(v))) return root.shopDay(v);
     return column[0] === 'group' ? groupWords(v) : String(v);
   }
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
@@ -89,6 +90,8 @@
     return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { headers: root.CBBooksActing.headers() }).then(function (a) {
       var list = ((a && a.periods) || []).map(function (p) { return String(p.period || ''); }).filter(function (p) { return /^[0-9]{4}-[0-9]{2}$/.test(p); }).sort();
       viewState.month = list.length ? list[list.length - 1] : '';
+      var busy = ((a && a.periods) || []).filter(function (p) { return Number(p.entries) > 0 && /^[0-9]{4}-[0-9]{2}$/.test(String(p.period || '')); }).map(function (p) { return String(p.period); }).sort();
+      if (busy.length) viewState.month = busy[busy.length - 1]; /* R18: the latest month WITH entries, not the latest month */
     }, function () { viewState.month = ''; });
   }
   function load() {
@@ -195,7 +198,7 @@
   /** a heading naming the date the figures stand at */
   function asAt(report) {
     var date = viewState.day || (viewState.answer && (viewState.answer.asOf || viewState.answer.as_of || viewState.answer.to)) || '';
-    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<h3 class="sub" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(date) + '</h3>' : '';
+    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<h3 class="sub" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</h3>' : '';
   }
   function paintRows(host, report) {
     if (report.panels) return paintDues(host, report);
