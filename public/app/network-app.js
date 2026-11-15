@@ -661,7 +661,15 @@
   }
   function start() {
     N.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';
-    return load().then(paint, paintFail);
+    return load().then(paint, paintFail).then(openFromLink);
+  }
+  /** l16 firm-dash: the practice list's "Open books" links here with ?open=<client>; a client this firm holds a live grant for opens at once (the seat chooser as ever), anything else is ignored */
+  function openFromLink() {
+    var id = null;
+    try { id = new root.URLSearchParams(root.location.search).get('open'); } catch (failure) { if (root.cbQuiet) root.cbQuiet('network:open', failure); }
+    if (!id || N.openedFromLink === id || !N.held[id]) return;
+    N.openedFromLink = id;
+    openSeat(id, N.held[id].grantor_name || T('this store'));
   }
   function reload() {
     return load().then(paint, paintFail);
