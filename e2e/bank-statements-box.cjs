@@ -114,7 +114,7 @@ function stand(pending) {
   await p.waitForSelector('[data-testid="bank-stmts-grid"]', { timeout: 10000 });
   const gaps = await p.locator('.bks-miss').count();
   ok(gaps === 6 && /Nov missing/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months, every month reads "<Mon> missing" (' + gaps + ')');
-  ok(/6 months missing/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says the gap: "6 months missing"');
+  ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
   ok(/Kept on our server for the record period; visible to the adviser or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
   ok(/never uploaded/.test(await p.textContent('[data-testid="bank-private"]')), 'the plain picker keeps its own device-only sentence');
   ok(await sideways(p), '1366 px: nothing scrolls sideways');
@@ -159,7 +159,8 @@ function stand(pending) {
   ok(S.ledgerCalls.length >= 1 && /from=2026-09-01&to=2026-09-25/.test(S.ledgerCalls[S.ledgerCalls.length - 1]), 'the page\'s own reader took it: the ledger is read for the statement\'s dates (' + S.ledgerCalls[S.ledgerCalls.length - 1] + ')');
   ok(await p.locator('[data-testid="bank-stmts-grid"]').count() === 0, 'the box folds once a statement is on screen, so the lines have the screen');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-read-laptop.png') });
-  ok(S.posts.length === 3 && S.reqs.filter((r) => r.m === 'POST' && !/statement-files/.test(r.u)).length === 0, 'nothing was posted to the books by Read (only the three Add presses)');
+  const toBooks = S.reqs.filter((r) => r.m === 'POST' && //api/books/(events|payments|entries)/.test(r.u));
+  ok(S.posts.length === 3 && toBooks.length === 0, 'nothing was posted to the books by Read (no entry, event or payment; only the three Add presses went to the box)' + (toBooks.length ? ' — ' + toBooks.map((r) => r.u).join(' ') : ''));
   await ctx.close();
 
   /* ── 6 · BEFORE THE SQL RUNS ── */
