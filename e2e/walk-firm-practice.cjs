@@ -74,11 +74,24 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       ok(tag + ' the shop cards (Till, Marketing, Online shop) are hidden on a firm Home', cards.every((n) => n === 0), JSON.stringify(cards));
       ok(tag + ' no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), await page.evaluate(() => document.documentElement.scrollWidth + ' > ' + window.innerWidth));
       /* no heading wraps letter by letter: every column heading stays within two lines and no word of it is cut */
-      const heads = await page.evaluate(() => [...document.querySelectorAll('[data-testid="practice-list"] .cbl-hdr > *, [data-testid="practice-list"] .cbl-hdr [role="columnheader"]')].map((h) => ({ t: h.innerText.replace(/\s+/g, ' ').trim(), h: Math.round(h.getBoundingClientRect().height) })).filter((x) => x.t));
-      if (vp.tag === '1366') {
-        console.log(tag + ' headings: ' + JSON.stringify(heads));
-        ok(tag + ' no heading wraps letter by letter (each at most two lines tall)', heads.length > 0 && heads.every((x) => x.h <= 46), JSON.stringify(heads.filter((x) => x.h > 46)));
-      }
+      const cut = await page.evaluate(() => {
+        const out = [];
+        document.querySelectorAll('[data-testid="practice-list"] .cbl-hdr').forEach((hdr) => {
+          const walker = document.createTreeWalker(hdr, NodeFilter.SHOW_TEXT);
+          for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            const re = /\S+/g;
+            let m;
+            while ((m = re.exec(n.nodeValue))) {
+              const r = document.createRange();
+              r.setStart(n, m.index);
+              r.setEnd(n, m.index + m[0].length);
+              if (m[0].length > 2 && new Set([...r.getClientRects()].map((q) => Math.round(q.top))).size > 1) out.push(m[0]);
+            }
+          }
+        });
+        return out;
+      });
+      if (vp.tag === '1366') ok(tag + ' no heading is cut mid-word (a word of a heading sitting on two lines)', cut.length === 0, JSON.stringify(cut));
       const inline = await page.evaluate(() => { const r = document.querySelector('[data-testid^="practice-row-"]'); return r ? r.innerText.replace(/\s+/g, ' ').slice(0, 400) : ''; });
       console.log(tag + ' first row: ' + inline);
       ok(tag + ' status and Open books are in the first row (never dropped)', /Needs help|Watch|Doing well|Not enough/.test(inline) && /Open books/.test(inline), inline);

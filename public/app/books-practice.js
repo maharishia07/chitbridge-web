@@ -148,7 +148,7 @@
       num('status', 'Status', 180, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
-      num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }, { hfilter: 'queries' }),
+      num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
       num('bas', 'Return due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
       num('checked', 'Checked', 100, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, {}),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
