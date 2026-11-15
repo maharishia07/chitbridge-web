@@ -380,6 +380,7 @@
   function paintOpened(host) {
     root.CBBooksGrantView.mount(host, {
       call: call,
+      raw: function (path, headers) { return root.fetch((N.o.base || '') + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + N.o.token }, headers || {}) }); } /* a file: the same token and base as call, the answer left as bytes (cap-evidence.js) */,
       member: N.opened,
       stores: root.CBBooksActing.clientStores(N.stores, N.held),
       mountList: mountList, sheet: sheet, closeSheet: closeSheet,

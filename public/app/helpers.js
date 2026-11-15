@@ -415,6 +415,18 @@ var DAY_BOOK_KINDS = [
   ['Receipts', /received|receipt/, 'receipt'],
   ['Payments', /payment/, 'payment']
 ];
+/** ONE rule: the line of a Day book entry that names its party (the first with one): the owner Day book (cap-books.js bkDvParty) and the auditor Day book (books-grant-view.js) both read it */
+function dayBookPartyLine(entry) {
+  return ((entry && entry.lines) || []).filter(function (line) {
+    return line.party_name || line.party_id;
+  })[0];
+}
+/** "Kensington Strata · HP-INV-1": the party and the document number a Day book row stands on (R70: one source for the owner and the auditor); the entry's own words when it has neither (an opening, a hand-keyed journal) */
+function dayBookPartyRef(entry) {
+  var line = dayBookPartyLine(entry),
+    ref = entry && entry.source && entry.source.ref;
+  return [line && line.party_name, ref].filter(Boolean).join(' · ') || (entry && entry.narration) || '';
+}
 function dayBookKind(entry) {
   var type = String((entry && entry.event_type) || ''),
     sourceKind = String((entry && entry.source && entry.source.kind) || '');
