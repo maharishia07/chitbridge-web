@@ -55,6 +55,8 @@ button{font-family:inherit;cursor:pointer}
 .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line-3,#d8ccb0);border-top-color:var(--accent,#1f5f5b);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 dialog.sheet{border:1px solid var(--line,#e6dcc6);border-radius:14px;padding:20px;width:min(520px,96vw);max-height:92vh;overflow:auto;background:var(--surface,#fffdf8);color:var(--ink,#2a2418);position:relative}
+dialog.sheet.wide{width:min(980px,96vw)}
+dialog.sheet .bd-list{height:min(52vh,420px)}
 dialog.sheet::backdrop{background:var(--scrim,rgba(42,36,24,.4))}
 dialog.sheet h2{margin:0 0 4px;font-family:var(--serif);font-size:21px}
 dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:18px;color:inherit}
@@ -99,6 +101,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script src="/app/books-grant-member.js"></script>   <!-- ACC-176: My books — who can see my books -->
 <script src="/app/books-acting.js"></script>   <!-- ACC-176b: the one acting context — store, role, headers, banner, clear on a switch -->
 <script src="/app/books-actions-view.js"></script>   <!-- ACC-176b: the three queues — prepared by my team, to review, to accept -->
+<script src="/app/books-grant-drill.js"></script>   <!-- ACC-176c: the auditor drill: an account ledger, a journal entry -->
 <script src="/app/books-grant-view.js"></script>   <!-- ACC-176: Open books — a member's books, read only; for an adviser grant the firm's workspace -->
 <script src="/app/network-app.js"></script>
 <script>
