@@ -54,7 +54,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch();
-  const threw = [];
+  const threw = (globalThis.__threw = []);
   async function open(vp, who) {
     const ctx = await b.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
@@ -65,13 +65,14 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
       if (p === '/api/books/todo') return J(r, 200, []);
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.accounts.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events') return J(r, 200, books.eventsAnswer(EVENTS));
-      if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Business bank account', LEDGER, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: OPENING, closing_minor: CLOSING }));
-      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Harbour Plumbing', rail_chits: [], parties: [], may: { ask: { ok: true } } });
+      if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Business bank account', LEDGER, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: globalThis.__opening == null ? OPENING : globalThis.__opening, closing_minor: CLOSING }));
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Harbour Plumbing', rail_chits: [], parties: [], books: { parties: [], open_items: [] }, may: { ask: { ok: true } } });
       return J(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, who || OWNER);
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
+    p.on('console', (m) => { if ((m.type() === 'error' && !/Failed to load resource/.test(m.text())) || /bank-quiet/i.test(m.text())) threw.push('console: ' + m.text().slice(0, 200)); });
     await p.goto(base + '/accounts.html#bank');
     await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p };
@@ -139,6 +140,18 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(!sh.overlap, tag + ': the code chip does not sit over the close cross');
     ok(/Difference\s*A?\$?1,682\.25 = 10 lines not yet in your books/.test(sh.strip) && /Unexplained/.test(sh.strip) && !/Difference now/.test(sh.strip), tag + ': the sheet says the same one truth as the band (' + sh.strip.slice(0, 140) + ')');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet.png') });
+    /* M5 · a line nothing explained says what it can be, ON THE LINE, one step each (the engine's closed list) */
+    const ato = p.locator('#acc_sheet tr[data-line]', { hasText: 'ATO PAYMENT' });
+    ok(await ato.locator('[data-act="kind"]').count() >= 1, tag + ': the ATO payment line offers its one-step answers on the line (' + (await ato.locator('[data-act="kind"]').allTextContents()).join(' | ') + ')');
+    const r0 = await p.evaluate(() => BKSH.ctl.readyCount());
+    const taxBtn = ato.locator('[data-act="kind"][data-kind="tax_payment"]');
+    if (await taxBtn.count()) {
+      await taxBtn.click();
+      await p.waitForTimeout(300);
+      const r1 = await p.evaluate(() => BKSH.ctl.readyCount());
+      ok(r1 === r0 + 1, tag + ': one press on "Tax paid to the tax office" makes the ATO line ready (' + r0 + ' then ' + r1 + ')');
+      await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet-kind.png') });
+    }
     const before = await p.evaluate(() => { const d = document.querySelector('#acc_sheet [data-act="tick"],#acc_sheet [data-act="gst"][data-v="cash"],#acc_sheet [data-act="resolve"]'); if (d) d.click(); return { ready: BKSH.ctl.readyCount(), clicked: !!d }; });
     await p.mouse.click(4, Math.floor(vp.height / 2)); /* a press outside the sheet */
     await p.waitForTimeout(300);
@@ -153,9 +166,23 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     } else await p.click('[data-testid="bank-sheet-close"]');
     await ctx.close();
   }
+  /* B9 · the wrong account speaks ON THE PAGE, with both figures, and holds Add until it is answered */
+  {
+    globalThis.__opening = 1000000;
+    const w = await open({ width: 1366, height: 768 });
+    await load(w.p);
+    const said = await w.p.textContent('[data-testid="bank-opening-check"]').catch(() => '');
+    ok(said.includes('opens at A$18,500.00') && said.includes('show A$10,000.00'), 'wrong account: the page says what the statement opens at and what the books show (' + said.slice(0, 110) + ')');
+    ok(await w.p.locator('[data-testid="bank-sheet-open"]').isDisabled(), 'wrong account: Add is held until the question is answered');
+    await w.p.screenshot({ path: path.join(ASHOTS, 'bank-laptop-wrong-account.png') });
+    await w.p.click('[data-testid="bank-opening-go"]');
+    ok(await w.p.locator('[data-testid="bank-sheet-open"]').isEnabled() && await w.p.locator('[data-testid="bank-opening-check"]').count() === 0, 'wrong account: "It is right, go on" lifts the hold');
+    await w.ctx.close();
+    globalThis.__opening = null;
+  }
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await b.close(); srv.close();
   ok(...C.finish());
   console.log('\n  bank-monday-ui: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.log('  XX  the harness stopped: ' + e.message); process.exit(1); });
+})().catch((e) => { console.log('  XX  the harness stopped: ' + e.message + (globalThis.__threw && globalThis.__threw.length ? ' | page errors: ' + globalThis.__threw.slice(0, 3).join(' ; ') : '')); process.exit(1); });

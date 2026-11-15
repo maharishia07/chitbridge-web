@@ -225,7 +225,7 @@ const bankStorePanel = () =>
 function bankStorePaintLine() {
   const host = document.getElementById('bk_store'),
     slot = document.getElementById('bk_primary');
-  const quiet = document.querySelector('.bk-store');
+  const quiet = document.getElementById('bk_store_line');
   if (host) host.outerHTML = bankStorePanel();
   else if (quiet) {
     quiet.textContent = bankStoreLine();

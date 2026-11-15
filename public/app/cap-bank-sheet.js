@@ -87,6 +87,9 @@ function bkshPairing(lines) {
   (bankStoreState.posted || []).forEach((row) => {
     if (row.ref && row.entry_no) posted[row.ref] = row.entry_no;
   });
+  Object.keys(bkshBook().postedLocal || {}).forEach((ref) => {
+    posted[ref] = bkshBook().postedLocal[ref]; /* what this very session posted: its reply named the entry, so the pairing never waits for the log */
+  });
   const acct = bkshStatementAccount();
   return { line_refs: engine.project.refsOf(lines, acct.name || String(bkshBook().acct), lines), posted };
 }
@@ -166,7 +169,9 @@ async function bkshAdd(btn) {
   try {
     const done = await BKSH.ctl.postReady(() => {});
     bkshNoteAdded();
-    await bankRun(); /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
+    await bankRun();
+    bkshAcceptAdded(); /* the owner's own adds read as accepted at once, whichever way the sheet is closed later */
+    /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
     bkshEl('bks_say').textContent = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
   } catch (failure) {
@@ -175,28 +180,6 @@ async function bkshAdd(btn) {
   }
   BKSH.posting = false;
   bkshPaint();
-}
-/**
- * BNK-new-10: the lines the owner just added from the sheet were CONFIRMED by the owner (the press named what it reached), so each is accepted as it comes back matched: the accept mark names the entry
- * it made, and the bank log no longer lists it as posted-not-accepted. The refs added in this sheet session are remembered here; nothing is accepted that the sheet did not post.
- */
-function bkshNoteAdded() {
-  const results = (BKSH.ctl && BKSH.ctl.view().results) || {};
-  BKSH.added = BKSH.added || {};
-  Object.keys(results).forEach((ref) => {
-    if (results[ref] && results[ref].ok) BKSH.added[ref] = true;
-  });
-}
-/** accept each added line that now reads as matched, by its own client_ref (one to one by occurrence) */
-function bkshAcceptAdded() {
-  const added = BKSH.added || {},
-    parsed = bkshBook().parsed;
-  if (!parsed || !Object.keys(added).length) return;
-  const refs = bkshPairing(parsed.lines).line_refs || [];
-  (bkshBook().rows || []).forEach((row) => {
-    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(row, true);
-  });
-  BKSH.added = {};
 }
 /** the one step on a line the sheet cannot finish (a tax payment, a loan, a transfer): the ＋ Entry opens for that line, the sheet stays kept behind it. The entry is pre-filled by bankEntryPreset when the bank-match build provides it; else the date, amount and words of the line */
 function bkshEntry(key) {
@@ -213,7 +196,33 @@ function bkshEntry(key) {
   enOpen(preset);
   return { ok: true };
 }
-/** the sheet closed: the Bank view reads the books again so the lines that were added show as matched */
+/**
+ * BNK-new-10: the lines the owner just added from the sheet were CONFIRMED by the owner (the press named what it reached), so each is accepted as it comes back matched: the accept mark names the entry
+ * it made, and the bank log no longer lists it as posted-not-accepted. The refs added in this sheet session are remembered here; nothing is accepted that the sheet did not post.
+ */
+function bkshNoteAdded() {
+  const results = (BKSH.ctl && BKSH.ctl.view().results) || {};
+  BKSH.added = BKSH.added || {};
+  bkshBook().postedLocal = bkshBook().postedLocal || {};
+  Object.keys(results).forEach((ref) => {
+    if (results[ref] && results[ref].ok) {
+      BKSH.added[ref] = true;
+      if (results[ref].entry_no) bkshBook().postedLocal[ref] = results[ref].entry_no;
+    }
+  });
+}
+/** accept each added line that now reads as matched, by its own client_ref (one to one by occurrence) */
+function bkshAcceptAdded() {
+  const added = BKSH.added || {},
+    parsed = bkshBook().parsed;
+  if (!parsed || !Object.keys(added).length) return;
+  const refs = bkshPairing(parsed.lines).line_refs || [];
+  (bkshBook().rows || []).forEach((row) => {
+    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(row, true);
+  });
+  BKSH.added = {};
+}
+/** the sheet closed: the Bank view reads the books again so the lines that were added show as matched, and the owner's own adds are accepted */
 function bkshClose() {
   closeModal();
   if (typeof bankRun === 'function' && bkshBook().parsed) bankRun().then(bkshAcceptAdded).catch((failure) => bkQuiet('bank-sheet-close', failure));
@@ -248,7 +257,7 @@ async function bankSheetOpen() {
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
