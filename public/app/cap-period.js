@@ -74,7 +74,7 @@ function peList(r, k) {
 
 /* ── words: the server's sentence, its one fix button, and the calm line for "not migrated yet" ── */
 function peFix(msg, code) {
-  if (code === 'PERIOD_RETURN_OPEN') return { label: tx('Open Tax close'), tab: 'gstclose' }; /* ACC-204: the year close waits for every BAS period — branch on the code, never the prose */
+  if (code === 'PERIOD_RETURN_OPEN') return { label: txf('Open {name}', { name: peReturnName() }), tab: 'gstclose' }; /* ACC-204: the year close waits for every BAS period — branch on the code, never the prose */
   if (/locked|closed for good/i.test(msg)) return { label: tx('Open Month lock'), tab: 'lock' };
   return null;
 }
@@ -929,6 +929,7 @@ async function peGstView(body) {
   let ret = null;
   try {
     PE_RET.q = Object.assign({}, peRetRecall());
+    if (!PE_RET.q.period) PE_RET.q.on = await peBusyDay(); /* open on the quarter that has entries, as the Day book does */
     ret = await peReturnLoad();
   } catch (e) {
     body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
@@ -1209,10 +1210,26 @@ function peRetRecall() {
   }
 }
 const peRetDash = () => '<span style="color:var(--grey)">—</span>';
+/** the last day of the latest month WITH entries (the Day book's rule: GET /periods rows carry start_date, end_date, entries); '' when none, so the server's own default stands */
+async function peBusyDay() {
+  try {
+    const busy = ((await api('booksPeriods')) || {}).periods || [];
+    const last = busy
+      .filter((item) => Number(item.entries) > 0 && Number(item.period) >= 1 && item.end_date)
+      .map((item) => String(item.end_date).slice(0, 10))
+      .sort()
+      .pop();
+    return last || '';
+  } catch (_) {
+    return '';
+  }
+}
+/** what the shop calls its return — BAS, VAT return — before the server has answered (the pack's word), else the neutral "Tax close" */
+const peReturnName = () => PE_RET.word || (typeof packWord === 'function' && packWord('returnName')) || tx('Tax close');
 /** the return for the current picks; null when this shop's return is not read from the ledgers (India: 422 RETURN_FROM_RAIL) or the server predates the route (404) */
 async function peReturnLoad() {
   const q = {};
-  ['period', 'frequency', 'simpler', 'stagger', 'emirate'].forEach((item) => {
+  ['period', 'on', 'frequency', 'simpler', 'stagger', 'emirate'].forEach((item) => {
     if (PE_RET.q[item] != null && PE_RET.q[item] !== '') q[item] = String(PE_RET.q[item]);
   });
   /* TOUR-FIX1: the server ANSWERS a shop whose return is not read from the ledgers — 200 { form: null, code: RETURN_FROM_RAIL, why } — and the
@@ -1563,7 +1580,7 @@ async function peYearView(body) {
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
 function peYearFix(x) {
   const s = (x.name || '') + ' ' + (x.why || '');
-  if (x.code === 'PERIOD_RETURN_OPEN' || x.name === 'return_open') return { label: tx('Open Tax close'), tab: 'gstclose' }; /* ACC-204: the server's code first */
+  if (x.code === 'PERIOD_RETURN_OPEN' || x.name === 'return_open') return { label: txf('Open {name}', { name: peReturnName() }), tab: 'gstclose' }; /* ACC-204: the server's code first */
   if (/month|lock/i.test(s)) return { label: tx('Open Month lock'), tab: 'lock' };
   if (/suspense/i.test(s)) return { label: tx('Open the Day book'), tab: 'daybook' };
   if (/balance|trial/i.test(s)) return { label: tx('Open Trial balance'), tab: 'tb' };

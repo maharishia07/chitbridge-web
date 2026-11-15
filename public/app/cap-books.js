@@ -1418,7 +1418,7 @@ function payPaint() {
             );
           })
           .join('') +
-        '</tbody></table>';
+        '</tbody></table></div>';
   payLeftPaint();
   var list = payOpenWarnings();
   if (band) {
@@ -4954,7 +4954,7 @@ function bkLockNote(row, periodNo, mayLock, whyNot) {
   var taxPeriod = row && row.return,
     note = !mayLock && whyNot ? '<span data-testid="lk-why-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(whyNot)) + '</span>' : '';
   if (!taxPeriod || taxPeriod.closed) return note;
-  return note + '<span data-testid="lk-return-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{form} {label} not closed yet', { form: taxPeriod.form, label: taxPeriod.label })) + '</span>';
+  return note + ' <span data-testid="lk-return-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{form} {label} not closed yet', { form: taxPeriod.form, label: taxPeriod.label })) + '</span>';
 }
 /** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
 function bkPeriodOfDay(dayKey, lockState) {
@@ -5040,8 +5040,8 @@ async function bkLockView(body) {
   }
   var own = bkIsOwner();
   body.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px">' +
-    '<label>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;max-width:900px">' +
+    '<label style="max-width:420px">' +
     tx('Financial year') +
     bkFyPicker('lk_fy', 'lk_fy', 'width:100%') +
     '</label>' +
@@ -5084,7 +5084,7 @@ function bkLockRowsPaint() {
       : reopens
         ? tx('A locked month opens again with a reason. Close for good never opens.')
         : tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.');
-  el.innerHTML = bkMonths()
+  var rows = bkMonths()
     .map(function (item, index) {
       var p = index + 1,
         st = L.rows[L.fy + '|' + p] || 'open',
@@ -5094,26 +5094,24 @@ function bkLockRowsPaint() {
         why = x && x.lock && x.lock.why ? x.lock.why : '';
       if (own && st === 'open')
         b =
-          '<button data-cbsid="CMP042-B07"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="lk-lock-' +
+          '<button data-cbsid="CMP042-B07"' + bkMountAttribute('CMP042') + ' type="button"' + (may ? ' class="supact-pri"' : '') + ' data-testid="lk-lock-' +
           p +
           '"' +
           (may
             ? " onclick=\"bkLockDo('lock'," + p + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '"'
-            : ' disabled title="' + esc(tx(why)) + '"') +
+            : ' disabled style="opacity:.55;cursor:not-allowed" title="' + esc(tx(why)) + '"') +
           '>🔒 ' +
           tx('Lock') +
-          '</button>' +
-          bkLockNote(x, p, may, why);
+          '</button>';
       if (own && st === 'soft_locked')
         b =
-          '<button data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' data-testid="lk-unlock-' +
+          '<button data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-unlock-' +
           p +
           '" onclick="bkLockDo(\'unlock\',' +
           p +
           ')">🔓 ' +
           tx('Open again') +
-          '</button>' +
-          '<button data-cbsid="CMP042-B09"' + bkMountAttribute('CMP042') + ' data-testid="lk-hard-' +
+          '</button> <button data-cbsid="CMP042-B09"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-hard-' +
           p +
           '" onclick="bkLockDo(\'hard\',' +
           p +
@@ -5121,13 +5119,11 @@ function bkLockRowsPaint() {
           tx('Close for good') +
           '</button>';
       return (
-        '<div data-testid="lk-row-' +
+        '<tr data-testid="lk-row-' +
         p +
-        '" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 0;border-bottom:1px solid var(--line)">' +
-        '<b style="flex:1 1 52px">' +
+        '"><th scope="row">' +
         tx(item) +
-        '</b>' +
-        '<span data-testid="lk-state-' +
+        '</th><td data-testid="lk-state-' +
         p +
         '" data-state="' +
         esc(st) +
@@ -5135,20 +5131,38 @@ function bkLockRowsPaint() {
         (BK_PERIOD_SYM[st] || '') +
         ' ' +
         esc(tx(BK_PERIOD_WORD[st] || st)) +
-        '</span>' +
-        (x && (x.entries || x.sales_minor)
-          ? '<span data-testid="lk-figs-' +
-            p +
-            '" style="color:var(--grey);font-size:var(--fs-1)">' +
-            txf('{n} entries', { n: x.entries }) +
-            (x.sales_minor ? ' · ' + bkMoney(x.sales_minor) + ' ' + tx('sales') : '') +
-            '</span>'
-          : '') +
-        (b ? '<span class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin:0">' + b + '</span>' : '') +
-        '</div>'
+        '</td><td data-testid="lk-figs-' +
+        p +
+        '" class="num lk-ent">' +
+        esc(String((x && x.entries) || 0)) +
+        '</td><td class="num lk-sales">' +
+        (x && x.sales_minor ? bkMoney(x.sales_minor) : esc(tx('No sales'))) +
+        '</td><td class="lk-act">' +
+        b +
+        (b ? (may ? '' : '<button type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(why)) + '" data-full="' + esc(tx(why) + (x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(why)) + '" onclick="bkLockWhy(this)">' + esc(tx(why)) + '</button>') : '') +
+        '</td></tr>'
       );
     })
     .join('');
+  el.innerHTML =
+    '<style>@media(max-width:620px){.lk-t thead{display:none}.lk-t,.lk-t tbody{display:block}.lk-t tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}.lk-t td,.lk-t th{padding:0!important}.lk-t .lk-ent{display:none}.lk-t .lk-act{grid-column:1 / -1}.lk-t .lk-sales{text-align:right}}.lk-t button.lk-why{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;font:inherit!important;font-size:var(--fs-1)!important;font-weight:400!important;color:var(--grey)!important;text-align:left;cursor:pointer;display:inline-block;vertical-align:middle;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}@media(max-width:620px){.lk-t button.lk-why{display:block;margin:2px 0 0;max-width:100%}}.lk-t button.lk-why[aria-expanded=true]{white-space:normal;max-width:100%}.lk-box{max-height:calc(100vh - 340px);min-height:160px;overflow:auto}.lk-t th{position:sticky;top:0;background:var(--bg,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
+    '<div class="lk-box" data-testid="lk-box"><table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
+    tx('Month') +
+    '</th><th>' +
+    tx('State') +
+    '</th><th class="num">' +
+    tx('Entries') +
+    '</th><th class="num">' +
+    tx('Sales') +
+    '</th><th></th></tr></thead><tbody>' +
+    rows +
+    '</tbody></table></div>';
+}
+/** the reason line opens in place to the full sentence (tap or Enter), shut again on the next press */
+function bkLockWhy(node) {
+  var open = node.getAttribute('aria-expanded') !== 'true';
+  node.setAttribute('aria-expanded', open ? 'true' : 'false');
+  node.textContent = node.getAttribute(open ? 'data-full' : 'data-short');
 }
 /* lock or unlock one month, asking the server and flipping only that row */
 async function bkLockDo(what, period) {
