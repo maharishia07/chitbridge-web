@@ -63,8 +63,10 @@ function bkstSummary() {
   if (BKST.mode === 'error') return tx('Could not read the statements kept.');
   const data = BKST.data;
   if (!data || !data.files.length) return data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet');
-  const gaps = bkstMissing(data);
-  return gaps ? txf('{n} months missing', { n: gaps }) : tx('Every month is kept');
+  const gaps = bkstMissing(data),
+    last = data.files.map((file) => String(file.period_to || '').slice(0, 7)).filter(Boolean).sort().pop(),
+    kept = last ? bkstMonth(last) + ' ✓ · ' : '';
+  return kept + (gaps ? txf('{n} months missing', { n: gaps }) : tx('Every month is kept'));
 }
 function bankStmtPaint() {
   const host = bkstEl('bk_stmts');
@@ -74,7 +76,7 @@ function bankStmtPaint() {
   bkstOneDoor(ready);
   host.innerHTML =
     '<div class="bks-bar"><b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
-    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Show')) + '</button>' : '') +
+    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '') +
     '</div>' +
     (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + bkstJustReadHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the adviser or auditor you give access.')) + '</div>' : '');
 }

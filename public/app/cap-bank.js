@@ -611,6 +611,7 @@ function bankPaint() {
   bankLayout(true, lines);
   if (lines) bankList();
   else bankBrsPaint();
+  if (typeof bankStmtPaint === 'function') bankStmtPaint(); /* a statement is on screen: the Statements box folds to its one line (it may have opened before the kept statement came back) */
 }
 
 /** the words of the band, ONE truth: the statement's figure and the books' figure (both carried: the engine's BRS reads them), the gap between them and what it is made of, and what nobody explained.
