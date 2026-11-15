@@ -590,7 +590,7 @@
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
-  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
@@ -598,7 +598,7 @@
   function stretchable(c) {
     return !c.num && !c.money && !c.mono && c.pin !== 'end' && c.type !== 'num' && c.type !== 'money' && !/^(code|status|state|date|id|no|ref|type)$/i.test(String(c.label || c.key).trim());
   }
-  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }.
+  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows, avail) {
     var auto = {},
@@ -626,30 +626,52 @@
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
       auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
     });
-    /* R47: a list always fits its box. Over the width: the stretch column gives way first (it wraps), then the others shrink toward their minimum. A width the person dragged is theirs and is not touched. */
-    var fixed = 0, free = [];
+    /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
+       Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
+       3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
+    var fixed = 0, free = [], natural = {}, sc = null;
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') fixed += widthOf(I, c);
-      else free.push(c);
+      else { free.push(c); natural[c.key] = auto[c.key]; }
+      if (c.key === auto.stretch) sc = c;
     });
-    var need = function () { return free.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
-    var over = avail > 0 ? need() - avail : 0;
-    if (over > 0 && auto.stretch && auto[auto.stretch] != null) {
-      var sc = cols.filter(function (c) { return c.key === auto.stretch; })[0];
-      auto[sc.key] = Math.max(minW(I, sc), auto[sc.key] - over);
-      over = need() - avail;
-    }
-    for (var pass = 0; over > 0 && pass < 4; pass++) {
-      var room = free.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(I, c)); }, 0);
-      if (room <= 0) break;
-      var cut = Math.min(over, room);
-      free.forEach(function (c) {
-        var share = Math.max(0, auto[c.key] - minW(I, c));
-        auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
+    var live = free.slice(), hide = [];
+    var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
+    var squeeze = function (shrink) {
+      live.forEach(function (c) { auto[c.key] = natural[c.key]; });
+      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
+      if (sc && auto[sc.key] != null && over > 0) {
+        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
+        over = need() - avail;
+      }
+      for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
+        var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(I, c)); }, 0);
+        if (room <= 0) break;
+        var cut = Math.min(over, room);
+        others.forEach(function (c) {
+          var share = Math.max(0, auto[c.key] - minW(I, c));
+          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+        });
+        over = need() - avail;
+      }
+      return over;
+    };
+    var over = squeeze(false);
+    while (over > 0) {
+      var leave = null;
+      live.forEach(function (c) {
+        if (c !== sc && c.pin !== 'end' && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
       });
-      over = need() - avail;
+      if (!leave) break;
+      hide.push(leave.key);
+      live = live.filter(function (c) { return c !== leave; });
+      over = squeeze(false);
     }
+    if (over > 0) over = squeeze(true);
+    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(I, sc), auto[sc.key] - over); /* last resort: below its floor */
     I.auto = sample.length ? auto : null;
+    return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
   }
   function widthOf(I, c) {
     var w = I.s.widths[c.key];
@@ -1820,7 +1842,7 @@
     var m = matched(I),
       items = itemsOf(I, m.rows);
     if (m.rows.length && s.view === 'grid') {
-      autoFit(I, cols, m.rows, box.clientWidth - (leadOn(I) ? 34 : 0) - 2);
+      cols = autoFit(I, cols, m.rows, box.clientWidth - (leadOn(I) ? 34 : 0) - 2); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
       I.fitW = box.clientWidth;
       tpl = template(I, cols);
       hdr = headerHTML(I, cols, tpl, false);
