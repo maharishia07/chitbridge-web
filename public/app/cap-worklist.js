@@ -311,7 +311,7 @@ function wlRow(r, ctx, depth) {
      should not do that"*, and a row that disappears cannot say "someone already has this". Removing it would
      make two people picking the same sack MORE likely, not less. */
   return (
-    '<div data-testid="wl-row" data-state="' +
+    '<div data-cbsid="RAL002-C01" data-testid="wl-row" data-state="' +
     (done ? 'done' : 'open') +
     '" onclick="wlLine(&quot;' +
     r.line_id +
@@ -340,7 +340,7 @@ function wlRow(r, ctx, depth) {
      * the reader to choose between identical outcomes. A choice that has no consequence still costs a moment to
      * make, on every row.
      */
-    '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' +
+    '<span data-cbsid="RAL002-C02" data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' +
     r.line_id +
     '&quot;)"' +
     ' style="cursor:pointer;font-size:var(--fs-2);padding:2px 9px;border-radius:6px;color:var(--blue-2);background:var(--blue-tint-bg);font-weight:800">⋯</span>' +
@@ -402,7 +402,7 @@ function wlRollupText(rows) {
 }
 function wlHead(title, right, tone, id) {
   return (
-    '<div data-testid="wl-head"' +
+    '<div data-cbsid="RAL002-C03" data-testid="wl-head"' +
     (id ? ' onclick="wlToggle(&quot;' + esc(id) + '&quot;)"' : '') +
     ' style="' +
     (id ? 'cursor:pointer;' : '') +
@@ -466,7 +466,7 @@ function worklistScreen() {
 
   var chip = function (k, label, on, fn, testid) {
     return (
-      '<span data-testid="' +
+      '<span data-cbsid="RAL002-C04" data-testid="' +
       testid +
       '" onclick="' +
       fn +
@@ -486,7 +486,7 @@ function worklistScreen() {
     var on = sec === k;
     return (
       '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">' +
-      '<input type="checkbox" data-testid="wl-then-' +
+      '<input data-cbsid="RAL002-I01" type="checkbox" data-testid="wl-then-' +
       k +
       '" ' +
       (on ? 'checked' : '') +
@@ -513,7 +513,7 @@ function worklistScreen() {
     KEYS.map(function (x) {
       return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]);
     }).join('') +
-    '<input type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
+    '<input data-cbsid="RAL002-I02" type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
     esc(WL.due || '') +
     '" onchange="wlDue(this.value)" ' +
     'style="margin-inline-start:auto;font-size:var(--fs-2);padding:3px 7px;border:1px solid var(--line);border-radius:9px">' +
@@ -535,22 +535,22 @@ function worklistScreen() {
     (prim === 'item'
       ? ''
       : '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">' +
-        '<input type="checkbox" data-testid="wl-byitem" ' +
+        '<input data-cbsid="RAL002-I03" type="checkbox" data-testid="wl-byitem" ' +
         (WL.byItem === false ? '' : 'checked') +
         ' onchange="wlByItem()" style="width:15px;height:15px;accent-color:var(--blue)">total by product</label>') +
     /* ⚠️ SAY HOW MANY ARE HIDDEN. A list that quietly drops rows is a list people stop trusting the moment they
        notice — and they always notice. The count is the honest half of the filter. */
     (wlDoneCount(d2)
       ? '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">' +
-        '<input type="checkbox" data-testid="wl-showdone" ' +
+        '<input data-cbsid="RAL002-I04" type="checkbox" data-testid="wl-showdone" ' +
         (WL.showDone ? 'checked' : '') +
         ' onchange="wlDone()" style="width:15px;height:15px;accent-color:var(--blue)">show ' +
         wlDoneCount(d2) +
         ' done</label>'
       : '') +
     '<span style="margin-inline-start:auto;display:flex;gap:10px">' +
-    '<span data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">expand all</span>' +
-    '<span data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">collapse all</span>' +
+    '<span data-cbsid="RAL002-C05" data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">expand all</span>' +
+    '<span data-cbsid="RAL002-C06" data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">collapse all</span>' +
     '</span>' +
     '</div>' +
     body +
@@ -756,7 +756,7 @@ function wlRender(rows, keys, depth, path) {
       var head =
         depth === 0
           ? wlHead(caret + (tone === 'var(--disp)' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
-          : '<div onclick="wlToggle(&quot;' +
+          : '<div data-cbsid="RAL002-C07" onclick="wlToggle(&quot;' +
             esc(id) +
             '&quot;)" style="cursor:pointer;padding:7px ' +
             (ind - 2) +
@@ -1229,7 +1229,7 @@ function wlSec(k) {
 function wlSecHead(k, name, hint, tone) {
   var on = WLL.tab === k;
   return (
-    '<div data-testid="wl-sec-' +
+    '<div data-cbsid="RAL002-C08" data-testid="wl-sec-' +
     k +
     '" onclick="wlSec(&quot;' +
     k +
@@ -1395,7 +1395,7 @@ function wlRaidaRow(e) {
     '</div>' +
     '</div>' +
     (e.open && !e.inherited
-      ? '<span data-testid="wl-raida-close" onclick="wlRaidaClosing(&quot;' +
+      ? '<span data-cbsid="RAL002-C09" data-testid="wl-raida-close" onclick="wlRaidaClosing(&quot;' +
         e.raida_id +
         '&quot;)" title="Close this entry"' +
         ' style="flex:none;cursor:pointer;font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:2px 8px">' +
@@ -1411,7 +1411,7 @@ function wlRaidaRow(e) {
           .map(function (item) {
             var on = (WLL.raidaDisp || 'resolved') === item;
             return (
-              '<button type="button" data-testid="wl-raida-disp-' +
+              '<button data-cbsid="RAL002-B01" type="button" data-testid="wl-raida-disp-' +
               item +
               '" onclick="wlRaidaDisp(&quot;' +
               item +
@@ -1436,11 +1436,11 @@ function wlRaidaRow(e) {
           })
           .join('') +
         '</div><div style="display:flex;gap:7px">' +
-        '<input id="wl_raida_why" data-testid="wl-raida-why" placeholder="' +
+        '<input data-cbsid="RAL002-I05" id="wl_raida_why" data-testid="wl-raida-why" placeholder="' +
         esc(tx('What happened? (optional)')) +
         '"' +
         ' style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:var(--fs-2)">' +
-        '<button data-testid="wl-raida-close-go" onclick="wlRaidaClose(&quot;' +
+        '<button data-cbsid="RAL002-B02" data-testid="wl-raida-close-go" onclick="wlRaidaClose(&quot;' +
         e.raida_id +
         '&quot;)"' +
         ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:8px;padding:5px 12px">' +
@@ -1484,7 +1484,7 @@ function wlRaidaSec() {
      */
     out +=
       '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">' +
-      '<button data-testid="wl-raida-add" onclick="wlRaidaOpen()"' +
+      '<button data-cbsid="RAL002-B03" data-testid="wl-raida-add" onclick="wlRaidaOpen()"' +
       ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;' +
       'border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:9px;padding:6px 14px">' +
       '＋ ' +
@@ -1803,20 +1803,20 @@ function wlLineHTML(loading) {
          default, which is what pushed Save past the card edge — the row could not give way, so the button went
          over the side. With wrapping above and this here, the pair shrinks first and Save drops to its own line
          only when it genuinely cannot fit. */
-      '<select id="wl_who" data-testid="wl-who-sel" aria-label="' + esc(tx('Assigned to')) + '" style="flex:1 1 40%;min-width:0;font-size:var(--fs-3);padding:9px 11px;border:1px solid var(--line);border-radius:9px">' +
+      '<select data-cbsid="RAL002-S01" id="wl_who" data-testid="wl-who-sel" aria-label="' + esc(tx('Assigned to')) + '" style="flex:1 1 40%;min-width:0;font-size:var(--fs-3);padding:9px 11px;border:1px solid var(--line);border-radius:9px">' +
       opts +
       '</select>' +
       /* ⚠️ A DATE FIELD HAS A FLOOR, unlike the name beside it. Shrunk to 125px it rendered "11-08-202" — the
          YEAR cut off, which is the one part of a due date you cannot guess from context. min-width holds it at a
          readable size and the row wraps instead; a truncated date is worse than a second line. */
-      '<input id="wl_due" data-testid="wl-due-inp" type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
+      '<input data-cbsid="RAL002-I06" id="wl_due" data-testid="wl-due-inp" type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
       esc(String(r.due_date || '').slice(0, 10)) +
       '" style="flex:1 1 145px;min-width:145px;font-size:var(--fs-3);padding:9px 8px;border:1px solid var(--line);border-radius:9px">' +
       wlBtn('Save', 'wl-line-save', 'wlLineSave()', true) +
       '</div>' +
       /* ⚠️ THIS ONE IS DELIBERATELY FULL WIDTH — it is the section's own verb, not a field's companion, so .btn's
          width:100% is right here. Kept explicit so it reads as a choice rather than the bug the others had. */
-      '<div style="margin-top:8px"><button class="btn" data-testid="wl-mark-done" onclick="wlSetState(' +
+      '<div style="margin-top:8px"><button data-cbsid="RAL002-B04" class="btn" data-testid="wl-mark-done" onclick="wlSetState(' +
       (done ? '&quot;open&quot;' : '&quot;done&quot;') +
       ')" style="width:100%;margin:0;padding:11px">' +
       (done ? '↩ Reopen this subtask' : '✓ Mark this subtask done') +
@@ -1890,7 +1890,7 @@ function wlLineHTML(loading) {
     '<div class="mfoot"><button data-cbsid="CMP005" onclick="wlCardClose()">' +
     tx('Close') +
     '</button>' +
-    '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' +
+    '<button data-cbsid="RAL002-B05" data-testid="wl-open-order" onclick="wlOpen(&quot;' +
     r.chit_id +
     '&quot;)">' +
     tx('Open the order') +
@@ -1931,7 +1931,7 @@ function wlLineHTML(loading) {
 function wlMatPickHTML() {
   var n = ((typeof STORE !== 'undefined' && STORE.catalogue) || []).length;
   return (
-    '<button type="button" data-testid="wl-open-catalogue" onclick="wlMatOpen()"' +
+    '<button data-cbsid="RAL002-B06" type="button" data-testid="wl-open-catalogue" onclick="wlMatOpen()"' +
     ' style="width:100%;padding:9px 12px;margin-bottom:9px;border:1px dashed var(--line);border-radius:9px;' +
     'background:var(--card);color:var(--on-card);font-size:var(--fs-2);cursor:pointer;text-align:start">' +
     '🛒 ' +

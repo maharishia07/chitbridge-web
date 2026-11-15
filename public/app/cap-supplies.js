@@ -63,10 +63,10 @@ function supPaint() {
 
   var head =
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' +
-    '<button class="composebtn pri" data-testid="supply-add" onclick="supAddModal()">+ ' +
+    '<button data-cbsid="SCR009-B01" class="composebtn pri" data-testid="supply-add" onclick="supAddModal()">+ ' +
     tx('Add a supply') +
     '</button>' +
-    '<button class="composebtn" data-testid="supply-buy" onclick="supBuyModal()">🧾 ' +
+    '<button data-cbsid="SCR009-B02" class="composebtn" data-testid="supply-buy" onclick="supBuyModal()">🧾 ' +
     tx('Record a purchase') +
     '</button>' +
     '</div>' +
@@ -150,7 +150,7 @@ function supRow(s) {
     '</div>' +
     kept +
     (s.keep_stock
-      ? '<button class="btn2" data-testid="supply-use" onclick="supUseModal(\'' +
+      ? '<button data-cbsid="SCR009-B03" class="btn2" data-testid="supply-use" onclick="supUseModal(\'' +
         esc(s.supply_item_id) +
         "','" +
         esc(s.name) +
@@ -171,15 +171,15 @@ function supAddModal() {
       '<div style="font-size:var(--fs-1);color:var(--grey);margin:6px 0 12px;line-height:1.6">' +
       tx('Something the shop uses. It will never appear on your storefront.') +
       '</div>' +
-      '<input class="inp" id="sup_name" data-testid="supply-name" placeholder="' +
+      '<input data-cbsid="SCR009-I01" class="inp" id="sup_name" data-testid="supply-name" placeholder="' +
       tx('What is it?') +
       '" style="width:100%;margin-bottom:8px">' +
-      '<input class="inp" id="sup_unit" data-testid="supply-unit" placeholder="' +
+      '<input data-cbsid="SCR009-I02" class="inp" id="sup_unit" data-testid="supply-unit" placeholder="' +
       tx('Unit (piece, can, box)') +
       '" style="width:100%;margin-bottom:10px">' +
       /* ⭐ THE MATERIALITY CHOICE, in a shopkeeper's words and defaulting to the cheaper answer */
       '<label style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-2);cursor:pointer">' +
-      '<input type="checkbox" id="sup_keep" data-testid="supply-keep" style="margin-top:3px">' +
+      '<input data-cbsid="SCR009-I03" type="checkbox" id="sup_keep" data-testid="supply-keep" style="margin-top:3px">' +
       '<span>' +
       tx('Count how many are left') +
       '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">' +
@@ -246,12 +246,12 @@ function supBuyModal(from) {
       tx('Something you bought for the shop from outside ChitBridge — a cash bill from the shop down the road.') +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:8px">' +
-      '<input class="inp" id="sup_from" data-testid="supply-from" placeholder="' +
+      '<input data-cbsid="SCR009-I04" class="inp" id="sup_from" data-testid="supply-from" placeholder="' +
       tx('Who from') +
       '" style="flex:1" value="' +
       esc(from || '') +
       '">' +
-      '<input class="inp" id="sup_ref" data-testid="supply-ref" placeholder="' +
+      '<input data-cbsid="SCR009-I05" class="inp" id="sup_ref" data-testid="supply-ref" placeholder="' +
       tx('Bill number') +
       '" style="width:140px">' +
       '</div>' +
@@ -259,14 +259,14 @@ function supBuyModal(from) {
       opts +
       '</datalist>' +
       '<div id="sup_lines"></div>' +
-      '<button class="btn2" data-testid="supply-addline" onclick="supAddLine()" style="margin-top:6px">+ ' +
+      '<button data-cbsid="SCR009-B04" class="btn2" data-testid="supply-addline" onclick="supAddLine()" style="margin-top:6px">+ ' +
       tx('another line') +
       '</button>' +
       '<div style="display:flex;gap:8px;margin-top:16px">' +
       '<button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button class="composebtn pri" style="flex:1" data-testid="supply-record" onclick="supBuy()">' +
+      '<button data-cbsid="SCR009-B05" class="composebtn pri" style="flex:1" data-testid="supply-record" onclick="supBuy()">' +
       tx('Record it') +
       '</button>' +
       '</div></div>',
@@ -288,22 +288,22 @@ function supAddLine() {
   var node = document.createElement('div');
   node.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
   node.innerHTML =
-    '<input class="inp" list="sup_known" data-l="' +
+    '<input data-cbsid="SCR009-I06" class="inp" list="sup_known" data-l="' +
     i +
     '" data-f="name" data-testid="supply-l-name" placeholder="' +
     tx('What') +
     '" style="flex:1">' +
-    '<input class="inp" type="number" data-l="' +
+    '<input data-cbsid="SCR009-I07" class="inp" type="number" data-l="' +
     i +
     '" data-f="qty" data-testid="supply-l-qty" placeholder="' +
     tx('Qty') +
     '" style="width:70px">' +
-    '<input class="inp" data-l="' +
+    '<input data-cbsid="SCR009-I08" class="inp" data-l="' +
     i +
     '" data-f="unit" placeholder="' +
     tx('Unit') +
     '" style="width:70px">' +
-    '<input class="inp" type="number" data-l="' +
+    '<input data-cbsid="SCR009-I09" class="inp" type="number" data-l="' +
     i +
     '" data-f="cost" data-testid="supply-l-cost" placeholder="' +
     tx('Cost each') +
@@ -415,14 +415,14 @@ function supUseModal(id, name) {
       '<div style="font-size:var(--fs-1);color:var(--grey);margin:6px 0 12px;line-height:1.6">' +
       tx('How many did the shop use? This is what turns a purchase into something you can read later.') +
       '</div>' +
-      '<input class="inp" type="number" id="sup_use_qty" data-testid="supply-use-qty" placeholder="' +
+      '<input data-cbsid="SCR009-I10" class="inp" type="number" id="sup_use_qty" data-testid="supply-use-qty" placeholder="' +
       tx('How many') +
       '" style="width:100%">' +
       '<div style="display:flex;gap:8px;margin-top:16px">' +
       '<button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button class="composebtn pri" style="flex:1" data-testid="supply-use-save" onclick="supUse(\'' +
+      '<button data-cbsid="SCR009-B06" class="composebtn pri" style="flex:1" data-testid="supply-use-save" onclick="supUse(\'' +
       esc(id) +
       '\')">' +
       tx('Record') +
