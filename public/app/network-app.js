@@ -23,7 +23,7 @@
  */
 (function (root) {
   'use strict';
-  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, ended: {}, opened: null };
+  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, ended: {}, seats: {}, opened: null };
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
   function T(s) {
@@ -79,6 +79,7 @@
     ]).then(function (reply) {
       N.held = (reply[2] || {}).live || {};
       N.ended = (reply[2] || {}).ended || {};
+      N.seats = (reply[2] || {}).seats || {};
       var s = (reply[0] && reply[0].store) || {};
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
@@ -343,8 +344,38 @@
     if (!button) return;
     var id = button.getAttribute('data-open-books');
     var store = N.stores.filter(function (s) { return String(s.entity_id) === id; })[0];
-    N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || (store && store.name) || T('this store'), role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
+    openSeat(id, (N.held[id] && N.held[id].grantor_name) || (store && store.name) || T('this store'));
+  }
+  /** a firm that holds BOTH an auditor and an adviser grant on one client never gets one picked silently: it chooses the seat once, and the choice is remembered per client */
+  var SEAT_KEY = 'cb_seat:';
+  function quietSeat(failure) {
+    if (root.cbQuiet) root.cbQuiet('network:seat', failure); /* storage blocked: the person is asked again next time */
+  }
+  function rememberedSeat(id) {
+    try { return root.localStorage.getItem(SEAT_KEY + id); } catch (failure) { quietSeat(failure); return null; } /* no storage: ask each time */
+  }
+  function sitAs(id, name, preset) {
+    N.held[id] = N.seats[id][preset];
+    try { root.localStorage.setItem(SEAT_KEY + id, preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
+    N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: N.held[id].posting };
     paint();
+  }
+  function openSeat(id, name) {
+    var seats = N.seats[id] || {};
+    var saved = rememberedSeat(id);
+    if (!(seats.auditor && seats.adviser)) {
+      N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
+      paint();
+    } else if (seats[saved]) sitAs(id, name, saved);
+    else {
+      sheet('<h2 data-testid="nw-seat-title">' + esc(T('How do you want to open')) + ' ' + esc(name) + '?</h2>' +
+        '<p class="sub">' + esc(T('Your firm holds two kinds of access. Pick the one you are acting as now; it is remembered for this client.')) + '</p>' +
+        '<div class="nw-acts"><button data-cbsid="NET001-B07" type="button" class="act" data-seat="auditor" data-testid="nw-seat-auditor">' + esc(T('Open as auditor')) + '</button>' +
+        '<button data-cbsid="NET001-B08" type="button" class="act quiet" data-seat="adviser" data-testid="nw-seat-adviser">' + esc(T('Open as adviser')) + '</button></div>');
+      Array.prototype.forEach.call($('nw_sheet').querySelectorAll('[data-seat]'), function (b) {
+        b.onclick = function () { closeSheet(); sitAs(id, name, b.getAttribute('data-seat')); };
+      });
+    }
   }
   function paintOpened(host) {
     root.CBBooksGrantView.mount(host, {
@@ -353,7 +384,7 @@
       stores: root.CBBooksActing.clientStores(N.stores, N.held),
       mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: N.o.onEnded,
-      onSwitch: function (id, name) { N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting }; paint(); },
+      onSwitch: function (id, name) { openSeat(id, (N.held[id] && N.held[id].grantor_name) || name); },
       onBack: function () {
         var id = N.opened.id;
         N.opened = null;

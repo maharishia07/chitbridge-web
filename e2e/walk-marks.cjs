@@ -24,7 +24,7 @@ const SHOTS = process.env.MARKS_SHOTS || path.join(__dirname, 'shots');
 
 W.run('marks', async (w) => {
   const { page, ctx, base } = w;
-  const S = { daybookQueries: [], calls: [], marks: {}, msgs: [], sets: [], replies: [] };
+  const S = { both: false, daybookQueries: [], calls: [], marks: {}, msgs: [], sets: [], replies: [] };
   const J = (r, status, body) => C.json(r, status, body);
   const example = (key) => { const hit = C.load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };
   const VOC = [{ kind: 'checked', label: 'Checked', class: 'clear', note: 'none' }, { kind: 'query', label: 'Query', class: 'open', note: 'required' }, { kind: 'on_hold', label: 'On hold', class: 'hold', note: 'optional' }];
@@ -44,7 +44,7 @@ W.run('marks', async (w) => {
     S.calls.push({ m, p, q: u.search, h });
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }] });
-    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], received: [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, state: 'live', expires_at: DAY(200) }] });
+    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], received: [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, state: 'live', preset: 'auditor', expires_at: DAY(200) }].concat(S.both ? [{ grant_id: 'c0000000-0000-4000-8000-000000000002', grantor_entity: MEMBER, grantee_entity: BRAND, state: 'live', preset: 'adviser', expires_at: DAY(200) }] : []) });
     if (p === '/api/marks' && m === 'GET' && u.searchParams.get('open')) {
       const open = Object.keys(S.marks).map((id) => mark(id, h)).filter((x) => x.open).map((x) => Object.assign(x, { subject_label: 'JV-000' + (E.indexOf(x.subject_id) + 1), posting_date: '2026-11-04' }));
       const checked = Object.keys(S.marks).filter((id) => S.marks[id].class === 'clear' && !S.marks[id].altered).length;
@@ -70,7 +70,7 @@ W.run('marks', async (w) => {
       const ex = example('GET /api/books/daybook');
       return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [0, 1, 2].map((n) => Object.assign({}, ex.entries[0], entry(n), { mark: mark(E[n], h) })), count: 3, mark_actions: acts(h), mark_vocabulary: VOC }));
     }
-    if (p === '/api/books/periods' && h['x-books-for']) return J(r, 200, { periods: [{ fiscal_year: '2026-27', period: 5, start_date: '2026-11-01', end_date: '2026-11-30', status: 'open', entries: 3, sales_minor: 370200 }, { fiscal_year: '2026-27', period: 6, start_date: '2026-12-01', end_date: '2026-12-31', status: 'open', entries: 0, sales_minor: 0 }] }); /* the real shape: period is the fiscal month number, the dates are the range; the latest month is EMPTY */
+    if (p === '/api/books/periods' && h['x-books-for']) return J(r, 200, { periods: [{ fiscal_year: '2026-27', period: 5, start_date: '2026-11-01', end_date: '2026-11-30', status: 'open', entries: 3, sales_minor: 370200 }, { fiscal_year: '2026-27', period: 6, start_date: '2026-12-01', end_date: '2026-12-31', status: 'open', entries: 0, sales_minor: 0 }, { fiscal_year: '2098-99', period: 7, start_date: '2099-01-01', end_date: '2099-01-31', status: 'open', entries: 0, sales_minor: 0 }] }); /* the real shape: period is the fiscal month number, the dates are the range; the latest month is EMPTY */
     if (/^\/api\/books\/(trial-balance|pl|bs|dues|periods)$/.test(p) && h['x-books-for']) { const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { entries: [], parties: [], periods: [] })); }
     return J(r, 200, {});
   });
@@ -182,6 +182,25 @@ W.run('marks', async (w) => {
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     const back = await page.evaluate((id) => !!document.activeElement.closest('[data-mark*="' + id + '"]'), E[1]);
     return { ok: inSheet && back, saw: 'focus in the sheet ' + inSheet + ' · back on the chip ' + back };
+  });
+  await w.step('M1', 'Closed months: month names, the sales as the server sent them, and no month that has not begun', async () => {
+    await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /November 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
+    const list = await txt(T('bv-list')); await shot('13-closed-months');
+    return { ok: list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
+  });
+  await w.step('S1', 'two grants on one client: the firm is asked which seat, nothing is picked silently; "Open as auditor" opens read only with no Prepare a journal', async () => {
+    S.both = true; await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
+    await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('nw-seat-title'), { timeout: 8000 });
+    const asked = await page.locator(T('bv-band')).count(); await shot('14-seat-choice');
+    await page.click(T('nw-seat-auditor')); await page.waitForSelector(T('bv-band'), { timeout: 8000 });
+    const band = await txt(T('bv-band')), prepare = await page.locator(T('bv-prepare')).count();
+    return { ok: asked === 0 && /read only/.test(band) && prepare === 0, saw: 'books before choice ' + asked + ' · ' + band.slice(0, 50) + ' · prepare ' + prepare };
+  });
+  await w.step('S2', 'the seat is remembered per client: the next Open books goes straight in, no second question', async () => {
+    await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
+    await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 8000 });
+    const asked = await page.locator(T('nw-seat-title')).count();
+    return { ok: asked === 0, saw: 'seat questions ' + asked };
   });
   await w.step('X1', 'a write by the owner is refused in the server\'s words (he cannot set a mark)', async () => {
     const r = await page.evaluate(async (a) => { const res = await fetch('/api/marks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adopter: 'acc.audit', subject_id: a, kind: 'checked' }) }); return res.status; }, E[2]);
