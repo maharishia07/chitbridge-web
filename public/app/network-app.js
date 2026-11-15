@@ -348,12 +348,15 @@
   }
   /** a firm that holds BOTH an auditor and an adviser grant on one client never gets one picked silently: it chooses the seat once, and the choice is remembered per client */
   var SEAT_KEY = 'cb_seat:';
+  function quietSeat(failure) {
+    if (root.cbQuiet) root.cbQuiet('network:seat', failure); /* storage blocked: the person is asked again next time */
+  }
   function rememberedSeat(id) {
-    try { return root.localStorage.getItem(SEAT_KEY + id); } catch (_) { return null; } /* no storage: ask each time */
+    try { return root.localStorage.getItem(SEAT_KEY + id); } catch (failure) { quietSeat(failure); return null; } /* no storage: ask each time */
   }
   function sitAs(id, name, preset) {
     N.held[id] = N.seats[id][preset];
-    try { root.localStorage.setItem(SEAT_KEY + id, preset); } catch (_) { /* a seat not remembered is asked again */ }
+    try { root.localStorage.setItem(SEAT_KEY + id, preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
     N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: N.held[id].posting };
     paint();
   }
