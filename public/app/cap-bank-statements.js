@@ -5,7 +5,7 @@
  * ⭐ NO SECOND PARSER AND NO MONEY: the period is what CBBankRecon.parse already returned (bankStmtPeriod); Read hands the text to bankTake, which parses, hashes, projects and posts as it always did. A file with no period is refused, never guessed.
  * ⭐ EVERY FILE IS FILED AGAINST AN ACCOUNT AND A PERIOD (Athi, 15 Nov): the account is required; "Oct missing" is a cell of the grid, with a shortcut that picks that account.
  * ⭐ THE WORDS: "Kept on our server for the record period; visible to the adviser or auditor you give access." is the box's own line (cb-compliance owns the final text). The plain picker above keeps its own, still-true device-only sentence.
- * IDS       BKS014-B27 (Show/Hide the box) · BKS014-I02 (the account label) · BKS014-I03 (the statement file) · BKS014-B28 (Read) · BKS014-B29 (Download) · BKS014-B30 (a missing month: add for it); the account select and Add button are the page's library builders (peSel BKS016-S01, peBtn BKS016-B02).
+ * IDS       BKS014-B41 (Show/Hide the box) · BKS014-I12 (the account label) · BKS014-I13 (the statement file) · BKS014-B42 (Read) · BKS014-B43 (Download) · BKS014-B44 (a missing month: add for it); the account select and Add button are the page's library builders (peSel BKS016-S01, peBtn BKS016-B02).
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
@@ -73,7 +73,7 @@ function bankStmtPaint() {
   const ready = BKST.mode === 'server';
   host.innerHTML =
     '<div class="bks-bar"><b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
-    (ready ? '<button data-cbsid="BKS014-B27" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Show')) + '</button>' : '') +
+    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Show')) + '</button>' : '') +
     '</div>' +
     (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the adviser or auditor you give access.')) + '</div>' : '');
 }
@@ -89,8 +89,8 @@ function bkstAddHtml() {
   return (
     '<div class="bks-add" data-testid="bank-stmts-add">' +
     peField('bks_acct', 'Bank account', peSel('bks_acct', banks.map((item) => [item.code, item.name]), BKST.pickAcct, ' onchange="BKST.pickAcct=this.value"')) +
-    peField('bks_label', 'Label, such as ..1234', '<input data-cbsid="BKS014-I02" class="inp" id="bks_label" data-testid="bank-stmts-label" maxlength="40" autocomplete="off" value="' + bkstE(bkstLabelOf(BKST.pickAcct)) + '">') +
-    peField('bks_file', 'Statement file (CSV or JSON)', '<input data-cbsid="BKS014-I03" class="inp" type="file" id="bks_file" data-testid="bank-stmts-file" accept=".csv,.json,.txt,text/csv,application/json">') +
+    peField('bks_label', 'Label, such as ..1234', '<input data-cbsid="BKS014-I12" class="inp" id="bks_label" data-testid="bank-stmts-label" maxlength="40" autocomplete="off" value="' + bkstE(bkstLabelOf(BKST.pickAcct)) + '">') +
+    peField('bks_file', 'Statement file (CSV or JSON)', '<input data-cbsid="BKS014-I13" class="inp" type="file" id="bks_file" data-testid="bank-stmts-file" accept=".csv,.json,.txt,text/csv,application/json">') +
     peBtn('bank-stmts-add-go', 'Add statement', 'bankStmtAdd()') +
     '</div><div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>'
   );
@@ -162,7 +162,7 @@ function bkstGridHtml() {
           const cell = cellOf(account, month) || { missing: true, file_ids: [] };
           if (cell.missing)
             return (
-              '<td class="bks-gap"><button data-cbsid="BKS014-B30" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + bkstE(account.account_id) + '-' + bkstE(month) + '" data-acct="' + bkstE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkstE(tx('Add a statement for this account')) + '">' + bkstE(txf('{month} missing', { month: bkstMonth(month) })) + '</button></td>'
+              '<td class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + bkstE(account.account_id) + '-' + bkstE(month) + '" data-acct="' + bkstE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkstE(tx('Add a statement for this account')) + '">' + bkstE(txf('{month} missing', { month: bkstMonth(month) })) + '</button></td>'
             );
           const crossed = cell.file_ids.some((id) => fileOf(id).overlaps);
           return '<td class="bks-have" data-testid="bank-stmts-have-' + bkstE(account.account_id) + '-' + bkstE(month) + '"><span aria-hidden="true">✓</span> ' + bkstE(String(cell.file_ids.length)) + (crossed ? ' <span class="bks-flag">' + bkstE(tx('overlap')) + '</span>' : '') + '</td>';
@@ -195,8 +195,8 @@ function bkstFilesHtml() {
     .map(
       (file) =>
         '<tr data-testid="bank-stmts-file-' + bkstE(file.id) + '"><td>' + bkstE(bkstAccountName(bkstAccountOf(file.account_id))) + '</td><td>' + bkstE(bkDate(file.period_from)) + ' – ' + bkstE(bkDate(file.period_to)) + (file.overlaps ? ' <span class="bks-flag">' + bkstE(tx('overlap')) + '</span>' : '') + '</td><td class="bks-name">' + bkstE(file.name) + '</td><td>' + bkstE(by(file)) + '</td><td class="bks-acts">' +
-        '<button data-cbsid="BKS014-B28" type="button" class="bks-btn" data-testid="bank-stmts-read" data-file="' + bkstE(file.id) + '" onclick="bankStmtRead(this)">' + bkstE(tx('Read')) + '</button>' +
-        '<button data-cbsid="BKS014-B29" type="button" class="bks-btn" data-testid="bank-stmts-download" data-file="' + bkstE(file.id) + '" onclick="bankStmtDownload(this)">' + bkstE(tx('Download')) + '</button></td></tr>'
+        '<button data-cbsid="BKS014-B42" type="button" class="bks-btn" data-testid="bank-stmts-read" data-file="' + bkstE(file.id) + '" onclick="bankStmtRead(this)">' + bkstE(tx('Read')) + '</button>' +
+        '<button data-cbsid="BKS014-B43" type="button" class="bks-btn" data-testid="bank-stmts-download" data-file="' + bkstE(file.id) + '" onclick="bankStmtDownload(this)">' + bkstE(tx('Download')) + '</button></td></tr>'
     )
     .join('');
   return '<div class="bks-wrap"><table class="bks-files" data-testid="bank-stmts-files"><thead><tr><th scope="col">' + bkstE(tx('Account')) + '</th><th scope="col">' + bkstE(tx('Period')) + '</th><th scope="col">' + bkstE(tx('File')) + '</th><th scope="col">' + bkstE(tx('Added by')) + '</th><th scope="col"></th></tr></thead><tbody>' + rows + '</tbody></table></div>';

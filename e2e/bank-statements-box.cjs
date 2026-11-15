@@ -172,7 +172,7 @@ function stand(pending) {
   await c2.ctx.close();
 
   /* ── 7 · IDS · NO ERROR ── */
-  const ids = ['BKS014-I02', 'BKS014-I03', 'BKS014-B27', 'BKS014-B28', 'BKS014-B29', 'BKS014-B30'];
+  const ids = ['BKS014-I12', 'BKS014-I13', 'BKS014-B41', 'BKS014-B42', 'BKS014-B43', 'BKS014-B44'];
   const src = fs.readFileSync(path.join(PUB, 'app', 'cap-bank-statements.js'), 'utf8');
   ok(ids.every((id) => src.indexOf('data-cbsid="' + id + '"') >= 0), 'every control the box draws wears its id (' + ids.join(' ') + ')');
   ok(!/\.parse\(/.test(src.replace(/CBBankRecon\.parse\(text, \{ format: 'auto'[^\n]*\n/, '')), 'the box holds no second parser: its only parse call is the reader\'s own, for the period');
