@@ -181,7 +181,7 @@ W.run('marks', async (w) => {
     if (!(await page.locator(T('bell-row')).isVisible())) await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
     const off = await page.$eval(T('bell-row'), (b) => b.disabled);
     await page.click(T('bell-row')); await page.waitForSelector(T('mk-sheet'), { timeout: 8000 }); await shot('06c-owner-bell-opens-thread');
-    const q = await txt(T('mk-question')), title = await txt(T('mk-title'));
+    await page.waitForSelector(T('msg-body'), { timeout: 8000 }); const q = await txt(T('mk-question')), title = await txt(T('mk-title'));
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     return { ok: !off && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
   });
