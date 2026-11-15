@@ -588,8 +588,39 @@
   function minW(I, c) {
     return Math.max(64, String(c.label || c.key).length * 9 + 40);
   }
+  /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
+     A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
+  var AUTO_CHAR = 8.4, AUTO_PAD = 28, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
+  function plainText(html) {
+    return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
+  }
+  /** the column that stretches: the one the page names (stretch: true), else the first that is not a number or the pinned amount */
+  function stretchKey(cols) {
+    var named = cols.filter(function (item) { return item.stretch; })[0];
+    if (named) return named.key;
+    var text = cols.filter(function (item) { return !item.num && item.pin !== 'end'; })[0];
+    return text ? text.key : null;
+  }
+  /** measure the rows once per paint: I.auto = { width per column key, stretch: key } */
+  function autoFit(I, cols, rows) {
+    var auto = { stretch: stretchKey(cols) };
+    var sample = rows.slice(0, AUTO_SAMPLE);
+    cols.forEach(function (c) {
+      if (typeof I.s.widths[c.key] === 'number') return;
+      var chars = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
+      sample.forEach(function (row) {
+        var text = plainText(cellOf(I, c, row));
+        var longest = text.trim().length;
+        if (longest > chars) chars = longest;
+      });
+      var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars * AUTO_CHAR + AUTO_PAD)));
+    });
+    I.auto = sample.length ? auto : null;
+  }
   function widthOf(I, c) {
     var w = I.s.widths[c.key];
+    if (typeof w !== 'number' && I.auto && typeof I.auto[c.key] === 'number') w = I.auto[c.key];
     if (typeof w !== 'number') w = Math.max(px(c.w, 140), minW(I, c));
     return Math.max(minW(I, c), w);
   }
@@ -609,7 +640,8 @@
       (leadOn(I) ? '34px ' : '') +
       cols
         .map(function (item) {
-          return widthOf(I, item) + 'px';
+          var free = I.auto && I.auto.stretch === item.key && typeof I.s.widths[item.key] !== 'number';
+          return free ? 'minmax(' + widthOf(I, item) + 'px,1fr)' : widthOf(I, item) + 'px';
         })
         .join(' ')
     );
@@ -1737,6 +1769,11 @@
     }
     var m = matched(I),
       items = itemsOf(I, m.rows);
+    if (m.rows.length && s.view === 'grid') {
+      autoFit(I, cols, m.rows);
+      tpl = template(I, cols);
+      hdr = headerHTML(I, cols, tpl, false);
+    }
     if (!m.rows.length) {
       var narrowed = isNarrowed(I);
       if (m.all.length && narrowed && !remote(I)) {
