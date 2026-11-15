@@ -172,7 +172,7 @@ of file each thing is; this says what already does the job.
 | 18 | `more` | `lab-kit.js` | idKey: |
 | 18 | `head` | `list-ctl.js` |  |
 | 18 | `resolve` | `page.js` |  |
-| 18 | `label` | `screen-id.js` |  |
+| 19 | `label` | `screen-id.js` |  |
 | 18 | `setting` | `books-store.js` | const missingToNull = (value) => (value == null ? null : |
 | 18 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
 | 18 | `notMigrated` | `crm-followups.js` |  |

@@ -4,6 +4,7 @@
  *
  * OWNS       ui.field(options) -> one HTML string (label, control, hint, error) · ui.field.read / set / error / focusFirstError (repaint locally, never rebuild the form) ·
  *            ui.field.parse (the one number reader: typed text + shop locale -> canonical ASCII decimal) · the one delegated input / change / focusout listener.
+ *            density:'compact' (a VARIANT of this part, not a new one): the control alone in a one-line list row, named by aria-label, a hint as a hidden description; the page class gives the look. `of` appends the row's own name to that label (data, never translated).
  * NOT YET    kind 'money' (own PR after this one: the cap-books helper move needs the M36 owners). It is refused here, never faked.
  * CALLED BY  a page that draws a field: shop.html first. Loaded AFTER app/ui.js (it reads ui.words, ui.escape, ui.style and ui.components from it).
  * KEYBOARD   a native control: Tab reaches it, the ring is 2 px --accent; a checkbox is a 44 px row; Enter in a text field commits nothing (a commit is a Save, which confirms).
@@ -17,7 +18,7 @@
 var CBUiField = (function () {
   var MOUNT_CODE = /^[A-Z]{3}\d{3}(?:-D\d{2})?-U\d{2,3}$/;
   var ALLOWED = ['mount', 'kind', 'label', 'id', 'name', 'key', 'value', 'hint', 'error', 'required', 'readonly', 'role', 'min', 'max', 'step', 'maxlength', 'accept', 'rows',
-    'autocomplete', 'inputmode', 'placeholder', 'testid', 'cls', 'data', 'attrs', 'onInput', 'onChange'];
+    'autocomplete', 'inputmode', 'placeholder', 'testid', 'cls', 'data', 'attrs', 'onInput', 'onChange', 'density', 'of'];
   /* the long tail a page may still pass: a closed name list, never free HTML (no on*, style, id, type, value, data-cbsid) */
   var ATTRS = ['list', 'pattern', 'spellcheck', 'autocapitalize', 'enterkeyhint', 'size', 'multiple', 'capture'];
   var KINDS = {
@@ -30,6 +31,7 @@ var CBUiField = (function () {
   };
   var DIGITS = [['٠', '٩'], ['۰', '۹'], ['०', '९']]; /* Arabic-Indic, Extended Arabic-Indic, Devanagari: each ten code points in a row */
   var HANDLERS = {};
+  var ID_OWNER = {};
   /* the error colour: the theme has no danger TEXT token (the page's own #b4453f is 2.98:1 on Dark), so it is the red pulled 30% toward the theme's --ink: dark red on Cream, light red on Dark, AA on both (the walk measures it) */
   var FIELD_STYLE =
     '@supports (color:color-mix(in srgb,currentcolor,currentcolor)){:root{--field-bad:color-mix(in srgb,var(--bad-source,#b4453f) 65%,var(--ink,#1d1b16))}}' +
@@ -49,6 +51,12 @@ var CBUiField = (function () {
     'border:1.5px dashed var(--field-edge,#85807C);border-radius:10px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--ink,#2a2418);background:var(--card,#fff);text-align:center}' +
     '.cbf .cbf-fb .cbf-in{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;min-height:0}' +
     '.cbf-fn{font-weight:400;color:var(--grey-3,var(--dim,#5e594d));overflow-wrap:anywhere}' +
+    /* density:'compact': the control stands alone in a one-line row (no wrapper, no label row); the page's own class gives its look, this adds only the state rules and the tap floor */
+    '.cbf-in.cbf-dn:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:1px}.cbf-in.cbf-dn[aria-invalid="true"]{border-color:var(--field-bad,#b4453f)}' +
+    'input.cbf-in.cbf-dn{min-height:32px;box-sizing:border-box}input[type="checkbox"].cbf-dn{min-height:0;width:20px;height:20px;margin:2px}.cbf-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+    '@media(max-width:700px){input.cbf-in.cbf-dn:not([type="checkbox"]){min-height:max(44px,var(--act-h,44px))}input[type="checkbox"].cbf-dn{-webkit-appearance:none;appearance:none;width:max(44px,var(--act-h,44px));height:max(44px,var(--act-h,44px));margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}' +
+    '.cbf-in.cbf-dn[type="checkbox"]::before{content:"";box-sizing:border-box;width:22px;height:22px;border:2px solid var(--field-edge,#85807C);border-radius:5px;background:var(--card,#fff)}' +
+    '.cbf-in.cbf-dn[type="checkbox"]:checked::before{background:var(--accent,#1f5f5b);border-color:var(--accent,#1f5f5b);box-shadow:inset 0 0 0 3px var(--card,#fff)}.cbf-in.cbf-dn[type="checkbox"]:disabled{opacity:.5}}' +
     '.cbf-suf{position:relative}.cbf .cbf-suf .cbf-in{padding-inline-end:30px}.cbf-suf b{position:absolute;inset-inline-end:10px;top:50%;margin-top:-4px;font-weight:400;color:var(--grey-3,var(--dim,#5e594d))}';
 
   function refuse(reason) {
@@ -152,7 +160,13 @@ var CBUiField = (function () {
     if (!MOUNT_CODE.test(options.mount || '')) refuse('mount must be a screen mount code like SHP001-U03');
     if (!KINDS[options.kind]) refuse('kind must be ' + Object.keys(KINDS).join(', '));
     if (!options.label || !String(options.label).trim()) refuse('label is required (the accessible name; a placeholder is never the name)');
+    checkDensity(options);
     checkHandlers(options);
+  }
+  /** density is compact or regular; compact is one line, so a file or a long text is refused */
+  function checkDensity(options) {
+    if (options.density !== undefined && options.density !== 'compact' && options.density !== 'regular') refuse('density is "compact" or "regular"');
+    if (options.density === 'compact' && (options.kind === 'file' || options.kind === 'long')) refuse('density "compact" is one line: text, number, date, time or checkbox, not ' + options.kind);
   }
   /** a handler is a function, never inline JavaScript; attrs is the closed name list */
   function checkHandlers(options) {
@@ -163,7 +177,20 @@ var CBUiField = (function () {
   function idOf(options) {
     if (options.id) return String(options.id);
     var tail = options.key === undefined || options.key === null ? '' : '-' + String(options.key).toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    return options.mount.toLowerCase() + tail;
+    return uniqueId(options.mount.toLowerCase() + tail, options.mount + '|' + String(options.key));
+  }
+  /** the id a key-made field gets: the first writer keeps it, a different key that sanitises to the same id gets a short hash of its own key, so two rows never share an id (and a redraw of the same key keeps its id) */
+  function uniqueId(id, owner) {
+    if (ID_OWNER[id] === undefined || ID_OWNER[id] === owner) { ID_OWNER[id] = owner; return id; }
+    var hashed = id + '-' + hashOf(owner);
+    if (ID_OWNER[hashed] !== undefined && ID_OWNER[hashed] !== owner) refuse('two keys make the same id (' + hashed + '); give one of them an id');
+    ID_OWNER[hashed] = owner;
+    return hashed;
+  }
+  function hashOf(text) {
+    var sum = 7;
+    for (var at = 0; at < text.length; at += 1) sum = (sum * 31 + text.charCodeAt(at)) % 1679616;
+    return sum.toString(36);
   }
   /** the reason a field is read-only: role {ok:false, why} (permission) outranks readonly:'sentence' (state); null when it can be typed in */
   function readonlyReason(options) {
@@ -172,20 +199,29 @@ var CBUiField = (function () {
     if (typeof options.readonly !== 'string' || !options.readonly.trim()) refuse('readonly: give the reason as a sentence; a locked field always says why');
     return options.readonly;
   }
+  /** density:'compact' (the one-line row variant of this same part; Material dense, Fluent small) */
+  function isCompact(options) {
+    return options.density === 'compact';
+  }
+  /** the hint and the locked reason as one sentence, through the catalogue */
+  function noteText(options, reason) {
+    return [options.hint, reason].filter(Boolean).map(function (text) { return library().words(String(text)); }).join(' · ');
+  }
   function describedBy(id, hasHint, hasError, hasName) {
     return [hasHint ? id + '-h' : '', hasError ? id + '-e' : '', hasName ? id + '-n' : ''].filter(Boolean).join(' ') || null;
   }
   /** the register and page-owned attributes: id, name, testid, class, data-* and the closed attrs list, all as the page wrote them */
   function ownedPairs(options, shape, id) {
     var own = [['data-cbsid', 'CMP055-' + shape.el], ['data-cbname', 'field'], ['data-cbmount', options.mount], ['data-cbkind', options.kind], ['id', id], ['name', options.name],
-      ['data-testid', options.testid], ['class', 'cbf-in' + (options.cls ? ' ' + options.cls : '')]];
+      ['data-testid', options.testid], ['class', 'cbf-in' + (isCompact(options) ? ' cbf-dn' : '') + (options.cls ? ' ' + options.cls : '')]];
     var data = Object.keys(options.data || {}).map(function (suffix) { return ['data-' + suffix, String(options.data[suffix])]; });
     var extra = Object.keys(options.attrs || {}).map(function (name) { return [name, options.attrs[name]]; });
-    return own.concat(data, extra);
+    var dense = isCompact(options) ? [['aria-label', library().words(String(options.label)) + (options.of ? ' ' + options.of : '')], ['title', noteText(options, null) || null]] : [];
+    return own.concat(data, extra, dense);
   }
   /** what the browser needs to type into it: keypad, direction, limits */
   function typingPairs(options, shape) {
-    return shapePairs(options, shape).concat([['placeholder', options.placeholder], ['autocomplete', options.autocomplete || shape.auto], ['inputmode', options.inputmode || shape.mode || null],
+    return shapePairs(options, shape).concat([['placeholder', options.placeholder ? library().words(String(options.placeholder)) : null], ['autocomplete', options.autocomplete || shape.auto], ['inputmode', options.inputmode || shape.mode || null],
       ['min', options.min], ['max', options.max], ['step', options.step], ['maxlength', options.maxlength], ['accept', options.accept]]);
   }
   /** the element's own type, rows and text direction (numbers, email and phone stay left-to-right on an Arabic page) */
@@ -195,7 +231,7 @@ var CBUiField = (function () {
   }
   /** required, locked, invalid and described-by: the state of the field */
   function statePairs(options, shape, id, reason) {
-    var hasNote = !!(options.hint || reason || shape.decimal || shape.type === 'date');
+    var hasNote = !!(options.hint || reason || (!isCompact(options) && (shape.decimal || shape.type === 'date')));
     return [['required', !!options.required], ['readonly', reason !== null], ['aria-invalid', options.error ? 'true' : null],
       ['aria-describedby', describedBy(id, hasNote, !!options.error, options.kind === 'file')]];
   }
@@ -218,7 +254,8 @@ var CBUiField = (function () {
   }
   function noteHtml(options, id, reason) {
     var shape = KINDS[options.kind], esc = library().escape;
-    var hintText = [options.hint, reason].filter(Boolean).map(function (text) { return esc(text); }).join(' · ');
+    var hintText = esc(noteText(options, reason));
+    if (isCompact(options)) return hintText ? '<span class="cbf-vh" id="' + id + '-h">' + hintText + '</span>' : '';
     var echoes = shape.decimal || shape.type === 'date';
     if (!hintText && !echoes) return '';
     return '<div class="cbf-h" id="' + id + '-h"><span>' + hintText + '</span>' + (echoes ? ' <span id="' + id + '-x" aria-live="polite"></span>' : '') + '</div>';
@@ -244,6 +281,7 @@ var CBUiField = (function () {
     if (options.onInput || options.onChange) HANDLERS[id] = { input: options.onInput, change: options.onChange };
     var tail = noteHtml(options, id, reason) + errorHtml(options, id);
     var control = controlHtml(options, id, reason);
+    if (isCompact(options)) return control + tail;
     if (shape.type === 'checkbox') return '<div class="cbf"><label class="cbf-c" for="' + id + '">' + control + '<span>' + labelText(options) + '</span></label>' + tail + '</div>';
     if (shape.type === 'file') return '<div class="cbf"><label class="cbf-fb" for="' + id + '"><span>' + labelText(options) + '</span>' + control + '</label><div class="cbf-fn" id="' + id + '-n"></div>' + tail + '</div>';
     return '<div class="cbf">' + labelHtml(options, id) + control + tail + '</div>';

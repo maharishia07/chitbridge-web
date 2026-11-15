@@ -4,7 +4,7 @@
  * ui-codes-g4.test.cjs - wave 2 group G4: four scripts wear their identity codes (UX-137 stamp, 15 Nov).
  *
  * OWNS      the proof that app/cap-traceability.js (INS003), app/cap-readiness.js (SCR033), app/cap-definitions.js (SCR003) and app/cap-catsetup.js (CAT004)
- *           carry 109 data-cbsid codes (+ 5 ui.field mounts, R2), each INSIDE the tag of the control it names (a removed code, a code moved to another kind of tag, or a swap of two
+ *           carry 109 data-cbsid codes (+ 15 ui.field mounts, R2 and the compact rows), each INSIDE the tag of the control it names (a removed code, a code moved to another kind of tag, or a swap of two
  *           codes whose handlers differ fails it), that no code is written on two element definitions, that each file carries exactly its own count, and
  *           that every code is a live row in the register UIID_REG names.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-g4.test.cjs   (G4_MUTATE=remove or swap must fail it)
@@ -72,12 +72,7 @@ const CODES = [
   ["app/cap-catsetup.js","CAT004-C01","span","onclick=\"catsetDefStatus"],
   ["app/cap-catsetup.js","CAT004-C02","span","onclick=\"catsetDefStatus"],
   ["app/cap-catsetup.js","CAT004-C03","span","onclick=\"catsetDefRetire"],
-  ["app/cap-catsetup.js","CAT004-I01","input","onchange=\"catsetSelToggle"],
   ["app/cap-catsetup.js","CAT004-C04","span","onclick=\"catsetLangToggle"],
-  ["app/cap-catsetup.js","CAT004-I02","input","onchange=\"catsetUomRuleSet"],
-  ["app/cap-catsetup.js","CAT004-I03","input","onchange=\"catsetUomRuleSet"],
-  ["app/cap-catsetup.js","CAT004-I04","input","onchange=\"catsetUomRuleSet"],
-  ["app/cap-catsetup.js","CAT004-I05","input","onchange=\"catsetUnitToggle"],
   ["app/cap-catsetup.js","CAT004-B01","button","onclick=\"catsetRecheckSet"],
   ["app/cap-catsetup.js","CAT004-C05","span","onclick=\"declareVariants"],
   ["app/cap-catsetup.js","CAT004-B02","button","onclick=\"catsetBlueprint"],
@@ -91,7 +86,6 @@ const CODES = [
   ["app/cap-catsetup.js","CAT004-B10","button","onclick=\"exportCatalogueCSV"],
   ["app/cap-catsetup.js","CAT004-B11","button","onclick=\"catsetDefNew"],
   ["app/cap-catsetup.js","CAT004-S01","select","onchange=\"catcolLoad"],
-  ["app/cap-catsetup.js","CAT004-I06","input"," id=\"catcol_own"],
   ["app/cap-catsetup.js","CAT004-S02","select"," id=\"catcol_owntype"],
   ["app/cap-catsetup.js","CAT004-B12","button","onclick=\"catcolGo"],
   ["app/cap-catsetup.js","CAT004-B13","button","onclick=\"catcolAll"],
@@ -102,20 +96,16 @@ const CODES = [
   ["app/cap-catsetup.js","CAT004-I08","input","onchange=\"catsetFieldPatch"],
   ["app/cap-catsetup.js","CAT004-I09","input","onchange=\"catsetFieldPatch"],
   ["app/cap-catsetup.js","CAT004-B16","button","onclick=\"catsetDrop"],
-  ["app/cap-catsetup.js","CAT004-I10","input","onchange=\"catsetFieldPatch"],
   ["app/cap-catsetup.js","CAT004-B17","button","onclick=\"catsetMove"],
   ["app/cap-catsetup.js","CAT004-B18","button","onclick=\"catsetMove"],
   ["app/cap-catsetup.js","CAT004-B19","button","disabled title=\""],
   ["app/cap-catsetup.js","CAT004-B20","button","disabled title=\""],
   ["app/cap-catsetup.js","CAT004-S04","select","onchange=\"catsetErpSet"],
-  ["app/cap-catsetup.js","CAT004-I11","input","onchange=\"catsetErpSet"],
   ["app/cap-catsetup.js","CAT004-C06","div","onclick=\"catsetDefEdit"],
   ["app/cap-catsetup.js","CAT004-I12","input","oninput=\"CATSET_PLAN"],
   ["app/cap-catsetup.js","CAT004-S05","select","onchange=\"CATSET_PLAN"],
   ["app/cap-catsetup.js","CAT004-I13","input","oninput=\"CATSET_PLAN"],
   ["app/cap-catsetup.js","CAT004-S06","select","onchange=\"CATSET_PLAN"],
-  ["app/cap-catsetup.js","CAT004-I14","input","onchange=\"CATSET_PLAN"],
-  ["app/cap-catsetup.js","CAT004-I15","input","onchange=\"CATSET_PLAN"],
   ["app/cap-catsetup.js","CAT004-B21","button","onclick=\"CATSET_PLAN"],
   ["app/cap-catsetup.js","CAT004-B22","button","onclick=\"catsetPlanGo"],
   ["app/cap-catsetup.js","CAT004-C07","span","onclick=\"catsetTaxCatg"],
@@ -135,9 +125,19 @@ const MOUNTS = [
   ['app/cap-readiness.js', 'SCR033-U02', 'file', 'gd_file', 'SCR033-I02'],
   ['app/cap-readiness.js', 'SCR033-U03', 'text', 'gd_ref', 'SCR033-I03'],
   ['app/cap-readiness.js', 'SCR033-U04', 'date', 'gd_valid', 'SCR033-I04'],
-  ['app/cap-definitions.js', 'SCR003-U01', 'text', 'cbdef-note', 'SCR003-I05']
+  ['app/cap-definitions.js', 'SCR003-U01', 'text', 'cbdef-note', 'SCR003-I05'],
+  ['app/cap-catsetup.js', 'CAT004-U01', 'checkbox', null, 'CAT004-I01'],
+  ['app/cap-catsetup.js', 'CAT004-U02', 'checkbox', null, 'CAT004-I02'],
+  ['app/cap-catsetup.js', 'CAT004-U03', 'number', null, 'CAT004-I03'],
+  ['app/cap-catsetup.js', 'CAT004-U04', 'number', null, 'CAT004-I04'],
+  ['app/cap-catsetup.js', 'CAT004-U05', 'checkbox', null, 'CAT004-I05'],
+  ['app/cap-catsetup.js', 'CAT004-U06', 'text', 'catcol_own', 'CAT004-I06'],
+  ['app/cap-catsetup.js', 'CAT004-U07', 'text', null, 'CAT004-I10'],
+  ['app/cap-catsetup.js', 'CAT004-U08', 'text', null, 'CAT004-I11'],
+  ['app/cap-catsetup.js', 'CAT004-U09', 'date', null, 'CAT004-I14'],
+  ['app/cap-catsetup.js', 'CAT004-U10', 'date', null, 'CAT004-I15']
 ];
-const COUNTS = {"app/cap-traceability.js":8,"app/cap-readiness.js":18,"app/cap-definitions.js":24,"app/cap-catsetup.js":59};
+const COUNTS = {"app/cap-traceability.js":8,"app/cap-readiness.js":18,"app/cap-definitions.js":24,"app/cap-catsetup.js":49};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */
@@ -172,11 +172,11 @@ for (const f of Object.keys(COUNTS)) {
 for (const [f, mount, kind, id, oldCode] of MOUNTS) {
   const t = text(f), at = t.indexOf("mount: '" + mount + "'");
   const call = at < 0 ? '' : t.slice(t.lastIndexOf('ui.field(', at), t.indexOf('})', at));
-  check(call.indexOf("kind: '" + kind + "'") > 0 && call.indexOf("id: '" + id + "'") > 0, f + ' ' + mount + ' is a ui.field ' + kind + ' with id ' + id + ' (the id its reader uses)');
+  check(call.indexOf("kind: '" + kind + "'") > 0 && (id === null || call.indexOf("id: '" + id + "'") > 0), f + ' ' + mount + ' is a ui.field ' + kind + (id ? ' with id ' + id + ' (the id its reader uses)' : ' keyed per row'));
   check(t.indexOf(oldCode) < 0, f + ' no longer carries ' + oldCode + ' (the field component writes its own CMP055 code)');
 }
 const mountSeen = {};
-for (const f of ['app/cap-readiness.js', 'app/cap-definitions.js']) for (const m of text(f).matchAll(/mount: '([A-Z]{3}\d{3}-U\d{2})'/g)) mountSeen[m[1]] = (mountSeen[m[1]] || 0) + 1;
+for (const f of ['app/cap-readiness.js', 'app/cap-definitions.js', 'app/cap-catsetup.js']) for (const m of text(f).matchAll(/mount: '([A-Z]{3}\d{3}-U\d{2})'/g)) mountSeen[m[1]] = (mountSeen[m[1]] || 0) + 1;
 check(Object.keys(mountSeen).length === MOUNTS.length && Object.keys(mountSeen).every((m) => mountSeen[m] === 1), 'each of the ' + MOUNTS.length + ' mounts is written once, no other ui.field is mounted in these files');
 const dup = Object.keys(seen).filter((c) => seen[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));

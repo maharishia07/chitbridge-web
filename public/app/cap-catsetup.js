@@ -308,6 +308,32 @@ function catsetBack() {
   if (node) node.classList.remove('showdetail');
 }
 
+/** a ui.field handler for a compact row control: calls fn(...args, value) with the value the field read */
+function catsetOn(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return function (value) {
+    return fn.apply(null, args.concat([value]));
+  };
+}
+/** the name a column row shows (its label, else its key) */
+function catsetColName(c) {
+  return String(c.field_name || c.field_key);
+}
+/** the rename box of a column row saves the new label */
+function catsetRename(key, value) {
+  return catsetFieldPatch(key, { field_name: value });
+}
+/** the name of a plan row for a screen reader: its number and its product (or every product), so each From and To is its own */
+function catsetPlanLabel(item, prods, index) {
+  var made = (prods || []).filter(function (p) {
+    return (p.item_id || p.id) === item.product;
+  })[0];
+  return '#' + (index + 1) + ' ' + (made ? (made.item_data || made).name || '' : tx('every product'));
+}
+/** a plan row's From / To date */
+function catsetPlanDate(index, prop, value) {
+  CATSET_PLAN[index][prop] = value;
+}
 /**
  * ⭐ THE VOCABULARY BLOCKS — rehomed from Definitions, NOT copied out of it.
  *
@@ -410,13 +436,8 @@ function catsetRegistry(keys) {
                   '">' +
                   '<div class="rr1">' +
                   (flag
-                    ? '<input data-cbsid="CAT004-I01" type="checkbox" ' +
-                      (on ? 'checked' : '') +
-                      ' onchange="catsetSelToggle(\'' +
-                      esc(flag) +
-                      "','" +
-                      esc(entry.code) +
-                      '\',this.checked)">'
+                    ? ui.field({ mount: 'CAT004-U01', kind: 'checkbox', density: 'compact', key: flag + '-' + entry.code, label: 'Pick', of: entry.label || entry.code, value: on,
+                        onChange: catsetOn(catsetSelToggle, flag, entry.code) })
                     : '') +
                   (same ? '' : '<code>' + esc(entry.code) + '</code>') +
                   '<span class="rl">' +
@@ -656,11 +677,9 @@ function catsetUomRuleHTML(u) {
     id = 'uomr_' + u;
   return (
     '<div class="uom-rule">' +
-    '<label class="urk"><input data-cbsid="CAT004-I02" type="checkbox" ' +
-    (r.decimals ? 'checked' : '') +
-    ' onchange="catsetUomRuleSet(\'' +
-    esc(u) +
-    "','decimals',this.checked)\"> " +
+    '<label class="urk">' +
+    ui.field({ mount: 'CAT004-U02', kind: 'checkbox', density: 'compact', key: u, label: 'Decimal allowed', of: u, value: r.decimals, onChange: catsetOn(catsetUomRuleSet, u, 'decimals') }) +
+    ' ' +
     tx('Decimal allowed') +
     '</label>' +
     (r.decimals
@@ -669,15 +688,8 @@ function catsetUomRuleHTML(u) {
         '_t">' +
         tx('Round down within') +
         '</label>' +
-        '<input data-cbsid="CAT004-I03" id="' +
-        id +
-        '_t" type="number" min="0" step="0.001" inputmode="decimal" value="' +
-        esc(String(r.tol)) +
-        '" data-testid="uom-tol-' +
-        esc(u) +
-        '" onchange="catsetUomRuleSet(\'' +
-        esc(u) +
-        "','tol',this.value)\">" +
+        ui.field({ mount: 'CAT004-U03', kind: 'number', density: 'compact', id: id + '_t', min: '0', step: '0.001', label: 'Round down within', of: u, value: String(r.tol), testid: 'uom-tol-' + u,
+        onChange: catsetOn(catsetUomRuleSet, u, 'tol') }) +
         '<span class="uru">' +
         esc(u) +
         '</span></span>' +
@@ -686,15 +698,8 @@ function catsetUomRuleHTML(u) {
         '_m">' +
         tx('from') +
         '</label>' +
-        '<input data-cbsid="CAT004-I04" id="' +
-        id +
-        '_m" type="number" min="0" step="0.001" inputmode="decimal" value="' +
-        esc(String(r.min_qty)) +
-        '" data-testid="uom-min-' +
-        esc(u) +
-        '" onchange="catsetUomRuleSet(\'' +
-        esc(u) +
-        "','min_qty',this.value)\">" +
+        ui.field({ mount: 'CAT004-U04', kind: 'number', density: 'compact', id: id + '_m', min: '0', step: '0.001', label: 'from', of: u, value: String(r.min_qty), testid: 'uom-min-' + u,
+        onChange: catsetOn(catsetUomRuleSet, u, 'min_qty') }) +
         '<span class="uru">' +
         esc(u) +
         '</span></span>' +
@@ -778,11 +783,7 @@ function catsetUnitsHTML() {
           (on ? '' : ' off') +
           '">' +
           '<div class="ur1">' +
-          '<input data-cbsid="CAT004-I05" type="checkbox" ' +
-          (on ? 'checked' : '') +
-          ' onchange="catsetUnitToggle(\'' +
-          esc(entry) +
-          '\',this.checked)">' +
+          ui.field({ mount: 'CAT004-U05', kind: 'checkbox', density: 'compact', key: entry, label: 'Use', of: entry, value: on, onChange: catsetOn(catsetUnitToggle, entry) }) +
           '<code>' +
           esc(entry) +
           '</code>' +
@@ -1316,10 +1317,8 @@ async function catcolPick() {
       '<div style="margin-top:11px"><label class="fl">' +
       tx('Add your own as well') +
       '</label>' +
-      '<div style="display:flex;gap:6px"><input data-cbsid="CAT004-I06" class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"' +
-      ' placeholder="' +
-      esc(tx('column name')) +
-      '">' +
+      '<div style="display:flex;gap:6px">' +
+      ui.field({ mount: 'CAT004-U06', kind: 'text', density: 'compact', id: 'catcol_own', testid: 'catcol-own', cls: 'inp catset-grow', label: 'Add your own as well', placeholder: 'column name' }) +
       '<select data-cbsid="CAT004-S02" class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">' +
       ['text', 'number', 'boolean', 'date', 'choice']
         .map(function (item) {
@@ -1748,16 +1747,8 @@ function catsetColRow(c, i, n) {
     '<div class="bulkrow" data-testid="catset-col-' +
     key +
     '">' +
-    '<input data-cbsid="CAT004-I10" class="bn" data-testid="catset-name-' +
-    key +
-    '" value="' +
-    name +
-    '" title="' +
-    esc(tx('Rename — every screen and sheet follows; the key stays')) +
-    '"' +
-    ' onchange="catsetFieldPatch(\'' +
-    key +
-    '\',{field_name:this.value})" style="border:0;border-bottom:1px dashed var(--line);background:transparent;color:inherit;font:inherit;font-weight:600;min-width:0;flex:1">' +
+    ui.field({ mount: 'CAT004-U07', kind: 'text', density: 'compact', key: key, label: 'Column name', of: key, hint: 'Rename — every screen and sheet follows; the key stays', cls: 'bn catset-rename',
+      value: catsetColName(c), testid: 'catset-name-' + key, onChange: catsetOn(catsetRename, key) }) +
     '<span class="bh">' +
     (c.required ? tx('required') : '') +
     '</span>' +
@@ -2073,17 +2064,8 @@ function catsetErpHTML() {
           /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
          a question with no context, and an answer typed against "—" would be stored against nothing. */
           (sys !== '—'
-            ? '<input data-cbsid="CAT004-I11" class="inp" data-testid="catset-erpref-' +
-              esc(item.field_key) +
-              '" style="width:170px;padding:3px 7px"' +
-              ' value="' +
-              esc(m.ref || '') +
-              '" placeholder="' +
-              esc(tx('their field name')) +
-              '"' +
-              ' onchange="catsetErpSet(\'' +
-              esc(item.field_key) +
-              "','ref',this.value)\">"
+            ? ui.field({ mount: 'CAT004-U08', kind: 'text', density: 'compact', key: item.field_key, label: 'Their field name', of: item.field_key, placeholder: 'their field name', cls: 'inp catset-erp',
+                value: m.ref || '', testid: 'catset-erpref-' + item.field_key, onChange: catsetOn(catsetErpSet, item.field_key, 'ref') })
             : '<span class="bh">' + tx('not mapped') + '</span>') +
           '</div>'
         );
@@ -2373,20 +2355,8 @@ function catsetPlanPaint() {
         })
         .join('') +
       '</select>' +
-      '<input data-cbsid="CAT004-I14" class="inp" type="date" data-testid="plan-from-' +
-      index +
-      '" value="' +
-      esc(item.from) +
-      '" onchange="CATSET_PLAN[' +
-      index +
-      '].from=this.value">' +
-      '<input data-cbsid="CAT004-I15" class="inp" type="date" data-testid="plan-to-' +
-      index +
-      '" value="' +
-      esc(item.to) +
-      '" onchange="CATSET_PLAN[' +
-      index +
-      '].to=this.value">' +
+      ui.field({ mount: 'CAT004-U09', kind: 'date', density: 'compact', key: index, label: 'From', of: catsetPlanLabel(item, prods, index), cls: 'inp', value: item.from, testid: 'plan-from-' + index, onChange: catsetOn(catsetPlanDate, index, 'from') }) +
+      ui.field({ mount: 'CAT004-U10', kind: 'date', density: 'compact', key: index, label: 'To', of: catsetPlanLabel(item, prods, index), cls: 'inp', value: item.to, testid: 'plan-to-' + index, onChange: catsetOn(catsetPlanDate, index, 'to') }) +
       '<button data-cbsid="CMP008" class="composebtn" title="' +
       esc(tx('Remove')) +
       '" onclick="CATSET_PLAN.splice(' +
