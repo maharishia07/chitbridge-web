@@ -27,7 +27,7 @@
   };
   /* the six books reads an auditor opens. Plain paths on purpose: the endpoint registry already names each one (cap-books.js booksTB · booksPL · booksBS · booksDaybook · booksPeriods, accounts-shell.js booksDues) and
      ep-aliases.cjs fails an endpoint with two names; this page reads them with a header the books page never sends. */
-  var READS = { readTB: '/api/books/trial-balance', readPL: '/api/books/pl', readBS: '/api/books/bs', readDaybook: '/api/books/daybook', readDues: '/api/books/dues', readPeriods: '/api/books/periods' };
+  var READS = { readTB: '/api/books/trial-balance', readPL: '/api/books/pl', readBS: '/api/books/bs', readDaybook: '/api/books/daybook', readLedger: '/api/books/ledger/:account', readDues: '/api/books/dues', readPeriods: '/api/books/periods' };
   var HEADER = 'X-Books-For'; /* names the member whose books are read; the server checks it against a live grant */
   var ROLE_HEADER = 'X-Books-Role'; /* `adviser` picks the member's adviser grant; absent is the auditor's (read only) */
   var STATE = { live: 'Open', revoked: 'Ended', expired: 'Ran out', edge_off: 'Paused: not connected now' };
