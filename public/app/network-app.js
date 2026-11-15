@@ -185,8 +185,8 @@
       if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
       return;
     }
-    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
-    mountStores();
+    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + root.CBBooksGrantApi.endedToggle(N.ended, N.showEnded, T) + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
+    mountStores(); root.CBBooksGrantApi.wireEnded(host, N, paint);
     if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
   }
   function openBooksDoor() {
@@ -313,7 +313,7 @@
     mountList($('nw_stores'), {
       key: 'network-stores',
       rows: function () {
-        return N.stores;
+        return root.CBBooksGrantApi.visible(N.stores, N.ended, N.showEnded);
       },
       id: function (s) {
         return s.entity_id;

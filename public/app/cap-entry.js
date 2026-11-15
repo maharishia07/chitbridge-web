@@ -1043,7 +1043,7 @@ async function enSave(btn) {
   if (!enCanSave() || !EN.ev) return;
   await bkOnce('entry-save', btn, async function () {
     /* R106: a money promise asks first, INSIDE the busy guard (a second press while the question is open is dropped — the R102b lesson) */
-    var question = enAskWords();
+    var question = enAskWords() || (enActingAdviser() && CBBooksActing.posts() ? CBBooksActing.postAsk(EN.pv) : null);
     if (question && typeof CBAction !== 'undefined' && (await CBAction.ask(question)) !== true) return;
     await enSaveWrite();
   });
