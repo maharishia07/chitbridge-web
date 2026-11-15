@@ -113,11 +113,12 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
       skeleton: {
         name: 'Network',
         icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5',
-        active: 'mine',
+        active: location.hash === '#books' ? 'books' : 'mine' /* the Accounts door lands here (#books) */,
         sections: [
           { k: 'mine', label: 'My network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5' },
           { k: 'offers', label: 'Offers', icon: 'M20 12l-8 8-8-8V4h8zM8.5 8.5h.01' },
-          { k: 'design', label: 'Design', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 7l3 3' }
+          { k: 'design', label: 'Design', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 7l3 3' },
+          { k: 'books', label: 'Who can see my books', icon: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 .01' }
         ],
         onSection: function (k) {
           if (app) app.go(k);
@@ -132,6 +133,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
     token: frame.token,
     base: API,
     sidebar: true,
+    tab: location.hash === '#books' ? 'books' : 'mine',
     onEnded: function () {
       CBFrame.ended();
     }
