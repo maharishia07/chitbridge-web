@@ -118,7 +118,7 @@ function bkbBound() {
   return false;
 }
 /** the dropdown moved to another account: the statement, its marks and its reconciliation belong to the old one, so they are cleared and the file is asked for again (B5-07) */
-function bankAcctPick(code) {
+function bankAcctPick(code, loading) {
   const moved = BKB.stmtAcct && BKB.stmtAcct !== code;
   BKB.acct = code;
   if (!moved) return;
@@ -129,6 +129,7 @@ function bankAcctPick(code) {
   if (file) file.value = '';
   if (res) res.innerHTML = '';
   bankLayout(false, false);
+  if (loading) return; /* the Statements box is about to read a kept file for this account: the device copy is not loaded over it */
   if (bankRestore()) return;
   if (out) out.innerHTML = '<div class="pe-note" data-testid="bank-acct-changed">' + bkbE(tx('You changed the bank account, so the statement on screen was cleared. Load the statement file for this account.')) + '</div>';
 }
@@ -245,7 +246,9 @@ async function bankView(body) {
     '</div><div class="pe-note" data-testid="bank-private">🔒 ' +
     bkbE(tx('The file is read on this device and is never uploaded. This device keeps the latest one.')) +
     '</div><div id="bk_out" class="pe-slot"></div></div>' +
+    '<div class="pe-card bks" id="bk_stmts" data-testid="bank-stmts"></div>' /* the Statements box (cap-bank-statements.js) */ +
     '<div id="bk_res" data-testid="bank-res"></div></div>';
+  if (typeof bankStmtMount === 'function') bankStmtMount(banks);
   if (BKB.rows.length || BKB.parsed) bankPaint();
   else bankRestore();
 }
