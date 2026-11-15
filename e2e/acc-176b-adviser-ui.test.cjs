@@ -46,7 +46,7 @@ check(A.current() === null, 'leaving forgets the store');
 
 /* (3) the writes */
 for (const key of ['actionsReview', 'actionsReturn', 'actionsAccept']) {
-  check(new RegExp("api\\('" + key + "', \\{ params: \\{ id: [a-z._]+ \\}, body: root\\.CBBooksActing\\.body\\(\\{ body_hash: row\\.body_hash").test(actions), key + ' carries store_id (the context) and the body_hash it was shown');
+  check(new RegExp("api\\('" + key + "', \\{ params: \\{ id: [a-z._]+ \\}, (?:headers: .*?, )?body: root\\.CBBooksActing\\.body\\(\\{ body_hash: row\\.body_hash").test(actions), key + ' carries store_id (the context) and the body_hash it was shown');
 }
 check(/total_minor: row\.total_minor, currency: row\.currency/.test(actions), 'accept carries the total and currency of its own row, per action');
 check(/CBAction\.run\(/.test(actions) && (actions.match(/confirm: \{/g) || []).length >= 2 && /Accept and post\?/.test(actions) && /reachWords\(rows\)/.test(actions), 'accept asks first and the confirm names the store, count and total');
