@@ -6,7 +6,7 @@ const { chromium } = require('@playwright/test'), fs = require('fs'), path = req
 const L = require('./lib/live-harbour.cjs');
 const OUT = process.env.OUT || 'e2e/shots';
 let pass = 0, fail = 0;
-const PRESS_TARGET = Number(process.env.PRESS_TARGET || 14);
+const PRESS_TARGET = Number(process.env.PRESS_TARGET || 12);
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const CSV = () => fs.readFileSync(fs.existsSync('/w/Harbour-Plumbing-Oct2026-bank-statement-description.csv') ? '/w/Harbour-Plumbing-Oct2026-bank-statement-description.csv' : path.join(__dirname, 'fixtures', 'harbour-oct-2026.csv'));
 const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
@@ -50,6 +50,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(shown === 1, 'ITEM 2: the sheet shows the ONE line, not all of them (' + shown + ' rows)');
   const sheetText = flat(await p.locator('[data-testid="bank-sheet-lines"]').innerText());
   ok(!/say which account|from the list for/i.test(sheetText) && (sheetText.match(/What is this\?/g) || []).length === 1, 'ITEM 2: one short question, said once: "What is this?"');
+  ok(await p.locator('[data-testid="bd-looks-transfer"]').count() === 1 && !/New party|New supplier|New customer|Savings.*Use this party/i.test(sheetText), 'l16-bank-rules: the Savings line leads with "Looks like: Moved between my own accounts" and proposes no new party (' + sheetText.slice(0, 160) + ')');
   const stacked = await p.$$eval('.bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
   ok(stacked, 'ITEM 2: each choice that has a list carries it right under its own button');
   ok(await p.locator('[data-testid="bank-sheet-lines"] input[data-act=pname]').count() === 0 && await p.locator('[data-testid="bank-sheet-lines"] select[data-act=acct]').count() === 0, 'ITEM 2: the New party and Or an account boxes are not under the question from the start');
@@ -87,8 +88,8 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   /* the answers: each line that needs one opens by itself, one at a time; every press and choice is counted */
   let presses = 0;
   const lines = '[data-testid="bank-sheet-lines"]';
-  const press = async (loc) => { presses++; await loc.click(); await pause(); };
-  const choose = async (loc, what) => { presses++; await loc.selectOption(what); await pause(); };
+  const press = async (loc) => { presses++; console.log('   press ' + presses + ': ' + flat(await loc.first().innerText().catch(() => '?')).slice(0, 50)); await loc.click(); await pause(); };
+  const choose = async (loc, what) => { presses++; console.log('   press ' + presses + ': choose ' + JSON.stringify(what)); await loc.selectOption(what); await pause(); };
   const heightOf = (sel) => p.evaluate((q) => { const e = document.querySelector(q); return e ? e.scrollHeight : -1; }, sel);
   const sheetHeight = await heightOf('#acc_sheet');
   const pageScrolls = await p.evaluate(() => document.documentElement.scrollHeight > innerHeight + 2);
@@ -108,6 +109,9 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const strip = flat(await p.textContent('[data-testid="bank-sheet-strip"]'));
   console.log('   strip: ' + strip);
   ok(/9 lines to add/.test(strip) && /ready/.test(strip) && /need an answer/.test(strip), 'ITEM 4: the sheet says what each number is (' + strip.slice(0, 90) + ')');
+  const atoWords = flat(await row('ATO PAYMENT').innerText());
+  console.log('   ATO row before any answer: ' + atoWords.slice(0, 260));
+  ok(!/New party|New supplier|New customer/i.test(atoWords) && await row('ATO PAYMENT').locator('input[data-act=pname]').count() === 0, 'l16-bank-rules: the ATO line offers no new supplier (its entry is checked below: Dr GST collected, the tax account) (' + atoWords.slice(0, 170) + ')');
   for (let round = 0; round < 24; round++) {
     const basis = p.locator(lines + ' button[data-act=gst][data-v=cash]');
     if (await basis.count()) {
@@ -119,12 +123,16 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
     const open = p.locator(lines + ' .bd-row.bd-is-open').first();
     if (!(await open.count())) break;
     const text = flat(await open.innerText());
+    console.log('   OPEN: ' + text.slice(0, 230));
     const more = open.locator('button[data-act=more]');
-    if (/ATO PAYMENT/.test(text)) await press(open.locator('button[data-act=kind][data-kind=tax_payment]'));
-    else if (/CARD SETTLEMENT/.test(text)) { if (await more.count()) await press(more); await choose(open.locator('select[data-act=acct]'), { label: 'Sundry income' }); await choose(open.locator('select[data-act=taxkind]'), { label: 'Taxable supply' }); }
-    else if (/MONTHLY ACCOUNT FEE/.test(text)) await choose(open.locator('select[data-act=taxkind1]'), { label: 'Input-taxed supply' });
+    if (/ATO PAYMENT/.test(text)) {
+      await press(open.locator('button[data-act=tick]').first());
+    } else if (/CARD SETTLEMENT/.test(text)) {
+      ok(!/New party|New supplier|New customer/i.test(text) && await open.locator('input[data-act=pname]').count() === 0 && /card/i.test(text), 'l16-bank-rules: the card settlement line is proposed into the card account, no new customer (' + text.slice(0, 170) + ')');
+      await press(open.locator('button[data-act=tick]').first());
+    } else if (/MONTHLY ACCOUNT FEE/.test(text)) await choose(open.locator('select[data-act=taxkind1]'), { label: 'Input-taxed supply' });
     else if (/PACIFIC RIM/.test(text)) { if (await more.count()) await press(more); await open.locator('input[data-act=pname]').fill('Pacific Rim Traders'); await choose(open.locator('select[data-act=pkind]'), 'customer'); await press(open.locator('button[data-act=resolve]')); }
-    else if (/BUNNINGS/.test(text)) { if (await more.count()) await press(more); await choose(open.locator('select[data-act=acct]'), 'repairs'); await choose(open.locator('select[data-act=taxkind]'), { index: 1 }); }
+    else if (/BUNNINGS/.test(text) && ((await more.count()) || (await open.locator('select[data-act=acct]').count()))) { if (await more.count()) await press(more); await choose(open.locator('select[data-act=acct]'), 'repairs'); await choose(open.locator('select[data-act=taxkind]'), { index: 1 }); }
     else if (await open.locator('button[data-act=tick]').count()) await press(open.locator('button[data-act=tick]').first());
     else if (await open.locator('button[data-act=inv][data-v=held]').count()) await press(open.locator('button[data-act=inv][data-v=held]'));
     else { console.log('   UNHANDLED open row: ' + text.slice(0, 160)); break; }
@@ -137,11 +145,11 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(presses <= PRESS_TARGET, 'ITEM 1/2: the nine lines answered in ' + presses + ' presses (target ' + PRESS_TARGET + ')');
   await p.locator(lines + ' button[data-act=group][data-g=ready]').first().click().catch(() => {});
   await p.waitForTimeout(300);
-  await row('CARD SETTLEMENT').locator('button[data-act=open]').click();
+  await row('ATO PAYMENT').locator('button[data-act=open]').click();
   await p.waitForTimeout(300);
-  const entryWords = flat(await row('CARD SETTLEMENT').innerText());
+  const entryWords = flat(await row('ATO PAYMENT').innerText());
   console.log('   entry words: ' + entryWords);
-  ok(/Cr GST collected/.test(entryWords) && !/gst collected|Dr bank |Cr card/.test(entryWords), 'ITEM 3: the entry prints the chart account names (' + entryWords.slice(0, 160) + ')');
+  ok(/Dr GST collected/.test(entryWords) && !/New party|New supplier/i.test(entryWords) && !/gst collected|Dr bank |Cr card/.test(entryWords), 'ITEM 3: the entry prints the chart account names (' + entryWords.slice(0, 160) + ')');
   const rows = await p.$$eval('[data-testid="bank-sheet-lines"] .bd-row', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').slice(0, 170)));
   rows.forEach((r, i) => console.log('   row ' + i + ': ' + r));
   await p.screenshot({ path: path.join(OUT, 'r3-02-sheet-answered-1366.png') });

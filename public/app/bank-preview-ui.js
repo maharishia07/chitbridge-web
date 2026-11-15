@@ -208,11 +208,13 @@
       var out = item.line.debit_minor > 0,
         key = escapeHtml(item.key),
         listed = engine.whatIsThis({ country: cfg.country, own_accounts: cfg.ownAccounts ? cfg.ownAccounts() : [] }).items || [];
+      var said = item.what && item.what.kind; /* l16-bank-rules: the pack's words already say what this line is: that choice leads, marked, so it is one press */
       var choices = listed
         .filter(function (choice) {
           return choice.id !== 'expense' && choice.id !== 'other_income' && (choice.side === 'both' || choice.side === (out ? 'out' : 'in'));
         })
-        .map(function (choice) { return choiceHtml(choice, key); });
+        .sort(function (left, right) { return (right.id === said) - (left.id === said); })
+        .map(function (choice) { return (choice.id === said ? '<span class="bd-ask bd-looks" data-testid="bd-looks-' + escapeHtml(choice.id) + '">Looks like:</span>' : '') + choiceHtml(choice, key); });
       if (choices.length && !ctx.opened[item.key]) choices.push('<span class="bd-choice"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="more" data-key="' + key + '">Someone or something else</button></span>');
       return choices.length ? '<span class="bd-party"><span class="bd-ask">What is this?</span><span class="bd-choices">' + choices.join('') + '</span></span>' : '';
     }
