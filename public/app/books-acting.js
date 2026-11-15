@@ -8,7 +8,7 @@
  *
  * Why one object: data must never mix between clients. A request is never built from two places (a header from one, a body from another); both come from the same context, and the server refuses a mismatch with STORE_MISMATCH.
  * The owner works in his own books: role 'owner', no header, his own entity as the store. The server decides who may; nothing here grants anything.
- *   CBBooksActing.enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore
+ *   CBBooksActing.enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .adviserStores
  */
 (function (root) {
   'use strict';
@@ -109,9 +109,52 @@
     if (back) back.onclick = o.onBack;
     if (box)
       box.onchange = function () {
-        o.onSwitch(box.value);
+        o.onSwitch(box.value, box.options[box.selectedIndex].text);
       };
   }
 
-  root.CBBooksActing = { enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
+  /** this page acts for a store as the adviser */
+  function isAdviser() {
+    return !!context && context.role === 'adviser';
+  }
+  /** an adviser's Save: POST /api/books-actions { store_id, kind: 'journal', body, client_ref, working_month } through the screen's own api; the journal's date is required, the owner accepts and only then it posts */
+  async function prepare(api, tx, entry, month) {
+    if (entry.event !== 'journal') throw new Error(tx('An adviser prepares journals. Pick Journal.'));
+    if (!entry.date) throw new Error(tx('Give the journal its date.'));
+    var journal = Object.assign({}, entry);
+    delete journal.event;
+    delete journal.client_ref;
+    var made = await api('booksActionPrepare', { body: body({ kind: 'journal', body: journal, client_ref: entry.client_ref, working_month: month }) });
+    return Object.assign({ prepared: true }, made);
+  }
+  /** the screen after an adviser's Save: prepared, not posted */
+  function paintPrepared(host, acts, saved, tx, esc2) {
+    host.innerHTML =
+      '<h3 data-testid="en-prepared"><span class="en-ok">✓</span> ' + esc2(tx('Prepared, waiting for review')) + '</h3><div data-testid="en-prepared-ref" class="en-chip">' + esc2(saved.client_ref || '') + '</div>' +
+      '<div class="en-why" style="border:0;margin-top:10px">' + esc2(tx('A colleague reviews it, then the owner accepts. Nothing is posted yet.')) + '</div>';
+    acts.innerHTML = '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc2(tx('Done')) + '</button>';
+  }
+  /** a page opened to act for a store (accounts.html): the frozen banner under the header, the way back, and, when asked (?prepare=journal), the journal sheet that PREPARES; byId is the page's element finder, openSheet its entry opener, currency the shop's */
+  function startPage(byId, openSheet, currency) {
+    if (!context) return;
+    setCurrency(currency);
+    var shell = byId('shell');
+    var band = root.document.createElement('div');
+    band.id = 'acting-band';
+    band.setAttribute('data-testid', 'acting-band');
+    band.innerHTML = banner();
+    shell.parentNode.insertBefore(band, shell.nextSibling);
+    wireBanner(band, { onBack: function () { root.location.assign('/network.html'); } });
+    if (/[?&]prepare=journal/.test(root.location.search)) openSheet({ kind: 'journal' });
+  }
+  /** the role a held grant gives on one store: an adviser grant acts, anything else reads */
+  function roleOf(held, id) {
+    return (held[String(id)] || {}).preset === 'adviser' ? 'adviser' : 'auditor';
+  }
+  /** the stores a firm holds an ADVISER grant on, for the banner's switch (one store: no switch is drawn) */
+  function adviserStores(stores, held) {
+    return stores.filter(function (s) { return roleOf(held, s.entity_id) === 'adviser'; }).map(function (s) { return { id: s.entity_id, name: s.name }; });
+  }
+
+  root.CBBooksActing = { isAdviser: isAdviser, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, adviserStores: adviserStores, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -113,8 +113,9 @@
     );
   }
   function wireBand() {
-    if (isAdviser()) root.CBBooksActing.wireBanner(viewState.host, { onBack: viewState.o.onBack, onSwitch: viewState.o.onSwitch });
-    else $('bv_back').onclick = viewState.o.onBack;
+    var back = function () { root.CBBooksActing.leave(); viewState.o.onBack(); };
+    if (isAdviser()) root.CBBooksActing.wireBanner(viewState.host, { onBack: back, onSwitch: viewState.o.onSwitch });
+    else $('bv_back').onclick = back;
   }
   function paint() {
     var report = onActions() ? { day: null, facts: [] } : current();
