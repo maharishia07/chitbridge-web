@@ -13,7 +13,7 @@
      It loads config.js first (the guard's rule for any page with shell.js) but no sign-in script, and tells the frame apiBase '' and no token, so no api request or token leaves the page.
      The one request the frame makes is the shell's own /app/manifest.json (its labs and apps list), so the CSP is connect-src 'self', the narrowest that lets the frame run; every other origin is refused.
      Nothing is stored (no localStorage write, no cookie); the language is held in the page, never in cb_lang, so a visitor's own choice on the real app is not touched. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-TdK3tIewp/af0r7xtro0FQ/bO8ZnHgwbolms97lm5tc='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-TdK3tIewp/af0r7xtro0FQ/bO8ZnHgwbolms97lm5tc='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <title>UI standard</title>
 <!-- the product's own faces, loaded the way app.html loads them (Google Fonts): Inter is the default, Space Grotesk and Space Mono are the avatar's Grotesk and Monospace. Self-hosting is a later decision. Only font-src and style-src name Google; connect-src stays 'self'. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">

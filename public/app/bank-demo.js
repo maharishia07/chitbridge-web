@@ -462,10 +462,10 @@
       }
     };
   }
-  /** the one product header: CBFrame bar, signed out ("Sign in" goes to Home); nothing stored is read, nothing is fetched, no font is linked (the page's CSP) */
+  /** the one product header: CBFrame bar, signed out ("Sign in" goes to Home); nothing stored is read, nothing is fetched, fonts are our own /fonts (page CSP font-src self) */
   function mountHeader() {
     if (!root.CBFrame || !el('shell')) return;
-    root.CBFrame.mount({ app: 'bank-demo', bar: true, signin: false, anonymous: true, manifest: { entries: [] }, fonts: false, host: el('shell'), title: { icon: '\u21c4', name: 'Harbour Plumbing Pty Ltd \u00b7 sample books' } });
+    root.CBFrame.mount({ app: 'bank-demo', bar: true, signin: false, anonymous: true, manifest: { entries: [] }, host: el('shell'), title: { icon: '\u21c4', name: 'Harbour Plumbing Pty Ltd \u00b7 sample books' } });
   }
   function start() {
     mountHeader();

@@ -11,7 +11,9 @@
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Shell Lab · ChitBridge</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/cb-fonts.css">
 <!-- The shell's gallery page (plan row N17): CBShell on a bare page, the pass mark e2e/shell.cjs measures.
      ?mode=app&app=accounts → inside an app (the switcher) · ?mode=bar → the bar only (the counter) · otherwise Home.
      No other page mounts the shell yet: N18 makes index.html its Home, N20 the utility apps. -->

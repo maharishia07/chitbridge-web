@@ -3,7 +3,7 @@
 <!-- OWNS  the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into
            ON-SCREEN books only. Nothing is sent, nothing is saved. The same module (app/bank-preview.js) goes inside the app later; only its post adapter differs.
      CALLED BY a link from the auditor's pack (not in any menu). A utility page, not app.html: no config.js, no device-id.js, no analytics, no api call, no storage.
-     HEADER  the one product frame (CBFrame bar; signed out, "Sign in" goes to Home), mounted by app/bank-demo.js with anonymous:true: no stored session is read, no manifest is fetched, no font is linked.
+     HEADER  the one product frame (CBFrame bar; signed out, "Sign in" goes to Home), mounted by app/bank-demo.js with anonymous:true: no stored session is read, no manifest is fetched, fonts come from our own /fonts (font-src self).
      CSP     style-src has 'unsafe-inline' because the shared library sets a style attribute (the progress bar's width) and injects its own style element; script-src stays 'self' and
              connect-src stays 'none' (that is what makes "a file you load stays on this device" true).
      FLOW  load sample → CBBankRecon.parse/explain → CBBankProject.project → paint → confirm popup → demo post → project again
@@ -11,12 +11,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Bank to books demo · ChitBridge</title>
 <link rel="stylesheet" href="/app/lab-kit.css">
 <link rel="stylesheet" href="/app/bank-demo.css">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/cb-fonts.css">
 </head>
 <body>
 <div id="shell" class="bd-frame"></div>

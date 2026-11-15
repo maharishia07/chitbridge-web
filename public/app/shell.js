@@ -396,15 +396,15 @@
     node.textContent = CSS;
     (doc.head || doc.documentElement).appendChild(node);
   }
-  /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono) comes WITH the frame, once — a page never links its own face */
-  var FONTS_HREF =
-    'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
+  /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono · Source Serif 4) is SELF-HOSTED: ONE sheet, /fonts/cb-fonts.css (OFL), no third-party call.
+     A page links it in its head (so the first paint has it); the frame adds it only when the page forgot (guard: tests/font-faces-guard.test.cjs). */
+  var FONTS_HREF = '/fonts/cb-fonts.css';
   function addFonts(options) {
-    if (!doc || !doc.head || (options && options.fonts === false)) return; /* fonts:false: a page whose CSP allows no third-party call (the no-login bank page) */
-    var hasPlexLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
-      return /IBM\+Plex\+Sans/.test(nestedLink.getAttribute('href') || '');
+    if (!doc || !doc.head || (options && options.fonts === false)) return;
+    var has = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
+      return /[/]fonts[/]cb-fonts[.]css/.test(nestedLink.getAttribute('href') || '');
     });
-    if (hasPlexLink) return;
+    if (has) return;
     var link = doc.createElement('link');
     link.id = 'cbsh-fonts';
     link.rel = 'stylesheet';
