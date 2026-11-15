@@ -611,6 +611,7 @@ function bankPaint() {
   bankLayout(true, lines);
   if (lines) bankList();
   else bankBrsPaint();
+  if (typeof bankStmtPaint === 'function') bankStmtPaint(); /* a statement is on screen: the Statements box folds to its one line (it may have opened before the kept statement came back) */
 }
 
 /** the words of the band, ONE truth: the statement's figure and the books' figure (both carried: the engine's BRS reads them), the gap between them and what it is made of, and what nobody explained.
@@ -686,9 +687,14 @@ const bkbWrongAccountButton = (testid, label) =>
  *  Every figure is carried (bankFigures: the engine's BRS; the counts are the list's own rows). */
 function bankFinish() {
   const fig = bankFigures();
-  const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
+  const acts = '<div class="bk-acts" data-testid="bank-actions">' + (typeof bkstMiniHtml === 'function' ? bkstMiniHtml() : '') + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
-    return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</span>' + acts + '</div>';
+    return (
+      '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) + '</span>' +
+      /* W15-75: the answer is typed HERE, in one step (the same box and button the Statement tab has: the library money input and button) */
+      '<span class="bk-bal-quick" data-testid="bank-bal-quick">' + peAmt('bk_bal_q', BKB.bal) + ' ' + peBtn('bank-bal-quick-go', 'Show the difference', "BKB.bal=peVal('bk_bal_q');bankBrs();bankPaint()") + '</span>' +
+      acts + '</div>'
+    );
   const P = BKB.parsed,
     code = bkCur();
   return CBBankBand.html({

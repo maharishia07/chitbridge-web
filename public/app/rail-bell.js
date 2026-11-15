@@ -69,6 +69,7 @@
     ask: 'Clear all activity?',
     askBody: 'This clears your Activity list. The events are kept — chits, statuses and disputes are unchanged.',
     readFail: 'Could not read your activity — try again',
+    markFail: 'That question could not be opened — try again',
     aria: 'Activity',
     chit: 'a chit',
     needs: 'Clearing needs the latest update on this system'
@@ -131,7 +132,10 @@
         id: item.log_id || null
       };
     }
+    /* W15-54: a mark notice (a Query asked, a reply) opens that record's thread: the entry id when the feed carries it, else its number (the open list names it) */
+    var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', title: subj } : null;
     return {
+      mark: mark && (mark.id || mark.no) ? mark : null,
       i: kind ? kind[0] : '•',
       mine: !!(item.assigned_to_me || item.dispute_for_me),
       chit: item.chit_id || null,
@@ -247,7 +251,7 @@
   function recordHtml(x) {
     return (
       '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
-      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-title="' + esc(x.mark.title) + '"' : ' disabled') +
       (x.order ? ' data-order="1"' : '') +
       '><span aria-hidden="true">' +
       x.i +
@@ -396,6 +400,37 @@
         read();
       }
     }
+    /** W15-54: the owner's bell row for a Query opens the Query thread sheet through the Day book's own opener (CBMark's sheet: one thread, one composer) */
+    /** the page's endpoint table is a lexical const (not window.EP), so cap-mark cannot fill it: the two mark reads are added here, from cap-mark's own list */
+    function markEndpoints() {
+      if (typeof EP !== 'undefined' && root.CB_MARK_EP)
+        Object.keys(root.CB_MARK_EP).forEach(function (key) {
+          if (!EP[key]) EP[key] = root.CB_MARK_EP[key];
+        });
+    }
+    function openMark(row) {
+      var ctl = bell.mk || (bell.mk = root.CBMark.use({
+          adopter: 'acc.audit',
+          call: function (key, o) {
+            markEndpoints();
+            return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
+          }
+        })),
+        title = row.getAttribute('data-mark-title') || '',
+        id = row.getAttribute('data-mark-id'),
+        no = row.getAttribute('data-mark-no');
+      var show = function (subject) {
+        if (subject) ctl.sheet(subject, { title: title });
+        else if (typeof root.toast === 'function') root.toast(T(W.markFail));
+      };
+      if (id) return ctl.load([id]).then(function () { show(id); });
+      return ctl.summary().then(function (sum) {
+        var hit = ((sum && sum.open) || []).filter(function (m) {
+          return no && String(m.subject_label || '').indexOf(no) === 0;
+        })[0];
+        return ctl.load(hit ? [String(hit.subject_id)] : []).then(function () { show(hit ? String(hit.subject_id) : ''); });
+      });
+    }
     function onClick(ev) {
       ev.__cbbIn = true; /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
       var node = ev.target;
@@ -417,6 +452,17 @@
         else if (r.getAttribute('data-order') && !(root.CBEdition && root.CBEdition.hidesHref('/tasks.html')))
           root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
         else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
+        return;
+      }
+      var mk = node.closest('[data-testid="bell-row"]');
+      if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null) && root.CBMark) {
+        bell.open = false;
+        paint();
+        new Promise(function (done) {
+          done(openMark(mk));
+        }).catch(function () {
+          if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        });
         return;
       }
       var c = node.closest('[data-testid="bell-clear"]');

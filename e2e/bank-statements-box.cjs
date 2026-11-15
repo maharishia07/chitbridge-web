@@ -103,7 +103,7 @@ function stand(pending) {
     const p = await ctx.newPage();
     p.on('pageerror', (e) => { threw.push(e.message); if (process.env.DEBUG_PE) console.log('  !! pageerror: ' + e.message); });
     await p.goto(base + '/accounts.html#bank');
-    await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
+    await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000, state: 'attached' });
     return { ctx, p };
   }
   const pick = (p, name, text) => p.setInputFiles('[data-testid="bank-stmts-file"]', { name, mimeType: 'text/csv', buffer: Buffer.from(text) });
@@ -116,9 +116,16 @@ function stand(pending) {
   ok(gaps === 6 && /Nov missing/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months, every month reads "<Mon> missing" (' + gaps + ')');
   ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
   ok(/Kept on our server for the record period; visible to the adviser or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
-  ok(/never uploaded/.test(await p.textContent('[data-testid="bank-private"]')), 'the plain picker keeps its own device-only sentence');
+  /* W15-62: ONE door - the plain picker's file field and its sentence step aside; the quiet secondary lives in the box */
+  ok(!(await p.locator('label:has([data-testid="bank-file"])').isVisible()) && !(await p.isVisible('[data-testid="bank-private"]')) && await p.locator('[data-testid="bank-stmts-add-go"]').isVisible(), 'W15-62: one "Add statement" door - the old picker (and its "never uploaded" line) is not a second door');
+  ok(/Just read a file, don't keep it/.test(await p.textContent('[data-testid="bank-stmts-justread"]')) && /Not sent to our server/.test(await p.textContent('[data-testid="bank-stmts-justread"]')), 'W15-62: the quiet choice says what it does');
+  { const [fc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null), p.click('[data-testid="bank-stmts-justread-go"]')]); ok(!!fc, 'W15-62: it opens the file picker (the one reader of the page)'); }
   ok(await sideways(p), '1366 px: nothing scrolls sideways');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-box-laptop.png') });
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok(await sideways(p) && await p.locator('[data-testid="bank-stmts-justread-go"]').isVisible(), 'W15-62 · 390x844: nothing scrolls sideways and the quiet "Just read a file" choice shows');
+  await p.screenshot({ path: path.join(SHOTS, 'stmts-box-phone.png') });
+  await p.setViewportSize({ width: 1366, height: 768 });
 
   /* ── 2 · ADD ── */
   await p.click('[data-testid="bank-stmts-add-go"]');
@@ -161,6 +168,16 @@ function stand(pending) {
   await p.screenshot({ path: path.join(SHOTS, 'stmts-read-laptop.png') });
   const toBooks = S.reqs.filter((r) => r.m === 'POST' && /\/api\/books\/(events|payments|entries)/.test(r.u));
   ok(S.posts.length === 3 && toBooks.length === 0, 'nothing was posted to the books by Read (no entry, event or payment; only the three Add presses went to the box)' + (toBooks.length ? ' — ' + toBooks.map((r) => r.u).join(' ') : ''));
+  /* ── 5b · W15-75 · a statement that does not carry the bank's closing balance: the box to type it is REACHABLE while a statement is on screen (it sat inside a form folded to display:none) ── */
+  const NOBAL = SEP.split('\n').map((l, n) => (n === 0 ? l : l.replace(/,[^,]*$/, ''))).join('\n'); /* the same statement without its Closing Balance column */
+  await p.setInputFiles('[data-testid="bank-file"]', { name: 'no-balance.csv', mimeType: 'text/csv', buffer: Buffer.from(NOBAL) });
+  await p.waitForSelector('[data-testid="bank-bal-ask"], [data-testid="bank-currency"], .pe-bad', { timeout: 10000 }).catch(async () => { await p.screenshot({ path: path.join(SHOTS, 'stmts-nobal-debug.png') }); });
+  if (await p.locator('[data-testid="bank-currency"]').isVisible()) { await p.fill('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); }
+  await p.waitForSelector('[data-testid="bank-bal-ask"]', { timeout: 10000, state: 'attached' }).catch(() => {});
+  const askVisible = await p.locator('#bk_bal_q').isVisible().catch(() => false);
+  ok(askVisible, 'W15-75: "Type it from the statement" - the closing balance box is on screen, not hidden in the folded form');
+  if (askVisible) { await p.fill('#bk_bal_q', '109016.40'); await p.click('[data-testid="bank-bal-quick-go"]'); await p.waitForTimeout(500); ok(await p.locator('[data-testid="bank-finish-ask"]').count() === 0, 'W15-75: typing it in the band and pressing Show the difference works (the ask is gone)'); }
+  await p.screenshot({ path: path.join(SHOTS, 'stmts-balance-laptop.png') });
   await ctx.close();
 
   /* ── 6 · BEFORE THE SQL RUNS ── */
@@ -172,7 +189,7 @@ function stand(pending) {
   await c2.ctx.close();
 
   /* ── 7 · IDS · NO ERROR ── */
-  const ids = ['BKS014-I12', 'BKS014-I13', 'BKS014-B41', 'BKS014-B42', 'BKS014-B43', 'BKS014-B44'];
+  const ids = ['BKS014-I12', 'BKS014-I13', 'BKS014-B41', 'BKS014-B42', 'BKS014-B43', 'BKS014-B44', 'BKS014-B45'];
   const src = fs.readFileSync(path.join(PUB, 'app', 'cap-bank-statements.js'), 'utf8');
   ok(ids.every((id) => src.indexOf('data-cbsid="' + id + '"') >= 0), 'every control the box draws wears its id (' + ids.join(' ') + ')');
   ok(!/\.parse\(/.test(src.replace(/CBBankRecon\.parse\(text, \{ format: 'auto'[^\n]*\n/, '')), 'the box holds no second parser: its only parse call is the reader\'s own, for the period');

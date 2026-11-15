@@ -50,6 +50,7 @@ W.run('marks', async (w) => {
       const checked = Object.keys(S.marks).filter((id) => S.marks[id].class === 'clear' && !S.marks[id].altered).length;
       return J(r, 200, { adopter: 'acc.audit', from: '2026-11-01', to: '2026-11-15', open, total_open: open.length, checked, of: u.searchParams.get('from') === '2026-11-01' && u.searchParams.get('to') === '2026-11-30' ? 3 : 0, /* the server counts the period it is asked about; with none it is the current month (empty here) */ oldest_age_days: open.length ? 3 : null, vocabulary: VOC, actions: acts(h) });
     }
+    if (p === '/api/marks' && m === 'GET' && u.searchParams.get('ids')) return J(r, 200, { adopter: 'acc.audit', marks: u.searchParams.get('ids').split(',').map((id) => mark(id, h)).filter(Boolean), actions: acts(h) }); /* the list of marks for ids (the bell opens one record without the Day book) */
     if (p === '/api/marks' && m === 'POST') {
       const b = JSON.parse(q.postData() || '{}'); S.sets.push({ b, h });
       if (!auditor(h)) return J(r, 403, { code: 'MARK_NOT_ALLOWED', message: NOT_AUDITOR });
@@ -176,6 +177,16 @@ W.run('marks', async (w) => {
     const row = await txt(T('bell-row')); await shot('06b-owner-bell');
     await page.keyboard.press('Escape');
     return { ok: dot === '1' && /asked a question about/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
+  });
+  await w.step('B1b', 'W15-54 · the owner bell row for the Query is NOT disabled: pressing it opens the Query thread sheet on that entry (the same opener as the Day book chip)', async () => {
+    if (!(await page.locator(T('bell-row')).isVisible())) await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
+    const off = await page.$eval(T('bell-row'), (b) => b.disabled);
+    await page.click(T('bell-row')); await page.waitForSelector(T('mk-sheet'), { timeout: 8000 }); await shot('06c-owner-bell-opens-thread');
+    await page.waitForSelector(T('msg-body'), { timeout: 8000 }); const q = await txt(T('mk-question')), title = await txt(T('mk-title'));
+    await page.setViewportSize(NARROW); await page.waitForTimeout(400); await shot('06d-owner-bell-thread-phone');
+    const fits = await page.evaluate(() => { const d = document.querySelector('dialog.mk-sheet').getBoundingClientRect(); return d.left >= 0 && d.right <= window.innerWidth + 1 && d.bottom <= window.innerHeight + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth; }); await page.setViewportSize(WIDE);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    return { ok: !off && fits && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
   });
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
