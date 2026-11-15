@@ -1145,8 +1145,14 @@ function payOpen(kind, partyId, pre) {
       (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>')
   });
   payPaint();
+  if (!pre && !offer) pre = payOpenTotal(kind, d); /* opens FILLED: the dues figure the list already carries, Bank first, the bills table at once */
   if (pre) payPrefill(pre);
   else if (offer) payPreviewSoon(0); /* F4: the amount came filled in: read its bills now */
+}
+/** the open total of a party as the ONE dues read carries it (BK.dues balance_minor — never recomputed): Receive needs it owed to us, Pay owed by us; else null (nothing to prefill) */
+function payOpenTotal(kind, due) {
+  var minor = Number((due && due.balance_minor) || 0);
+  return (kind === 'supplier' ? minor < 0 : minor > 0) ? { amount_minor: Math.abs(minor), mode: 'bank' } : null;
 }
 /**
  * BR1 · a payment the OTHER PARTY already told us about (their payment advice chit, read by the Bank page): the amount, How (the statement's
@@ -4636,7 +4642,15 @@ async function bkRemindTarget(pid) {
   } catch (failure) {
     bkQuiet('bill-line', failure);
   }
-  return { chit_id: bill.against_ref, line_id: line, actions: acts, bill: bill, currency: reply.currency, party: (reply.party && reply.party.name) || '' };
+  /* can the reminder reach anyone? a party with no phone, no e-mail and not on the network is told the truth (null = not known: the old words stand) */
+  var reach = null;
+  try {
+    var rec = await api('crmParty', { params: { id: pid } });
+    if (rec) reach = !!(rec.phone || rec.email || rec.on_chitbridge);
+  } catch (failure) {
+    bkQuiet('remind-reach', failure);
+  }
+  return { chit_id: bill.against_ref, line_id: line, actions: acts, bill: bill, currency: reply.currency, party: (reply.party && reply.party.name) || '', reach: reach };
 }
 /* start a reminder to one party by opening their chit thread */
 function bkRemind(pid, btn) {
@@ -4686,6 +4700,7 @@ function bkRemindOpen(t) {
     actions: t.actions || undefined,
     text: text,
     party: name,
+    no_channel: t.reach === false,
     channel: 'external',
     thread_type: 'external',
     context: { host: 'dues', source: 'remind' }

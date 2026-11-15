@@ -88,6 +88,7 @@
     external: '↔ External',
     audInternal: '🔒 Team only — the other party never sees this',
     audExternal: '↔ {party} sees this. It cannot be unsent',
+    audNoChannel: '{party} has no phone or e-mail on record and is not on the network; add one to send this',
     audDispute: '⚑ Dispute — only its members see this',
     send: 'Send',
     sending: 'Sending…',
@@ -423,7 +424,7 @@
             .join('') +
           '</select></label>'
         : '';
-    var aud = disp ? T(W.audDispute) : ext ? fill(T(W.audExternal), { party: o.party || T('the other party') }) : T(W.audInternal);
+    var aud = disp ? T(W.audDispute) : ext ? fill(T(o.no_channel ? W.audNoChannel : W.audExternal), { party: o.party || T('the other party') }) : T(W.audInternal);
     var tone = disp ? 'disp' : ext ? 'ext' : 'int';
     return (
       '<div class="rt-comp ' +
