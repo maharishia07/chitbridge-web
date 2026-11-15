@@ -402,7 +402,12 @@
     }
     /** W15-54: the owner's bell row for a Query opens the Query thread sheet through the Day book's own opener (CBMark's sheet: one thread, one composer) */
     function openMark(row) {
-      var ctl = bell.mk || (bell.mk = root.CBMark.use({ adopter: 'acc.audit' })),
+      var ctl = bell.mk || (bell.mk = root.CBMark.use({
+          adopter: 'acc.audit',
+          call: function (key, o) {
+            return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
+          }
+        })),
         title = row.getAttribute('data-mark-title') || '',
         id = row.getAttribute('data-mark-id'),
         no = row.getAttribute('data-mark-no');
@@ -445,7 +450,9 @@
       if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null) && root.CBMark) {
         bell.open = false;
         paint();
-        openMark(mk);
+        Promise.resolve(openMark(mk)).catch(function () {
+          if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        });
         return;
       }
       var c = node.closest('[data-testid="bell-clear"]');
