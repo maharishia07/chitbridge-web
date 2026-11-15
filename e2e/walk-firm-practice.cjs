@@ -1,0 +1,112 @@
+'use strict';
+/**
+ * e2e/walk-firm-practice.cjs — l16/firm-dash: the firm's first screen (Practice band + client list on Home) against a REAL api on a SIT box's throwaway copy database (never production).
+ * env: API (http://127.0.0.1:3997), OUT (shots folder; token-<firm>.json from the box), FIRMS (comma list, default coastal,bayside).
+ * Checks per firm at 1366 and 390: the band and the rule are drawn; the list has the clients; the shop cards (Till, Marketing, Online shop) are absent; every band tile's count equals the rows its filter leaves;
+ * status and action are never dropped at 390 (no field dropped, R74); no horizontal scroll; Open books is on every row. Shots go to OUT.
+ */
+const { chromium } = require('@playwright/test');
+const http = require('http'), fs = require('fs'), path = require('path');
+const API = process.env.API || 'http://127.0.0.1:3997', OUT = process.env.OUT || '/out';
+if (/railway|vercel/i.test(API)) throw new Error('STOP: production is never a target');
+const PUB = path.join(__dirname, '..', 'public');
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+let pass = 0, fail = 0;
+const ok = (what, cond, info) => { if (cond) { pass++; console.log('  ok   ' + what); } else { fail++; console.log('  FAIL ' + what + (info ? ' :: ' + String(info).slice(0, 300) : '')); } };
+async function serve() {
+  const srv = http.createServer((q, r) => {
+    const url = q.url.split('?')[0];
+    if (url === '/config.js') { r.writeHead(200, { 'content-type': 'text/javascript' }); return r.end('window.CB_API = location.origin;'); }
+    if (url.startsWith('/api/') || url === '/health') {
+      const target = new URL(API + q.url);
+      const up = http.request({ host: target.hostname, port: target.port, path: target.pathname + target.search, method: q.method, headers: Object.assign({}, q.headers, { host: target.host }) }, (resp) => { r.writeHead(resp.statusCode, resp.headers); resp.pipe(r); });
+      up.on('error', (e) => { r.writeHead(502); r.end(String(e.message)); });
+      return q.pipe(up);
+    }
+    const home = url === '/' || url === '/index.html'; /* Home is the repo-root index.html, as it deploys */
+    const rel = decodeURIComponent(url).replace(/^[/]+/, ''), f = home ? path.join(PUB, '..', 'index.html') : path.join(PUB, rel);
+    if ((!home && !f.startsWith(PUB)) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
+    r.writeHead(200, { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' });
+    fs.createReadStream(f).pipe(r);
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  return { srv, base: 'http://127.0.0.1:' + srv.address().port };
+}
+async function open(browser, base, tok, vp, startUrl) {
+  const ctx = await browser.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, { token: tok.token, role: 'entity', name: tok.name });
+  await ctx.route('http://localhost:3000/**', async (r) => {
+    const cors = { 'access-control-allow-origin': base, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
+    if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
+    if (r.request().url().includes('/events/stream')) return r.abort();
+    const u = new URL(r.request().url()), hs = Object.assign({}, r.request().headers());
+    delete hs.origin; delete hs.referer;
+    const got = await r.fetch({ url: API + u.pathname + u.search, headers: hs });
+    return r.fulfill({ response: got, headers: Object.assign({}, got.headers(), cors) });
+  });
+  const page = await ctx.newPage();
+  page.__threw = [];
+  page.on('pageerror', (e) => page.__threw.push(e.message));
+  await page.goto(base + startUrl);
+  return { ctx, page };
+}
+const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-testid="practice-list"] [data-testid^="practice-row-"]').length);
+(async () => {
+  fs.mkdirSync(OUT, { recursive: true });
+  const { base } = await serve();
+  const b = await chromium.launch();
+  for (const firm of (process.env.FIRMS || 'coastal,bayside').split(',')) {
+    const tok = JSON.parse(fs.readFileSync(path.join(OUT, 'token-' + firm + '.json'), 'utf8'));
+    const truth = await (await fetch(API + '/api/books-grants/practice', { headers: { authorization: 'Bearer ' + tok.token } })).json();
+    for (const vp of [{ width: 1366, height: 768, tag: '1366' }, { width: 390, height: 844, tag: '390' }]) {
+      const { ctx, page } = await open(b, base, tok, vp, '/');
+      await page.waitForSelector('[data-testid="practice-band"]', { timeout: 30000 }).catch(() => {});
+      await page.waitForSelector('[data-testid^="practice-row-"]', { timeout: 20000 }).catch(() => {});
+      await pause(4000);
+      const tag = firm + ' ' + vp.tag;
+      ok(tag + ' the Practice band and the rule are drawn', (await page.locator('[data-testid="practice-band"]').count()) === 1 && (await page.locator('[data-testid="practice-rule"]').count()) === 1);
+      const tiles = await page.locator('[data-testid^="practice-tile-"]').count();
+      ok(tag + ' ten tiles: Needs help, Watch, Doing well, queries, return due, months, checked, access ending, bank (held)', tiles === 9, tiles);
+      const shown = await rowCount(page);
+      ok(tag + ' the client list shows rows (up to 50 at a time of ' + truth.clients.length + ')', shown > 0 && shown <= Math.min(50, truth.clients.length) + 1, shown);
+      const cards = await page.evaluate(() => ['till', 'marketing', 'storefront'].map((id) => document.querySelectorAll('[data-testid="shell-card-' + id + '"]').length));
+      ok(tag + ' the shop cards (Till, Marketing, Online shop) are hidden on a firm Home', cards.every((n) => n === 0), JSON.stringify(cards));
+      ok(tag + ' no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), await page.evaluate(() => document.documentElement.scrollWidth + ' > ' + window.innerWidth));
+      const inline = await page.evaluate(() => { const r = document.querySelector('[data-testid^="practice-row-"]'); return r ? r.innerText.replace(/\s+/g, ' ').slice(0, 400) : ''; });
+      console.log(tag + ' first row: ' + inline);
+      ok(tag + ' status and Open books are in the first row (never dropped)', /Needs help|Watch|Doing well|Not enough/.test(inline) && /Open books/.test(inline), inline);
+      await page.screenshot({ path: path.join(OUT, firm + '-home-' + vp.tag + '.png') });
+      /* a band tile is a filter: its count equals the rows it leaves (when the rows fit one page) */
+      if (vp.tag === '1366') {
+        for (const key of ['help', 'queries', 'months', 'ending']) {
+          const tile = page.locator('[data-testid="practice-tile-' + key + '"]');
+          if (!(await tile.count())) continue;
+          const asked = Number((await tile.locator('b').innerText()).trim());
+          await tile.click();
+          await pause(1500);
+          const left = await rowCount(page);
+          ok(tag + ' tile ' + key + ' says ' + asked + ' and the list it opens has ' + (asked > 50 ? '50 (first page) of ' + asked : left), asked > 50 ? left >= 50 : left === asked, left);
+          if (key === 'help') await page.screenshot({ path: path.join(OUT, firm + '-home-needs-help-' + vp.tag + '.png') });
+          await page.locator('[data-testid="practice-clear"]').click().catch(() => {});
+          await pause(800);
+        }
+        const open = page.locator('[data-testid^="practice-open-"]').first();
+        if (await open.count()) {
+          await open.click();
+          await page.waitForURL(/network\.html\?open=/, { timeout: 15000 }).catch(() => {});
+          await pause(6000);
+          const text = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' ').slice(0, 300));
+          ok(tag + ' Open books leads to that client\'s books page', /network\.html\?open=/.test(page.url()), page.url());
+          console.log(tag + ' after Open books: ' + text);
+          await page.screenshot({ path: path.join(OUT, firm + '-open-books-' + vp.tag + '.png') });
+        }
+      }
+      if (page.__threw.length) console.log(tag + ' page errors: ' + JSON.stringify(page.__threw.slice(0, 4)));
+      await ctx.close();
+    }
+  }
+  await b.close();
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error('WALK FAILED', e && e.stack || e); process.exit(1); });

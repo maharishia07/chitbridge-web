@@ -166,9 +166,18 @@
   function openBooks(id) {
     root.location.href = '/network.html?open=' + encodeURIComponent(id);
   }
+  /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
+  function withList(then) {
+    if (root.CBList) return then();
+    var tag = root.document.createElement('script');
+    tag.src = '/app/list-ctl.js';
+    tag.onload = then;
+    root.document.head.appendChild(tag);
+  }
   function mountList() {
     var host = root.document.getElementById('bp_list');
-    if (!host || !root.CBList) return;
+    if (!host) return;
+    if (!root.CBList) return withList(mountList);
     if (P.list) {
       try { P.list.destroy(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:destroy', failure); }
     }
