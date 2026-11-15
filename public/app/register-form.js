@@ -260,18 +260,18 @@ function renderRegister() {
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
+    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', autocomplete: 'username', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
        <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
          <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). Your business name can be anything; set it after you sign in.'))}">ⓘ</span></div>
-       ${ui.field({ mount: 'SCR053-U03', kind: 'text', id: 'r_email', testid: 'reg-email', label: 'Email', placeholder: 'you@yourshop.example', value: R.email })}
-       ${R.err ? `<div class="err">${R.err}</div>` : ''}
+       ${ui.field({ mount: 'SCR053-U03', kind: 'email', id: 'r_email', testid: 'reg-email', label: 'Email', placeholder: 'you@yourshop.example', value: R.email })}
+       ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
   } else {
     form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric' })}
-       ${R.err ? `<div class="err">${R.err}</div>` : ''}
+       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 6 })}
+       ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
   }
   /* ⭐ FX-UX2: a small app's pane — the same form, under the page's own heading; "Sign in" is Home's one sign-in window (never #/login) */

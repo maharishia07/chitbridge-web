@@ -34,6 +34,7 @@ sandbox.window = sandbox;
 vm.runInContext(read('app/ui.js'), sandbox);
 vm.runInContext(read('app/ui-field.js'), sandbox);
 let source = read('app/register-form.js');
+if (mutate === 'autofill') source = source.replace("kind: 'email', id: 'r_email'", "kind: 'text', id: 'r_email'");
 if (mutate === 'revert') source = source.replace("ui.field({ mount: 'SCR053-U04'", "String({ mount: 'SCR053-U04'");
 vm.runInContext(source, sandbox);
 
@@ -47,6 +48,7 @@ let html = host.innerHTML;
 const name = tagOf(html, 'r_name'), email = tagOf(html, 'r_email');
 check(/data-cbmount="SCR053-U02"/.test(name) && /data-cbsid="CMP055-I01"/.test(name) && /data-testid="reg-name"/.test(name) && /placeholder="acmetraders"/.test(name) && /value="acme&quot;s"/.test(name), 'User ID: a CMP055 text field, id, testid, placeholder kept, value escaped');
 check(/autocapitalize="off"/.test(name) && /spellcheck="false"/.test(name), 'User ID keeps autocapitalize off and spellcheck off');
+check(/type="email"/.test(email) && /autocomplete="email"/.test(email) && /autocomplete="username"/.test(name), 'e-mail is type email with autocomplete email, User ID is autocomplete username (browser autofill works)');
 check(/data-cbmount="SCR053-U03"/.test(email) && /data-testid="reg-email"/.test(email) && /value="a@b.example"/.test(email) && /for="r_email"/.test(html), 'e-mail: a CMP055 field, testid and value kept, its label is tied to it (for=)');
 
 console.log('the code step: the code box and the terms tick');
@@ -54,7 +56,7 @@ sandbox.REG = { step: 'otp', name: 'acme', email: 'a@b.example', busy: false, er
 sandbox.CBRegistration.mount(host, () => {});
 html = host.innerHTML;
 const otp = tagOf(html, 'r_otp'), agree = tagOf(html, 'r_agree');
-check(/data-cbmount="SCR053-U04"/.test(otp) && /data-testid="reg-otp"/.test(otp) && /autocomplete="one-time-code"/.test(otp) && /inputmode="numeric"/.test(otp) && /placeholder="6-digit code"/.test(otp), 'code: a CMP055 field with one-time-code, numeric keypad, placeholder and testid kept');
+check(/data-cbmount="SCR053-U04"/.test(otp) && /data-testid="reg-otp"/.test(otp) && /autocomplete="one-time-code"/.test(otp) && /inputmode="numeric"/.test(otp) && /maxlength="6"/.test(otp) && /placeholder="6-digit code"/.test(otp), 'code: a CMP055 field with one-time-code, numeric keypad, placeholder and testid kept');
 check(/Code sent to a@b.example/.test(html), 'the code label still names the address');
 check(/type="checkbox"/.test(agree) && /data-cbmount="SCR053-U01"/.test(agree) && /data-testid="reg-agree"/.test(agree) && agree.indexOf(' checked') < 0, 'terms tick: a CMP055 checkbox, testid kept, unticked');
 check(!/data-cbsid="SCR053-I0[1-4]"/.test(html) && !/data-cbsid="SCR053-I0[1-4]"/.test(source), 'no hand-written SCR053-I01..I04 is left in the page or its output');
@@ -66,6 +68,10 @@ check(sandbox.REG.agreed === true, 'ticking sets REG.agreed');
 check(painted.length === before + 1 && / checked/.test(tagOf(host.innerHTML, 'r_agree')), 'the form repaints once and the tick stays ticked');
 heard.change(asEvent('r_agree', 'checkbox', { checked: false }));
 check(sandbox.REG.agreed === false, 'unticking clears REG.agreed');
+
+console.log('the error line is announced');
+const errored = source.match(/<div class="err"[^>]*>/g) || [];
+check(errored.length === 2 && errored.every((tag) => /role="alert"/.test(tag)), 'both error lines carry role=alert');
 
 console.log('settings.html loads the part');
 const settings = read('settings.html');
