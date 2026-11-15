@@ -248,6 +248,7 @@
     var no = e.entry_no || e.subject_label;
     if (!no) return '';
     var day = e.posting_date || e.date, minor = e.total_minor != null ? e.total_minor : e.amount_minor;
+    if (minor == null && Array.isArray(e.lines)) minor = e.lines.reduce(function (sum, l) { return sum + Number(l.dr_minor || 0); }, 0); /* the Day book's own amount: the debit side of its lines */
     if (minor == null) minor = Number(e.dr_minor) > 0 ? e.dr_minor : Number(e.cr_minor) > 0 ? e.cr_minor : null;
     var cur = e.currency || (answer && answer.currency) || '';
     var amount = '';
