@@ -52,7 +52,7 @@ for (const f of Object.keys(SET)) {
 }
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 64, 'the page has 64 coded element definitions: ' + Object.keys(all).length);
+check(Object.keys(all).length === 65, 'the page has 65 coded element definitions: ' + Object.keys(all).length);
 
 for (const [f, marker, code] of NEAR) {
   const lines = src[f].split('\n'), at = lines.findIndex((l) => l.indexOf('data-cbsid="' + code + '"') >= 0);
