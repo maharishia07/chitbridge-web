@@ -23,7 +23,7 @@
  */
 (function (root) {
   'use strict';
-  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, opened: null };
+  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, ended: {}, opened: null };
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
   function T(s) {
@@ -60,7 +60,7 @@
             if (reply.status === 401 && N.o.onEnded) N.o.onEnded();
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
-              e.status = reply.status;
+              e.status = reply.status; e.code = j.code; /* a refusal's code: books-grant-api.js says it in a plain sentence */
               throw e;
             }
             return j;
@@ -75,14 +75,15 @@
       call('GET', '/api/network-design/stores').catch(function () {
         return { stores: [] };
       }),
-      root.CBBooksGrantApi.held(call)
+      root.CBBooksGrantApi.heldSplit(call)
     ]).then(function (reply) {
-      N.held = reply[2] || {};
+      N.held = (reply[2] || {}).live || {};
+      N.ended = (reply[2] || {}).ended || {};
       var s = (reply[0] && reply[0].store) || {};
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
       N.may = reply[0].may_design || N.may;
-      N.stores = (reply[1] && reply[1].stores) || [];
+      N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], Object.assign({}, N.ended, N.held), T);
     });
   }
   function offers() {
@@ -158,7 +159,7 @@
     try {
       node.close();
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    node.innerHTML = '';
+    node.innerHTML = ''; node.className = 'sheet';
   }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) {
@@ -218,7 +219,7 @@
   }
   /** the store list's columns */
   function storeColumns() {
-    return [
+    var cols = [
       {
         key: 'name',
         label: T('Store'),
@@ -252,9 +253,7 @@
         prio: 3,
         w: 110,
         sort: 'km',
-        cell: function (s) {
-          return s.km == null ? '—' : Math.round(s.km) + ' km';
-        },
+        cell: function (s) { return s.km == null ? '—' : Math.round(s.km) + ' km'; },
         value: function (s) {
           return s.km == null ? '' : String(s.km);
         }
@@ -282,7 +281,7 @@
           return N.held[String(s.entity_id)] ? 'open' : '';
         }
       }
-    ];
+    ]; return root.CBBooksGrantApi.clientColumns(cols, N, T);
   }
   /** the store list's sort choices */
   function storeSorts() {
@@ -338,24 +337,24 @@
     var id = esc(s.entity_id);
     return N.held[String(s.entity_id)]
       ? '<button data-cbsid="NET001-B04" type="button" class="act quiet" id="nw_books_' + id + '" data-open-books="' + id + '" data-testid="nw-books-' + id + '">' + esc(T('Open books')) + '</button>'
-      : '';
+      : '<span class="sub" data-testid="nw-ended-' + id + '">' + esc(root.CBBooksGrantApi.endedWords(N.ended[String(s.entity_id)])) + '</span>';
   }
   function openBooksClick(ev) {
     var button = ev.target.closest && ev.target.closest('[data-open-books]');
     if (!button) return;
     var id = button.getAttribute('data-open-books');
-    var store = N.stores.filter(function (s) {
-      return String(s.entity_id) === id;
-    })[0];
-    N.opened = { id: id, name: (store && store.name) || T('this store') };
+    var store = N.stores.filter(function (s) { return String(s.entity_id) === id; })[0];
+    N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || (store && store.name) || T('this store'), role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
     paint();
   }
   function paintOpened(host) {
     root.CBBooksGrantView.mount(host, {
       call: call,
       member: N.opened,
-      mountList: mountList,
+      stores: root.CBBooksActing.clientStores(N.stores, N.held),
+      mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: N.o.onEnded,
+      onSwitch: function (id, name) { N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting }; paint(); },
       onBack: function () {
         var id = N.opened.id;
         N.opened = null;
@@ -377,7 +376,7 @@
       });
   }
   function paintBooks(host) {
-    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
+    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, ownStore: root.CBBooksActing.ownStore(N.o.token, T('Your books')), sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
         N.tab = 'mine';
         paint();
       } });
