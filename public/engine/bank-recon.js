@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · bank-recon · sha256 7a951d22b4e7efeb6eccbf58a9beb770e018f10af77cb094b528b3c98cae587c — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.0 · bank-recon · sha256 893588afdd4887fd219d7d654c7e73a63d8dd8ad413a835dac095ce080c62254 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -39,7 +39,7 @@
    *   currency prefix (the pack's: pack.bank.amountPrefixes), "Dr" / "Cr" suffix, (brackets) or a minus for a debit in a single Amount column, separate Debit and Credit
    *   columns, or an Amount column with a Dr/Cr column. A single signed Amount column reads negative as debit. Dates: dd/mm/yyyy,
    *   dd-mm-yy, dd-MMM-yyyy, dd MMM yyyy, yyyy-mm-dd (and an ISO time after it). A statement listed newest-first is turned round (warned).
-   *   PRESETS (the pack's data: pack.bank.presets) — each names its header cells. ⚠️ They are written from the shape of each
+   *   PRESETS (the pack's data: pack.bank.presets) — each names its header cells, or (headerless) its columns by position, read only when the first row fits (date, amount, a description that is no amount, a balance). ⚠️ They are written from the shape of each
    *   bank's usual export and are all marked verify:true — check against a real file before trusting one; a bank changes its headers.
    *   `mapping` { field: 'Header text' | columnIndex } for any other bank; fields: date value_date narration ref cheque_no debit credit
    *   amount drcr balance. With no preset and no mapping the generic header words are tried.
@@ -131,7 +131,7 @@
   var GENERIC = {
     date: ['Date', 'Txn Date', 'Transaction Date', 'Tran Date', 'Posting Date'],
     value_date: ['Value Date', 'Value Dt'],
-    narration: ['Narration', 'Description', 'Particulars', 'Transaction Remarks', 'Remarks', 'Details'],
+    narration: ['Narration', 'Description', 'Particulars', 'Transaction Remarks', 'Remarks', 'Details', 'Narrative', 'Transaction Details', 'Transaction Description'],
     ref: ['Ref No', 'Ref No.', 'Reference', 'Chq./Ref.No.', 'Chq / Ref No', 'UTR', 'Transaction Id'],
     cheque_no: ['Cheque No', 'Cheque Number', 'Chq No', 'CHQNO', 'Instrument No'],
     debit: ['Debit', 'Withdrawal', 'Withdrawal Amt.', 'Withdrawals', 'DR', 'Debit Amount'],
@@ -433,18 +433,68 @@
     }
     return lines;
   }
+  /** does one sample row fit a headerless layout: a date in the date cell, an amount in the amount cell, a description that is NOT itself an amount or a date, and an amount in the balance cell when the layout has one (so an unsigned Date, Debit, Credit, Balance file is never read as signed money) */
+  function fitsHeaderless_(sample, layout, ctx) {
+    var cell = function (field) {
+      return sample[layout.map[field]];
+    };
+    var amount = amountOf_(ctx, cell('amount')),
+      note = String(cell('narration') == null ? '' : cell('narration')).trim(),
+      noteAmount = amountOf_(ctx, note),
+      balance = layout.map.balance == null ? { empty: false } : amountOf_(ctx, cell('balance'));
+    var noteReadsAsData = !note || dateOf_(note) || (noteAmount && !noteAmount.empty);
+    return !!dateOf_(cell('date')) && !!amount && !amount.empty && !noteReadsAsData && !!balance && !balance.empty;
+  }
+  /** FIN-115: the pack's preset that reads a file with NO header row, by column position (preset.headerless = { count, map: { field: index } }): the one asked for, else the one whose column count the first row has and whose date and amount cells read as a date and an amount; null when none fits */
+  function headerlessPick_(rows, options, ctx) {
+    var sample = rows.filter(function (row) {
+      return row.some(function (cell) {
+        return String(cell).trim() !== '';
+      });
+    })[0];
+    if (!sample) return null;
+    var named = options.preset ? String(options.preset).toLowerCase() : null,
+      keys = named ? [named] : Object.keys(ctx.presets);
+    for (var index = 0; index < keys.length; index++) {
+      var preset = ctx.presets[keys[index]],
+        layout = preset && preset.headerless;
+      if (!layout || (!named && sample.length !== layout.count)) continue;
+      if (fitsHeaderless_(sample, layout, ctx)) return preset;
+    }
+    return null;
+  }
+  /** FIN-115: a statement whose lines all came out with no narration is warned in words, never read silently (nothing to match or suggest from) */
+  function blankNarrationWarning_(lines) {
+    var named = lines.some(function (line) {
+      return line.narration;
+    });
+    if (!lines.length || named) return null;
+    return (
+      'No description was read on any of the ' +
+      lines.length +
+      ' lines, so there is nothing to match or suggest from. Check the description column of the file (the bank may print it under another name), or choose the bank or map the columns.'
+    );
+  }
   function parseCsv_(text, options, ctx) {
     var warnings = [],
       preset = options.preset ? ctx.presets[String(options.preset).toLowerCase()] : null;
     if (options.preset && !preset) return fail_('Unknown bank preset "' + options.preset + '" — presets: ' + Object.keys(ctx.presets).join(', ') + '; or pass a mapping.');
     var spec = options.mapping || (preset ? preset.map : GENERIC);
     var rows = csvRows_(text.replace(/^﻿/, ''), delimiterOf_(text));
+    var bare = !options.mapping && headerRowIndex_(rows, spec) < 0 ? headerlessPick_(rows, options, ctx) : null;
+    if (bare) {
+      options = Object.assign({}, options, { mapping: bare.headerless.map, header: false });
+      spec = options.mapping;
+      warnings.push('This file has no header row, so its columns were read by position as the ' + bare.bank + ' layout (' + bare.note + '). Check the first lines against your file.');
+    }
     var located = csvColumns_(rows, spec, options, preset);
     if (located.ok === false) return located;
-    if (preset && preset.verify) warnings.push('preset ' + options.preset + ' is marked "verify against a real file" — headers: ' + preset.note);
+    if (preset && preset.verify && !bare) warnings.push('preset ' + options.preset + ' is marked "verify against a real file" — headers: ' + preset.note);
     var account = csvAccount_(rows.slice(0, Math.max(located.count, 0)), options.account || null);
     var balances = {},
-      lines = csvLines_(rows, located, ctx, warnings, balances);
+      lines = csvLines_(rows, located, ctx, warnings, balances),
+      blank = blankNarrationWarning_(lines);
+    if (blank) warnings.push(blank);
     return Object.assign({ ok: true, account: account, lines: lines, warnings: warnings }, balances);
   }
 

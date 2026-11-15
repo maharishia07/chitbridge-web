@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · posting · sha256 d0cf6de25e4b15a495863ed9a0b2c9524ae8f435c87cfc3b777c4c234758a2e0 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.0 · posting · sha256 d0cf6de25e4b15a495863ed9a0b2c9524ae8f435c87cfc3b777c4c234758a2e0 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · posting. Edited ONLY in chitbridge-engines/src/posting.js; every platform adopts a released version of it. */
 /*
  * OWNS      the double-entry posting rules: one event in, balanced Dr/Cr lines out (refused unless debits equal credits to the minor unit), plus the walk-in day summary, tax set-off, depreciation, FX revaluation and the voucher type of an event.

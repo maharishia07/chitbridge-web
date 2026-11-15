@@ -1,60 +1,124 @@
-/* ADOPTED BUNDLE from chitbridge-engines · pack-kit v1.65.0 + reg-in v1.86.0 + reg-au v1.86.0 + reg-ae v1.86.0 + reg-sg v1.65.0 + reg-my v1.65.0 + reg-us v1.65.0 + reg-jp v1.65.0 + regulation v1.85.0 + country v1.88.0 + tax-packs v1.86.0 + tax-slab v1.72.0 + tax v1.86.0 — DO NOT EDIT HERE. Each part below is a release, unchanged. */
-/* ADOPTED from chitbridge-engines v1.65.0 · pack-kit · sha256 265fed3faa84578d00043d07aef4eab0176827cff617dc583ea1e160a9147f37 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
-/* chitbridge-engines · pack-kit. Edited ONLY in chitbridge-engines/src/pack-kit.js; every platform adopts a released version of it. */
-(function (root) {
-'use strict';
-// @stage tested
-// @stage-note [BOOKS · COUNTRY HELPERS] what every country pack does the same way, written once (DESIGN-COUNTRY-ENGINE-SPLIT R1, v1.51.0).
-// @stage-note A pack is its own engine; it calls these. A change here re-runs every country's golden (tests/golden.test.js).
-/**
- * pack-kit.js — THE COUNTRY HELPERS (R1). Athi, 2026-10-16: "each country should have its own engine … if there are shared functionalities,
- * that has to be handled as a helper functions" and "if there is a change to the helper function, then every engine should be tested."
- *
- * Lifted VERBATIM from reg-in / reg-au / reg-ae; what differed between the copies (a unit word, a head name, a sentence) is now an argument.
- *   refuse(why)                              → an Error marked `refused` (the one way a pack says no)
- *   pad2(n) · ymd(y, m, d) · lastDay(y, m)   → calendar strings, UTC, no clock
- *   int(v, where, unit)                      → a ledger amount as a whole number of `unit` ('cents', 'fils'), else refused
- *   lineExtras(r, g, pack)                   → { group_name, line, line_label, statement } from pack.presentation.lines (IFRS-worded packs)
- *   singleHeadSetOff(o, minor, { head, negative, leftover }) → { utilised, payable, carried, [leftover] } for a ONE-head tax (GST AU, VAT AE)
- *   noCreditSetOff(o, minor, { head, negative }) → { utilised: [], payable, carried } for a SINGLE-STAGE tax with NO input credit (SST, US sales tax): the whole output is payable
- *   returnRow(code, label, amount, tax, roles, note)  → one box of a return in the shape gst-returns.returnFor hands a screen (R2)
- *
- * ── ZERO DEPENDENCIES · NO CLOCK · NO STORAGE ──────────────────────────────────────────────────────────────
+/* ADOPTED BUNDLE from chitbridge-engines · pack-kit v1.97.0 + reg-in v1.86.0 + reg-au v1.97.0 + reg-ae v1.86.0 + reg-sg v1.65.0 + reg-my v1.65.0 + reg-us v1.65.0 + reg-jp v1.65.0 + regulation v1.85.0 + country v1.88.0 + tax-packs v1.86.0 + tax-slab v1.72.0 + tax v1.86.0 — DO NOT EDIT HERE. Each part below is a release, unchanged. */
+/* ADOPTED from chitbridge-engines v1.97.0 · pack-kit · sha256 b5871899eb34a411c0be7853850bf904717328215b5f699986c16e739e291e68 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · pack-kit. Edited ONLY in chitbridge-engines/src/pack-kit.js; every platform adopts a released version of it.
+ * CALLED BY src/reg-ae.js, src/reg-au.js, src/reg-jp.js, src/reg-my.js, src/reg-sg.js (+1 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
-function refuse(why) { var e = new Error(why); e.refused = true; return e; }
-function pad2(n) { return String(n).padStart(2, '0'); }
-function ymd(y, m, d) { return y + '-' + pad2(m) + '-' + pad2(d); }
-function lastDay(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
-function int(v, where, unit) { var n = v == null ? 0 : Number(v); if (!Number.isInteger(n)) throw refuse('A ledger amount is a whole number of ' + unit + ' — ' + where + ' is not.'); return n; }
-function lineExtras(r, g, pack) {
-  const p = pack, key = r.line || g.line;
-  const line = (p.presentation && p.presentation.lines && Object.prototype.hasOwnProperty.call(p.presentation.lines, key)) ? p.presentation.lines[key] : null;
-  return { group_name: g.name, line: key, line_label: line ? line.label : null, statement: line ? line.st : null };
-}
-/** a return's box as one row: { code, label, amount_minor, tax_minor, roles, note } — moved from gst-returns.row_ (R2); a BAS label has one figure, a VAT201 box two */
-function returnRow(code, label, amount, tax, roles, note) { return { code: String(code), label: label, amount_minor: amount == null ? null : amount, tax_minor: tax == null ? null : tax, roles: roles || [], note: note || null }; }
-function singleHeadSetOff(o, minor, w) {
-  var h = w.head, out = minor((o.output || {})[h]), inp = minor((o.input || {})[h]);
-  if (out < 0 || inp < 0) throw refuse(w.negative);
-  var a = Math.min(inp, out), used = a > 0 ? [{ from: h, against: h, amount: a }] : [];
-  var r = { utilised: used, payable: {}, carried: {} };
-  r.payable[h] = out - a; r.carried[h] = inp - a; r[w.leftover] = inp - a;
-  return r;
-}
+(function (root) {
+  'use strict';
+  // @stage tested
+  // @stage-note [BOOKS · COUNTRY HELPERS] what every country pack does the same way, written once (DESIGN-COUNTRY-ENGINE-SPLIT R1, v1.51.0).
+  // @stage-note A pack is its own engine; it calls these. A change here re-runs every country's golden (tests/golden.test.js).
+  /**
+   * pack-kit.js — THE COUNTRY HELPERS (R1). Athi, 2026-10-16: "each country should have its own engine … if there are shared functionalities,
+   * that has to be handled as a helper functions" and "if there is a change to the helper function, then every engine should be tested."
+   *
+   * Lifted VERBATIM from reg-in / reg-au / reg-ae; what differed between the copies (a unit word, a head name, a sentence) is now an argument.
+   *   refuse(why)                              → an Error marked `refused` (the one way a pack says no)
+   *   pad2(n) · ymd(y, m, d) · lastDay(y, m)   → calendar strings, UTC, no clock
+   *   int(v, where, unit)                      → a ledger amount as a whole number of `unit` ('cents', 'fils'), else refused
+   *   lineExtras(r, g, pack)                   → { group_name, line, line_label, statement } from pack.presentation.lines (IFRS-worded packs)
+   *   singleHeadSetOff(o, minor, { head, negative, leftover }) → { utilised, payable, carried, [leftover] } for a ONE-head tax (GST AU, VAT AE)
+   *   noCreditSetOff(o, minor, { head, negative }) → { utilised: [], payable, carried } for a SINGLE-STAGE tax with NO input credit (SST, US sales tax): the whole output is payable
+   *   returnRow(code, label, amount, tax, roles, note)  → one box of a return in the shape gst-returns.returnFor hands a screen (R2)
+   *
+   * ── ZERO DEPENDENCIES · NO CLOCK · NO STORAGE ──────────────────────────────────────────────────────────────
+   */
+  function refuse(why) {
+    var e = new Error(why);
+    e.refused = true;
+    return e;
+  }
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+  function ymd(y, m, d) {
+    return y + '-' + pad2(m) + '-' + pad2(d);
+  }
+  function lastDay(y, m) {
+    return new Date(Date.UTC(y, m, 0)).getUTCDate();
+  }
+  function int(v, where, unit) {
+    var n = v == null ? 0 : Number(v);
+    if (!Number.isInteger(n)) throw refuse('A ledger amount is a whole number of ' + unit + ' — ' + where + ' is not.');
+    return n;
+  }
+  function lineExtras(r, g, pack) {
+    const p = pack,
+      key = r.line || g.line;
+    const line = p.presentation && p.presentation.lines && Object.prototype.hasOwnProperty.call(p.presentation.lines, key) ? p.presentation.lines[key] : null;
+    return { group_name: g.name, line: key, line_label: line ? line.label : null, statement: line ? line.st : null };
+  }
+  /** a return's box as one row: { code, label, amount_minor, tax_minor, roles, note } — moved from gst-returns.row_ (R2); a BAS label has one figure, a VAT201 box two */
+  function returnRow(code, label, amount, tax, roles, note) {
+    return {
+      code: String(code),
+      label: label,
+      amount_minor: amount == null ? null : amount,
+      tax_minor: tax == null ? null : tax,
+      roles: roles || [],
+      note: note || null
+    };
+  }
+  function singleHeadSetOff(o, minor, w) {
+    var h = w.head,
+      out = minor((o.output || {})[h]),
+      inp = minor((o.input || {})[h]);
+    if (out < 0 || inp < 0) throw refuse(w.negative);
+    var a = Math.min(inp, out),
+      used = a > 0 ? [{ from: h, against: h, amount: a }] : [];
+    var r = { utilised: used, payable: {}, carried: {} };
+    r.payable[h] = out - a;
+    r.carried[h] = inp - a;
+    r[w.leftover] = inp - a;
+    return r;
+  }
 
-function noCreditSetOff(o, minor, w) {
-  var h = w.head, out = minor((o.output || {})[h]), inp = minor((o.input || {})[h]);
-  if (out < 0 || inp < 0) throw refuse(w.negative);
-  var r = { utilised: [], payable: {}, carried: {} };
-  r.payable[h] = out; r.carried[h] = 0;
-  return r;
-}
+  function noCreditSetOff(o, minor, w) {
+    var h = w.head,
+      out = minor((o.output || {})[h]),
+      inp = minor((o.input || {})[h]);
+    if (out < 0 || inp < 0) throw refuse(w.negative);
+    var r = { utilised: [], payable: {}, carried: {} };
+    r.payable[h] = out;
+    r.carried[h] = 0;
+    return r;
+  }
 
-const EXPORTS = { noCreditSetOff: noCreditSetOff, refuse: refuse, pad2: pad2, ymd: ymd, lastDay: lastDay, int: int, lineExtras: lineExtras, singleHeadSetOff: singleHeadSetOff, returnRow: returnRow };
+  /**
+   * ⭐ ACC-290 part A — the `unknown` supply-kind row of a pack's return map (read-only; posting and the boxes never change). A sale at 0% that names no
+   * supply kind lands on the plain sales ledger, so the boxes of the kinds that need a named kind (BAS G3, VAT201 boxes 4 and 5 …) cannot count it. The row says so
+   * in one shape for every pack: `role` is the ledger the unnamed sale is on, `kinds` the kinds the owner picks from, `ask` the question, `why` the sentence.
+   * Never defaults 0% to a free kind (DECISIONS.md:1497): the supply stays unknown until the owner answers.
+   */
+  function unknownKind(o) {
+    return Object.freeze({
+      id: 'unknown',
+      name: o.name,
+      role: o.role || 'sales',
+      kinds: Object.freeze(o.kinds.slice()),
+      boxes: Object.freeze((o.boxes || []).slice()),
+      ask: o.ask,
+      why: o.why,
+      cite: o.cite
+    });
+  }
 
-/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBPackKit (loaded before any pack). */
-if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
-if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
+  const EXPORTS = {
+    noCreditSetOff: noCreditSetOff,
+    refuse: refuse,
+    pad2: pad2,
+    ymd: ymd,
+    lastDay: lastDay,
+    int: int,
+    lineExtras: lineExtras,
+    singleHeadSetOff: singleHeadSetOff,
+    returnRow: returnRow,
+    unknownKind: unknownKind
+  };
+
+  /* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBPackKit (loaded before any pack). */
+  if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+  if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ADOPTED from chitbridge-engines v1.86.0 · reg-in · sha256 6401cc34845b1471d2501451d92afc133576b065b73f5220d6c94140318b6bcd — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
@@ -1847,7 +1911,7 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
   if (root && typeof root.window !== 'undefined') root.window.CBRegIN = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
-/* ADOPTED from chitbridge-engines v1.86.0 · reg-au · sha256 57513a89c9de9153abc67d5f339d99f785a0487961015a52191023b83dc5b08e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.0 · reg-au · sha256 93c2d6f2fb53a96a72e70afbbfe67cf90793ad78033c62b2ac8ea17a6fa96fea — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · reg-au. Edited ONLY in chitbridge-engines/src/reg-au.js; every platform adopts a released version of it. */
 /*
  * OWNS      the Australia regulation pack: its chart, AASB 101 lines, Division 40 depreciation, GST 10% with its supply kinds, the BAS periods and labels, the dated penalty unit and records rules, as data.
@@ -2256,6 +2320,18 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
      * within 28 days of a request. A tax invoice for A$1,000 or more must ALSO show the buyer's identity or ABN (s.29-70(1)(c)(ii)).
      */
     taxInvoice: Object.freeze({
+      /* ACC-7 (v1.90.0): the thresholds as DATED rows {from, to, cite}, read by tax-packs.rowAsOf on the bill's own date; the flat members below are the row still open, kept for readers that never had a date.
+         A date no row covers has no rule (taxInvoice answers required false and says so). UNVERIFIED (12 Nov 2026): no primary source could be read (ato.gov.au and AustLII answered 403). The only history we hold is the critic's unconfirmed note: A$50 ex-GST to 30 Jun 2007, A$75 ex-GST (A$82.50 inclusive) from 1 Jul 2007 (Treasury 2007-08 budget paper, snippet only), so the row starts 2007-07-01 and earlier days have NO row. */
+      rows: Object.freeze([
+        Object.freeze({
+          from: '2007-07-01',
+          to: null,
+          from_minor: 8250,
+          buyer_identity_from_minor: 100000,
+          cite: 'unverified: no primary text read (ato.gov.au 403, AustLII 403). Secondary only: GST Act 1999 s.29-70(1), s.29-80 + GST Regulations 2019 s.29-80.01, tax invoice at A$82.50 incl. GST (A$75 ex-GST) from 1 Jul 2007; buyer identity or ABN from A$1,000. Whether the law says "more than" or "or more" the threshold is NOT confirmed; the engine reads A$82.50 and above (>=)',
+          status: 'unconfirmed'
+        })
+      ]),
       from_minor: 8250 /* A$82.50 including GST */,
       buyer_identity_from_minor: 100000 /* A$1,000 */,
       within_days: 28,
@@ -2320,11 +2396,16 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
    *   buyer_identity   the buyer's identity or ABN must be on it too — from A$1,000
    * Below A$82.50 a receipt is enough for the buyer's credit; the seller may still issue a tax invoice.
    */
-  function taxInvoice(totalMinor) {
+  function taxInvoice(totalMinor, opt) {
     var t = TAX_AU.taxInvoice,
       m = Math.abs(Number(totalMinor) || 0);
-    var required = m >= t.from_minor,
-      buyer = m >= t.buyer_identity_from_minor;
+    /* ACC-7: the row in force on the bill's own day is picked by the caller with tax-packs.rowAsOf (the one dated-row reader) and handed in as opt.row — invoice.build does; `opt.dated` says it looked.
+       A caller that did not look reads the open row (as before); a day no row covers (opt.dated, no row) has no rule and says so. */
+    var row = opt && opt.dated ? opt.row : t.rows[t.rows.length - 1];
+    if (!row)
+      return { required: false, buyer_identity: false, within_days: t.within_days, must: [], cite: t.cite, why: 'No GST tax-invoice rule is in force on the date of this bill (the row we hold starts 1 Jul 2007; earlier days are not read).' };
+    var required = m >= row.from_minor,
+      buyer = m >= row.buyer_identity_from_minor;
     var must = required
       ? [
           'the words "Tax invoice"',
@@ -2411,7 +2492,8 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
    *   `rows` are the period's ledger MOVEMENTS by role, as ledger.accumulate gives them: [{ role, dr_minor, cr_minor }] (a code with no role is a shop's own ledger and is not a GST label).
    *   Labels (ato.gov.au › GST labels on your BAS), every amount in CENTS:
    *     G1  Total sales — GST inclusive (the form's "Does the amount at G1 include GST? Yes"): every sales ledger's net credit plus 1A
-   *     G2  Export sales (`sales_export`)   G3  Other GST-free sales (`sales_gst_free`)   — nil until a shop posts there (see LEDGERS_AU)
+   *     G2  Export sales (`sales_export`)   G3  Other GST-free sales (`sales_gst_free`)   G4  Input taxed sales (`sales_input_taxed`, v1.90.0) — nil until a shop posts there (see LEDGERS_AU)
+   *     Hand check: 1A = (G1 − G2 − G3 − G4) / 11 (GST is one-eleventh of a GST-inclusive taxable sale, GST Act s.9-70).
    *     G10 Capital purchases (the ppe_* ledgers' net debit)   G11 Non-capital purchases (purchases, purchase returns and every expense class)
    *     1A  GST on sales (`gst_collected` net credit)   1B  GST on purchases (`gst_paid` net debit)   9  the net amount: 1A − 1B (positive = payable, negative = refund, s.35-5)
    *   `simpler: true` (Simpler BAS — GST turnover under A$10 million, the default since 1 July 2017) answers G1, 1A and 1B only.
@@ -2422,6 +2504,7 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
     G1: 'Total sales',
     G2: 'Export sales',
     G3: 'Other GST-free sales',
+    G4: 'Input taxed sales',
     G10: 'Capital purchases',
     G11: 'Non-capital purchases',
     '1A': 'GST on sales',
@@ -2472,12 +2555,14 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
       9: ['gst_collected', 'gst_paid'],
       G2: ['sales_export'],
       G3: ['sales_gst_free'],
+      G4: ['sales_input_taxed'],
       G10: capitalRoles,
       G11: nonCapitalRoles
     };
     if (!x.simpler) {
       labels.G2 = cr('sales_export');
       labels.G3 = cr('sales_gst_free');
+      labels.G4 = cr('sales_input_taxed'); /* ACC-233 (v1.90.0): input-taxed sales (Div 40) are in G1 and reported again at G4, read from the ledger a kind-carrying line posted to */
       labels.G10 = sum(capitalRoles, dr);
       labels.G11 = sum(nonCapitalRoles, dr);
     }
@@ -2635,6 +2720,13 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
       closingStock: 'Closing inventory'
     }
   };
+  /** the payment modes an Australian shop is offered, in order — every id is a key of CHART.paymentModes (tests/country-payments.test.js); no UPI here. A cheque posts when it clears, so it is not offered at the till. */
+  const PAYMENTS = Object.freeze([
+    Object.freeze({ id: 'cash', label: 'Cash' }),
+    Object.freeze({ id: 'bank', label: 'Bank' }),
+    Object.freeze({ id: 'card', label: 'Card' }),
+    Object.freeze({ id: 'eft', label: 'EFT' })
+  ]);
   /** the groups the core reads by KIND, and how a payment mode lands: the REAL account money comes into (EFT, BPAY, PayID and a cheque reach the bank; EFTPOS is a card settlement) */
   const CHART = {
     paymentModes: { cash: 'cash', bank: 'bank', eft: 'bank', bpay: 'bank', payid: 'bank', cheque: 'bank', card: 'card', eftpos: 'card' },
@@ -2660,16 +2752,23 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
     return a && a.line === 'employee_benefits' ? 'wages_payable' : 'accrued_expenses';
   }
 
-  /* ⭐ BANK STATEMENTS (b7) — the amount prefixes and the whole words a narration uses. No bank's header cells are recorded yet (a preset is added once checked against a real file). */
+  /* ⭐ BANK STATEMENTS (b7) — the amount prefixes and the whole words a narration uses; presets = a LAYOUT, not a bank (none named until its file is read), verify:true. NO tax row here: GST on a fee comes from the rule's tax code (learn), never from "it is a fee" (auditor to confirm).
+   B5-01 (Fable review 5): PHRASES only. A bare FEE / INT / INTEREST / WDL / WITHDRAWAL named an account for "SMITH LEGAL PROFESSIONAL FEE", "INT TRANSFER FROM J SMITH" and "WITHDRAWAL ONLINE ... TFR SMITH PLUMBING"; bank-recon now tries a party before these words and never calls a word-rule proposal ready without the person's tick. */
   const BANK = {
-    amountPrefixes: ['$', 'a$', 'aud'],
-    minorUnit: 'cents',
-    presets: {},
+    amountPrefixes: ['$', 'a$', 'aud'], minorUnit: 'cents',
+    /* FIN-115 (14 Nov): the headers a bank prints (Westpac / St.George "Narrative", NAB "Transaction Details") and the two exports with NO header row (CommBank NetBank: date, signed amount, description, balance; ANZ: date, signed amount, description). The banks publish no column list (ANZ, Westpac, NAB and CommBank help pages read on 14 Nov name the export but not its columns), so every one is verify:true: CommBank's order is from a converter vendor's page (statement-converter.pages.dev, "date, amount, description, and running balance"; debits negative), ANZ's from the same shape, NAB's from the Transaction Details heading its export carries. A file that fits none is refused in words; one whose descriptions all read blank is warned. */
+    presets: {
+      narrative: { bank: 'Narrative layout', verify: true, note: 'Date · Narrative · Debit Amount · Credit Amount · Balance', map: { date: ['Date'], narration: ['Narrative'], debit: ['Debit Amount'], credit: ['Credit Amount'], balance: ['Balance'] } },
+      westpac: { bank: 'Westpac / St.George', verify: true, note: 'Date · Narrative · Debit Amount · Credit Amount · Balance', map: { date: ['Date'], narration: ['Narrative'], debit: ['Debit Amount'], credit: ['Credit Amount'], balance: ['Balance'] } },
+      nab: { bank: 'NAB', verify: true, note: 'Date · Amount · Transaction Details · Balance', map: { date: ['Date'], amount: ['Amount'], narration: ['Transaction Details'], balance: ['Balance'] } },
+      cba: { bank: 'CommBank NetBank (no header row)', verify: true, note: 'Date · Amount (money out is negative) · Description · Balance', map: {}, headerless: { count: 4, map: { date: 0, amount: 1, narration: 2, balance: 3 } } },
+      anz: { bank: 'ANZ (no header row)', verify: true, note: 'Date · Amount (money out is negative) · Description', map: {}, headerless: { count: 3, map: { date: 0, amount: 1, narration: 2 } } }
+    },
     keywords: {
       default: {
-        charges: ['FEE', 'FEES', 'ACCOUNT FEE', 'MERCHANT FEE', 'MONTHLY FEE', 'SERVICE FEE', 'BANK CHARGE'],
-        interest: ['INTEREST', 'INT', 'CREDIT INTEREST', 'INTEREST PAID'],
-        atm: ['ATM', 'WDL', 'WITHDRAWAL', 'CASH OUT'],
+        charges: ['ACCOUNT FEE', 'MERCHANT FEE', 'MONTHLY FEE', 'SERVICE FEE', 'BANK CHARGE'],
+        interest: ['CREDIT INTEREST', 'INTEREST PAID'],
+        atm: ['ATM', 'ATM WITHDRAWAL', 'CASH OUT'],
         cash_deposit: ['CASH DEPOSIT', 'DEPOSIT CASH', 'CASH DEP'],
         cheque_return: ['DISHONOUR', 'DISHONOURED', 'RETURNED', 'REVERSAL'],
         transfer: ['EFT', 'BPAY', 'OSKO', 'PAYID', 'DIRECT CREDIT', 'DIRECT DEBIT', 'TRANSFER', 'NPP']
@@ -2931,6 +3030,7 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
     accountExtras: accountExtras,
     presentation: PRESENTATION,
     chart: CHART,
+    payments: PAYMENTS /* v1.90.0: the tenders a shop here is offered, ids of chart.paymentModes (no UPI) */,
     depreciation: { assetClasses: ASSET_CLASSES_AU, entityBases: ENTITY_BASES_AU, compute: depreciationCompute },
     bank: BANK,
     cite: CITE,
@@ -2980,7 +3080,15 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
       frequencies: ['quarterly', 'monthly'],
       labels: BAS_LABELS,
       periods: basPeriods,
-      bas: bas
+      bas: bas,
+      unknownKind: KIT.unknownKind({
+        name: 'Sale at 0% with no GST kind',
+        kinds: ['taxable', 'gst_free', 'input_taxed'],
+        boxes: ['G3'],
+        ask: 'Is this sale taxable, GST-free or input-taxed?',
+        why: 'A sale at 0% that names no kind stays on Sales (4000), so BAS G3 does not count it. We never assume GST-free: it is a list in the law, not a default.',
+        cite: 'GST Act 1999 Div 38 (GST-free), Div 40 (input-taxed); ato.gov.au › GST labels on your BAS'
+      })
     },
     thresholds: {
       registration: TAX_AU.registration,
