@@ -39,13 +39,13 @@ of file each thing is; this says what already does the job.
 | 61 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
 | 58 | `again` | `signin-ui.js` |  |
+| 56 | `rows` | `cap-settings.js` |  |
 | 56 | `view` | `books-payables.js` | group: |
 | 56 | `pack` | `books-store.js` |  |
 | 56 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 56 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 55 | `toast` | `accounts-shell.js` |  |
-| 55 | `rows` | `cap-settings.js` |  |
-| 54 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 55 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 54 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 54 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 54 | `count` | `money-check.js` | the count /health reads |
@@ -57,8 +57,8 @@ of file each thing is; this says what already does the job.
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 48 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
+| 47 | `host` | `chit-sheet.js` |  |
 | 47 | `facts` | `bill-steps.js` | MY state_log — |
-| 46 | `host` | `chit-sheet.js` |  |
 | 46 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 45 | `rules` | `docnumber.js` | the rule set for a country — |
 | 44 | `holds` | `bounds.js` | holds(fragment, figure) → true when a figure is a finite number inside the fragment's min / max (the derived f |
