@@ -140,12 +140,12 @@
   function confirmBody(text) {
     var model = host.controller().view(),
       ready = model.items.filter(function (item) { return host.standing(item, model.results[item.key]) === 'ready'; });
-    var money = function (minor) { return esc(host.amountText({ amount_minor: minor, currency: host.CURRENCY })); };
+    var amountMarkup = function (minor) { return esc(host.amountText({ amount_minor: minor, currency: host.CURRENCY })); };
     var cards = ready.map(function (item) {
       var entry = item.entry || { lines: [] };
       var legs = (entry.lines || []).map(function (leg) {
         var dr = (leg.dr_minor || 0) > 0;
-        return '<tr><td>' + (dr ? 'Dr' : 'Cr') + '</td><td>' + esc(host.nameOf(leg.account)) + '</td><td class="bd-r">' + money(dr ? leg.dr_minor : leg.cr_minor) + '</td></tr>';
+        return '<tr><td>' + (dr ? 'Dr' : 'Cr') + '</td><td>' + esc(host.nameOf(leg.account)) + '</td><td class="bd-r">' + amountMarkup(dr ? leg.dr_minor : leg.cr_minor) + '</td></tr>';
       }).join('');
       return '<li><div class="bd-lp-top"><span>' + esc(host.payeeOf(item)) + '</span><span>' + esc(host.preview.dateText(item.line.date)) + '</span></div><div class="bd-lp-sub">' + esc(host.accountOf(item)) + (item.party && item.party.status === 'new' ? ' · new payee made first' : '') + '</div><table class="bd-jt"><tbody>' + legs + '</tbody></table>' +
         (entry.balanced ? '<div class="bd-lp-sub">Dr = Cr ✓</div>' : '') + '</li>';
