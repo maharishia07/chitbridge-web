@@ -379,7 +379,8 @@ function bankExplain() {
   const asks = chits
     .filter((item) => item.direction === 'sent' && (item.business_json || {}).kind === 'bank_query' && item.business_json.bank_query)
     .map((item) => ({ key: item.business_json.bank_query.key, chit_id: item.chit_id, party: item.party, at: item.created_at }));
-  const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, parties: bkbBookParties(), open_items: bkbOpenItems(), learned: bkbRules(), bank: BKB.preset || undefined, country: bkbCountry() });
+  const pairing = typeof bkshPairing === 'function' ? bkshPairing(P.lines) : {};
+  const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, line_refs: pairing.line_refs, posted: pairing.posted, parties: bkbBookParties(), open_items: bkbOpenItems(), learned: bkbRules(), bank: BKB.preset || undefined, country: bkbCountry() });
   BKB.m = {
     unmatched_ledger: M.unmatched_ledger || [],
     unmatched_stmt: M.rows.filter((item) => !item.ledger.length).map((item) => Object.assign({ i: item.i }, P.lines[item.i]))
@@ -728,7 +729,7 @@ function bankList() {
 const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|payment_made|cheque_dishonoured)$/.test(r.sugg.event.type));
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */
-function bankAccept(r) {
+function bankAccept(r, quiet) {
   if (
     !bkbStep({
       act: 'accept',
@@ -743,7 +744,7 @@ function bankAccept(r) {
   if (c && c.party && c.party.id) bkbLearn(r.stmt, { party: c.party.id, party_name: c.party.name });
   bankExplain();
   bankPaint();
-  toast(tx('Accepted. Undo keeps your notes.'));
+  if (!quiet) toast(tx('Accepted. Undo keeps your notes.'));
 }
 function bankUndo(r) {
   if (!bkbStep({ act: 'undo', key: r.key })) return;

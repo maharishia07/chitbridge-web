@@ -283,10 +283,17 @@ const make = (over) => {
   assert.deepStrictEqual(Object.keys(contra).sort(), ['amount', 'client_ref', 'date', 'from', 'kind', 'narration', 'to']);
   /* the loan / tax-payment answers have no api door yet: refused in words before any party is made or anything sent */
   const guard = POST.adapter({ api: async () => assert.fail('nothing is sent'), who: { role: 'owner' } });
-  for (const type of ['tax_payment', 'loan_taken', 'loan_repaid']) {
+  for (const type of ['loan_taken', 'loan_repaid']) {
     const refused = await guard({ ref: 'bank:n', event: { type, amount: 5 }, party: { status: 'new', name: 'Z', kind: 'supplier' } });
     assert.ok(refused.ok === false && /cannot be added from a bank line yet/.test(refused.why), type);
   }
+  /* M5: the ATO BAS payment (the whole figure on the one head) and a taxed receipt (net + the GST inside) are posted through POST /events */
+  const bas = POST.bodyOf({ ref: 'bank:b', event: { type: 'tax_payment', mode: 'bank', heads: { gst: 0 }, date: '2026-10-24', amount: 1462, narration: 'ATO PAYMENT BAS 1126' } }, null, (b) => Object.assign({}, b, { paid_from: b.paid_from }));
+  assert.deepStrictEqual(bas, { kind: 'tax_payment', date: '2026-10-24', amount: 1462, narration: 'ATO PAYMENT BAS 1126', client_ref: 'bank:b', paid_from: 'bank' });
+  const card = POST.bodyOf({ ref: 'bank:k', event: { type: 'other_income', class: 'sundry_income', into: 'bank', date: '2026-10-08', amount: 410, narration: 'CARD' }, tax: { direction: 'output', tax_minor: 4100 } });
+  assert.strictEqual(card.output_tax_minor, 4100);
+  assert.strictEqual(card.amount, 410);
+  assert.ok(POST.POSTABLE.indexOf('tax_payment') >= 0);
   /* item 1: tax_invoice 'held' rides with the tax; a new customer answers customer_identity_id */
   const held = POST.bodyOf({ ref: 'bank:h', event: { type: 'expense', class: 'x', paid_from: 'bank', date: '2026-10-23', amount: 100, narration: 'n' }, tax: { tax_minor: 1000, invoice_answer: 'held' } });
   assert.strictEqual(held.tax_invoice, 'held');

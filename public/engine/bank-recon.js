@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0-bankmonday.1 · bank-recon · sha256 7d02611397ce2a3b9656276ec43552b058d59f3acb15b3f1e950d0243a1588c7 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-bankmonday.2 · bank-recon · sha256 8417eb327137c9866c3fafb0ab4e80862255e559c329837d568e4641b4bd31e4 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -881,6 +881,7 @@
     var list = statementRows_(stmtLines);
     var ledgerRows = ledgerRowsOf_(ledgerLines);
     var matched = [];
+    matchByPostedRef_(list, ledgerRows, matched, opts);
     matchByRef_(list, ledgerRows, matched);
     var ambiguous = matchByAmountDate_(list, ledgerRows, matched, win);
     matchOneToMany_(list, ledgerRows, matched, win);
@@ -941,6 +942,25 @@
   function daysNearestFirst_(byDay, dayNumber) {
     return Object.keys(byDay).sort(function (first, second) {
       return Math.abs(dayNo_(first) - dayNumber) - Math.abs(dayNo_(second) - dayNumber) || (first < second ? -1 : 1);
+    });
+  }
+  /**
+   * (0) v1.98.0 (B5 / Fable 30-SECONDS): a line that was ADDED from this very statement is paired with the entry it made, ONE TO ONE BY OCCURRENCE. opts.line_refs = the line's own client_ref per statement line
+   * (bank-project refsOf: 'bank:<fingerprint>-<n>', n = its place among identical lines) and opts.posted = { <client_ref>: <entry_no> } (the books' own record of what each ref posted). Two equal lines on
+   * one day (Bunnings 96.80 twice) carry two refs and made two entries: each pairs with its own, so neither is left 'missing in the bank' nor 'missing in the books'. Same amount and side only (a
+   * mismatch is left to the later passes and the statement check); a ref with no entry in the ledger given changes nothing.
+   */
+  function matchByPostedRef_(list, ledgerRows, matched, opts) {
+    var refs = opts && opts.line_refs,
+      posted = opts && opts.posted;
+    if (!refs || !posted) return;
+    list.forEach(function (item) {
+      var entryNo = posted[refs[item.i]];
+      if (item.used || entryNo == null) return;
+      var hit = ledgerRows.filter(function (x) {
+        return !x.used && x.side === item.side && x.m === item.m && String(x.line.entry_no) === String(entryNo);
+      })[0];
+      if (hit) takeMatch_(matched, [item], [hit], 'posted');
     });
   }
   /** (a) the same reference and amount */
@@ -1622,7 +1642,7 @@
       win = options.window_days != null ? Math.max(0, +options.window_days) : 3;
     var lines = stmtLines || [],
       list = ledgerLines || [],
-      matchResult = match(lines, list, { window_days: win });
+      matchResult = match(lines, list, { window_days: win, line_refs: options.line_refs, posted: options.posted });
     var keys = lineKeys_(lines);
     var statementRows = explainStatementRows_(lines);
     var railRows = railRowsOf_(railPays);
