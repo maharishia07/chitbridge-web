@@ -22,7 +22,7 @@
  * title row is drawn — a page with no chrome of its own mounts CBAvatar there, and the head stays three rows. The unit draws the span
  * and reads nothing from the page: what goes in it is the page's business.
  *
- * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · sort · cell(row)), its grouping, filters, sorts, notices,
+ * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · keep · sort · cell(row)); keep:true = never left out for width (a status, a code, the row's action), its grouping, filters, sorts, notices,
  * period, what a row opens to (`next`), row actions and bulk operations. WHAT THE UNIT OWNS, FOR EVERY LIST, AND NO LIST
  * CAN OPT OUT OF: the three-row head, ADJUSTABLE COLUMNS (drag, touch, ← → in 8 px, double-click resets, never narrower than
  * the label, remembered), ONLY THE ROWS SCROLL (the head is fixed, the rows fill the rest of the window, the column header
@@ -682,10 +682,10 @@
       return over;
     };
     var over = squeeze(false);
-    while (over > 0) {
+    while (over > 0 && !I.card) { /* a card is not a row of columns: it never leaves a field out for width */
       var leave = null;
       live.forEach(function (c) {
-        if (c !== sc && c.pin !== 'end' && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
+        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
       });
       if (!leave) break;
       hide.push(leave.key);
