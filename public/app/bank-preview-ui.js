@@ -141,7 +141,7 @@
       var reason = item.state === 'needs_you' && !asked ? '<span class="bd-why">' + escapeHtml(/^no rule matched$/i.test(item.why || '') ? 'Nothing here says who or what this is.' : item.why || 'Nothing here says who or what this is.') + '</span>' : '';
       return entryNote(item) + asked + (others ? ' ' + others : '') + reason + sayBox(item);
     }
-    Object.assign(ctx, { basisQuestion: basisQuestion, taxKindBox, askedBox, sayBox, lineNote });
+    Object.assign(ctx, { taxKindBox, askedBox, sayBox, lineNote });
   }
   /** a new party, and the account a line nothing explained is given; each function lands on the one shared `ctx` */
   function addParties(ctx) {
