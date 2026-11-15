@@ -171,9 +171,9 @@
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
     return root.CB_API || '';
   }
-  function session() {
+  function session(anonymous) {
     try {
-      var parsed = JSON.parse(lsGet('cb_sess') || 'null');
+      var parsed = anonymous ? null : JSON.parse(lsGet('cb_sess') || 'null'); /* anonymous: a page that reads no stored session */
       return parsed && parsed.token ? parsed : null;
     } catch (_) {
       return null;
@@ -399,8 +399,8 @@
   /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono) comes WITH the frame, once — a page never links its own face */
   var FONTS_HREF =
     'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
-  function addFonts() {
-    if (!doc || !doc.head) return;
+  function addFonts(options) {
+    if (!doc || !doc.head || (options && options.fonts === false)) return; /* fonts:false: a page whose CSP allows no third-party call (the no-login bank page) */
     var hasPlexLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
       return /IBM\+Plex\+Sans/.test(nestedLink.getAttribute('href') || '');
     });
@@ -930,12 +930,12 @@
     if (!el) return null;
     o = o || {};
     addCss();
-    addFonts();
+    addFonts(o);
     addSkipLink();
     var host = o.host || null,
       mode = host && host.bar ? 'bar' : host ? 'app' : 'home';
     var appId = host && host.app ? String(host.app) : ''; /* bar mode too (SHELL-ONE): the storefront and the labs name their app for the chip */
-    var sess = session();
+    var sess = session(o.anonymous);
     var person = o.person !== undefined ? o.person : root.CBAvatar && root.CBAvatar.sessionPerson ? root.CBAvatar.sessionPerson() : null;
     var token = o.token || (sess && sess.token) || '';
     var base = o.apiBase != null ? o.apiBase : apiBase();

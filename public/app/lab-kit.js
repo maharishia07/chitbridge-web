@@ -125,23 +125,59 @@
   }
 
   /* ── W15: at most three inline + "and N more" opening the one list control in a popup ── */
-  function popup(title, build, extraClass) {
+  /** the controls a Tab can reach inside a node (visible, enabled): the popup's focus trap walks this list */
+  function tabbables(node) {
+    var query = 'a[href],button,input,select,textarea,[tabindex]';
+    return Array.prototype.filter.call(node.querySelectorAll(query), function (item) {
+      return !item.disabled && item.getAttribute('tabindex') !== '-1' && !item.hidden && item.offsetParent !== null;
+    });
+  }
+  /** the keys of an open popup: Esc closes only this one (a sheet or confirm under it stays until the next Esc); Tab and Shift+Tab stay inside the dialog */
+  function popupKey(event, back, close) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      return void close();
+    }
+    if (event.key !== 'Tab') return;
+    var items = tabbables(back.querySelector('.lk-pop'));
+    if (!items.length) return void event.preventDefault();
+    var first = items[0],
+      last = items[items.length - 1],
+      inside = back.contains(root.document.activeElement);
+    if (!inside || (event.shiftKey && root.document.activeElement === first)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (!event.shiftKey && root.document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+  /**
+   * popup(title, build, extraClass, onClose): the ONE modal of the labs and of every page that loads this file (CMP002 dialog).
+   * Focus: it starts on the close button (confirm() moves it to the safe button), Tab and Shift+Tab stay INSIDE the dialog, Esc, the x and a click outside close it,
+   * and focus goes back to the control that opened it (or, when the page repainted that control, to onClose's answer: a node to focus).
+   * extraClass 'lk-side' is the placement variant: a panel at the side on a wide screen, a sheet at the bottom on a phone.
+   */
+  function popup(title, build, extraClass, onClose) {
+    var opener = root.document.activeElement;
     var back = root.document.createElement('div');
-    back.className = 'lk-pop-back';
+    back.className = 'lk-pop-back' + (extraClass && extraClass.indexOf('lk-side') >= 0 ? ' lk-side-back' : '');
     back.innerHTML =
       '<div class="lk-pop' + (extraClass ? ' ' + extraClass : '') + '" role="dialog" data-pop="POP141" aria-modal="true" aria-label="' + escapeText(title) + '" data-testid="lk-pop"><header><b>' + escapeText(title) +
       '</b><button data-cbsid="CMP005" type="button" class="lk-pop-x" aria-label="Close" data-testid="lk-pop-close">×</button></header><div class="lk-pop-body"></div></div>';
     function close() {
-      root.document.removeEventListener('keydown', onKey);
+      root.document.removeEventListener('keydown', onKey, true);
       back.remove();
+      var target = (onClose && onClose()) || opener;
+      if (target && target.isConnected && target.focus) target.focus();
     }
     function onKey(event) {
-      if (event.key === 'Escape') close();
+      popupKey(event, back, close);
     }
     back.addEventListener('click', function (event) {
       if (event.target === back || event.target.closest('.lk-pop-x')) close();
     });
-    root.document.addEventListener('keydown', onKey);
+    root.document.addEventListener('keydown', onKey, true);
     root.document.body.appendChild(back);
     build(back.querySelector('.lk-pop-body'));
     var closeBtn = back.querySelector('.lk-pop-x');
@@ -151,7 +187,7 @@
   /**
    * UX-109 (Athi 22 Oct): an action that commits a money promise asks first, in words. `bodyHtml` is raw HTML (the caller escapes what it
    * puts in); `onOk` runs only on Confirm. Cancel, the x, Esc and a click outside change nothing. Focus starts on Cancel, never on the promise.
-   * opts: { okLabel, danger }
+   * opts: { okLabel, cancelLabel, danger, className (added to lk-confirm), onClose (→ the node to focus after it closes) }
    */
   function confirm(title, bodyHtml, onOk, opts) {
     opts = opts || {};
@@ -160,12 +196,13 @@
       function (body) {
         body.innerHTML =
           '<div class="lk-confirm-text" data-testid="lk-confirm-text">' + bodyHtml + '</div>' +
-          '<div class="lk-confirm-acts"><button data-cbsid="CMP003" type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
+          '<div class="lk-confirm-acts"><button data-cbsid="CMP003" type="button" class="lk-btn" data-testid="lk-confirm-cancel">' + escapeText(opts.cancelLabel || 'Cancel') + '</button>' +
           '<button data-cbsid="SCR042-B01" type="button" class="lk-btn lk-btn-go' + (opts.danger ? ' lk-btn-danger' : '') + '" data-testid="lk-confirm-ok">' + escapeText(opts.okLabel || 'Confirm') + '</button></div>';
         body.querySelector('[data-testid="lk-confirm-cancel"]').onclick = function () { shown.close(); };
         body.querySelector('[data-testid="lk-confirm-ok"]').onclick = function () { shown.close(); onOk(); };
       },
-      'lk-confirm'
+      'lk-confirm' + (opts.className ? ' ' + opts.className : ''),
+      opts.onClose
     );
     var cancelButton = shown.node.querySelector('[data-testid="lk-confirm-cancel"]');
     if (cancelButton && cancelButton.focus) cancelButton.focus();
@@ -277,5 +314,47 @@
       };
   }
 
-  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, groupBy: groupBy, more: more, popup: popup, confirm: confirm, promise: promise };
+  /* ── CMP059 INITIALS BADGE: a round badge for a named payee (initials on one of six tints, picked from the name) or, for a category (a tax office, a power bill, a bank), a plain line icon.
+        No logos, never a person's photo; CBAvatar (CMP048) stays the account menu. The six tints are the classes lk-bd-0..5 in lab-kit.css: no style=. ── */
+  var BADGE_ICONS = {
+    bolt: 'M13 2 4 14h6l-1 8 9-12h-6z',
+    phone: 'M7 2h10v20H7zM11 18h2',
+    gov: 'M3 10 12 4l9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18',
+    bank: 'M3 10 12 4l9 6M5 20h14M6 10v7M12 10v7M18 10v7',
+    cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+    card: 'M3 6h18v12H3zM3 10h18',
+    home: 'M4 11 12 4l8 7v9H4z',
+    who: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21c1-5 15-5 16 0'
+  };
+  /** the tint (0..5) of a name: the same name is always the same colour, on every page */
+  function tintOf(name) {
+    var sum = 7;
+    String(name || '').split('').forEach(function (letter) {
+      sum = (sum * 31 + letter.charCodeAt(0)) >>> 0;
+    });
+    return sum % 6;
+  }
+  /** badge({ name, icon }) → html: initials of the name (first letters of up to two words) unless an icon is asked for */
+  function badge(opts) {
+    var icon = opts.icon && BADGE_ICONS[opts.icon];
+    if (icon)
+      return '<span class="lk-bd lk-bd-ic" data-cbsid="CMP059-D01" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + icon + '"/></svg></span>';
+    var letters = String(opts.name || '?').trim().split(/s+/).slice(0, 2).map(function (word) { return word.charAt(0); }).join('').toUpperCase();
+    return '<span class="lk-bd lk-bd-' + tintOf(opts.name) + '" data-cbsid="CMP059-D01" aria-hidden="true">' + escapeText(letters) + '</span>';
+  }
+  /* ── CMP058 FIGURE CARD: a label, one big figure and (optional) a progress line. The figure arrives as text the caller made with the ONE money formatter (its currency in it, CUR-1);
+        the bar is the existing .lk-bar (CMP021 family), never a second one. opts: { label, value (text), note, done, total, good } ── */
+  function figure(opts) {
+    var bar = '';
+    if (opts.total) {
+      var percent = Math.round((opts.done / opts.total) * 100);
+      bar = '<div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + opts.total + '" aria-valuenow="' + opts.done + '" aria-label="' + escapeText(opts.note || '') + '"><i style="width:' + percent + '%"></i></div>';
+    }
+    return (
+      '<div class="lk-fig' + (opts.good ? ' lk-fig-good' : '') + '" data-cbsid="CMP058-D01"><span class="lk-fig-l">' + escapeText(opts.label) + '</span><b class="lk-fig-v">' + escapeText(opts.value) + '</b>' +
+      bar + (opts.note ? '<span class="lk-progress-line">' + escapeText(opts.note) + '</span>' : '') + '</div>'
+    );
+  }
+
+  root.CBLabKit = { badge: badge, figure: figure, tintOf: tintOf, LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, groupBy: groupBy, more: more, popup: popup, confirm: confirm, promise: promise };
 })(typeof window !== 'undefined' ? window : globalThis);

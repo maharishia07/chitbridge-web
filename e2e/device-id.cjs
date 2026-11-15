@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const PUB = path.join(__dirname, '..', 'public');
-const OWN_STAMP = new Set(['till.html', 'promo.html']); /* the counter and the shop screen set X-Device-Id themselves */
+const OWN_STAMP = new Set(['till.html', 'promo.html', 'bank-demo.html']); /* the counter and the shop screen set X-Device-Id themselves; the no-login bank demo mounts the header anonymous: it reads no session and makes no call, and must load no device-id.js (e2e/bank-preview.test.cjs pins that) */
 /* ⚠️ NAMED GAP (K-SEC PR A): the readability guard has no trace row for public/cmdb/*.html, so ANY edit there fails CI. Until the
    trace covers it, the CMDB record viewer is left as it was: a person with a listed session sees its "Sign in" line there only. */
 const KNOWN_GAP = new Set(['cmdb/record.html']);

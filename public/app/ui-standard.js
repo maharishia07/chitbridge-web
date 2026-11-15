@@ -362,14 +362,15 @@ var CBUiStandard = (function () {
     ['bookfield', 'CMP040-I01 text, I02 date, I03 tick, T01 free text'], ['bookselect', 'CMP041-S01 select'], ['bookaction', 'CMP042-B01..B23 the books commands, P01 row tools'],
     ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal'],
     ['field', 'CMP055-I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text (ui.field; CMP040 and CMP045 are aliases)'],
-    ['select', 'CMP056-S01 select (ui.select; CMP035 and CMP041 are aliases)']
+    ['select', 'CMP056-S01 select (ui.select; CMP035 and CMP041 are aliases)'],
+    ['figure', 'CMP058-D01 figure card: a label, one figure with its currency, an optional progress line', 'CBLabKit.figure (lab-kit.js)'], ['badge', 'CMP059-D01 initials badge: a named payee\'s initials on one of six tints, or a category icon', 'CBLabKit.badge (lab-kit.js)']
   ];
   function listRows() {
     return LIST_ROWS.map(function (entry) {
       var component = ui.components[entry[0]];
       return '<section class="crow" data-testid="gal-row-' + component.code + '"><div class="cid"><span class="chip" data-testid="gal-code">' + component.code + '</span><b>' + esc(words(component.label)) + '</b>' +
         '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + '</span></span></div>' +
-        '<div class="states"><figure class="st"><div class="slot"><span class="mono">' + esc(entry[1]) + '</span></div><figcaption>CBList (list-ctl.js)</figcaption></figure></div></section>';
+        '<div class="states"><figure class="st"><div class="slot"><span class="mono">' + esc(entry[1]) + '</span></div><figcaption>' + esc(entry[2] || 'CBList (list-ctl.js)') + '</figcaption></figure></div></section>';
     }).join('');
   }
   /** CMP032 Batch job note: every state of a saved job in words, each its own standard text key (the batch bar itself is CMP026, the corner tray CMP027) */

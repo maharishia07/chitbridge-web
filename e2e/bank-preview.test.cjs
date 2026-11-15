@@ -325,7 +325,8 @@ const make = (over) => {
   /* the demo page is public and inert */
   const html = read('bank-demo.html');
   const csp = /http-equiv="Content-Security-Policy" content="([^"]+)"/.exec(html);
-  assert.ok(csp && !/unsafe-inline|unsafe-eval|https?:/.test(csp[1]) && /connect-src 'none'/.test(csp[1]), 'strict CSP, no network');
+  /* style-src 'self' 'unsafe-inline' only: the shared library sets a style attribute and injects its own style element (CSP-DECISION, 15 Nov); scripts stay 'self', the network stays shut */
+  assert.ok(csp && !/unsafe-eval|https?:/.test(csp[1]) && !/script-src[^;]*unsafe-inline/.test(csp[1]) && /script-src 'self'/.test(csp[1]) && /style-src 'self' 'unsafe-inline'/.test(csp[1]) && /connect-src 'none'/.test(csp[1]), 'script-src self only, no network');
   assert.ok(/name="robots" content="noindex/.test(html));
   assert.ok(/Demo\. Nothing is saved/.test(html));
   assert.ok(!/config\.js|device-id\.js|analytics|<script>[^<]|style="/.test(html.replace(/<!--[\s\S]*?-->/g, '')));
