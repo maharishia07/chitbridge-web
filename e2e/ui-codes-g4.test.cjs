@@ -4,7 +4,7 @@
  * ui-codes-g4.test.cjs - wave 2 group G4: four scripts wear their identity codes (UX-137 stamp, 15 Nov).
  *
  * OWNS      the proof that app/cap-traceability.js (INS003), app/cap-readiness.js (SCR033), app/cap-definitions.js (SCR003) and app/cap-catsetup.js (CAT004)
- *           carry 114 data-cbsid codes, each INSIDE the tag of the control it names (a removed code, a code moved to another kind of tag, or a swap of two
+ *           carry 109 data-cbsid codes (+ 5 ui.field mounts, R2), each INSIDE the tag of the control it names (a removed code, a code moved to another kind of tag, or a swap of two
  *           codes whose handlers differ fails it), that no code is written on two element definitions, that each file carries exactly its own count, and
  *           that every code is a live row in the register UIID_REG names.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-g4.test.cjs   (G4_MUTATE=remove or swap must fail it)
@@ -43,11 +43,7 @@ const CODES = [
   ["app/cap-readiness.js","SCR033-B09","button","onclick=\"openSectorMatrix"],
   ["app/cap-readiness.js","SCR033-C04","div","onclick=\"_rdComSelect"],
   ["app/cap-readiness.js","SCR033-B10","button","onclick=\"aiDraftCommerce"],
-  ["app/cap-readiness.js","SCR033-I01","input"," id=\"vf_id"],
   ["app/cap-readiness.js","SCR033-B11","button","onclick=\"submitVerify"],
-  ["app/cap-readiness.js","SCR033-I02","input"," id=\"gd_file"],
-  ["app/cap-readiness.js","SCR033-I03","input"," id=\"gd_ref"],
-  ["app/cap-readiness.js","SCR033-I04","input"," id=\"gd_valid"],
   ["app/cap-readiness.js","SCR033-B12","button","onclick=\"submitGather"],
   ["app/cap-definitions.js","SCR003-S01","select","onchange=\"cbDefSetRule"],
   ["app/cap-definitions.js","SCR003-S02","select","onchange=\"cbDefSetRule"],
@@ -61,7 +57,6 @@ const CODES = [
   ["app/cap-definitions.js","SCR003-I03","input","class=\"inp\""],
   ["app/cap-definitions.js","SCR003-S06","select","onchange=\"cbDefSetSub"],
   ["app/cap-definitions.js","SCR003-I04","input","oninput=\"cbDefSetField"],
-  ["app/cap-definitions.js","SCR003-I05","input","oninput=\"cbDefSetField"],
   ["app/cap-definitions.js","SCR003-B01","button","onclick=\"cbDefToggleStd"],
   ["app/cap-definitions.js","SCR003-S07","select"," id=\"cbdef_takeover"],
   ["app/cap-definitions.js","SCR003-B02","button","onclick=\"cbDefTakeoverGo"],
@@ -134,7 +129,15 @@ const CODES = [
   ["app/cap-catsetup.js","CAT004-B25","button","onclick=\"catsetSfDefUnit"],
   ["app/cap-catsetup.js","CAT004-B26","button","onclick=\"catsetSfFacet"]
 ];
-const COUNTS = {"app/cap-traceability.js":8,"app/cap-readiness.js":22,"app/cap-definitions.js":25,"app/cap-catsetup.js":59};
+/** UX-137 R2: a text-like input that became a ui.field mount. [file, mount code, the kind, the id it keeps for the handler that reads it]; the mount is a literal in the call (the census reads it) and the old element code is gone */
+const MOUNTS = [
+  ['app/cap-readiness.js', 'SCR033-U01', 'text', 'vf_id', 'SCR033-I01'],
+  ['app/cap-readiness.js', 'SCR033-U02', 'file', 'gd_file', 'SCR033-I02'],
+  ['app/cap-readiness.js', 'SCR033-U03', 'text', 'gd_ref', 'SCR033-I03'],
+  ['app/cap-readiness.js', 'SCR033-U04', 'date', 'gd_valid', 'SCR033-I04'],
+  ['app/cap-definitions.js', 'SCR003-U01', 'text', 'cbdef-note', 'SCR003-I05']
+];
+const COUNTS = {"app/cap-traceability.js":8,"app/cap-readiness.js":18,"app/cap-definitions.js":24,"app/cap-catsetup.js":59};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */
@@ -166,6 +169,15 @@ for (const f of Object.keys(COUNTS)) {
   for (const m of text(f).matchAll(/data-cbsid=[\\]?"([A-Z]{3}\d{3}-[A-Z]\d{2})/g)) { seen[m[1]] = (seen[m[1]] || 0) + 1; n++; }
   check(n === COUNTS[f], f + ' carries exactly ' + COUNTS[f] + ' coded element definitions: ' + n);
 }
+for (const [f, mount, kind, id, oldCode] of MOUNTS) {
+  const t = text(f), at = t.indexOf("mount: '" + mount + "'");
+  const call = at < 0 ? '' : t.slice(t.lastIndexOf('ui.field(', at), t.indexOf('})', at));
+  check(call.indexOf("kind: '" + kind + "'") > 0 && call.indexOf("id: '" + id + "'") > 0, f + ' ' + mount + ' is a ui.field ' + kind + ' with id ' + id + ' (the id its reader uses)');
+  check(t.indexOf(oldCode) < 0, f + ' no longer carries ' + oldCode + ' (the field component writes its own CMP055 code)');
+}
+const mountSeen = {};
+for (const f of ['app/cap-readiness.js', 'app/cap-definitions.js']) for (const m of text(f).matchAll(/mount: '([A-Z]{3}\d{3}-U\d{2})'/g)) mountSeen[m[1]] = (mountSeen[m[1]] || 0) + 1;
+check(Object.keys(mountSeen).length === MOUNTS.length && Object.keys(mountSeen).every((m) => mountSeen[m] === 1), 'each of the ' + MOUNTS.length + ' mounts is written once, no other ui.field is mounted in these files');
 const dup = Object.keys(seen).filter((c) => seen[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
 

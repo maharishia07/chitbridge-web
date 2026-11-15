@@ -1440,20 +1440,18 @@ function readinessScreen() {
 }
 function verifyReadiness(standard, doc, id_type) {
   UI.rdVerify = { standard: standard, doc: doc, id_type: id_type };
-  var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';
   var body =
     '<div class="mbody" style="padding:16px 18px">' +
     '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">Check your <b>' +
     id_type.toUpperCase() +
     '</b>. When a registry is connected this confirms it against the source of truth — the top <b>verified</b> rung. Until then it validates the format and records a <b>declared</b> claim (never a false “verified”).</div>' +
-    '<label style="font-size:var(--fs-1);font-weight:700;color:var(--grey)">' +
-    id_type.toUpperCase() +
-    ' number</label>' +
-    '<input data-cbsid="SCR033-I01" id="vf_id" placeholder="' +
-    (id_type === 'iec' ? 'e.g. AAACR1234B' : id_type.toUpperCase() + ' number') +
-    '" style="' +
-    inS +
-    '">' +
+    ui.field({
+      mount: 'SCR033-U01',
+      kind: 'text',
+      id: 'vf_id',
+      label: id_type.toUpperCase() + ' number',
+      placeholder: id_type === 'iec' ? 'e.g. AAACR1234B' : id_type.toUpperCase() + ' number'
+    }) +
     '<div id="vf_err" style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px"></div>' +
     '<button data-cbsid="SCR033-B11" id="vf_btn" onclick="submitVerify()" style="width:100%;background:var(--ok-3);color:var(--on-ok);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' +
     tx('🔗 Verify ID') +
@@ -1495,37 +1493,12 @@ function gatherReadiness(standard, doc) {
   })[0];
   UI.rdGather = { standard: standard, doc: doc, title: (it && it.title) || doc };
   var date = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
-  var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';
-  var lbl = 'font-size:var(--fs-1);font-weight:700;color:var(--grey)';
   var body =
     '<div class="mbody" style="padding:16px 18px">' +
     '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:13px">This records the clearance as a <b>chit on the rail</b> that carries your document — provenanced &amp; private. Buyers see only that it\'s met + its validity.</div>' +
-    '<label style="' +
-    lbl +
-    '">' +
-    tx('Document (PDF/image · ≤ 6 MB)') +
-    '</label>' +
-    '<input data-cbsid="SCR033-I02" id="gd_file" type="file" style="' +
-    inS +
-    '">' +
-    '<label style="' +
-    lbl +
-    '">' +
-    tx('Reference / number (optional)') +
-    '</label>' +
-    '<input data-cbsid="SCR033-I03" id="gd_ref" placeholder="e.g. certificate no." style="' +
-    inS +
-    '">' +
-    '<label style="' +
-    lbl +
-    '">' +
-    tx('Valid until') +
-    '</label>' +
-    '<input data-cbsid="SCR033-I04" id="gd_valid" type="date" value="' +
-    date +
-    '" style="' +
-    inS +
-    '">' +
+    ui.field({ mount: 'SCR033-U02', kind: 'file', id: 'gd_file', label: 'Document (PDF/image · ≤ 6 MB)' }) +
+    ui.field({ mount: 'SCR033-U03', kind: 'text', id: 'gd_ref', label: 'Reference / number (optional)', placeholder: 'e.g. certificate no.' }) +
+    ui.field({ mount: 'SCR033-U04', kind: 'date', id: 'gd_valid', label: 'Valid until', value: date }) +
     '<div id="gd_err" style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px"></div>' +
     '<button data-cbsid="SCR033-B12" id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:var(--on-accent);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' +
     tx('Record clearance on the rail') +

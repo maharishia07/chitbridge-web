@@ -1378,6 +1378,28 @@ function cbDefSetCheck(k, on) {
   cbDefPaintPreview();
 }
 
+/** the "Note to yourself" box: one text field (CMP055, mount SCR003-U01) that writes the offer's note; the hint says who sees it */
+function cbDefNoteFieldHTML(form) {
+  var hint =
+    form.kind === 'tax'
+      ? tx('On your tax slabs list. Buyers never see it.')
+      : f.kind === 'pricing'
+        ? tx('On your pricing list. Buyers never see it.')
+        : tx('On your offers list. Buyers never see it.');
+  return ui.field({
+    mount: 'SCR003-U01',
+    kind: 'text',
+    id: 'cbdef-note',
+    label: 'Note to yourself',
+    placeholder: tx('optional'),
+    hint: hint,
+    value: form.note || '',
+    onInput: function (value) {
+      cbDefSetField('note', value);
+    }
+  });
+}
+
 /** ONE field, whatever its shape. Every branch keeps the `cbdef-rule-<key>` test id a spec drives. */
 function cbDefFieldHTML(x, v) {
   var id = 'cbdef-rule-' + esc(String(x.k).replace(/\./g, '-'));
@@ -1587,26 +1609,8 @@ function cbDefFormHTML() {
      * the record, invisible and uneditable — so both lists print it under the offer's name, and the label now
      * says exactly who sees it. A field whose audience is not stated is a field somebody will type a price into.
      */
-    '<label class="fl cbdef-w2">' +
-    tx('Note to yourself') +
-    '</label>' +
     '<div class="cbdef-f cbdef-w2">' +
-    '<input data-cbsid="SCR003-I05" class="inp" value="' +
-    esc(f.note) +
-    '" placeholder="' +
-    tx('optional') +
-    '"' +
-    ' oninput="cbDefSetField(\'note\',this.value)">' +
-    '<div class="cbdef-hint">' +
-    tx(
-      f.kind === 'tax'
-        ? 'On your tax slabs list. Buyers never see it.'
-        : f.kind === 'pricing'
-          ? 'On your pricing list. Buyers never see it.'
-          : 'On your offers list. Buyers never see it.'
-    ) +
-    '</div>' +
-    '</div>' +
+    cbDefNoteFieldHTML(f) +
     '</div>' +
     '<div id="cbdef_prev">' +
     cbDefPreviewHTML() +
