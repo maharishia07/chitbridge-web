@@ -159,7 +159,7 @@ function stand(pending) {
   ok(S.ledgerCalls.length >= 1 && /from=2026-09-01&to=2026-09-25/.test(S.ledgerCalls[S.ledgerCalls.length - 1]), 'the page\'s own reader took it: the ledger is read for the statement\'s dates (' + S.ledgerCalls[S.ledgerCalls.length - 1] + ')');
   ok(await p.locator('[data-testid="bank-stmts-grid"]').count() === 0, 'the box folds once a statement is on screen, so the lines have the screen');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-read-laptop.png') });
-  const toBooks = S.reqs.filter((r) => r.m === 'POST' && //api/books/(events|payments|entries)/.test(r.u));
+  const toBooks = S.reqs.filter((r) => r.m === 'POST' && /\/api\/books\/(events|payments|entries)/.test(r.u));
   ok(S.posts.length === 3 && toBooks.length === 0, 'nothing was posted to the books by Read (no entry, event or payment; only the three Add presses went to the box)' + (toBooks.length ? ' — ' + toBooks.map((r) => r.u).join(' ') : ''));
   await ctx.close();
 
