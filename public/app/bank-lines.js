@@ -191,6 +191,7 @@
         id: function (row) { return row.id; },
         rowTid: cfg.tid || function (row) { return 'bank-row-' + row.id; },
         oneOpen: true,
+        foldHead: true /* View · Grid / Lines · Columns · CSV · Expand under ONE menu: the head stays short */,
         defaultCols: ['status', 'date', 'payee', 'out', 'in'],
         views: viewsOf(cfg),
         columns: [

@@ -5,7 +5,7 @@
 .bb-period{font-size:14px;color:var(--ink,#1d1b16)}
 .bb-cur{margin-left:auto;font-size:14px;font-weight:700;color:var(--ink,#1d1b16)}
 .bb-acts{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
-.bb-right{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding:7px 12px;font-size:13.5px;background:var(--green-t,#e8f4ed);border:1px solid var(--green-b,#a9d3bc);border-radius:10px;color:var(--ink,#1d1b16)}
+.bb-right{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;padding:5px 12px;font-size:13px;background:var(--green-t,#e8f4ed);border:1px solid var(--green-b,#a9d3bc);border-radius:10px;color:var(--ink,#1d1b16)}
 .bb-chk{white-space:nowrap}
 .bb-sum{display:none}
 .bb-ok{color:var(--green-d,#0d4a2b)}
