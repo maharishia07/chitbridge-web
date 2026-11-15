@@ -927,7 +927,21 @@
   var pack = {
     '{count} bill could not be read and is left out of this month\u0005one': '{count} बिल पढ़ा नहीं जा सका और इस महीने से बाहर रखा गया है',
     '{count} bill could not be read and is left out of this month\u0005other': '{count} बिल पढ़े नहीं जा सके और इस महीने से बाहर रखे गए हैं',
-    'Open bill {n}': 'बिल {n} खोलें'
+    'Open bill {n}': 'बिल {n} खोलें',
+    'Clear this payment?': 'यह भुगतान हटाएँ?',
+    'Clear payment': 'भुगतान हटाएँ',
+    'This clears the recorded payment. The log keeps both entries.': 'यह दर्ज किया गया भुगतान हटा देगा। लॉग में दोनों प्रविष्टियाँ रहेंगी।',
+    'Add to this offer?': 'इस ऑफ़र में जोड़ें?',
+    'will be priced by this offer': 'इस ऑफ़र से मूल्य पाएँगे',
+    'This offer': 'यह ऑफ़र',
+    'This offer will apply to ALL products': 'यह ऑफ़र सभी उत्पादों पर लागू होगा',
+    'Apply to all': 'सभी पर लागू करें',
+    'Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.': 'आख़िरी उत्पाद हटाने पर इस ऑफ़र को सीमित करने वाला कुछ नहीं बचता, इसलिए यह सभी उत्पादों पर लागू होगा।',
+    'This offer changed while you were confirming; check and try again': 'पुष्टि करते समय यह ऑफ़र बदल गया; जाँचकर फिर कोशिश करें',
+    'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'यह चिट अब स्क्रीन पर नहीं है, इसलिए भुगतान नहीं हटाया गया। इसे फिर खोलकर कोशिश करें।',
+    'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'इस चिट में भुगतान की राशि और मुद्रा नहीं है, इसलिए इसे नहीं हटाया गया। इसे फिर खोलकर कोशिश करें।',
+    '{count} product\u0005one': '{count} उत्पाद',
+    '{count} product\u0005other': '{count} उत्पाद'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

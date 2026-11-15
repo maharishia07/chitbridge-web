@@ -1373,6 +1373,8 @@
 .composebtn,.pri,.mfoot button,.btn{transition:transform .06s ease, filter .12s ease}
 .composebtn:active,.pri:active,.mfoot button:active,.btn:active{transform:translateY(1px);filter:brightness(.96)}
 button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px solid #9bb6e0;outline-offset:1px}
+/* a danger confirm focuses Cancel by script: after a mouse press :focus-visible may not match, so the ring is stated for :focus here */
+#modalhost [data-testid="confirm-cancel"]:focus{outline:2px solid #9bb6e0;outline-offset:1px}
 .modal{position:relative}
 .mx{position:absolute;top:7px;inset-inline-end:9px;width:26px;height:26px;border:0;background:none;color:var(--grey-4);font-size:15px;line-height:1;cursor:pointer;border-radius:50%;z-index:3}
 .mx:hover{background:var(--hover);color:var(--on-card)}
@@ -9800,7 +9802,7 @@ function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel) {
       onOk();
     };
   /* a danger confirm opens with Cancel focused, so a stray Enter commits nothing */
-  const cancel = danger && document.querySelector('[data-testid="confirm-cancel"]');
+  const cancel = danger && document.querySelector('#modalhost [data-testid="confirm-cancel"]');
   if (cancel) cancel.focus();
 }
 /**
@@ -16571,17 +16573,29 @@ function prodOfferNextIds(current, ids, add) {
   });
   return list;
 }
-/** ask before a change that WIDENS what the offer prices: adding products, or removing the LAST one (an empty list means EVERY product). The busy cover is lifted while the question is up; false = Cancel, nothing is written; narrowing, or an unreadable offer, asks nothing */
-async function prodOfferConfirm(add, offerDef, rules, ids, was, next) {
-  const toAll = !add && !next.length && Array.isArray(was) && was.length > 0;
-  if (!(add || toAll) || !rules.kind) return true;
-  hideBusy();
-  const body = toAll ? prodOfferAllWords(offerDef, rules) : prodOfferAskWords(offerDef, rules, ids);
-  const title = toAll ? tx('This offer will apply to ALL products') : tx('Add to this offer?');
-  if (!(await CBAction.ask({ title: title, body: body, yes: toAll ? tx('Apply to all') : tx('Add') }))) return false;
-  showBusy(add ? txn('Adding {count} product…', 'Adding {count} products…', ids.length) : txn('Removing {count} product…', 'Removing {count} products…', ids.length));
+/** removing the LAST product leaves an empty list, and an empty list means EVERY product */
+function prodOfferToAll(change) {
+  return !change.add && !change.next.length && Array.isArray(change.was) && change.was.length > 0;
+}
+/** the offer moved while the question was up: the answer was to the old terms, so nothing is saved */
+async function prodOfferMoved(change) {
+  const again = await api('defGet', { params: { id: change.id } });
+  if (((again && again.definition) || {}).current_version === (change.def || {}).current_version) return false;
+  toast(tx('This offer changed while you were confirming; check and try again'), true);
   return true;
 }
+/** ask before a change that WIDENS what the offer prices: adding products, or removing the LAST one (an empty list means EVERY product). The busy cover is lifted while the question is up; false = Cancel, nothing is written; narrowing, or an unreadable offer, asks nothing */
+async function prodOfferConfirm(change) {
+  const toAll = prodOfferToAll(change);
+  if (!(change.add || toAll) || !change.rules.kind) return true;
+  hideBusy();
+  const body = toAll ? prodOfferAllWords(change.def, change.rules) : prodOfferAskWords(change.def, change.rules, change.ids);
+  const title = toAll ? tx('This offer will apply to ALL products') : tx('Add to this offer?');
+  if (!(await CBAction.ask({ title: title, body: body, yes: toAll ? tx('Apply to all') : tx('Add') }))) return false;
+  showBusy(change.add ? txn('Adding {count} product…', 'Adding {count} products…', change.ids.length) : txn('Removing {count} product…', 'Removing {count} products…', change.ids.length));
+  return !(await prodOfferMoved(change));
+}
+
 /** the words for the last-product removal: nothing narrows the offer any more, so it reaches the whole catalogue */
 function prodOfferAllWords(offerDef, rules) {
   return (
@@ -16639,7 +16653,7 @@ async function prodOfferApply(offerId, add) {
     }
     const at = Object.assign({}, rules.applies_to || {});
     const next = prodOfferNextIds(at.item_ids, ids, add);
-    if (!(await prodOfferConfirm(add, d, rules, ids, at.item_ids, next))) return;
+    if (!(await prodOfferConfirm({ id: offerId, add: add, def: d, rules: rules, ids: ids, was: at.item_ids, next: next }))) return;
 
     /**
      * ⚠️⚠️ AN EMPTY item_ids LIST MEANS "EVERY PRODUCT", NOT "NONE" — see CBOffers.eligibleFor, where a missing
@@ -22563,18 +22577,34 @@ function chitPayAsk(id, form, e) {
   return true;
 }
 /** what the Clear-payment confirm shows: the amount with its currency, the method and the reference (nothing is invented when the row does not carry them) */
-function chitUnpayWords(row) {
+function chitUnpayPay(row) {
   const bj = (row && (row.business_json || (row.header && row.header.business_json))) || {};
-  const pay = bj.payment || {};
-  const code = (row && (row.currency || (row.summary_json && row.summary_json.currency_code) || (row.header && row.header.currency_code))) || '';
+  return bj.payment || {};
+}
+/** the chit's own currency code, '' when the row states none (never the shop's: money is a value type) */
+function chitUnpayCode(row) {
+  return (row && (row.currency || (row.summary_json && row.summary_json.currency_code) || (row.header && row.header.currency_code))) || '';
+}
+/** why a payment is NOT cleared, in words, or '' when the confirm can show amount AND currency */
+function chitUnpayRefusal(row) {
+  if (!row) return tx('This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.');
+  const amount = chitUnpayPay(row).amount;
+  if (!chitUnpayCode(row) || amount == null || amount === '' || !isFinite(Number(amount))) return tx('This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.');
+  return '';
+}
+function chitUnpayWords(row) {
+  const pay = chitUnpayPay(row);
+  const code = chitUnpayCode(row);
   return (
     '<div>' + esc(tx('This clears the recorded payment. The log keeps both entries.')) + '</div>' +
-    '<div style="margin-top:8px"><b data-testid="unpay-amount">' + esc(fmtMoney(pay.amount, code, '—')) + '</b> · <span data-testid="unpay-method">' +
+    '<div style="margin-top:8px"><b data-testid="unpay-amount">' + esc(fmtMoney(pay.amount, code)) + '</b> · <span data-testid="unpay-method">' +
     esc(String(pay.method || '—').toUpperCase()) + '</span>' + (pay.ref ? ' · <span data-testid="unpay-ref">' + esc(pay.ref) + '</span>' : '') + '</div>'
   );
 }
 async function chitUnpay(id) {
   const row = UI.rows && UI.rows.find((x) => x.id === id);
+  const refusal = chitUnpayRefusal(row);
+  if (refusal) return toast(refusal, true);
   if (!(await CBAction.ask({ title: tx('Clear this payment?'), body: chitUnpayWords(row), yes: tx('Clear payment') }))) return;
   try {
     await api('chitUnpay', { params: { id } });

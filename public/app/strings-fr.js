@@ -926,7 +926,21 @@
   var pack = {
     '{count} bill could not be read and is left out of this month\u0005one': '{count} facture illisible, exclue de ce mois',
     '{count} bill could not be read and is left out of this month\u0005other': '{count} factures illisibles, exclues de ce mois',
-    'Open bill {n}': 'Ouvrir la facture {n}'
+    'Open bill {n}': 'Ouvrir la facture {n}',
+    'Clear this payment?': 'Effacer ce paiement ?',
+    'Clear payment': 'Effacer le paiement',
+    'This clears the recorded payment. The log keeps both entries.': 'Cela efface le paiement enregistré. Le journal garde les deux entrées.',
+    'Add to this offer?': 'Ajouter à cette offre ?',
+    'will be priced by this offer': 'seront tarifés par cette offre',
+    'This offer': 'Cette offre',
+    'This offer will apply to ALL products': 'Cette offre s’appliquera à TOUS les produits',
+    'Apply to all': 'Appliquer à tous',
+    'Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.': 'En retirant le dernier produit, plus rien ne limite cette offre : elle s’appliquera à TOUS les produits.',
+    'This offer changed while you were confirming; check and try again': 'Cette offre a changé pendant votre confirmation ; vérifiez et réessayez',
+    'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'Cette pièce n’est plus à l’écran, son paiement n’a donc pas été effacé. Rouvrez-la et réessayez.',
+    'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'Cette pièce n’indique pas le montant et la devise de son paiement, il n’a donc pas été effacé. Rouvrez-la et réessayez.',
+    '{count} product\u0005one': '{count} produit',
+    '{count} product\u0005other': '{count} produits'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {
