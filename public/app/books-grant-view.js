@@ -17,6 +17,10 @@
 (function (root) {
   'use strict';
   var viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null, mk: null };
+  /** where a reviewer lands: the auditor on the Day book (the entries are the job), the adviser on the trial balance */
+  function homeOf(options) {
+    return options && options.member && options.member.role === 'adviser' ? 'tb' : 'daybook';
+  }
   var MONEY = 'money'; /* a column kind: the server's minor units, painted in the answer's currency */
   var ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
@@ -26,7 +30,7 @@
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['narration', 'What it was'], ['amount_minor', 'Amount', MONEY], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [], panels: true },
-    { k: 'periods', label: 'Closed months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
+    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
 
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
@@ -307,7 +311,8 @@
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[2] === MONEY ? 1 : 2,
           num: column[2] === MONEY,
-          w: column[2] === MONEY ? 140 : 180,
+          keep: column[2] === 'mark', /* the Mark chip is never cut to make room (list-ctl keep) */
+          w: column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180,
           cell: function (row) {
             return figure(row, column);
           },
@@ -341,7 +346,7 @@
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
   function forget() {
-    viewState = { host: viewState.host, o: viewState.o, report: 'tb', day: '', answer: null, why: null, mk: viewState.mk };
+    viewState = { host: viewState.host, o: viewState.o, report: homeOf(viewState.o), day: '', answer: null, why: null, mk: viewState.mk };
     newMarks();
   }
   /** after Open books: focus lands on the books heading (the acting band), not on a button that has gone */
@@ -351,7 +356,7 @@
     head.focus();
   }
   function mount(host, options) {
-    viewState = { host: host, o: options, report: 'tb', day: '', answer: null, why: null, mk: null };
+    viewState = { host: host, o: options, report: homeOf(options), day: '', answer: null, why: null, mk: null };
     newMarks();
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();

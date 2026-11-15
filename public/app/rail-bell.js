@@ -82,8 +82,17 @@
     accepted: ['✍️', 'accepted'],
     dispute_raised: ['⚑', 'raised a dispute on'],
     dispute_resolved: ['✅', 'resolved a dispute on'],
-    voided: ['🚫', 'voided']
+    voided: ['🚫', 'voided'],
+    mark_query: ['?', 'asked a question about'],
+    mark_reply: ['💬', 'replied about']
   };
+  /** a mark notice names its entry the way the books do: number · day (the shop's way) · amount in its own currency */
+  function entryName(entry) {
+    if (!entry) return '';
+    var day = entry.posting_date ? (typeof root.shopDay === 'function' ? root.shopDay(entry.posting_date) : entry.posting_date) : '',
+      amount = entry.total_minor != null && entry.currency && typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(entry.total_minor), currency: entry.currency }) : '';
+    return [entry.entry_no, day, amount].filter(Boolean).join(' · ');
+  }
   /** the moment a feed row happened, as the reader's LOCAL time: CBLocale first, then the browser's own format, then the raw text */
   function localMoment(createdAt) {
     var shape = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
@@ -101,7 +110,7 @@
   /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
   function line(item) {
     var kind = KIND[item.action],
-      subj = item.manual_subject || item.auto_subject || T(W.chit),
+      subj = item.mark_entry ? entryName(item.mark_entry) : item.manual_subject || item.auto_subject || T(W.chit),
       moment = '';
     /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
     if (item.created_at) moment = localMoment(item.created_at);

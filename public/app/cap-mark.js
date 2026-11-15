@@ -66,6 +66,8 @@
     checkedOf: 'Checked {n} of {m} entries this period',
     allQueries: 'All queries',
     allEntries: 'All entries',
+    queryWord: 'Query',
+    entryFallback: 'This entry',
     noQueries: 'No open queries.',
     openQueries: 'Open queries',
     everyone: 'Everyone who can see this record'
@@ -122,7 +124,8 @@
     '.mk-act[disabled],.mk-act[aria-disabled=true]{opacity:.55;cursor:not-allowed}' +
     '.mk-out{font-size:var(--fs-1,12px);min-height:1em}.mk-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.mk-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.mk-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
-    '@media (max-width:700px){.mk .mk-w{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:auto 0 0;width:100vw;max-width:100vw;border-radius:14px 14px 0 0}}';
+    '.mk-n{display:none}' +
+    '@media (max-width:700px){.mk-ghost .mk-w{display:none}.mk-ghost .mk-n{display:inline}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:auto 0 0;width:100vw;max-width:100vw;border-radius:14px 14px 0 0}}';
   var cssDone = false;
   function addCss() {
     if (cssDone || !doc) return;
@@ -170,7 +173,7 @@
 
   function use(cfg) {
     addCss();
-    var c = { cfg: cfg || {}, rows: {}, may: null, on: false, sum: null, subs: [], failed: false };
+    var c = { cfg: cfg || {}, rows: {}, names: {}, may: null, on: false, sum: null, subs: [], failed: false };
     ensureEP();
     controls.push(c);
     var ctl = {
@@ -192,10 +195,17 @@
         if (!answer || !answer.mark_actions) { c.on = false; return; }
         c.on = true;
         c.may = answer.mark_actions;
-        (list || []).forEach(function (e) { if (e && e.entry_id != null) c.rows[String(e.entry_id)] = e.mark || null; });
+        (list || []).forEach(function (e) {
+          if (!e || e.entry_id == null) return;
+          c.rows[String(e.entry_id)] = e.mark || null;
+          var name = recordName(e, answer);
+          if (name) c.names[String(e.entry_id)] = name;
+        });
         paint(root.document);
       },
       row: function (id) { return c.rows[String(id)] || null; },
+      /** the record in words ("JV-0002 · 12 Oct 2026 · A$880.00"), as the page last showed it; '' when the page never showed it */
+      nameOf: function (id) { return c.names[String(id)] || ''; },
       mayCheck: function (id) {
         var r = c.rows[String(id)], a = (r && r.actions) || c.may || {};
         return !!(a.set && a.set.ok !== false && a.set.ok != null) || (a.set === true);
@@ -233,6 +243,17 @@
     c.ctl = ctl;
     return ctl;
   }
+  /** the record's name for a sheet title: its number, its day (the shop's way) and its amount in its own currency; whatever the row does not carry is left out (never the record id) */
+  function recordName(e, answer) {
+    var no = e.entry_no || e.subject_label;
+    if (!no) return '';
+    var day = e.posting_date || e.date, minor = e.total_minor != null ? e.total_minor : e.amount_minor;
+    if (minor == null) minor = Number(e.dr_minor) > 0 ? e.dr_minor : Number(e.cr_minor) > 0 ? e.cr_minor : null;
+    var cur = e.currency || (answer && answer.currency) || '';
+    var amount = '';
+    if (minor != null && cur) amount = typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(minor), currency: cur }) : String(minor) + ' ' + cur;
+    return [no, day ? (typeof root.shopDay === 'function' ? root.shopDay(String(day).slice(0, 10)) : String(day).slice(0, 10)) : '', amount].filter(Boolean).join(' · ');
+  }
   function num(n) { return n == null ? null : Number(n); }
   function fire(c) {
     c.subs.forEach(function (fn) { try { fn(); } catch (_) { /* best effort: failing here changes nothing the user sees */ } });
@@ -259,8 +280,8 @@
     var cls = classOf(r), alt = r && (r.altered || r.recheck_needed);
     if (!r || !cls) {
       if (!c.ctl.mayCheck(id)) return '<span class="mk-none" title="' + esc(T(W.notChecked)) + '">—</span>';
-      return '<button type="button" class="mk mk-ghost" data-cbsid="CMP058-B01" data-mk="check" data-id="' + esc(id) + '" aria-label="' + esc(T(W.markChecked)) + '" title="' + esc(T(W.markChecked)) + '"><span class="mk-s" aria-hidden="true">○</span><span class="mk-w">' + esc(T(W.check)) + '</span></button>' +
-        ' <button type="button" class="mk mk-ghost" data-cbsid="CMP058-B05" data-mk="ask" data-id="' + esc(id) + '" aria-label="' + esc(T(W.askQuestion)) + '" title="' + esc(T(W.askQuestion)) + '"><span class="mk-s" aria-hidden="true">?</span></button>';
+      return '<button type="button" class="mk mk-ghost" data-cbsid="CMP058-B01" data-mk="check" data-id="' + esc(id) + '" aria-label="' + esc(T(W.markChecked)) + '" title="' + esc(T(W.markChecked)) + '"><span class="mk-s" aria-hidden="true">○</span><span class="mk-w">' + esc(T(W.check)) + '</span><span class="mk-n">' + esc(T(W.notChecked)) + '</span></button>' +
+        ' <button type="button" class="mk mk-ghost" data-cbsid="CMP058-B05" data-mk="ask" data-id="' + esc(id) + '" aria-label="' + esc(T(W.askQuestion)) + '" title="' + esc(T(W.askQuestion)) + '"><span class="mk-s" aria-hidden="true">?</span><span class="mk-n">' + esc(T(W.queryWord)) + '</span></button>';
     }
     var k = CLASS[cls], word = (r.label && !alt) ? r.label : T(k.word), tone = 'mk-' + k.tone, sym = k.sym;
     if (alt) { word = r.recheck_needed && !r.altered ? T(W.recheck) : T(W.altered); tone = 'mk-alt'; sym = '⚠'; }
@@ -344,7 +365,7 @@
     var altered = r && (r.altered || r.recheck_needed);
     var word = cls ? (altered ? T(W.altered) : (r.label || T(CLASS[cls].word))) : T(W.notChecked);
     var thread = r && r.thread_id;
-    var title = o.title || (c.cfg.title && c.cfg.title(id)) || id;
+    var title = c.names[id] || o.title || (c.cfg.title && c.cfg.title(id)) || T(W.entryFallback);
     dlg.innerHTML =
       '<div class="mk-in"><div class="mk-hd"><div><h2 data-testid="mk-title">' + esc(title) + '</h2>' +
       '<div class="mk-sub" data-testid="mk-state">' + (cls ? '<span class="mk mk-' + (altered ? 'alt' : CLASS[cls].tone) + '" style="cursor:default"><span class="mk-s" aria-hidden="true">' + (altered ? '⚠' : CLASS[cls].sym) + '</span> ' + esc(word) + '</span> ' + (r.by_name ? esc(fill(W.by, { who: r.by_name })) : '') + ' ' + esc(when(r.at)) : esc(word)) + '</div></div>' +
