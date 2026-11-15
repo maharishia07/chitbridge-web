@@ -16,6 +16,11 @@
 'use strict';
 var REG = { step: 'form', name: '', email: '', busy: false, err: '' };
 var REG_AT = { host: null, onDone: null }; /* host · onDone: a small app's pane (CB Settings › New shop) — null = app.html's auth card at #root */
+/** the gate tick (SCR053-U01): the answer is kept and the form repaints, so Verify enables */
+function regAgreeChanged(checked) {
+  REG.agreed = checked === true;
+  renderRegister();
+}
 function regReset() {
   REG = { step: 'form', name: '', email: '', busy: false, err: '' };
   renderRegister();
@@ -223,12 +228,7 @@ function govPanel() {
       .join('') +
     '</div>' +
     /* ⚠️⚠️ THE GATE. Not a notice — a question about the country that decides their tax. GOV-SPIN: the same one control accepts the country. */
-    '<label class="govagree"><input data-cbsid="SCR053-I01" type="checkbox" id="r_agree" data-testid="reg-agree"' +
-    (REG.agreed ? ' checked' : '') +
-    ' onchange="REG.agreed=this.checked;renderRegister()">' +
-    '<span>' +
-    esc(tx('These are right, and I accept the terms of use.')) +
-    '</span></label>'
+    ui.field({ mount: 'SCR053-U01', kind: 'checkbox', id: 'r_agree', testid: 'reg-agree', label: 'These are right, and I accept the terms of use.', value: !!REG.agreed, onChange: regAgreeChanged })
   );
 }
 /** what verify sends: the browser's context, with the country the person ACCEPTED and where it came from (the server re-decides the source) */
@@ -260,18 +260,18 @@ function renderRegister() {
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}<label class="fl">${esc(tx('User ID'))}</label><input data-cbsid="SCR053-I02" class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
+    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', autocomplete: 'username', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
        <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
          <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). Your business name can be anything; set it after you sign in.'))}">ⓘ</span></div>
-       <label class="fl">${esc(tx('Email'))}</label><input data-cbsid="SCR053-I03" class="inp" id="r_email" data-testid="reg-email" placeholder="you@yourshop.example" value="${esc(R.email)}">
-       ${R.err ? `<div class="err">${R.err}</div>` : ''}
+       ${ui.field({ mount: 'SCR053-U03', kind: 'email', id: 'r_email', testid: 'reg-email', label: 'Email', placeholder: 'you@yourshop.example', value: R.email })}
+       ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
   } else {
     form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       <label class="fl">${esc(txf('Code sent to {e}', { e: R.email }))}</label><input data-cbsid="SCR053-I04" class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
-       ${R.err ? `<div class="err">${R.err}</div>` : ''}
+       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 6 })}
+       ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
   }
   /* ⭐ FX-UX2: a small app's pane — the same form, under the page's own heading; "Sign in" is Home's one sign-in window (never #/login) */
