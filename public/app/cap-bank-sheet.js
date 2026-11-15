@@ -106,6 +106,10 @@ function bkshPairing(lines) {
   Object.keys(bkshBook().postedLocal || {}).forEach((ref) => {
     posted[ref] = bkshBook().postedLocal[ref]; /* what this very session posted: its reply named the entry, so the pairing never waits for the log */
   });
+  const made = (BKSH.ctl && BKSH.ctl.pairsMade && BKSH.ctl.pairsMade()) || {};
+  Object.keys(made).forEach((ref) => {
+    posted[ref] = String(made[ref]).split('#')[0]; /* "Same payment": the owner said which entry this line is; the page counts it too (the id is entry_no#line) */
+  });
   return { line_refs: engine.project.refsOf(lines, bkshRefAccount(), lines), posted };
 }
 /** the ONE account key every statement-line ref is fingerprinted with: the ledger CODE, the same the statement check hands back (fingerprint_account) and the controller posts with. A name here made the page pair by other refs than the entries were posted under (B5, reload showed twins as "Not on the statement") */
@@ -160,6 +164,16 @@ function bkshStrip() {
   });
 }
 /** paint the sheet again from the controller: the strip, the lines, and the Add button with its count */
+/** a "Same payment" answer is the page's truth too: when the pairs changed, the page counts its lines again (no read: the engine's match with the pairs added) */
+function bkshPageFollows() {
+  const sig = JSON.stringify((BKSH.ctl.pairsMade && BKSH.ctl.pairsMade()) || {});
+  if (sig === BKSH.pairSig) return;
+  BKSH.pairSig = sig;
+  if (typeof bankExplain === 'function' && typeof bankPaint === 'function') {
+    bankExplain();
+    bankPaint();
+  }
+}
 function bkshPaint() {
   const model = BKSH.ctl.view(),
     addButton = bkshEl('bks_add'),
@@ -283,7 +297,7 @@ async function bankSheetOpen() {
   });
   BKSH.ui = CBBankPreviewUI.mount({
     host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
-    say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
+    say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: () => { bkshPaint(); bkshPageFollows(); }
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
   else bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);

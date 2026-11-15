@@ -107,6 +107,8 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await load(phone.page);
   await phone.page.screenshot({ path: path.join(OUT, 'r3-07-reload-390.png') });
   ok(await phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '390x844: no sideways scroll');
+  const fold = await phone.page.evaluate(() => { const first = document.querySelector('[data-testid="bank-list"] [data-row]'); return first ? Math.round(first.getBoundingClientRect().top) : -1; });
+  ok(fold > 0 && fold <= Math.round(844 / 3) + 10, '390x844: the first line starts within a third of the screen (' + fold + ' px of 844)');
   console.log('THREW ' + JSON.stringify(p.__threw.concat(again.page.__threw).filter((x) => !/stream|ERR_FAILED/.test(x))));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
