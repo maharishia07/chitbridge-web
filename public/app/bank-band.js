@@ -98,7 +98,7 @@
     if (mismatch) out.push(item('number', 'bad', mismatch.why));
     else if (masked && f.accountNumber) out.push(item('number', 'ok', T('Account number') + ' ' + masked + ' ' + T('matches the account')));
     else if (masked) out.push(item('number', 'none', T('Account number') + ' ' + masked + ' ' + T('is in the file; the account holds none to compare')));
-    else out.push(item('number', 'none', T('Account number') + ': ' + T('not in this file')));
+    else out.push(item('number', 'none', T('Account no.') + ': ' + T('not in this file')));
     /* 5 · the earlier statement: continuity */
     var gap = checkItem(check, 'period_gap'),
       overlap = checkItem(check, 'period_overlap') || checkItem(check, 'period_repeat'),
@@ -107,7 +107,7 @@
     else if (lastClose) out.push(item('previous', 'bad', lastClose.why));
     else if (gap) out.push(item('previous', 'bad', gap.why));
     else if (f.previous && f.previous.to) out.push(item('previous', 'ok', T('Follows the statement to') + ' ' + dayText(f.previous.to) + (f.previous.by ? ', ' + T('signed off by') + ' ' + f.previous.by : '')));
-    else out.push(item('previous', 'none', T('No statement loaded before this one')));
+    else out.push(item('previous', 'none', T('No earlier statement loaded')));
     return out;
   }
   var MARK = { ok: '✓', bad: '✕', none: '○' };
@@ -154,10 +154,10 @@
       '<span class="bb-period" data-testid="' + esc(tid) + '-period">' + esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
       (f.change || '') +
       '<span class="bb-cur" data-testid="' + esc(tid) + '-currency">' + esc(currencyLine(f.currency || '')) + '</span>' +
-      (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' +
+      '</div>' +
       ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right') : '') +
       tiles +
-      (tiles ? '<div class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</div>' + progress : '') +
+      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' : '') +
       '</section>'
     );
   }

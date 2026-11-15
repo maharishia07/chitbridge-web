@@ -13,9 +13,10 @@
 .bb-bad{color:var(--bad-i,#8e3517);font-weight:600}
 .bb-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .bb-tiles .lk-fig{min-width:0}
-.bb-go{font-size:15px;font-weight:700;color:var(--amber-i,var(--ask-i,#7a5205));text-align:right}
+.bb-gorow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px}
+.bb-go{font-size:15px;font-weight:700;color:var(--amber-i,var(--ask-i,#7a5205));white-space:nowrap}
 .bb-nil .bb-go{color:var(--green-d,#0d4a2b)}
-.bb-progress{display:flex;align-items:center;gap:12px}
+.bb-progress{flex:1 1 180px;display:flex;align-items:center;gap:12px;min-width:0}
 .bb-progress .lk-bar{flex:1}
 .bb-pnote{font-size:13px;color:var(--muted,#5e594d);white-space:nowrap}
 @media (max-width:700px){
@@ -27,7 +28,6 @@
   .bb-chk.bb-ok{display:none}
   .bb-cur{margin-left:0;flex-basis:100%}
   .bb-right{gap:2px 12px;font-size:13px}
-  .bb-go{text-align:left}
 }
 /* the status chips of the bank lines (the list's own views): they wrap, never scroll sideways */
 .cbl[data-cbl^="bank"] .cbl-views{flex-wrap:wrap;overflow:visible}
