@@ -1169,13 +1169,13 @@ function bankBrsPaint() {
           '"><span>' +
           bkbE(tx(x.label)) +
           '</span><span class="mono">' +
-          bkbE(x.sign === '+' || x.sign === '-' ? bkMoney(Math.abs(x.minor)) : bkDrCr(x.minor)) +
+          bkbE(bkMoney(Math.abs(x.minor)) + (x.minor < 0 && x.sign === '' ? ' ' + tx('overdrawn') : '')) +
           '</span></div>'
       )
       .join('') +
     '</div>' +
     (b.tied
-      ? '<div class="pe-ok" data-testid="brs-tied">✓ ' + bkbE(tx('The books reconcile to the bank: every difference is a named item.')) + '</div>'
+      ? '<div class="pe-ok" data-testid="brs-tied">✓ ' + bkbE(bankFigures() && !bankFigures().nil ? tx('Nothing is unexplained: every difference is a named line below.') : tx('The books reconcile to the bank: every difference is a named item.')) + '</div>'
       : '<div class="pe-warn" data-testid="brs-untied">⚠ ' + bkbE(b.note || '') + '</div>') +
     items('Cheques issued, not yet presented', b.issued_not_presented || [], 'brs-issued') +
     items('Cheques deposited, not yet credited', b.deposited_not_credited || [], 'brs-deposited') +
