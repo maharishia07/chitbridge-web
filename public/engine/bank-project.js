@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · bank-project · sha256 8ffe8a46789b167c5f44df91aded79e4fadf06d9037cfd227199828e6cb19892 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.0 · bank-project · sha256 dd423a5671e672b96aab71b9562318b64867912a2eca1e03f650d611f2b84c5e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-project.js: THE BANK LEDGER AND THE RECONCILIATION AS THEY WILL READ ONCE THE PROPOSED ENTRIES ARE POSTED. PURE: no I/O, no clock, nothing saved.
  * OWNS project (the preview: bank ledger after posting, the BRS, each line's state) · refsOf / fingerprintOf / readRef (the idempotency key of a statement line) · partyKeyOf.
