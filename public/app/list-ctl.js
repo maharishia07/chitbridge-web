@@ -244,7 +244,7 @@
     '.cbl .cbl-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
     /* a phone, or any narrow pane: one card per row, label : value, nothing sideways (a container query, not the page width) */
     '@container list (max-width: 620px){',
-    '.cbl .cbl-grid{min-width:0}.cbl .cbl-hdr{display:none}',
+    '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
     '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
     '.cbl .cbl-row .cbl-cell{padding:2px 0}',
     '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
@@ -598,6 +598,28 @@
   function stretchable(c) {
     return !c.num && !c.money && !c.mono && c.pin !== 'end' && c.type !== 'num' && c.type !== 'money' && !/^(code|status|state|date|id|no|ref|type)$/i.test(String(c.label || c.key).trim());
   }
+  /** what a short column really needs: its three longest cells set on one line in the list's own font (the character estimate runs wide, Age took 242 px for a date and a few words). Returns { key: px }. */
+  function inkWidths(list, cols, sample) {
+    var host = list.el.querySelector(".cbl-list") || list.el,
+      probe = document.createElement('div'),
+      out = {};
+    probe.className = 'cbl-row';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:absolute;visibility:hidden;display:block;width:4000px;white-space:nowrap;left:0;top:0';
+    host.appendChild(probe);
+    cols.forEach(function (c) {
+      var longest = sample
+        .map(function (row) { return cellOf(list, c, row); })
+        .sort(function (first, second) { return plainText(second).length - plainText(first).length; })
+        .slice(0, 3);
+      out[c.key] = longest.reduce(function (widest, html) {
+        probe.innerHTML = '<div class="cbl-cell" style="display:inline-block;width:auto">' + html + '</div>';
+        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 2);
+      }, 0);
+    });
+    host.removeChild(probe);
+    return out;
+  }
   /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows, avail) {
@@ -621,10 +643,12 @@
         if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
       });
     auto.stretch = named ? named.key : best ? best.key : null;
+    var shortPx = inkWidths(I, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') return;
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
       auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
+      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(I, c), shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
     });
     /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
        Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
@@ -671,7 +695,15 @@
     if (over > 0) over = squeeze(true);
     if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(I, sc), auto[sc.key] - over); /* last resort: below its floor */
     I.auto = sample.length ? auto : null;
+    I.leftOut = hide;
     return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
+  }
+  /** autoFit, then the toolbar says so when the number of columns left out changed (the "+2" cue) */
+  function fitCols(list, cols, rows, box) {
+    var before = leftOutKeys(list).length,
+      shown = autoFit(list, cols, rows, box.clientWidth - (leadOn(list) ? 34 : 0) - 2);
+    if (before !== leftOutKeys(list).length) paintTools(list);
+    return shown;
   }
   function widthOf(I, c) {
     var w = I.s.widths[c.key];
@@ -1197,7 +1229,7 @@
       '" aria-haspopup="dialog" aria-expanded="' +
       (list.pop === 'cols') +
       '">⚙' +
-      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span></button>' +
+      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span>' + leftOutCue(list, keyText) + '</button>' +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>';
     if (listOptions.csv !== false && toolOptions.csv !== false)
@@ -1657,6 +1689,16 @@
       '</button></div></div>'
     );
   }
+  /** the small "+2 columns" cue on the Columns button: columns the row had no room for are named, never dropped silently (the chooser tags each one) */
+  function leftOutKeys(I) {
+    return I.card ? [] : I.leftOut || [];
+  }
+  function leftOutCue(list, keyText) {
+    var left = leftOutKeys(list).length;
+    if (!left) return '';
+    var words = T(list, '+{n} columns hidden — no room', { n: left });
+    return ' <span class="cbl-noroom" data-testid="cols-more-' + keyText + '" title="' + esc(words) + '" aria-label="' + esc(words) + '">+' + left + '</span>';
+  }
   function colsPop(I) {
     var all = choosable(I),
       shown = shownKeys(I),
@@ -1669,7 +1711,7 @@
         return shown.indexOf(item.key) < 0;
       }),
       k = esc(I.key),
-      nr = noRoomKeys(I);
+      nr = noRoomKeys(I).concat(leftOutKeys(I)); /* no room: a card's extra fields, and the columns the last paint left out (autoFit) */
     function row(c, i, on) {
       return (
         '<div class="cbl-colrow">' +
@@ -1842,7 +1884,7 @@
     var m = matched(I),
       items = itemsOf(I, m.rows);
     if (m.rows.length && s.view === 'grid') {
-      cols = autoFit(I, cols, m.rows, box.clientWidth - (leadOn(I) ? 34 : 0) - 2); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
+      cols = fitCols(I, cols, m.rows, box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
       I.fitW = box.clientWidth;
       tpl = template(I, cols);
       hdr = headerHTML(I, cols, tpl, false);
