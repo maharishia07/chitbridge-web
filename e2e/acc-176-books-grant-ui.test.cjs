@@ -18,7 +18,7 @@ const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (
 let member = read('app/books-grant-member.js'), view = read('app/books-grant-view.js'), api = read('app/books-grant-api.js'), net = read('app/network-app.js');
 if (mutate === 'write') view += "\nvar x = CBAction.run(null, function () { return call('POST', '/api/books/x'); });";
 if (mutate === 'noid') member = member.replace(' id="bg_give"', '');
-if (mutate === 'header') view = view.replace(/headers: headerOf\(\)/, 'headers: {}');
+if (mutate === 'header') view = view.replace(/headers: root\.CBBooksActing\.headers\(\)/, 'headers: {}');
 
 /* (1) codes and ids */
 const tagsWithCode = (src) => [...src.matchAll(/<(button|input|select|textarea)\b[^<]*?data-cbsid="([A-Z]{3}\d{3}-[A-Z]\d{2})"[^<]*?>/g)].map((m) => ({ tag: m[0], code: m[2] }));
@@ -36,7 +36,7 @@ check(!/CBAction/.test(view) && !/\b(POST|PATCH|PUT|DELETE)\b/.test(view.replace
 check(!/csv|export|download|print/i.test(view.replace(/\/\*[^]*?\*\//g, '')), 'the auditor\'s view offers no export or copy');
 
 /* (3) the header */
-check(/headers: headerOf\(\)/.test(view) && /HEADER\] = viewState\.o\.member\.id/.test(view), 'every read of the view sends X-Books-For with the member it opened');
+check(/headers: root\.CBBooksActing\.headers\(\)/.test(view) && /HEADER\] = context\.store\.id/.test(read('app/books-acting.js')), 'every read of the view sends the headers of the acting context, which names the member it opened');
 check(!/X-Books-For|x-books-for/i.test(member) && !/X-Books-For/.test(net), 'only the view and the api file name the header');
 
 /* (4) the member's writes */

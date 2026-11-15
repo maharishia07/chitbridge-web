@@ -61,6 +61,7 @@
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
               e.status = reply.status;
+              e.code = j.code; /* a refusal's code: books-grant-api.js says it in a plain sentence */
               throw e;
             }
             return j;
@@ -347,18 +348,43 @@
     var store = N.stores.filter(function (s) {
       return String(s.entity_id) === id;
     })[0];
-    N.opened = { id: id, name: (store && store.name) || T('this store') };
+    openStore(id, (store && store.name) || T('this store'));
+  }
+  /** open one store's books in the role its live grant gives: an adviser grant acts, anything else reads */
+  function openStore(id, name) {
+    var grant = N.held[String(id)] || {};
+    N.opened = { id: id, name: name, role: grant.preset === 'adviser' ? 'adviser' : 'auditor' };
     paint();
+  }
+  /** the stores this business holds an adviser grant on, for the banner's switch (one store: no switch is drawn) */
+  function switchableStores() {
+    return N.stores
+      .filter(function (s) {
+        return (N.held[String(s.entity_id)] || {}).preset === 'adviser';
+      })
+      .map(function (s) {
+        return { id: s.entity_id, name: s.name };
+      });
   }
   function paintOpened(host) {
     root.CBBooksGrantView.mount(host, {
       call: call,
       member: N.opened,
+      stores: switchableStores(),
       mountList: mountList,
+      sheet: sheet,
+      closeSheet: closeSheet,
       onEnded: N.o.onEnded,
+      onSwitch: function (id) {
+        var other = N.stores.filter(function (s) {
+          return String(s.entity_id) === String(id);
+        })[0];
+        openStore(id, (other && other.name) || T('this store'));
+      },
       onBack: function () {
         var id = N.opened.id;
         N.opened = null;
+        root.CBBooksActing.leave();
         paint();
         var back = $('nw_books_' + id);
         if (back) back.focus();
@@ -377,7 +403,7 @@
       });
   }
   function paintBooks(host) {
-    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
+    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, ownStore: root.CBBooksActing.ownStore(N.o.token, T('Your books')), sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
         N.tab = 'mine';
         paint();
       } });
