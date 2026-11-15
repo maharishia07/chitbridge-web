@@ -73,7 +73,12 @@
     if (parseOpts) opts.parseOpts = parseOpts;
     controller = preview.create(opts);
   }
+  /** an amount as digits only: the currency is said ONCE (the column and card headings, the report heading), never on every figure */
   function amountText(value) {
+    return preview.moneyText(value, CURRENCY).replace(/^[A-Z]{3}\s/, '');
+  }
+  /** an amount inside a sentence, with its currency */
+  function amountWithCurrency(value) {
     return preview.moneyText(value, CURRENCY);
   }
   function tag(kind, words) {
@@ -181,9 +186,9 @@
     var closed = preview.minorOf(recon.difference_before) === 0 && !open;
     el('bd_figs').hidden = false;
     el('bd_figs').innerHTML =
-      labKit.figure({ label: 'Statement balance, ' + dateWords(recon.statement_date || lastDate(model)), value: amountText(recon.closing_statement), note: 'Closing balance on the file' }) +
-      labKit.figure({ label: 'Balance in the books', value: amountText(recon.closing_books_before), note: 'In the demo bank account' }) +
-      labKit.figure({ label: 'Difference', value: amountText(recon.difference_before), done: held, total: total, good: closed, note: closed ? 'All ' + total + ' lines are in the books' : plural(open, 'statement line is', 'statement lines are') + ' not in the books' });
+      labKit.figure({ label: 'Statement balance (' + CURRENCY + '), ' + dateWords(recon.statement_date || lastDate(model)), value: amountText(recon.closing_statement), note: 'Closing balance on the file' }) +
+      labKit.figure({ label: 'Balance in the books (' + CURRENCY + ')', value: amountText(recon.closing_books_before), note: 'In the demo bank account' }) +
+      labKit.figure({ label: 'Difference (' + CURRENCY + ')', value: amountText(recon.difference_before), done: held, total: total, good: closed, note: closed ? 'All ' + total + ' lines are in the books' : plural(open, 'statement line is', 'statement lines are') + ' not in the books' });
   }
   function lastDate(model) {
     var dates = model.items.map(function (item) { return item.line.date; }).sort();
@@ -199,9 +204,9 @@
     node.hidden = false;
     node.className = 'bd-gst' + (gstBasis ? ' bd-answered' : '');
     var waiting = countsOf(model).wait;
-    var group = root.ui.choice({ mount: 'BKS017-U01', key: 'gst', id: 'bd_gst_choice', testid: 'bd-gst', size: 'compact', label: 'Is your GST on a cash or an accrual basis?', value: gstBasis || '', items: [{ value: 'cash', label: 'Cash' }, { value: 'accrual', label: 'Accrual' }], onChange: answerBasis });
+    var group = root.ui.choice({ mount: 'BKS017-U01', key: 'gst', id: 'bd_gst_choice', testid: 'bd-gst', size: 'compact', label: 'Do you count GST when money moves (cash) or when you invoice (accrual)?', value: gstBasis || '', items: [{ value: 'cash', label: 'Cash' }, { value: 'accrual', label: 'Accrual' }], onChange: answerBasis });
     node.innerHTML =
-      '<b>Is your GST on a cash or an accrual basis?</b>' + group +
+      '<b>Do you count GST when money moves (cash) or when you invoice (accrual)?</b>' + group +
       '<span class="bd-why">' + (waiting ? 'Asked once for every line. ' + plural(waiting, 'line waits', 'lines wait') + ' for it.' : 'Asked once, for every line.') + '</span>';
   }
   /** the one GST answer of the page: every line reads it through the controller, so the chips, the bar and the popup change together */
@@ -369,7 +374,7 @@
         var model = controller.view(),
           counts = countsOf(model);
         var recon = model.projection && model.projection.brs;
-        added = { count: said.added, balance: recon ? amountText(recon.closing_books_before) : '', open: counts.need + counts.wait };
+        added = { count: said.added, balance: recon ? amountWithCurrency(recon.closing_books_before) : '', open: counts.need + counts.wait };
         setMessage(said.failed ? plural(said.failed, 'line was', 'lines were') + ' not added.' : plural(said.added, 'line', 'lines') + ' added to the demo books.', !said.failed);
         view = 'lines';
         paint();

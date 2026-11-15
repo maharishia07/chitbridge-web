@@ -156,7 +156,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   const text = (selector) => page.textContent(selector);
   const phone = width < 700;
   const figs = await text('#bd_figs');
-  check(figs.includes('AUD 14,400.00') && figs.includes('AUD 3,108.50') && figs.includes('AUD 17,508.50'), tag + ': pass test: statement 17,508.50, books 14,400.00, difference 3,108.50');
+  check(figs.includes('14,400.00') && figs.includes('3,108.50') && figs.includes('17,508.50') && !/AUD \d/.test(figs), tag + ': pass test: statement 17,508.50, books 14,400.00, difference 3,108.50');
   check((await text('#bd_lines')).includes('19 Oct 2026'), tag + ': dates read "19 Oct 2026" (en-AU), also at 390');
   await countsAgree(page, tag, 'before the GST answer');
   check(await page.locator('#bd_gst').isVisible(), tag + ': the page asks the GST basis once');
@@ -221,7 +221,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   await page.waitForSelector('[data-testid=bd-added]');
   await page.waitForTimeout(200);
   const figsAfter = await text('#bd_figs');
-  check(figsAfter.includes(resolved ? 'AUD 14,308.50' : 'AUD 13,428.50') && figsAfter.includes(resolved ? 'AUD 3,200.00' : 'AUD 4,080.00'), tag + ': after the press: books ' + (resolved ? '14,308.50, difference 3,200.00' : '13,428.50, difference 4,080.00'));
+  check(figsAfter.includes(resolved ? '14,308.50' : '13,428.50') && figsAfter.includes(resolved ? '3,200.00' : '4,080.00'), tag + ': after the press: books ' + (resolved ? '14,308.50, difference 3,200.00' : '13,428.50, difference 4,080.00'));
   check(new RegExp(ready + ' lines added').test(await text('#bd_msg')), tag + ': the outcome is said in the status line (' + (await text('#bd_msg')).trim() + ')');
   await countsAgree(page, tag, 'after the add');
   await fits('after add');
