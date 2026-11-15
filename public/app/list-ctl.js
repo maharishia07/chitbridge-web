@@ -1657,6 +1657,23 @@
             esc(T(I, 'Move {x} right', { x: c.label })) +
             '">→</button>'
           : '<span class="cbl-mvsp"></span>') +
+        /* L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
+        (on
+          ? ['-1', '1']
+              .map(function (dir) {
+                var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
+                return (
+                  '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
+                  esc(c.key) +
+                  '" data-d="' + dir + '" data-testid="cols-wd-' + esc(c.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
+                  esc(T(I, word, { x: c.label })) +
+                  '" title="' +
+                  esc(T(I, word, { x: c.label })) +
+                  '">' + (dir === '1' ? '+' : '−') + '</button>'
+                );
+              })
+              .join('')
+          : '') +
         '</div>'
       );
     }
@@ -1965,7 +1982,7 @@
     return (
       '<button type="button" data-cbsid="CMP039-B02"' + mountAttribute('CMP039') + ' class="cbl-rz colrz" data-rz="' +
       esc(item.key) +
-      '" aria-label="' +
+      '" tabindex="-1" data-testid="cbl-rz-' + esc(item.key) + '" aria-label="' +
       esc(T(list, 'Resize {x} column (arrow keys)', { x: item.label || item.key })) +
       '" title="' +
       esc(T(list, 'Drag to resize · double-click resets')) +
@@ -2401,7 +2418,14 @@
       });
       return;
     }
-    if (hasNext(I)) toggleRow(I, id, ev && ev.type === 'keydown');
+    if (hasNext(I)) {
+      toggleRow(I, id, ev && ev.type === 'keydown');
+      return;
+    }
+    /* L16 F29: Enter on a row with no open handler runs the row's main action: its first link or button (a mouse click on the row never reaches here) */
+    var rowNode = ev && ev.type === 'keydown' ? I.el.querySelector('[data-row="' + cssId(id) + '"]') : null;
+    var main = rowNode && rowNode.querySelector('a[href],button:not([disabled]):not([data-caret]),[data-act]');
+    if (main) main.click();
   }
   function closePop(list, refocus) {
     if (!list.pop) return;
@@ -2734,6 +2758,13 @@
       saveChoices(list);
       paintTools(list);
       paintList(list);
+      return;
+    }
+    if (d.wd) {
+      resize(list, d.wd, +d.d * 16, false);
+      paintTools(list);
+      var again = list.el.querySelector('[data-wd="' + d.wd + '"][data-d="' + d.d + '"]');
+      if (again) again.focus();
       return;
     }
     if (d.col) return; /* the checkbox acts on 'change' */

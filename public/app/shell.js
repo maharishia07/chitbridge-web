@@ -88,6 +88,7 @@
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
     factsFailed: 'Could not read',
+    skip: 'Skip to content',
     state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' },
     setUp: 'Set up',
     needsYou: 'Needs you',
@@ -261,6 +262,7 @@
     '.cbsh-nv .i{font-size:17px;line-height:1}.cbsh-nv .t{font-size:10px;font-weight:600;letter-spacing:.01em}',
     '.cbsh-nv:hover{background:var(--sh-hover)}.cbsh-nv[hidden]{display:none}',
     '.cbsh-nv[aria-current]{background:var(--sh-card);color:var(--sh-green-d);box-shadow:0 0 0 1px var(--sh-line)}.cbsh-nv[aria-current] .i{color:var(--sh-green)}',
+    '.cbsh-skip{position:absolute;inset-inline-start:8px;top:-60px;z-index:2000;padding:10px 16px;border-radius:8px;background:var(--ink,#1D1B16);color:var(--card,#fff);font-weight:700;text-decoration:none}.cbsh-skip:focus{top:8px}',
     '.cbsh-main{flex:1 1 auto;min-width:0;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--sh-line) transparent}',
     '.cbsh-inner{max-width:1240px;margin:0 auto;padding:16px 24px 28px}',
     '.cbsh-sec{margin-bottom:22px;scroll-margin-top:4px}',
@@ -907,11 +909,29 @@
         })
       : drawn.indexOf(navId) < 0;
   }
+  /** L16 F29: the first Tab stop on every page — a link that jumps over the header and the side menu to the page's main region (shown only while it has focus) */
+  function addSkipLink() {
+    if (!doc || !doc.body || doc.querySelector('[data-testid="skip-link"]')) return;
+    var link = doc.createElement('a');
+    link.className = 'cbsh-skip';
+    link.href = '#cb-main';
+    link.setAttribute('data-testid', 'skip-link');
+    link.textContent = W.skip;
+    link.addEventListener('click', function (event) {
+      var target = doc.querySelector('main') || doc.querySelector('[role="main"]');
+      if (!target) return;
+      event.preventDefault();
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.focus();
+    });
+    doc.body.insertBefore(link, doc.body.firstChild);
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
     addCss();
     addFonts();
+    addSkipLink();
     var host = o.host || null,
       mode = host && host.bar ? 'bar' : host ? 'app' : 'home';
     var appId = host && host.app ? String(host.app) : ''; /* bar mode too (SHELL-ONE): the storefront and the labs name their app for the chip */

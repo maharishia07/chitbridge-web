@@ -37,5 +37,25 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
   const ph = await page(390, 844, true); await ph.click('[data-testid="avatar"]'); await ph.waitForSelector('[data-testid="avatar-menu"]');
   const pb = await ph.locator('[data-testid="nav-signout"]').boundingBox(); ok(pb && pb.y + pb.height <= 844, 'phone 390x844: Sign out inside the screen');
   await ph.screenshot({ path: path.join(SHOTS, 'shell-monday-phone-menu.png') });
+  /* round 2 (F29): skip link is the first Tab stop; the resize handles are out of the Tab order; the content-sized columns fit both screens */
+  const k = await page(1366, 768, true); await k.keyboard.press('Tab');
+  ok(await k.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) === 'skip-link'), 'the first Tab stop is "Skip to content"');
+  await k.keyboard.press('Enter');
+  ok(await k.evaluate(() => !!document.activeElement && document.activeElement.tagName === 'MAIN'), 'Enter on it moves focus to the main region');
+  for (const [w, h] of [[1366, 768], [390, 844]]) {
+    for (const hash of ['/list-lab.html', '/accounts.html#daybook', '/accounts.html#bank', '/crm.html']) {
+      const ctx = await b.newContext({ viewport: { width: w, height: h }, serviceWorkers: 'block' });
+      await ctx.route(/fonts.(googleapis|gstatic).com/, (r) => r.abort());
+      await ctx.route('**/api/**', (r) => { const pp = new URL(r.request().url()).pathname; if (pp === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Books Shop', currency_code: 'AUD', ui_prefs: {} } }); return booksRoute(S, r); });
+      await ctx.addInitScript((x) => { try { localStorage.setItem('cb_sess', x); } catch (_) {} }, sess);
+      const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', (e) => errs.push(String(e.message)));
+      await pg.goto(web.url(hash)); await pg.waitForTimeout(1500);
+      const tag = hash.replace(/[^a-z]/g, '') + '-' + w;
+      await pg.screenshot({ path: path.join(SHOTS, 'shell-monday-list-' + tag + '.png') });
+      const rz = await pg.evaluate(() => [].slice.call(document.querySelectorAll('.cbl-rz')).filter((n) => n.tabIndex !== -1).length);
+      ok(rz === 0 && errs.length === 0, hash + ' @' + w + ': no resize handle in the Tab order, no page error' + (errs[0] ? ' (' + errs[0] + ')' : ''));
+      await ctx.close();
+    }
+  }
   await b.close(); await web.close && web.close(); console.log(fail ? 'FAIL ' + fail : 'PASS'); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
