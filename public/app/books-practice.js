@@ -69,12 +69,12 @@
       ['help', 'Needs help', b.health.help, { status: 'help' }],
       ['watch', 'Watch', b.health.watch, { status: 'watch' }],
       ['good', 'Doing well', b.health.good, { status: 'good' }],
-      ['queries', 'Clients with open queries', b.queries.clients, { queries: 'open' }, b.queries.on_client + ' ' + tx('waiting on the client') + ' · ' + b.queries.on_us + ' ' + tx('waiting on us')],
-      ['bas', 'Clients with a return due in 30 days', b.bas_due_30, { bas: 'soon' }],
-      ['bank', 'Clients with bank not reconciled', b.bank.unexplained, { bank: 'unexplained' }, b.bank.no_statement + ' ' + tx('with no statement signed')],
-      ['months', 'Clients with months not locked', b.months_unlocked, { unlocked: 'yes' }],
-      ['checked', 'Clients with entries to check', b.checked.clients_behind, { checked: 'behind' }, b.checked.n + ' ' + tx('of') + ' ' + b.checked.of + ' ' + tx('entries checked')],
-      ['ending', 'Clients whose access ends in 30 days', b.grants_ending_30, { ending: 'soon' }]
+      ['queries', 'Open queries', b.queries.clients, { queries: 'open' }, b.queries.on_client + ' ' + tx('on the client') + ' · ' + b.queries.on_us + ' ' + tx('on us')],
+      ['bas', 'Return due in 30 days', b.bas_due_30, { bas: 'soon' }],
+      ['bank', 'Bank not reconciled', b.bank.unexplained, { bank: 'unexplained' }, b.bank.no_statement + ' ' + tx('no statement')],
+      ['months', 'Months not locked', b.months_unlocked, { unlocked: 'yes' }],
+      ['checked', 'Entries to check', b.checked.clients_behind, { checked: 'behind' }, b.checked.n + ' ' + tx('of') + ' ' + b.checked.of + ' ' + tx('checked')],
+      ['ending', 'Access ends in 30 days', b.grants_ending_30, { ending: 'soon' }]
     ];
   }
   function bandHTML(data) {
@@ -93,8 +93,8 @@
   }
   function ruleHTML(rule) {
     return (
-      '<p class="bp-rule sub" data-testid="practice-rule">' + esc(tx('Needs help')) + ': ' + esc(tx('cash under')) + ' ' + rule.help.cash_days_below + ' ' + esc(tx('days of bills')) + ', ' + esc(tx('sales down')) + ' ' + rule.help.sales_down_pct + '%, ' + esc(tx('or a loss')) + ' ' + rule.help.loss_months_running + ' ' + esc(tx('months running')) +
-      '. ' + esc(tx('Watch')) + ': ' + esc(tx('sales down')) + ' ' + rule.watch.sales_down_pct + '%, ' + esc(tx('or a loss this quarter')) + '. ' + esc(tx('This is our starting rule; the firm can change it.')) + '</p>'
+      '<p class="bp-rule sub" data-testid="practice-rule">' + esc(tx('Needs help')) + ': ' + esc(tx('cash under')) + ' ' + rule.help.cash_days_below + ' ' + esc(tx('days of bills')) + ', ' + esc(tx('sales down')) + ' ' + rule.help.sales_down_pct + '%, ' + esc(tx('loss')) + ' ' + rule.help.loss_months_running + ' ' + esc(tx('months running')) +
+      '. ' + esc(tx('Watch')) + ': ' + esc(tx('sales down')) + ' ' + rule.watch.sales_down_pct + '%, ' + esc(tx('loss this quarter')) + '. ' + esc(tx('The firm can change this.')) + '</p>'
     );
   }
   function statusCell(r) {
@@ -114,16 +114,16 @@
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
   function detailHTML(r) {
-    var h = r.health, held = tx('Not shown yet');
+    var h = r.health, held = tx('Not shown');
     var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + esc(tx(label)) + '</span><b>' + value + '</b></div>'; };
     return (
       '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' +
-      line('Sales last month against the 3-month average', esc(trend(r))) +
-      line('Gross margin this quarter', h.gross_margin_pct == null ? '—' : esc(h.gross_margin_pct) + '%') +
+      line('Sales vs 3-month average', esc(trend(r))) +
+      line('Margin this quarter', h.gross_margin_pct == null ? '—' : esc(h.gross_margin_pct) + '%') +
       line('Cash in bank', esc(money(h.cash_minor, r.currency))) +
-      line('Bills due in the next 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
-      line('Cash against those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
-      line('Receivables over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
+      line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
+      line('Cash for those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
+      line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
       line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(money(r.bank.unexplained_minor, r.currency)) + ' ' + esc(tx('unexplained'))) +
       line('Profit this quarter', esc(money(h.profit_quarter_minor, r.currency))) +
       line('Months not locked', esc(r.months_unlocked)) +
@@ -164,7 +164,7 @@
   function sorts() {
     var by = function (k, get, text) { return { key: k, label: tx(text), cmp: function (a, b) { var x = get(a), y = get(b); return typeof x === 'string' || typeof y === 'string' ? String(x).localeCompare(String(y)) : (x == null ? -1e18 : x) - (y == null ? -1e18 : y); } }; };
     return [
-      by('urgency', function (r) { return r._n; }, 'Most to action first'),
+      by('urgency', function (r) { return r._n; }, 'Most urgent first'),
       by('name', function (r) { return r.name || ''; }, 'Client'),
       by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
       by('queries', function (r) { return r.queries.open; }, 'Queries open'),
@@ -187,7 +187,7 @@
       f('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
       f('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
       f('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
-      f('checked', 'Checked', [['behind', 'Entries not all checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
+      f('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
       f('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
       f('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
     ];
@@ -251,7 +251,7 @@
     section.innerHTML =
       '<h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + ruleHTML(P.data.rule) + bandHTML(P.data) +
       (P.filter ? '<button type="button" class="act quiet bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') +
-      (P.data.truncated ? '<p class="sub">' + esc(tx('Only the first clients are shown.')) + '</p>' : '') +
+      (P.data.truncated ? '<p class="sub">' + esc(tx('Some clients are not shown.')) + '</p>' : '') +
       '<div id="bp_list" data-testid="practice-list"></div>';
     [].forEach.call(section.querySelectorAll('[data-bp-filter]'), function (b) {
       b.onclick = function () {
