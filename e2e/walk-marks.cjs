@@ -184,7 +184,7 @@ W.run('marks', async (w) => {
     return { ok: inSheet && back, saw: 'focus in the sheet ' + inSheet + ' · back on the chip ' + back };
   });
   await w.step('M1', 'Closed months: month names, the sales as the server sent them, and no month that has not begun', async () => {
-    await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForSelector(T('bv-row-0'), { timeout: 8000 });
+    await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /November 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
     const list = await txt(T('bv-list')); await shot('13-closed-months');
     return { ok: list.includes('November 2026') && !list.includes('2099') && !list.includes('January'), saw: list.slice(0, 160) };
   });
