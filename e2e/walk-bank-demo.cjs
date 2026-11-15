@@ -247,4 +247,9 @@ async function filesStates(page, tag, shot) {
   }
   check((await page.locator('#bd_lines .bd-row').count()) >= 2, tag + ': a file whose heading says "Narrative" is read (by the engine or through the column map), its lines are listed');
   await shot('13-own-file');
+  await loadWithCurrency(page, input, file('harbour.csv', fs.readFileSync(path.join(__dirname, 'fixtures', 'harbour-oct-2026.csv'), 'utf8')));
+  await page.waitForSelector('#bd_lines .bd-row');
+  await shot('14-harbour-file');
+  const sampleText = await page.textContent('#bd_lines');
+  check(/Looks like a transfer to your own account\. Which one\?/.test(sampleText) && /Looks like tax paid to the tax office\./.test(sampleText) && !/New (supplier|customer): (Savings|Ato|Card)/i.test(sampleText), tag + ': l16-bank-rules (R69, the same words as the owner sheet): the savings transfer and the ATO payment say what they look like, no new supplier made of a bank word');
 }

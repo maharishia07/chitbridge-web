@@ -140,19 +140,27 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(!sh.overlap, tag + ': the code chip does not sit over the close cross');
     ok(/10 lines to add · \d+ ready · \d+ need an answer/.test(sh.strip) && /Difference 1,682\.25/.test(sh.strip) && /Unexplained/.test(sh.strip) && !/Difference now/.test(sh.strip), tag + ': the sheet says the same one truth as the band (' + sh.strip.slice(0, 140) + ')');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet.png') });
-    /* M5 · a line nothing explained says what it can be, ON THE LINE, one step each (the engine's closed list) */
-    const ato = p.locator('#acc_sheet tr[data-line]', { hasText: 'ATO PAYMENT' });
-    if (!(await ato.locator('[data-act="kind"]').count())) await ato.locator('[data-act="open"]').click(); /* one row is open at a time: open this one */
-    ok(await ato.locator('[data-act="kind"]').count() >= 1, tag + ': the ATO payment line offers its one-step answers on the line (' + (await ato.locator('[data-act="kind"]').allTextContents()).join(' | ') + ')');
+    /* M5 + l16-bank-rules · the pack's own words say what a line is, ON THE LINE, before it is opened: the transfer (which own account?), the ATO payment (the entry it will make), the card settlement.
+       The ATO and card lines used to be "needs you" with the kind buttons (assert 'offers its one-step answers on the line'): the engine now PROPOSES them, so the answer is one tick, not a kind button (expectation changed, not a regression) */
+    const lineOf = (needle) => p.locator('#acc_sheet tr[data-line]', { hasText: needle });
+    const hintOf = async (needle) => (await lineOf(needle).locator('[data-testid="bd-hint"]').allTextContents()).join(' ').replace(/\s+/g, ' ');
+    const sav = lineOf('TRANSFER TO SAVINGS');
+    ok(/Looks like a transfer to your own account\. Which one\?/.test(await hintOf('TRANSFER TO SAVINGS')) && !/New (party|supplier|customer)/i.test(await sav.innerText()), tag + ': the savings transfer says on its closed line what it looks like, no new party (' + (await hintOf('TRANSFER TO SAVINGS')).slice(0, 80) + ')');
+    const atoHint = await hintOf('ATO PAYMENT');
+    ok(/Looks like tax paid to the tax office/.test(atoHint) && /Dr .*1,462\.00/.test(atoHint) && /Cr .*1,462\.00/.test(atoHint), tag + ': the ATO payment says on its closed line what it looks like and the entry it makes (' + atoHint.slice(0, 160) + ')');
+    const cardHint = await hintOf('CARD SETTLEMENT');
+    ok(/Looks like your card takings paid into the bank/.test(cardHint) || (await lineOf('CARD SETTLEMENT').locator('[data-act="tick"]').count()) === 1, tag + ': the card settlement says what it looks like, or is the open row with its tick (' + cardHint.slice(0, 100) + ')');
+    if (!(await sav.locator('[data-act="kind"]').count())) await sav.locator('[data-act="open"]').click(); /* one row is open at a time: open this one */
+    ok(await sav.locator('[data-act="kind"]').count() >= 1, tag + ': the savings transfer line offers its one-step answers on the line (' + (await sav.locator('[data-act="kind"]').allTextContents()).join(' | ') + ')');
+    const ato = lineOf('ATO PAYMENT');
+    if (!(await ato.locator('[data-act="tick"]').count())) await ato.locator('[data-act="open"]').click();
     const r0 = await p.evaluate(() => BKSH.ctl.readyCount());
-    const taxBtn = ato.locator('[data-act="kind"][data-kind="tax_payment"]');
-    if (await taxBtn.count()) {
-      await taxBtn.click();
-      await p.waitForTimeout(300);
-      const r1 = await p.evaluate(() => BKSH.ctl.readyCount());
-      ok(r1 === r0 + 1, tag + ': one press on "Tax paid to the tax office" makes the ATO line ready (' + r0 + ' then ' + r1 + ')');
-      await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet-kind.png') });
-    }
+    ok(await ato.locator('[data-act="tick"]').count() === 1, tag + ': opened, the ATO payment line asks one tick');
+    await ato.locator('[data-act="tick"]').click();
+    await p.waitForTimeout(300);
+    const r1 = await p.evaluate(() => BKSH.ctl.readyCount());
+    ok(r1 === r0 + 1, tag + ': one tick makes the ATO line ready (' + r0 + ' then ' + r1 + ')');
+    await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet-kind.png') });
     const before = await p.evaluate(() => { const d = document.querySelector('#acc_sheet [data-act="tick"],#acc_sheet [data-act="gst"][data-v="cash"],#acc_sheet [data-act="resolve"]'); if (d) d.click(); return { ready: BKSH.ctl.readyCount(), clicked: !!d }; });
     await p.mouse.click(4, Math.floor(vp.height / 2)); /* a press outside the sheet */
     await p.waitForTimeout(300);

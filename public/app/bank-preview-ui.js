@@ -146,7 +146,7 @@
       if (done) return done;
       var asked = askedBox(item),
         others = otherNeeds(item, tag);
-      var reason = item.state === 'needs_you' && !asked ? '<span class="bd-why">' + escapeHtml(/^no rule matched$/i.test(item.why || '') ? 'Nothing here says who or what this is.' : item.why || 'Nothing here says who or what this is.') + '</span>' : '';
+      var reason = item.state === 'needs_you' && !asked && !item.what ? '<span class="bd-why">' + escapeHtml(/^no rule matched$/i.test(item.why || '') ? 'Nothing here says who or what this is.' : item.why || 'Nothing here says who or what this is.') + '</span>' : '';
       return entryNote(item) + asked + (others ? ' ' + others : '') + reason + sayBox(item);
     }
     Object.assign(ctx, { taxKindBox, askedBox, sayBox, lineNote });
@@ -214,7 +214,7 @@
           return choice.id !== 'expense' && choice.id !== 'other_income' && (choice.side === 'both' || choice.side === (out ? 'out' : 'in'));
         })
         .sort(function (left, right) { return (right.id === said) - (left.id === said); })
-        .map(function (choice) { return (choice.id === said ? '<span class="bd-ask bd-looks" data-testid="bd-looks-' + escapeHtml(choice.id) + '">Looks like:</span>' : '') + choiceHtml(choice, key); });
+        .map(function (choice) { return (choice.id === said ? '<span class="bd-ask bd-looks" data-testid="bd-looks-' + escapeHtml(choice.id) + '">' + escapeHtml(preview.looksLike(item) || 'Looks like:') + '</span>' : '') + choiceHtml(choice, key); });
       if (choices.length && !ctx.opened[item.key]) choices.push('<span class="bd-choice"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="more" data-key="' + key + '">Someone or something else</button></span>');
       return choices.length ? '<span class="bd-party"><span class="bd-ask">What is this?</span><span class="bd-choices">' + choices.join('') + '</span></span>' : '';
     }
@@ -248,7 +248,8 @@
         open = item.key === openKey,
         ask = needsAnswer(item, results),
         toggle = cfg.only && cfg.only() ? '' : ' <button data-cbsid="BKS017-B19" type="button" class="bd-btn bd-open" data-act="open" data-key="' + escapeHtml(item.key) + '" aria-expanded="' + open + '">' + (open ? 'Close' : ask ? 'Answer' : 'Details') + '</button>',
-        sub = open || result ? '<div class="bd-sub">' + (open ? kindBox(item) + (kindBox(item) && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') : '') + lineNote(item, result) + '</div>' : '';
+        hint = !open && !result && item.what && preview.looksLike(item) ? '<div class="bd-sub bd-hint" data-testid="bd-hint"><span class="bd-ask">' + escapeHtml(preview.looksLike(item)) + '</span> ' + ctx.entryNote(item) + '</div>' : '',
+        sub = hint || (open || result ? '<div class="bd-sub">' + (open ? kindBox(item) + (kindBox(item) && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') : '') + lineNote(item, result) + '</div>' : '');
       return (
         '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + (open ? ' bd-is-open' : '') + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
         '<td class="bd-m">' + (line.debit_minor ? escapeHtml(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? escapeHtml(amountText(line.credit_minor)) : '') + '</td>' +

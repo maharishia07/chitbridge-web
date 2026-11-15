@@ -505,6 +505,18 @@
     });
   }
 
-  root.CBBankPreview = { create: create, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
+  /**
+   * l16-bank-rules (R69): what the PACK's words say a line is, in ONE sentence the owner's sheet and the demo both print: an own-account transfer, tax paid to the tax office, card takings paid in.
+   * null when the words say nothing. It carries no figure and no account; the entry (when the engine composed one) is printed beside it by each page from the engine's own legs.
+   */
+  function looksLike(item) {
+    var kind = item && item.what && item.what.kind,
+      out = !!(item && item.line && item.line.debit_minor > 0);
+    if (kind === 'transfer') return 'Looks like a transfer ' + (out ? 'to' : 'from') + ' your own account. Which one?';
+    if (kind === 'tax_payment') return 'Looks like tax paid to the tax office.';
+    if (kind === 'card_settlement') return 'Looks like your card takings paid into the bank.';
+    return null;
+  }
+  root.CBBankPreview = { create: create, looksLike: looksLike, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankPreview;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

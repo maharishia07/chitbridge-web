@@ -40,6 +40,17 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(/Statement\s*18,280\.75/.test(await band(p)), 'ITEM 1: opened with no file: the latest statement is on screen, band unchanged (' + (await band(p)).slice(0, 100) + ')');
   ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the restored statement asks no currency');
   await p.screenshot({ path: path.join(OUT, 'b9-01-opens-on-last-statement-1366.png') });
+  /* l16-bank-rules: the CLEAN Harbour (no savings account yet), the whole sheet, nothing answered: the three lines say what they look like while CLOSED (the gap that let 39/39 pass: only open rows were read) */
+  await p.click('[data-testid="bank-sheet-open"]');
+  await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 20000 });
+  await p.waitForTimeout(700);
+  const closedRow = (needle) => p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: needle }).first();
+  const savClosed = flat(await closedRow('TRANSFER TO SAVINGS').innerText()), atoClosed = flat(await closedRow('ATO PAYMENT').innerText());
+  ok(/Looks like a transfer to your own account\. Which one\?/.test(savClosed) && !/New (party|supplier|customer)|Nothing here says/i.test(savClosed), 'l16-bank-rules: Savings, closed, says "Looks like a transfer to your own account. Which one?" (' + savClosed.slice(0, 160) + ')');
+  ok(/Looks like tax paid to the tax office\./.test(atoClosed) && /Dr GST collected 1,462\.00/.test(atoClosed), 'l16-bank-rules: ATO, closed, says what it looks like and its entry (' + atoClosed.slice(0, 200) + ')');
+  await p.screenshot({ path: path.join(OUT, 'rules-00-all-closed-1366.png') });
+  await p.click('[data-testid="bank-sheet-close"]');
+  await p.waitForTimeout(500);
   /* ITEM 2 + 3: answer ONE line (Add missing on the transfer): the sheet shows that line, one short question, each list under its own button */
   const tr = p.locator('[data-testid^="bank-row-"]', { hasText: 'TRANSFER TO SAVINGS' }).first();
   await tr.locator('[data-caret]').click();
@@ -51,6 +62,8 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const sheetText = flat(await p.locator('[data-testid="bank-sheet-lines"]').innerText());
   ok(!/say which account|from the list for/i.test(sheetText) && (sheetText.match(/What is this\?/g) || []).length === 1, 'ITEM 2: one short question, said once: "What is this?"');
   ok(await p.locator('[data-testid="bd-looks-transfer"]').count() === 1 && !/New party|New supplier|New customer|Savings.*Use this party/i.test(sheetText), 'l16-bank-rules: the Savings line leads with "Looks like: Moved between my own accounts" and proposes no new party (' + sheetText.slice(0, 160) + ')');
+  const ownList = flat(await p.locator('[data-testid="bank-sheet-lines"] select[data-act^=kindacct-transfer]').first().innerText().catch(() => ''));
+  ok(/Looks like a transfer to your own account\. Which one\?/.test(sheetText) && !/Savings account/.test(ownList) && await p.locator('[data-testid="bd-addown-name"]').count() === 1, 'l16-bank-rules (CLEAN Harbour: no savings account yet): the line says "Looks like a transfer to your own account. Which one?" and offers "+ add a savings account" (list: ' + ownList.slice(0, 80) + ')');
   const stacked = await p.$$eval('.bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
   ok(stacked, 'ITEM 2: each choice that has a list carries it right under its own button');
   ok(await p.locator('[data-testid="bank-sheet-lines"] input[data-act=pname]').count() === 0 && await p.locator('[data-testid="bank-sheet-lines"] select[data-act=acct]').count() === 0, 'ITEM 2: the New party and Or an account boxes are not under the question from the start');
@@ -111,7 +124,9 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(/9 lines to add/.test(strip) && /ready/.test(strip) && /need an answer/.test(strip), 'ITEM 4: the sheet says what each number is (' + strip.slice(0, 90) + ')');
   const atoWords = flat(await row('ATO PAYMENT').innerText());
   console.log('   ATO row before any answer: ' + atoWords.slice(0, 260));
-  ok(!/New party|New supplier|New customer/i.test(atoWords) && await row('ATO PAYMENT').locator('input[data-act=pname]').count() === 0, 'l16-bank-rules: the ATO line offers no new supplier (its entry is checked below: Dr GST collected, the tax account) (' + atoWords.slice(0, 170) + ')');
+  const cardClosed = flat(await row('CARD SETTLEMENT').innerText());
+  ok(/Looks like tax paid to the tax office/.test(atoWords) && /Dr GST collected 1,462\.00/.test(atoWords) && /Cr Business bank account 1,462\.00/.test(atoWords) && !/New party|New supplier|New customer/i.test(atoWords), 'l16-bank-rules: the ATO line, CLOSED, says what it looks like and the entry it makes, no new supplier (' + atoWords.slice(0, 200) + ')');
+  ok(/Looks like your card takings paid into the bank|Cr Card and EFTPOS settlements 451\.00/.test(cardClosed) && !/New party|New supplier|New customer/i.test(cardClosed), 'l16-bank-rules: the card line says what it is, no new customer (' + cardClosed.slice(0, 200) + ')');
   for (let round = 0; round < 24; round++) {
     const basis = p.locator(lines + ' button[data-act=gst][data-v=cash]');
     if (await basis.count()) {

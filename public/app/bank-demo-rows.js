@@ -42,10 +42,14 @@
     return '<span class="bd-question">' + more + '</span>';
   }
   /** the right-hand column of a line, under its chip: the entry it matched, the entry it will make, or the question it asks */
+  function looksHtml(item) {
+    var said = host.preview.looksLike(item);
+    return said ? '<span class="bd-detail" data-testid="bd-hint">' + esc(said) + (item.entry ? ' ' + esc(entryWords(item)) : '') + '</span>' : '';
+  }
   function detailHtml(item, state, matched) {
     if (state === 'in') return '<span class="bd-detail">' + esc(matched || '') + '</span>';
     if (state === 'ready' || state === 'posted') return '<span class="bd-detail">' + esc(entryWords(item)) + '</span>';
-    return state === 'need' ? questionHtml(item) : '';
+    return state === 'need' ? looksHtml(item) + questionHtml(item) : '';
   }
   /** one money cell: the carried amount as digits (the currency is in the column heading), or an empty cell; which is 'out' (spent) or 'in' (received) */
   function moneyCell(minor, which) {
