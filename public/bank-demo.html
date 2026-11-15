@@ -20,13 +20,13 @@
 </head>
 <body>
 <div id="shell" class="bd-frame"></div>
-<div class="bd-banner" role="note" data-testid="bd-banner" data-cbsid="BKS017-N01"><b>Demo. Nothing is saved.</b> Sample data, not your books. A file you load stays on this device.</div>
 <header class="bd-head">
   <div class="bd-titles"><h1>Bank statement to books</h1><p id="bd_sub" class="bd-subtitle"></p></div>
+  <p class="bd-demo" role="note" data-testid="bd-banner" data-cbsid="BKS017-N01"><b>Demo. Nothing is saved.</b> Sample data. A file you load stays on this device.</p>
   <div class="bd-acts">
-    <button data-cbsid="BKS017-B01" id="bd_load" type="button" class="bd-btn" data-testid="bd-load">Load the sample statement</button>
-    <label class="bd-btn bd-file">Load your own CSV <input data-cbsid="BKS017-I01" id="bd_file" type="file" accept=".csv,.txt,text/csv" data-testid="bd-file"></label>
-    <button data-cbsid="BKS017-B06" id="bd_reset" type="button" class="bd-btn" data-testid="bd-reset">Start again</button>
+    <button data-cbsid="BKS017-B01" id="bd_load" type="button" class="bd-btn bd-offscript" data-testid="bd-load">Load the sample statement</button>
+    <label class="bd-btn bd-file">Load your own statement <input data-cbsid="BKS017-I01" id="bd_file" type="file" accept=".csv,.txt,text/csv" data-testid="bd-file"></label>
+    <button data-cbsid="BKS017-B06" id="bd_reset" type="button" class="bd-btn bd-offscript" data-testid="bd-reset">Start again</button>
   </div>
   <div class="bd-more">
     <button data-cbsid="BKS017-B19" id="bd_more" type="button" class="bd-btn" aria-haspopup="true" aria-expanded="false" data-testid="bd-more">More</button>
@@ -38,6 +38,10 @@
   </div>
 </header>
 <section id="bd_figs" class="bd-figs" aria-label="Totals" data-testid="bd-sum" aria-live="polite"></section>
+<div id="bd_bar" class="bd-bar" data-cbsid="BKS017-F01">
+  <span id="bd_count" class="bd-count" data-testid="bd-count"></span>
+  <button data-cbsid="BKS017-B02" id="bd_add" type="button" class="bd-btn bd-go" data-testid="bd-add" disabled>Nothing ready to add</button>
+</div>
 <div id="bd_check" class="bd-check" role="status" hidden data-testid="bd-check" data-cbsid="BKS017-N03"></div>
 <div id="bd_warn" class="bd-check" role="status" hidden data-testid="bd-warn" data-cbsid="BKS017-N04"></div>
 <div id="bd_gst" class="bd-gst" hidden data-testid="bd-gst"></div>
@@ -52,10 +56,6 @@
   <section id="bd_books" class="bd-pane" aria-label="Books after" tabindex="0" hidden></section>
   <section id="bd_brs" class="bd-pane" aria-label="Bank reconciliation" tabindex="0" hidden></section>
 </main>
-<footer id="bd_bar" class="bd-bar" data-cbsid="BKS017-F01">
-  <span id="bd_count" class="bd-count" data-testid="bd-count"></span>
-  <button data-cbsid="BKS017-B02" id="bd_add" type="button" class="bd-btn bd-go" data-testid="bd-add" disabled>Nothing ready to add</button>
-</footer>
 <script src="/app/helpers.js"></script>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>

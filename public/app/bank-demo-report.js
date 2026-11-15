@@ -52,37 +52,46 @@
       }).join('') + '</tbody></table>';
   }
 
-  var NONE_ROW = '<tr class="bd-none bd-i"><td colspan="3">None</td></tr>';
   /** the two short lists under the report: what this demo does not do yet, and what it does that others do not */
   var EDGES =
     '<div class="bd-edges"><h3>Not in this demo yet</h3><ul><li>Match to an invoice (find and match several, part payment)</li><li>Split a line</li><li>Undo a posted line</li><li>Bank rules you write yourself</li><li>Bank feeds: CSV only for now, no OFX or QIF</li></ul>' +
     '<h3>What this does that others do not</h3><ul><li>Shows a preview before anything posts</li><li>Recognises a line seen in an earlier file</li><li>Names a closed month, never skips it silently</li><li>Nothing posts by itself</li></ul></div>';
-  /** one statement line of the report: its date, the bank's words, the carried amount */
-  function outsideRow(item, minor) {
-    return '<tr class="bd-i"><td>' + esc(host.preview.dateText(item.line.date)) + '</td><td>' + esc(item.line.narration) + '</td><td class="bd-r">' + esc(host.amountText({ amount_minor: minor, currency: host.CURRENCY })) + '</td></tr>';
+  function zeroMoney() {
+    return host.amountText({ amount_minor: 0, currency: host.CURRENCY });
+  }
+  /** one line of the report: its date, the words, the carried amount */
+  function itemRow(date, words, minor) {
+    return '<tr class="bd-i"><td>' + esc(host.preview.dateText(date)) + '</td><td>' + esc(words) + '</td><td class="bd-r">' + esc(host.amountText({ amount_minor: minor, currency: host.CURRENCY })) + '</td></tr>';
+  }
+  /** the group's heading and its lines; a group with none is one row with 0.00, so the statement never looks unfinished */
+  function groupRows(heading, rows) {
+    if (!rows.length) return '<tr class="bd-i"><td colspan="2">' + heading + '</td><td class="bd-r">' + zeroMoney() + '</td></tr>';
+    return '<tr class="bd-g"><td colspan="3">' + heading + ' (' + rows.length + ')</td></tr>' + rows.join('');
   }
   /** a total row, shown only when the engine carries the figure (never added up here) */
   function totalRow(words, money) {
     return money ? '<tr class="bd-k"><td colspan="2">' + words + '</td><td class="bd-r">' + esc(host.amountText(money)) + '</td></tr>' : '';
   }
-  /** the group's heading, then each line of it (or None), then the engine's total when it has one */
-  function groupRows(heading, items, key, totalWords, total) {
-    var head = '<tr class="bd-g"><td colspan="3">' + heading + ' (' + items.length + ')</td></tr>';
-    if (!items.length) return head + NONE_ROW;
-    return head + items.map(function (item) { return outsideRow(item, item.line[key]); }).join('') + totalRow(totalWords, total);
-  }
   /** the last row: the difference the engine carried, a pending note while lines are outside the books, and the tick ONLY when none is */
   function differenceRow(recon, outsideCount, done) {
     var pending = done ? '' : ' <span class="bd-pending">' + esc(host.plural(outsideCount, 'statement line', 'statement lines') + ' not in the books yet') + '</span>';
     var tick = done ? ' <span class="bd-tick" aria-label="Reconciled">\u2713</span>' : '';
-    return '<tr class="bd-res"><td colspan="2">Difference, statement less books' + pending + '</td><td class="bd-r">' + esc(host.amountText(recon.difference_before)) + tick + '</td></tr>';
+    return '<tr class="bd-res"><td colspan="2">Difference' + pending + '</td><td class="bd-r">' + esc(host.amountText(recon.difference_before)) + tick + '</td></tr>';
   }
   function reportHead(recon, model) {
-    return '<header class="bd-sheet-h"><div><h2>Bank reconciliation statement</h2><p class="bd-sheet-sub"><b>Demo, sample data</b> \u00b7 ' + esc(host.ACCOUNT) + ' \u00b7 as at ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + ' \u00b7 Currency ' + host.CURRENCY + '</p></div>' +
-      '<div><button type="button" class="bd-btn" data-act="print" data-cbsid="BKS017-B14">Print or save as PDF</button></div></header>';
+    return '<header class="bd-sheet-h"><div><h2>Bank reconciliation</h2><p class="bd-sheet-sub"><b>Demo, sample data</b> \u00b7 ' + esc(host.ACCOUNT) + ' \u00b7 as at ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + ' \u00b7 amounts in ' + host.CURRENCY + '</p></div>' +
+      '<div class="bd-sheet-acts"><button type="button" class="bd-btn" data-act="print" data-cbsid="BKS017-B14">Print</button><button type="button" class="bd-btn" data-act="view" data-v="lines" data-cbsid="BKS017-B29">Back to the lines</button><button type="button" class="bd-btn" data-act="reset" data-cbsid="BKS017-B30">Start again</button></div></header>';
   }
-  /** the bank reconciliation as a statement an auditor reads: books, the statement lines not yet in them, the statement; a tick ONLY when nothing is left outside the books */
-  function paintBrs(model) {
+  /** the statement lines not yet in the books, as report rows, by side */
+  function outsideRows(outside, key) {
+    return outside.filter(function (item) { return item.line[key]; }).map(function (item) { return itemRow(item.line.date, item.line.narration, item.line[key]); });
+  }
+  /** the entries of the books that are not yet on the statement (the engine's match() says which), as report rows, by side */
+  function ledgerRows(ledger, key) {
+    return ledger.filter(function (row) { return row[key]; }).map(function (row) { return itemRow(row.date, row.narration, row[key]); });
+  }
+  /** the bank reconciliation as an auditor reads one: the statement balance, what the books hold that the statement does not, the books; the difference with a tick ONLY when no statement line is left outside the books */
+  function paintBrs(model, ledger) {
     var recon = model.projection && model.projection.brs;
     if (!recon) return void (host.el('bd_brs').innerHTML = '');
     var outside = model.items.filter(function (item) {
@@ -91,16 +100,16 @@
     });
     var carried = recon.not_in_books || {},
       done = !outside.length && host.preview.minorOf(recon.difference_before) === 0;
-    var amountMarkup = function (value) { return esc(host.amountText(value)); };
+    var money = function (value) { return esc(host.amountText(value)); };
+    var leftOut = outside.length ? '<tr class="bd-g"><td colspan="3">Statement lines not yet in the books</td></tr>' + outsideRows(outside, 'credit_minor').concat(outsideRows(outside, 'debit_minor')).join('') + totalRow('Receipts', carried.in) + totalRow('Payments', carried.out) : '';
     host.el('bd_brs').innerHTML =
       '<div class="bd-report"><article class="bd-sheet" data-cbsid="BKS017-R90">' + reportHead(recon, model) +
-      '<table><tbody><tr class="bd-k"><td colspan="2">Balance per the books</td><td class="bd-r">' + amountMarkup(recon.closing_books_before) + '</td></tr>' +
-      groupRows('Add: receipts on the statement, not yet in the books', outside.filter(function (item) { return item.line.credit_minor; }), 'credit_minor', 'Total receipts', carried.in) +
-      groupRows('Less: payments on the statement, not yet in the books', outside.filter(function (item) { return item.line.debit_minor; }), 'debit_minor', 'Total payments', carried.out) +
-      '<tr class="bd-k"><td colspan="2">Balance per the bank statement</td><td class="bd-r">' + amountMarkup(recon.closing_statement) + '</td></tr>' +
-      '<tr class="bd-g"><td colspan="3">In the books, not yet on the statement</td></tr>' + NONE_ROW + differenceRow(recon, outside.length, done) + '</tbody></table>' +
-      '<p class="bd-foot">' + (done ? 'Reconciled: every statement line is in the books and the statement and the books agree.' : 'Not reconciled yet. The tick appears when no statement line is left outside the books.') + '</p>' +
-      '<div class="bd-sign"><span>Prepared by ________________</span><span>Reviewed by ________________</span></div></article>' + EDGES + '</div>';
+      '<table><tbody><tr class="bd-k"><td colspan="2">Balance as per bank statement</td><td class="bd-r">' + money(recon.closing_statement) + '</td></tr>' +
+      groupRows('Add: receipts not yet on the statement', ledgerRows(ledger, 'dr_minor')) +
+      groupRows('Less: payments not yet on the statement', ledgerRows(ledger, 'cr_minor')) + leftOut +
+      '<tr class="bd-k"><td colspan="2">Balance as per books</td><td class="bd-r">' + money(recon.closing_books_before) + '</td></tr>' + differenceRow(recon, outside.length, done) + '</tbody></table>' +
+      '<p class="bd-foot">' + (done ? 'Reconciled to the statement of ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + '.' : 'Not reconciled yet. The tick appears when no statement line is left outside the books.') + '</p>' +
+      '<div class="bd-sign"><span>Prepared by: sample</span></div></article>' + EDGES + '</div>';
   }
   /** create(host) → the painters; host is the page's own functions */
   function create(pageHost) {

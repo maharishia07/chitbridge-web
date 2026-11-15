@@ -136,6 +136,11 @@
     closePanel(firstNeedKey());
   }
 
+  /** the closing line of the confirm: the difference to the statement once these lines are in (the engine's carried figure) */
+  function afterWords(model) {
+    var recon = model.projection && model.projection.brs;
+    return recon ? '<p class="bd-after"><b>Difference to the statement after: ' + esc(host.amountText(recon.difference_after)) + '</b></p>' : '';
+  }
   /** the confirm popup: the reach first, then each line with its payee, account and the Dr and Cr lines the engine composed, each entry's own balanced flag */
   function confirmBody(text) {
     var model = host.controller().view(),
@@ -151,7 +156,7 @@
         (entry.balanced ? '<div class="bd-lp-sub">Dr = Cr ✓</div>' : '') + '</li>';
     }).join('');
     var facts = text.lines.map(function (words) { return esc(words.replace(/new part(y|ies)/g, function (_, tail) { return tail === 'y' ? 'new payee' : 'new payees'; })); });
-    return '<p class="lk-reach">' + facts.slice(0, 2).join(' · ') + '</p><p>' + facts.slice(2).join('</p><p>') + '</p><ul class="bd-lines-pop">' + cards + '</ul><p class="bd-note">Demo: only the books on this page change. Nothing is sent or saved.</p>';
+    return '<p class="lk-reach">' + facts.slice(0, 2).join(' · ') + '</p><p>' + facts.slice(2).join('</p><p>') + '</p>' + afterWords(model) + '<ul class="bd-lines-pop">' + cards + '</ul><p class="bd-note">Demo: only the books on this page change. Nothing is sent or saved.</p>';
   }
 
   function headCells(text) {
