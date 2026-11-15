@@ -132,6 +132,26 @@
       return !item.disabled && item.getAttribute('tabindex') !== '-1' && !item.hidden && item.offsetParent !== null;
     });
   }
+  /** the keys of an open popup: Esc closes only this one (a sheet or confirm under it stays until the next Esc); Tab and Shift+Tab stay inside the dialog */
+  function popupKey(event, back, close) {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      return void close();
+    }
+    if (event.key !== 'Tab') return;
+    var items = tabbables(back.querySelector('.lk-pop'));
+    if (!items.length) return void event.preventDefault();
+    var first = items[0],
+      last = items[items.length - 1],
+      inside = back.contains(root.document.activeElement);
+    if (!inside || (event.shiftKey && root.document.activeElement === first)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (!event.shiftKey && root.document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
   /**
    * popup(title, build, extraClass, onClose): the ONE modal of the labs and of every page that loads this file (CMP002 dialog).
    * Focus: it starts on the close button (confirm() moves it to the safe button), Tab and Shift+Tab stay INSIDE the dialog, Esc, the x and a click outside close it,
@@ -152,23 +172,7 @@
       if (target && target.isConnected && target.focus) target.focus();
     }
     function onKey(event) {
-      if (event.key === 'Escape') {
-        event.stopPropagation(); /* one Esc closes only this popup: a sheet or confirm under it stays until the next one */
-        return void close();
-      }
-      if (event.key !== 'Tab') return;
-      var items = tabbables(back.querySelector('.lk-pop'));
-      if (!items.length) return void event.preventDefault();
-      var first = items[0],
-        last = items[items.length - 1],
-        inside = back.contains(root.document.activeElement);
-      if (!inside || (event.shiftKey && root.document.activeElement === first)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (!event.shiftKey && root.document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      popupKey(event, back, close);
     }
     back.addEventListener('click', function (event) {
       if (event.target === back || event.target.closest('.lk-pop-x')) close();
