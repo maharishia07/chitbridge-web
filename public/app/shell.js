@@ -1309,6 +1309,21 @@
         readFacts(entry.id);
       });
     }
+    /* R-HOME (l16 polish g): the areas lead by the DATA, not the trade: an area whose cards are in use or need you comes before an area that is all "not started" (a books shop opens on
+       Money, not on Marketing). Stable: areas the data does not tell apart keep the manifest's order; Labs and Setup stay last. */
+    var LEAD_LAST = { labs: 1, setup: 1 };
+    function leadByData() {
+      var holder = $('.cbsh-more');
+      if (!holder) return;
+      var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
+      var score = function (sec) {
+        return LEAD_LAST[sec.getAttribute('data-area')] ? -1 : sec.querySelector('[data-state="needs_you"],[data-state="in_use"]') ? 1 : 0;
+      };
+      var ordered = secs
+        .map(function (sec, n) { return { sec: sec, n: n, s: score(sec) }; })
+        .sort(function (a, b) { return b.s - a.s || a.n - b.n; });
+      if (ordered.some(function (x, n) { return x.sec !== secs[n]; })) ordered.forEach(function (x) { holder.appendChild(x.sec); });
+    }
     function readFacts(onlyId) {
       if (!person || !S.manifest) return;
       (S.manifest.entries || []).forEach(function (e) {
@@ -1321,6 +1336,7 @@
               state = noteNeeds(e, cardState(reply, lines), routeOf);
             paintBadges(el);
             spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
+            leadByData();
           })
           .catch(function () {
             spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>';
