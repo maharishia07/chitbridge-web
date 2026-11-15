@@ -136,12 +136,12 @@
     };
     return [
       { key: 'name', label: tx('Client'), prio: 1, w: 150, keep: true, stretch: true, sort: 'name', cell: function (r) { return r.name || r.entity_id.slice(0, 8); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', 200, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
-      num('role', 'Role', 80, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, { hfilter: 'role' }),
-      num('bank', 'Bank', 70, function () { return '<span class="sub" title="' + esc(tx('Not shown yet')) + '">—</span>'; }, function () { return ''; }),
-      num('queries', 'Queries', 110, queriesCell, function (r) { return r.queries.open; }, { hfilter: 'queries' }),
+      num('status', 'Status', 180, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
+      num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, { hfilter: 'role' }),
+      num('bank', 'Bank', 70, function () { return '<span class="sub" title="' + esc(tx('Not shown yet')) + '">—</span>'; }, function () { return ''; }, { prio: 3 }),
+      num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }, { hfilter: 'queries' }),
       num('bas', 'Return due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('checked', 'Checked', 70, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, { hfilter: 'checked' }),
+      num('checked', 'Checked', 100, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, { hfilter: 'checked' }),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
       num('margin', 'Margin', 80, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
@@ -221,7 +221,7 @@
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(2,1fr)}.bp-tile{padding:6px 8px}}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
-      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
+      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
     root.document.head.appendChild(s);
   }
   function draw() {
