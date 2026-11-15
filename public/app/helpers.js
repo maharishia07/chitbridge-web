@@ -106,8 +106,8 @@ function shopReg(cc) {
    row by the country code the caller passes — each pack's id is its country's code. */
 var PACK_WORDS = {
   IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
-  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State' },
-  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate' },
+  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', returnName: 'BAS', cash: 'Bank' },
+  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', returnName: 'VAT return' },
   US: { stock: 'Inventory' }
 };
 var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
