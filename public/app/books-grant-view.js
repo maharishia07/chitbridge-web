@@ -165,6 +165,7 @@
     });
     viewState.o.mountList(host, {
       key: 'books-grant-' + report.k,
+      csv: false /* read only: no copy of the books leaves this screen */,
       defaultCols: report.cols.map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
       rows: function () {
         return rows;

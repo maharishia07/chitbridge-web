@@ -59,6 +59,7 @@ check(/readLedger: '\/api\/books\/ledger\/:account'/.test(api) && /'readLedger'/
 check((view.match(/drill: 'ledger'/g) || []).length === 3 && /drill: 'entry'/.test(view) && /onOpen: report\.drill/.test(view), 'trial balance, profit and loss, balance sheet rows open a ledger; a Day book row opens its entry');
 check(/\['amount_minor', 'Amount', MONEY\]/.test(view) && /onOpen: function \(row\) \{ openLedger/.test(drill) && /openEntry\(ctx, entry, a\.currency/.test(drill), 'the Day book shows each entry amount; an entry line opens its account, a ledger line opens its entry');
 check(/'Opening'/.test(drill) && /'Total debit'/.test(drill) && /'Total credit'/.test(drill) && /running_minor/.test(drill) && /'Closing'/.test(drill), 'the ledger shows opening, running balance, the period total and the closing as the server carried them');
+check((drill.match(/csv: false/g) || []).length === 2 && /csv: false/.test(view), 'no list of the auditor view or its drill carries the CSV button');
 check(/limit: PAGE/.test(drill) && /after/.test(drill), 'a ledger is read a page at a time (limit + the server cursor)');
 
 /* (6) one name per endpoint */
