@@ -217,7 +217,7 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 .bd-figs .lk-fig-v{font-size:26px}
 .bd-bar{padding:3px 24px}
 .bd-bar .bd-btn{min-height:34px}
-.bd-colh,.bd-row{grid-template-columns:76px minmax(180px,1fr) 100px 100px minmax(480px,760px);padding:2px 24px}
+.bd-colh,.bd-row{grid-template-columns:76px minmax(180px,1fr) 100px 100px minmax(440px,600px);padding:2px 24px}
 .bd-row{min-height:42px}
 .bd-row .lk-bd{width:30px;height:30px;font-size:12px}
 .bd-row .lk-bd svg{width:16px;height:16px}
