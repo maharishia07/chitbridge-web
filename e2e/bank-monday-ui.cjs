@@ -65,7 +65,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
       if (p === '/api/books/todo') return J(r, 200, []);
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.accounts.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events') return J(r, 200, books.eventsAnswer(EVENTS));
-      if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Business bank account', LEDGER, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: OPENING, closing_minor: CLOSING }));
+      if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Business bank account', LEDGER, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: globalThis.__opening == null ? OPENING : globalThis.__opening, closing_minor: CLOSING }));
       if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Harbour Plumbing', rail_chits: [], parties: [], books: { parties: [], open_items: [] }, may: { ask: { ok: true } } });
       return J(r, 200, {});
     });
@@ -165,6 +165,20 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
       await p.click('[data-testid="bank-sheet-close"]');
     } else await p.click('[data-testid="bank-sheet-close"]');
     await ctx.close();
+  }
+  /* B9 · the wrong account speaks ON THE PAGE, with both figures, and holds Add until it is answered */
+  {
+    globalThis.__opening = 1000000;
+    const w = await open({ width: 1366, height: 768 });
+    await load(w.p);
+    const said = await w.p.textContent('[data-testid="bank-opening-check"]').catch(() => '');
+    ok(/opens at A$18,500.00/.test(said) && /show A$10,000.00/.test(said), 'wrong account: the page says what the statement opens at and what the books show (' + said.slice(0, 110) + ')');
+    ok(await w.p.locator('[data-testid="bank-sheet-open"]').isDisabled(), 'wrong account: Add is held until the question is answered');
+    await w.p.screenshot({ path: path.join(ASHOTS, 'bank-laptop-wrong-account.png') });
+    await w.p.click('[data-testid="bank-opening-go"]');
+    ok(await w.p.locator('[data-testid="bank-sheet-open"]').isEnabled() && await w.p.locator('[data-testid="bank-opening-check"]').count() === 0, 'wrong account: "It is right, go on" lifts the hold');
+    await w.ctx.close();
+    globalThis.__opening = null;
   }
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await b.close(); srv.close();

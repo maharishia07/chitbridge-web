@@ -262,6 +262,7 @@ async function bankPick(input) {
   }
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
   BKB.postedLocal = {};
+  BKB.openingOk = false; /* a new statement asks the opening-balance question afresh */
   if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* a statement read again starts the sheet's answers afresh */
   BKB.file = { name: file.name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
@@ -561,6 +562,7 @@ function bankPaint() {
   const lines = BKB.tab !== 'brs';
   res.innerHTML =
     warn +
+    bankOpeningHtml() +
     bankFinish() +
     (lines
       ? '<div id="bkl_bank" data-testid="bank-list"></div>'
@@ -596,12 +598,38 @@ function bankFigures() {
     nil: gap === 0 && worked.difference_minor === 0
   };
 }
+/** the opening-balance question, ON THE PAGE: the statement's own opening figure against the books' balance the day before it starts (two carried figures, compared). Unanswered, Add is held. Null when they agree or one is not stated. */
+function bankOpeningFacts() {
+  const stated = BKB.parsed && BKB.parsed.opening_minor,
+    books = BKB.ledgerRaw && BKB.ledgerRaw.opening_minor;
+  if (BKB.openingOk || stated == null || books == null || Number(stated) === Number(books)) return null;
+  return { statement: bkMoney(stated), books: bkMoney(books) };
+}
+/** "Choose another account": the load form opens again over the lines */
+function bankChangeOpen() {
+  const button = document.querySelector('[data-testid="bank-change"]');
+  if (button && !document.querySelector('.pe-bank.bk-open')) bankChange(button);
+}
+function bankOpeningHtml() {
+  const facts = bankOpeningFacts();
+  if (!facts) return '';
+  return (
+    '<div class="pe-bad bk-wrong" role="alert" data-testid="bank-opening-check"><span>' +
+    bkbE(txf('This statement opens at {s}; your books show {b} the day before. Is it the right bank account?', { s: facts.statement, b: facts.books })) +
+    '</span><span class="bk-wrong-acts"><button data-cbsid="BKS014-B23" type="button" class="act" data-testid="bank-opening-other" onclick="bankChangeOpen()">' +
+    bkbE(tx('Choose another account')) +
+    '</button><button data-cbsid="BKS014-B24" type="button" class="act" data-testid="bank-opening-go" onclick="BKB.openingOk=true;bankPaint()">' +
+    bkbE(tx('It is right, go on')) +
+    '</button></span></div>'
+  );
+}
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
   const canAdd = typeof bankSheetOpen === 'function' && BKB.text && peOwner();
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (!canAdd || (fig && !bkbCount('books'))) return '';
-  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open" onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button>';
+  const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
+  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button>';
 }
 
 /** FIN-27 · the band over the lines: Statement · Books · Difference (and what it is made of) · Unexplained, then the one primary button and More. Green when nothing is left to do */
