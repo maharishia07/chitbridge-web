@@ -39,7 +39,7 @@ function intakeScreen() {
     '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' +
     tx('📥 Intake') +
     '</span>' +
-    '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>' +
+    '<button data-cbsid="CMP016" onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>' +
     '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' +
     tx('↻ Refresh') +
     '</button>' +
@@ -622,7 +622,7 @@ async function intakeShowJson(id) {
     '<div class="mhd"><div class="t">{ } What the reader saw</div>' +
       '<div class="s">the message <span class=arw>→</span> what was read <span class=arw>→</span> what the chit would carry</div></div>' +
       '<div class="mbody" id="ijson"><div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> building…</div></div>' +
-      '<div class="mfoot"><button class="composebtn" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP005" class="composebtn" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true

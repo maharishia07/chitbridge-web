@@ -219,7 +219,7 @@ function svcPaint() {
         '</h3><div style="font-size:var(--fs-2);color:var(--disp)">' +
         esc(SVC.err) +
         '</div>' +
-        '<button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
+        '<button data-cbsid="CMP005" class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
         tx('Close') +
         '</button>'
     );
@@ -234,7 +234,7 @@ function svcPaint() {
         '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">Starts a response and a resolution clock. Impact and urgency are kept apart on purpose — together they decide the priority, and collapsing them into one field is how everything becomes a P1.</div>' +
         svcPickers(d) +
         '<div style="display:flex;gap:8px;margin-top:14px">' +
-        '<button class="btn" style="flex:1" onclick="closeModal()">' +
+        '<button data-cbsid="CMP003" class="btn" style="flex:1" onclick="closeModal()">' +
         tx('Cancel') +
         '</button>' +
         '<button class="btn pri" style="flex:1" onclick="svcStart()">' +
@@ -269,7 +269,7 @@ function svcPaint() {
       (c.responded ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcRespond()">' + tx('Mark responded') + '</button>') +
       (iPaused || c.resolved ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcPauseAsk()">' + tx('Pause the clock') + '</button>') +
       (c.resolved ? '' : '<button class="btn pri" style="flex:1;min-width:120px" onclick="svcResolveAsk()">' + tx('Resolve') + '</button>') +
-      '<button class="btn" style="flex:1;min-width:90px" onclick="closeModal()">' +
+      '<button data-cbsid="CMP005" class="btn" style="flex:1;min-width:90px" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>'
   );
@@ -336,7 +336,7 @@ function svcPauseAsk() {
       '<input id="svc_note" class="inp" style="width:100%;margin-bottom:10px" placeholder="asked for the serial number on 14 Aug">' +
       '<label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" id="svc_onother"> This is waiting on <b>them</b></label>' +
       '<div style="display:flex;gap:8px;margin-top:14px">' +
-      '<button class="btn" style="flex:1" onclick="svcPaint()">' +
+      '<button data-cbsid="CMP006" class="btn" style="flex:1" onclick="svcPaint()">' +
       tx('Back') +
       '</button>' +
       '<button class="btn pri" style="flex:1" onclick="svcDoPause()">' +
@@ -394,7 +394,7 @@ function svcResolveAsk() {
       tx('Note') +
       '</label><input id="svc_rnote" class="inp" style="width:100%">' +
       '<div style="display:flex;gap:8px;margin-top:14px">' +
-      '<button class="btn" style="flex:1" onclick="svcPaint()">' +
+      '<button data-cbsid="CMP006" class="btn" style="flex:1" onclick="svcPaint()">' +
       tx('Back') +
       '</button>' +
       '<button class="btn pri" style="flex:1" onclick="svcDoResolve()">' +
