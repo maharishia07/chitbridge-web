@@ -219,7 +219,7 @@ var CBUiMoney = (function () {
   /** currency is a code or the word 'unknown': never defaulted, never INR (CUR-1). Throws, because silence is the bug. */
   function checkField(options) {
     var code = options.currency;
-    if (typeof code !== 'string' || !(code === UNKNOWN || /^[A-Z]{3}$/.test(code))) throw new Error('ui.field money: currency is required, a code like "AUD" or the word "unknown"');
+    if (typeof code !== 'string' || !(code === UNKNOWN || /^[A-Z]{3}$/.test(code))) throw new Error('ui.field money: currency is required, a three-letter code or the word "unknown"');
     if (options.minor !== undefined && options.value !== undefined) throw new Error('ui.field money: give minor (integer minor units) or value (text), not both');
     if (options.minor !== undefined && options.minor !== null && !Number.isSafeInteger(options.minor)) throw new Error('ui.field money: minor must be a safe integer of minor units');
   }
