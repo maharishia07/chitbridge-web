@@ -71,6 +71,7 @@
       i: projected.i,
       line: statementLine,
       entry: projected.entry || null,
+      tax: projected.tax || null /* the tax the engine says this line claims { kind, rate, tax_minor, … }, for the tax-invoice question */,
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
       needs: blockers.indexOf('gst_basis') >= 0 ? 'gst_basis' : blockers.indexOf('tax_invoice') >= 0 ? 'tax_invoice' : null, /* tax_invoice: the engine asks whether the tax invoice is held (B5-03) */
       blockers: blockers,

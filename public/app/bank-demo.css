@@ -217,7 +217,7 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 .bd-figs .lk-fig-v{font-size:26px}
 .bd-bar{padding:3px 24px}
 .bd-bar .bd-btn{min-height:34px}
-.bd-colh,.bd-row{grid-template-columns:76px minmax(180px,1fr) 100px 100px minmax(440px,600px);padding:2px 24px}
+.bd-colh,.bd-row{grid-template-columns:76px minmax(180px,1fr) 100px 100px minmax(480px,760px);padding:2px 24px}
 .bd-row{min-height:42px}
 .bd-row .lk-bd{width:30px;height:30px;font-size:12px}
 .bd-row .lk-bd svg{width:16px;height:16px}
@@ -228,4 +228,22 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 @media (max-width:700px){
   .bd-status{flex-direction:column;align-items:flex-start}
   .bd-row .lk-bd{width:36px;height:36px}
+}
+/* the phone, last so it wins: a line is a badge, the payee and the amount, with its status under it */
+@media (max-width:700px){
+  .bd-figs .lk-fig{padding:4px 8px}
+  .bd-figs .lk-fig-v{font-size:16px}
+  .bd-figs .lk-fig-l{font-size:10px}
+  .bd-figs .lk-progress-line{display:none}
+  .bd-colh{display:none}
+  .bd-row{grid-template-columns:36px minmax(0,1fr) auto;column-gap:8px;row-gap:2px;padding:6px 12px;min-height:0}
+  .bd-row .bd-date{display:none}
+  .bd-row .bd-who{display:contents}
+  .bd-row .bd-lk-badge{grid-row:1 / span 2}
+  .bd-row .bd-names{grid-column:2;min-width:0}
+  .bd-row .bd-cellout,.bd-row .bd-cellin{grid-column:3;grid-row:1;justify-self:end}
+  .bd-row .bd-cellout:empty,.bd-row .bd-cellin:empty{display:none}
+  .bd-row .bd-status{grid-column:2 / -1;grid-row:2}
+  .bd-row .lk-bd{width:32px;height:32px}
+  .bd-question .bd-btn{min-height:40px}
 }
