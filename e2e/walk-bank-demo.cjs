@@ -96,8 +96,10 @@ async function walkOne(browser, base, scheme, width, height, signedIn) {
   const context = await browser.newContext({ viewport: { width, height }, colorScheme: scheme });
   if (signedIn) await context.addInitScript(() => { try { localStorage.setItem('cb_sess', JSON.stringify({ token: 'x.y.z', user: { id: 'u1', name: 'Test', role: 'owner' }, biz: { id: 'b1', name: 'Shop' } })); } catch (_) { /* a profile without storage */ } });
   /* proof only: a copy of the engine's "What is this?" file (engines batch I, #145) stands in until the engines adopt lands; no fixture = the page's own adopted engine */
-  const fixture = path.join(__dirname, 'fixtures', 'bank-entry-whatisthis.js');
-  if (fs.existsSync(fixture)) await context.route('**/engine/bank-entry.js', (route) => route.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(fixture, 'utf8') }));
+  for (const [name, file] of [['bank-entry', 'bank-entry-whatisthis.js'], ['bank-recon', 'bank-recon-batch-i.js'], ['bank-project', 'bank-project-batch-i.js']]) {
+    const fixture = path.join(__dirname, 'fixtures', file);
+    if (fs.existsSync(fixture)) await context.route('**/engine/' + name + '.js', (route) => route.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(fixture, 'utf8') }));
+  }
   const page = await context.newPage();
   const tag = scheme + ' ' + width + 'x' + height + (signedIn ? ' with a stored session' : '');
   const seen = { outside: [], calls: [], errors: [] };
@@ -128,7 +130,7 @@ async function walkOne(browser, base, scheme, width, height, signedIn) {
 async function countsAgree(page, tag, when) {
   const chips = await page.locator('#bd_lines .bd-go-tag').count();
   const button = (await page.getAttribute('#bd_add', 'data-ready')) || '0';
-  const bar = ((await page.textContent('#bd_count')).match(/^\s*(\d+) ready/) || [])[1] || '0';
+  const bar = ((await page.textContent('#bd_count')).match(/(\d+) ready to add/) || [])[1] || '0';
   check(String(chips) === button && button === bar, tag + ' ' + when + ': ' + chips + ' "Ready to add" chips = the button (' + button + ') = the bar (' + bar + ')');
 }
 /** answer the page's one GST question: a radio segment on a wide screen, a menu on a phone */
@@ -156,87 +158,55 @@ async function signedOutStates(page, tag, width, shot, fits) {
   const text = (selector) => page.textContent(selector);
   const phone = width < 700;
   const figs = await text('#bd_figs');
-  check(figs.includes('14,400.00') && figs.includes('3,108.50') && figs.includes('17,508.50') && !/AUD \d/.test(figs), tag + ': pass test: statement 17,508.50, books 14,400.00, difference 3,108.50');
-  check((await text('#bd_lines')).includes('19 Oct 2026'), tag + ': dates read "19 Oct 2026" (en-AU), also at 390');
-  await countsAgree(page, tag, 'before the GST answer');
-  check(await page.locator('#bd_gst').isVisible(), tag + ': the page asks the GST basis once');
-  await answerGst(page, 'cash');
-  await page.waitForTimeout(150);
-  await countsAgree(page, tag, 'after the GST answer');
-  const button = await text('#bd_add');
-  check(/Add 6 lines/.test(button), tag + ': 6 lines ready after the answer (' + button.trim() + ')');
-  await shot('2-gst-answered');
-  /* the More menu on a phone keeps both loads */
-  if (phone) {
-    await page.click('#bd_more');
-    check((await text('#bd_menu')).includes('Load your own CSV') && (await text('#bd_menu')).includes('Load the sample statement'), tag + ': More keeps "Load your own CSV" and the sample');
-    await shot('3-more-menu');
-    await page.keyboard.press('Escape');
+  check(figs.includes('21,068.55') && figs.includes('23,043.00') && figs.includes('1,974.45') && !/AUD \d/.test(figs), tag + ': frame 0: statement 21,068.55, books 23,043.00, difference 1,974.45 (hand figures of the sample), AUD not on a figure');
+  check((await page.locator('#bd_lines .bd-row').count()) === 10, tag + ': the ten sample lines are listed');
+  if (!phone) check(await page.evaluate(() => { const pane = document.getElementById('bd_lines'); return pane.scrollHeight <= pane.clientHeight + 2; }), tag + ': all ten rows are visible without scrolling the list');
+  check((await text('#bd_lines')).includes('2 Oct 2026') && (await text('#bd_lines')).includes('Invoice INV-2'), tag + ': dates read "2 Oct 2026" and an in-books line names the entry it matched');
+  check(!(await page.locator('#bd_tabs, .bd-tabs').first().isVisible()) && !(await page.locator('#bd_gst').isVisible()), tag + ': no tabs and no setup question on the opening frame');
+  await countsAgree(page, tag, 'at the start');
+  await shot('30s-0-open');
+  const hasInvoiceQuestion = (await page.locator('[data-act=taxinvoice]').count()) > 0;
+  if (hasInvoiceQuestion) {
+    check((await text('#bd_lines')).includes('needs a tax invoice. Do you hold it?'), tag + ': Bunnings asks the tax-invoice question first, in the row');
+    await shot('30s-8-question');
+    await page.click('[data-act=taxinvoice][data-v=held]');
+    await countsAgree(page, tag, 'after "Yes, I hold it"');
   }
-  /* the panel: a line that needs you */
-  await page.click('button.bd-row[data-act=open]');
-  await page.waitForSelector('.lk-side');
-  await fits('panel step 1');
-  await shot('4-panel-step1');
-  check((await text('.lk-side')).includes('What is this?'), tag + ': the panel asks "What is this?" first');
-  const hasList = await page.evaluate(() => !!(window.CBBankEntry && window.CBBankEntry.whatIsThis));
-  check(hasList ? (await page.locator('.lk-side [data-act=pick]').count()) >= 2 : (await page.locator('.lk-side select[data-field=account]').count()) === 1, tag + ': ' + (hasList ? 'step 1 lists the answers the engine gives' : 'the engine has no answer list yet: one step, an account from the chart'));
-  if (hasList) {
-    await page.click('.lk-side [data-act=pick]');
-    await page.click('.lk-side [data-act=next]');
+  const newParty = page.locator('[data-act=newparty]');
+  if (await newParty.count()) {
+    await newParty.first().click();
+    await countsAgree(page, tag, 'after "New customer"');
   }
-  await shot('5-panel-step2');
-  await trapAndReturn(page, tag, 'panel', () => !!document.activeElement && (document.activeElement.matches('button.bd-row') || document.activeElement.id === 'bd_add'));
-  /* answer "What is this?" for the first line that needs you (when the engine gives the list): it becomes ready, and the counts follow */
-  let resolved = false;
-  if (hasList) {
-    await page.click('button.bd-row[data-act=open]');
-    await page.waitForSelector('.lk-side');
-    const card = page.locator('.lk-side [data-kind=card_settlement]');
-    if (await card.count()) {
-      await card.click();
-      await page.click('.lk-side [data-act=next]');
-      await shot('5b-panel-card-settlement');
-      await page.click('.lk-side [data-act=resolve2]');
-      await page.waitForSelector('.lk-side', { state: 'detached' });
-      resolved = true;
-      await countsAgree(page, tag, 'after answering one line');
-    } else await page.keyboard.press('Escape');
-  }
-  const ready = resolved ? 7 : 6;
-  /* the confirm popup */
+  await fits('before the press');
+  await shot('30s-15-ready');
   await page.focus('#bd_add');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.lk-confirm');
   const popup = await page.innerText('.lk-confirm-text');
-  check(new RegExp('Add ' + ready + ' lines').test(await text('.lk-pop header')) && popup.includes(resolved ? 'AUD 892.50' : 'AUD 12.50') && popup.includes('AUD 984.00'), tag + ': popup: ' + ready + ' lines, in ' + (resolved ? '892.50' : '12.50') + ', out 984.00');
-  check(/\bDr\b/.test(popup) && /\bCr\b/.test(popup) && /Dr = Cr/.test(popup), tag + ': popup lists every line with its Dr and Cr and each entry\'s Dr = Cr');
+  check(/Difference to the statement after: [-\d,.]+/.test(popup) && /\bDr\b/.test(popup) && /Dr = Cr/.test(popup), tag + ': the confirm lists each entry with Dr and Cr and closes with "Difference to the statement after" (' + ((popup.match(/Difference to the statement after: [-\d,.]+/) || [''])[0]) + ')');
   await fits('popup');
-  await shot('6-confirm');
+  await shot('30s-16-confirm');
   await trapAndReturn(page, tag, 'popup', () => document.activeElement && document.activeElement.id === 'bd_add');
-  /* Add */
   await page.focus('#bd_add');
   await page.keyboard.press('Enter');
   await page.click('[data-testid=lk-confirm-ok]');
-  await page.waitForSelector('[data-testid=bd-added]');
-  await page.waitForTimeout(200);
-  const figsAfter = await text('#bd_figs');
-  check(figsAfter.includes(resolved ? '14,308.50' : '13,428.50') && figsAfter.includes(resolved ? '3,200.00' : '4,080.00'), tag + ': after the press: books ' + (resolved ? '14,308.50, difference 3,200.00' : '13,428.50, difference 4,080.00'));
-  check(new RegExp(ready + ' lines added').test(await text('#bd_msg')), tag + ': the outcome is said in the status line (' + (await text('#bd_msg')).trim() + ')');
-  await countsAgree(page, tag, 'after the add');
-  await fits('after add');
-  await shot('7-added');
-  await page.click('#bd_tab_books');
-  check(!/not yet in the books/i.test(await text('#bd_books')) && (await text('#bd_books')).includes('Added'), tag + ': "Books after" stops saying "not yet" after the add');
-  await fits('books after');
-  await shot('8-books-after');
-  await page.click('#bd_tab_brs');
+  await page.waitForTimeout(250);
+  await fits('after the press');
+  await shot('30s-20-added');
+  const finished = (await page.locator('#bd_brs').isVisible()) && (await page.locator('.bd-tick').count()) > 0;
+  if (hasInvoiceQuestion) check(finished && (await text('#bd_brs')).includes('Reconciled') && (await text('#bd_figs')).includes('0.00'), tag + ': the last frame is the reconciliation statement with the green nil and the tick');
+  else check(!(await page.locator('.bd-tick').count()) || finished, tag + ': the report shows a tick only when nothing is left outside the books');
+  if (!(await page.locator('#bd_brs').isVisible())) await page.evaluate(() => document.getElementById('bd_tab_brs').click());
   const report = await text('#bd_brs');
-  check(report.includes('Demo, sample data') && report.includes('Balance per the books') && report.includes('Balance per the bank statement') && !(await page.locator('.bd-tick').count()), tag + ': the reconciliation is in the standard order, says "Demo, sample data", and has NO tick while lines are outside the books');
-  await fits('reconciliation');
-  await shot('9-reconciliation');
-  if (!phone) await printAndFiles(page, tag, shot);
-  else await filesStates(page, tag, shot);
+  check(report.includes('Demo, sample data') && report.includes('Balance as per bank statement') && report.includes('Balance as per books') && /not yet on the statement/.test(report) && !/\bDr\b/.test(report), tag + ': the statement uses the AU words and no Dr on the bank figure');
+  await shot('30s-25-reconciliation');
+  if (phone) {
+    await page.click('#bd_more');
+    check((await text('#bd_menu')).includes('Load your own'), tag + ': the phone keeps both loads under More');
+    await page.keyboard.press('Escape');
+    return filesStates(page, tag, shot);
+  }
+  return printAndFiles(page, tag, shot);
 }
 
 /** the print stylesheet, then the file states (desktop) */
