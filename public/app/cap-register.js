@@ -168,7 +168,7 @@ async function openRegister(force) {
         '',
         true
       ),
-      true
+      true, { pop: 'POP067' }
     );
     await rgLoad(force);
   }
@@ -208,7 +208,7 @@ function rgPaint() {
       '<br><span style="color:var(--grey)">' +
       tx('This does NOT mean there is nothing on the register.') +
       '</span></div>';
-    modal(rgShell(body), true);
+    modal(rgShell(body), true, { pop: 'POP067' });
     return;
   }
   if (r && r.migrated === false) {
@@ -218,7 +218,7 @@ function rgPaint() {
           tx('The register is not switched on for this environment yet (b182).') +
           '</div>'
       ),
-      true
+      true, { pop: 'POP067' }
     );
     return;
   }
@@ -227,7 +227,7 @@ function rgPaint() {
     ? r.open + ' ' + tx('open') + ' · ' + r.closed + ' ' + tx('closed') + (r.closed_by_order ? ' · ' + r.closed_by_order + ' ' + tx('with the order') : '')
     : '';
   body = RG.view === 'closure' ? rgClosure() : RG.view === 'impact' ? rgImpact() : rgLive();
-  modal(rgShell(rgTabs() + body, head), true);
+  modal(rgShell(rgTabs() + body, head), true, { pop: 'POP067' });
   rgWiden();
   rgSyncFields();
 }
@@ -1108,7 +1108,7 @@ async function rgQuickAdd(opt) {
         '<span class="spin"></span> ' +
         tx('opening…') +
         '</div>',
-      false
+      false, { pop: 'POP068' }
     );
   }
   if (!RG.report) {
@@ -1119,7 +1119,7 @@ async function rgQuickAdd(opt) {
       '<div class="mbody" data-testid="raida-quickadd" style="padding:8px 16px 16px">' +
       rgAddPanel({ into: opt.into, kind: opt.kind, bare: true }) +
       '</div>',
-    false
+    false, { pop: 'POP068' }
   );
   rgSyncFields();
 }

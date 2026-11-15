@@ -166,7 +166,7 @@ var CBPick = (function () {
           '</div>' +
           skel
       ),
-      true
+      true, { pop: 'POP210' }
     );
   }
 
@@ -194,7 +194,7 @@ var CBPick = (function () {
           }
         })
       ),
-      true
+      true, { pop: 'POP210' }
     );
   }
 
@@ -263,7 +263,7 @@ var CBPick = (function () {
                   esc(typeof MSG !== 'undefined' && MSG.fail ? MSG.fail('read the catalogue', e) : tx_('Could not read the catalogue.')) +
                   '</div>'
               ),
-              true
+              true, { pop: 'POP210' }
             );
           });
       });

@@ -484,7 +484,7 @@
           '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>'
         : '') +
       (frame.mode === 'app'
-        ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-cbsid="CMP033-B01" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>'
+        ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-cbsid="CMP033-B01" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" data-pop="POP116" hidden></div></div>'
         : '') +
       titleHTML(frame) +
       '<span class="cbsh-grow"></span>' +
@@ -503,7 +503,7 @@
       (frame.person
         ? '<div class="cbsh-sheet" id="' +
           frame.sheetId +
-          '" role="region" data-testid="shell-sheet" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>'
+          '" role="region" data-testid="shell-sheet" data-pop="POP115" hidden></div><div class="cbsh-scrim" data-testid="shell-scrim"></div>'
         : '') +
       '</header>'
     );

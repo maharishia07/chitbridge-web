@@ -591,7 +591,7 @@ function testPanelOpen() {
   var host = document.createElement('div');
   host.id = 'cbtesthost';
   host.innerHTML =
-    '<div id="cbtestpanel" role="dialog" aria-label="Test panel" style="' +
+    '<div id="cbtestpanel" role="dialog" data-pop="POP208" aria-label="Test panel" style="' +
     TEST_SCALE +
     'position:fixed;right:16px;bottom:16px;' +
     'width:min(420px,calc(100vw - 32px));max-height:min(70vh,620px);display:flex;flex-direction:column;' +
@@ -5838,7 +5838,7 @@ async function screenCasesPopup(code, name) {
   var host = document.createElement('div');
   host.id = 'cbcaseshost';
   host.innerHTML =
-    '<div id="cbcasespanel" role="dialog" aria-label="Test cases for this screen" style="' +
+    '<div id="cbcasespanel" role="dialog" data-pop="POP209" aria-label="Test cases for this screen" style="' +
     TEST_SCALE +
     'position:fixed;' +
     'inset-inline-end:16px;bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(72vh,660px);' +

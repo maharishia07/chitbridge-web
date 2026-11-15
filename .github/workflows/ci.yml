@@ -255,6 +255,7 @@ jobs:
           node e2e/ui-batch-clock.test.cjs
           node tests/price-moved-ui.test.cjs
           node e2e/ui-codes-chit-price-moved.test.cjs
+          node e2e/ui-codes-popups-green.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
           node e2e/ui-codes-shop.test.cjs
           node e2e/ui-codes-g4.test.cjs

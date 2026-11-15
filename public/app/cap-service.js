@@ -210,7 +210,7 @@ function svcPaint() {
     return modal(
       '<h3 style="margin:0 0 10px">' +
         tx('Service clock') +
-        '</h3><div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> reading…</div>'
+        '</h3><div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> reading…</div>', false, { pop: 'POP079' }
     );
   if (SVC.err)
     return modal(
@@ -221,7 +221,7 @@ function svcPaint() {
         '</div>' +
         '<button data-cbsid="CMP005" class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP079' }
     );
   var d = SVC.data || {};
 
@@ -239,7 +239,7 @@ function svcPaint() {
         '</button>' +
         '<button data-cbsid="SCR008-B04" class="btn pri" style="flex:1" onclick="svcStart()">' +
         tx('Start the clock') +
-        '</button></div>'
+        '</button></div>', false, { pop: 'POP207' }
     );
   }
 
@@ -271,7 +271,7 @@ function svcPaint() {
       (c.resolved ? '' : '<button data-cbsid="SCR008-B07" class="btn pri" style="flex:1;min-width:120px" onclick="svcResolveAsk()">' + tx('Resolve') + '</button>') +
       '<button data-cbsid="CMP005" class="btn" style="flex:1;min-width:90px" onclick="closeModal()">' +
       tx('Close') +
-      '</button></div>'
+      '</button></div>', false, { pop: 'POP079' }
   );
 }
 
