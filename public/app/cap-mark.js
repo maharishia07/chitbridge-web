@@ -76,9 +76,6 @@
   function fill(s, v) {
     return String(T(s)).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; });
   }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
-  }
   function when(ts) {
     if (!ts) return '';
     try {
