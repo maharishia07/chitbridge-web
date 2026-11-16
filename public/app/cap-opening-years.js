@@ -22,7 +22,7 @@ function obYearsHtml() {
         else if (prev && prev.matches === true) line = '<span class="ob-ok" data-testid="ob-match">' + esc(tx("matches last year's closing balance sheet")) + ' ✓</span>';
         else if (prev && prev.matches === false)
           line = '<span class="ob-bad">' + esc(txf("Opening {a} vs last year's closing {b}: {gap} apart", { a: bkMoney(prev.next_opening_minor, cur), b: bkMoney(prev.closing_minor, cur), gap: bkMoney(prev.apart_minor, cur) })) + '</span>';
-        else if (!prev) line = '<span style="color:var(--grey)">' + esc(tx('Opening balances are typed here')) + '</span>';
+        else if (!prev) line = '<span style="color:var(--grey)">' + esc(tx('Typed in by you')) + '</span>';
         return (
           '<div class="ob-year" data-testid="ob-year"><b>' + esc(year.fiscal_year) + '</b> · ' + esc(tx('opening')) + ' ' + esc(bkMoney(year.opening_minor, cur)) +
           (year.closing_minor != null ? ' · ' + esc(tx('closing')) + ' ' + esc(bkMoney(year.closing_minor, cur)) : '') + '<br>' + line + '</div>'
