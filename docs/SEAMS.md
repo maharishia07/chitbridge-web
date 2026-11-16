@@ -208,4 +208,4 @@ of file each thing is; this says what already does the job.
 | 16 | `guard` | `books-acting.js` | a call outside /api/books* is refused here, before it is sent, while the page acts for a store |
 | 16 | `show` | `books-grant-drill.js` |  |
 | 16 | `band` | `books-grant-view.js` | the band: |
-| 16 | `when` | `cap-mark.js` |  |
+| 16 | `when` | `cap-mark.js` | the one date-time stamp is CBThread.when (rail-thread.js loads first on both pages that load this file) |
