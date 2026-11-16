@@ -63,6 +63,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Harbour Plumbing', currency_code: 'AUD' } });
       if (p === '/api/books/health') return J(r, 200, books.health({ currency: 'AUD', country: books.csStatus('AU', 'Australia'), year: { fiscal_year: '2026-27', from: '2026-07-01', start_month: 7 } }));
       if (p === '/api/books/todo') return J(r, 200, []);
+      if (p === '/api/books/periods') return J(r, 200, books.periods([]));
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.accounts.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events') return J(r, 200, books.eventsAnswer(EVENTS));
       if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Business bank account', LEDGER, { currency: 'AUD', from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: globalThis.__opening == null ? OPENING : globalThis.__opening, closing_minor: CLOSING }));

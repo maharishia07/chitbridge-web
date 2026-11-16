@@ -49,7 +49,7 @@ const ledger = (code, name, lines, o) => Object.assign({ currency: 'INR', accoun
   lines: (function () { let run = (o && o.opening_minor) || 0; return (lines || []).map((l) => { run += (l.dr_minor || 0) - (l.cr_minor || 0); return Object.assign({ doc_date: l.date, party_id: null, running_minor: run,
     /* PERF1: a ledger line reads its own entry — entry_id · entry_no · event_type · the reversal pair (the API's keys, null when none) */
     entry_id: l.entry_id || ('e-' + (l.ref || l.date)), entry_no: l.entry_no || l.ref || null, event_type: l.event_type || null,
-    reverses_entry_id: null, reversed_by: null }, l, { source: source(l.source) }); }); })(), closing_minor: 0 }, o || {});
+    reverses_entry_id: null, reversed_by: null, evidence: { doc: null, files: [], count: 0, flag: null } }, l, { source: source(l.source) }); }); })(), closing_minor: 0 }, o || {});
 /** one asset register row (lib/books-assets) */
 const assetRow = (o) => Object.assign({ entity: 'ent-M', asset_id: 'a1', name: 'Asset', asset_class: 'furniture', cost_minor: 0, currency: 'INR', put_to_use: DAY, source_entry_id: 'e1', source_chit_id: null,
   accumulated_minor: 0, last_dep_fy: null, disposed_on: null, disposal_entry_id: null, proceeds_minor: null, created_by: 'u1', wdv_minor: 0 }, o || {});
