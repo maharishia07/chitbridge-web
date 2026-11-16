@@ -17,7 +17,7 @@ function overrides() { try { return JSON.parse(fs.readFileSync(path.join(__dirna
 const measure = () => document && (() => {
   const visible = (e) => e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
   const rows = Array.from(document.querySelectorAll('[data-testid^="bv-row-"], #bv_list tbody tr, #bv_dues_c tbody tr, #bv_list .cbl-row')).filter(visible);
-  const empty = Array.from(document.querySelectorAll('#bv_list .cbl-state, #bv_list .empty, #bv_list [data-testid*="empty"]')).filter(visible)[0];
+  const empty = Array.from(document.querySelectorAll('#bv_list .cbl-state, #bv_list .empty, #bv_list [data-testid*="empty"], #bv_list .bv-dues-nil')).filter(visible)[0];
   const el = rows[0] || empty || null;
   let top = null;
   if (el) { top = el.getBoundingClientRect().top; const sticky = document.querySelector('#bv_list thead, #bv_list .cbl-head'); if (sticky && visible(sticky) && rows[0] && sticky.getBoundingClientRect().bottom > top) top = sticky.getBoundingClientRect().bottom; } /* a sticky head covering the first row: the row's visible top is under the head */
