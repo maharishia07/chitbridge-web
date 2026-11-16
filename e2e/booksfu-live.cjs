@@ -21,7 +21,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
   const periods = (await api('GET', '/api/books/periods')).body.periods || [];
   for (const r of periods.filter((x) => Number(x.period) >= 1 && String(x.end_date).slice(0, 10) <= '2026-10-31').sort((x, y) => String(x.start_date).localeCompare(String(y.start_date)))) if (r.status === 'open') await api('POST', '/api/books/periods/' + r.fiscal_year + '/' + r.period + '/lock', { reason: 'BAS lodged' });
   const ref = 'bank:bf' + Date.now().toString(36);
-  const rc = await send('/api/books/payments', { party_id: cust.party_id, direction: 'in', amount_minor: 4400, mode: 'bank', received_at: '2026-10-20', allocate: 'none', client_ref: ref + '-1', if_locked: 'next_open' });
+  const rc = await send('/api/books/payments', { party_id: cust.party_id, direction: 'in', amount_minor: 4400, mode: 'bank', received_at: '2026-10-20', allocate: 'none', acknowledge: ['same_again'], client_ref: ref + '-1', if_locked: 'next_open' });
   console.log('   receipt into locked October -> ' + rc.status + ' ' + JSON.stringify(rc.body).slice(0, 200));
   ok(rc.status === 200, 'a receipt dated in locked October posts with if_locked next_open');
   const fee = await send('/api/books/events', { kind: 'expense', class: 'bank_charges', amount: 15, paid_from: 'bank', date: '2026-10-21', narration: 'MONTHLY ACCOUNT FEE', client_ref: ref + '-2', if_locked: 'next_open' });
