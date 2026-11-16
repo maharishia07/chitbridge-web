@@ -251,7 +251,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 /* ⭐ THE STATEMENTS BOX (app/cap-bank-statements.js): compact, 32 px rows, toolbar on the table, tokens only; folded while a statement is on screen */
 .pe-card.bks{max-width:none;gap:6px;padding:6px 14px}
 .bks-bar{display:flex;align-items:center;gap:10px;min-height:32px;font-size:14px}
-.bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}/* wraps, never cut: the Statements line reads in full at 390 (Fable r2) */
 #bk_body .bks-tog,#bk_body .bks-btn,#bk_body .bks-miss,#bk_body .bks-add button{min-height:32px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font-size:13px;font-weight:600;cursor:pointer}
 #bk_body .bks-add .supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 #bk_body .bks-miss{border-color:var(--amber-b,var(--line));background:var(--amber-t,var(--surface));color:var(--amber-d,var(--ink,inherit));width:100%;height:26px;min-height:26px;padding:0 6px}
