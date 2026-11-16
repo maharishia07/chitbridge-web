@@ -46,7 +46,7 @@ function obCss() {
     '.ob-row.ob-pin{background:var(--soft,transparent)}.ob-hd{position:sticky;top:0;z-index:1;font-weight:700;background:var(--card,var(--bg));color:var(--grey)}' +
     '.ob-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ob-name small{color:var(--grey);margin-inline-start:6px}' +
     '.ob-bills{grid-column:1/-1;padding:4px 0 6px 14px;display:flex;flex-direction:column;gap:5px}' +
-    '.ob-bill{display:grid;grid-template-columns:minmax(120px,1.4fr) minmax(70px,1fr) 128px minmax(100px,1fr) 28px;gap:6px;align-items:center}' +
+    '.ob-bill{display:grid;grid-template-columns:minmax(110px,1.4fr) minmax(70px,1fr) 128px 128px minmax(100px,1fr) 28px;gap:6px;align-items:center}' +
     '.ob-foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:var(--fs-1)}.ob-num{text-align:end;font-variant-numeric:tabular-nums}' +
     '.ob-years{display:flex;flex-wrap:wrap;gap:6px}.ob-year{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:var(--fs-1)}.ob-ok{color:var(--ok-2,var(--ok,green))}.ob-bad{color:var(--warn-2,var(--bad,#b42318))}' +
     '@media (max-width:520px){.ob-row{grid-template-columns:1fr 1fr}.ob-row .ob-name{grid-column:1/-1}.ob-hd .ob-name{grid-column:1}.ob-bill{grid-template-columns:1fr 1fr}.ob-bill .ob-del{justify-self:end}}';
@@ -122,7 +122,7 @@ function obEdit() {
     if (line.role === 'suspense') return;
     var row = rowFor(line.code);
     if (line.party_id) {
-      row.bills.push({ party_id: line.party_id, ref: line.bill_ref || '', due: line.due_date || '', minor: line.dr_minor || line.cr_minor });
+      row.bills.push({ party_id: line.party_id, ref: line.bill_ref || '', date: line.bill_date || '', due: line.due_date || '', minor: line.dr_minor || line.cr_minor });
       row.open = true;
     } else if (line.dr_minor) row.dr = (row.dr || 0) + line.dr_minor;
     else row.cr = (row.cr || 0) + line.cr_minor;
@@ -193,6 +193,7 @@ function obBillsHtml(row, i, total) {
         '<div class="ob-bill" data-testid="ob-bill-' + i + '-' + j + '">' +
         '<select class="inp" data-cbsid="CMP041-S01"' + obMount('CMP041') + ' data-testid="ob_bp_' + i + '_' + j + '" aria-label="' + esc(tx('Party')) + '" onchange="obBillIn(' + i + ',' + j + ",'party_id',this.value)\">" + obPartyOptions(row, bill.party_id) + '</select>' +
         '<input class="inp" data-cbsid="CMP040-I01"' + obMount('CMP040') + ' data-testid="ob_bn_' + i + '_' + j + '" aria-label="' + esc(tx('Bill no')) + '" placeholder="' + esc(tx('Bill no')) + '" value="' + esc(bill.ref) + '" onchange="obBillIn(' + i + ',' + j + ",'ref',this.value)\">" +
+        '<input class="inp" type="date" data-cbsid="CMP040-I02"' + obMount('CMP040') + ' data-testid="ob_bt_' + i + '_' + j + '" aria-label="' + esc(tx('Bill date')) + '" value="' + esc(bill.date || '') + '" onchange="obBillIn(' + i + ',' + j + ",'date',this.value)\">" +
         '<input class="inp" type="date" data-cbsid="CMP040-I02"' + obMount('CMP040') + ' data-testid="ob_bd_' + i + '_' + j + '" aria-label="' + esc(tx('Due')) + '" value="' + esc(bill.due) + '" onchange="obBillIn(' + i + ',' + j + ",'due',this.value)\">" +
         obField('ob_ba_' + i + '_' + j, bill.minor, 'obBillIn(' + i + ',' + j + ",'minor')", tx('Amount')) +
         '<button type="button" class="supact ob-del" data-cbsid="CMP014-B01"' + obMount('CMP014') + ' data-testid="ob_bx_' + i + '_' + j + '" aria-label="' + esc(tx('Remove')) + '" onclick="obBillDel(' + i + ',' + j + ')">×</button></div>'
@@ -278,7 +279,7 @@ function obCell(i, side) {
 }
 function obToggle(i) {
   OB.rows[i].open = !OB.rows[i].open;
-  if (OB.rows[i].open && !OB.rows[i].bills.length) OB.rows[i].bills.push({ party_id: '', ref: '', due: '', minor: null });
+  if (OB.rows[i].open && !OB.rows[i].bills.length) OB.rows[i].bills.push({ party_id: '', ref: '', date: '', due: '', minor: null });
   obEnsureParties().then(obRender);
 }
 async function obEnsureParties() {
@@ -291,7 +292,7 @@ async function obEnsureParties() {
   }
 }
 function obBillAdd(i) {
-  OB.rows[i].bills.push({ party_id: '', ref: '', due: '', minor: null });
+  OB.rows[i].bills.push({ party_id: '', ref: '', date: '', due: '', minor: null });
   obRender();
 }
 function obBillDel(i, j) {
@@ -317,7 +318,7 @@ function obRowsOut() {
       return bill.party_id && bill.minor;
     });
     bills.forEach(function (bill) {
-      var one = { code: row.code, party_id: bill.party_id, bill_ref: bill.ref || null, due_date: bill.due || null };
+      var one = { code: row.code, party_id: bill.party_id, bill_ref: bill.ref || null, bill_date: bill.date || null, due_date: bill.due || null };
       one[side === 'cr' ? 'cr_minor' : 'dr_minor'] = bill.minor;
       out.push(one);
     });
