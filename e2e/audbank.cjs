@@ -139,7 +139,7 @@ function periodRows() {
       ok((await row.count()) === 1, 'a line the owner accepted shows as Accepted for the auditor');
       await row.click();
       console.log('  PANEL ' + JSON.stringify(await second.p.locator('[data-testid^="bank-next-"]').allTextContents()));
-      ok(/Accepted by Eastlake owner/.test((await second.p.locator('[data-testid^="bank-next-"]').allTextContents()).join(' ')), 'its panel says who matched it: "Accepted by Eastlake owner · 14 Nov 2026"');
+      ok(/Accepted bys*Eastlake owner · 14 Nov 2026/.test((await second.p.locator('[data-testid^="bank-next-"]').allTextContents()).join(' ')), 'its panel says who matched it: "Accepted by Eastlake owner · 14 Nov 2026"');
       await second.p.screenshot({ path: path.join(SHOTS, 'A3-auditor-who-matched-1366.png') });
     } else ok(false, 'no matched line in the stand-in statement to carry a mark');
     ok(/Signed off by Eastlake owner/.test(await second.p.evaluate(() => document.body.innerText)) || true, 'sign-off state is said where the month is signed (Aug)');
