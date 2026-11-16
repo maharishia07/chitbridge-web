@@ -1178,7 +1178,7 @@ async function peGstPay(btn) {
 }
 
 /* ═══ 4a · THE SHOP'S OWN RETURN (BAS1, 2026-10-12) — BAS (AU) · VAT return (AE), prepared from the books, never lodged ═══════════════════════════════
-   GET /returns?period&frequency&simpler&stagger&emirate → { currency, pack, form, name, short, authority, portal, prepared, asked, periods: [{ period, label, start, end, due, ended }],
+   GET /returns?period&frequency&simpler&stagger&emirate → { currency, pack, form, name, short, authority, portal, prepared, asked, periods: [{ period, label, start, end, due, ended, state?, closed? }],
      period, boxes: [{ code, label, amount_minor, tax_minor, roles, accounts: [{ code, name }], note }], payable_minor, refund_minor, net_minor, notes, cite, emirates?, staggers?, needs?, why? }
    ⭐ THE PAGE COMPUTES NOTHING: every figure is the server's READ of the posted ledgers (engines gst-returns.returnFor → the pack's bas / vat201). The list IS CBList (rule 5);
    a box row opens the Ledgers page on the ledgers it counts, for the period; "Copy figures" puts the boxes on the clipboard as one block for the ATO / FTA portal.
@@ -1299,7 +1299,7 @@ function peReturnPaint(r) {
           'Period',
           peSel(
             'pr_p',
-            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open'))]),
+            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open')) + peRetStateWord(item.state)]),
             P ? P.period : '',
             ' onchange="peReturnPick(\'period\', this.value)"'
           )
@@ -1417,8 +1417,22 @@ function peReturnClaimMark(r, b) {
   if (!u || !u.box || u.box !== b.code || !peReturnClaim(r)) return '';
   return ' <span class="ev ev-warn" data-testid="pr-claim-mark">⚠ ' + esc(CBEvidence.words.flag) + ' · ' + esc(String(u.count)) + '</span>';
 }
+/* PAST-YEARS: each return period carries its state from the server (set_off · months_locked · year_closed · declared_lodged · open): said in the shop's words, never the code */
+const PE_RET_STATE = { set_off: 'closed', months_locked: 'closed', year_closed: 'closed with the year', declared_lodged: 'lodged, as you said' };
+const peRetStateWord = (state) => (PE_RET_STATE[state] ? ' · ' + tx(PE_RET_STATE[state]) : '');
+/** a period closed with its year, or whose months are locked, is READ ONLY: the sentence says why (the server refuses a write all the same) */
+const PE_RET_READ_ONLY = {
+  year_closed: 'This period was closed with its year. You can read it; nothing here can change it.',
+  declared_lodged: 'You said these returns were lodged outside ChitBridge when the year closed. You can read this period; nothing here can change it.',
+  months_locked: "This period's months are locked. You can read it; nothing here can change it."
+};
+const peRetReadOnly = (r) => {
+  const cur = (r.periods || []).find((item) => r.period && item.period === r.period.period);
+  return (cur && PE_RET_READ_ONLY[cur.state]) || '';
+};
 /** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
 function peReturnCloseSection(r) {
+  if (peRetReadOnly(r)) return '<div class="pe-card" data-testid="pr-readonly"><div class="pe-note">' + esc(tx(peRetReadOnly(r))) + '</div></div>';
   return peOwner() ? peReturnCloseCard(r) : peNoOwner(PE_OWNER_ONLY_CLOSES);
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
@@ -1597,8 +1611,8 @@ async function peReturnCopy(btn) {
 }
 
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   GET /year/:fy/status → { fiscal_year, closed, can_close, refusals: [{ name, why }], months: [{ period, status }], next } — what a close would say, nothing written
-   POST /year/:fy/close → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
+   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, refusals: [{ name, why }], months: [{ period, status }], next } — what a close would say, nothing written
+   POST /year/:fy/close { returns_lodged?: true } → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
   let L;
   try {
@@ -1683,6 +1697,7 @@ async function peYearStatus() {
     if (!refs.length) h += '<div class="pe-check ok" data-testid="py-rest"><span>✓</span><span>' + esc(tx('Nothing else stands in the way')) + '</span></div>';
   }
   h += '</div>';
+  if (!st.closed && peOwner() && st.can_close_if_lodged) h += peYearLodgedTick();
   if (!st.closed && peOwner())
     h +=
       '<div class="supacts">' +
@@ -1695,16 +1710,34 @@ async function peYearStatus() {
   h += '<div id="py_out" class="pe-slot"></div>';
   host.innerHTML = h;
 }
+/* PAST-YEARS: the server says can_close_if_lodged when only the returns stand in the way. PRODUCT POLICY, NOT LAW: ChitBridge takes the owner's word that the returns were lodged outside it
+   (an older year the shop moved in with); it records the sentence and posts nothing. Shown only when the server says so; the owner ticks it and the button wakes. */
+function peYearLodgedTick() {
+  return (
+    '<div class="pe-card" data-testid="py-lodged-card"><label class="pe-check" style="cursor:pointer"><input data-cbsid="BKS016-I02" type="checkbox" data-testid="py-lodged" onchange="peYearLodged(this)"> <span>' +
+    esc(tx('I lodged these returns outside ChitBridge')) +
+    '</span></label><div class="pe-note" data-testid="py-lodged-why">' +
+    esc(tx('The year stays shut until you say so. ChitBridge keeps your word on each month and posts nothing.')) +
+    '</div></div>'
+  );
+}
+/** the tick wakes or greys Close the year (the server still decides) */
+function peYearLodged(box) {
+  const btn = document.querySelector('[data-testid="py-close"]');
+  if (btn) btn.disabled = !box.checked;
+}
 function peYearClose(btn) {
-  const fy = peVal('py_fy');
+  const fy = peVal('py_fy'),
+    tick = document.querySelector('[data-testid="py-lodged"]'),
+    lodged = !!(tick && tick.checked && PE.year && PE.year.can_close_if_lodged);
   confirmAsk(
     tx('Close the year?'),
-    esc(txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })),
+    esc(lodged ? txf('{fy} is carried forward and locked for good, with its returns marked as lodged outside ChitBridge. This cannot be undone.', { fy }) : txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })),
     tx('Close the year'),
     () => {
       bkOnce('pe-year-' + fy, btn, async () => {
         try {
-          const r = (await api('perYearClose', { params: { fy }, body: {} })) || {};
+          const r = (await api('perYearClose', { params: { fy }, body: lodged ? { returns_lodged: true } : {} })) || {};
           peOk('py_out', esc(txf('{fy} closed · carried to {next}', { fy, next: r.next || '' })));
           const node = document.querySelector('[data-testid="py-close"]');
           if (node) node.remove();

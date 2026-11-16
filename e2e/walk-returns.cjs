@@ -28,11 +28,12 @@ const DENY = "Only the owner or the shop's auditor may read the returns.";
 
 /* ── the stand-in's answers, in the server's shape (lib/books-period.taxReturn) ── */
 const AU_PERIODS = [
+  ['2023-Q1', '2023-24 Q1 (Jul–Sep 2023)', '2023-07-01', '2023-09-30', '2023-10-28', 'declared_lodged'], ['2024-Q1', '2024-25 Q1 (Jul–Sep 2024)', '2024-07-01', '2024-09-30', '2024-10-28', 'year_closed'],
   ['2025-Q1', '2025-26 Q1 (Jul–Sep 2025)', '2025-07-01', '2025-09-30', '2025-10-28'], ['2025-Q2', '2025-26 Q2 (Oct–Dec 2025)', '2025-10-01', '2025-12-31', '2026-02-28'],
   ['2026-Q3', '2025-26 Q3 (Jan–Mar 2026)', '2026-01-01', '2026-03-31', '2026-04-28'], ['2026-Q4', '2025-26 Q4 (Apr–Jun 2026)', '2026-04-01', '2026-06-30', '2026-07-28'],
   ['2026-Q1', '2026-27 Q1 (Jul–Sep 2026)', '2026-07-01', '2026-09-30', '2026-10-28'], ['2026-Q2', '2026-27 Q2 (Oct–Dec 2026)', '2026-10-01', '2026-12-31', '2027-02-28'],
   ['2027-Q3', '2026-27 Q3 (Jan–Mar 2027)', '2027-01-01', '2027-03-31', '2027-04-28'], ['2027-Q4', '2026-27 Q4 (Apr–Jun 2027)', '2027-04-01', '2027-06-30', '2027-07-28'],
-].map(([period, label, start, end, due]) => ({ period, label, frequency: 'quarterly', start, end, due, ended: end <= '2026-10-12' }));
+].map(([period, label, start, end, due, state]) => Object.assign({ period, label, frequency: 'quarterly', start, end, due, ended: end <= '2026-10-12' }, state ? { state, closed: true } : { state: 'open', closed: false }));   /* PAST-YEARS: every year the books hold, each period with its state (the server's words in codes) */
 /* ACC-357: each box carries its ledgers' own amounts, largest first (the first ledger holds the box here), the count, and "and n more" past ten; G1 stands in for a shop with twelve sales places */
 const box = (code, label, amount, tax, roles, accounts, note) => {
   const many = String(code) === 'G1' ? 12 : accounts.length;
@@ -41,7 +42,7 @@ const box = (code, label, amount, tax, roles, accounts, note) => {
 const A = { sales: { code: '4000', name: 'Sales' }, ret: { code: '4090', name: 'Sales returns and allowances' }, exp: { code: '4010', name: 'Export sales' }, free: { code: '4020', name: 'GST-free sales' },
   gstc: { code: '2200', name: 'GST collected' }, gstp: { code: '2210', name: 'GST paid' }, pur: { code: '5000', name: 'Purchases' }, rent: { code: '6010', name: 'Rent' }, pc: { code: '1060', name: 'Computers' } };
 function bas(simpler, period) {
-  const P = AU_PERIODS.find((p) => p.period === period) || AU_PERIODS[4];
+  const P = AU_PERIODS.find((p) => p.period === period) || AU_PERIODS[6];
   const boxes = [box('G1', 'Total sales', 1345000, null, ['sales', 'sales_export', 'sales_gst_free', 'sales_input_taxed', 'sales_returns', 'gst_collected'], [A.sales, A.exp, A.free, A.ret, A.gstc])];
   if (!simpler) boxes.push(box('G2', 'Export sales', 100000, null, ['sales_export'], [A.exp]), box('G3', 'Other GST-free sales', 200000, null, ['sales_gst_free'], [A.free]),
     box('G10', 'Capital purchases', 300000, null, ['ppe_computers'], [A.pc], 'GST-exclusive (the ledgers hold all GST paid in one account)'),
@@ -92,7 +93,7 @@ const LOCKED_BY = (P, yearStartMonth) => {
   }
   return out;
 };
-const CLOSE_AU = (period) => { const P = AU_PERIODS.find((x) => x.period === period) || AU_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'gst', against: 'gst', amount_minor: 80000 }], payable_minor: { gst_minor: 15000 }, carried_minor: { gst_minor: 0 }, pay_total_minor: 15000, owed_before_payments_minor: { gst_minor: 15000 }, owed_before_payments_total_minor: 15000, paid_before_close_minor: {}, still_to_pay_minor: { gst_minor: 15000 }, still_to_pay_total_minor: 15000, excess_paid_minor: { gst_minor: 0 },
+const CLOSE_AU = (period) => { const P = AU_PERIODS.find((x) => x.period === period) || AU_PERIODS[6]; return { period: P.period, date: P.end, utilised: [{ from: 'gst', against: 'gst', amount_minor: 80000 }], payable_minor: { gst_minor: 15000 }, carried_minor: { gst_minor: 0 }, pay_total_minor: 15000, owed_before_payments_minor: { gst_minor: 15000 }, owed_before_payments_total_minor: 15000, paid_before_close_minor: {}, still_to_pay_minor: { gst_minor: 15000 }, still_to_pay_total_minor: 15000, excess_paid_minor: { gst_minor: 0 },
   form: 'BAS', heads: ['gst'], return_period: RP(P), ref_label: 'Payment reference number', ref_hint: 'The payment reference number on the BAS', carried_word: 'GST refund due from the ATO', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026-27/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null, locked: LOCKED_BY(P, 7) }; };
 const CLOSE_AE = (period) => { const P = AE_PERIODS.find((x) => x.period === period) || AE_PERIODS[4]; return { period: P.period, date: P.end, utilised: [{ from: 'vat', against: 'vat', amount_minor: 280000 }], payable_minor: { vat_minor: 195000 }, carried_minor: { vat_minor: 0 }, pay_total_minor: 235000, owed_before_payments_minor: { vat_minor: 195000 }, owed_before_payments_total_minor: 235000, paid_before_close_minor: {}, still_to_pay_minor: { vat_minor: 195000 }, still_to_pay_total_minor: 235000, excess_paid_minor: { vat_minor: 0 }, rcm_minor: { vat: 40000 }, cash_minor: { vat: 235000 },
   form: 'VAT201', heads: ['vat'], return_period: RP(P), ref_label: 'Payment reference', ref_hint: 'The EmaraTax payment reference', carried_word: 'VAT recoverable from the FTA', ok: true, entry_id: '00000000-0000-4000-8000-000000000130', entry_no: 'MJ/2026/000011', posting_date: P.end, doc_date: P.end, moved: false, lines: 2, items: 0, note: null, locked: LOCKED_BY(P, 1) }; };
@@ -188,6 +189,15 @@ W.run('returns', async (w) => {
     const rows = await AU.page.$$eval('[data-testid^="pr-box-"]', (x) => x.map((e) => e.getAttribute('data-testid').slice(7)));
     const g11 = await text(AU.page, '[data-testid="pr-amt-G11"]'), lbl = await text(AU.page, '[data-testid="pr-box-G11"]');
     return { ok: gets.length === 1 && /simpler=0/.test(gets[0]) && rows.join() === 'G1,G2,G3,G10,G11,1A,1B,9' && /5,000\.00/.test(g11) && /GST-exclusive/.test(lbl), saw: gets.join(' ') + ' · rows ' + rows.join(' ') + ' · G11 ' + g11 };
+  });
+  await w.step('R2b', 'PAST YEARS: older years are listed with each period state in words; an old period reads and is read only (no Close button, one sentence)', async () => {
+    const opts = await AU.page.$$eval('#pr_p option', (x) => x.map((e) => e.textContent));
+    await AU.page.selectOption('#pr_p', '2024-Q1');
+    await AU.page.waitForSelector('[data-testid="pr-readonly"]', { timeout: 8000 });
+    const note = await text(AU.page, '[data-testid="pr-readonly"]'), btn = await count(AU.page, '[data-testid="pr-close"]');
+    await AU.page.selectOption('#pr_p', '2026-Q1');
+    await AU.page.waitForSelector('[data-testid="pr-close"]', { timeout: 8000 });
+    return { ok: opts.some((o) => /2023-24 Q1.*lodged, as you said/.test(o)) && opts.some((o) => /2024-25 Q1.*closed with the year/.test(o)) && /read it; nothing here can change it/.test(note) && btn === 0, saw: opts.slice(-3).join(' | ') + ' · ' + note + ' · close buttons ' + btn };
   });
   await w.step('R3', 'Copy figures -> the clipboard holds the boxes as one block (code · label · amount, plain digits) for the portal', async () => {
     await AU.page.click('[data-testid="pr-copy"]');

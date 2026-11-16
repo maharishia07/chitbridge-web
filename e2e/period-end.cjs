@@ -35,7 +35,7 @@ const EVENTS = { events: [
   picks: { mode: ['cash', 'bank', 'upi', 'card'], expense_class: [{ role: 'rent', code: '6010', name: 'Rent' }, { role: 'electricity', code: '6020', name: 'Electricity' }], income_class: [{ role: 'interest_received', code: '4210', name: 'Interest received' }], debit_reason: ['rate'] } };
 
 function stand(over) {
-  const S = Object.assign({ calls: [], bodies: [], offHost: [], todo: [], stockRefuse: false, depRefuse: false, assetRefuse: false, gstRefuse: false, gst503: false, yearReady: false, yearHas: false, recRefuse: false }, over || {});
+  const S = Object.assign({ calls: [], bodies: [], offHost: [], todo: [], stockRefuse: false, depRefuse: false, assetRefuse: false, gstRefuse: false, gst503: false, yearReady: false, yearHas: false, yearLodged: false, recRefuse: false }, over || {});
   S.assets = [
     { asset_id: 'a1', name: 'Display fridge', asset_class: 'furniture', cost_minor: 4500000, put_to_use: '2025-06-01', accumulated_minor: 450000, wdv_minor: 4050000, disposed_on: null },
     { asset_id: 'a2', name: 'Old scooter', asset_class: 'vehicles', cost_minor: 6000000, put_to_use: '2022-04-02', accumulated_minor: 6000000, wdv_minor: 0, disposed_on: '2026-03-31' }];
@@ -110,6 +110,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
       }
       if (p === '/api/books/gst/pay') { if (S.payRefuse) return J(r, 409, { error: 'That is more than the tax owed — SGST owed 4200.00, paid 420000.00. Run the month close first, or correct the amount.' }); return J(r, 200, books.posted({ entry_no: 'JV/26-27/0024', challan_no: body.challan_no, payment_ref: body.challan_no, paid_minor: { cgst: 0, sgst: 420000 } })); }
       let ym = /^\/api\/books\/year\/([^/]+)\/status$/.exec(p);
+      if (ym && S.yearLodged) return J(r, 200, { fiscal_year: ym[1], closed: !!S.yearHas, can_close: false, can_close_if_lodged: !S.yearHas, refusals: [{ name: 'return_open', code: 'PERIOD_RETURN_OPEN', why: '2 BAS periods of ' + ym[1] + ' are not closed: Q1, Q2.' }], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' });
       if (ym) return J(r, 200, S.yearReady ? { fiscal_year: ym[1], closed: !!S.yearHas, can_close: !S.yearHas, refusals: [], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' }
         : { fiscal_year: ym[1], closed: false, can_close: false, months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: i < 10 ? 'soft_locked' : 'open' })), next: '2026-27',
           refusals: [{ name: 'months_locked', why: 'Month 11 (Feb) and month 12 (Mar) are still open — lock every month first.' }, { name: 'suspense_nil', why: 'Suspense holds 1,200.00 — clear it with an entry first.' }] });
@@ -326,6 +327,18 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     await c2.p.waitForSelector('#py_out [data-testid="pe-ok"]', { timeout: 5000 });
     ok(posts(S2, /year\/.*close/).length === 1 && /closed · carried to 2026-27/.test(await c2.p.textContent('#py_out')), 'POST /year/:fy/close once; "closed · carried to 2026-27" from the response');
     await c2.ctx.close();
+    /* PAST-YEARS: only the returns stand in the way → one plain sentence; Close waits for the tick, then sends returns_lodged (product policy, the server decides) */
+    const SL = stand({ yearLodged: true }), cl = await open(SL, 'yearclose');
+    await cl.p.waitForSelector('[data-testid="py-lodged"]', { timeout: 15000 });
+    ok(/lodged these returns outside ChitBridge/.test(await cl.p.textContent('[data-testid="py-lodged-card"]')) && await cl.p.isDisabled('[data-testid="py-close"]'), 'the lodged sentence is shown when the server says can_close_if_lodged; Close waits for the tick');
+    await cl.p.check('[data-testid="py-lodged"]');
+    ok(await cl.p.isEnabled('[data-testid="py-close"]'), 'ticking it wakes Close the year');
+    await cl.p.click('[data-testid="py-close"]'); await cl.p.waitForSelector('[data-testid="confirm"]', { timeout: 3000 });
+    await cl.p.click('[data-testid="confirm-ok"]');
+    await cl.p.waitForSelector('#py_out [data-testid="pe-ok"]', { timeout: 5000 });
+    ok(posts(SL, /year[/].*close/).length === 1 && posts(SL, /year[/].*close/)[0].body.returns_lodged === true, 'POST /year/:fy/close once, with returns_lodged: true');
+    ok(posts(S2, /year[/].*close/)[0].body && posts(S2, /year[/].*close/)[0].body.returns_lodged === undefined, 'a year that can close on its own sends no returns_lodged');
+    await cl.ctx.close();
     const S3 = stand({ yearReady: true }), c3 = await open(S3, 'yearclose', RAVI);
     await c3.p.waitForSelector('[data-testid="py-checks"]', { timeout: 15000 });
     ok(await c3.p.locator('[data-testid="py-close"]').count() === 0 && await c3.p.locator('[data-testid="pe-readonly"]').count() === 1, 'a co-assist reads the checks and cannot close');
