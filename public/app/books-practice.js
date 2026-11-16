@@ -67,9 +67,9 @@
      tile key → [label, the filter it opens]; every count is the size of that filter on the list (the server counts them from the same rows). */
   var BAND_NAME = { pipeline: 'Year end', on_us: 'On us today', advisory: 'Advice' };
   var TILE = {
-    books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ['Marked lodged by the owner', { stage: 'lodged' }],
+    books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Lodged (owner's word)", { stage: 'lodged' }],
     bas_due_30: ['Due in 30 days', { bas: 'soon' }],
-    queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Entries to check', { checked: 'behind' }], months_unlocked: ['Months to lock', { unlocked: 'yes' }],
+    queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Entries to check (quarter)', { checked: 'behind' }], months_unlocked: ['Months to lock', { unlocked: 'yes' }],
     cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]
   };
   function sameFilter(f, g) {
@@ -88,7 +88,7 @@
     }).join('') + '</div>' : '';
     var tiles = shown.tiles.filter(function (t) { return TILE[t.key]; }).map(function (t) {
       var def = TILE[t.key], on = sameFilter(P.filter, def[1]);
-      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '" data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(def[0])) + '</span></button>';
+      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(def[0])) + '</span></button>';
     }).join('');
     var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
     return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + '</div>' + note + '</div>';
@@ -111,8 +111,29 @@
     if (!r.bas.due_date) return '—';
     return esc(r.bas.form || '') + ' ' + esc(day(r.bas.due_date)) + (r.bas.due_in_days != null && r.bas.due_in_days <= 30 ? ' <span class="sub">(' + esc(r.bas.due_in_days) + ' ' + esc(tx('days')) + ')</span>' : '');
   }
+  /** the queries of a client in words: "2 waiting on client" · "1 on us" (with its age once over 14 days) · "—" */
   function queriesCell(r) {
-    return r.queries.open ? esc(r.queries.on_client) + ' ' + esc(tx('client')) + ' · ' + esc(r.queries.on_us) + ' ' + esc(tx('us')) : '0';
+    var q = r.queries, parts = [];
+    if (!q.open) return '—';
+    if (q.on_client) parts.push(esc(q.on_client) + ' ' + esc(tx('waiting on client')));
+    if (q.on_us) parts.push(esc(q.on_us) + ' ' + esc(tx('on us')) + (q.waiting_over_14 ? ' <span class="sub">(' + esc(q.oldest_days) + ' ' + esc(tx('days')) + ')</span>' : ''));
+    return parts.join(' · ');
+  }
+  /** the last year end's label for the header, from the server's own year_end (the pack's label as stored: '2025-26' → FY25-26) */
+  function yearLabel() {
+    var row = ((P.data && P.data.clients) || []).filter(function (r) { return r.year_end; })[0];
+    return row ? 'FY' + String(row.year_end.fy).replace(/^dd(dd)/, '$1') : '';
+  }
+  /** the year-end cells: the same figures the Complete and Checked tiles count (the server's year_end), never the quarter */
+  function yendCell(r) {
+    var y = r.year_end;
+    if (!y) return '—';
+    if (y.first_year) return esc(tx('First year'));
+    return esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(day(y.end)) : esc(tx('bank not to year end')));
+  }
+  function checkedCell(r) {
+    var e = r.year_end && r.year_end.entries;
+    return e ? esc(e.checked) + '/' + esc(e.of) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
   function detailHTML(r) {
@@ -159,21 +180,21 @@
       return Object.assign({ key: key, label: tx(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return esc(r.name || r.entity_id.slice(0, 8)) + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', 180, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
+      { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + esc(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', 190, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
-      num('bas', 'Return due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('checked', 'Checked', 100, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, {}),
+      num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
+      num('yend', 'Year end', 200, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('checked', 'Checked ' + yearLabel(), 110, checkedCell, function (r) { var e = r.year_end && r.year_end.entries; return e ? e.checked / (e.of || 1) : -1; }, { prio: 1 }),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
       num('margin', 'Margin', 80, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
       num('cash', 'Cash', 110, function (r) { return esc(money(r.health.cash_minor, r.currency)); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
       num('profit', 'Profit (qtr)', 110, function (r) { return esc(money(r.health.profit_quarter_minor, r.currency)); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
-      num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
-      { key: 'books', label: tx('Books'), prio: 1, w: 110, keep: true, html: true, cell: function (r) { return '<button type="button" class="act quiet" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(tx('Open books')) + '</button>'; }, value: function () { return 'open'; } }
+      num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; })
     ];
   }
   function sorts() {
@@ -184,7 +205,8 @@
       by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
       by('queries', function (r) { return r.queries.open; }, 'Queries open'),
       by('bas', function (r) { return r.bas.due_date || '9999'; }, 'Return due'),
-      by('checked', function (r) { return r.checked.of - r.checked.n; }, 'Checked'),
+      by('checked', function (r) { var e = r.year_end && r.year_end.entries; return e ? e.of - e.checked : -1; }, 'Entries left to check (year end)'),
+      by('yend', function (r) { return r.year_end ? r.year_end.locked : -1; }, 'Months locked (year end)'),
       by('unlocked', function (r) { return r.months_unlocked; }, 'Months not locked'),
       by('sales', function (r) { return r.health.sales_trend_pct; }, 'Sales vs 3-month average'),
       by('margin', function (r) { return r.health.gross_margin_pct; }, 'Gross margin'),
@@ -231,7 +253,7 @@
     var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
     P.list = root.CBList.mount(host, {
       key: 'practice-clients', t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: ['name', 'status', 'role', 'bank', 'queries', 'bas', 'checked', 'sales', 'look', 'books'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
+      columns: columns(), defaultCols: ['name', 'status', 'yend', 'checked', 'bank', 'queries', 'bas'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') },
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
@@ -242,7 +264,7 @@
     }
     host.onclick = function (ev) {
       var button = ev.target.closest && ev.target.closest('[data-bp-open]');
-      if (button) openBooks(button.getAttribute('data-bp-open'));
+      if (button) { ev.preventDefault(); openBooks(button.getAttribute('data-bp-open')); }
     };
   }
   function css() {
@@ -252,7 +274,7 @@
     s.textContent =
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
-      '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
+      '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
