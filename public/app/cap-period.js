@@ -1301,9 +1301,9 @@ function peReturnPaint(r) {
             'pr_p',
             periods.map((item) => [item.period, item.label + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open'))]),
             P ? P.period : '',
-            ' style="min-width:min(100%,25em)" onchange="peReturnPick(\'period\', this.value)"'
+            ' onchange="peReturnPick(\'period\', this.value)"'
           )
-        )
+        ).replace('<label class="pe-f">', '<label class="pe-f" style="grid-column:1/-1">') /* ACC-357: the period has the whole row, so its due date shows whole */
       : '') +
     (!isAE
       ? peField(
@@ -1520,13 +1520,13 @@ function peReturnLedgers(r, b, two) {
   const lines = (b.accounts || []).map((item) =>
     CBList.nextRow(
       [
-        '<button data-cbsid="BKS016-B06" type="button" class="optchip" data-testid="pr-open-' + esc(b.code) + '-' + esc(item.code) + '" onclick="peReturnOpen(\'' + esc(item.code) + '\')">' + esc(item.code + ' ' + item.name) + '</button>'
+        '<button data-cbsid="BKS016-B06" type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" data-testid="pr-open-' + esc(b.code) + '-' + esc(item.code) + '" onclick="peReturnOpen(\'' + esc(item.code) + '\')">' + esc(item.code + ' ' + item.name) + '</button>'
       ].concat(two ? [money(item.amount_minor), money(item.tax_minor)] : [money(item.amount_minor != null ? item.amount_minor : item.tax_minor)]),
       widths
     )
   );
   const more = b.accounts_more_n
-    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button type="button" class="optchip" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
+    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
     : '';
   return '<div data-testid="pr-ledgers-' + esc(b.code) + '">' + head + lines.join('') + more + '</div>';
 }
