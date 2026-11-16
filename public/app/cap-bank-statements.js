@@ -81,6 +81,7 @@ async function bankStmtLoad() {
   if (BKST.data && typeof bankHomeSigned === 'function') await bankHomeSigned().catch(() => {});
   if (BKST.data && BKST.all) await bankStmtAllLoad();
   else bankStmtPaint();
+  if (typeof bankHomeDeepOnce === 'function') bankHomeDeepOnce(); /* a reload on #bank/<account>/<month> reopens that statement once the list is in */
 }
 /** All years: the counts of each year the pack says to keep (a one-file read per year: cells only), newest first */
 async function bankStmtAllLoad() {
@@ -97,7 +98,6 @@ async function bankStmtAllLoad() {
     BKST.all = false;
   }
   bankStmtPaint();
-  if (typeof bankHomeDeepOnce === 'function') bankHomeDeepOnce(); /* a reload on #bank/<account>/<month> reopens that statement once the list is in */
 }
 /** the files list asked for another search or page: only the files are read again (the cells stay) */
 async function bkstFilesGo() {
