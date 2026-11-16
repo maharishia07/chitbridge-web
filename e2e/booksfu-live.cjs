@@ -40,6 +40,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
   ok(feeLine && feeLine.other && feeLine.other.code && feeLine.party_name === null, 'the fee line says its expense ledger (' + (feeLine && feeLine.other && feeLine.other.name) + ') and no party');
   const odd = lines.find((x) => x.other && x.other.code == null);
   if (odd) { const en = (await api('GET', '/api/books/daybook?from=' + odd.date + '&to=' + odd.date + '&limit=300')).body.entries.find((e) => e.entry_no === odd.entry_no); console.log('   a Split line: ' + odd.what + ' ' + JSON.stringify(odd.other) + ' entry lines ' + JSON.stringify(((en && en.lines) || []).map((l) => [l.code, l.name, l.dr_minor, l.cr_minor, l.rate]))); }
+  ok(!odd, 'a bill with its tax line reads as ONE other ledger, never Split (' + (odd ? odd.what + ' ' + JSON.stringify(odd.other) : 'no Split line') + ')');
   const b = await chromium.launch();
   for (const vp of [{ width: 1366, height: 768, tag: '1366' }, { width: 390, height: 844, tag: '390' }]) {
     const { ctx, page: p } = await L.open(b, base, token, vp, undefined, '/accounts.html#ledgers', '[data-testid="lg-acc-' + bank.code + '"]');
