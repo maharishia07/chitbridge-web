@@ -221,7 +221,21 @@
     '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 12px;background:var(--cl-gband);color:var(--cl-ink);border-top:1px solid var(--cl-line);border-bottom:1px solid var(--cl-line);border-inline-start:4px solid var(--cl-blue);font-size:calc(12px * var(--k,1));text-transform:uppercase;letter-spacing:.04em}',
     '.cbl .cbl-row.ing>:first-child{padding-inline-start:28px}.cbl .cbl-lrec.ing{padding-inline-start:28px}',
     '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(12px * var(--k,1));color:var(--cl-ink);text-transform:none;letter-spacing:0}',
-    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);padding:6px 12px 10px 38px;cursor:default;overflow-wrap:break-word;word-break:normal}',
+    /* W15-108 (Athi, 15 Nov: "i have no idea which one is header, which one i can expand, which one is information"): a band is TINTED caps with its total at the right; a row that opens carries a bordered ▸ button and lights across the whole row;
+       what it opens to is an INDENTED panel with a rule at its left, holding an info strip and then a real sub-table under its own grey header; information is never drawn like a button */
+    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);margin:0 0 6px 26px;padding:8px 12px 10px 14px;border-inline-start:3px solid var(--cl-blue);cursor:default;overflow-wrap:break-word;word-break:normal}',
+    '.cbl .cbl-row[aria-expanded]>.cbl-cell .cbl-tw,.cbl .cbl-row[aria-expanded] .cbl-tw{border:1px solid var(--cl-line);border-radius:6px;background:var(--cl-card);color:var(--cl-ink);width:24px;min-width:24px;min-height:24px;font-size:calc(13px * var(--k,1))}',
+    '.cbl .cbl-row[aria-expanded]:hover{background:var(--cl-hov)}.cbl .cbl-row[aria-expanded]:hover .cbl-tw{border-color:var(--cl-blue)}',
+    '.cbl .cbl-group .fig{margin-inline-start:auto}',
+    '.cbl .cbl-nstrip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:2px 0 8px;color:var(--cl-muted);font-size:calc(12px * var(--k,1))}',
+    '.cbl .cbl-nstrip>span,.cbl .cbl-nstrip .cbl-nchip{padding:0}.cbl .cbl-nstrip b{color:var(--cl-ink);font-family:var(--cl-num);font-weight:600}',
+    '.cbl .cbl-nchip{border:1px solid var(--cl-line);border-radius:999px;background:var(--cl-card);color:var(--cl-ink);padding:2px 10px;min-height:24px;cursor:pointer;font:inherit}.cbl .cbl-nchip:hover{border-color:var(--cl-blue)}.cbl .cbl-nchip[aria-pressed="true"]{background:var(--cl-blue-t);border-color:var(--cl-blue);font-weight:700}',
+    '.cbl .cbl-ntab{display:flex;flex-direction:column;border:1px solid var(--cl-line);border-radius:8px;background:var(--cl-card);overflow:hidden}',
+    '.cbl .cbl-nthead{display:flex;align-items:center;background:var(--cl-gband);border-bottom:1px solid var(--cl-line);font-size:calc(11px * var(--k,1));text-transform:uppercase;letter-spacing:.04em;color:var(--cl-muted)}',
+    '.cbl .cbl-ntrow{display:flex;align-items:center;border-bottom:1px solid var(--cl-hair);font-size:calc(13.5px * var(--k,1))}.cbl .cbl-ntrow:last-child{border-bottom:0}',
+    '.cbl .cbl-ntc{flex:0 0 auto;padding:5px 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}.cbl .cbl-ntc.first{flex:1 1 90px}.cbl .cbl-ntc.r{text-align:end}',
+    '.cbl .cbl-ntc button.cbl-nsort{all:unset;cursor:pointer;display:inline-flex;gap:3px;align-items:center;min-height:24px;text-transform:inherit;letter-spacing:inherit}.cbl .cbl-ntc button.cbl-nsort:focus-visible{outline:2px solid var(--cl-blue)}',
+    '.cbl .cbl-nempty{padding:10px;color:var(--cl-muted)}',
     '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
     /* ☰ lines */
     '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
@@ -3277,5 +3291,35 @@
     return pagerButton('prev', 'B06', pair.prev) + pagerButton('next', 'B07', pair.next);
   }
 
-  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset, every: every, pager: pager };
+  /**
+   * W15-108 · THE SUB-TABLE a row opens to: its own grey header row, then plain rows — nothing here is drawn like a button except a header you can sort by.
+   * o = { id, cols: [{ k, label, w (px; none = the one wide column), r (right-aligned), sort (true = a header button) }], rows: [[html per column]], sort: { k, dir }, act (the handler text of a sort press, called with the key) , empty (words) }
+   * Pure drawing: the page keeps what a sort does (a server read for a server-paged list).
+   */
+  function nextTable(o) {
+    var cols = o.cols || [];
+    var cell = function (col, html, index) {
+      return '<div class="cbl-ntc' + (index === 0 ? ' first' : '') + (col.r ? ' r' : '') + '"' + (col.w ? ' style="width:' + col.w + 'px"' : '') + '>' + html + '</div>';
+    };
+    var head = cols
+      .map(function (col, index) {
+        var on = o.sort && o.sort.k === col.k,
+          arrow = on ? (o.sort.dir === 'asc' ? '▲' : '▼') : '';
+        var inner = col.sort
+          ? '<button type="button" class="cbl-nsort" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' data-nt-sort="' + esc(col.k) + '" onclick="' + esc(o.act) + '(this.dataset.ntSort)" aria-label="' + esc(col.label) + '">' + esc(col.label) + (arrow ? ' <span aria-hidden="true">' + arrow + '</span>' : '') + '</button>'
+          : esc(col.label);
+        return cell(col, inner, index).replace('class="cbl-ntc', 'role="columnheader" class="cbl-ntc');
+      })
+      .join('');
+    var body = (o.rows || []).length
+      ? o.rows
+          .map(function (row) {
+            return '<div class="cbl-ntrow" role="row">' + cols.map(function (col, index) { return cell(col, row[index] == null ? '' : row[index], index); }).join('') + '</div>';
+          })
+          .join('')
+      : '<div class="cbl-nempty">' + esc(o.empty || '') + '</div>';
+    return '<div class="cbl-ntab" role="table" data-nt="' + esc(o.id || '') + '"><div class="cbl-nthead" role="row">' + head + '</div>' + body + '</div>';
+  }
+
+  root.CBList = { mount: mount, nextRow: nextRow, nextTable: nextTable, get: get, reset: reset, every: every, pager: pager };
 })(typeof window !== 'undefined' ? window : this);

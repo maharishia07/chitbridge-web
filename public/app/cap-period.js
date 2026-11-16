@@ -1375,7 +1375,8 @@ function peReturnPaint(r) {
       '</div>' +
       r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
       '</div>';
-  host.innerHTML = h + peReturnCloseSection(r);
+  host.innerHTML = '<div id="bk_attn_bas"></div>' + h + peReturnCloseSection(r);
+  if (typeof CBAttention !== 'undefined' && r.period) CBAttention.mount(document.getElementById('bk_attn_bas'), { from: r.period.start, to: r.period.end }); /* W15-102: the same strip, the return's days */
   peReturnList(r);
 }
 /** W15-91: the credit claimed with no tax invoice — the server carried it (the Day book's own flag over this period); the words are CBEvidence's, "See them" opens the Day book on the same days, Evidence = No tax invoice. The return's figures and the lodging are not touched. */
