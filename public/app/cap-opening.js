@@ -308,8 +308,30 @@ async function obPreviewNow() {
 function obSideWord(side) {
   return side === 'dr' ? tx('Dr') : tx('Cr');
 }
+/** a ledger's bills-total cell follows its bills without a repaint of the grid (a repaint would drop the caret): read-only with bills, a money field without */
+function obBillCellsPaint() {
+  OB.rows.forEach(function (row, i) {
+    if (!obHasBills(row)) return;
+    var host = document.querySelector('[data-testid="ob-row-' + row.code + '"]');
+    var side = obSide(row);
+    var cell = host && host.children[side === 'dr' ? 1 : 2];
+    if (!cell) return;
+    var has = row.bills.some(function (bill) {
+      return bill.party_id && bill.minor;
+    });
+    var isRo = cell.getAttribute('data-testid') === 'ob-from-bills-' + row.code;
+    if (has) {
+      if (has && OB.pv && !OB.checking) cell.outerHTML = obSideCell(row, i, side, obBillsTotalOf(row.code));
+      else if (!isRo) cell.outerHTML = obSideCell(row, i, side, null);
+    } else if (isRo) {
+      cell.outerHTML = obSideCell(row, i, side, null);
+      row[side] = null;
+    }
+  });
+}
 /** paints the Difference sentence, the totals, the balance button and the Save state from the server's last answer — and nothing of its own */
 function obStatePaint() {
+  obBillCellsPaint();
   var diff = document.getElementById('ob_diff'),
     save = document.getElementById('ob_save'),
     tot = document.getElementById('ob_tot'),
