@@ -542,17 +542,22 @@
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
-  var SHOP_COUNTRY = null;
+  var SHOP_COUNTRY = null,
+    SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
   function announceShop(entity) {
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
+    SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
-      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY } }));
+      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON } }));
     } catch (e) {
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
     }
   }
   function shopCountry() {
     return SHOP_COUNTRY;
+  }
+  function ledgerOn() {
+    return SHOP_LEDGER_ON;
   }
 
   function set(kind, value) {
@@ -1231,6 +1236,7 @@
     TEXT_SIZES: TEXT_SIZES,
     FS_BASE: FS_BASE,
     fontStack: fontStack,
-    shopCountry: shopCountry
+    shopCountry: shopCountry,
+    ledgerOn: ledgerOn
   };
 })(typeof window !== 'undefined' ? window : this);

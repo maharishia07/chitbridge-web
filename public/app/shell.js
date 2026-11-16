@@ -1324,6 +1324,7 @@
     function leadByData() {
       var holder = $('.cbsh-more');
       if (!holder) return;
+      if (isFirm()) return; /* l16 firmhome: a firm's Home is led by its practice and reads cards as they come into view, so the areas are not reshuffled under the reader */
       if (factsRunning || factsQueue.length) return; /* l16: the order is set ONCE, when every card has answered or failed: a card that is still waiting (or was shed) must not reshuffle the sections per load */
       var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
       /* rank: an area with a card that needs you (2) outranks one that is only in use (1), which outranks one not started (0); Money, once it holds any money fact (in use or
@@ -1372,23 +1373,63 @@
         factsNext();
       });
     }
+    /* l16 firmhome: ONE ask per card URL per page load (several cards share a URL, and Home draws its areas again once the practice has answered, which used to ask every card a second time;
+       the reply is kept and the card is painted from it). A failed ask is forgotten so the next paint asks again. */
+    var factsCache = {};
+    function factsOnce(url) {
+      if (!factsCache[url])
+        factsCache[url] = factsRead(url).catch(function (err) {
+          delete factsCache[url];
+          throw err;
+        });
+      return factsCache[url];
+    }
+    /* the practice read comes first (books-practice.js settled): a firm's Home hides the shop cards and asks only for the cards it draws */
+    function practiceFirst() {
+      return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled(3000) : root.Promise.resolve();
+    }
+    function isFirm() {
+      return !!(root.CBPractice && root.CBPractice.isFirm && root.CBPractice.isFirm());
+    }
+    /* a firm's Home asks a card's facts when the card comes into view (the practice fills the first screen; the cards are below it, or on another phone tab): a card nobody has scrolled to is not asked for */
+    function whenSeen(spot, fn) {
+      var io = new root.IntersectionObserver(
+        function (list) {
+          if (!list.some(function (i) { return i.isIntersecting; })) return;
+          io.disconnect();
+          fn();
+        },
+        { rootMargin: '100px' }
+      );
+      io.observe(spot);
+    }
+    function paintFacts(e, spot) {
+      factsOnce(e.facts)
+        .then(function (reply) {
+          var lines = (reply && reply.lines) || [],
+            state = noteNeeds(e, cardState(reply, lines), routeOf);
+          paintBadges(el);
+          spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
+          leadByData();
+        })
+        .catch(function () {
+          spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>';
+        });
+    }
     function readFacts(onlyId) {
       if (!person || !S.manifest) return;
-      (S.manifest.entries || []).forEach(function (e) {
-        if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
-        var spot = $('[data-testid="shell-facts-' + e.id + '"]');
-        if (!spot) return;
-        factsRead(e.facts)
-          .then(function (reply) {
-            var lines = (reply && reply.lines) || [],
-              state = noteNeeds(e, cardState(reply, lines), routeOf);
-            paintBadges(el);
-            spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
-            leadByData();
-          })
-          .catch(function () {
-            spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>';
-          });
+      (onlyId ? root.Promise.resolve() : practiceFirst()).then(function () {
+        var lazy = !onlyId && isFirm() && !!root.IntersectionObserver;
+        shown().forEach(function (e) {
+          if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
+          var spot = $('[data-testid="shell-facts-' + e.id + '"]');
+          if (!spot) return;
+          if (lazy)
+            whenSeen(spot, function () {
+              paintFacts(e, spot);
+            });
+          else paintFacts(e, spot);
+        });
       });
     }
 
@@ -1723,6 +1764,7 @@
         return root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest;
       } /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch; AX1: the edition's entries only */,
       edition: edition,
+      facts: function (url) { return factsOnce(url); } /* l16 firmhome: the Home page's Your work read shares the card's one ask (and its retry on SERVER_BUSY) */,
       sides: sidesApi,
       ready: Promise.all([manP, hdrP, kuralP, sidesApi ? sidesApi.ready : null]).then(function () {
         return api;

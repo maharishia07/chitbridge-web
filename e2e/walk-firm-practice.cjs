@@ -4,6 +4,7 @@
  * env: API (http://127.0.0.1:3997), OUT (shots folder; token-<firm>.json from the box), FIRMS (comma list, default coastal,bayside).
  * Checks per firm at 1366 and 390: the band and the rule are drawn; the list has the clients; the shop cards (Till, Marketing, Online shop) are absent; every band tile's count equals the rows its filter leaves;
  * status and action are never dropped at 390 (no field dropped, R74); no horizontal scroll; Open books is on every row. Shots go to OUT.
+ * l16 firmhome (Fable round 2 R2-1): ONE load of the firm Home makes at most firm_home_calls_max /api calls (e2e/firm-home-calls.budget.json), counted here at both sizes and listed on a miss.
  */
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -11,6 +12,7 @@ const API = process.env.API || 'http://127.0.0.1:3997', OUT = process.env.OUT ||
 if (/railway|vercel/i.test(API)) throw new Error('STOP: production is never a target');
 const PUB = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+const BUDGET = JSON.parse(fs.readFileSync(path.join(__dirname, 'firm-home-calls.budget.json'), 'utf8')).firm_home_calls_max;
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const ok = (what, cond, info) => { if (cond) { pass++; console.log('  ok   ' + what); } else { fail++; console.log('  FAIL ' + what + (info ? ' :: ' + String(info).slice(0, 300) : '')); } };
@@ -47,6 +49,8 @@ async function open(browser, base, tok, vp, startUrl) {
   });
   const page = await ctx.newPage();
   page.__threw = [];
+  page.__calls = [];
+  page.on('request', (r) => { const u = r.url(); if (u.includes('/api/') && !u.includes('/api/events/stream')) page.__calls.push(r.method() + ' ' + u.replace(/^https?:[/][/][^/]+/, '').slice(0, 90)); });
   page.on('pageerror', (e) => page.__threw.push(e.message));
   await page.goto(base + startUrl);
   return { ctx, page };
@@ -65,6 +69,9 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       await page.waitForSelector('[data-testid^="practice-row-"]', { timeout: 20000 }).catch(() => {});
       await pause(4000);
       const tag = firm + ' ' + vp.tag;
+      const load = page.__calls.slice(); /* the calls of the one Home load, before any tile is pressed or the page scrolled */
+      console.log(tag + ' api calls in one Home load: ' + load.length + ' (budget ' + BUDGET + ')');
+      ok(tag + ' one Home load makes at most ' + BUDGET + ' api calls', load.length <= BUDGET, load.length + ': ' + load.join(' | '));
       ok(tag + ' the Practice band and the rule are drawn', (await page.locator('[data-testid="practice-band"]').count()) === 1 && (await page.locator('[data-testid="practice-rule"]').count()) === 1);
       const tiles = await page.locator('[data-testid^="practice-tile-"]').count();
       ok(tag + ' nine tiles: Needs help, Watch, Doing well, queries, return due, bank, months, checked, access ending', tiles === 9, tiles);
