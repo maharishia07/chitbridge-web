@@ -324,7 +324,6 @@ async function route(S, r) {
     const tbReads = S.calls.filter((c) => /\/api\/books\/trial-balance/.test(c)).length;
     ok(tbReads === 1, 'ONE trial-balance read for the whole tree (' + tbReads + ')');
     { const reads = S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)); ok(reads.length === 1 && /\/ledger\/1500/.test(reads[0]), 'no per-leaf balance read; the one ledger opened on its own is the bank-role ledger (W15-90) (' + reads.join(' ') + ')'); }
-    { const h = await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (n) => n.map((x) => x.textContent.trim())); ok(h.map((x) => x.replace(/[⇅▲▼]/g, '').trim()).join() === 'Date,Details,Spent,Received,Balance' && /▲/.test(h[0]), 'W15-87/88 · the bank ledger opens Date (▲ oldest first) · Details · Spent · Received · Balance (' + h.join(' | ') + ')'); }
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-ledgers.png'), fullPage: true });
     await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-laptop.png'), fullPage: false });
 
@@ -421,9 +420,10 @@ async function route(S, r) {
       const fit = await p.evaluate(() => { const l = document.querySelector('#lg_out').getBoundingClientRect(), k = document.querySelector('[data-testid="kural-footer"]'), kr = k && !k.hidden ? k.getBoundingClientRect() : null; return { bottom: Math.round(l.bottom), limit: Math.round(kr ? kr.top : innerHeight), kural: !!kr, doc: document.documentElement.scrollHeight <= innerHeight + 1 }; });
       ok(fit.bottom <= fit.limit + 1 && fit.doc, 'only the rows scroll: the list ends where the kural footer begins (' + fit.bottom + ' ≤ ' + fit.limit + '), the page itself does not scroll');
     }
-    ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Amount', 'Balance']), 'a plain ledger\'s default columns: Date · Details · Amount (Dr/Cr) · Balance (W15-88)');
+    { const h = await p.$$eval("#lg_out .cbl-hdr .cbl-hc", (n) => n.map((x) => x.textContent.trim())); ok(h.map((x) => x.replace(/[⇅▲▼]/g, "").trim()).join() === "Date,Details,Spent,Received,Balance" && /▲/.test(h[0]), "W15-87/88 · a cash ledger: Date (▲ = oldest first, the order the rows are in) · Details · Spent · Received · Balance (" + h.join(" | ") + ")"); }
     /* only the rows scroll: a LONG ledger (80 lines) scrolls inside the list; the page does not, and its last row is reachable above the kural footer */
     await p.click('[data-testid="lg-acc-4000"]'); await p.waitForSelector('#lg_out .lrow', { timeout: 8000 });
+    { const h = await p.$$eval("#lg_out .cbl-hdr .cbl-hc", (n) => n.map((x) => x.textContent.replace(/[⇅▲▼]/g, "").trim())); ok(h.join() === "Date,Details,Amount,Balance", "a plain ledger's default columns: Date · Details · Amount (Dr/Cr) · Balance (W15-88) (" + h.join(" | ") + ")"); }
     {
       const fit = await p.evaluate(async () => { const out = document.querySelector('#lg_out'), l = out.querySelector('.cbl-list'), k = document.querySelector('[data-testid="kural-footer"]'), kr = k && !k.hidden ? k.getBoundingClientRect() : null, limit = kr ? kr.top : innerHeight;
         l.scrollTop = l.scrollHeight; await new Promise((r) => setTimeout(r, 400)); l.scrollTop = l.scrollHeight; await new Promise((r) => setTimeout(r, 300)); const rows = l.querySelectorAll('.lrow'), last = rows[rows.length - 1].getBoundingClientRect();
