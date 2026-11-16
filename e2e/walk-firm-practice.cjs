@@ -74,7 +74,8 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       ok(tag + ' one Home load makes at most ' + BUDGET + ' api calls', load.length <= BUDGET, load.length + ': ' + load.join(' | '));
       ok(tag + ' the Practice band and the rule are drawn', (await page.locator('[data-testid="practice-band"]').count()) === 1 && (await page.locator('[data-testid="practice-rule"]').count()) === 1);
       const tiles = await page.locator('[data-testid^="practice-tile-"]').count();
-      ok(tag + ' nine tiles: Needs help, Watch, Doing well, queries, return due, bank, months, checked, access ending', tiles === 9, tiles);
+      const counts = await page.$eval('[data-testid^="practice-tile-"] b', (els) => els.map((el) => Number(el.textContent)));
+      ok(tag + ' at most nine tiles, and none says nothing (0, or every client): ' + counts.join(','), tiles <= 9 && counts.every((n) => n > 0 && (truth.clients.length < 2 || n < truth.clients.length)), tiles);
       const shown = await rowCount(page);
       ok(tag + ' the client list shows rows (up to 50 at a time of ' + truth.clients.length + ')', shown > 0 && shown <= Math.min(50, truth.clients.length) + 1, shown);
       const cards = await page.evaluate(() => ['till', 'marketing', 'storefront'].map((id) => document.querySelectorAll('[data-testid="shell-card-' + id + '"]').length));
