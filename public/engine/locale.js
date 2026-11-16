@@ -1056,9 +1056,6 @@
          `new Date('')` is invalid — so a missing timestamp rendered a real-looking date from 1970 on the
          screen, which is worse than "Invalid Date": it looks like data. An absent value must render as absent. */
       if (ts === null || ts === undefined || ts === '') return null;
-      /* ⚠️ A STRING WITH NO FOUR-DIGIT YEAR IS NOT A DATE. V8 reads "Oct 8" / "Thu Oct 08" (a Date cut by String().slice(0,10)) as 8 Oct 2001,
-         a real-looking wrong day. Refuse it: an unreadable day paints as absent, never as a guess. */
-      if (typeof ts === 'string' && !/\d{4}/.test(ts)) return null;
       var date = new Date(ts);
       return isNaN(date.getTime()) ? null : date;
     },

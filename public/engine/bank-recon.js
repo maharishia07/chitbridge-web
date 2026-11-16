@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-recon · sha256 a58c48f3d1f71a23c0b69ddc3b0f2ab734f0aa37f6a0d29e3dc483225b6145c1 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-l17sit.1 · bank-recon · sha256 2c6d72b84f355af61420a041be0f08af408a506a1ff92a243ad24b2386994bd0 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -1184,7 +1184,8 @@
     var debit = situation.debit,
       credit = situation.credit;
     if (debit > 0 === credit > 0) return none('a statement line has money going one way — this has ' + (debit && credit ? 'both' : 'neither'));
-    return ruleSuggestion_(situation) || withNewParty_(none('no rule matched'), situation);
+    var answer = ruleSuggestion_(situation) || withNewParty_(none('no rule matched'), situation);
+    return situation.billNote && !answer.against ? Object.assign(answer, situation.billNote) : answer;
   }
   /** everything the rules look at for one statement line: the pack's keywords, the line's side, amount and narration, `base` (the call that completes a proposal) and `none` (the no-proposal answer) */
   function situationOf_(line, options, bankRules, none) {
@@ -1210,11 +1211,6 @@
   }
   /** the answer for an unexplained line, with the party it would be — only when the caller handed in its parties (opt-in: no caller's answer changes): a payee who is no party yet is PROPOSED new (never created here), near names listed first */
   function withNewParty_(answer, situation) {
-    var not = Array.isArray(situation.options.parties) && bankEntry_().notAParty(situation.text, { rules: situation.rules, out: situation.out, has: hasWord_ });
-    if (not) {
-      answer.what = not; /* l16-bank-rules: the pack's own words say it is no payee (own account, tax office, card payout): proposed as that answer, never as a new party */
-      return answer;
-    }
     var party = Array.isArray(situation.options.parties) && bankEntry_().newParty(situation.line, { out: situation.out, parties: situation.options.parties, ownWords: bankWords_(situation.pack) });
     if (party) answer.party = party;
     return answer;
@@ -1224,17 +1220,7 @@
    * B5-01: a PARTY is tried before the words ("SMITH LEGAL PROFESSIONAL FEE" is a payment to Smith, not a bank charge); a proposal that only the words made is never ready on its own (see basisOf_).
    */
   function ruleSuggestion_(situation) {
-    return learnedSuggestion_(situation) || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation)) || notAPartySuggestion_(situation);
-  }
-  /**
-   * l16-bank-rules: a narration the pack's own words call a tax-office payment or a card settlement is no supplier or customer: it is PROPOSED as that answer of bank-entry.whatIsThis (tax paid against the tax head, card takings into the card account),
-   * composed by the one answer path (eventOfAnswer), never a new party. Words only, so it waits for the person's tick like any word-made proposal. Opt-in like the party proposal: only when the caller handed in its parties.
-   */
-  function notAPartySuggestion_(situation) {
-    var not = Array.isArray(situation.options.parties) && bankEntry_().notAParty(situation.text, { rules: situation.rules, out: situation.out, has: hasWord_ });
-    if (!not || not.kind === 'transfer') return null;
-    var made = bankEntry_().eventOfAnswer({ kind: not.kind }, situation.out, situation.pack, situation.options);
-    return made.event ? situation.base(made.event, 'not_a_party', 'medium', 'narration says "' + not.word + '"' + (not.kind === 'tax_payment' ? ' — tax paid to the tax office' : ' — card takings paid to the bank'), { what: not }) : null;
+    return learnedSuggestion_(situation) || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation));
   }
   /** BR1: a rule a person taught (learn()) is tried first — still only a PROPOSAL, shown with where it came from */
   function learnedSuggestion_(situation) {
@@ -1267,7 +1253,9 @@
   }
   /** money into the bank, by the words of the narration: cash paid in, interest credited; null when neither is named */
   function creditWordSuggestion_(situation) {
-    var word;
+    var word,
+      settled = situation.options.card_sales && settlementSuggestion_(situation);
+    if (settled) return settled;
     if ((word = hasWord_(situation.text, situation.rules.cash_deposit)))
       return situation.base({ type: 'contra', from: 'cash', to: 'bank' }, 'cash_deposit', 'medium', 'narration says "' + word + '" — cash paid into the bank');
     if ((word = hasWord_(situation.text, situation.rules.interest)))
@@ -1278,6 +1266,15 @@
         'narration says "' + word + '" — interest credited by the bank'
       );
     return null;
+  }
+  /** a card settlement that arrived NET of the acquirer's fee (BB-04): ONE entry, bank · fees · card clearing; the tax on the fee is asked (fee_tax), never assumed; null when not exactly one card sale waits */
+  function settlementSuggestion_(situation) {
+    var made = bankEntry_().settlement({ text: situation.text, minor: situation.minor, currency: situation.pack.currency, decimals: decimalsOf_(situation.pack.currency), options: situation.options, pack: situation.pack, date: situation.line.date, basis: situation.options.gst_basis, invoice: situation.options.tax_invoice });
+    if (!made) return null;
+    var answer = situation.base(made.event, 'card_settlement', 'medium', made.why, { tax: made.tax });
+    answer.split = made.split;
+    if (made.needs && !answer.needs) answer.needs = made.needs;
+    return answer;
   }
   /** a returned cheque: the cleared receipt it reverses when one fits (by cheque number, else by amount alone), else a low-confidence proposal that asks for the party and the receipt */
   function chequeReturnSuggestion_(situation, word) {
@@ -1323,9 +1320,15 @@
   }
   /** the open documents (options.open_items: { ref, bill_no, party, side: 'customer'|'supplier', open_minor, currency? }) this line could be paying: this side, this very amount, this currency */
   function openCandidates_(situation) {
+    return openOf_(situation).filter(function (item) {
+      return +item.open_minor === situation.minor;
+    });
+  }
+  /** every open document of this side and currency (the books' open bills, or invoices) */
+  function openOf_(situation) {
     var want = situation.out ? 'supplier' : 'customer';
     return (situation.options.open_items || []).filter(function (item) {
-      return item && item.side === want && +item.open_minor === situation.minor && (!item.currency || item.currency === situation.pack.currency);
+      return item && item.side === want && +item.open_minor > 0 && (!item.currency || item.currency === situation.pack.currency);
     });
   }
   /**
@@ -1335,16 +1338,32 @@
    */
   function openItemSuggestion_(situation) {
     var found = openCandidates_(situation);
-    if (!found.length) return null;
+    if (!found.length) return billsSuggestion_(situation);
     var hit = partyIn_(situation.line.narration, situation.options.parties),
       byParty = hit && hit !== 'many' ? found.filter(function (item) { return String(item.party) === String(hit.p.id || hit.p.name); }) : [],
       byDoc = found.filter(function (item) { return namesDocument_(situation.text, item.bill_no); });
     var pick = byDoc.length === 1 ? byDoc[0] : byDoc.length === 0 && byParty.length === 1 ? byParty[0] : null;
     if (!pick) return null;
-    var event = { type: situation.out ? 'payment_made' : 'payment_received', mode: 'bank', party: pick.party },
-      answer = situation.base(event, 'open_item', 'high', 'the amount is exactly the open ' + (situation.out ? 'bill ' : 'invoice ') + (pick.bill_no || pick.ref) + ' — ' + (byDoc.length === 1 ? 'the narration names it' : 'the narration names its party'));
-    answer.against = [{ against_ref: pick.ref, bill_no: pick.bill_no || null, amount_minor: situation.minor }];
+    var reason = 'the amount is exactly the open ' + (situation.out ? 'bill ' : 'invoice ') + (pick.bill_no || pick.ref) + ' — ' + (byDoc.length === 1 ? 'the narration names it' : 'the narration names its party');
+    return againstProposal_(situation, pick.party, [{ against_ref: pick.ref, bill_no: pick.bill_no || null, amount_minor: situation.minor }], reason);
+  }
+  /** the payment of an open document or several, proposed as the payment door takes it: proposal.against = [{ against_ref, bill_no, amount_minor }], one allocation per bill */
+  function againstProposal_(situation, party, against, reason) {
+    var answer = situation.base({ type: situation.out ? 'payment_made' : 'payment_received', mode: 'bank', party: party }, 'open_item', 'high', reason);
+    answer.against = against;
     return answer;
+  }
+  /**
+   * BB-10: one payment across SEVERAL open bills. Proposed (as allocations) only when exactly ONE set of the named party's (or the narration's named) bills adds up to the amount; else the person picks:
+   * the party proposal lists `open_bills`, and the person's own pick (options.allocate) is checked to the cent. Never allocated on a guess.
+   */
+  function billsSuggestion_(situation) {
+    var hit = partyIn_(situation.line.narration, situation.options.parties),
+      found = bankEntry_().billsOf(openOf_(situation), situation.minor, { text: situation.text, party: hit && hit !== 'many' ? hit.p.id || hit.p.name : null, names: namesDocument_ }),
+      picked = situation.options.allocate ? bankEntry_().pickOf(situation.options.allocate, found.list, situation.minor) : null;
+    if (found.list.length > 1) situation.billNote = { open_bills: found.list.map(function (item) { return { against_ref: item.ref, bill_no: item.bill_no || null, open_minor: item.open_minor, currency: item.currency || situation.pack.currency }; }), allocate_refusal: (picked && picked.why) || undefined };
+    var set = picked && picked.against ? picked.against : found.fit && found.fit.map(function (item) { return { against_ref: item.ref, bill_no: item.bill_no || null, amount_minor: item.open_minor }; });
+    return set ? againstProposal_(situation, found.list[0].party, set, picked && picked.against ? 'the bills you picked add up to exactly the amount' : 'exactly one set of the open bills adds up to the amount: ' + found.fit.map(function (item) { return item.bill_no || item.ref; }).join(' + ')) : null;
   }
   /** a transfer naming a party: 'many' parties is no proposal; one party gives a received / paid proposal; null when the narration names none */
   function partySuggestion_(situation) {
@@ -1394,7 +1413,6 @@
       if (extra.tax.tax_minor > 0 && !extra.tax.basis) res.needs = 'gst_basis'; /* cash or accrual is in no pack: the owner says once, never defaulted */
       else if (taxInvoiceUnanswered_(extra.tax)) res.needs = 'tax_invoice'; /* B5-03: the credit waits for the person's word on the tax invoice */
     }
-    if (extra && extra.what) res.what = extra.what; /* l16-bank-rules: the pack's words said what the line is (tax_payment · card_settlement) */
     if (extra && extra.source !== undefined) {
       res.source = extra.source;
       res.learned_id = extra.learned_id;
@@ -1565,8 +1583,7 @@
    *   step(state, action)                         the device's reconciliation marks: accept · undo · note · attach (undo keeps notes and files)
    * Still pure and still PROPOSE-ONLY: nothing here posts, sends or stores; a host does each of those after a person presses.
    */
-  var ADVICE_KIND = 'payment_advice',
-    QUERY_KIND = 'bank_query';
+  var ADVICE_KIND = 'payment_advice';
   /**
    * ⭐ railPayments(chits) → [{ chit_id, side (my money: out of the bank or into it), amount_minor, currency, ref, date, party: { id, name }, bills: [{ ref_chit_id, bill_no, applied_minor }],
    *   payment_id, mine, words }]
@@ -1914,24 +1931,6 @@
       return x.r;
     });
   }
-  var MON3_ = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  function dayWords_(value) {
-    var isoDate = dateOf_(value);
-    return isoDate ? +isoDate.slice(8, 10) + ' ' + MON3_[+isoDate.slice(5, 7) - 1] + ' ' + isoDate.slice(0, 4) : '';
-  }
-  /** an amount for words: the currency CODE and the figure in the pack's number format (money.format's rule: the code, never a guessed symbol) */
-  function amountWords_(minor, currency, pack) {
-    var decimals = decimalsOf_(currency),
-      locale = (pack && pack.locale && pack.locale.format) || 'en-US';
-    var figure = minor / Math.pow(10, decimals);
-    var text;
-    try {
-      text = figure.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    } catch (_) {
-      text = figure.toFixed(decimals);
-    }
-    return (currency ? currency + ' ' : '') + text;
-  }
   /**
    * ⭐ ask(line, { party: { id, name }, currency, me?, key?, pack?, country? }) → { ok, words, body } | { ok: false, why }
    *   The question a line nobody explained puts to the other party ON THE RAIL: "<CUR> 4,200.00 came into our bank on 12 Oct 2026, ref R —
@@ -1941,70 +1940,9 @@
    *   Their answer is the payment advice they already send (M30), carrying the reference: explain() then settles the line by 'ref' — in both books.
    */
   function askWhichBill(line, opts) {
-    var options = opts || {},
-      statementLine = line || {},
-      money = lineMoney_(statementLine);
-    var refusal = askRefusal_(options, money.debit, money.credit);
-    if (refusal) return refusal;
-    var bankRules = bankOf_(options),
-      pack = bankRules ? bankRules.pack : null;
-    return askResult_(statementLine, options, money, pack, askCurrency_(options, pack));
-  }
-  /** the refusal when the line moves money both ways or neither, or no party was chosen; null when the question can be put */
-  function askRefusal_(options, debit, credit) {
-    if (debit > 0 === credit > 0) return { ok: false, why: 'a statement line has money going one way' };
-    if (!options.party || !options.party.id) return { ok: false, why: 'choose who to ask' };
-    return null;
-  }
-  /** the currency the question names: the one given, else the pack's, upper-case; null when neither */
-  function askCurrency_(options, pack) {
-    return String(options.currency || (pack && pack.currency) || '').toUpperCase() || null;
-  }
-  /** the question and the chit send body that carries it: only the date, the amount and the reference travel */
-  function askResult_(statementLine, options, money, pack, currency) {
-    var debit = money.debit,
-      key = options.key || lineKey(statementLine),
-      ref = statementLine.ref || statementLine.cheque_no || null,
-      minor = debit || money.credit,
-      side = SIDE_(debit);
-    var amountText = amountWords_(minor, currency, pack),
-      dayText = dayWords_(statementLine.date);
-    var words = askWords_(options, amountText, dayText, ref, debit);
-    return {
-      ok: true,
-      words: words,
-      key: key,
-      body: {
-        recipients: [{ entity_id: options.party.id, role: 'to' }],
-        purpose: 'general',
-        manual_subject: 'Bank line ' + dayText + ' — which bill?',
-        client_ref: 'bankask:' + key,
-        message: words,
-        business_json: {
-          kind: QUERY_KIND,
-          currency: currency,
-          bank_query: { key: key, side: side, amount_minor: minor, currency: currency, date: statementLine.date || null, ref: ref, words: words }
-        }
-      }
-    };
-  }
-  /** the question in words: money that came in asks which bill it is for, money that went out asks which bill it was for */
-  function askWords_(options, amountText, dayText, ref, debit) {
-    return !debit
-      ? amountText +
-          ' came into ' +
-          (options.me ? options.me + "'s" : 'our') +
-          ' bank on ' +
-          dayText +
-          (ref ? ', ref ' + ref : '') +
-          ' — which bill is it for? Send the payment advice and both books settle.'
-      : amountText +
-          ' went from ' +
-          (options.me ? options.me + "'s" : 'our') +
-          ' bank to you on ' +
-          dayText +
-          (ref ? ', ref ' + ref : '') +
-          ' — which bill was it for? Send the receipt advice and both books settle.';
+    var asker = dep_('./bank-ask', 'CBBankAsk');
+    if (!asker) return { ok: false, why: 'the bank-ask engine did not load' };
+    return asker.ask(line, opts, { bankOf: bankOf_, lineMoney: lineMoney_, lineKey: lineKey, side: SIDE_, dateOf: dateOf_, decimalsOf: decimalsOf_ });
   }
   /* the words a bank prints around a name — never what identifies a payer: these neutral ones, and every word of the PACK's own bank keywords
    (its transfer rails, charges, …) and amount prefixes, so a country's rails stay in its pack */
@@ -2057,7 +1995,6 @@
     };
     Object.keys(keywords).forEach(function (bank) {
       Object.keys(keywords[bank] || {}).forEach(function (item) {
-        if (bankEntry_().NOT_A_PARTY_CATEGORIES.indexOf(item) >= 0) return; /* ATO, EFTPOS, SAVINGS can name who a taught rule is for: only these words say the line is no payee, they are not the bank's own filler */
         (keywords[bank][item] || []).forEach(addWords);
       });
     });

@@ -1,7 +1,7 @@
-/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-entry · sha256 2be543dacee8719f2d706e9e3581b819a9566c8448caa8088a6e8b74367d880e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-l17sit.1 · bank-entry · sha256 31d7468078e6cd82b6dded70c66793a38fd19192766b257cc5d208f9b1bd731e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-entry.js: WHAT A BANK-LINE PROPOSAL'S ENTRY CARRIES: the shape of the entry posting.post composed, and the tax inside a tax-inclusive expense.
- * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here) · notAParty (a narration that is an own-account transfer, a tax-office payment or a card settlement: no party, a whatIsThis answer instead).
+ * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here).
  * CALLED BY bank-recon.js (base → withTax, finish_ → entryOf) · bank-project.js reads the entry these make and nothing else.
  * FLOW bank statement → books, step "suggest" (docs/16-finance/BANK-TO-BOOKS-REQUIREMENT.md, Critic 14 Nov, item 3). CARD 16-finance/bank-reconciliation-and-bank-rail.
  * ONE calculation: no rate is written here and no tax is divided here. The rate and the credit rule are the pack's supply kind (pack.supplyKindOf), the sum is tax.splitLineTax,
@@ -176,25 +176,6 @@
     if (same) return { status: 'existing', id: same.id || same.name, name: same.name || same.id, kind: same.kind || null, did_you_mean: [] };
     return { status: 'new', name: name, kind: ctx.out ? 'supplier' : 'customer', basis: 'direction', did_you_mean: didYouMean_(nameKey_(name), ctx.parties) };
   }
-  /** the three things a narration can be before it is a payee, in the order tried: [the pack's keyword category, the whatIsThis id it proposes, the one side it is for (null = either)] */
-  var NOT_A_PARTY_ = [
-    ['own_transfer', 'transfer', null],
-    ['tax_office', 'tax_payment', 'out'],
-    ['card_settlement', 'card_settlement', 'in']
-  ];
-  /**
-   * notAParty(text, { rules, out, has }) → { kind, word, ask } or null: the narration names the shop's OWN account, the tax office or the card terminal's payout, so it is no supplier or customer.
-   * The WORDS are the pack's (pack.bank.keywords: own_transfer · tax_office · card_settlement, read through bank-recon's rules and its one whole-word test `has`); a pack with none gives null, so the engine stays neutral.
-   * kind is an id of whatIsThis(): the line is proposed as that answer (a transfer asks which own account), never as a new party.
-   */
-  function notAParty(text, ctx) {
-    for (var at = 0; at < NOT_A_PARTY_.length; at++) {
-      var row = NOT_A_PARTY_[at],
-        word = row[2] && row[2] !== (ctx.out ? 'out' : 'in') ? null : ctx.has(text, (ctx.rules && ctx.rules[row[0]]) || []);
-      if (word) return { kind: row[1], word: word, ask: row[1] === 'transfer' ? 'account' : null };
-    }
-    return null;
-  }
   /** the pack the answers are read against: the one given, else the one the options name; null when neither */
   function packOf_(opts) {
     var regulation = dep_('./regulation', 'CBRegulation');
@@ -341,6 +322,10 @@
     var recon = dep_('./bank-recon', 'CBBankRecon'),
       given = answers || {},
       out = (+line.debit_minor || 0) > 0;
+    if (recon && given.kind === 'card_settlement' && given.gross_minor != null) {
+      var told = recon.suggest(line, Object.assign({}, opts, { settlement: true, card_sales: [{ amount_minor: +given.gross_minor }], fee_tax: given.fee_tax }));
+      return told.split ? told : { ok: false, why: 'the card sales you name must be more than the bank paid in' };
+    }
     var basePack = packOf_(opts),
       pack = basePack && packWith_(basePack, opts),
       made = basePack ? eventOf_(given, out, basePack, opts) : { event: null },
@@ -354,7 +339,62 @@
     if (!taught.ok) return given.party ? { ok: false, why: taught.why } : composeOnce_(recon, line, event, taught.why, opts);
     return Object.assign({ taught: taught.rule, learned: true }, recon.suggest(line, Object.assign({}, opts, { learned: [taught.rule].concat((opts && opts.learned) || []) })));
   }
-  var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, notAParty: notAParty, eventOfAnswer: eventOf_, NOT_A_PARTY_CATEGORIES: NOT_A_PARTY_.map(function (row) { return row[0]; }), whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_ };
+  var SETTLE_WORDS_ = ['EFTPOS SETTLEMENT', 'CARD SETTLEMENT', 'MERCHANT SETTLEMENT'];
+  /**
+   * settlement(x) → null, or { split: { gross_minor, fee_minor, net_minor, currency, sales_ref }, event, tax, needs?, why }: a card settlement that arrived NET of the acquirer's fee, as ONE contra with a fee (Dr bank · Dr bank charges · Cr card clearing).
+   *   x { text (upper), minor (the statement's), currency, decimals, options (card_sales: [{ amount_minor, currency?, ref? }] the books' card sales still waiting; fee_tax: 'tax' | 'none'; the tax basis and invoice answer ride in x; settlement: the person said it is one), pack, date }
+   * Only when ONE sale of the same currency is waiting and it is MORE than the settlement; two, none or an equal one is no split, never a guess. Whether the tax on the fee is claimable is RQ1: undecided, so with no `fee_tax` answer the proposal says needs 'fee_tax';
+   * 'tax' sends a synthetic expense for the fee through the one withTax (the pack's 'taxable' kind, the person's choice); 'none' carries no tax.
+   */
+  function settlement(x) {
+    var options = x.options || {};
+    if (!options.settlement && !SETTLE_WORDS_.some(function (word) { return x.text.indexOf(word) >= 0; })) return null;
+    var sales = (options.card_sales || []).filter(function (item) { return !item.currency || item.currency === x.currency; });
+    if (sales.length !== 1 || !(Number.isInteger(+sales[0].amount_minor) && +sales[0].amount_minor > x.minor)) return null;
+    var feeMinor = +sales[0].amount_minor - x.minor,
+      scale = Math.pow(10, x.decimals),
+      split = { gross_minor: +sales[0].amount_minor, fee_minor: feeMinor, net_minor: x.minor, currency: x.currency, sales_ref: sales[0].ref || null },
+      event = { type: 'contra', from: 'card', to: 'bank', fee: feeMinor / scale },
+      out = { split: split, event: event, tax: null, why: 'the settlement is ' + (feeMinor / scale).toFixed(x.decimals) + ' less than the card sales waiting (' + (split.gross_minor / scale).toFixed(x.decimals) + '): the acquirer kept it as its fee' };
+    if (options.fee_tax !== 'tax') return Object.assign(out, options.fee_tax === 'none' ? {} : { needs: 'fee_tax' });
+    var taxed = withTax({ type: 'expense', class: 'bank_charges', amount: event.fee, date: x.date, tax_kind: 'taxable' }, { rule: 'card_settlement', pack: x.pack, currency: x.currency, minor: feeMinor, decimals: x.decimals, basis: x.basis, invoice: x.invoice });
+    if (!taxed.tax) return Object.assign(out, { needs: 'fee_tax', why: out.why + ' (this country\'s pack has no tax kind to put the fee under, so say no tax)' });
+    event.fee = taxed.event.amount;
+    event.fee_input_tax = taxed.event.input_tax;
+    return Object.assign(out, { tax: taxed.tax });
+  }
+  /** a subset of the items (two or more) adding up to exactly `minor`, every one found: [[item, ...], ...]; none above 16 items */
+  function billSets_(items, minor) {
+    var found = [];
+    if (items.length > 16) return found;
+    (function walk(from, chosen, left) {
+      if (left === 0 && chosen.length > 1) found.push(chosen.slice());
+      for (var at = from; at < items.length && left > 0; at++) {
+        if (items[at].open_minor <= left) walk(at + 1, chosen.concat(items[at]), left - items[at].open_minor);
+      }
+    })(0, [], minor);
+    return found;
+  }
+  /**
+   * billsOf(items, minor, x) → { fit: [item, ...] | null, list: [item, ...] }: one payment across SEVERAL open bills (BB-10). `items` are the open documents of this side and currency; `x` { text, party (the id the narration names, or null), names(text, bill_no) }.
+   * The pool is the bills the narration names (two or more, one party) else the named party's bills; `fit` is the ONE set of them that adds up to the amount (Xero offers the exact match), null when none or more than one makes it: then `list` is what the person picks from.
+   */
+  function billsOf(items, minor, x) {
+    var named = items.filter(function (item) { return x.names(x.text, item.bill_no); }),
+      byParty = x.party == null ? [] : items.filter(function (item) { return String(item.party) === String(x.party); }),
+      pool = named.length > 1 && named.every(function (item) { return String(item.party) === String(named[0].party); }) ? named : byParty,
+      sets = billSets_(pool, minor);
+    return { fit: sets.length === 1 ? sets[0] : null, list: byParty.length ? byParty : pool };
+  }
+  /** the person's own pick of bills ([{ against_ref, amount_minor }]) for a payment of `minor`: { against } when each is an open bill of one party, no more than it owes, and together exactly the amount; else { why } in words */
+  function pickOf(pick, items, minor) {
+    var rows = Array.isArray(pick) ? pick : [], total = 0, bills = rows.map(function (row) { return items.filter(function (item) { return item.ref === row.against_ref; })[0]; });
+    rows.forEach(function (row) { total += +row.amount_minor || 0; });
+    var bad = !rows.length || bills.some(function (bill, at) { return !bill || !(+rows[at].amount_minor > 0) || +rows[at].amount_minor > bill.open_minor || String(bill.party) !== String(bills[0].party); });
+    if (bad || total !== minor) return { why: 'the bills you picked must be open bills of one party, each no more than it owes, and add up to exactly ' + minor + ' minor units' };
+    return { against: rows.map(function (row, at) { return { against_ref: row.against_ref, bill_no: bills[at].bill_no || null, amount_minor: +row.amount_minor }; }) };
+  }
+  var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_, settlement: settlement, billsOf: billsOf, pickOf: pickOf };
   /* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page takes window.CBBankEntry. */
   if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
   if (root && typeof root.window !== 'undefined') root.window.CBBankEntry = EXPORTS;
