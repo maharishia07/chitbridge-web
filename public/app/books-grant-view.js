@@ -256,7 +256,8 @@
     return !isAdviser() && !viewState.why ? '<button data-cbsid="NET005-B02" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
   }
   function openBank() {
-    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank'));
+    var report = viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (viewState.period ? root.CBPeriodPick.toAddress(viewState.period) : ''); /* E10: the screen and the period ride to Bank and back */
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
   }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {
