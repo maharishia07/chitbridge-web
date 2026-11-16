@@ -49,7 +49,8 @@ function obCss() {
     '.ob-bill{display:grid;grid-template-columns:minmax(110px,1.4fr) minmax(70px,1fr) 128px 128px minmax(100px,1fr) 28px;gap:6px;align-items:center}' +
     '.ob-foot{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:var(--fs-1)}.ob-num{text-align:end;font-variant-numeric:tabular-nums}' +
     '.ob-years{display:flex;flex-wrap:wrap;gap:6px}.ob-year{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:var(--fs-1)}.ob-ok{color:var(--ok-2,var(--ok,green))}.ob-bad{color:var(--warn-2,var(--bad,#b42318))}' +
-    '@media (max-width:520px){.ob-row{grid-template-columns:1fr 1fr}.ob-row .ob-name{grid-column:1/-1}.ob-hd .ob-name{grid-column:1}.ob-bill{grid-template-columns:1fr 1fr}.ob-bill .ob-del{justify-self:end}}';
+    '.ob-sw{display:none}' +
+    '@media (max-width:520px){.ob-hd{display:none}.ob-row{grid-template-columns:76px minmax(0,1fr);align-items:center}.ob-row .ob-name{grid-column:1/-1;white-space:normal}.ob-row .ob-sw{display:block;grid-column:1;grid-row:2;min-width:0}.ob-row[data-side="dr"]>:nth-child(3),.ob-row[data-side="cr"]>:nth-child(2){display:none}.ob-row[data-side="dr"]>:nth-child(2),.ob-row[data-side="cr"]>:nth-child(3){grid-column:2;grid-row:2;min-width:0}.ob-bills{padding-inline-start:0}.ob-bill{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ob-bill>*{min-width:0;max-width:100%;box-sizing:border-box;font-size:12px}.ob-bill>:nth-child(1){grid-column:1/-1}.ob-bill>:nth-child(5){grid-column:1/3}.ob-bill>:nth-child(6){grid-column:3;justify-self:end}.ob-bill{border:1px solid var(--line);border-radius:8px;padding:6px}.ob-head{gap:6px 8px}}';
   document.head.appendChild(node);
 }
 function obErr(e, fallback) {
@@ -139,25 +140,12 @@ function obField(id, minor, on, label) {
     ? bkMoneyInput({ id: id, tid: id, minor: minor, on: on, extra: 'aria-label="' + esc(label) + '" data-cbsid="CMP040-I01"' + obMount('CMP040') })
     : '<input class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(label) + '" inputmode="decimal">';
 }
-/** a ledger with bills shows the bills' total on its own side, read-only and greyed, "from n bills": the server's figure (the preview's pair), never a sum made here; every other cell is a money field */
-function obSideCell(row, i, side, total) {
-  var n = row.bills.filter(function (bill) {
-    return bill.party_id && bill.minor;
-  }).length;
-  if (obHasBills(row) && n && obSide(row) === side)
-    return (
-      '<div class="ob-num" data-testid="ob-from-bills-' + esc(row.code) + '" style="color:var(--grey)" title="' + esc(tx('Filled from its bills')) + '">' +
-      (total != null ? esc(bkMoney(total, OB.pv && OB.pv.currency)) : '…') +
-      '<br><small>' + esc(n === 1 ? tx('from 1 bill') : txf('from {n} bills', { n: n })) + '</small></div>'
-    );
-  return obField('ob_' + side + '_' + i, row[side], 'obCell(' + i + ",'" + side + "')", row.name + ' ' + tx(side === 'dr' ? 'Debit' : 'Credit'));
-}
 function obRowHtml(row, i) {
   var hint = obHasBills(row) && OB.pv ? obBillsTotalOf(row.code) : null; /* the server's bills total for this ledger, as a placeholder: the page sums nothing */
   var html =
     '<div class="ob-row' +
     (row.pinned ? ' ob-pin' : '') +
-    '" data-testid="ob-row-' +
+    '" data-side="' + obSideOf(row) + '" data-testid="ob-row-' +
     esc(row.code) +
     '"><div class="ob-name" title="' +
     esc(row.name) +
@@ -173,6 +161,7 @@ function obRowHtml(row, i) {
     '</div>' +
     obSideCell(row, i, 'dr', hint) +
     obSideCell(row, i, 'cr', hint) +
+    obSwitchHtml(row, i) +
     '</div>';
   if (row.open && obHasBills(row)) html += obBillsHtml(row, i, hint);
   return html;
