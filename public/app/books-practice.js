@@ -245,18 +245,26 @@
     var y = r.year_end;
     if (!y) return '—';
     if (y.first_year) return esc(tx('First year'));
-    var figures = esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(tx('bank not to year end')));
-    return r.stage ? '<b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '<br><span class="sub">' + figures + '</span>' : figures;
+    var figures = esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(bankWords(r)));
+    /* F4 (17 Nov): ONE line per client, the stage and the one blocker; the figures sit in the title and one press away on the sheet (no second statement of the blocker, so the row is not two lines) */
+    return r.stage ? '<span class="bp-yend" data-cbsid="HOM001-P16" title="' + esc(figures.replace(/<[^>]*>/g, '')) + '"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>' : figures;
   }
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {
     var y = r.year_end, b = r.stage_blocker, n;
     if (!b) return '';
     if (b === 'months') { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
-    if (b === 'bank') return ' · ' + esc(tx(r.bank && r.bank.state === 'none' ? 'no bank statement signed' : 'bank not to year end'));
+    if (b === 'bank') return ' · ' + esc(bankWords(r));
     if (b === 'checked') return ' · ' + esc(tx('not checked'));
     if (b === 'queries') return ' · ' + esc(r.queries.open) + ' ' + esc(tx(r.queries.open === 1 ? 'query open' : 'queries open'));
     return '';
+  }
+  /** F1 (17 Nov): the bank's words from the one answer the Bank page reads (the client's newest sign-off, bank.state / unexplained_minor / reconciled_to): the same words the Bank page uses ('{a} unexplained' · 'Signed off to {d}'), never a second wording; 'bank not to year end' only when the answer carries no sign-off figure */
+  function bankWords(r) {
+    var b = r.bank || {};
+    if (b.state === 'none') return tx('no bank statement signed');
+    if (b.state === 'unexplained') return tx('{a} unexplained').replace('{a}', bankLeft(r));
+    return b.reconciled_to ? tx('Signed off to {d}').replace('{d}', day(b.reconciled_to)) : tx('bank not to year end');
   }
   function shortDay(iso) {
     try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return day(iso); }
@@ -430,9 +438,11 @@
   }
   /* A3P rank 5: on Year end a client opens where its blocker is (the server's stage_blocker): months → Months · bank → Bank · not checked or a query → Day book, the year picked; no blocker or no year → the client as before */
   var BLOCKER_VIEW = { months: 'periods', bank: 'bank', checked: 'daybook', queries: 'daybook' };
+  /* F3: a client whose blocker is entries opens the Day book already narrowed to them (the Day book's own Mark filter words, read from the address by books-grant-filters.js): not checked · queried */
+  var BLOCKER_MARK = { checked: 'notchecked', queries: 'query' };
   function openBooks(id, band) {
     var r = band === 'pipeline' ? (P.data.clients || []).filter(function (x) { return String(x.entity_id) === String(id); })[0] : null;
-    var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) : '';
+    var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) + (BLOCKER_MARK[r.stage_blocker] ? '&dbf_mark=' + BLOCKER_MARK[r.stage_blocker] : '') : '';
     root.location.href = to || '/network.html?open=' + encodeURIComponent(id);
   }
   /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
@@ -477,7 +487,7 @@
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
-      '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
+      '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
     root.document.head.appendChild(s);
@@ -655,5 +665,5 @@
   else start();
   root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: checkedWords, checkedLeft: checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { use: function (d) { P.data = d; P.band = null; P.filter = null; }, compareHTML: compareHTML, pairHTML: pairHTML, yendCell: yendCell, detailHTML: detailHTML, sorts: sorts, statusCell: statusCell, workOrder: workOrder, sheetHTML: sheetHTML, pictureHTML: pictureHTML, stripHTML: stripHTML, columns: columns, filters: filters, bandHTML: bandHTML, stageWord: stageWord, BAND_COLS: BAND_COLS } };
+    parts: { bankWords: bankWords, openBooks: openBooks, use: function (d) { P.data = d; P.band = null; P.filter = null; }, compareHTML: compareHTML, pairHTML: pairHTML, yendCell: yendCell, detailHTML: detailHTML, sorts: sorts, statusCell: statusCell, workOrder: workOrder, sheetHTML: sheetHTML, pictureHTML: pictureHTML, stripHTML: stripHTML, columns: columns, filters: filters, bandHTML: bandHTML, stageWord: stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

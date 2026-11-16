@@ -417,9 +417,9 @@
   }
   /** a heading naming the date the figures stand at */
   function asAt(report) {
-    var a = viewState.answer || {}, date = viewState.day || a.asOf || a.as_of || a.to || '';
+    var a = viewState.answer || {}, date = viewState.day || a.shown_as_at || a.asOf || a.as_of || a.to || '', running = !viewState.day && a.shown_as_at && a.asOf && a.shown_as_at < a.asOf; /* F5: an unfinished year says the shop day the api carried (shown_as_at), never its end */
     if (report.k === 'pl' && a.from && a.to && !viewState.day) return '<span class="tag" data-testid="bv-for">' + esc(words('For')) + ' ' + esc(root.shopDay(a.from)) + ' – ' + esc(root.shopDay(a.to)) + '</span>'; /* W18: a profit and loss is for a period, never "as at" a day */
-    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs' || report.k === 'dues') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</span>' : '';
+    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs' || report.k === 'dues') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + (running ? ' · ' + esc(words('year to date')) : '') + '</span>' : '';
   }
   /** the Day pick (a report that can stand at one day) */
   function dayPick(report) {
