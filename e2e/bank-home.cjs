@@ -88,7 +88,7 @@ function stand() {
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-      if (p === '/api/books/health') return json(r, 200, books.health());
+      if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year and country, as the page reads them */
       if (p === '/api/books/todo') return json(r, 200, []);
       if (p === '/api/books/accounts') return json(r, 200, { accounts: chart.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
@@ -203,7 +203,7 @@ function stand() {
     S2.signedBy['1500'] = monthsEnding('2026-03', 9).map((month) => ({ period_from: month + '-01', period_to: lastDay(month), at: '2026-09-02T01:00:00Z', by_name: 'Mayur', difference_minor: 0, tied: true, currency: 'INR' })); /* 2025-07 … 2026-03 signed off */
     const { ctx, p } = await open(S2, { accts, session: AU });
     const view = (w, h) => p.setViewportSize({ width: w, height: h }).then(() => p.waitForTimeout(350));
-    const fitsNow = () => p.evaluate(() => document.querySelector('.main').scrollHeight <= document.querySelector('.main').clientHeight + 2 && document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    const fitsNow = async () => { const r = await p.evaluate(() => { const m = document.querySelector('.main'); return { h: m.scrollHeight, c: m.clientHeight, w: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }; }); const good = r.h <= r.c + 2 && r.w <= r.cw; if (!good) console.log('  FIT ' + JSON.stringify(r)); return good; };
     const clipped = () => p.evaluate(() => Array.from(document.querySelectorAll('.bks-grid td button, .bks-grid td span.bks-sum, .bks-grid td')).filter((n) => n.scrollWidth > n.clientWidth + 1).map((n) => n.getAttribute('data-testid') || n.tagName).slice(0, 5));
     const fyNow = () => p.textContent('[data-testid="bank-home-fy-now"]');
     const retention = await p.evaluate(() => Number((shopReg() || {}).retentionYears || 0));
