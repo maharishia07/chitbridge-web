@@ -2978,7 +2978,7 @@ function bkLtModel(accounts) {
         grp = { title: title, accts: [] };
         band.groups.push(grp);
       }
-      grp.accts.push({ code: code, name: String(item.name || ''), short: item.short_name || item.short || '' });
+      grp.accts.push({ code: code, name: String(item.name || ''), short: item.short_name || item.short || '', role: item.role || null });
     });
   bands.forEach(function (item) {
     item.groups.sort(function (x, y) {
