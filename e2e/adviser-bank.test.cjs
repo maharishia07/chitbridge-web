@@ -3,7 +3,7 @@
 /**
  * adviser-bank.test.cjs - the web half of lane l16/adviser-bank, no browser, no api: an acting ADVISER works the Bank page.
  *
- * OWNS      (1) the Bank tab opens for an adviser and stays hidden for an auditor; (2) the seat rule: a firm holding ONE adviser grant (and one auditor grant) sends X-Books-Role: adviser / none,
+ * OWNS      (1) the Bank tab opens for an adviser and opens read-only for an auditor (audbank); (2) the seat rule: a firm holding ONE adviser grant (and one auditor grant) sends X-Books-Role: adviser / none,
  *           chosen by the held grant's preset, never by how many grants are held; (3) the post adapter: posts only when the grant posts, never makes a party; (4) the words of who did it.
  * CALLED BY CI (offline guards) · by hand: node e2e/adviser-bank.test.cjs
  * CARD      16-finance/bank-reconciliation-and-bank-rail
@@ -26,7 +26,7 @@ const menu = [['daybook'], ['bank'], ['compare']], groups = [['Books', ['daybook
 A.keepTabs(menu, groups);
 check(menu.map((m) => m[0]).join() === 'daybook,bank' && groups[0][1].join() === 'daybook,bank', 'the menu cut keeps Bank for an adviser');
 A.enter({ id: 's1', name: 'Client Co' }, 'auditor');
-check(A.hides('bank'), 'an auditor does not get the Bank tab');
+check(!A.hides('bank') && !A.posts(), 'an auditor gets the Bank tab, read only (audbank: it never posts)');
 A.enter({ id: 's1', name: 'Client Co' }, 'owner');
 check(!A.hides('bank'), 'the owner is not held back');
 
