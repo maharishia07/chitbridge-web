@@ -131,7 +131,7 @@ function bkstSummary() {
   if (!data || !BKST.fileTotal) return data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet');
   const gaps = bkstMissing(data),
     kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
-  return kept + (gaps ? txf('{n} months missing', { n: gaps }) : tx('Every month is kept'));
+  return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept'));
 }
 /** the box's one line: its name, what it holds (the gap to fix) and, on the home only, the press that opens Add statement (BKS014-B41) */
 function bkstBarInner(open, ready) {
@@ -295,15 +295,28 @@ function bkstFilesFoot() {
     CBList.pager({ prev: { label: tx('Previous'), tid: 'bank-stmts-prev', act: 'bankStmtPage(-1)', off: BKST.ix === 0 }, next: { label: tx('Next'), tid: 'bank-stmts-next', act: 'bankStmtPage(1)', off: !data.next } })
   );
 }
+const bkstPhone = () => !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
+/** a phone's row of the files list: two lines, "Account 10 · Oct 2026" with Read and Download as small icon presses, then the file name (muted, cut short) and who added it */
+function bkstFileCard(file) {
+  const month = String(file.period_to || '').slice(0, 7),
+    id = bkstE(file.id),
+    press = (code, tid, run, glyph, word) => '<button data-cbsid="' + code + '" type="button" class="bks-btn bkf-ic" data-testid="' + tid + '" data-file="' + id + '" onclick="event.stopPropagation();' + run + '(this)" title="' + bkstE(word) + '" aria-label="' + bkstE(word + ' · ' + file.name) + '"><span aria-hidden="true">' + glyph + '</span></button>';
+  return (
+    '<span class="bkf-l1"><b>' + bkstE(bkstAccountName(bkstAccountOf(file.account_id))) + ' · ' + bkstE(bkstMonth(month) + ' ' + month.slice(0, 4)) + '</b><span class="bks-acts">' +
+    press('BKS014-B42', 'bank-stmts-read', 'bankStmtRead', '▸', tx('Read')) + press('BKS014-B43', 'bank-stmts-download', 'bankStmtDownload', '↓', tx('Download')) + '</span></span>' +
+    '<span class="bkf-l2" title="' + bkstE(file.name) + '">' + bkstE(file.name) + (file.overlaps ? ' · ⚠' : '') + ' · ' + bkstE(bkstFileBy(file)) + '</span>'
+  );
+}
 function bkstFilesOptions() {
+  const phone = bkstPhone();
   return {
     key: 'bank-stmts-files',
     t: tx,
     rows: () => (BKST.data ? BKST.data.files : []),
     id: (file) => file.id,
     rowTid: (file) => 'bank-stmts-file-' + file.id,
-    defaultCols: ['account', 'period', 'name', 'by', 'acts'],
-    columns: [
+    defaultCols: phone ? ['card'] : ['account', 'period', 'name', 'by', 'acts'],
+    columns: (phone ? [{ key: 'card', label: tx('File'), prio: 1, keep: true, w: 300, html: true, cell: bkstFileCard }] : []).concat([
       { key: 'account', label: tx('Account'), prio: 1, keep: true, w: 170, cell: (file) => bkstAccountName(bkstAccountOf(file.account_id)) },
       { key: 'period', label: tx('Period'), prio: 2, w: 210, html: true, cell: (file) => bkstE(bkDate(file.period_from)) + ' – ' + bkstE(bkDate(file.period_to)) + (file.overlaps ? ' <span class="bks-flag" title="' + bkstE(tx('Two statements cover this month')) + '">⚠ ' + bkstE(tx('overlap')) + '</span>' : '') },
       { key: 'name', label: tx('File'), prio: 3, w: 200, cell: (file) => file.name },
@@ -319,7 +332,7 @@ function bkstFilesOptions() {
           '<span class="bks-acts"><button data-cbsid="BKS014-B42" type="button" class="bks-btn" data-testid="bank-stmts-read" data-file="' + bkstE(file.id) + '" onclick="event.stopPropagation();bankStmtRead(this)">' + bkstE(tx('Read')) + '</button>' +
           '<button data-cbsid="BKS014-B43" type="button" class="bks-btn" data-testid="bank-stmts-download" data-file="' + bkstE(file.id) + '" onclick="event.stopPropagation();bankStmtDownload(this)">' + bkstE(tx('Download')) + '</button></span>'
       }
-    ],
+    ]),
     search: (file) => [bkstAccountName(bkstAccountOf(file.account_id)), file.name, file.period_from, file.period_to].join(' '),
     searchHint: tx('Account, month or file name'),
     empty: { title: tx('No kept file matches') },

@@ -147,7 +147,7 @@ function stand(pending) {
   /* ── 3 · THE MONTH FILLS · A DUPLICATE ── */
   await p.waitForSelector('[data-testid="bank-stmts-have-acc-1500-2026-09"]');
   ok(/1/.test(await p.textContent('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && await p.locator('.bks-miss').count() === 4, 'September fills; four months are still missing');
-  ok(/4 months missing/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary follows: "4 months missing"');
+  ok(/4 missing/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary follows: "4 missing"');
   await pick(p, 'sep-again.csv', SEP);
   await p.click('[data-testid="bank-stmts-add-go"]');
   await p.waitForSelector('#bks_out [data-testid="pe-refused"]');

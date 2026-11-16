@@ -256,6 +256,7 @@ function stand() {
     const topId = await p.locator('[data-testid^="bank-stmts-file-"]').first().getAttribute('data-testid');
     ok(/stmt-1509-2026-10/.test(await p.locator('[data-testid^="bank-stmts-file-"]').first().textContent()), 'newest on top: the first row is ' + (await p.locator('[data-testid^="bank-stmts-file-"]').first().textContent()).replace(/\s+/g, ' ').slice(0, 80));
     ok(await fitsNow(), '1366: the files list open: no page scroll');
+    ok(await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'), r = n.getBoundingClientRect(); return r.bottom <= window.innerHeight; }), '1366: Previous and Next are on screen');
     await shot2('14-files-1366.png');
     await p.focus('[data-testid="bank-stmts-next"]');
     await p.keyboard.press('Enter');
@@ -309,6 +310,17 @@ function stand() {
     await p.click('[data-testid="bank-stmts-filesbox"] summary');
     await p.waitForSelector('[data-testid^="bank-stmts-file-"]', { timeout: 10000 });
     ok(await fitsNow(), '390: the files list open: no page scroll');
+    const card = await p.evaluate(() => {
+      const row = document.querySelector('[data-testid^="bank-stmts-file-"]'), l1 = row && row.querySelector('.bkf-l1'), l2 = row && row.querySelector('.bkf-l2'), r = row && row.querySelector('[data-testid="bank-stmts-read"]');
+      if (!row || !l1 || !l2 || !r) return null;
+      const a = l1.getBoundingClientRect(), b = l2.getBoundingClientRect(), c = r.getBoundingClientRect();
+      return { two: b.top >= a.bottom - 1, icon: c.width >= 24 && c.height >= 24, label: !!r.getAttribute('aria-label'), clip: l2.scrollWidth > l2.clientWidth ? 'cut' : 'whole', text: l1.textContent.trim() + ' / ' + l2.textContent.trim() };
+    });
+    ok(card && card.two && card.icon && card.label, '390: each file is two lines, "Account · month" with Read and Download as icon presses (24 px or more, labelled): ' + (card && card.text));
+    const pg = await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'), m = document.querySelector('.main'); if (!n) return null; const r = n.getBoundingClientRect(), mm = m.getBoundingClientRect(); return { in: r.top >= mm.top && r.bottom <= mm.bottom + 1 && r.bottom <= window.innerHeight }; });
+    ok(pg && pg.in, '390: Previous and Next are on screen without scrolling the page');
+    const head = (await p.textContent('[data-testid="bank-stmts-sum"]')).trim();
+    ok(/^Oct ✓ · \d+ missing$/.test(head) && (await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-sum"]'); return n.scrollWidth <= n.clientWidth; })), '390: the header line reads whole, not clipped: "' + head + '"');
     await shot2('23-files-390.png');
     await p.click('[data-testid="bank-stmts-filesbox"] summary');
     await p.click('[data-testid="bank-home-fy-all"]');

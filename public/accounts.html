@@ -279,6 +279,11 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .bkh-all{display:flex;flex-direction:column;gap:6px;margin:6px 0;max-height:clamp(150px,40vh,330px);overflow:auto}#bk_body .bkh-allrow{justify-content:flex-start;text-align:left;width:100%;height:32px;white-space:nowrap}
 /* the whole list of cards, or the kept files, take the place of the grid while they are open: the page never grows */
 #bk_stmts:has(.bkh-cards-all) :is(.bks-wrap.bkh-gridwrap,.bkh-key),#bk_stmts:has(details.bkh-files[open]) :is(.bkh-cards,.bks-wrap.bkh-gridwrap,.bkh-key,.bks-just,[data-testid=bank-stmts-kept]){display:none}.bkh-pageof{font-size:12.5px;color:var(--muted-2);margin-inline-end:8px}
+#bk_stmts .cbl-foot{position:sticky;bottom:0;z-index:2;background:var(--surface);padding:2px 0}
+.bkf-l1{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}.bkf-l1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.bkf-l1 .bks-acts{display:inline-flex;gap:6px;flex:none}
+.bkf-l2{display:block;min-width:0;color:var(--muted-2);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bk_body .bks-btn.bkf-ic{width:28px;height:28px;min-height:28px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1}
+@media (max-width:760px){#bk_stmts:has(.bkh-body) .bks-bar>b{display:none}}
 #bk_body .bks-tog{white-space:nowrap;flex:none}
 .bkh-files{margin-top:8px}.bkh-files summary{cursor:pointer;min-height:32px;display:list-item;list-style-position:inside;line-height:32px;font-size:13px;color:var(--muted-2)}
 .bkh-trail{display:flex;align-items:center;gap:8px;min-height:24px;font-size:13.5px}
