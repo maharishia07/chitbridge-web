@@ -31,9 +31,9 @@ button{font-family:inherit;cursor:pointer}
 .nw-tab{min-height:40px;padding:0 16px;border:1px solid var(--line-3,#d8ccb0);border-radius:9px;background:transparent;color:var(--ink,#2a2418);font-size:14px;font-weight:600}
 .nw-tab.on{background:var(--accent,#1f5f5b);border-color:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec)}
 .nw-tab.no{opacity:.6}
-.nw-body{display:flex;flex-direction:column;gap:12px;flex:1}
+.nw-body{display:flex;flex-direction:column;gap:12px;flex:1;min-width:0}.nw-body>*{min-width:0;max-width:100%}   /* l16 n12 N2: a flex child is never wider than the phone (414 px in 302 on the adviser client page) */
 .nw-nets{display:flex;flex-wrap:wrap;gap:10px}
-.nw-net{border:1px solid var(--line,#e6dcc6);border-radius:12px;background:var(--surface,#fffdf8);padding:10px 14px;min-width:220px}
+.nw-net{border:1px solid var(--line,#e6dcc6);border-radius:12px;background:var(--surface,#fffdf8);padding:10px 14px;min-width:min(220px,100%)}
 .nw-list{flex:1;min-height:420px;display:flex;flex-direction:column}
 .nw-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 0}
 .nw-why{padding:10px 14px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);border-radius:10px;font-weight:600}
