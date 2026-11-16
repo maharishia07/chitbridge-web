@@ -11,7 +11,7 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
-const BKH = { signed: {}, known: false, noPush: false, shown: 3 };
+const BKH = { signed: {}, known: false, noPush: false, shown: 3, deepDone: false };
 const bkhE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 /** 'September 2026' for '2026-09', in the reader's language (a date helper, no money) */
 function bkhMonthLong(month) {
@@ -287,5 +287,11 @@ function bankHomeRoute() {
     return bankHomeOpen(account, hit[2]);
   }
   bankHomeShow();
+}
+/** once, when the first list has come in: a reload or a bookmark on #bank/<account>/<month> opens that account's month (the same route the browser's Back and Forward walk) */
+function bankHomeDeepOnce() {
+  if (BKH.deepDone) return;
+  BKH.deepDone = true;
+  if (BKST.mode === 'server') bankHomeRoute();
 }
 window.addEventListener('popstate', bankHomeRoute);

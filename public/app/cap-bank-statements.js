@@ -97,6 +97,7 @@ async function bankStmtAllLoad() {
     BKST.all = false;
   }
   bankStmtPaint();
+  if (typeof bankHomeDeepOnce === 'function') bankHomeDeepOnce(); /* a reload on #bank/<account>/<month> reopens that statement once the list is in */
 }
 /** the files list asked for another search or page: only the files are read again (the cells stay) */
 async function bkstFilesGo() {
@@ -196,6 +197,8 @@ function bankStmtToggle() {
   const open = BKST.open === null ? !(BKST.data && (BKST.fileTotal || BKST.data.older)) : BKST.open;
   BKST.open = !open;
   bankStmtPaint();
+  const press = document.querySelector('[data-testid="bank-stmts-toggle"]');
+  if (press) press.focus({ preventScroll: true }); /* the paint drew a new button: the keyboard stays on Add statement (Enter closed the box, focus must not fall to the page) */
 }
 
 /* ── Add statement ── */

@@ -752,6 +752,8 @@ document.getElementById('acc_sheet').addEventListener('click', (e) => {
 });
 
 /* ── which view, and its chrome ── */
+/** the PAGE the address names: the first segment of the # (`#bank/B-1100/2026-03` is the Bank page; the rest belongs to that page, cap-bank-home.js bankHomeRoute reads it) */
+const hashPageOf = () => (location.hash || '').replace(/^#\/?/, '').split('/')[0];
 function chrome(view) {
   const nav = NAV.find((item) => item[0] === view) || NAV[0];
   if (window.CBScreenId) CBScreenId.here('accounts', nav[0]); /* SCREEN-ID: the view on show is the screen the chip names */
@@ -763,7 +765,8 @@ function chrome(view) {
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
   try {
-    history.replaceState(null, '', '#' + nav[0]);
+    /* the page's own deep address (#bank/<account>/<month>) stays through the first paint, so a reload or a bookmark reopens it (cap-bank-home bankHomeDeepOnce); a press on the menu after that names the page alone */
+    if (hashPageOf() !== nav[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) history.replaceState(null, '', '#' + nav[0]);
   } catch (_) {}
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
@@ -1173,7 +1176,7 @@ async function start() {
   /* ⭐ UI9: the WHOLE frame at once — the menu, the title and the rows' room — before anything is read; the views then fill only the rows.
      (The Ledger's answer below can still turn this into the "not switched on" card; nothing here reads or writes.) */
   {
-    const f0 = (location.hash || '').replace(/^#\/?/, ''),
+    const f0 = hashPageOf(),
       v0 = NAV.some((item) => item[0] === f0) ? f0 : CBBooksActing.firstTab();
     chrome(v0);
     if (v0 !== 'ledgers')
@@ -1189,7 +1192,10 @@ async function start() {
   if (g !== ACC.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   try {
-    const reply = await api('booksHealth'); /* 404 = the Ledger is off for this shop */
+    /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
+    const mine = await api('me');
+    if (!(mine && mine.ledger_on === true)) return offCard();
+    const reply = await api('booksHealth');
     BK.waiting = (reply && reply.waiting) || [];
     if (reply && reply.year) BK.year = reply.year; /* the shop's year — cap-books bkFyNow / bkMonths paint it, never an April of their own */
     if (reply && reply.currency) BK.cur = reply.currency; /* the ledger's money — bkCur's answer when a figure names none */
@@ -1205,7 +1211,7 @@ async function start() {
     return failedCard();
   }
   if (!ON) return offCard();
-  const first = (location.hash || '').replace(/^#\/?/, '');
+  const first = hashPageOf();
   show(NAV.some((item) => item[0] === first) ? first : CBBooksActing.firstTab()); CBBooksActing.startPage($, enOpen, SESSION.currency); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
 }
 
@@ -1232,7 +1238,7 @@ CBOnePerson.attach({
 });
 /* ⭐ THE # DECIDES THE PAGE (M138): Back, Forward and a typed or shared link land on the page the address says. chrome() writes the # with replaceState, which fires nothing, so a click never loops here. */
 function hashView() {
-  const v = (location.hash || '').replace(/^#\/?/, '');
+  const v = hashPageOf();
   return NAV.some((item) => item[0] === v) ? v : null;
 }
 window.addEventListener('hashchange', () => {
