@@ -112,7 +112,7 @@ W.run('chart-bar', async (w) => {
   });
 
   /* the Colour Vision theme, nothing chosen about Readability */
-  S.prefs = {};
+  S.prefs = { theme: 'cvd' };   /* the person's saved theme: the server holds it, so hydrate keeps it */
   await page.evaluate(() => { localStorage.setItem('cb_theme', 'cvd'); ['cb_chart_read', 'cb_chart_theme', 'cb_chart_fav_series', 'cb_chart_pending'].forEach((k) => localStorage.removeItem(k)); });
   await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
   await w.step('B7', 'the Colour Vision theme switches Readability ON by itself; the person can switch it OFF', async () => {
