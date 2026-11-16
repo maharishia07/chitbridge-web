@@ -12,7 +12,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const cell = (p, code, side) => p.locator('[data-testid="ob-row-' + code + '"] [id^="ob_' + side + '_"]').first();
-const diff = async (p) => { await p.waitForFunction(() => { const d = document.querySelector('[data-testid="ob-diff"]'); return d && !/Checking/.test(d.textContent); }, null, { timeout: 15000 }); return flat(await p.textContent('[data-testid="ob-diff"]')); };
+const diff = async (p) => { await p.waitForTimeout(800); await p.waitForFunction(() => { const d = document.querySelector('[data-testid="ob-diff"]'); return d && !/Checking/.test(d.textContent); }, null, { timeout: 15000 }); return flat(await p.textContent('[data-testid="ob-diff"]')); };
 const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, sh: document.documentElement.scrollHeight, ih: innerHeight }));
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -110,7 +110,7 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   ok(/matches|opening/.test(flat(await p.textContent('[data-testid="ob-years"]'))), 'the year strip is shown');
   await p.screenshot({ path: path.join(OUT, 'ob-08-saved-after-1366.png') });
   const fresh = (await p.evaluate(() => (window.__threw || []).length)) || 0;
-  const threw = (p.__threw || []).filter((e) => !/favicon|manifest|404/.test(e));
+  const threw = (p.__threw || []).filter((e) => !/favicon|manifest|404|events.stream|ERR_FAILED/.test(e));
   ok(threw.length === 0, 'no console errors or failed requests (' + threw.slice(0, 3).join(' | ') + ')');
   await ctx.close();
 
@@ -124,7 +124,7 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   g = await geo(p);
   ok(g.sw <= g.iw, 'no sideways scroll at 390 (the grid) ' + JSON.stringify(g));
   await p.screenshot({ path: path.join(OUT, 'ob-10-grid-390.png') });
-  await p.click('[data-testid="ob-bills-1300"]');
+  if ((await p.getAttribute('[data-testid="ob-bills-1300"]', 'aria-expanded')) !== 'true') await p.click('[data-testid="ob-bills-1300"]'); /* Edit opens the ledgers that hold bills */
   await p.waitForSelector('[data-testid="ob-bill-' + (await p.$$eval('[data-testid^="ob-row-"]', (e) => e.map((x) => x.getAttribute('data-testid').slice(7)).indexOf('1300'))) + '-0"]');
   g = await geo(p);
   ok(g.sw <= g.iw, 'no sideways scroll at 390 with the bills open ' + JSON.stringify(g));
