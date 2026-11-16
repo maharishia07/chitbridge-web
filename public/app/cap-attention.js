@@ -181,5 +181,5 @@
     var c = key(id).counts;
     return c && c.needs > 0 ? Number(c.needs) : 0;
   }
-  root.CBAttention = { mount: mount, open: open, page: page, needs: needs, words: W };
+  root.CBAttention = { mount: mount, open: open, page: page, needs: needs, styles: css, words: W };
 })(typeof window !== 'undefined' ? window : this);

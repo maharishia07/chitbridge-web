@@ -5155,6 +5155,11 @@ function bkBillTitle(row) {
 /** W15-113: a tax invoice is attached to a held bill → offer to release the hold; the owner confirms, nothing releases by itself */
 function bkAskRelease(pid, row) {
   var marks = bkMarkControl();
+  /* the hold is the AUDITOR's mark (api lib/mark-adopters: only grant:auditor sets): an owner who may not set one is told, not offered a button that would be refused */
+  if (marks && row.entry_id && !marks.mayCheck(row.entry_id)) {
+    if (typeof toast === 'function') toast(tx('The tax invoice is attached. The hold is the auditor\'s to release.'));
+    return bkPbSet(pid, {}, true);
+  }
   if (!marks || !row.entry_id || typeof CBConfirm !== 'function') return bkPbSet(pid, {}, true);
   CBConfirm(
     tx('Release the hold?'),
@@ -5410,6 +5415,7 @@ function bkNeedsHead() {
   if (sum.query) parts.push(seg('query', '<b>' + sum.query + '</b> ' + esc(tx('open queries'))));
   if (sum.held) parts.push(seg('held', '<b>' + sum.held + '</b> ' + esc(tx('on hold'))));
   if (sum.overdue) parts.push(seg('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, c)) : sum.overdue) + '</b> ' + esc(tx('overdue'))));
+  if (typeof CBAttention !== 'undefined' && CBAttention.styles) CBAttention.styles(); /* the one strip look (Day book, Ledgers, BAS and this line) */
   host.innerHTML = '<div class="attn-strip" role="status" data-testid="needs-head">' + (parts.length ? parts.join(' · ') : '<span class="attn-ok" data-b="needs-ok">✓ ' + esc(tx('Nobody needs you')) + '</span>') + '</div>';
 }
 /** a press on the header line: the list narrows to that reason; the same press again puts it back */
