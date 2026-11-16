@@ -111,7 +111,7 @@ const bankStoreLine = () =>
   bankStoreState.blind
     ? bksCostBlindSay() /* the api's 403 COST_BLIND: said, not the "could not reach" line (silence is the bug) */
     : bankStoreState.mode === 'server'
-    ? tx('Marks and notes are kept for your accountant too.')
+    ? (typeof bkbReadOnly === 'function' && bkbReadOnly() ? '' : tx('Marks and notes are kept for your accountant too.')) /* R3-3: the read-only auditor makes no marks, so the line is not said to them */
     : bankStoreState.mode === 'device'
       ? tx('Saved on this device until the next update')
       : tx('Could not reach the shared record. Saved on this device for now.'); /* FIN-118: never the server's raw sentence (it named a route); the words are ours */
