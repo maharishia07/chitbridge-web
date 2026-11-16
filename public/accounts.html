@@ -1193,8 +1193,13 @@ async function start() {
   if (t.others.length) return closeFirst(t);
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
-    const mine = await api('me'),
+    let me = {};
+    try {
+      const mine = await api('me');
       me = (mine && mine.entity) || mine || {};
+    } catch (_) {
+      me = {}; /* /me failed: UNKNOWN, never "off" — fall through to the old probe, whose 404 is the only "off" */
+    }
     if (typeof me.ledger_on === 'boolean' && !me.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
     BK.waiting = (reply && reply.waiting) || [];

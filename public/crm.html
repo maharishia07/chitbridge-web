@@ -630,8 +630,8 @@ async function start() {
     else CRM.ledger = await api('booksHealth').then(() => true, () => false); /* an api that does not say (no ledger_on): the old probe, 404 = off */
     if (reply && reply.country) SESSION.country = reply.country;
   } catch (e) {
-    /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
-    CRM.ledger = false;
+    /* /me failed: UNKNOWN, never "off" — the old probe decides (404 = off); CX0 country is just not set */
+    CRM.ledger = await api('booksHealth').then(() => true, () => false);
   }
   try {
     localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0');
