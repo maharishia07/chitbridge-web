@@ -1824,7 +1824,7 @@
        what    the thing that could not be read, already in the person's words ("Your practice", "Your client list")
        status  the HTTP status (0 / absent = no answer): 403 says access and uses the server's own sentence (detail); 429, 5xx and no answer say "could not be read, nothing was changed"
        detail  the server's sentence for a 403 (never invented here); anything else is not printed
-       retry   a function: draws Try again (CMP009-B01); back  { href, label }: the way out
+       retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; back  { href, label }: the way out
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
   function readFailed(host, o) {
     if (!host) return null;
@@ -1838,7 +1838,7 @@
     host.innerHTML =
       '<div class="cbsh-readfail" data-testid="read-failed" data-status="' + (refused ? '403' : status >= 500 ? '5xx' : status === 429 ? '429' : 'none') + '" role="alert" style="padding:12px 0">' +
       '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' +
-      (typeof o.retry === 'function' ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
+      (typeof o.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
     var again = host.querySelector('[data-testid="read-failed-retry"]');
     if (again) again.onclick = o.retry;
     return host.firstChild;

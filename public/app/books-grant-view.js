@@ -268,7 +268,7 @@
   }
   /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
   function band(report) {
-    var ctx = viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + asAt(report) + (viewState.choices ? '' : periodLine(report)) + dayPick(report) + '</span>' + tabSelect(); /* the date the figures stand at, with its Day pick: one place, the header line; the period dropdown says the period, so the Period tag is only the fallback */
+    var ctx = viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + asAt(report) + (viewState.choices ? '' : periodLine(report)) + dayPick(report) + '</span>' + (viewState.why ? '' : lockLines(report)) + tabSelect(); /* the date the figures stand at, with its Day pick: one place, the header line; the period dropdown says the period, so the Period tag is only the fallback */
     root.CBBooksActing.css(); /* the one header line's rules, for the auditor's band too (the adviser's banner draws them itself) */
     if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores, screenName(), false, ctx);
     return (
@@ -306,9 +306,8 @@
       band(report) +
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
-      (viewState.why ? '' : lockLines(report)) +
       (viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
-      (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
+      (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
     if (viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: viewState.failure && viewState.failure.status, detail: viewState.failure && viewState.failure.detail, retry: function () { reload(); } });
@@ -387,15 +386,16 @@
     if (report.k !== 'daybook' || viewState.day || !viewState.range) return '';
     return '<span class="tag" data-testid="bv-period">' + esc(words('Period')) + ' ' + esc(root.shopDay(viewState.range.from)) + ' – ' + esc(root.shopDay(viewState.range.to)) + '</span>';
   }
-  /** W22: the firm's Months view, the lock in ONE line as Xero's lock date reads: "Books start Jul 2025" · "Locked to 31 Jan 2026" · "Open: Feb 2026 (gap)" — every word and date the server's (books_start, lock_date, gaps); months before the books start are not listed */
+  /** W22 (fd17: ONE short tag in the header line, no row of its own): the firm's Months view, the lock as Xero's lock date reads it. The tag says the lock ("Locked to 31 Jan 2026" + the count of open gaps); the full sentence (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)) is its title and its aria-label. Every word and date is the server's (books_start, lock_date, gaps); months before the books start are not listed */
   function lockLines(report) {
     var a = viewState.answer;
     if (report.k !== 'periods' || !a || !a.books_start) return '';
     var names = typeof root.monthNames === 'function' ? root.monthNames('short') : [];
     var monthOf = function (m) { var at = String(m.start_date || ''); return (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4); };
-    var lines = [['start', words('Books start') + ' ' + monthOf(a.books_start)], ['lock', a.lock_date ? words('Locked to') + ' ' + root.shopDay(a.lock_date) : words('Not locked from the books start')]];
-    if ((a.gaps || []).length) lines.push(['gap', words('Open') + ': ' + a.gaps.map(monthOf).join(', ') + ' (' + words('gap') + ')']);
-    return '<div class="nw-acts" data-testid="bv-lock-lines">' + lines.map(function (l) { return '<span class="tag" data-testid="bv-lock-' + l[0] + '">' + esc(l[1]) + '</span>'; }).join('') + '</div>';
+    var gaps = a.gaps || [], lock = a.lock_date ? words('Locked to') + ' ' + root.shopDay(a.lock_date) : words('Not locked from the books start');
+    var full = [words('Books start') + ' ' + monthOf(a.books_start), lock].concat(gaps.length ? [words('Open') + ': ' + gaps.map(monthOf).join(', ') + ' (' + words('gap') + ')'] : []).join(' · ');
+    var short = lock + (gaps.length ? ' · ' + gaps.length + ' ' + words('gap') : '');
+    return '<span class="tag bv-lock" data-testid="bv-lock-lines" title="' + esc(full) + '" aria-label="' + esc(full) + '" data-full="' + esc(full) + '">' + esc(short) + '</span>';
   }
   function facts(report) {
     var items = report.facts
@@ -508,9 +508,17 @@
   /** Who owes whom: two aged tables, customers owe and the shop owes suppliers (Current · 1–30 · 31–60 · 61–90 · 90+ days past due), each with its total row, no net total */
   function paintDues(host, report) {
     var all = report.rows(viewState.answer || {}), voice = duesVoice(viewState.o && viewState.o.member && viewState.o.member.name), totals = (viewState.answer && viewState.answer.aged_totals) || {};
-    host.innerHTML = '<h3 class="sub" data-testid="bv-dues-customers-head">' + esc(voice.customer) + '</h3><div id="bv_dues_c" data-testid="bv-dues-customers"></div><h3 class="sub" data-testid="bv-dues-suppliers-head">' + esc(voice.supplier) + '</h3><div id="bv_dues_s" data-testid="bv-dues-suppliers"></div>';
+    var member = viewState.o && viewState.o.member && viewState.o.member.name, heads = { customer: voice.customer, supplier: voice.supplier };
+    /* fd17: ONE heading line per side; a side with nobody owing is that line plus its sentence (no list, no head), the sentence is still the side's own (bv-dues-customers / bv-dues-suppliers) */
+    host.classList.add('bv-dues');
+    host.innerHTML = ['customer', 'supplier'].map(function (who) {
+      var empty = !all.some(function (row) { return row.side === who; }), tid = who === 'customer' ? 'customers' : 'suppliers', id = who === 'customer' ? 'bv_dues_c' : 'bv_dues_s';
+      return '<div class="bv-dues-side' + (empty ? ' bv-dues-nil' : '') + '"><h3 class="sub" data-testid="bv-dues-' + tid + '-head">' + esc(heads[who]) + '</h3>' +
+        (empty ? '<span class="tag" id="' + id + '" data-testid="bv-dues-' + tid + '">' + esc(duesNobody(member, who)) + '</span>' : '<div id="' + id + '" data-testid="bv-dues-' + tid + '"></div>') + '</div>';
+    }).join('');
     ['customer', 'supplier'].forEach(function (who) {
-      var parties = all.filter(function (row) { return row.side === who; }).map(agedRow); /* E15: the server drops a party with nothing open; a side with no party is an empty sentence, never a lone Total row */
+      var parties = all.filter(function (row) { return row.side === who; }).map(agedRow);
+      if (!parties.length) return; /* said in the heading line above */ /* E15: the server drops a party with nothing open; a side with no party is an empty sentence, never a lone Total row */
       var rows = (parties.length ? parties.concat(agedTotalRow(who, totals[who])) : []).map(function (row, n) { return Object.assign({ _n: n }, row); });
       var config = listConfig(report, rows);
       config.key = 'books-grant-dues-' + who;
