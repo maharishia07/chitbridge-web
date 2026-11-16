@@ -182,6 +182,7 @@ html[data-open] .sheet,html[data-open] .scrim{display:block}
 <script src="/app/lab-kit.js"></script>   <!-- the Labs switcher the frame reads -->
 <script src="/app/page-frame.js"></script>   <!-- CBFrame.lab: the standard frame -->
 <script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set, CMP001..CMP010 -->
+<script src="/engine/chart-draw.js"></script>   <!-- CBDraw.contrast: the one WCAG contrast arithmetic (the chart engine's); ui-standard.js calls it -->
 <script src="/app/ui-standard.js"></script>
 <!-- the frame call: inline so the guards read it here (e2e/skeleton-guard.cjs, screen-id-guard.cjs); the CSP names this script by its hash, e2e/ui-standard.test.cjs recomputes it -->
 <script>

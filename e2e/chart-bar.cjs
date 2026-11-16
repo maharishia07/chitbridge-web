@@ -53,15 +53,16 @@ W.run('chart-bar', async (w) => {
   const open = async (url, wait) => { await page.goto('about:blank'); await page.goto(base + url); if (wait) await page.waitForSelector(wait, { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(900); };
   const fills = () => page.evaluate(() => [...document.querySelectorAll('[data-testid^="tr-bar-"]')].map((e) => getComputedStyle(e).fill));
   const rgbOf = (hex) => { const h = hex.slice(1); return 'rgb(' + [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)).join(', ') + ')'; };
+  const setRead = async (on) => { const now = (await page.getAttribute('[data-testid="chart-read"]', 'aria-pressed')) === 'true'; if (now !== on) await page.click('[data-testid="chart-read"]'); };
   const pick = async (testid, value) => { await page.selectOption('[data-testid="' + testid + '"]', value); await page.waitForTimeout(400); };
 
   await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
   await w.step('B1', 'Reports › Trend carries the bar: Colours, Chart type, the star, Readability; each wears its UI code; Readability OFF, Follow my avatar theme chosen', async () => {
     const m = await page.evaluate(() => ({
-      codes: ['chart-bar', 'chart-colours', 'chart-type', 'chart-fav', 'chart-read'].map((t) => (document.querySelector('[data-testid="' + t + '"]') || {}).getAttribute ? document.querySelector('[data-testid="' + t + '"]').getAttribute('data-cbsid') : null),
-      colours: document.querySelector('[data-testid="chart-colours"]').value, read: document.querySelector('[data-testid="chart-read"]').checked,
-      options: [...document.querySelectorAll('[data-testid="chart-colours"] option')].map((o) => o.textContent), mode: document.querySelector('[data-testid="tr-chart"]').getAttribute('data-read') }));
-    return { ok: m.codes.every(Boolean) && new Set(m.codes).size === 5 && m.colours === 'follow' && m.read === false && m.mode === 'off' && m.options.length === 12 && /Follow my avatar theme/.test(m.options[0]),
+      codes: ['chart-colours', 'chart-type', 'chart-fav', 'chart-read'].map((t) => (document.querySelector('[data-testid="' + t + '"]') || {}).getAttribute ? document.querySelector('[data-testid="' + t + '"]').getAttribute('data-cbsid') : null),
+      colours: document.querySelector('[data-testid="chart-colours"]').value, read: document.querySelector('[data-testid="chart-read"]').getAttribute('aria-pressed') === 'true',
+      options: [...document.querySelectorAll('[data-testid="chart-colours"] option')].map((o) => o.textContent), mode: document.querySelector('[data-testid="tr-chart"]').getAttribute('data-read'), group: document.querySelector('[data-testid="chart-bar"]').getAttribute('data-cbsid') }));
+    return { ok: m.codes.join() === 'CMP035-S01,CMP035-S01,CMP034-B01,CMP034-B01' && m.group === null && m.colours === 'follow' && m.read === false && m.mode === 'off' && m.options.length === 12 && /Follow my avatar theme/.test(m.options[0]),
       saw: JSON.stringify(m.codes) + '; colours ' + m.colours + '; Readability ' + m.read + '; mode ' + m.mode + '; ' + m.options.length + ' options, first "' + m.options[0] + '"' };
   });
   await pick('chart-colours', 'okabe');
@@ -98,7 +99,7 @@ W.run('chart-bar', async (w) => {
   await other.close();
 
   await pick('chart-type', 'column');
-  await page.check('[data-testid="chart-read"]'); await page.waitForTimeout(500);
+  await setRead(true); await page.waitForTimeout(500);
   await w.step('B6', 'Readability ON: data-read="on", every mark holds 3:1 against the page, saved as chart_read=on; OFF returns Okabe-Ito', async () => {
     const on = await page.evaluate(() => {
       const card = document.querySelector('#screen'); let bg = 'rgb(255,255,255)';
@@ -107,7 +108,7 @@ W.run('chart-bar', async (w) => {
       return { mode: document.querySelector('[data-testid="tr-chart"]').getAttribute('data-read'), bg, marks, low: Math.min(...marks.map((m) => CBDraw.contrast(m, bg))) };
     });
     const saved = S.prefs.chart_read;
-    await page.uncheck('[data-testid="chart-read"]'); await page.waitForTimeout(500);
+    await setRead(false); await page.waitForTimeout(500);
     const off = await fills();
     return { ok: on.mode === 'on' && on.low >= 3 && saved === 'on' && off.some((x) => x === rgbOf(OKABE_ACT)) && S.prefs.chart_read === 'off', saw: 'mode ' + on.mode + '; lowest mark ' + on.low.toFixed(2) + ':1; saved ' + saved + '; after OFF ' + off[0] + '; server ' + S.prefs.chart_read };
   });
@@ -117,8 +118,8 @@ W.run('chart-bar', async (w) => {
   await page.evaluate(() => { localStorage.setItem('cb_theme', 'cvd'); ['cb_chart_read', 'cb_chart_theme', 'cb_chart_fav_series', 'cb_chart_pending'].forEach((k) => localStorage.removeItem(k)); });
   await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
   await w.step('B7', 'the Colour Vision theme switches Readability ON by itself; the person can switch it OFF', async () => {
-    const auto = await page.evaluate(() => ({ on: document.querySelector('[data-testid="chart-read"]').checked, mode: document.querySelector('[data-testid="tr-chart"]').getAttribute('data-read'), theme: document.documentElement.getAttribute('data-theme') }));
-    await page.uncheck('[data-testid="chart-read"]'); await page.waitForTimeout(400);
+    const auto = await page.evaluate(() => ({ on: document.querySelector('[data-testid="chart-read"]').getAttribute('aria-pressed') === 'true', mode: document.querySelector('[data-testid="tr-chart"]').getAttribute('data-read'), theme: document.documentElement.getAttribute('data-theme') }));
+    await setRead(false); await page.waitForTimeout(400);
     const off = await page.getAttribute('[data-testid="tr-chart"]', 'data-read');
     return { ok: auto.on && auto.mode === 'on' && off === 'off', saw: JSON.stringify(auto) + '; after OFF ' + off };
   });
@@ -141,7 +142,7 @@ W.run('chart-bar', async (w) => {
     const star = await page.getAttribute('[data-testid="chart-fav"]', 'aria-pressed');
     await page.keyboard.press('Tab'); seen.push(await focusTestid());
     await page.keyboard.press('Space'); await page.waitForTimeout(300);
-    const read = await page.isChecked('[data-testid="chart-read"]');
+    const read = (await page.getAttribute('[data-testid="chart-read"]', 'aria-pressed')) === 'true';
     const ring = await page.evaluate(() => { const e = document.activeElement, s = getComputedStyle(e); return (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none'; });
     return { ok: colours !== 'follow' && star === 'true' && read === true && ring && seen.join() === 'chart-colours,chart-type,chart-fav,chart-read', saw: 'colours ' + colours + '; order ' + seen.join('>') + '; star ' + star + '; Readability ' + read + '; focus ring ' + ring };
   });
@@ -150,15 +151,20 @@ W.run('chart-bar', async (w) => {
     await page.setViewportSize({ width, height });
     await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
     await w.step('B10-' + name, 'the bar and the chart fit at ' + width + 'x' + height + ': no horizontal scroll' + (width < 400 ? ', the bar on one line' : ''), async () => {
-      const m = await page.evaluate(() => { const bar = document.querySelector('[data-testid="chart-bar"]'), r = bar.getBoundingClientRect(); return { barH: Math.round(r.height), barW: Math.round(r.width), scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth, sticky: getComputedStyle(bar).position }; });
+      const m = await page.evaluate(() => { const bar = document.querySelector('[data-testid="chart-bar"]'), r = bar.getBoundingClientRect(), hs = [...bar.querySelectorAll('select,button')].map((e) => e.getBoundingClientRect()); return { tops: new Set(hs.map((h) => Math.round(h.top))).size, minTap: Math.round(Math.min(...hs.map((h) => Math.min(h.width, h.height)))), barH: Math.round(r.height), barW: Math.round(r.width), scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth, sticky: getComputedStyle(bar).position }; });
       await page.screenshot({ path: path.join(process.env.CB_SHOTS || __dirname, 'chart-step2-bar-' + name + '.png') }).catch(() => {});
-      return { ok: m.scroll <= 0 && m.sticky === 'sticky' && (width > 400 || m.barH <= 90), saw: JSON.stringify(m) };
+      return { ok: m.scroll <= 0 && m.sticky === 'sticky' && (width > 400 ? m.tops === 1 : (m.tops === 1 && m.minTap >= 44 && m.barH <= 60)), saw: JSON.stringify(m) };
     });
   }
   await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
   await w.step('B11', 'the words of the bar come through tx (the string layer): the labels are words, never keys', async () => {
     const m = await page.evaluate(() => ({ labels: [...document.querySelectorAll('[data-testid="chart-bar"] [aria-label]')].map((e) => e.getAttribute('aria-label')), tx: typeof tx }));
     return { ok: m.tx === 'function' && m.labels.length >= 3 && m.labels.every((x) => /^[A-Z][a-z]/.test(x)), saw: JSON.stringify(m) };
+  });
+  await w.step('B12', 'the bar is built from the library: public/app/chart-bar.js names CMP035-S01 (the menus) and CMP034-B01 (the toggles), no proposed CHB001 code, and every visible word goes through words() (the string layer)', async () => {
+    const source = require('fs').readFileSync(path.join(__dirname, '..', 'public', 'app', 'chart-bar.js'), 'utf8');
+    const ok = source.includes("select: 'CMP035-S01'") && source.includes("toggle: 'CMP034-B01'") && !source.includes('CHB001-') && source.includes("words('Readability')") && source.includes("words('Colours')");
+    return { ok, saw: 'CMP035-S01 ' + source.includes('CMP035-S01') + '; CMP034-B01 ' + source.includes('CMP034-B01') + '; CHB001 left ' + source.includes('CHB001-') };
   });
   if (w.errs.length) await w.step('E0', 'no page errors while walking', async () => ({ ok: false, saw: w.errs.slice(0, 2).join(' | ') }));
 });

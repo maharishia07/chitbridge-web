@@ -155,22 +155,9 @@ var CBUiStandard = (function () {
     var shown = component.nameOnly ? PACK_LANGS : translatedIn(component.shown);
     return { label: label, shown: shown, missing: PACK_LANGS.filter(function (lang) { return label.indexOf(lang) < 0 || shown.indexOf(lang) < 0; }) };
   }
-  /** WCAG contrast ratio of two css rgb() strings */
-  function channels(colourText) {
-    if (/^#/.test(String(colourText).trim())) colourText = hexToRgb(String(colourText).trim());
-    var found = String(colourText).match(/[\d.]+/g) || [0, 0, 0];
-    return found.slice(0, 3).map(Number);
-  }
-  function luminance(colourText) {
-    var parts = channels(colourText).map(function (value) {
-      var unit = value / 255;
-      return unit <= 0.03928 ? unit / 12.92 : Math.pow((unit + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2];
-  }
+  /** WCAG contrast ratio of two colours: the chart engine's ONE arithmetic (public/engine/chart-draw.js CBDraw.contrast, loaded before this file by ui-standard.html) */
   function contrastRatio(first, second) {
-    var lighter = Math.max(luminance(first), luminance(second)), darker = Math.min(luminance(first), luminance(second));
-    return (lighter + 0.05) / (darker + 0.05);
+    return window.CBDraw.contrast(first, second);
   }
 
   /* ── the dialog host ui.dialog needs (same classes as app.html's modal) ── */

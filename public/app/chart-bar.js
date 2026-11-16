@@ -12,12 +12,13 @@
  * FLOW      open → read chart_fav_<kind> (a favourite applies at once), else chart_theme; chart_read, else ON for the Colour Vision and high-contrast themes (the person chose them
  *           for readability) and OFF everywhere else → palette → onChange. A pick is saved at once; the star saves "<combination>-<type>" for this kind; switching Readability off returns the
  *           chosen colours (they are kept, never replaced).
- * UI CODES  each control wears its code on the element (data-cbsid) from CODES below, the ONE table of this bar. PROPOSED codes: the register row and the CMDB entry are cb-ux-locale's and
- *           cb-capability's to mint (toolset/ui-identity/ui-stamp.cjs); the library has no select, switch or star component yet (ui-find.cjs, 16 Nov), so these are native elements.
+ * UI CODES  NO new component (cb-ux-locale, 16 Nov, CMDB search ui-find select|switch|toggle|star|menu): the two menus are CMP035 List select (S01), the star and Readability are CMP034 List toggle
+ *           (B01, a pressed toggle: aria-pressed, a glyph and its word, the word leaves a phone as the list control's own toggles do). Each wears its component code on the element
+ *           (data-cbsid) and the screen's mount (data-cbmount, CBScreenId.mountAttr, where the page names its screen); the bar itself is a labelled group, not a control.
  */
 (function (root) {
   'use strict';
-  var CODES = { bar: 'CHB001-P01', colours: 'CHB001-S01', type: 'CHB001-S02', star: 'CHB001-B01', read: 'CHB001-I01' };
+  var CODES = { select: 'CMP035-S01', toggle: 'CMP034-B01' };
   var AUTO_READ_THEMES = ['contrast', 'hc', 'hcdark', 'cvd']; /* Contrast · High Contrast · High Contrast Dark · Colour Vision: chosen for readability */
   var TYPE_WORDS = { column: 'Columns', line: 'Line', bar: 'Ranked bars', stack: 'Stacked bar', pie: 'Pie', donut: 'Donut', area: 'Area', waterfall: 'Waterfall' };
   var FOLLOW = 'follow';
@@ -46,7 +47,7 @@
       var colour = root.getComputedStyle(node).backgroundColor;
       if (colour && !/rgba?\(\s*0,\s*0,\s*0,\s*0\)|transparent/.test(colour)) return colour;
     }
-    return 'rgb(255,255,255)';
+    return resolved(scope, 'Canvas');
   }
   /** the person's theme as the four colours the palette rules need */
   function tokensOf(scope) {
@@ -82,9 +83,13 @@
     });
     return names;
   }
-  function selectHtml(code, testid, label, options, current) {
+  /** the data-cbmount of a component on this screen ('' where the page names no screen) */
+  function mountOf(component) {
+    return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
+  }
+  function selectHtml(testid, label, options, current) {
     return (
-      '<select data-cbsid="' + code + '" data-testid="' + testid + '" aria-label="' + escapeText(label) + '" title="' + escapeText(label) + '">' +
+      '<select data-cbsid="' + CODES.select + '"' + mountOf('CMP035') + ' data-testid="' + testid + '" aria-label="' + escapeText(label) + '" title="' + escapeText(label) + '">' +
       options
         .map(function (option) {
           return '<option value="' + escapeText(option[0]) + '"' + (option[0] === current ? ' selected' : '') + '>' + escapeText(option[1]) + '</option>';
@@ -93,28 +98,36 @@
       '</select>'
     );
   }
+  /** a pressed toggle (CMP034): the glyph and its word; a phone keeps the glyph, the aria-label keeps the word */
+  function toggleHtml(testid, glyph, label, hint) {
+    return (
+      '<button type="button" class="chart-bar-tg" data-cbsid="' + CODES.toggle + '"' + mountOf('CMP034') + ' data-testid="' + testid + '" aria-pressed="false" aria-label="' + escapeText(label) + '" title="' + escapeText(hint) + '">' +
+      '<span class="chart-bar-g" aria-hidden="true">' + glyph + '</span><span class="chart-bar-w">' + escapeText(label) + '</span></button>'
+    );
+  }
   function barHtml(kind, types, state) {
     var typeOptions = types.map(function (type) {
       return [type, words(TYPE_WORDS[type] || type)];
     });
     return (
-      '<div class="chart-bar" data-cbsid="' + CODES.bar + '" data-testid="chart-bar" data-kind="' + escapeText(kind) + '" role="group" aria-label="' + escapeText(words('Chart options')) + '">' +
-      selectHtml(CODES.colours, 'chart-colours', words('Colours'), comboNames(), state.combo) +
+      '<div class="chart-bar" data-testid="chart-bar" data-kind="' + escapeText(kind) + '" role="group" aria-label="' + escapeText(words('Chart options')) + '">' +
+      selectHtml('chart-colours', words('Colours'), comboNames(), state.combo) +
       (types.length > 1
-        ? selectHtml(CODES.type, 'chart-type', words('Chart type'), typeOptions, state.type)
+        ? selectHtml('chart-type', words('Chart type'), typeOptions, state.type)
         : '<span class="chart-bar-one" data-testid="chart-type-one">' + escapeText(typeOptions[0][1]) + '</span>') +
-      '<button type="button" class="chart-bar-star" data-cbsid="' + CODES.star + '" data-testid="chart-fav" aria-pressed="false" aria-label="' + escapeText(words('Favourite')) + '" title="' + escapeText(words('Favourite: use this chart and these colours next time')) + '">☆</button>' +
-      '<label class="chart-bar-read" title="' + escapeText(words('Readability: every mark clearly visible against the page')) + '"><input type="checkbox" data-cbsid="' + CODES.read + '" data-testid="chart-read"> ' + escapeText(words('Readability')) + '</label>' +
+      toggleHtml('chart-fav', '☆', words('Favourite'), words('Favourite: use this chart and these colours next time')) +
+      toggleHtml('chart-read', '◐', words('Readability'), words('Readability: every mark clearly visible against the page')) +
       '</div>'
     );
   }
   var STYLE =
-    '.chart-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 20px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd);font-size:13px}' +
-    '.chart-bar select{font:inherit;min-height:32px;max-width:46%;padding:2px 6px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--card,#fff);color:var(--ink,#222)}' +
-    '.chart-bar-star{min-width:32px;min-height:32px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--card,#fff);color:var(--ink,#222);font-size:16px;line-height:1;cursor:pointer}' +
-    '.chart-bar-star[aria-pressed="true"]{border-color:var(--ink,#222);font-weight:700}' +
-    '.chart-bar-read{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:var(--ink,#222);white-space:nowrap;min-height:32px}' +
-    '.chart-bar-one{color:var(--muted,#555)}';
+    '.chart-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:6px 20px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd);font-size:13px}' +
+    '.chart-bar select{flex:1 1 0;min-width:0;font:inherit;min-height:32px;padding:2px 6px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--card,#fff);color:var(--ink,#222)}' +
+    '.chart-bar-tg{display:inline-flex;flex:none;align-items:center;justify-content:center;gap:4px;min-width:32px;min-height:32px;padding:0 8px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--card,#fff);color:var(--ink,#222);font:inherit;font-weight:600;white-space:nowrap;cursor:pointer}' +
+    '.chart-bar-g{font-size:16px;line-height:1}' +
+    '.chart-bar-tg[aria-pressed="true"]{border-color:var(--ink,#222);background:var(--line,#eee)}' +
+    '.chart-bar-one{flex:1 1 0;color:var(--muted,#555)}' +
+    '@media(max-width:700px){.chart-bar{padding:4px 12px;gap:6px}.chart-bar select,.chart-bar-tg{min-height:44px}.chart-bar-tg{min-width:44px;padding:0}.chart-bar-w{display:none}}';
   function styleOnce() {
     var doc = root.document;
     if (doc.getElementById('chart-bar-style')) return;
@@ -162,7 +175,8 @@
       redraw();
     });
     read.addEventListener('change', function () {
-      state.read = read.checked ? 'on' : 'off';
+      state.read = state.read === 'on' ? 'off' : 'on';
+      read.setAttribute('aria-pressed', state.read === 'on' ? 'true' : 'false');
       root.CBChartCap.set('chart_read', state.read);
       redraw();
     });
@@ -184,13 +198,13 @@
       read = bar.querySelector('[data-testid="chart-read"]'),
       typeMenu = bar.querySelector('[data-testid="chart-type"]'),
       star = bar.querySelector('[data-testid="chart-fav"]');
-    read.checked = state.read === 'on';
+    read.setAttribute('aria-pressed', state.read === 'on' ? 'true' : 'false');
 
     function redraw() {
       var palette = root.CBDraw.paletteOf(state.combo === FOLLOW ? '' : state.combo, tokensOf(scope), state.read);
       root.CBDraw.applyPalette(scope, palette, state.read);
       star.setAttribute('aria-pressed', isFavourite(kind, state) ? 'true' : 'false');
-      star.textContent = isFavourite(kind, state) ? '★' : '☆';
+      star.querySelector('.chart-bar-g').textContent = isFavourite(kind, state) ? '★' : '☆';
       options.onChange({ combo: state.combo, type: state.type, read: state.read, palette: palette });
     }
     bindBar(bar, state, kind, redraw);
@@ -201,7 +215,7 @@
       Object.assign(state, savedChoice(kind, types));
       bar.querySelector('[data-testid="chart-colours"]').value = state.combo;
       if (typeMenu) typeMenu.value = state.type;
-      read.checked = state.read === 'on';
+      read.setAttribute('aria-pressed', state.read === 'on' ? 'true' : 'false');
       redraw();
     });
     redraw();

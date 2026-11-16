@@ -749,21 +749,8 @@
    * RPT2: the Till card's teaser — the server's figures.trend (8 weeks' sales, the engine's change vs last year) as a sparkline + words, a door
    * into Reports › Trend. Nothing from the server → nothing drawn (omit, never 0); CBDraw absent (a page without it) → nothing.
    */
-  /** the teaser's engine is fetched only when a sparkline can be drawn (two figures or more): once it is here the teaser is added to the card */
-  function trendLater(spot, trend) {
-    if (!root.CBChartCap || !trend.spark || trend.spark.length < 2) return '';
-    root.CBChartCap.ready().then(function () {
-      if (!spot.querySelector('.trendf')) spot.insertAdjacentHTML('beforeend', trendHTML(trend, spot));
-    }, shellQuiet);
-    return '';
-  }
-  /** the engine could not load: the card keeps its words and drops the picture, as it does for a trend the server did not send */
-  function shellQuiet(error) {
-    if (root.console) root.console.warn('shell: the teaser chart did not load', error && error.message);
-  }
   function trendHTML(trend, spot) {
-    if (!trend) return '';
-    if (!root.CBDraw) return trendLater(spot, trend);
+    if (!trend || !root.CBDraw) return trend && root.CBChartCap ? root.CBChartCap.later(trend.spark, function () { if (!spot.querySelector('.trendf')) spot.insertAdjacentHTML('beforeend', trendHTML(trend, spot)); }) : '';
     var change = trend.vs_last_year_pct,
       locale = root.CBLocale;
     var amount = change == null ? '' : locale && locale.number ? locale.number(Math.abs(change), { maximumFractionDigits: 1 }) : String(Math.abs(change));

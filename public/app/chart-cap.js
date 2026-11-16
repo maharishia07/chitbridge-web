@@ -47,6 +47,15 @@
     return loading;
   }
 
+  /** a drawing that waits for the engine, only where there is something to draw (two figures or more): the teaser's door. A load that fails is said once in the console and the caller keeps its words. Returns '' (nothing drawn now). */
+  function later(figures, draw) {
+    if (figures && figures.length > 1)
+      ready().then(draw, function (error) {
+        if (root.console) root.console.warn('chart engine did not load', error && error.message);
+      });
+    return '';
+  }
+
   function store(name, value) {
     try {
       if (value === undefined) return root.localStorage.getItem(name);
@@ -173,5 +182,5 @@
   }
   if (root.addEventListener) root.addEventListener('online', retry);
 
-  root.CBChartCap = { ready: ready, chosen: chosen, set: set, hydrate: hydrate, pending: pendingGet };
+  root.CBChartCap = { ready: ready, later: later, chosen: chosen, set: set, hydrate: hydrate, pending: pendingGet };
 })(typeof window !== 'undefined' ? window : this);

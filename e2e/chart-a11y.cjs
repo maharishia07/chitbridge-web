@@ -108,7 +108,7 @@ W.run('chart-a11y', async (w) => {
       await page.goto(base + '/finance.html#/reports/trend');
       await page.waitForSelector('[data-testid="chart-bar"]', { timeout: 20000 }).catch(() => {});
       await page.waitForTimeout(700);
-      if (mode === 'on') { await page.check('[data-testid="chart-read"]'); await page.waitForTimeout(500); }
+      if (mode === 'on') { await page.click('[data-testid="chart-read"]'); await page.waitForTimeout(500); }
       await page.addScriptTag({ path: AXE }).catch(() => {});
       await w.step((mode === 'on' ? 'A2-' : 'A3-') + theme + '-' + width, 'Trend, Okabe-Ito, ' + theme + ', ' + width + 'x' + height + ', Readability ' + mode.toUpperCase() + ': ' + (mode === 'on' ? 'marks 3:1, ' : 'marks exempt (the person\'s own palette), ') + 'text 4.5:1, table, label, axe', async () => {
         const g = await page.evaluate(GUARD + '("[data-testid=\\"tr-chart\\"]", (function(){ var n = document.querySelector("#screen"); for (; n; n = n.parentElement) { var c = getComputedStyle(n).backgroundColor; if (c && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(c)) return c; } return "rgb(255,255,255)"; })())');

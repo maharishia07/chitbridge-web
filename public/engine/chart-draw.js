@@ -533,8 +533,7 @@
     }
     return (text.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
   }
-  /** WCAG contrast of two colours. The same arithmetic as CBUiStandard.contrastRatio (the UI standard page's helper, which is the page's and too heavy to load on a chart
-   *  page); tests/chart-combos.test.cjs holds the two equal on a table of pairs, so there is still ONE answer. */
+  /** WCAG contrast of two colours: THE one arithmetic. CBUiStandard.contrastRatio (the UI standard page) calls this; there is no second copy. */
   function contrast(first, second) {
     var light = function (colour) {
       var part = channelsOf(colour).map(function (value) {

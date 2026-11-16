@@ -8,7 +8,7 @@
  *   · the vibrant default draws a published set exactly as published; the readable render draws a set that holds 3:1 as it is, else the theme tint, else IBCS grey
  *   · HOSTILE FIXTURE: a combination with a 1.4:1 mark — drawn as published with Readability off (the person's own pick, the guards treat it so), but the readable render
  *     clears 3:1; and a render that IGNORES the toggle (the 1.4:1 mark under data-read="on") is caught by the checker
- *   · the contrast helper is the one arithmetic: it equals CBUiStandard.contrastRatio on a table of pairs (read from public/app/ui-standard.js, not copied)
+ *   · the contrast helper is the one arithmetic: CBUiStandard.contrastRatio is a call to it (ui-standard.js holds no copy)
  *
  * Run: node tests/chart-combos.test.cjs
  */
@@ -106,15 +106,13 @@ it('HOSTILE: a 1.4:1 combination is drawn as chosen with Readability OFF, and ma
     delete D.COMBOS.hostile;
   }
 });
-it('the contrast helper equals CBUiStandard.contrastRatio on a table of pairs (the standard page\'s own function, read from its file)', () => {
+it('CBUiStandard.contrastRatio calls CBDraw.contrast: one arithmetic, no second copy in ui-standard.js', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'ui-standard.js'), 'utf8');
-  const cut = (from, to) => source.slice(source.indexOf(from), source.indexOf(to, source.indexOf(from)));
-  const body = cut('function hexToRgb', '/* ── type:') + cut('function channels', '/* ── the dialog host');
-  assert.ok(body.includes('contrastRatio'), 'the helper was found in ui-standard.js');
-  const theirs = new Function(body + '; return contrastRatio;')();
-  [['#000000', '#ffffff'], ['#0072B2', '#ffffff'], ['#E69F00', '#FAF8F4'], ['rgb(22,105,63)', 'rgb(255,255,255)'], ['#dcdcdc', '#ffffff'], ['#3b518b', '#0f2e3d']].forEach(([a, b]) => {
-    assert.ok(Math.abs(theirs(a, b) - D.contrast(a, b)) < 1e-9, a + ' on ' + b);
-  });
+  assert.ok(source.includes('return window.CBDraw.contrast(first, second);'), 'contrastRatio is a call to CBDraw.contrast');
+  assert.ok(!source.includes('Math.pow('), 'ui-standard.js holds no luminance arithmetic of its own');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'ui-standard.html'), 'utf8');
+  assert.ok(html.indexOf('/engine/chart-draw.js') > 0 && html.indexOf('/engine/chart-draw.js') < html.indexOf('/app/ui-standard.js'), 'the page loads the engine before ui-standard.js');
+  assert.ok(Math.abs(D.contrast('#000000', '#ffffff') - 21) < 1e-9);
 });
 console.log((fail ? 'FAIL' : 'PASS') + ' · chart combos · ' + pass + ' ok, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
