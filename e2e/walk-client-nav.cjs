@@ -35,6 +35,16 @@ async function serve() {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   return 'http://127.0.0.1:' + srv.address().port;
 }
+/* l16 R5-1: the header's last visible control must end inside the screen (and inside its bar), and no element of the page scrolls sideways (the document alone is not enough: main.scroll was panning 58 px) */
+async function headerFit(page) {
+  return page.evaluate(() => {
+    const bar = document.querySelector('.cbsh-bar'), vis = (n) => n.getClientRects().length && getComputedStyle(n).visibility !== 'hidden';
+    const kids = bar ? Array.from(bar.querySelectorAll('button,a,.cbsh-av')).filter(vis) : [];
+    const lastRight = Math.max.apply(null, kids.map((n) => Math.round(n.getBoundingClientRect().right)).concat([0]));
+    const wide = Array.from(document.querySelectorAll('body *')).filter((n) => { const c = getComputedStyle(n); return /auto|scroll/.test(c.overflowX) && n.scrollWidth > n.clientWidth + 1 && n.clientWidth > 0 && vis(n); }).map((n) => (n.id || n.className || n.tagName).toString().slice(0, 30) + ' ' + (n.scrollWidth - n.clientWidth));
+    return { lastRight, barRight: bar ? Math.round(bar.getBoundingClientRect().right) : 0, w: innerWidth, bar: bar ? bar.scrollWidth - bar.clientWidth : 0, doc: document.documentElement.scrollWidth - innerWidth, wide };
+  });
+}
 const where = (page) => { const u = new URL(page.url()); return u.pathname + u.search + u.hash; };
 async function seatSheet(page, seat) { const b = page.locator('[data-testid="nw-seat-' + seat + '"]'); if (await b.count()) await b.click(); }
 (async () => {
@@ -65,6 +75,7 @@ async function seatSheet(page, seat) { const b = page.locator('[data-testid="nw-
     ok(tag + ': Open books lands on the client (the address names it)', where(page).indexOf('/network.html?open=' + id) === 0, where(page));
     ok(tag + ': the header names the client plainly, one press back to Clients', (await page.locator('[data-testid="shell-working"]').count()) === 1 && (await page.locator('[data-testid="shell-working"] b').innerText()).length > 0);
     ok(tag + ': the breadcrumb Clients > client > screen is on the client page', (await page.locator('[data-testid="ba-crumbs"]').count()) >= 1);
+    { const f = await headerFit(page); ok(tag + ': client page header ends inside the screen (last control right ' + f.lastRight + ' of ' + f.w + ', bar overflow ' + f.bar + ')', f.lastRight <= f.w && f.bar <= 0 && f.doc <= 0, JSON.stringify(f)); }
     await page.screenshot({ path: OUT + '/nav-' + seat + '-1-client-' + vp.tag + '.png' });
     await page.locator('[data-testid="bv-tab-tb"]').click(); await pause(2500);
     ok(tag + ': a screen of the books is a history entry (view in the address)', /view=tb/.test(where(page)), where(page));
@@ -72,6 +83,7 @@ async function seatSheet(page, seat) { const b = page.locator('[data-testid="nw-
     else await page.evaluate(() => { location.assign(CBBooksActing.addressOf(CBBooksActing.current().store)); });
     await page.waitForURL(/accounts\.html/, { timeout: 20000 }); await pause(5000);
     ok(tag + ': the client screen shows the crumbs and the client name in the header', (await page.locator('[data-testid="crumb-screen"]').count()) === 1 && (await page.locator('[data-testid="shell-working"]').count()) === 1, where(page));
+    { const f = await headerFit(page); ok(tag + ': books screen header ends inside the screen (last control right ' + f.lastRight + ' of ' + f.w + ', bar overflow ' + f.bar + ') and no inner scroller pans sideways', f.lastRight <= f.w && f.bar <= 0 && f.doc <= 0 && f.wide.length === 0, JSON.stringify(f)); }
     await page.screenshot({ path: OUT + '/nav-' + seat + '-2-books-' + vp.tag + '.png' });
     await page.goBack(); await pause(4000);
     ok(tag + ': browser Back 1 -> the client Books (not the network list)', where(page).indexOf('/network.html?open=' + id) === 0 && /view=tb/.test(where(page)), where(page));

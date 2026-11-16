@@ -706,7 +706,7 @@ function bankBandCore() {
   const fig = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig && !bkbMayAct())
-    return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("This file does not say the bank's closing balance.")) + '</span>' + acts + '</div>'; /* l16 fable3 R3-3: a read-only seat is told, never asked to type */
+    return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + (BKB.tab === 'brs' ? '' : bkbE(tx("This file does not say the bank's closing balance."))) + '</span>' + acts + '</div>'; /* l16 R5 R3-3: the sign-off view says it once, in the box under the record (bankBrsPaint); the band says it on the other tabs. l16 fable3 R3-3: a read-only seat is told, never asked to type */
   if (!fig)
     return (
       '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) + '</span>' +

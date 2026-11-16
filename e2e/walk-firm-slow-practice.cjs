@@ -61,11 +61,16 @@ async function load(browser, base, key, vp) {
   page.on('pageerror', (e) => { if (process.env.DEBUG_CONSOLE) console.log('   [pageerror] ' + e.message.slice(0, 200)); });
   page.on('request', (r) => { const u = r.url(); if (u.includes('/api/') && !u.includes('/api/events/stream')) calls.push(u.replace(/^https?:[/][/][^/]+/, '').replace(/\?.*/, '')); });
   await page.goto(base + '/');
-  let sawWait = false;
-  for (let t = 0; t < (HELD + 9000) / 500; t++) { await pause(500); if (await page.locator('[data-testid="practice-loading"]').count()) sawWait = true; }
+  let sawWait = false, early = 0;
+  for (let t = 0; t < (HELD + 9000) / 200; t++) {
+    await pause(200);
+    if (await page.locator('[data-testid="practice-loading"]').count()) sawWait = true;
+    /* l16 R5-2: while the answer is held, no shop area card, no shop words and no 'Your work' is on screen (only the loading frame) */
+    if (!(await page.locator('[data-testid="practice"]').count()) && (await page.evaluate(() => { const a = document.querySelector('[data-testid="shell-areas"]'); return !!a && a.getClientRects().length > 0 && /Till|Marketing|No shop yet|Your work/.test(a.innerText); }))) early++;
+  }
   const st = await page.evaluate(() => ({ practice: !!document.querySelector('[data-testid="practice-list"]'), door: !!document.querySelector('[data-testid="home-your-clients"]'), till: !!document.querySelector('[data-testid="shell-card-till"]'), waiting: !!document.querySelector('[data-testid="practice-loading"]') }));
   await ctx.close();
-  return { calls, sawWait, st, shopAsked: calls.some((c) => /\/api\/facts\/(till|marketing)/.test(c)) };
+  return { calls, sawWait, early, st, shopAsked: calls.some((c) => /\/api\/facts\/(till|marketing)/.test(c)) };
 }
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -76,6 +81,7 @@ async function load(browser, base, key, vp) {
     const calls = rows.map((x) => x.calls.length), fb = rows.filter((x) => kind === 'firm' ? (x.shopAsked || x.st.door || !x.st.practice) : x.st.practice);
     console.log(tag + ' (' + kind + ') calls per load: ' + calls.join(',') + ' | fallbacks/wrong: ' + fb.length + ' of ' + rows.length);
     if (kind === 'firm') {
+      ok(tag + ': no shop card or shop words on screen before the practice (samples every 0.2 s; early = ' + rows.map((x) => x.early).join() + ')', rows.every((x) => x.early === 0), rows.map((x) => x.early).join());
       ok(tag + ': 0 fallbacks to the shop Home (practice drawn, no shop card asked, no Your clients card)', fb.length === 0, JSON.stringify(fb.slice(0, 2).map((x) => x.st)) + ' ' + x0(fb));
       ok(tag + ': calls per load <= ' + SLOW_MAX + ' (max ' + Math.max(...calls) + ')', Math.max(...calls) <= SLOW_MAX, rows.find((x) => x.calls.length > SLOW_MAX) ? rows.find((x) => x.calls.length > SLOW_MAX).calls.join(' ') : '');
       ok(tag + ': the loading frame is shown while the practice is held, and gone once it is drawn', rows.every((x) => x.sawWait && !x.st.waiting), rows.map((x) => x.sawWait + '/' + x.st.waiting).join());

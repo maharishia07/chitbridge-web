@@ -210,7 +210,7 @@
     '.cbsh-mark{width:28px;height:28px;border-radius:8px;background:var(--sh-green);color:var(--sh-on);display:grid;place-items:center;font-size:13px;font-weight:700;flex:0 0 auto}',
     '.cbsh-who{display:flex;align-items:center;gap:8px;border:0;background:none;padding:4px 9px;border-radius:8px;min-width:0}',
     '.cbsh-who:hover,.cbsh-hdr.open .cbsh-who{background:var(--sh-panel)}',
-    '.cbsh-working{display:inline-flex;align-items:center;flex:0 1 auto;min-width:96px;max-width:44%;min-height:44px;padding:0 10px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:13px;text-decoration:none;white-space:nowrap}.cbsh-working b{overflow:hidden;text-overflow:ellipsis;font-weight:700}@media(max-width:700px){.cbsh-working{max-width:52%}}',
+    '.cbsh-working{display:inline-flex;align-items:center;flex:0 1 auto;min-width:96px;max-width:44%;min-height:44px;padding:0 10px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:13px;text-decoration:none;white-space:nowrap}.cbsh-working b{overflow:hidden;text-overflow:ellipsis;font-weight:700}@media(max-width:700px){.cbsh-working{min-width:0;max-width:none;flex:1 1 0}.cbsh-working b{min-width:0}.cbsh-bar:has(.cbsh-working) .cbsh-sw{display:none}}' /* l16 R5-1: at phone width the chip replaces the area switcher and its name is cut with an ellipsis (title carries the full name): the bar held 384 px in a 326 px pane */ + '',
     '.cbsh-who b{font-family:"Bricolage Grotesque",sans-serif;font-size:16px;font-weight:800;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.cbsh-who .chev{color:var(--sh-muted);font-size:10px;transition:transform .14s}',
     '.cbsh-hdr.open .cbsh-who .chev{transform:rotate(180deg)}',
@@ -1807,7 +1807,7 @@
     link.setAttribute('data-cbsid', 'CMP033-B01');
     link.setAttribute('data-testid', 'shell-working');
     link.setAttribute('aria-label', working + '. ' + W.backToClients);
-    link.title = W.backToClients;
+    link.title = working + '. ' + W.backToClients;
     link.innerHTML = '<b>' + esc(working) + '</b><span aria-hidden="true">&nbsp;✕</span>';
     var grow = bar.querySelector('.cbsh-grow');
     bar.insertBefore(link, grow || null);
