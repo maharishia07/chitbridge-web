@@ -423,6 +423,7 @@
         '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>' +
         '<div class="emp-acts">' +
         actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(node.access.label) + '</span>', 'EMP001-B04') +
+        actRow('emp_areas', '📒', T('What they can see'), m.access, '', 'EMP001-B15') +
         actRow(
           'emp_email',
           '✉️',
@@ -450,6 +451,10 @@
     if (m.access.ok !== false)
       q('emp_access').onclick = function () {
         accessPanel(node);
+      };
+    if (m.access.ok !== false)
+      q('emp_areas').onclick = function () {
+        areasPanel(node);
       };
     if ((m.email || m.access).ok !== false)
       q('emp_email').onclick = function () {
@@ -633,6 +638,86 @@
         }
       );
     };
+  }
+
+
+  /* ── W15-66: what a person may see besides their own work. The areas, their words and their levels ARE the server's (GET /api/actors/areas, lib/actor-areas AREAS); this file lists none.
+     The owner ticks per person; Save sends one PATCH /api/actors/:id/areas per change (see | work | none), after a confirm that says what opens. ── */
+  function areasPanel(p) {
+    $('emp_more').innerHTML = '<div class="emp-panel" role="status" data-testid="emp-areas-wait">' + esc(T('Reading…')) + '</div>';
+    call('GET', '/api/actors/areas').then(
+      function (reply) {
+        paintAreas(p, reply || {});
+      },
+      function (err) {
+        $('emp_more').innerHTML = '<div class="emp-panel" role="alert" data-testid="emp-areas-fail">' + esc((err && err.message) || T("Couldn't read")) + '</div>';
+      }
+    );
+  }
+  /** what this person holds now in one area: { level, source: preset | grant, ... } or null (the owner's reading in people[]) */
+  function heldIn(reply, p, area) {
+    var row = (reply.people || []).filter(function (item) {
+      return item.identity_id === p.id;
+    })[0];
+    return (row && row.access && row.access[area]) || null;
+  }
+  function areaRowHTML(item, held) {
+    var byRole = !!held && held.source === 'preset';
+    var head =
+      '<label class="emp-opt"><span><input data-cbsid="EMP001-I08" type="checkbox" id="emp_area_' + esc(item.id) + '" data-area="' + esc(item.id) + '" data-testid="emp-area-on-' + esc(item.id) + '"' +
+      (held ? ' checked' : '') + (byRole ? ' disabled' : '') + '> <b>' + esc(item.label) + '</b></span><span class="sub">' + esc(item.see) + '</span></label>';
+    if (byRole) return '<div class="emp-area" data-testid="emp-area-' + esc(item.id) + '">' + head + '<span class="sub">' + esc(T('Their role already opens this.')) + '</span></div>';
+    var levels = item.levels || [];
+    var pick = levels.length < 2 ? '' : levels.map(function (level) {
+      return '<label class="sub"><input data-cbsid="EMP001-I09" type="radio" name="emp_arealvl_' + esc(item.id) + '" value="' + esc(level) + '" data-testid="emp-area-level-' + esc(item.id) + '-' + esc(level) + '"' +
+        ((held ? held.level : levels[0]) === level ? ' checked' : '') + '> ' + esc(item[level] || level) + '</label>';
+    }).join('');
+    return '<div class="emp-area" data-testid="emp-area-' + esc(item.id) + '">' + head + pick + '</div>';
+  }
+  function paintAreas(p, reply) {
+    var list = reply.areas || [];
+    $('emp_more').innerHTML =
+      '<div class="emp-panel" data-testid="emp-areas">' + list.map(function (item) { return areaRowHTML(item, heldIn(reply, p, item.id)); }).join('') +
+      '<button data-cbsid="EMP001-B16" type="button" class="act" id="emp_areas_go" data-testid="emp-areas-go">' + esc(T('Save')) + '</button></div>';
+    $('emp_areas_go').onclick = function () {
+      var changes = areaChanges(list, reply, p);
+      if (!changes.length) {
+        $('emp_out').textContent = T('Nothing to change.');
+        return;
+      }
+      var opening = changes.filter(function (change) { return change.level !== 'none'; });
+      root.CBAction.run($('emp_areas_go'), function () { return sendAreas(p, changes); }, {
+        key: 'emp-areas-' + p.id,
+        failed: T("Couldn't save"),
+        out: 'emp_out',
+        confirm: opening.length ? { title: T('Open this for') + ' ' + p.name + '?', body: '<ul>' + opening.map(function (change) { return '<li><b>' + esc(change.label) + '</b> ' + esc(change.words) + '</li>'; }).join('') + '</ul>', yes: T('Open') } : undefined,
+        outcome: function () {
+          $('emp_out').textContent = T('Saved.');
+          changed(p.id);
+        }
+      });
+    };
+  }
+  /** the PATCHes the ticks ask for: an unticked area the person holds by grant closes ('none'), a ticked one opens at the chosen level; what the role already gives is never touched */
+  function areaChanges(list, reply, p) {
+    var out = [];
+    list.forEach(function (item) {
+      var held = heldIn(reply, p, item.id);
+      if (held && held.source === 'preset') return;
+      var box = $('emp_area_' + item.id);
+      var picked = root.document.querySelector('input[name="emp_arealvl_' + item.id + '"]:checked');
+      var wanted = !box || !box.checked ? 'none' : picked ? picked.value : (item.levels || ['see'])[0];
+      if (wanted === 'none' ? !held : held && held.level === wanted) return;
+      out.push({ area: item.id, level: wanted, label: item.label, words: item[wanted] || '' });
+    });
+    return out;
+  }
+  function sendAreas(p, changes) {
+    return changes.reduce(function (chain, change) {
+      return chain.then(function () {
+        return call('PATCH', '/api/actors/' + encodeURIComponent(p.id) + '/areas', { area: change.area, level: change.level });
+      });
+    }, Promise.resolve());
   }
 
   /* SEC2 · PEOPLE-EMAIL: where the first code and every reset go. The server stores it (PATCH /api/actors/:id { email }); empty clears it. */

@@ -1087,6 +1087,13 @@ function offCard() {
         }
       });
 }
+/* W15-66: the owner has not opened the accounts for this person (403 BOOKS_AREA_CLOSED, or the ledger's other refusals of a person): say the server's own sentence, never a blank page or "could not be read" */
+function closedCard(e) {
+  ON = false;
+  navPaint('');
+  $('nav').innerHTML = '';
+  card(`<h2 data-testid="acc-closed">Accounts is closed to you</h2><p data-testid="acc-closed-why">${esc((e && e.message) || 'Your access does not include the books. Ask the owner.')}</p>`);
+}
 function failedCard() {
   card(
     `<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button data-cbsid="CMP009" type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`,
@@ -1162,6 +1169,7 @@ async function start() {
       SESSION.country = reply.country.country.code; /* CX0: the shop's country (CS1 status) — the pack's words on this page (shopReg) */
   } catch (e) {
     if (e && e.status === 404) return offCard();
+    if (e && e.status === 403) return closedCard(e);
     if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
     return failedCard();
   }

@@ -88,6 +88,7 @@
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
     factsFailed: 'Could not read',
+    closedWhy: 'Closed to you. Ask the owner.' /* W15-66: a card of an area the owner has not opened for this person, when the server sent no sentence */,
     skip: 'Skip to content',
     state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' },
     setUp: 'Set up',
@@ -274,6 +275,8 @@
     '.cbsh-nv{position:relative}.cbsh-nv[data-go=more]{display:none}',
     '.cbsh-nv .bd{position:absolute;top:1px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:var(--sh-amber-t);border:1px solid var(--sh-amber-b);color:var(--sh-amber-i);font-size:10px;font-weight:700;line-height:14px;text-align:center}',
     '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
+    /* W15-66: a card of a closed area (the server answers it { closed, why }): greyed like an off tile, the server's sentence in place of the facts; it stays a door, where the page says the same thing */
+    '.cbsh-box.closed{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted)}.cbsh-box.closed:hover{border-color:var(--sh-line)}.cbsh-box.closed .what,.cbsh-box.closed .arw{display:none}.cbsh-box.closed .facts{height:auto;align-items:flex-start}.cbsh-box.closed .f.why{flex:1;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;font-family:inherit}',
     '.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
     /* cards (max three columns, DECISIONS.md) */
@@ -702,6 +705,11 @@
       esc(T(W.state[state])) +
       '</span>'
     );
+  }
+  /* W15-66: a card the server answered { closed: true, why } is NOT a card to set up: greyed, no state, no action, the sentence it sent (or the plain fallback) */
+  function closedFactsHTML(card, why) {
+    var words = why ? String(why) : T(W.closedWhy);
+    return '<span class="f why" data-testid="shell-closed-' + esc(card.id) + '" title="' + esc(words) + '">' + esc(words) + '</span>';
   }
   /* a card's facts on its tile: NOT STARTED says so and invites (never "No X yet" — the tile is already the link); otherwise ONE line, and
      two or more → a +n badge with every line in the drop-down (.more) */
@@ -1380,6 +1388,15 @@
         if (!spot) return;
         factsRead(e.facts)
           .then(function (reply) {
+            var tile = spot.parentNode;
+            if (tile && tile.classList) tile.classList.toggle('closed', !!(reply && reply.closed === true));
+            if (reply && reply.closed === true) {
+              noteNeeds(e, '', routeOf);
+              paintBadges(el);
+              spot.innerHTML = closedFactsHTML(e, reply.why);
+              leadByData();
+              return;
+            }
             var lines = (reply && reply.lines) || [],
               state = noteNeeds(e, cardState(reply, lines), routeOf);
             paintBadges(el);
