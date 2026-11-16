@@ -538,7 +538,13 @@ function bankChange(btn) {
   if (open && file) file.focus(); /* the form opens ABOVE the band that holds this button: the keyboard goes to its file box */
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
-const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
+/** the group a row counts in: the engine's, except a line the books hold by its own client_ref (posted in a later month because its own was locked, W15-85): the controller says it is in the books */
+const bkbRowGroup = (item) => {
+  const group = bkbGroupOf(item.status),
+    one = group !== 'matched' && typeof bkshItemOf === 'function' ? bkshItemOf(item) : null;
+  return one && one.state === 'in_books' ? 'matched' : group;
+};
+const bkbCount = (key) => BKB.rows.filter((item) => bkbRowGroup(item) === key).length;
 /** a signed period at nil: "Sign off again" lives in More on a phone, where the band has no room for the button (the band shows it from 760 px up) */
 function bankMoreSignAgain() {
   const fig = bankFigures();
@@ -689,6 +695,9 @@ const bkbWrongAccountButton = (testid, label) =>
 /** W15-18, W15-20 to W15-23, W15-27 · the band over the lines (bank-band.js, the same one the public demo paints): the account large, the period, the currency said once, "Right account?", three slim tiles, the lines to go and the progress bar.
  *  Every figure is carried (bankFigures: the engine's BRS; the counts are the list's own rows). */
 function bankFinish() {
+  return bankBandCore() + (typeof bkshLockNotice === 'function' ? bkshLockNotice() : ''); /* W15-85: a locked month is said under the band, before any work */
+}
+function bankBandCore() {
   const fig = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
@@ -810,8 +819,9 @@ function bkbLineRows() {
 }
 /** what opens under a line: the answers it asks (the sheet's controller, bank-preview-ui.js: what it looks like, Dr and Cr, the questions) and, under them, what the rail and the books say about it */
 function bkbLinePanel(row) {
-  const answers = row.item && BKB.ui && (row.status === 'need' || row.status === 'ready') ? BKB.ui.panel(row.item, row.result) : '';
-  return answers + bankNext(row.raw);
+  const answers = row.item && BKB.ui && (row.status === 'need' || row.status === 'ready' || row.status === 'lock') ? BKB.ui.panel(row.item, row.result) : '';
+  const booked = row.item && row.status === 'in' && row.item.alreadyWhy ? '<div class="pe-note" data-testid="bank-in-why">' + bkbE(tx('In your books') + ' · ' + row.item.alreadyWhy) + '</div>' : ''; /* W15-85: a line posted in a later month says so on its own row */
+  return booked + answers + bankNext(row.raw);
 }
 /** an answer was given under a line on this page: the band and the chips follow (the same controller), the open row and the filters stay, and after an answer the next line that needs one opens */
 function bkbAnswered(key, what) {

@@ -358,13 +358,14 @@
 
   /* ── CMP064 STATUS ICON: the state of a list row as ONE small icon, never a word on every row (Athi 15 Nov, W15-13). The shape says it without colour: a tick = settled, a filled dot = ready,
         a ring = needs you, a tick in a ring = just answered. The word is always there as the icon's accessible name (role img, aria-label) and as the tooltip, so the icon is never the only carrier of the meaning.
-        statusIcon({ status: 'in'|'ready'|'need'|'done'|'books', name }) → html ── */
+        statusIcon({ status: 'in'|'ready'|'need'|'done'|'books'|'lock', name }) → html ── */
   var STATUS_ICONS = {
     in: '<path d="M5 12.5 10 17.5 19 7"/>',
     ready: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
     need: '<circle cx="12" cy="12" r="6"/>',
     done: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5 11 15l4.5-5.5"/>',
-    books: '<path d="M6 7h12M6 12h12M6 17h8"/>'
+    books: '<path d="M6 7h12M6 12h12M6 17h8"/>',
+    lock: '<rect x="6" y="11" width="12" height="8" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/>' /* a month that is locked: the line cannot be added until it is reopened (W15-85) */
   };
   function statusIcon(opts) {
     var shape = STATUS_ICONS[opts.status] || STATUS_ICONS.need,

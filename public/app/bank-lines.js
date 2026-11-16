@@ -9,9 +9,9 @@
  */
 (function (root) {
   'use strict';
-  var STATUS = { need: 'Needs you', ready: 'Ready to add', in: 'In your books', done: 'Added', books: 'Not on the statement' };
+  var STATUS = { need: 'Needs you', ready: 'Ready to add', in: 'In your books', done: 'Added', books: 'Not on the statement', lock: 'Month locked' };
   /** pending first: what a person must still answer sits at the top */
-  var ORDER = { need: 0, ready: 1, books: 2, done: 3, in: 4 };
+  var ORDER = { lock: 0, need: 0, ready: 1, books: 2, done: 3, in: 4 };
   /** the chip's words on a phone, where four full words do not fit on one row */
   var SHORT = { in: 'In books', ready: 'Ready', need: 'Needs you', books: 'Not on statement' };
   var KIND_WORDS = {
@@ -27,7 +27,8 @@
     if (standing === 'in') return 'in';
     if (standing === 'ready') return 'ready';
     if (standing === 'posted') return 'done';
-    return 'need'; /* wait · need · failed · closed: a person has something to do or to read */
+    if (standing === 'closed') return 'lock'; /* the month is locked: shown with a padlock, answered on the band */
+    return 'need'; /* wait · need · failed: a person has something to do or to read */
   }
   /** what the engine says the line is, in the owner's words: its closed list first (transfer, tax, card takings), else the proposal's event; '' when it proposes nothing */
   function kindOf(item) {
@@ -150,7 +151,7 @@
       });
     };
     return [
-      { key: 'status', label: 'Status', all: 'All', options: function (rows) { return ['need', 'ready', 'in', 'books'].filter(function (key) { return key !== 'books' || rows.some(function (row) { return row.status === 'books'; }); }).map(function (key) { return { v: key, label: T(STATUS[key]) }; }); }, match: function (row, value) { return row.status === value || (value === 'in' && row.status === 'done'); } },
+      { key: 'status', label: 'Status', all: 'All', options: function (rows) { return ['need', 'ready', 'in', 'books'].filter(function (key) { return key !== 'books' || rows.some(function (row) { return row.status === 'books'; }); }).map(function (key) { return { v: key, label: T(STATUS[key]) }; }); }, match: function (row, value) { return row.status === value || (value === 'in' && row.status === 'done') || (value === 'need' && row.status === 'lock'); } },
       { key: 'dir', label: 'Money', all: 'In and out', options: function (rows) { return distinct(rows, function (row) { return row.out ? 'out' : 'in'; }, function (value) { return T(value === 'out' ? 'Money out' : 'Money in'); }); }, match: function (row, value) { return (row.out ? 'out' : 'in') === value; } },
       { key: 'week', label: 'Date', all: 'Any date', options: weeks, match: function (row, value) { return weekOf(row.date) === value; } },
       { key: 'band', label: 'Amount', all: 'Any amount', options: function (rows) { return BANDS.filter(function (band) { return rows.some(function (row) { return band[2](row.amount_minor); }); }).map(function (band) { return { v: band[0], label: T(band[1]) }; }); }, match: function (row, value) { return bandOf(row.amount_minor) === value; } },
