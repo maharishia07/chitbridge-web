@@ -75,13 +75,19 @@ W.run('chart-lazy', async (w) => {
   S.refuseEngine = false;
   await open('/finance.html#/reports/trend', '[data-testid="tr-chart"]');
   await w.step('L6', 'large seed: 5 years of days (1,826 points) draw at most 120 bars, under 100 ms', async () => {
-    const out = await page.evaluate(() => {
+    /* a page of its own in a context WITHOUT the walk's fixed clock (a fixed clock freezes performance.now and every draw would "take" 0 ms) */
+    const timed = await page.context().browser().newContext();
+    const probe = await timed.newPage();
+    await probe.goto(base + '/config.js');
+    await probe.addScriptTag({ url: base + '/engine/chart-draw.js' });
+    const out = await probe.evaluate(() => {
       const points = Array.from({ length: 1826 }, (_, i) => ({ key: 'd' + i, label: String(i), value: 1000 + ((i * 37) % 500), title: 'day ' + i }));
       const t0 = performance.now(); let svg = '';
       for (let run = 0; run < 20; run++) svg = CBDraw.bars(points, { tid: 'big', width: 640 });
       return { ms: (performance.now() - t0) / 20, bars: (svg.match(/data-testid="big-bar-/g) || []).length, bytes: svg.length };
     });
-    return { ok: out.bars === 120 && out.ms < 100, saw: out.bars + ' bars, ' + out.ms.toFixed(2) + ' ms per draw (mean of 20), ' + out.bytes + ' bytes of svg' };
+    await timed.close();
+    return { ok: out.bars === 120 && out.ms > 0 && out.ms < 100, saw: out.bars + ' bars, ' + out.ms.toFixed(2) + ' ms per draw (mean of 20), ' + out.bytes + ' bytes of svg' };
   });
   await w.step('L7', 'keyboard only: Tab reaches the period tabs; Enter on Weeks redraws 52 bars; focus is visible', async () => {
     await page.locator('body').click({ position: { x: 2, y: 2 } }).catch(() => {});
