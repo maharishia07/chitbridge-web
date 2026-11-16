@@ -1363,6 +1363,7 @@ function peReturnPaint(r) {
     '</span><span class="mono">' +
     esc(peMoney(Math.abs(r.net_minor || 0), c)) +
     '</span></div>' +
+    peReturnClaimBand(r) +
     '<div class="pe-note" data-testid="pr-prepared">' +
     esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) +
     '</div>' +
@@ -1376,6 +1377,35 @@ function peReturnPaint(r) {
       '</div>';
   host.innerHTML = h + peReturnCloseSection(r);
   peReturnList(r);
+}
+/** W15-91: the credit claimed with no tax invoice — the server carried it (the Day book's own flag over this period); the words are CBEvidence's, "See them" opens the Day book on the same days, Evidence = No tax invoice. The return's figures and the lodging are not touched. */
+function peReturnClaim(r) {
+  return typeof CBEvidence !== 'undefined' && CBEvidence.claimWarning ? CBEvidence.claimWarning(r.unsupported_input, (minor) => peMoney(minor, r.currency)) : null;
+}
+function peReturnClaimBand(r) {
+  const w = peReturnClaim(r);
+  if (!w) return '';
+  return (
+    '<div class="ev-warnbox" role="status" data-testid="pr-claim">' +
+    esc(w.text) +
+    ' <button data-cbsid="BKS016-B10" type="button" class="optchip" data-testid="pr-claim-see" onclick="peReturnSeeClaim()">' +
+    esc(w.see) +
+    '</button></div>'
+  );
+}
+/** "See them": the Day book for the return's days, narrowed to Evidence = No tax invoice (the list's own preset, replaced once, then the list remembers as usual) */
+function peReturnSeeClaim() {
+  const P = PE_RET.r && PE_RET.r.period;
+  if (!P || typeof BK === 'undefined') return;
+  BK.dbp = bkDbPeriod('custom', { from: P.start, to: P.end });
+  BK.dvPreset = { filt: { evidence: 'flag' } };
+  if (typeof show === 'function') show('daybook');
+}
+/** the same warning, short, beside the box that counts the input tax (1B) */
+function peReturnClaimMark(r, b) {
+  const u = r.unsupported_input;
+  if (!u || !u.box || u.box !== b.code || !peReturnClaim(r)) return '';
+  return ' <span class="ev ev-warn" data-testid="pr-claim-mark">⚠ ' + esc(CBEvidence.words.flag) + ' · ' + esc(String(u.count)) + '</span>';
 }
 /** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
 function peReturnCloseSection(r) {
@@ -1427,7 +1457,7 @@ function peReturnList(r) {
       prio: 2,
       w: 320,
       html: true,
-      cell: (b) => esc(b.label) + (b.note ? ' <span style="color:var(--grey)">' + esc(b.note) + '</span>' : '')
+      cell: (b) => esc(b.label) + (b.note ? ' <span style="color:var(--grey)">' + esc(b.note) + '</span>' : '') + peReturnClaimMark(r, b)
     },
     {
       key: 'amount',

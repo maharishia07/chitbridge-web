@@ -1,6 +1,6 @@
 /**
  * cap-evidence.js — CMP062 the Evidence chip and CMP063 the Evidence sheet: what stands behind a books row (ASA 500: the auditor vouches an entry to its source).
- * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No document), or, for a purchase that claims GST above the tax-invoice threshold with no file,
+ * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: an opening balance, a receipt or a journal, so nothing to attach to), or, for a purchase that claims GST above the tax-invoice threshold with no file,
  * No tax invoice (a warning). A press opens the sheet: the source document (its number) and its files; a file opens in a new tab.
  *
  * OWNS      the chip html · the sheet · the one door a file is read through (GET /api/books/evidence/:id, with the seat's own headers, never cached)
@@ -29,7 +29,7 @@
   var W = {
     flag: 'No tax invoice',
     none: 'No file',
-    nodoc: 'No document',
+    nodoc: 'No source',
     evidence: 'Evidence',
     head: 'Evidence for {no}',
     source: 'Source document',
@@ -41,7 +41,11 @@
     flagWhy: 'GST is claimed on this purchase and no tax invoice is held on it.',
     rule: 'Rule read',
     failed: 'Could not open that file. Nothing was changed.',
-    ended: 'Access to these books has ended.'
+    ended: 'Access to these books has ended.',
+    claimOne: '{amount} of {box} is from 1 purchase with no tax invoice. You need the tax invoice to claim it.',
+    claimMany: '{amount} of {box} is from {n} purchases with no tax invoice. You need the tax invoice to claim it.',
+    claimBox: 'the tax you claim',
+    claimSee: 'See them'
   };
   var CSS =
     '.ev{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:inherit;font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 10px;min-height:28px;cursor:pointer;white-space:nowrap}' +
@@ -76,12 +80,12 @@
     return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
   }
 
-  /** the chip's state from what the server sent: { tone, word } */
+  /** the chip's state from what the server sent: { key, rank, tone, word } (key = the Day book's Evidence filter; rank = its sort, the ones needing action first) */
   function stateOf(ev) {
-    if (ev.flag === 'no_tax_invoice') return { tone: 'warn', word: T(W.flag), sym: '⚠' };
-    if (ev.count > 0) return { tone: 'ok', word: T(W.evidence) + ' ' + ev.count, sym: '📎' };
-    if (ev.doc) return { tone: 'quiet', word: T(W.none), sym: '○' };
-    return { tone: 'quiet', word: T(W.nodoc), sym: '○' };
+    if (ev.flag === 'no_tax_invoice') return { key: 'flag', rank: 0, tone: 'warn', word: T(W.flag), sym: '⚠' };
+    if (ev.count > 0) return { key: 'held', rank: 3, tone: 'ok', word: T(W.evidence) + ' ' + ev.count, sym: '📎' };
+    if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: T(W.none), sym: '○' };
+    return { key: 'nodoc', rank: 2, tone: 'quiet', word: T(W.nodoc), sym: '○' };
   }
 
   function use(cfg) {
@@ -218,5 +222,19 @@
     );
   }
 
-  root.CBEvidence = { use: use, stateOf: stateOf };
+  /**
+   * the warning on a return: the server carried { count, tax_minor, box } (the Day book's own flag over the period, books-evidence.unsupportedIn) — this words it and adds nothing up.
+   * money(minor) is the page's own formatter (it knows the currency). → { text, see } or null when no claimed tax is without its tax invoice.
+   */
+  function claimWarning(u, money) {
+    if (!u || !(u.count > 0) || !(u.tax_minor > 0)) return null;
+    addCss(); /* the warning band is painted by a page that has not opened the chip yet */
+    var text = T(u.count === 1 ? W.claimOne : W.claimMany)
+      .replace('{amount}', money(u.tax_minor))
+      .replace('{box}', u.box ? u.box : T(W.claimBox))
+      .replace('{n}', String(u.count));
+    return { text: text, see: T(W.claimSee) };
+  }
+
+  root.CBEvidence = { use: use, stateOf: stateOf, claimWarning: claimWarning, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File attached' } };
 })(typeof window !== 'undefined' ? window : globalThis);
