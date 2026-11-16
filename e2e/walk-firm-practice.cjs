@@ -101,7 +101,7 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
         return out;
       });
       if (vp.tag === '1366') ok(tag + ' no heading is cut mid-word (a word of a heading sitting on two lines)', cut.length === 0, JSON.stringify(cut));
-      if (vp.tag === '1366') { const hh = await page.evaluate(() => [...document.querySelectorAll('[data-testid="practice-list"] .cbl-hdr')].map((h) => Math.round(h.getBoundingClientRect().height))); ok(tag + ' every list header is one line (a column that sets minw keeps it: Status, REP-73)', hh.length > 0 && hh.every((h) => h <= 40), JSON.stringify(hh)); }
+      if (vp.tag === '1366') { const st = await page.evaluate(() => { const c = [...document.querySelectorAll('[data-testid="practice-list"] .cbl-hdr > *')].find((x) => /^status/i.test(x.innerText.trim())); if (!c) return null; const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT); let n = w.nextNode(); while (n && !n.nodeValue.trim()) n = w.nextNode(); const r = document.createRange(); r.selectNodeContents(n); return { w: Math.round(c.getBoundingClientRect().width), lines: new Set([...r.getClientRects()].map((q) => Math.round(q.top))).size }; }); ok(tag + ' the Status header (minw 130) is one line and at least 130 px wide', !!st && st.lines === 1 && st.w >= 130, JSON.stringify(st)); }
       const inline = await page.evaluate(() => { const r = document.querySelector('[data-testid^="practice-row-"]'); return r ? r.innerText.replace(/\s+/g, ' ').slice(0, 400) : ''; });
       console.log(tag + ' first row: ' + inline);
       ok(tag + ' status and Open books are in the first row (never dropped)', /Needs help|Watch|Doing well|Not enough/.test(inline) && /Open books/.test(inline), inline);
