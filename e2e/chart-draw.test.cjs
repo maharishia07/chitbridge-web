@@ -113,5 +113,43 @@ console.log('palette: measured in all 16 themes with ui-standard contrastRatio')
   check(rows.filter((r) => r.old45 < 3).length > 0, 'the check can fail: a 45% mix does fail somewhere (so 3:1 is really being measured)');
 }
 
+console.log('compare (REP-66b): the nine hand-computed rows, geometry from the carried change only');
+{
+  const rows = [
+    { label: 'A', now: 12000000, before: 15000000, changePct: -20, state: 'ok', title: 'A' },
+    { label: 'B', now: 5500000, before: 5000000, changePct: 10, state: 'ok' },
+    { label: 'C', now: 3333300, before: 3000000, changePct: 11.1, state: 'ok' },
+    { label: 'D', now: 4200000, before: 0, changePct: null, state: 'no_last_year', words: 'no last year yet' },
+    { label: 'E', now: 100000, before: 10000, changePct: 900, state: 'ok' },
+    { label: 'F', now: 2998500, before: 3000000, changePct: 0, state: 'ok' },
+    { label: 'G', now: 6000000, before: 9000000, changePct: -33.3, state: 'stale', title: 'books in to 30 Sep' },
+    { label: 'H', now: 8000000, before: 2000000, changePct: null, state: 'short_last_year', words: 'no full last year' },
+    { label: 'I', now: null, before: null, changePct: null, state: 'mixed', words: 'two currencies' }
+  ];
+  const svg = D.compare(rows, { id: 'cm', tid: 'cm', title: 'Sales', desc: 'd', width: 320 });
+  const w = (kind, i) => { const m = new RegExp('<rect x="[\0-9.]+" y="[\0-9.]+" width="([\0-9.]+)"[^>]*data-testid="cm-' + kind + '-' + i + '"').exec(svg); return m && m[1] !== undefined ? Number(m[1]) : null; };
+  const txt = (i) => { const m = new RegExp('data-testid="cm-change-' + i + '"[^>]*>(.*?)</text>').exec(svg); return m ? m[1].replace(/<[^>]+>/g, '').trim() : null; };
+  check(w('before', 0) === 83 && w('now', 0) === 66.4, 'A: last year at half the room 83, this year 0.8 of it = 66.4 (' + w('now', 0) + ')');
+  check(txt(0) === '▼ −20.0%' && txt(1) === '▲ +10.0%' && txt(2) === '▲ +11.1%', 'A, B, C print the carried figure with a sign and a glyph: ' + [0, 1, 2].map(txt).join(' | '));
+  check(w('now', 4) === 166 && /stroke:var\(--card,#fffdf8\);stroke-width:1.5/.test(svg) && txt(4) === '▲ +900.0%', 'E: +900.0% printed true, the bar capped at the full 166 with a broken end');
+  check(txt(5) === '0.0%' && w('now', 5) === 83, 'F: zero prints 0.0%, no sign, no glyph, the two bars equal');
+  check(w('now', 3) === null && txt(3) === 'no last year yet' && /data-state="no_last_year"/.test(svg) && /stroke-dasharray/.test(svg), 'D: no bar, a dashed empty line and the words, never 0%');
+  check(/fill:url\(#cm-hatch\)/.test(svg) && /<title>books in to 30 Sep<\/title>/.test(svg) && txt(6) === '▼ −33.3%', 'G: stale is hatched, the true figure printed, the words in the title');
+  check(w('now', 7) === null && w('now', 8) === null && txt(8) === 'two currencies', 'H and I: no bars, only their words');
+  check(/role="img"/.test(svg) && /<title id="cm-t">Sales<\/title><desc id="cm-d">d<\/desc>/.test(svg) && /--rp-actual:/.test(svg), 'accessible head and the palette custom properties');
+  check(D.compare([], {}) === '' && D.changeText(-0) === '0.0%' && D.changeText(null) === '', 'no rows is nothing; minus zero is 0.0%');
+  const money = D.compare([{ label: 'Sales', now: 120, before: 150, changePct: -20, state: 'ok' }], { id: 'mm', tid: 'mm', mode: 'money', width: 320 });
+  check(/data-testid="mm-before-0"/.test(money), 'money mode draws the pair on one scale (largest figure = the room)');
+  /* E17: the caller's codes (opts.codes) land on the picture's chart, parts and legend; with none passed, nothing is written and the output is unchanged */
+  const codes = { chart: 'T-P01', part: 'T-P02', legend: 'T-P03' }, count = (svg, c) => svg.split('data-cbsid="' + c + '"').length - 1;
+  const sb = D.statusBar([{ kind: 'good', value: 3, label: 'a: 3' }, { kind: 'watch', value: 2, label: 'b: 2' }], { id: 'sb', tid: 'sb', codes });
+  check(count(sb, 'T-P01') === 1 && count(sb, 'T-P02') === 2 && count(sb, 'T-P03') === 2, 'statusBar: one chart code, a part code per part, a legend code per figure');
+  const ms = D.monthStrip([{ label: 'Jan', state: 'locked' }, { label: 'Feb', state: 'open' }], { id: 'ms', tid: 'ms', labels: true, codes });
+  check(count(ms, 'T-P01') === 1 && count(ms, 'T-P02') === 2 && count(ms, 'T-P03') === 2, 'monthStrip: chart, a part per month, a legend per month label');
+  const cm = D.compare([{ label: 'A', now: 8, before: 10, changePct: -20, state: 'ok' }], { id: 'cc', tid: 'cc', codes });
+  check(count(cm, 'T-P01') === 1 && count(cm, 'T-P02') === 1 && count(cm, 'T-P03') === 2, 'compare: chart, a part per row, a legend for the label and for the change');
+  check(!/data-cbsid/.test(D.statusBar([{ kind: 'good', value: 3 }], { id: 'n', tid: 'n' })) && !/data-cbsid/.test(D.compare([{ label: 'A', now: 8, before: 10, changePct: -20 }], { id: 'n', tid: 'n' })), 'no codes passed: no data-cbsid');
+}
+
 console.log(failures ? failures + ' FAILED' : 'all ok');
 process.exit(failures ? 1 : 0);

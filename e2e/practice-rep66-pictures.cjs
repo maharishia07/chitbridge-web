@@ -29,7 +29,7 @@ t('Year end: the picture segments sum to the tile counts (10/10/2/4/4)', () => {
 t('On us today: the three kinds of work left equal their tiles, each in its own words', () => {
   const html = T.pictureHTML({ key: 'on_us', tiles: left });
   assert.deepStrictEqual(titles(html).map(num), [7, 41, 12]);
-  assert.ok(/Bank not explained: 7/.test(html) && /Entries to check \(quarter\): 41/.test(html) && /Months to lock: 12/.test(html));
+  assert.ok(/Bank not explained: 7/.test(html) && /Entries to check \(quarter\): 41/.test(html) && /Clients with months to lock: 12/.test(html));
   assert.ok(/data-testid="practice-pic-count">7 · 41 · 12</.test(html));
 });
 t('a tile with no count or zero is left out, never drawn as 0; no parts = no picture; the advice band has none', () => {

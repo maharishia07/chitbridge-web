@@ -55,6 +55,15 @@ function csCharts(key, palette) {
       ],
       { width: 300, id: 'cs-status-' + key, tid: 'cs-status-' + key, title: 'Demo clients by status', palette: palette }
     ) +
+    '</div><div class="card"><b>Year on year</b>' +
+    CBDraw.compare(
+      [
+        { label: 'Client A', now: 12000000, before: 15000000, changePct: -20, state: 'ok', title: 'Client A: down 20.0%' },
+        { label: 'Client E', now: 100000, before: 10000, changePct: 900, state: 'ok', title: 'Client E: up 900.0%, bar capped' },
+        { label: 'Client G', now: 6000000, before: 9000000, changePct: -33.3, state: 'stale', title: 'Client G: books in to 30 Sep' }
+      ],
+      { width: 300, id: 'cs-cmp-' + key, tid: 'cs-cmp-' + key, title: 'Demo sales this year against last year', desc: 'Three demo clients, this year over last year', palette: palette }
+    ) +
     '</div><div class="card"><b>Month strip</b>' +
     CBDraw.monthStrip(csStrip(), { id: 'cs-strip-' + key, tid: 'cs-strip-' + key, title: 'Demo months locked', labels: true, palette: palette }) +
     '</div>'

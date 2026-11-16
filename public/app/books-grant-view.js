@@ -519,7 +519,8 @@
   }
   /** after Open books: focus lands on the books heading (the acting band), not on a button that has gone */
   function focusHeading() {
-    var head = $('ba_band') || viewState.host;
+    var head = $('ba_band');
+    if (!head) return; /* E18: no heading, no focus: the whole pane took a black outline */
     head.setAttribute('tabindex', '-1');
     head.focus();
   }
