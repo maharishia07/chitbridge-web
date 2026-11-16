@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" data-appearance-fixed>
+<!-- OWNS  a THROWAWAY SAMPLE (not product): the three MIS charts drawn in each of the avatar's 16 themes, so Athi can judge the chart palette by eye. Fixed sample numbers, no api, no storage.
+     CALLED BY  nobody; opened by its address (public/lab/chart-themes.html), also served on a throwaway container on the sit-au host.
+     REUSES  the avatar's own path: /engine/screen.js (CBScreen.APP_THEMES, the 16) and /app/avatar.js (CBAvatar.applyWith, the same apply every page uses; on a data-appearance-fixed page it never touches storage),
+             /app/ui-standard.js (CBUiStandard.contrastRatio, the one contrast helper). No theme colour is typed here: every colour is read back from the page after the avatar applied the theme.
+     THE ONE COPY  the :root block below is the app's CREAM base (public/app.html :root, which declares them inline and cannot be linked); a theme overrides it, cream overrides nothing.
+     RULE  (critic 16 Nov, REQ-MIS-SHOWCASE) actual = --ink solid; previous = color-mix(--ink 45%, --page) and must clear 3:1; plan = --ink outline; ONE accent mark in --accent-text; good/watch/bad = --ok/--prog/--disp, never themed away;
+           a fixed palette replaces the set for any theme that fails. -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chart themes sample</title>
+<style>
+:root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#494F56;--ok:#27794c;--prog:#7d6126;--disp:#b4453f}
+:root{--page:var(--paper);--accent-text:var(--blue)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.4 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+.lead{margin:0 0 12px;color:var(--grey);font-size:14px}
+.sample{display:inline-block;font:700 11px/1 ui-monospace,Menlo,Consolas,monospace;border:1px solid currentColor;border-radius:4px;padding:3px 6px;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;vertical-align:middle}
+.themes{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.themes button{min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+.themes button[aria-pressed="true"]{border:2px solid var(--ink);font-weight:700}
+.themes .b{font-size:11px;margin-inline-start:4px;color:var(--grey)}
+.status{margin:6px 0 12px;font-size:13px;color:var(--grey)}
+.status b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.card.wide{grid-column:1/-1}
+.card h2{font-size:15px;margin:0 0 2px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.sub{font-size:12px;color:var(--grey);margin:0 0 6px}
+.key{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink);margin:2px 0 4px}
+.key i{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-inline-end:5px;border-radius:2px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:inherit}
+details{margin-top:6px;font-size:12px}
+details table{border-collapse:collapse;width:100%}
+details td,details th{padding:2px 6px;border-bottom:1px solid var(--line);text-align:end;font-variant-numeric:tabular-nums}
+details th:first-child,details td:first-child{text-align:start}
+.tbl{margin-top:14px;overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;font-size:13px;background:var(--card);border:1px solid var(--line)}
+.tbl th,.tbl td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:start}
+.tbl tr[data-k]{cursor:pointer}
+.tbl tr.on td{font-weight:700;background:color-mix(in srgb,var(--ink) 8%,var(--card))}
+.pass{color:var(--ok);font-weight:700}.fb{color:var(--prog);font-weight:700}
+@media (max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Chart palette across the 16 avatar themes <span class="sample">Sample</span></h1>
+  <p class="lead">A throwaway page, not product. The numbers are fixed samples. The themes are the avatar's own (pick one below, or from the table); the colours are whatever each theme gives the page.</p>
+  <div class="themes" id="themes" role="group" aria-label="Theme"></div>
+  <div class="status" id="status" aria-live="polite"></div>
+  <div id="stage" class="grid">
+    <section class="card wide" aria-labelledby="t1"><h2 id="t1">Sales, this year against last year <span class="sample">Sample</span></h2>
+      <p class="sub">Twelve months, thousands. This year solid, last year grey, the plan as an outline.</p>
+      <div class="key"><span><i style="background:var(--c-act)"></i>This year</span><span><i style="background:var(--c-prev)"></i>Last year</span><span><i style="border:1.5px solid var(--c-plan)"></i>Plan</span></div>
+      <div id="c1"></div><details><summary>Table</summary><div id="d1"></div></details></section>
+    <section class="card" aria-labelledby="t2"><h2 id="t2">To collect, by age <span class="sample">Sample</span></h2>
+      <p class="sub">Thousands owed to you, ranked. One group needs a look.</p>
+      <div id="c2"></div><details><summary>Table</summary><div id="d2"></div></details></section>
+    <section class="card" aria-labelledby="t3"><h2 id="t3">Cash, next 30 days <span class="sample">Sample</span></h2>
+      <p class="sub">Expected balance each day, thousands. The lowest day is marked.</p>
+      <div id="c3"></div><details><summary>Table</summary><div id="d3"></div></details></section>
+  </div>
+  <div class="tbl"><table id="tbl"><caption style="text-align:start;padding:6px 0;font-size:13px" id="cap"></caption>
+    <thead><tr><th>Theme</th><th>Actual</th><th>Previous</th><th>Accent</th><th>Watch</th><th>Result</th></tr></thead><tbody></tbody></table></div>
+  <p class="status">Ratios are against the page. Marks need 3 to 1. Watch is the theme's own amber against the page, shown for information.</p>
+</div>
+<script src="/engine/screen.js"></script>   <!-- CBScreen.APP_THEMES: the 16 themes -->
+<script src="/app/avatar.js"></script>   <!-- CBAvatar.applyWith: the avatar's own apply -->
+<script src="/app/ui-standard.js"></script>   <!-- CBUiStandard.contrastRatio: the one helper -->
+<script>
+(function () {
+  var ratio = CBUiStandard.contrastRatio;
+  var html = document.documentElement, stage = document.getElementById('stage');
+  var KEYS = Object.keys(CBAvatar.THEMES);
+  var NEED = 3; /* WCAG 1.4.11, a mark */
+  /* the fixed fallback, by ground: the SPEC-colour-and-chart-style rp- values, used only when a theme fails */
+  var FIXED = {
+    light: { act: '#1F2A33', prev: '#7C858D', acc: '#3F66A6', page: null },
+    dark: { act: '#E6EAEF', prev: '#8B949E', acc: '#6892DB', page: null }
+  };
+
+  function tok(name) { return getComputedStyle(html).getPropertyValue(name).trim(); }
+  function rgb(c) { var m = String(c).match(/[\d.]+/g); if (/^#/.test(c)) { var h = c.slice(1); if (h.length === 3) h = h.replace(/./g, '$&$&'); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); } return m.slice(0, 3).map(Number); }
+  function mix(a, b, pa) { var x = rgb(a), y = rgb(b); return 'rgb(' + [0, 1, 2].map(function (i) { return Math.round(x[i] * pa + y[i] * (1 - pa)); }).join(',') + ')'; } /* color-mix(in srgb, a pa, b) */
+  function lum(c) { return 0.2126 * lin(rgb(c)[0]) + 0.7152 * lin(rgb(c)[1]) + 0.0722 * lin(rgb(c)[2]); }
+  function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function r1(n) { return Math.round(n * 100) / 100; }
+
+  /* apply a theme through the avatar and read what it gave */
+  function read(k) {
+    CBAvatar.applyWith({ theme: k });
+    var page = tok('--paper'), ink = tok('--ink'), acc = tok('--blue'), prev = mix(ink, page, 0.45);
+    var res = { k: k, name: CBAvatar.THEMES[k].name, page: page, ink: ink, acc: acc, prev: prev, good: tok('--ok'), watch: tok('--prog'), bad: tok('--disp'),
+      rAct: r1(ratio(ink, page)), rPrev: r1(ratio(prev, page)), rAcc: r1(ratio(acc, page)), rWatch: r1(ratio(tok('--prog'), page)) };
+    res.pass = res.rAct >= NEED && res.rPrev >= NEED && res.rAcc >= NEED;
+    var set = lum(page) < 0.18 ? FIXED.dark : FIXED.light;
+    res.fixed = { act: set.act, prev: set.prev, acc: set.acc, rAct: r1(ratio(set.act, page)), rPrev: r1(ratio(set.prev, page)), rAcc: r1(ratio(set.acc, page)) };
+    return res;
+  }
+  var ALL = {}, cur = null;
+  var want = (location.search.match(/theme=([\w]+)/) || [])[1];
+  KEYS.forEach(function (k) { ALL[k] = read(k); });
+
+  function setVars(t) {
+    var use = t.pass ? { act: t.ink, prev: 'color-mix(in srgb, var(--ink) 45%, var(--paper))', acc: 'var(--accent-text)' } : t.fixed;
+    stage.style.setProperty('--c-act', use.act); stage.style.setProperty('--c-plan', use.act);
+    stage.style.setProperty('--c-prev', use.prev); stage.style.setProperty('--c-acc', use.acc);
+    stage.style.setProperty('--c-good', 'var(--ok)'); stage.style.setProperty('--c-watch', 'var(--prog)'); stage.style.setProperty('--c-bad', 'var(--disp)');
+    stage.style.setProperty('--c-grid', 'var(--line)');
+  }
+
+  /* ---------- sample data (fixed) ---------- */
+  var MON = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  var LAST = [118, 124, 131, 127, 140, 152, 148, 155, 162, 170, 198, 214];
+  var THIS = [126, 131, 128, 139, 151, 149, 160, 158, 171, 183, 204, 226];
+  var PLAN = [125, 130, 135, 140, 148, 155, 158, 165, 170, 180, 200, 220];
+  var AGE = [['Not yet due', 184, 0], ['1 to 30 days', 96, 0], ['31 to 60 days', 52, 0], ['61 to 90 days', 38, 1], ['Over 90 days', 21, 0]];
+  var CASH = [142, 138, 131, 127, 120, 128, 121, 114, 109, 101, 96, 88, 92, 85, 76, 70, 64, 58, 51, 44, 38, 31, 36, 52, 61, 58, 67, 74, 82, 90];
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, a, txt) { var e = document.createElementNS(NS, tag); Object.keys(a || {}).forEach(function (n) { e.setAttribute(n, a[n]); }); if (txt != null) e.textContent = txt; return e; }
+  function svg(w, h, label) { var s = el('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img', 'aria-label': label }); return s; }
+  function tbl(head, rows) { return '<table><tr>' + head.map(function (x) { return '<th>' + x + '</th>'; }).join('') + '</tr>' + rows.map(function (r) { return '<tr>' + r.map(function (x) { return '<td>' + x + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>'; }
+  function put(id, node) { var h = document.getElementById(id); h.textContent = ''; h.appendChild(node); }
+  function width(id) { return Math.max(260, Math.floor(document.getElementById(id).getBoundingClientRect().width) || 320); }
+
+  function chart1() {
+    var w = width('c1'), h = 230, L = 34, B = 22, T = 8, pw = w - L - 4, ph = h - B - T, max = 250, s = svg(w, h, 'Sample sales by month, this year against last year and plan');
+    [0, 100, 200].forEach(function (v) { var y = T + ph - v / max * ph; s.appendChild(el('line', { x1: L, x2: w - 4, y1: y, y2: y, stroke: 'var(--c-grid)', 'stroke-width': 1 })); s.appendChild(el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--grey)' }, v)); });
+    var slot = pw / 12, bw = Math.max(5, Math.min(18, slot * 0.36));
+    MON.forEach(function (m, i) {
+      var cx = L + slot * i + slot / 2, yb = T + ph;
+      var hp = LAST[i] / max * ph, ha = THIS[i] / max * ph, hl = PLAN[i] / max * ph;
+      s.appendChild(el('rect', { x: cx - bw - 1, y: yb - hp, width: bw, height: hp, fill: 'var(--c-prev)' }));
+      s.appendChild(el('rect', { x: cx + 1, y: yb - ha, width: bw, height: ha, fill: 'var(--c-act)' }));
+      s.appendChild(el('rect', { x: cx - 0.25, y: yb - hl, width: bw + 2.5, height: hl, fill: 'none', stroke: 'var(--c-plan)', 'stroke-width': 1.5 }));
+      s.appendChild(el('text', { x: cx, y: h - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--grey)' }, m));
+    });
+    put('c1', s);
+    document.getElementById('d1').innerHTML = tbl(['Month', 'This year', 'Last year', 'Plan'], MON.map(function (m, i) { return [m, THIS[i], LAST[i], PLAN[i]]; }));
+  }
+  function chart2() {
+    var w = width('c2'), rh = 34, h = AGE.length * rh + 6, lab = Math.min(118, w * 0.38), s = svg(w, h, 'Sample amounts to collect by age, ranked'), max = 200, bw = w - lab - 78;
+    AGE.forEach(function (r, i) {
+      var y = 4 + i * rh, len = r[1] / max * bw, col = r[2] ? 'var(--c-watch)' : 'var(--c-act)';
+      s.appendChild(el('text', { x: 0, y: y + 19, 'font-size': 12, fill: 'var(--ink)' }, r[0]));
+      s.appendChild(el('rect', { x: lab, y: y + 6, width: len, height: 18, fill: col }));
+      s.appendChild(el('text', { x: lab + len + 6, y: y + 19, 'font-size': 12, 'font-weight': 700, fill: r[2] ? 'var(--c-watch)' : 'var(--ink)' }, r[1] + (r[2] ? '  Watch' : '')));
+    });
+    put('c2', s);
+    document.getElementById('d2').innerHTML = tbl(['Age', 'Owed', 'State'], AGE.map(function (r) { return [r[0], r[1], r[2] ? 'Watch' : '']; }));
+  }
+  function chart3() {
+    var w = width('c3'), h = 200, L = 34, B = 22, T = 14, pw = w - L - 10, ph = h - B - T, max = 160, s = svg(w, h, 'Sample cash balance for the next 30 days, lowest day marked');
+    [0, 50, 100, 150].forEach(function (v) { var y = T + ph - v / max * ph; s.appendChild(el('line', { x1: L, x2: w - 6, y1: y, y2: y, stroke: 'var(--c-grid)', 'stroke-width': 1 })); s.appendChild(el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--grey)' }, v)); });
+    var X = function (i) { return L + i / 29 * pw; }, Y = function (v) { return T + ph - v / max * ph; }, lo = CASH.indexOf(Math.min.apply(null, CASH));
+    s.appendChild(el('polyline', { points: CASH.map(function (v, i) { return X(i) + ',' + Y(v); }).join(' '), fill: 'none', stroke: 'var(--c-act)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+    [1, 10, 20, 30].forEach(function (d) { s.appendChild(el('text', { x: X(d - 1), y: h - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--grey)' }, 'Day ' + d)); });
+    s.appendChild(el('circle', { cx: X(lo), cy: Y(CASH[lo]), r: 6, fill: 'var(--c-acc)', stroke: 'var(--card)', 'stroke-width': 2 }));
+    var tx = X(lo) > w * 0.6 ? X(lo) - 10 : X(lo) + 10;
+    s.appendChild(el('text', { x: tx, y: Y(CASH[lo]) + 24, 'text-anchor': X(lo) > w * 0.6 ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--c-acc)' }, 'Lowest: day ' + (lo + 1) + ', ' + CASH[lo]));
+    put('c3', s);
+    document.getElementById('d3').innerHTML = tbl(['Day', 'Balance'], CASH.map(function (v, i) { return [i + 1, v + (i === lo ? ' (lowest)' : '')]; }));
+  }
+
+  /* ---------- the switcher and the table ---------- */
+  var bar = document.getElementById('themes'), tb = document.querySelector('#tbl tbody');
+  KEYS.forEach(function (k) {
+    var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-k', k); b.setAttribute('aria-pressed', 'false'); b.textContent = ALL[k].name;
+    if (!ALL[k].pass) { var f = document.createElement('span'); f.className = 'b'; f.textContent = 'fallback'; b.appendChild(f); }
+    b.onclick = function () { choose(k); }; bar.appendChild(b);
+    var tr = document.createElement('tr'); tr.setAttribute('data-k', k); var t = ALL[k];
+    tr.innerHTML = '<td>' + t.name + '</td><td>' + t.rAct.toFixed(2) + '</td><td>' + t.rPrev.toFixed(2) + (t.rPrev < NEED ? ' x' : '') + '</td><td>' + t.rAcc.toFixed(2) + (t.rAcc < NEED ? ' x' : '') + '</td><td>' + t.rWatch.toFixed(2) + '</td><td class="' + (t.pass ? 'pass' : 'fb') + '">' + (t.pass ? 'Pass' : 'Fallback (' + t.fixed.rPrev.toFixed(2) + ' / ' + t.fixed.rAcc.toFixed(2) + ')') + '</td>';
+    tr.onclick = function () { choose(k); }; tb.appendChild(tr);
+  });
+  var nPass = KEYS.filter(function (k) { return ALL[k].pass; }).length;
+  document.getElementById('cap').textContent = nPass + ' of ' + KEYS.length + ' themes pass without the fallback. Fallback column: previous / accent ratios of the fixed set.';
+
+  function choose(k) {
+    cur = k; var t = ALL[k];
+    CBAvatar.applyWith({ theme: k });
+    setVars(t);
+    document.querySelectorAll('#themes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === k)); });
+    document.querySelectorAll('#tbl tr[data-k]').forEach(function (r) { r.className = r.getAttribute('data-k') === k ? 'on' : ''; });
+    document.getElementById('status').innerHTML = '<b>' + t.name + '</b>: actual ' + t.rAct.toFixed(2) + ', previous ' + t.rPrev.toFixed(2) + ', accent ' + t.rAcc.toFixed(2) + ' against the page. ' +
+      (t.pass ? '<b class="pass">Uses the theme colours.</b>' : '<b class="fb">Uses the fixed fallback palette</b> (previous ' + t.fixed.rPrev.toFixed(2) + ', accent ' + t.fixed.rAcc.toFixed(2) + ').');
+    draw();
+  }
+  function draw() { chart1(); chart2(); chart3(); }
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(draw, 120); });
+  window.MIS_RESULT = { pass: nPass, total: KEYS.length, rows: KEYS.map(function (k) { var t = ALL[k]; return { k: k, name: t.name, actual: t.rAct, previous: t.rPrev, accent: t.rAcc, watch: t.rWatch, pass: t.pass, fixedPrev: t.fixed.rPrev, fixedAcc: t.fixed.rAcc }; }) };
+  choose(ALL[want] ? want : 'cream');
+})();
+</script>
+</body>
+</html>
