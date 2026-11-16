@@ -52,6 +52,8 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
     });
     const page = await ctx.newPage(), threw = [];
     page.on('pageerror', (e) => threw.push(e.message));
+    let duesApi = null; /* the api's own answer to the page's dues read: the proof of which side has rows (acc17b dues-zero-party: the server drops a party with nothing open) */
+    page.on('response', (r) => { if (r.url().includes('/api/books/dues') && r.status() === 200) r.json().then((j) => { duesApi = j; }).catch(() => {}); });
     await page.goto(base + '/');
     await page.waitForSelector('[data-testid^="practice-row-"]', { timeout: 40000 }).catch(async (e) => { await page.screenshot({ path: OUT + '/fail-home.png' }); console.log('home text: ' + (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').slice(0, 300)); throw e; });
     const rows = await page.$$eval('[data-testid^="practice-row-"]', (els) => els.map((e) => ({ id: e.getAttribute('data-testid').replace('practice-row-', ''), t: e.innerText })));
@@ -73,9 +75,16 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(tag + 'no owner wording on the firm page', !/Customers owe you|You owe suppliers/.test(body));
     const c = (await page.locator('[data-testid="bv-dues-customers"]').innerText().catch(() => '')).replace(/\s+/g, ' ');
     console.log(tag + 'customers table: ' + c.slice(0, 500));
+    const custRows = duesApi ? (duesApi.parties || []).filter((p) => p.side === 'customer' && Number(p.balance_minor) !== 0).length : -1;
+    ok(tag + 'the api answered the dues read (' + custRows + ' customers with a balance)', custRows >= 0, 'no /api/books/dues answer seen');
+    if (custRows === 0) { /* a side with no one owing says so in a sentence: no columns, no lone Total row */
+      ok(tag + 'empty customers side says "Nobody owes ' + name + '"', c === 'Nobody owes ' + name, c);
+      ok(tag + 'no Total row on an empty side', !/Total/.test(c));
+    } else {
     ok(tag + 'columns Current · 1–30 · 31–60 · 61–90 · 90+ · Total', vp.width < 500 || ['current', '1–30', '31–60', '61–90', '90+', 'total'].every((x) => c.toLowerCase().includes(x)), c.slice(0, 200));
     if (vp.width < 500) console.log(tag + 'first card: ' + (await page.locator('[data-testid="bv-row-0"]').first().innerHTML().catch(() => '')).replace(/<[^>]+>/g, '|').replace(/[|]+/g, "|").slice(0, 400));
     ok(tag + 'a Total row', /Total/.test(c));
+    }
     const over = await page.evaluate(() => {
       const d = document.documentElement;
       const wide = Array.from(document.querySelectorAll('body *')).filter((n) => { const s = getComputedStyle(n); return /auto|scroll/.test(s.overflowX) && n.scrollWidth > n.clientWidth + 1 && n.clientWidth > 0 && n.getClientRects().length; }).map((n) => (n.id || n.className || n.tagName).toString().slice(0, 40));
