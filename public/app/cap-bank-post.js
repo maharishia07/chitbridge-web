@@ -43,7 +43,7 @@
     }
   }
   /** the keys of each entry kind POST /events reads beside the common ones (books-contract EVENT_BODY is CLOSED: a key it does not list is refused, so nothing else is sent) */
-  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to'], tax_payment: [] };
+  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to', 'fee'], tax_payment: [] };
   /** money in from / out to a named party goes through the ONE payments door (POST /payments, what Dues records through), never POST /events: direction in | out */
   var PAYMENT_DIRECTION = { payment_received: 'in', payment_made: 'out' };
   /** the engine proposes these for a line with no payee (whatIsThis), but no api door takes them yet (BKS-ACC-4): refused in words here, never posted wrong */
@@ -65,6 +65,7 @@
       if (item.tax.invoice_answer === 'held') body.tax_invoice = 'held'; /* the person's word that they hold the tax invoice (the server needs it at the pack's threshold; 'none' sends no tax at all) */
     }
     if (event.type === 'other_income' && item.tax && item.tax.direction === 'output' && item.tax.tax_minor > 0) body.output_tax_minor = item.tax.tax_minor; /* the GST collected INSIDE the bank figure, the engine's own split: amount is the NET */
+    if (event.type === 'contra' && event.fee != null && item.tax && item.tax.tax_minor > 0) body.fee_tax_minor = item.tax.tax_minor; /* a card settlement net of its fee: the tax inside the fee, the engine's own figure; fee is the NET of it */
     if (event.type === 'tax_payment') Object.assign(body, { paid_from: 'bank' }); /* the whole figure, the statement account's mode (modeOf below); the api puts it on the pack's one tax head */
     if (item.moveTo) body.if_locked = 'next_open'; /* W15-85: the person chose to post this locked month's line in the next open month; the api adds the "<Month> locked" note (W15-85a, one wording) */
     return modeOf ? modeOf(body) : body;
