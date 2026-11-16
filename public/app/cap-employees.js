@@ -665,7 +665,7 @@
     var byRole = !!held && held.source === 'preset';
     var head =
       '<label class="emp-opt"><span><input data-cbsid="EMP001-I08" type="checkbox" id="emp_area_' + esc(item.id) + '" data-area="' + esc(item.id) + '" data-testid="emp-area-on-' + esc(item.id) + '"' +
-      (held ? ' checked' : '') + (byRole ? ' disabled' : '') + '> <b>' + esc(item.label) + '</b></span><span class="sub">' + esc(item.see) + '</span></label>';
+      (held ? ' checked' : '') + (byRole ? ' disabled' : '') + '> <b>' + esc(item.label) + '</b></span>' + ((item.levels || []).length < 2 ? '<span class="sub">' + esc(item.see) + '</span>' : '') + '</label>';
     if (byRole) return '<div class="emp-area" data-testid="emp-area-' + esc(item.id) + '">' + head + '<span class="sub">' + esc(T('Their role already opens this.')) + '</span></div>';
     var levels = item.levels || [];
     var pick = levels.length < 2 ? '' : levels.map(function (level) {
@@ -690,7 +690,7 @@
         key: 'emp-areas-' + p.id,
         failed: T("Couldn't save"),
         out: 'emp_out',
-        confirm: opening.length ? { title: T('Open this for') + ' ' + p.name + '?', body: '<ul>' + opening.map(function (change) { return '<li><b>' + esc(change.label) + '</b> ' + esc(change.words) + '</li>'; }).join('') + '</ul>', yes: T('Open') } : undefined,
+        confirm: opening.length ? { title: T('Open this for') + ' ' + p.name + '?', body: '<ul>' + opening.map(function (change) { return '<li><b>' + esc(change.label) + '</b> ' + esc(change.words) + '</li>'; }).join('') + '</ul>', yes: T('Open'), danger: false } : undefined,
         outcome: function () {
           $('emp_out').textContent = T('Saved.');
           changed(p.id);
