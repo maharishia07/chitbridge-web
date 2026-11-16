@@ -832,9 +832,11 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/Locked/.test(await p.textContent('[data-testid="lk-state-' + sep + '"]')), 'a locked month\'s row says Locked after coming back to the screen (read from the server)');
   const before = S.lastLock;
   await p.click('[data-testid="lk-unlock-' + sep + '"]');
-  ok(S.lastLock === before && /Say why/.test(await p.textContent('[data-testid="lk_out"]')), 'opening a month again without a reason is refused before sending');
+  await p.waitForSelector('[data-testid="lk_why"]', { timeout: 5000 }); /* W15-97: the reason is asked in the popup beside Open again */
+  await p.click('[data-testid="lk-reopen-go"]');
+  ok(S.lastLock === before && /Say why/.test(await p.textContent('[data-testid="lk-whyout"]')), 'opening a month again without a reason is refused before sending');
   await p.fill('[data-testid="lk_why"]', 'late bill from Agro Mills');
-  await p.click('[data-testid="lk-unlock-' + sep + '"]');
+  await p.click('[data-testid="lk-reopen-go"]');
   await p.waitForFunction((n) => document.querySelector('[data-testid="lk-state-' + n + '"]').getAttribute('data-state') === 'open', sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === false && S.lastLock.body.reason === 'late bill from Agro Mills', 'opened again, with the reason sent');
 

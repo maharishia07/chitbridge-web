@@ -11,7 +11,7 @@
 /** the Bank view's own state (cap-bank.js declares BKB; this file reads it through one door) */
 const bkshBook = () => BKB;
 /** the shop's own login (the page's isOwner: a co-assist is not the owner); false where the page has none */
-const bkshIsOwner = () => typeof isOwner === 'function' && isOwner();
+const bkshIsOwner = () => typeof isOwner === 'function' && isOwner() && !(typeof bkReadOnlySeat === 'function' && bkReadOnlySeat()); /* W15-71: an auditor's seat never reads as the owner */
 const BKSH = { ctl: null, ui: null, key: '', taxRegistered: null, posting: false, said: null, refs: null };
 /** the statement the answers belong to: the account and the file's hash; the controller (and every answer on it) is kept for this key, so closing the sheet never loses them */
 const bkshKey = () => String(bkshBook().stmtAcct || bkshBook().acct) + ':' + ((bkshBook().file && bkshBook().file.hash) || '');

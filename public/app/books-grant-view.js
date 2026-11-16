@@ -32,7 +32,7 @@
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [], panels: true },
-    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
+    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
 
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
@@ -41,7 +41,8 @@
     var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
     return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
-      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null });
+      var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
+      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
     });
   }
   function words(s) {
@@ -73,6 +74,7 @@
     var v = row[column[0]];
     if (column[2] === MONEY) return moneyCell(row, column[0], v);
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
+    if (column[0] === 'lock_note') return v || '—'; /* html built from the server's trail, each line escaped */
     if (column[0] === 'party_ref') return partyCell(row, v); /* one painter: the party · ref, and under it who posted it when an adviser did */
     if (column[2] === 'evidence') return viewState.ev ? viewState.ev.chip(row) : '—'; /* CMP062: what stands behind the row (cap-evidence.js) */
     if (v == null || v === '') return row._total ? '' : '—';
@@ -187,7 +189,14 @@
       return (
         '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
-    }).join('') + prepareButton();
+    }).join('') + prepareButton() + bankButton();
+  }
+  /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
+  function bankButton() {
+    return !isAdviser() && !viewState.why ? '<button data-cbsid="NET005-B02" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
+  }
+  function openBank() {
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank'));
   }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {
@@ -221,6 +230,7 @@
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
+    if ($('bv_bank')) $('bv_bank').onclick = openBank;
     Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-report]'), function (button) {
       button.onclick = function () {
         viewState.report = button.getAttribute('data-report');
@@ -356,7 +366,7 @@
       },
       columns: shownCols(report).map(function (column, i) {
         return {
-          html: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref',
+          html: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref' || column[0] === 'lock_note',
           key: column[0],
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === MONEY ? 1 : 2,

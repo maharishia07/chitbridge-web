@@ -5647,8 +5647,13 @@ function bkFyWord(w) {
 }
 /** the period's status is a server enum — it becomes a word here, never shown raw */
 var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
+/** W15-71: the seat that only READS the client's books (an auditor under a grant): every write control is left out, not greyed; the server refuses the writes too */
+function bkReadOnlySeat() {
+  var seat = typeof CBBooksActing !== 'undefined' && CBBooksActing.current ? CBBooksActing.current() : null;
+  return !!seat && seat.role === 'auditor';
+}
 function bkIsOwner() {
-  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity';
+  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity' && !bkReadOnlySeat();
 } /* the server enforces it; this only decides who is offered the buttons */
 var BK_PERIOD_SYM = { open: '○', soft_locked: '🔒', hard_locked: '⛔' };
 /**
@@ -5702,6 +5707,13 @@ function bkFyPick(v) {
   if (BK.tab === 'lock') bkLockRowsPaint();
   else bkPackCtlPaint();
 }
+/** W15-97: the words of a month's lock history and of the month a Lock waits for are lock-words.js' (the auditor's Months say the same) */
+function bkLockWho(x, st) {
+  return CBLockWords.whoOf(x, st);
+}
+function bkLockWhyWords(x, kind) {
+  return CBLockWords.whyOf(x, kind, bkMonths().map(tx)) || (x && x[kind] && x[kind].why) || '';
+}
 /* the Month lock tab: the year picker and its twelve month rows */
 async function bkLockView(body) {
   try {
@@ -5734,28 +5746,8 @@ function bkLockRowsPaint() {
     own = bkIsOwner();
   if (!el) return;
   if (typeof fxLockLine === 'function') fxLockLine();
-  var reopens = bkMonths().some(function (item, index) {
-    var q = (L.info || {})[L.fy + '|' + (index + 1)];
-    return q && q.reopen && q.reopen.may;
-  });
-  var foot = document.getElementById('lk_foot'),
-    whyBox = document.getElementById('lk_whybox');
-  if (own && reopens && !whyBox && foot)
-    foot.insertAdjacentHTML(
-      'beforebegin',
-      '<label id="lk_whybox">' +
-        tx('Reason') +
-        '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="lk_why" data-testid="lk_why" placeholder="' +
-        esc(tx('Needed to open a month again')) +
-        '"></label>'
-    );
-  if (own && !reopens && whyBox) whyBox.remove();
-  if (foot)
-    foot.textContent = !own
-      ? ''
-      : reopens
-        ? tx('A locked month opens again with a reason. Close for good never opens.')
-        : tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.');
+  var foot = document.getElementById('lk_foot');
+  if (foot) foot.textContent = !own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. Close for good never opens.');
   var rows = bkMonths()
     .map(function (item, index) {
       var p = index + 1,
@@ -5763,7 +5755,11 @@ function bkLockRowsPaint() {
         b = '',
         x = (L.info || {})[L.fy + '|' + p] || null;
       var may = !x || !x.lock || x.lock.may,
-        why = x && x.lock && x.lock.why ? x.lock.why : '';
+        why = x && x.lock && x.lock.why ? bkLockWhyWords(x, 'lock') : '',
+        who = bkLockWho(x, st),
+        openMay = !x || !x.reopen || x.reopen.may !== false,
+        blocked = st === 'open' ? !may : st === 'soft_locked' && !openMay,
+        blockWhy = st === 'open' ? why : bkLockWhyWords(x, 'reopen');
       if (own && st === 'open')
         b =
           '<button data-cbsid="CMP042-B07"' + bkMountAttribute('CMP042') + ' type="button"' + (may ? ' class="supact-pri"' : '') + ' data-testid="lk-lock-' +
@@ -5779,9 +5775,7 @@ function bkLockRowsPaint() {
         b =
           '<button data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-unlock-' +
           p +
-          '" onclick="bkLockDo(\'unlock\',' +
-          p +
-          ')">🔓 ' +
+          '"' + (openMay ? ' onclick="bkLockReopen(' + p + ')"' : ' disabled style="opacity:.55;cursor:not-allowed" title="' + esc(tx(blockWhy)) + '"') + '>🔓 ' +
           tx('Open again') +
           '</button> <button data-cbsid="CMP042-B09"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-hard-' +
           p +
@@ -5803,6 +5797,8 @@ function bkLockRowsPaint() {
         (BK_PERIOD_SYM[st] || '') +
         ' ' +
         esc(tx(BK_PERIOD_WORD[st] || st)) +
+        (who.line || who.note ? '<div class="lk-who" data-testid="lk-who-' + p + '">' + esc([who.line, who.note].filter(Boolean).join('. ')) + '</div>' : '') +
+        (who.all.length > 1 ? '<details class="lk-hist" data-testid="lk-hist-' + p + '"><summary>' + esc(txf('History ({n})', { n: who.all.length })) + '</summary><ul>' + who.all.map(function (words) { return '<li>' + esc(words) + '</li>'; }).join('') + '</ul></details>' : '') +
         '</td><td data-testid="lk-figs-' +
         p +
         '" class="num lk-ent">' +
@@ -5811,13 +5807,13 @@ function bkLockRowsPaint() {
         (x && x.sales_minor ? bkMoney(x.sales_minor) : esc(tx('No sales'))) +
         '</td><td class="lk-act">' +
         b +
-        (b ? (may ? '' : '<button type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(why)) + '" data-full="' + esc(tx(why) + (x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(why)) + '" onclick="bkLockWhy(this)">' + esc(tx(why)) + '</button>') : '') +
+        (b ? (!blocked ? '' : '<button type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(blockWhy)) + '" data-full="' + esc(tx(blockWhy) + (st === 'open' && x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(blockWhy)) + '" onclick="bkLockWhy(this)">' + esc(tx(blockWhy)) + '</button>') : '') +
         '</td></tr>'
       );
     })
     .join('');
   el.innerHTML =
-    '<style>@media(max-width:620px){.lk-t thead{display:none}.lk-t,.lk-t tbody{display:block}.lk-t tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}.lk-t td,.lk-t th{padding:0!important}.lk-t .lk-ent{display:none}.lk-t .lk-act{grid-column:1 / -1}.lk-t .lk-sales{text-align:right}}.lk-t button.lk-why{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;font:inherit!important;font-size:var(--fs-1)!important;font-weight:400!important;color:var(--grey)!important;text-align:left;cursor:pointer;display:inline-block;vertical-align:middle;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}@media(max-width:620px){.lk-t button.lk-why{display:block;margin:2px 0 0;max-width:100%}}.lk-t button.lk-why[aria-expanded=true]{white-space:normal;max-width:100%}.lk-box{max-height:calc(100vh - 340px);min-height:160px;overflow:auto}.lk-t th{position:sticky;top:0;background:var(--bg,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
+    '<style>@media(max-width:620px){.lk-t thead{display:none}.lk-t,.lk-t tbody{display:block}.lk-t tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}.lk-t td,.lk-t th{padding:0!important}.lk-t .lk-ent{display:none}.lk-t .lk-act{grid-column:1 / -1}.lk-t .lk-sales{text-align:right}}.lk-t button.lk-why{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;font:inherit!important;font-size:var(--fs-1)!important;font-weight:400!important;color:var(--grey)!important;text-align:left;cursor:pointer;display:inline-block;vertical-align:middle;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}@media(max-width:620px){.lk-t button.lk-why{display:block;margin:2px 0 0;max-width:100%}}.lk-t button.lk-why[aria-expanded=true]{white-space:normal;max-width:100%}.lk-who{color:var(--grey);font-size:var(--fs-1);font-weight:400}.lk-hist{font-size:var(--fs-1);color:var(--grey)}.lk-hist summary{cursor:pointer;display:inline-block}.lk-hist ul{margin:2px 0 0;padding-left:16px}.lk-box{max-height:calc(100vh - 405px);min-height:160px;overflow:auto}body:has(#acting-band) .lk-box{max-height:calc(100vh - 465px)}@media(max-width:620px){.lk-box{max-height:calc(100vh - 480px)}}.lk-t th{position:sticky;top:0;background:var(--bg,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
     '<div class="lk-box" data-testid="lk-box"><table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
     tx('Month') +
     '</th><th>' +
@@ -5836,19 +5832,42 @@ function bkLockWhy(node) {
   node.setAttribute('aria-expanded', open ? 'true' : 'false');
   node.textContent = node.getAttribute(open ? 'data-full' : 'data-short');
 }
-/* lock or unlock one month, asking the server and flipping only that row */
-async function bkLockDo(what, period) {
-  var lockState = BK.lk,
-    fiscalYear = lockState.fy,
-    node = (document.getElementById('lk_why') || {}).value || '',
-    out = document.getElementById('lk_out');
+/**
+ * W15-97 · OPEN AGAIN asks its reason in its own popup, beside the button that sends it (the box used to sit under the twelve rows, apart from the action). The reason is kept in the trail with the name and the day; Cancel sends nothing.
+ */
+function bkLockReopen(period) {
   var monthName = tx(bkMonths()[period - 1] || String(period));
-  if (what === 'unlock' && !node.trim()) {
+  ui.dialog({
+    mount: bkDialogMount(6),
+    pop: 'POP092',
+    titleText: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
+    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
+    body:
+      '<label>' + tx('Why are you opening it again?') + '<input class="inp" data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' id="lk_why" data-testid="lk_why" maxlength="200" autocomplete="off" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>' +
+      '<div id="lk_whyout" data-testid="lk-whyout" role="alert" style="color:var(--warn-2)"></div>',
+    footerHtml:
+      '<button type="button" data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' + tx('Cancel') + '</button>' +
+      '<button type="button" class="supact-pri" data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' data-testid="lk-reopen-go" onclick="bkLockReopenGo(' + period + ')">' + tx('Open again') + '</button>'
+  });
+}
+function bkLockReopenGo(period) {
+  var reason = String((document.getElementById('lk_why') || {}).value || '').trim(),
+    out = document.getElementById('lk_whyout');
+  if (!reason) {
     if (out) out.textContent = tx('Say why — the reason is kept');
-    var reasonBox = document.getElementById('lk_why');
-    if (reasonBox) reasonBox.focus();
     return;
   }
+  closeModal();
+  return bkLockDo('unlock', period, reason);
+}
+/* lock or unlock one month, asking the server and flipping only that row */
+async function bkLockDo(what, period, reason) {
+  var lockState = BK.lk,
+    fiscalYear = lockState.fy,
+    node = reason || '',
+    out = document.getElementById('lk_out');
+  var monthName = tx(bkMonths()[period - 1] || String(period));
+  if (what === 'unlock' && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
   var btn = document.querySelector('[data-testid="lk-' + what + '-' + period + '"]');

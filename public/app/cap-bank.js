@@ -137,6 +137,8 @@ function bankAcctPick(code, loading) {
 /** an acting adviser works the bank page for the client; the owner's own login too. Only the owner's grant decides whether the adviser may POST (the server stays the authority) */
 const bkbActing = () => typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser();
 const bkbMayAct = () => peOwner() || bkbActing();
+/** W15-71: the auditor's seat reads the bank (home, kept files, a month's lines, who matched, the sign-off) and writes nothing: no Add, Post, Match, Note, Sign off or Reopen is drawn, and the rail (party and bank details) is not asked */
+const bkbReadOnly = () => typeof bkReadOnlySeat === 'function' && bkReadOnlySeat();
 /** the sentence for an adviser whose grant does not post straight into these books ('' when the person may act) */
 function bkbActRefusal() {
   return bkbActing() && !CBBooksActing.posts() ? tx('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.') : '';
@@ -228,6 +230,7 @@ async function bankView(body) {
         ' onchange="bankAcctPick(this.value)"'
       )
     ) +
+    (bkbReadOnly() ? '' : [
     peField(
       'bk_preset',
       'Which bank',
@@ -242,10 +245,9 @@ async function bankView(body) {
       'bk_file',
       'Statement file (CSV or JSON)',
       '<input data-cbsid="BKS014-I01" class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,text/csv,application/json" onchange="bankPick(this)">'
-    ) +
-    '</div><div class="pe-note" data-testid="bank-private">🔒 ' +
-    bkbE(tx('The file is read on this device and is never uploaded. This device keeps the latest one.')) +
-    '</div><div id="bk_out" class="pe-slot"></div></div>' +
+    )].join('')) +
+    '</div>' + (bkbReadOnly() ? '' : '<div class="pe-note" data-testid="bank-private">🔒 ' + bkbE(tx('The file is read on this device and is never uploaded. This device keeps the latest one.')) + '</div>') +
+    '<div id="bk_out" class="pe-slot"></div></div>' +
     '<div class="pe-card bks" id="bk_stmts" data-testid="bank-stmts"></div>' /* the Statements box (cap-bank-statements.js) */ +
     '<div id="bk_res" data-testid="bank-res"></div></div>';
   BKB.view = 'home'; /* W15-84: the menu's Bank ALWAYS lands on the home; the device's last statement never decides it (it is read again from a month's press) */
@@ -368,6 +370,7 @@ async function bankLedger() {
 }
 /** BR1: what the other parties already told us for the statement's dates — their advices and my questions. A failure is said, never a blank: the lines still match the books */
 async function bankRail() {
+  if (bkbReadOnly()) return { chits: [], parties: [], books: { parties: [], open_items: [] }, may: {}, me: null, currency: null }; /* the auditor never asks the rail: no failure notice either */
   try {
     const r = (await api('booksBankRail', { query: { from: BKB.from, to: BKB.to } })) || {};
     return { chits: r.rail_chits || [], parties: r.parties || [], books: r.books || { parties: [], open_items: [] }, may: r.may || {}, me: r.me || null, currency: r.currency || null };
@@ -453,7 +456,8 @@ function bankExplain() {
       party: x.party || (x.asked && x.asked.party) || null,
       books: (x.state === 'check' ? x.candidates || [] : x.ledger).map((id) => byLedger[id]).filter(Boolean),
       sugg: x.suggestion,
-      asked: x.asked
+      asked: x.asked,
+      accepted: status === 'accepted' ? marks[x.key] : null /* W15-71: who matched it and when, the shared record's own mark */
     });
   });
   (M.unmatched_ledger || []).forEach((item) =>
@@ -673,6 +677,7 @@ function bankOpeningHtml() {
 }
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
+  if (bkbReadOnly()) return typeof bankStoreSignButton === 'function' ? bankStoreSignButton() : ''; /* the auditor: the sign-off is SAID whenever the month is signed, whatever the difference; no button */
   const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct();
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (!canAdd || (fig && !bkbCount('books'))) return '';
@@ -714,7 +719,7 @@ function bankBandCore() {
     account: bkbAcctName() || BKB.stmtAcct,
     from: P.from, to: P.to, count: P.lines.length, currency: code,
     change: typeof BKST !== 'undefined' && BKST.mode === 'server' ? '' /* the trail's Back (cap-bank-home.js) is the way to the files and the other statements */ : '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
-    rightAct: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
+    rightAct: bkbReadOnly() ? '' : bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
     actions: acts,
     right: CBBankBand.rightAccount({
       parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
@@ -819,7 +824,7 @@ function bkbLineRows() {
 }
 /** what opens under a line: the answers it asks (the sheet's controller, bank-preview-ui.js: what it looks like, Dr and Cr, the questions) and, under them, what the rail and the books say about it */
 function bkbLinePanel(row) {
-  const answers = row.item && BKB.ui && (row.status === 'need' || row.status === 'ready' || row.status === 'lock') ? BKB.ui.panel(row.item, row.result) : '';
+  const answers = !bkbReadOnly() && row.item && BKB.ui && (row.status === 'need' || row.status === 'ready' || row.status === 'lock') ? BKB.ui.panel(row.item, row.result) : '';
   const booked = row.item && row.status === 'in' && row.item.alreadyWhy ? '<div class="pe-note" data-testid="bank-in-why">' + bkbE(tx('In your books') + ' · ' + row.item.alreadyWhy) + '</div>' : ''; /* W15-85: a line posted in a later month says so on its own row */
   return booked + answers + bankNext(row.raw);
 }
@@ -880,7 +885,7 @@ function bankList() {
           cell: (row) => ((row.raw.books || []).length && row.raw.status !== 'check' ? '<span class="mono">' + bkbE(row.raw.books.map((item) => item.entry_no).join(', ')) + '</span>' : '—')
         }
       ],
-      actions: [
+      actions: bkbReadOnly() ? [] : [
       {
         id: 'accept',
         icon: '✓',
@@ -1201,6 +1206,7 @@ function bankNext(r) {
     h +=
       row('Why', bkbE(r.sugg && r.sugg.why ? tx(r.sugg.why) : tx('Nobody told you about it and nothing in your books matches it'))) +
       row('Next', bkbE(tx('Ask the party which bill, or add it in your books.')));
+  if (r.accepted && r.accepted.by) h += row('Accepted by', bkbE(txf('{who} · {date}', { who: r.accepted.by, date: bkDate(String(r.accepted.at || '').slice(0, 10)) }))); /* W15-71: who matched it and when, whatever its state before */
   const notes = r.key ? (bkbRec().notes || {})[r.key] || [] : [];
   if (notes.length)
     h +=
