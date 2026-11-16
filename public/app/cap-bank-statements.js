@@ -159,7 +159,11 @@ function bankStmtPaint() {
   host.innerHTML =
     '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' + year +
     (ready ? '<div class="bkh-body">' + (BKST.all ? bankHomeAllHtml() : bankHomeCardsHtml() + bankHomeGridHtml()) + (bankHomeMayAdd() ? (open ? bkstAddHtml() : '') : '') + '<div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>' + (BKST.all ? '' : bkstFilesHtml()) + (bankHomeMayAdd() ? bkstJustReadHtml() : '') + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div></div>' : '');
-  host.querySelectorAll('.bks-wrap').forEach((node) => (node.scrollLeft = node.scrollWidth)); /* on a phone the newest months show first */
+  host.querySelectorAll('.bks-wrap').forEach((node) => {
+    const days = Array.from(node.querySelectorAll('tbody tr:first-child td:not(.bkh-future):not(.bkh-tally)')),
+      last = days[days.length - 1]; /* on a phone the newest month that has begun shows first, not the months to come */
+    node.scrollLeft = last ? Math.max(0, last.offsetLeft + last.offsetWidth - node.clientWidth + 40) : node.scrollWidth;
+  });
   if (ready && !BKST.all) bkstFilesMount();
   if (BKST.focus) {
     const node = host.querySelector('[data-testid="' + BKST.focus + '"]');
