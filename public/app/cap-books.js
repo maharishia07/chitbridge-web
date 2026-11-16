@@ -4551,54 +4551,74 @@ function bkLedgerLink(code, name, tid) {
     '</a>'
   );
 }
-/* one side of the balance sheet or P&L: its title, rows and total */
-function bkSideHTML(title, rows, c, total) {
+/* one ledger row of a statement: "code · name" (the name opens the ledger), and what a netted tax line is pair of (the server names the two ledgers) */
+function bkStmtRow(x, currency) {
+  var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
+  return (
+    '<tr><td>' +
+    (x.code ? esc(x.code + ' · ') + bkLedgerLink(x.code, x.name, 'st') : esc(x.name)) +
+    (pair ? '<div style="font-size:var(--fs-1)" data-testid="st-netof">' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '</div>' : '') +
+    '</td><td class="num">' +
+    esc(bkMoney(x.amount_minor, currency)) +
+    '</td></tr>'
+  );
+}
+/* a total row: the label and the figure the SERVER carried (the page never adds) */
+function bkStmtTotal(label, minor, currency, tid) {
+  return minor == null ? '' : '<tr' + (tid ? ' data-testid="' + tid + '"' : '') + '><td><b>' + esc(label) + '</b></td><td class="num"><b>' + esc(bkMoney(minor, currency)) + '</b></td></tr>';
+}
+/* the report lines the server grouped (the pack's own heads, in its order): a heading, its ledgers, and its carried total when it holds more than one */
+function bkStmtGroups(lines, currency) {
+  return (lines || [])
+    .map(function (g) {
+      var accts = g.accounts || [];
+      return (
+        '<tr data-testid="st-group"><td colspan="2" style="padding-top:8px"><b>' + esc(g.label) + '</b></td></tr>' +
+        accts.map(function (x) { return bkStmtRow(x, currency); }).join('') +
+        (accts.length > 1 ? bkStmtTotal(tx('Total') + ' ' + g.label, g.amount_minor, currency) : '')
+      );
+    })
+    .join('');
+}
+/* one side of the balance sheet or P&L: its title, its rows (flat ledgers or the server's report lines) and its carried total */
+function bkSideHTML(title, rows, currency, total, totalLabel, lines) {
   return (
     '<div class="sec">' +
     title +
     '</div>' +
     bkTable(
       [{ t: tx('Ledger') }, { t: tx('Amount'), num: 1 }],
-      (rows || [])
-        .map(function (x) {
-          return (
-            '<tr><td>' +
-            (x.code ? esc(x.code + ' · ') + bkLedgerLink(x.code, x.name, 'st') : esc(x.name)) +
-            '</td><td class="num">' +
-            esc(bkMoney(x.amount_minor, c)) +
-            '</td></tr>'
-          );
-        })
-        .join(''),
-      total != null ? '<tr><td><b>' + tx('Total') + '</b></td><td class="num"><b>' + esc(bkMoney(total, c)) + '</b></td></tr>' : ''
+      lines && lines.length ? bkStmtGroups(lines, currency) : (rows || []).map(function (x) { return bkStmtRow(x, currency); }).join(''),
+      bkStmtTotal(totalLabel || tx('Total'), total, currency)
     )
   );
 }
-/* the P&L tab: income and expenses for one date range */
+/* the P&L tab: income and expenses for one date range, by the pack's report lines, then Total income, Total expenses and the Profit (all carried) */
 async function bkPL(body) {
   var q = bkRange('pl');
   try {
     var reply = await api('booksPL', { query: q });
-    var c = reply && reply.currency;
+    var currency = reply && reply.currency,
+      by = reply.by_line || {};
     body.innerHTML =
       bkRangeHTML('pl', "bkTab('pl')") +
-      bkSideHTML(tx('Income'), reply.income, c) +
-      bkSideHTML(tx('Expenses'), reply.expense, c) +
+      bkSideHTML(tx('Income'), reply.income, currency, reply.total_income_minor, tx('Total income'), by.income) +
+      bkSideHTML(tx('Expenses'), reply.expense, currency, reply.total_expense_minor, tx('Total expenses'), by.expense) +
       '<div style="padding:9px 0;font-size:var(--fs-3)" data-testid="pl-profit"><b>' +
       (Number(reply.profit_minor) >= 0 ? tx('Profit') : tx('Loss')) +
       ' ' +
-      esc(bkMoney(Math.abs(reply.profit_minor || 0), c)) +
+      esc(bkMoney(Math.abs(reply.profit_minor || 0), currency)) +
       '</b></div>';
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
 }
-/* the Balance sheet tab: assets, liabilities and equity as of one date */
+/* the Balance sheet tab: assets, liabilities and equity as of one date, each side with its carried total, then Total liabilities and equity */
 async function bkBS(body) {
   var asOf = (document.getElementById('bs_asof') || {}).value || bkToday();
   try {
     var reply = await api('booksBS', { query: { asOf: asOf } });
-    var c = reply && reply.currency;
+    var currency = reply && reply.currency;
     var ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor);
     body.innerHTML =
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
@@ -4611,9 +4631,12 @@ async function bkBS(body) {
       '">' +
       (ok ? tx('✓ balances') : tx('⚠ does not balance')) +
       '</span></div>' +
-      bkSideHTML(tx('Assets'), reply.assets, c, reply.total_assets_minor) +
-      bkSideHTML(tx('Liabilities'), reply.liabilities, c) +
-      bkSideHTML(tx('Owner'), reply.equity, c, reply.total_liab_equity_minor);
+      bkSideHTML(tx('Assets'), reply.assets, currency, reply.total_assets_minor, tx('Total assets')) +
+      bkSideHTML(tx('Liabilities'), reply.liabilities, currency, reply.total_liabilities_minor, tx('Total liabilities')) +
+      bkSideHTML(tx('Equity'), reply.equity, currency, reply.total_equity_minor, tx('Total equity')) +
+      '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><tfoot>' +
+      bkStmtTotal(tx('Total liabilities and equity'), reply.total_liab_equity_minor, currency, 'bs-total-le') +
+      '</tfoot></table>';
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
