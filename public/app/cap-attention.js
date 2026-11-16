@@ -121,7 +121,7 @@
     root.document.head.appendChild(st);
   }
   /** mount the strip in `host` (an element with an id) for the range { from, to }; reads the counts once, again when the range changes */
-  function mount(host, r) {
+  function mount(host, r, onCounts) {
     if (!host) return;
     css();
     host.setAttribute('data-from', r.from);
@@ -136,6 +136,7 @@
       function (reply) {
         s.counts = reply;
         draw(host);
+        if (typeof onCounts === 'function') onCounts(reply);
       },
       function () {
         s.failed = true;
@@ -175,5 +176,10 @@
     var s = key(id);
     load(id, s.kind, Math.max(1, s.page + step));
   }
-  root.CBAttention = { mount: mount, open: open, page: page, words: W };
+  /** the server's count of what wants the owner over the range (no tax invoice, or an open query) — the ⚑ Needs you toggle of the Day book says it; 0 until the strip has read */
+  function needs(id) {
+    var c = key(id).counts;
+    return c && c.needs > 0 ? Number(c.needs) : 0;
+  }
+  root.CBAttention = { mount: mount, open: open, page: page, needs: needs, words: W };
 })(typeof window !== 'undefined' ? window : this);

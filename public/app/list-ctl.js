@@ -127,6 +127,9 @@
     '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
     '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
     '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
+    '.cbl .cbl-needs{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00);font-weight:600}.cbl .cbl-needs[aria-pressed="true"]{background:var(--warn,#B7791F);border-color:var(--warn-3,#7A4B00);color:#fff}',
+    '.cbl .cbl-needs.clear{border-color:var(--cl-line);background:var(--cl-card);color:var(--grey,#5E594D);font-weight:400;cursor:default}.cbl .cbl-needs-prog{font-size:calc(13px * var(--k,1));color:var(--grey,#5E594D);white-space:nowrap}',
+    '.cbl .cbl-tools:has(.cbl-needs) .cbl-search{flex:1 1 120px}',
     '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
     '.cbl .cbl-glab{font-size:calc(12px * var(--k,1));color:var(--cl-muted);white-space:nowrap;margin-inline-end:-2px}',
     '@media (max-width:1100px){.cbl .cbl-tools{gap:5px 6px;padding-inline:12px}.cbl .cbl-seg button{padding:0 6px}.cbl .cbl-count{padding:0 2px}.cbl .cbl-search{flex-basis:170px}}',
@@ -236,6 +239,9 @@
     '.cbl .cbl-ntc{flex:0 0 auto;padding:5px 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}.cbl .cbl-ntc.first{flex:1 1 90px}.cbl .cbl-ntc.r{text-align:end}',
     '.cbl .cbl-ntc button.cbl-nsort{all:unset;cursor:pointer;display:inline-flex;gap:3px;align-items:center;min-height:24px;text-transform:inherit;letter-spacing:inherit}.cbl .cbl-ntc button.cbl-nsort:focus-visible{outline:2px solid var(--cl-blue)}',
     '.cbl .cbl-nempty{padding:10px;color:var(--cl-muted)}',
+    '.cbl .cbl-ntab.cards{min-width:0}.cbl .bk-tabwrap{overflow-x:auto}.cbl .cbl-ntab.cards .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntc{overflow:visible}',
+    '@media (max-width:700px){.cbl .bk-tabwrap{overflow:visible}.cbl .cbl-ntab.cards .cbl-nthead{display:none}.cbl .cbl-ntab.cards .cbl-ntrow{flex-wrap:wrap;align-items:center;gap:2px 10px;padding:6px 8px}.cbl .cbl-ntab.cards .cbl-ntrow::after{content:"";flex:0 0 100%;order:2;height:0}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc{width:auto!important;padding:0;flex:0 0 auto;order:1}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="0"]{display:none}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="2"]{order:3}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.first{flex:0 0 auto}.cbl .bk-bands{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cbl .bk-bands .bk-bw{display:none}.cbl .bk-bands>span{grid-column:1/-1}}',
+    '.cbl .bk-needs .cbl-nchip{padding:0 8px;min-height:22px;font-size:calc(12px * var(--k,1))}.cbl .bk-needs .bk-need-more{color:var(--cl-muted)}',
     '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
     /* ☰ lines */
     '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
@@ -409,6 +415,13 @@
         }
       },
       el: el,
+      /* filter(key, value) — a page sets (or, with '' , clears) one of its own filters: the header line of Receivables presses "no tax invoice" */
+      filter: function (name, value) {
+        if (value) R.filt[name] = value;
+        else delete R.filt[name];
+        resetLimit(I);
+        paintAll(I);
+      },
       state: function () {
         return {
           cols: I.s.cols.slice(),
@@ -830,6 +843,7 @@
         .toLowerCase(),
       fl = I.o.filters || [];
     var out = rows.filter(function (row) {
+      if (needsOn(I) && !safe(function () { return I.o.needs.match(row); }, false)) return false;
       if (q) {
         var text = I.o.search
           ? safe(function () {
@@ -865,7 +879,10 @@
       out = out.slice().sort(function (first, second) {
         return srt.cmp(first, second) * d;
       });
-    }
+    } else if (needsOn(I) && typeof I.o.needs.rank === 'function')
+      out = out.slice().sort(function (first, second) {
+        return (Number(I.o.needs.rank(second)) || 0) - (Number(I.o.needs.rank(first)) || 0); /* the most urgent first, until the person picks a sort */
+      });
     return { all: rows, rows: out };
   }
   function groupMode(I) {
@@ -1145,6 +1162,106 @@
     } else if (m.rows.length !== m.all.length) t += ' ' + T(I, 'of') + ' ' + m.all.length;
     return t;
   }
+  /* ── ⚑ NEEDS YOU (W15-116 / W15-117) — ONE toggle for every list, FIRST in the toolbar (left of the search), and the stepper that walks what it holds ──
+     A page that has something to ask of the person says so with `needs: { count, match(row), rank?(row), onToggle?(on), onNext?(row), unit? }`:
+       count   the SERVER's number of rows that need the person (a number or a function): what the button says, and what the filtered list must hold
+       match   the row's own answer, from the figures the server sent with it (never counted here)
+       rank    higher = more urgent: with the toggle on the list shows the most urgent first (a sort the person chose is kept)
+       onNext  a list whose rows are not a next level (the Day book) opens the row itself; else Next opens the next row's next level
+     With it on the list shows only what matches; "Next ›" steps through them with "3 of 12 done"; a row that is cleared drops off the next time the rows are read. */
+  function needsOf(I) {
+    return I.o.needs && typeof I.o.needs === 'object' ? I.o.needs : null;
+  }
+  function needsOn(I) {
+    return !!(needsOf(I) && I.r.needsOn);
+  }
+  function needsCount(I) {
+    var n = needsOf(I) && needsOf(I).count;
+    n = typeof n === 'function' ? safe(n, 0) : n;
+    return Number(n) > 0 ? Number(n) : 0;
+  }
+  /** the rows that need the person, most urgent first (the page's own match and rank; no search, no filter) */
+  function needsRows(I) {
+    var spec = needsOf(I);
+    if (!spec) return [];
+    var rows = allRows(I).filter(function (row) {
+      return safe(function () {
+        return spec.match(row);
+      }, false);
+    });
+    if (typeof spec.rank === 'function')
+      rows = rows.slice().sort(function (first, second) {
+        return (Number(spec.rank(second)) || 0) - (Number(spec.rank(first)) || 0);
+      });
+    return rows;
+  }
+  function needsHTML(I) {
+    var spec = needsOf(I);
+    if (!spec) return '';
+    var n = needsCount(I),
+      on = needsOn(I),
+      k = esc(I.key),
+      clear = n === 0 && !on;
+    var html =
+      '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn cbl-needs' + (clear ? ' clear' : '') + (on ? ' on' : '') + '" data-cbl-needs aria-pressed="' + on + '"' + (clear ? ' aria-disabled="true"' : '') +
+      ' data-testid="cbl-needs-' + k + '" title="' + esc(T(I, 'Show only what needs you')) + '">' +
+      (clear ? '✓ ' + esc(T(I, 'All clear')) : '⚑ ' + esc(T(I, 'Needs you')) + ' · ' + n) +
+      '</button>';
+    if (on) {
+      var left = needsRows(I).length,
+        total = Math.max(I.r.needsTotal || 0, left),
+        done = total - left;
+      html +=
+        '<button type="button" data-cbsid="CMP037-B07"' + mountAttribute('CMP037') + ' class="cbl-tbtn cbl-needs-next" data-cbl-needs-next data-testid="cbl-needs-next-' + k + '"' + (left ? '' : ' disabled') + '>' + esc(T(I, 'Next')) + ' ›</button>' +
+        '<span class="cbl-needs-prog" data-testid="cbl-needs-prog-' + k + '" aria-live="polite">' + esc(T(I, '{n} of {m} done', { n: done, m: total })) + '</span>';
+    }
+    return html;
+  }
+  /** the toggle: on narrows the list to what needs the person and starts the count "0 of n"; off puts the list back */
+  function needsToggle(I) {
+    if (!needsOf(I) || (needsCount(I) === 0 && !needsOn(I))) return;
+    var R = I.r;
+    R.needsOn = !R.needsOn;
+    R.open = {};
+    R.allOpen = false;
+    R.needsAt = 0;
+    R.hl = null;
+    if (R.needsOn) R.needsTotal = needsRows(I).length;
+    resetLimit(I);
+    safe(function () {
+      if (needsOf(I).onToggle) needsOf(I).onToggle(R.needsOn);
+    });
+    paintAll(I);
+  }
+  /** Next ›: the row after the one in hand (or, when that one was cleared and dropped off, the one that took its place) opens, the one before closes */
+  function needsNext(I) {
+    var spec = needsOf(I),
+      R = I.r;
+    var rows = needsRows(I);
+    if (!spec || !rows.length) return;
+    var ids = rows.map(function (row, index) {
+        return rid(I, row, index);
+      }),
+      at = ids.indexOf(String(R.hl)),
+      pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
+    if (pos >= ids.length) pos = ids.length - 1 === at ? at : 0;
+    R.needsAt = pos;
+    var id = ids[pos];
+    R.hl = id;
+    if (spec.onNext) {
+      safe(function () {
+        spec.onNext(rows[pos]);
+      });
+      paintTools(I);
+      return;
+    }
+    R.allOpen = false;
+    R.open = {};
+    R.open[id] = true;
+    paintTools(I);
+    paintList(I);
+    refocusRow(I, id);
+  }
   function fopts(f) {
     return (typeof f.options === 'function' ? f.options() || [] : f.options || []).map(function (x) {
       return typeof x === 'object' ? x : { v: x, label: x };
@@ -1365,7 +1482,8 @@
     var tids = o.tids || {},
       tl = o.tools || {},
       h =
-        tl.search === false
+        needsHTML(list) +
+        (tl.search === false
           ? ''
           : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP045-I01"' + mountAttribute('CMP045') + ' data-cbl-q id="cbl-q-' +
             k +
@@ -1377,7 +1495,7 @@
             esc(R.q) +
             '" aria-label="' +
             esc(T(list, 'Search')) +
-            '"></div>';
+            '"></div>');
     /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
        goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand. T3-CATALOGUE (widened, additively): a server-paged list that DECLARES
        filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
@@ -2824,6 +2942,14 @@
       paintList(list);
       return;
     }
+    if (b.hasAttribute('data-cbl-needs')) {
+      needsToggle(list);
+      return;
+    }
+    if (b.hasAttribute('data-cbl-needs-next')) {
+      needsNext(list);
+      return;
+    }
     if (b.hasAttribute('data-cbl-exp')) {
       R.allOpen = !R.allOpen;
       R.open = {};
@@ -3298,8 +3424,11 @@
    */
   function nextTable(o) {
     var cols = o.cols || [];
+    var cards = cols.some(function (col) {
+      return col.ln != null;
+    }); /* a table that says which line each column takes on a phone draws a 2-line card there (ln 1 · 2 · 0 = left off) */
     var cell = function (col, html, index) {
-      return '<div class="cbl-ntc' + (index === 0 ? ' first' : '') + (col.r ? ' r' : '') + '"' + (col.w ? ' style="width:' + col.w + 'px"' : '') + '>' + html + '</div>';
+      return '<div class="cbl-ntc' + (index === 0 ? ' first' : '') + (col.r ? ' r' : '') + (col.end ? ' end' : '') + '"' + (cards ? ' data-ln="' + (col.ln || 0) + '"' : '') + (col.w ? ' style="width:' + col.w + 'px"' : '') + '>' + html + '</div>';
     };
     var head = cols
       .map(function (col, index) {
@@ -3318,7 +3447,7 @@
           })
           .join('')
       : '<div class="cbl-nempty">' + esc(o.empty || '') + '</div>';
-    return '<div class="cbl-ntab" role="table" data-nt="' + esc(o.id || '') + '"><div class="cbl-nthead" role="row">' + head + '</div>' + body + '</div>';
+    return '<div class="cbl-ntab' + (cards ? ' cards' : '') + '" role="table" data-nt="' + esc(o.id || '') + '"><div class="cbl-nthead" role="row">' + head + '</div>' + body + '</div>';
   }
 
   root.CBList = { mount: mount, nextRow: nextRow, nextTable: nextTable, get: get, reset: reset, every: every, pager: pager };
