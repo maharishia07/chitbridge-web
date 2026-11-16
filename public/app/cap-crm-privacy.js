@@ -108,12 +108,7 @@ function crmConsentRows(cp) {
       ' ' +
       (m.may
         ? crmConsentBtn(item, 'marketing', false, 'No', why, 'crm-consent-no-' + item)
-        : crmConsentBtn(item, 'marketing', true, 'Yes', why, 'crm-consent-yes-' + item)) +
-      '<span class="hint" data-standing="' +
-      item +
-      '" data-testid="crm-consent-standing-' +
-      item +
-      '"></span>'; /* filled on open from the history: the customer's own no stands */
+        : crmConsentBtn(item, 'marketing', true, 'Yes', why, 'crm-consent-yes-' + item));
     var msgs =
       crmConsentChip(s, 'crm-consent-' + item + '-service') +
       ' ' +
@@ -133,7 +128,11 @@ function crmConsentRows(cp) {
       esc(tx('Their orders')) +
       '</i> ' +
       msgs +
-      '</span></span></div>'
+      '</span><span class="hint stand" data-standing="' +
+      item +
+      '" data-testid="crm-consent-standing-' +
+      item +
+      '"></span></span></div>'
     );
   }).join('');
 }
