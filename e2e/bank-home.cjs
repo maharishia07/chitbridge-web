@@ -87,7 +87,7 @@ function stand() {
     ctx.on('request', (rq) => { S.reqs.push({ m: rq.method(), u: rq.url(), h: rq.headers(), d: rq.postData() || '' }); });
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
-      if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+      if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year and country, as the page reads them */
       if (p === '/api/books/todo') return json(r, 200, []);
       if (p === '/api/books/accounts') return json(r, 200, { accounts: chart.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
@@ -172,6 +172,22 @@ function stand() {
   await p.waitForSelector(grid);
   await p.waitForTimeout(300);
   ok(await p.evaluate(() => /bkh-cell|bkh-go|bks-tog/.test(document.activeElement.className)), "keyboard: after Back focus lands on the home's first press");
+  /* 4b · a reload or a bookmark on #bank/<account>/<month> reopens that statement (the router read the whole hash as a page name and fell to To do) */
+  await p.goto(base + '/accounts.html#bank/1500/2026-09');
+  await p.waitForSelector(lines, { timeout: 15000 });
+  ok(/September 2026/.test(await text(trail)) && /#bank\/1500\/2026-09/.test(await p.evaluate(() => location.hash)), 'a reload on #bank/1500/2026-09 reopens that account and month, not To do');
+  await p.goto(base + '/accounts.html#bank/1500/2026-01');
+  await p.waitForSelector(grid, { timeout: 15000 });
+  ok((await p.locator(lines).count()) === 0 && /^#bank/.test(await p.evaluate(() => location.hash)), 'a month with no statement kept lands on the Bank home');
+  /* 4c · Enter on Add statement keeps the keyboard on that button, opening the box or closing it */
+  const tog = '[data-testid="bank-stmts-toggle"]', focusedTog = () => p.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-testid'));
+  await p.focus(tog);
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(200);
+  ok((await focusedTog()) === 'bank-stmts-toggle', 'Enter on Add statement: focus stays on Add statement (' + (await focusedTog()) + ')');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(200);
+  ok((await focusedTog()) === 'bank-stmts-toggle', 'Enter again, to close the open box: focus stays on the button (' + (await focusedTog()) + ')');
   /* 5 · phone */
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(400);
   ok(await fits(), '390: the home needs no page scroll and nothing scrolls sideways');
