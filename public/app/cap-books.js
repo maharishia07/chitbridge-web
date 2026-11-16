@@ -5433,12 +5433,18 @@ async function bkNeedDo(pid, ref, button) {
 function bkBillTitle(row) {
   return [row.bill_no || row.ref, row.date ? bkDate(row.date) : ''].filter(Boolean).join(' · ');
 }
+/** who holds a bill and since when, from the hold's own fields (mark.by_name, mark.at); says nothing about an attachment */
+function bkHeldBy(m) {
+  m = m || {};
+  var who = m.by_name || tx('someone else');
+  return m.at ? txf('Held by {who} on {date}. Ask them to release it.', { who: who, date: bkDate(m.at) }) : txf('Held by {who}. Ask them to release it.', { who: who });
+}
 /** W15-113: a tax invoice is attached to a held bill → offer to release the hold; the owner confirms, nothing releases by itself */
 function bkAskRelease(pid, row) {
   var marks = bkMarkControl();
   /* the hold is the AUDITOR's mark (api lib/mark-adopters: only grant:auditor sets): an owner who may not set one is told, not offered a button that would be refused */
   if (marks && row.entry_id && !marks.mayCheck(row.entry_id)) {
-    if (typeof toast === 'function') toast(tx('The tax invoice is attached. The hold is the auditor\'s to release.'));
+    if (typeof toast === 'function') toast(bkHeldBy(row.mark)); /* whoever set the hold releases it (DECISIONS 16 Nov); the owner's override is FIN-126 */
     return bkPbSet(pid, {}, true);
   }
   if (!marks || !row.entry_id || typeof CBConfirm !== 'function') return bkPbSet(pid, {}, true);

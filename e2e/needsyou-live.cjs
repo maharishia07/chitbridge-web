@@ -121,9 +121,9 @@ const num = (s) => Number(String(s || '').replace(/[^0-9]/g, ''));
       if (chooser) {
         const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
         await chooser.setFiles({ name: 'tax-invoice.png', mimeType: 'image/png', buffer: png });
-        await p.waitForFunction(() => /auditor.s to release/.test(document.body.innerText) || !!document.querySelector('[data-testid="release-body"]'), null, { timeout: 25000 }).catch(() => {});
-        const said = flat(await p.evaluate(() => document.body.innerText).catch(() => '')).match(/The tax invoice is attached[^.]*\./) ? "The tax invoice is attached. The hold is the auditor's to release." : '';
-        ok(/hold is the auditor's to release/.test(said) || (await p.locator('[data-testid="release-body"]').count()) === 1, 'after the file is attached the page does not offer a button the owner would be refused: "' + said.slice(0, 90) + '"');
+        await p.waitForFunction(() => /Ask them to release it/.test(document.body.innerText) || !!document.querySelector('[data-testid="release-body"]'), null, { timeout: 25000 }).catch(() => {});
+        const said = (flat(await p.evaluate(() => document.body.innerText).catch(() => '')).match(/Held by [^.]*. Ask them to release it./) || [''])[0];
+        ok((/^Held by .+. Ask them to release it.$/.test(said) && !/attached/.test(said)) || (await p.locator('[data-testid="release-body"]').count()) === 1, 'after the file is attached the page does not offer a button the owner would be refused: "' + said.slice(0, 90) + '"');
         await shot('pay-after-attach');
         const after = await get('/api/books/party/' + jones.party_id + '/bills?side=supplier&tab=open');
         const row = (after.bills || []).find((x) => x.ref === target.ref);
