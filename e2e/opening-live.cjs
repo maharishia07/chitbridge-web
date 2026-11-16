@@ -13,6 +13,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const cell = (p, code, side) => p.locator('[data-testid="ob-row-' + code + '"] [id^="ob_' + side + '_"]').first();
 const diff = async (p) => { await p.waitForTimeout(800); await p.waitForFunction(() => { const d = document.querySelector('[data-testid="ob-diff"]'); return d && !/Checking/.test(d.textContent); }, null, { timeout: 15000 }); return flat(await p.textContent('[data-testid="ob-diff"]')); };
+/** nothing may be clipped: every visible input, select and button of the page ends inside the viewport AND inside the scrolling grid that holds it */
+const clipped = (p) => p.evaluate(() => { const root = document.querySelector('[data-testid="ob-root"]'), box = document.querySelector('[data-testid="ob-rows"]').getBoundingClientRect(); return Array.from(root.querySelectorAll('input,select,button')).filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0).map((e) => { const r = e.getBoundingClientRect(); const inGrid = !!e.closest('[data-testid="ob-rows"]'); return { id: e.getAttribute('data-testid') || e.id, right: Math.round(r.right), left: Math.round(r.left), over: r.right > innerWidth + 0.5 || r.left < -0.5 || (inGrid && r.right > box.right + 0.5) }; }).filter((x) => x.over); });
 const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, sh: document.documentElement.scrollHeight, ih: innerHeight }));
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -122,11 +124,16 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   await p.waitForSelector('[data-testid="ob-save"]');
   g = await geo(p);
   ok(g.sw <= g.iw, 'no sideways scroll at 390 (the grid) ' + JSON.stringify(g));
+  let cut = await clipped(p);
+  ok(cut.length === 0, 'nothing clipped at 390 (the grid): every input ends inside the screen ' + JSON.stringify(cut.slice(0, 4)));
+  ok((await p.locator('[data-testid^="ob-sw-"]:visible').count()) > 3 && (await p.locator('[data-testid="ob-row-1500"] [id^="ob_"]:visible').count()) === 1, 'at 390 each ledger shows one amount field and a Dr/Cr switch');
   await p.screenshot({ path: path.join(OUT, 'ob-10-grid-390.png') });
   if ((await p.getAttribute('[data-testid="ob-bills-1300"]', 'aria-expanded')) !== 'true') await p.click('[data-testid="ob-bills-1300"]'); /* Edit opens the ledgers that hold bills */
   await p.waitForSelector('[data-testid="ob-bill-' + (await p.$$eval('[data-testid^="ob-row-"]', (e) => e.map((x) => x.getAttribute('data-testid').slice(7)).indexOf('1300'))) + '-0"]');
   g = await geo(p);
   ok(g.sw <= g.iw, 'no sideways scroll at 390 with the bills open ' + JSON.stringify(g));
+  cut = await clipped(p);
+  ok(cut.length === 0, 'nothing clipped at 390 with the bills open (party, bill no, dates, amount) ' + JSON.stringify(cut.slice(0, 4)));
   await p.screenshot({ path: path.join(OUT, 'ob-11-bills-390.png') });
   await ctx.close();
 
