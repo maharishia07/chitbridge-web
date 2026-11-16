@@ -317,7 +317,7 @@ function fxLockLine() {
   var host = document.getElementById('lk_fx'),
     month = fxLockMonth();
   if (!host) return;
-  if (!month || !bkIsOwner()) {
+  if (!month || !bkIsOwner() || (typeof CBBooksActing !== 'undefined' && CBBooksActing.current())) { /* l16 fable2 R2-3: the FX preview is the owner's own door (held back from every grant, the api's GRANT_HELD_BACK): in any acting seat the page does not ask and says nothing */
     host.innerHTML = '';
     return;
   }

@@ -125,6 +125,15 @@ function bankStmtPage(step) {
   BKST.ix = at;
   return bkstFilesGo();
 }
+/** " · Signed off to 31 Oct 2026 · A$354.32 unexplained": the practice list's own Bank words, from the sign-offs the home already read (the newest row of each account, as api lib/books-practice carries it); '' when none */
+function bkstSignedLine() {
+  const rows = Object.keys(BKH.signed || {}).map((id) => (BKH.signed[id] || [])[0]).filter(Boolean);
+  if (!BKH.known || !rows.length) return '';
+  const to = rows.map((row) => String(row.period_to || '').slice(0, 10)).sort()[0],
+    left = rows.reduce((sum, row) => sum + Math.abs(Number(row.difference_minor || 0)), 0),
+    cur = rows[0].currency || (typeof bkCur === 'function' ? bkCur() : '');
+  return ' · ' + txf('Signed off to {d}', { d: to }) + (left ? ' · ' + txf('{a} unexplained', { a: bkMoney(left, cur) }) : '');
+}
 const bkstMissing = (data) => (data ? bkhTally(data, data.accounts).missing : 0);
 /** one line: what the box holds, said as the gap the person should fix */
 function bkstSummary() {
@@ -132,7 +141,7 @@ function bkstSummary() {
   if (BKST.mode === 'blind' || (typeof BKH !== 'undefined' && BKH.blind)) return bksCostBlindSay();
   if (BKST.mode === 'error') return tx('Could not read the statements kept.');
   const data = BKST.data;
-  if (!data || !BKST.fileTotal) return data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet');
+  if (!data || !BKST.fileTotal) return (data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet')) + bkstSignedLine();
   const gaps = bkstMissing(data),
     kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
   return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept'));

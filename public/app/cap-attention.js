@@ -125,6 +125,7 @@
   function mount(host, r, onCounts) {
     if (!host) return;
     css();
+    if (typeof root.CBBooksActing !== 'undefined' && root.CBBooksActing.current() && root.CBBooksActing.current().role === 'auditor') { host.innerHTML = ''; return; } /* l16 fable2 R2-3: the evidence counts are the owner's to-do read: the accountant reads them (api ADVISER_EXTRA_READS), the auditor's door is closed, so his page does not ask and shows no failure line */
     host.setAttribute('data-from', r.from);
     host.setAttribute('data-to', r.to);
     var s = key(host.id);
