@@ -5792,63 +5792,9 @@ async function bkPackAck(id) {
     }
   });
 }
-/* the Opening balances form: one line per account balance */
+/* the Opening balances page lives in app/cap-opening.js (obView): a start date, the grid, the live Difference, what is saved */
 function bkOpeningView(body) {
-  BK.openingRef = BK.openingRef || bkRef(); /* one ref for this form until the server has said yes (M11) */
-  body.innerHTML =
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' +
-    tx('Per line: code, party no, debit, credit, bill, due date') +
-    '</div>' +
-    '<textarea data-cbsid="CMP040-T01"' + bkMountAttribute('CMP040') + ' class="inp" id="op_csv" data-testid="op_csv" rows="8" style="width:100%;font-family:var(--mono)" placeholder="1300,P-00001,5000,,INV-12,2026-10-15"></textarea>' +
-    '<div class="supacts" style="display:flex;gap:7px;margin-top:7px"><button data-cbsid="CMP042-B14"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="op_go" onclick="bkOpeningGo()">' +
-    tx('Enter opening balances') +
-    '</button></div><div id="op_out" data-testid="op_out" style="font-size:var(--fs-1);margin-top:6px"></div>';
-}
-/* send the typed opening balances to the server once */
-async function bkOpeningGo() {
-  var out = document.getElementById('op_out');
-  var lines = String((document.getElementById('op_csv') || {}).value || '')
-    .split(/\r?\n/)
-    .map(function (item) {
-      return item.trim();
-    })
-    .filter(Boolean);
-  var rows = [],
-    list = [];
-  lines.forEach(function (item, index) {
-    var c = item.split(',').map(function (x) {
-      return x.trim();
-    });
-    var dr = c[2] ? bkToMinor(c[2]) : 0,
-      cr = c[3] ? bkToMinor(c[3]) : 0;
-    if (!c[0] || !isFinite(dr) || !isFinite(cr) || (dr && cr) || (!dr && !cr)) list.push(index + 1);
-    else rows.push({ code: c[0], party_no: c[1] || null, dr_minor: dr, cr_minor: cr, bill_ref: c[4] || null, due_date: c[5] || null });
-  });
-  if (list.length) {
-    if (out) out.textContent = txf('Line {n}: one amount, debit or credit.', { n: list.join(', ') });
-    return;
-  }
-  if (!rows.length) {
-    if (out) out.textContent = tx('Type at least one line');
-    return;
-  }
-  /* ⚠️ M11: pressed twice, every balance doubled. The button is dead while the call is out; a retry carries the SAME
-     client_ref; and once the server has said yes the box is emptied and the ref replaced — the next press is a new entry */
-  await bkOnce('opening', document.querySelector('[data-testid="op_go"]'), async function () {
-    try {
-      BK.openingRef = BK.openingRef || bkRef();
-      var reply = await api('booksOpening', { body: { rows: rows, client_ref: BK.openingRef } });
-      BK.openingRef = bkRef();
-      var box = document.getElementById('op_csv');
-      if (box) box.value = '';
-      if (out)
-        out.textContent =
-          txf('Entered as {no}.', { no: (reply && reply.entry_no) || '' }) +
-          (reply && reply.suspense_minor ? ' ' + txf('{amt} did not balance — held in Suspense', { amt: bkMoney(reply.suspense_minor) }) : '');
-    } catch (e) {
-      if (out) out.textContent = bkWhy(e, tx('Could not enter them'));
-    }
-  });
+  return typeof obView === 'function' ? obView(body) : null;
 }
 
 /* ══ 4 · CHEQUES AND WHAT IS WAITING — the two things that were on no screen (2026-09-30, review M12) ═════════ */

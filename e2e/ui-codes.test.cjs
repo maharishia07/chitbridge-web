@@ -41,7 +41,7 @@ const BOOKS_TABLE = [
   ['data-testid="db-add"', 'CMP007-B01'], ['data-testid="lt-clear"', 'CMP014-B01'], ['data-testid="lt-back"', 'CMP006-B01'], ['data-testid="lt-unfold"', 'CMP042-B06'],
   ['data-testid="lg-statement"', 'CMP042-B05'], ['data-testid="lg-pay"', 'CMP042-B01'], ['data-testid="lt-find"', 'CMP040-I01'], ['data-testid="lt-fold"', 'CMP042-B06'],
   ['id="lt_rz"', 'CMP042-B23'], ['id="pay_mode"', 'CMP041-S01'], ['data-testid="pay_adv"', 'CMP040-I03'], ['data-testid="pk_p"', 'CMP041-S01'], ['data-testid="pk_build"', 'CMP042-B12'],
-  ['data-testid="op_csv"', 'CMP040-T01'], ['data-testid="op_go"', 'CMP042-B14'], ['data-testid="wait-retry"', 'CMP009-B01'], ['data-testid="ac_add"', 'CMP007-B01'],
+  ['data-testid="wait-retry"', 'CMP009-B01'], ['data-testid="ac_add"', 'CMP007-B01'],
   ['data-testid="ac_name"', 'CMP040-I01'], ['data-testid="ac_parent"', 'CMP041-S01'], ['data-testid="lk_why"', 'CMP040-I01'], ['data-testid="pay_ref"', 'CMP040-I01']
 ];
 
