@@ -44,16 +44,19 @@ const filt = F.filtersFor(mk), by = (k) => filt.find((f) => f.key === k);
 const ids = (k, v) => E.filter((e) => by(k).match(e, v)).map((e) => e.entry_id).join(',');
 const bar = { of: 8, checked: 2 };
 
+check(by('ev').options.map((o) => o.label).join('|') === box.CBEvidence.words.flag + '|' + box.CBEvidence.words.none + '|' + box.CBEvidence.words.nodoc + '|' + box.CBEvidence.words.held, 'the Evidence options use the chip own words (one wording per state)');
 check(ids('mark', 'checked') === 'e2,e8' && ids('mark', 'checked').split(',').length === bar.checked, 'Checked shows e2,e8 and equals the bar n (2)');
 check(ids('mark', 'notchecked').split(',').length === bar.of - bar.checked, 'Not checked equals the bar m - n (8 - 2 = 6): ' + ids('mark', 'notchecked'));
 check(ids('mark', 'notchecked') === 'e1,e3,e4,e5,e6,e7', 'Not checked holds the altered check (e6), the refused (e7), the queried (e4) and the held (e5)');
 check(ids('mark', 'query') === 'e4' && ids('mark', 'hold') === 'e5', 'Queried is e4, On hold is e5');
-check(ids('ev', 'flag') === 'e3' && ids('ev', 'none') === 'e2,e6' && ids('ev', 'nodoc') === 'e1,e7' && ids('ev', 'held') === 'e4,e8', 'Evidence: no tax invoice e3, no source e2 e6, no document e1 e7, has a file e4 e8; e5 (no evidence field) is in none and does not throw');
+check(ids('ev', 'flag') === 'e3' && ids('ev', 'none') === 'e2,e6' && ids('ev', 'nodoc') === 'e1,e7' && ids('ev', 'held') === 'e4,e8', 'Evidence: no tax invoice e3, no file e2 e6, no source e1 e7, has a file e4 e8; e5 (no evidence field) is in none and does not throw');
 check(ids('kind', 'Sales') === 'e1,e2' && ids('kind', 'Purchases') === 'e3,e4' && ids('kind', 'Expenses') === 'e8' && ids('kind', 'Other') === 'e5,e6,e7', 'Type: the Day book own kinds; a journal, a reversal and an unknown event type are Other, none throws');
 const typed = ['Sales', 'Purchases', 'Expenses', 'Returns', 'Receipts', 'Payments', 'Other'].reduce((n, v) => n + E.filter((e) => by('kind').match(e, v)).length, 0);
 check(typed === E.length, 'every entry is in exactly one Type (8 of 8, none lost)');
 check(F.filtersFor(null)[0].match({ entry_id: 'x' }, 'notchecked') === true && [].filter((e) => by('mark').match(e, 'notchecked')).length === 0, '0 entries: nothing to match; no marker control: an entry is Not checked, no throw');
 check(F.toAddress({ mark: 'notchecked', kind: 'Other' }) === 'dbf_mark=notchecked&dbf_kind=Other' && JSON.stringify(F.fromAddress('?open=1&dbf_ev=flag&dbf_mark=hold')) === '{"mark":"hold","ev":"flag"}' && JSON.stringify(F.fromAddress('')) === '{}', 'the choices ride the address and come back from it');
+
+check(F.carry('?open=c1&view=daybook&dbf_kind=Other', 'c1') === '&dbf_kind=Other' && F.carry('?open=c1&dbf_kind=Other', 'c2') === '' && F.carry('?open=c1', 'c1') === '', 'the address carries the narrowing for the same client only');
 
 /* D1: the ledger is read for the picked period */
 let drill = src('books-grant-drill.js');

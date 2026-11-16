@@ -433,7 +433,7 @@
     var config = Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows));
     if (report.k === 'daybook') narrowDaybook(host, config);
     viewState.o.mountList(host, config);
-    if (report.k === 'daybook') wireDaybook(host, report);
+    if (report.k === 'daybook') { wireDaybook(host, report); root.setTimeout(function () { rememberNarrowing(host); }, 0); }
   }
   /* ── A3C rank 3: review by exception. The Day book's Mark · Evidence · Type filters (books-grant-filters.js) on the one list control; the choice is remembered for this client and rides the address (&dbf_mark= &dbf_ev= &dbf_kind=) ── */
   function narrowDaybook(host, config) {
@@ -449,8 +449,8 @@
   /** after any press or change in the list: remember the narrowing and write it to the address (replace, never a new history entry) */
   function rememberNarrowing(host) {
     var F = root.CBBooksGrantFilters, inst = host.__cbl;
-    if (!F || !inst || !inst.api) return;
-    viewState.dbf = inst.api.state().filt || {};
+    if (!F || !inst || !inst.r) return;
+    viewState.dbf = JSON.parse(JSON.stringify(inst.r.filt || {})); /* the list's own remembered choices (api.state() also needs its column choices, which a fresh list has not made) */
     if (!root.history || !root.history.replaceState) return;
     try {
       var query = new root.URLSearchParams(root.location.search);
@@ -464,9 +464,12 @@
   function wireDaybook(host, report) {
     if (host.__bvKeys) return;
     host.__bvKeys = true;
-    var settle = function () { root.setTimeout(function () { rememberNarrowing(host); }, 0); };
-    host.addEventListener('change', settle);
-    host.addEventListener('click', settle);
+    var settle = function () {
+      if (!host.isConnected) { root.document.removeEventListener('change', settle); root.document.removeEventListener('click', settle); return; }
+      root.setTimeout(function () { rememberNarrowing(host); }, 0);
+    };
+    root.document.addEventListener('change', settle); /* the Filters pop-up sits outside the list: listen on the page */
+    root.document.addEventListener('click', settle);
     host.addEventListener('keydown', function (event) {
       var target = event.target, mk = viewState.mk;
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || !target || !target.closest) return;
