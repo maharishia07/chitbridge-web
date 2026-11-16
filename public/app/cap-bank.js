@@ -705,6 +705,8 @@ function bankFinish() {
 function bankBandCore() {
   const fig = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
+  if (!fig && !bkbMayAct())
+    return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("This file does not say the bank's closing balance.")) + '</span>' + acts + '</div>'; /* l16 fable3 R3-3: a read-only seat is told, never asked to type */
   if (!fig)
     return (
       '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) + '</span>' +
@@ -1257,6 +1259,10 @@ function bankTodoItem() {
 function bankBrsPaint() {
   const host = bkbEl('bk_brs');
   if (!host) return;
+  if (!BKB.brs && !bkbMayAct()) {
+    host.innerHTML = '<div class="pe-card" data-testid="bank-bal-ask"><div class="pe-note">' + bkbE(tx("This file does not say the bank's closing balance.")) + '</div></div>'; /* l16 fable3 R3-3: read only, no box to type in */
+    return;
+  }
   if (!BKB.brs) {
     host.innerHTML =
       '<div class="pe-card" data-testid="bank-bal-ask"><div class="pe-note">' +

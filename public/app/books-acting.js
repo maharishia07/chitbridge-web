@@ -117,6 +117,7 @@
     if (!context) return Promise.resolve(false);
     var id = context.store.id, role = context.role === 'auditor' ? 'auditor' : 'adviser';
     return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(function (split) {
+      if (split.unread) throw Object.assign(new Error('the grant list could not be read'), { unread: true });
       var heldBy = split.live || {}, seats = (split.seats || {})[id] || {};
       if (!context.seatNamed) role = seats.adviser ? 'adviser' : 'auditor'; /* no &role on the address: the seat the grant gives (the adviser seat acts, as the grant list does) */
       var grant = seats[role]; /* a seat the address names must be held: a store holding both gives each its own row */
@@ -146,15 +147,17 @@
     return !context || context.role === 'owner' || path.indexOf('/api/books') === 0;
   }
   /** no live grant for the store the address names: one sentence where the page is, the way back, nothing read */
-  function refuseInPlace() {
+  function refuseInPlace(unread) {
     var host = root.document.getElementById('content');
     if (!host) return root.location.replace('/network.html');
-    host.innerHTML = '<div class="en-why" data-testid="acting-refused" role="alert">' + esc(words("You do not have current access to this client's books. Nothing was opened.")) + ' <a href="/network.html" data-testid="acting-refused-back">' + esc(words('Back to My network')) + '</a></div>';
+    host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '" role="alert">' + esc(words(unread ? 'The list of your clients could not be read. Nothing was opened.' : "You do not have current access to this client's books. Nothing was opened.")) + (unread ? ' <a href="" data-testid="acting-retry" onclick="location.reload();return false">' + esc(words('Try again')) + '</a> ·' : '') + ' <a href="/network.html" data-testid="acting-refused-back">' + esc(words('Back to My network')) + '</a></div>';
   }
   /** the page's way in: only on a live adviser grant, then the menu is cut to the books tabs; false = not entered */
   function openPage(base, token, menu, groups) {
     if (!context) return Promise.resolve(true);
+    var unread = false;
     return confirmGrant(base, token).catch(function (e) {
+      unread = !!(e && e.unread);
       if (typeof root.cblog === 'function') root.cblog('error', 'acting: the grant could not be read: ' + ((e && e.message) || e));
       return false;
     }).then(function (entered) {
@@ -162,7 +165,7 @@
         keepTabs(menu, groups);
         return true;
       }
-      refuseInPlace();
+      refuseInPlace(unread);
       return new Promise(function () {}); /* the page stops here: nothing of the client's books is read or drawn */
     });
   }

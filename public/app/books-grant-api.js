@@ -99,8 +99,8 @@
         Object.keys(out.live).forEach(function (id) { delete out.ended[id]; });
         return out;
       },
-      function () {
-        return {};
+      function (failure) {
+        return failure && (failure.status === 401 || failure.status === 403) ? {} : { unread: true }; /* a login that may not list grants has none; a list that could not be read is said as that (l16 fable3), never as "no grant" */
       }
     );
   }

@@ -57,7 +57,8 @@ async function bankHomeSigned() {
 /* ── the financial year: one year on screen (W15-100). Its first month and its name are the shop's own (the country pack through bkYearStart and bkFyName); how far back the stepper reaches is the pack's record-keeping years ── */
 const bkhPad = (n) => (n < 10 ? '0' : '') + n;
 const bkhStartMonth = () => (typeof bkYearStart === 'function' ? bkYearStart() : 1);
-const bkhThisMonth = () => String(typeof bkToday === 'function' ? bkToday() : new Date().toISOString()).slice(0, 7);
+/** this month, by the SHOP's day: the api's own (GET /bank/statement-files today, the shop clock); the page's bkToday only before the first answer */
+const bkhThisMonth = () => String((typeof BKST !== 'undefined' && BKST.data && BKST.data.today) || (typeof bkToday === 'function' ? bkToday() : new Date().toISOString())).slice(0, 7);
 /** the year (its first calendar year) holding a month 'YYYY-MM' */
 const bkhFyOf = (month) => (Number(month.slice(5, 7)) >= bkhStartMonth() ? Number(month.slice(0, 4)) : Number(month.slice(0, 4)) - 1);
 /** the last month of a year: its 12 months end here */
@@ -78,10 +79,10 @@ function bkhCanStep(step) {
 }
 /** is there a signed-off statement (the reconciliation record) for this account and month: the SAME record the practice list's Bank column reads */
 const bkhSignedIn = (account, month) => (BKH.signed[account.account_id] || []).some((item) => String(item.period_to || '').slice(0, 7) === month);
-/** 'missing' · 'signed' · 'open' (kept, lines to do) · 'unfiled' (signed off, but no file kept: the record is shown, never "Missing") · 'kept' (the sign-off record could not be read) · 'future' (a month not over yet: never "missing") */
+/** 'missing' · 'signed' · 'open' (kept, lines to do) · 'unfiled' (signed off, but no file kept: the record is shown, never "Missing") · 'kept' (the sign-off record could not be read) · 'future' (a month not begun) · 'current' (the month in progress: not due yet, never "missing") */
 function bankHomeState(account, month, cell) {
   if ((!cell || cell.missing) && BKH.known && bkhSignedIn(account, month)) return 'unfiled'; /* l16 fable2 R2-2: the practice row says "unexplained to 31 Oct" from these sign-offs; the Bank page shows them too */
-  if (!cell || cell.missing) return month > bkhThisMonth() ? 'future' : 'missing';
+  if (!cell || cell.missing) return month > bkhThisMonth() ? 'future' : month === bkhThisMonth() ? 'current' : 'missing'; /* the month in progress is not due yet: its own state, never Missing */
   if (!BKH.known) return 'kept';
   return (BKH.signed[account.account_id] || []).some((item) => String(item.period_to || '').slice(0, 7) === month) ? 'signed' : 'open';
 }
@@ -190,6 +191,7 @@ function bankHomeGridHtml() {
           const cell = bkhCellOf(account, month),
             state = bankHomeState(account, month, cell),
             key = bkhE(account.account_id) + '-' + bkhE(month);
+          if (state === 'current') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap bkh-future" data-testid="bank-stmts-current-' + key + '" title="' + bkhE(tx('Not due yet')) + '"><span aria-hidden="true">·</span><span class="sr-only">' + bkhE(tx('Not due yet')) + '</span></td>';
           if (state === 'future') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap bkh-future" data-testid="bank-stmts-future-' + key + '"><span aria-hidden="true">·</span></td>';
           if (state === 'unfiled') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-unfiled-' + key + '" title="' + bkhE(tx('Signed off; no statement file is kept for this month')) + '">' + bkhE(tx('Signed off')) + '</span></td>';
           if (state === 'missing')

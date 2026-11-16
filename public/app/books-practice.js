@@ -124,7 +124,7 @@
       line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
       line('Cash for those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
       line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
-      line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(money(r.bank.unexplained_minor, r.currency)) + ' ' + esc(tx('unexplained'))) +
+      line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(bankLeft(r)) + ' ' + esc(tx('unexplained'))) +
       line('Profit this quarter', esc(money(h.profit_quarter_minor, r.currency))) +
       line('Months not locked', esc(r.months_unlocked)) +
       line('Access ends', esc(day(r.grant.expires_at))) +
@@ -132,12 +132,17 @@
       '</div>'
     );
   }
+  /** what is left unexplained, as the api carries it: one figure per currency (CUR-1), never two currencies added; an older answer's one figure in the client's currency */
+  function bankLeft(r) {
+    var b = r.bank, lines = b.by_currency || [];
+    return lines.length ? lines.map(function (l) { return money(l.unexplained_minor, l.currency); }).join(' · ') : money(b.unexplained_minor, b.currency || r.currency);
+  }
   /** the bank as the client's signed statements carry it: reconciled to a date, or the amount left unexplained, or no statement signed */
   function bankCell(r) {
     var b = r.bank;
     if (b.state === 'none') return '<span class="sub">' + esc(tx('No statement')) + '</span>';
     var to = esc(tx('to')) + ' ' + esc(day(b.reconciled_to));
-    return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + esc(r.entity_id) + '">' + esc(money(b.unexplained_minor, r.currency)) + ' ' + esc(tx('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : esc(tx('Reconciled')) + ' <span class="sub">' + to + '</span>';
+    return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + esc(r.entity_id) + '">' + esc(bankLeft(r)) + ' ' + esc(tx('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : esc(tx('Reconciled')) + ' <span class="sub">' + to + '</span>';
   }
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
