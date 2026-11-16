@@ -39,7 +39,7 @@ const BUDGET_FILE = [process.env.CB_API_DIR, path.join(ROOT, '..', 'chitbridge-a
 const BUDGET_ROUTES = BUDGET_FILE ? Object.keys(JSON.parse(fs.readFileSync(BUDGET_FILE, 'utf8')).routes) : null;
 /* the page's reads. With the api checkout beside this one the budget FILE is asked ("GET <path>" must be a line there); without it, this
    list mirrors it (every /api/facts/<card> is one line each in the file). */
-const READS = ['/api/entities/header', '/api/books/health', '/api/entities/me', '/api/entities/sides', '/api/work/facts', '/api/notifications', '/api/events/ticket', '/api/events/stream'];
+const READS = ['/api/entities/header', '/api/books/health', '/api/entities/me', '/api/entities/sides', '/api/work/facts', '/api/notifications', '/api/events/ticket', '/api/events/stream', '/api/books-grants', '/api/books-grants/practice'];
 const budgeted = (p, method) => BUDGET_ROUTES ? BUDGET_ROUTES.includes((method || 'GET') + ' ' + p) : (READS.includes(p) || p.startsWith('/api/facts/'));
 
 /* a planted manifest: facts URLs on four cards (two need you, one is in use with three lines, one is not started), the "Your work" read and its door.
