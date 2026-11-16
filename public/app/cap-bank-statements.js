@@ -52,13 +52,46 @@ async function bkstFetch(fy, extra) {
   if (!answer || !Array.isArray(answer.cells) || !Array.isArray(answer.accounts) || !Array.isArray(answer.files)) throw new Error('the statements answer is not the statements box answer');
   return answer;
 }
+/** bank17 D2: the period in the address (&fy=2025-26, or &from=&to=) as { fy: the year's first calendar year, to: the day it ends or null }; null when none is named. The same words Books writes (CBPeriodPick.toAddress). */
+function bkstAddressPeriod() {
+  const query = new URLSearchParams(window.location.search || ''),
+    from = query.get('from'),
+    to = query.get('to'),
+    year = Number(String(query.get('fy') || '').slice(0, 4)),
+    day = /^d{4}-d{2}-d{2}$/;
+  if (from && to && day.test(from) && day.test(to) && from <= to) return { fy: bkhFyOf(to.slice(0, 7)), to };
+  return year >= 1990 && year <= 2200 ? { fy: year, to: null } : null;
+}
+/** the last day of the shown period: the address's own day while its year is on show, else the end of the year on show */
+function bkstPeriodEnd() {
+  if (BKST.addr && BKST.addr.to && BKST.addr.fy === BKST.fy) return BKST.addr.to;
+  const end = bkhFyEnd(BKST.fy);
+  return end + '-' + bkhPad(new Date(Date.UTC(Number(end.slice(0, 4)), Number(end.slice(5, 7)), 0)).getUTCDate());
+}
+/** bank17 D2: the bank balance at the period end, READ from the sign-off the Bank already keeps (GET /bank/log statements: closing_bank_minor / closing_books_minor / difference_minor), the newest signed on or before the end; no figure is worked out here. '' when no account was signed by then. */
+function bkstBalanceHtml() {
+  const end = bkstPeriodEnd(),
+    accounts = (BKST.data && BKST.data.accounts) || [],
+    lines = accounts
+      .map((account) => {
+        const row = (BKH.signed[account.account_id] || []).filter((item) => String(item.period_to || '').slice(0, 10) <= end).sort((a, b) => String(b.period_to).localeCompare(String(a.period_to)))[0];
+        if (!row) return '';
+        const cur = row.currency || BKST.data.currency,
+          day = typeof shopDay === 'function' ? shopDay(String(row.period_to).slice(0, 10)) : String(row.period_to).slice(0, 10);
+        return '<div data-testid="bank-stmts-bal-' + bkstE(account.account_id) + '">' + (accounts.length > 1 ? '<b>' + bkstE(account.name || account.code) + '</b> · ' : '') + bkstE(txf('Signed off to {d}', { d: day }) + ' · ' + tx('Statement') + ' ' + bkMoney(row.closing_bank_minor, cur) + ' · ' + tx('Books') + ' ' + bkMoney(row.closing_books_minor, cur) + ' · ' + tx('Difference') + ' ' + bkMoney(row.difference_minor, cur)) + '</div>';
+      })
+      .filter(Boolean);
+  return lines.length ? '<div class="pe-note" data-testid="bank-stmts-balance">' + lines.join('') + '</div>' : '';
+}
 /** read the box for the shown year (the first time: the year holding the newest statement, found by stepping back from this year); the files start again at page 1 with no search */
 async function bankStmtLoad() {
   if (!bkstEl('bk_stmts')) return;
   try {
     if (BKST.fy === null) {
-      BKST.cur = BKST.fy = bkhFyOf(bkhThisMonth());
-      BKST.auto = true;
+      BKST.cur = bkhFyOf(bkhThisMonth());
+      BKST.addr = bkstAddressPeriod();
+      BKST.fy = BKST.addr ? BKST.addr.fy : BKST.cur; /* bank17 D2: the page opens on the year the address names, never a step back to find files */
+      BKST.auto = !BKST.addr;
     }
     BKST.q = '';
     BKST.cursors = [null];
@@ -170,7 +203,7 @@ function bankStmtPaint() {
   host.style.display = '';
   const year = ready && BKST.data ? bankHomeFyHtml() : '';
   host.innerHTML =
-    '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' + year +
+    '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' + year + (ready && BKST.data && BKH.known ? bkstBalanceHtml() : '') +
     (ready ? '<div class="bkh-body">' + (BKST.all ? bankHomeAllHtml() : bankHomeCardsHtml() + bankHomeGridHtml()) + (bankHomeMayAdd() ? (open ? bkstAddHtml() : '') : '') + '<div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>' + (BKST.all ? '' : bkstFilesHtml()) + (bankHomeMayAdd() ? bkstJustReadHtml() : '') + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div></div>' : '');
   host.querySelectorAll('.bks-wrap').forEach((node) => {
     const days = Array.from(node.querySelectorAll('tbody tr:first-child td:not(.bkh-future):not(.bkh-tally)')),
