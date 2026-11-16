@@ -218,5 +218,5 @@
     );
   }
 
-  root.CBEvidence = { use: use, stateOf: stateOf, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File held' } };
+  root.CBEvidence = { use: use, stateOf: stateOf, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File attached' } };
 })(typeof window !== 'undefined' ? window : globalThis);
