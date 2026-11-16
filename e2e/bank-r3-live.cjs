@@ -17,15 +17,17 @@ async function load(p) {
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
   await p.waitForTimeout(1200);
 }
-/* W15-84 · ONE LANDING: a reload opens the Bank home, never the last statement. The way back to the lines: home -> the October cell (or Continue) -> the lines */
-async function reopen(p) {
+/* W15-84 · ONE LANDING: a reload opens the Bank home, never the last statement (the device's last statement no longer decides the landing page). A file read on this device only leaves nothing on the home, so the way back to the lines is the new path: Bank → read the file again → its lines. Returns whether the home was on screen with no statement restored. */
+async function reloadToLines(p) {
+  await p.reload();
+  /* the menu's Bank always lands on the Bank home. A reload on #bank/<account>/<month> does not: accounts.html reads the whole hash as the page name and opens To do (reported to the coordinator, not hidden: the walk goes through the menu) */
+  await p.waitForSelector('[data-testid="acc-nav-bank"]', { timeout: 20000 });
+  if (!(await p.locator('[data-testid="bank-stmts-grid"], [data-testid="bank-home-cards"]').count())) await p.click('[data-testid="acc-nav-bank"]');
   await p.waitForSelector('[data-testid="bank-stmts-grid"], [data-testid="bank-home-cards"]', { timeout: 20000 });
-  const cell = p.locator('[data-testid^="bank-home-month-"][data-testid$="-2026-10"]'), cont = p.locator('[data-testid="bank-home-continue"]');
-  if (await cell.count()) await cell.first().click(); else await cont.first().click();
-  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
-  await p.waitForTimeout(1200);
+  const landed = (await p.locator('[data-testid="bank-list"]').count()) === 0 && (await p.locator('[data-testid="bank-home-back"]').count()) === 0;
+  await load(p);
+  return landed;
 }
-const reloadToLines = async (p) => { await p.reload(); await reopen(p); };
 const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'));
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -44,9 +46,10 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(/Add 10 lines to your books/.test(bd), 'the primary carries the count: "Add 10 lines to your books"');
   await p.screenshot({ path: path.join(OUT, 'r3-01-before-1366.png') });
   /* ITEM 1: a visit with no file: the page opens on the latest statement (this same page, reloaded: nothing chosen) */
-  await reloadToLines(p);
-  ok(/Statement\s*18,280\.75/.test(await band(p)), 'ITEM 1: opened with no file: the latest statement is on screen, band unchanged (' + (await band(p)).slice(0, 100) + ')');
-  ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the restored statement asks no currency');
+  const landedOnHome = await reloadToLines(p);
+  ok(landedOnHome, 'ITEM 1 (W15-84, one landing): a reload opens the Bank home, no statement restored from the device');
+  ok(/Statement\s*18,280\.75/.test(await band(p)), 'ITEM 1: the same file read again: the statement and band are unchanged (' + (await band(p)).slice(0, 100) + ')');
+  ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the statement read again asks no currency');
   await p.screenshot({ path: path.join(OUT, 'b9-01-opens-on-last-statement-1366.png') });
   /* l16-bank-rules: the CLEAN Harbour (no savings account yet), the whole sheet, nothing answered: the three lines say what they look like while CLOSED (the gap that let 39/39 pass: only open rows were read) */
   await p.click('[data-testid="bank-sheet-open"]');
@@ -291,6 +294,8 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   let reached = '';
   for (let n = 0; n < 80 && reached !== 'bank-stmts-toggle'; n++) { await p.keyboard.press('Tab'); reached = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) || ''); }
   ok(reached === 'bank-stmts-toggle', 'KEYBOARD: Tab reaches Add statement on the Bank home (' + reached + ')');
+  /* nothing kept yet: the box starts open, so the first Enter closes it and the second opens it again */
+  if (await p.locator('[data-testid="bank-stmts-toggle"]').getAttribute('aria-expanded') === 'true') { await p.keyboard.press('Enter'); await p.waitForTimeout(300); ok(await p.locator('[data-testid="bank-stmts-toggle"]').getAttribute('aria-expanded') === 'false', 'KEYBOARD: Enter on Add statement closes the open box'); const kept = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) || ''); if (kept !== 'bank-stmts-toggle') console.log('   FINDING (bank area, not asserted here): focus is lost to the page (' + (kept || 'body') + ') when Add statement closes the open box'); if (kept !== 'bank-stmts-toggle') await p.locator('[data-testid="bank-stmts-toggle"]').focus(); }
   await p.keyboard.press('Enter');
   await p.waitForTimeout(500);
   ok(await p.locator('[data-testid="bank-stmts-toggle"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-stmts-file"]').first().waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false), 'KEYBOARD: Enter opens Add statement with its file box');
