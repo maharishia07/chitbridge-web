@@ -430,7 +430,58 @@
     var rows = report.rows(viewState.answer || {}).concat(totalRows(report.k, viewState.answer || {})).map(function (row, n) {
       return Object.assign({ _n: n }, row);
     });
-    viewState.o.mountList(host, Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows)));
+    var config = Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows));
+    if (report.k === 'daybook') narrowDaybook(host, config);
+    viewState.o.mountList(host, config);
+    if (report.k === 'daybook') wireDaybook(host, report);
+  }
+  /* ── A3C rank 3: review by exception. The Day book's Mark · Evidence · Type filters (books-grant-filters.js) on the one list control; the choice is remembered for this client and rides the address (&dbf_mark= &dbf_ev= &dbf_kind=) ── */
+  function narrowDaybook(host, config) {
+    var F = root.CBBooksGrantFilters;
+    if (!F) return;
+    var all = F.filtersFor(viewState.mk);
+    config.filters = all.filter(function (f) { return f.key !== 'mark' || markable({ k: 'daybook' }); });
+    if (viewState.dbf === undefined) viewState.dbf = F.fromAddress(root.location.search); /* the first Day book of this client reads the address; later ones, what the person chose */
+    var kept = {};
+    config.filters.forEach(function (f) { if (viewState.dbf[f.key]) kept[f.key] = viewState.dbf[f.key]; });
+    config.preset = { filt: kept };
+  }
+  /** after any press or change in the list: remember the narrowing and write it to the address (replace, never a new history entry) */
+  function rememberNarrowing(host) {
+    var F = root.CBBooksGrantFilters, inst = host.__cbl;
+    if (!F || !inst || !inst.api) return;
+    viewState.dbf = inst.api.state().filt || {};
+    if (!root.history || !root.history.replaceState) return;
+    try {
+      var query = new root.URLSearchParams(root.location.search);
+      ['dbf_mark', 'dbf_ev', 'dbf_kind'].forEach(function (k) { query.delete(k); });
+      var more = F.toAddress(viewState.dbf), text = query.toString() + (more ? (query.toString() ? '&' : '') + more : '');
+      var url = root.location.pathname + (text ? '?' + text : '') + (root.location.hash || '');
+      if (url !== root.location.pathname + root.location.search + (root.location.hash || '')) root.history.replaceState(root.history.state, '', url);
+    } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:narrowing', failure); }
+  }
+  /** A3C rank 8: on a focused Day book row "c" checks it and moves down, "q" opens its question; never while typing */
+  function wireDaybook(host, report) {
+    if (host.__bvKeys) return;
+    host.__bvKeys = true;
+    var settle = function () { root.setTimeout(function () { rememberNarrowing(host); }, 0); };
+    host.addEventListener('change', settle);
+    host.addEventListener('click', settle);
+    host.addEventListener('keydown', function (event) {
+      var target = event.target, mk = viewState.mk;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || !target || !target.closest) return;
+      if (event.key !== 'c' && event.key !== 'q') return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable || !mk || !markable(report)) return;
+      var rowEl = target.closest('[data-row]');
+      if (!rowEl) return;
+      var entry = report.rows(viewState.answer || {})[Number(rowEl.getAttribute('data-row'))];
+      if (!entry || !entry.entry_id) return;
+      event.preventDefault();
+      if (event.key === 'q') { mk.sheet(entry.entry_id, { title: entry.entry_no, opener: rowEl }); return; }
+      var rowsNow = [].slice.call(host.querySelectorAll('[data-row]')), next = rowsNow[rowsNow.indexOf(rowEl) + 1];
+      if (mk.mayCheck(entry.entry_id) && mk.markOf(entry.entry_id).state === 'none') mk.set(entry.entry_id, 'clear', '', null);
+      if (next) next.focus();
+    });
   }
   /** W21: the two headings in the reader's voice: a firm reads "Customers owe <client>" and "<client> owes suppliers"; the owner's own books say you (no member = the owner) */
   function duesVoice(client) {
@@ -515,7 +566,7 @@
   }
   /** a row opens what is behind it (ACC-176c): an account's ledger (a code on the row), or the journal entry a Day book row is; books-grant-drill.js paints both, read only */
   function drill(report, row) {
-    var ctx = { mk: viewState.mk, ev: viewState.ev, call: viewState.o.call, sheet: viewState.o.sheet, mountList: viewState.o.mountList, day: viewState.day, currency: viewState.answer && viewState.answer.currency };
+    var ctx = { mk: viewState.mk, ev: viewState.ev, call: viewState.o.call, sheet: viewState.o.sheet, mountList: viewState.o.mountList, day: viewState.day, period: viewState.period /* D1 (A3C): the ledger opens on the period the trial balance was read for, not on this year to today */, currency: viewState.answer && viewState.answer.currency };
     if (report.drill === 'entry') root.CBBooksGrantDrill.openEntry(ctx, row, ctx.currency, null);
     else if (row.code) root.CBBooksGrantDrill.openLedger(ctx, { code: row.code, name: row.name });
   }

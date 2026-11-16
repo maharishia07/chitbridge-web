@@ -60,6 +60,7 @@
   function page(ctx, state, after) {
     var query = { limit: PAGE, after: after };
     if (ctx.day) query.to = ctx.day;
+    else if (ctx.period && ctx.period.from && ctx.period.to) { query.from = ctx.period.from; query.to = ctx.period.to; } /* D1 (A3C): the picked period travels; a ledger is never the server's default year-to-today under a 30 June trial balance */
     return read(ctx, 'readLedger', { account: state.account.code }, query).then(function (answer) {
       state.answer = answer;
       state.next = answer.next || null;

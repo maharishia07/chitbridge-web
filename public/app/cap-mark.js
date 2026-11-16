@@ -222,6 +222,11 @@
         var t = ctl.turn(id);
         return t === 'waiting' ? 'mk-wait' : t === 'answered' ? 'mk-answered' : '';
       },
+      /** the mark's neutral class for one record, for a filter or a count by the page: { state: 'none'|'clear'|'open'|'hold'|'reject', altered } — the server's words, nothing decided here (A3C) */
+      markOf: function (id) {
+        var r = c.rows[String(id)];
+        return { state: classOf(r) || 'none', altered: !!(r && (r.altered || r.recheck_needed)) };
+      },
       mayCheck: function (id) {
         var r = c.rows[String(id)], a = (r && r.actions) || c.may || {};
         return !!(a.set && a.set.ok !== false && a.set.ok != null) || (a.set === true);
@@ -325,6 +330,16 @@
     for (var i = 0; i < controls.length; i++) if (controls[i].cfg.adopter === spec.adopter) return controls[i];
     return null;
   }
+  /** A3C (auditor paper rank 8): a Check repaints the chip, so the button the person pressed is gone and the focus fell to the page top; it goes to the row's new chip instead (the paper's 477-click job keeps its place) */
+  function keepFocus(host, pressed, done) {
+    if (!done || typeof done.then !== 'function') return;
+    done.then(function () {
+      if (pressed.isConnected === false || !doc.activeElement || doc.activeElement === doc.body) {
+        var next = host.querySelector('button[data-mk]');
+        if (next && next.focus) next.focus();
+      }
+    }, function () { /* a refused write keeps the old chip: nothing to move */ });
+  }
   /* one delegated press for every chip (captured: a row's own open handler never sees it) */
   var wired = false;
   function wire() {
@@ -338,7 +353,7 @@
       event.stopPropagation();
       event.preventDefault();
       var id = b.getAttribute('data-id');
-      if (b.getAttribute('data-mk') === 'check') c.ctl.set(id, 'clear', '', b);
+      if (b.getAttribute('data-mk') === 'check') keepFocus(host, b, c.ctl.set(id, 'clear', '', b));
       else c.ctl.sheet(id, { opener: b });
     }
     doc.addEventListener('click', onPress, true);
