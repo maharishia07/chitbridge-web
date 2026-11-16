@@ -107,7 +107,7 @@ same way.
 - **Default columns:** control account = Date · Party · Details, plus Amount; any other ledger = Date · Details · Balance, plus
   Amount.
 - **Kept in ⚙:** Balance (on control accounts), Entry no., Tender, Counter, Rung by.
-- **Grouping:** Month · Day · None, newest first by default (like a passbook app; the ▲▼ on Date reverses it). Each month and day
+- **Grouping:** Month · Day · None, oldest first by default (a ledger reads down with its running balance; the ▲▼ on Date reverses it, and ▲ is then true). Each month and day
   row shows its count and its Dr/Cr totals from the data. While a search or filter is on, a group row shows only "n shown",
   because the page will not total a subset itself.
 - **Everything else is the standard's:** ⇣/⇡, ▤ grid / ☰ lines, adjustable columns (drag, arrows, double-click resets), ⬇ CSV,
