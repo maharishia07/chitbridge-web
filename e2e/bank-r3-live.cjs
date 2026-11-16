@@ -17,6 +17,15 @@ async function load(p) {
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
   await p.waitForTimeout(1200);
 }
+/* W15-84 · ONE LANDING: a reload opens the Bank home, never the last statement. The way back to the lines: home -> the October cell (or Continue) -> the lines */
+async function reopen(p) {
+  await p.waitForSelector('[data-testid="bank-stmts-grid"], [data-testid="bank-home-cards"]', { timeout: 20000 });
+  const cell = p.locator('[data-testid^="bank-home-month-"][data-testid$="-2026-10"]'), cont = p.locator('[data-testid="bank-home-continue"]');
+  if (await cell.count()) await cell.first().click(); else await cont.first().click();
+  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
+  await p.waitForTimeout(1200);
+}
+const reloadToLines = async (p) => { await p.reload(); await reopen(p); };
 const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'));
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -30,14 +39,12 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the account has its currency on record, so no currency question');
   /* CHANGED ON PURPOSE (W15-18, W15-20): the currency is said once in the band, large (IAS 1 para 51); Load another statement is the band's secondary button */
   const head = flat(await p.textContent('[data-testid="bank-finish"]'));
-  ok(head.includes('All amounts in Australian dollars (AUD)') && (await p.locator('[data-testid="bank-change"]').count()) === 1, 'ITEM 5: the currency is said once, in the band; ITEM 1: Load another statement is the secondary action (' + head.slice(0, 120) + ')');
+  ok(head.includes('All amounts in Australian dollars (AUD)') && (await p.locator('[data-testid="bank-home-back"]').count()) === 1, 'ITEM 5: the currency is said once, in the band; ITEM 1: another statement is added from the Bank home (the trail Back is the way there) (' + head.slice(0, 120) + ')');
   ok(!/A\$/.test(await p.textContent('[data-testid="bank-list"]')), 'ITEM 5: no A$ on any row');
   ok(/Add 10 lines to your books/.test(bd), 'the primary carries the count: "Add 10 lines to your books"');
   await p.screenshot({ path: path.join(OUT, 'r3-01-before-1366.png') });
   /* ITEM 1: a visit with no file: the page opens on the latest statement (this same page, reloaded: nothing chosen) */
-  await p.reload();
-  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
-  await p.waitForTimeout(1200);
+  await reloadToLines(p);
   ok(/Statement\s*18,280\.75/.test(await band(p)), 'ITEM 1: opened with no file: the latest statement is on screen, band unchanged (' + (await band(p)).slice(0, 100) + ')');
   ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the restored statement asks no currency');
   await p.screenshot({ path: path.join(OUT, 'b9-01-opens-on-last-statement-1366.png') });
@@ -192,9 +199,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const states = async (pg) => pg.$$eval('[data-testid="bank-list"] [data-status]', (els) => els.map((e) => e.getAttribute('data-status')));
   console.log('   states after posting: ' + JSON.stringify(await states(p)));
   /* RELOAD: the same page, nothing chosen: still nil */
-  await p.reload();
-  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
-  await p.waitForTimeout(1500);
+  await reloadToLines(p);
   bd = await band(p);
   ok(/Difference\s*0\.00/.test(bd) && /Nothing left to add/.test(bd), 'AFTER RELOAD (no file chosen): still Difference 0.00 (' + bd.slice(0, 200) + ')');
   console.log('   states after reload: ' + JSON.stringify(await states(p)));
@@ -279,24 +284,21 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.screenshot({ path: path.join(OUT, 'b9-06-brs-1366.png') });
   await p.locator('[data-testid="bank-tab-lines"]').click();
   await p.waitForTimeout(800);
-  /* KEYBOARD ONLY: Tab to Load another statement, Enter opens the form, Tab reaches the file box */
+  /* KEYBOARD ONLY (W15-84): the trail's Back goes to the Bank home; Tab reaches Add statement, Enter opens the form with its file box */
+  await p.locator('[data-testid="bank-home-back"]').focus(); await p.keyboard.press('Enter');
+  await p.waitForSelector('[data-testid="bank-stmts-toggle"]', { timeout: 20000 });
   await p.evaluate(() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0); });
   let reached = '';
-  for (let n = 0; n < 60 && reached !== 'bank-change'; n++) { await p.keyboard.press('Tab'); reached = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) || ''); }
-  ok(reached === 'bank-change', 'KEYBOARD: Tab reaches "Load another statement" (' + reached + ')');
+  for (let n = 0; n < 80 && reached !== 'bank-stmts-toggle'; n++) { await p.keyboard.press('Tab'); reached = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) || ''); }
+  ok(reached === 'bank-stmts-toggle', 'KEYBOARD: Tab reaches Add statement on the Bank home (' + reached + ')');
   await p.keyboard.press('Enter');
   await p.waitForTimeout(500);
-  ok(await p.locator('[data-testid="bank-change"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-stmts-file"], [data-testid="bank-file"]').first().waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false), 'KEYBOARD: Enter opens the form with the file box (the Statements box Add statement input, or the plain picker when the box is not ready)');
-  let file = false;
-  /* CHANGED ON PURPOSE (W15-18): the button now sits in the band UNDER the form, so Enter moves the focus to the file box itself */
-  file = await p.evaluate(() => ['bank-stmts-file', 'bank-file'].includes(document.activeElement && document.activeElement.getAttribute('data-testid')));
-  ok(file, 'KEYBOARD: Enter on Load another statement puts the focus on the file box (one door: Add statement file input of the box)');
+  ok(await p.locator('[data-testid="bank-stmts-toggle"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-stmts-file"]').first().waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false), 'KEYBOARD: Enter opens Add statement with its file box');
+  await p.screenshot({ path: path.join(OUT, 'b9-07-keyboard-add-statement-1366.png') });
   await p.screenshot({ path: path.join(OUT, 'b9-07-keyboard-another-statement-1366.png') });
   /* PHONE: the same page at 390x844, the statement is still there */
   await p.setViewportSize({ width: 390, height: 844 });
-  await p.reload();
-  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
-  await p.waitForTimeout(1500);
+  await reloadToLines(p);
   await p.screenshot({ path: path.join(OUT, 'b9-08-phone-390.png') });
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '390x844: no sideways scroll');
   const fold = await p.evaluate(() => { const first = document.querySelector('[data-testid="bank-list"] [data-row]'); return first ? Math.round(first.getBoundingClientRect().top) : -1; });
