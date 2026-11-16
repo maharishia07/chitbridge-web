@@ -3878,6 +3878,8 @@ function bkLgHead() {
   /* the grid's top-bar slot: back, fold and download buttons */
   head.slot = function (el) {
     var x = '';
+    if (BK.backTo) /* ACC-357: opened from a return's box: Back goes to the return, on the same period */
+      x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn" data-lt="backto" data-testid="lt-backto">‹ ' + esc(txf('Back to {form}', { form: BK.backTo.label })) + '</button>';
     if (bkLtNarrow())
       x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
     if (bkLtFolded() && !bkLtNarrow())
@@ -4304,6 +4306,12 @@ function bkLtBind(root) {
       bkLtBack();
       return;
     }
+    if (d === 'backto') {
+      var back = BK.backTo;
+      BK.backTo = null;
+      if (back && typeof show === 'function') show(back.tab);
+      return;
+    }
     if (d === 'statement') {
       bkLgStatement();
       return;
@@ -4648,7 +4656,7 @@ async function bkTB(body) {
           '<tr><td class="mono">' +
           esc(x.code) +
           '</td><td>' +
-          bkLedgerLink(x.code, x.name, 'tb') +
+          bkDrillLink(x.code, x.name, 'tb', reply.fy_from || bkFyFrom(), asOf, 'tb', tx('Trial balance')) +
           '</td><td class="num">' +
           (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') +
           '</td><td class="num">' +
@@ -4659,6 +4667,7 @@ async function bkTB(body) {
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
+      bkStmtCss() +
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
@@ -4696,108 +4705,271 @@ function bkOpenLedger(code) {
   if (typeof hashView === 'function') location.hash = 'ledgers';
   else bkTab('ledgers'); /* CB Accounts moves by its menu's hash (show) — the menu and the header follow */
 }
-/* a link that opens one ledger by its account code */
-function bkLedgerLink(code, name, tid) {
+/* ═══ THE STATEMENTS BESIDE LAST YEAR (ACC-357 · W15-118 P&L · W15-119 Balance sheet) ═══════════════════════════════════════════════════════════════
+   Leaders (docs/walks/LEADERS-REPORTS-2026-11-16.md): MYOB "Compare to" last year with $ and % change and "% Sale analysis"; QuickBooks "previous period / previous year"; Xero compares
+   equal-length periods. Taken: a Last-year column with its change and a % of income, ANY range against the same range a year earlier, the Balance sheet's prior month AND prior year in one view,
+   a line that opens below. ⭐ THE PAGE ADDS NOTHING: every figure, change and share is the server's (basis points, formatted here only). The period and the dates come from the pack's year. */
+var BK_PL = { preset: 'ytd', step: 0, from: '', to: '', compare: 'year' };
+var BK_BS = { kind: 'today', step: 0, asOf: '' };
+/** a carried change or share (basis points) as a short percent: "+25.0%" or "12.5%"; "—" when the server had nothing to compare with */
+function bkPct(bp, signed) {
+  if (bp == null) return '<span style="color:var(--grey)">—</span>';
+  var n = Number(bp) / 100;
+  return esc((signed && n > 0 ? '+' : '') + n.toFixed(1) + '%');
+}
+function bkSpan(from, to) {
+  return bkDate(from) + ' – ' + bkDate(to);
+}
+/** the figure cell: right-aligned money, "—" when the server sent none */
+function bkFig(minor, c) {
+  return minor == null ? '<span style="color:var(--grey)">—</span>' : esc(bkMoney(minor, c));
+}
+/** a ledger's name as a button that opens its entries BELOW the line (the server's page of ten), "Open all" going on to the Ledgers page and Back returning here; every line of every statement, one pattern */
+function bkDrillLink(code, name, tid, from, to, tab, label) {
+  if (!code) return esc(name);
   return (
-    '<a data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' href="#" data-testid="' +
-    esc(tid) +
-    '-open-' +
-    esc(code) +
-    '" onclick="bkOpenLedger(\'' +
-    esc(code) +
-    '\');return false" title="' +
-    esc(tx('Open this ledger')) +
-    '">' +
-    esc(name) +
-    '</a>'
+    '<button data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' type="button" class="bk-dl" aria-expanded="false" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkDrillToggle(this,\'' +
+    esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')" title="' + esc(tx('Show its entries below')) + '">' + '<span class="bk-code">' + esc(code) + ' · </span>' + esc(name) + ' ▸</button>'
   );
 }
-/* one ledger row of a statement: "code · name" (the name opens the ledger), and what a netted tax line is pair of (the server names the two ledgers) */
-function bkStmtRow(x, currency) {
-  var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
+/** open or close the entries of one ledger under its row: one read of ten, then the count and "Open all" */
+async function bkDrillToggle(btn, code, from, to, tab, label) {
+  var row = btn.closest('tr'),
+    next = row && row.nextElementSibling;
+  if (next && next.getAttribute('data-drill') === code) {
+    next.remove();
+    btn.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  btn.setAttribute('aria-expanded', 'true');
+  var td = document.createElement('td');
+  td.colSpan = row.cells.length;
+  td.innerHTML = '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the entries…')) + '</span>';
+  var tr = document.createElement('tr');
+  tr.setAttribute('data-drill', code);
+  tr.appendChild(td);
+  row.parentNode.insertBefore(tr, row.nextSibling);
+  try {
+    var r = await api('booksLedger', { params: { account: code }, query: { from: from, to: to, limit: 10, order: 'desc' } });
+    var c = r.currency,
+      lines = r.lines || [],
+      total = r.total != null ? r.total : lines.length;
+    td.innerHTML =
+      '<div style="padding:4px 0 8px 16px;font-size:var(--fs-1)" data-testid="drill-' + esc(code) + '">' +
+      (lines.length
+        ? lines
+            .map(function (l) {
+              return (
+                '<div style="display:flex;gap:10px;justify-content:space-between"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+                esc(bkDate(l.date)) + ' · ' + esc(l.what || '') + '</span><span class="num" style="white-space:nowrap">' + esc(bkMoney(l.dr_minor ? l.dr_minor : l.cr_minor, c)) + ' ' + esc(tx(l.dr_minor ? 'Dr' : 'Cr')) + '</span></div>'
+              );
+            })
+            .join('')
+        : '<span style="color:var(--grey)">' + esc(tx('No entries in this period')) + '</span>') +
+      (total > 0 ? '<div style="margin-top:4px"><button type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')">' +
+        esc(txn('Open the {count} entry ▸', 'Open all {count} entries ▸', total, { count: total })) + '</button></div>' : '') +
+      '</div>';
+  } catch (failure) {
+    td.innerHTML = '<span class="pe-bad">' + bkErr(failure) + '</span>';
+  }
+}
+/** the ledger's entries for a period, with Back returning to the statement it came from */
+function bkOpenLedgerIn(code, from, to, tab, label) {
+  BK.lgp = { preset: 'custom', from: from, to: to };
+  BK.backTo = { tab: tab, label: label, code: String(code) };
+  bkOpenLedger(code);
+}
+/** the picker row of a statement: preset (from the pack's year) · ‹ › · the range said once · the comparison */
+function bkPeriodBar(o) {
+  var sel = function (id, opts, cur, on) {
+    return (
+      '<select data-cbsid="BKS016-S01" class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(tx(o.aria)) + '" onchange="' + on + '">' +
+      opts.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (String(x[0]) === String(cur) ? ' selected' : '') + '>' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
+    );
+  };
+  var btn = function (tid, glyph, label, step, off) {
+    return '<button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="' + tid + '" aria-label="' + esc(tx(label)) + '"' + (off ? ' disabled' : '') + ' onclick="' + o.step + '(' + step + ')">' + glyph + '</button>';
+  };
   return (
-    '<tr><td>' +
-    (x.code ? esc(x.code + ' · ') + bkLedgerLink(x.code, x.name, 'st') : esc(x.name)) +
-    (pair ? '<div style="font-size:var(--fs-1)" data-testid="st-netof">' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '</div>' : '') +
-    '</td><td class="num">' +
-    esc(bkMoney(x.amount_minor, currency)) +
-    '</td></tr>'
+    '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap" data-testid="' + o.tid + '-bar">' +
+    sel(o.tid + '_pick', o.opts, o.cur, o.pick + '(this.value)') +
+    btn(o.tid + '-prev', '‹', 'Earlier', -1, o.custom) +
+    btn(o.tid + '-next', '›', 'Later', 1, o.custom || !o.canNext) +
+    (o.custom ? o.dates : '') +
+    (o.extra || '') +
+    '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="' + o.tid + '-range">' + esc(o.range) + '</span></div>'
   );
 }
-/* a total row: the label and the figure the SERVER carried (the page never adds) */
-function bkStmtTotal(label, minor, currency, tid) {
-  return minor == null ? '' : '<tr' + (tid ? ' data-testid="' + tid + '"' : '') + '><td><b>' + esc(label) + '</b></td><td class="num"><b>' + esc(bkMoney(minor, currency)) + '</b></td></tr>';
+/** the statements' own look: money columns right-aligned and equal, the narrow screen drops the percent columns, never a sideways scroll */
+function bkStmtCss() {
+  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none!important;border:0!important;padding:6px 0!important;min-height:0!important;line-height:1.2!important;font:inherit!important;color:var(--link,#1a5f8a)!important;text-align:left;cursor:pointer;box-shadow:none!important;border-radius:0!important}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide,.bk-st .bk-code{display:none}.bk-st{font-size:12px}.bk-st td,.bk-st th{padding:3px 3px}.bk-st .bk-ind{padding-left:4px;display:inline-block;max-width:100%}.bk-st .bk-note{display:block;margin:0;white-space:normal}.bk-st .bk-dl{max-width:8.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}}</style>';
 }
-/* the report lines the server grouped (the pack's own heads, in its order): a heading, its ledgers, and its carried total when it holds more than one */
-function bkStmtGroups(lines, currency) {
+/** one statement row: label cell, then the figures the server carried (a figure list of { v, pct?, wide? }) */
+function bkStRow(cls, label, cells) {
+  return '<tr class="' + cls + '"><td>' + label + '</td>' + cells.map(function (x) { return '<td class="num' + (x.wide ? ' bk-wide' : '') + '"' + (x.tid ? ' data-testid="' + x.tid + '"' : '') + '>' + x.v + '</td>'; }).join('') + '</tr>';
+}
+/** the P&L: a head's ledgers, then its subtotal (every head gets one), each line with last year · change · % of income */
+function bkPlGroups(lines, c, cmp, from, to) {
   return (lines || [])
     .map(function (g) {
       var accts = g.accounts || [];
+      var figs = function (x) {
+        var cells = [{ v: bkFig(x.amount_minor, c) }];
+        if (cmp) cells.push({ v: bkFig(x.prior_minor, c), wide: true }, { v: bkPct(x.change_bp, true), wide: true });
+        cells.push({ v: bkPct(x.share_bp), wide: true });
+        return cells;
+      };
       return (
-        '<tr data-testid="st-group"><td colspan="2" style="padding-top:8px"><b>' + esc(g.label) + '</b></td></tr>' +
-        accts.map(function (x) { return bkStmtRow(x, currency); }).join('') +
-        (accts.length > 1 ? bkStmtTotal(tx('Total') + ' ' + g.label, g.amount_minor, currency) : '')
+        bkStRow('bk-grp', esc(g.label), []).replace('</tr>', '<td colspan="' + (cmp ? 4 : 2) + '"></td></tr>') +
+        accts.map(function (x) { return bkStRow('', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + '</span>', figs(x)); }).join('') +
+        bkStRow('bk-sub', esc(tx('Total') + ' ' + g.label), figs(g))
       );
     })
     .join('');
 }
-/* one side of the balance sheet or P&L: its title, its rows (flat ledgers or the server's report lines) and its carried total */
-function bkSideHTML(title, rows, currency, total, totalLabel, lines) {
-  return (
-    '<div class="sec">' +
-    title +
-    '</div>' +
-    bkTable(
-      [{ t: tx('Ledger') }, { t: tx('Amount'), num: 1 }],
-      lines && lines.length ? bkStmtGroups(lines, currency) : (rows || []).map(function (x) { return bkStmtRow(x, currency); }).join(''),
-      bkStmtTotal(totalLabel || tx('Total'), total, currency)
-    )
-  );
+function bkPlPick(v) {
+  BK_PL.preset = v;
+  BK_PL.step = 0;
+  if (v === 'custom') {
+    BK_PL.from = BK_PL.from || bkFyFrom();
+    BK_PL.to = BK_PL.to || bkToday();
+  }
+  bkTab('pl');
 }
-/* the P&L tab: income and expenses for one date range, by the pack's report lines, then Total income, Total expenses and the Profit (all carried) */
+function bkPlStep(n) {
+  BK_PL.step = Math.min(0, (BK_PL.step || 0) + n);
+  bkTab('pl');
+}
+function bkPlCompare(v) {
+  BK_PL.compare = v;
+  bkTab('pl');
+}
+function bkPlDates() {
+  BK_PL.from = (document.getElementById('pl_from') || {}).value || BK_PL.from;
+  BK_PL.to = (document.getElementById('pl_to') || {}).value || BK_PL.to;
+  bkTab('pl');
+}
+/* the P&L tab: profit first, then income and expenses by the pack's heads with a subtotal each, beside the same range last year */
 async function bkPL(body) {
-  var q = bkRange('pl');
+  var q = { compare: BK_PL.compare };
+  if (BK_PL.preset === 'custom') {
+    q.from = BK_PL.from || bkFyFrom();
+    q.to = BK_PL.to || bkToday();
+  } else {
+    q.preset = BK_PL.preset;
+    q.step = BK_PL.step;
+  }
   try {
     var reply = await api('booksPL', { query: q });
-    var currency = reply && reply.currency,
-      by = reply.by_line || {};
+    var c = reply && reply.currency,
+      by = reply.by_line || {},
+      cmp = reply.compare,
+      P = reply.period || {},
+      custom = BK_PL.preset === 'custom';
+    var opts = (reply.presets || []).map(function (x) { return [x.id, x.label]; }).concat([['custom', 'Custom dates']]);
+    var dates = custom
+      ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="pl_from" aria-label="' + esc(tx('From')) + '" value="' + esc(reply.from) + '" onchange="bkPlDates()"><span>→</span><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="pl_to" aria-label="' + esc(tx('To')) + '" value="' + esc(reply.to) + '" onchange="bkPlDates()">'
+      : '';
+    var cmpSel =
+      '<select data-cbsid="BKS016-S01" class="inp" id="pl_cmp" data-testid="pl_cmp" aria-label="' + esc(tx('Compare with')) + '" onchange="bkPlCompare(this.value)">' +
+      [['year', 'Same days last year'], ['period', 'Period before'], ['none', 'No comparison']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === BK_PL.compare ? ' selected' : '') + '>' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>';
+    var range = bkSpan(reply.from, reply.to) + (cmp ? ' · ' + tx('against') + ' ' + bkSpan(cmp.from, cmp.to) : '');
+    var profit = Number(reply.profit_minor);
+    var lead =
+      '<div style="padding:4px 0 10px;font-size:var(--fs-3)" data-testid="pl-profit"><b>' + esc(tx(profit >= 0 ? 'Profit' : 'Loss')) + ' ' + esc(bkMoney(Math.abs(profit || 0), c)) + '</b>' +
+      (reply.profit_share_bp != null ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + bkPct(reply.profit_share_bp) + ' ' + esc(tx('of income')) + '</span>' : '') +
+      (cmp ? ' <span style="color:var(--grey);font-size:var(--fs-1)" data-testid="pl-profit-was">· ' + esc(tx('was')) + ' ' + esc(bkMoney(cmp.profit_minor, c)) + (cmp.profit_change_bp != null ? ' (' + bkPct(cmp.profit_change_bp, true) + ')' : '') + '</span>' : '') + '</div>';
+    var head =
+      '<thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This period')) + '</th>' +
+      (cmp ? '<th class="num bk-wide">' + esc(tx(cmp.how === 'year' ? 'Last year' : 'Before')) + '</th><th class="num bk-wide">' + esc(tx('Change')) + '</th>' : '') +
+      '<th class="num bk-wide">' + esc(tx('% of income')) + '</th></tr></thead>';
+    var tot = function (label, minor, was, ch, share, tid) {
+      var cells = [{ v: bkFig(minor, c), tid: tid }];
+      if (cmp) cells.push({ v: bkFig(was, c), wide: true }, { v: bkPct(ch, true), wide: true });
+      cells.push({ v: bkPct(share), wide: true });
+      return bkStRow('bk-tot', esc(label), cells);
+    };
     body.innerHTML =
-      bkRangeHTML('pl', "bkTab('pl')") +
-      bkSideHTML(tx('Income'), reply.income, currency, reply.total_income_minor, tx('Total income'), by.income) +
-      bkSideHTML(tx('Expenses'), reply.expense, currency, reply.total_expense_minor, tx('Total expenses'), by.expense) +
-      '<div style="padding:9px 0;font-size:var(--fs-3)" data-testid="pl-profit"><b>' +
-      (Number(reply.profit_minor) >= 0 ? tx('Profit') : tx('Loss')) +
-      ' ' +
-      esc(bkMoney(Math.abs(reply.profit_minor || 0), currency)) +
-      '</b></div>';
+      bkStmtCss() +
+      bkPeriodBar({ tid: 'pl', aria: 'Period', opts: opts, cur: BK_PL.preset, pick: 'bkPlPick', step: 'bkPlStep', custom: custom, canNext: P.can_next, dates: dates, extra: cmpSel, range: range }) +
+      lead +
+      '<table class="bk-st" data-testid="pl-table">' + head + '<tbody>' +
+      bkStRow('bk-sec', esc(tx('Income')), []).replace('</tr>', '<td colspan="' + (cmp ? 4 : 2) + '"></td></tr>') +
+      bkPlGroups(by.income, c, cmp, reply.from, reply.to) +
+      tot(tx('Total income'), reply.total_income_minor, cmp && cmp.total_income_minor, cmp && cmp.income_change_bp, reply.total_income_share_bp, 'pl-total-income') +
+      bkStRow('bk-sec', esc(tx('Expenses')), []).replace('</tr>', '<td colspan="' + (cmp ? 4 : 2) + '"></td></tr>') +
+      bkPlGroups(by.expense, c, cmp, reply.from, reply.to) +
+      tot(tx('Total expenses'), reply.total_expense_minor, cmp && cmp.total_expense_minor, cmp && cmp.expense_change_bp, reply.total_expense_share_bp, 'pl-total-expense') +
+      '</tbody></table>';
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
 }
-/* the Balance sheet tab: assets, liabilities and equity as of one date, each side with its carried total, then Total liabilities and equity */
+function bkBsPick(v) {
+  BK_BS.kind = v;
+  BK_BS.step = 0;
+  if (v === 'custom') BK_BS.asOf = BK_BS.asOf || bkToday();
+  bkTab('bs');
+}
+function bkBsStep(n) {
+  BK_BS.step = Math.min(0, (BK_BS.step || 0) + n);
+  bkTab('bs');
+}
+function bkBsDate() {
+  BK_BS.asOf = (document.getElementById('bs_asof') || {}).value || BK_BS.asOf;
+  bkTab('bs');
+}
+/** a side of the balance sheet: the pack's own chart heads, each with its ledgers and a subtotal, then the side's carried total */
+function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom) {
+  var cells = function (x) {
+    return [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
+  };
+  var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="3"></td></tr>');
+  (heads || []).forEach(function (g) {
+    var mine = (items || []).filter(function (x) { return (x.group ? x.group.code : null) === g.code; });
+    var same = !g.name || String(g.name).toLowerCase() === String(title).toLowerCase(); /* a group named like its section (Equity under Equity) is said once */
+    if (!same) out += bkStRow('bk-grp', esc(g.name), []).replace('</tr>', '<td colspan="3"></td></tr>');
+    mine.forEach(function (x) {
+      var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
+      var note = pair ? '<span class="bk-note" data-testid="st-netof" title="' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '">' + esc(tx('net of') + ' ' + pair[0].name + ' ' + tx('less') + ' ' + pair[1].name) + '</span>' : '';
+      out += bkStRow('', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
+    });
+    if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + g.name), cells(g));
+  });
+  return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }]);
+}
+/* the Balance sheet tab: net assets first, "as at" a day with ‹ ›, this date beside a month ago and a year ago, by the pack's own chart heads */
 async function bkBS(body) {
-  var asOf = (document.getElementById('bs_asof') || {}).value || bkToday();
+  var q = BK_BS.kind === 'custom' ? { asOf: BK_BS.asOf || bkToday() } : { kind: BK_BS.kind, step: BK_BS.step };
   try {
-    var reply = await api('booksBS', { query: { asOf: asOf } });
-    var currency = reply && reply.currency;
-    var ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor);
+    var reply = await api('booksBS', { query: q });
+    var c = reply && reply.currency,
+      A = reply.as_at || {},
+      cmp = reply.compare || {},
+      custom = BK_BS.kind === 'custom',
+      ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor),
+      g = reply.groups || {},
+      fyFrom = reply.fy_from || bkFyFrom();
+    var opts = [['today', 'Today'], ['month', 'Last month end'], ['year', 'Last year end'], ['custom', 'Pick a date']];
+    var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(reply.asOf) + '" onchange="bkBsDate()">' : '';
+    var was = function (side) {
+      return { month: cmp.month ? cmp.month[side] : null, year: cmp.year ? cmp.year[side] : null };
+    };
+    var lead =
+      '<div style="padding:4px 0 10px;font-size:var(--fs-3)" data-testid="bs-net"><b>' + esc(tx('Net assets')) + ' ' + esc(bkMoney(reply.net_assets_minor, c)) + '</b>' +
+      (cmp.month ? ' <span class="bk-wide" style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(tx('a month ago')) + ' ' + esc(bkMoney(cmp.month.net_assets_minor, c)) + '</span>' : '') +
+      (cmp.year ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(tx('a year ago')) + ' ' + esc(bkMoney(cmp.year.net_assets_minor, c)) + '</span>' : '') + '</div>';
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
-      asOf +
-      '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'bs\')">' +
-      tx('Show') +
-      '</button>' +
-      '<span class="optchip" data-testid="bs-balanced" style="margin-inline-start:auto;' +
-      (ok ? 'color:var(--ok-2)' : 'color:var(--warn-2)') +
-      '">' +
-      (ok ? tx('✓ balances') : tx('⚠ does not balance')) +
-      '</span></div>' +
-      bkSideHTML(tx('Assets'), reply.assets, currency, reply.total_assets_minor, tx('Total assets')) +
-      bkSideHTML(tx('Liabilities'), reply.liabilities, currency, reply.total_liabilities_minor, tx('Total liabilities')) +
-      bkSideHTML(tx('Equity'), reply.equity, currency, reply.total_equity_minor, tx('Total equity')) +
-      '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><tfoot>' +
-      bkStmtTotal(tx('Total liabilities and equity'), reply.total_liab_equity_minor, currency, 'bs-total-le') +
-      '</tfoot></table>';
+      bkStmtCss() +
+      bkPeriodBar({ tid: 'bs', aria: 'As at', opts: opts, cur: BK_BS.kind, pick: 'bkBsPick', step: 'bkBsStep', custom: custom, canNext: A.can_next, dates: dates, range: tx('as at') + ' ' + bkDate(reply.asOf) + (cmp.month ? ' · ' + bkDate(cmp.month.as_at) + ' · ' + bkDate(cmp.year && cmp.year.as_at) : ''),
+        extra: '<span class="optchip" data-testid="bs-balanced" style="' + (ok && reply.net_assets_ok !== false ? 'color:var(--ok-2)' : 'color:var(--warn-2)') + '">' + (ok ? tx('✓ balances') : tx('⚠ does not balance')) + '</span>' }) +
+      lead +
+      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th></tr></thead><tbody>' +
+      bkBsSide(tx('Assets'), reply.assets, g.assets, c, reply.total_assets_minor, was('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom) +
+      bkBsSide(tx('Liabilities'), reply.liabilities, g.liabilities, c, reply.total_liabilities_minor, was('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom) +
+      bkBsSide(tx('Equity'), reply.equity, g.equity, c, reply.total_equity_minor, was('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom) +
+      bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }]) +
+      '</tbody></table>';
   } catch (e) {
     body.innerHTML = bkErr(e);
   }

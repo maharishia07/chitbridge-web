@@ -205,7 +205,7 @@ W.run('x-r2r', async (w) => {
     await w.step('D6b', 'a Trial balance line opens the ledger it counts (Cash) — and the ledger\'s closing is the TB\'s figure', async () => {
       await open(page, base, 'tb');
       const want = (await page.locator('tr', { has: page.locator(T('tb-open-1400')) }).first().locator('td.num').first().innerText().catch(() => '')).trim();
-      await page.click(T('tb-open-1400')); await page.waitForTimeout(REAL ? 3500 : 1200);
+      await page.click(T('tb-open-1400')); await page.waitForSelector(T('drill-all-1400'), { timeout: 10000 }); /* ACC-357: the line opens its entries below; Open all goes on to the ledger */ await page.click(T('drill-all-1400')); await page.waitForTimeout(REAL ? 3500 : 1200);
       const h = await page.evaluate(() => location.hash), t = await content(page);
       const closing = (/Closing\s+([^\s·]*[\d,.]+)/.exec(await page.evaluate(() => document.body.innerText)) || [, ''])[1];
       return { ok: h === '#ledgers' && !!want && money(closing) === money(want), saw: 'TB Cash ' + want + ' · the Cash ledger says Closing ' + (closing || '(none)') };

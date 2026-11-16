@@ -1,7 +1,7 @@
 /**
- * stmts-pl-bs.test.cjs — W15-92 / W15-93: the P&L reads by the pack's report lines with Total income, Total expenses and Profit; the Balance sheet has Total liabilities, Total equity
- * and Total liabilities and equity; every figure is the SERVER's carried one, and the "✓ balances" chip compares the two carried totals.
- * OWNS      the proof on the real cap-books.js bkStmtRow / bkStmtTotal / bkStmtGroups / bkSideHTML / bkPL / bkBS (lifted into a vm sandbox) with the shape the api answers (docs/contracts/web-api.json).
+ * stmts-pl-bs.test.cjs — W15-92 / W15-93 / W15-118 / W15-119 (ACC-357): the P&L and the Balance sheet by the pack's heads, the profit and the net assets FIRST, a subtotal for every head,
+ * the Last-year column with its change and % of income, the Balance sheet's month and year ago; every figure, change and share is the SERVER's carried one (basis points), the page adds nothing.
+ * OWNS      the proof on the real cap-books.js statement functions (lifted into a vm sandbox) with the shape the api answers (docs/contracts/web-api.json)
  * CALLED BY .github/workflows/ci.yml (Offline guards). No browser, no network, no sibling repo.
  *   node e2e/stmts-pl-bs.test.cjs
  */
@@ -14,76 +14,90 @@ const cx = vm.createContext({
   tx: (s) => s,
   esc: (s) => String(s),
   bkMoney: (n) => 'M' + n,
-  bkLedgerLink: (code, name) => '<a>' + name + '</a>',
-  bkTable: (head, rows, foot) => '<table>' + rows + (foot ? '<tfoot>' + foot + '</tfoot>' : '') + '</table>',
-  bkRange: () => ({}),
-  bkRangeHTML: () => '',
+  bkDate: (d) => String(d),
+  txn: (one, many, n) => (n === 1 ? one : many).replace('{count}', n),
+  bkFyFrom: () => '2026-07-01',
   bkErr: (e) => 'ERR ' + e,
   bkToday: () => '2026-11-16',
   bkMountAttribute: () => '',
   document: { getElementById: () => null },
   api: async () => reply
 });
-vm.runInContext(liftFns('public/app/cap-books.js', ['bkStmtRow', 'bkStmtTotal', 'bkStmtGroups', 'bkSideHTML', 'bkPL', 'bkBS']) +
-  '\nthis.bkPL=bkPL;this.bkBS=bkBS;', cx);
+vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkBsSide', 'bkBS']) +
+  '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
 
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
 const body = () => ({ innerHTML: '' });
 const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) < h.indexOf(b);
-const A = (code, name, m) => ({ code, name, amount_minor: m });
 
 (async () => {
-  /* ── W15-92 P&L: the live walk's figures, in the pack's line order (not code order) ── */
+  /* ── P&L: the live walk's figures, in the pack's line order, beside the same days last year ── */
+  const L = (code, name, m, prior, ch, share) => ({ code, name, amount_minor: m, prior_minor: prior, change_bp: ch, share_bp: share });
   reply = {
-    currency: 'AUD',
-    income: [A('4000', 'Sales', 19500000)],
-    expense: [A('5100', 'Wages', 4348060), A('6090', 'Bank and merchant fees', 5860), A('6010', 'Rent', 1423163), A('6060', 'Repairs and maintenance', 5730419), A('6190', 'Sundry expenses', 64000)],
-    total_income_minor: 19500000, total_expense_minor: 11571502, profit_minor: 7928498,
+    currency: 'AUD', from: '2026-07-01', to: '2026-11-16',
+    income: [], expense: [],
+    total_income_minor: 19500000, total_expense_minor: 11571502, profit_minor: 7928498, profit_share_bp: 4066,
+    total_income_share_bp: 10000, total_expense_share_bp: 5934,
+    period: { preset: 'ytd', step: 0, can_next: false, from: '2026-07-01', to: '2026-11-16' },
+    presets: [{ id: 'ytd', label: 'This year to date' }, { id: 'year', label: 'Last year' }],
+    compare: { how: 'year', from: '2025-07-01', to: '2025-11-16', total_income_minor: 15600000, total_expense_minor: 9000000, profit_minor: 6600000, income_change_bp: 2500, expense_change_bp: 2857, profit_change_bp: 2013 },
     by_line: {
-      income: [{ line: 'revenue', label: 'Revenue', amount_minor: 19500000, accounts: [A('4000', 'Sales', 19500000)] }],
+      income: [{ line: 'revenue', label: 'Revenue', amount_minor: 19500000, prior_minor: 15600000, change_bp: 2500, share_bp: 10000, accounts: [L('4000', 'Sales', 19500000, 15600000, 2500, 10000)] }],
       expense: [
-        { line: 'employee', label: 'Employee benefits expense', amount_minor: 4348060, accounts: [A('5100', 'Wages', 4348060)] },
-        { line: 'finance', label: 'Finance costs', amount_minor: 5860, accounts: [A('6090', 'Bank and merchant fees', 5860)] },
-        { line: 'other', label: 'Other expenses', amount_minor: 7217582, accounts: [A('6010', 'Rent', 1423163), A('6060', 'Repairs and maintenance', 5730419), A('6190', 'Sundry expenses', 64000)] }
+        { line: 'employee', label: 'Employee benefits expense', amount_minor: 4348060, prior_minor: 4000000, change_bp: 870, share_bp: 2230, accounts: [L('5100', 'Wages', 4348060, 4000000, 870, 2230)] },
+        { line: 'finance', label: 'Finance costs', amount_minor: 5860, prior_minor: 0, change_bp: null, share_bp: 3, accounts: [L('6090', 'Bank and merchant fees', 5860, 0, null, 3)] },
+        { line: 'other', label: 'Other expenses', amount_minor: 7217582, prior_minor: 5000000, change_bp: 4435, share_bp: 3701, accounts: [L('6010', 'Rent', 1423163, 1000000, 4232, 730), L('6060', 'Repairs and maintenance', 5730419, 4000000, 4326, 2939), L('6190', 'Sundry expenses', 64000, 0, null, 33)] }
       ]
     }
   };
   let b = body(); await cx.bkPL(b); let h = b.innerHTML;
-  ok(at(h, 'Employee benefits expense', 'Finance costs') && at(h, 'Finance costs', 'Other expenses'), 'expense report-line headings show, in the pack order');
-  ok(at(h, 'Other expenses', '6010') && at(h, '6010', '6190') && at(h, '6190', 'Total Other expenses'), 'a group lists its ledgers, then its carried total (two or more ledgers)');
-  ok(h.includes('<b>Total Other expenses</b></td><td class="num"><b>M7217582</b>'), 'the group total is the server line amount (72,175.82), not a page sum');
-  ok(!h.includes('Total Finance costs') && !h.includes('Total Employee benefits expense'), 'a one-ledger group repeats no subtotal');
-  ok(at(h, 'Total income', 'Expenses') && h.includes('<b>Total income</b></td><td class="num"><b>M19500000</b>'), 'Total income = the carried total_income_minor 195,000.00');
-  ok(h.includes('<b>Total expenses</b></td><td class="num"><b>M11571502</b>'), 'Total expenses = the carried total_expense_minor 115,715.02');
-  ok(at(h, 'Total expenses', 'data-testid="pl-profit"') && /Profit M7928498/.test(h), 'then the Profit 79,284.98, the carried one');
-  reply = Object.assign({}, reply, { by_line: undefined });
+  ok(at(h, 'data-testid="pl-profit"', 'data-testid="pl-table"') && /Profit M7928498/.test(h) && /40\.7% of income/.test(h), 'the Profit leads, above the table, with its share of income (the server 4066 bp = 40.7%)');
+  ok(/was M6600000 \(\+20\.1%\)/.test(h), 'the profit says what it was last year and the change (carried)');
+  ok(at(h, 'Employee benefits expense', 'Finance costs') && at(h, 'Finance costs', 'Other expenses'), 'expense heads show, in the pack order');
+  ok(at(h, 'Other expenses', '6010') && at(h, '6010', '6190') && at(h, '6190', 'Total Other expenses'), 'a head lists its ledgers, then its subtotal');
+  ok(h.includes('Total Finance costs') && h.includes('Total Employee benefits expense') && h.includes('Total Revenue'), 'EVERY head has a subtotal, a one-ledger head too (W15-118)');
+  ok(h.includes('M7217582') && h.includes('M5000000'), 'the head subtotal and its last-year figure are the servers (72,175.82 and 50,000.00), not a page sum');
+  ok((h.match(/<th[ >]/g) || []).length === 5 && (h.match(/<thead>/g) || []).length === 1, 'the Ledger / This period / Last year / Change / % of income heading shows ONCE');
+  ok(h.includes('+25.0%') && h.includes('+44.4%') && h.includes('>—<') && !h.includes('>NaN'), 'the change is carried (+25.0%), and a ledger new since last year says a dash, not a made-up percent');
+  ok(h.includes('data-testid="pl-total-income"') && h.includes('M19500000') && h.includes('data-testid="pl-total-expense"') && h.includes('M11571502'), 'Total income 195,000.00 and Total expenses 115,715.02 are the carried ones');
+  ok(h.includes('data-testid="pl-open-6010"') && h.includes('aria-expanded="false"') && h.includes("'2026-07-01','2026-11-16'"), 'a ledger line is a button that opens its entries below, for THIS period');
+  ok(h.includes('data-testid="pl_pick"') && h.includes('This year to date') && h.includes('Custom dates') && h.includes('data-testid="pl-prev"') && /data-testid="pl-next"[^>]*disabled/.test(h), 'the period picker (the packs presets) and the stepper replace the two dates and Show; the later arrow is greyed at the running period');
+  ok(!h.includes('id="pl_from"'), 'no typed dates until Custom dates is picked');
+  reply = Object.assign({}, reply, { compare: null });
   b = body(); await cx.bkPL(b);
-  ok(b.innerHTML.includes('6010') && b.innerHTML.includes('Total expenses') && !b.innerHTML.includes('st-group'), 'an api with no by_line: the flat ledgers still list, with the carried totals');
+  ok((b.innerHTML.match(/<th[ >]/g) || []).length === 3 && !b.innerHTML.includes('>Last year</th>'), 'comparison off: no Last year and Change columns (nothing empty)');
   reply = Object.assign({}, reply, { total_income_minor: undefined, total_expense_minor: undefined });
   b = body(); await cx.bkPL(b);
-  ok(!/Total income|Total expenses/.test(b.innerHTML), 'a total the server did not carry is not shown (the page never sums)');
+  ok(/data-testid="pl-total-income"[^>]*><span[^>]*>—/.test(b.innerHTML) && !b.innerHTML.includes('data-testid="pl-total-income">M'), 'a total the server did not carry reads a dash (the page never sums)');
 
-  /* ── W15-93 Balance sheet ── */
+  /* ── Balance sheet: net assets first, as at a day, this date · a month ago · a year ago ── */
+  const G = (name, m, pm, py) => ({ code: name, name, amount_minor: m, prior_month_minor: pm, prior_year_minor: py });
+  const I = (code, name, m, pm, py, group, extra) => Object.assign({ code, name, amount_minor: m, prior_month_minor: pm, prior_year_minor: py, group: { code: group, name: group } }, extra || {});
   reply = {
-    currency: 'AUD',
-    assets: [A('1000', 'Bank', 14061005)], total_assets_minor: 14061005,
-    liabilities: [A('2100', 'Suppliers', 2125730), Object.assign(A('2200', 'GST payable to the ATO', 1400972), { net_of: [{ code: '2200', name: 'GST collected' }, { code: '2210', name: 'GST paid' }] })],
-    equity: [A('3000', "Owner's capital", 2605805), { code: null, name: 'Net profit', amount_minor: 7928498 }],
-    total_liabilities_minor: 3526702, total_equity_minor: 10534303, total_liab_equity_minor: 14061005
+    currency: 'AUD', asOf: '2026-11-16', fy_from: '2026-07-01', as_at: { kind: 'today', step: 0, as_at: '2026-11-16', can_next: false },
+    assets: [I('1000', 'Bank', 14061005, 13000000, 9000000, 'Current Assets')], total_assets_minor: 14061005,
+    liabilities: [I('2100', 'Suppliers', 2125730, 2000000, 1500000, 'Current Liabilities'), I('2200', 'GST payable to the ATO', 1400972, 1000000, 800000, 'Current Liabilities', { net_of: [{ code: '2200', name: 'GST collected' }, { code: '2210', name: 'GST paid' }] })],
+    equity: [I('3000', 'Owners capital', 2605805, 2605805, 2605805, 'Equity'), { code: null, name: 'Net profit', amount_minor: 7928498, prior_month_minor: 7000000, prior_year_minor: 4000000, group: null }],
+    total_liabilities_minor: 3526702, total_equity_minor: 10534303, total_liab_equity_minor: 14061005, net_assets_minor: 10534303, net_assets_ok: true,
+    groups: { assets: [G('Current Assets', 14061005, 13000000, 9000000)], liabilities: [G('Current Liabilities', 3526702, 3000000, 2300000)], equity: [G('Equity', 2605805, 2605805, 2605805), { code: null, name: null, amount_minor: 7928498, prior_month_minor: 7000000, prior_year_minor: 4000000 }] },
+    compare: { month: { as_at: '2026-10-16', total_assets_minor: 13000000, total_liabilities_minor: 3000000, total_equity_minor: 10000000, net_assets_minor: 10000000 }, year: { as_at: '2025-11-16', total_assets_minor: 9000000, total_liabilities_minor: 2300000, total_equity_minor: 6700000, net_assets_minor: 6700000 } }
   };
   b = body(); await cx.bkBS(b); h = b.innerHTML;
-  ok(h.includes('<b>Total liabilities</b></td><td class="num"><b>M3526702</b>'), 'Total liabilities 35,267.02 (carried)');
-  ok(h.includes('<b>Total equity</b></td><td class="num"><b>M10534303</b>'), 'Total equity 105,343.03 (carried)');
-  ok(h.includes('data-testid="bs-total-le"') && h.includes('<b>Total liabilities and equity</b></td><td class="num"><b>M14061005</b>'), 'Total liabilities and equity 140,610.05 (carried)');
-  ok(at(h, 'Total assets', 'Liabilities') && at(h, '<b>Total liabilities</b>', 'Equity') && at(h, '<b>Total equity</b>', 'Total liabilities and equity'), 'order: assets, liabilities + total, equity + total, the grand total');
-  ok(h.includes('Net of GST collected 2200 less GST paid 2210'), 'the netted GST line says it is net of 2200 GST collected less 2210 GST paid');
+  ok(at(h, 'data-testid="bs-net"', 'data-testid="bs-table"') && /Net assets M10534303/.test(h) && /a month ago M10000000/.test(h) && /a year ago M6700000/.test(h), 'Net assets lead, above the table, with a month ago and a year ago (carried)');
+  ok(/as at 2026-11-16/.test(h) && h.includes('data-testid="bs_pick"') && h.includes('data-testid="bs-prev"'), 'the date says "as at", with the picker and the stepper');
+  ok(h.includes('Total Current Assets') && h.includes('Total Current Liabilities'), 'the packs own chart heads group the lines, each with its carried subtotal (no word of ours)');
+  ok(h.includes('data-testid="bs-total-assets"') && h.includes('M14061005') && h.includes('data-testid="bs-total-liabilities"') && h.includes('M3526702') && h.includes('data-testid="bs-total-equity"') && h.includes('M10534303'), 'Total assets, liabilities and equity are the carried totals');
+  ok(h.includes('data-testid="bs-total-le"') && /Total liabilities and equity/.test(h), 'Total liabilities and equity still closes the sheet');
+  ok(h.includes('M13000000') && h.includes('M9000000') && /A month ago/.test(h) && /A year ago/.test(h), 'each line carries a month ago and a year ago, side by side in the one view');
+  ok(/data-testid="st-netof"[^>]*>net of GST collected less GST paid</.test(h) && !/<td>\s*Net of/.test(h), 'the GST explanation sits on the SAME line as its ledger (small text, the full words on hover), never its own row');
+  ok(!h.includes('Total Equity') && (h.match(/>Equity</g) || []).length === 1, 'a pack group named like its section (Equity under Equity) is said once, with no second total');
+  ok((h.match(/as at/g) || []).length === 1, 'as at is said once (the bar), not again in the Net assets line');
+  ok(/<th class="num">A year ago/.test(h) && /<th class="num bk-wide">A month ago/.test(h), 'the narrow screen keeps a year ago and drops a month ago');
+  ok(h.includes('.bk-dl{background:none!important;border:0!important;padding:6px 0!important'), 'a ledger line is plain link text with a padded hit area, not a pill (it wins over the global button look)');
   ok(/data-testid="bs-balanced"[^>]*>✓ balances/.test(h), 'the chip compares the two carried totals: balances');
   reply = Object.assign({}, reply, { total_liab_equity_minor: 14061000 });
   b = body(); await cx.bkBS(b);
   ok(/⚠ does not balance/.test(b.innerHTML), 'two carried totals that differ: does not balance');
-  reply = Object.assign({}, reply, { total_liabilities_minor: undefined, total_equity_minor: undefined });
-  b = body(); await cx.bkBS(b);
-  ok(!b.innerHTML.includes('<b>Total liabilities</b>') && !b.innerHTML.includes('<b>Total equity</b>'), 'an api without the two sub-totals: none are made up');
   process.exitCode = bad ? 1 : 0;
 })();

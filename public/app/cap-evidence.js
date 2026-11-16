@@ -44,6 +44,8 @@
     ended: 'Access to these books has ended.',
     claimOne: '{amount} of {box} is from 1 purchase with no tax invoice. You need the tax invoice to claim it.',
     claimMany: '{amount} of {box} is from {n} purchases with no tax invoice. You need the tax invoice to claim it.',
+    claimRiskOne: '{amount}{kind} if the {n} purchase without a tax invoice is not claimed',
+    claimRiskMany: '{amount}{kind} if the {n} purchases without a tax invoice are not claimed',
     claimBox: 'the tax you claim',
     claimSee: 'See them'
   };
@@ -236,5 +238,19 @@
     return { text: text, see: T(W.claimSee) };
   }
 
-  root.CBEvidence = { use: use, stateOf: stateOf, claimWarning: claimWarning, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File attached' } };
+  /**
+   * ACC-357 (W15-103): the money at risk on the To pay line. The server carried both figures (net_minor, and unsupported_input.net_if_unclaimed_minor — what the return would say if those
+   * purchases are not claimed); this words them and adds nothing up. money(minor) is the page's formatter; netMinor is the return's own net. → "A$6,000.00 if the 2 purchases … are not claimed" or null.
+   */
+  function claimRisk(u, netMinor, money) {
+    if (!u || !(u.count > 0) || u.net_if_unclaimed_minor == null) return null;
+    var now = Number(u.net_if_unclaimed_minor),
+      kind = now < 0 ? ' ' + T('refund') : netMinor < 0 ? ' ' + T('to pay') : '';
+    return T(u.count === 1 ? W.claimRiskOne : W.claimRiskMany)
+      .replace('{amount}', money(Math.abs(now)))
+      .replace('{kind}', kind)
+      .replace('{n}', String(u.count));
+  }
+
+  root.CBEvidence = { use: use, stateOf: stateOf, claimWarning: claimWarning, claimRisk: claimRisk, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File attached' } };
 })(typeof window !== 'undefined' ? window : globalThis);
