@@ -231,8 +231,11 @@ function railPaint(r){
 }
 function railRead(){
   var g = GEN;
-  return SHELL.ready.then(function(){
+  /* l16 n12: a login that may be a firm waits for the practice answer; a firm draws no Your work strip (CBPractice.hidesShopCards, the one rule) and so asks nothing for it */
+  var pr = window.CBPractice, wait = pr && pr.holding && pr.holding() ? pr.settled() : Promise.resolve();
+  return wait.then(function(){ return SHELL.ready; }).then(function(){
     if (g !== GEN || !SESS) return;
+    if (pr && pr.hidesShopCards && pr.hidesShopCards('rail')) return;
     var m = SHELL.manifest(), rail = m && m.rail;
     if (!rail || !rail.facts) return;                       /* no read exists yet → nothing is drawn (never a made-up number) */
     return (SHELL.facts ? SHELL.facts(rail.facts) : read(rail.facts)).then(function(r){ if (g === GEN) railPaint(r); }).catch(function(){});   /* l16 firmhome: one ask for work/facts (the Tasks card shares it) */

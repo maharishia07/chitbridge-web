@@ -11,7 +11,9 @@
 (function (root) {
   'use strict';
   var P = { token: null, data: null, drawn: false, filter: null, list: null };
-  var HIDDEN_CARDS = { till: 1, marketing: 1, storefront: 1 };
+  /* l16 n12: what a firm with no trade of its own KEEPS of the shop's Home, by id: its own Setup (the business, account, plan, policy, privacy, standards, connectors). Everything else is shop: every other card, so
+     every area that would hold only those cards (the left rail), and the two shop panels named by id here: 'sides' (We lean on / Leans on us) and 'rail' (Your work). ONE list, ONE test (hidesShopCards). */
+  var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1 };
   var EP = { practice: { m: 'GET', p: '/api/books-grants/practice' } };
   function tx(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -51,7 +53,7 @@
     return !!(P.data && P.data.clients && P.data.clients.length && P.data.own_trade === false);
   }
   function hidesShopCards(id) {
-    return isFirm() && !!HIDDEN_CARDS[id];
+    return isFirm() && !FIRM_KEEPS[id];
   }
   function money(minor, currency) {
     if (minor == null) return '—';
@@ -333,10 +335,17 @@
   if (holding) {
     root.document.documentElement.classList.add('bp-hold');
     var hs = root.document.createElement('style');
-    hs.textContent = 'html.bp-hold [data-testid="shell-areas"]{display:none!important}';
+    hs.textContent = 'html.bp-hold [data-testid="shell-areas"],html.bp-hold [data-testid="shell-sidetools"],html.bp-hold #railbox{display:none!important}';
     (root.document.head || root.document.documentElement).appendChild(hs);
     root.setTimeout(release, SETTLE_CEILING + 500);
   }
+  /* l16 n12: a firm's Home draws neither the two side buttons (We lean on / Leans on us) nor the Your work strip: one class, set from the one rule, hides them with no flash (the hold above covers the wait) */
+  function markFirm() {
+    root.document.documentElement.classList.toggle('bp-firm', hidesShopCards('sides'));
+  }
+  var fs = root.document.createElement('style');
+  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox{display:none!important}';
+  (root.document.head || root.document.documentElement).appendChild(fs);
   function dropWaiting() {
     var w = root.document.getElementById('bp_wait');
     if (w && w.parentNode) w.parentNode.removeChild(w);
@@ -367,6 +376,7 @@
         if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
         P.data = answer;
         hint(answer.own_trade === false);
+        markFirm();
         root.dispatchEvent(new root.Event('cb-practice'));
         settle();
         tick();
@@ -381,5 +391,5 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start };
+  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start };
 })(typeof window !== 'undefined' ? window : globalThis);
