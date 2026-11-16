@@ -145,6 +145,16 @@
       usePeriod(named || (review ? { kind: 'year', fy: review.fy, from: review.from, to: review.to } : null)); /* W15/W17: the year under review, never "this month" or "as at today" */
     }, function () { viewState.choices = null; usePeriod(viewState.period && viewState.period.from ? viewState.period : null); });
   }
+  /** E16: a mark changes the dropdown's "checked n/m" lines too: the choices are read again (the server's own counts, the same GET /periods?marks=1) and the slot repainted, the period kept */
+  function rereadChoices() {
+    if (!alive() || !viewState.choices) return;
+    root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { query: { marks: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) {
+      if (!alive() || !a) return;
+      viewState.choices = a;
+      var report = current();
+      if (report) fillPeriodSlot(report);
+    }, function () { /* the lines stay as they were; the next open reads them fresh */ });
+  }
   /** the period control mounts into the named slot of the header line (CBBooksActing.periodSlot, W19): ONE function, ONE call in paint(); moving it is changing that call. Nothing in a refused or Actions screen. */
   function fillPeriodSlot(report) {
     var slot = $('bv_period_slot');
@@ -339,6 +349,7 @@
   }
   /** a mark set anywhere repaints the bar's count and, when All queries is open, its list */
   function onMarkChange() {
+    rereadChoices();
     if (!markBar) return;
     markBar.refresh().then(function () { if (viewState.queriesOnly) paintList(current()); });
   }
@@ -424,6 +435,11 @@
   function duesVoice(client) {
     return client ? { customer: words('Customers owe') + ' ' + client, supplier: client + ' ' + words('owes suppliers') } : { customer: words('Customers owe you'), supplier: words('You owe suppliers') };
   }
+  /** E15: the empty side of Who owes whom in the reader's voice, as the owner's own Dues says it ("Nobody owes you money" · "You owe nobody") */
+  function duesNobody(client, who) {
+    if (who === 'customer') return client ? words('Nobody owes') + ' ' + client : words('Nobody owes you money');
+    return client ? client + ' ' + words('owes nobody') : words('You owe nobody');
+  }
   /** the aged figures of one row (the server's follow_up, days past due) as the table's columns */
   function agedRow(row) {
     var fu = row.follow_up || {};
@@ -439,9 +455,11 @@
     var all = report.rows(viewState.answer || {}), voice = duesVoice(viewState.o && viewState.o.member && viewState.o.member.name), totals = (viewState.answer && viewState.answer.aged_totals) || {};
     host.innerHTML = '<h3 class="sub" data-testid="bv-dues-customers-head">' + esc(voice.customer) + '</h3><div id="bv_dues_c" data-testid="bv-dues-customers"></div><h3 class="sub" data-testid="bv-dues-suppliers-head">' + esc(voice.supplier) + '</h3><div id="bv_dues_s" data-testid="bv-dues-suppliers"></div>';
     ['customer', 'supplier'].forEach(function (who) {
-      var rows = all.filter(function (row) { return row.side === who; }).map(agedRow).concat(agedTotalRow(who, totals[who])).map(function (row, n) { return Object.assign({ _n: n }, row); });
+      var parties = all.filter(function (row) { return row.side === who; }).map(agedRow); /* E15: the server drops a party with nothing open; a side with no party is an empty sentence, never a lone Total row */
+      var rows = (parties.length ? parties.concat(agedTotalRow(who, totals[who])) : []).map(function (row, n) { return Object.assign({ _n: n }, row); });
       var config = listConfig(report, rows);
       config.key = 'books-grant-dues-' + who;
+      config.empty = { title: duesNobody(viewState.o && viewState.o.member && viewState.o.member.name, who) };
       viewState.o.mountList($(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), Object.assign({ foldHead: true }, config));
     });
   }
