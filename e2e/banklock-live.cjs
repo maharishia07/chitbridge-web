@@ -13,7 +13,7 @@ const CSV = () => fs.readFileSync(path.join(__dirname, 'fixtures', 'harbour-oct-
 const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'));
 const diffOf = (text) => (/Difference\s*(-?[\d,]+\.\d\d)/.exec(text) || [])[1] || '';
-const states = (p) => p.$eval('[data-testid="bank-list"] .lk-st', (els) => els.map((e) => e.getAttribute('data-state')));
+const states = (p) => p.$$eval('[data-testid="bank-list"] .lk-st', (els) => els.map((e) => e.getAttribute('data-state')));
 async function load(p) {
   await p.setInputFiles('[data-testid="bank-file"]', { name: 'Harbour-Plumbing-Oct2026.csv', mimeType: 'text/csv', buffer: CSV() });
   await p.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
