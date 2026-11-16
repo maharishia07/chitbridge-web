@@ -132,18 +132,18 @@ W.run('finance', async (w) => {
     return { ok: /Your ledger is off/.test(t1) && on1 && asked && sent === 0 && /Your ledger is off/.test(t2), saw: '"' + t1 + '"; enabled ' + on1 + '; asked first ' + asked + '; writes before yes ' + sent + '; Terms: "' + t2 + '"' };
   });
   /* FIN-72 · the follow-up view: the server's days-past-due split, painted and never computed */
-  await w.step('F14', 'Collections -> the head shows the totals by days past due (0-30 · 31-60 · 61-90 · 90+) and "Not due yet" apart, in money', async () => {
+  await w.step('F14', 'Collections -> the head shows the totals by days past due (1–30 · 31–60 · 61–90 · 90+) and "Current" apart, in money', async () => {
     await open();   /* F13 left the page on the Terms tab with the ledger off: read Collections afresh (mode is ok again) */
     const chips = await page.locator('[data-testid^="fin-age-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid') + '=' + el.textContent.replace(/\s+/g, ' ').trim()));
     const t = chips.join(' | ');
-    const ok = chips.length === 5 && /d90_plus=90\+ days .*1,?20,?000/.test(t) && /d61_90=61-90 days .*45,?000/.test(t) && /d0_30=0-30 days/.test(t) && /not_due=Not due yet .*8,?000/.test(t);
+    const ok = chips.length === 5 && /d90_plus=90\+ days .*1,?20,?000/.test(t) && /d61_90=61–90 days .*45,?000/.test(t) && /d0_30=1–30 days/.test(t) && /not_due=Current .*8,?000/.test(t);
     return { ok, saw: t.slice(0, 260) };
   });
-  await w.step('F15', 'Collections -> each Age says its oldest late bucket in days (Sri Hardware "90+ days", Lakshmi "61-90 days"); Kumar, not yet due, says "Not due yet"', async () => {
+  await w.step('F15', 'Collections -> each Age says its oldest late bucket in days (Sri Hardware "90+ days", Lakshmi "61–90 days"); Kumar, not yet due, says "Current"', async () => {
     const a = await txt('[data-testid="fin-row-pa"] [data-b="age"]'), b = await txt('[data-testid="fin-row-pb"] [data-b="age"]'), c = await txt('[data-testid="fin-row-pc"] [data-b="age"]');
-    return { ok: /90\+ days/.test(a) && /61-90 days/.test(b) && /Not due yet/.test(c), saw: '"' + a + '" | "' + b + '" | "' + c + '"' };
+    return { ok: /90\+ days/.test(a) && /61–90 days/.test(b) && /Current/.test(c), saw: '"' + a + '" | "' + b + '" | "' + c + '"' };
   });
-  await w.step('F16', 'Collections -> Show 61-90 days -> only Lakshmi Stores is left (the filter reads the worst code)', async () => {
+  await w.step('F16', 'Collections -> Show 61–90 days -> only Lakshmi Stores is left (the filter reads the worst code)', async () => {
     if (!await page.locator('[data-testid="cbl-filters-pop-fin-collect"]').count()) await page.click('[data-testid="cbl-filters-fin-collect"]').catch(() => {});
     await page.selectOption('[data-testid="listctl-filter-flag"]', 'd61_90'); await page.waitForTimeout(400);
     const n = await rows(), t = await body();
@@ -157,11 +157,11 @@ W.run('finance', async (w) => {
     const off = await page.locator('[data-testid="fin-set-terms"]').count();
     return { ok: on === 1 && off === 0, saw: 'note ' + on + ' (not set) · ' + off + ' (days set)' };
   });
-  await w.step('F18', 'Collections -> an answer with no follow_up (an older server) keeps the old look: no chips, the Schedule III word in Age, no note', async () => {
+  await w.step('F18', 'Collections -> an answer with no follow_up (an older server) shows no chips, no age word and no note (W15-94: no second ageing to fall back on)', async () => {
     S.total = null; S.rows = ROWS.map((x) => Object.assign({}, x, { follow_up: undefined })); await open();
     const chips = await page.locator('[data-testid^="fin-age-"]').count(), age = await txt('[data-testid="fin-row-pa"] [data-b="age"]'), note = await page.locator('[data-testid="fin-set-terms"]').count();
     S.total = TOTAL; S.rows = ROWS; await open();
-    return { ok: chips === 0 && /6 months|year|Not due|months/.test(age) && !/days/.test(age) && note === 0, saw: chips + ' chips; age "' + age + '"; note ' + note };
+    return { ok: chips === 0 && age === '' && note === 0, saw: chips + ' chips; age "' + age + '"; note ' + note };
   });
   for (const theme of ['cream', 'dark']) {
     for (const [width, height] of [[1366, 768], [390, 844]]) {

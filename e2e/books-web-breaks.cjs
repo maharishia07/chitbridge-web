@@ -40,7 +40,9 @@ const BREAKS = [
   ['M12 waiting reason not shown', CAP, `esc(w.reason || w.why || tx('No reason given'))`, `esc(tx('No reason given'))`],
   ['M12 retry not sent', CAP, `      await api('booksRetry', { body: {} });`, ``],
   ['M12 waiting count not shown', CAP, `el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');`, ``],
-  ['F11 payable buckets have no column', CAP, `cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS, known`, `cols = BK_BUCKETS, known`],
+  ['W15-94 an age bucket is dropped from the party row', CAP, `BK_FOLLOW.filter(function (item) {
+      return follow && Number(follow[item[0]]);`, `BK_FOLLOW.filter(function (item) {
+      return false && follow && Number(follow[item[0]]);`],
   /* ── where an entry came from (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") ── */
   ['SRC bill number not a link', CAP, `var link = s.chit_id ? '<a href="#"`, `var link = false ? '<a href="#"`],
   ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],

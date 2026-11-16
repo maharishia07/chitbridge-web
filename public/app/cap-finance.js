@@ -161,34 +161,24 @@ function finEarlyHTML(party) {
   return party.early && party.early.valid ? '<div data-b="early" style="font-size:var(--fs-1);color:var(--grey)">' + esc(party.early.words || '') + '</div>' : '';
 }
 /* ── FIN-72 · the follow-up view: days past the due date. Every figure and every code is the server's (follow_up, follow_up_total); this file only paints them ── */
-/** the server's four late buckets (follow_up keys) in order, with the words the chips, the filter and the Age column share */
-var FIN_AGES = [
-  ['d0_30', '0-30 days'],
-  ['d31_60', '31-60 days'],
-  ['d61_90', '61-90 days'],
-  ['d90_plus', '90+ days']
-];
+/** the server's four late buckets (follow_up keys) in order, with the words the chips, the filter and the Age column share — cap-books.js BK_FOLLOW, the one list Receivables, Payables and the Day book chip read too (W15-94) */
+var FIN_AGES = BK_FOLLOW.slice(1);
 /** the words of one follow-up code, or '' for a code this screen does not know */
 function finAgeWord(code) {
-  var match = FIN_AGES.filter(function (item) {
-    return item[0] === code;
-  })[0];
-  return match ? tx(match[1]) : '';
+  return bkFollowWord(code);
 }
-/** the Age column's tail for a row: the oldest late bucket, else "Not due yet" when it holds money, else ''; a row with no follow_up keeps the old Schedule III word */
+/** the Age column's tail for a row: the oldest late bucket, else "Current" when it holds money, else '' — bkDuesAge, the one reader */
 function finAgeTail(party) {
-  var follow = party.follow_up;
-  if (!follow) return tx(bkDuesAge(party));
-  return follow.worst ? finAgeWord(follow.worst) : Number(follow.not_due) ? tx('Not due yet') : '';
+  return bkDuesAge(party);
 }
-/** the head's chips: each late bucket's money, then "Not due yet" apart (the server's follow_up_total, in the books' money unit) — none when the server sent none */
+/** the head's chips: each late bucket's money, then "Current" apart (the server's follow_up_total, in the books' money unit) — none when the server sent none */
 function finAgeChips() {
   var total = FIN.fu;
   if (!total) return [];
   var chips = FIN_AGES.map(function (item) {
     return { tid: 'fin-age-' + item[0], text: tx(item[1]) + ' ' + bkMoney(Number(total[item[0]] || 0), FIN.cur) };
   });
-  chips.push({ tid: 'fin-age-not_due', text: tx('Not due yet') + ' ' + bkMoney(Number(total.not_due || 0), FIN.cur) });
+  chips.push({ tid: 'fin-age-not_due', text: bkFollowWord('not_due') + ' ' + bkMoney(Number(total.not_due || 0), FIN.cur) });
   return chips;
 }
 /** the note when a bill had no due date and the shop has no credit days (the server's terms code 'not_set'): it opens Terms, where days are set */
@@ -219,6 +209,7 @@ function finFilterOptions() {
 function finFilterMatch(party, value) {
   if (value === 'over') return !!party.over_limit;
   if (finAgeWord(value)) return !!party.follow_up && party.follow_up.worst === value;
+  if (party.follow_up) return !!party.follow_up.worst; /* W15-94: overdue is the one ageing's word, the same as the Day book chip */
   return Number(party.interest_minor) > 0 || (party.oldest_due && party.oldest_due < bkToday());
 }
 /* ── the columns: every figure is the server's ── */
@@ -262,7 +253,7 @@ function finCols() {
       cell: function (p) {
         var ag = finAgeTail(p);
         var ageSpan = ag ? '<span data-b="age" title="' + esc(tx('Days past the due date')) + '" style="color:var(--grey);white-space:nowrap">' + (p.oldest_due ? '· ' : '') + esc(ag) + '</span>' : '';
-        // no overdue bill but money owed later still says so ("Not due yet"), never a bare dash (FIN-72, walk F15)
+        // no overdue bill but money owed later still says so ("Current"), never a bare dash (FIN-72, walk F15)
         if (!p.oldest_due) return ageSpan || dash;
         return '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span> ' + ageSpan;
       }

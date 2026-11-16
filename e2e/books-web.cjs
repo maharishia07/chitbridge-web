@@ -70,7 +70,8 @@ function standIn() {
     const sup = !!who.supplier_entity_id, sum = open.reduce((a, x) => a + x.open_minor, 0);
     return { party_id: id, party_no: who.party_no, name: who.display_name, side: sup ? 'supplier' : 'customer', balance_minor: S.balance(id),
       oldest_due: open.map((x) => x.due_date).sort()[0] || null, disputed_minor: S.items[id].filter((x) => x.disputed).reduce((a, x) => a + x.open_minor, 0),
-      buckets: sup ? { not_due: 0, lt_1y: sum } : { not_due: 0, lt_6m: sum } };
+      buckets: sup ? { not_due: 0, lt_1y: sum } : { not_due: 0, lt_6m: sum }, /* the pack's months buckets stay on the wire; no screen reads them */
+      follow_up: { not_due: 0, d0_30: 0, d31_60: Math.abs(sum), d61_90: 0, d90_plus: 0, worst: sum ? 'd31_60' : null, no_terms_minor: 0, terms: 'ok' } };
   }) });
   return S;
 }
@@ -750,8 +751,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
   const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
-  ok(/2,500/.test(String(await cellOf('s1', 'lt_1y'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "< 1 year" in its own group (' + await cellOf('s1', 'lt_1y') + ')');
-  ok(String(await cellOf('c1', 'lt_6m') || '').length > 0 && await cellOf('c1', 'lt_1y') === null, 'dues: a customer keeps the six receivable buckets');
+  ok(/2,500/.test(String(await cellOf('s1', 'd31_60'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "31–60 days" in its own group (' + await cellOf('s1', 'd31_60') + ')');
+  ok(String(await cellOf('c1', 'd31_60') || '').length > 0 && await cellOf('c1', 'other') === null && await cellOf('s1', 'other') === null, 'dues: a customer and a supplier read the SAME five ages, and there is no "Other" (W15-94)');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-laptop.png') });
   await noAccounting(p, 'ledger');
 

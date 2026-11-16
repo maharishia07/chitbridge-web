@@ -330,7 +330,7 @@ function bkErr(e) {
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
-var BK = { dues: null, duesAt: 0, stmt: {}, tab: 'daybook' };
+var BK = { dues: null, duesAt: 0, stmt: {}, owed: {}, tab: 'daybook' };
 /** the /dues answer becomes the party map (party_id → no · name · balance) every screen reads — one place stores it */
 function bkDuesStore(r) {
   BK.dues = {};
@@ -1327,7 +1327,7 @@ async function payPreview() {
   try {
     var q = payIntent(false),
       reply = await api('booksPayPreview', {
-        body: { party_id: PAY.partyId, direction: payDirection(), amount_minor: amt, currency: bkCur(), allocate: q.allocate }
+        body: { party_id: PAY.partyId, direction: payDirection(), amount_minor: amt, currency: bkCur(), allocate: q.allocate, checks: payDirection() === 'out' ? true : undefined } /* W15-96: the bills' holds and tax-invoice flags ride with the bills */
       });
     if (PAY === p && n === PAY.seq) {
       PAY.preview = reply;
@@ -1404,6 +1404,7 @@ function payPaint() {
               '"><td class="mono">' +
               esc(bkBillNo(item.bill_no, item.against_ref, item.date || item.due_date)) +
               (item.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('In dispute') + '</span>' : '') +
+              bkBillFlags(item) +
               '</td><td>' +
               esc(bkDate(item.due_date)) +
               '</td><td class="num">' +
@@ -1550,6 +1551,27 @@ function payRefusal(allocations, amount) {
   if (used > amount) return tx('More applied than paid');
   return null;
 }
+/** W15-96: the bills this payment would settle that the auditor has put on hold — [{ no, by, note }] (the proposal rows' mark, the Day book's own); none when nothing is held */
+function payHeldBills() {
+  var rows = (PAY.preview && PAY.preview.proposal) || [];
+  return payAllocs()
+    .filter(function (alloc) {
+      return alloc.amount_minor > 0;
+    })
+    .map(function (alloc) {
+      return (
+        rows.filter(function (row) {
+          return row.against_ref === alloc.against_ref;
+        })[0] || null
+      );
+    })
+    .filter(function (row) {
+      return row && row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold');
+    })
+    .map(function (row) {
+      return { no: bkBillNo(row.bill_no, row.against_ref, row.date || row.due_date), by: row.mark.by_name || '', note: row.mark.note || '' };
+    });
+}
 /** the ask, in the screen's own words: who, how much, how (the How select's word) — through CBConfirm, the stacked <dialog> every utility page
  *  aliases confirmAsk to; on app.html confirmAsk paints into #modalhost, the host this sheet is in, so CBAction.ask there would replace the
  *  form before the write. true = yes · false = cancel · null = no dialog on this page (nothing is sent, and the form says so) */
@@ -1569,10 +1591,18 @@ function payAsk(amount) {
     : howWord
       ? txf('Record {amt} from {name} by {how}?', words)
       : txf('Record {amt} from {name}?', words);
+  var held = payHeldBills(),
+    heldWords = held
+      .map(function (item) {
+        return txf('{no} is on hold', { no: item.no }) + (item.by ? ' ' + txf('(marked by {who})', { who: item.by }) : '') + (item.note ? ': ' + item.note : '') + '.';
+      })
+      .join(' ');
+  if (held.length) title = txf('A bill is on hold. Pay {name} {amt} anyway?', words);
   return new Promise(function (res) {
     CBConfirm(
       title,
-      esc(tx(out ? 'Your books will show it paid.' : 'Your books will show it received.')),
+      (held.length ? '<div data-testid="pay_hold_words" style="color:var(--warn-2);font-weight:700;margin-bottom:6px">' + esc(heldWords) + '</div>' : '') +
+        esc(tx(out ? 'Your books will show it paid.' : 'Your books will show it received.')),
       tx(out ? 'Pay' : 'Record'),
       function () {
         res(true);
@@ -1705,6 +1735,7 @@ function booksAfterPay(r) {
   var pid = PAY && PAY.partyId;
   if (PAY) {
     delete BK.stmt[PAY.partyId];
+    delete BK.owed[PAY.partyId];
   }
   /* M30-1c: repaint LOCALLY from the answer - the balance the record just returned is the party's balance now (same sign as the dues read: + they owe you) */
   try {
@@ -1958,7 +1989,7 @@ function bkDaySales(entries, day) {
  * ⭐ THE TO-DO — what waits on you, one line each, a tap away. Only a count above zero earns a row (SYSTEM rule 1);
  * all quiet collapses into one line. Every count is the server's: /health `todo` (STD1: the one count — bills to accept, one opens its
  * sheet, several open Waiting; suppliers to add; the rest are the ledger's to record), /dues (a
- * customer with any bucket past "Not due"), /cheques (a held cheque with a step still open).
+ * customer with money past its due date: follow_up.worst), /cheques (a held cheque with a step still open).
  */
 function bkTodoCounts(dues, cheques, health) {
   var waiting = (health && health.waiting) || [],
@@ -1968,10 +1999,7 @@ function bkTodoCounts(dues, cheques, health) {
   });
   var overdue = ((dues && dues.parties) || []).filter(function (item) {
     if (bkDuesSide(item) !== 'rcv') return false;
-    var b = item.buckets || {};
-    return Object.keys(b).some(function (entry) {
-      return entry !== 'not_due' && Number(b[entry] || 0);
-    });
+    return !!(item.follow_up && item.follow_up.worst); /* W15-94: the one ageing — the same word Receivables and Collections show */
   });
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) {
     return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0;
@@ -2832,7 +2860,12 @@ function bkDvMount(el) {
 }
 /** ACC-358 (cap-mark.js): the auditor's marks arrive on each Day book entry; the owner sees the chip and may reply to a Query, never set one (the server's `mark_actions` says so) */
 function bkMarksIngest(r, list) {
-  if (typeof CBMark === 'undefined') return;
+  if (!bkMarkControl()) return;
+  BK.mk.ingest(list || r.entries, r);
+}
+/** the ONE mark control (adopter acc.audit): the Day book and the Receivables / Payables bill list read the same marks through it — null on a page that loads no cap-mark.js */
+function bkMarkControl() {
+  if (typeof CBMark === 'undefined') return null;
   if (!BK.mk) {
     BK.mk = CBMark.use({ adopter: 'acc.audit', call: api, period: function () { return BK.dv && BK.dv.range; } }); /* the Checked n of m counts the range the list shows */
     BK.mk.onChange(function () {
@@ -2840,7 +2873,7 @@ function bkMarksIngest(r, list) {
       if (BK.lt && BK.lt.api) BK.lt.api.refresh();
     });
   }
-  BK.mk.ingest(list || r.entries, r);
+  return BK.mk;
 }
 /** CMP062 (cap-evidence.js): each Day book entry arrives with its evidence; the chip says what is held, a press opens the sheet, a file opens through the seat's own headers (the adviser's X-Books-For rides in CBBooksActing) */
 function bkEvidenceIngest(list) {
@@ -3344,6 +3377,7 @@ function bkLtPickCtrl(code) {
 function bkLtPickParty(id, ctrl) {
   BK.lgAcc = ctrl;
   delete BK.stmt[id];
+  delete BK.owed[id];
   BK.lt.open['L:' + ctrl] = true;
   bkLtOpen({ code: ctrl, party: id });
 }
@@ -4584,29 +4618,27 @@ async function bkBS(body) {
     body.innerHTML = bkErr(e);
   }
 }
-/** ⭐ Schedule III: not due, then less than 6 months, 6–12 months, 1–2 years, 2–3 years, more than 3 years — disputed apart */
-var BK_BUCKETS = [
-  ['not_due', 'Not due'],
-  ['lt_6m', '< 6 months'],
-  ['m6_1y', '6–12 months'],
-  ['y1_2', '1–2 years'],
-  ['y2_3', '2–3 years'],
-  ['gt_3y', '> 3 years']
-];
-/** ⚠️ what the shop OWES is aged differently (Schedule III, payables): not due · under a year · 1–2 · 2–3 · over 3 years */
-var BK_BUCKETS_PAY = [
-  ['not_due', 'Not due'],
-  ['lt_1y', '< 1 year'],
-  ['y1_2', '1–2 years'],
-  ['y2_3', '2–3 years'],
-  ['gt_3y', '> 3 years']
-];
 /**
- * ⚠️⚠️ THE SERVER'S BUCKETS DECIDE THE COLUMNS (2026-09-30, review F11). One table with the six receivable columns
- * showed a supplier's `lt_1y` amount nowhere but under Balance. So: two tables — what customers owe you, what you owe
- * suppliers — each with the columns of its own side, and any bucket the server sends that has no column here lands in
- * "Other" rather than vanishing (a named list of columns must never be a silent filter).
+ * ⭐ ONE AGEING (W15-94, 2026-11-16): the server's days-past-due set (row.follow_up — engines CBLedger.ageing set 'followup', api books-engines.followRow), the same on
+ * Receivables, Payables, Collections and the Day book's overdue chip. The old tables here named the India Schedule III keys (lt_6m, m6_1y …); an Australian shop's pack sends
+ * lt_1m / m1_2 …, so its money fell into "Other" and the oldest word read "Not due". No pack bucket is read by any screen now, and there is no "Other": the five keys are
+ * the whole answer. A bill with no due date ages from its bill date (follow_up.no_terms_minor says how much; the screen says so).
+ * Due today sits in 1–30 days (FIN-72: a collector chases a bill on its due day).
  */
+var BK_FOLLOW = [
+  ['not_due', 'Current'],
+  ['d0_30', '1–30 days'],
+  ['d31_60', '31–60 days'],
+  ['d61_90', '61–90 days'],
+  ['d90_plus', '90+ days']
+];
+/** the words of one follow-up code ('' for a code this screen does not know) */
+function bkFollowWord(code) {
+  var match = BK_FOLLOW.filter(function (item) {
+    return item[0] === code;
+  })[0];
+  return match ? tx(match[1]) : '';
+}
 /** a supplier the shop has paid ahead (Dr balance: paid with no bill) is an advance — they owe you; the balance sheet reclassifies it the same way (1700). It is never under To pay. */
 function bkDuesAdvance(p) {
   return bkDuesSide(p) === 'pay' && Number(p.balance_minor) > 0;
@@ -4717,15 +4749,12 @@ function bkDuesForeign(p) {
     })
     .join('');
 }
-/** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
+/** the oldest late bucket the party has money in, else "Current" when all it owes is not yet due — the server's follow_up, in the words of BK_FOLLOW ('' when the row carries none) */
 function bkDuesAge(party) {
-  var cols = bkDuesSide(party) === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
-    buckets = party.buckets || {},
-    word = '';
-  cols.forEach(function (item) {
-    if (Number(buckets[item[0]])) word = item[1];
-  });
-  return word;
+  var follow = party.follow_up;
+  if (!follow) return '';
+  if (follow.worst) return bkFollowWord(follow.worst);
+  return Number(follow.not_due) ? bkFollowWord('not_due') : '';
 }
 /** the buttons on a Dues row: Receive (or Pay) opens the ONE unit — an ADVANCE row says what it does: "Get back" (paid ahead to a supplier) or "Adjust" (a customer's advance), never "Pay" (M167); Remind (only on what is owed to you) messages the oldest open bill */
 function bkDuesActs(p) {
@@ -4734,6 +4763,7 @@ function bkDuesActs(p) {
     rcv = kind === 'customer';
   return (
     '<span data-cbsid="CMP042-P01"' + bkMountAttribute('CMP042') + ' style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
+    (kind === 'supplier' ? bkOwedFlags(p.party_id) : '') +
     '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="dues-pay-' +
     id +
     '" onclick="event.stopPropagation();payOpen(\'' +
@@ -4857,69 +4887,181 @@ function bkRemindOpen(t) {
   });
 }
 /**
- * the bills on a party's statement, as a next level's rows — read once, on the first time its row opens (the party's own
- * statement route). `list` is the table that asked (it paints again when the read lands); a bill's amount is the line's own.
- * Shared by Dues and the CRM's Customers and Suppliers (app.html), so a party's bills read the same wherever its row opens.
+ * ⭐ W15-95: what is still owed on each bill — the pay sheet's own open-bills reader (POST /payments/preview, `checks: true`), read once when a party's bills open. The figure is the
+ * books' one due figure (due_minor: net of the receipts on account, books-engines.netOpen — what Remind asks for); nothing here works out an allocation. A bill the reader does not list
+ * is paid in full. `reply.proposal[].entry_id` joins a row to its line on the statement (the same entry).
+ */
+async function bkOwedRead(pid, list) {
+  if (BK.owed[pid] || (BK.owedBusy || {})[pid]) return;
+  BK.owedBusy = BK.owedBusy || {};
+  BK.owedBusy[pid] = true;
+  try {
+    var reply = await api('booksPayPreview', {
+      body: { party_id: pid, direction: bkPartyKind(pid) === 'supplier' ? 'out' : 'in', amount_minor: 1, currency: bkCur(), allocate: 'none', checks: true }
+    });
+    BK.owed[pid] = reply;
+    var marks = bkMarkControl();
+    if (marks && reply && reply.mark_actions)
+      marks.ingest(
+        ((reply && reply.proposal) || []).map(function (row) {
+          return { entry_id: row.entry_id, mark: row.mark };
+        }),
+        { mark_actions: reply.mark_actions }
+      );
+  } catch (failure) {
+    BK.owed[pid] = bkQuiet('owed', failure, { proposal: [], failed: true });
+  }
+  delete BK.owedBusy[pid];
+  var lst = CBList.get(list);
+  if (lst) lst.refresh();
+}
+/** a bill's standing from its own figures: 'paid' (nothing owed) · 'part' (less owed than the bill) · 'unpaid'; '' when the owed figure is hidden from this reader */
+function bkBillStanding(amount, owed) {
+  if (owed == null) return '';
+  return owed <= 0 ? 'paid' : owed < amount ? 'part' : 'unpaid';
+}
+var BK_STANDING = { paid: 'Paid', part: 'Part-paid', unpaid: 'Unpaid' };
+/** the two things a reviewer and the books say about an open bill, beside Pay (W15-96): the auditor's hold (the Day book's mark) and "No tax invoice" (the Day book's evidence flag) — both the server's, on the bill's row */
+function bkBillFlags(row) {
+  var out = '',
+    mark = row && row.mark;
+  if (mark && (mark.class === 'hold' || mark.kind === 'on_hold'))
+    out += ' <span class="optchip" data-b="mark-hold" style="color:var(--warn-2)">‖ ' + esc(tx('On hold')) + '</span>';
+  if (row && row.evidence_flag === 'no_tax_invoice') out += ' <span class="optchip" data-b="no-tax-invoice" style="color:var(--warn-2)">⚠ ' + esc(tx('No tax invoice')) + '</span>';
+  return out;
+}
+/** the flags of every open bill of a party, once, for its row's Pay (shown after its bills have been opened — a list does not read every party's bills) */
+function bkOwedFlags(pid) {
+  var rows = (BK.owed[pid] && BK.owed[pid].proposal) || [],
+    held = rows.some(function (row) {
+      return row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold');
+    }),
+    flagged = rows.some(function (row) {
+      return row.evidence_flag === 'no_tax_invoice';
+    });
+  return bkBillFlags({ mark: held ? { class: 'hold' } : null, evidence_flag: flagged ? 'no_tax_invoice' : null });
+}
+/**
+ * the bills on a party's statement, as a next level's rows — read once, on the first time its row opens (the party's own statement route), with what is still owed on each (bkOwedRead).
+ * `list` is the table that asked (it paints again when each read lands). Shared by Dues and the CRM's Customers and Suppliers (app.html), so a party's bills read the same wherever its row opens.
+ * ⭐ W15-95: per bill — the amount · what is still owed · Paid / Part-paid / Unpaid. The receipts are said under the bills as the books hold them: "on account, counted against the oldest bills
+ * first" for money no bill was named for (the books' own netting, R73) — never an allocation made up here. Two carried totals that disagree are said, not hidden.
  */
 function bkPartyBillsHTML(pid, list, c) {
   var st = BK.stmt[pid],
     amt = function (v) {
       return esc(bkMoney(Number(v), c));
-    };
+    },
+    grey = 'color:var(--grey);font-size:var(--fs-1)';
   if (!st) {
     bkStmtRead(pid, list);
-    return '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the bills…')) + '</div>';
+    return '<div style="' + grey + '">' + esc(tx('Reading the bills…')) + '</div>';
   }
   /* a bill is a line that points at a chit and is not a receipt or a payment */
   var chitOf = function (l) {
     return l.source_chit_id || (l.source && l.source.chit_id);
   };
+  var isMoney = function (item) {
+    return item.source && /receipt|payment/.test(String(item.source.kind));
+  };
   var ls = (st.lines || []).filter(function (item) {
-    return chitOf(item) && !(item.source && /receipt|payment/.test(String(item.source.kind)));
+    return chitOf(item) && !isMoney(item);
   });
-  return ls.length
-    ? ls
-        .map(function (item, index) {
-          return CBList.nextRow(
-            [
-              esc(bkDate(item.date)) + ' ' + bkBillPart(item.source || { ref: item.ref, chit_id: chitOf(item) }, 'bills-' + pid + '-' + index),
-              amt(item.dr_minor || item.cr_minor || 0)
-            ],
-            [120]
-          );
-        })
-        .join('')
-    : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
+  if (!ls.length) return '<div style="' + grey + '">' + esc(tx('No bills on the statement')) + '</div>';
+  /* the side is the ONE dues read's (BK.dues): a page that holds none (the CRM record) keeps the old bills list rather than ask the wrong side */
+  if (BK.dues && BK.dues[pid]) bkOwedRead(pid, list);
+  var owed = BK.dues && BK.dues[pid] ? BK.owed[pid] : null,
+    ready = !!(owed && !owed.failed && owed.checks === true), /* an answer that never heard of `checks` (an older api) has no entry ids: every bill would read "Paid" */
+    byEntry = {};
+  ((ready && owed.proposal) || []).forEach(function (row) {
+    byEntry[String(row.entry_id)] = row;
+  });
+  var billsTotal = 0,
+    owedTotal = 0,
+    hidden = false;
+  var rows = ls
+    .map(function (item, index) {
+      var amount = Number(item.dr_minor || item.cr_minor || 0),
+        row = ready ? byEntry[String(item.entry_id)] || null : null,
+        left = null,
+        standing = '';
+      if (ready) {
+        left = row ? (row.due_minor != null ? Number(row.due_minor) : row.open_minor != null ? Number(row.open_minor) : null) : 0;
+        if (left == null) hidden = true;
+        standing = bkBillStanding(amount, left);
+        billsTotal += amount;
+        owedTotal += left || 0;
+      }
+      var mk = ready && item.entry_id != null && BK.mk && BK.mk.row(item.entry_id) ? BK.mk.chip(item.entry_id) : '';
+      var flags = ready ? bkBillFlags(row) : '';
+      return (
+        CBList.nextRow(
+          [
+            esc(bkDate(item.date)) +
+              ' ' +
+              bkBillPart(item.source || { ref: item.ref, chit_id: chitOf(item) }, 'bills-' + pid + '-' + index) +
+              (standing ? ' <span class="optchip" data-b="standing-' + standing + '"' + (standing === 'unpaid' ? '' : ' style="color:var(--grey)"') + '>' + esc(tx(BK_STANDING[standing])) + '</span>' : '') +
+              (row && row.disputed ? ' <span class="optchip" data-b="in-dispute" style="color:var(--warn-2)">' + esc(tx('In dispute')) + '</span>' : ''),
+            amt(amount)
+          ].concat(ready ? [left == null ? '<span data-b="owed-hidden" style="' + grey + '">—</span>' : '<b data-b="owed">' + amt(left) + '</b>'] : []),
+          ready ? [100, 100] : [120]
+        ) + (mk || flags ? '<div data-b="bill-flags" style="padding:0 0 3px">' + mk + flags + '</div>' : '')
+      );
+    })
+    .join('');
+  var head = ready
+    ? CBList.nextRow(['<span style="' + grey + '">' + esc(tx('Bill')) + '</span>', '<span style="' + grey + '">' + esc(tx('Amount')) + '</span>', '<span style="' + grey + '">' + esc(tx('Still owed')) + '</span>'], [100, 100])
+    : '';
+  /* the money that came in or went out, as the books hold it: on account (no bill named) or matched */
+  var money = (st.lines || [])
+    .filter(function (item) {
+      return isMoney(item) && Number(item.cr_minor || item.dr_minor || 0) > 0;
+    })
+    .map(function (item) {
+      var onAccount = Number(item.unapplied_minor) > 0;
+      return (
+        '<div data-b="money-line" style="' + grey + ';padding:2px 0">' +
+        esc(
+          txf(bkPartyKind(pid) === 'supplier' ? 'Paid {amt} on {date}' : 'Received {amt} on {date}', { amt: bkMoney(Number(item.cr_minor || item.dr_minor), c), date: bkDate(item.date) }) +
+            (item.ref ? ' · ' + item.ref : '') +
+            (ready ? ' · ' + tx(onAccount ? 'on account, counted against the oldest bills first' : 'matched to bills') : '')
+        ) +
+        '</div>'
+      );
+    })
+    .join('');
+  var balance = BK.dues && BK.dues[pid] ? Math.abs(Number(BK.dues[pid].balance_minor)) : null;
+  var sum =
+    ready && !hidden
+      ? '<div data-b="owed-sum" style="font-size:var(--fs-1);padding:3px 0">' +
+        esc(txf('Bills {bills} · still owed {owed}', { bills: bkMoney(billsTotal, c), owed: bkMoney(owedTotal, c) })) +
+        (balance != null && balance !== owedTotal
+          ? ' <span data-b="owed-mismatch" style="color:var(--warn-2)">' + esc(txf('The party owes {bal} — these bills do not add up to it', { bal: bkMoney(balance, c) })) + '</span>'
+          : '') +
+        '</div>'
+      : '';
+  return head + rows + money + sum;
 }
 /** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement. `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the statement read repaints THAT list, else "Reading the bills…" never ends) */
 function bkDuesNext(party, currency, list) {
-  var side = bkDuesSide(party),
-    cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
-    known = cols.map(function (item) {
-      return item[0];
-    }),
-    buckets = party.buckets || {};
-  var amountText = function (value) {
-    return esc(bkMoney(side === 'pay' ? -Number(value) : Number(value), currency));
-  };
-  var other = Object.keys(buckets)
-    .filter(function (item) {
-      return known.indexOf(item) < 0;
-    })
-    .reduce(function (total, item) {
-      return total + Number(buckets[item] || 0);
-    }, 0);
+  var follow = party.follow_up || null,
+    money = function (value) {
+      return esc(bkMoney(Math.abs(Number(value)), currency));
+    };
   var rows =
-    cols
-      .filter(function (item) {
-        return buckets[item[0]];
-      })
+    BK_FOLLOW.filter(function (item) {
+      return follow && Number(follow[item[0]]);
+    })
       .map(function (item) {
-        return CBList.nextRow(['<span data-b="' + item[0] + '">' + esc(tx(item[1])) + '</span>', amountText(buckets[item[0]])], [120]);
+        return CBList.nextRow(['<span data-b="' + item[0] + '">' + esc(bkFollowWord(item[0])) + '</span>', money(follow[item[0]])], [120]);
       })
       .join('') +
-    (other ? CBList.nextRow(['<span data-b="other">' + esc(tx('Other')) + '</span>', amountText(other)], [120]) : '') +
-    (party.disputed_minor ? CBList.nextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', amountText(party.disputed_minor)], [120]) : '');
+    (follow && Number(follow.no_terms_minor)
+      ? '<div data-b="no-due-date" style="color:var(--grey);font-size:var(--fs-1);padding:0 0 2px">' +
+        esc(txf('{amt} has no due date — aged from the bill date', { amt: bkMoney(Number(follow.no_terms_minor), currency) })) +
+        '</div>'
+      : '') +
+    (party.disputed_minor ? CBList.nextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', money(party.disputed_minor)], [120]) : '');
   return (
     '<div data-testid="dues-next-' +
     esc(party.party_id) +
@@ -5794,6 +5936,7 @@ async function bkChequeStep(id, to) {
       node(''); /* the next steps are the engine's to say — the fallback table until the list is read again */
       if (to === 'cleared' || to === 'bounced') {
         delete BK.stmt[c.party_id];
+        delete BK.owed[c.party_id];
         booksDuesLoad(true);
       }
     } catch (e) {
