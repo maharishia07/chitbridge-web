@@ -13,7 +13,7 @@ const CSV = () => fs.readFileSync(path.join(__dirname, 'fixtures', 'harbour-oct-
 const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'));
 const diffOf = (text) => (/Difference\s*(-?[\d,]+\.\d\d)/.exec(text) || [])[1] || '';
-const states = (p) => p.$$eval('[data-testid="bank-list"] [data-status]', (els) => els.map((e) => e.getAttribute('data-status')));
+const states = (p) => p.$eval('[data-testid="bank-list"] .lk-st', (els) => els.map((e) => e.getAttribute('data-state')));
 async function load(p) {
   await p.setInputFiles('[data-testid="bank-file"]', { name: 'Harbour-Plumbing-Oct2026.csv', mimeType: 'text/csv', buffer: CSV() });
   await p.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
@@ -117,6 +117,7 @@ const count = (list, key) => list.filter((s) => s === key).length;
   await p.waitForTimeout(2000);
   /* what the server holds: the entries, on 1 Nov, doc_date their own day, the note */
   const day = (await api('GET', '/api/books/daybook?from=2026-10-01&to=2026-11-30&entries=1&limit=200')).body;
+  console.log('   daybook keys: ' + Object.keys(day || {}).join(',') + ' count ' + ((day.entries || []).length) + ' sample ' + JSON.stringify((day.entries || [])[0] || null).slice(0, 300));
   const rows = (day.entries || []).filter((e) => /October locked/.test(String(e.narration || '')));
   console.log('   daybook rows with the note: ' + rows.length + ' ' + JSON.stringify(rows.slice(0, 2).map((e) => [e.posting_date, e.doc_date, e.narration])));
   ok(rows.length >= 1 && rows.every((e) => String(e.posting_date).slice(0, 10) === '2026-11-01' && /^2026-10-/.test(String(e.doc_date || '').slice(0, 10))), 'the server holds ' + rows.length + ' entries on 1 Nov 2026, each with its own October day as doc_date, noted "October locked"');
