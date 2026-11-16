@@ -5491,7 +5491,7 @@ function bkLockReopen(period) {
   ui.dialog({
     mount: bkDialogMount(6),
     pop: 'POP092',
-    titleText: txf('Open {m} {fy} again?', { m: monthName, fy: BK.lk.fy }),
+    titleText: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body:
       '<label>' + tx('Why are you opening it again?') + '<input class="inp" data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' id="lk_why" data-testid="lk_why" maxlength="200" autocomplete="off" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>' +
