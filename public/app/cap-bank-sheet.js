@@ -418,14 +418,16 @@ async function bkshReadMonths() {
 }
 /** the locked months with lines in them, as the band words them: [{ key, label, name, by, at, may, next, count, moved, fy, period }] */
 const bkshLockGroups = () => CBBankLock.groupsOf(BKSH.ctl && BKSH.ctl.view().items, BKSH.ctl && BKSH.ctl.movedMonths && BKSH.ctl.movedMonths());
-/** the notice under the band for each locked month (an owner's choices only: a firm's seat is told and may not post here) */
+/** the notice under the band for each locked month. Reopen is the owner's act. Posting in the next open month is the owner's, and the accountant's where the grant lets her post (the accountant does the books for the owner; the entry carries the firm's name) */
 function bkshLockNotice() {
-  const owner = bkshSignedIn().role === 'owner';
+  const who = bkshSignedIn(),
+    owner = who.role === 'owner',
+    mayPost = owner || (who.role === 'adviser' && !!who.posts);
   return bkshLockGroups()
     .map((group, at) => {
       const reopen = owner && group.may ? '<button data-cbsid="BKS014-B60" type="button" class="act" data-testid="bank-lock-reopen-' + at + '" onclick="bkshReopen(\'' + group.key + '\')">' + bkbE(txf('Reopen {month}', { month: group.name })) + '</button>' : '',
-        move = owner && group.next && !group.moved ? '<button data-cbsid="BKS014-B61" type="button" class="act" data-testid="bank-lock-move-' + at + '" onclick="bkshLockMove(\'' + group.key + '\', true)">' + bkbE(txf('Post in {month} instead', { month: group.next.name })) + '</button>' : '',
-        back = owner && group.moved ? '<button data-cbsid="BKS014-B62" type="button" class="act" data-testid="bank-lock-undo-' + at + '" onclick="bkshLockMove(\'' + group.key + '\', false)">' + bkbE(tx('Keep them out')) + '</button>' : '';
+        move = mayPost && group.next && !group.moved ? '<button data-cbsid="BKS014-B61" type="button" class="act" data-testid="bank-lock-move-' + at + '" onclick="bkshLockMove(\'' + group.key + '\', true)">' + bkbE(txf('Post in {month} instead', { month: group.next.name })) + '</button>' : '',
+        back = mayPost && group.moved ? '<button data-cbsid="BKS014-B62" type="button" class="act" data-testid="bank-lock-undo-' + at + '" onclick="bkshLockMove(\'' + group.key + '\', false)">' + bkbE(tx('Keep them out')) + '</button>' : '';
       return '<div class="bk-lock" role="status" data-testid="bank-lock-' + at + '"><span class="bk-lock-w">' + bkbE(group.moved ? CBBankLock.movedWords(group) : CBBankLock.noticeWords(group)) + '</span>' + reopen + move + back + '</div>';
     })
     .join('');

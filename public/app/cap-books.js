@@ -3373,19 +3373,27 @@ function bkEntryWord(e) {
       ? esc(tx('Received'))
       : esc((e && (e.narration || e.what || e.event_type)) || '');
 }
+/** W15-89b · who the money went to / came from and what for, as the api carries them on the line ({ other: { code, name } | { code: null, name: 'Split', count }, party_name }): "Rent · Metro Trade Supplies"; '' when the line carries neither */
+function bkLgOtherWords(l) {
+  var o = l && l.other,
+    what = !o ? '' : o.code == null ? tx('Split') + ' (' + o.count + ')' : o.name || '';
+  return [what, l && l.party_name].filter(Boolean).join(' · ');
+}
 /** the Details cell: the kind and the bill, ONCE ("Expense C2/26-27/0007 11:44") — the entry number, the tender, the counter and who rang it live in ⚙ and in the opened entry */
 function bkLgDetails(l) {
   /* W15-89: no time and no "recorded" note on the line — both live in the opened entry (bkLgNext) */
   var s = l.source || {},
     tid = 'stmt-src-' + l._ix,
     word = bkEntryWord(l),
-    text = BK_SRC_WORD[s.kind] ? tx(BK_SRC_WORD[s.kind]) : '';
+    text = BK_SRC_WORD[s.kind] ? tx(BK_SRC_WORD[s.kind]) : '',
+    other = bkLgKind() === 'plain' ? bkLgOtherWords(l) : ''; /* W15-89b: on a ledger's own page the line says what the money was for and who got it; the bank's own words stay under the pointer */
   var said = !!text && String(word).trim().toLowerCase() === text.toLowerCase(),
-    out = word;
+    out = other ? '<span title="' + word + '">' + esc(other) + '</span>' : word;
+  if (other) said = false;
   if (s.kind === 'day') {
     if (s.count != null) out += ' · ' + esc(txn('{count} bill', '{count} bills', s.count));
   } else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (text ? esc(text) + ' ' : '')) + bkBillPart(s, tid, true);
-  return out + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
+  return out + (l.ref && !s.ref && !other ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
 }
 /** a cash or bank ledger (not a party's, not a control account's): it reads Spent / Received, the way a bank register does (W15-88) */
 function bkLgIsBank(kind) {

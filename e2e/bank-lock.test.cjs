@@ -5,8 +5,7 @@
  *
  * OWNS      the proof that public/app/bank-lock.js reads the server's month rows (who closed it, when, may it reopen, the first OPEN month after it) and says nothing it does not carry;
  *           that the controller (bank-preview.js) holds a not-yet-booked line of a locked month ('closed', never ready) and never a line already in the books; that "Post in <next month> instead"
- *           makes those lines ready again with moveTo; that the post adapter (cap-bank-post.js) then sends if_locked: next_open, the line's OWN date and the narration "<words> - September locked"
- *           (an entry) or the same switch (a payment); and that a second read of the SAME file finds the moved line by its client_ref (the bank log's posted row carries posting_date and doc_date),
+ *           makes those lines ready again with moveTo; that the post adapter (cap-bank-post.js) then sends if_locked: next_open, the line's OWN date and the bank's own words (an entry; the api adds the note) or the same switch (a payment); and that a second read of the SAME file finds the moved line by its client_ref (the bank log's posted row carries posting_date and doc_date),
  *           shows it as in the books with "posted 1 Oct 2026 (September locked)", offers it no more, and hands the engine the SAME books lines and opening as before (the difference does not move).
  *           The engines are stand-ins here (their contract is read through one door); the real engines and the page are proven by the SIT walk (e2e/banklock-live.cjs).
  * CALLED BY ci.yml (the unit checks): node e2e/bank-lock.test.cjs
@@ -48,11 +47,10 @@ ok('a month whose trail names nobody is just "locked": nothing is filled in; a h
 const twoLocked = ROWS.concat([{ fiscal_year: '2026-27', period: 5, start_date: '2026-11-01', end_date: '2026-11-30', status: 'open' }]).map((row) => (row.period === 4 ? Object.assign({}, row, { status: 'soft_locked' }) : row));
 assert.strictEqual(L.lockedOf(twoLocked, '2026-09-15').next.date, '2026-11-01');
 ok('the next OPEN month skips a locked one');
-assert.strictEqual(L.narrationOf('MONTHLY ACCOUNT FEE', 'September'), 'MONTHLY ACCOUNT FEE — September locked');
 assert.strictEqual(L.lateWords({ posting_date: '2026-10-01', doc_date: '2026-09-15' }), 'posted 1 Oct 2026 (September locked)');
 assert.strictEqual(L.lateWords({ posting_date: '2026-09-15', doc_date: '2026-09-15' }), null);
 assert.strictEqual(L.lateWords({ posting_date: '2026-09-15' }), null);
-ok('the narration and the late-posted words read the two carried dates (a normal line says nothing)');
+ok('the late-posted words read the two carried dates (a normal line says nothing)');
 
 /* ── 2 · the controller, with stand-in engines ── */
 const LINES = [
@@ -139,9 +137,9 @@ ok('"Keep them out" takes it back');
   const body = sent[0][1];
   assert.strictEqual(body.if_locked, 'next_open');
   assert.strictEqual(body.date, '2026-09-15');
-  assert.strictEqual(body.narration, 'MONTHLY ACCOUNT FEE — September locked');
+  assert.strictEqual(body.narration, 'MONTHLY ACCOUNT FEE'); /* the api adds the "<Month> locked" note (W15-85a), one wording for events and payments */
   assert.strictEqual(body.client_ref, fee.ref);
-  ok('an entry is sent with if_locked next_open, its OWN date, the note, and the line\'s own client_ref');
+  ok('an entry is sent with if_locked next_open, its OWN date, the bank own words, and the line\'s own client_ref');
   const plain = POST.bodyOf(Object.assign({}, items[3], { moveTo: null, event: { type: 'expense', date: '2026-10-05', amount: 1, narration: 'Bunnings' } }), null, null);
   assert.strictEqual(plain.if_locked, undefined);
   assert.strictEqual(plain.narration, 'Bunnings');
@@ -173,6 +171,23 @@ ok('"Keep them out" takes it back');
   ok('the engine got the same books lines and opening as before: the Difference does not move');
   assert.strictEqual(logRow.ref, refOf(0));
   ok('the line is found by its own client_ref, never by date (the posted row names posting_date 1 Oct, the line is 15 Sep)');
+  /* W15-85b · the band's buttons by seat: Reopen is the owner's alone; "Post in <month> instead" is the owner's and the accountant's where the grant lets her post */
+  {
+    const vm = require('vm'), src = require('fs').readFileSync(pub('app/cap-bank-sheet.js'), 'utf8');
+    const at = src.indexOf('function bkshLockNotice()'), body = src.slice(at, src.indexOf('\n}\n', at) + 3);
+    const group = { key: '2026-09', label: 'September 2026', name: 'September', may: true, next: { name: 'October', date: '2026-10-01' }, moved: false, count: 1, by: null, at: null };
+    const seat = (signed) => {
+      const sb = { bkshSignedIn: () => signed, bkshLockGroups: () => [group], CBBankLock: L, bkbE: (x) => x, tx: (x) => x, txf: (x) => x };
+      vm.createContext(sb);
+      vm.runInContext(body + '\nthis.out = bkshLockNotice();', sb);
+      return { reopen: /bank-lock-reopen-0/.test(sb.out), move: /bank-lock-move-0/.test(sb.out) };
+    };
+    assert.deepStrictEqual(seat({ role: 'owner' }), { reopen: true, move: true });
+    assert.deepStrictEqual(seat({ role: 'adviser', posts: true }), { reopen: false, move: true });
+    assert.deepStrictEqual(seat({ role: 'adviser', posts: false }), { reopen: false, move: false });
+    assert.deepStrictEqual(seat({ role: 'other' }), { reopen: false, move: false });
+    ok('the owner may Reopen and Post in the next month; the accountant who posts may only Post in the next month; one who may not post, and anyone else, is told and offered neither');
+  }
   console.log('\n' + ran + ' checks passed');
 })().catch((failure) => {
   console.error(failure);

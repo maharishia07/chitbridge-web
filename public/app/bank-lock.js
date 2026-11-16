@@ -1,7 +1,7 @@
 /* bank-lock.js — A STATEMENT LINE IN A LOCKED MONTH: say it before any work, and offer the two ways out (W15-85).
  * OWNS      reading the shop's own month rows (GET /periods, the rows cap-books.js bkPeriodsLoad keeps in BK.lk.info) for one day: is that month locked, by whom and when, may it be reopened (the server's own
- *           reopen.may), which is the first OPEN month after it; the band's sentence and its groups ("September 2026 · 3 lines"); the narration a moved line carries ("<narration> — September locked");
- *           the late-posted words a re-read shows ("posted 1 Oct 2026 (September locked)").
+ *           reopen.may), which is the first OPEN month after it; the band's sentence and its groups ("September 2026 · 3 lines"); 
+ *           the late-posted words a re-read shows ("posted 1 Oct 2026 (September locked)"). The note a moved line carries ("<narration> — September locked") is the api's (lib/books-lock-note): ONE wording, every door.
  * CALLED BY public/app/cap-bank-sheet.js (the controller's lockedMonth, the band's lock notice, the feed of posted lines) · public/app/bank-preview.js reads what lockedOf returns · cap-bank-post.js (narration).
  * FLOW      rows (GET /periods) + a line's day → lockedOf(rows, day) → { key, name, label, by, at, may, next } | null → the preview marks the line 'closed' → groupsOf(items) → noticeWords(group) → the band.
  * ⭐ NOTHING IS RE-DERIVED. The lock state, who closed it and whether it may be reopened are the server's rows (status, lock_trail, reopen.may); "the next open month" is the first row after the locked one whose status is open (the api's
@@ -92,10 +92,6 @@
   function movedWords(group) {
     return F('{n} will post on {date}, with the note "{month} locked".', { n: group.count === 1 ? T('1 line') : group.count + ' ' + T('lines'), date: group.next ? dayText(group.next.date) : '', month: group.name });
   }
-  /** what a moved line is narrated as: the bank's words, then why the month differs */
-  function narrationOf(narration, name) {
-    return String(narration || '').trim() + ' — ' + F('{month} locked', { month: name });
-  }
   /**
    * the posted line a re-read finds, as the log carries it ({ posting_date, doc_date }): words when it was posted in a LATER month than its own day ("posted 1 Oct 2026 (September locked)"), else null.
    * Read from the two carried dates, never matched by date: the line is found by its own client_ref.
@@ -106,7 +102,7 @@
     if (!posted || !own || posted.slice(0, 7) <= own.slice(0, 7)) return null;
     return F('posted {date} ({month} locked)', { date: dayText(posted), month: monthName(own) });
   }
-  var API = { lockedOf: lockedOf, rowOfDay: rowOfDay, nextOpen: nextOpen, closedBy: closedBy, groupsOf: groupsOf, noticeWords: noticeWords, movedWords: movedWords, narrationOf: narrationOf, lateWords: lateWords, dayText: dayText };
+  var API = { lockedOf: lockedOf, rowOfDay: rowOfDay, nextOpen: nextOpen, closedBy: closedBy, groupsOf: groupsOf, noticeWords: noticeWords, movedWords: movedWords, lateWords: lateWords, dayText: dayText };
   root.CBBankLock = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

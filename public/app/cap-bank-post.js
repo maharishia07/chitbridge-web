@@ -66,14 +66,8 @@
     }
     if (event.type === 'other_income' && item.tax && item.tax.direction === 'output' && item.tax.tax_minor > 0) body.output_tax_minor = item.tax.tax_minor; /* the GST collected INSIDE the bank figure, the engine's own split: amount is the NET */
     if (event.type === 'tax_payment') Object.assign(body, { paid_from: 'bank' }); /* the whole figure, the statement account's mode (modeOf below); the api puts it on the pack's one tax head */
-    if (item.moveTo) Object.assign(body, moveKeys_(item, body.narration, 'narration')); /* W15-85: the owner chose to post this locked month's line in the next open month */
+    if (item.moveTo) body.if_locked = 'next_open'; /* W15-85: the person chose to post this locked month's line in the next open month; the api adds the "<Month> locked" note (W15-85a, one wording) */
     return modeOf ? modeOf(body) : body;
-  }
-  /** the two things a moved line sends: the api's own switch (if_locked) and, for an entry, the narration that says why its month differs from its date */
-  function moveKeys_(item, narration, key) {
-    var out = { if_locked: 'next_open' };
-    if (key && root.CBBankLock) out[key] = root.CBBankLock.narrationOf(narration, item.moveTo.name);
-    return out;
   }
   /**
    * the body POST /payments takes for a line the bank shows as money in from / out to a party: the statement line's own figure (minor units, never worked out here), the statement
@@ -96,7 +90,7 @@
       delete body.allocate;
     }
     if (item.ticked || item.twin) body.acknowledge = ['same_again'];
-    if (item.moveTo) Object.assign(body, moveKeys_(item));
+    if (item.moveTo) body.if_locked = 'next_open';
     return body;
   }
   /** the id of the party this line's entry names: an existing one as picked, a new one made FIRST (once per name and kind in this run); { ok, id } or the reason it could not be made */

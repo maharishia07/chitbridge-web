@@ -96,3 +96,24 @@ it('W15-90 · a first visit opens on the bank-role ledger, else the first Cash &
   assert(/bkLtMainBank\(\)/.test(r) && /BK\.lt\.sel \|\| bkLtNarrow\(\)/.test(r));
 });
 console.log(pass + ' passed');
+
+/* W15-89b · Details names what the money was for and who got it, from the api's own other / party_name */
+{
+  const sb2 = { BK: { lt: { sel: { code: '6010' } } }, tx: (s) => s, esc: (s) => String(s), txn: (a) => a, bkLgKind: () => 'plain', bkEntryWord: (l) => l.what, BK_SRC_WORD: {}, bkBillPart: () => '', bkLineChips: () => '' };
+  vm.createContext(sb2);
+  vm.runInContext([fn('bkLgOtherWords'), fn('bkLgDetails')].join('\n') + '\nthis.__d = { bkLgOtherWords, bkLgDetails };', sb2);
+  const D = sb2.__d;
+  it('W15-89b · "Rent · Metro Trade Supplies" in place of the bare "Expense S042-20"; the bank\'s words and the entry number step back', () => {
+    const l = { _ix: 0, what: 'Expense S042-20', ref: 'S042-20', other: { code: '6300', name: 'Rent' }, party_name: 'Metro Trade Supplies' };
+    assert.strictEqual(D.bkLgOtherWords(l), 'Rent · Metro Trade Supplies');
+    const html = D.bkLgDetails(l);
+    assert.strictEqual(textOf(html), 'Rent · Metro Trade Supplies');
+    assert.ok(/title="Expense S042-20"/.test(html) && !/S042-20<\/span>/.test(html.replace(/title="[^"]*"/, '')), 'the old words are the pointer text only');
+  });
+  it('W15-89b · several ledgers read "Split (3)"; no other side and no party leave the line as it was', () => {
+    assert.strictEqual(D.bkLgOtherWords({ other: { code: null, name: 'Split', count: 3 }, party_name: null }), 'Split (3)');
+    assert.strictEqual(D.bkLgOtherWords({ other: null, party_name: null }), '');
+    const old = { _ix: 1, what: 'Expense S042-20', ref: 'S042-20' };
+    assert.ok(/Expense S042-20/.test(textOf(D.bkLgDetails(old))) && /S042-20/.test(D.bkLgDetails(old)));
+  });
+}
