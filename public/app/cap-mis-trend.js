@@ -249,15 +249,25 @@ function trPaintChart() {
     box.innerHTML = '<p class="hint" data-testid="tr-none">' + esc(tx('No sales summaries on CB yet.')) + '</p>';
     return;
   }
-  var head = trHeadline();
-  box.innerHTML =
-    CBDraw.bars(points, {
-      width: Math.max(240, (box.clientWidth || 640) - 8),
-      height: 170,
-      id: 'tr',
-      tid: 'tr',
-      aria: tx('Sales by period') + (head ? '. ' + head : '')
-    }) + trLegend();
+  var head = trHeadline(),
+    width = Math.max(240, (box.clientWidth || 640) - 8);
+  /* the engine loads when a chart is about to be drawn (CBChartCap, avatar.js); the table under the chart is there either way */
+  CBChartCap.ready().then(
+    function () {
+      if (!document.body.contains(box)) return;
+      box.innerHTML =
+        CBDraw.bars(points, {
+          width: width,
+          height: 170,
+          id: 'tr',
+          tid: 'tr',
+          aria: tx('Sales by period') + (head ? '. ' + head : '')
+        }) + trLegend();
+    },
+    function () {
+      box.innerHTML = '<p class="hint">' + esc(tx('The chart could not load; the table below has the same figures.')) + '</p>';
+    }
+  );
 }
 window.addEventListener('resize', function () {
   if (!trOn()) return;

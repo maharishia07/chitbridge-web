@@ -130,7 +130,16 @@ function fcPaintChart() {
     box.innerHTML = '<p class="hint">' + esc(FC.state === 'error' ? tx('Could not read your cash position.') : tx('Loading…')) + '</p>';
     return;
   }
-  box.innerHTML = fcChart(FC.r, Math.max(240, (box.clientWidth || 640) - 32));
+  var report = FC.r,
+    width = Math.max(240, (box.clientWidth || 640) - 32);
+  CBChartCap.ready().then(
+    function () {
+      if (FC.r === report) box.innerHTML = fcChart(report, width);
+    },
+    function () {
+      box.innerHTML = '<p class="hint">' + esc(tx('The chart could not load; the table below has the same days.')) + '</p>';
+    }
+  );
 }
 window.addEventListener('resize', function () {
   clearTimeout(FC.rs);
@@ -143,78 +152,24 @@ window.addEventListener('resize', function () {
 function fcChart(report, width) {
   var rows = report.series || [],
     count = rows.length;
-  if (!count) return '';
+  if (!count || typeof CBDraw === 'undefined') return '';
   var currency = report.currency,
     vals = rows.map(function (item) {
       return Number(item.balance_minor || 0);
     });
-  var highest = Math.max(0, Math.max.apply(null, vals)),
-    lowest = Math.min(0, Math.min.apply(null, vals)),
-    span = highest - lowest || 1;
-  var chartWidth = width || 640,
-    chartHeight = 150,
-    top = 14,
-    bottom = 22,
-    plot = chartHeight - top - bottom,
-    barGap = 2,
-    barWidth = Math.max(2, Math.floor(chartWidth / count) - barGap),
-    step = chartWidth / count;
-  var y = function (v) {
-      return top + ((highest - v) / span) * plot;
-    },
-    zeroY = y(0);
-  var lowI = vals.indexOf(Math.min.apply(null, vals));
-  var bars = rows
-    .map(function (item, index) {
-      var value = vals[index],
-        x = index * step + (step - barWidth) / 2,
-        barHeight = Math.max(1, Math.abs(y(value) - zeroY)),
-        barTop = value >= 0 ? zeroY - barHeight : zeroY;
-      var negative = value < 0,
-        today = index === 0;
-      return (
-        '<rect x="' +
-        x.toFixed(1) +
-        '" y="' +
-        barTop.toFixed(1) +
-        '" width="' +
-        barWidth +
-        '" height="' +
-        barHeight.toFixed(1) +
-        '" rx="2" data-testid="fc-bar-' +
-        esc(item.date) +
-        '" data-neg="' +
-        negative +
-        '"' +
-        ' style="fill:' +
-        (negative ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)') +
-        (today ? '' : ';opacity:.82') +
-        '"><title>' +
-        esc(bkDate(item.date) + ' · ' + fcBal(value, currency)) +
-        '</title></rect>' +
-        (count <= 7 || index % 5 === 0 || index === count - 1
-          ? '<text x="' +
-            (index * step + step / 2).toFixed(1) +
-            '" y="' +
-            (chartHeight - 6) +
-            '" text-anchor="middle" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' +
-            esc(String(item.date).slice(8, 10)) +
-            '</text>'
-          : '')
-      );
-    })
-    .join('');
-  var lowX = lowI * step + step / 2,
-    lowLabel =
-      '<text x="' +
-      lowX.toFixed(1) +
-      '" y="' +
-      (vals[lowI] < 0 ? Math.min(chartHeight - bottom - 2, y(vals[lowI]) + 11) : Math.max(10, y(vals[lowI]) - 4)).toFixed(1) +
-      '" text-anchor="' +
-      (lowX > chartWidth * 0.8 ? 'end' : lowX < chartWidth * 0.2 ? 'start' : 'middle') +
-      '" data-testid="fc-low-label" style="font:600 11px var(--mono,monospace);fill:var(--ink,#2a2418)">' +
-      esc(fcBal(vals[lowI], currency)) +
-      '</text>';
+  var lowest = vals.indexOf(Math.min.apply(null, vals));
+  /* the server's balance_minor, drawn: the accent above zero, red below, today solid; the day under every 5th bar and the lowest day worded */
+  var points = rows.map(function (item, index) {
+    return {
+      key: item.date,
+      label: String(item.date).slice(8, 10),
+      value: vals[index],
+      neg: vals[index] < 0,
+      fill: vals[index] < 0 ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)',
+      opacity: index === 0 ? 0 : 0.82,
+      title: bkDate(item.date) + ' · ' + fcBal(vals[index], currency)
+    };
+  });
   return (
     '<div class="sec" style="display:flex;justify-content:space-between;gap:8px"><span>' +
     esc(tx('Running balance')) +
@@ -222,26 +177,21 @@ function fcChart(report, width) {
     esc(tx('Today') + ' ' + fcBal(report.opening_minor, currency)) +
     '</span></div>' +
     fcWhere(report, currency) +
-    /* inline sizes: the page's icon rule (svg{width:18px;height:18px;stroke:currentColor}) would otherwise shrink the chart to an icon */
-    '<svg viewBox="0 0 ' +
-    chartWidth +
-    ' ' +
-    chartHeight +
-    '" role="img" aria-label="' +
-    esc(report.words || '') +
-    '" style="display:block;width:100%;height:' +
-    chartHeight +
-    'px;overflow:visible;stroke:none;fill:none">' +
-    '<line x1="0" x2="' +
-    chartWidth +
-    '" y1="' +
-    zeroY.toFixed(1) +
-    '" y2="' +
-    zeroY.toFixed(1) +
-    '" style="stroke:var(--line-3,#d8ccb0);stroke-width:1"/>' +
-    bars +
-    lowLabel +
-    '</svg>'
+    CBDraw.bars(points, {
+      width: width || 640,
+      height: 150,
+      padTop: 14,
+      padBottom: 22,
+      gap: 2,
+      id: 'fc',
+      tid: 'fc',
+      svgTid: 'fc-svg',
+      aria: report.words || '',
+      labelOn: function (index, total) {
+        return total <= 7 || index % 5 === 0 || index === total - 1;
+      },
+      mark: { index: lowest, text: fcBal(vals[lowest], currency), tid: 'fc-low-label' }
+    })
   );
 }
 

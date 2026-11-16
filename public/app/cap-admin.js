@@ -567,72 +567,41 @@ function _misSplitBar(m) {
   );
 }
 function _misStack(m) {
-  var t = m.chits || 1;
   /**
-   * ⚠️⚠️ EVERY BACKGROUND MUST NAME ITS TEXT COLOUR, and this was the one renderer that did not. Found by
-   * THEME-01 once the account was seeded: `hcdark / mis` — white on `rgb(143,190,255)` at **1.91:1**.
-   *
-   * ⭐ IT IS THE ONLY BAR THAT PUTS THE NUMBER INSIDE THE FILL. `_misSplitBar` and both `miskey` swatches pair
-   * each background with its `--on-*` token; this one wrote the count onto the segment and let it inherit the
-   * card's ink — white in every dark theme.
-   *
-   * ⭐⭐ AND IT FAILED IN THE HIGH-CONTRAST DARK THEME, which exists precisely for people who need contrast.
-   * `--blue` is LIGHTENED in dark themes so it reads as an accent ON dark; using it as a BACKGROUND inverts
-   * that relationship, and inherited white then sits on a pale blue. A token is readable in one direction
-   * only — which is exactly what the paired `--on-*` tokens are for.
-   *
-   * ⚠️ IT COULD NOT HAVE BEEN CAUGHT ON AN EMPTY ACCOUNT: `seg()` returns '' when the count is zero, so with
-   * no chits there is no segment, no text, and nothing to measure. This is the bug M3 was worth doing for.
+   * ⚠️⚠️ EVERY BACKGROUND MUST NAME ITS TEXT COLOUR (THEME-01, hcdark / mis: white on rgb(143,190,255) at 1.91:1). The count is written INSIDE the fill,
+   * and a token is readable in one direction only: --blue is lightened in dark themes, so it reads as an accent ON dark and fails as a BACKGROUND under
+   * inherited white. Each part therefore names its --on-* token; CBDraw.stackBar writes both. A zero count draws no segment, so an empty account
+   * cannot show the bug: the proof is a seeded one.
    */
-  var seg = function (n, col, on) {
-    return n ? '<span style="background:' + col + ';color:' + on + ';width:' + (n / t) * 100 + '%">' + n + '</span>' : '';
-  };
-  return (
-    '<div class="misstack">' +
-    seg(m.open, 'var(--blue)', 'var(--on-accent)') +
-    seg(m.in_progress, 'var(--prog)', 'var(--on-warn)') +
-    seg(m.closed, 'var(--ok)', 'var(--on-ok)') +
-    '</div>' +
-    '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> ' +
-    tx('Open') +
-    '</span>' +
-    '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> ' +
-    tx('In progress') +
-    '</span>' +
-    '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> ' +
-    tx('Closed') +
-    '</span></div>'
+  return CBDraw.stackBar(
+    [
+      { n: m.open, label: tx('Open'), fill: 'var(--blue)', on: 'var(--on-accent)' },
+      { n: m.in_progress, label: tx('In progress'), fill: 'var(--prog)', on: 'var(--on-warn)' },
+      { n: m.closed, label: tx('Closed'), fill: 'var(--ok)', on: 'var(--on-ok)' }
+    ],
+    { total: m.chits || 1 }
   );
 }
 /* A real series off created_at — no invented shape. Flat line when there is only one bucket, which is honest. */
 function _misSpark(series) {
   if (!series || series.length < 2) return '<div class="misnote">Not enough history yet for a trend — one bucket of data.</div>';
-  var max =
-    Math.max.apply(
-      null,
-      series.map(function (item) {
-        return item.n;
-      })
-    ) || 1;
-  var text = series
-    .map(function (item, index) {
-      var x = 6 + index * (288 / (series.length - 1));
-      return Math.round(x) + ',' + Math.round(50 - (item.n / max) * 42);
-    })
-    .join(' ');
-  var last = text.split(' ').pop().split(',');
-  return (
-    '<svg class="misspark" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Chits per period, latest ' +
-    series[series.length - 1].n +
-    '">' +
-    '<polyline points="' +
-    text +
-    '" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<circle cx="' +
-    last[0] +
-    '" cy="' +
-    last[1] +
-    '" r="4" fill="var(--blue)" stroke="#fff" stroke-width="2"/></svg>'
+  return CBDraw.spark(
+    series.map(function (item) {
+      return item.n;
+    }),
+    {
+      width: 300,
+      height: 56,
+      fluid: true,
+      cls: 'misspark',
+      stroke: 'var(--blue)',
+      lineWidth: 2,
+      dot: 4,
+      ring: 'var(--card,#fff)',
+      inset: { left: 6, right: 6, top: 8, bottom: 6 },
+      aria: 'Chits per period, latest ' + series[series.length - 1].n,
+      tid: 'mis-spark'
+    }
   );
 }
 

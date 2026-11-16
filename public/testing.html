@@ -1040,6 +1040,7 @@ recorded.">Try it</button>
 -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>
+<script src="/engine/chart-draw.js"></script>   <!-- CBDraw: the four charts below are drawn by the one chart helper; this internal page loads it by tag, the one named exception to CBChartCap.ready() -->
 <script src="/engine/docnumber.js"></script>
 <script src="/engine/nums.js"></script>
 <script src="/engine/tax.js" onerror="void 0"></script>
@@ -3436,69 +3437,21 @@ function chartLegend(keys) {
 function chartStack(rows, opts) {
   var o = opts || {};
   if (!rows || !rows.length) return '<div class="none">Nothing to draw yet.</div>';
-  var rowH = 26,
-    pad = 4;
-  /**
-   * ⭐ MEASURED, NOT ASSUMED. 74px at 10.5px monospace is about eleven and a half characters, which is why
-   * an 11-character cut looked like it fitted — the two numbers were tuned to each other by accident. One
-   * new area or kind with a longer name and the label would have been clipped in a chart, the one place a
-   * reader cannot tell a shortened name from a real one.
-   * ⚠️ 6.3 is the advance width of this face at this size; it is an approximation, so the column is given a
-   * character of slack rather than being fitted exactly.
-   */
-  var longest = rows.reduce(function (total, item) {
-    return Math.max(total, String(item.key || '').length);
-  }, 0);
-  /* ⚠️ 6.3 was the advance width at 10.5px; the label text is 12px now, so the column must widen with it */
-  var labelW = o.labelW || Math.max(84, Math.ceil((longest + 1) * 7.2));
-  var W = labelW + 226; /* the bar track and the count keep their room whatever the labels need */
-  var h = rows.length * rowH + pad;
-  var out = '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' + esc(o.label || '') + '">';
-  rows.forEach(function (item, index) {
-    var y = index * rowH + pad;
-    var total = item.total || 1;
-    var x = labelW;
-    var w = W - labelW - 44; /* room on the right for the count — labels must fit INSIDE the viewBox */
-    /* ⭐ never cut — labelW above is measured from the longest of these */
-    out +=
-      '<text x="0" y="' +
-      (y + 12) +
-      '" font-size="12" font-family="ui-monospace,Menlo,monospace" ' +
-      'fill="var(--ink-2)" font-weight="700">' +
-      esc(String(item.key)) +
-      '</text>';
-    CHART_TONES.forEach(function (t) {
-      var v = Number(item[t[0]] || 0);
-      if (!v) return;
-      var seg = (v / total) * w;
-      out +=
-        '<rect x="' +
-        x.toFixed(1) +
-        '" y="' +
-        y +
-        '" width="' +
-        seg.toFixed(1) +
-        '" height="15" ' +
-        'fill="' +
-        t[1] +
-        '"><title>' +
-        esc(t[0] + ': ' + v) +
-        '</title></rect>';
-      x += seg;
-    });
-    /* ⭐ the number, because a bar you have to measure by eye is decoration */
-    out +=
-      '<text x="' +
-      (W - 40) +
-      '" y="' +
-      (y + 12) +
-      '" font-size="12" fill="var(--grey-2)">' +
-      (item.total - (item.untested || 0)) +
-      '/' +
-      item.total +
-      '</text>';
-  });
-  return out + '</svg>';
+  /* the drawing is CBDraw's (public/engine/chart-draw.js, chart engine step 1): the label column is measured there from the longest name, never assumed */
+  return CBDraw.stackRows(
+    rows.map(function (item) {
+      return {
+        name: String(item.key),
+        total: item.total || 1,
+        note: item.total - (item.untested || 0) + '/' + item.total /* ⭐ the number, because a bar you have to measure by eye is decoration */,
+        parts: CHART_TONES.map(function (tone) {
+          var count = Number(item[tone[0]] || 0);
+          return { value: count, fill: tone[1], title: tone[0] + ': ' + count };
+        })
+      };
+    }),
+    { aria: o.label || '' }
+  );
 }
 
 /**
@@ -3506,64 +3459,24 @@ function chartStack(rows, opts) {
  * this says what happened in each sitting. Columns, oldest on the left, because that is how a trend reads.
  */
 function chartTrend(runs) {
-  if (!runs || runs.length < 2) return '<div class="none">One sitting so far \u2014 a trend needs at least two.</div>';
-  var max =
-    Math.max.apply(
-      null,
-      runs.map(function (item) {
-        return item.total;
-      })
-    ) || 1;
-  var w = 340,
-    h = 120,
-    pad = 18,
-    colW = (w - pad * 2) / runs.length;
-  var out = '<svg viewBox="0 0 ' + w + ' ' + (h + 16) + '" role="img" aria-label="Results per sitting">';
-  /* ⚠️ one faint baseline, not a grid — a grid on twelve columns is noise */
-  out += '<line x1="' + pad + '" y1="' + h + '" x2="' + (w - pad) + '" y2="' + h + '" stroke="var(--line)"/>';
-  runs.forEach(function (item, index) {
-    var x = pad + index * colW + colW * 0.18;
-    var bw = colW * 0.64;
-    var y = h;
-    [
-      ['passed', 'var(--ok)'],
-      ['blocked', 'var(--warn)'],
-      ['failed', 'var(--bad)']
-    ].forEach(function (t) {
-      var v = Number(item[t[0]] || 0);
-      if (!v) return;
-      var bh = (v / max) * (h - 10);
-      y -= bh;
-      out +=
-        '<rect x="' +
-        x.toFixed(1) +
-        '" y="' +
-        y.toFixed(1) +
-        '" width="' +
-        bw.toFixed(1) +
-        '" ' +
-        'height="' +
-        bh.toFixed(1) +
-        '" fill="' +
-        t[1] +
-        '"><title>' +
-        esc((item.run_label || 'sitting') + ' \u2014 ' + t[0] + ': ' + v) +
-        '</title></rect>';
-    });
-    /* ⚠️ label every third column at most — twelve dates overlap into a grey smear */
-    if (index === 0 || index === runs.length - 1 || index % 3 === 0) {
-      out +=
-        '<text x="' +
-        (x + bw / 2) +
-        '" y="' +
-        (h + 12) +
-        '" font-size="9" fill="var(--grey-2)" ' +
-        'text-anchor="middle">' +
-        esc(new Date(item.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) +
-        '</text>';
-    }
-  });
-  return out + '</svg>';
+  if (!runs || runs.length < 2) return '<div class="none">One sitting so far — a trend needs at least two.</div>';
+  var tones = [
+    ['passed', 'var(--ok)'],
+    ['blocked', 'var(--warn)'],
+    ['failed', 'var(--bad)']
+  ];
+  /* ⚠️ one faint baseline and a label on every third column at most, both CBDraw's — twelve dates overlap into a grey smear */
+  return CBDraw.stackColumns(
+    runs.map(function (item) {
+      return {
+        label: new Date(item.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        parts: tones.map(function (tone) {
+          return { value: Number(item[tone[0]] || 0), fill: tone[1], title: (item.run_label || 'sitting') + ' — ' + tone[0] + ': ' + Number(item[tone[0]] || 0) };
+        })
+      };
+    }),
+    { aria: 'Results per sitting' }
+  );
 }
 
 function chartCard(title, ask, body, keys) {
