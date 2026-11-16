@@ -106,6 +106,8 @@ async function bkstFilesGo() {
   } catch (_) {
     BKST.data = Object.assign({}, BKST.data, { files: [], total: 0, next: null });
   }
+  const pager = bkstEl('bks_pager');
+  if (pager) pager.innerHTML = bkstFilesFoot();
   if (BKST.filesApi) BKST.filesApi.refresh();
 }
 function bkstFilesQuery(text) {
@@ -278,7 +280,7 @@ function bankStmtPickGap(button) {
 function bkstFilesHtml() {
   if (!BKST.fileTotal && !BKST.q) return '';
   return (
-    '<details class="bkh-files" data-testid="bank-stmts-filesbox"' + (BKST.filesOpen ? ' open' : '') + ' ontoggle="bkstFilesToggle(this)"><summary>' + bkstE(txf('Kept files · {n}', { n: BKST.fileTotal })) + ' · ' + bkstE(bkhFyLabel(BKST.fy)) + '</summary><div id="bks_fileslist" class="bkh-fileslist" data-testid="bank-stmts-files"></div></details>'
+    '<details class="bkh-files" data-testid="bank-stmts-filesbox"' + (BKST.filesOpen ? ' open' : '') + ' ontoggle="bkstFilesToggle(this)"><summary>' + bkstE(txf('Kept files · {n}', { n: BKST.fileTotal })) + ' · ' + bkstE(bkhFyLabel(BKST.fy)) + '</summary><div id="bks_pager" class="bkh-pager" data-testid="bank-stmts-pager">' + bkstFilesFoot() + '</div><div id="bks_fileslist" class="bkh-fileslist" data-testid="bank-stmts-files"></div></details>'
   );
 }
 function bkstFilesToggle(node) {
@@ -286,6 +288,7 @@ function bkstFilesToggle(node) {
   if (node.open && BKST.filesApi) BKST.filesApi.refresh();
 }
 const bkstFileBy = (file) => (file.by_name ? file.by_name + (file.by_firm ? ', ' + file.by_firm : '') : '—');
+/** Previous · "1–25 of 41" · Next: above the rows, so it is on screen however long the page is (the list's own foot would sit below the fold) */
 function bkstFilesFoot() {
   const data = BKST.data;
   if (!data || !data.total) return '';
@@ -336,7 +339,7 @@ function bkstFilesOptions() {
     search: (file) => [bkstAccountName(bkstAccountOf(file.account_id)), file.name, file.period_from, file.period_to].join(' '),
     searchHint: tx('Account, month or file name'),
     empty: { title: tx('No kept file matches') },
-    remote: { total: () => (BKST.data ? BKST.data.total : 0), onQuery: (query) => bkstFilesQuery(query.q), foot: bkstFilesFoot }
+    remote: { total: () => (BKST.data ? BKST.data.total : 0), onQuery: (query) => bkstFilesQuery(query.q) }
   };
 }
 /** the list is drawn after the box is painted (the host is in the page again after every paint) */
