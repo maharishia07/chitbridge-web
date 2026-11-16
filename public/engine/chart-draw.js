@@ -513,23 +513,30 @@
     if (typeof root.tx === 'function') said = root.tx(said);
     return '<p role="status" aria-live="polite" data-testid="cd-waterfall-refused" data-state="mismatch" data-why="' + code + '">' + escape(said) + (step ? ' (' + escape(step) + ')' : '') + '</p>';
   }
+  /** why ONE step may not be drawn (its kind, its whole-number figure, its currency), or null */
+  function stepFault(step, currency) {
+    if (step.kind !== 'total' && step.kind !== 'plus' && step.kind !== 'minus') return 'kind';
+    if (typeof step.amount_minor !== 'number' || !Number.isSafeInteger(step.amount_minor) || (step.kind !== 'total' && step.amount_minor < 0)) return 'figure';
+    return step.currency && step.currency === currency ? null : 'currency';
+  }
+  /** the running level after a step: a total restates it, a rise adds, a fall takes away (integers; the compare in waterfallFault is the only use) */
+  function levelAfter(level, step) {
+    if (step.kind === 'total') return step.amount_minor;
+    return level + (step.kind === 'plus' ? step.amount_minor : -step.amount_minor);
+  }
   /** why a list of steps may not be drawn, as [code, step label], or null. Integers in minor units; the compare of carried totals is the only sum. */
   function waterfallFault(steps, currency) {
     var level = 0,
-      seen = {};
+      seen = {},
+      shop = currency || (steps[0] && steps[0].currency);
     if (steps.length < 2) return ['few'];
     if (steps.length > WATERFALL_MAX) return ['many'];
     for (var at = 0; at < steps.length; at++) {
-      var step = steps[at] || {};
-      if (step.kind !== 'total' && step.kind !== 'plus' && step.kind !== 'minus') return ['kind', step.label];
-      if (typeof step.amount_minor !== 'number' || !Number.isSafeInteger(step.amount_minor) || (step.kind !== 'total' && step.amount_minor < 0)) return ['figure', step.label];
-      if (!step.currency || step.currency !== (currency || steps[0].currency)) return ['currency', step.label];
-      if (seen[step.key]) return ['key', step.label];
+      var step = steps[at] || {},
+        fault = stepFault(step, shop) || (seen[step.key] ? 'key' : step.kind === 'total' && at > 0 && step.amount_minor !== level ? 'close' : null);
+      if (fault) return [fault, step.label];
       seen[step.key] = 1;
-      if (step.kind === 'total') {
-        if (at > 0 && step.amount_minor !== level) return ['close', step.label];
-        level = step.amount_minor;
-      } else level += step.kind === 'plus' ? step.amount_minor : -step.amount_minor;
+      level = levelAfter(level, step);
     }
     return steps[steps.length - 1].kind === 'total' ? null : ['close', steps[steps.length - 1].label];
   }

@@ -4459,14 +4459,14 @@ async function bkPL(body) {
 }
 /** the profit bridge under the P&L's profit line: income, expenses, profit or loss, each the server's own figure (reply.total_income_minor, total_expense_minor, profit_minor); the
  *  chart engine loads on demand, a page without it (or one that fails to load) keeps the figures above and shows nothing more; the chart compares, it adds nothing the person reads */
-function bkPLBridge(box, reply, c) {
+function bkPLBridge(box, reply, currency) {
   if (!box || typeof CBChartCap === 'undefined') return;
-  var cur = String(c || '');
+  var shopCurrency = String(currency || '');
   var profit = Number(reply.profit_minor);
   var steps = [
-    { key: 'income', label: tx('Income'), kind: 'total', amount_minor: Number(reply.total_income_minor), currency: cur },
-    { key: 'expenses', label: tx('Expenses'), kind: 'minus', amount_minor: Number(reply.total_expense_minor), currency: cur },
-    { key: 'profit', label: profit >= 0 ? tx('Profit') : tx('Loss'), kind: 'total', amount_minor: profit, currency: cur }
+    { key: 'income', label: tx('Income'), kind: 'total', amount_minor: Number(reply.total_income_minor), currency: shopCurrency },
+    { key: 'expenses', label: tx('Expenses'), kind: 'minus', amount_minor: Number(reply.total_expense_minor), currency: shopCurrency },
+    { key: 'profit', label: profit >= 0 ? tx('Profit') : tx('Loss'), kind: 'total', amount_minor: profit, currency: shopCurrency }
   ];
   function draw(choice) {
     var host = box.querySelector('[data-testid="pl-bridge"]');
@@ -4481,11 +4481,11 @@ function bkPLBridge(box, reply, c) {
         height: 170,
         id: 'pl',
         tid: 'pl',
-        currency: cur,
+        currency: shopCurrency,
         read: choice && choice.read,
-        aria: tx('Income to profit') + '. ' + steps[2].label + ' ' + bkMoney(Math.abs(profit), c),
+        aria: tx('Income to profit') + '. ' + steps[2].label + ' ' + bkMoney(Math.abs(profit), currency),
         format: function (step) {
-          return step.label + ' ' + bkMoney(Math.abs(step.amount_minor), c);
+          return step.label + ' ' + bkMoney(Math.abs(step.amount_minor), currency);
         }
       });
   }
