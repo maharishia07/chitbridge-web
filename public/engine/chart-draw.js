@@ -2,8 +2,10 @@
  * CARD 26-reporting-mis-and-bi/charts
  *
  * OWNS      bars(points, opts) — bars from zero, an optional dashed "same time last year" line with hollow dots, a hatched bar for part of a
- *           period, an empty tick for a period with no record · spark(values, opts) — a sparkline with its last point dotted.
- * CALLED BY app/cap-mis-trend.js (CB Finance › Reports › Trend) · app/shell.js (the Till card's teaser on Home).
+ *           period, an empty tick for a period with no record (opts.actual / opts.previous = the measured colours of the bars and of the previous line) · spark(values, opts) — a sparkline with its last
+ *           point dotted (REP-36: opts.title + opts.desc add a <title>/<desc>) · statusBar(parts, opts) — stacked good/watch/help with figures · monthStrip(months, opts) —
+ *           12 small squares locked/open/running · palette(vars, contrast) — actual/previous/accent/good/watch/bad measured per theme.
+ * CALLED BY app/cap-mis-trend.js (CB Finance › Reports › Trend) · app/shell.js (the Till card's teaser on Home) · e2e/chart-draw.test.cjs · public/chart-sample.html (REP-36 theme sample).
  * FLOW      R2R · reports — the server's figures in → an SVG string out. It computes NO figure: heights are geometry, the words are the caller's.
  *
  * Lifted from the two private renderers SPEC-charts found (docs/26-reporting-mis-and-bi/SPEC-charts.md "no shared helper"): fcChart
@@ -71,7 +73,7 @@
     if (value === null) return missingBarOf(left, barTestId, title, layout);
     var height = Math.max(1, Math.abs(layout.yOf(value) - layout.zero)),
       top = value >= 0 ? layout.zero - height : layout.zero;
-    var look = point.hatch ? 'fill:url(#' + layout.id + '-hatch);stroke:' + BAR + ';stroke-width:1.5' : 'fill:' + BAR;
+    var look = point.hatch ? 'fill:url(#' + layout.id + '-hatch);stroke:' + layout.actual + ';stroke-width:1.5' : 'fill:' + layout.actual;
     return (
       '<rect x="' +
       left.toFixed(1) +
@@ -116,13 +118,13 @@
         '" r="2.5" style="fill:' +
         DOT_FILL +
         ';stroke:' +
-        LAST_YEAR +
+        layout.previous +
         ';stroke-width:1.5"><title>' +
         escape(point.lineTitle || '') +
         '</title></circle>';
     });
     return path
-      ? '<path d="' + path.trim() + '" data-testid="cd-lastyear" style="fill:none;stroke:' + LAST_YEAR + ';stroke-width:1.5;stroke-dasharray:4 3"/>' + dots
+      ? '<path d="' + path.trim() + '" data-testid="cd-lastyear" style="fill:none;stroke:' + layout.previous + ';stroke-width:1.5;stroke-dasharray:4 3"/>' + dots
       : '';
   }
 
@@ -166,12 +168,12 @@
   }
 
   /** the diagonal-hatch pattern that fills a part-period bar (its id is unique per chart) */
-  function hatchDefs(id) {
+  function hatchDefs(id, colour) {
     return (
       '<defs><pattern id="' +
       id +
       '-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" style="stroke:' +
-      BAR +
+      colour +
       ';stroke-width:1.5"/></pattern></defs>'
     );
   }
@@ -205,7 +207,9 @@
       id = escape(options.id || 'cd'),
       testId = options.tid || 'cd';
     var layout = geometryOf(list, width, height, id);
-    var hatch = hatchDefs(id);
+    layout.actual = options.actual || BAR;
+    layout.previous = options.previous || LAST_YEAR; /* REP-36: a caller that measured the previous colour (palette) passes it; the Trend page does not */
+    var hatch = hatchDefs(id, layout.actual);
     var scaleWords = options.top ? '<text x="0" y="10" style="font:10px var(--mono,monospace);fill:' + LABEL + '">' + escape(options.top) + '</text>' : '';
     return (
       '<svg viewBox="0 0 ' +
@@ -270,6 +274,12 @@
     return sparkSvg(width, height, options, path, last, stroke);
   }
 
+  /** REP-36: a sparkline that is given opts.title / opts.desc also carries them as <title> and <desc> (the text equivalent of its figures); without them nothing changes */
+  function sparkWords(options) {
+    if (!options.title && !options.desc) return '';
+    return '<title>' + escape(options.title || '') + '</title><desc>' + escape(options.desc || '') + '</desc>';
+  }
+
   /** the sparkline's svg wrapper: its path and the dot on the last point */
   function sparkSvg(width, height, options, path, last, stroke) {
     return (
@@ -290,6 +300,7 @@
       'px;height:' +
       height +
       'px;overflow:visible;fill:none;stroke:none">' +
+      sparkWords(options) +
       '<path d="' +
       path.trim() +
       '" style="fill:none;stroke:' +
@@ -305,7 +316,260 @@
     );
   }
 
-  var CBDraw = { bars: bars, spark: spark };
+  /* ── REP-36 (16 Nov): the palette, the status bar and the month strip, beside bars and spark. The caller passes numbers and WORDS (money already
+   *    through the M36 unit by the caller); nothing here formats money or fetches. Each svg carries role="img", a <title>, a <desc> that is the
+   *    text equivalent of every figure, and a <title> on each part. Colours: ink for actual, a mix of ink and page for previous (cleared to 3:1),
+   *    the accent-text for the ONE accent, and good / watch / bad as fixed meanings (light and dark variant), never a theme's blue or red. ── */
+  var FIXED = {
+    light: { good: '#1F6B46', watch: '#8A5A00', bad: '#B3402A' },
+    dark: { good: '#5CC08A', watch: '#E0A838', bad: '#F08068' }
+  };
+  var PREV_FROM = 55,
+    PREV_STEP = 5,
+    NEED_PREVIOUS = 3;
+
+  function rgbOf(text) {
+    var value = String(text).trim();
+    if (/^#/.test(value)) {
+      value = value.slice(1);
+      if (value.length === 3) value = value.replace(/./g, '$&$&');
+      return [0, 2, 4].map(function (at) {
+        return parseInt(value.substr(at, 2), 16);
+      });
+    }
+    return (value.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+  }
+  /** `percent` of the first colour over the rest of the second: what CSS color-mix(in srgb, a percent, b) paints */
+  function mix(first, second, percent) {
+    var one = rgbOf(first),
+      two = rgbOf(second);
+    return (
+      'rgb(' +
+      one
+        .map(function (value, at) {
+          return Math.round((value * percent) / 100 + (two[at] * (100 - percent)) / 100);
+        })
+        .join(',') +
+      ')'
+    );
+  }
+  function isDark(page, contrast) {
+    return contrast(page, 'rgb(0,0,0)') < contrast(page, 'rgb(255,255,255)');
+  }
+  /**
+   * palette(vars, contrast) → { actual, previous, previousMix, accent, good, watch, bad, dark, fellBack: [names] } — vars { ink, page, card, accent } are resolved
+   * colours; `contrast` is ui-standard's contrastRatio (the one measure, passed in so this file stays loadable alone). previous starts at 55% ink over page
+   * and rises in steps of 5 until it clears 3:1 on BOTH the page and the card (a 45% mix failed on 11 of 16 themes); the accent drops to ink when it
+   * cannot clear 3:1; good / watch / bad are fixed per light or dark and are listed in fellBack if a theme's page still defeats them.
+   */
+  function palette(vars, contrast) {
+    var clears = function (colour) {
+      return [vars.page, vars.card].every(function (ground) {
+        return contrast(colour, ground) >= NEED_PREVIOUS;
+      });
+    };
+    var percent = PREV_FROM;
+    while (percent < 100 && !clears(mix(vars.ink, vars.page, percent))) percent += PREV_STEP;
+    var dark = isDark(vars.page, contrast),
+      kinds = dark ? FIXED.dark : FIXED.light,
+      fellBack = [];
+    if (percent > PREV_FROM) fellBack.push('previous');
+    var accent = vars.accent && clears(vars.accent) ? vars.accent : vars.ink;
+    if (accent !== vars.accent) fellBack.push('accent');
+    var out = { actual: vars.ink, previous: mix(vars.ink, vars.page, percent), previousMix: percent, accent: accent, dark: dark, fellBack: fellBack };
+    ['good', 'watch', 'bad'].forEach(function (name) {
+      out[name] = kinds[name];
+      if (!clears(kinds[name])) fellBack.push(name);
+    });
+    return out;
+  }
+  /** the palette of the theme on the page now, or on `element` (the avatar's tokens, resolved; an unset token falls to Cream's own value). Needs a browser and a contrast function. */
+  function paletteNow(contrast, element) {
+    var style = getComputedStyle(element || document.documentElement),
+      read = function (name, fallback) {
+        return style.getPropertyValue(name).trim() || fallback;
+      };
+    return palette(
+      { ink: read('--ink', '#2a2418'), page: read('--page', '#FCFAF5'), card: read('--card', '#fffdf8'), accent: read('--accent-text', read('--accent', '#1f5f5b')) },
+      contrast || (root.CBUiStandard && root.CBUiStandard.contrastRatio)
+    );
+  }
+
+  /** the custom properties a palette sets on its svg, so shapes read var(--rp-…); with no palette the tokens themselves drive it (55% previous mix) */
+  function paletteStyle(colours) {
+    var chosen = colours || {
+      actual: 'var(--ink,#2a2418)',
+      previous: 'color-mix(in srgb,var(--ink,#2a2418) 55%,var(--page,#FCFAF5))',
+      accent: 'var(--accent-text,#1f5f5b)',
+      good: FIXED.light.good,
+      watch: FIXED.light.watch,
+      bad: FIXED.light.bad
+    };
+    return '--rp-actual:' + chosen.actual + ';--rp-previous:' + chosen.previous + ';--rp-accent:' + chosen.accent + ';--rp-good:' + chosen.good + ';--rp-watch:' + chosen.watch + ';--rp-bad:' + chosen.bad;
+  }
+
+  /** the accessible head every new svg shares: role, a <title>, a <desc> (the text equivalent), and the inline size the page's svg icon rule would otherwise crush */
+  function accessibleSvg(width, height, options, inner) {
+    var id = escape(options.id);
+    return (
+      '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-labelledby="' + id + '-t ' + id + '-d" data-testid="' + escape(options.tid) +
+      '" style="display:block;width:100%;max-width:' + width + 'px;height:auto;aspect-ratio:' + width + '/' + height + ';overflow:visible;stroke:none;fill:none;' + paletteStyle(options.palette) +
+      '"><title id="' + id + '-t">' + escape(options.title || '') + '</title><desc id="' + id + '-d">' + escape(options.desc || '') + '</desc>' + inner + '</svg>'
+    );
+  }
+
+  var KIND_VAR = { good: 'var(--rp-good)', watch: 'var(--rp-watch)', help: 'var(--rp-bad)' };
+  var STATUS_GAP = 2,
+    STATUS_BAR = 14,
+    STATUS_TEXT_AT = 28,
+    STATUS_MIN_LABEL = 30;
+
+  /** statusGeometry(parts, width) → [{ kind, x, w, mid, part }] — a part with no count is left out; widths share `width` less the gaps in proportion to the counts. */
+  function statusGeometry(parts, width) {
+    var shown = (parts || []).filter(function (part) {
+      return figure(part.value) !== null && Number(part.value) > 0;
+    });
+    var total = shown.reduce(function (sum, part) {
+      return sum + Number(part.value);
+    }, 0);
+    var room = width - STATUS_GAP * Math.max(0, shown.length - 1),
+      at = 0;
+    return shown.map(function (part) {
+      var w = (Number(part.value) / total) * room,
+        box = { kind: part.kind, x: at, w: w, mid: at + w / 2, part: part };
+      at += w + STATUS_GAP;
+      return box;
+    });
+  }
+  /** one part's shape: solid = good, diagonal hatch = watch, dots = help, so a colour-blind reader still tells them apart */
+  function statusShape(box, id) {
+    var common = ' x="' + box.x.toFixed(1) + '" y="0" width="' + box.w.toFixed(1) + '" height="' + STATUS_BAR + '" rx="2"';
+    var title = '<title>' + escape(box.part.label || '') + '</title>';
+    var base = '<rect' + common + ' style="fill:' + (KIND_VAR[box.kind] || KIND_VAR.help) + '" data-kind="' + escape(box.kind) + '">' + title + '</rect>';
+    if (box.kind === 'good') return base;
+    return base + '<rect' + common + ' style="fill:url(#' + id + (box.kind === 'watch' ? '-w' : '-h') + ')"/>';
+  }
+  function statusDefs(id) {
+    return (
+      '<defs><pattern id="' + id + '-w" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="6" style="fill:var(--card,#fffdf8)"/></pattern>' +
+      '<pattern id="' + id + '-h" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r="1" style="fill:var(--card,#fffdf8)"/></pattern></defs>'
+    );
+  }
+  /** the figures under the bar: each part's figure (and its short words when the part is wide enough), skipped where it would touch the last one drawn */
+  function statusTexts(boxes, width) {
+    var lastEnd = -1;
+    return boxes
+      .map(function (box) {
+        var text = box.part.figure !== undefined ? String(box.part.figure) : String(box.part.value),
+          words = box.w >= STATUS_MIN_LABEL && box.part.short ? ' ' + box.part.short : '',
+          size = (text.length + words.length) * 6.5,
+          mid = Math.min(Math.max(box.mid, size / 2), width - size / 2), /* never past either edge of the viewBox */
+          left = mid - size / 2;
+        if (left < lastEnd + 4) return '';
+        lastEnd = left + size;
+        return '<text x="' + mid.toFixed(1) + '" y="' + STATUS_TEXT_AT + '" text-anchor="middle" style="font:11px var(--mono,monospace);fill:var(--rp-actual)">' + escape(text + words) + '</text>';
+      })
+      .join('');
+  }
+  /**
+   * statusBar(parts, opts) → '<svg …>' — parts [{ kind: 'good'|'watch'|'help', value (a count), label (the full words, for the part's title and the <desc>),
+   * figure (what is printed under it; default the count), short (words printed beside it when it is wide) }]; opts { width 320, id, tid, title, desc, palette }.
+   * The <desc> is built from the labels: "label, label, …". No part with a count → '' (no invented shape).
+   */
+  function statusBar(parts, opts) {
+    var options = opts || {},
+      width = options.width || 320,
+      id = options.id || 'cd-status',
+      boxes = statusGeometry(parts, width);
+    if (!boxes.length) return '';
+    var desc =
+      options.desc ||
+      boxes
+        .map(function (box) {
+          return box.part.label || String(box.part.value);
+        })
+        .join(', ');
+    var inner =
+      statusDefs(escape(id)) +
+      boxes
+        .map(function (box) {
+          return statusShape(box, escape(id));
+        })
+        .join('') +
+      statusTexts(boxes, width);
+    return accessibleSvg(width, STATUS_TEXT_AT + 6, { id: id, tid: options.tid || 'cd-status', title: options.title, desc: desc, palette: options.palette }, inner);
+  }
+
+  var STRIP = { size: 18, gap: 4, labelAt: 30 };
+  var STRIP_WORDS = { locked: 'locked', open: 'open', running: 'running' };
+  /** stripGeometry(months, size, gap) → [{ x, y, size, month }] */
+  function stripGeometry(months, size, gap) {
+    return (months || []).map(function (month, index) {
+      return { x: index * (size + gap), y: 1, size: size, month: month };
+    });
+  }
+  function stateOf(month) {
+    return STRIP_WORDS[month.state] ? month.state : 'open';
+  }
+  /** one square: locked = filled ink, open = hollow muted outline, running = hollow accent outline with a dot, so the three differ in shape as well as colour */
+  function stripSquare(cell, words) {
+    var state = stateOf(cell.month),
+      half = cell.size / 2,
+      title = '<title>' + escape((cell.month.label || '') + ': ' + ((words || STRIP_WORDS)[state] || STRIP_WORDS[state])) + '</title>',
+      common = ' x="' + (cell.x + 1) + '" y="' + cell.y + '" width="' + (cell.size - 2) + '" height="' + (cell.size - 2) + '" rx="2" data-state="' + state + '"';
+    if (state === 'locked') return '<rect' + common + ' style="fill:var(--rp-actual)">' + title + '</rect>';
+    if (state === 'open') return '<rect' + common + ' style="fill:none;stroke:var(--rp-previous);stroke-width:1.5">' + title + '</rect>';
+    return (
+      '<rect' + common + ' style="fill:none;stroke:var(--rp-accent);stroke-width:2">' + title + '</rect>' +
+      '<circle cx="' + (cell.x + half) + '" cy="' + (cell.y + half - 1) + '" r="2.5" style="fill:var(--rp-accent)"/>'
+    );
+  }
+  /**
+   * monthStrip(months, opts) → '<svg …>' — months [{ label (short: "Nov"), state: 'locked'|'open'|'running' }] oldest first (the caller passes 12);
+   * opts { size 18, gap 4, id, tid, title, desc, words { locked, open, running } (the caller's translated words), labels (true draws each label), palette }.
+   * The <desc> reads "Jan: locked, Feb: open, …". No months → ''.
+   */
+  function monthStrip(months, opts) {
+    var options = opts || {},
+      words = options.words || STRIP_WORDS,
+      cells = stripGeometry(months, options.size || STRIP.size, options.gap || STRIP.gap);
+    if (!cells.length) return '';
+    var width = cells[cells.length - 1].x + cells[cells.length - 1].size;
+    var desc =
+      options.desc ||
+      cells
+        .map(function (cell) {
+          return (cell.month.label || '') + ': ' + (words[stateOf(cell.month)] || STRIP_WORDS[stateOf(cell.month)]);
+        })
+        .join(', ');
+    var labels = options.labels
+      ? cells
+          .map(function (cell) {
+            return '<text x="' + (cell.x + cell.size / 2) + '" y="' + STRIP.labelAt + '" text-anchor="middle" style="font:9px var(--mono,monospace);fill:var(--rp-actual)">' + escape(cell.month.label || '') + '</text>';
+          })
+          .join('')
+      : '';
+    var inner =
+      cells
+        .map(function (cell) {
+          return stripSquare(cell, options.words);
+        })
+        .join('') + labels;
+    var height = options.labels ? STRIP.labelAt + 4 : cells[0].size + 2;
+    return accessibleSvg(width, height, { id: options.id || 'cd-strip', tid: options.tid || 'cd-strip', title: options.title, desc: desc, palette: options.palette }, inner);
+  }
+
+  var CBDraw = {
+    bars: bars,
+    spark: spark,
+    statusBar: statusBar,
+    monthStrip: monthStrip,
+    palette: palette,
+    paletteNow: paletteNow,
+    paletteStyle: paletteStyle,
+    geometry: { status: statusGeometry, strip: stripGeometry },
+    mix: mix
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = CBDraw;
   if (root) root.CBDraw = CBDraw;
 })(typeof window !== 'undefined' ? window : globalThis);
