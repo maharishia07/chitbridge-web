@@ -58,4 +58,25 @@ t('rank 6 the entries tile counts entries (1,175) with the clients behind (2); a
   assert.ok(/<b>1,175<\/b><span>Entries to check · 2 clients<\/span>/.test(html), html);
   assert.ok(/<b>3<\/b>/.test(html));
 });
+
+/* fin1117: F1 bank words from the one answer · F4 one line per client · F3 the blocker link carries the Mark filter */
+t('F1 a bank with 35.00 unexplained says it in the Bank page words, never "bank not to year end"', () => {
+  const r = row({ stage: 'books_in', stage_blocker: 'bank', year_end: Object.assign({}, YE, { bank_to_end: false }), bank: { state: 'unexplained', reconciled_to: '2026-06-30', unexplained_minor: 3500, currency: 'AUD' }, currency: 'AUD' });
+  use([r]);
+  const h = T.yendCell(r).replace(/<[^>]+>/g, '');
+  assert.ok(/3.?5|35/.test(h) && /unexplained/.test(h) && !/not to year end/.test(h), h);
+});
+t('F4 the Year end cell is one line: stage + one blocker, the blocker said once', () => {
+  const y = Object.assign({}, YE, { locked: 3, bank_to_end: false });
+  const r = row({ stage: 'books_in', stage_blocker: 'months', year_end: y });
+  use([r]);
+  const h = T.yendCell(r);
+  assert.ok(!/<br/.test(h), h); assert.strictEqual((h.replace(/title="[^"]*"/, '').match(/not locked/g) || []).length, 1, h);
+});
+t('F3 a client whose blocker is entries opens the Day book on Not checked; queries on Queried; months carry no filter', () => {
+  const go = (b) => { const r = row({ entity_id: 'z1', stage_blocker: b }); use([r]); root.location.href = ''; T.openBooks('z1', 'pipeline'); return root.location.href; };
+  assert.ok(/view=daybook&fy=2025-26&dbf_mark=notchecked$/.test(go('checked')), go('checked'));
+  assert.ok(/view=daybook&fy=2025-26&dbf_mark=query$/.test(go('queries')), go('queries'));
+  assert.ok(!/dbf_mark/.test(go('months')));
+});
 console.log(bad ? bad + ' FAILED' : 'all ok'); process.exit(bad ? 1 : 0);
