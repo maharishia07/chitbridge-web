@@ -934,6 +934,13 @@ async function accBills(body) {
     const rows = await api('folderChits', { params: { id: cur.folder_id }, query: { state: 'open' } });
     /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
     const list = Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
+    /* E19: this screen lists bill CHITS; the books (Dues) also hold bills no chit stands behind (a loader, a move-in, a typed bill). When no chit is open the empty sentence reads the books' own dues for this side (the same GET /dues Dues paints), so it never says "Nothing open" over money the books say is owed */
+    let booksSide = null;
+    if (!list.length) {
+      const owed = await api('booksDues', { query: { side: cur.code === 'B-2100' ? 'supplier' : 'customer' } }).catch(() => null),
+        parties = ((owed && owed.parties) || []).filter((p) => Number(p.balance_minor) !== 0);
+      if (parties.length) booksSide = { n: parties.length, minor: parties.reduce((t, p) => t + Math.abs(Number(p.balance_minor) || 0), 0), cur: owed.currency, supplier: cur.code === 'B-2100' };
+    }
     const word = (f) => (f.code === 'B-2100' ? 'Received' : 'Issued');
     const tabs =
       '<div class="tabs" role="group">' +
@@ -968,7 +975,9 @@ async function accBills(body) {
         { key: 'step', label: tx('Step'), cmp: by((c) => (c.bill || {}).label || '') }
       ],
       next: accBillNext,
-      empty: { title: tx('Nothing open') }
+      empty: booksSide
+        ? { title: tx('No bill chits are open'), sub: ' ' + bkMoney(booksSide.minor, booksSide.cur) + ' ' + (booksSide.supplier ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + booksSide.n + '). ' + tx('See') + ' ' + tx(booksSide.supplier ? 'Payables' : 'Receivables') + '.' }
+        : { title: tx('Nothing open') }
     });
   } catch (e) {
     body.innerHTML = bkErr(e);
