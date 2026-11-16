@@ -177,8 +177,8 @@ function alertsPaint(){
 /* l16 firmhome: /me already says whether the Ledger is on (cb:me · ledger_on): a shop or a firm with none is never asked GET /books/health (404 LEDGER_OFF, one red request). /me answered without ledger_on, or no answer within 2.5 s = asked the old way. */
 function ledgerSaid(){
   return new Promise(function(done){
-    var av = window.CBAvatar, now = av && av.ledgerOn ? av.ledgerOn() : null;
-    if (typeof now === 'boolean') return done(now);
+    var av = window.CBAvatar, now = av && av.ledgerOn ? av.ledgerOn() : undefined;
+    if (now !== undefined) return done(typeof now === 'boolean' ? now : null);   /* /me has already answered */
     var t = setTimeout(function(){ document.removeEventListener('cb:me', on); done(null); }, 2500);
     function on(e){ var v = e && e.detail ? e.detail.ledger_on : null; clearTimeout(t); document.removeEventListener('cb:me', on); done(typeof v === 'boolean' ? v : null); }
     document.addEventListener('cb:me', on);

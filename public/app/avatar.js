@@ -543,7 +543,7 @@
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
   var SHOP_COUNTRY = null,
-    SHOP_LEDGER_ON = null; /* l16 firmhome: /me's ledger_on (true | false), null = not said: Home asks GET /books/health only then */
+    SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
   function announceShop(entity) {
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
