@@ -4829,10 +4829,24 @@ async function bkBS(body) {
       bkBsSide(tx('Equity'), reply.equity, g.equity, c, reply.total_equity_minor, was('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom) +
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }]) +
       '</tbody></table>' +
-      bkBsFoot(reply, c);
+      '<div id="bs_foot">' + bkBsFoot(reply, c) + '</div>';
+    bkBsAgeing(reply, c);
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
+}
+/** l16-country: the statutory ageing schedule is read AFTER the sheet is painted (it reads every open item, as Receivables does), and only where the shop's pack names it (India: Schedule III) */
+function bkBsAgeing(reply, c) {
+  var pack = typeof shopReg === 'function' ? shopReg() : null;
+  if (!(pack && pack.presentation && pack.presentation.statementAgeing)) return;
+  api('booksBS', { query: { asOf: reply.asOf, ageing: 'only' } })
+    .then(function (more) {
+      var foot = document.getElementById('bs_foot');
+      if (foot && more && more.ageing_note) foot.innerHTML = bkBsFoot(Object.assign({}, reply, { ageing_note: more.ageing_note }), c);
+    })
+    .catch(function (err) {
+      bkQuiet('bs-ageing', err);
+    });
 }
 /** under the sheet: where its Current / Non-current split comes from (the pack's own standard), and — only where the country's pack asks for it — the ageing schedule (India: Schedule III) */
 function bkBsFoot(reply, c) {
