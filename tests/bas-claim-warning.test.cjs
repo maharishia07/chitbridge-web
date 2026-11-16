@@ -27,5 +27,13 @@ ok('nothing without its invoice: no warning (count 0)', W({ count: 0, tax_minor:
 ok('a count with no tax claimed: no warning', W({ count: 2, tax_minor: 0, box: '1B' }, money) === null);
 ok('an older server (no field): no warning, no error', W(undefined, money) === null && W(null, money) === null);
 ok('the amount is exactly what the formatter gave for the server\'s minor (carried, not recomputed)', two.text.indexOf(money(242520)) === 0);
+/* ACC-357 / W15-103: the money at risk on the To pay line - both figures the server's; the page words them */
+const R = sandbox.CBEvidence.claimRisk;
+const risk = R({ count: 2, tax_minor: 242520, net_if_unclaimed_minor: 600000 }, 357480, money);
+ok('To pay A$3,574.80 -> "A$6,000.00 if the 2 purchases without a tax invoice are not claimed" (the walk sentence)', risk === 'A$6,000.00 if the 2 purchases without a tax invoice are not claimed', risk);
+ok('one purchase: singular', R({ count: 1, tax_minor: 5000, net_if_unclaimed_minor: 9000 }, 4000, money) === 'A$90.00 if the 1 purchase without a tax invoice is not claimed');
+ok('a refund that turns into a payment says so', R({ count: 1, tax_minor: 5000, net_if_unclaimed_minor: 3000 }, -2000, money) === 'A$30.00 to pay if the 1 purchase without a tax invoice is not claimed');
+ok('a payment that turns into a refund says so', /^A\$10\.00 refund if/.test(R({ count: 1, tax_minor: 5000, net_if_unclaimed_minor: -1000 }, 4000, money)));
+ok('nothing without an invoice, or an older server: nothing said', R({ count: 0, net_if_unclaimed_minor: null }, 100, money) === null && R(null, 1, money) === null && R({ count: 2 }, 1, money) === null);
 console.log('\n   ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

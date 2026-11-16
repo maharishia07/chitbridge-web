@@ -3707,6 +3707,8 @@ function bkLgHead() {
   /* the grid's top-bar slot: back, fold and download buttons */
   head.slot = function (el) {
     var x = '';
+    if (BK.backTo) /* ACC-357: opened from a return's box: Back goes to the return, on the same period */
+      x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn" data-lt="backto" data-testid="lt-backto">‹ ' + esc(txf('Back to {form}', { form: BK.backTo.label })) + '</button>';
     if (bkLtNarrow())
       x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
     if (bkLtFolded() && !bkLtNarrow())
@@ -4151,6 +4153,12 @@ function bkLtBind(root) {
     }
     if (d === 'back') {
       bkLtBack();
+      return;
+    }
+    if (d === 'backto') {
+      var back = BK.backTo;
+      BK.backTo = null;
+      if (back && typeof show === 'function') show(back.tab);
       return;
     }
     if (d === 'statement') {
