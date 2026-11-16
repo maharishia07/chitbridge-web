@@ -449,6 +449,7 @@ function go() {
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the money field reads its marks and number reader from it -->
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
 <script src="/app/cap-books.js"></script>
+<script src="/app/cap-opening.js"></script><script src="/app/cap-opening-years.js"></script>   <!-- Setup › Opening balances (l16): the grid, the live Difference from the server, what is saved, the year strip -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
 <script src="/app/attach-ui.js"></script>   <!-- CBAttach.mount (R07): the one picker, 6 MB cap and audience rule in this one file -->
 <script src="/app/rail-thread.js"></script>
@@ -755,6 +756,7 @@ BK.views = {
   gstclose: (b) => peGstView(b),
   yearclose: (b) => peYearView(b),
   bank: (b) => (CBBooksActing.hides('bank') ? CBBooksActing.hiddenView(b) : bankView(b)),
+  opening: (b) => obView(b),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
   rates: (b) => fxView(b),

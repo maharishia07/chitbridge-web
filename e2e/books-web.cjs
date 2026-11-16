@@ -906,28 +906,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await noAccounting(p, 'packs');
 
   /* 8 · opening balances + a shop ledger */
-  await p.click('[data-testid="acc-nav-opening"]'); await p.waitForSelector('[data-testid="op_csv"]');
-  await p.fill('[data-testid="op_csv"]', '1300,P-00001,5000,,INV-0,2026-10-15\n2100,P-00003,100,200,,');
-  await p.click('[data-testid="op_go"]');
-  ok(S.opening === null && /Line 2/.test(await p.textContent('[data-testid="op_out"]')), 'a line with both debit and credit is refused before sending');
-  await p.fill('[data-testid="op_csv"]', '1300,P-00001,5000,,INV-0,2026-10-15\n2100,P-00003,,5000,AM-1,');
-  /* ⚠️⚠️ review M11 — the first press fails on the way; the second is a RETRY and carries the same client_ref */
-  S.failOpeningOnce = true;
-  await p.click('[data-testid="op_go"]');
-  for (let i = 0; i < 40 && S.openingPosts.length < 1; i++) await p.waitForTimeout(100);
-  await p.waitForFunction(() => { const b = document.querySelector('[data-testid="op_go"]'); return b && !b.disabled && (document.querySelector('[data-testid="op_out"]').textContent || '').trim() !== ''; }, null, { timeout: 8000 }).catch(() => {});
-  await p.click('[data-testid="op_go"]');
-  await p.waitForFunction(() => /Entered/.test(document.querySelector('[data-testid="op_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
-  ok(S.opening && S.opening.rows.length === 2 && S.opening.rows[0].dr_minor === 500000 && S.opening.rows[1].cr_minor === 500000, 'opening balances sent in minor units');
-  const oRef = (S.openingPosts[0] || {}).client_ref;
-  ok(S.openingPosts.length === 2 && /^web-/.test(String(oRef || '')) && S.openingPosts[1].client_ref === oRef, 'opening balances carry a client_ref, and the retry sends the SAME one');
-  /* pressed again after it went in: nothing is sent a second time */
-  await p.click('[data-testid="op_go"]'); await p.waitForTimeout(500);
-  ok(S.openingPosts.length === 2 && /at least one line/.test(await p.textContent('[data-testid="op_out"]')), '⚠️⚠️ a second press after it went in sends NOTHING (the box was emptied): ' + S.openingPosts.length + ' POSTs');
-  await p.fill('[data-testid="op_csv"]', '1400,,250,,,');
-  await p.click('[data-testid="op_go"]');
-  for (let i = 0; i < 40 && S.openingPosts.length < 3; i++) await p.waitForTimeout(100);
-  ok(S.openingPosts.length === 3 && S.openingPosts[2].client_ref && S.openingPosts[2].client_ref !== oRef, 'the next entry, after a yes, has a NEW client_ref');
+  /* the Opening balances page (cap-opening.js) is walked against the real api by e2e/opening-live.cjs; the mock here only proves the door opens it */
+  await p.click('[data-testid="acc-nav-opening"]'); await p.waitForSelector('[data-testid="ob-root"], [data-testid="ob-err"]');
   await p.click('[data-testid="acc-nav-accounts"]'); await p.waitForSelector('[data-testid="ac_add"]');
   await p.fill('[data-testid="ac_name"]', 'Shop repairs'); await p.click('[data-testid="ac_add"]');
   await p.waitForTimeout(500);
