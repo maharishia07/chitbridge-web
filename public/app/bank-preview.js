@@ -61,7 +61,7 @@
     return Number(m[3]) + ' ' + month + ' ' + m[1];
   }
 
-  /** a line's standing: its state, the words for it and whether it may be posted; a closed month overrides what the engine said */
+  /** a line's standing: its state, the words for it and whether it may be posted; a locked month holds a line the books do not have yet (never one already in them) */
   function standingOf_(projected, closed) {
     if (closed) return { state: 'closed', why: closed.words, ready: false };
     return { state: projected.state, why: projected.why || '', ready: !!projected.ready };
@@ -87,9 +87,12 @@
     return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [], what: projected.what || null };
   }
   /** the statement line (index i) joined to what the engine said about it, ready to paint and to post */
-  function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate) {
+  function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate, moved) {
     var blockers = projected.blockers || [],
-      closed = lockedMonth ? lockedMonth(statementLine.date) : null,
+      locked = lockedMonth && projected.state !== 'in_books' ? lockedMonth(statementLine.date) : null,
+      /* W15-85: the person chose "Post in <next month> instead" for this month: the line is worked as any other and posts on the first day of the next open month, its own date kept */
+      moveTo = locked && locked.next && moved && moved[locked.key] ? locked : null,
+      closed = moveTo ? null : locked,
       named = partyProposalFor_(toCreate, projected.i);
     var item = {
       key: projected.ref,
@@ -102,6 +105,7 @@
       needs: askedNeedOf_(blockers),
       blockers: blockers,
       closed: closed,
+      moveTo: moveTo,
       party: projected.party ? Object.assign({}, projected.party) : null,
       didYouMean: (named && named.did_you_mean) || []
     };
@@ -224,8 +228,10 @@
     return !!opts.postable && opts.postable.indexOf(type) < 0;
   }
   /** what the statement check says of this line already being done (who, when), or null */
-  function alreadyOf_(preview, index) {
-    return (root.CBBankPreviewCheck && root.CBBankPreviewCheck.alreadyByLine(preview.check)[index]) || null;
+  function alreadyOf_(preview, index, opts, ref) {
+    var said = (root.CBBankPreviewCheck && root.CBBankPreviewCheck.alreadyByLine(preview.check)[index]) || null,
+      late = opts && opts.lateOf ? opts.lateOf(ref) : null; /* W15-85: a line posted in a later month because its own was locked says so, found by its own ref */
+    return late ? (said ? said + ' · ' : '') + late : said;
   }
   /** the owner's answers to the statement check, as controller methods: tick a finding (confirmCheck) · pick the account (chooseAccount); each reads the statement again */
   function checkAnswers(opts, preview) {
@@ -253,9 +259,9 @@
     preview.projection = out;
     preview.refusal = null;
     preview.items = out.lines.map(function (projected, index) {
-      var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
+      var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || [], preview.moved);
       item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
-      item.alreadyWhy = alreadyOf_(preview, index);
+      item.alreadyWhy = alreadyOf_(preview, index, opts, projected.ref);
       return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
@@ -314,7 +320,7 @@
   async function postOne(opts, preview, item) {
     try {
       var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key] }));
-      preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+      preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
     }
@@ -365,7 +371,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -454,6 +460,16 @@
         return answerLine(opts, preview, key, function () {
           preview.notMatch[key] = true;
         });
+      },
+      /** W15-85: post the lines of a locked month (its key 'YYYY-MM') in the next open month instead (on), or take that back (off); the lines are worked again either way */
+      moveLocked: function (monthKey, on) {
+        if (on) preview.moved[monthKey] = true;
+        else delete preview.moved[monthKey];
+        return preview.parsed ? projectAgain(opts, preview) : false;
+      },
+      /** the months the person chose to post in the next month, { 'YYYY-MM': true } */
+      movedMonths: function () {
+        return Object.assign({}, preview.moved);
       }
     };
   }
@@ -466,7 +482,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);

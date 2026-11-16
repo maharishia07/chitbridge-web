@@ -692,6 +692,9 @@ const bkbWrongAccountButton = (testid, label) =>
 /** W15-18, W15-20 to W15-23, W15-27 · the band over the lines (bank-band.js, the same one the public demo paints): the account large, the period, the currency said once, "Right account?", three slim tiles, the lines to go and the progress bar.
  *  Every figure is carried (bankFigures: the engine's BRS; the counts are the list's own rows). */
 function bankFinish() {
+  return bankBandCore() + (typeof bkshLockNotice === 'function' ? bkshLockNotice() : ''); /* W15-85: a locked month is said under the band, before any work */
+}
+function bankBandCore() {
   const fig = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions">' + (typeof bkstMiniHtml === 'function' ? bkstMiniHtml() : '') + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
@@ -813,7 +816,7 @@ function bkbLineRows() {
 }
 /** what opens under a line: the answers it asks (the sheet's controller, bank-preview-ui.js: what it looks like, Dr and Cr, the questions) and, under them, what the rail and the books say about it */
 function bkbLinePanel(row) {
-  const answers = row.item && BKB.ui && (row.status === 'need' || row.status === 'ready') ? BKB.ui.panel(row.item, row.result) : '';
+  const answers = row.item && BKB.ui && (row.status === 'need' || row.status === 'ready' || row.status === 'lock') ? BKB.ui.panel(row.item, row.result) : '';
   return answers + bankNext(row.raw);
 }
 /** an answer was given under a line on this page: the band and the chips follow (the same controller), the open row and the filters stay, and after an answer the next line that needs one opens */

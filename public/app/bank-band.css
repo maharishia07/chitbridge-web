@@ -72,3 +72,7 @@
 .cbl[data-cbl^="bank"] .bb-tiles .lk-fig-v{overflow:visible}
 }
 .bb-row2 .bb-tiles{flex:0 1 640px}
+
+/* W15-85 · a locked month, said under the band: one calm strip per month, its two choices at the right (never a modal before the work) */
+.bk-lock{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:6px 0;padding:6px 10px;border:1px solid var(--line,#d6d3cc);border-left:3px solid var(--amber,#b7791f);border-radius:6px;font-size:var(--fs-1,13px)}
+.bk-lock-w{flex:1 1 240px;min-width:0}

@@ -141,6 +141,10 @@
       return '<span class="bd-say" role="status" data-testid="bd-line-say" data-line-say="' + escapeHtml(item.key) + '">' + escapeHtml(words) + ' <button data-cbsid="BKS017-B18" type="button" class="bd-btn bd-go" data-act="entry"' + dataKey(item) + '>' + escapeHtml(cfg.entryWords || 'Add it as an entry') + '</button></span>';
     }
     function lineNote(item, result) {
+      var moved = item.moveTo && !result && root.CBBankLock ? tag('plain', 'Posts ' + root.CBBankLock.dayText(item.moveTo.next.date) + ' · ' + item.moveTo.name + ' locked') : ''; /* W15-85 */
+      return moved + lineNoteCore(item, result);
+    }
+    function lineNoteCore(item, result) {
       if (result) return result.ok ? tag('ok', cfg.addedWords || 'Added') : tag('bad', 'Not added: ' + result.why);
       if (item.state === 'closed') return tag('bad', item.why);
       var done = alreadyNote(item, escapeHtml);
