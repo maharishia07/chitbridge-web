@@ -275,6 +275,9 @@ W.run('returns', async (w) => {
   await w.step('R6', '390 px: the BAS paints and nothing scrolls sideways', async () => {
     await P.page.waitForSelector('[data-testid="pr-box-1A"]', { timeout: 15000 });
     await P.page.waitForTimeout(300);
+    await P.page.click('[data-testid="pr-box-1A"]'); /* ACC-357: the row open below, at 390 */
+    await P.page.waitForSelector('[data-testid="pr-ledgers-1A"]', { timeout: 8000 });
+    await P.page.screenshot({ path: require('path').join(__dirname, 'shots', 'l16-bas-bas-390.png') }).catch(() => {});
     const m = await P.page.evaluate(() => ({ d: document.documentElement.scrollWidth, main: document.querySelector('.main') ? document.querySelector('.main').scrollWidth <= document.querySelector('.main').clientWidth : true }));
     return { ok: m.d <= 390 && m.main && P.errs.length === 0, saw: 'document ' + m.d + ' px wide · main fits: ' + m.main };
   });

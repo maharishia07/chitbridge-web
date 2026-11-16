@@ -131,7 +131,11 @@ W.run('statements', async (w) => {
     await B.page.evaluate(() => { location.hash = 'bs'; });
     await B.page.waitForSelector('[data-testid="bs-table"]', { timeout: 15000 });
     const bsFit = await fits(B.page); await shot(B.page, 'bs-390');
-    return { ok: plFit && bsFit && B.errs.length === 0, saw: 'P&L fits ' + plFit + ' · Balance sheet fits ' + bsFit };
+    const yr = await B.page.locator('[data-testid="bs-table"] th', { hasText: 'A year ago' }).isVisible();
+    await B.page.evaluate(() => { location.hash = 'tb'; });
+    await B.page.waitForSelector('[data-testid="tb-open-1400"]', { timeout: 15000 });
+    const tbFit = await fits(B.page); await shot(B.page, 'tb-390');
+    return { ok: plFit && bsFit && tbFit && yr && B.errs.length === 0, saw: 'P&L fits ' + plFit + ' · Balance sheet fits ' + bsFit + ' (a year ago shown: ' + yr + ') · Trial balance fits ' + tbFit };
   });
   await B.ctx.close();
 });

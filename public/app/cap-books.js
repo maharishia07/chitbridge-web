@@ -4597,7 +4597,7 @@ async function bkDrillToggle(btn, code, from, to, tab, label) {
   tr.appendChild(td);
   row.parentNode.insertBefore(tr, row.nextSibling);
   try {
-    var r = await api('booksLedger', { params: { account: code }, query: { from: from, to: to, limit: 10 } });
+    var r = await api('booksLedger', { params: { account: code }, query: { from: from, to: to, limit: 10, order: 'desc' } });
     var c = r.currency,
       lines = r.lines || [],
       total = r.total != null ? r.total : lines.length;
@@ -4649,7 +4649,7 @@ function bkPeriodBar(o) {
 }
 /** the statements' own look: money columns right-aligned and equal, the narrow screen drops the percent columns, never a sideways scroll */
 function bkStmtCss() {
-  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);text-align:left;cursor:pointer;box-shadow:none}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide{display:none}}</style>';
+  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none;border:0;padding:6px 0;min-height:0;line-height:1.2;font:inherit;color:var(--link,#1a5f8a);text-align:left;cursor:pointer;box-shadow:none}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide{display:none}}</style>';
 }
 /** one statement row: label cell, then the figures the server carried (a figure list of { v, pct?, wide? }) */
 function bkStRow(cls, label, cells) {
@@ -4769,20 +4769,21 @@ function bkBsDate() {
 /** a side of the balance sheet: the pack's own chart heads, each with its ledgers and a subtotal, then the side's carried total */
 function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom) {
   var cells = function (x) {
-    return [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c), wide: true }];
+    return [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
   };
   var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="3"></td></tr>');
   (heads || []).forEach(function (g) {
     var mine = (items || []).filter(function (x) { return (x.group ? x.group.code : null) === g.code; });
-    if (g.name) out += bkStRow('bk-grp', esc(g.name), []).replace('</tr>', '<td colspan="3"></td></tr>');
+    var same = !g.name || String(g.name).toLowerCase() === String(title).toLowerCase(); /* a group named like its section (Equity under Equity) is said once */
+    if (!same) out += bkStRow('bk-grp', esc(g.name), []).replace('</tr>', '<td colspan="3"></td></tr>');
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
       var note = pair ? '<span class="bk-note" data-testid="st-netof" title="' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '">' + esc(tx('net of') + ' ' + pair[0].name + ' ' + tx('less') + ' ' + pair[1].name) + '</span>' : '';
       out += bkStRow('', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
     });
-    if (g.name) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + g.name), cells(g));
+    if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + g.name), cells(g));
   });
-  return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c), wide: true }]);
+  return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }]);
 }
 /* the Balance sheet tab: net assets first, "as at" a day with ‹ ›, this date beside a month ago and a year ago, by the pack's own chart heads */
 async function bkBS(body) {
@@ -4802,19 +4803,19 @@ async function bkBS(body) {
       return { month: cmp.month ? cmp.month[side] : null, year: cmp.year ? cmp.year[side] : null };
     };
     var lead =
-      '<div style="padding:4px 0 10px;font-size:var(--fs-3)" data-testid="bs-net"><b>' + esc(tx('Net assets')) + ' ' + esc(bkMoney(reply.net_assets_minor, c)) + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(tx('as at')) + ' ' + esc(bkDate(reply.asOf)) + '</span>' +
+      '<div style="padding:4px 0 10px;font-size:var(--fs-3)" data-testid="bs-net"><b>' + esc(tx('Net assets')) + ' ' + esc(bkMoney(reply.net_assets_minor, c)) + '</b>' +
       (cmp.month ? ' <span class="bk-wide" style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(tx('a month ago')) + ' ' + esc(bkMoney(cmp.month.net_assets_minor, c)) + '</span>' : '') +
-      (cmp.year ? ' <span class="bk-wide" style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(tx('a year ago')) + ' ' + esc(bkMoney(cmp.year.net_assets_minor, c)) + '</span>' : '') + '</div>';
+      (cmp.year ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(tx('a year ago')) + ' ' + esc(bkMoney(cmp.year.net_assets_minor, c)) + '</span>' : '') + '</div>';
     body.innerHTML =
       bkStmtCss() +
       bkPeriodBar({ tid: 'bs', aria: 'As at', opts: opts, cur: BK_BS.kind, pick: 'bkBsPick', step: 'bkBsStep', custom: custom, canNext: A.can_next, dates: dates, range: tx('as at') + ' ' + bkDate(reply.asOf) + (cmp.month ? ' · ' + bkDate(cmp.month.as_at) + ' · ' + bkDate(cmp.year && cmp.year.as_at) : ''),
         extra: '<span class="optchip" data-testid="bs-balanced" style="' + (ok && reply.net_assets_ok !== false ? 'color:var(--ok-2)' : 'color:var(--warn-2)') + '">' + (ok ? tx('✓ balances') : tx('⚠ does not balance')) + '</span>' }) +
       lead +
-      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num bk-wide">' + esc(tx('A year ago')) + '</th></tr></thead><tbody>' +
+      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th></tr></thead><tbody>' +
       bkBsSide(tx('Assets'), reply.assets, g.assets, c, reply.total_assets_minor, was('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom) +
       bkBsSide(tx('Liabilities'), reply.liabilities, g.liabilities, c, reply.total_liabilities_minor, was('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom) +
       bkBsSide(tx('Equity'), reply.equity, g.equity, c, reply.total_equity_minor, was('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom) +
-      bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '', wide: true }]) +
+      bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }]) +
       '</tbody></table>';
   } catch (e) {
     body.innerHTML = bkErr(e);

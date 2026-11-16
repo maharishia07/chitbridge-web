@@ -91,6 +91,10 @@ const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) <
   ok(h.includes('data-testid="bs-total-le"') && /Total liabilities and equity/.test(h), 'Total liabilities and equity still closes the sheet');
   ok(h.includes('M13000000') && h.includes('M9000000') && /A month ago/.test(h) && /A year ago/.test(h), 'each line carries a month ago and a year ago, side by side in the one view');
   ok(/data-testid="st-netof"[^>]*>net of GST collected less GST paid</.test(h) && !/<td>\s*Net of/.test(h), 'the GST explanation sits on the SAME line as its ledger (small text, the full words on hover), never its own row');
+  ok(!h.includes('Total Equity') && (h.match(/>Equity</g) || []).length === 1, 'a pack group named like its section (Equity under Equity) is said once, with no second total');
+  ok((h.match(/as at/g) || []).length === 1, 'as at is said once (the bar), not again in the Net assets line');
+  ok(/<th class="num">A year ago/.test(h) && /<th class="num bk-wide">A month ago/.test(h), 'the narrow screen keeps a year ago and drops a month ago');
+  ok(/.bk-dl{background:none;border:0;padding:6px 0/.test(h), 'a ledger line is plain link text with a padded hit area, not a pill');
   ok(/data-testid="bs-balanced"[^>]*>✓ balances/.test(h), 'the chip compares the two carried totals: balances');
   reply = Object.assign({}, reply, { total_liab_equity_minor: 14061000 });
   b = body(); await cx.bkBS(b);
