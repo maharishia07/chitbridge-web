@@ -49,8 +49,9 @@ function stand(pending) {
   S.list = (query) => {
     const months = monthsEnding(query.get('to') || '2026-11', Number(query.get('months') || 6));
     const account = { account_id: 'acc-1500', code: '1500', name: 'Bank', label: (S.files[0] || {}).label || null };
-    const cells = months.map((month) => { const here = S.files.filter((f) => f.period_from <= lastDay(month) && f.period_to >= month + '-01'); return { account_id: 'acc-1500', month, missing: !here.length, file_ids: here.map((f) => f.id) }; });
-    return { currency: 'INR', months, accounts: [account], cells, files: S.files.map((f) => Object.assign({}, f, { text: undefined, sha: undefined })), older: 0 };
+    const cells = months.map((month) => { const here = S.files.filter((f) => f.period_from <= lastDay(month) && f.period_to >= month + '-01'), newest = here.slice().sort((x, y) => y.period_to.localeCompare(x.period_to))[0]; return { account_id: 'acc-1500', month, missing: !here.length, file_ids: here.map((f) => f.id), overlaps: here.some((f) => f.overlaps), newest_id: newest ? newest.id : null, newest_name: newest ? newest.name : null, newest_to: newest ? newest.period_to : null }; });
+    const win = S.files.filter((f) => f.period_from <= lastDay(months[months.length - 1]) && f.period_to >= months[0] + '-01'), page = win.slice().sort((x, y) => y.period_to.localeCompare(x.period_to)).slice(0, Number(query.get('limit') || 25));
+    return { currency: 'INR', months, accounts: [account], cells, files: page.map((f) => Object.assign({}, f, { text: undefined, sha: undefined })), total: win.length, next: null, older: S.files.length - win.length };
   };
   return S;
 }
@@ -72,11 +73,12 @@ function stand(pending) {
   async function open(S) {
     const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
+    await ctx.clock.setFixedTime(new Date('2026-11-16T10:00:00+11:00')); /* ONE today */
     ctx.on('request', (rq) => { S.reqs.push({ m: rq.method(), u: rq.url(), h: rq.headers(), d: rq.postData() || '' }); });
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-      if (p === '/api/books/health') return json(r, 200, books.health());
+      if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year (July to June) */
       if (p === '/api/books/todo') return json(r, 200, []);
       if (p === '/api/books/accounts') return json(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
@@ -113,7 +115,7 @@ function stand(pending) {
   const S = stand(), { ctx, p } = await open(S);
   await p.waitForSelector('[data-testid="bank-stmts-grid"]', { timeout: 10000 });
   const gaps = await p.locator('.bks-miss').count();
-  ok(gaps === 6 && /Missing/.test(await p.textContent('.bks-grid')) && /Nov/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months across, every month reads "Missing" (' + gaps + ')');
+  ok(gaps === 5 && /Missing/.test(await p.textContent('.bks-grid')) && /Nov/.test(await p.textContent('.bks-grid')), 'the grid: one account, the year July to June, July to November read "Missing", the months to come do not (' + gaps + ')');
   ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
   ok(/Kept on our server for the record period; visible to the accountant or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
   /* W15-62: ONE door - the plain picker's file field and its sentence step aside; the quiet secondary lives in the box */
@@ -144,8 +146,8 @@ function stand(pending) {
   ok(post && Object.keys(post).sort().join() === 'account,currency,label,name,period_from,period_to,sha256,text', 'the body names nothing else (no who, no when, no source)');
   /* ── 3 · THE MONTH FILLS · A DUPLICATE ── */
   await p.waitForSelector('[data-testid="bank-stmts-have-acc-1500-2026-09"]');
-  ok(/1/.test(await p.textContent('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && await p.locator('.bks-miss').count() === 5, 'September fills; five months are still missing');
-  ok(/5 months missing/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary follows: "5 months missing"');
+  ok(/1/.test(await p.textContent('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && await p.locator('.bks-miss').count() === 4, 'September fills; four months are still missing');
+  ok(/4 months missing/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary follows: "4 months missing"');
   await pick(p, 'sep-again.csv', SEP);
   await p.click('[data-testid="bank-stmts-add-go"]');
   await p.waitForSelector('#bks_out [data-testid="pe-refused"]');
@@ -156,7 +158,7 @@ function stand(pending) {
   await p.waitForSelector('[data-testid="bank-stmts-kept-say"]');
   ok(/overlaps 1 other statement/.test(await p.textContent('#bks_out')) && await p.locator('.bks-flag').count() >= 1, 'a crossing file is kept, the answer says it overlaps, and the cell and the row carry the flag');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-filled-laptop.png') });
-  ok(await p.locator('[data-testid="bank-stmts-files"] tbody tr').count() === 2, 'both files are listed with their period, name and who added');
+  ok(await p.locator('[data-testid^="bank-stmts-file-"]').count() === 2, 'both files are listed with their period, name and who added');
 
   /* ── 5 · READ → THE ONE READER ── */
   const reads0 = S.reads.length;

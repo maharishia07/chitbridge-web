@@ -158,7 +158,7 @@ function bankStmtPaint() {
   const year = ready && BKST.data ? bankHomeFyHtml() : '';
   host.innerHTML =
     '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' + year +
-    (ready ? (BKST.all ? bankHomeAllHtml() : bankHomeCardsHtml() + bankHomeGridHtml()) + (bankHomeMayAdd() ? (open ? bkstAddHtml() : '') : '') + '<div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>' + (BKST.all ? '' : bkstFilesHtml()) + (bankHomeMayAdd() ? bkstJustReadHtml() : '') + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div>' : '');
+    (ready ? '<div class="bkh-body">' + (BKST.all ? bankHomeAllHtml() : bankHomeCardsHtml() + bankHomeGridHtml()) + (bankHomeMayAdd() ? (open ? bkstAddHtml() : '') : '') + '<div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>' + (BKST.all ? '' : bkstFilesHtml()) + (bankHomeMayAdd() ? bkstJustReadHtml() : '') + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div></div>' : '');
   host.querySelectorAll('.bks-wrap').forEach((node) => (node.scrollLeft = node.scrollWidth)); /* on a phone the newest months show first */
   if (ready && !BKST.all) bkstFilesMount();
   if (BKST.focus) {
