@@ -249,25 +249,35 @@ function trPaintChart() {
     box.innerHTML = '<p class="hint" data-testid="tr-none">' + esc(tx('No sales summaries on CB yet.')) + '</p>';
     return;
   }
-  var head = trHeadline(),
-    width = Math.max(240, (box.clientWidth || 640) - 8);
-  /* the engine loads when a chart is about to be drawn (CBChartCap, avatar.js); the table under the chart is there either way */
+  /* the engine and the options bar load when a chart is about to be drawn (CBChartCap, app/chart-cap.js); the table under the chart is there either way */
   CBChartCap.ready().then(
     function () {
       if (!document.body.contains(box)) return;
-      box.innerHTML =
-        CBDraw.bars(points, {
-          width: width,
-          height: 170,
-          id: 'tr',
-          tid: 'tr',
-          aria: tx('Sales by period') + (head ? '. ' + head : '')
-        }) + trLegend();
+      if (!TR.bar || !TR.barScope || !TR.barScope.querySelector('[data-testid="chart-bar"]')) {
+        TR.barScope = document.getElementById('screen');
+        TR.bar = CBChartBar.mount(TR.barScope, { kind: 'series', types: ['column', 'line'], onChange: trDrawChart });
+      } else trDrawChart(TR.bar.state());
     },
     function () {
       box.innerHTML = '<p class="hint">' + esc(tx('The chart could not load; the table below has the same figures.')) + '</p>';
     }
   );
+}
+/** the chart in the person's choice (column or line, the colours already on the screen as --ch-* tokens, the mode on the chart element) */
+function trDrawChart(choice) {
+  var box = document.getElementById('tr_chart');
+  if (!box || TR.state !== 'ready' || !TR.answer) return;
+  var head = trHeadline();
+  box.innerHTML =
+    CBDraw.bars(trPoints(), {
+      width: Math.max(240, (box.clientWidth || 640) - 8),
+      height: 170,
+      id: 'tr',
+      tid: 'tr',
+      type: choice.type,
+      read: choice.read,
+      aria: tx('Sales by period') + (head ? '. ' + head : '')
+    }) + trLegend();
 }
 window.addEventListener('resize', function () {
   if (!trOn()) return;

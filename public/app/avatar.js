@@ -26,12 +26,10 @@
  *
  * ⭐ THEMES ARE NOT HERE. They are the engine's (screen v1.15.0 `CBScreen.APP_THEMES`, 16 with Terminal) — load /engine/screen.js
  *    first. This file only APPLIES one: it writes the theme's tokens on <html> (`removeProperty` first, so leaving a theme leaves
- *    nothing behind), stamps `data-theme`, and sets `color-scheme`. A theme with `font:'mono'` (Terminal) gives the page the
- *    monospace face unless the person chose a reading font.
+ *    nothing behind), stamps `data-theme`, and sets `color-scheme`. A theme with `font:'mono'` (Terminal) gives the page the monospace face unless the person chose a reading font.
  *
  * ⭐ THE KEYS NEVER CHANGE (a stored value is not free to rename): cb_theme · cb_font · cb_fs (s/m/l/xl) · cb_motion
- *    (auto/reduce/full) — and the new cb_weight (normal/bold). cb_theme may also hold `device` ("My device": the operating
- *    system's light/dark decides, once, at load — an explicit choice always wins over the OS).
+ *    (auto/reduce/full) — and the new cb_weight (normal/bold). cb_theme may also hold `device` ("My device": the operating system's light/dark decides, once, at load — an explicit choice always wins over the OS).
  *
  * ⭐ TEXT SIZE MULTIPLIES THE EIGHT --fs TOKENS (FS_BASE), never `zoom` and never one flat size: a caption stays smaller than a
  *    heading. The base is the page's OWN value (read once from its stylesheet — CB Accounts keeps 12 / 13.5 / 15), falling back to
@@ -95,11 +93,7 @@
     ['off', 'Off']
   ];
   var EDITION = /^[a-z][a-z0-9-]{0,23}$/;
-  var STRIPES = [
-    ['off', 'Off'],
-    ['light', 'Light'],
-    ['strong', 'Strong']
-  ]; /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
+  var STRIPES = [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong']]; /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
 
   function lsGet(k, d) {
     try {
@@ -498,7 +492,7 @@
           changed = true;
         }
       });
-      if (chartHydrate(prefs)) changed = true;
+      if (root.CBChartCap && root.CBChartCap.hydrate(prefs)) changed = true; /* the chart keys are app/chart-cap.js's: they never ride push() */
       if (changed) {
         apply();
         repaint();
@@ -1204,140 +1198,9 @@
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
   if (root.addEventListener)
     root.addEventListener('online', function () {
-      if (OVERRIDE) return;
-      if (otherPending()) push();
-      chartRetry();
+      if (!OVERRIDE && Object.keys(pendGet()).length) push();
     });
 
-  /* ⭐ THE CHART ENGINE'S TWO DOORS (chart engine step 1, 16 Nov 2026 · REQ PM/REQ-CHART-ENGINE-2026-11-16.md, critic points 2 and 4).
-     This file is on every page that has a person, so the two small things every chart page needs live here and nowhere else:
-     · CBChartCap.ready() — the ONE loader. A page that draws no chart never fetches chart code; a page about to draw one asks ready() and gets one
-       promise (the files are injected once, with the build query where the page has one). app.html's ensureCap('chart') is a call to it; finance and
-       the small apps call it directly. (Not "CBChart": that name is the chart of ACCOUNTS, engine chart.js.)
-     · the person's chart choices — chart_theme · chart_read · chart_fav_<kind> — kept on this device (cb_<key>) and in ui_prefs.
-       ⚠️ THEY NEVER RIDE push()'s full body. push() sends all eight keys, with '' meaning "drop"; a device that has not hydrated yet (offline start, a
-       failed read) would send its chart keys at their defaults and delete the favourite. chartSet sends ONLY the key just changed. The shape is
-       checked here, the kinds are the engine's (CBDraw.KINDS) and the server's closed lists (api lib/chart-prefs.js) decide. */
-  var CHART_FILES = ['/engine/chart-draw.js'],
-    chartLoad = null;
-  function chartReady() {
-    if (root.CBDraw) return Promise.resolve();
-    if (chartLoad) return chartLoad;
-    var bust = typeof CB_BUILD !== 'undefined' && CB_BUILD ? '?v=' + CB_BUILD : '';
-    chartLoad = Promise.all(
-      CHART_FILES.map(function (file) {
-        return new Promise(function (resolve, reject) {
-          var node = doc.createElement('script');
-          node.src = file + bust;
-          node.async = false;
-          node.onload = resolve;
-          node.onerror = function () {
-            chartLoad = null; /* a failed load may be tried again; the caller says one sentence and leaves the table */
-            reject(new Error('chart engine'));
-          };
-          (doc.head || doc.documentElement).appendChild(node);
-        });
-      })
-    );
-    return chartLoad;
-  }
-  var CHART_KEY = /^chart_(theme|read|fav_[a-z]+)$/,
-    CHART_VALUE = /^[A-Za-z0-9][A-Za-z0-9-]{0,34}$/;
-  function chartGet(key) {
-    return CHART_KEY.test(key) ? lsGet('cb_' + key, '') : '';
-  }
-  /** this device's chart keys: the ones the server sent plus any already held here */
-  function chartKeysHeld(server) {
-    var found = {};
-    Object.keys(server || {}).forEach(function (key) {
-      if (CHART_KEY.test(key)) found[key] = 1;
-    });
-    try {
-      for (var at = 0; at < root.localStorage.length; at++) {
-        var name = String(root.localStorage.key(at) || '');
-        if (name.indexOf('cb_chart_') === 0 && CHART_KEY.test(name.slice(3))) found[name.slice(3)] = 1;
-      }
-    } catch (error) {
-      chartUnsent(error);
-    }
-    return Object.keys(found);
-  }
-  /** a chart key that did not reach the server: its pending mark stays, so the next hydrate or the 'online' event sends it again */
-  function chartUnsent(error) {
-    if (root.console) root.console.warn('avatar: chart pref not sent yet', error && error.message);
-  }
-  /** one chart key to the server, alone ('' removes it); the pending mark goes when the server answers ok:true */
-  function chartPush(key) {
-    var base = apiBaseOf(HOST),
-      token = tokenOf(HOST);
-    if (HOST.sync === false || !base || !token || !root.fetch) return;
-    var body = {};
-    body[key] = chartGet(key);
-    try {
-      root
-        .fetch(base + '/api/entities/me/prefs/ui', {
-          method: 'PATCH',
-          cache: 'no-store',
-          keepalive: true,
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify(body)
-        })
-        .then(function (reply) {
-          return reply.ok ? reply.json() : null;
-        })
-        .then(function (reply) {
-          landed(body, reply);
-        })
-        .catch(chartUnsent);
-    } catch (error) {
-      chartUnsent(error);
-    }
-  }
-  function chartSet(key, value) {
-    var text = value == null ? '' : String(value);
-    if (OVERRIDE || !CHART_KEY.test(key) || (text && !CHART_VALUE.test(text))) return false;
-    if (text) lsSet('cb_' + key, text);
-    else lsDel('cb_' + key);
-    var held = pendGet();
-    held[key] = text; /* a removal is held as '' until the server has it */
-    pendPut(held);
-    chartPush(key);
-    return true;
-  }
-  /** the server's chart keys are the truth, like every other kind — except a key still pending here: kept, and sent again (alone) */
-  function chartHydrate(prefs) {
-    var changed = false;
-    chartKeysHeld(prefs).forEach(function (key) {
-      var held = pendGet(),
-        server = prefs[key] == null ? '' : String(prefs[key]);
-      if (Object.prototype.hasOwnProperty.call(held, key)) {
-        if (server === held[key]) {
-          delete held[key];
-          pendPut(held);
-        } else chartPush(key);
-        return;
-      }
-      if (server === chartGet(key)) return;
-      if (server && CHART_VALUE.test(server)) lsSet('cb_' + key, server);
-      else lsDel('cb_' + key);
-      changed = true;
-    });
-    return changed;
-  }
-  /** a choice made offline goes up when the connection is back: the chart keys alone, one at a time */
-  function chartRetry() {
-    Object.keys(pendGet()).forEach(function (key) {
-      if (CHART_KEY.test(key)) chartPush(key);
-    });
-  }
-  /** a pending mark that is NOT a chart key — the ones push()'s full body carries */
-  function otherPending() {
-    return Object.keys(pendGet()).some(function (key) {
-      return !CHART_KEY.test(key);
-    });
-  }
-
-  root.CBChartCap = { ready: chartReady };
   root.CBAvatar = {
     mount: mount,
     apply: apply,
@@ -1351,8 +1214,9 @@
     applyTheme: themeApply,
     push: push,
     pending: pendGet,
-    chartGet: chartGet,
-    chartSet: chartSet,
+    host: function () {
+      return HOST;
+    },
     themeBase: themeBase,
     menuHtml: menuHtml,
     isOpen: function () {

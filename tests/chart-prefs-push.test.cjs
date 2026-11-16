@@ -9,6 +9,8 @@
  *   · the chart kinds and types are the pinned lists (the api's tests/chart-prefs.test.cjs pins the same literals)
  *   · CBDraw draws at most 120 points of a series
  *
+ * (Step 2: the chart keys moved out of avatar.js into app/chart-cap.js; their pending marks have their own store, cb_chart_pending.)
+ *
  * No browser: a stand-in document, storage and fetch (the avatar-hydrate harness, trimmed). Run: node tests/chart-prefs-push.test.cjs
  */
 'use strict';
@@ -34,11 +36,12 @@ function page(o) {
   Object.entries(o.ls || {}).forEach(([k, v]) => g.localStorage.setItem(k, v));
   if (typeof globalThis.esc !== 'function') require('vm').runInThisContext(fs.readFileSync(path.join(path.dirname(FILE), 'helpers.js'), 'utf8'));
   new Function('window', 'localStorage', 'document', fs.readFileSync(FILE, 'utf8')).call(g, g, g.localStorage, g.document);
+  new Function('window', 'localStorage', 'document', fs.readFileSync(path.join(path.dirname(FILE), 'chart-cap.js'), 'utf8')).call(g, g, g.localStorage, g.document);
   g.A = g.CBAvatar;
   g.A.mount({ innerHTML: '', querySelector: () => null, contains: () => false }, { apiBase: 'http://api', token: 't', pull: false });
   return g;
 }
-const chartScripts = (g) => g.scripts.filter((n) => String(n.src || '').startsWith('/engine/chart'));
+const chartScripts = (g) => g.scripts.filter((n) => ['/engine/chart-draw.js', '/app/chart-bar.js'].includes(String(n.src || '')));
 const tick = () => new Promise((r) => setTimeout(r, 5));
 let pass = 0, fail = 0;
 const it = (what, fn) => Promise.resolve().then(fn).then(() => { pass++; console.log('  ok  ' + what); }, (e) => { fail++; console.log('  FAIL ' + what + '\n       ' + ((e && e.message) || e)); });
@@ -54,11 +57,11 @@ const chartKeysIn = (body) => Object.keys(body).filter((k) => /^chart_/.test(k))
   });
   await it('chartSet sends ONLY the key just changed, in a body of its own', async () => {
     const g = page();
-    assert.strictEqual(g.A.chartSet('chart_fav_series', 'ocean-column'), true);
+    assert.strictEqual(g.CBChartCap.set('chart_fav_series', 'ocean-column'), true);
     await tick();
     assert.deepStrictEqual(g.sent.map((s) => s.body), [{ chart_fav_series: 'ocean-column' }]);
-    assert.strictEqual(g.A.chartGet('chart_fav_series'), 'ocean-column');
-    assert.deepStrictEqual(g.A.pending(), {}, 'ok:true clears the mark');
+    assert.strictEqual(g.CBChartCap.get('chart_fav_series'), 'ocean-column');
+    assert.deepStrictEqual(g.CBChartCap.pending(), {}, 'ok:true clears the mark');
   });
   await it('after a favourite is held, a theme change still carries no chart key', async () => {
     const g = page();
@@ -67,53 +70,52 @@ const chartKeysIn = (body) => Object.keys(body).filter((k) => /^chart_/.test(k))
     g.A.set('theme', 'dark');
     await tick();
     g.sent.forEach((s) => assert.deepStrictEqual(chartKeysIn(s.body), []));
-    assert.strictEqual(g.A.chartGet('chart_fav_series'), 'ocean-column');
-    assert.strictEqual(g.A.chartGet('chart_read'), 'on');
+    assert.strictEqual(g.CBChartCap.get('chart_fav_series'), 'ocean-column');
+    assert.strictEqual(g.CBChartCap.get('chart_read'), 'on');
   });
   await it('the server is the truth: it sets a key, and a key it no longer holds resets the device', () => {
     const g = page({ ls: { cb_chart_theme: 'old' } });
     assert.strictEqual(g.A.hydrate({ chart_read: 'on' }), true);
-    assert.strictEqual(g.A.chartGet('chart_read'), 'on');
-    assert.strictEqual(g.A.chartGet('chart_theme'), '', 'cleared on the server → cleared here');
+    assert.strictEqual(g.CBChartCap.get('chart_read'), 'on');
+    assert.strictEqual(g.CBChartCap.get('chart_theme'), '', 'cleared on the server → cleared here');
   });
   await it('a key still pending here (the push never landed) is KEPT and sent again, alone', async () => {
     const g = page({ answer: { ok: false, pending: true } });
-    g.A.chartSet('chart_theme', 'ocean');
+    g.CBChartCap.set('chart_theme', 'ocean');
     await tick();
-    assert.deepStrictEqual(g.A.pending(), { chart_theme: 'ocean' });
+    assert.deepStrictEqual(g.CBChartCap.pending(), { chart_theme: 'ocean' });
     g.sent.length = 0;
     g.A.hydrate({});
     await tick();
-    assert.strictEqual(g.A.chartGet('chart_theme'), 'ocean', 'kept');
+    assert.strictEqual(g.CBChartCap.get('chart_theme'), 'ocean', 'kept');
     assert.deepStrictEqual(g.sent.map((s) => s.body), [{ chart_theme: 'ocean' }]);
   });
   await it('clearing a key sends it empty (= remove) and holds the removal until the server has it', async () => {
     const g = page({ ls: { cb_chart_theme: 'ocean' }, answer: { ok: false, pending: true } });
-    g.A.chartSet('chart_theme', '');
+    g.CBChartCap.set('chart_theme', '');
     await tick();
-    assert.strictEqual(g.A.chartGet('chart_theme'), '');
+    assert.strictEqual(g.CBChartCap.get('chart_theme'), '');
     assert.deepStrictEqual(g.sent[0].body, { chart_theme: '' });
-    assert.deepStrictEqual(g.A.pending(), { chart_theme: '' });
+    assert.deepStrictEqual(g.CBChartCap.pending(), { chart_theme: '' });
   });
   await it('a bad value or key is refused on the device: nothing stored, nothing sent', async () => {
     const g = page();
-    ['ocean blue', 'a/b', 'x'.repeat(36)].forEach((v) => assert.strictEqual(g.A.chartSet('chart_theme', v), false));
-    assert.strictEqual(g.A.chartSet('theme', 'dark-ish'), false, 'not a chart key');
-    assert.strictEqual(g.A.chartSet('chart_fav_Series', 'a-b'), false, 'kinds are lower case');
+    ['ocean blue', 'a/b', 'x'.repeat(36)].forEach((v) => assert.strictEqual(g.CBChartCap.set('chart_theme', v), false));
+    assert.strictEqual(g.CBChartCap.set('theme', 'dark-ish'), false, 'not a chart key');
+    assert.strictEqual(g.CBChartCap.set('chart_fav_Series', 'a-b'), false, 'kinds are lower case');
     await tick();
     assert.strictEqual(g.sent.length, 0);
-    assert.strictEqual(g.A.chartGet('chart_theme'), '');
+    assert.strictEqual(g.CBChartCap.get('chart_theme'), '');
   });
-  await it('CBChartCap.ready(): no script until asked; two asks make one script; the file is the engine', async () => {
+  await it('CBChartCap.ready(): no script until asked; two asks make one load of the two files (the engine, the bar)', async () => {
     const g = page();
     assert.strictEqual(chartScripts(g).length, 0, 'a page that draws no chart fetches nothing');
     await Promise.all([g.CBChartCap.ready(), g.CBChartCap.ready()]);
-    assert.strictEqual(chartScripts(g).length, 1);
-    assert.strictEqual(chartScripts(g)[0].src, '/engine/chart-draw.js');
+    assert.deepStrictEqual(chartScripts(g).map((n) => n.src), ['/engine/chart-draw.js', '/app/chart-bar.js']);
   });
   await it('CBChartCap.ready() is already done where CBDraw is present', async () => {
     const g = page();
-    g.CBDraw = {};
+    g.CBDraw = {}; g.CBChartBar = {};
     await g.CBChartCap.ready();
     assert.strictEqual(chartScripts(g).length, 0);
   });

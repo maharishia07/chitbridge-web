@@ -134,12 +134,21 @@ function fcPaintChart() {
     width = Math.max(240, (box.clientWidth || 640) - 32);
   CBChartCap.ready().then(
     function () {
-      if (FC.r === report) box.innerHTML = fcChart(report, width);
+      if (FC.r !== report) return;
+      if (!FC.bar || !FC.barScope || !FC.barScope.querySelector('[data-testid="chart-bar"]')) {
+        FC.barScope = box.parentNode;
+        FC.bar = CBChartBar.mount(FC.barScope, { kind: 'series', types: ['column', 'line'], onChange: fcDraw });
+      } else fcDraw(FC.bar.state());
     },
     function () {
       box.innerHTML = '<p class="hint">' + esc(tx('The chart could not load; the table below has the same days.')) + '</p>';
     }
   );
+}
+/** the running balance in the person's choice (columns or a line; the colours are already on the screen as --ch-* tokens) */
+function fcDraw(choice) {
+  var box = document.getElementById('fc_chart');
+  if (box && FC.state === 'ready' && FC.r) box.innerHTML = fcChart(FC.r, Math.max(240, (box.clientWidth || 640) - 32), choice);
 }
 window.addEventListener('resize', function () {
   clearTimeout(FC.rs);
@@ -149,7 +158,7 @@ window.addEventListener('resize', function () {
  * the running balance as bars, one per day (the server's balance_minor — drawn, never worked out here): the accent above zero, red below (a sale
  * at risk is the one red), a zero line, the day under every bar (every 5th on 30 days) and the lowest day labelled. The same numbers are the table.
  */
-function fcChart(report, width) {
+function fcChart(report, width, choice) {
   var rows = report.series || [],
     count = rows.length;
   if (!count || typeof CBDraw === 'undefined') return '';
@@ -165,7 +174,7 @@ function fcChart(report, width) {
       label: String(item.date).slice(8, 10),
       value: vals[index],
       neg: vals[index] < 0,
-      fill: vals[index] < 0 ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)',
+      fill: vals[index] < 0 ? 'var(--red,#C4562F)' : 'var(--ch-act,var(--accent,#1f5f5b))',
       opacity: index === 0 ? 0 : 0.82,
       title: bkDate(item.date) + ' · ' + fcBal(vals[index], currency)
     };
@@ -186,6 +195,8 @@ function fcChart(report, width) {
       id: 'fc',
       tid: 'fc',
       svgTid: 'fc-svg',
+      type: choice && choice.type,
+      read: choice && choice.read,
       aria: report.words || '',
       labelOn: function (index, total) {
         return total <= 7 || index % 5 === 0 || index === total - 1;

@@ -5,7 +5,9 @@
  *           period, an empty tick for a period with no record; per bar its own tone, and one marked point (the lowest day) · spark(values, opts) — a
  *           sparkline with its last point dotted · stackBar(parts, opts) — one 100% bar in HTML with its key · stackRows(rows, opts) — a stacked
  *           bar per row with its count · stackColumns(columns, opts) — stacked columns, oldest left · KINDS and TYPES — the ONE vocabulary of chart
- *           kinds and drawings (the person's favourites are chart_fav_<kind> in ui_prefs; the api's lib/chart-prefs.js pins the same two lists).
+ *           kinds and drawings (the person's favourites are chart_fav_<kind> in ui_prefs; the api's lib/chart-prefs.js pins the same two lists) ·
+ *           COMBOS and paletteOf(id, tokens, read) — the colour combinations as DATA, ONE place, and what a combination draws in the vibrant default and in
+ *           the readable render · applyPalette(host, palette, read) — writes the palette as --ch-* tokens on a host and marks it data-read="on|off".
  * CALLED BY app/cap-mis-trend.js (CB Finance › Reports › Trend) · app/cap-finance-cash.js (the running balance) · app/cap-admin.js (the MIS flow
  *           bar and sparkline) · app/shell.js (the Till card's teaser on Home) · public/testing.html (its four charts; internal, loads this by tag).
  * LOADED BY CBChartCap.ready() (app/avatar.js) — a page that draws no chart never fetches this file.
@@ -19,8 +21,8 @@
  */
 (function (root) {
   'use strict';
-  var BAR = 'var(--green-d,#1f6b46)',
-    LAST_YEAR = 'var(--muted,#6f6450)',
+  var BAR = 'var(--ch-act,var(--green-d,#1f6b46))',
+    LAST_YEAR = 'var(--ch-prev,var(--muted,#6f6450))',
     BASELINE = 'var(--line-3,#d8ccb0)',
     DOT_FILL = 'var(--card,#fffdf8)',
     LABEL = 'var(--muted,#6f6450)';
@@ -146,6 +148,27 @@
       : '';
   }
 
+  /** the same points as ONE line (type "line"): a path through every figure, a dot on each carrying the same test id and words as its bar would */
+  function valueLineOf(points, layout, testId) {
+    var path = '',
+      dots = '',
+      penDown = false;
+    points.forEach(function (point, index) {
+      var value = figure(point.value);
+      if (value === null) {
+        penDown = false;
+        return;
+      }
+      var across = (index * layout.step + layout.step / 2).toFixed(1),
+        down = layout.yOf(value).toFixed(1);
+      path += (penDown ? ' L' : ' M') + across + ' ' + down;
+      penDown = true;
+      dots += '<circle cx="' + across + '" cy="' + down + '" r="3" data-testid="' + escape(testId + '-bar-' + point.key) + '" data-state="' + (point.hatch ? 'partial' : 'full') +
+        '" style="fill:' + (point.fill || BAR) + '"><title>' + escape(point.title || '') + '</title></circle>';
+    });
+    return path ? '<path d="' + path.trim() + '" data-testid="cd-valueline" style="fill:none;stroke:' + BAR + ';stroke-width:2;stroke-linejoin:round"/>' + dots : '';
+  }
+
   /** the labels under the bars: every k-th, counted from the newest so the latest always has its label */
   function labelsOf(points, layout, chartHeight, labelOn) {
     var every = Math.max(1, Math.ceil(LABEL_GAP / layout.step)),
@@ -262,23 +285,27 @@
       hatch +
       scaleWordsOf(options.top) +
       zeroLineOf(width, layout) +
-      list
+      (options.type === 'line' ? valueLineOf(list, layout, testId) : list
         .map(function (point, index) {
           return barOf(point, index, layout, testId);
         })
-        .join('') +
+        .join('')) +
       lineOf(list, layout) +
       labelsOf(list, layout, height, options.labelOn) +
       markOf(options.mark, list, layout, width, height) +
       '</svg>'
     );
   }
+  /** the mode a chart was drawn in, on the chart element itself: the a11y guard reads it from here, the chart does not guess (read "on" = the readable render) */
+  function readOf(options) {
+    return options.read ? ' data-read="' + (options.read === 'on' ? 'on' : 'off') + '"' : '';
+  }
   /** the bars' svg tag: inline sizes, because the page's icon rule (svg{width:18px}) would otherwise shrink the chart to an icon */
   function barsOpen(width, height, options) {
     return (
       '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + escape(options.aria || '') +
-      '" data-testid="' + escape(options.svgTid || (options.tid || 'cd') + '-chart') +
-      '" style="display:block;width:100%;height:' + height + 'px;overflow:visible;stroke:none;fill:none">'
+      '" data-testid="' + escape(options.svgTid || (options.tid || 'cd') + '-chart') + '"' + readOf(options) +
+      ' style="display:block;width:100%;height:' + height + 'px;overflow:visible;stroke:none;fill:none">'
     );
   }
   /** the words at the top-left (the scale), or nothing */
@@ -333,7 +360,7 @@
       : 'display:inline-block;vertical-align:middle;width:' + width + 'px;height:' + height + 'px';
     return (
       '<svg viewBox="0 0 ' + width + ' ' + height + '" width="' + width + '" height="' + height + '" role="img" aria-label="' + escape(options.aria || '') +
-      '" data-testid="' + escape(options.tid || 'cd-spark') + '"' +
+      '" data-testid="' + escape(options.tid || 'cd-spark') + '"' + readOf(options) +
       (options.cls ? ' class="' + escape(options.cls) + '"' : '') +
       (options.fluid ? ' preserveAspectRatio="none"' : '') +
       ' style="' + box + ';overflow:visible;fill:none;stroke:none">'
@@ -463,7 +490,174 @@
     return out;
   }
 
-  var CBDraw = { bars: bars, spark: spark, stackBar: stackBar, stackRows: stackRows, stackColumns: stackColumns, KINDS: KINDS, TYPES: TYPES, MAX_POINTS: MAX_POINTS };
+  /**
+   * THE COLOUR COMBINATIONS, AS DATA, in ONE place. A combination is { name, act (this period), prev (the one before), acc (a third mark), ramp (five, calm to warm), pie? (six slice
+   * colours), more? }. "Follow my avatar theme" is not here: it is the 'tint' rule below, resolved on the person's own theme, and it is what a person who chose nothing sees.
+   * PUBLISHED HEXES, each as the sample page read it (web branch l16/mis-sample-web, public/lab/chart-themes.html; nothing else is used, which colour does which job is ours):
+   *   okabe      Okabe-Ito, https://siegal.bio.nyu.edu/color-palette/ (8 hexes, unnamed there)
+   *   tableau    Tableau colour-blind, matplotlib stylelib/tableau-colorblind10.mplstyle
+   *   classic    Tableau classic, d3-scale-chromatic src/categorical/Tableau10.js
+   *   carbon     IBM Carbon, https://carbondesignsystem.com/data-visualization/color-palettes/ (14 hexes)
+   *   set2 · dark2 · paired   ColorBrewer, axismaps/colorbrewer export/colorbrewer.js
+   *   viridis    BIDS/colormap colormaps.py, entries 0, 64, 128, 192, 255
+   *   tealpink · coolblue   the theme files ColorblindSafe-Longer.json and Waveform.json that Microsoft Learn's report-themes page links
+   * NOT USED: the built-in Power BI report themes (their hexes were pictures only). RED IS NEVER A SERIES COLOUR: a red-led hex (Carbon's #9f1853) is left out, and
+   * tests/chart-combos.test.cjs fails on any series colour whose hue is red. The order is the sample's; the ranked order is the generated test's (its readability count over the 16 themes).
+   * The colour-blind scores are NOT shown: the sample's simulation matrices were typed from memory.
+   */
+  var COMBOS = {
+    ibcs: { name: 'IBCS grey' },
+    okabe: { name: 'Okabe-Ito', act: '#0072B2', prev: '#E69F00', acc: '#009E73', ramp: ['#0072B2', '#56B4E9', '#009E73', '#F0E442', '#E69F00'], more: ['#CC79A7'] },
+    tableau: { name: 'Tableau colour-blind', act: '#006BA4', prev: '#FF800E', acc: '#C85200', ramp: ['#006BA4', '#5F9ED1', '#FFBC79', '#FF800E', '#C85200'], more: ['#A2C8EC'] },
+    classic: { name: 'Tableau classic', act: '#4e79a7', prev: '#f28e2c', acc: '#59a14f', ramp: ['#4e79a7', '#76b7b2', '#59a14f', '#edc949', '#f28e2c'], more: ['#af7aa1'] },
+    carbon: { name: 'IBM Carbon', act: '#6929c4', prev: '#1192e8', acc: '#005d5d', ramp: ['#005d5d', '#1192e8', '#6929c4', '#b28600', '#8a3800'] },
+    tealpink: { name: 'Teal and pink, colour-blind safe', act: '#074650', prev: '#009292', acc: '#480091', ramp: ['#074650', '#009292', '#6db6ff', '#fe6db6', '#914800'] },
+    coolblue: { name: 'Cool blues to lime', act: '#4584D3', prev: '#31B6FD', acc: '#4C45D3', ramp: ['#4584D3', '#5BD0B0', '#5BD078', '#A5D028', '#F5C040'] },
+    set2: { name: 'Brewer Set2 pastel', act: '#66c2a5', prev: '#fc8d62', acc: '#8da0cb', ramp: ['#8da0cb', '#66c2a5', '#a6d854', '#ffd92f', '#fc8d62'], more: ['#e78ac3'] },
+    dark2: { name: 'Brewer Dark2', act: '#1b9e77', prev: '#d95f02', acc: '#7570b3', ramp: ['#7570b3', '#1b9e77', '#66a61e', '#e6ab02', '#d95f02'], more: ['#e7298a'] },
+    paired: { name: 'Brewer Paired', act: '#1f78b4', prev: '#a6cee3', acc: '#6a3d9a', ramp: ['#1f78b4', '#a6cee3', '#33a02c', '#fdbf6f', '#ff7f00'] },
+    viridis: { name: 'Viridis', act: '#3b518b', prev: '#5cc863', acc: '#21908d', ramp: ['#440154', '#3b518b', '#21908d', '#5cc863', '#fde725'], pie: ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'] }
+  };
+  var MARK_NEED = 3; /* WCAG 1.4.11: a series mark against the page */
+  var TEXT_NEED = 4.5; /* WCAG 1.4.3: text */
+
+  /** a css colour (#hex, #hex3 or rgb()) as [r, g, b] */
+  function channelsOf(colour) {
+    var text = String(colour).trim();
+    if (text.charAt(0) === '#') {
+      var hex = text.slice(1);
+      if (hex.length === 3) hex = hex.replace(/./g, '$&$&');
+      return [0, 2, 4].map(function (at) {
+        return parseInt(hex.substr(at, 2), 16);
+      });
+    }
+    return (text.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+  }
+  /** WCAG contrast of two colours. The same arithmetic as CBUiStandard.contrastRatio (the UI standard page's helper, which is the page's and too heavy to load on a chart
+   *  page); tests/chart-combos.test.cjs holds the two equal on a table of pairs, so there is still ONE answer. */
+  function contrast(first, second) {
+    var light = function (colour) {
+      var part = channelsOf(colour).map(function (value) {
+        var unit = value / 255;
+        return unit <= 0.03928 ? unit / 12.92 : Math.pow((unit + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * part[0] + 0.7152 * part[1] + 0.0722 * part[2];
+    };
+    var high = Math.max(light(first), light(second)),
+      low = Math.min(light(first), light(second));
+    return (high + 0.05) / (low + 0.05);
+  }
+  /** a mix of two colours, the first at share (0..1): the same as css color-mix(in srgb) */
+  function mixOf(first, second, share) {
+    var one = channelsOf(first),
+      two = channelsOf(second);
+    return (
+      'rgb(' +
+      [0, 1, 2]
+        .map(function (at) {
+          return Math.round(one[at] * share + two[at] * (1 - share));
+        })
+        .join(',') +
+      ')'
+    );
+  }
+  /** the black or the white that reads better on a colour: the text colour for a label written inside a fill */
+  function onColour(fill) {
+    return contrast(fill, '#ffffff') >= contrast(fill, '#000000') ? '#ffffff' : '#000000';
+  }
+  /** the share (30..100, in 5s) of a colour that, mixed toward the page, is the lightest that still clears 3:1 against the page */
+  function lightestShare(colour, page) {
+    var share = 30;
+    while (share < 100 && contrast(mixOf(colour, page, share / 100), page) < MARK_NEED) share += 5;
+    return share;
+  }
+  /** the colour of this person's own theme, as marks: this period the accent, the one before a lighter tint of it, a ramp from the theme's amber to its accent (rule "tint") */
+  function tintOf(tokens) {
+    return {
+      act: tokens.acc,
+      prev: mixOf(tokens.acc, tokens.page, lightestShare(tokens.acc, tokens.page) / 100),
+      acc: tokens.ink,
+      ramp: [0, 0.2, 0.4, 0.6, 0.8].map(function (share) {
+        return mixOf(tokens.prog, tokens.acc, share);
+      })
+    };
+  }
+  /** IBCS: this period the ink, the one before the lightest ink mix that clears 3:1, a grey ramp from there to the ink */
+  function greyOf(tokens) {
+    var share = lightestShare(tokens.ink, tokens.page);
+    return {
+      act: tokens.ink,
+      prev: mixOf(tokens.ink, tokens.page, share / 100),
+      acc: tokens.acc,
+      ramp: [0, 1, 2, 3, 4].map(function (at) {
+        return mixOf(tokens.ink, tokens.page, (share + ((100 - share) * at) / 4) / 100);
+      })
+    };
+  }
+  /** the six slice colours of a set: its own, distinct (a published list as published) */
+  function sliceColours(set) {
+    if (set.pie) return set.pie;
+    var seen = {},
+      out = [];
+    [set.act, set.prev, set.acc].concat(set.ramp, set.more || []).forEach(function (colour) {
+      var key = channelsOf(colour).join();
+      if (!seen[key]) {
+        seen[key] = 1;
+        out.push(colour);
+      }
+    });
+    return out.slice(0, 6);
+  }
+  /** the lowest contrast of any mark of a palette against the page */
+  function lowestMark(palette, page) {
+    return Math.min.apply(
+      null,
+      palette.pie.concat([palette.act, palette.prev, palette.acc], palette.ramp).map(function (colour) {
+        return contrast(colour, page);
+      })
+    );
+  }
+  /**
+   * paletteOf(id, tokens, read) → { act, prev, acc, ramp, pie, on, used, held } — tokens { page, ink, acc, prog } are the person's theme as css colours; read is "on" or "off".
+   * VIBRANT (off, the default): a published combination draws exactly as published, whatever its contrast: it is the person's own pick, and the guards treat it so.
+   * READABLE (on): a combination that holds 3:1 on every mark against the page draws as it is; one that does not draws as IBCS grey for this theme. No id (or an unknown
+   * one, a removed combination read back) is "follow my avatar theme". `used` names what was drawn; `held` says whether every mark clears 3:1.
+   */
+  function paletteOf(id, tokens, read) {
+    var set = COMBOS[id] && COMBOS[id].act ? JSON.parse(JSON.stringify(COMBOS[id])) : id === 'ibcs' ? greyOf(tokens) : tintOf(tokens),
+      used = COMBOS[id] ? id : 'follow';
+    set.pie = sliceColours(set);
+    var held = lowestMark(set, tokens.page) >= MARK_NEED;
+    if (read === 'on' && !held) {
+      /* the readable render: the person's theme tint where it clears 3:1, else the IBCS grey (REQ section 6) */
+      set = tintOf(tokens);
+      set.pie = sliceColours(set);
+      used = 'follow';
+      if (lowestMark(set, tokens.page) < MARK_NEED) {
+        set = greyOf(tokens);
+        set.pie = sliceColours(set);
+        used = 'ibcs';
+      }
+      held = lowestMark(set, tokens.page) >= MARK_NEED;
+    }
+    set.on = onColour(set.act);
+    set.used = used;
+    set.held = held;
+    return set;
+  }
+  /** write a palette as --ch-* tokens on a host, and say which mode it is in (data-read) on the host: every chart under it inherits the colours */
+  function applyPalette(host, palette, read) {
+    var names = { '--ch-act': palette.act, '--ch-prev': palette.prev, '--ch-acc': palette.acc };
+    palette.ramp.forEach(function (colour, at) {
+      names['--ch-r' + at] = colour;
+    });
+    Object.keys(names).forEach(function (name) {
+      host.style.setProperty(name, names[name]);
+    });
+    host.setAttribute('data-read', read === 'on' ? 'on' : 'off');
+  }
+
+  var CBDraw = { bars: bars, spark: spark, stackBar: stackBar, stackRows: stackRows, stackColumns: stackColumns, KINDS: KINDS, TYPES: TYPES, MAX_POINTS: MAX_POINTS, COMBOS: COMBOS, paletteOf: paletteOf, applyPalette: applyPalette, contrast: contrast, onColour: onColour, channelsOf: channelsOf, MARK_NEED: MARK_NEED, TEXT_NEED: TEXT_NEED };
   if (typeof module !== 'undefined' && module.exports) module.exports = CBDraw;
   if (root) root.CBDraw = CBDraw;
 })(typeof window !== 'undefined' ? window : globalThis);
