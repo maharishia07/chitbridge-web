@@ -39,8 +39,11 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
   ok(feeLine && feeLine.other && feeLine.other.code && feeLine.party_name === null, 'the fee line says its expense ledger (' + (feeLine && feeLine.other && feeLine.other.name) + ') and no party');
   const b = await chromium.launch();
   for (const vp of [{ width: 1366, height: 768, tag: '1366' }, { width: 390, height: 844, tag: '390' }]) {
-    const { ctx, page: p } = await L.open(b, base, token, vp, undefined, '/accounts.html#ledgers', '[data-testid^="stmt-amt-"]');
-    await p.waitForTimeout(2500);
+    const { ctx, page: p } = await L.open(b, base, token, vp, undefined, '/accounts.html#ledgers', '[data-testid="lg-acc-' + bank.code + '"]');
+    await p.waitForTimeout(1500);
+    if (!(await p.locator('[data-testid^="stmt-amt-"]').count())) await p.click('[data-testid="lg-acc-' + bank.code + '"]');
+    await p.waitForSelector('[data-testid^="stmt-amt-"]', { timeout: 20000 });
+    await p.waitForTimeout(1500);
     const texts = await p.$$eval('[data-testid^="stmt-amt-"]', (els) => els.map((e) => { let n = e; for (let i = 0; i < 6 && n && !/^(TR|LI)$/.test(n.tagName) && !(n.getAttribute && /row/.test(n.getAttribute('role') || '')); i++) n = n.parentElement; return (n || e).innerText.replace(/\s+/g, ' ').trim(); }));
     console.log('   ' + vp.tag + ' rows: ' + JSON.stringify(texts.filter((t) => /Coogee|charge|Customers|Split/i.test(t)).slice(0, 6)));
     ok(texts.some((t) => /·/.test(t) && /Coogee/.test(t)), vp.tag + ': Details reads "<ledger> · <customer>" on the receipt line');
