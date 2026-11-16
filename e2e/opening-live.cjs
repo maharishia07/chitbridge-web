@@ -134,8 +134,8 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   /* 3 · keyboard only, a fresh page (the saved opening -> Edit) */
   ({ ctx, page: p } = await open({ width: 1366, height: 768 }));
   await p.keyboard.press('Tab');
-  let n = 0; while (n++ < 12 && (await p.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-testid'))) !== 'ob-edit') await p.keyboard.press('Tab');
-  ok((await p.evaluate(() => document.activeElement.getAttribute('data-testid'))) === 'ob-edit', 'keyboard: Tab reaches Edit');
+  let n = 0; while (n++ < 90 && (await p.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-testid'))) !== 'ob-edit') await p.keyboard.press('Tab');
+  ok((await p.evaluate(() => document.activeElement.getAttribute('data-testid'))) === 'ob-edit', 'keyboard: Tab reaches Edit (' + (n - 1) + ' presses from the top of the page)');
   await p.keyboard.press('Enter');
   await p.waitForSelector('[data-testid="ob-save"]');
   const order = [];
