@@ -70,6 +70,7 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
       if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return J(r, 200, []);
+      if (p === '/api/books/periods') return J(r, 200, books.periods([]));
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer({ events: [], picks: {} }));
       if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: 10000000, closing_minor: 10700000 }));
