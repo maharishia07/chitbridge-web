@@ -1,6 +1,6 @@
 /**
  * cap-evidence.js — CMP062 the Evidence chip and CMP063 the Evidence sheet: what stands behind a books row (ASA 500: the auditor vouches an entry to its source).
- * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No document), or, for a purchase that claims GST above the tax-invoice threshold with no file,
+ * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: an opening balance, a receipt or a journal, so nothing to attach to), or, for a purchase that claims GST above the tax-invoice threshold with no file,
  * No tax invoice (a warning). A press opens the sheet: the source document (its number) and its files; a file opens in a new tab.
  *
  * OWNS      the chip html · the sheet · the one door a file is read through (GET /api/books/evidence/:id, with the seat's own headers, never cached)
@@ -29,7 +29,7 @@
   var W = {
     flag: 'No tax invoice',
     none: 'No file',
-    nodoc: 'No document',
+    nodoc: 'No source',
     evidence: 'Evidence',
     head: 'Evidence for {no}',
     source: 'Source document',
@@ -76,12 +76,12 @@
     return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
   }
 
-  /** the chip's state from what the server sent: { tone, word } */
+  /** the chip's state from what the server sent: { key, rank, tone, word } (key = the Day book's Evidence filter; rank = its sort, the ones needing action first) */
   function stateOf(ev) {
-    if (ev.flag === 'no_tax_invoice') return { tone: 'warn', word: T(W.flag), sym: '⚠' };
-    if (ev.count > 0) return { tone: 'ok', word: T(W.evidence) + ' ' + ev.count, sym: '📎' };
-    if (ev.doc) return { tone: 'quiet', word: T(W.none), sym: '○' };
-    return { tone: 'quiet', word: T(W.nodoc), sym: '○' };
+    if (ev.flag === 'no_tax_invoice') return { key: 'flag', rank: 0, tone: 'warn', word: T(W.flag), sym: '⚠' };
+    if (ev.count > 0) return { key: 'held', rank: 3, tone: 'ok', word: T(W.evidence) + ' ' + ev.count, sym: '📎' };
+    if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: T(W.none), sym: '○' };
+    return { key: 'nodoc', rank: 2, tone: 'quiet', word: T(W.nodoc), sym: '○' };
   }
 
   function use(cfg) {
@@ -218,5 +218,5 @@
     );
   }
 
-  root.CBEvidence = { use: use, stateOf: stateOf };
+  root.CBEvidence = { use: use, stateOf: stateOf, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File held' } };
 })(typeof window !== 'undefined' ? window : globalThis);

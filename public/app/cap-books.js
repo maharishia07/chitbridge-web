@@ -2622,7 +2622,40 @@ function bkMarkChips(notices, entries) {
   });
   return count.waiting;
 }
-/** declare the Day book's list once per read: its columns, grouping, four filters (Kind · Tender · Counter · Person), sorts, search, next level, CSV — the page paints nothing else */
+/** the Evidence state of an entry (CBEvidence.stateOf, the chip's own): flag · none · nodoc · held; null when the server sent none */
+function bkDvEvState(e) {
+  return e && e.evidence ? CBEvidence.stateOf(e.evidence) : null;
+}
+function bkDvEvRank(e) {
+  var s = bkDvEvState(e);
+  return s ? s.rank : 9;
+}
+/** the fifth filter, Evidence: one choice per state the chip can show, with how many entries hold it */
+function bkDvEvidenceFilter(ents) {
+  var n = {};
+  ents.forEach(function (e) {
+    var s = bkDvEvState(e);
+    if (s) n[s.key] = (n[s.key] || 0) + 1;
+  });
+  var w = CBEvidence.words;
+  return {
+    key: 'evidence',
+    label: tx('Evidence'),
+    all: tx('Evidence'),
+    match: function (e, v) {
+      var s = bkDvEvState(e);
+      return !!s && s.key === v;
+    },
+    options: ['flag', 'none', 'nodoc', 'held']
+      .filter(function (k) {
+        return n[k];
+      })
+      .map(function (k) {
+        return { v: k, label: tx(w[k]) + ' · ' + n[k] };
+      })
+  };
+}
+/** declare the Day book's list once per read: its columns, grouping, five filters (Kind · Tender · Counter · Person · Evidence), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
   var d = BK.dv,
     c = d.r.currency,
@@ -2654,6 +2687,7 @@ function bkDvMount(el) {
       })
     };
   });
+  if (BK.ev) filters.push(bkDvEvidenceFilter(ents));
   var by = function (f, num) {
     return function (a, b) {
       var x = f(a),
@@ -2663,7 +2697,7 @@ function bkDvMount(el) {
   };
   var cols = bkDvCols(c);
   if (BK.ev)
-    cols.splice(cols.length - 1, 0, { key: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = e.evidence && CBEvidence.stateOf(e.evidence); return s ? s.word : ''; } }); /* CMP062: never cut to make room */
+    cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = e.evidence && CBEvidence.stateOf(e.evidence); return s ? s.word : ''; } }); /* CMP062: never cut to make room */
   if (BK.mk && BK.mk.state().may)
     cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
   return CBList.mount(el, {
@@ -2767,7 +2801,7 @@ function bkDvMount(el) {
         })
       },
       { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) }
-    ],
+    ].concat(BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : []),
     csv: function (rows) {
       bkDvDownload(rows);
     },
