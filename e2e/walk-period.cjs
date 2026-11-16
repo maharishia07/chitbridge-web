@@ -74,7 +74,7 @@ W.run('period', async (w) => {
   await page.focus(T('nw-books-' + MEMBER)); await page.keyboard.press('Enter');
   await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector('#bv_period', { timeout: 10000 }); await page.waitForTimeout(500);
 
-  await w.step('P1', 'the firm opens a client: the period control sits in the header line (W19's named slot) and opens on the year under review (FY 2025-26), the Day book reads that year, not this month', async () => {
+  await w.step('P1', 'the firm opens a client: the period control sits in the header line (the named slot of W19) and opens on the year under review (FY 2025-26), the Day book reads that year, not this month', async () => {
     const dq = lastCall('/api/books/daybook'), where = await page.$eval(T('bv-period-slot'), (el) => el.closest('[data-testid="bv-band"]') !== null);
     return { ok: (await picked()) === 'y:2025-26' && dq.get('from') === '2025-07-01' && dq.get('to') === '2026-06-30' && where, saw: 'value ' + (await picked()) + ' · daybook ' + dq.get('from') + ' – ' + dq.get('to') + ' · in the header line ' + where };
   });
