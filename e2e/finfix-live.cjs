@@ -29,7 +29,7 @@ const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
       await p.waitForTimeout(800);
       const t = flat(await p.locator('[data-pb]').first().innerText().catch(() => ''));
       ok(/Date.*Bill.*Due date.*Days overdue.*Status.*Amount.*Still owed.*Reviewed/i.test(t), 'the sub-table header: Date · Bill · Due date · Days overdue · Status · Amount · Still owed · Reviewed (' + vp.tag + ')');
-      ok(/Open \d+/.test(t) && /Paid \d+/.test(t) && /All \d+/.test(t), 'Open / Paid / All carry the server counts');
+      ok(/Needs you \d+/.test(t) && /Open \d+/.test(t) && /All \d+/.test(t), 'Needs you / Open / All carry the server counts (W15-113: the Paid tab is gone, All holds the paid)');
       ok(!/ 07:00| 0[0-9]:[0-9]{2} (am|pm)/i.test(t), 'no time-of-day noise on the bill rows');
       await shot('recv-open');
       const chip = p.locator('[data-pb] [data-b^="band-"]').first();
