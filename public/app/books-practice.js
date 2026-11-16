@@ -296,22 +296,46 @@
      they wait for the one practice read (at most `ms`) and then know which Home they are on. Never rejects. */
   var settleNow = null,
     settledOnce = new root.Promise(function (go) { settleNow = go; });
-  function settle() { P.pending = false; dropWaiting(); if (settleNow) settleNow(true); }
+  function settle() { P.pending = false; release(); dropWaiting(); if (settleNow) settleNow(true); }
   /* l16 R4-2: the wait is for the ANSWER, not for 3 s. A practice answer held past 3 s used to let Home decide "not a firm": the auditor saw the shop Home and the page asked 31 calls against a budget of 8. The ceiling is
      only a hang-guard (a read that never returns); a slow answer shows the loading frame (drawWaiting) and Home waits for it. */
   var SETTLE_CEILING = 25000;
   function settled(ms) {
     return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(go, ms || SETTLE_CEILING, false); })]);
   }
-  /** what the last answer said (a firm or not), kept per browser only to word the loading frame; the page never decides from it */
-  function hint(set) {
+  /** what the last answer said (a firm or not) for THIS login, kept per browser only to word the loading frame and to decide whether Home holds its paint; the page never decides from it.
+      Stored as "1:<token tail>" / "0:<token tail>" so another login in the same browser reads as unknown. */
+  function hintRaw() {
     try {
-      if (set !== undefined) root.localStorage.setItem('cb_practice_hint', set ? '1' : '0');
-      return root.localStorage.getItem('cb_practice_hint') === '1';
+      var v = root.localStorage.getItem('cb_practice_hint') || '', t = token() || '';
+      return v.slice(1, 2) === ':' && v.slice(2) === t.slice(-12) ? v.slice(0, 1) : '';
     } catch (failure) {
       if (root.cbQuiet) root.cbQuiet('practice:hint', failure);
-      return false;
+      return '';
     }
+  }
+  function hint(set) {
+    try {
+      if (set !== undefined) root.localStorage.setItem('cb_practice_hint', (set ? '1' : '0') + ':' + (token() || '').slice(-12));
+    } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('practice:hint', failure);
+    }
+    return hintRaw() === '1';
+  }
+  /** l16 R5-2: Home paints ONLY the loading frame while this login may be a firm (signed in, and the last answer for this login was not "a shop"): no shop card, no card facts, until settled() answers.
+      A login known to be a shop (hint 0) paints at once as before, so an owner is never slower. */
+  var holding = !!token() && hintRaw() !== '0';
+  function release() {
+    if (!holding) return;
+    holding = false;
+    root.document.documentElement.classList.remove('bp-hold');
+  }
+  if (holding) {
+    root.document.documentElement.classList.add('bp-hold');
+    var hs = root.document.createElement('style');
+    hs.textContent = 'html.bp-hold [data-testid="shell-areas"]{display:none!important}';
+    (root.document.head || root.document.documentElement).appendChild(hs);
+    root.setTimeout(release, SETTLE_CEILING + 500);
   }
   function dropWaiting() {
     var w = root.document.getElementById('bp_wait');
@@ -348,11 +372,12 @@
         tick();
       }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); settle(); });
     } else if (P.data && !root.document.getElementById('bp_practice')) draw();
-    else if (P.pending && !P.data && Date.now() - P.since > 800) drawWaiting();
+    else if (P.pending && !P.data && (holding || Date.now() - P.since > 800)) drawWaiting();
   }
   function start() {
     tick();
     if (!P.timer) P.timer = root.setInterval(tick, 1000);
+    if (holding) { var quick = root.setInterval(function () { if (!holding || P.data) return root.clearInterval(quick); drawWaiting(); }, 60); }
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
