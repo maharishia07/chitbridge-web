@@ -75,7 +75,7 @@
   }
   function figure(row, column) {
     var v = row[column[0]];
-    if (column[2] === MONEY) return moneyCell(row, column[0], v);
+    if (column[2] === MONEY) return narrowLabel(row, column, moneyCell(row, column[0], v));
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
     if (column[0] === 'lock_note') return v || '—'; /* html built from the server's trail, each line escaped */
     if (column[0] === 'party_ref') return partyCell(row, v); /* one painter: the party · ref, and under it who posted it when an adviser did */
@@ -88,6 +88,12 @@
   function partyCell(row, v) {
     var text = v == null || v === '' ? '—' : String(v), by = row.posted_by_words ? '<div class="sub" data-testid="bv-posted-by">' + esc(words('posted') + ' ' + String(row.posted_by_words).replace(/^Posted /, '')) + '</div>' : '';
     return esc(text) + by;
+  }
+  /** W21: on a phone the aged table is a card of values, so each aged figure names its bucket ("1–30 A$220.00"); on a wide screen the column head does that */
+  function narrowLabel(row, column, painted) {
+    var narrow = typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 600px)').matches;
+    var aged = /^age_/.test(column[0]) || (column[0] === 'balance_minor' && viewState.report === 'dues');
+    return narrow && painted && aged ? words(column[1]) + ' ' + painted : painted;
   }
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
   function moneyCell(row, key, v) {

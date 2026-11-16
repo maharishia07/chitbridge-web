@@ -1,7 +1,5 @@
-/* dues-aged.cjs — W21: A FIRM'S "WHO OWES WHOM" IS AN AGED TABLE (Current · 1–30 · 31–60 · 61–90 · 90+ days past due, one row per party, a total row), IN THE FIRM'S VOICE.
- *  A firm reads "Customers owe <client>" / "<client> owes suppliers"; the owner's own wording stays "Customers owe you" / "You owe suppliers".
- *  The fixture is hand-computed: Ravi 100.00 (1–30) + 100.00 (31–60) = 200.00 · Mei 100.00 current + 150.00 90+ = 250.00 · Zed 500.00 (61–90) → customers 950.00; supplier Anand 300.00 (90+).
- *  Fits 1366x768 and 390x844 with no sideways scroll. */
+/* dues-aged.cjs — W21: THE WORDING OF A FIRM'S "WHO OWES WHOM" HEADINGS: a firm reads "Customers owe <client>" / "<client> owes suppliers"; the owner's own voice stays "Customers owe you" / "You owe suppliers" (no client named).
+ *  Calls the page's one voice function (CBBooksGrantView.duesVoice) in a real browser; the rendered aged table, the total row and the 1366 / 390 fit are proved on a box against the real api by e2e/dues-aged-live.cjs. */
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS = process.env.OUT || path.join(__dirname, 'shots');
@@ -56,26 +54,6 @@ const DUES = { currency: 'AUD', asOf: '2026-11-16', total_minor: 65000, parties:
     return { ctx, p, threw };
   }
   const text = (p, sel) => p.locator(sel).innerText().then((t) => t.replace(/\s+/g, ' '));
-  for (const [w, h] of [[1366, 768], [390, 844]]) {
-    const { ctx, p, threw } = await open(w, h, '#/dues');
-    const c = await text(p, '[data-testid="bv-dues-customers"]'), s = await text(p, '[data-testid="bv-dues-suppliers"]'), page = await p.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
-    const tag = w + ' · ';
-    ok((await text(p, '[data-testid="bv-dues-customers-head"]')) === 'Customers owe ' + NAME, tag + 'firm voice: "Customers owe ' + NAME + '"');
-    ok((await text(p, '[data-testid="bv-dues-suppliers-head"]')) === NAME + ' owes suppliers', tag + 'firm voice: "' + NAME + ' owes suppliers"');
-    ok(!/Customers owe you|You owe suppliers/.test(page), tag + 'the owner wording is not on a firm page');
-    ok(/Ravi/.test(c) && /Mei/.test(c) && /Zed/.test(c), tag + 'one row per customer');
-    if (w === 1366) {
-      for (const label of ['Current', '1–30', '31–60', '61–90', '90+', 'Total']) ok(c.includes(label), tag + 'column ' + label);
-      ok(/Total .*950\.00/.test(c) && /100\.00/.test(c) && /500\.00/.test(c) && /150\.00/.test(c), tag + 'the total row carries the server 950.00, the rows 100.00 · 500.00 · 150.00');
-      ok(/Anand .*300\.00/.test(s) && /Total .*300\.00/.test(s), tag + 'supplier row and total, 300.00');
-      ok(!/-\s?\$?300|−/.test(s), tag + 'no minus sign on what is owed');
-    }
-    const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    ok(over <= 0, tag + 'no sideways scroll (' + over + 'px over)');
-    ok(threw.length === 0, tag + 'no page error ' + threw.join(';'));
-    await p.screenshot({ path: path.join(SHOTS, 'dues-aged-' + w + '.png') });
-    await ctx.close();
-  }
   { /* the owner's own voice: no client named */
     const { ctx, p } = await open(1366, 768, '#/daybook');
     const v = await p.evaluate(() => window.CBBooksGrantView.duesVoice(''));
