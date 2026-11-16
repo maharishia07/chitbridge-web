@@ -3,6 +3,7 @@
  * OWNS     the measurement: for every client view (Trial balance, Profit and loss, Balance sheet, Day book, Who owes whom, Months) at both sizes, the VISIBLE top of the first data row, measured from y = 0 of the page at scroll 0, nothing subtracted
  *          (the shell bar, a wrapped crumb, a search box all count: the person sees them). A view with no rows measures its empty state's top. Sideways scroll and a search box on fewer than ten rows fail too.
  * CALLED BY e2e/walk-books-grant.cjs (the auditor seat, step W19) and e2e/walk-books-adviser.cjs (the accountant seat). Needs the walk's page on an open client with the tabs drawn.
+ * PHONE the six tabs are ONE select (bv-tab-select), no tab buttons.
  * CEILINGS TARGET.wide 0.20 · TARGET.narrow 0.30 for every view. A view that cannot meet it yet is listed in e2e/first-data-ceilings.json under "<seat>.<view>.<width>" with its MEASURED fraction; that number may only fall, never be raised (a PR that raises one is refused in review).
  *          The walk prints each view's figure; nothing is loosened silently.
  */
@@ -27,8 +28,10 @@ async function firstDataTop(page, o) {
     await page.setViewportSize(vp); await page.waitForTimeout(300);
     const narrow = vp.width < 500;
     for (const view of VIEWS) {
-      if (!(await has(T('bv-tab-' + view)))) continue;
-      await page.click(T('bv-tab-' + view));
+      const pick = narrow && (await has(T('bv-tab-select'))); /* a phone holds the six screens as ONE library select (header line); a laptop as buttons */
+      if (!pick && !(await has(T('bv-tab-' + view)))) continue;
+      if (pick) await page.selectOption(T('bv-tab-select'), view); else await page.click(T('bv-tab-' + view));
+      if (narrow && !pick) bad.push(seat + '.' + view + '.' + vp.width + ' phone without the one screen select');
       await page.waitForFunction((k) => { const b = document.querySelector('[data-testid="bv-tab-' + k + '"]'); return b && (b.getAttribute('aria-pressed') === 'true' || b.classList.contains('on') || b.getAttribute('aria-selected') === 'true' || true); }, view).catch(() => {});
       await page.waitForTimeout(600);
       await page.evaluate(() => window.scrollTo(0, 0));

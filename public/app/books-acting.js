@@ -203,7 +203,7 @@
   function switchBox(stores) {
     if (!stores || stores.length < 2) return '';
     return (
-      '<label class="sub" for="ba_switch">' + esc(words('Switch client')) + '</label><select data-cbsid="NET006-S01" id="ba_switch" class="inp" data-testid="ba-switch">' +
+      '<label class="ba-sr" for="ba_switch">' + esc(words('Switch client')) + '</label><select data-cbsid="NET006-S01" id="ba_switch" class="inp" data-testid="ba-switch" title="' + esc(words('Switch client')) + '">' +
       stores.map(function (item) {
         return '<option value="' + esc(item.id) + '"' + (String(item.id) === context.store.id ? ' selected' : '') + '>' + esc(item.name) + (item.role ? ' (' + esc(roleWord(item.role)) + ')' : '') + '</option>';
       }).join('') + '</select>'
@@ -217,7 +217,7 @@
   function crumbs(screen, onScreen) {
     var who = esc(context.store.name || '');
     return (
-      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" style="flex:0 1 auto;font-size:13px"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
+      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" title="' + who + (screen ? ' › ' + esc(screen) : '') + '"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
       (onScreen ? '<a href="' + esc(clientAddress(context.store)) + '" data-testid="crumb-client">' + who + '</a>' : '<span data-testid="crumb-client">' + who + '</span>') +
       (screen ? ' <span aria-hidden="true">›</span> <span id="ba_screen" aria-current="page" data-testid="crumb-screen">' + esc(screen) + '</span>' : '') + '</nav>'
     );
@@ -238,10 +238,29 @@
   /** the banner's markup: who this is for, in which currency, a way to another store (when the firm holds more than one), the breadcrumb and the way back one level (screen: the screen's name; onScreen: this is a screen of the books page, not the client's own page) */
   function banner(stores, screen, onScreen, extra) {
     if (!context) return '';
+    css();
+    var who = context.role === 'auditor'
+      ? '<span class="tag bv-ro" data-testid="bv-readonly">' + esc(words('read only')) + '</span>'
+      : '<b class="bv-ro ba-acting" data-testid="ba-acting" title="' + esc(words('Acting for') + ' ' + context.store.name + (context.currency ? ', ' + context.currency : '')) + '"><span class="ba-sr">' + esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '') + '</span><span aria-hidden="true">' + esc(roleWord(context.role)) + (context.currency ? ' · ' + esc(context.currency) : '') + '</span></b>';
     return (
-      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + (context.role === 'auditor' ? '<span class="tag bv-ro" data-testid="bv-readonly">' + esc(words('read only')) + '</span>' : '<b class="bv-ro" style="font-size:13px">' + esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '') + '</b>') + (extra || '') + periodSlot() +
+      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + who + (extra || '') + periodSlot() +
       '<span class="ba-tools">' + switchBox(stores) + '<button data-cbsid="NET006-B01" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(backLabel(onScreen)) + '</button></span></div>'
     );
+  }
+  /** ONE header line for a firm in a client's books (T6, first data by 20% / 30%): who and where, the date, the period and the way back on a single 28 px line; a phone's second line holds the screen pick and the period. Drawn once for both pages (network.html, accounts.html). */
+  function css() {
+    var doc = root.document;
+    if (!doc || doc.getElementById('ba-hdr-css')) return;
+    var style = doc.createElement('style');
+    style.id = 'ba-hdr-css';
+    style.textContent =
+      '.ba-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+      '.bv-band.bv-band{flex-wrap:nowrap;gap:0 8px;min-height:28px}.bv-band .ba-crumbs{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}' +
+      '.bv-band .ba-acting{font-size:13px;white-space:nowrap}.bv-band .bv-ctx{flex:none;flex-wrap:nowrap;white-space:nowrap}.bv-band .bv-slot{flex:1 1 0;min-width:120px}.bv-band .ba-tools{flex:none;flex-wrap:nowrap;gap:6px}' +
+      '.bv-band #ba_switch{max-width:170px;min-height:28px}.bv-band .bv-tabsel{display:none}' +
+      '@media (max-width:700px){.bv-band.bv-band{flex-wrap:wrap;gap:4px 8px}.bv-band .ba-crumbs{flex:1 1 calc(100% - 210px);order:1}.bv-band .bv-ro,.bv-band .ba-acting{order:2}.bv-band .ba-tools{order:3}' +
+      '.bv-band .bv-ctx{display:none}.bv-band #ba_switch{display:none}.bv-band .bv-tabsel{display:block;order:4;flex:1 1 45%;min-width:0}.bv-band .bv-slot{order:5;flex:1 1 45%;min-width:0}.bv-band .bv-tabsel .cbs,.bv-band .bv-slot .cbs{margin:0}.bv-band .bv-tabsel select,.bv-band .bv-slot select{width:100%;max-width:none}}';
+    doc.head.appendChild(style);
   }
   /** wire the banner just drawn in `host`: Back, and the switch (a different store is entered, which clears the first one's drafts and caches, then the page repaints) */
   function wireBanner(host, o) {
@@ -335,5 +354,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: css, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);
