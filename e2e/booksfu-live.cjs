@@ -12,6 +12,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
   fs.mkdirSync(OUT, { recursive: true });
   const { base } = await L.serve(), token = await L.signIn(process.env.HANDLE || 'harbour-plumbing-au');
   const api = (m, u, b) => L.call(m, u, token, b);
+  const send = async (u, b) => { const r = await fetch(L.API + u, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token, 'idempotency-key': 'bf-' + Math.random().toString(36).slice(2) + Date.now() }, body: JSON.stringify(b) }); let j; try { j = await r.json(); } catch (_) { j = null; } return { status: r.status, ok: r.ok, body: j }; };
   const parties = (await api('GET', '/api/crm/parties')).body.parties || [];
   const cust = parties.find((x) => /Coogee/.test(x.display_name)) || parties[0];
   const accounts = (await api('GET', '/api/books/accounts')).body, list = accounts.accounts || accounts.rows || accounts;
@@ -20,10 +21,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
   const periods = (await api('GET', '/api/books/periods')).body.periods || [];
   for (const r of periods.filter((x) => Number(x.period) >= 1 && String(x.end_date).slice(0, 10) <= '2026-10-31').sort((x, y) => String(x.start_date).localeCompare(String(y.start_date)))) if (r.status === 'open') await api('POST', '/api/books/periods/' + r.fiscal_year + '/' + r.period + '/lock', { reason: 'BAS lodged' });
   const ref = 'bank:bf' + Date.now().toString(36);
-  const rc = await api('POST', '/api/books/payments', { party_id: cust.party_id, direction: 'in', amount_minor: 4400, mode: 'bank', received_at: '2026-10-20', allocate: 'none', client_ref: ref + '-1', if_locked: 'next_open' });
+  const rc = await send('/api/books/payments', { party_id: cust.party_id, direction: 'in', amount_minor: 4400, mode: 'bank', received_at: '2026-10-20', allocate: 'none', client_ref: ref + '-1', if_locked: 'next_open' });
   console.log('   receipt into locked October -> ' + rc.status + ' ' + JSON.stringify(rc.body).slice(0, 200));
   ok(rc.status === 200, 'a receipt dated in locked October posts with if_locked next_open');
-  const fee = await api('POST', '/api/books/events', { kind: 'expense', class: 'bank_charges', amount: 15, paid_from: 'bank', date: '2026-10-21', narration: 'MONTHLY ACCOUNT FEE', client_ref: ref + '-2', if_locked: 'next_open' });
+  const fee = await send('/api/books/events', { kind: 'expense', class: 'bank_charges', amount: 15, paid_from: 'bank', date: '2026-10-21', narration: 'MONTHLY ACCOUNT FEE', client_ref: ref + '-2', if_locked: 'next_open' });
   ok(fee.status === 200 && fee.body.moved === true, 'an expense dated in locked October posts moved too (' + fee.status + ')');
   const day = (await api('GET', '/api/books/daybook?from=2026-10-01&to=2026-12-31&limit=300')).body;
   const mine = (day.entries || []).filter((e) => e.doc_date && e.posting_date && String(e.posting_date).slice(0, 7) > String(e.doc_date).slice(0, 7));
@@ -37,6 +38,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
   console.log('   ledger lines ' + lines.length + ' · receipt line ' + JSON.stringify(recLine && { what: recLine.what, other: recLine.other, party_name: recLine.party_name }) + ' · fee line ' + JSON.stringify(feeLine && { what: feeLine.what, other: feeLine.other, party_name: feeLine.party_name }));
   ok(recLine && recLine.other && recLine.party_name === cust.display_name, 'the receipt line says its other side (' + (recLine && recLine.other && recLine.other.name) + ') and the customer by name (' + (recLine && recLine.party_name) + ')');
   ok(feeLine && feeLine.other && feeLine.other.code && feeLine.party_name === null, 'the fee line says its expense ledger (' + (feeLine && feeLine.other && feeLine.other.name) + ') and no party');
+  const odd = lines.find((x) => x.other && x.other.code == null);
+  if (odd) { const en = (await api('GET', '/api/books/daybook?from=' + odd.date + '&to=' + odd.date + '&limit=300')).body.entries.find((e) => e.entry_no === odd.entry_no); console.log('   a Split line: ' + odd.what + ' ' + JSON.stringify(odd.other) + ' entry lines ' + JSON.stringify(((en && en.lines) || []).map((l) => [l.code, l.name, l.dr_minor, l.cr_minor, l.rate]))); }
   const b = await chromium.launch();
   for (const vp of [{ width: 1366, height: 768, tag: '1366' }, { width: 390, height: 844, tag: '390' }]) {
     const { ctx, page: p } = await L.open(b, base, token, vp, undefined, '/accounts.html#ledgers', '[data-testid="lg-acc-' + bank.code + '"]');
