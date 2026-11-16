@@ -23,6 +23,7 @@
  *   SHELL-ONE (2026-10-15, every page wears the same frame — Athi: "lot of in-consistencies in each page before sign-in itself"):
  *   host: <element>  the page's own place for the header (an app with its own sidebar: CB Accounts · CRM · Finance put it at the top of their main pane)
  *   bar: true        the HEADER ONLY (the storefront, a lab, the shop screen): mark · name · chip · ⌂ Home · avatar, the page's own body under it
+ *   anonymous        true: no stored session is read, the avatar is "Sign in"; manifest { entries: [] } skips the manifest fetch; fonts false skips the Google Fonts link (the no-login bank demo)
  *   homeHref         where ⌂ Home goes (default '/'); the storefront passes the shop's own front
  *   title            { icon, name } the bar's name for a page with no manifest entry (a lab) or whose name is data (the shop's)
  *   avatar           extra CBAvatar options (onSignIn: a page that hosts the one sign-in window in its own card scrolls to it)
@@ -31,7 +32,8 @@
  */
 (function (root) {
   'use strict';
-  function session() {
+  function session(anonymous) {
+    if (anonymous) return null; /* a page that stores and reads nothing (bank-demo.html) */
     try {
       var parsed = JSON.parse(root.localStorage.getItem('cb_sess') || 'null');
       return parsed && root.CBOnePerson && root.CBOnePerson.who(parsed) ? parsed : null;
@@ -265,6 +267,9 @@
       homeHref: opts.homeHref || '/',
       area: opts.area,
       title: opts.title || null,
+      manifest: opts.manifest, /* an object { entries:[] }: no manifest.json fetch (a page whose CSP has connect-src 'none') */
+      anonymous: !!opts.anonymous,
+      fonts: opts.fonts,
       fit: skel || opts.host ? 'pane' : undefined /* in a page's own pane the header is a block, never the full-window frame */,
       person: personOf(sess, opts.level),
       token: sess && sess.token,
@@ -285,7 +290,7 @@
   /* mounts THE ONE HEADER (CBShell) for this page and hands it the page's work; every page goes through here (SHELL-ONE) */
   function mount(opts) {
     opts = opts || {};
-    var sess = session(),
+    var sess = session(opts.anonymous),
       doc = root.document,
       skel = opts.skeleton ? skeleton(doc, opts.skeleton, opts.app) : null,
       host = headerHost(doc, opts, skel);

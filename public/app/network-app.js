@@ -23,7 +23,7 @@
  */
 (function (root) {
   'use strict';
-  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, opened: null };
+  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, ended: {}, seats: {}, opened: null };
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
   function T(s) {
@@ -60,7 +60,7 @@
             if (reply.status === 401 && N.o.onEnded) N.o.onEnded();
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
-              e.status = reply.status;
+              e.status = reply.status; e.code = j.code; /* a refusal's code: books-grant-api.js says it in a plain sentence */
               throw e;
             }
             return j;
@@ -75,14 +75,16 @@
       call('GET', '/api/network-design/stores').catch(function () {
         return { stores: [] };
       }),
-      root.CBBooksGrantApi.held(call)
+      root.CBBooksGrantApi.heldSplit(call)
     ]).then(function (reply) {
-      N.held = reply[2] || {};
+      N.held = (reply[2] || {}).live || {};
+      N.ended = (reply[2] || {}).ended || {};
+      N.seats = (reply[2] || {}).seats || {};
       var s = (reply[0] && reply[0].store) || {};
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
       N.may = reply[0].may_design || N.may;
-      N.stores = (reply[1] && reply[1].stores) || [];
+      N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], Object.assign({}, N.ended, N.held), T);
     });
   }
   function offers() {
@@ -158,7 +160,7 @@
     try {
       node.close();
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    node.innerHTML = '';
+    node.innerHTML = ''; node.className = 'sheet';
   }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) {
@@ -180,22 +182,21 @@
         esc(T('Not in a network yet')) +
         '</div><div>' +
         esc(T('When a brand adds this shop to its network, it shows here.')) +
-        '</div></div>';
+        '</div></div>' + booksDoor();
+      if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
       return;
     }
-    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
-    mountStores();
+    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + root.CBBooksGrantApi.endedToggle(N.ended, N.showEnded, T) + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
+    mountStores(); root.CBBooksGrantApi.wireEnded(host, N, paint);
     if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
   }
   function openBooksDoor() {
     N.tab = 'books';
     paint();
   }
-  /** the door to the member's own screen, "Who can see my books": shown when this store sits in a network */
+  /** the door to the member's own screen, "Who can see my books": always drawn: a shop linked to a firm only by a books grant sits in no network */
   function booksDoor() {
-    return N.networks.length
-      ? '<div class="nw-acts"><button data-cbsid="NET001-B05" type="button" class="act quiet" id="nw_books_door" data-testid="nw-books-door">' + esc(T('Who can see my books')) + '</button></div>'
-      : '';
+    return '<div class="nw-acts"><button data-cbsid="NET001-B05" type="button" class="act quiet" id="nw_books_door" data-testid="nw-books-door">' + esc(T('Who can see my books')) + '</button></div>';
   }
   /** one network this store sits in: the brand, where this store stands, who its parent is */
   function netCard(item) {
@@ -218,7 +219,7 @@
   }
   /** the store list's columns */
   function storeColumns() {
-    return [
+    var cols = [
       {
         key: 'name',
         label: T('Store'),
@@ -252,9 +253,7 @@
         prio: 3,
         w: 110,
         sort: 'km',
-        cell: function (s) {
-          return s.km == null ? '—' : Math.round(s.km) + ' km';
-        },
+        cell: function (s) { return s.km == null ? '—' : Math.round(s.km) + ' km'; },
         value: function (s) {
           return s.km == null ? '' : String(s.km);
         }
@@ -282,7 +281,7 @@
           return N.held[String(s.entity_id)] ? 'open' : '';
         }
       }
-    ];
+    ]; return root.CBBooksGrantApi.clientColumns(cols, N, T);
   }
   /** the store list's sort choices */
   function storeSorts() {
@@ -315,7 +314,7 @@
     mountList($('nw_stores'), {
       key: 'network-stores',
       rows: function () {
-        return N.stores;
+        return root.CBBooksGrantApi.visible(N.stores, N.ended, N.showEnded);
       },
       id: function (s) {
         return s.entity_id;
@@ -338,24 +337,55 @@
     var id = esc(s.entity_id);
     return N.held[String(s.entity_id)]
       ? '<button data-cbsid="NET001-B04" type="button" class="act quiet" id="nw_books_' + id + '" data-open-books="' + id + '" data-testid="nw-books-' + id + '">' + esc(T('Open books')) + '</button>'
-      : '';
+      : '<span class="sub" data-testid="nw-ended-' + id + '">' + esc(root.CBBooksGrantApi.endedWords(N.ended[String(s.entity_id)])) + '</span>';
   }
   function openBooksClick(ev) {
     var button = ev.target.closest && ev.target.closest('[data-open-books]');
     if (!button) return;
     var id = button.getAttribute('data-open-books');
-    var store = N.stores.filter(function (s) {
-      return String(s.entity_id) === id;
-    })[0];
-    N.opened = { id: id, name: (store && store.name) || T('this store') };
+    var store = N.stores.filter(function (s) { return String(s.entity_id) === id; })[0];
+    openSeat(id, (N.held[id] && N.held[id].grantor_name) || (store && store.name) || T('this store'));
+  }
+  /** a firm that holds BOTH an auditor and an adviser grant on one client never gets one picked silently: it chooses the seat once, and the choice is remembered per client */
+  var SEAT_KEY = 'cb_seat:';
+  function quietSeat(failure) {
+    if (root.cbQuiet) root.cbQuiet('network:seat', failure); /* storage blocked: the person is asked again next time */
+  }
+  function rememberedSeat(id) {
+    try { return root.localStorage.getItem(SEAT_KEY + id); } catch (failure) { quietSeat(failure); return null; } /* no storage: ask each time */
+  }
+  function sitAs(id, name, preset) {
+    N.held[id] = N.seats[id][preset];
+    try { root.localStorage.setItem(SEAT_KEY + id, preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
+    N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: N.held[id].posting };
     paint();
+  }
+  function openSeat(id, name) {
+    var seats = N.seats[id] || {};
+    var saved = rememberedSeat(id);
+    if (!(seats.auditor && seats.adviser)) {
+      N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
+      paint();
+    } else if (seats[saved]) sitAs(id, name, saved);
+    else {
+      sheet('<h2 data-testid="nw-seat-title">' + esc(T('How do you want to open')) + ' ' + esc(name) + '?</h2>' +
+        '<p class="sub">' + esc(T('Your firm holds two kinds of access. Pick the one you are acting as now; it is remembered for this client.')) + '</p>' +
+        '<div class="nw-acts"><button data-cbsid="NET001-B07" type="button" class="act" data-seat="auditor" data-testid="nw-seat-auditor">' + esc(T('Open as auditor')) + '</button>' +
+        '<button data-cbsid="NET001-B08" type="button" class="act quiet" data-seat="adviser" data-testid="nw-seat-adviser">' + esc(T('Open as accountant')) + '</button></div>');
+      Array.prototype.forEach.call($('nw_sheet').querySelectorAll('[data-seat]'), function (b) {
+        b.onclick = function () { closeSheet(); sitAs(id, name, b.getAttribute('data-seat')); };
+      });
+    }
   }
   function paintOpened(host) {
     root.CBBooksGrantView.mount(host, {
       call: call,
+      raw: function (path, headers) { return root.fetch((N.o.base || '') + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + N.o.token }, headers || {}) }); } /* a file: the same token and base as call, the answer left as bytes (cap-evidence.js) */,
       member: N.opened,
-      mountList: mountList,
+      stores: root.CBBooksActing.clientStores(N.stores, N.held),
+      mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: N.o.onEnded,
+      onSwitch: function (id, name) { openSeat(id, (N.held[id] && N.held[id].grantor_name) || name); },
       onBack: function () {
         var id = N.opened.id;
         N.opened = null;
@@ -377,7 +407,7 @@
       });
   }
   function paintBooks(host) {
-    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
+    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, ownStore: root.CBBooksActing.ownStore(N.o.token, T('Your books')), sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
         N.tab = 'mine';
         paint();
       } });
@@ -443,7 +473,7 @@
           prio: 4,
           w: 130,
           cell: function (o) {
-            return o.until ? String(o.until).slice(0, 10) : '—';
+            return o.until ? shopDay(o.until) : '—';
           },
           value: function (o) {
             return o.until || '';
@@ -632,7 +662,15 @@
   }
   function start() {
     N.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';
-    return load().then(paint, paintFail);
+    return load().then(paint, paintFail).then(openFromLink);
+  }
+  /** l16 firm-dash: the practice list's "Open books" links here with ?open=<client>; a client this firm holds a live grant for opens at once (the seat chooser as ever), anything else is ignored */
+  function openFromLink() {
+    var id = null;
+    try { id = new root.URLSearchParams(root.location.search).get('open'); } catch (failure) { if (root.cbQuiet) root.cbQuiet('network:open', failure); }
+    if (!id || N.openedFromLink === id || !N.held[id]) return;
+    N.openedFromLink = id;
+    openSeat(id, N.held[id].grantor_name || T('this store'));
   }
   function reload() {
     return load().then(paint, paintFail);
@@ -647,6 +685,7 @@
   function mount(el, o) {
     N.el = el;
     N.o = o || {};
+    if (N.o.tab) N.tab = N.o.tab;
     start();
     return { reload: reload, go: go };
   }

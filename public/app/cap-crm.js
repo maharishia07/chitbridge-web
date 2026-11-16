@@ -1435,7 +1435,8 @@ function crmMiniActions() {
         return crmWhyNot(p, 'pay');
       },
       run: function (p) {
-        payOpen(Number(p.balance_minor) > 0 || (p.roles || []).indexOf('supplier') < 0 ? 'customer' : 'supplier', p.party_id);
+        var side = Number(p.balance_minor) > 0 || (p.roles || []).indexOf('supplier') < 0 ? 'customer' : 'supplier';
+        payOpen(side, p.party_id, payOpenTotal(side, p) || undefined);
       }
     },
     {

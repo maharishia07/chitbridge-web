@@ -17,7 +17,7 @@ const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'settings.html',
 const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html', 'ui-standard.html'];
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 /* testing.html: the test board's printable report — it loads list-ctl.js only for CBList.every (every page of a paged list, T2-PAGING), it mounts no list */
-const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html'];
+const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html', 'bank-demo.html'];   /* bank-demo.html: the no-login showcase mounts the frame's bar from app/bank-demo.js (anonymous, CSP script-src self), so the page carries no inline CBFrame.mount */
 
 OWN.forEach((f) => {
   const h = read('public/' + f);
@@ -71,12 +71,11 @@ const SHELL_NOT_YET_WHY = {
   'storefront-design.html': 'design reference', 'supplier-design.html': 'design reference', 'screen-gallery.html': 'the gallery of screen drawings', 'lifecycle-test.html': 'a tool board',
   'testing.html': 'the test board', 'intake.html': 'a prototype, no customer door', 'iot-howitworks.html': 'a showcase opened in the workshop\'s overlay',
   'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo',
-  'bank-demo.html': 'the no-login showcase for the auditor: inert BY DECISION (no api call, no storage, no device id, strict CSP), and the shell reads the device id and config.js'
 };   /* shell-lab.html mounts CBShell itself (the unit's pass mark, e2e/shell.cjs): it loads the shell, so it is not here */
 const SHELL_NOT_YET = Object.keys(SHELL_NOT_YET_WHY);
 /* every page on the no-shell list is a design reference in the register, or one of the named exceptions (the workshop · the counter · the print surface · the two forwards) */
 const refs = (() => { const w = {}; new Function('window', 'globalThis', read('public/app/screen-id.js'))(w, w); return (w.CBScreenId.DECLARED.references || []).map((r) => r[0].replace(/^\//, '')); })();
-const EXCEPTIONS = ['app.html', 'till.html', 'bank-demo.html'];
+const EXCEPTIONS = ['app.html', 'till.html'];
 SHELL_NOT_YET.forEach((f) => { if (!refs.includes(f) && !EXCEPTIONS.includes(f)) bad(f + ': skips the shell but is neither a design reference in app/screen-id.js DECLARED.references nor the workshop / the counter'); });
 refs.forEach((f) => { if (!SHELL_NOT_YET.includes(f)) bad(f + ': a design reference in the register must be on the no-shell list here (or stop being a reference)'); });
 const shellPages = [];

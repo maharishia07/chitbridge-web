@@ -43,6 +43,11 @@ W.run('books-grant', async (w) => {
       if (S.refuse && p === S.refuse.path) return J(r, 403, { error: S.refuse.words, message: S.refuse.words, code: 'GRANT_ROUTE_NOT_LISTED' });
       if (p === '/api/books/trial-balance') { const ex = example('GET /api/books/trial-balance'); return J(r, 200, Object.assign(ex, { currency: 'INR', rows: [line(ex.rows[0], { code: '1000', name: 'Cash', group: 'Assets', dr_minor: 123400, cr_minor: 0 }), line(ex.rows[0], { code: '4000', name: 'Sales', group: 'Income', dr_minor: 0, cr_minor: 123400 })], total_dr_minor: 123400, total_cr_minor: 123400, balanced: true })); }
       if (p === '/api/books/pl') { const ex = example('GET /api/books/pl'); return J(r, 200, Object.assign(ex, { currency: 'INR', income: [line(ex.income[0], { code: '4000', name: 'Sales', amount_minor: 500000 })], expense: [line(ex.expense[0], { code: '5000', name: 'Rent', amount_minor: 100000 })], total_income_minor: 500000, total_expense_minor: 100000, profit_minor: 400000 })); }
+      const E1 = 'e0000000-0000-4000-8000-000000000001';
+      const entry = { entry_id: E1, entry_no: 'JV-0001', posting_date: '2026-11-03', doc_date: '2026-11-03', event_type: 'sale', narration: 'Cash sale', source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: { chit_id: null, ref: 'B-9', kind: 'bill', counter: null, by: 'Asha', count: null, how: 'Cash', how_ref: null, split: null, bills: null, doc_at: '2026-11-03T09:00:00.000Z', recorded_at: '2026-11-03T09:05:00.000Z' }, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: 'Walk-in buyer', dr_minor: 123400, cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 123400, counter: null, rate: null }] };
+      if (p === '/api/books/ledger/1000' || p === '/api/books/ledger/4000') { const ex = example('GET /api/books/ledger/:account'), cash = p.endsWith('1000'); /* the PAGED ledger the drill asks for (limit=100): its page keys (total · page · limit · next · totals · page_opening_minor) are not in the api contract's example yet (reported to cb-api), so this one answer is sent as the server sends it and not held to the example */
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(Object.assign(ex, { currency: 'INR', account: { code: cash ? '1000' : '4000', name: cash ? 'Cash' : 'Sales', nature: cash ? 'asset' : 'income' }, from: '2026-04-01', to: '2026-11-15', opening_minor: 0, lines: [{ date: '2026-11-03', doc_date: '2026-11-03', what: 'Cash sale', ref: 'JV-0001', entry_id: E1, entry_no: 'JV-0001', event_type: 'sale', reverses_entry_id: null, reversed_by: null, source_chit_id: null, source: null, party_id: null, dr_minor: cash ? 123400 : 0, cr_minor: cash ? 0 : 123400, running_minor: cash ? 123400 : -123400 }], closing_minor: cash ? 123400 : -123400, page_opening_minor: 0, total: 1, page: 1, limit: 100, next: null, totals: { dr_minor: cash ? 123400 : 0, cr_minor: cash ? 0 : 123400 } })) }); }
+      if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [Object.assign({}, ex.entries[0], entry)], count: 1 })); }
       const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { entries: [], parties: [], periods: [] }));
     }
     return J(r, 200, {});
@@ -73,6 +78,38 @@ W.run('books-grant', async (w) => {
     const names = await page.$$eval(T('bv-band') + ' button,' + T('bv-tabs') + ' button', (els) => els.map((e) => e.textContent.trim()));
     return { ok: names.every((n) => /Back|Trial|Profit|Balance|Day|owes|Closed/.test(n)) && !(await has('#nw_body [data-act]')), saw: names.join(' · ') };
   });
+  await w.step('D1', 'the auditor drill · trial balance row Cash → its ledger: opening, the line with its running balance, the period total and the closing', async () => {
+    await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
+    const title = await txt(T('bd-title')), facts = await txt(T('bd-facts')), line = await txt(T('bd-line-0'));
+    const asked = S.calls.filter((c) => c.p === "/api/books/ledger/1000");
+    return { ok: /1000 Cash/.test(title) && /Opening/.test(facts) && /Total debit/.test(facts) && /Closing/.test(facts) && /JV-0001/.test(line) && /1,234/.test(line) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER && /limit=100/.test(c.q)), saw: title + ' · ' + facts + ' · ' + line };
+  });
+  await w.step('D2', 'the auditor drill · the ledger line opens its entry: who made it, when, each line account · party · Dr · Cr', async () => {
+    await page.click(T('bd-line-0')); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
+    const title = await txt(T('bd-title')), who = await txt(T('bd-who')), facts = await txt(T('bd-facts')), l0 = await txt(T('bd-jl-0')), l1 = await txt(T('bd-jl-1'));
+    return { ok: /JV-0001/.test(title) && /Made by Asha/.test(who) && /recorded/.test(who) && /Amount/.test(facts) && !(await has(T('bd-unbalanced'))) && /Cash/.test(l0) && /Walk-in buyer/.test(l0) && /Sales/.test(l1), saw: title + ' · ' + who + ' · ' + l0 + ' · ' + l1 };
+  });
+  await w.step('D3', 'the auditor drill · Back to the ledger; an entry line (Sales) opens the Sales ledger', async () => {
+    await page.click(T('bd-back')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
+    await page.click(T('bd-line-0')); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
+    await page.click(T('bd-jl-1')); await page.waitForSelector(T('bd-fact-closing'), { timeout: 10000 });
+    const title = await txt(T('bd-title'));
+    return { ok: /4000 Sales/.test(title), saw: title };
+  });
+  await w.step('D4', 'the auditor drill · fits 1366×768 with the ledger open: no page scroll, no write or export control in the sheet', async () => {
+    const a = await noScroll(), names = await page.$$eval('#nw_sheet button', (els) => els.map((e) => e.textContent.trim()));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    return { ok: a.y && a.x && !names.some((n) => /csv|export|download|print|save|post|delete|edit|add/i.test(n)), saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · buttons ' + names.join(' / ') };
+  });
+  await w.step('D5', 'the auditor drill · Day book: each entry shows its amount and opens to its journal lines', async () => {
+    await page.click(T('bv-tab-daybook')); await page.waitForFunction((sel) => { const n = document.querySelector(sel); return n && /JV-/.test(n.textContent); }, T('bv-row-0'), { timeout: 10000 }); /* the Day book's own row, not the tab's previous list still on show */
+    const row = await txt(T('bv-row-0'));
+    await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
+    const title = await txt(T('bd-title'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    return { ok: /JV-0001/.test(row) && /1,234/.test(row) && /JV-0001/.test(title) && !(await has(T('bd-back'))), saw: row + ' · ' + title };
+  });
   await w.step('A4', 'the auditor · Profit and loss by keyboard: Tab to the tab, Enter → income, expense and the profit', async () => {
     await page.focus(T('bv-tab-pl')); await page.keyboard.press('Enter');
     await page.waitForSelector(T('bv-fact-profit_minor'), { timeout: 10000 });
@@ -100,6 +137,13 @@ W.run('books-grant', async (w) => {
     await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const a = await noScroll();
     return { ok: a.y && a.x, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x };
+  });
+
+  await w.step('D6', 'the auditor drill · 390×844: trial balance → ledger sheet fits, no page scroll', async () => {
+    await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
+    const a = await noScroll(), sheet = await page.evaluate(() => { const d = document.getElementById('nw_sheet').getBoundingClientRect(); return d.width <= window.innerWidth + 1 && d.height <= window.innerHeight + 1; });
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    return { ok: a.y && a.x && sheet, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · sheet inside the screen ' + sheet };
   });
 
   /* ═══ the member ═══ */

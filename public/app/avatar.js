@@ -86,7 +86,7 @@
     kural: 'cb_kural',
     keys: 'cb_keys'
   };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto', keys: 'on' };
+  var DEFAULTS = { theme: 'cream' /* L16-M7: ONE look from sign-in to the app; 'My device' stays a choice */, font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto', keys: 'on' };
   var DEVICE_ONLY = ['keys']; /* held on this device: the server's ui.keys list has no 'keys' yet, so hydrate and push leave it alone */
   /* SET-WALK1 · W7: the Thirukkural band — auto (on only where the shop reads Tamil: CBLocale.langs has 'ta') · on · off; the owner's choice, synced like the rest */
   var KURAL = [
@@ -542,17 +542,22 @@
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
-  var SHOP_COUNTRY = null;
+  var SHOP_COUNTRY = null,
+    SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
   function announceShop(entity) {
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
+    SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
-      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY } }));
+      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON } }));
     } catch (e) {
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
     }
   }
   function shopCountry() {
     return SHOP_COUNTRY;
+  }
+  function ledgerOn() {
+    return SHOP_LEDGER_ON;
   }
 
   function set(kind, value) {
@@ -752,8 +757,7 @@
     var has_ = function (k) {
       return items.indexOf(k) >= 0;
     };
-    var up = [],
-      down = [];
+    var up = [];
     if (has_('profile'))
       up.push(
         o.onProfile
@@ -769,12 +773,13 @@
       );
     /* UX-96: Support only where there is somewhere to go (no support page yet → no item, no loop to Home) */
     if (has_('support') && (o.onSupport || o.supportHref))
-      down.push(
+      up.push(
         o.onSupport
           ? '<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="av-support" data-av="support">Support</button>'
           : '<a data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>'
       );
-    if (has_('signout')) down.push('<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-signout" data-av="signout">Sign out</button>');
+    /* L16-M7: Sign out sits at the TOP with Profile and Settings; the menu is taller than 1366x768, so a button at its foot was below the fold */
+    if (has_('signout')) up.push('<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-signout" data-av="signout">Sign out</button>');
 
     var fsNow = pref('fs'),
       w = pref('weight'),
@@ -866,7 +871,6 @@
       '</div>' +
       langs +
       '</div></div>' +
-      (down.length ? '<div class="cbav-items last">' + down.join('') + '</div>' : '') +
       '</div>'
     );
   }
@@ -1232,6 +1236,7 @@
     TEXT_SIZES: TEXT_SIZES,
     FS_BASE: FS_BASE,
     fontStack: fontStack,
-    shopCountry: shopCountry
+    shopCountry: shopCountry,
+    ledgerOn: ledgerOn
   };
 })(typeof window !== 'undefined' ? window : this);

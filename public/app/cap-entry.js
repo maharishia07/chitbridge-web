@@ -26,7 +26,7 @@ if (typeof EP !== 'undefined') {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
-    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }
+    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
   });
 }
 
@@ -36,7 +36,8 @@ var EN_ICON = { receipt: '🧾', 'receipt-minus': '🧾', coins: '🪙', 'wallet
 /* R106: an event whose Save is a money promise asks first (CBAction.ask), naming the party and the server's ₹ — by the event's kind, the server's own code */
 var EN_ASK = { debit_note: { title: 'Note {amt} against the bill?', body: 'A debit note posts against the bill. What you owe {who} falls by {amt}.', yes: 'Note it' } };
 var EN_ITEM = { name: 'Item', qty: 'Qty', unit_price: 'Rate difference', gst_rate: 'Tax %' };
-var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card' };
+/* a payment mode in words: the pack's raw keys (eft, bpay, payid, eftpos…) never show as typed */
+var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card', eft: 'EFT', bpay: 'BPAY', payid: 'PayID', eftpos: 'EFTPOS', cheque: 'Cheque', transfer: 'Bank transfer', neft: 'NEFT', imps: 'IMPS', rtgs: 'RTGS', paynow: 'PayNow', nets: 'NETS', duitnow: 'DuitNow', fpx: 'FPX', paypay: 'PayPay', ic: 'IC card' };
 var EN_LABEL = {
   class: 'What for',
   paid_from: 'Paid from',
@@ -311,7 +312,7 @@ function enActs() {
     esc(tx('Back')) +
     '</button>' +
     (last
-      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
+      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx(enActingAdviser() ? (CBBooksActing.posts() ? 'Post' : 'Prepare') : 'Save')) + '</button>'
       : '<button data-cbsid="SCR022-B01" class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' +
         (enStepReady(EN.step) ? '' : ' disabled') +
         '>' +
@@ -506,6 +507,55 @@ function enLedgerSelect(id, cur, onch, onlyGroup, testid) {
   });
   return '<select data-cbsid="SCR022-S01"' + (testid ? ' data-testid="' + testid + '"' : '') + ' id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
+/** the shop's OWN cash and bank ledgers (the ones money moves between): [{ v, l }], v the ledger's payment mode when it has one, else its code (the server's contra takes either) */
+function enOwnOptions() {
+  var all = (EN.accounts || []).filter(function (a) {
+      return !a.is_group && a.active !== false;
+    }),
+    homes = {};
+  all.forEach(function (a) {
+    if (/^(cash|bank|upi|card)$/.test(a.role || '')) homes[a.parent_code] = true;
+  });
+  return all
+    .filter(function (a) {
+      return /^(cash|bank|upi|card)$/.test(a.role || '') || homes[a.parent_code];
+    })
+    .map(function (a) {
+      return { v: /^(cash|bank|upi|card)$/.test(a.role || '') ? a.role : String(a.code), l: a.name };
+    });
+}
+/** Move money: "Taken from" / "Put into" name the business's own accounts, with the one inline door to add a savings account (the same POST /accounts the chart uses) */
+function enOwnField(k, lab, tid, v, on) {
+  var opened = EN.addOwn === k,
+    box = opened
+      ? '<span class="en-addown" data-testid="en-addown"><input data-testid="en-addown-name" id="en_addown_name" maxlength="60" placeholder="' + esc(tx('Name, e.g. Savings account')) + '" value="' + esc(EN.addOwnName || '') + '" oninput="EN.addOwnName=this.value"> <button type="button" class="en-btn pri" data-testid="en-addown-go" onclick="enOwnAdd(this.dataset.k)" data-k="' + esc(k) + '">' + esc(tx('Add account')) + '</button> <button type="button" class="en-btn" onclick="EN.addOwn=null;enPaint()">' + esc(tx('Cancel')) + '</button></span>' + (EN.addOwnErr ? '<span class="en-bad" role="alert">' + esc(EN.addOwnErr) + '</span>' : '')
+      : '<button type="button" class="en-btn" data-testid="en-addown-open" data-k="' + esc(k) + '" onclick="EN.addOwn=this.dataset.k;EN.addOwnErr=&quot;&quot;;enPaint()">+ ' + esc(tx('Add a savings account')) + '</button>';
+  return '<label class="en-f"><span>' + esc(lab) + '</span>' + enSelect(tid, enOwnOptions(), v, on) + '</label>' + box;
+}
+/** add the account under the shop's bank group, read the accounts again, and put it in the field that asked */
+async function enOwnAdd(k) {
+  var name = String(EN.addOwnName || '').trim(),
+    main = (EN.accounts || []).filter(function (a) {
+      return a.role === 'bank';
+    })[0];
+  if (!name) {
+    EN.addOwnErr = tx('Type a name');
+    return enPaint();
+  }
+  try {
+    var made = await api('booksAccountAdd', { body: { name: name, parent_code: main ? main.parent_code : undefined } });
+    var again = await api('booksAccounts');
+    EN.accounts = (again && again.accounts) || EN.accounts;
+    EN.v[k] = String((made && made.account && made.account.code) || '');
+    EN.pv = null;
+    EN.addOwn = null;
+    EN.addOwnName = '';
+    EN.addOwnErr = '';
+  } catch (e) {
+    EN.addOwnErr = bkWhy(e, tx('Could not add it'));
+  }
+  enPaint();
+}
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
   var k = f.key,
@@ -534,6 +584,7 @@ function enFieldHTML(f) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
   };
   var on = "enSet('" + esc(k) + "',this.value)";
+  if (EN.ev && EN.ev.kind === 'contra' && (k === 'from' || k === 'to')) return enOwnField(k, lab, tid, v, on);
   if (f.kind === 'pick' && f.pick === 'ledger')
     return (
       '<label class="en-f"><span>' +
@@ -863,7 +914,7 @@ function enSeen(r) {
     lines: (r.lines || []).map(function (item) {
       return Object.assign({}, item, { name: item.ledger || item.name });
     }),
-    refusals: enWords(r.refusals, r.code),
+    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(r.refusals) : r.refusals, r.code),
     warnings: enWords(r.flags || r.warnings, null).map(function (item, index) {
       return Object.assign(item, { code: 'FLAG' + index });
     })
@@ -1043,7 +1094,7 @@ async function enSave(btn) {
   if (!enCanSave() || !EN.ev) return;
   await bkOnce('entry-save', btn, async function () {
     /* R106: a money promise asks first, INSIDE the busy guard (a second press while the question is open is dropped — the R102b lesson) */
-    var question = enAskWords();
+    var question = enAskWords() || (enActingAdviser() && CBBooksActing.posts() ? CBBooksActing.postAsk(EN.pv) : null);
     if (question && typeof CBAction !== 'undefined' && (await CBAction.ask(question)) !== true) return;
     await enSaveWrite();
   });
@@ -1051,15 +1102,12 @@ async function enSave(btn) {
 /** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */
 async function enSaveWrite() {
   EN.saving = true;
-  var body = enBody();
-  body.client_ref = EN.ref;
+  var body = enBody(); body.client_ref = EN.ref;
   if (EN.photo) body.attachment = EN.photo;
   try {
-    var reply = await api('booksEventPost', { body: body });
-    EN.saved = reply || {};
-    EN.saving = false;
-    EN.ref = null;
-    enSavedTell(EN.saved);
+    var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
+    EN.saved = reply || {}; EN.saving = false; EN.ref = null;
+    if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
     EN.saving = false;
@@ -1069,6 +1117,8 @@ async function enSaveWrite() {
     enPaint2();
   }
 }
+/** this sheet is open on a page acting for a store as the adviser: Save PREPARES, or POSTS under the grant's adviser_posts (CBBooksActing is loaded only by the pages that act) */
+function enActingAdviser() { return typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser(); }
 /** after a save: the Day book, the Books to-do and the opener (R106: Payables) are told — a painter that fails is logged, the save stands */
 function enSavedTell(saved) {
   try {
@@ -1082,6 +1132,7 @@ function enSavedTell(saved) {
 }
 /** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
+  if (EN.saved.prepared) return CBBooksActing.paintPrepared(body, acts, EN.saved, tx, esc);
   var s = EN.saved,
     no = s.entry_no || s.no || '';
   body.innerHTML =

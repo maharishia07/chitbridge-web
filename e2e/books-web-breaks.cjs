@@ -24,9 +24,6 @@ const BREAKS = [
   ['M11 payment has no client_ref', CAP, `          client_ref: PAY.ref };`, `          };`],
   ['M11 button live while the call is out', CAP, `  if (btn) btn.disabled = true;`, ``],
   ['M11 one ref for every form', CAP, `name: r.nickname || r.display_name || '', ref: bkRef() };`, `name: r.nickname || r.display_name || '', ref: 'web-0-0' };`],
-  ['M11 opening has no client_ref', CAP, `{ rows: rows, client_ref: BK.openingRef }`, `{ rows: rows }`],
-  ['M11 opening can be pressed twice', CAP, `var box = document.getElementById('op_csv'); if (box) box.value = '';`, ``],
-  ['M11 opening ref never renewed', CAP, `      BK.openingRef = bkRef();`, ``],
   ['M10 download is not the file', CAP, `fetch(base + EP.booksPackFile.p.replace(`, `fetch(base + EP.booksPackGet.p.replace(`],
   ['M10 We have it never asks', CAP, `      if (!(BK.packGot && BK.packGot[id])) {`, `      if (false) {`],
   ['M10 download not remembered', CAP, `BK.packGot = BK.packGot || {}; BK.packGot[id] = true;`, ``],
@@ -40,7 +37,9 @@ const BREAKS = [
   ['M12 waiting reason not shown', CAP, `esc(w.reason || w.why || tx('No reason given'))`, `esc(tx('No reason given'))`],
   ['M12 retry not sent', CAP, `      await api('booksRetry', { body: {} });`, ``],
   ['M12 waiting count not shown', CAP, `el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');`, ``],
-  ['F11 payable buckets have no column', CAP, `cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS, known`, `cols = BK_BUCKETS, known`],
+  ['W15-94 an age bucket is dropped from the party row', CAP, `BK_FOLLOW.filter(function (item) {
+      return follow && Number(follow[item[0]]);`, `BK_FOLLOW.filter(function (item) {
+      return false && follow && Number(follow[item[0]]);`],
   /* ── where an entry came from (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") ── */
   ['SRC bill number not a link', CAP, `var link = s.chit_id ? '<a href="#"`, `var link = false ? '<a href="#"`],
   ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],

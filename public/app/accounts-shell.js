@@ -66,7 +66,9 @@ var CB_BOOKS_EP = {
   booksEnable: { m: 'POST', p: '/api/books/enable', ok: 'y' }, // owner: the switch (Settings › Your business › Ledger)
   booksSetting: { m: 'POST', p: '/api/books/setting', ok: 'y' }, // owner: { enabled:false } switches it off; nothing deleted
   booksDues: { m: 'GET', p: '/api/books/dues', ok: 'y' }, // every party's balance + oldest due in one read (the row chips)
-  booksStatement: { m: 'GET', p: '/api/books/party/:id/statement', ok: 'y' }
+  booksStatement: { m: 'GET', p: '/api/books/party/:id/statement', ok: 'y' },
+  booksPartyBills: { m: 'GET', p: '/api/books/party/:id/bills', ok: 'y' }, // W15-107: one party's bills, open first, newest first, a page at a time (the row's sub-table)
+  booksAttention: { m: 'GET', p: '/api/books/attention', ok: 'y' } // W15-102: the evidence counts of a range, or the entries behind one count
 };
 
 /* ── the party routes the app's Customers/Suppliers screens and CB CRM share (MOVED from app.html's EP, not copied: one name per endpoint,

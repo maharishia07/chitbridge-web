@@ -95,13 +95,14 @@ function stand() {
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       let body = null; try { body = r.request().postDataJSON(); } catch (_) {} if (m !== 'GET') S.bodies.push({ m, p, body });
-      if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+      if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return J(r, 200, []);
+      if (p === '/api/books/periods') return J(r, 200, books.periods([]));
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer(EVENTS));
       if (p === '/api/books/ledger/1500') { const op = 10000000; return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: op, closing_minor: op + S.lines.reduce((t, l) => t + l.dr_minor - l.cr_minor, 0) })); }
-      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', rail_chits: S.chits,
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', books: { parties: [], open_items: [] }, rail_chits: S.chits,
         parties: [P.ravi, P.kumar, P.unk].map((x) => ({ party_id: x.id, name: x.name })), may: { ask: S.who === 'viewer' ? { ok: false, why: 'read_only', say: READ_ONLY } : { ok: true } } });
       if (p === '/api/books/payments/preview') return J(r, 200, books.payPreview(S.bills[body.party_id] || [], body, 'Kumar & Sons'));
       if (p === '/api/books/payments' && m === 'POST') return J(r, 200, books.payRecorded(S.bills[body.party_id] || [], body, 'Kumar & Sons', { entry_no: 'PY/2026-27/000007' }));
@@ -119,7 +120,7 @@ function stand() {
     if ((o.hash || 'bank') === 'bank') await pg.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p: pg };
   }
-  const load = async (pg, csv) => { await pg.selectOption('#bk_preset', 'hdfc'); await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await pg.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 }); await pg.fill('[data-testid="bank-currency"]', 'INR'); await pg.click('[data-testid="bank-currency-go"]'); await pg.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); };
+  const load = async (pg, csv) => { if (await pg.locator('[data-testid="bank-change"]').isVisible() && !(await pg.locator('#bk_preset').isVisible())) await pg.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await pg.selectOption('#bk_preset', 'hdfc'); await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await pg.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); if (await pg.locator('[data-testid="bank-currency"]').count()) { await pg.fill('[data-testid="bank-currency"]', 'INR'); await pg.click('[data-testid="bank-currency-go"]'); } await pg.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); };
   const st = (pg, s) => pg.locator('[data-testid="bank-list"] [data-status="' + s + '"]').count();
   const rowOf = (i) => '[data-testid="bank-row-s' + i + '"]';
   const openRow = async (pg, i) => { await pg.click(rowOf(i) + ' [data-caret]'); await pg.waitForSelector('[data-testid="bank-next-s' + i + '"]', { timeout: 5000 }); };
@@ -134,7 +135,7 @@ function stand() {
   const c = {}; for (const k of ['settled', 'told', 'matched', 'suggested', 'bank-only']) c[k] = await st(p, k);
   ok('B1', c.settled === 1 && c.told === 2 && c.matched === 1 && c.suggested === 1 && c['bank-only'] === 1, 'settled 1 · told 2 · matched 1 · suggested 1 · needs you 1 ' + JSON.stringify(c));
   ok('B1', (await statusOf(p, 0)) === 'settled' && (await statusOf(p, 1)) === 'told' && (await statusOf(p, 2)) === 'told' && (await statusOf(p, 3)) === 'matched', 'Ravi settled · Kumar told (ref) · the cash deposit told by two advices · my cheque matched');
-  ok('B1', /2 lines need you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the head says "2 lines need you" (' + (await p.textContent('[data-testid="bank-notice"]')).trim() + ')');
+  ok('B1', (await p.locator('[data-testid="bank-notice"]').count()) === 0, 'one count: the head carries no second "lines need you" number (the chips and the band count them)');
   await p.screenshot({ path: path.join(SHOTS, 'walk-bank-rec-lines.png') });
 
   /* ── B2 ── */
@@ -198,7 +199,7 @@ function stand() {
   ok('B5', sent.length === 1 && sb.purpose === 'general' && sb.business_json.kind === 'bank_query' && sb.recipients[0].entity_id === 'p-unk' && /^bankask:2026-09-25\|in\|420000\|N99912$/.test(sb.client_ref), 'ONE chit through POST /api/chits/send: kind bank_query, to the party, client_ref bankask:<key>');
   leaks = S.reqs.filter((r) => SECRETS.some((s) => (r.u + r.h + r.d).indexOf(s) >= 0));
   ok('B5', leaks.length === 0, 'the ask carries the date, the amount and the ref — never the narration' + (leaks.length ? ' — ' + leaks[0].u + ' ' + leaks[0].d.slice(0, 120) : ''));
-  ok('B5', (await statusOf(p, 5)) === 'asked' && /1 line needs you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the line is Asked; "1 line needs you" (the bank charge)');
+  ok('B5', (await statusOf(p, 5)) === 'asked', 'the line is Asked');
 
   /* ── B6 ── */
   S.chits.push({ chit_id: 'q-1', direction: 'sent', status: 'delivered', created_at: '2026-10-13T06:00:00.000Z', party: P.unk, business_json: { kind: 'bank_query', currency: 'INR', bank_query: sb.business_json.bank_query }, line_items: [] });
@@ -240,19 +241,13 @@ function stand() {
 
   /* ── B10 · B5-05 the file's currency is asked, never the account's · B5-07 a statement belongs to the account it was read for ── */
   ({ ctx, p } = await open(S, {}));
-  await p.selectOption('#bk_preset', 'hdfc');
+  if (await p.locator('[data-testid="bank-change"]').isVisible() && !(await p.locator('#bk_preset').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await p.selectOption('#bk_preset', 'hdfc');
   await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
-  await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 });
-  ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0, 'B5-05: the file is NOT read against the books until its currency is said');
-  await p.fill('[data-testid="bank-currency"]', 'USD');
-  await p.click('[data-testid="bank-currency-go"]');
-  await p.waitForTimeout(400);
-  ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0 && /USD/.test(await p.textContent('#bk_out')) && /INR/.test(await p.textContent('#bk_out')), 'B5-05: a USD statement against the INR account is refused, naming both (' + (await p.textContent('#bk_out')).trim().slice(0, 90) + ')');
-  await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) }); /* a refused statement is loaded again, with its currency said */
-  await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 });
-  await p.fill('[data-testid="bank-currency"]', 'INR');
-  await p.click('[data-testid="bank-currency-go"]');
+  /* l16-bank-9: the account has its currency on record (a known fact), so nothing is asked and the statement is read at once */
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
+  ok('B10', (await p.locator('[data-testid="bank-currency"]').count()) === 0, 'B5-05 (changed): the account has its currency on record, so no currency question and the statement is read');
+  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
+  if (!(await p.locator('#bk_acct').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen: open it to pick another account */
   await p.selectOption('#bk_acct', '1501');
   await p.waitForSelector('[data-testid="bank-acct-changed"]', { timeout: 5000 });
   ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0 && (await p.locator('[data-testid="bank-res"] *').count()) === 0, 'B5-07: changing the bank account clears the statement, its marks and the reconciliation, and asks for the file again');

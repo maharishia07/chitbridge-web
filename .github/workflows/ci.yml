@@ -123,6 +123,7 @@ jobs:
           node e2e/legend-complete.cjs
           node e2e/network-guard.cjs
           node e2e/acc-176-books-grant-ui.test.cjs
+          node e2e/acc-176b-adviser-ui.test.cjs
           node e2e/offer-nudge-gap.cjs
           node e2e/offers-combined.test.cjs
           node e2e/offers-kinds.test.cjs
@@ -183,6 +184,7 @@ jobs:
           # CRM proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real code; each is red when its cited line is mutated
           node e2e/crm-9-standards-fold.test.cjs
           node e2e/crm-23-dues-columns.test.cjs
+          node e2e/stmts-pl-bs.test.cjs
           node e2e/crm-26-sheet-reads-invoice.test.cjs
           node e2e/crm-30-31-sum-scope.test.cjs
           node e2e/arabic-catalogue.test.cjs

@@ -52,7 +52,7 @@ function fcWhere(answer, currency) {
     esc(tx('Cash drawer') + ' ' + fcBal(answer.drawer_minor, currency)) +
     '</span>' +
     '<span data-testid="fc-bank">' +
-    esc(tx('UPI and bank') + ' ' + fcBal(answer.bank_minor, currency)) +
+    esc(tx((typeof packWord === 'function' && packWord('cash')) || 'UPI and bank') + ' ' + fcBal(answer.bank_minor, currency)) +
     '</span></div>'
   );
 }
@@ -68,7 +68,10 @@ async function fcLoad(quiet) {
     var reply = await api('booksCashflow', { query: { days: String(FC.days) } });
     if (generation !== FC.gen) return;
     FC.r = reply;
-    FC.rows = (reply && reply.series) || [];
+    /* only the days that have money (an item) and today are listed; the rest become one line in the head (fcQuietDays) */
+    FC.rows = ((reply && reply.series) || []).filter(function (d) {
+      return (d.items && d.items.length) || d.date === (reply.asOf || bkToday());
+    });
     FC.state = 'ready';
   } catch (e) {
     if (generation !== FC.gen) return;
@@ -130,7 +133,12 @@ function fcPaintChart() {
     box.innerHTML = '<p class="hint">' + esc(FC.state === 'error' ? tx('Could not read your cash position.') : tx('Loading…')) + '</p>';
     return;
   }
-  box.innerHTML = fcChart(FC.r, Math.max(240, (box.clientWidth || 640) - 32));
+  /* a picture of one level says nothing the sentence above does not: drawn only when at least two days differ */
+  var flat = (FC.r.series || []).every(function (d) {
+    return Number(d.balance_minor) === Number(FC.r.series[0].balance_minor);
+  });
+  box.innerHTML = flat ? '' : fcChart(FC.r, Math.max(240, (box.clientWidth || 640) - 32));
+  box.style.display = flat ? 'none' : '';
 }
 window.addEventListener('resize', function () {
   clearTimeout(FC.rs);
@@ -265,7 +273,7 @@ function fcCols() {
           esc(bkDate(d.date)) +
           '</span>' +
           (d.date === ((FC.r && FC.r.asOf) || bkToday()) ? ' <span class="tag">' + esc(tx('Today')) + '</span>' : '') +
-          (d.items.length ? '' : ' <span class="sub">' + esc(tx('quiet')) + '</span>')
+          ''
         );
       }
     },
@@ -374,8 +382,13 @@ function fcHead() {
         }
       });
     else chips.push({ tid: 'fc-words', text: reply.words });
+    var quiet = (reply.series || []).filter(function (d) {
+      return !(d.items && d.items.length) && d.date !== (reply.asOf || bkToday());
+    }).length;
+    if (quiet) chips.push({ tid: 'fc-quiet', text: txf('No money moved on {n} days', { n: quiet }) });
     if (reply.uncounted && reply.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: reply.uncounted.words });
     if (reply.gst && Number(reply.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(reply.gst, reply.currency) });
+    if (reply.gst && reply.gst.earlier && Number(reply.gst.earlier.payable_minor) > 0) chips.push({ tid: 'fc-gst-earlier', text: fcEarlierChip(reply.gst, reply.currency) });
   }
   return { title: tx('Cash position'), notices: notices, chips: chips };
 }
@@ -383,6 +396,11 @@ function fcHead() {
 function fcReturnChip(g, cur) {
   var when = g.due_date ? bkDate(g.due_date) + (g.counted ? '' : ' · ' + tx('after this window')) : g.why || tx('due date not known');
   return g.short + ' ' + bkMoney(g.payable_minor, cur) + ' · ' + when;
+}
+/** ONE-FIGURE: what the ledgers owe from BEFORE the return's period (an opening balance or earlier periods) — its own line, the server's figure, no due date made up for it */
+function fcEarlierChip(g, cur) {
+  var e = g.earlier;
+  return (g.short === 'BAS' ? 'GST' : g.short) + ' ' + tx('owing from before') + ' ' + (e.before ? shopDay(e.before) : tx('this period')) + ' · ' + bkMoney(e.payable_minor, cur) + ' · ' + tx('due date not recorded');
 }
 /** mount the Cash tab into the screen */
 function fcMount(frame) {

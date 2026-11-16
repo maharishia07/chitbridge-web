@@ -5,7 +5,7 @@
  * CALLED BY public/app/cap-bank-sheet.js (the in-app Bank sheet, FIN-117); loaded by public/accounts.html after bank-preview.js. The body it sends is the one POST /events reads (kind, never type; no key the closed EVENT_BODY lacks).
  * FLOW      bank-preview.postReady → post(item) → [party door] → api('booksEventPost') → { ok, duplicate?, entry_no? } | { ok:false, why }
  * CARD      16-finance/bank-reconciliation-and-bank-rail
- * ⚠️ POST /events is OWNER-ONLY: an accountant login is told up front (ownerRefusal), not once per line. A closed month answers 409 PERIOD_LOCKED / YEAR_CLOSED; the
+ * ⚠️ POST /events is the OWNER's, and an acting ADVISER's only when the grant posts (CBBooksActing.posts(); then no new party: the owner adds it first). Anyone else is told up front (ownerRefusal), not once per line. A closed month answers 409 PERIOD_LOCKED / YEAR_CLOSED; the
  *   server's own words are shown on the line. bank-preview.js pre-checks the months, so the popup already counted them.
  */
 (function (root) {
@@ -14,7 +14,16 @@
 
   /** why this login may not post (the server decides; this only says it first, once); null when it may */
   function ownerRefusal(who) {
-    return who && who.role && who.role !== 'owner' ? 'Adding entries is for the owner. Ask the owner to confirm this statement.' : null;
+    if (who && who.role === 'adviser') return who.posts ? null : txt('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.'); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
+    return who && who.role && who.role !== 'owner' ? txt('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
+  }
+  /** one catalogue sentence: the page's tx() when it has one */
+  function txt(s) {
+    return typeof root.tx === 'function' ? root.tx(s) : s;
+  }
+  /** an adviser never makes a party (those doors are outside /api/books and refused): a line that needs a new one waits for the owner to add it */
+  function newPartyRefusal(who, name) {
+    return who && who.role === 'adviser' ? (typeof root.txf === 'function' ? root.txf('Ask the owner to add {name} to the party list first, then add this line.', { name: name || txt('this party') }) : 'Ask the owner to add ' + (name || 'this party') + ' to the party list first, then add this line.') : null;
   }
   /** the id of the party a party door answered with, whichever shape that door uses; null when it sent none */
   function idOfParty(reply) {
@@ -34,11 +43,11 @@
     }
   }
   /** the keys of each entry kind POST /events reads beside the common ones (books-contract EVENT_BODY is CLOSED: a key it does not list is refused, so nothing else is sent) */
-  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to'] };
+  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to'], tax_payment: [] };
   /** money in from / out to a named party goes through the ONE payments door (POST /payments, what Dues records through), never POST /events: direction in | out */
   var PAYMENT_DIRECTION = { payment_received: 'in', payment_made: 'out' };
   /** the engine proposes these for a line with no payee (whatIsThis), but no api door takes them yet (BKS-ACC-4): refused in words here, never posted wrong */
-  var NOT_YET = { tax_payment: 'A tax payment to the tax office', loan_taken: 'A loan received', loan_repaid: 'A loan repayment' };
+  var NOT_YET = { loan_taken: 'A loan received', loan_repaid: 'A loan repayment' };
   /** the event types this adapter posts: through POST /events, and through POST /payments for a party */
   var POSTABLE = Object.keys(KIND_KEYS).concat(Object.keys(PAYMENT_DIRECTION));
   /**
@@ -55,6 +64,9 @@
       body.input_tax_minor = item.tax.tax_minor;
       if (item.tax.invoice_answer === 'held') body.tax_invoice = 'held'; /* the person's word that they hold the tax invoice (the server needs it at the pack's threshold; 'none' sends no tax at all) */
     }
+    if (event.type === 'other_income' && item.tax && item.tax.direction === 'output' && item.tax.tax_minor > 0) body.output_tax_minor = item.tax.tax_minor; /* the GST collected INSIDE the bank figure, the engine's own split: amount is the NET */
+    if (event.type === 'tax_payment') Object.assign(body, { paid_from: 'bank' }); /* the whole figure, the statement account's mode (modeOf below); the api puts it on the pack's one tax head */
+    if (item.moveTo) body.if_locked = 'next_open'; /* W15-85: the person chose to post this locked month's line in the next open month; the api adds the "<Month> locked" note (W15-85a, one wording) */
     return modeOf ? modeOf(body) : body;
   }
   /**
@@ -73,12 +85,19 @@
   function paymentBodyOf(item, partyId, modeOf) {
     var line = item.line || {}, event = item.event || {};
     var body = { party_id: partyId, direction: PAYMENT_DIRECTION[event.type], amount_minor: lineFigure(line), mode: statementMode(modeOf, event), received_at: event.date || line.date, reference: item.ref, allocate: 'none', client_ref: item.ref };
+    if (item.against && item.against.length) {
+      body.allocations = item.against.map(function (one) { return { against_ref: one.against_ref, amount_minor: one.amount_minor }; }); /* the engine found the open document this line IS: the receipt settles it, nothing is worked out here */
+      delete body.allocate;
+    }
     if (item.ticked || item.twin) body.acknowledge = ['same_again'];
+    if (item.moveTo) body.if_locked = 'next_open';
     return body;
   }
   /** the id of the party this line's entry names: an existing one as picked, a new one made FIRST (once per name and kind in this run); { ok, id } or the reason it could not be made */
   async function partyOf(deps, made, party) {
     if (!party) return { ok: true, id: null };
+    var noNew = party.status === 'new' && newPartyRefusal(deps.who, party.name);
+    if (noNew) return { ok: false, why: noNew };
     if (party.status !== 'new') return { ok: true, id: party.status === 'existing' ? party.id : null };
     var tag = String(party.name).toLowerCase() + '|' + party.kind;
     if (!made[tag]) {
@@ -115,7 +134,9 @@
     if (!party.ok) return party;
     if (!PAYMENT_DIRECTION[item.event.type]) return postEntry(deps, item, party.id);
     var partyId = party.id || namedPartyId(item.event);
-    return partyId ? postPayment(deps, item, partyId) : { ok: false, why: 'Pick who this payment is with, then try again.' };
+    if (partyId) return postPayment(deps, item, partyId);
+    var needs = newPartyRefusal(deps.who, (item.party && item.party.name) || '');
+    return { ok: false, why: needs || 'Pick who this payment is with, then try again.' };
   }
   /** why this kind of line is not added from here (in words); null when it is */
   function refusalOf(type) {
@@ -125,12 +146,12 @@
   /** one entry through POST /events */
   async function postEntry(deps, item, partyId) {
     var reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
-    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null };
+    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
   /** one receipt or payment through POST /payments, the door Dues records through */
   async function postPayment(deps, item, partyId) {
     var reply = await deps.api('booksPayRecord', { body: paymentBodyOf(item, partyId, deps.modeOf) });
-    return { ok: true, duplicate: !!(reply && reply.payment && reply.payment.duplicate), entry_no: (reply && reply.posted && reply.posted.entry_no) || null };
+    return { ok: true, duplicate: !!(reply && reply.payment && reply.payment.duplicate), entry_no: (reply && reply.posted && reply.posted.entry_no) || null, posting_date: (reply && reply.posted && reply.posted.posting_date) || null };
   }
 
   root.CBBankPost = { POSTABLE: POSTABLE, adapter: adapter, ownerRefusal: ownerRefusal, idOfParty: idOfParty, makeParty: makeParty, bodyOf: bodyOf, paymentBodyOf: paymentBodyOf };

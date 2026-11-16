@@ -52,6 +52,7 @@ dialog.sheet{border:1px solid var(--line,#e6dcc6);border-radius:14px;padding:20p
 dialog.sheet::backdrop{background:var(--scrim,rgba(42,36,24,.4))}
 dialog.sheet h2{margin:0 0 4px;font-family:var(--serif);font-size:21px}
 dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:18px;color:inherit}
+.emp-copy{min-height:32px;padding:0 10px;font-size:13px}
 .emp-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .emp-out{min-height:20px;margin:6px 0;font-weight:600;color:var(--green-d,#0D4A2B)}
 .emp-out[data-tone="error"]{color:var(--red-i,#8E3517)}
@@ -66,6 +67,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
 </style>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/cb-fonts.css">
 </head>
 <body>
 <div id="emp" data-testid="emp-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>

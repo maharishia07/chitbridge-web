@@ -61,7 +61,7 @@
     return Number(m[3]) + ' ' + month + ' ' + m[1];
   }
 
-  /** a line's standing: its state, the words for it and whether it may be posted; a closed month overrides what the engine said */
+  /** a line's standing: its state, the words for it and whether it may be posted; a locked month holds a line the books do not have yet (never one already in them) */
   function standingOf_(projected, closed) {
     if (closed) return { state: 'closed', why: closed.words, ready: false };
     return { state: projected.state, why: projected.why || '', ready: !!projected.ready };
@@ -84,12 +84,15 @@
   }
   /** what the engine carried about a line besides its entry: the tax record, what made the proposal, the books entries it may already be */
   function carriedOf_(projected) {
-    return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [] };
+    return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [], what: projected.what || null };
   }
   /** the statement line (index i) joined to what the engine said about it, ready to paint and to post */
-  function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate) {
+  function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate, moved) {
     var blockers = projected.blockers || [],
-      closed = lockedMonth ? lockedMonth(statementLine.date) : null,
+      locked = lockedMonth && projected.state !== 'in_books' ? lockedMonth(statementLine.date) : null,
+      /* W15-85: the person chose "Post in <next month> instead" for this month: the line is worked as any other and posts on the first day of the next open month, its own date kept */
+      moveTo = locked && locked.next && moved && moved[locked.key] ? locked : null,
+      closed = moveTo ? null : locked,
       named = partyProposalFor_(toCreate, projected.i);
     var item = {
       key: projected.ref,
@@ -97,10 +100,12 @@
       i: projected.i,
       line: statementLine,
       entry: projected.entry || null,
+      against: (proposal && proposal.against) || null, /* the open invoice or bill the engine found this line to be (bank-recon open_item) */
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
       needs: askedNeedOf_(blockers),
       blockers: blockers,
       closed: closed,
+      moveTo: moveTo,
       party: projected.party ? Object.assign({}, projected.party) : null,
       didYouMean: (named && named.did_you_mean) || []
     };
@@ -123,7 +128,8 @@
    */
   function booksPass(opts, preview, lines, refs, bookLines) {
     var recon = opts.engine.recon,
-      found = recon.match(lines, bookLines, { window_days: MATCH_WINDOW_DAYS }),
+      pairing = opts.pairing ? opts.pairing(lines) : {},
+      found = recon.match(lines, bookLines, { window_days: MATCH_WINDOW_DAYS, line_refs: pairing.line_refs, posted: pairing.posted }),
       held = {},
       taken = {};
     found.matched.forEach(function (pair) {
@@ -153,7 +159,7 @@
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
-    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
+    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, kind: asked.kind, account: asked.account, tax_kind: asked.tax_kind };
     var resolved = entry.resolve(line, answers, suggestOpts); /* engines #147: a payee-less line composes once with learned:false and no taught rule — nothing is stored on the device either way */
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
@@ -217,14 +223,15 @@
     if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
     return proposal;
   }
-  /** the host cannot post this proposal: its kind is not on the host's list, or the engine split a taxed receipt into net + output tax (POST /events carries input tax only, so the bank leg would be short) */
+  /** the host cannot post this proposal: its kind is not on the host's list (a taxed receipt is posted since l16-bankmatch-fix: POST /events other_income carries output_tax_minor) */
   function cannotPostHere_(proposal, type, opts) {
-    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0;
-    return !!outputTax || (!!opts.postable && opts.postable.indexOf(type) < 0);
+    return !!opts.postable && opts.postable.indexOf(type) < 0;
   }
   /** what the statement check says of this line already being done (who, when), or null */
-  function alreadyOf_(preview, index) {
-    return (root.CBBankPreviewCheck && root.CBBankPreviewCheck.alreadyByLine(preview.check)[index]) || null;
+  function alreadyOf_(preview, index, opts, ref) {
+    var said = (root.CBBankPreviewCheck && root.CBBankPreviewCheck.alreadyByLine(preview.check)[index]) || null,
+      late = opts && opts.lateOf ? opts.lateOf(ref) : null; /* W15-85: a line posted in a later month because its own was locked says so, found by its own ref */
+    return late ? (said ? said + ' · ' : '') + late : said;
   }
   /** the owner's answers to the statement check, as controller methods: tick a finding (confirmCheck) · pick the account (chooseAccount); each reads the statement again */
   function checkAnswers(opts, preview) {
@@ -252,9 +259,9 @@
     preview.projection = out;
     preview.refusal = null;
     preview.items = out.lines.map(function (projected, index) {
-      var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
+      var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || [], preview.moved);
       item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
-      item.alreadyWhy = alreadyOf_(preview, index);
+      item.alreadyWhy = alreadyOf_(preview, index, opts, projected.ref);
       return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
@@ -262,7 +269,7 @@
   /** the lines a press would post: ready, and not already added in this session */
   function readyItems(preview) {
     return preview.items.filter(function (item) {
-      return item.ready && !(preview.results[item.key] && preview.results[item.key].ok);
+      return (!preview.only || item.key === preview.only) && item.ready && !(preview.results[item.key] && preview.results[item.key].ok);
     });
   }
   /** how many NEW parties the press would make: one per distinct name and kind among the ready lines (two lines naming one payee make it once) */
@@ -273,6 +280,11 @@
     });
     return Object.keys(seen).length;
   }
+  /** what the press reaches when ONE line is answered: that line's own carried figures (its amount and its tax record), not the statement's totals */
+  function oneLineReach(preview, item) {
+    var line = item ? item.line : {};
+    return { currency: preview.projection.currency, count: item ? 1 : 0, in: line.credit_minor || 0, out: line.debit_minor || 0, tax: item && item.tax ? item.tax.tax_minor : 0, from: line.date || null, to: line.date || null, needs_you: 0, closed: 0, newParties: newPartyCount(preview), single: true };
+  }
   /** what the press reaches: the engine's carried totals of the READY lines, the lines a closed month holds back, the lines that still need a person; null when the engine sent none */
   function reachOf(preview) {
     var totals = preview.projection && preview.projection.totals,
@@ -281,12 +293,13 @@
     var held = preview.items.filter(function (item) {
       return item.closed;
     }).length;
+    if (preview.only) return oneLineReach(preview, readyItems(preview)[0]);
     return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: counts.needs_you, closed: held, newParties: newPartyCount(preview) };
   }
   /** the popup: count · in · out · date range · currency · new parties · how many still need you */
-  function confirmWords(reach) {
+  function confirmWords(reach, amountText) {
     var amountOf = function (value) {
-      return moneyText(value, reach.currency);
+      return amountText ? amountText(value) : moneyText(value, reach.currency); /* a host draws money its own way (the in-app Bank page: plain figures, the currency said once) */
     };
     var parties = reach.newParties ? reach.newParties + (reach.newParties === 1 ? ' new party' : ' new parties') + ' made first' : null;
     var held = reach.closed ? ' ' + reach.closed + ' in a closed month are held back.' : '';
@@ -299,7 +312,7 @@
         'Dated: ' + dateText(reach.from) + (reach.to && reach.to !== reach.from ? ' to ' + dateText(reach.to) : ''),
         'Currency: ' + reach.currency,
         parties,
-        reach.needs_you + ' still need you. They are not added.' + held
+        reach.single ? null : reach.needs_you + ' still need you; they are left out for now.' + held
       ].filter(Boolean)
     };
   }
@@ -307,7 +320,7 @@
   async function postOne(opts, preview, item) {
     try {
       var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key] }));
-      preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+      preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
     }
@@ -358,7 +371,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -382,7 +395,7 @@
   }
   /** the answers the owner gave for a line, as resolve() takes them: the party (new or existing), or an account from the chart (+ the tax kind on money out); or the words for what is missing */
   function answersOf(item, key, given) {
-    if (given && given.account) return { answers: { account: given.account, tax_kind: given.tax_kind || undefined } };
+    if (given && (given.kind || given.account)) return { answers: { kind: given.kind || undefined, account: given.account || undefined, tax_kind: given.tax_kind || undefined } }; /* kind = an id of CBBankEntry.whatIsThis (transfer, card_settlement, tax_payment ...) */
     if (given) return { why: 'Pick an account from the list first.' };
     if (!item.party) return { why: 'Say who this is first.' };
     var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };
@@ -439,10 +452,24 @@
           preview.pairs[key] = entryId;
         });
       },
+      /** the pairs the person made this session, { line ref → books entry id }: the host's page reads them so its band counts the same lines the sheet does */
+      pairsMade: function () {
+        return Object.assign({}, preview.pairs);
+      },
       notMatch: function (key) {
         return answerLine(opts, preview, key, function () {
           preview.notMatch[key] = true;
         });
+      },
+      /** W15-85: post the lines of a locked month (its key 'YYYY-MM') in the next open month instead (on), or take that back (off); the lines are worked again either way */
+      moveLocked: function (monthKey, on) {
+        if (on) preview.moved[monthKey] = true;
+        else delete preview.moved[monthKey];
+        return preview.parsed ? projectAgain(opts, preview) : false;
+      },
+      /** the months the person chose to post in the next month, { 'YYYY-MM': true } */
+      movedMonths: function () {
+        return Object.assign({}, preview.moved);
       }
     };
   }
@@ -455,7 +482,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -465,7 +492,7 @@
       },
       confirmText: function () {
         var reach = reachOf(preview);
-        return reach ? confirmWords(reach) : null;
+        return reach ? confirmWords(reach, opts.amountText) : null;
       },
       postReady: function (onLine) {
         return postReady(opts, preview, onLine);
@@ -480,6 +507,11 @@
         preview.answers[name] = value;
         if (preview.parsed) projectAgain(opts, preview);
       },
+      /** answer ONE line only: its key (or '' for every line); what is ready, the press and its words then reach that line alone */
+      only: function (key) {
+        if (key !== undefined) preview.only = key || '';
+        return preview.only || '';
+      },
       readyCount: function () {
         return readyItems(preview).length;
       },
@@ -489,6 +521,39 @@
     });
   }
 
-  root.CBBankPreview = { create: create, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
+  /**
+   * l16-bank-rules (R69): what the PACK's words say a line is, in ONE sentence the owner's sheet and the demo both print: an own-account transfer, tax paid to the tax office, card takings paid in.
+   * null when the words say nothing. It carries no figure and no account; the entry (when the engine composed one) is printed beside it by each page from the engine's own legs.
+   */
+  function looksLike(item) {
+    var kind = item && item.what && item.what.kind,
+      out = !!(item && item.line && item.line.debit_minor > 0);
+    if (kind === 'transfer') return 'Looks like a transfer ' + (out ? 'to' : 'from') + ' your own account. Which one?';
+    if (kind === 'tax_payment') return 'Looks like tax paid to the tax office.';
+    if (kind === 'card_settlement') return 'Looks like your card takings paid into the bank.';
+    return null;
+  }
+  /**
+   * ONE standing per statement line (l16-bank-10): 'in' (in the books) · 'ready' · 'wait' (only the GST basis holds it) · 'need' (a person answers) · 'posted' · 'failed' · 'closed'.
+   * The demo's chips and bar, the owner's page rows and the sheet's counts all read THIS, from the controller's own items, so one file never shows two splits.
+   */
+  function standing(item, result) {
+    if (result) return result.ok ? 'posted' : 'failed';
+    if (item.state === 'closed') return 'closed';
+    if (item.state === 'in_books') return 'in';
+    if (item.state === 'proposed') return item.ready ? 'ready' : item.needs === 'gst_basis' ? 'wait' : 'need';
+    return 'need';
+  }
+  /** a new party's name in the statement's own letters (never re-cased): the slice of the bank words the engine's name was made from; the engine's name when the words do not hold it */
+  function asWritten(item) {
+    var name = (item && item.party && item.party.name) || '',
+      words = String((item && item.line && item.line.narration) || ''),
+      at = name ? words.toLowerCase().indexOf(name.toLowerCase()) : -1;
+    if (at >= 0) return words.slice(at, at + name.length);
+    /* the engine left a number out of the name ("EFTPOS BUNNINGS 0450 SYDNEY"): the words it kept, still in the statement's letters */
+    var kept = words.split(/\s+/).filter(function (word) { return name.toLowerCase().split(/\s+/).indexOf(word.toLowerCase()) >= 0; }).join(' ');
+    return kept.toLowerCase() === name.toLowerCase() ? kept : name;
+  }
+  root.CBBankPreview = { create: create, looksLike: looksLike, standing: standing, asWritten: asWritten, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankPreview;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

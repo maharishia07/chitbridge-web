@@ -98,7 +98,7 @@ W.run('employees', async (w) => {
 
   await w.step('E1', 'Employees -> the list has one line per person, the count says 2 on · 1 off, and the sign-in name is the short one', async () => {
     const n = await rows(), cnt = await txt('[data-testid="emp-count"]'), list = await txt('[data-testid="emp-list"]');
-    return { ok: n === 3 && /2\s*on/.test(cnt) && /1\s*off/.test(cnt) && /asha01\b/.test(list) && !/@walk-shop/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the long sign-in form is showing' : 'short sign-in names only') };
+    return { ok: n === 3 && /2\s*on/.test(cnt) && /1\s*off/.test(cnt) && /asha01@walk-shop.br/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the whole sign-in name is showing' : 'the sign-in name is cut') };
   });
   await w.step('E2', 'Employees -> type "ravi" in the search box -> only Ravi Nair is left', async () => {
     await page.fill('[data-testid="listctl-search-employees"]', 'ravi'); await page.waitForTimeout(400);
@@ -158,7 +158,7 @@ W.run('employees', async (w) => {
     await page.click('#emp_add'); await page.waitForSelector('[data-testid="emp-add-name"]', { timeout: 6000 });
     await page.fill('[data-testid="emp-add-name"]', 'Kavya Rao'); await page.waitForTimeout(900);
     const key = await page.inputValue('[data-testid="emp-add-key"]'), note = await txt('[data-testid="emp-add-keynote"]');
-    return { ok: /^kavya/.test(key) && /They sign in as/.test(note), saw: 'suggested "' + key + '"; "' + note + '"' };
+    return { ok: /^kavya/.test(key) && /They sign in as/.test(note) && /4 to 12 letters or numbers/.test(await txt('[data-testid="emp-add-keyhint"]')), saw: 'suggested "' + key + '"; "' + note + '"' };
   });
   await w.step('E12', 'Add a person -> a sign-in name that is too short -> told in words, nothing sent', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kr'); await page.click('[data-testid="emp-add-go"]'); await page.waitForTimeout(300);
@@ -167,10 +167,10 @@ W.run('employees', async (w) => {
   });
   await w.step('E13', 'Add a person -> a good sign-in name -> Add -> "Added" with the sign-in name and where the first code went, and the list has 4 people', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kavya04'); await page.click('[data-testid="emp-add-go"]'); await page.waitForSelector('[data-testid="emp-added"]', { timeout: 6000 });
-    const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]');
+    const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]'); const copyN = await page.locator('[data-testid="emp-copy"]').count(); await page.screenshot({ path: 'e2e/shots/smallfix-employee-added-laptop.png' }).catch(() => {}); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); const fit390 = await page.evaluate(() => { const b = document.querySelector('[data-testid="emp-copy"]').getBoundingClientRect(); return b.right <= window.innerWidth && document.documentElement.scrollWidth <= document.documentElement.clientWidth; }); await page.screenshot({ path: 'e2e/shots/smallfix-employee-added-phone.png' }).catch(() => {}); await page.setViewportSize({ width: 1366, height: 800 });
     await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(400);
     const n = await rows();
-    return { ok: id === 'kavya04' && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+    return { ok: id === 'kavya04@walk-shop.br' && copyN === 1 && fit390 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
   });
   await w.step('E18', 'SEC2 · Asha -> E-mail -> type her address -> Save -> "Saved." and the sheet shows it (codes go there, never on screen)', async () => {
     await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_email', { timeout: 6000 });
@@ -190,7 +190,7 @@ W.run('employees', async (w) => {
     await page.click('#emp_pin'); await confirmYes();
     const digits = (await txt('[data-testid="emp-code-digits"]')).replace(/\s/g, ''), say = await txt('[data-testid="emp-code-say"]');
     const grouped = /^\d{3} \d{3}$/.test(await txt('[data-testid="emp-code-digits"]'));
-    const copy = await page.locator('#emp_sheet button', { hasText: /copy/i }).count();
+    const copy = await page.locator('#emp_sheet button:not([data-testid="emp-copy"])', { hasText: /copy/i }).count();
     await page.screenshot({ path: 'e2e/shots/walk-employees-r112.png' }).catch(() => {});
     const bad = [];   /* AA contrast + no clipping + no sideways scroll, light and dark, 1366 and 390 */
     for (const [wd, ht] of [[1366, 800], [390, 844]]) {

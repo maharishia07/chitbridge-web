@@ -1,7 +1,7 @@
-/* ADOPTED from chitbridge-engines v1.97.0 · bank-entry · sha256 de91cf7ea2664c23da55cf609ed21f3f601822fbb087530f0f514bcc201420cb — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-entry · sha256 2be543dacee8719f2d706e9e3581b819a9566c8448caa8088a6e8b74367d880e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-entry.js: WHAT A BANK-LINE PROPOSAL'S ENTRY CARRIES: the shape of the entry posting.post composed, and the tax inside a tax-inclusive expense.
- * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here).
+ * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here) · notAParty (a narration that is an own-account transfer, a tax-office payment or a card settlement: no party, a whatIsThis answer instead).
  * CALLED BY bank-recon.js (base → withTax, finish_ → entryOf) · bank-project.js reads the entry these make and nothing else.
  * FLOW bank statement → books, step "suggest" (docs/16-finance/BANK-TO-BOOKS-REQUIREMENT.md, Critic 14 Nov, item 3). CARD 16-finance/bank-reconciliation-and-bank-rail.
  * ONE calculation: no rate is written here and no tax is divided here. The rate and the credit rule are the pack's supply kind (pack.supplyKindOf), the sum is tax.splitLineTax,
@@ -176,6 +176,25 @@
     if (same) return { status: 'existing', id: same.id || same.name, name: same.name || same.id, kind: same.kind || null, did_you_mean: [] };
     return { status: 'new', name: name, kind: ctx.out ? 'supplier' : 'customer', basis: 'direction', did_you_mean: didYouMean_(nameKey_(name), ctx.parties) };
   }
+  /** the three things a narration can be before it is a payee, in the order tried: [the pack's keyword category, the whatIsThis id it proposes, the one side it is for (null = either)] */
+  var NOT_A_PARTY_ = [
+    ['own_transfer', 'transfer', null],
+    ['tax_office', 'tax_payment', 'out'],
+    ['card_settlement', 'card_settlement', 'in']
+  ];
+  /**
+   * notAParty(text, { rules, out, has }) → { kind, word, ask } or null: the narration names the shop's OWN account, the tax office or the card terminal's payout, so it is no supplier or customer.
+   * The WORDS are the pack's (pack.bank.keywords: own_transfer · tax_office · card_settlement, read through bank-recon's rules and its one whole-word test `has`); a pack with none gives null, so the engine stays neutral.
+   * kind is an id of whatIsThis(): the line is proposed as that answer (a transfer asks which own account), never as a new party.
+   */
+  function notAParty(text, ctx) {
+    for (var at = 0; at < NOT_A_PARTY_.length; at++) {
+      var row = NOT_A_PARTY_[at],
+        word = row[2] && row[2] !== (ctx.out ? 'out' : 'in') ? null : ctx.has(text, (ctx.rules && ctx.rules[row[0]]) || []);
+      if (word) return { kind: row[1], word: word, ask: row[1] === 'transfer' ? 'account' : null };
+    }
+    return null;
+  }
   /** the pack the answers are read against: the one given, else the one the options name; null when neither */
   function packOf_(opts) {
     var regulation = dep_('./regulation', 'CBRegulation');
@@ -210,8 +229,26 @@
     { id: 'equipment', words: 'I bought equipment', why: 'an asset is added through the assets door (POST /assets), not a posting event; BKS-ACC-1' }
   ];
   /**
+   * the shop's OWN bank-group ledgers the pack does not know (a savings account it added): opts.own_accounts [{ code, name }] → [{ role: null, code, name }], the line's own account left out by the caller.
+   * A transfer to one of them is a `contra` the engine composes through the pack that carries them (packWith_), never a new account.
+   */
+  function ownAccounts_(opts, pack) {
+    var known = {};
+    (pack.ledgers || []).forEach(function (item) { known[String(item.code)] = true; });
+    return ((opts && opts.own_accounts) || [])
+      .filter(function (item) { return item && item.code && !known[String(item.code)]; })
+      .map(function (item) { return { role: null, code: String(item.code), name: String(item.name || item.code) }; });
+  }
+  /** the pack with the shop's own bank-group ledgers added (a copy; the pack itself is not touched): what posting.post needs to compose a contra to one */
+  function packWith_(pack, opts) {
+    var more = ownAccounts_(opts, pack);
+    if (!more.length) return pack;
+    var bankGroup = pack.chart && pack.chart.kinds && pack.chart.kinds.bank;
+    return Object.assign({}, pack, { ledgers: (pack.ledgers || []).concat(more.map(function (item) { return { role: undefined, code: item.code, name: item.name, group: bankGroup }; })) });
+  }
+  /**
    * whatIsThis(opts) → { ok, items, later, not_offered }: THE CLOSED LIST for a line that names no payee ("What is this?"). Nothing here is new: every answer is an EXISTING posting event, from the accounts the pack already has.
-   *   opts { country | pack }; item = { id, words, side: 'out' | 'in' | 'both', event: the posting event type, ask: 'account' | null, accounts: [{ role, code, name }] (what the account answer is picked from), fixed: the one account it is, or null }
+   *   opts { country | pack, own_accounts? }; item = { id, words, side: 'out' | 'in' | 'both', event: the posting event type, ask: 'account' | null, accounts: [{ role, code, name }] (what the account answer is picked from), fixed: the one account it is, or null }
    *   answers to resolve(): { kind: <an id here>, account: <a role or code from that item's accounts> }; an `account` with no kind is an expense (money out) or other income (money in), as before.
    * The tax payment is offered ONLY when the pack has ONE tax head (the whole figure is that head's); PAYG and super have no head, so they are not offered. A loan repayment is the whole figure as principal (the interest split is not asked).
    * The same list is used by resolve(), so a screen and the engine cannot disagree on what may be said.
@@ -224,6 +261,7 @@
         return item.role !== 'bank';
       }),
       loans = accountsIn_(pack, kinds.loans),
+      own = ownAccounts_(opts, pack),
       only = function (role) {
         return money.filter(function (item) {
           return item.role === role;
@@ -232,7 +270,7 @@
       items = [
         { id: 'expense', words: 'A cost of the business', side: 'out', event: 'expense', ask: 'account', accounts: accountsIn_(pack, null, 'expense_classes'), fixed: null },
         { id: 'other_income', words: 'Money that is not a sale', side: 'in', event: 'other_income', ask: 'account', accounts: accountsIn_(pack, null, 'income_classes'), fixed: null },
-        { id: 'transfer', words: 'Moved between my own accounts', side: 'both', event: 'contra', ask: 'account', accounts: money, fixed: null },
+        { id: 'transfer', words: 'Moved between my own accounts', side: 'both', event: 'contra', ask: 'account', accounts: money.concat(own), fixed: null },
         { id: 'card_settlement', words: 'Card or EFTPOS takings paid to the bank', side: 'in', event: 'contra', ask: null, accounts: only('card'), fixed: 'card' },
         { id: 'cash', words: 'Cash taken out of or paid into the bank', side: 'both', event: 'contra', ask: null, accounts: only('cash'), fixed: 'cash' },
         { id: 'tax_payment', words: 'Tax paid to the tax office', side: 'out', event: 'tax_payment', ask: null, accounts: [], fixed: null, head: (pack.payHeads || [])[0] || null },
@@ -263,14 +301,14 @@
     if (!chosen) return { why: 'say which account it is, from the list for "' + item.words + '"' };
     if (item.event === 'expense') return { event: { type: 'expense', class: chosen.role, paid_from: 'bank', tax_kind: answers.tax_kind } };
     if (item.event === 'other_income') return { event: { type: 'other_income', class: chosen.role, into: 'bank', tax_kind: answers.tax_kind } }; /* B5-04: money in names its tax kind too */
-    if (item.event === 'contra') return { event: out ? { type: 'contra', from: 'bank', to: chosen.role } : { type: 'contra', from: chosen.role, to: 'bank' } };
+    if (item.event === 'contra') return { event: out ? { type: 'contra', from: 'bank', to: chosen.role || chosen.code } : { type: 'contra', from: chosen.role || chosen.code, to: 'bank' } };
     return { event: item.event === 'loan_taken' ? { type: 'loan_taken', loan: chosen.role, into: 'bank' } : { type: 'loan_repaid', loan: chosen.role, from: 'bank', principal: 0, interest: 0 } };
   }
   /** the event the owner's answers make of a line: { event } (null when no account or kind is said), or { why } when what is said is not on the closed list for this side or this pack */
-  function eventOf_(answers, out, pack) {
+  function eventOf_(answers, out, pack, opts) {
     var kind = answers.kind || (answers.account ? (out ? 'expense' : 'other_income') : null);
     if (!kind) return { event: null };
-    var item = whatIsThis({ pack: pack }).items.filter(function (entry) {
+    var item = whatIsThis({ pack: pack, own_accounts: opts && opts.own_accounts }).items.filter(function (entry) {
       return entry.id === kind;
     })[0];
     if (!item) return { why: '"' + kind + '" is not on the list of answers for this country' };
@@ -303,18 +341,20 @@
     var recon = dep_('./bank-recon', 'CBBankRecon'),
       given = answers || {},
       out = (+line.debit_minor || 0) > 0;
-    var pack = packOf_(opts),
-      made = pack ? eventOf_(given, out, pack) : { event: null },
+    var basePack = packOf_(opts),
+      pack = basePack && packWith_(basePack, opts),
+      made = basePack ? eventOf_(given, out, basePack, opts) : { event: null },
       event = made.event;
+    if (pack && opts) opts = Object.assign({}, opts, { pack: pack });
     if (made.why) return { ok: false, why: made.why };
     if (!recon || (!event && !given.party)) return { ok: false, why: 'say which party it is, or which account it goes to' };
-    var missing = taxKindMissing_(given, event, pack);
+    var missing = taxKindMissing_(given, event, basePack);
     if (missing) return { ok: false, why: missing };
     var taught = recon.learn(line, { party: given.party, party_name: given.party_name, event: event }, Object.assign({ at: (opts && opts.at) || null, by: (opts && opts.by) || null }, opts));
     if (!taught.ok) return given.party ? { ok: false, why: taught.why } : composeOnce_(recon, line, event, taught.why, opts);
     return Object.assign({ taught: taught.rule, learned: true }, recon.suggest(line, Object.assign({}, opts, { learned: [taught.rule].concat((opts && opts.learned) || []) })));
   }
-  var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_ };
+  var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, notAParty: notAParty, eventOfAnswer: eventOf_, NOT_A_PARTY_CATEGORIES: NOT_A_PARTY_.map(function (row) { return row[0]; }), whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_ };
   /* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page takes window.CBBankEntry. */
   if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
   if (root && typeof root.window !== 'undefined') root.window.CBBankEntry = EXPORTS;

@@ -70,7 +70,8 @@ function standIn() {
     const sup = !!who.supplier_entity_id, sum = open.reduce((a, x) => a + x.open_minor, 0);
     return { party_id: id, party_no: who.party_no, name: who.display_name, side: sup ? 'supplier' : 'customer', balance_minor: S.balance(id),
       oldest_due: open.map((x) => x.due_date).sort()[0] || null, disputed_minor: S.items[id].filter((x) => x.disputed).reduce((a, x) => a + x.open_minor, 0),
-      buckets: sup ? { not_due: 0, lt_1y: sum } : { not_due: 0, lt_6m: sum } };
+      buckets: sup ? { not_due: 0, lt_1y: sum } : { not_due: 0, lt_6m: sum }, /* the pack's months buckets stay on the wire; no screen reads them */
+      follow_up: { not_due: 0, d0_30: 0, d31_60: Math.abs(sum), d61_90: 0, d90_plus: 0, worst: sum ? 'd31_60' : null, no_terms_minor: 0, terms: 'ok' } };
   }) });
   return S;
 }
@@ -750,8 +751,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
   const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
-  ok(/2,500/.test(String(await cellOf('s1', 'lt_1y'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "< 1 year" in its own group (' + await cellOf('s1', 'lt_1y') + ')');
-  ok(String(await cellOf('c1', 'lt_6m') || '').length > 0 && await cellOf('c1', 'lt_1y') === null, 'dues: a customer keeps the six receivable buckets');
+  ok(/2,500/.test(String(await cellOf('s1', 'd31_60'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "31–60 days" in its own group (' + await cellOf('s1', 'd31_60') + ')');
+  ok(String(await cellOf('c1', 'd31_60') || '').length > 0 && await cellOf('c1', 'other') === null && await cellOf('s1', 'other') === null, 'dues: a customer and a supplier read the SAME five ages, and there is no "Other" (W15-94)');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-laptop.png') });
   await noAccounting(p, 'ledger');
 
@@ -831,9 +832,11 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/Locked/.test(await p.textContent('[data-testid="lk-state-' + sep + '"]')), 'a locked month\'s row says Locked after coming back to the screen (read from the server)');
   const before = S.lastLock;
   await p.click('[data-testid="lk-unlock-' + sep + '"]');
-  ok(S.lastLock === before && /Say why/.test(await p.textContent('[data-testid="lk_out"]')), 'opening a month again without a reason is refused before sending');
+  await p.waitForSelector('[data-testid="lk_why"]', { timeout: 5000 }); /* W15-97: the reason is asked in the popup beside Open again */
+  await p.click('[data-testid="lk-reopen-go"]');
+  ok(S.lastLock === before && /Say why/.test(await p.textContent('[data-testid="lk-whyout"]')), 'opening a month again without a reason is refused before sending');
   await p.fill('[data-testid="lk_why"]', 'late bill from Agro Mills');
-  await p.click('[data-testid="lk-unlock-' + sep + '"]');
+  await p.click('[data-testid="lk-reopen-go"]');
   await p.waitForFunction((n) => document.querySelector('[data-testid="lk-state-' + n + '"]').getAttribute('data-state') === 'open', sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === false && S.lastLock.body.reason === 'late bill from Agro Mills', 'opened again, with the reason sent');
 
@@ -906,28 +909,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await noAccounting(p, 'packs');
 
   /* 8 · opening balances + a shop ledger */
-  await p.click('[data-testid="acc-nav-opening"]'); await p.waitForSelector('[data-testid="op_csv"]');
-  await p.fill('[data-testid="op_csv"]', '1300,P-00001,5000,,INV-0,2026-10-15\n2100,P-00003,100,200,,');
-  await p.click('[data-testid="op_go"]');
-  ok(S.opening === null && /Line 2/.test(await p.textContent('[data-testid="op_out"]')), 'a line with both debit and credit is refused before sending');
-  await p.fill('[data-testid="op_csv"]', '1300,P-00001,5000,,INV-0,2026-10-15\n2100,P-00003,,5000,AM-1,');
-  /* ⚠️⚠️ review M11 — the first press fails on the way; the second is a RETRY and carries the same client_ref */
-  S.failOpeningOnce = true;
-  await p.click('[data-testid="op_go"]');
-  for (let i = 0; i < 40 && S.openingPosts.length < 1; i++) await p.waitForTimeout(100);
-  await p.waitForFunction(() => { const b = document.querySelector('[data-testid="op_go"]'); return b && !b.disabled && (document.querySelector('[data-testid="op_out"]').textContent || '').trim() !== ''; }, null, { timeout: 8000 }).catch(() => {});
-  await p.click('[data-testid="op_go"]');
-  await p.waitForFunction(() => /Entered/.test(document.querySelector('[data-testid="op_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
-  ok(S.opening && S.opening.rows.length === 2 && S.opening.rows[0].dr_minor === 500000 && S.opening.rows[1].cr_minor === 500000, 'opening balances sent in minor units');
-  const oRef = (S.openingPosts[0] || {}).client_ref;
-  ok(S.openingPosts.length === 2 && /^web-/.test(String(oRef || '')) && S.openingPosts[1].client_ref === oRef, 'opening balances carry a client_ref, and the retry sends the SAME one');
-  /* pressed again after it went in: nothing is sent a second time */
-  await p.click('[data-testid="op_go"]'); await p.waitForTimeout(500);
-  ok(S.openingPosts.length === 2 && /at least one line/.test(await p.textContent('[data-testid="op_out"]')), '⚠️⚠️ a second press after it went in sends NOTHING (the box was emptied): ' + S.openingPosts.length + ' POSTs');
-  await p.fill('[data-testid="op_csv"]', '1400,,250,,,');
-  await p.click('[data-testid="op_go"]');
-  for (let i = 0; i < 40 && S.openingPosts.length < 3; i++) await p.waitForTimeout(100);
-  ok(S.openingPosts.length === 3 && S.openingPosts[2].client_ref && S.openingPosts[2].client_ref !== oRef, 'the next entry, after a yes, has a NEW client_ref');
+  /* the Opening balances page (cap-opening.js) is walked against the real api by e2e/opening-live.cjs; the mock here only proves the door opens it */
+  await p.click('[data-testid="acc-nav-opening"]'); await p.waitForSelector('[data-testid="ob-root"], [data-testid="ob-err"]');
   await p.click('[data-testid="acc-nav-accounts"]'); await p.waitForSelector('[data-testid="ac_add"]');
   await p.fill('[data-testid="ac_name"]', 'Shop repairs'); await p.click('[data-testid="ac_add"]');
   await p.waitForTimeout(500);

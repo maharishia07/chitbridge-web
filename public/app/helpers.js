@@ -106,8 +106,8 @@ function shopReg(cc) {
    row by the country code the caller passes — each pack's id is its country's code. */
 var PACK_WORDS = {
   IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
-  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State' },
-  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate' },
+  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', returnName: 'BAS', cash: 'Bank' },
+  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', returnName: 'VAT return' },
   US: { stock: 'Inventory' }
 };
 var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
@@ -404,6 +404,55 @@ function shopDateTime(ts, opts) {
     }
   }
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
+}
+/** ONE rule: which day-book group an entry belongs to — the owner Day book (cap-books.js) and the auditor/firm Day book (books-grant-view.js) both read it (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
+/* [group, the event_type pattern, the source.kind it also takes] — the first row that fits wins, so the order is the rule */
+var DAY_BOOK_KINDS = [
+  ['Returns', /return|credit_note|debit_note/, 'credit_note'],
+  ['Purchases', /purchase/, null],
+  ['Expenses', /expense/, 'expense'],
+  ['Sales', /sale|walkin/, 'day'],
+  ['Receipts', /received|receipt/, 'receipt'],
+  ['Payments', /payment/, 'payment']
+];
+/** ONE rule: the line of a Day book entry that names its party (the first with one): the owner Day book (cap-books.js bkDvParty) and the auditor Day book (books-grant-view.js) both read it */
+function dayBookPartyLine(entry) {
+  return ((entry && entry.lines) || []).filter(function (line) {
+    return line.party_name || line.party_id;
+  })[0];
+}
+/** "Kensington Strata · HP-INV-1": the party and the document number a Day book row stands on (R70: one source for the owner and the auditor); the entry's own words when it has neither (an opening, a hand-keyed journal) */
+function dayBookPartyRef(entry) {
+  var line = dayBookPartyLine(entry),
+    ref = entry && entry.source && entry.source.ref;
+  return [line && line.party_name, ref].filter(Boolean).join(' · ') || (entry && entry.narration) || '';
+}
+function dayBookKind(entry) {
+  var type = String((entry && entry.event_type) || ''),
+    sourceKind = String((entry && entry.source && entry.source.kind) || '');
+  var hit = DAY_BOOK_KINDS.filter(function (row) {
+    return row[1].test(type) || (row[2] !== null && row[2] === sourceKind);
+  })[0];
+  if (hit) return hit[0];
+  return sourceKind === 'bill' ? 'Sales' : 'Other';
+}
+/**
+ * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
+ * A bare day (YYYY-MM-DD) is a calendar day, read in UTC so no zone moves it; a moment goes through shopDateTime with the year. Unreadable -> the dash.
+ */
+function shopDay(value) {
+  var text = String(value == null ? '' : value);
+  if (!text) return '—';
+  var bare = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  var ts = bare ? Date.UTC(+bare[1], +bare[2] - 1, +bare[3], 12) : value;
+  var opts = { day: 'numeric', month: 'short', year: 'numeric' };
+  if (bare) opts.timeZone = 'UTC';
+  var out = typeof CBLocale !== 'undefined' && !isNaN(new Date(ts).getTime()) ? CBLocale.date(ts, opts) : '';
+  return out || (isNaN(new Date(ts).getTime()) ? text : text.slice(0, 10));
+}
+function shopStamp(value) {
+  if (!value || isNaN(new Date(value).getTime())) return value ? String(value) : '—';
+  return shopDateTime(value, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 /** CUR-1 slice 5: a money VALUE (an object) carries its own currency, which outranks the caller's code; returns { amount, code }, or { text } (a dash or the caller's empty word) when it cannot be read */
 function moneyValueFor(value, code, empty) {

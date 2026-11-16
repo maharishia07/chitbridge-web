@@ -56,7 +56,7 @@ function adviceOf(S, pid) {
   return books.payAdvice(pid, row.body, NAME, { on_rail: S.adv.on_rail, state: row.state, chit_id: row.chit_id, shared_at: row.shared_at, entry_no: row.entry_no, settled: row.settled, may: S.adv.may || undefined });
 }
 const DUES = [
-  { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
+  { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 }, follow_up: { not_due: 0, d0_30: 0, d31_60: 0, d61_90: 300000, d90_plus: 0, worst: 'd61_90', no_terms_minor: 0, terms: 'ok' } },
   { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
   { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }];
 /* the supplier of the spec's worked example: four open bills, 1,120.00 · 560.00 · 1,050.00 · 990.12 = 3,720.12 */
@@ -153,7 +153,7 @@ async function route(S, r) {
     S.msgs.push(row); return J(r, 200, { message_id: row.message_id, thread_type: row.thread_type, message_text: row.message_text, sender_display_name: row.sender_display_name, created_at: row.created_at });
   }
   if (p === '/api/books/todo') return J(r, 200, S.todo || []);
-  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, crmApi.list(S.list, { records: S.fx.records }));
+  if (p === '/api/crm/parties' && m === 'GET') return J(r, 200, (() => { const l = crmApi.list(S.list, { records: S.fx.records }); (l.parties || []).forEach((x) => { if (!x.currency) x.currency = 'INR'; }); return l; })());
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, crmApi.timeline(S.fx.timelines[decodeURIComponent(x[1])] || { entries: [] }, x[1], {}));
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
@@ -185,14 +185,14 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid^="party-due-"]', { timeout: 15000 });
     const chips = await p.$$eval('[data-testid^="party-due-"]:not([data-testid^="party-due-late-"])', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(chips.length >= 3, 'crm.html: the list shows dues chips (' + chips.length + ')');
-    ok(chips.every((t) => CRMWORDS.test(t)), 'E9 crm.html list: every dues figure is said the shopkeeper way — "you will get" / "you will give" / "settled" (' + chips.filter((t) => !CRMWORDS.test(t)).join(' | ') + ')');
+    ok(chips.every((t) => CRMWORDS.test(t)), 'E9 crm.html list: every dues figure is said the shopkeeper way — you-will get / you-will give / "settled" (' + chips.filter((t) => !CRMWORDS.test(t)).join(' | ') + ')');
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html list: no minus sign in front of a figure');
     await p.click('[data-testid="crm-row-P-0001"]');
     await p.waitForSelector('[data-testid="crm-rec-name"]', { timeout: 15000 });
     await p.waitForTimeout(500);
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html record: no minus sign in front of a figure');
     const hdr = await p.$$eval('.rchips [data-testid^="party-due-"]:not([data-testid^="party-due-late-"])', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    ok(hdr.length === 1 && /^[↑↓]?\s*₹\s?481\.65 you'll give/.test(hdr[0]), 'E9 crm.html record: the header figure says 481.65 "you will give" for the server\'s -48165 (' + hdr.join('|') + ')');
+    ok(hdr.length === 1 && /^[↑↓]?\s*₹\s?481\.65 you'll give/.test(hdr[0]), 'E9 crm.html record: the header figure says 481.65 you-will-give for the server\'s -48165 (' + hdr.join('|') + ')');
     try { await p.click('[data-testid="crm-sec-ledger"]', { timeout: 2000 }); } catch (_) {}
     await p.waitForTimeout(600);
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html ledger section opened: still no minus');
@@ -391,7 +391,7 @@ async function route(S, r) {
     const sum = (side) => DUES.filter((d) => (side === 'rcv' ? d.balance_minor > 0 : d.balance_minor < 0)).reduce((t, d) => t + d.balance_minor, 0);
     ok(/they owe you ₹3,000\.00/.test(hr) && /you owe ₹2,500\.00/.test(hp) && sum('rcv') === 300000 && sum('pay') === -250000, 'E10 each heading carries its total in words, equal to the /dues balances (' + hr + ' | ' + hp + ')');
     ok(await p.locator('[data-testid="dues-pay-c1"]').innerText() === 'Receive' && await p.locator('[data-testid="dues-pay-s1"]').innerText() === 'Pay' && await p.locator('[data-testid="dues-remind-c1"]').count() === 1 && await p.locator('[data-testid="dues-remind-s1"]').count() === 0, 'E10 To collect rows say Receive and Remind; To pay rows say Pay and have no Remind');
-    ok((await text(p, 'dues-c1')).indexOf('< 6 months') >= 0 && /01 Aug 2026/.test(await text(p, 'dues-c1')), 'E10 a row shows its age bucket and its due date (' + (await text(p, 'dues-c1')) + ')');
+    ok((await text(p, 'dues-c1')).indexOf('61–90 days') >= 0 && /01 Aug 2026/.test(await text(p, 'dues-c1')), 'E10 a row shows its age bucket and its due date (' + (await text(p, 'dues-c1')) + ')');
     const url0 = p.url();
     await p.click('[data-testid="dues-pay-s1"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 });
     ok(p.url() === url0 && /^Pay ·/.test(await text(p, 'pay_title')) && await p.locator('[data-testid="pay_remind"]').count() === 0, 'E10 a Dues row\'s Pay opens the same pay_amt popup without leaving the page (no "remind me" on what you owe)');

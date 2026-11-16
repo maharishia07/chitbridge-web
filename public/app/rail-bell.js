@@ -69,6 +69,8 @@
     ask: 'Clear all activity?',
     askBody: 'This clears your Activity list. The events are kept — chits, statuses and disputes are unchanged.',
     readFail: 'Could not read your activity — try again',
+    markFail: 'That question could not be opened — try again',
+    markGone: 'This entry was reversed or removed, so its question cannot be opened',
     aria: 'Activity',
     chit: 'a chit',
     needs: 'Clearing needs the latest update on this system'
@@ -82,8 +84,17 @@
     accepted: ['✍️', 'accepted'],
     dispute_raised: ['⚑', 'raised a dispute on'],
     dispute_resolved: ['✅', 'resolved a dispute on'],
-    voided: ['🚫', 'voided']
+    voided: ['🚫', 'voided'],
+    mark_query: ['?', 'asked a question about'],
+    mark_reply: ['💬', 'replied about']
   };
+  /** a mark notice names its entry the way the books do: number · day (the shop's way) · amount in its own currency */
+  function entryName(entry) {
+    if (!entry) return '';
+    var day = entry.posting_date ? (typeof root.shopDay === 'function' ? root.shopDay(entry.posting_date) : entry.posting_date) : '',
+      amount = entry.total_minor != null && entry.currency && typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(entry.total_minor), currency: entry.currency }) : '';
+    return [entry.entry_no, day, amount].filter(Boolean).join(' · ');
+  }
   /** the moment a feed row happened, as the reader's LOCAL time: CBLocale first, then the browser's own format, then the raw text */
   function localMoment(createdAt) {
     var shape = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
@@ -101,7 +112,7 @@
   /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
   function line(item) {
     var kind = KIND[item.action],
-      subj = item.manual_subject || item.auto_subject || T(W.chit),
+      subj = item.mark_entry ? entryName(item.mark_entry) : item.manual_subject || item.auto_subject || T(W.chit),
       moment = '';
     /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
     if (item.created_at) moment = localMoment(item.created_at);
@@ -122,7 +133,10 @@
         id: item.log_id || null
       };
     }
+    /* W15-54: a mark notice (a Query asked, a reply) opens that record's thread: the entry id when the feed carries it, else its number (the open list names it) */
+    var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', day: (item.mark_entry && item.mark_entry.posting_date) || '', title: subj } : null;
     return {
+      mark: mark && (mark.id || mark.no) ? mark : null,
       i: kind ? kind[0] : '•',
       mine: !!(item.assigned_to_me || item.dispute_for_me),
       chit: item.chit_id || null,
@@ -238,7 +252,7 @@
   function recordHtml(x) {
     return (
       '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
-      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '"' : ' disabled') +
       (x.order ? ' data-order="1"' : '') +
       '><span aria-hidden="true">' +
       x.i +
@@ -387,6 +401,41 @@
         read();
       }
     }
+    /** W15-54: the owner's bell row for a Query opens the Query thread sheet through the Day book's own opener (CBMark's sheet: one thread, one composer) */
+    /** the page's endpoint table is a lexical const (not window.EP), so cap-mark cannot fill it: the two mark reads are added here, from cap-mark's own list */
+    function markEndpoints() {
+      if (typeof EP !== 'undefined' && root.CB_MARK_EP)
+        Object.keys(root.CB_MARK_EP).forEach(function (key) {
+          if (!EP[key]) EP[key] = root.CB_MARK_EP[key];
+        });
+    }
+    function openMark(row) {
+      var ctl = bell.mk || (bell.mk = root.CBMark.use({
+          adopter: 'acc.audit',
+          period: function () {
+            return bell.mkDay ? { from: bell.mkDay, to: bell.mkDay } : null; /* the open list answers for the CURRENT month unless asked: an older entry's Query is found by its own day */
+          },
+          call: function (key, o) {
+            markEndpoints();
+            return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
+          }
+        })),
+        title = row.getAttribute('data-mark-title') || '',
+        id = row.getAttribute('data-mark-id'),
+        no = row.getAttribute('data-mark-no');
+      bell.mkDay = String(row.getAttribute('data-mark-day') || '').slice(0, 10);
+      var show = function (subject) {
+        if (subject) ctl.sheet(subject, { title: title });
+        else if (typeof root.toast === 'function') root.toast(T(W.markGone)); /* no id and no open question by that number: say why, not "try again" */
+      };
+      if (id) return ctl.load([id]).then(function () { show(id); });
+      return ctl.summary().then(function (sum) {
+        var hit = ((sum && sum.open) || []).filter(function (m) {
+          return no && String(m.subject_label || '').indexOf(no) === 0;
+        })[0];
+        return ctl.load(hit ? [String(hit.subject_id)] : []).then(function () { show(hit ? String(hit.subject_id) : ''); });
+      });
+    }
     function onClick(ev) {
       ev.__cbbIn = true; /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
       var node = ev.target;
@@ -408,6 +457,17 @@
         else if (r.getAttribute('data-order') && !(root.CBEdition && root.CBEdition.hidesHref('/tasks.html')))
           root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
         else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
+        return;
+      }
+      var mk = node.closest('[data-testid="bell-row"]');
+      if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null) && root.CBMark) {
+        bell.open = false;
+        paint();
+        new Promise(function (done) {
+          done(openMark(mk));
+        }).catch(function () {
+          if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        });
         return;
       }
       var c = node.closest('[data-testid="bell-clear"]');

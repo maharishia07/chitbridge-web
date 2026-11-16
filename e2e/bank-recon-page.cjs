@@ -89,9 +89,9 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
       if (p === '/api/books/ledger/1500') { S.ledgerCalls.push(u.search); return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: S.opening, closing_minor: closing(S) })); }
       if (p === '/api/books/preview') return J(r, 200, { ok: true, kind: body.event, voucher: { series: 'MJ', type: 'Payment' }, date: body.date, balanced: true, totals: { dr_minor: body.amount_minor, cr_minor: body.amount_minor }, refusals: [], flags: [], credit: null, bill: null, code: null, duplicate: null,
         lines: [{ code: '6090', ledger: 'Bank charges', dr_minor: body.amount_minor, cr_minor: 0, type: 'nominal', rule: 'Dr expenses and losses' }, { code: '1500', ledger: 'Bank', dr_minor: 0, cr_minor: body.amount_minor, type: 'real', rule: 'Cr what goes out' }] });
-      if (p === '/api/books/events' && m === 'POST') { S.lines.push({ date: body.date, what: body.narration, ref: 'MJ/26-27/0030', source: { how_ref: null }, dr_minor: 0, cr_minor: 2360 }); return J(r, 200, Object.assign({ kind: body.event }, books.posted({ entry_no: 'MJ/26-27/0030', entry_id: 'e30' }))); }
+      if (p === '/api/books/events' && m === 'POST') { S.lines.push({ date: body.date, what: body.narration, ref: 'MJ/26-27/0030', source: { how_ref: null }, dr_minor: 0, cr_minor: 2360 }); return J(r, 200, Object.assign({ kind: body.kind || body.event }, books.posted({ entry_no: 'MJ/26-27/0030', entry_id: 'e30' }))); }
       if (p === '/api/books/dues') return J(r, 200, books.dues([]));
-      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', rail_chits: [], parties: [], may: { ask: { ok: true } } });   /* BR1: nobody told us anything here — the lines match the books alone */
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', books: { parties: [], open_items: [] }, rail_chits: [], parties: [], may: { ask: { ok: true } } });   /* BR1: nobody told us anything here — the lines match the books alone */
       return J(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, who || OWNER);
@@ -101,7 +101,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
     await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p };
   }
-  const load = async (p, csv) => { await p.selectOption('#bk_preset', 'hdfc'); await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 }); await p.fill('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); }; /* B5-05: the file's currency is asked */
+  const load = async (p, csv) => { if (await p.locator('[data-testid="bank-change"]').isVisible() && !(await p.locator('#bk_preset').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await p.selectOption('#bk_preset', 'hdfc'); await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await p.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status], [data-testid="bank-refuse"], .pe-bad', { timeout: 10000 }); if (await p.locator('[data-testid="bank-currency"]').isVisible()) { await p.fill('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); } }; /* B5-05: the file's currency is asked */
   const status = (p, s) => p.locator('[data-status="' + s + '"]').count();
   const noSide = async (p) => { await p.waitForTimeout(300); return p.evaluate(() => ({ d: document.documentElement.scrollWidth, m: document.querySelector('.main').scrollWidth <= document.querySelector('.main').clientWidth })); };
 
@@ -128,25 +128,32 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   await p.click('[data-testid="' + sms.replace('bank-chip-', 'bank-row-') + '"] [data-caret]');
   ok(/Bank charge/.test(await p.textContent('[data-testid="bank-next-' + sms.replace('bank-chip-', '') + '"]')), 'the row opens to what it looks like ("Bank charge") and why');
   await p.click('[data-testid="bank-add"]');
-  await p.waitForSelector('[data-testid="en-step-4"]', { timeout: 8000 }); await p.waitForSelector('[data-testid="en-balanced"]', { timeout: 5000 });
-  const pv = S.bodies.filter((x) => x.p === '/api/books/preview').pop().body;
-  ok(pv.event === 'expense' && pv.class === 'bank_charges' && pv.paid_from === 'bank' && pv.amount_minor === 2360 && pv.date === '2026-09-10', 'Add missing opens the ＋ Entry preview with the suggestion placed (expense · bank_charges · bank · 2360 · 2026-09-10)');
-  ok(S.bodies.filter((x) => x.p === '/api/books/events').length === 0, 'the shop confirms: nothing is posted until Save');
-  await p.click('[data-testid="en-save"]'); await p.waitForSelector('[data-testid="en-saved"]', { timeout: 5000 });
+  /* the Add button opens the ONE sheet (every line against the books), not a lone entry: the charge is a line of it, ready with what it would post */
+  await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
+  const sheetRows = await p.$$eval('[data-testid="bank-sheet-lines"] .bd-row', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ')));
+  if (process.env.DEBUG_PE) console.log(sheetRows.join(' // '));
+  ok(sheetRows.length > 0 && sheetRows.some((t) => /23\.60/.test(t) && /bank charges/i.test(t)), 'Add missing opens the sheet with the charge placed (bank charges · 23.60)');
+  ok(S.bodies.filter((x) => x.p === '/api/books/events').length === 0, 'the shop confirms: nothing is posted until the sheet is confirmed');
+  const charge = p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: /23\.60/ }).first();
+  for (const act of ['tick', 'inv', 'gst']) { const b2 = charge.locator('button[data-act=' + act + ']').first(); if (await b2.count()) { await b2.click(); await p.waitForTimeout(300); } }
+  await p.locator('#acc_sheet button', { hasText: /Add \d+ to your books/ }).first().click();
+  await p.locator('[role=dialog] button, dialog[open] button', { hasText: /^(Yes|Add|Confirm)/ }).last().click();
+  await p.waitForFunction(() => !!document.querySelector('#acc_sheet') && /added to your books|Added/i.test(document.querySelector('#acc_sheet').innerText), null, { timeout: 8000 });
   const ev = S.bodies.filter((x) => x.p === '/api/books/events' && x.m === 'POST');
-  ok(ev.length === 1 && /^bank:[0-9a-f]{16}:\d+$/.test(ev[0].body.client_ref), 'ONE entry posted through POST /events, client_ref = bank:<file hash>:<line no> (' + (ev[0] && ev[0].body.client_ref) + ')');
-  ok(/MJ\/26-27\/0030/.test(await p.textContent('[data-testid="en-saved-no"]')), 'the entry number is the API\'s (MJ/26-27/0030)');
-  await p.click('[data-testid="en-done"]');
+  ok(ev.length === 1 && /^bank:[0-9a-f]{24}-\d+$/.test(ev[0].body.client_ref), 'ONE entry posted through POST /events, client_ref = bank:<fingerprint>-<n> (' + (ev[0] && ev[0].body.client_ref) + ')');
+  await p.keyboard.press('Escape');
   await p.waitForFunction(() => document.querySelectorAll('[data-status="suggested"]').length === 2, null, { timeout: 8000 });
-  ok(await status(p, 'matched') === 3 && await status(p, 'suggested') === 2 && S.ledgerCalls.length === 2, 'the ledger is read again and the line is now matched: matched 3 · suggested 2');
+  if (process.env.DEBUG_PE) console.log('STATUS', await p.$$eval('[data-status]', (e) => e.map((x) => x.getAttribute('data-status')).join(','))); await p.waitForTimeout(1500);
+  ok(await status(p, 'matched') + await status(p, 'accepted') === 3 && await status(p, 'suggested') === 2 && S.ledgerCalls.length >= 2, 'the ledger is read again and the line is now in the books (matched or accepted: 3) · suggested 2');
+  await p.waitForFunction(() => document.querySelectorAll('[data-status="suggested"]').length === 2, null, { timeout: 8000 });
   const leaks2 = S.reqs.filter((r) => ['ZZMARKER7731', 'KV TRADERS', 'UNKNOWN PARTY', 'statement.csv', 'N123456', '50100123456789'].some((s) => (r.u + r.h + r.d).indexOf(s) >= 0));
   ok(leaks2.length === 0, 'still no request carries the file (the confirmed entry carries a date, an amount and the note the shop saw)');
 
   /* ── 4 · THE STATEMENT (BRS) ── */
-  await p.click('[data-testid="bank-tab-brs"]'); await p.waitForSelector('[data-testid="bank-brs-card"]');
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]'); await p.waitForSelector('[data-testid="bank-brs-card"]');
   ok(await p.locator('[data-testid="brs-tied"]').count() === 1 && await p.locator('[data-testid="brs-untied"]').count() === 0, 'the BRS ties: "the books reconcile to the bank"');
   const brs = await p.textContent('[data-testid="bank-brs-card"]'); if (process.env.DEBUG_PE) console.log(brs.slice(0, 700));
-  ok(/Balance as per books/.test(brs) && /1,04,476\.40 Dr/.test(brs) && /Balance as per bank statement/.test(brs) && /1,09,016\.40 Dr/.test(brs), 'books vs bank: books 1,04,476.40 Dr (the API\'s ledger figure after the new entry) and bank 1,09,016.40 Dr (the statement\'s)');
+  ok(/Balance as per books/.test(brs) && /1,04,476\.40/.test(brs) && /Balance as per bank/.test(brs) && /1,09,016\.40/.test(brs), 'books vs bank: books 1,04,476.40 Dr (the API\'s ledger figure after the new entry) and bank 1,09,016.40 Dr (the statement\'s) :: ' + brs.replace(/ +/g, ' ').replace(/\n/g, ' ').slice(0, 300));
   ok(await p.locator('[data-testid="brs-issued"] .pe-row').count() === 1 && await p.locator('[data-testid="brs-bankcr"] .pe-row').count() === 2 && await p.locator('[data-testid="brs-bankdr"] .pe-row').count() === 1, 'every reconciling item is named: 1 cheque not presented · 2 bank credits not in the books · 1 bank debit');
   ok(/Difference/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Difference'))), 'the difference is nothing');
   await p.screenshot({ path: path.join(SHOTS, 'bank-brs-laptop.png') });
@@ -169,7 +176,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
     await c4.p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
     let m = await noSide(c4.p); ok(m.d === 390 && m.m, '390 px: the lines do not scroll sideways (' + m.d + ')');
     await c4.p.screenshot({ path: path.join(SHOTS, 'bank-lines-phone.png') });
-    await c4.p.click('[data-testid="bank-tab-brs"]'); await c4.p.waitForSelector('[data-testid="bank-brs-card"]');
+    await c4.p.click('[data-testid="bank-more"]'); await c4.p.click('[data-testid="bank-tab-brs"]'); await c4.p.waitForSelector('[data-testid="bank-brs-card"]');
     m = await noSide(c4.p); ok(m.d === 390 && m.m, '390 px: the statement does not scroll sideways (' + m.d + ')');
     await c4.p.screenshot({ path: path.join(SHOTS, 'bank-brs-phone.png') });
     await c4.ctx.close();

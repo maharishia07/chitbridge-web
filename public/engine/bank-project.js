@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.97.0 · bank-project · sha256 dd423a5671e672b96aab71b9562318b64867912a2eca1e03f650d611f2b84c5e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.0 · bank-project · sha256 a51e3b1b4a4e8dab843783f8176bf7da046c473ffc52eeae70887060a740e0cb — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-project.js: THE BANK LEDGER AND THE RECONCILIATION AS THEY WILL READ ONCE THE PROPOSED ENTRIES ARE POSTED. PURE: no I/O, no clock, nothing saved.
  * OWNS project (the preview: bank ledger after posting, the BRS, each line's state) · refsOf / fingerprintOf / readRef (the idempotency key of a statement line) · partyKeyOf.
@@ -219,6 +219,7 @@
     view.entry = res.entry || null;
     view.tax = res.tax || null;
     view.party = res.party || null;
+    view.what = res.what || null; /* l16-bank-rules: what the pack's words say the line is (transfer · tax_payment · card_settlement), carried so a screen can lead with it */
     view.blockers = blockers;
     view.state = res.entry ? 'proposed' : 'needs_you';
     view.ready = blockers.length === 0;

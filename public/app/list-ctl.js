@@ -22,7 +22,7 @@
  * title row is drawn — a page with no chrome of its own mounts CBAvatar there, and the head stays three rows. The unit draws the span
  * and reads nothing from the page: what goes in it is the page's business.
  *
- * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · sort · cell(row)), its grouping, filters, sorts, notices,
+ * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · keep · sort · cell(row)); keep:true = never left out for width (a status, a code, the row's action), its grouping, filters, sorts, notices,
  * period, what a row opens to (`next`), row actions and bulk operations. WHAT THE UNIT OWNS, FOR EVERY LIST, AND NO LIST
  * CAN OPT OUT OF: the three-row head, ADJUSTABLE COLUMNS (drag, touch, ← → in 8 px, double-click resets, never narrower than
  * the label, remembered), ONLY THE ROWS SCROLL (the head is fixed, the rows fill the rest of the window, the column header
@@ -116,6 +116,7 @@
     '.cbl .cbl-chip.period{font-family:var(--cl-num);font-size:calc(13px * var(--k,1))}',
     '.cbl .cbl-chip.warn{background:var(--cl-amber-t);border-color:var(--cl-amber-b);color:var(--cl-amber-i);font-weight:600}',
     '.cbl .cbl-chip.bad{background:var(--cl-red-t);border-color:var(--cl-red-b);color:var(--cl-red-i);font-weight:600}',
+    '.cbl .cbl-chip.ask{background:var(--cl-blue-t);border-color:var(--cl-blue-b);color:var(--cl-blue-i);font-weight:600}.cbl .cbl-chip.ask[aria-pressed=true]{background:var(--cl-blue);border-color:var(--cl-blue);color:var(--on-accent,#fff)}',
     '.cbl .cbl-chip.warn::before,.cbl .cbl-chip.bad::before{content:"⚠"}',
     '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
     /* row 2 · tools */
@@ -126,6 +127,9 @@
     '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
     '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
     '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
+    '.cbl .cbl-needs{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00);font-weight:600}.cbl .cbl-needs[aria-pressed="true"]{background:var(--warn,#B7791F);border-color:var(--warn-3,#7A4B00);color:#fff}',
+    '.cbl .cbl-needs.clear{border-color:var(--cl-line);background:var(--cl-card);color:var(--grey,#5E594D);font-weight:400;cursor:default}.cbl .cbl-needs-prog{font-size:calc(13px * var(--k,1));color:var(--grey,#5E594D);white-space:nowrap}',
+    '.cbl .cbl-tools:has(.cbl-needs) .cbl-search{flex:1 1 120px}',
     '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
     '.cbl .cbl-glab{font-size:calc(12px * var(--k,1));color:var(--cl-muted);white-space:nowrap;margin-inline-end:-2px}',
     '@media (max-width:1100px){.cbl .cbl-tools{gap:5px 6px;padding-inline:12px}.cbl .cbl-seg button{padding:0 6px}.cbl .cbl-count{padding:0 2px}.cbl .cbl-search{flex-basis:170px}}',
@@ -185,7 +189,7 @@
     '.cbl .cbl-noroom{font-size:calc(11.5px * var(--k,1));color:var(--cl-amber-i);margin-inline-start:4px}',
     /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
     '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
-    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines{min-width:0}',
+    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
     '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
     '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
     '.cbl .cbl-hc.r{justify-content:flex-end}',
@@ -220,7 +224,25 @@
     '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 12px;background:var(--cl-gband);color:var(--cl-ink);border-top:1px solid var(--cl-line);border-bottom:1px solid var(--cl-line);border-inline-start:4px solid var(--cl-blue);font-size:calc(12px * var(--k,1));text-transform:uppercase;letter-spacing:.04em}',
     '.cbl .cbl-row.ing>:first-child{padding-inline-start:28px}.cbl .cbl-lrec.ing{padding-inline-start:28px}',
     '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(12px * var(--k,1));color:var(--cl-ink);text-transform:none;letter-spacing:0}',
-    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);padding:6px 12px 10px 38px;cursor:default;overflow-wrap:break-word;word-break:normal}',
+    /* W15-108 (Athi, 15 Nov: "i have no idea which one is header, which one i can expand, which one is information"): a band is TINTED caps with its total at the right; a row that opens carries a bordered ▸ button and lights across the whole row;
+       what it opens to is an INDENTED panel with a rule at its left, holding an info strip and then a real sub-table under its own grey header; information is never drawn like a button */
+    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);margin:0 0 6px 26px;padding:8px 12px 10px 14px;border-inline-start:3px solid var(--cl-blue);cursor:default;overflow-wrap:break-word;word-break:normal}',
+    '.cbl .cbl-row[aria-expanded]>.cbl-cell .cbl-tw,.cbl .cbl-row[aria-expanded] .cbl-tw{border:1px solid var(--cl-line);border-radius:6px;background:var(--cl-card);color:var(--cl-ink);font-size:calc(13px * var(--k,1))}/* the LOOK only (W15-108): its size is the tap rule below (32 px laptop, 44 px phone) - a width here out-ranks it (24 px drew, walk-list-tap 52 XX) */',
+    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-row[aria-expanded] .cbl-tw{margin-inline:-6px 6px}}' /* the bordered 44 px caret sits inside the card, not over its edge */,
+    '.cbl .cbl-row[aria-expanded]:hover{background:var(--cl-hov)}.cbl .cbl-row[aria-expanded]:hover .cbl-tw{border-color:var(--cl-blue)}',
+    '.cbl .cbl-group .fig{margin-inline-start:auto}',
+    '.cbl .cbl-nstrip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:2px 0 8px;color:var(--cl-muted);font-size:calc(12px * var(--k,1))}',
+    '.cbl .cbl-nstrip>span,.cbl .cbl-nstrip .cbl-nchip{padding:0}.cbl .cbl-nstrip b{color:var(--cl-ink);font-family:var(--cl-num);font-weight:600}',
+    '.cbl .cbl-nchip{border:1px solid var(--cl-line);border-radius:999px;background:var(--cl-card);color:var(--cl-ink);padding:2px 10px;min-height:24px;cursor:pointer;font:inherit}.cbl .cbl-nchip:hover{border-color:var(--cl-blue)}.cbl .cbl-nchip[aria-pressed="true"]{background:var(--cl-blue-t);border-color:var(--cl-blue);font-weight:700}',
+    '.cbl .cbl-ntab{min-width:1000px;display:flex;flex-direction:column;border:1px solid var(--cl-line);border-radius:8px;background:var(--cl-card);overflow:hidden}',
+    '.cbl .cbl-nthead{display:flex;align-items:center;background:var(--cl-gband);border-bottom:1px solid var(--cl-line);font-size:calc(11px * var(--k,1));text-transform:uppercase;letter-spacing:.04em;color:var(--cl-muted)}',
+    '.cbl .cbl-ntrow{display:flex;align-items:center;border-bottom:1px solid var(--cl-hair);font-size:calc(13.5px * var(--k,1))}.cbl .cbl-ntrow:last-child{border-bottom:0}',
+    '.cbl .cbl-ntc{flex:0 0 auto;padding:5px 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}.cbl .cbl-ntc.first{flex:1 1 90px}.cbl .cbl-ntc.r{text-align:end}',
+    '.cbl .cbl-ntc button.cbl-nsort{all:unset;cursor:pointer;display:inline-flex;gap:3px;align-items:center;min-height:24px;text-transform:inherit;letter-spacing:inherit}.cbl .cbl-ntc button.cbl-nsort:focus-visible{outline:2px solid var(--cl-blue)}',
+    '.cbl .cbl-nempty{padding:10px;color:var(--cl-muted)}',
+    '.cbl .cbl-ntab.cards{min-width:0}.cbl .bk-tabwrap{overflow-x:auto}.cbl .cbl-ntab.cards .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntc{overflow:visible}',
+    '@media (max-width:700px){.cbl .bk-tabwrap{overflow:visible}.cbl .cbl-ntab.cards .cbl-nthead{display:none}.cbl .cbl-ntab.cards .cbl-ntrow{flex-wrap:wrap;align-items:center;gap:2px 10px;padding:6px 8px}.cbl .cbl-ntab.cards .cbl-ntrow::after{content:"";flex:0 0 100%;order:2;height:0}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc{width:auto!important;padding:0;flex:0 0 auto;order:1}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="0"]{display:none}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="2"]{order:3}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.first{flex:0 0 auto}.cbl .bk-bands{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cbl .bk-bands .bk-bw{display:none}.cbl .bk-bands>span{grid-column:1/-1}}',
+    '.cbl .bk-needs .cbl-nchip{padding:0 8px;min-height:22px;font-size:calc(12px * var(--k,1))}.cbl .bk-needs .bk-need-more{color:var(--cl-muted)}',
     '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
     /* ☰ lines */
     '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
@@ -244,7 +266,7 @@
     '.cbl .cbl-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
     /* a phone, or any narrow pane: one card per row, label : value, nothing sideways (a container query, not the page width) */
     '@container list (max-width: 620px){',
-    '.cbl .cbl-grid{min-width:0}.cbl .cbl-hdr{display:none}',
+    '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
     '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
     '.cbl .cbl-row .cbl-cell{padding:2px 0}',
     '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
@@ -394,6 +416,13 @@
         }
       },
       el: el,
+      /* filter(key, value) — a page sets (or, with '' , clears) one of its own filters: the header line of Receivables presses "no tax invoice" */
+      filter: function (name, value) {
+        if (value) R.filt[name] = value;
+        else delete R.filt[name];
+        resetLimit(I);
+        paintAll(I);
+      },
       state: function () {
         return {
           cols: I.s.cols.slice(),
@@ -588,8 +617,131 @@
   function minW(I, c) {
     return Math.max(64, String(c.label || c.key).length * 9 + 40);
   }
+  /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
+     A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
+  function plainText(html) {
+    return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
+  }
+  /** a column that may take the free width: text that reads on, never a number, money, code, status, date or id */
+  function stretchable(c) {
+    return !c.num && !c.money && !c.mono && c.pin !== 'end' && c.type !== 'num' && c.type !== 'money' && !/^(code|status|state|date|id|no|ref|type)$/i.test(String(c.label || c.key).trim());
+  }
+  /** what a short column really needs: its three longest cells set on one line in the list's own font (the character estimate runs wide, Age took 242 px for a date and a few words). Returns { key: px }. */
+  function inkWidths(list, cols, sample) {
+    var host = list.el.querySelector(".cbl-list") || list.el,
+      probe = document.createElement('div'),
+      out = {};
+    probe.className = 'cbl-row';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:absolute;visibility:hidden;display:block;width:4000px;white-space:nowrap;left:0;top:0';
+    host.appendChild(probe);
+    cols.forEach(function (c) {
+      var longest = sample
+        .map(function (row) { return cellOf(list, c, row); })
+        .sort(function (first, second) { return plainText(second).length - plainText(first).length; })
+        .slice(0, 3);
+      out[c.key] = longest.reduce(function (widest, html) {
+        probe.innerHTML = '<div class="cbl-cell" style="display:inline-block;width:auto">' + html + '</div>';
+        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 2);
+      }, 0);
+    });
+    host.removeChild(probe);
+    return out;
+  }
+  /** the R47 half of autoFit: squeeze `auto` (width per key) into `avail`; returns the keys left out. */
+  function fitWidths(list, cols, auto, chars, avail) {
+    /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
+       Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
+       3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
+    var fixed = 0, free = [], natural = {}, sc = null;
+    cols.forEach(function (c) {
+      if (typeof list.s.widths[c.key] === 'number') fixed += widthOf(list, c);
+      else { free.push(c); natural[c.key] = auto[c.key]; }
+      if (c.key === auto.stretch) sc = c;
+    });
+    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
+    var live = free.slice(), hide = [];
+    var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
+    var squeeze = function (shrink) {
+      live.forEach(function (c) { auto[c.key] = natural[c.key]; });
+      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
+      if (sc && auto[sc.key] != null && over > 0) {
+        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
+        over = need() - avail;
+      }
+      for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
+        var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(list, c)); }, 0);
+        if (room <= 0) break;
+        var cut = Math.min(over, room);
+        others.forEach(function (c) {
+          var share = Math.max(0, auto[c.key] - minW(list, c));
+          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+        });
+        over = need() - avail;
+      }
+      return over;
+    };
+    var over = squeeze(false);
+    while (over > 0 && !list.card && !list.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
+      var leave = null;
+      live.forEach(function (c) {
+        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
+      });
+      if (!leave) break;
+      hide.push(leave.key);
+      live = live.filter(function (c) { return c !== leave; });
+      over = squeeze(false);
+    }
+    if (over > 0) over = squeeze(true);
+    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(list, sc), auto[sc.key] - over); /* last resort: below its floor */
+    return hide;
+  }
+  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
+   *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
+  function autoFit(I, cols, rows, avail) {
+    var auto = {},
+      sample = rows.slice(0, AUTO_SAMPLE),
+      chars = {},
+      named = cols.filter(function (item) { return item.stretch; })[0],
+      best = null;
+    cols.forEach(function (c) {
+      var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
+      sample.forEach(function (row) {
+        var cell = cellOf(I, c, row),
+          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[\s>]/g) || []).length * 7 : 0); /* a button in the cell is wider than its words: its padding counts */
+        if (len > n) n = len;
+      });
+      chars[c.key] = n;
+      if (!named && stretchable(c) && (!best || n > chars[best.key])) best = c;
+    });
+    if (!named && !best)
+      cols.forEach(function (c) {
+        if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
+      });
+    auto.stretch = named ? named.key : best ? best.key : null;
+    var shortPx = inkWidths(I, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
+    cols.forEach(function (c) {
+      if (typeof I.s.widths[c.key] === 'number') return;
+      var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
+      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(I, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
+    });
+    var hide = fitWidths(I, cols, auto, chars, avail);
+    I.auto = sample.length ? auto : null;
+    I.leftOut = hide;
+    return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
+  }
+  /** autoFit, then the toolbar says so when the number of columns left out changed (the "+2" cue) */
+  function fitCols(list, cols, rows, box) {
+    var before = leftOutKeys(list).length,
+      shown = autoFit(list, cols, rows, box.clientWidth - (leadOn(list) ? 34 : 0) - 2);
+    if (before !== leftOutKeys(list).length) paintTools(list);
+    return shown;
+  }
   function widthOf(I, c) {
     var w = I.s.widths[c.key];
+    if (typeof w !== 'number' && I.auto && typeof I.auto[c.key] === 'number') w = I.auto[c.key];
     if (typeof w !== 'number') w = Math.max(px(c.w, 140), minW(I, c));
     return Math.max(minW(I, c), w);
   }
@@ -609,7 +761,8 @@
       (leadOn(I) ? '34px ' : '') +
       cols
         .map(function (item) {
-          return widthOf(I, item) + 'px';
+          var free = I.auto && I.auto.stretch === item.key && typeof I.s.widths[item.key] !== 'number';
+          return free ? 'minmax(' + widthOf(I, item) + 'px,1fr)' : widthOf(I, item) + 'px';
         })
         .join(' ')
     );
@@ -691,6 +844,7 @@
         .toLowerCase(),
       fl = I.o.filters || [];
     var out = rows.filter(function (row) {
+      if (needsOn(I) && !safe(function () { return I.o.needs.match(row); }, false)) return false;
       if (q) {
         var text = I.o.search
           ? safe(function () {
@@ -726,7 +880,10 @@
       out = out.slice().sort(function (first, second) {
         return srt.cmp(first, second) * d;
       });
-    }
+    } else if (needsOn(I) && typeof I.o.needs.rank === 'function')
+      out = out.slice().sort(function (first, second) {
+        return (Number(I.o.needs.rank(second)) || 0) - (Number(I.o.needs.rank(first)) || 0); /* the most urgent first, until the person picks a sort */
+      });
     return { all: rows, rows: out };
   }
   function groupMode(I) {
@@ -859,8 +1016,8 @@
   function noteHTML(n, i) {
     return (
       '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
-      esc(n.cls === 'bad' ? 'bad' : 'warn') +
-      '" data-notice="' +
+      esc(n.cls === 'bad' ? 'bad' : n.cls === 'ask' ? 'ask' : 'warn') +
+      '"' + (n.cls === 'ask' ? ' aria-pressed="' + (n.pressed ? 'true' : 'false') + '"' : '') + ' data-notice="' +
       i +
       '"' +
       (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') +
@@ -1006,8 +1163,108 @@
     } else if (m.rows.length !== m.all.length) t += ' ' + T(I, 'of') + ' ' + m.all.length;
     return t;
   }
+  /* ── ⚑ NEEDS YOU (W15-116 / W15-117) — ONE toggle for every list, FIRST in the toolbar (left of the search), and the stepper that walks what it holds ──
+     A page that has something to ask of the person says so with `needs: { count, match(row), rank?(row), onToggle?(on), onNext?(row), unit? }`:
+       count   the SERVER's number of rows that need the person (a number or a function): what the button says, and what the filtered list must hold
+       match   the row's own answer, from the figures the server sent with it (never counted here)
+       rank    higher = more urgent: with the toggle on the list shows the most urgent first (a sort the person chose is kept)
+       onNext  a list whose rows are not a next level (the Day book) opens the row itself; else Next opens the next row's next level
+     With it on the list shows only what matches; "Next ›" steps through them with "3 of 12 done"; a row that is cleared drops off the next time the rows are read. */
+  function needsOf(I) {
+    return I.o.needs && typeof I.o.needs === 'object' ? I.o.needs : null;
+  }
+  function needsOn(I) {
+    return !!(needsOf(I) && I.r.needsOn);
+  }
+  function needsCount(I) {
+    var n = needsOf(I) && needsOf(I).count;
+    n = typeof n === 'function' ? safe(n, 0) : n;
+    return Number(n) > 0 ? Number(n) : 0;
+  }
+  /** the rows that need the person, most urgent first (the page's own match and rank; no search, no filter) */
+  function needsRows(I) {
+    var spec = needsOf(I);
+    if (!spec) return [];
+    var rows = allRows(I).filter(function (row) {
+      return safe(function () {
+        return spec.match(row);
+      }, false);
+    });
+    if (typeof spec.rank === 'function')
+      rows = rows.slice().sort(function (first, second) {
+        return (Number(spec.rank(second)) || 0) - (Number(spec.rank(first)) || 0);
+      });
+    return rows;
+  }
+  function needsHTML(I) {
+    var spec = needsOf(I);
+    if (!spec) return '';
+    var n = needsCount(I),
+      on = needsOn(I),
+      k = esc(I.key),
+      clear = n === 0 && !on;
+    var html =
+      '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn cbl-needs' + (clear ? ' clear' : '') + (on ? ' on' : '') + '" data-cbl-needs aria-pressed="' + on + '"' + (clear ? ' aria-disabled="true"' : '') +
+      ' data-testid="cbl-needs-' + k + '" title="' + esc(T(I, 'Show only what needs you')) + '">' +
+      (clear ? '✓ ' + esc(T(I, 'All clear')) : '⚑ ' + esc(T(I, 'Needs you')) + ' · ' + n) +
+      '</button>';
+    if (on) {
+      var left = needsRows(I).length,
+        total = Math.max(I.r.needsTotal || 0, left),
+        done = total - left;
+      html +=
+        '<button type="button" data-cbsid="CMP037-B07"' + mountAttribute('CMP037') + ' class="cbl-tbtn cbl-needs-next" data-cbl-needs-next data-testid="cbl-needs-next-' + k + '"' + (left ? '' : ' disabled') + '>' + esc(T(I, 'Next')) + ' ›</button>' +
+        '<span class="cbl-needs-prog" data-testid="cbl-needs-prog-' + k + '" aria-live="polite">' + esc(T(I, '{n} of {m} done', { n: done, m: total })) + '</span>';
+    }
+    return html;
+  }
+  /** the toggle: on narrows the list to what needs the person and starts the count "0 of n"; off puts the list back */
+  function needsToggle(I) {
+    if (!needsOf(I) || (needsCount(I) === 0 && !needsOn(I))) return;
+    var R = I.r;
+    R.needsOn = !R.needsOn;
+    R.open = {};
+    R.allOpen = false;
+    R.needsAt = 0;
+    R.hl = null;
+    if (R.needsOn) R.needsTotal = needsRows(I).length;
+    resetLimit(I);
+    safe(function () {
+      if (needsOf(I).onToggle) needsOf(I).onToggle(R.needsOn);
+    });
+    paintAll(I);
+  }
+  /** Next ›: the row after the one in hand (or, when that one was cleared and dropped off, the one that took its place) opens, the one before closes */
+  function needsNext(I) {
+    var spec = needsOf(I),
+      R = I.r;
+    var rows = needsRows(I);
+    if (!spec || !rows.length) return;
+    var ids = rows.map(function (row, index) {
+        return rid(I, row, index);
+      }),
+      at = ids.indexOf(String(R.hl)),
+      pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
+    if (pos >= ids.length) pos = ids.length - 1 === at ? at : 0;
+    R.needsAt = pos;
+    var id = ids[pos];
+    R.hl = id;
+    if (spec.onNext) {
+      safe(function () {
+        spec.onNext(rows[pos]);
+      });
+      paintTools(I);
+      return;
+    }
+    R.allOpen = false;
+    R.open = {};
+    R.open[id] = true;
+    paintTools(I);
+    paintList(I);
+    refocusRow(I, id);
+  }
   function fopts(f) {
-    return (f.options || []).map(function (x) {
+    return (typeof f.options === 'function' ? f.options() || [] : f.options || []).map(function (x) {
       return typeof x === 'object' ? x : { v: x, label: x };
     });
   }
@@ -1110,7 +1367,7 @@
       '" aria-haspopup="dialog" aria-expanded="' +
       (list.pop === 'cols') +
       '">⚙' +
-      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span></button>' +
+      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span>' + leftOutCue(list, keyText) + '</button>' +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>';
     if (listOptions.csv !== false && toolOptions.csv !== false)
@@ -1226,7 +1483,8 @@
     var tids = o.tids || {},
       tl = o.tools || {},
       h =
-        tl.search === false
+        needsHTML(list) +
+        (tl.search === false
           ? ''
           : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP045-I01"' + mountAttribute('CMP045') + ' data-cbl-q id="cbl-q-' +
             k +
@@ -1238,7 +1496,7 @@
             esc(R.q) +
             '" aria-label="' +
             esc(T(list, 'Search')) +
-            '"></div>';
+            '"></div>');
     /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
        goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand. T3-CATALOGUE (widened, additively): a server-paged list that DECLARES
        filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
@@ -1362,6 +1620,16 @@
     });
     return ok;
   }
+  /** every filter key some view of the list sets */
+  function viewKeys(inst) {
+    var keys = [];
+    ((inst.o.views && inst.o.views.items) || []).forEach(function (view) {
+      Object.keys(view.filt || {}).forEach(function (item) {
+        if (keys.indexOf(item) < 0) keys.push(item);
+      });
+    });
+    return keys;
+  }
   function viewOn(inst, view) {
     var a = inst.r.filt,
       b = view.filt || {},
@@ -1372,6 +1640,13 @@
     var sameOwn = list.every(function (item) {
       return a[item] === b[item];
     });
+    if (inst.o.views && inst.o.views.merge)
+      /* views.merge: the tabs are one more filter, not a replacement of them all: a tab is lit when ITS keys hold (the tab with none is lit when no tab's key is set) */
+      return list.length
+        ? sameOwn
+        : !viewKeys(inst).some(function (item) {
+            return a[item];
+          });
     return view.rows
       ? list.length > 0 && sameOwn
       : ka.length === list.length && sameOwn; /* a view with its own rows stays lit while its filters are in force (its country filter may change) */
@@ -1429,7 +1704,8 @@
           '"' +
           (item.tip ? ' title="' + esc(T(I, item.tip)) + '"' : '') +
           '>' +
-          esc(T(I, item.label)) +
+          (item.iconHtml || '') +
+          (item.labelHtml || esc(T(I, item.label))) +
           ' <span class="n">' +
           n +
           '</span></button>'
@@ -1514,6 +1790,9 @@
       esc(T(I, 'Filters')) +
       '</h4>' +
       (I.o.filters || [])
+        .filter(function (item) {
+          return !(typeof item.hide === 'function' && item.hide()); /* a filter with nothing to choose among (no line has the fact) is not offered */
+        })
         .map(function (item) {
           return (
             '<div class="f"><span id="cbl-fl-' +
@@ -1570,6 +1849,16 @@
       '</button></div></div>'
     );
   }
+  /** the small "+2 columns" cue on the Columns button: columns the row had no room for are named, never dropped silently (the chooser tags each one) */
+  function leftOutKeys(I) {
+    return I.card ? [] : I.leftOut || [];
+  }
+  function leftOutCue(list, keyText) {
+    var left = leftOutKeys(list).length;
+    if (!left) return '';
+    var words = T(list, '+{n} columns hidden — no room', { n: left });
+    return ' <span class="cbl-noroom" data-testid="cols-more-' + keyText + '" title="' + esc(words) + '" aria-label="' + esc(words) + '">+' + left + '</span>';
+  }
   function colsPop(I) {
     var all = choosable(I),
       shown = shownKeys(I),
@@ -1582,7 +1871,7 @@
         return shown.indexOf(item.key) < 0;
       }),
       k = esc(I.key),
-      nr = noRoomKeys(I);
+      nr = noRoomKeys(I).concat(leftOutKeys(I)); /* no room: a card's extra fields, and the columns the last paint left out (autoFit) */
     function row(c, i, on) {
       return (
         '<div class="cbl-colrow">' +
@@ -1625,6 +1914,23 @@
             esc(T(I, 'Move {x} right', { x: c.label })) +
             '">→</button>'
           : '<span class="cbl-mvsp"></span>') +
+        /* L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
+        (on
+          ? ['-1', '1']
+              .map(function (dir) {
+                var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
+                return (
+                  '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
+                  esc(c.key) +
+                  '" data-d="' + dir + '" data-testid="cols-wd-' + esc(c.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
+                  esc(T(I, word, { x: c.label })) +
+                  '" title="' +
+                  esc(T(I, word, { x: c.label })) +
+                  '">' + (dir === '1' ? '+' : '−') + '</button>'
+                );
+              })
+              .join('')
+          : '') +
         '</div>'
       );
     }
@@ -1688,7 +1994,7 @@
       box.__cblRO = new root.ResizeObserver(function () {
         if (I.dead) return;
         var c = box.clientWidth > 0 && box.clientWidth <= 620;
-        if (c !== I.card) {
+        if (c !== I.card || (I.auto && Math.abs(box.clientWidth - (I.fitW || 0)) > 8)) {
           paintTools(I);
           paintList(I);
         }
@@ -1737,6 +2043,12 @@
     }
     var m = matched(I),
       items = itemsOf(I, m.rows);
+    if (m.rows.length && s.view === 'grid') {
+      cols = fitCols(I, cols, m.rows, box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
+      I.fitW = box.clientWidth;
+      tpl = template(I, cols);
+      hdr = headerHTML(I, cols, tpl, false);
+    }
     if (!m.rows.length) {
       var narrowed = isNarrowed(I);
       if (m.all.length && narrowed && !remote(I)) {
@@ -1843,6 +2155,7 @@
     box.innerHTML =
       '<div class="cbl-grid' +
       (s.view === 'lines' ? ' cbl-lines' : '') +
+      (I.auto ? ' cbl-fit' : '') +
       '" role="' + gridRole(I, items) + '" aria-rowcount="' +
       total +
       '">' +
@@ -1928,7 +2241,7 @@
     return (
       '<button type="button" data-cbsid="CMP039-B02"' + mountAttribute('CMP039') + ' class="cbl-rz colrz" data-rz="' +
       esc(item.key) +
-      '" aria-label="' +
+      '" tabindex="-1" data-testid="cbl-rz-' + esc(item.key) + '" aria-label="' +
       esc(T(list, 'Resize {x} column (arrow keys)', { x: item.label || item.key })) +
       '" title="' +
       esc(T(list, 'Drag to resize · double-click resets')) +
@@ -1947,7 +2260,7 @@
         .map(function (item) {
           var id = sortId(item),
             sorted = !!(st && id && st.key === id),
-            r = !!(item.num || item.pin === 'end'),
+            r = !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end'),
             label = esc(item.label || item.key);
           return (
             '<div class="cbl-hc lhcell' +
@@ -2022,7 +2335,7 @@
           '<div class="cbl-cell lcell' +
           (index === 0 ? ' first' : '') +
           (amt ? ' r mono strong amt' : '') +
-          (item.num && !amt ? ' r mono' : '') +
+          ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
           (item.mono ? ' mono' : '') +
           '" data-l="' +
           esc(index === 0 ? '' : item.label || '') +
@@ -2332,7 +2645,11 @@
     var R = I.r;
     R.hl = id;
     if (R.allOpen) R.open[id + '#closed'] = !R.open[id + '#closed'];
-    else R.open[id] = !R.open[id];
+    else {
+      var wasOpen = !!R.open[id];
+      if (I.o.oneOpen) R.open = {}; /* oneOpen: a list whose next level is a working panel (an answer to give) keeps ONE row open; opening another closes the first */
+      R.open[id] = !wasOpen;
+    }
     var keep = I.el.querySelector('.cbl-list'),
       top = keep ? keep.scrollTop : 0;
     paintList(I);
@@ -2364,7 +2681,14 @@
       });
       return;
     }
-    if (hasNext(I)) toggleRow(I, id, ev && ev.type === 'keydown');
+    if (hasNext(I)) {
+      toggleRow(I, id, ev && ev.type === 'keydown');
+      return;
+    }
+    /* L16 F29: Enter on a row with no open handler runs the row's main action: its first link or button (a mouse click on the row never reaches here) */
+    var rowNode = ev && ev.type === 'keydown' ? I.el.querySelector('[data-row="' + cssId(id) + '"]') : null;
+    var main = rowNode && rowNode.querySelector('a[href],button:not([disabled]):not([data-caret]),[data-act]');
+    if (main) main.click();
   }
   function closePop(list, refocus) {
     if (!list.pop) return;
@@ -2546,10 +2870,22 @@
         return x.key === b.getAttribute('data-view-tab');
       })[0];
       if (vw) {
-        R.filt = {};
-        Object.keys(vw.filt || {}).forEach(function (item) {
-          R.filt[item] = vw.filt[item];
-        });
+        if (o.views.merge) {
+          /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
+          var wasLit = viewOn(list, vw);
+          viewKeys(list).forEach(function (item) {
+            delete R.filt[item];
+          });
+          if (!wasLit)
+            Object.keys(vw.filt || {}).forEach(function (item) {
+              R.filt[item] = vw.filt[item];
+            });
+        } else {
+          R.filt = {};
+          Object.keys(vw.filt || {}).forEach(function (item) {
+            R.filt[item] = vw.filt[item];
+          });
+        }
         list.pop = null;
         resetLimit(list);
         paintAll(list);
@@ -2605,6 +2941,14 @@
       saveChoices(list);
       paintTools(list);
       paintList(list);
+      return;
+    }
+    if (b.hasAttribute('data-cbl-needs')) {
+      needsToggle(list);
+      return;
+    }
+    if (b.hasAttribute('data-cbl-needs-next')) {
+      needsNext(list);
       return;
     }
     if (b.hasAttribute('data-cbl-exp')) {
@@ -2697,6 +3041,13 @@
       saveChoices(list);
       paintTools(list);
       paintList(list);
+      return;
+    }
+    if (d.wd) {
+      resize(list, d.wd, +d.d * 16, false);
+      paintTools(list);
+      var again = list.el.querySelector('[data-wd="' + d.wd + '"][data-d="' + d.d + '"]');
+      if (again) again.focus();
       return;
     }
     if (d.col) return; /* the checkbox acts on 'change' */
@@ -3067,5 +3418,38 @@
     return pagerButton('prev', 'B06', pair.prev) + pagerButton('next', 'B07', pair.next);
   }
 
-  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset, every: every, pager: pager };
+  /**
+   * W15-108 · THE SUB-TABLE a row opens to: its own grey header row, then plain rows — nothing here is drawn like a button except a header you can sort by.
+   * o = { id, cols: [{ k, label, w (px; none = the one wide column), r (right-aligned), sort (true = a header button) }], rows: [[html per column]], sort: { k, dir }, act (the handler text of a sort press, called with the key) , empty (words) }
+   * Pure drawing: the page keeps what a sort does (a server read for a server-paged list).
+   */
+  function nextTable(o) {
+    var cols = o.cols || [];
+    var cards = cols.some(function (col) {
+      return col.ln != null;
+    }); /* a table that says which line each column takes on a phone draws a 2-line card there (ln 1 · 2 · 0 = left off) */
+    var cell = function (col, html, index) {
+      return '<div class="cbl-ntc' + (index === 0 ? ' first' : '') + (col.r ? ' r' : '') + (col.end ? ' end' : '') + '"' + (cards ? ' data-ln="' + (col.ln || 0) + '"' : '') + (col.w ? ' style="width:' + col.w + 'px"' : '') + '>' + html + '</div>';
+    };
+    var head = cols
+      .map(function (col, index) {
+        var on = o.sort && o.sort.k === col.k,
+          arrow = on ? (o.sort.dir === 'asc' ? '▲' : '▼') : '';
+        var inner = col.sort
+          ? '<button type="button" class="cbl-nsort" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' data-nt-sort="' + esc(col.k) + '" onclick="' + esc(o.act) + '(this.dataset.ntSort)" aria-label="' + esc(col.label) + '">' + esc(col.label) + (arrow ? ' <span aria-hidden="true">' + arrow + '</span>' : '') + '</button>'
+          : esc(col.label);
+        return cell(col, inner, index).replace('class="cbl-ntc', 'role="columnheader" class="cbl-ntc');
+      })
+      .join('');
+    var body = (o.rows || []).length
+      ? o.rows
+          .map(function (row) {
+            return '<div class="cbl-ntrow" role="row">' + cols.map(function (col, index) { return cell(col, row[index] == null ? '' : row[index], index); }).join('') + '</div>';
+          })
+          .join('')
+      : '<div class="cbl-nempty">' + esc(o.empty || '') + '</div>';
+    return '<div class="cbl-ntab' + (cards ? ' cards' : '') + '" role="table" data-nt="' + esc(o.id || '') + '"><div class="cbl-nthead" role="row">' + head + '</div>' + body + '</div>';
+  }
+
+  root.CBList = { mount: mount, nextRow: nextRow, nextTable: nextTable, get: get, reset: reset, every: every, pager: pager };
 })(typeof window !== 'undefined' ? window : this);

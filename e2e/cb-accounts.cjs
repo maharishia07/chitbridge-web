@@ -44,7 +44,7 @@ const VIEWS = [
   ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
   ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
-  ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
+  ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="ob-root"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
   ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
@@ -77,7 +77,7 @@ function standIn(over) {
     accounts: [
       { code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1300-P00001', name: 'Ravi Stores', is_group: false },
       { code: '2100', name: 'Suppliers (Sundry Creditors)', is_group: false }, { code: '2100-P00003', name: 'Agro Mills', is_group: false },
-      { code: '1400', name: 'Cash', is_group: false }, { code: '1500', name: 'Bank', is_group: false }, { code: '1510', name: 'UPI collections', is_group: false },
+      { code: '1400', name: 'Cash', is_group: false }, { code: '1500', name: 'Bank', is_group: false, role: 'bank' }, { code: '1510', name: 'UPI collections', is_group: false },
       { code: '1200', name: 'Stock-in-hand', is_group: false }, { code: '2200', name: 'Output CGST', is_group: false }, { code: '2210', name: 'Input CGST', is_group: false },
       { code: '2220', name: 'TDS payable', is_group: false }, { code: '2900', name: 'Suspense', is_group: false },
       { code: '3000', name: 'Capital', is_group: false }, { code: '3900', name: 'Profit and loss (retained)', is_group: false },
@@ -115,7 +115,7 @@ const claims = (h) => { try { return JSON.parse(Buffer.from(String(h || '').repl
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   S.calls.push(m + ' ' + p + u.search);
-  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
   /* "Your work" on the shell's rail: the API's keys (truncated · counts · lines · figures), nothing waiting */
   if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }, lines: [], figures: { orders_new: 0, tasks_mine: 0, orders_in: 0, orders_out: 0, tasks: 0, done: 0 } });
   if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: S.folders });
@@ -126,8 +126,10 @@ async function route(S, r) {
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, books.health({ waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, todo: w.todo || 'record', name: w.name || null })) })); }
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
+    if (p === '/api/books/opening' && m === 'GET') return J(r, 200, { date: null, default_date: '2026-04-01', lines: [], pinned: [{ code: '1400' }, { code: '3000' }] }); /* the opening page (l16): nothing saved yet, the pack's pinned ledgers */
+    if (p === '/api/books/opening/years' && m === 'GET') return J(r, 200, { years: [] });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, books.trialBalance(S.tb, { total_dr_minor: 1940000, total_cr_minor: 1840000, balanced: false })); }
-    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) })); }
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, entry_id: l.entry_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) })); }
     if (p === '/api/books/ledger/4000') return J(r, 200, books.ledger('4000', 'Sales', Array.from({ length: 80 }, (_, i) => ({ date: '2026-09-' + String(1 + (i % 28)).padStart(2, '0'), what: 'Sale', ref: 'SV/2026-27/' + String(i + 1).padStart(6, '0'), source_chit_id: null, source: null, dr_minor: 0, cr_minor: 10000 + i })), { closing_minor: -1000 * 80 }));
     if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Bank', [], { opening_minor: 500000, closing_minor: 500000 }));
     if (p === '/api/books/ledger/6010') return J(r, 200, books.ledger('6010', 'Rent', [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }], { closing_minor: 100000 }));
@@ -321,7 +323,7 @@ async function route(S, r) {
     ok((await p.textContent('[data-testid="bal-4200"]')).trim() === '—', 'a ledger the trial balance does not list says "—", not a made-up nil');
     const tbReads = S.calls.filter((c) => /\/api\/books\/trial-balance/.test(c)).length;
     ok(tbReads === 1, 'ONE trial-balance read for the whole tree (' + tbReads + ')');
-    ok(S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)).length === 0, 'no per-leaf balance read, and no ledger opened on its own');
+    { const reads = S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)); ok(reads.length === 1 && /\/ledger\/1500/.test(reads[0]), 'no per-leaf balance read; the one ledger opened on its own is the bank-role ledger (W15-90) (' + reads.join(' ') + ')'); }
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-ledgers.png'), fullPage: true });
     await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-laptop.png'), fullPage: false });
 
@@ -418,9 +420,10 @@ async function route(S, r) {
       const fit = await p.evaluate(() => { const l = document.querySelector('#lg_out').getBoundingClientRect(), k = document.querySelector('[data-testid="kural-footer"]'), kr = k && !k.hidden ? k.getBoundingClientRect() : null; return { bottom: Math.round(l.bottom), limit: Math.round(kr ? kr.top : innerHeight), kural: !!kr, doc: document.documentElement.scrollHeight <= innerHeight + 1 }; });
       ok(fit.bottom <= fit.limit + 1 && fit.doc, 'only the rows scroll: the list ends where the kural footer begins (' + fit.bottom + ' ≤ ' + fit.limit + '), the page itself does not scroll');
     }
-    ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'a plain ledger\'s default columns: Date · Details · Balance, and the Amount');
+    { const h = await p.$$eval("#lg_out .cbl-hdr .cbl-hc", (n) => n.map((x) => x.textContent.trim())); ok(h.map((x) => x.replace(/[⇅▲▼]/g, "").trim()).join() === "Date,Details,Spent,Received,Balance" && /▲/.test(h[0]), "W15-87/88 · a cash ledger: Date (▲ = oldest first, the order the rows are in) · Details · Spent · Received · Balance (" + h.join(" | ") + ")"); }
     /* only the rows scroll: a LONG ledger (80 lines) scrolls inside the list; the page does not, and its last row is reachable above the kural footer */
     await p.click('[data-testid="lg-acc-4000"]'); await p.waitForSelector('#lg_out .lrow', { timeout: 8000 });
+    { const h = await p.$$eval("#lg_out .cbl-hdr .cbl-hc", (n) => n.map((x) => x.textContent.replace(/[⇅▲▼]/g, "").trim())); ok(h.join() === "Date,Details,Amount,Balance", "a plain ledger's default columns: Date · Details · Amount (Dr/Cr) · Balance (W15-88) (" + h.join(" | ") + ")"); }
     {
       const fit = await p.evaluate(async () => { const out = document.querySelector('#lg_out'), l = out.querySelector('.cbl-list'), k = document.querySelector('[data-testid="kural-footer"]'), kr = k && !k.hidden ? k.getBoundingClientRect() : null, limit = kr ? kr.top : innerHeight;
         l.scrollTop = l.scrollHeight; await new Promise((r) => setTimeout(r, 400)); l.scrollTop = l.scrollHeight; await new Promise((r) => setTimeout(r, 300)); const rows = l.querySelectorAll('.lrow'), last = rows[rows.length - 1].getBoundingClientRect();
@@ -463,12 +466,12 @@ async function route(S, r) {
     ok(dueReads() === 1 && partyReads() === 0, 'one /api/books/dues read names every party; no statement per party (' + dueReads() + ' / ' + partyReads() + ')');
     ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Party', 'Details', 'Amount']), 'a control account\'s default columns: Date · Party · Details, and the Amount (the Balance is kept in ⚙)');
     let rt = await stmtText(), pc = await partyCells();
-    ok(rt.length === 2 && pc.length === 2 && /^P-00002 · Chola Auto Care$/.test(pc[0]) && /^P-00001 · Ravi Stores$/.test(pc[1]), 'every 1300 row leads with its party — newest first, "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
+    ok(rt.length === 2 && pc.length === 2 && /^P-00001 · Ravi Stores$/.test(pc[0]) && /^P-00002 · Chola Auto Care$/.test(pc[1]), 'every 1300 row leads with its party — oldest first (W15-87), "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
     ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter as its party');
     ok(rt.every((t) => /^Sale · Bill C2\/26-27\/001[67]( recorded \d\d \w+)?$/.test(t)), 'Details is the kind and the bill, once (' + rt[0] + ')');
     await openCols(p, 'ledger-control'); await p.waitForSelector('[data-testid="cols-menu-ledger-control"]');
     const colsOff = await p.$$eval('[data-testid="cols-menu-ledger-control"] input[type=checkbox]', (c) => c.map((x) => x.getAttribute('data-testid').replace('cols-ledger-control-', '') + ':' + (x.checked ? 1 : 0)));
-    ok(JSON.stringify(colsOff) === JSON.stringify(['date:1', 'party:1', 'what:1', 'entry:0', 'tender:0', 'counter:0', 'person:0', 'bal:0']) || colsOff.join() === ['date:1', 'party:1', 'what:1', 'bal:0', 'entry:0', 'tender:0', 'counter:0', 'person:0'].join(), 'the gear keeps Balance · Entry no. · Tender · Counter · Rung by (' + colsOff.join(' ') + ')');
+    ok(JSON.stringify(colsOff) === JSON.stringify(['date:1', 'party:1', 'what:1', 'amount:1', 'bal:0', 'entry:0', 'tender:0', 'counter:0', 'person:0']), 'the gear keeps Balance · Entry no. · Tender · Counter · Rung by (' + colsOff.join(' ') + ')');
     await p.keyboard.press('Escape');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
 
@@ -495,7 +498,7 @@ async function route(S, r) {
     await openCols(p, 'ledger-party'); await p.waitForSelector('[data-testid="cols-menu-ledger-party"]');
     ok(await p.locator('[data-testid="cols-ledger-party-party"]').count() === 0 && await p.locator('[data-testid="cols-ledger-party-what"]').count() === 1, 'a party\'s ledger offers no Party column, not even in the gear');
     await p.keyboard.press('Escape');
-    ok(await p.locator('#lg_out .lg-party').count() === 0 && ((await p.textContent('#lg_out .cbl-list')).match(/Ravi Stores/g) || []).length === 0 && JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'on a party\'s own ledger there is NO Party column and the party is not repeated on any row (it is said once, in the title)');
+    ok(await p.locator('#lg_out .lg-party').count() === 0 && ((await p.textContent('#lg_out .cbl-list')).match(/Ravi Stores/g) || []).length === 0 && JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Amount', 'Balance']), 'on a party\'s own ledger there is NO Party column and the party is not repeated on any row (it is said once, in the title)');
     await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const own = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); return { t: n.textContent, nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth }; });
     ok(!/Ravi Stores/.test(own.t) && /Output CGST/.test(own.t), 'inside the opened entry the party is not repeated either');
@@ -798,9 +801,9 @@ async function route(S, r) {
     const S = standIn(); S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
     const { ctx, p } = await open(S, { viewport: { width: 1080, height: 768 } });
     await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
-    await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
-    ok(await p.locator('.lt-tree').isVisible(), 'narrow laptop: with no ledger open the tree is shown (the way in)');
-    await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); await p.waitForTimeout(250);
+    await p.waitForSelector('[data-testid="lt-band-people"]', { state: 'attached' }); await p.waitForTimeout(250);
+    ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop: the bank ledger opens on its own (W15-90), so the tree is folded and "☰ Ledgers" is the way in');
+    await p.click('[data-testid="lt-unfold"]'); await p.waitForTimeout(200); await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); await p.waitForTimeout(250);
     ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop (1080): once a ledger is open the tree folds, and "☰ Ledgers" is one tap away');
     const n1 = rd(await headPct(p)), n1x = await headPct(p);
     ok(n1 <= 20, 'narrow laptop (1080×768): the head is ' + n1 + '% (' + fx(n1x) + ') of the window with the notices chip showing (limit 20%)');
@@ -861,7 +864,7 @@ async function route(S, r) {
       const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h } });
       await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { timeout: 15000 }); await p.click('[data-testid="acc-nav-ledgers"]');
       const pk = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); } await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
-      await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 15000 }); await pk('lg-acc-1300'); await pk('lg-party-c1'); await p.waitForSelector('[data-testid="stmt-row-3"]', { timeout: 15000 }); await p.waitForTimeout(400);
+      await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 15000 }); await pk('lg-acc-1300'); await pk('lg-party-c1'); await p.waitForSelector('[data-testid="stmt-row-3"]', { timeout: 15000 }); await p.mouse.move(1, 1); await p.waitForTimeout(400); /* the pointer rests off the rows: a hover shade is not the zebra */
       const zb = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('[data-testid^="stmt-row-"]')); return { n: rs.length, a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]), d: bg(rs[3]) }; });
       ok(zb.n >= 4 && zb.a === zb.c && zb.b === zb.d && zb.a !== zb.b, 'ledger @' + w + ': the entries alternate their shade (' + zb.a + ' / ' + zb.b + ')');
       await p.screenshot({ path: path.join(SHOTS, 'lists', 'accounts-ledger-zebra-' + w + '.png') }).catch(() => {});

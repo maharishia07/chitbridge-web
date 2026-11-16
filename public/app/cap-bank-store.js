@@ -20,12 +20,17 @@ if (typeof EP !== 'undefined') {
 }
 
 /** where the marks are kept: mode 'server' (shared record) · 'device' (the record is not set up yet) · 'error' (could not reach it); the rest is what the log said */
-var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', signing: false };
+var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', blind: false, signing: false };
 const bankStoreState_SHOWN = 4;
 /** a string made safe to put into the panel */
 const bksE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 /** true when the server says the shared record is not set up yet (503) */
 const bksNotSetUp = (failure) => !!failure && failure.status === 503;
+/** the api's 403 COST_BLIND (B3): this login may not see costs, so the bank statements and log are not its to read; ONE test and ONE sentence for every bank read (the body's code, from the error's own data) */
+const bksCostBlind = (failure) => !!failure && failure.status === 403 && !!failure.data && (failure.data.code === 'COST_BLIND' || (failure.data.error && failure.data.error.code === 'COST_BLIND'));
+const bksCostBlindSay = () => tx('Your access does not include costs, so the bank statements are hidden.');
+/** why a bank read failed, in words: the cost-blind sentence, else the server's own message */
+const bksWhy = (failure) => (bksCostBlind(failure) ? bksCostBlindSay() : (failure && failure.message) || '');
 
 /** the log's marks, oldest first, through the engine's own step; a mark the engine refuses is skipped, never invented */
 function bankStoreReplay(marks) {
@@ -41,7 +46,7 @@ function bankStoreReplay(marks) {
       name: row.attach_ref,
       ref: row.attach_ref,
       at: row.at,
-      by: row.by
+      by: row.by_name || row.by /* W15-71: the name the log carries for the person, else the id as before */
     });
     if (!next.why) state = next;
   });
@@ -49,7 +54,7 @@ function bankStoreReplay(marks) {
 }
 /** the marks of the picked account: the shared record when it answers, else this device's own copy (and the line says which) */
 async function bankStoreLoad(view) {
-  bankStoreState = Object.assign(bankStoreState, { view: view, acct: view.acct, statements: [], exceptions: [], say: '', chain: Promise.resolve() });
+  bankStoreState = Object.assign(bankStoreState, { view: view, acct: view.acct, statements: [], exceptions: [], say: '', blind: false, chain: Promise.resolve() });
   try {
     const log = (await api('booksBankLog', { query: { account: bankStoreState.view.acct, from: bankStoreState.view.from, to: bankStoreState.view.to }, fresh: true })) || {};
     bankStoreState.mode = 'server';
@@ -61,7 +66,8 @@ async function bankStoreLoad(view) {
     return state;
   } catch (failure) {
     bankStoreState.mode = bksNotSetUp(failure) ? 'device' : 'error';
-    bankStoreState.say = bksNotSetUp(failure) ? '' : (failure && failure.message) || '';
+    bankStoreState.say = bksNotSetUp(failure) ? '' : bksWhy(failure);
+    bankStoreState.blind = bksCostBlind(failure);
     return bkbLoad('marks:' + bankStoreState.view.acct, {});
   }
 }
@@ -86,10 +92,12 @@ function bankStoreAppend(action) {
     .then(() => {
       bankStoreState.mode = 'server';
       bankStoreState.say = '';
+      bankStoreState.blind = false;
     })
     .catch((failure) => {
       bankStoreState.mode = bksNotSetUp(failure) ? 'device' : 'error';
-      bankStoreState.say = bksNotSetUp(failure) ? '' : (failure && failure.message) || '';
+      bankStoreState.say = bksNotSetUp(failure) ? '' : bksWhy(failure);
+      bankStoreState.blind = bksCostBlind(failure);
     })
     .then(bankStorePaintLine);
 }
@@ -100,7 +108,9 @@ const bankStoreNoteWords = () =>
     : tx('Kept on this device. A note never stops you accepting.');
 /** the one line saying where the marks are kept */
 const bankStoreLine = () =>
-  bankStoreState.mode === 'server'
+  bankStoreState.blind
+    ? bksCostBlindSay() /* the api's 403 COST_BLIND: said, not the "could not reach" line (silence is the bug) */
+    : bankStoreState.mode === 'server'
     ? tx('Marks and notes are kept for your accountant too.')
     : bankStoreState.mode === 'device'
       ? tx('Saved on this device until the next update')
@@ -132,7 +142,7 @@ function bankStoreAsk(body) {
       '<div data-testid="bank-signoff-reach">' +
       bksE(txf('{account}, {from} to {to}.', { account: (acct && acct.name) || bankStoreState.view.acct, from: bkDate(bankStoreState.view.from), to: bkDate(bankStoreState.view.to) })) +
       '<br>' +
-      bksE(txf('Difference {amount}.', { amount: bkMoney(Math.abs(body.difference_minor), body.currency) })) +
+      bksE(txf('Difference {amount}.', { amount: bkbFig(Math.abs(body.difference_minor), body.currency) })) +
       '<br>' +
       bksE(tx('It is kept for your accountant and cannot be edited. Signing again adds a new record.')) +
       '</div>',
@@ -144,6 +154,7 @@ function bankStoreAsk(body) {
 function bankStoreSignOff(btn) {
   if (!bkbBound()) return;
   if (!bankStoreState.view.brs || !bankStoreState.view.brs.ok || bankStoreState.mode !== 'server') return;
+  if (typeof bkbActRefusal === 'function' && bkbActRefusal()) return toast(bkbActRefusal());
   const body = bankStoreBody();
   return CBAction.run(btn, () => api('booksBankStatements', { body }), {
     key: 'bank-signoff:' + bankStoreState.view.acct,
@@ -162,6 +173,42 @@ function bankStoreSignOff(btn) {
 const bksRow = (testId, left, right) => '<div class="pe-row" data-testid="' + testId + '"><span>' + bksE(left) + '</span><span class="mono">' + bksE(right) + '</span></div>';
 /** "and n more" when a list shows only its first few rows */
 const bksMore = (count) => (count > bankStoreState_SHOWN ? '<div class="pe-note">' + bksE(txf('and {n} more', { n: count - bankStoreState_SHOWN })) + '</div>' : '');
+/** who signed, in words: the record carries the login's id, so the name is the one on this login (or the record's own by_name); an id nobody can name is left out, never printed */
+function bankStoreSigner(item) {
+  if (item && item.by_name) return item.by_name; /* the api's own word for who, whoever signed: never the viewer's name for another person */
+  const by = String((item && item.by) || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(by)) return by;
+  return bankStoreIsMine(by) && typeof bkbBy === 'function' ? bkbBy() || '' : ''; /* an id of someone else with no name is left out; only this login's own id falls back to its name */
+}
+/** this login's own id (core.js cbMeId); an unknown own id on the owner's own page still reads as the owner's, never while acting for a client */
+function bankStoreIsMine(by) {
+  const me = (typeof cbMeId === 'function' && cbMeId()) || '';
+  if (me) return String(me) === by;
+  return !(typeof CBBooksActing !== 'undefined' && CBBooksActing.current());
+}
+/** who made a line, for the posted feed: an adviser's own page reads "Pat Lee for <client>", the owner reads "Pat Lee, <firm>"; a row with no by_name keeps the plain name the api sent (made_by) */
+function bankStoreMadeBy(row) {
+  const name = (row && (row.by_name || row.made_by)) || '';
+  if (!row || !row.by_name) return name;
+  if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return txf('{name} for {client}', { name, client: (CBBooksActing.current().store || {}).name || '' });
+  return row.by_firm ? name + ', ' + row.by_firm : name;
+}
+/** the signer with the firm when an adviser made it: "Pat Lee, Bayside Bookkeeping - demo" */
+function bankStoreSignerFull(item) {
+  const who = bankStoreSigner(item);
+  return who && item && item.by_firm && item.by_firm !== who ? who + ', ' + item.by_firm : who; /* a firm that signs as itself is said once */
+}
+/** the sign-off of THIS statement's period, newest first, or null */
+const bankStoreSignedNow = () => bankStoreState.statements.filter((item) => item.period_to && bankStoreState.view && item.period_to === bankStoreState.view.to)[0] || null;
+/** "Signed off by <name> on <date>", the one sentence the lines view and the statement both print; '' while the period is not signed */
+function bankStoreSignedWords() {
+  const item = bankStoreSignedNow();
+  if (!item) return '';
+  const who = bankStoreSignerFull(item),
+    date = bkDate(String(item.at || '').slice(0, 10));
+  if (who && item.by_firm) return txf('Reconciled by {who} on {date}', { who, date }); /* W15-75: a bookkeeper signs as the preparer, the firm named; the owner or auditor reviews */
+  return who ? txf('Signed off by {who} on {date}', { who, date }) : txf('Signed off on {date}', { date });
+}
 /** the signed statements, newest first, the first few */
 function bankStoreSigned() {
   if (!bankStoreState.statements.length) return '';
@@ -174,7 +221,7 @@ function bankStoreSigned() {
       .map((item) =>
         bksRow(
           'bank-signed-row',
-          bkDate(String(item.at || '').slice(0, 10)) + ' · ' + (item.by || '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
+          bkDate(String(item.at || '').slice(0, 10)) + (bankStoreSignerFull(item) ? ' · ' + bankStoreSignerFull(item) : '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
           (item.tied ? tx('Tied') : tx('Difference') + ' ' + bkMoney(Math.abs(item.difference_minor), item.currency))
         )
       )
@@ -198,32 +245,41 @@ function bankStoreExceptions() {
     bksMore(bankStoreState.exceptions.length)
   );
 }
-/** the Sign off button: shown always, greyed with the reason while the record is not set up */
+/** the Sign off button, drawn only when the difference is nil (the band asks for it then); greyed with the reason while the record is not set up. Its slot is repainted after a sign-off */
 function bankStoreSignButton() {
   const worked = bankStoreState.view.brs;
+  if (typeof bkbReadOnly === 'function' && bkbReadOnly()) return (bankStoreSignedWords() && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(bankStoreSignedWords()) + '</span>' : ''); /* W15-71: the sign-off is said, never offered */
   if (!worked || !worked.ok) return '';
-  const notReady = bankStoreState.mode !== 'server';
+  const notReady = bankStoreState.mode !== 'server',
+    signed = bankStoreSignedWords();
   return (
-    '<div class="supacts"><button data-cbsid="BKS014-B08" type="button" class="act" data-testid="bank-signoff"' +
-    (notReady ? ' disabled aria-describedby="bk_store_line" title="' + bksE(tx('Signing off starts after the next update')) + '"' : '') +
+    (signed && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(signed) + '</span>' : '') +
+    '<button data-cbsid="BKS014-B08" type="button" class="' + (signed ? 'act' : 'pri bk-primary') + '" data-testid="bank-signoff"' +
+    (notReady ? ' disabled title="' + bksE(tx('Signing off starts after the next update')) + '"' : '') +
     ' onclick="bankStoreSignOff(this)">' +
-    bksE(tx('Sign off this reconciliation')) +
-    '</button></div>'
+    bksE(tx(signed ? 'Sign off again' : 'Sign off this reconciliation')) +
+    '</button>'
   );
 }
-/** the whole panel: the line, the sign-off, the signed list, the exceptions */
+/** the whole panel: the line, the signed list, the exceptions */
 const bankStorePanel = () =>
   '<div id="bk_store" data-testid="bank-store"><div class="pe-note" id="bk_store_line" data-testid="bank-store-line" data-mode="' +
   bankStoreState.mode +
   '">' +
   bksE(bankStoreLine()) +
   '</div>' +
-  bankStoreSignButton() +
   bankStoreSigned() +
   bankStoreExceptions() +
   '</div>';
 /** a step or an answer changed the line or the lists: redraw the panel where it is, nothing else */
 function bankStorePaintLine() {
-  const host = document.getElementById('bk_store');
+  const host = document.getElementById('bk_store'),
+    slot = document.getElementById('bk_primary');
+  const quiet = document.getElementById('bk_store_line');
   if (host) host.outerHTML = bankStorePanel();
+  else if (quiet) {
+    quiet.textContent = bankStoreLine();
+    quiet.setAttribute('data-mode', bankStoreState.mode);
+  }
+  if (slot && typeof bankPrimaryHtml === 'function') slot.innerHTML = bankPrimaryHtml(bankFigures());
 }

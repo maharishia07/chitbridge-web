@@ -35,6 +35,7 @@
  *     party?, me?,                   // the other party's name (the audience line) · my display name (my rows read "You")
  *     signature?,                    // appended to a dispute message ("— name@shop", the acting co-assist's provenance)
  *     decorate?(row) → { by, body, kind },   // a host's byline/prefix reader (cap-dispute's disputeByline)
+ *     subject?: { type: 'mark', id },  // CAP-25: a mark's thread instead of a chit (chit_id then not needed); transport?(method, path, body): a host with its own headers (the auditor grant)
  *     readOnly?,                     // list only (a resolved dispute's room)
  *     ids?: { text, send },          // test ids for the box and the button when a host's spec drives them by other names
  *     context: { host, source? },    // who mounted it (rides on cb:rail)
@@ -60,7 +61,9 @@
    line gets them at mount (ensureEP) — the attach-ui.js pattern. ── */
   var CB_THREAD_EP = {
     messages: { m: 'GET', p: '/api/chits/:id/messages', ok: 'y' }, // ?thread_type= &line_id= &dispute=1
-    sendMsg: { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' } // the ONE composer's route
+    sendMsg: { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' }, // the ONE composer's route
+    marksMessages: { m: 'GET', p: '/api/marks/:id/messages', ok: 'y' }, // CAP-25: the same list, for a mark's thread (mount option `subject`)
+    marksSend: { m: 'POST', p: '/api/marks/:id/messages', ok: 'y', idem: true } // the same composer, the mark's reply door
   };
   root.CB_THREAD_EP = CB_THREAD_EP;
   function ensureEP() {
@@ -69,14 +72,28 @@
     return true;
   }
 
+  /** CAP-25: the ONE transport. A mount with `subject` reads and sends through the mark pair; a host with its own headers (the auditor's books grant) hands `transport(method, path, body)`; else the page's api() */
+  function viaApi(o, key, opts) {
+    if (o.subject) key = key === 'messages' ? 'marksMessages' : key === 'sendMsg' ? 'marksSend' : key;
+    if (!o.transport) return api(key, opts);
+    var ep = CB_THREAD_EP[key],
+      path = ep.p.replace(':id', encodeURIComponent(opts.params.id)),
+      q = Object.keys(opts.query || {}).map(function (n) { return encodeURIComponent(n) + '=' + encodeURIComponent(opts.query[n]); }).join('&');
+    return o.transport(ep.m, path + (q ? '?' + q : ''), opts.body);
+  }
+
   /* ── the words, one place (copy budget: a label, a verb, a sentence) ── */
   var W = {
     internal: '🔒 Internal',
     external: '↔ External',
     audInternal: '🔒 Team only — the other party never sees this',
     audExternal: '↔ {party} sees this. It cannot be unsent',
+    audNoChannel: '{party} has no phone or e-mail on record and is not on the network; add one to send this',
     audDispute: '⚑ Dispute — only its members see this',
     send: 'Send',
+    write: 'Write a reply',
+    count1: '1 message',
+    countN: '{n} messages',
     sending: 'Sending…',
     sentInt: '🔒 Note added — team only',
     sentExt: '↔ Sent — {party} notified',
@@ -111,7 +128,7 @@
   function sentWords(thread, body, reply) {
     var held = reply && reply.ctp && (reply.ctp.queued || reply.ctp.why);
     if (thread.dispute_id) return T(W.sentDisp);
-    if (body.thread_type !== 'external') return T(W.sentInt);
+    if (body.thread_type && body.thread_type !== 'external') return T(W.sentInt);
     if (held) return reply.ctp.why || fill(T(W.sentWait), { where: thread.where || thread.party || T('the other side') });
     return fill(T(W.sentExt), { party: thread.party || T('the other party') });
   }
@@ -152,10 +169,13 @@
     '.rt-out{font-size:var(--fs-1,12px);min-height:1em}.rt-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.rt-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.rt-no{border:1px dashed var(--line,#DDD6C6);border-radius:9px;padding:9px 11px;color:var(--grey,#5E594D);font-size:var(--fs-2,14px)}' +
     '.rt-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
-    '.rt-list{display:flex;flex-direction:column;gap:7px}.rt-n{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);font-weight:700}' +
-    '.rt-m{border:1px solid var(--line,#DDD6C6);border-radius:0 10px 10px 0;padding:8px 11px;background:var(--card,#fff);border-inline-start:3px solid var(--slate-line,#8aa0ad)}' +
-    '.rt-m.ext{background:var(--blue-tint-bg,#eef4fb);border-inline-start-color:var(--blue,#1f5fa8)}.rt-m.disp{background:var(--danger-tint,#fbeeec);border-inline-start-color:var(--disp,#8E3517)}' +
-    '.rt-m.mine{margin-inline-start:18px}' +
+    '.rt-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;max-height:var(--rt-max,min(46vh,380px));min-height:64px;padding:4px 2px;overscroll-behavior:contain}' +
+    '.rt.fill{height:100%;min-height:0}.rt.fill .rt-list{flex:1 1 auto;max-height:none}.rt-n{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);align-self:center}' +
+    '.rt-above{display:flex;flex-direction:column;gap:6px}.rt-above:empty{display:none}' +
+    '.rt-box{display:flex;gap:8px;align-items:flex-end}.rt-box textarea{flex:1 1 auto;min-width:0;min-height:44px;max-height:140px;resize:none}.rt-box .rt-send{flex:0 0 auto;min-height:44px}' +
+    '.rt-m{border:1px solid var(--line,#DDD6C6);border-radius:14px 14px 14px 4px;padding:8px 12px;background:var(--card,#fff);max-width:86%;align-self:flex-start;box-sizing:border-box;overflow-wrap:anywhere}' +
+    '.rt-m.ext{border-inline-start:3px solid var(--blue,#1f5fa8)}.rt-m.disp{background:var(--danger-tint,#fbeeec);border-inline-start:3px solid var(--disp,#8E3517)}' +
+    '.rt-m.mine{align-self:flex-end;border-radius:14px 14px 4px 14px;background:var(--blue-tint-bg,#eef4fb);border-color:var(--blue-line,#B9D2EF)}' +
     '.rt-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:var(--fs-1,12px);margin-bottom:3px}.rt-h b{color:var(--ink,#1D1B16)}.rt-h .rt-t{margin-inline-start:auto;color:var(--grey,#5E594D)}' +
     '.rt-tag{border-radius:6px;padding:1px 7px;font-weight:700;font-size:var(--fs-1,12px)}.rt-tag.int{background:var(--blue-tint-bg,#eef4fb);color:var(--grey,#5f7682)}.rt-tag.ext{background:var(--blue-tint-bg,#eef4fb);color:var(--blue,#1f5fa8)}.rt-tag.disp{background:var(--danger-tint,#fbeeec);color:var(--disp,#8E3517)}.rt-tag.ln{background:var(--paper,#f4f1ea);color:var(--grey,#5E594D)}' +
     '.rt-b{white-space:pre-wrap;line-height:1.45}.rt-att{margin-top:6px}.rt-empty{color:var(--grey,#5E594D);padding:8px 2px}';
@@ -172,7 +192,7 @@
   /* ── drafts: the typed text survives a repaint (and a reload when CBOffline is on the page) ── */
   var DRAFTS = {};
   function dkey(o) {
-    return 'rt.' + o.chit_id + '.' + (o.line_id || '') + '.' + (o.dispute_id || '');
+    return 'rt.' + (o.subject ? o.subject.type + '.' : '') + o.chit_id + '.' + (o.line_id || '') + '.' + (o.dispute_id || '');
   }
   function draftGet(o) {
     var k = dkey(o);
@@ -217,7 +237,7 @@
 
   /* ── the list: what the server handed this copy, filtered to the subject (line · dispute) ── */
   async function load(m) {
-    if (!ensureEP()) {
+    if (!ensureEP() && !m.o.transport) {
       m.err = 'no EP';
       paint(m);
       return;
@@ -228,9 +248,10 @@
     q.thread_type = ch === 'both' || o.dispute_id ? 'all' : ch;
     if (o.line_id) q.line_id = o.line_id;
     if (o.dispute_id) q.dispute = '1';
+    if (o.subject) q = {}; /* the mark's list takes no filter */
     m.err = null;
     try {
-      var reply = await api('messages', { params: { id: o.chit_id }, query: q });
+      var reply = await viaApi(o, 'messages', { params: { id: o.chit_id }, query: q });
       var list = (reply && (reply.messages || reply.items || (Array.isArray(reply) ? reply : []))) || [];
       /* ⚠️ FILTERED AGAIN CLIENT-SIDE, the subject's rows only: a line's thread never absorbs the chit's (pre-b155 servers ignore
        line_id); a dispute room shows ITS dispute's rows; the general thread shows NO dispute row — those live in the room, for
@@ -239,12 +260,12 @@
         if (o.dispute_id) return x.is_dispute && String(x.dispute_id) === String(o.dispute_id);
         if (x.is_dispute) return false;
         if (o.line_id && x.line_id && String(x.line_id) !== String(o.line_id)) return false;
-        if (ch !== 'both' && x.thread_type !== ch) return false;
+        if (!o.subject && ch !== 'both' && x.thread_type !== ch) return false; /* a mark's thread has one channel and its rows carry no thread_type */
         return true;
       });
       list.sort(function (first, second) {
-        return String(second.created_at || '').localeCompare(String(first.created_at || ''));
-      }); /* newest first (Athi, 2026-08-15) */
+        return String(first.created_at || '').localeCompare(String(second.created_at || ''));
+      }); /* a chat: oldest first, the newest at the BOTTOM next to the reply box (Athi, 15 Nov walk W15-26/W15-28; it was newest first since 2026-08-15) */
       m.rows = list;
     } catch (e) {
       m.err = (e && e.message) || 'fail';
@@ -258,7 +279,7 @@
   }
   /** the chit's actions when the host did not hand them over — one GET through the page's `chit` row, deduped by core */
   async function readActions(m) {
-    if (m.actions || typeof EP === 'undefined' || !EP || !EP.chit) return;
+    if (m.actions || m.o.subject || typeof EP === 'undefined' || !EP || !EP.chit) return;
     try {
       var reply = await api('chit', { params: { id: m.o.chit_id } });
       if (reply && reply.actions) {
@@ -269,6 +290,14 @@
   }
 
   /* ── paint ── */
+  /** a bubble that is not a posted message: the question a thread opens with (o.lead = { who, at, text, mine, tid }) */
+  function leadHTML(L) {
+    return (
+      '<div class="rt-m lead' + (L.mine ? ' mine' : '') + '" data-testid="rt-lead" data-side="' + (L.mine ? 'mine' : 'theirs') + '">' +
+      '<div class="rt-h"><b>' + esc(L.mine ? T(W.you) : L.who || '—') + '</b><span class="rt-t">' + esc(when(L.at)) + '</span></div>' +
+      '<div class="rt-b"' + (L.tid ? ' data-testid="' + esc(L.tid) + '"' : '') + '>' + esc(L.text || '') + '</div></div>'
+    );
+  }
   function rowHTML(m, x) {
     var o = m.o,
       dec = null;
@@ -279,7 +308,7 @@
     }
     var body = dec && dec.body != null ? dec.body : x.message_text || '';
     var mine =
-      !!(o.me && x.sender_display_name && String(x.sender_display_name) === String(o.me)) || (m.sent && String(m.sent.message_id) === String(x.message_id));
+      !!(o.me && x.sender_display_name && String(x.sender_display_name) === String(o.me)) || (m.sent && String(m.sent.message_id) === String(x.message_id)) || x.mine === true;
     var cls = x.is_dispute ? 'disp' : x.thread_type === 'external' ? 'ext' : 'int';
     var tag = x.is_dispute
       ? '<span class="rt-tag disp">' + T('⚑ Dispute') + '</span>'
@@ -303,7 +332,7 @@
       '<div class="rt-m ' +
       cls +
       (mine ? ' mine' : '') +
-      '" data-testid="rt-row" data-id="' +
+      '" data-testid="rt-row" data-side="' + (mine ? 'mine' : 'theirs') + '" data-id="' +
       esc(x.message_id) +
       '" data-thread="' +
       esc(x.thread_type) +
@@ -409,7 +438,7 @@
             .join('') +
           '</select></label>'
         : '';
-    var aud = disp ? T(W.audDispute) : ext ? fill(T(W.audExternal), { party: o.party || T('the other party') }) : T(W.audInternal);
+    var aud = disp ? T(W.audDispute) : ext ? fill(T(o.no_channel ? W.audNoChannel : W.audExternal), { party: o.party || T('the other party') }) : T(W.audInternal);
     var tone = disp ? 'disp' : ext ? 'ext' : 'int';
     return (
       '<div class="rt-comp ' +
@@ -418,37 +447,41 @@
       (toggle || kinds ? '<div class="rt-row">' + toggle + kinds + '</div>' : '') +
       offWhy +
       lines +
-      '<textarea data-cbsid="SCR051-T01" data-rt-act="text" data-testid="' +
-      esc(ids.text || 'msg-body') +
-      '" placeholder="' +
-      esc(aud) +
-      '">' +
-      esc(m.text) +
-      '</textarea>' +
       '<div class="rt-aud ' +
       tone +
       '" data-testid="rt-aud">' +
       esc(aud) +
       '</div>' +
-      '<div class="rt-foot"><button data-cbsid="SCR051-B03" type="button" class="rt-send ' +
+      '<div class="rt-box"><textarea data-cbsid="SCR051-T01" data-rt-act="text" rows="1" data-testid="' +
+      esc(ids.text || 'msg-body') +
+      '" aria-label="' +
+      esc(T(W.write)) +
+      '" placeholder="' +
+      esc(o.reason ? T(o.reason) : o.no_channel && ext ? aud : T(W.write)) + /* a thread that cannot send says WHY in the box (the caller's own reason, else the no-channel sentence), never the generic prompt */
+      '">' +
+      esc(m.text) +
+      '</textarea>' +
+      '<button data-cbsid="SCR051-B03" type="button" class="rt-send ' +
       tone +
       '" data-rt-act="send" data-testid="' +
       esc(ids.send || 'msg-send') +
       '">' +
       esc(T(W.send)) +
-      '</button>' +
-      '<span class="rt-out" data-testid="rt-out" data-tone=""></span></div></div>'
+      '</button></div>' +
+      '<div class="rt-foot"><span class="rt-out" role="status" data-testid="rt-out" data-tone=""></span></div></div>'
     );
   }
   function listHTML(m) {
     var o = m.o;
     if (m.err) return '<div class="rt-empty" data-testid="rt-err">' + esc(T(W.readFail)) + '</div>';
     if (!m.rows) return '<div class="rt-empty">' + esc(T(W.reading)) + '</div>';
-    if (!m.rows.length) return '<div class="rt-empty" data-testid="rt-empty">' + esc(T(o.line_id ? W.noneLine : W.none)) + '</div>';
+    var lead = o.lead ? leadHTML(o.lead) : '';
+    if (!m.rows.length) return lead + (o.lead ? '' : '<div class="rt-empty" data-testid="rt-empty">' + esc(T(o.line_id ? W.noneLine : W.none)) + '</div>');
     return (
       '<div class="rt-n" data-testid="rt-count">' +
-      m.rows.length +
+      esc(fill(T(m.rows.length === 1 ? W.count1 : W.countN), { n: m.rows.length })) +
       '</div>' +
+      lead +
       m.rows
         .map(function (x) {
           return rowHTML(m, x);
@@ -460,19 +493,39 @@
     if (!m.el || !m.el.isConnected) return;
     var keep = m.el.querySelector('[data-rt-act="text"]');
     if (keep) m.text = keep.value;
+    var hadFocus = !!keep && doc.activeElement === keep;
+    var above = m.o.above && m.o.above.nodeType ? m.o.above : null;
+    if (above && above.parentNode) above.parentNode.removeChild(above); /* a host's node outlives the repaint: detach before the innerHTML wipe, put back after */
+    var composer = m.o.readOnly ? '' : composerHTML(m);
     m.el.innerHTML =
-      '<div class="rt" data-testid="rt" data-chit="' +
+      '<div class="rt' + (m.o.fill ? ' fill' : '') + '" data-testid="rt" data-chit="' +
       esc(m.o.chit_id) +
       '">' +
-      (m.o.readOnly ? '' : composerHTML(m)) +
-      '<div class="rt-list" data-testid="rt-list">' +
+      '<div class="rt-list" data-testid="rt-list" tabindex="-1" role="log" aria-live="polite">' +
       listHTML(m) +
-      '</div></div>';
+      '</div>' +
+      '<div class="rt-above" data-testid="rt-above"></div>' +
+      composer +
+      '</div>';
+    var slot = m.el.querySelector('[data-testid="rt-above"]');
+    if (above && slot) slot.appendChild(above);
+    var list = m.el.querySelector('.rt-list');
+    if (list) list.scrollTop = list.scrollHeight; /* opens on the newest */
+    if (hadFocus || (m.o.focus && !m.focused && m.rows)) {
+      var box = m.el.querySelector('[data-rt-act="text"]');
+      if (box) {
+        m.focused = true;
+        try {
+          box.focus({ preventScroll: true });
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+      }
+    }
   }
 
   /* ── the one send ── */
   function bodyFor(o, text, ch, extra) {
     extra = extra || {};
+    if (o.subject) return { message_text: text, msg_type: extra.msg_type || 'info' }; /* the mark's reply door takes these two and nothing else */
     var b = { thread_type: o.dispute_id ? 'external' : ch, message_text: text, msg_type: extra.msg_type || 'info' };
     var line = extra.line_id !== undefined ? extra.line_id : o.line_id;
     if (line) b.line_id = line;
@@ -497,7 +550,7 @@
     return CBAction.run(
       btn,
       function () {
-        return api('sendMsg', { params: { id: o.chit_id }, body: body });
+        return viaApi(o, 'sendMsg', { params: { id: o.chit_id }, body: body });
       },
       {
         key: 'rt:' + o.chit_id + ':' + (o.line_id || '') + ':' + (o.dispute_id || ''),
@@ -528,6 +581,7 @@
   /* ── mount ── */
   function mount(el, o) {
     el = typeof el === 'string' ? doc.getElementById(el) : el;
+    if (o && o.subject && o.subject.id && !o.chit_id) o = Object.assign({}, o, { chit_id: o.subject.id, channel: 'external' }); /* CAP-25: a mark's thread: one channel, the subject id keys the drafts */
     if (!el || !o || !o.chit_id) return null;
     addCss();
     ensureEP();
@@ -576,6 +630,8 @@
       if (node.getAttribute('data-rt-act') === 'text') {
         m.text = node.value;
         draftSet(o, node.value);
+        node.style.height = 'auto';
+        node.style.height = Math.min(node.scrollHeight + 2, 140) + 'px'; /* grows with Shift+Enter lines, then scrolls inside */
       }
       if (node.getAttribute('data-rt-act') === 'line') m.line = node.value;
     }
@@ -645,6 +701,16 @@
         }
       });
     }
+    function onKey(ev) {
+      var node = ev.target;
+      if (!node || !node.getAttribute || node.getAttribute('data-rt-act') !== 'text') return;
+      if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing && !ev.ctrlKey && !ev.altKey) {
+        ev.preventDefault(); /* Enter sends, Shift+Enter is a new line */
+        var send = el.querySelector('[data-rt-act="send"]');
+        if (send) sendPress(send);
+      }
+    }
+    el.addEventListener('keydown', onKey);
     el.addEventListener('click', onClick);
     el.addEventListener('input', onInput);
     el.addEventListener('change', onInput);
@@ -654,6 +720,7 @@
         return load(m);
       },
       destroy: function () {
+        el.removeEventListener('keydown', onKey);
         el.removeEventListener('click', onClick);
         el.removeEventListener('input', onInput);
         el.removeEventListener('change', onInput);
@@ -726,6 +793,6 @@
     return out;
   }
 
-  var CBThread = { mount: mount, mountAll: mountAll, send: send, last: null, EP: CB_THREAD_EP, WORDS: W };
+  var CBThread = { when: when, /* the one date-time stamp (cap-mark.js reads it here, no copy) */ mount: mount, mountAll: mountAll, send: send, lead: function (L) { addCss(); return '<div class="rt"><div class="rt-list">' + leadHTML(L) + '</div></div>'; }, last: null, EP: CB_THREAD_EP, WORDS: W };
   root.CBThread = CBThread;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

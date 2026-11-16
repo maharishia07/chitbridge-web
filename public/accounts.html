@@ -17,7 +17,11 @@
      second copy of them), and the floor under them (tx, toast, the Ledger switch) is app/accounts-shell.js, which app.html
      loads too. This page is only: the shell, the Ledgers view, the Bills view, the off card and the gate.
      ⚠️ Never the two banned words on a screen — CB Accounts, Ledger, Day book. -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/cb-fonts.css">
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- CMP060 figure card, CMP064 status icon: the Bank band and its lines -->
+<link rel="stylesheet" href="/app/bank-band.css">   <!-- the band over a bank statement, shared with the public demo -->
 <style>
 /* the designer's tokens, as handed over (docs/design/ledgers-page/styles.css) … */
 :root{
@@ -132,6 +136,7 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .step.blue{background:var(--blue-t);border-color:var(--blue-b);color:var(--blue-i)}
 .step.amber{background:var(--amber-t);border-color:var(--amber-b);color:var(--amber-i)}
 .step.red{background:var(--red-t);border-color:var(--red-b);color:var(--red-i)}
+:root[data-theme="dark"] .step.red{background:var(--surface);border-color:var(--red-b);color:var(--ink)}
 .step.green{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}
 
 /* ── the app's own screens (cap-books.js), dressed for this page ── */
@@ -179,6 +184,13 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .pe-note{color:var(--muted-2);font-size:14px;padding:6px 0}
 .pe-ok{border:1px solid var(--green-b);background:var(--green-t);color:var(--green-d);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600}
 .pe-bad,.pe-calm,.pe-warn{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border-radius:10px;padding:10px 12px;font-size:14px}
+.bk-signed{font-weight:600;color:var(--green-d,var(--text));font-size:13px;line-height:1.25}
+@media (max-width:760px){#bk_primary:has(.bk-signed){display:contents}.bk-acts:has(.bk-signed){flex-wrap:nowrap}.bk-acts .bk-signed{flex:1 1 0;min-width:0}.bk-acts button[data-testid="bank-signoff"].act{display:none}}
+.bk-more-sign{display:none}
+@media (max-width:760px){.bk-more-sign{display:block}}
+.brs-title{margin:0 0 6px;font-size:16px;font-weight:700}
+.brs-signed{margin:0 0 8px;padding:6px 10px;font-size:13px}
+@media print{body.brs-printing *{visibility:hidden}body.brs-printing #bk_brs_print,body.brs-printing #bk_brs_print *{visibility:visible}body.brs-printing #bk_brs_print{position:absolute;inset:0 auto auto 0;width:100%;border:0;box-shadow:none;background:Canvas;color:CanvasText}}
 .pe-bad{border:1px solid var(--red-b);background:var(--red-t);color:var(--red-i)}
 .pe-warn{border:1px solid var(--amber-b);background:var(--amber-t);color:var(--amber-i)}
 .pe-calm{border:1px dashed var(--line-3);color:var(--muted-2)}
@@ -210,6 +222,14 @@ dialog.sheet .mfoot{padding:10px 20px 16px;display:flex;gap:8px;justify-content:
 dialog.sheet .mfoot button{min-height:40px;padding:0 16px;border:1px solid var(--line-3);border-radius:9px;background:transparent;color:var(--ink);font-weight:600}
 dialog.sheet .mfoot button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 dialog.sheet .mfoot button[disabled]{opacity:.6}
+/* a WIDE sheet (ui.dialog wide:true) takes the screen: head and foot stay, only the body scrolls; on a phone it is the whole screen. The code chip sits clear of the close cross. */
+dialog.sheet.wide{width:min(1240px,98vw);height:min(94vh,920px);max-height:94vh}
+dialog.sheet.wide[open]{display:flex;flex-direction:column}
+dialog.sheet.wide .mhd{padding-inline-end:56px}
+dialog.sheet.wide .mbody{flex:1 1 auto;min-height:0;max-height:none}
+dialog.sheet.wide .bks-lines{max-height:none;flex:1 1 auto}
+dialog.sheet .mfoot .bks-keep{margin-inline-end:auto;align-self:center;font-size:12.5px;color:var(--muted)}
+@media (max-width:700px){dialog.sheet.wide{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0}dialog.sheet.wide .mfoot .bks-keep{flex:1 1 100%}}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow-toast)}
 #toast .toast.err{background:var(--red-i)}
@@ -227,6 +247,113 @@ body.lg-on #bk_body{height:100%;min-height:0}
 body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the view's heading; the frame above stays (SHELL-ONE) */
 /* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
 @media (min-width:761px){body.lg-on .nav-grp{display:none}body.lg-on .nav-sec:has(>.nav-grp)::before{content:"";display:block;height:1px;margin:8px 10px;background:var(--line-3)}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
+
+/* ⭐ THE STATEMENTS BOX (app/cap-bank-statements.js): compact, 32 px rows, toolbar on the table, tokens only; folded while a statement is on screen */
+.pe-card.bks{max-width:none;gap:6px;padding:6px 14px}
+.bks-bar{display:flex;align-items:center;gap:10px;min-height:32px;font-size:14px}
+.bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}/* wraps, never cut: the Statements line reads in full at 390 (Fable r2) */
+#bk_body .bks-tog,#bk_body .bks-btn,#bk_body .bks-miss,#bk_body .bks-add button{min-height:32px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font-size:13px;font-weight:600;cursor:pointer}
+#bk_body .bks-add .supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+#bk_body .bks-miss{border-color:var(--amber-b,var(--line));background:var(--amber-t,var(--surface));color:var(--amber-d,var(--ink,inherit));width:100%;height:26px;min-height:26px;padding:0 6px}
+.bks-add{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
+.bks-add .pe-f .inp{min-height:32px;height:32px;padding:0 8px}
+.bks-add .pe-f{flex:1 1 180px}
+.bks-just{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:6px}.bks-just .bks-sum{white-space:normal;flex:1 1 220px}#bk_body .bks-link{background:none;border:0;padding:0;min-height:32px;color:var(--accent);font-size:13px;text-decoration:underline;cursor:pointer}
+.bks-mini{display:inline-flex;align-items:center;gap:8px;min-width:0;font-size:13px}.bks-mini b{font-weight:600}.bks-mini .bks-sum{white-space:normal;overflow:visible;text-overflow:clip;flex:0 1 auto}#bk_body .bks-mini .bks-tog{min-height:28px;height:28px}
+.bks-wrap{overflow-x:auto}
+/* ⭐ THE BANK HOME (app/cap-bank-home.js): cards for unfinished months, the grid's month buttons, the trail over the lines — 32 px rows, tokens only */
+.bkh-cards{display:flex;flex-direction:column;gap:4px;margin:4px 0}
+.bkh-card{display:flex;align-items:center;gap:10px;min-height:36px;padding:2px 10px;border:1px solid var(--amber-b,var(--line));border-radius:8px;background:var(--amber-t,var(--surface))}
+.bkh-dot{color:var(--amber-d,var(--muted-2))}.bkh-words{flex:1 1 auto;min-width:0;font-size:14px}
+#bk_body .bkh-go,#bk_body .bkh-back{min-height:32px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font:inherit;font-size:13px;cursor:pointer}
+#bk_body .bkh-cell{min-height:32px;width:100%;border:0;background:none;color:inherit;font:inherit;cursor:pointer;border-radius:6px}
+#bk_body .bkh-cell:hover{background:var(--surface-2,var(--line))}
+.bks-grid .bkh-open{color:var(--amber-d,var(--ink,inherit))}.bks-grid .bkh-kept{color:var(--muted-2)}
+.bkh-key{margin-top:4px}
+/* W15-100 (Athi 16 Nov, hundreds of months): ONE year on the grid (its own scroll when there are many accounts), the year stepper, the cards' long list and the kept files list scroll inside their own boxes, so the page never grows */
+.bkh-fy{display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap}.bkh-fynow{font-size:14px;min-width:96px;text-align:center}
+#bk_body .bkh-step{min-height:32px;height:32px;padding:0 10px;font-size:13px}#bk_body .bkh-step[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}#bk_body .bkh-step:disabled{opacity:.45;cursor:default}
+#bk_stmts:has(.bkh-body){display:flex;flex-direction:column;max-height:calc(100dvh - 286px);min-height:0}#bk_stmts:has(.bkh-body) .bks-bar,#bk_stmts:has(.bkh-body) .bkh-fy{flex:none}
+.bkh-body{flex:1 1 auto;min-height:0;overflow:auto}
+#bk_body .bkh-more{min-height:32px;align-self:flex-start}
+.bkh-all{display:flex;flex-direction:column;gap:6px;margin:6px 0;max-height:clamp(150px,40vh,330px);overflow:auto}#bk_body .bkh-allrow{justify-content:flex-start;text-align:left;width:100%;height:32px;white-space:nowrap}
+/* the whole list of cards, or the kept files, take the place of the grid while they are open: the page never grows */
+#bk_stmts:has(.bkh-cards-all) :is(.bks-wrap.bkh-gridwrap,.bkh-key),#bk_stmts:has(details.bkh-files[open]) :is(.bkh-cards,.bks-wrap.bkh-gridwrap,.bkh-key,.bks-just,[data-testid=bank-stmts-kept]){display:none}.bkh-pageof{font-size:12.5px;color:var(--muted-2);margin-inline-end:8px}
+.bkh-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:32px;padding:2px 0}.bkh-pager:empty{display:none}.bkh-pager .cbl-pgbtn{min-height:32px}
+.bkf-l1{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}.bkf-l1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.bkf-l1 .bks-acts{display:inline-flex;gap:6px;flex:none}
+.bkf-l2{display:block;min-width:0;color:var(--muted-2);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bk_body .bks-btn.bkf-ic{width:28px;height:28px;min-height:28px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1}
+@media (max-width:760px){#bk_stmts:has(.bkh-body) .bks-bar>b{display:none}}
+#bk_body .bks-tog{white-space:nowrap;flex:none}
+.bkh-files{margin-top:8px}.bkh-files summary{cursor:pointer;min-height:32px;display:list-item;list-style-position:inside;line-height:32px;font-size:13px;color:var(--muted-2)}
+.bkh-trail{display:flex;align-items:center;gap:8px;min-height:24px;font-size:13.5px}
+.pe-bank.bk-loaded .pe-card.bks:has(.bkh-trail){padding:0;border:0;background:none;box-shadow:none}
+#bk_body .bkh-trail .bkh-back{min-height:24px;height:24px;padding:0 10px;font-size:13px}
+.pe-bank.bk-loaded .pe-card.bks:has(.bkh-trail){margin-bottom:-8px}
+.bkh-crumbs{color:var(--muted-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pe-bank.bk-home [data-testid="bank-form"] .pe-form,.pe-bank.bk-home [data-testid="bank-private"]{display:none}
+.pe-bank.bk-home [data-testid="bank-form"]:not(:has(#bk_out:not(:empty))){display:none}
+.bks-grid,.bks-files{border-collapse:collapse;width:100%;font-size:13px}
+.bks-grid th,.bks-grid td,.bks-files th,.bks-files td{height:32px;padding:0 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.bks-grid thead th,.bks-files thead th{color:var(--muted-2);font-weight:600;position:sticky;top:0;background:var(--surface)}
+.bks-grid td{text-align:center;min-width:58px;padding:0 4px}.bks-grid th{padding:0 4px}.bks-grid th[scope=row]{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis;padding:0 8px}.bks-grid .bkh-tally{text-align:left;color:var(--muted-2);font-size:12.5px;padding:0 8px}.bks-grid .bkh-future{color:var(--muted-2)}
+.bks-grid .bks-have{color:var(--green-d)}
+.bks-flag{font-size:12px;color:var(--amber-d,var(--muted-2));border:1px solid var(--amber-b,var(--line));border-radius:6px;padding:0 4px}
+.bks-name{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.bks-files .bks-acts{text-align:right}.bks-files .bks-btn{margin-left:6px}
+.pe-bank.bk-loaded .pe-card.bks{padding:2px 14px}
+/* ⭐ THE BANK VIEW, a statement on screen (app/cap-bank.js): the load form is ONE line, a band of four figures and ONE primary button, and the lines fill the rest of the screen; nothing scrolls but the rows.
+   body.bk-on is set while the Lines view shows (bankLayout); the Statement view scrolls as a page. */
+.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-form"] .pe-form,.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-private"]{display:none}
+.bk-line{display:none}
+.pe-bank.bk-loaded .bk-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
+.pe-bank.bk-loaded .bk-name{font-size:15px}
+.pe-bank.bk-loaded .bk-store{color:var(--muted);font-size:13px}
+.pe-bank.bk-loaded .bk-file{color:var(--muted);font-size:13.5px;flex:1 1 120px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pe-bank.bk-loaded .bk-line .act{flex:none}
+.pe-bank.bk-loaded:not(.bk-open) .pe-card[data-testid="bank-form"]{display:none}.pe-bank.bk-loaded:not(.bk-open) .bk-file{display:none}.pe-bank.bk-loaded:not(.bk-open) .bk-line{justify-content:flex-end}.pe-bank.bk-loaded .bk-line button.act{min-height:32px;padding-block:0}   /* the quiet file line: the account, the period and the count are the band's */
+.pe-bank.bk-loaded .pe-card{padding:8px 14px;margin:0;max-width:none;gap:8px}
+.bk-band{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;padding:10px 16px;border:1px solid var(--amber-b,var(--line));border-radius:12px;background:var(--amber-t,var(--surface))}
+.bk-bal-quick{display:inline-flex;align-items:center;gap:8px}.bk-bal-quick .inp{width:150px;min-height:32px;height:32px}
+.bk-band.bk-ok{border-color:var(--green-b,var(--line));background:var(--green-t,var(--surface))}
+.bk-fig{display:flex;flex-direction:column;gap:1px;min-width:0}
+.bk-fig .bk-l{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bk-fig b{font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;line-height:1.2}
+.bk-fig .bk-sub{font-size:12.5px;color:var(--muted)}
+.bk-acts{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex-wrap:wrap}
+.bk-acts button{min-height:40px}
+#bk_body .bk-acts .bk-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,var(--on-accent,#fff))}
+#bk_body .bk-acts .bk-primary:hover{background:var(--accent);filter:brightness(1.08)}
+#bk_body .bk-acts .bk-primary[disabled]{opacity:.6}
+.bk-wrong{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;justify-content:space-between}.bk-wrong-acts{display:flex;gap:8px;flex-wrap:wrap}
+.bk-pop .bk-note{padding:6px 10px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px}
+.bk-menu{position:relative;display:inline-block}
+.bk-pop{position:absolute;inset-inline-end:0;top:calc(100% + 4px);z-index:30;min-width:240px;display:flex;flex-direction:column;padding:4px;background:var(--surface);border:1px solid var(--line-3);border-radius:10px;box-shadow:var(--shadow-toast,0 8px 24px rgba(0,0,0,.18))}
+.bk-pop[hidden]{display:none}
+#bk_body .bk-pop .bk-mi{border:0;background:none;text-align:start;justify-content:flex-start;width:100%;border-radius:7px}
+#bk_body .bk-pop .bk-mi:hover{background:var(--hover)}
+body.bk-on .main{display:flex;flex-direction:column;overflow:hidden}
+body.bk-on .titlebar{display:none}
+body.bk-on .content{flex:1 1 auto;min-height:0;padding:0 24px 2px;gap:8px}
+body.bk-on #bk_body,body.bk-on .pe-bank,body.bk-on #bk_res{display:flex;flex-direction:column;min-height:0;gap:8px}
+body.bk-on #bk_body,body.bk-on .pe-bank{flex:1 1 auto}
+body.bk-on #bk_res{flex:1 1 auto}
+body.bk-on #bkl_bank{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
+@media (max-width:760px){body.bk-on .content{padding:8px 12px 6px}.bk-band{padding:8px 12px;gap:6px 16px}.bk-fig b{font-size:16px}.bk-acts{margin-inline-start:0;width:100%}.bk-acts .bk-primary{flex:1 1 auto}.bk-fig .bk-sub{max-width:34ch}}
+/* the phone's head folds to a third of the screen (Fable r2): one line for the account, the four figures in two rows, the primary and More in one row, search · Filters · View in one row; the file name, the figures' sub-lines and the notes chip wait on the big screen */
+@media (max-width:760px){
+  body.bk-on .content{padding:4px 8px 4px;gap:4px}
+  body.bk-on #bk_body,body.bk-on .pe-bank,body.bk-on #bk_res{gap:4px}
+  .pe-bank.bk-loaded .pe-card{padding:4px 8px}.pe-bank.bk-loaded .bk-line{flex-wrap:nowrap;gap:6px}.pe-bank.bk-loaded .bk-name{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pe-bank.bk-loaded .bk-file{display:none}.pe-bank.bk-loaded .bk-line .act{min-height:32px;padding:0 10px}
+  .bk-band{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px;padding:6px 8px}.bk-fig{flex-direction:row;justify-content:space-between;align-items:baseline;gap:4px}.bk-fig .bk-l{font-size:9.5px;letter-spacing:.02em}.bk-fig b{font-size:13px;white-space:nowrap}.bk-fig .bk-sub{display:none}.bk-acts{grid-column:1/-1;gap:6px}.bk-acts button{min-height:36px}
+  /* W15-62/18 at 390: the first line starts within four fifths - the folded Statements line is just its press (the summary is its title), the two band buttons share a row, the four chips share a row */
+  .bks-mini:has(.bks-tog) b,.bks-mini:has(.bks-tog) .bks-sum{display:none}.bk-acts button{min-height:32px}.bk-acts .bks-mini{flex:0 0 auto}.bk-acts .bks-mini .bks-tog{padding:0 8px;font-size:12.5px}
+  #bk_body .pe-bank .bb-head{gap:4px 6px}#bk_body .pe-bank .bb-head [data-testid=bank-change],#bk_body .pe-bank .bb-head .bb-rtoggle{font-size:13px;padding:0 8px;min-height:32px;height:32px}
+  #bk_body #bkl_bank .cbl-fchips{flex-wrap:nowrap;gap:4px}#bk_body #bkl_bank .cbl-fchips>*{flex:0 1 auto;min-width:0;min-height:32px;padding:2px 8px;font-size:12.5px;gap:4px}
+  body.bk-on #bkl_bank :has(>.cbl-chip){flex-wrap:nowrap;gap:4px}body.bk-on #bkl_bank .cbl-chip{flex:0 1 auto;min-width:0;padding:2px 7px;font-size:12.5px;gap:4px}
+  body.bk-on #bkl_bank .cbl-title{display:none}body.bk-on #bkl_bank .cbl-tools{flex-wrap:nowrap;padding:2px 0 4px;gap:4px}body.bk-on #bkl_bank .cbl-search{flex:1 1 0;min-width:0}body.bk-on #bkl_bank .cbl-count{display:none}
+}
 
 /* the sidebar is an icon rail below 760px, as designed; a table becomes one card per row below 620px (SYSTEM rule 8) */
 @media (max-width:760px){
@@ -254,12 +381,22 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 /* The Add to your books sheet (app/cap-bank-sheet.js, lines painted by app/bank-preview-ui.js): the lines are rows that stack at phone width — tokens only */
 #bks_say:empty{display:none}
-.bks-lines{min-height:0;max-height:60vh;overflow:auto}
+.bks-lines{min-height:0;max-height:calc(100vh - 260px);overflow:auto}
+.bks-lines .bd-confirm{position:sticky;top:0;z-index:3;margin:0 0 6px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.bks-lines .bd-group td{padding:4px 8px;background:var(--sub)}
+.bks-lines .bd-open{min-height:32px;margin-inline-start:6px;padding:2px 10px}
+.bks-lines .bd-row.bd-is-open{background:var(--sub)}
+.bks-lines .bd-table th{position:static}
 .bks-lines .bd-table{width:100%;border-collapse:collapse;font-size:13px}
 .bks-lines .bd-table th{position:sticky;top:0;background:var(--sub);text-align:left;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .bks-lines .bd-table td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .bks-lines .bd-m{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.bks-lines .bd-sub{margin-top:3px;font-size:12px;color:var(--muted-2)}
+.bks-lines .bd-sub{margin-top:3px;font-size:12.5px;color:var(--muted-2);display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.bks-lines .bd-sub .bd-party,.bks-lines .bd-sub .bd-ask{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.bks-lines .bd-sub .bd-party{flex-direction:column;align-items:flex-start}.bks-lines .bd-choices{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px}.bks-lines .bd-choice{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.bks-lines .bd-table{table-layout:auto}.bks-lines .bd-n{min-width:200px;max-width:340px;overflow-wrap:anywhere}.bks-lines .bd-st{min-width:300px}
+.bks-lines .bd-inp{max-width:200px}
+.bks-lines .bd-say{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 10px;border-radius:8px;background:var(--amber-t);color:var(--amber-i);width:100%}
 .bks-lines .bd-tag{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;border:1px solid var(--line);white-space:nowrap}
 .bks-lines .bd-ask{background:var(--sub);color:var(--ink)}
 .bks-lines .bd-bad{color:var(--ink);border-color:var(--ink)}
@@ -272,6 +409,8 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
   .bks-lines .bd-row .bd-d{display:none}
   .bks-lines .bd-row .bd-st{grid-column:1 / -1}
 }
+/* ACC-176b / W15-71: the acting band over the books page (the same rules as network.html's .bv-band .ba-band): a firm working in a client's books sees whose they are, and the way back */
+#acting-band{margin:0 0 6px}.bv-band{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 14px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);border-radius:10px}.ba-band{position:sticky;top:0;z-index:5}.ba-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ba-band .act{min-height:32px;padding-block:2px}
 </style>
 </head>
 <body>
@@ -327,7 +466,7 @@ function go() {
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
-<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
+<script src="/app/books-grant-api.js"></script><script src="/app/books-acting.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
@@ -344,18 +483,28 @@ function go() {
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the money field reads its marks and number reader from it -->
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
 <script src="/app/cap-books.js"></script>
+<script src="/app/cap-attention.js"></script>   <!-- W15-102: the Needs attention strip (Day book · Ledgers · BAS) — the server counts -->
+<script src="/app/cap-opening.js"></script><script src="/app/cap-opening-years.js"></script><script src="/app/cap-opening-bills.js"></script>   <!-- Setup › Opening balances (l16): the grid, the live Difference from the server, what is saved, the year strip -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
 <script src="/app/attach-ui.js"></script>   <!-- CBAttach.mount (R07): the one picker, 6 MB cap and audience rule in this one file -->
 <script src="/app/rail-thread.js"></script>
+<script src="/app/cap-mark.js"></script>   <!-- CMP058 the marker chip · CMP059 the Query sheet (ACC-358): the auditor's marks on the Day book -->
+<script src="/app/cap-evidence.js"></script>   <!-- CMP062 the Evidence chip · CMP063 the Evidence sheet: the source document and its files behind each Day book row -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — Send on rail / Share off rail, the server's may painted -->
 <script src="/engine/chart.js"></script><script src="/engine/accounts-packs.js"></script><script src="/engine/posting.js"></script><script src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
 <script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
+<script src="/app/cap-bank-statements.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
 <script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
 <script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
 <script src="/engine/bank-statement-check.js"></script><script src="/app/bank-preview-check.js"></script><script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
+<script src="/app/bank-lock.js"></script>   <!-- CBBankLock: a line in a locked month, said first; the two ways on -->
+<script src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
+<script src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
 <script src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
 <script src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
 <script src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
@@ -407,6 +556,7 @@ const NAV = [
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
   ['movein', 'Move in', 'M4 12h12M12 8l4 4-4 4M20 4v16'] /* IM1: move in from Xero / QuickBooks — the five exports, each file → columns → preview → import */,
+  ['access', 'Who can see my books', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 .01'] /* the second door: the owner gives, changes or ends an adviser's view (network.html#books) */,
   ['rates', 'Rates', 'M4 7h13l-3-3M20 17H7l3 3'] /* FX1: exchange rates — a foreign bill posts at its day's rate (cap-fx.js) */
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
@@ -434,6 +584,7 @@ const KURAL_OF = {
   accounts: 'accounts',
   movein: 'accounts',
   rates: 'accounts',
+  access: 'accounts',
   compare: 'reports'
 };
 const TITLES = { ledgers: 'Ledgers', todo: 'To do' }; /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
@@ -466,7 +617,7 @@ const NAV_GROUPS = [
   /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Dues is the two sides together and has its button, lit while open (ACC-175) */
   ['Outstandings', ['dues', 'receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
-  ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates']]
+  ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates', 'access']]
 ];
 const navFolded = () => {
   try {
@@ -481,7 +632,7 @@ function taxCloseWord() {
     word = pack && ((pack.words && pack.words.taxName) || (pack.tax && pack.tax.scheme));
   /* the return's own name wins once the server has answered one (BAS, VAT return — cap-period.js peReturnWord): the specific over the general,
      or this repaint would put "GST close & pay" back over an Australian shop's BAS */
-  const returnWord = typeof PE_RET !== 'undefined' ? PE_RET.word || '' : '';
+  const returnWord = (typeof PE_RET !== 'undefined' && PE_RET.word) || (typeof packWord === 'function' && packWord('returnName')) || ''; /* the pack's word (BAS) from the first paint, not only once the page has opened */
   const item = NAV.find((entry) => entry[0] === 'gstclose');
   if (item && (returnWord || word)) item[1] = returnWord || word + ' close & pay';
 }
@@ -571,8 +722,9 @@ function openChit(id) {
 /* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */
 const confirmAsk = CBConfirm;
 /* a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (as crm.html), so cap-books.js's Pay and Remind open here unchanged */
-function modal(html) {
+function modal(html, wide) {
   const node = document.getElementById('acc_sheet');
+  node.classList.toggle('wide', !!wide); /* ui.dialog({ wide }): a sheet that takes the screen (the Bank view's Add to your books) */
   node.innerHTML = '<button data-cbsid="CMP005" class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
   if (!node.open) {
     try {
@@ -600,17 +752,21 @@ document.getElementById('acc_sheet').addEventListener('click', (e) => {
 });
 
 /* ── which view, and its chrome ── */
+/** the PAGE the address names: the first segment of the # (`#bank/B-1100/2026-03` is the Bank page; the rest belongs to that page, cap-bank-home.js bankHomeRoute reads it) */
+const hashPageOf = () => (location.hash || '').replace(/^#\/?/, '').split('/')[0];
 function chrome(view) {
   const nav = NAV.find((item) => item[0] === view) || NAV[0];
   if (window.CBScreenId) CBScreenId.here('accounts', nav[0]); /* SCREEN-ID: the view on show is the screen the chip names */
   navPaint(nav[0]);
   document.body.classList.toggle('lg-on', nav[0] === 'ledgers');
   if (nav[0] !== 'ledgers') document.body.classList.remove('lg-sel');
+  document.body.classList.remove('bk-on'); /* the Bank view sets it again while a statement's lines show (cap-bank.js bankLayout) */
   $('title').hidden = false;
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
   try {
-    history.replaceState(null, '', '#' + nav[0]);
+    /* the page's own deep address (#bank/<account>/<month>) stays through the first paint, so a reload or a bookmark reopens it (cap-bank-home bankHomeDeepOnce); a press on the menu after that names the page alone */
+    if (hashPageOf() !== nav[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) history.replaceState(null, '', '#' + nav[0]);
   } catch (_) {}
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
@@ -639,10 +795,14 @@ BK.views = {
   accruals: (b) => peAccrualsView(b),
   gstclose: (b) => peGstView(b),
   yearclose: (b) => peYearView(b),
-  bank: (b) => bankView(b),
+  bank: (b) => (CBBooksActing.hides('bank') ? CBBooksActing.hiddenView(b) : bankView(b)),
+  opening: (b) => obView(b),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
-  rates: (b) => fxView(b)
+  rates: (b) => fxView(b),
+  access: () => {
+    location.href = CB_HOMES.network + '#books';
+  }
 }; /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view) {
   if (!ON) {
@@ -858,7 +1018,7 @@ async function accTodo(body) {
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    const bank = typeof bankTodoItem === 'function' ? bankTodoItem() : null;
+    const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
     if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
     ACC.todo = list;
     body.innerHTML = list.length
@@ -889,7 +1049,7 @@ new MutationObserver(() => cardLabels($('content'))).observe($('content'), { chi
 
 /* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
 function card(html, bad) {
-  document.body.classList.remove('lg-on', 'lg-sel');
+  document.body.classList.remove('lg-on', 'lg-sel', 'bk-on');
   $('title').hidden = true;
   $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`;
   $('summary').textContent = '';
@@ -995,7 +1155,7 @@ function countryCard(d) {
 
 /* ═══ START ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 async function start() {
-  SESS = session();
+  SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
   SESSION = Object.assign(
@@ -1011,13 +1171,13 @@ async function start() {
       shop: SESS.shop
     }
   );
-  whoPaint();
+  whoPaint(); await CBBooksActing.openPage(CFG.API_BASE, SESS.token, NAV, NAV_GROUPS); /* ACC-176b: acting enters only on a live adviser grant (else leaves); the menu keeps the /api/books tabs */
   const g = ++ACC.gen;
   /* ⭐ UI9: the WHOLE frame at once — the menu, the title and the rows' room — before anything is read; the views then fill only the rows.
      (The Ledger's answer below can still turn this into the "not switched on" card; nothing here reads or writes.) */
   {
-    const f0 = (location.hash || '').replace(/^#\/?/, ''),
-      v0 = NAV.some((item) => item[0] === f0) ? f0 : 'todo';
+    const f0 = hashPageOf(),
+      v0 = NAV.some((item) => item[0] === f0) ? f0 : CBBooksActing.firstTab();
     chrome(v0);
     if (v0 !== 'ledgers')
       $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
@@ -1032,7 +1192,16 @@ async function start() {
   if (g !== ACC.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   try {
-    const reply = await api('booksHealth'); /* 404 = the Ledger is off for this shop */
+    /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
+    let me = {};
+    try {
+      const mine = await api('me');
+      me = (mine && mine.entity) || mine || {};
+    } catch (_) {
+      me = {}; /* /me failed: UNKNOWN, never "off" — fall through to the old probe, whose 404 is the only "off" */
+    }
+    if (typeof me.ledger_on === 'boolean' && !me.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
+    const reply = await api('booksHealth');
     BK.waiting = (reply && reply.waiting) || [];
     if (reply && reply.year) BK.year = reply.year; /* the shop's year — cap-books bkFyNow / bkMonths paint it, never an April of their own */
     if (reply && reply.currency) BK.cur = reply.currency; /* the ledger's money — bkCur's answer when a figure names none */
@@ -1048,8 +1217,8 @@ async function start() {
     return failedCard();
   }
   if (!ON) return offCard();
-  const first = (location.hash || '').replace(/^#\/?/, '');
-  show(NAV.some((item) => item[0] === first) ? first : 'todo');
+  const first = hashPageOf();
+  show(NAV.some((item) => item[0] === first) ? first : CBBooksActing.firstTab()); CBBooksActing.startPage($, enOpen, SESSION.currency); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
 }
 
 /* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */
@@ -1075,7 +1244,7 @@ CBOnePerson.attach({
 });
 /* ⭐ THE # DECIDES THE PAGE (M138): Back, Forward and a typed or shared link land on the page the address says. chrome() writes the # with replaceState, which fires nothing, so a click never loops here. */
 function hashView() {
-  const v = (location.hash || '').replace(/^#\/?/, '');
+  const v = hashPageOf();
   return NAV.some((item) => item[0] === v) ? v : null;
 }
 window.addEventListener('hashchange', () => {

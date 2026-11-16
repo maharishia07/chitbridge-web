@@ -88,6 +88,7 @@
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
     factsFailed: 'Could not read',
+    skip: 'Skip to content',
     state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' },
     setUp: 'Set up',
     needsYou: 'Needs you',
@@ -170,9 +171,9 @@
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
     return root.CB_API || '';
   }
-  function session() {
+  function session(anonymous) {
     try {
-      var parsed = JSON.parse(lsGet('cb_sess') || 'null');
+      var parsed = anonymous ? null : JSON.parse(lsGet('cb_sess') || 'null'); /* anonymous: a page that reads no stored session */
       return parsed && parsed.token ? parsed : null;
     } catch (_) {
       return null;
@@ -261,6 +262,7 @@
     '.cbsh-nv .i{font-size:17px;line-height:1}.cbsh-nv .t{font-size:10px;font-weight:600;letter-spacing:.01em}',
     '.cbsh-nv:hover{background:var(--sh-hover)}.cbsh-nv[hidden]{display:none}',
     '.cbsh-nv[aria-current]{background:var(--sh-card);color:var(--sh-green-d);box-shadow:0 0 0 1px var(--sh-line)}.cbsh-nv[aria-current] .i{color:var(--sh-green)}',
+    '.cbsh-skip{position:absolute;inset-inline-start:8px;top:-60px;z-index:2000;padding:10px 16px;border-radius:8px;background:var(--ink,#1D1B16);color:var(--card,#fff);font-weight:700;text-decoration:none}.cbsh-skip:focus{top:8px}',
     '.cbsh-main{flex:1 1 auto;min-width:0;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--sh-line) transparent}',
     '.cbsh-inner{max-width:1240px;margin:0 auto;padding:16px 24px 28px}',
     '.cbsh-sec{margin-bottom:22px;scroll-margin-top:4px}',
@@ -394,15 +396,15 @@
     node.textContent = CSS;
     (doc.head || doc.documentElement).appendChild(node);
   }
-  /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono) comes WITH the frame, once — a page never links its own face */
-  var FONTS_HREF =
-    'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
-  function addFonts() {
-    if (!doc || !doc.head) return;
-    var hasPlexLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
-      return /IBM\+Plex\+Sans/.test(nestedLink.getAttribute('href') || '');
+  /* SHELL-ONE: the type SYSTEM.md §2 names (Bricolage Grotesque · IBM Plex Sans · IBM Plex Mono · Source Serif 4) is SELF-HOSTED: ONE sheet, /fonts/cb-fonts.css (OFL), no third-party call.
+     A page links it in its head (so the first paint has it); the frame adds it only when the page forgot (guard: tests/font-faces-guard.test.cjs). */
+  var FONTS_HREF = '/fonts/cb-fonts.css';
+  function addFonts(options) {
+    if (!doc || !doc.head || (options && options.fonts === false)) return;
+    var has = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
+      return /[/]fonts[/]cb-fonts[.]css/.test(nestedLink.getAttribute('href') || '');
     });
-    if (hasPlexLink) return;
+    if (has) return;
     var link = doc.createElement('link');
     link.id = 'cbsh-fonts';
     link.rel = 'stylesheet';
@@ -907,15 +909,33 @@
         })
       : drawn.indexOf(navId) < 0;
   }
+  /** L16 F29: the first Tab stop on every page — a link that jumps over the header and the side menu to the page's main region (shown only while it has focus) */
+  function addSkipLink() {
+    if (!doc || !doc.body || doc.querySelector('[data-testid="skip-link"]')) return;
+    var link = doc.createElement('a');
+    link.className = 'cbsh-skip';
+    link.href = '#cb-main';
+    link.setAttribute('data-testid', 'skip-link');
+    link.textContent = W.skip;
+    link.addEventListener('click', function (event) {
+      var target = doc.querySelector('main') || doc.querySelector('[role="main"]');
+      if (!target) return;
+      event.preventDefault();
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.focus();
+    });
+    doc.body.insertBefore(link, doc.body.firstChild);
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
     addCss();
-    addFonts();
+    addFonts(o);
+    addSkipLink();
     var host = o.host || null,
       mode = host && host.bar ? 'bar' : host ? 'app' : 'home';
     var appId = host && host.app ? String(host.app) : ''; /* bar mode too (SHELL-ONE): the storefront and the labs name their app for the chip */
-    var sess = session();
+    var sess = session(o.anonymous);
     var person = o.person !== undefined ? o.person : root.CBAvatar && root.CBAvatar.sessionPerson ? root.CBAvatar.sessionPerson() : null;
     var token = o.token || (sess && sess.token) || '';
     var base = o.apiBase != null ? o.apiBase : apiBase();
@@ -1099,7 +1119,10 @@
     /* ── the five areas (Home) ── */
     function shown() {
       var m = root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest;
-      return (m && m.entries) || [];
+      /* l16 firm-dash: a firm (clients by live grants, no trade of its own, the server's own_trade) is not shown the shop cards: the data decides, not a trade switch */
+      return ((m && m.entries) || []).filter(function (e) {
+        return !(root.CBPractice && root.CBPractice.hidesShopCards(e && e.id));
+      });
     }
     function entriesOf(area) {
       return shown().filter(function (e) {
@@ -1281,6 +1304,12 @@
       placeKural();
     }
 
+    /* l16 firm-dash: the practice answered and says this login is a firm: draw the areas again without the shop cards and read the facts of the cards that remain */
+    root.addEventListener('cb-practice', function () {
+      if (mode !== 'home' || !S.manifest) return;
+      paintAreas();
+      readFacts();
+    });
     /* the header lands after the tiles: a shop tile that was greyed for want of an id opens now */
     function reopenShopTile() {
       if (mode !== 'home' || !S.manifest || !shopIdOf()) return;
@@ -1289,22 +1318,118 @@
         readFacts(entry.id);
       });
     }
+    /* R-HOME (l16 polish g): the areas lead by the DATA, not the trade: an area whose cards are in use or need you comes before an area that is all "not started" (a books shop opens on
+       Money, not on Marketing). Stable: areas the data does not tell apart keep the manifest's order; Labs and Setup stay last. */
+    var LEAD_LAST = { labs: 1, setup: 1 };
+    function leadByData() {
+      var holder = $('.cbsh-more');
+      if (!holder) return;
+      if (isFirm()) return; /* l16 firmhome: a firm's Home is led by its practice and reads cards as they come into view, so the areas are not reshuffled under the reader */
+      if (factsRunning || factsQueue.length) return; /* l16: the order is set ONCE, when every card has answered or failed: a card that is still waiting (or was shed) must not reshuffle the sections per load */
+      var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
+      /* rank: an area with a card that needs you (2) outranks one that is only in use (1), which outranks one not started (0); Money, once it holds any money fact (in use or
+         needing you), leads outright (R48 + the 30-second rule: bank, owed to you, you owe, GST due are in view on a laptop). Same data, same order on every load (R51). */
+      var score = function (sec) {
+        var area = sec.getAttribute('data-area');
+        if (LEAD_LAST[area]) return -1;
+        var rank = sec.querySelector('[data-state="needs_you"]') ? 2 : sec.querySelector('[data-state="in_use"]') ? 1 : 0;
+        return area === 'money' && rank ? 30 : rank * 10; /* the 30-second rule: the books hold money facts (a money card in use or needing you) -> Money leads, above every other area, by the data and not by trade */
+      };
+      var ordered = secs
+        .map(function (sec, n) { return { sec: sec, n: n, s: score(sec) }; })
+        .sort(function (a, b) { return b.s - a.s || a.n - b.n; });
+      if (ordered.some(function (x, n) { return x.sec !== secs[n]; })) ordered.forEach(function (x) { holder.appendChild(x.sec); });
+    }
+    /* l16 home-fix: the api sheds over its in-flight cap (503 SERVER_BUSY; pool 10 x 1.6 = 16) and Home asked for ~20 cards at once, so the cards read "—" on every load.
+       The cards are read FACTS_PARALLEL at a time, and a SERVER_BUSY is asked again after the server's own Retry-After (at most FACTS_RETRIES times). One place: every card's read goes through it. */
+    var FACTS_PARALLEL = 4,
+      FACTS_RETRIES = 3,
+      factsQueue = [],
+      factsRunning = 0;
+    function factsGet(url, left) {
+      return get(url).catch(function (err) {
+        if (!err || err.status !== 503 || !(left > 0)) throw err;
+        return new Promise(function (go) {
+          root.setTimeout(go, (err.retryAfter || 2) * 1000);
+        }).then(function () {
+          return factsGet(url, left - 1);
+        });
+      });
+    }
+    function factsNext() {
+      while (factsRunning < FACTS_PARALLEL && factsQueue.length) {
+        var job = factsQueue.shift();
+        factsRunning += 1;
+        factsGet(job.url, FACTS_RETRIES).then(job.ok, job.no).then(function () {
+          factsRunning -= 1;
+          factsNext();
+          if (!factsRunning && !factsQueue.length) leadByData();
+        });
+      }
+    }
+    function factsRead(url) {
+      return new Promise(function (ok, no) {
+        factsQueue.push({ url: url, ok: ok, no: no });
+        factsNext();
+      });
+    }
+    /* l16 firmhome: ONE ask per card URL per page load (several cards share a URL, and Home draws its areas again once the practice has answered, which used to ask every card a second time;
+       the reply is kept and the card is painted from it). A failed ask is forgotten so the next paint asks again. */
+    var factsCache = {};
+    function factsOnce(url) {
+      if (!factsCache[url])
+        factsCache[url] = factsRead(url).catch(function (err) {
+          delete factsCache[url];
+          throw err;
+        });
+      return factsCache[url];
+    }
+    /* the practice read comes first (books-practice.js settled): a firm's Home hides the shop cards and asks only for the cards it draws */
+    function practiceFirst() {
+      return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled(3000) : root.Promise.resolve();
+    }
+    function isFirm() {
+      return !!(root.CBPractice && root.CBPractice.isFirm && root.CBPractice.isFirm());
+    }
+    /* a firm's Home asks a card's facts when the card comes into view (the practice fills the first screen; the cards are below it, or on another phone tab): a card nobody has scrolled to is not asked for */
+    function whenSeen(spot, fn) {
+      var io = new root.IntersectionObserver(
+        function (list) {
+          if (!list.some(function (i) { return i.isIntersecting; })) return;
+          io.disconnect();
+          fn();
+        },
+        { rootMargin: '100px' }
+      );
+      io.observe(spot);
+    }
+    function paintFacts(e, spot) {
+      factsOnce(e.facts)
+        .then(function (reply) {
+          var lines = (reply && reply.lines) || [],
+            state = noteNeeds(e, cardState(reply, lines), routeOf);
+          paintBadges(el);
+          spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
+          leadByData();
+        })
+        .catch(function () {
+          spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>';
+        });
+    }
     function readFacts(onlyId) {
       if (!person || !S.manifest) return;
-      (S.manifest.entries || []).forEach(function (e) {
-        if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
-        var spot = $('[data-testid="shell-facts-' + e.id + '"]');
-        if (!spot) return;
-        get(e.facts)
-          .then(function (reply) {
-            var lines = (reply && reply.lines) || [],
-              state = noteNeeds(e, cardState(reply, lines), routeOf);
-            paintBadges(el);
-            spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
-          })
-          .catch(function () {
-            spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>';
-          });
+      (onlyId ? root.Promise.resolve() : practiceFirst()).then(function () {
+        var lazy = !onlyId && isFirm() && !!root.IntersectionObserver;
+        shown().forEach(function (e) {
+          if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
+          var spot = $('[data-testid="shell-facts-' + e.id + '"]');
+          if (!spot) return;
+          if (lazy)
+            whenSeen(spot, function () {
+              paintFacts(e, spot);
+            });
+          else paintFacts(e, spot);
+        });
       });
     }
 
@@ -1435,6 +1560,7 @@
         if (!reply.ok) {
           var e = new Error('HTTP ' + reply.status);
           e.status = reply.status;
+          e.retryAfter = Math.min(10, Number(reply.headers && reply.headers.get && reply.headers.get('Retry-After')) || 0);
           throw e;
         }
         return reply.json();
@@ -1638,6 +1764,7 @@
         return root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest;
       } /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch; AX1: the edition's entries only */,
       edition: edition,
+      facts: function (url) { return factsOnce(url); } /* l16 firmhome: the Home page's Your work read shares the card's one ask (and its retry on SERVER_BUSY) */,
       sides: sidesApi,
       ready: Promise.all([manP, hdrP, kuralP, sidesApi ? sidesApi.ready : null]).then(function () {
         return api;

@@ -67,13 +67,14 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       let body = null; try { body = r.request().postDataJSON(); } catch (_) {}
-      if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+      if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return J(r, 200, []);
+      if (p === '/api/books/periods') return J(r, 200, books.periods([]));
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer({ events: [], picks: {} }));
       if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: 10000000, closing_minor: 10700000 }));
-      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', rail_chits: [], parties: [], may: { ask: { ok: true } } });
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', books: { parties: [], open_items: [] }, rail_chits: [], parties: [], may: { ask: { ok: true } } });
       if (/^\/api\/books\/bank\/(log|marks|statements)$/.test(p)) {
         if (m !== 'GET') S.posts.push({ p, body });
         if (!S.ready) return J(r, 503, NOT_YET);
@@ -100,12 +101,11 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
     return { ctx, p: pg };
   }
   const load = async (pg) => {
-    await pg.selectOption('#bk_preset', 'hdfc');
+    if (await pg.locator('[data-testid="bank-change"]').isVisible() && !(await pg.locator('#bk_preset').isVisible())) await pg.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await pg.selectOption('#bk_preset', 'hdfc');
     await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
-    await pg.waitForSelector('[data-testid="bank-currency"]', { timeout: 15000 }); /* B5-05: the file's currency is asked, never the account's */
-    await pg.fill('[data-testid="bank-currency"]', 'INR');
-    await pg.click('[data-testid="bank-currency-go"]');
-    await pg.waitForSelector('[data-testid="bank-store-line"]', { timeout: 15000 });
+    await pg.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-store-line"]', { state: 'attached', timeout: 15000 }); /* the currency is asked only when the account has none on record */
+    if (await pg.locator('[data-testid="bank-currency"]').count()) { await pg.fill('[data-testid="bank-currency"]', 'INR'); await pg.click('[data-testid="bank-currency-go"]'); }
+    await pg.waitForSelector('[data-testid="bank-store-line"]', { state: 'attached', timeout: 15000 });
   };
   const status = (pg, i) => pg.getAttribute('[data-testid="bank-chip-s' + i + '"]', 'data-status');
   const accept = async (pg, i) => {
@@ -125,7 +125,8 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   await accept(p, 0);
   ok('F1', (await status(p, 0)) === 'accepted' && lineStatus !== 'accepted', 'an accept still works on the device (' + lineStatus + ' to accepted)');
   ok('F1', S.posts.length === 0, 'nothing is sent to the marks door while the record is not set up (' + S.posts.length + ' posts)');
-  ok('F1', await p.locator('[data-testid="bank-signoff"]').isDisabled(), 'Sign off is shown and greyed (the line says why)');
+  const tiedNow = (await p.getAttribute('[data-testid="bank-finish"]', 'data-tied')) === 'true';
+  ok('F1', tiedNow ? await p.locator('[data-testid="bank-signoff"]').isDisabled() : (await p.locator('[data-testid="bank-signoff"]').count()) === 0, 'Sign off shows only at a nil difference, and is greyed while the record is not set up (nil: ' + tiedNow + ')');
   await p.screenshot({ path: path.join(SHOTS, 'walk-bank-store-device.png') });
   await ctx.close();
 
@@ -164,11 +165,12 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   ok('F3', !!note && note.note === 'Cheque seen at the branch', 'the note travels as the owner\'s own text');
 
   /* ── F5 · the exceptions ── */
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]'); /* the exceptions and the signed list live on the Statement view */
   const ex = await p.textContent('[data-testid="bank-exceptions"]').catch(() => '');
   ok('F5', /MJ\/26-27\/0009/.test(ex) && /1,234\.00/.test(ex), 'the posted-not-accepted line is a named row: ' + ex.replace(/\s+/g, ' ').trim().slice(0, 90));
 
   /* ── F4 · sign off, keyboard only ── */
-  await p.click('[data-testid="bank-tab-brs"]');
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]');
   const btn = p.locator('[data-testid="bank-signoff"]');
   ok('F4', (await btn.count()) === 1 && (await btn.isEnabled()) && (await btn.getAttribute('data-cbsid')) === 'BKS014-B08', 'the Sign off button is there, enabled, and wears BKS014-B08');
   await btn.focus();
@@ -206,7 +208,7 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
     const tag = theme + '-' + vp.width;
     ({ ctx, p } = await open(S, { theme, vp }));
     await load(p);
-    await p.click('[data-testid="bank-tab-brs"]');
+    await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]');
     await p.waitForTimeout(300);
     const m = (await p.evaluate(measure)).filter((x) => !x.grad && x.ratio < x.need);
     ok('F7', m.length === 0, tag + ': AA contrast for every text' + (m.length ? ' — ' + m.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + ' < ' + x.need).join(' · ') : ''));
