@@ -690,14 +690,9 @@
     );
   }
 
-  function paintFail() {
-    N.el.innerHTML =
-      '<div class="empty" data-testid="nw-fail"><div class="t">' +
-      esc(T("Couldn't read your network")) +
-      '</div><button data-cbsid="NET001-B03" type="button" class="act" id="nw_retry" data-testid="nw-retry">' +
-      esc(T('Try again')) +
-      '</button></div>';
-    $('nw_retry').onclick = start;
+  function paintFail(failure) {
+    N.el.innerHTML = '<div data-testid="nw-fail"></div>';
+    root.CBShell.readFailed(N.el.firstChild, { what: T('Your network'), status: failure && failure.status, detail: failure && failure.status === 403 ? failure.message : '', retry: start });
   }
   function start() {
     N.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';

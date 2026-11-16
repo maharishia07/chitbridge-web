@@ -1138,12 +1138,9 @@ function offCard() {
         }
       });
 }
-function failedCard() {
-  card(
-    `<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button data-cbsid="CMP009" type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`,
-    true
-  );
-  $('retry').onclick = () => start();
+function failedCard(failure) {
+  card('<div id="retry" data-testid="acc-failed"></div>', true);
+  CBShell.readFailed($('retry'), { what: tx('Accounts'), status: failure && failure.status, detail: failure && failure.status === 403 && failure.data ? failure.data.detail || failure.data.message : '', retry: () => start() });
 }
 /* ⭐ CS1: the country decides whether books may open here — a country with no pack (or no country, or the setup still to do) is SAID in the
    server's own sentence (engines regulation.status, 422 with a code), never the quiet 404 and never India's rules by default. The one button
@@ -1223,7 +1220,7 @@ async function start() {
   } catch (e) {
     if (e && e.status === 404) return offCard();
     if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
-    return failedCard();
+    return failedCard(e);
   }
   if (!ON) return offCard();
   const first = hashPageOf();

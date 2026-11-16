@@ -624,7 +624,7 @@ async function route(S, r) {
   {
     const S = standIn({ healthStatus: 500 });
     const { ctx, p } = await open(S);
-    await p.waitForSelector('[data-testid="acc-retry"]');
+    await p.waitForSelector('[data-testid="read-failed-retry"]');
     ok(!/error|500|down/i.test(await p.textContent('[data-testid="acc-card"]')), 'a failed read says what happened in its own words, never the server\'s');
     ok(await p.locator('[data-testid="acc-switch-on"]').count() === 0, 'a read that failed is not mistaken for a Ledger that is off');
     await ctx.close();
