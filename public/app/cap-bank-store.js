@@ -41,7 +41,7 @@ function bankStoreReplay(marks) {
       name: row.attach_ref,
       ref: row.attach_ref,
       at: row.at,
-      by: row.by
+      by: row.by_name || row.by /* W15-71: the name the log carries for the person, else the id as before */
     });
     if (!next.why) state = next;
   });
@@ -239,6 +239,7 @@ function bankStoreExceptions() {
 function bankStoreSignButton() {
   const worked = bankStoreState.view.brs;
   if (!worked || !worked.ok) return '';
+  if (typeof bkbReadOnly === 'function' && bkbReadOnly()) return (bankStoreSignedWords() && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(bankStoreSignedWords()) + '</span>' : ''); /* W15-71: the sign-off is said, never offered */
   const notReady = bankStoreState.mode !== 'server',
     signed = bankStoreSignedWords();
   return (

@@ -88,11 +88,15 @@
   function addressOf(store, doing) {
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + (doing ? '&prepare=' + doing : '') + '#/daybook';
   }
+  /** W15-71: the auditor's way to the client's Bank (and Month lock) on the books page: the same page, the auditor's seat, read only */
+  function auditAddressOf(store, tab) {
+    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=auditor#/' + (tab || 'bank');
+  }
   /** read the store from the page address: a page opened with ?acting=<store> works in that store's books as the adviser; null when it carries none */
   function fromAddress(search) {
     var query = new URLSearchParams(search || '');
     var id = query.get('acting');
-    return id ? enter({ id: id, name: '' }, 'adviser') : null;
+    return id ? enter({ id: id, name: '' }, query.get('role') === 'auditor' ? 'auditor' : 'adviser') : null;
   }
   /** a page call(method, path, body, headers) of its own (token + base): no acting header, the grant list is the firm's own */
   function grantCall(base, token) {
@@ -108,10 +112,10 @@
   /** the page opened with ?acting=<id> enters only when the firm holds a LIVE ADVISER grant on that id; the banner's name and the grant's posting come from the grant row, never from the address. false: not entered (context dropped) */
   function confirmGrant(base, token) {
     if (!context) return Promise.resolve(false);
-    var id = context.store.id;
-    return root.CBBooksGrantApi.held(grantCall(base, token)).then(function (heldBy) {
-      var grant = heldBy[id];
-      if (!grant || grant.preset !== 'adviser') {
+    var id = context.store.id, role = context.role === 'auditor' ? 'auditor' : 'adviser';
+    return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(function (split) {
+      var heldBy = split.live || {}, grant = ((split.seats || {})[id] || {})[role]; /* the seat the address names: a store holding both gives each its own row */
+      if (!grant) {
         context = null;
         return false;
       }
@@ -127,8 +131,9 @@
   /** the acting page shows only what is read and written through /api/books*: the tabs that call anything else are taken out of the menu, so no request outside it carries the store's header */
   var OWNER_SENTENCE = 'Only the owner may record this.';
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
-  /** the Bank tab opens for an acting ADVISER only (the api holds bank/log back from an auditor): it reads and posts through /api/books/bank/*, /events and /payments */
+  /** the Bank tab opens for an acting ADVISER (reads and posts through /api/books/bank/*, /events and /payments) and for an AUDITOR (reads only: bank/log and the kept statements; W15-71, every write control is left out) */
   function tabOpen(tab) {
+    if (context && context.role === 'auditor') return tab === 'bank' || tab === 'lock'; /* the auditor's other reads are the network's own books view; here only what needs the books page: the Bank and the Month lock, read only */
     return TABS.indexOf(tab) >= 0 || (tab === 'bank' && !!context && context.role === 'adviser');
   }
   function mayCall(path) {
@@ -155,7 +160,7 @@
     return endpoint;
   }
   function firstTab() {
-    return context && context.role !== 'owner' ? TABS[0] : 'todo';
+    return context && context.role === 'auditor' ? 'bank' : context && context.role !== 'owner' ? TABS[0] : 'todo';
   }
   function keepTabs(menu, groups) {
     if (!context || context.role === 'owner') return;
@@ -183,7 +188,7 @@
   function banner(stores) {
     if (!context) return '';
     return (
-      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band"><b>' + esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '') + '</b>' +
+      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band"><b>' + (context.role === 'auditor' ? esc(words('Viewing')) + ' ' + esc(context.store.name) + ' — ' + esc(words('read only')) : esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '')) + '</b>' +
       '<span class="ba-tools">' + switchBox(stores) + '<button data-cbsid="NET006-B01" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(words('Back to My network')) + '</button></span></div>'
     );
   }
@@ -235,6 +240,7 @@
     band.id = 'acting-band';
     band.setAttribute('data-testid', 'acting-band');
     band.innerHTML = banner();
+    if (context.role === 'auditor') band.setAttribute('data-readonly', 'true');
     shell.parentNode.insertBefore(band, shell.nextSibling);
     wireBanner(band, { onBack: function () { root.location.assign('/network.html'); } });
     if (/[?&]prepare=journal/.test(root.location.search)) openSheet({ kind: 'journal' });
@@ -265,7 +271,7 @@
     if (context && context.role === 'adviser') return short ? fill('by {name}', { name: who.name }) : fill('by {name} for {client}', { name: who.name, client: context.store.name });
     return who.firm && who.firm !== who.name ? fill('Posted by {name}, {firm}', { name: who.name, firm: who.firm }) : fill('Posted by {name}', { name: who.name });
   }
-  /** a tab this page does not offer while acting for a client (the bank, for an auditor: the api holds bank/log back from it) */
+  /** a tab this page does not offer while acting for a client (the bank for neither role now; the books-only pages for both) */
   function hides(tab) {
     return !!context && context.role !== 'owner' && !tabOpen(tab);
   }
@@ -278,5 +284,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);
