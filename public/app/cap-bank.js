@@ -677,6 +677,7 @@ function bankOpeningHtml() {
 }
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
+  if (bkbReadOnly()) return typeof bankStoreSignButton === 'function' ? bankStoreSignButton() : ''; /* the auditor: the sign-off is SAID whenever the month is signed, whatever the difference; no button */
   const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct();
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (!canAdd || (fig && !bkbCount('books'))) return '';

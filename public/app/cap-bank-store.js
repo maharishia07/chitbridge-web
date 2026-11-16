@@ -238,8 +238,8 @@ function bankStoreExceptions() {
 /** the Sign off button, drawn only when the difference is nil (the band asks for it then); greyed with the reason while the record is not set up. Its slot is repainted after a sign-off */
 function bankStoreSignButton() {
   const worked = bankStoreState.view.brs;
-  if (!worked || !worked.ok) return '';
   if (typeof bkbReadOnly === 'function' && bkbReadOnly()) return (bankStoreSignedWords() && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(bankStoreSignedWords()) + '</span>' : ''); /* W15-71: the sign-off is said, never offered */
+  if (!worked || !worked.ok) return '';
   const notReady = bankStoreState.mode !== 'server',
     signed = bankStoreSignedWords();
   return (
