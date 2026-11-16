@@ -70,8 +70,15 @@
   /* REP-73: the bands are the server's (data.band.bands, in its order, the first one open); the page knows each tile's WORDS and the list filter it opens, never which band comes first, which tile is hidden or a count.
      tile key → [label, the filter it opens]; every count is the size of that filter on the list (the server counts them from the same rows). */
   var BAND_NAME = { pipeline: 'Year end', on_us: 'On us today', advisory: 'Advice' };
+  /* REP-73 B6: ONE name per stage, on the tile, the filter chip, the filter's choices and the row. The last two stages say what the firm's country calls filing the return: the server sends them
+     (lib/books-practice words, from the country pack's filingVerb: lodge · file); until it does the neutral words stand. Never a country branch here. */
+  var STAGE_WORDS = { books_in: 'Books in', complete: 'Complete', checked: 'Checked', ready: 'Ready to file', lodged: "Filed (owner's word)" };
+  function stageWord(key) {
+    var w = (P.data && P.data.words) || {};
+    return key === 'ready' && w.ready ? w.ready : key === 'lodged' && w.done ? w.done : STAGE_WORDS[key] || key;
+  }
   var TILE = {
-    books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Lodged (owner's word)", { stage: 'lodged' }],
+    books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Filed (owner's word)", { stage: 'lodged' }],
     bas_due_30: ['Due in 30 days', { bas: 'soon' }],
     queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Entries to check (quarter)', { checked: 'behind' }], months_unlocked: ['Months to lock', { unlocked: 'yes' }],
     cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]
@@ -92,7 +99,7 @@
     }).join('') + '</div>' : '';
     var tiles = shown.tiles.filter(function (t) { return TILE[t.key]; }).map(function (t) {
       var def = TILE[t.key], on = sameFilter(P.filter, def[1]);
-      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(def[0])) + '</span></button>';
+      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(STAGE_WORDS[t.key] ? stageWord(t.key) : def[0])) + '</span></button>';
     }).join('');
     var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
     return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + '</div>' + note + '</div>';
@@ -133,7 +140,18 @@
     var y = r.year_end;
     if (!y) return '—';
     if (y.first_year) return esc(tx('First year'));
-    return esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(tx('bank not to year end')));
+    var figures = esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(tx('bank not to year end')));
+    return r.stage ? '<b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '<br><span class="sub">' + figures + '</span>' : figures;
+  }
+  /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
+  function blockerWords(r) {
+    var y = r.year_end, b = r.stage_blocker, n;
+    if (!b) return '';
+    if (b === 'months') { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
+    if (b === 'bank') return ' · ' + esc(tx(r.bank && r.bank.state === 'none' ? 'no bank statement signed' : 'bank not to year end'));
+    if (b === 'checked') return ' · ' + esc(tx('not checked'));
+    if (b === 'queries') return ' · ' + esc(r.queries.open) + ' ' + esc(tx(r.queries.open === 1 ? 'query open' : 'queries open'));
+    return '';
   }
   function shortDay(iso) {
     try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return day(iso); }
@@ -155,19 +173,28 @@
     return e ? esc(checkedWords(e)) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
+  /** B7: why a figure is not there, from the server's health.withheld: costs the grant does not show → "costs not shared"; more than one currency → said so; null otherwise (then "—" is no data). Never 0. */
+  function withheldWord(r, notCosts) {
+    var w = (r.health && r.health.withheld) || {};
+    return w.costs && !notCosts ? tx('costs not shared') : w.currencies ? tx('more than one currency') : '';
+  }
+  /** notCosts: a figure no cost gate hides (the cash in bank): only a mixed currency explains its absence */
+  function figureOrWhy(r, value, shown, notCosts) {
+    return value == null ? esc(withheldWord(r, notCosts) || '—') : shown;
+  }
   function detailHTML(r) {
-    var h = r.health, held = tx('Not shown');
+    var h = r.health, held = withheldWord(r) || tx('Not shown');
     var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + esc(tx(label)) + '</span><b>' + value + '</b></div>'; };
     return (
       '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' +
       line('Sales vs 3-month average', esc(trend(r))) +
-      line('Margin this quarter', h.gross_margin_pct == null ? '—' : esc(h.gross_margin_pct) + '%') +
-      line('Cash in bank', esc(money(h.cash_minor, r.currency))) +
+      line('Margin this quarter', figureOrWhy(r, h.gross_margin_pct, esc(h.gross_margin_pct) + '%')) +
+      line('Cash in bank', figureOrWhy(r, h.cash_minor, esc(money(h.cash_minor, r.currency)), true)) +
       line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
       line('Cash for those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
       line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
       line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(bankLeft(r)) + ' ' + esc(tx('unexplained'))) +
-      line('Profit this quarter', esc(money(h.profit_quarter_minor, r.currency))) +
+      line('Profit this quarter', figureOrWhy(r, h.profit_quarter_minor, esc(money(h.profit_quarter_minor, r.currency)))) +
       line('Months not locked', esc(r.months_unlocked)) +
       line('Access ends', esc(day(r.grant.expires_at))) +
       (h.reasons && h.reasons.length ? '<p class="sub">' + esc(tx('Why')) + ': ' + esc(h.reasons.join(' · ')) + '</p>' : '') +
@@ -194,6 +221,13 @@
     var last = lastClient();
     return !!last && String(r.entity_id) === last;
   }
+  /* REP-73 B2: the columns follow the open band, so a tile counts something its rows show: Year end shows the stage and the year's figures; On us today shows the bank, the queries, the entries to check and the months to lock
+     (the four tiles); Advice shows the figures its rules read. The page knows which columns a band opens with; the server decides which band exists and what each tile counts. */
+  var BAND_COLS = {
+    pipeline: ['name', 'status', 'yend', 'checked', 'queries', 'bas'],
+    on_us: ['name', 'status', 'bank', 'queries', 'tocheck', 'unlocked'],
+    advisory: ['name', 'status', 'sales', 'margin', 'cash', 'profit']
+  };
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
       return Object.assign({ key: key, label: tx(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
@@ -205,13 +239,14 @@
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
       num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('yend', 'Year end', 150, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('yend', 'Year end', 230, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
       num('checked', 'Checked ' + yearLabel(), 110, checkedCell, checkedLeft, { prio: 1, dir0: -1 }),
-      num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
+      num('tocheck', 'To check (qtr)', 100, function (r) { return esc(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
+      num('unlocked', 'Months not locked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
-      num('margin', 'Margin', 80, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
-      num('cash', 'Cash', 110, function (r) { return esc(money(r.health.cash_minor, r.currency)); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
-      num('profit', 'Profit (qtr)', 110, function (r) { return esc(money(r.health.profit_quarter_minor, r.currency)); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
+      num('margin', 'Margin', 80, function (r) { return figureOrWhy(r, r.health.gross_margin_pct, esc(r.health.gross_margin_pct) + '%'); }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
+      num('cash', 'Cash', 110, function (r) { return figureOrWhy(r, r.health.cash_minor, esc(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
+      num('profit', 'Profit (qtr)', 110, function (r) { return figureOrWhy(r, r.health.profit_quarter_minor, esc(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
       num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; })
     ];
@@ -239,7 +274,7 @@
     var f = function (key, label, options, match) { return { key: key, label: tx(label), all: tx('All'), options: options.map(function (o) { return { v: o[0], label: tx(o[1]) }; }), match: match }; };
     return [
       f('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
-      f('stage', 'Year end', [['books_in', 'Books in'], ['complete', 'Complete'], ['checked', 'Checked'], ['ready', 'Ready to file'], ['lodged', 'Marked lodged']], function (r, v) { return r.stage === v; }),
+      f('stage', 'Year end', ['books_in', 'complete', 'checked', 'ready', 'lodged'].map(function (k) { return [k, stageWord(k)]; }), function (r, v) { return r.stage === v; }),
       f('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
       f('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
       f('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
@@ -268,11 +303,12 @@
     if (P.list) {
       try { P.list.destroy(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:destroy', failure); }
     }
-    if (root.CBList.reset) root.CBList.reset('practice-clients');
+    var bandKey = (bandShown(P.data) || {}).key || 'pipeline';
+    if (root.CBList.reset) root.CBList.reset('practice-clients-' + bandKey);
     var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
     P.list = root.CBList.mount(host, {
-      key: 'practice-clients', t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: ['name', 'status', 'yend', 'checked', 'queries', 'bas'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
+      key: 'practice-clients-' + bandKey, t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
+      columns: columns(), defaultCols: BAND_COLS[bandKey] || BAND_COLS.pipeline, next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') },
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
@@ -296,7 +332,7 @@
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
-      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
+      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
     root.document.head.appendChild(s);
   }
   function draw() {
@@ -311,11 +347,12 @@
       areas.parentNode.insertBefore(section, areas);
     }
     dropWaiting();
+    var held = root.document.activeElement, heldId = held && section.contains(held) && held.getAttribute ? held.getAttribute('data-testid') : null; /* B3: where the keyboard was, put back after the redraw */
     var door = root.document.getElementById('bcd_card');
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
-      '<h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
-      (P.filter ? '<button type="button" class="act quiet bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') +
+      '<div class="bp-head"><h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' +
+      (P.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') + '</div>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
       (P.data.truncated ? '<p class="sub">' + esc(tx('Some clients are not shown.')) + '</p>' : '') +
       '<div id="bp_list" data-testid="practice-list"></div>';
     [].forEach.call(section.querySelectorAll('[data-bp-filter]'), function (b) {
@@ -331,6 +368,10 @@
     var clear = section.querySelector('[data-bp-clear]');
     if (clear) clear.onclick = function () { P.filter = null; draw(); };
     mountList();
+    if (heldId) {
+      var back = section.querySelector('[data-testid="' + heldId + '"]') || section.querySelector('.bp-tile.on') || section.querySelector('.bp-tile');
+      if (back && back.focus) back.focus();
+    }
     P.drawn = true;
     return true;
   }
@@ -386,7 +427,7 @@
     root.document.documentElement.classList.toggle('bp-firm', hidesShopCards('sides'));
   }
   var fs = root.document.createElement('style');
-  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox{display:none!important}';
+  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox{display:none!important}html.bp-firm:not(.bp-setup) .cbsh-main[data-tab=home] .cbsh-sec.setup{display:none!important}'; /* W9: a firm's Home is its practice only: the folded "What it all stands on" holds only the cards FIRM_KEEPS names (its own Setup), so it is not drawn on Home; the Setup button reveals it (shell go) */
   (root.document.head || root.document.documentElement).appendChild(fs);
   function dropWaiting() {
     var w = root.document.getElementById('bp_wait');
@@ -460,5 +501,7 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: checkedWords, checkedLeft: checkedLeft };
+  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: checkedWords, checkedLeft: checkedLeft,
+    /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
+    parts: { use: function (d) { P.data = d; P.band = null; P.filter = null; }, yendCell: yendCell, detailHTML: detailHTML, columns: columns, filters: filters, bandHTML: bandHTML, stageWord: stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

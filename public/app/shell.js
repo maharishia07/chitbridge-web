@@ -1457,6 +1457,8 @@
         placeKural();
         return;
       }
+      /* W9: a firm's Home does not draw the Setup section (books-practice.js); asking for Setup shows it, any other area hides it again */
+      root.document.documentElement.classList.toggle('bp-setup', id === 'setup');
       var element = $('.cbsh-sec.' + id);
       /* the chosen area stays lit while the scroll it started runs, and at the end of the page (where Labs cannot reach the top) */
       S.pin = id;
@@ -1474,9 +1476,9 @@
         cur = 'home';
       areasShown().forEach(function (id) {
         var element = $('.cbsh-sec.' + id);
-        if (element && element.offsetTop <= y) cur = id;
+        if (element && element.offsetParent && element.offsetTop <= y) cur = id; /* W9: a section not drawn (a firm's Setup) is never the one in view */
       });
-      if (bottom) cur = areasShown().slice(-1)[0];
+      if (bottom) cur = areasShown().filter(function (id) { var e = $('.cbsh-sec.' + id); return e && e.offsetParent; }).slice(-1)[0] || cur;
       mark(cur);
     }
 
