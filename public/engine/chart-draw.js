@@ -433,7 +433,8 @@
   var STATUS_GAP = 2,
     STATUS_BAR = 14,
     STATUS_TEXT_AT = 28,
-    STATUS_MIN_LABEL = 30;
+    STATUS_MIN_LABEL = 30,
+    STATUS_MIN_W = 16;
 
   /** statusGeometry(parts, width) → [{ kind, x, w, mid, part }] — a part with no count is left out; widths share `width` less the gaps in proportion to the counts. */
   function statusGeometry(parts, width) {
@@ -445,8 +446,17 @@
     }, 0);
     var room = width - STATUS_GAP * Math.max(0, shown.length - 1),
       at = 0;
-    return shown.map(function (part) {
-      var w = (Number(part.value) / total) * room,
+    /* a small part keeps a floor wide enough to see and to carry its figure (E17); the others share what is left in proportion */
+    var floor = {}, left = room, rest = total;
+    for (var again = true; again && rest > 0; ) {
+      again = false;
+      shown.forEach(function (part, i) {
+        if (floor[i] || (Number(part.value) / rest) * left >= STATUS_MIN_W) return;
+        floor[i] = true; left -= STATUS_MIN_W; rest -= Number(part.value); again = true;
+      });
+    }
+    return shown.map(function (part, i) {
+      var w = floor[i] ? STATUS_MIN_W : rest > 0 ? (Number(part.value) / rest) * left : room / shown.length,
         box = { kind: part.kind, x: at, w: w, mid: at + w / 2, part: part };
       at += w + STATUS_GAP;
       return box;
@@ -597,16 +607,21 @@
     var pct = figure(row.changePct), ratio = pct === null ? 1 : 1 + pct / 100;
     return { before: half, now: Math.max(0, Math.min(2, ratio)) * half, broken: ratio > 2 };
   }
+  /** the 13-character label: when names share a start ("Seed E Client A/B"), keep the end that tells them apart; the full name is in the text's title */
+  function shortLabel(full, all) {
+    if (full.length <= 13) return full;
+    var head = full.slice(0, 12), clash = (all || []).some(function (o) { return o !== full && o.slice(0, 12) === head; });
+    return clash ? '…' + full.slice(-12) : head + '…';
+  }
   function compareRow(row, index, layout) {
     var y = index * layout.row, h = layout.row - 3, text = changeText(row.changePct), pct = figure(row.changePct);
     var has = layout.mode === 'money' ? figure(row.now) !== null && figure(row.before) !== null : pct !== null; /* a change is the server's word: without it a change bar is not drawn */
     var bars = compareBars(row, layout.area, layout.high, layout.mode), x0 = layout.labelW + CMP.gap;
     var hatched = row.state === 'stale';
-    var label = String(row.label || '');
-    if (label.length > 13) label = label.slice(0, 12) + '…';
+    var full = String(row.label || ''), label = shortLabel(full, layout.labels);
     var glyph = pct === null || pct === 0 ? '' : pct > 0 ? '▲' : '▼';
     var inner =
-      '<text x="0" y="' + (y + h - 2) + '" style="font:11px var(--sans,system-ui,sans-serif);fill:var(--ink,#2a2418)">' + escape(label) + '</text>';
+      '<text x="0" y="' + (y + h - 2) + '" style="font:11px var(--sans,system-ui,sans-serif);fill:var(--ink,#2a2418)">' + escape(label) + (label !== full ? '<title>' + escape(full) + '</title>' : '') + '</text>';
     if (has) {
       inner +=
         '<rect x="' + x0 + '" y="' + (y + 1) + '" width="' + bars.before.toFixed(1) + '" height="' + (h - 2) + '" rx="1" data-testid="' + layout.tid + '-before-' + index + '" style="fill:none;stroke:var(--rp-previous);stroke-width:1.5"/>' +
@@ -633,7 +648,7 @@
     var width = options.width || 320, id = escape(options.id || 'cd-cmp'), rowH = options.row || CMP.row, labelW = options.labelW || CMP.labelW;
     var area = Math.max(20, width - labelW - CMP.textW - CMP.gap * 2), high = 0;
     list.forEach(function (row) { high = Math.max(high, figure(row.now) || 0, figure(row.before) || 0); });
-    var layout = { row: rowH, width: width, labelW: labelW, area: area, high: high, mode: options.mode || 'change', id: id, tid: escape(options.tid || 'cd-cmp') };
+    var layout = { row: rowH, width: width, labelW: labelW, area: area, high: high, mode: options.mode || 'change', id: id, tid: escape(options.tid || 'cd-cmp'), labels: list.map(function (r) { return String(r.label || ''); }) };
     var inner = hatchDefs(id, 'var(--rp-actual)') + list.map(function (row, index) { return compareRow(row, index, layout); }).join('');
     return accessibleSvg(width, list.length * rowH, { id: options.id || 'cd-cmp', tid: options.tid || 'cd-cmp', title: options.title, desc: options.desc, palette: options.palette }, inner);
   }
