@@ -184,12 +184,12 @@
     };
     return [
       { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + esc(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', 190, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
+      num('status', 'Status', 260, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
       num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('yend', 'Year end', 190, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('yend', 'Year end', 150, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
       num('checked', 'Checked ' + yearLabel(), 110, checkedCell, function (r) { var e = r.year_end && r.year_end.entries; return e ? e.checked / (e.of || 1) : -1; }, { prio: 1 }),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
