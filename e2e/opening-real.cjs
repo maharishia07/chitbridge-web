@@ -12,6 +12,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const trips = [];
 async function run(handle, S) {
   console.log('\n== ' + handle + ' ==');
+  fs.rmSync(path.join(process.env.OUT || '.', 'token.json'), { force: true }); /* the sign-in cache is one file: one shop at a time */
   const token = await L.signIn(handle);
   const call = async (m, u, b) => { const res = await fetch(L.API + u, { method: m, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: b === undefined ? undefined : JSON.stringify(b) }); const text = await res.text(); let json = {}; try { json = JSON.parse(text); } catch (_) {} return { status: res.status, body: json, trips: res.headers.get('x-db-trips') }; };
   const note = (name, r) => trips.push({ route: name, status: r.status, trips: r.trips == null ? null : Number(r.trips) });
@@ -63,8 +64,10 @@ async function run(handle, S) {
   console.log('   failing change answered ' + fl.status + ' ' + JSON.stringify(fl.body).slice(0, 160));
   ok(fl.status >= 400, 'ATOMIC  the failing change is refused (' + fl.status + ')');
   ok(JSON.stringify(before.entries.map((e) => e.entry_no)) === JSON.stringify(after.entries.map((e) => e.entry_no)) && after.lines.length === before.lines.length, 'ATOMIC  the old opening is still the live one: entries ' + JSON.stringify(after.entries.map((e) => e.entry_no)) + ' (no reversal survived)');
+  console.log('   (change lines follow the replace)');
   const rep = await call('POST', '/api/books/opening/replace', { date: D, rows: grid({ bank: 1230450, equity: 1430450 }), client_ref: 'grid:C' + handle, reason: 'typing slip' }); note('POST /api/books/opening/replace', rep);
   ok(rep.status === 200 && rep.body.reversed.length === 1 && rep.body.changes === 2, '8  bank 1,234,050 → 1,230,450 + equity 1,430,450 with a reason → 200, reversed ' + JSON.stringify(rep.body.reversed) + ', ' + rep.body.changes + ' changes');
+  console.log('   changed: ' + JSON.stringify(rep.body.changed));
   const rep2 = await call('POST', '/api/books/opening/replace', { date: D, rows: grid({ bank: 1230450, equity: 1430450 }), client_ref: 'grid:C' + handle, reason: 'typing slip' });
   ok(rep2.status === 200 && rep2.body.duplicate === true, '8  the same change tapped twice is a replay');
   const yrs = await call('GET', '/api/books/opening/years'); note('GET /api/books/opening/years', yrs);
