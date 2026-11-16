@@ -10,7 +10,7 @@
  */
 (function (root) {
   'use strict';
-  var P = { token: null, data: null, drawn: false, filter: null, list: null };
+  var P = { token: null, data: null, drawn: false, filter: null, list: null, band: null };
   var HIDDEN_CARDS = { till: 1, marketing: 1, storefront: 1 };
   var EP = { practice: { m: 'GET', p: '/api/books-grants/practice' } };
   function tx(s) {
@@ -63,39 +63,35 @@
   }
   var STATUS_CLASS = { help: 'red', watch: 'amber', good: 'green', none: '' };
   var ROLE = { adviser: 'Accountant', auditor: 'Auditor' };
-  /* the band: key → [label, count, the filter it opens] */
-  function tiles(b) {
-    return [
-      ['help', 'Needs help', b.health.help, { status: 'help' }],
-      ['watch', 'Watch', b.health.watch, { status: 'watch' }],
-      ['good', 'Doing well', b.health.good, { status: 'good' }],
-      ['queries', 'Open queries', b.queries.clients, { queries: 'open' }, b.queries.on_client + ' ' + tx('on the client') + ' · ' + b.queries.on_us + ' ' + tx('on us')],
-      ['bas', 'Return due in 30 days', b.bas_due_30, { bas: 'soon' }],
-      ['bank', 'Bank not reconciled', b.bank.unexplained, { bank: 'unexplained' }, b.bank.no_statement + ' ' + tx('no statement')],
-      ['months', 'Months not locked', b.months_unlocked, { unlocked: 'yes' }],
-      ['checked', 'Entries to check', b.checked.clients_behind, { checked: 'behind' }, b.checked.n + ' ' + tx('of') + ' ' + b.checked.of + ' ' + tx('checked')],
-      ['ending', 'Access ends in 30 days', b.grants_ending_30, { ending: 'soon' }]
-    ];
+  /* REP-73: the bands are the server's (data.band.bands, in its order, the first one open); the page knows each tile's WORDS and the list filter it opens, never which band comes first, which tile is hidden or a count.
+     tile key → [label, the filter it opens]; every count is the size of that filter on the list (the server counts them from the same rows). */
+  var BAND_NAME = { pipeline: 'Year end', on_us: 'On us today', advisory: 'Advice' };
+  var TILE = {
+    books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ['Marked lodged by the owner', { stage: 'lodged' }],
+    bas_due_30: ['Due in 30 days', { bas: 'soon' }],
+    queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Entries to check', { checked: 'behind' }], months_unlocked: ['Months to lock', { unlocked: 'yes' }],
+    cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]
+  };
+  function sameFilter(f, g) {
+    return !!f && !!g && JSON.stringify(f) === JSON.stringify(g);
   }
-  /* a count tile that says nothing is not drawn (MIS critic, 16 Nov): 0, or every client (73 of 73), is no news; it stays a filter in the list; an active filter's tile stays so it can be turned off */
-  function tileShows(t, data, active) {
-    var total = (data.clients || []).length, n = Number(t[2]);
-    var on = active && Object.keys(t[3])[0] === Object.keys(active)[0] && t[3][Object.keys(t[3])[0]] === active[Object.keys(active)[0]];
-    return on || (n > 0 && !(total > 1 && n === total));
+  /** the band shown: the one the person chose, else the one the server opened first */
+  function bandShown(data) {
+    var bands = (data.band && data.band.bands) || [];
+    return bands.filter(function (x) { return x.key === P.band; })[0] || bands.filter(function (x) { return x.first; })[0] || bands[0] || null;
   }
   function bandHTML(data) {
-    var b = data.band;
-    return (
-      '<div class="bp-band" data-testid="practice-band" role="group" aria-label="' + esc(tx('Practice counts')) + '">' +
-      tiles(b).filter(function (t) { return tileShows(t, data, P.filter); }).map(function (t) {
-        var on = P.filter && Object.keys(t[3])[0] === Object.keys(P.filter)[0] && t[3][Object.keys(t[3])[0]] === P.filter[Object.keys(P.filter)[0]];
-        return (
-          '<button type="button" class="bp-tile ' + esc(t[0]) + (on ? ' on' : '') + '" data-bp-filter="' + esc(JSON.stringify(t[3])) + '" aria-pressed="' + !!on + '" data-testid="practice-tile-' + esc(t[0]) + '">' +
-          '<b>' + esc(t[2]) + '</b><span>' + esc(tx(t[1])) + '</span>' + (t[4] ? '<i>' + esc(t[4]) + '</i>' : '') + '</button>'
-        );
-      }).join('') +
-      '</div>'
-    );
+    var bands = (data.band && data.band.bands) || [], shown = bandShown(data);
+    if (!shown) return '';
+    var tabs = bands.length > 1 ? '<div class="bp-bands" role="tablist" aria-label="' + esc(tx('Practice bands')) + '">' + bands.map(function (x) {
+      return '<button type="button" role="tab" class="bp-bandtab' + (x.key === shown.key ? ' on' : '') + '" aria-selected="' + (x.key === shown.key) + '" data-cbsid="CMP036-D01" data-bp-band="' + esc(x.key) + '" data-testid="practice-band-' + esc(x.key) + '">' + esc(tx(BAND_NAME[x.key] || x.key)) + '</button>';
+    }).join('') + '</div>' : '';
+    var tiles = shown.tiles.filter(function (t) { return TILE[t.key]; }).map(function (t) {
+      var def = TILE[t.key], on = sameFilter(P.filter, def[1]);
+      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '" data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(def[0])) + '</span></button>';
+    }).join('');
+    var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
+    return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + '</div>' + note + '</div>';
   }
   function ruleHTML(rule) {
     return (
@@ -202,9 +198,11 @@
     var f = function (key, label, options, match) { return { key: key, label: tx(label), all: tx('All'), options: options.map(function (o) { return { v: o[0], label: tx(o[1]) }; }), match: match }; };
     return [
       f('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
+      f('stage', 'Year end', [['books_in', 'Books in'], ['complete', 'Complete'], ['checked', 'Checked'], ['ready', 'Ready to file'], ['lodged', 'Marked lodged']], function (r, v) { return (r.stages_reached || []).indexOf(v) >= 0; }),
+      f('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
       f('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
       f('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
-      f('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
+      f('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
       f('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
       f('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
       f('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
@@ -254,7 +252,7 @@
     s.textContent =
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
-      '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(2,1fr)}.bp-tile{padding:6px 8px}}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
+      '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
@@ -275,7 +273,7 @@
     var door = root.document.getElementById('bcd_card');
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
-      '<h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + ruleHTML(P.data.rule) + bandHTML(P.data) +
+      '<h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
       (P.filter ? '<button type="button" class="act quiet bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') +
       (P.data.truncated ? '<p class="sub">' + esc(tx('Some clients are not shown.')) + '</p>' : '') +
       '<div id="bp_list" data-testid="practice-list"></div>';
@@ -285,6 +283,9 @@
         P.filter = P.filter && JSON.stringify(P.filter) === JSON.stringify(f) ? null : f;
         draw();
       };
+    });
+    [].forEach.call(section.querySelectorAll('[data-bp-band]'), function (b) {
+      b.onclick = function () { P.band = b.getAttribute('data-bp-band'); P.filter = null; draw(); };
     });
     var clear = section.querySelector('[data-bp-clear]');
     if (clear) clear.onclick = function () { P.filter = null; draw(); };

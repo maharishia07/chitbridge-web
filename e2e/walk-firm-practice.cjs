@@ -72,10 +72,11 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       const load = page.__calls.slice(); /* the calls of the one Home load, before any tile is pressed or the page scrolled */
       console.log(tag + ' api calls in one Home load: ' + load.length + ' (budget ' + BUDGET + ')');
       ok(tag + ' one Home load makes at most ' + BUDGET + ' api calls', load.length <= BUDGET, load.length + ': ' + load.join(' | '));
-      ok(tag + ' the Practice band and the rule are drawn', (await page.locator('[data-testid="practice-band"]').count()) === 1 && (await page.locator('[data-testid="practice-rule"]').count()) === 1);
+      ok(tag + ' the Practice band is drawn, in the band the server opened first (' + truth.band.bands[0].key + ')', (await page.locator('[data-testid="practice-band"]').count()) === 1 && (await page.locator('[data-testid="practice-band"]').getAttribute('data-band')) === truth.band.bands[0].key);
       const tiles = await page.locator('[data-testid^="practice-tile-"]').count();
       const counts = await page.$$eval('[data-testid^="practice-tile-"] b', (els) => els.map((el) => Number(el.textContent)));
-      ok(tag + ' at most nine tiles, and none says nothing (0, or every client): ' + counts.join(','), tiles <= 9 && counts.every((n) => n > 0 && (truth.clients.length < 2 || n < truth.clients.length)), tiles);
+      const serverTiles = truth.band.bands[0].tiles.map((t) => t.n);
+      ok(tag + ' the first band draws exactly the server tiles (at most six) with the server counts: ' + counts.join(','), tiles <= 6 && JSON.stringify(counts) === JSON.stringify(serverTiles), tiles);
       const shown = await rowCount(page);
       ok(tag + ' the client list shows rows (up to 50 at a time of ' + truth.clients.length + ')', shown > 0 && shown <= Math.min(50, truth.clients.length) + 1, shown);
       const cards = await page.evaluate(() => ['till', 'marketing', 'storefront'].map((id) => document.querySelectorAll('[data-testid="shell-card-' + id + '"]').length));
@@ -110,7 +111,7 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       ok(tag + ' the practice section replaced the Your clients card', (await page.locator('[data-testid="home-your-clients"]').count()) === 0);
       /* a band tile is a filter: its count equals the rows it leaves (when the rows fit one page) */
       if (vp.tag === '1366') {
-        for (const key of ['help', 'queries', 'bank', 'months', 'ending']) {
+        for (const key of truth.band.bands[0].tiles.map((t) => t.key)) {
           const tile = page.locator('[data-testid="practice-tile-' + key + '"]');
           if (!(await tile.count())) continue;
           const asked = Number((await tile.locator('b').innerText()).trim());
@@ -118,7 +119,7 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
           await pause(1500);
           const left = await rowCount(page);
           ok(tag + ' tile ' + key + ' says ' + asked + ' and the list it opens has ' + (asked > 50 ? '50 (first page) of ' + asked : left), asked > 50 ? left >= 50 : left === asked, left);
-          if (key === 'help') await page.screenshot({ path: path.join(OUT, firm + '-home-needs-help-' + vp.tag + '.png') });
+          if (key === 'complete') await page.screenshot({ path: path.join(OUT, firm + '-home-needs-help-' + vp.tag + '.png') });
           await page.locator('[data-testid="practice-clear"]').click().catch(() => {});
           await pause(800);
         }
