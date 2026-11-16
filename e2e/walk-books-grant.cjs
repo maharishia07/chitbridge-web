@@ -74,7 +74,9 @@ W.run('books-grant', async (w) => {
   });
   await w.step('A2', 'the auditor · keyboard: focus "Open books", Enter → the header line names Store One with the read only tag, the trial balance is listed', async () => {
     await page.focus(T('nw-books-' + MEMBER)); await page.keyboard.press('Enter');
-    await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    await page.waitForSelector(T('bv-band'), { timeout: 10000 });
+    await page.click(T('bv-tab-tb')); /* acc17 (walk A2 was a test bug): the books open on the Day book of the year under review since the period merge, so the trial balance is the tab pressed, not the first screen */
+    await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const band = await txt(T('bv-band')), rows = await txt(T('bv-list'));
     const asked = S.calls.filter((c) => c.p === '/api/books/trial-balance');
     return { ok: /Store One/.test(band) && /read only/.test(band) && /Cash/.test(rows) && /1,234|1234/.test(rows) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER), saw: band + ' · ' + rows.slice(0, 80) + ' · header sent ' + asked.length + '×' };
@@ -87,6 +89,7 @@ W.run('books-grant', async (w) => {
   /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). */
   await w.step('W19', 'the auditor · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0 (a view above it is held at its measured ceiling, which only falls)', () => require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'auditor' }));
   await w.step('D1', 'the auditor drill · trial balance row Cash → its ledger: opening, the line with its running balance, the period total and the closing', async () => {
+    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book, and W19 leaves the last tab: the ledger is opened from the trial balance, so that tab is pressed first */
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const title = await txt(T('bd-title')), facts = await txt(T('bd-facts')), line = await txt(T('bd-line-0'));
     const asked = S.calls.filter((c) => c.p === "/api/books/ledger/1000");
@@ -148,6 +151,7 @@ W.run('books-grant', async (w) => {
   });
 
   await w.step('D6', 'the auditor drill · 390×844: trial balance → ledger sheet fits, no page scroll', async () => {
+    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book, and W19 leaves the last tab: the ledger is opened from the trial balance, so that tab is pressed first */
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const a = await noScroll(), sheet = await page.evaluate(() => { const d = document.getElementById('nw_sheet').getBoundingClientRect(); return d.width <= window.innerWidth + 1 && d.height <= window.innerHeight + 1; });
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
