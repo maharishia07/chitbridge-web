@@ -28,7 +28,7 @@ const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
       await p.waitForSelector('[data-pb]', { timeout: 15000 }).catch(() => {});
       await p.waitForTimeout(800);
       const t = flat(await p.locator('[data-pb]').first().innerText().catch(() => ''));
-      ok(/Date.*Bill.*Due date.*Days overdue.*Status.*Amount.*Still owed.*Reviewed/i.test(t), 'the sub-table header: Date · Bill · Due date · Days overdue · Status · Amount · Still owed · Reviewed (' + vp.tag + ')');
+      ok(vp.width < 700 || /Date.*Bill.*Due date.*Days overdue.*Still owed.*Reviewed/i.test(t), 'the sub-table header: Date · Bill · (Why) · Due date · Days overdue · Still owed · Reviewed (1366 only; a phone shows cards) (' + vp.tag + ')');
       ok(/Needs you \d+/.test(t) && /Open \d+/.test(t) && /All \d+/.test(t), 'Needs you / Open / All carry the server counts (W15-113: the Paid tab is gone, All holds the paid)');
       ok(!/ 07:00| 0[0-9]:[0-9]{2} (am|pm)/i.test(t), 'no time-of-day noise on the bill rows');
       await shot('recv-open');
@@ -55,7 +55,7 @@ const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
     await p.goto(base + '/accounts.html#payables'); await p.waitForTimeout(3500);
     await shot('pay-list');
     const prow = p.locator('.cbl-row[aria-expanded]');
-    if (await prow.count()) { await prow.first().click(); await p.waitForSelector('[data-pb]', { timeout: 15000 }).catch(() => {}); await p.waitForTimeout(800); await shot('pay-open'); const t = flat(await p.locator('[data-pb]').first().innerText().catch(() => '')); ok(/Date.*Bill.*Due date.*Days overdue.*Status/i.test(t), 'Payables opens the same sub-table'); ok(((t.match(/On hold/g)) || []).length <= 1, 'a hold is said once'); }
+    if (await prow.count()) { await prow.first().click(); await p.waitForSelector('[data-pb]', { timeout: 15000 }).catch(() => {}); await p.waitForTimeout(800); await shot('pay-open'); const t = flat(await p.locator('[data-pb]').first().innerText().catch(() => '')); ok(vp.width < 700 || /Date.*Bill.*Due date.*Days overdue.*Still owed/i.test(t), 'Payables opens the same sub-table'); ok(((t.match(/On hold/g)) || []).length <= 1, 'a hold is said once'); }
     await fit('payables');
     /* Day book · Ledgers · BAS: the strip */
     for (const [name, hash] of [['daybook', '#daybook'], ['ledgers', '#ledgers'], ['bas', '#gstclose']]) {
