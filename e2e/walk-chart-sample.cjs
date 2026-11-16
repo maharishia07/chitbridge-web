@@ -23,7 +23,7 @@ W.run('chart-sample', async (w) => {
   };
 
   await open(1366);
-  await w.step('S1', 'chart sample at 1366: 16 themes, each with the four kinds, each svg named and described', async () => {
+  await w.step('S1', 'chart sample at 1366: 16 themes, each with the five kinds, each svg named and described', async () => {
     const r = await page.evaluate(() => ({
       panels: document.querySelectorAll('[data-testid^="cs-panel-"]').length,
       svgs: [...document.querySelectorAll('.panel svg')].length,
@@ -32,7 +32,7 @@ W.run('chart-sample', async (w) => {
       summary: document.getElementById('summary').textContent
     }));
     await page.screenshot({ path: path.join(SHOT_DIR, 'rep36-chart-sample-1366.png'), fullPage: true });
-    return { ok: r.panels === 16 && r.svgs === 16 * 4 && r.unnamed === 0 && r.noDesc === 0, saw: r.panels + ' panels, ' + r.svgs + ' svgs, ' + r.unnamed + ' unnamed, ' + r.noDesc + ' without a desc; ' + r.summary };
+    return { ok: r.panels === 16 && r.svgs === 16 * 5 && r.unnamed === 0 && r.noDesc === 0, saw: r.panels + ' panels, ' + r.svgs + ' svgs, ' + r.unnamed + ' unnamed, ' + r.noDesc + ' without a desc; ' + r.summary };
   });
   await w.step('S2', 'contrast measured in the browser: previous >= 3:1 and actual >= 4.5:1 in all 16 themes', async () => {
     const rows = await page.evaluate(() => window.CB_CHART_SAMPLE);

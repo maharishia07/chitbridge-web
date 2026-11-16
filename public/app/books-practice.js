@@ -119,6 +119,50 @@
     var total = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
     return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + esc(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-testid="practice-pic-count">' + esc(spec.unit ? total + ' ' + tx(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
   }
+  /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
+     (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints
+     money through money(). A client whose books stop early, whose last year is short or absent, or who holds two currencies is never ranked; the opened row says why in words. */
+  var YOY_WORDS = { stale: 'Books in to', short_last_year: 'No full last year yet', no_last_year: 'No last year to compare yet', mixed: 'Two currencies: not compared' };
+  function yoyDates(h) {
+    return h && h.sales_yoy_from ? day(h.sales_yoy_from) + ' – ' + day(h.sales_yoy_to) + ' / ' + day(h.sales_prev_from) + ' – ' + day(h.sales_prev_to) : '';
+  }
+  function yoyWords(h) {
+    var w = YOY_WORDS[h.sales_yoy_state];
+    return w ? tx(w) + (h.sales_yoy_state === 'stale' ? ' ' + day(h.sales_through) : '') : '';
+  }
+  function yoyRow(r) {
+    var h = r.health, cur = r.currency;
+    return { label: r.name || String(r.entity_id).slice(0, 8), now: h.sales_ytd_minor, before: h.sales_prev_ytd_minor, changePct: h.sales_yoy_pct, state: h.sales_yoy_state,
+      title: (r.name || '') + ' · ' + money(h.sales_ytd_minor, cur) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, cur) + ' ' + tx('last year') + ' · ' + yoyDates(h) };
+  }
+  /** chart 1: the listed clients whose sales fell most and rose most (only state ok; the bar is the carried change), the caption says how many of the list it shows */
+  function yoyRanked(clients) {
+    var ok = clients.filter(function (r) { return r.health && r.health.sales_yoy_state === 'ok' && r.health.sales_yoy_pct != null; });
+    var by = function (sign) { return function (a, b) { return sign * (a.health.sales_yoy_pct - b.health.sales_yoy_pct); }; };
+    return { fall: ok.filter(function (r) { return r.health.sales_yoy_pct < 0; }).sort(by(1)), rise: ok.filter(function (r) { return r.health.sales_yoy_pct > 0; }).sort(by(-1)) };
+  }
+  function compareHTML(data) {
+    var clients = data.clients || [];
+    if (!root.CBDraw || !root.CBDraw.compare || !clients.length) return '';
+    var narrow = root.innerWidth && root.innerWidth <= 700, take = 3, ranked = yoyRanked(clients), palette = paletteHere();
+    var first = clients.filter(function (r) { return r.health && r.health.sales_yoy_from; })[0];
+    var one = function (list, id, title) {
+      return list.length ? root.CBDraw.compare(list.slice(0, take).map(yoyRow), { palette: palette, width: narrow ? 280 : 250, labelW: narrow ? 92 : 80, id: id, tid: id, title: tx(title), desc: tx(title) + ': ' + list.slice(0, take).map(function (r) { return yoyRow(r).title; }).join('; ') }) : '';
+    };
+    var svgs = one(ranked.fall, 'bp-cmp-fall', 'Sales down most on last year') + (narrow ? '' : one(ranked.rise, 'bp-cmp-rise', 'Sales up most on last year'));
+    if (!svgs) return '';
+    var shown = Math.min(take, ranked.fall.length) + (narrow ? 0 : Math.min(take, ranked.rise.length));
+    return '<div class="bp-cmp" data-testid="practice-cmp" data-shown="' + shown + '" data-listed="' + clients.length + '"><span class="sub" data-testid="practice-cmp-caption">' + esc(tx('Sales to date vs last year') + (first ? ' · ' + day(first.health.sales_yoy_from) + ' – ' + day(first.health.sales_yoy_to) : '') + ' · ' + shown + ' ' + tx('of') + ' ' + clients.length + ' ' + tx('clients listed')) + '</span><div class="bp-cmp-row">' + svgs + '</div></div>';
+  }
+  /** chart 2: this client's pair in the opened row, with the figures in words under it and the reason when there is no change */
+  function pairHTML(r) {
+    var h = r.health;
+    if (!root.CBDraw || !root.CBDraw.compare || !h || h.sales_ytd_minor == null || !h.sales_yoy_state) return '';
+    var row = yoyRow(r), reason = yoyWords(h);
+    row.label = tx('Sales');
+    var svg = root.CBDraw.compare([row], { palette: paletteHere(), mode: 'money', width: 340, labelW: 60, id: 'bp-pair-' + String(r.entity_id).slice(0, 8), tid: 'practice-pair-' + r.entity_id, title: tx('Sales this year and last year'), desc: row.title });
+    return '<div class="bp-pair" data-testid="practice-pair-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-testid="practice-pair-words-' + esc(r.entity_id) + '">' + esc(money(h.sales_ytd_minor, r.currency) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, r.currency) + ' ' + tx('last year') + (reason ? ' · ' + reason : '')) + '</span></div>';
+  }
   /* REP-66: the opened row's months. The server's year_end carries how many months of the year are locked (the Month lock page's one rule, locked oldest first), so the first `locked` squares are locked and the rest open: no second read, no count made here. */
   function monthWords(y) {
     var start = String(y.start || '').slice(0, 7).split('-'), year = Number(start[0]), month = Number(start[1]) - 1, out = [];
@@ -147,7 +191,7 @@
       return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(STAGE_WORDS[t.key] ? stageWord(t.key) : def[0])) + '</span></button>';
     }).join('');
     var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
-    return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + '</div>' + note + '</div>';
+    return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + (shown.key === 'advisory' ? compareHTML(data) : '') + '</div>' + note + '</div>';
   }
   function ruleHTML(rule) {
     return (
@@ -231,7 +275,7 @@
     var h = r.health, held = withheldWord(r) || tx('Not shown');
     var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + esc(tx(label)) + '</span><b>' + value + '</b></div>'; };
     return (
-      '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + stripHTML(r) +
+      '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + stripHTML(r) + pairHTML(r) +
       line('Sales vs 3-month average', esc(trend(r))) +
       line('Margin this quarter', figureOrWhy(r, h.gross_margin_pct, esc(h.gross_margin_pct) + '%')) +
       line('Cash in bank', figureOrWhy(r, h.cash_minor, esc(money(h.cash_minor, r.currency)), true)) +
@@ -376,7 +420,7 @@
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
-      '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
+      '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;height:56px;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
     root.document.head.appendChild(s);
   }
