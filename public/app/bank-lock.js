@@ -20,10 +20,14 @@
   }
   var day = function (value) { return String(value || '').slice(0, 10); };
   var isLocked = function (row) { return !!row && (row.status === 'soft_locked' || row.status === 'hard_locked'); };
+  /* the page's own locale month words when it has them (helpers.js monthNames), else the English list through tx; WHICH months exist and where a year starts is only ever the server's rows (country-neutral) */
+  function names(form, fallback) {
+    return typeof root.monthNames === 'function' ? root.monthNames(form) : fallback.map(T);
+  }
   /** the month name of a 'YYYY-MM-DD' day ("September"), and with the year ("September 2026") */
   function monthName(iso) {
     var m = /^(\d{4})-(\d{2})/.exec(iso || '');
-    return m ? T(MONTHS[+m[2] - 1]) : '';
+    return m ? names('long', MONTHS)[+m[2] - 1] : '';
   }
   function monthLabel(iso) {
     return monthName(iso) + ' ' + String(iso || '').slice(0, 4);
@@ -31,7 +35,7 @@
   /** "1 Oct 2026" */
   function dayText(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
-    return m ? +m[3] + ' ' + T(SHORT[+m[2] - 1]) + ' ' + m[1] : '';
+    return m ? +m[3] + ' ' + names('short', SHORT)[+m[2] - 1] + ' ' + m[1] : '';
   }
   /** the month row (1-12, never the opening period 0) that a day falls in, from the server's own start_date…end_date; null when the rows do not cover it */
   function rowOfDay(rows, iso) {
