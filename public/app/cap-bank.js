@@ -29,7 +29,7 @@
  */
 'use strict';
 /* stmtAcct = the account the statement on screen was read FOR; stmtCur = the currency the person said the file is in (B5-05: never the account's by default) */
-const BKB = { acct: '', stmtAcct: '', stmtCur: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
+const BKB = { acct: '', stmtAcct: '', stmtCur: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '', view: 'home' }; /* view: 'home' (the page the menu's Bank always opens on) | 'lines' (a statement's lines; cap-bank-home.js) */
 const bkbE = (v) => esc(v);
 /** a figure on this page: plain, with no symbol. The currency is said ONCE (the header line, and the confirm's "Currency" line); the page is one account, so one currency. Money stays a value type in code; this is display only.
  *  A figure whose own currency differs from the page's keeps its code. The grouping and decimals are bkMoney's (the one formatter) with its symbol taken off. */
@@ -248,11 +248,12 @@ async function bankView(body) {
     '</div><div id="bk_out" class="pe-slot"></div></div>' +
     '<div class="pe-card bks" id="bk_stmts" data-testid="bank-stmts"></div>' /* the Statements box (cap-bank-statements.js) */ +
     '<div id="bk_res" data-testid="bank-res"></div></div>';
+  BKB.view = 'home'; /* W15-84: the menu's Bank ALWAYS lands on the home; the device's last statement never decides it (it is read again from a month's press) */
+  bankLayout(false, false);
+  if (typeof bankHomeClass === 'function') bankHomeClass();
   if (typeof bankStmtMount === 'function') bankStmtMount(banks);
-  if (BKB.rows.length || BKB.parsed) bankPaint();
-  else bankRestore();
 }
-/** the latest statement of the bank account on screen, kept on this device: the page opens on it (in progress or signed); no file is asked for. Null-safe when nothing is kept. */
+/** the latest statement of the bank account on screen, kept on this device: picked again when the account is changed on the plain picker (never the landing page). Null-safe when nothing is kept. */
 function bankRestore() {
   const kept = bkbLoad('stmt:' + BKB.acct, null);
   if (!kept || !kept.text) return false;
@@ -532,13 +533,8 @@ function bankChange(btn) {
   btn.setAttribute('aria-expanded', String(open));
   btn.textContent = tx(open ? 'Hide the form' : 'Load another statement');
   window.dispatchEvent(new Event('resize'));
-  /* ONE DOOR (W15-62): while the Statements box is ready it IS the file door, so it opens with the form and the keyboard goes to ITS file box; else to the plain picker's */
-  const boxReady = typeof BKST !== 'undefined' && BKST.mode === 'server' && typeof bankStmtPaint === 'function';
-  if (boxReady) {
-    BKST.open = open;
-    bankStmtPaint();
-  }
-  const file = bkbEl(boxReady ? 'bks_file' : 'bk_file') || bkbEl('bk_file');
+  /* the box is not ready: the plain picker is the only door */
+  const file = bkbEl('bk_file');
   if (open && file) file.focus(); /* the form opens ABOVE the band that holds this button: the keyboard goes to its file box */
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
@@ -614,6 +610,7 @@ function bankPaint() {
         bkbE(tx('Back to the lines')) + '</button><button data-cbsid="BKS014-B25" type="button" class="act" data-testid="bank-brs-print" onclick="bankBrsPrint()">' + bkbE(tx('Print or save as PDF')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
   const line = bkbEl('bk_line');
   if (line) line.innerHTML = bankLineHtml();
+  if (typeof bankHomeEnter === 'function') bankHomeEnter(); /* the lines are on screen: the view is 'lines' and the browser's Back has the home to go to */
   bankLayout(true, lines);
   if (lines) bankList();
   else bankBrsPaint();
@@ -693,7 +690,7 @@ const bkbWrongAccountButton = (testid, label) =>
  *  Every figure is carried (bankFigures: the engine's BRS; the counts are the list's own rows). */
 function bankFinish() {
   const fig = bankFigures();
-  const acts = '<div class="bk-acts" data-testid="bank-actions">' + (typeof bkstMiniHtml === 'function' ? bkstMiniHtml() : '') + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
+  const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
     return (
       '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) + '</span>' +
@@ -707,7 +704,7 @@ function bankFinish() {
     tid: 'bank-finish',
     account: bkbAcctName() || BKB.stmtAcct,
     from: P.from, to: P.to, count: P.lines.length, currency: code,
-    change: '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
+    change: typeof BKST !== 'undefined' && BKST.mode === 'server' ? '' /* the trail's Back (cap-bank-home.js) is the way to the files and the other statements */ : '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
     rightAct: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
     actions: acts,
     right: CBBankBand.rightAccount({
