@@ -183,6 +183,14 @@
     var svg = root.CBDraw.monthStrip(months, { id: 'bp-strip-' + String(r.entity_id).slice(0, 8), tid: 'practice-strip-' + r.entity_id, title: tx('Months locked'), codes: PIC_CODES.strip, words: words, labels: true, palette: paletteHere() });
     return '<div class="bp-strip" data-testid="practice-strip-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P08" data-testid="practice-strip-count-' + esc(r.entity_id) + '">FY' + esc(String(y.fy).replace(/^dd(dd)/, '$1')) + ' · ' + esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of) + ' ' + esc(tx('months locked')) + '</span></div>';
   }
+  /* A3P rank 6: the entries tile counts the work: the entries to check (the server's tile.entries), with the clients behind in its words; every other tile is its n. The filter under the tile is unchanged: its rows are the n clients. */
+  function tileFigure(t) {
+    return t.key === 'to_check' && typeof t.entries === 'number' ? Number(t.entries).toLocaleString() : t.n;
+  }
+  function tileWords(t, def) {
+    if (t.key === 'to_check' && typeof t.entries === 'number') return tx('Entries to check') + ' · ' + t.n + ' ' + tx(t.n === 1 ? 'client' : 'clients');
+    return tx(STAGE_WORDS[t.key] ? stageWord(t.key) : def[0]);
+  }
   function bandHTML(data) {
     var bands = (data.band && data.band.bands) || [], shown = bandShown(data);
     if (!shown) return '';
@@ -191,7 +199,7 @@
     }).join('') + '</div>' : '';
     var tiles = shown.tiles.filter(function (t) { return TILE[t.key]; }).map(function (t) {
       var def = TILE[t.key], on = sameFilter(P.filter, def[1]);
-      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(STAGE_WORDS[t.key] ? stageWord(t.key) : def[0])) + '</span></button>';
+      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(tileFigure(t)) + '</b><span>' + esc(tileWords(t, def)) + '</span></button>';
     }).join('');
     var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
     return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + (shown.key === 'advisory' ? compareHTML(data) : '') + '</div>' + note + '</div>';
@@ -202,8 +210,13 @@
       '. ' + esc(tx('Watch')) + ': ' + esc(tx('sales down')) + ' ' + rule.watch.sales_down_pct + '%, ' + esc(tx('loss this quarter')) + '. ' + esc(tx('The firm can change this.')) + '</p>'
     );
   }
+  /** the band on screen now: the server's first one until a tab is pressed */
+  function bandNow() {
+    return (P.data && bandShown(P.data) || {}).key || 'pipeline';
+  }
   function statusCell(r) {
-    var why = r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + esc(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
+    /* A3P rank 1: on Year end the Status is a chip only (the reasons move to the opened row), so Due fits at 1366 */
+    var why = bandNow() !== 'pipeline' && r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + esc(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
     return '<span class="tag ' + (STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + esc(r.entity_id) + '">' + esc(tx(r.health.words)) + '</span>' + why;
   }
   function trend(r) {
@@ -274,14 +287,44 @@
   function figureOrWhy(r, value, shown, notCosts) {
     return value == null ? esc(withheldWord(r, notCosts) || '—') : shown;
   }
-  function detailHTML(r) {
+  /* A3P rank 2: the opened Year end row is the year-end sheet: five facts from the row's own year_end, queries and bas (the figures in the cells, never a second read), each a link into that client with the year picked.
+     Addresses come from CBBooksActing (the one place that builds them): the client's screen (&view=, &fy=) and the auditor's Bank. No year_end (books not on): one sentence, no link. */
+  var SHEET_LINK = 'HOM001-P15';
+  function sheetAddress(r, view) {
+    var A = root.CBBooksActing, fy = r.year_end && r.year_end.fy;
+    if (!A || !fy) return '';
+    var carry = '&fy=' + encodeURIComponent(fy), store = { id: r.entity_id };
+    return view === 'bank' ? A.auditAddressOf(store, 'bank', carry) : A.clientAddress(store, '&view=' + encodeURIComponent(view) + carry);
+  }
+  function sheetLine(r, key, label, value, view) {
+    var href = sheetAddress(r, view), text = '<b>' + value + '</b>';
+    return '<div class="bp-fig" data-testid="practice-sheet-' + key + '-' + esc(r.entity_id) + '"><span class="sub">' + esc(tx(label)) + '</span>' +
+      (href ? '<a class="bp-link" href="' + esc(href) + '" data-cbsid="' + SHEET_LINK + '" data-testid="practice-sheet-go-' + key + '-' + esc(r.entity_id) + '">' + text + '</a>' : text) + '</div>';
+  }
+  function sheetHTML(r) {
+    var y = r.year_end;
+    if (!y) return '<p class="sub" data-testid="practice-sheet-none-' + esc(r.entity_id) + '">' + esc(tx('Books are not on for this client yet.')) + '</p>';
+    var e = y.entries, q = r.queries, locked = esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of);
+    return '<div class="bp-sheet" data-testid="practice-sheet-' + esc(r.entity_id) + '">' +
+      sheetLine(r, 'months', 'Months locked', locked, 'periods') +
+      sheetLine(r, 'bank', 'Bank to year end', y.bank_to_end ? esc(tx('Yes, to')) + ' ' + esc(shortDay(y.end)) : esc(tx('Not yet')), 'bank') +
+      sheetLine(r, 'checked', 'Entries checked', e ? esc(e.checked) + ' ' + esc(tx('of')) + ' ' + esc(e.of) : '—', 'daybook') +
+      sheetLine(r, 'queries', 'Queries', q.open ? queriesCell(r) : esc(tx('None')), 'daybook') +
+      sheetLine(r, 'due', 'Return due', r.bas.due_date ? basCell(r) : esc(tx('No date')), 'periods') + '</div>';
+  }
+  function whyLine(r) {
+    var h = r.health;
+    return h.reasons && h.reasons.length ? '<p class="sub">' + esc(tx('Why')) + ': ' + esc(h.reasons.join(' · ')) + '</p>' : '';
+  }
+  function detailHTML(r, band) {
+    if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + sheetHTML(r) + stripHTML(r) + pairHTML(r) + whyLine(r) + '</div>';
     var h = r.health, held = withheldWord(r) || tx('Not shown');
     var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + esc(tx(label)) + '</span><b>' + value + '</b></div>'; };
     return (
       '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + stripHTML(r) + pairHTML(r) +
       line('Sales vs 3-month average', esc(trend(r))) +
       line('Margin this quarter', figureOrWhy(r, h.gross_margin_pct, esc(h.gross_margin_pct) + '%')) +
-      line('Cash in bank', figureOrWhy(r, h.cash_minor, esc(money(h.cash_minor, r.currency)), true)) +
+      line('Cash and bank', figureOrWhy(r, h.cash_minor, esc(money(h.cash_minor, r.currency)), true)) +
       line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
       line('Cash for those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
       line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
@@ -289,7 +332,7 @@
       line('Profit this quarter', figureOrWhy(r, h.profit_quarter_minor, esc(money(h.profit_quarter_minor, r.currency)))) +
       line('Months not locked', esc(r.months_unlocked)) +
       line('Access ends', esc(day(r.grant.expires_at))) +
-      (h.reasons && h.reasons.length ? '<p class="sub">' + esc(tx('Why')) + ': ' + esc(h.reasons.join(' · ')) + '</p>' : '') +
+      whyLine(r) +
       '</div>'
     );
   }
@@ -326,7 +369,7 @@
     };
     return [
       { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + esc(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', 260, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
+      num('status', 'Status', bandNow() === 'pipeline' ? 150 : 260, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
@@ -343,9 +386,17 @@
       num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; })
     ];
   }
-  function sorts() {
+  /** A3P rank 1: the Year end band's work order: stage in the server's pipeline order (Books in first, Lodged last; a stage the list does not know, last), then the blocker, then the return due date, then the server's own order. */
+  var BLOCKERS = ['months', 'bank', 'checked', 'queries'];
+  function workOrder(a, b) {
+    var stages = (((P.data && P.data.band) || {}).pipeline || []).map(function (x) { return x.key; });
+    var at = function (list, key) { var i = list.indexOf(key); return i < 0 ? list.length : i; };
+    var due = function (r) { return (r.bas && r.bas.due_date) || '9999'; };
+    return at(stages, a.stage) - at(stages, b.stage) || at(BLOCKERS, a.stage_blocker) - at(BLOCKERS, b.stage_blocker) || (due(a) < due(b) ? -1 : due(a) > due(b) ? 1 : 0) || a._n - b._n;
+  }
+  function sorts(band) {
     var by = function (k, get, text) { return { key: k, label: tx(text), cmp: function (a, b) { var x = get(a), y = get(b); return typeof x === 'string' || typeof y === 'string' ? String(x).localeCompare(String(y)) : (x == null ? -1e18 : x) - (y == null ? -1e18 : y); } }; };
-    return [
+    return (band === 'pipeline' ? [{ key: 'pipeline', label: tx('Work order'), cmp: workOrder }] : []).concat([
       by('urgency', function (r) { return r._n; }, 'Most urgent first'),
       by('name', function (r) { return r.name || ''; }, 'Client'),
       by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
@@ -356,11 +407,11 @@
       by('unlocked', function (r) { return r.months_unlocked; }, 'Months not locked'),
       by('sales', function (r) { return r.health.sales_trend_pct; }, 'Sales vs 3-month average'),
       by('margin', function (r) { return r.health.gross_margin_pct; }, 'Gross margin'),
-      by('cash', function (r) { return r.health.cash_minor; }, 'Cash in bank'),
+      by('cash', function (r) { return r.health.cash_minor; }, 'Cash and bank'),
       by('profit', function (r) { return r.health.profit_quarter_minor; }, 'Profit this quarter'),
       by('ending', function (r) { return r.grant.expires_at || ''; }, 'Access ends'),
       by('look', function (r) { return r.last_look || ''; }, 'Last look')
-    ];
+    ]);
   }
   function filters() {
     var f = function (key, label, options, match) { return { key: key, label: tx(label), all: tx('All'), options: options.map(function (o) { return { v: o[0], label: tx(o[1]) }; }), match: match }; };
@@ -377,8 +428,12 @@
       f('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
     ];
   }
-  function openBooks(id) {
-    root.location.href = '/network.html?open=' + encodeURIComponent(id);
+  /* A3P rank 5: on Year end a client opens where its blocker is (the server's stage_blocker): months → Months · bank → Bank · not checked or a query → Day book, the year picked; no blocker or no year → the client as before */
+  var BLOCKER_VIEW = { months: 'periods', bank: 'bank', checked: 'daybook', queries: 'daybook' };
+  function openBooks(id, band) {
+    var r = band === 'pipeline' ? (P.data.clients || []).filter(function (x) { return String(x.entity_id) === String(id); })[0] : null;
+    var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) : '';
+    root.location.href = to || '/network.html?open=' + encodeURIComponent(id);
   }
   /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
   function withList(then) {
@@ -400,7 +455,7 @@
     var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
     P.list = root.CBList.mount(host, {
       key: 'practice-clients-' + bandKey, t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: BAND_COLS[bandKey] || BAND_COLS.pipeline, next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
+      columns: columns(), defaultCols: BAND_COLS[bandKey] || BAND_COLS.pipeline, next: function (r) { return detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') },
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
@@ -411,7 +466,7 @@
     }
     host.onclick = function (ev) {
       var button = ev.target.closest && ev.target.closest('[data-bp-open]');
-      if (button) { ev.preventDefault(); openBooks(button.getAttribute('data-bp-open')); }
+      if (button) { ev.preventDefault(); openBooks(button.getAttribute('data-bp-open'), bandKey); }
     };
   }
   function css() {
@@ -600,5 +655,5 @@
   else start();
   root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: checkedWords, checkedLeft: checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { use: function (d) { P.data = d; P.band = null; P.filter = null; }, compareHTML: compareHTML, pairHTML: pairHTML, yendCell: yendCell, detailHTML: detailHTML, pictureHTML: pictureHTML, stripHTML: stripHTML, columns: columns, filters: filters, bandHTML: bandHTML, stageWord: stageWord, BAND_COLS: BAND_COLS } };
+    parts: { use: function (d) { P.data = d; P.band = null; P.filter = null; }, compareHTML: compareHTML, pairHTML: pairHTML, yendCell: yendCell, detailHTML: detailHTML, sorts: sorts, statusCell: statusCell, workOrder: workOrder, sheetHTML: sheetHTML, pictureHTML: pictureHTML, stripHTML: stripHTML, columns: columns, filters: filters, bandHTML: bandHTML, stageWord: stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);
