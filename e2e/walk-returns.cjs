@@ -83,7 +83,7 @@ const CHART = { accounts: [acct('1400', 'Cash on hand', 'asset', 'cash', 'G1400'
 
 const RCM_WHY = 'Reverse-charge tax is owed this period and the recoverable tax is more than the due tax. The return nets them on the form; this close cannot post that netting yet — lodge from the return and record the payment by hand.';
 /* the server's close names the period WITHOUT `ended` (that flag is the list's, GET /returns) */
-const RP = (P) => { const o = Object.assign({}, P); delete o.ended; return o; };
+const RP = (P) => { const o = Object.assign({}, P); delete o.ended; delete o.state; delete o.closed; return o; };
 /* the months a close locks, as lib/books-period lockCovered answers them: [{ fiscal_year, period }] — AU's year starts in July, the Emirates' in January */
 const LOCKED_BY = (P, yearStartMonth) => {
   const out = [];
