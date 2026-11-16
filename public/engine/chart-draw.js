@@ -601,7 +601,7 @@
       zeroLineOf(width, layout) +
       body +
       labelsOf(list, layout, height, function (at, count) {
-        return labelled || at === 0 || at === count - 1 || at % every === 0;
+        return labelled || at === 0 || at === count - 1 || (at % every === 0 && count - 1 - at >= every); /* the closing label is never crowded by the one before it */
       }) +
       '</svg>'
     );
