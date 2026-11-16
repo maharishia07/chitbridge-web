@@ -1058,6 +1058,7 @@
     'This offer changed while you were confirming; check and try again': 'تغيّر هذا العرض أثناء التأكيد؛ تحقّق وحاول مرة أخرى',
     'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'هذا القيد لم يعد على الشاشة، لذا لم تُمسح دفعته. أعد فتحه وحاول مرة أخرى.',
     'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'هذا القيد لا يحمل مبلغ دفعته وعملتها، لذا لم تُمسح. أعد فتحه وحاول مرة أخرى.',
+    /* MACHINE-WRITTEN (l16 uxwrap 44501552), NOT REVIEWED BY A NATIVE SPEAKER: the next two lines need a native read before a customer sees them */
     "You do not have current access to this client's books. Nothing was opened.": "ليس لديك وصول حالي إلى دفاتر هذا العميل. لم يتم فتح أي شيء.",
     'Your access does not include costs, so the bank statements are hidden.': "لا يشمل وصولك التكاليف، لذا كشوف الحساب البنكية مخفية.",
     '{count} product\u0005one': '{count} منتج',

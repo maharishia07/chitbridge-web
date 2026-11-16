@@ -955,6 +955,7 @@
     'This offer changed while you were confirming; check and try again': 'पुष्टि करते समय यह ऑफ़र बदल गया; जाँचकर फिर कोशिश करें',
     'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'यह चिट अब स्क्रीन पर नहीं है, इसलिए भुगतान नहीं हटाया गया। इसे फिर खोलकर कोशिश करें।',
     'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'इस चिट में भुगतान की राशि और मुद्रा नहीं है, इसलिए इसे नहीं हटाया गया। इसे फिर खोलकर कोशिश करें।',
+    /* MACHINE-WRITTEN (l16 uxwrap 44501552), NOT REVIEWED BY A NATIVE SPEAKER: the next two lines need a native read before a customer sees them */
     "You do not have current access to this client's books. Nothing was opened.": "इस ग्राहक की बही तक अभी आपकी पहुँच नहीं है। कुछ भी नहीं खोला गया।",
     'Your access does not include costs, so the bank statements are hidden.': "आपकी पहुँच में लागत शामिल नहीं है, इसलिए बैंक स्टेटमेंट छिपे हैं।",
     '{count} product\u0005one': '{count} उत्पाद',

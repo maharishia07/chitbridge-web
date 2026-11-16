@@ -954,6 +954,7 @@
     'This offer changed while you were confirming; check and try again': 'Cette offre a changé pendant votre confirmation ; vérifiez et réessayez',
     'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'Cette pièce n’est plus à l’écran, son paiement n’a donc pas été effacé. Rouvrez-la et réessayez.',
     'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'Cette pièce n’indique pas le montant et la devise de son paiement, il n’a donc pas été effacé. Rouvrez-la et réessayez.',
+    /* MACHINE-WRITTEN (l16 uxwrap 44501552), NOT REVIEWED BY A NATIVE SPEAKER: the next two lines need a native read before a customer sees them */
     "You do not have current access to this client's books. Nothing was opened.": "Vous n’avez pas d’accès actuel aux livres de ce client. Rien n’a été ouvert.",
     'Your access does not include costs, so the bank statements are hidden.': "Votre accès n’inclut pas les coûts, les relevés bancaires sont donc masqués.",
     '{count} product\u0005one': '{count} produit',

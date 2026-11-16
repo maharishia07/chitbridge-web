@@ -150,7 +150,7 @@
   function refuseInPlace(unread) {
     var host = root.document.getElementById('content');
     if (!host) return root.location.replace('/network.html');
-    host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '" role="alert">' + esc(words(unread ? 'The list of your clients could not be read. Nothing was opened.' : "You do not have current access to this client's books. Nothing was opened.")) + (unread ? ' <a href="" data-testid="acting-retry" onclick="location.reload();return false">' + esc(words('Try again')) + '</a> ·' : '') + ' <a href="/network.html" data-testid="acting-refused-back">' + esc(words('Back to My network')) + '</a></div>';
+    host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '" role="alert">' + esc(words(unread ? 'Your client list could not be read. Nothing was opened.' : "You do not have current access to this client's books. Nothing was opened.")) + (unread ? ' <a href="" data-testid="acting-retry" onclick="location.reload();return false">' + esc(words('Try again')) + '</a> ·' : '') + ' <a href="/network.html" data-testid="acting-refused-back">' + esc(words('Back to My network')) + '</a></div>';
   }
   /** the page's way in: only on a live adviser grant, then the menu is cut to the books tabs; false = not entered */
   function openPage(base, token, menu, groups) {

@@ -954,6 +954,7 @@
     'This offer changed while you were confirming; check and try again': 'நீங்கள் உறுதிசெய்யும்போது இந்தச் சலுகை மாறிவிட்டது; சரிபார்த்து மீண்டும் முயலவும்',
     'This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.': 'இந்தச் சீட்டு திரையில் இல்லை, எனவே கட்டணம் நீக்கப்படவில்லை. மீண்டும் திறந்து முயலவும்.',
     'This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.': 'இந்தச் சீட்டில் கட்டணத் தொகையும் நாணயமும் இல்லை, எனவே நீக்கப்படவில்லை. மீண்டும் திறந்து முயலவும்.',
+    /* MACHINE-WRITTEN (l16 uxwrap 44501552), NOT REVIEWED BY A NATIVE SPEAKER: the next two lines need a native read before a customer sees them */
     "You do not have current access to this client's books. Nothing was opened.": "இந்த வாடிக்கையாளரின் கணக்குகளுக்கு உங்களுக்கு தற்போது அணுகல் இல்லை. எதுவும் திறக்கப்படவில்லை.",
     'Your access does not include costs, so the bank statements are hidden.': "உங்கள் அணுகலில் செலவுகள் இல்லை, எனவே வங்கி அறிக்கைகள் மறைக்கப்பட்டுள்ளன.",
     '{count} product\u0005one': '{count} பொருள்',
