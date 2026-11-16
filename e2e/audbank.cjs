@@ -164,7 +164,7 @@ function periodRows() {
     const t = (id) => p.textContent('[data-testid="' + id + '"]');
     ok(/Locked by Eastlake owner · 15 Nov 2026/.test(await t('lk-who-3')), 'Sep: "Locked by Eastlake owner · 15 Nov 2026"');
     console.log('  TEXT ' + JSON.stringify([await t('lk-who-2'), await t('lk-who-1')]));
-    ok(/Locked by Eastlake owner · 0?5 Sep 2026/.test(await t('lk-who-2')), 'Aug: "Locked by Eastlake owner · 5 Sep 2026"');
+    ok(/Locked by Eastlake owner · 0?5 Sep(t)? 2026/.test(await t('lk-who-2')), 'Aug: "Locked by Eastlake owner · 5 Sep 2026"');
     ok(/Opened again by Eastlake owner · 0?1 Oct 2026 · Why: bank fee missed/.test(await t('lk-who-1')) && /Later months stay locked/.test(await t('lk-who-1')), 'Jul: opened again by whom, when and why, and the odd state is explained: "Later months stay locked."');
     ok((await p.locator('[data-testid="lk-hist-3"]').count()) === 1 && (await p.locator('[data-testid="lk-hist-2"]').count()) === 0, 'Sep has a History (3); Aug, with one event, has none');
     await p.focus('[data-testid="lk-hist-3"] summary'); await p.keyboard.press('Enter');

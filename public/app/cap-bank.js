@@ -1174,7 +1174,7 @@ function bankNext(r) {
   else if (r.status === 'told') h += told() + row('Next', bkbE(tx('Not in your books yet. Record from the chit fills in their amount and bills.')));
   else if (r.status === 'told-only') h += told() + row('Why', bkbE(tx('Their chit says it was paid, but it is not on this statement yet.')));
   else if (r.status === 'matched' || r.status === 'accepted')
-    h += books() + row('Matched by', bkbE(tx(HOW[r.how] || 'a rule'))) + (r.accepted && r.accepted.by ? row('Accepted by', bkbE(txf('{who} · {date}', { who: r.accepted.by, date: bkDate(String(r.accepted.at || '').slice(0, 10)) }))) : '') + row('Told by', bkbE(tx('Nobody sent a chit for it')));
+    h += books() + row('Matched by', bkbE(tx(HOW[r.how] || 'a rule'))) + row('Told by', bkbE(tx('Nobody sent a chit for it')));
   else if (r.status === 'asked')
     h += row(
       'Asked',
@@ -1206,6 +1206,7 @@ function bankNext(r) {
     h +=
       row('Why', bkbE(r.sugg && r.sugg.why ? tx(r.sugg.why) : tx('Nobody told you about it and nothing in your books matches it'))) +
       row('Next', bkbE(tx('Ask the party which bill, or add it in your books.')));
+  if (r.accepted && r.accepted.by) h += row('Accepted by', bkbE(txf('{who} · {date}', { who: r.accepted.by, date: bkDate(String(r.accepted.at || '').slice(0, 10)) }))); /* W15-71: who matched it and when, whatever its state before */
   const notes = r.key ? (bkbRec().notes || {})[r.key] || [] : [];
   if (notes.length)
     h +=
