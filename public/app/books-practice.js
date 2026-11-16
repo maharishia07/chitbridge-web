@@ -38,12 +38,14 @@
       return null;
     }
   }
+  var FAILED = { failed: true };
   function read(left) {
     left = left === undefined ? 3 : left;
     return root.fetch(base() + EP.practice.p, { method: EP.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
       if (r.status === 503 && left > 0) {
         return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1); });
       }
+      if (r.status === 429 || r.status >= 500) return FAILED; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
       if (!r.ok) return null; /* a login that may not read the practice (403) or a server without it: nothing is drawn */
       return r.json();
     });
@@ -136,8 +138,6 @@
   function shortDay(iso) {
     try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return day(iso); }
   }
-  function checkedCell(r) {
-    var e = r.year_end && r.year_end.entries;
   /** W3 (Athi, 16 Nov): the Checked cell says the share WITH the counts, so a big book's 50% pending is not read like a small one's; the share rounds DOWN and is never 100% unless every entry is checked */
   function checkedWords(e) {
     if (!e) return '—';
@@ -150,6 +150,8 @@
     var e = r.year_end && r.year_end.entries;
     return e ? e.of - e.checked : -1;
   }
+  function checkedCell(r) {
+    var e = r.year_end && r.year_end.entries;
     return e ? esc(checkedWords(e)) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
@@ -341,6 +343,8 @@
      only a hang-guard (a read that never returns); a slow answer shows the loading frame (drawWaiting) and Home waits for it. */
   var SETTLE_CEILING = 25000;
   function settled(ms) {
+    /* l16 W5: while a known firm's practice read has failed, nothing decides "a shop": the cards keep waiting for the retry */
+    if (P.failedFirm) return settledOnce;
     return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(go, ms || SETTLE_CEILING, false); })]);
   }
   /** what the last answer said (a firm or not) for THIS login, kept per browser only to word the loading frame and to decide whether Home holds its paint; the page never decides from it.
@@ -375,7 +379,7 @@
     var hs = root.document.createElement('style');
     hs.textContent = 'html.bp-hold [data-testid="shell-areas"],html.bp-hold [data-testid="shell-sidetools"],html.bp-hold #railbox{display:none!important}html.bp-hold .cbsh-nv:not([data-go="home"]){visibility:hidden}';
     (root.document.head || root.document.documentElement).appendChild(hs);
-    root.setTimeout(release, SETTLE_CEILING + 500);
+    root.setTimeout(function () { if (!P.failedFirm) release(); }, SETTLE_CEILING + 500);
   }
   /* l16 n12: a firm's Home draws neither the two side buttons (We lean on / Leans on us) nor the Your work strip: one class, set from the one rule, hides them with no flash (the hold above covers the wait) */
   function markFirm() {
@@ -401,6 +405,32 @@
     w.innerHTML = (hint() ? '<h2 style="margin:0 0 6px;font-size:18px">' + esc(tx('Your practice')) + '</h2>' : '') + '<p class="sub">' + esc(tx('Loading')) + '</p>';
     areas.parentNode.insertBefore(w, areas);
   }
+  /** l16 W5: a login known to be a firm (hint 1) whose practice read failed (429 / 5xx / no answer): a calm frame with a retry, never the shop Home. An unknown login keeps hold-then-decide. */
+  function drawFailed() {
+    dropWaiting();
+    var areas = root.document.querySelector('[data-testid="shell-areas"]');
+    if (!areas || root.document.getElementById('bp_failed')) return;
+    var w = root.document.createElement('section');
+    w.id = 'bp_failed';
+    w.setAttribute('data-testid', 'practice-failed');
+    w.setAttribute('role', 'alert');
+    w.style.margin = '0 0 16px';
+    w.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + esc(tx('Your practice')) + '</h2><p class="sub">' + esc(tx("Can't load your practice right now")) + '</p>' +
+      '<button type="button" class="btn" data-testid="practice-retry">' + esc(tx('Try again')) + '</button>';
+    w.querySelector('button').onclick = function () {
+      P.failedFirm = false;
+      P.token = null; /* the next tick reads again */
+      var f = root.document.getElementById('bp_failed');
+      if (f && f.parentNode) f.parentNode.removeChild(f);
+      tick();
+    };
+    areas.parentNode.insertBefore(w, areas);
+  }
+  function failedRead() {
+    P.pending = false;
+    if (hintRaw() === '1') { P.failedFirm = true; drawFailed(); return; } /* known firm: stay held, say so, offer the retry */
+    settle(); /* an unknown login or a known shop: the current behaviour */
+  }
   function tick() {
     var t = token();
     if (!t) return;
@@ -411,6 +441,7 @@
       P.pending = true;
       P.since = Date.now();
       read().then(function (answer) {
+        if (answer === FAILED) return failedRead();
         if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
         P.data = answer;
         hint(answer.own_trade === false);
@@ -418,7 +449,7 @@
         root.dispatchEvent(new root.Event('cb-practice'));
         settle();
         tick();
-      }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); settle(); });
+      }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); failedRead(); });
     } else if (P.data && !root.document.getElementById('bp_practice')) draw();
     else if (P.pending && !P.data && (holding || Date.now() - P.since > 800)) drawWaiting();
   }

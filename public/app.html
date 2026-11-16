@@ -3978,6 +3978,36 @@ function ledgerDoorClosed(view) {
   var v = view || (typeof BK !== 'undefined' && BK && BK.tab) || '';
   location.replace('/accounts.html' + (v ? '#' + v : ''));
 }
+/** l16 W4: where an ACTOR lands: 'home' (a firm's practice) · 'rail' · or a promise of either (one practice read, 4 s at most, its answer kept as the one hint books-practice.js reads) */
+function firmLanding() {
+  var tail = String(SESSION.token || '').slice(-12),
+    kept = '';
+  try {
+    kept = localStorage.getItem('cb_practice_hint') || '';
+  } catch (_) {}
+  if (kept.slice(1, 2) === ':' && kept.slice(2) === tail) return kept.slice(0, 1) === '1' ? 'home' : 'rail';
+  var ctl = typeof AbortController === 'function' ? new AbortController() : null,
+    t = setTimeout(function () {
+      if (ctl) ctl.abort();
+    }, 4000);
+  return fetch(CFG.API_BASE + '/api/books-grants/practice', { headers: { Authorization: 'Bearer ' + SESSION.token }, signal: ctl ? ctl.signal : undefined })
+    .then(function (r) {
+      return r.ok ? r.json() : null;
+    })
+    .then(function (a) {
+      clearTimeout(t);
+      if (!a) return 'rail'; /* no answer (403, 429, a hang): not decided, not kept */
+      var firm = !!(a.clients && a.clients.length && a.own_trade === false);
+      try {
+        localStorage.setItem('cb_practice_hint', (firm ? '1' : '0') + ':' + tail);
+      } catch (_) {}
+      return firm ? 'home' : 'rail';
+    })
+    .catch(function () {
+      clearTimeout(t);
+      return 'rail';
+    });
+}
 window.addEventListener('hashchange', route);
 function route() {
   try {
@@ -3998,6 +4028,19 @@ function route() {
    * the back office on it.
    */
   if (SESSION.token && counterHere() && !counterStay() && (text === '#/' || text === '' || text === '#/app')) return toCounter();
+  /* l16 W4 (walk 16 Nov): STAFF OF A FIRM LAND ON THE PRACTICE. An actor whose firm practice answers (clients held by live grants, no trade of its own: the same rule as books-practice.js isFirm)
+     opens Home, the same as the firm's owner; a shop's counter staff keep the rail. The per-login hint (cb_practice_hint, the one books-practice.js keeps) answers at once; with none, ONE practice read decides and is kept.
+     ONLY the app's own front (#/app, empty), as the paired-counter rule above. A read that fails or is slow lets the rail draw (the practice frame on Home carries its own retry). */
+  if (SESSION.token && SESSION.role === 'actor' && (text === '#/' || text === '' || text === '#/app') && !window._firmLandingDone) {
+    var _fl = firmLanding();
+    if (_fl === 'home') return location.replace('/');
+    if (_fl && _fl.then)
+      return _fl.then(function (to) {
+        window._firmLandingDone = true;
+        if (to === 'home') location.replace('/');
+        else route();
+      });
+  }
   /* ⭐ THE SMALLEST DEEP LINK (index page, 2026-09-30): #/app/<nav> sets UI.nav on arrival, and nothing else —
      the app still routes by UI.nav, never by hash. Exact #/app keeps the counter jump above: a deep link is a
      deliberate ask for one screen, and answering a specific request with the till is its own bug. */
