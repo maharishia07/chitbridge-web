@@ -174,7 +174,7 @@
       root.CBChartCap.set('chart_fav_' + kind, isFavourite(kind, state) ? '' : state.combo + '-' + state.type);
       redraw();
     });
-    read.addEventListener('change', function () {
+    read.addEventListener('click', function () {
       state.read = state.read === 'on' ? 'off' : 'on';
       read.setAttribute('aria-pressed', state.read === 'on' ? 'true' : 'false');
       root.CBChartCap.set('chart_read', state.read);
