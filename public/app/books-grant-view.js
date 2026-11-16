@@ -207,7 +207,12 @@
   }
 
   /* ── the screen ── */
+  /** a phone (the header's 700 px rule) holds the screen pick as ONE select, not seven buttons */
+  function phone() {
+    return typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 700px)').matches;
+  }
   function tabs() {
+    if (phone()) return '';
     var all = REPORTS.map(function (r) {
       return { k: r.k, label: r.label };
     });
@@ -217,6 +222,23 @@
         '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
     }).join('') + prepareButton() + bankButton();
+  }
+  /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
+  function tabSelect() {
+    if (!phone() || viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
+    var options = REPORTS.map(function (r) { return { value: r.k, label: words(r.label) }; });
+    if (isAdviser()) options.push({ value: ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
+    else options.push({ value: '_bank', label: words('Bank') });
+    return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
+      mount: 'NET005-U02', label: 'Books', bare: true, id: 'bv_tabsel', testid: 'bv-tab-select', value: viewState.report, options: options,
+      onChange: function (value) {
+        if (value === '_prepare') return openPrepare();
+        if (value === '_bank') return openBank();
+        viewState.report = value;
+        tell();
+        reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
+      }
+    }) + '</span>';
   }
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
   function bankButton() {
@@ -234,7 +256,8 @@
   }
   /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
   function band(report) {
-    var ctx = viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + asAt(report) + periodLine(report) + dayPick(report) + '</span>'; /* the date the figures stand at, with its Day pick: one place, the header line */
+    var ctx = viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + asAt(report) + (viewState.choices ? '' : periodLine(report)) + dayPick(report) + '</span>' + tabSelect(); /* the date the figures stand at, with its Day pick: one place, the header line; the period dropdown says the period, so the Period tag is only the fallback */
+    root.CBBooksActing.css(); /* the one header line's rules, for the auditor's band too (the adviser's banner draws them itself) */
     if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores, screenName(), false, ctx);
     return (
       '<div class="bv-band" role="status" data-testid="bv-band">' + root.CBBooksActing.crumbs(screenName(), false) + '<span class="tag bv-ro" data-testid="bv-readonly">' + esc(words('read only')) + '</span>' + ctx + root.CBBooksActing.periodSlot() +
@@ -256,7 +279,16 @@
     if (isAdviser()) root.CBBooksActing.wireBanner(viewState.host, { onBack: back, onSwitch: viewState.o.onSwitch });
     else $('bv_back').onclick = back;
   }
+  /** the screen pick changes form at the phone width: repaint once when the width crosses it (bound once per page) */
+  var breakpointBound = false;
+  function followBreakpoint() {
+    if (breakpointBound || typeof root.matchMedia !== 'function') return;
+    breakpointBound = true;
+    var query = root.matchMedia('(max-width: 700px)'), again = function () { if (viewState.host && viewState.host.isConnected && viewState.report) paint(); };
+    if (query.addEventListener) query.addEventListener('change', again);
+  }
   function paint() {
+    followBreakpoint();
     var report = onActions() ? { day: null, facts: [] } : current();
     viewState.host.innerHTML =
       band(report) +
@@ -417,12 +449,12 @@
     return report.cols.filter(function (column) { return column[2] !== 'mark' || markable(report); });
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
-  var SEARCH_FROM = 10;
+  var SEARCH_FROM = 10, BAR_FROM = 12;
   function listConfig(report, rows) {
     return {
       key: 'books-grant-' + report.k,
       csv: false /* read only: no copy of the books leaves this screen */,
-      tools: { search: rows.length >= SEARCH_FROM } /* W19: a short list is read at a glance; no search box under ten rows */,
+      tools: { search: rows.length >= SEARCH_FROM, bar: rows.length > BAR_FROM } /* W19: a short list is read at a glance; no search box under ten rows, no tools bar up to twelve (T6: first data by 20% / 30%) */,
       defaultCols: shownCols(report).map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
       rows: function () {
         return rows;

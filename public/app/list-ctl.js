@@ -120,6 +120,7 @@
     '.cbl .cbl-chip.warn::before,.cbl .cbl-chip.bad::before{content:"⚠"}',
     '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
     /* row 2 · tools */
+    '.cbl .cbl-tools[hidden]{display:none}',
     '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px;background:var(--cl-page)}',
     '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
     '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
@@ -1477,7 +1478,13 @@
         '</span>';
     return groupHtml;
   }
+  /** tools.bar:false — a short list read at a glance draws no tools bar (it stays in the page, hidden, so every part that looks for it still finds it); backwards compatible: absent = drawn */
   function paintTools(list) {
+    paintToolsBar(list);
+    var bar = $(list, ':scope > .cbl-tools');
+    if (bar) bar.hidden = !!(list.o.tools && list.o.tools.bar === false);
+  }
+  function paintToolsBar(list) {
     paintViews(list);
     var box = $(list, ':scope > .cbl-tools');
     if (!box) {
