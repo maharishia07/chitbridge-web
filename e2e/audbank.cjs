@@ -109,7 +109,7 @@ function periodRows() {
   {
     const { ctx, p } = await open(FIRM, '/accounts.html?acting=' + CLIENT + '&role=auditor#/bank');
     const shot = (name) => p.screenshot({ path: path.join(SHOTS, name) });
-    ok(/Viewing Eastlake Fresh/.test(await p.textContent('[data-testid="ba-band"]')) && /read only/.test(await p.textContent('[data-testid="ba-band"]')), 'the band says "Viewing Eastlake Fresh — read only", not "Acting for"');
+    ok(/Eastlake Fresh/.test(await p.textContent('[data-testid="ba-band"]')) && /read only/.test(await p.textContent('[data-testid="ba-band"]')), 'the band says "Viewing Eastlake Fresh — read only", not "Acting for"');
     const menu = await p.evaluate(() => [...document.querySelectorAll('[data-testid^="acc-nav-"]')].map((n) => n.getAttribute('data-testid').replace('acc-nav-', '')));
     ok(menu.includes('bank') && menu.includes('lock') && !menu.includes('pl') && !menu.includes('daybook'), 'the menu offers the Bank and the Month lock only: ' + menu.join(','));
     ok(/✓/.test(await p.textContent('[data-testid="bank-stmts-have-acc-1500-2026-08"]')) && /●/.test(await p.textContent('[data-testid="bank-stmts-have-acc-1500-2026-09"]')), 'home: FY grid with Aug signed off and Sep not');

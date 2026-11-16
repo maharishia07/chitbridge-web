@@ -215,10 +215,14 @@
   function crumbs(screen, onScreen) {
     var who = esc(context.store.name || '');
     return (
-      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" style="flex:1 0 100%;font-size:13px"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
+      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" style="flex:0 1 auto;font-size:13px"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
       (onScreen ? '<a href="' + esc(clientAddress(context.store)) + '" data-testid="crumb-client">' + who + '</a>' : '<span data-testid="crumb-client">' + who + '</span>') +
       (screen ? ' <span aria-hidden="true">›</span> <span id="ba_screen" aria-current="page" data-testid="crumb-screen">' + esc(screen) + '</span>' : '') + '</nav>'
     );
+  }
+  /** W19: the header line's empty, named slot for the period control (W14/W8 fill it); it takes the free room and pushes the way back to the right */
+  function periodSlot() {
+    return '<span class="bv-slot" id="bv_period_slot" data-testid="bv-period-slot"></span>';
   }
   /** the screen's name in the breadcrumb, when the screen changes without a repaint of the band */
   function setScreen(label) {
@@ -230,10 +234,10 @@
     return onScreen ? (context.store.name || words('Clients')) : words('Clients');
   }
   /** the banner's markup: who this is for, in which currency, a way to another store (when the firm holds more than one), the breadcrumb and the way back one level (screen: the screen's name; onScreen: this is a screen of the books page, not the client's own page) */
-  function banner(stores, screen, onScreen) {
+  function banner(stores, screen, onScreen, extra) {
     if (!context) return '';
     return (
-      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + '<b>' + (context.role === 'auditor' ? esc(words('Viewing')) + ' ' + esc(context.store.name) + ' — ' + esc(words('read only')) : esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '')) + '</b>' +
+      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + (context.role === 'auditor' ? '<span class="tag bv-ro" data-testid="bv-readonly">' + esc(words('read only')) + '</span>' : '<b class="bv-ro" style="font-size:13px">' + esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '') + '</b>') + (extra || '') + periodSlot() +
       '<span class="ba-tools">' + switchBox(stores) + '<button data-cbsid="NET006-B01" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(backLabel(onScreen)) + '</button></span></div>'
     );
   }
@@ -329,5 +333,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

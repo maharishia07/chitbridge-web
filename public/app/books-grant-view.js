@@ -143,7 +143,7 @@
       return '<button type="button" class="act ' + (m.from === on ? '' : 'quiet') + '" data-cbsid="NET005-B06" id="bv_month_' + esc(m.from.slice(0, 7).replace('-', '')) + '" data-month="' + esc(m.from) + '" aria-pressed="' + (m.from === on) + '" data-testid="bv-month-' + esc(m.from.slice(0, 7)) + '">' + esc(monthWord(m) + ' · ' + m.entries) + '</button>';
     }).join('');
     var rule = viewState.monthRule && on === viewState.monthRule.opened.from ? '<p class="sub" data-testid="bv-month-rule">' + esc(words('Opened on') + ' ' + monthWord(viewState.monthRule.opened) + ' ' + words('because') + ' ' + monthWord(viewState.monthRule.latest) + ' ' + words('has only') + ' ' + viewState.monthRule.latest.entries + ' ' + words(viewState.monthRule.latest.entries === 1 ? 'entry' : 'entries') + '. ' + words('Press its chip to see it.')) + '</p>' : '';
-    return '<div class="nw-acts" data-testid="bv-months" role="group" aria-label="' + esc(words('Months')) + '">' + chips + '</div>' + rule;
+    return '<div class="nw-acts bv-months" data-testid="bv-months" role="group" aria-label="' + esc(words('Months')) + '">' + chips + '</div>' + rule;
   }
   /** a month chosen (a chip, or a Months row): its Day book, the whole month */
   function openMonth(from, to) {
@@ -210,10 +210,11 @@
     root.location.assign(root.CBBooksActing.addressOf(root.CBBooksActing.current().store, 'journal'));
   }
   /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
-  function band() {
-    if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores, screenName(), false);
+  function band(report) {
+    var ctx = viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + asAt(report) + periodLine(report) + dayPick(report) + '</span>'; /* the date the figures stand at, with its Day pick: one place, the header line */
+    if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores, screenName(), false, ctx);
     return (
-      '<div class="bv-band" role="status" data-testid="bv-band">' + root.CBBooksActing.crumbs(screenName(), false) + '<b>' + esc(words('Viewing')) + ' ' + esc(viewState.o.member.name) + ' — ' + esc(words('read only')) + '</b>' +
+      '<div class="bv-band" role="status" data-testid="bv-band">' + root.CBBooksActing.crumbs(screenName(), false) + '<span class="tag bv-ro" data-testid="bv-readonly">' + esc(words('read only')) + '</span>' + ctx + root.CBBooksActing.periodSlot() +
       '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(words('Clients')) + '</button></div>'
     );
   }
@@ -235,11 +236,11 @@
   function paint() {
     var report = onActions() ? { day: null, facts: [] } : current();
     viewState.host.innerHTML =
-      band() +
-      '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
-      (report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '') + '</div>' +
-      (viewState.why ? '' : asAt(report) + monthBar(report) + periodLine(report)) +
-      (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
+      band(report) +
+      '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
+      (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
+      (viewState.why ? '' : monthBar(report)) +
+      (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : '') +
       (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
@@ -317,7 +318,7 @@
   /** the period the Day book shows when no day is typed: "1 Oct 2026 – 31 Oct 2026" */
   function periodLine(report) {
     if (report.k !== 'daybook' || viewState.day || !viewState.range) return '';
-    return '<h3 class="sub" data-testid="bv-period">' + esc(words('Period')) + ' ' + esc(root.shopDay(viewState.range.from)) + ' – ' + esc(root.shopDay(viewState.range.to)) + '</h3>';
+    return '<span class="tag" data-testid="bv-period">' + esc(words('Period')) + ' ' + esc(root.shopDay(viewState.range.from)) + ' – ' + esc(root.shopDay(viewState.range.to)) + '</span>';
   }
   function facts(report) {
     var items = report.facts
@@ -327,7 +328,7 @@
       .map(function (f) {
         return '<span class="tag" data-testid="bv-fact-' + f[0] + '">' + esc(words(f[1])) + ': ' + esc(minorWords(viewState.answer[f[0]])) + '</span>';
       });
-    return items.length ? '<div class="nw-acts" data-testid="bv-facts">' + items.join('') + '</div>' : '';
+    return items.length ? '<span class="bv-facts" data-testid="bv-facts">' + items.join('') + '</span>' : '';
   }
   /** the server's own totals as a last row (nothing is added up here) */
   function totalRows(key, a) {
@@ -340,7 +341,11 @@
   /** a heading naming the date the figures stand at */
   function asAt(report) {
     var date = viewState.day || (viewState.answer && (viewState.answer.asOf || viewState.answer.as_of || viewState.answer.to)) || '';
-    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<h3 class="sub" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</h3>' : '';
+    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</span>' : '';
+  }
+  /** the Day pick (a report that can stand at one day) */
+  function dayPick(report) {
+    return report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '';
   }
   function paintRows(host, report) {
     if (report.panels) return paintDues(host, report);
@@ -365,10 +370,12 @@
     return report.cols.filter(function (column) { return column[2] !== 'mark' || markable(report); });
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
+  var SEARCH_FROM = 10;
   function listConfig(report, rows) {
     return {
       key: 'books-grant-' + report.k,
       csv: false /* read only: no copy of the books leaves this screen */,
+      tools: { search: rows.length >= SEARCH_FROM } /* W19: a short list is read at a glance; no search box under ten rows */,
       defaultCols: shownCols(report).map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
       rows: function () {
         return rows;

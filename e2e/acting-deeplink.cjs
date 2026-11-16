@@ -65,9 +65,9 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   const here = (p) => new URL(p.url()).pathname;
   const BANK = '[data-testid="bank-stmts-grid"]', BAND = '[data-testid="ba-band"]', NO = '[data-testid="acting-refused"]';
   const cases = [
-    ['A', [G()], 'acting=' + CLIENT, BANK, true, /Viewing Eastlake Fresh/],
+    ['A', [G()], 'acting=' + CLIENT, BANK, true, /Eastlake Fresh[sS]*read only/],
     ['B', [G({ preset: 'adviser' })], 'acting=' + CLIENT, BANK, true, /Acting for Eastlake Fresh/],
-    ['C', [G()], 'acting=' + CLIENT + '&role=auditor', BANK, true, /Viewing Eastlake Fresh/],
+    ['C', [G()], 'acting=' + CLIENT + '&role=auditor', BANK, true, /Eastlake Fresh[sS]*read only/],
     ['D', [G({ state: 'revoked', revoked_at: '2026-11-01' })], 'acting=' + CLIENT, NO, false, /no longer|not.*access/i],
     ['E', [G({ grantor_entity: 'ent-OTHER' })], 'acting=' + CLIENT, NO, false, /no longer|not.*access/i],
     ['F', [G()], 'acting=' + CLIENT + '&role=adviser', NO, false, /no longer|not.*access/i]
