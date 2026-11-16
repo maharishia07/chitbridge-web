@@ -43,6 +43,6 @@ async function firstDataTop(page, o) {
     }
   }
   await page.setViewportSize(WIDE); await page.waitForTimeout(300);
-  return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') : out.join(' · ') };
+  return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') : out.join(' · '), all: out, bad };
 }
 module.exports = { firstDataTop, TARGET, VIEWS };
