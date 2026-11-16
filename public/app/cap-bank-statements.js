@@ -47,7 +47,7 @@ function bankStmtMount(banks) {
 }
 /** ONE read of one financial year: its 12 months of cells and ONE page of kept files, newest first (the server pages and searches; the page never holds the whole box) */
 async function bkstFetch(fy, extra) {
-  const query = Object.assign({ accounts: bkstBanks().map((item) => item.code).join(','), months: BKST_MONTHS, to: bkhFyEnd(fy), limit: BKST_PAGE }, extra || {});
+  const query = Object.assign({ accounts: bkstBanks().map((item) => item.code).join(','), months: BKST_MONTHS, to: bkhFyEnd(fy), limit: BKST_PAGE }, fy === BKST.fy ? { asOf: bkstPeriodEnd() } : {}, extra || {});
   const answer = await api('booksStmtList', { query, fresh: true });
   if (!answer || !Array.isArray(answer.cells) || !Array.isArray(answer.accounts) || !Array.isArray(answer.files)) throw new Error('the statements answer is not the statements box answer');
   return answer;
@@ -68,17 +68,19 @@ function bkstPeriodEnd() {
   const end = bkhFyEnd(BKST.fy);
   return end + '-' + bkhPad(new Date(Date.UTC(Number(end.slice(0, 4)), Number(end.slice(5, 7)), 0)).getUTCDate());
 }
-/** bank17 D2: the bank balance at the period end, READ from the sign-off the Bank already keeps (GET /bank/log statements: closing_bank_minor / closing_books_minor / difference_minor), the newest signed on or before the end; no figure is worked out here. '' when no account was signed by then. */
+/** the bank balance at the period end, READ from the sign-off the api chose (GET /bank/statement-files asOf → signed_as_at: the ONE rule, the newest period end on or before the day; no choosing, no sum here).
+ *  The words: the statement figure and "nothing unexplained" / "unexplained A$Y" (the absolute remainder after the timing items; it is NOT statement minus books, so no Books or Difference figure is shown). '' when no account was signed by then. */
 function bkstBalanceHtml() {
-  const end = bkstPeriodEnd(),
+  const signed = (BKST.data && BKST.data.signed_as_at && BKST.data.signed_as_at.accounts) || [],
     accounts = (BKST.data && BKST.data.accounts) || [],
     lines = accounts
       .map((account) => {
-        const row = (BKH.signed[account.account_id] || []).filter((item) => String(item.period_to || '').slice(0, 10) <= end).sort((a, b) => String(b.period_to).localeCompare(String(a.period_to)))[0];
+        const row = signed.filter((item) => item.account_id === account.account_id)[0];
         if (!row) return '';
         const cur = row.currency || BKST.data.currency,
-          day = typeof shopDay === 'function' ? shopDay(String(row.period_to).slice(0, 10)) : String(row.period_to).slice(0, 10);
-        return '<div data-testid="bank-stmts-bal-' + bkstE(account.account_id) + '">' + (accounts.length > 1 ? '<b>' + bkstE(account.name || account.code) + '</b> · ' : '') + bkstE(txf('Signed off to {d}', { d: day }) + ' · ' + tx('Statement') + ' ' + bkMoney(row.closing_bank_minor, cur) + ' · ' + tx('Books') + ' ' + bkMoney(row.closing_books_minor, cur) + ' · ' + tx('Difference') + ' ' + bkMoney(row.difference_minor, cur)) + '</div>';
+          day = typeof shopDay === 'function' ? shopDay(String(row.period_to).slice(0, 10)) : String(row.period_to).slice(0, 10),
+          rest = row.unexplained_minor ? txf('unexplained {a}', { a: bkMoney(row.unexplained_minor, cur) }) : tx('nothing unexplained');
+        return '<div data-testid="bank-stmts-bal-' + bkstE(account.account_id) + '">' + (accounts.length > 1 ? '<b>' + bkstE(account.name || account.code) + '</b> · ' : '') + bkstE(txf('Signed off to {d}', { d: day }) + ' · ' + tx('Statement') + ' ' + bkMoney(row.statement_minor, cur) + ' · ' + rest) + '</div>';
       })
       .filter(Boolean);
   return lines.length ? '<div class="pe-note" data-testid="bank-stmts-balance">' + lines.join('') + '</div>' : '';
