@@ -398,7 +398,7 @@
   }
   /* ── l16 R4-2b: the client is in the address (?open=<client>&view=<screen>): every open client and every screen of its books is a history entry (pushState), Back and Forward restore it, and the page never falls back to the network list ── */
   function addressOfClient(id, view, period) {
-    return '/network.html?open=' + encodeURIComponent(id) + (view ? '&view=' + encodeURIComponent(view) : '') + (view && period ? root.CBPeriodPick.toAddress(period) : ''); /* the period rides the address (&fy= or &from=&to=): Back and a shared link keep it */
+    return '/network.html?open=' + encodeURIComponent(id) + (view ? '&view=' + encodeURIComponent(view) : '') + (view && period ? root.CBPeriodPick.toAddress(period) : '') + (view === 'daybook' && root.CBBooksGrantFilters ? root.CBBooksGrantFilters.carry(root.location.search, id) : ''); /* the period rides the address (&fy= or &from=&to=): Back and a shared link keep it; so do the Day book's filters (A3C, &dbf_*) */
   }
   /** record the client now open (or the list, id null) in history: push a new entry (replace: the one the address already names, on a deep link or a restore) */
   function record(replace, view, period) {
