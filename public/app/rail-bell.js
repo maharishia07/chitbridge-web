@@ -70,6 +70,7 @@
     askBody: 'This clears your Activity list. The events are kept — chits, statuses and disputes are unchanged.',
     readFail: 'Could not read your activity — try again',
     markFail: 'That question could not be opened — try again',
+    markGone: 'This entry was reversed or removed, so its question cannot be opened',
     aria: 'Activity',
     chit: 'a chit',
     needs: 'Clearing needs the latest update on this system'
@@ -425,7 +426,7 @@
       bell.mkDay = String(row.getAttribute('data-mark-day') || '').slice(0, 10);
       var show = function (subject) {
         if (subject) ctl.sheet(subject, { title: title });
-        else if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        else if (typeof root.toast === 'function') root.toast(T(W.markGone)); /* no id and no open question by that number: say why, not "try again" */
       };
       if (id) return ctl.load([id]).then(function () { show(id); });
       return ctl.summary().then(function (sum) {
