@@ -93,6 +93,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
       const before = posts(/POST \/api\/crm\/parties\/[^/]+\/contact-prefs/);
       if (!(await has(T('crm-consent-yes-whatsapp')))) { await page.click(T('crm-consent-no-whatsapp')); await page.waitForSelector(T('crm-consent-yes-whatsapp'), { timeout: 15000 }); }
       await page.click(T('crm-consent-yes-whatsapp'));
+      await page.fill(T('crm-consent-note'), 'Said yes at the counter on Monday'); await page.click(T('crm-consent-note-save'));
       await page.waitForSelector(T('crm-consent-no-whatsapp'), { timeout: 15000 }); await settle(600);
       const chip = await txt(T('crm-consent-whatsapp-marketing')), code = await page.getAttribute(T('crm-consent-whatsapp-marketing'), 'data-code'), fact = await txt(T('crm-sec-fact-consent'));
       await openConsent(); const hist = await txt(T('crm-consent-hist'));
@@ -112,9 +113,36 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
       const chip = await txt(T('crm-consent-sms-service')), code = await page.getAttribute(T('crm-consent-sms-service'), 'data-code');
       return { ok: /Stopped/.test(chip) && code === 'OPTED_OUT', saw: 'SMS their orders "' + chip + '" (' + code + ')' };
     });
+    await w.step('C5a', 'Yes needs its reason: under 3 characters → the sentence on the field, NO POST; the api’s own 400 words show on the field too', async () => {
+      const RT = /contact-prefs$/;
+      const re = /POST [/]api[/]crm[/]parties[/][^/]+[/]contact-prefs/, before = posts(re);
+      await openConsent(); await page.click(T('crm-consent-yes-whatsapp'));
+      await page.fill(T('crm-consent-note'), 'ok'); await page.click(T('crm-consent-note-save')); await settle(300);
+      const short = await txt(T('crm-consent-note-err')), none = posts(re) - before;
+      let seen = null;
+      await page.route(RT, async (route) => {
+        if (route.request().method() !== 'POST') return route.fallback();
+        seen = JSON.parse(route.request().postData() || '{}');
+        await route.fulfill({ status: 400, contentType: 'application/problem+json', body: JSON.stringify({ type: 'about:blank', title: 'Bad request', status: 400, code: 'BAD_REQUEST', detail: 'To note a yes to offers, say it came from staff (source: staff) and add a note of what the customer said, and when.' }) });
+      });
+      await page.fill(T('crm-consent-note'), 'Asked on the phone'); await page.click(T('crm-consent-note-save')); await settle(500);
+      await page.unroute(RT);
+      const words = await txt(T('crm-consent-note-err')), open = await has(T('crm-consent-note'));
+      await page.click(T('crm-consent-note-cancel')); const closed = !(await has(T('crm-consent-note')));
+      return { ok: /at least 3/.test(short) && (REAL || none === 0) && seen && seen.source === 'staff' && seen.note === 'Asked on the phone' && seen.allowed === true && /source: staff/.test(words) && open && closed, saw: 'short "' + short + '" · POSTs ' + none + ' · body ' + JSON.stringify(seen) + ' · api words "' + words.slice(0, 60) + '" · field kept ' + open + ' · cancel closes ' + closed };
+    });
+    if (S) await w.step('C5b', 'the customer’s own no stands: the line says so beside the toggle; a staff Yes with a reason is noted but does not lift it', async () => {
+      S.priv.prefs.unshift({ pref_id: 'cust-no-1', party_id: S.priv.prefs[0].party_id, channel: 'email', purpose: 'marketing', allowed: false, basis: 'consent', notice_version: null, noted_at: new Date(Date.now() - 86400e3).toISOString(), noted_by: S.priv.prefs[0].party_id, source: 'self', withdrawn_at: null });
+      await page.reload(); await openRecord(key); await openConsent();
+      const line = await tc(T('crm-consent-standing-email')), other = await tc(T('crm-consent-standing-whatsapp'));
+      await page.click(T('crm-consent-yes-email')); await page.fill(T('crm-consent-note'), 'Rang to ask, said yes'); await page.click(T('crm-consent-note-save'));
+      await page.waitForFunction(() => !document.querySelector('[data-testid="crm-consent-note"]'), null, { timeout: 15000 }); await settle(700);
+      const code = await page.getAttribute(T('crm-consent-email-marketing'), 'data-code'); await openConsent(); const again = await tc(T('crm-consent-standing-email'));
+      return { ok: /The customer said no themselves[.] Only their own yes lifts it[.]/.test(line) && other === '' && code !== 'CONSENT' && /said no themselves/.test(again), saw: 'line "' + line + '" · whatsapp line "' + other + '" · chip code after the staff yes ' + code };
+    });
     /* rule 13 on the record: with CB Accounts OFF in the stand-in. With it on, the record's Ledger block (cap-books.js: the dues fact and the statement
        table) already overflows 390 px before this round — a CB Accounts finding, reported, not hidden; the Consent block itself is measured here. */
-    if (S) { S.ledgerOff = true; await page.evaluate(() => { try { localStorage.setItem('cb_crm_ledger', '0'); } catch (_) {} }); await page.reload(); await openRecord(key); await openConsent(); }   /* a reload: the same hash would not reboot the page */
+    if (S) { S.ledgerOff = true; await page.evaluate(() => { try { localStorage.setItem('cb_crm_ledger', '0'); } catch (_) {} }); await page.reload(); await openRecord(key); await openConsent(); await page.click(T('crm-consent-yes-email'), { timeout: 3000 }).catch(() => {}); }   /* the reason field open and the standing line shown, measured below; a reload: the same hash would not reboot the page */
     await rule13(w, 'R13a', 'the record with Consent open (Ledger off)', 'screen');
     if (S) S.ledgerOff = false;
 
