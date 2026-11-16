@@ -203,7 +203,7 @@ function stand() {
     S2.signedBy['1500'] = monthsEnding('2026-03', 9).map((month) => ({ period_from: month + '-01', period_to: lastDay(month), at: '2026-09-02T01:00:00Z', by_name: 'Mayur', difference_minor: 0, tied: true, currency: 'INR' })); /* 2025-07 … 2026-03 signed off */
     const { ctx, p } = await open(S2, { accts, session: AU });
     const view = (w, h) => p.setViewportSize({ width: w, height: h }).then(() => p.waitForTimeout(350));
-    const fitsNow = async () => { const r = await p.evaluate(() => { const m = document.querySelector('.main'); return { h: m.scrollHeight, c: m.clientHeight, w: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }; }); const good = r.h <= r.c + 2 && r.w <= r.cw; if (!good) console.log('  FIT ' + JSON.stringify(r) + ' ' + JSON.stringify(await p.evaluate(() => ['#bk_stmts', '.bkh-body', '.bks-bar', '.bkh-fy'].map((q) => { const n = document.querySelector(q); return n ? q + ' h' + Math.round(n.getBoundingClientRect().height) + ' sh' + n.scrollHeight + ' top' + Math.round(n.getBoundingClientRect().top) : q; })))); return good; };
+    const fitsNow = async () => { const r = await p.evaluate(() => { const m = document.querySelector('.main'); return { h: m.scrollHeight, c: m.clientHeight, w: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }; }); const good = r.h <= r.c + 2 && r.w <= r.cw; if (!good) console.log('  FIT ' + JSON.stringify(r) + ' ' + JSON.stringify(await p.evaluate(() => ['#bk_stmts', '.bkh-body', '.pe-bank', '#bk_body', '.content', '.main', '#bk_res', '[data-testid="bank-form"]', '#bk_out'].map((q) => { const n = document.querySelector(q); return n ? q + ' h' + Math.round(n.getBoundingClientRect().height) + ' sh' + n.scrollHeight + ' top' + Math.round(n.getBoundingClientRect().top) : q; })))); return good; };
     const clipped = () => p.evaluate(() => Array.from(document.querySelectorAll('.bks-grid td button, .bks-grid td span.bks-sum, .bks-grid td')).filter((n) => n.scrollWidth > n.clientWidth + 1).map((n) => n.getAttribute('data-testid') || n.tagName).slice(0, 5));
     const fyNow = () => p.textContent('[data-testid="bank-home-fy-now"]');
     const retention = await p.evaluate(() => Number((shopReg() || {}).retentionYears || 0));
@@ -211,6 +211,8 @@ function stand() {
     ok(retention > 0, 'the AU pack states the record-keeping years: ' + retention);
     /* 1 · one year, the one holding the newest statement */
     ok(/FY 2026-27/.test(await fyNow()), 'the year opens on the one holding the newest statement: ' + (await fyNow()));
+    const logs = S2.reqs.filter((r) => /bank\/log/.test(r.u));
+    ok(logs.length === 10 && logs.every((r) => /marks_limit=0/.test(r.u) && new RegExp('from=' + (2026 - (retention - 1)) + '-07-01').test(r.u) && /to=2027-06-30/.test(r.u)), 'the Bank home asks for the sign-offs only: no marks, ' + retention + ' years (from the first day of the oldest year), once per account (' + logs.length + ')');
     ok((await p.locator('.bks-grid thead th').count()) === 14, 'one year: twelve months across (plus the account and the year count)');
     const first = S2.reqs.filter((r) => /statement-files/.test(r.u) && r.m === 'GET')[0];
     ok(first && /months=12/.test(first.u) && /to=2027-06/.test(first.u) && /limit=25/.test(first.u), 'the box is read for ONE year and ONE page: ' + (first && first.u.replace(/^.*\/api/, '')));

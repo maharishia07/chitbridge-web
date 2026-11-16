@@ -24,6 +24,15 @@ function bkhMonthLong(month) {
 const bkhAccountById = (id) => ((BKST.data && BKST.data.accounts) || []).filter((item) => item.account_id === id)[0] || null;
 const bkhAccountByCode = (code) => ((BKST.data && BKST.data.accounts) || []).filter((item) => String(item.code) === String(code))[0] || null;
 const bkhCellOf = (account, month) => BKST.data.cells.filter((item) => item.account_id === account.account_id && item.month === month)[0];
+/** the days the sign-offs are asked for: from the first day of the oldest year the stepper reaches (the shown year when the pack gives no years to keep) to the last day of this year's end */
+function bkhSignedRange() {
+  if (BKST.fy === null) return {};
+  const years = bkhRetention(),
+    start = bkhStartMonth(),
+    oldest = years ? BKST.cur - (years - 1) : BKST.fy,
+    end = bkhFyEnd(BKST.cur);
+  return { from: oldest + '-' + bkhPad(start) + '-01', to: end + '-' + bkhPad(new Date(Date.UTC(Number(end.slice(0, 4)), Number(end.slice(5, 7)), 0)).getUTCDate()) };
+}
 /** the sign-offs of every account the box lists: the same GET /bank/log the lines view reads; one that fails leaves the whole answer unknown (cells say Kept) */
 async function bankHomeSigned() {
   const accounts = (BKST.data && BKST.data.accounts) || [],
@@ -32,7 +41,7 @@ async function bankHomeSigned() {
   await Promise.all(
     accounts.map(async (account) => {
       try {
-        const log = await api('booksBankLog', { query: { account: String(account.code) }, fresh: true });
+        const log = await api('booksBankLog', { query: Object.assign({ account: String(account.code), marks_limit: 0 }, bkhSignedRange()), fresh: true }); /* only the sign-offs, of the years on show: no marks, never the whole record */
         next[account.account_id] = (log && log.statements) || [];
       } catch (_) {
         known = false;
