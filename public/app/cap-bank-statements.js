@@ -342,6 +342,7 @@ function bkstFilesOptions() {
     search: (file) => [bkstAccountName(bkstAccountOf(file.account_id)), file.name, file.period_from, file.period_to].join(' '),
     searchHint: tx('Account, month or file name'),
     empty: { title: tx('No kept file matches') },
+    tools: { count: false } /* the pager above says "1–25 of 41" once; no second "25 shown of 41" */,
     remote: { total: () => (BKST.data ? BKST.data.total : 0), onQuery: (query) => bkstFilesQuery(query.q) }
   };
 }
