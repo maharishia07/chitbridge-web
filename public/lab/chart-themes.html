@@ -75,22 +75,38 @@ details th:first-child,details td:first-child{text-align:start}
 .lg .n{font-variant-numeric:tabular-nums;text-align:end}.lg .p{font-weight:700;min-width:44px;text-align:end;font-variant-numeric:tabular-nums}
 .two{display:grid;grid-template-columns:minmax(200px,300px) 1fr;gap:16px;align-items:center}
 @media (max-width:760px){.shapes{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+.bar{position:sticky;top:0;z-index:20;background:var(--page);border-bottom:1px solid var(--line);padding:8px 16px}
+.bar .in{max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:13px}
+.bar label{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--grey)}
+.bar select{font:inherit;font-size:13px;min-height:32px;max-width:100%;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+.bar .rd{font-weight:700;color:var(--grey);display:inline-flex;gap:5px;align-items:center}
+.bar .jump{display:inline-flex;gap:10px;flex-wrap:wrap;margin-inline-start:auto}
+.bar .jump a{color:var(--accent-text);text-decoration:underline;font-weight:600}
+.card,h3{scroll-margin-top:64px}
+@media (max-width:760px){.card,h3{scroll-margin-top:112px}.bar{padding:6px 16px}.bar .jump{margin-inline-start:0}}
 .foot{font-size:12px;color:var(--grey);margin-top:12px}
 @media (max-width:760px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<div class="bar" id="bar" role="group" aria-label="Options">
+  <div class="in">
+    <label>Combination <select id="selC"></select></label>
+    <label>Theme <select id="selT"></select></label>
+    <label class="rd" title="Hold every mark to 3 to 1 against the page and fall back to the IBCS grey where a combination fails. Off = the vibrant colours as published. Remembered in this browser."><input type="checkbox" id="raw"> Readability</label>
+    <span class="jump"><a href="#sec-bars">Bars</a><a href="#sec-lines">Lines</a><a href="#sec-pie">Pie &amp; donut</a><a href="#sec-age">Age</a><a href="#sec-pbi">Power BI table</a></span>
+  </div>
+</div>
 <div class="wrap">
   <h1>Chart palette across the 16 avatar themes <span class="sample">Sample</span></h1>
   <p class="lead">A throwaway page, not product. The numbers are fixed samples. Pick a theme (the avatar's own) and a colour combination; each chart carries its legend. Combinations are ranked: the top 6 come first.</p>
   <div class="lab">Colour combination</div>
   <div class="themes" id="combos" role="group" aria-label="Colour combination"></div>
-  <label class="raw"><input type="checkbox" id="raw"> Readability: hold every mark to 3 to 1 against the page, and fall back to the IBCS grey where a combination fails (off = the vibrant colours as published; your choice is remembered in this browser)</label>
   <div class="lab">Theme</div>
   <div class="themes" id="themes" role="group" aria-label="Theme"></div>
   <div class="status" id="status" aria-live="polite"></div>
   <div id="stage" class="grid">
-    <section class="card wide" aria-labelledby="t1"><h2 id="t1">Sales, this year against last year <span class="sample">Sample</span></h2>
+    <section class="card wide" id="sec-bars" aria-labelledby="t1"><h2 id="t1">Sales, this year against last year <span class="sample">Sample</span></h2>
       <p class="sub">Twelve months, thousands. The plan is an outline.</p>
       <div class="key" id="k1"></div>
       <div id="c1"></div><details><summary>Table</summary><div id="d1"></div></details></section>
@@ -98,22 +114,22 @@ details th:first-child,details td:first-child{text-align:start}
       <p class="sub">Thousands owed to you, ranked. Calm to warm as the days grow.</p>
       <div class="key" id="k2"></div>
       <div id="c2"></div><details><summary>Table</summary><div id="d2"></div></details></section>
-    <section class="card" aria-labelledby="t3"><h2 id="t3">Cash, next 30 days <span class="sample">Sample</span></h2>
+    <section class="card" id="sec-lines" aria-labelledby="t3"><h2 id="t3">Cash, next 30 days <span class="sample">Sample</span></h2>
       <p class="sub">Expected balance each day, thousands. The lowest day is marked.</p>
       <div class="key" id="k3"></div>
       <div id="c3"></div><details><summary>Table</summary><div id="d3"></div></details></section>
-    <section class="card wide" aria-labelledby="t4"><h2 id="t4">Sales by category, five ways <span class="sample">Sample</span></h2>
+    <section class="card wide" id="sec-pie" aria-labelledby="t4"><h2 id="t4">Sales by category, five ways <span class="sample">Sample</span></h2>
       <p class="sub">Thousands, largest first from 12 o'clock; slices under 3% fold into Other. Pie, donut, donut with the total, half-donut, then the stacked bar as the easier-to-read alternative.</p>
       <div class="shapes"><figure><div id="p1"></div><figcaption>Pie</figcaption></figure><figure><div id="p2"></div><figcaption>Donut</figcaption></figure><figure><div id="p3"></div><figcaption>Donut with the total</figcaption></figure><figure><div id="p4"></div><figcaption>Half-donut</figcaption></figure></div>
       <div class="lg" id="lg1"></div>
       <div class="sub" style="margin-top:10px">The readable alternative: one bar, 100%</div><div id="sb1"></div></section>
-    <section class="card wide" aria-labelledby="t5"><h2 id="t5">To collect, by age, as a donut <span class="sample">Sample</span></h2>
+    <section class="card wide" id="sec-age" aria-labelledby="t5"><h2 id="t5">To collect, by age, as a donut <span class="sample">Sample</span></h2>
       <p class="sub">Five groups, calm to warm as the days grow. The same figures as the ranked bars above.</p>
       <div class="two"><div id="p5"></div><div><div class="lg" id="lg2"></div></div></div>
       <div class="sub" style="margin-top:10px">As one 100% bar</div><div id="sb2"></div></section>
   </div>
 
-  <h3>Power BI comparison: the visuals a finance dashboard uses, and what we cover</h3>
+  <h3 id="sec-pbi">Power BI comparison: the visuals a finance dashboard uses, and what we cover</h3>
   <div class="tbl"><table id="pbi"><thead><tr><th>Visual</th><th>Finance use</th><th>Our charts today</th></tr></thead><tbody></tbody></table></div>
 
   <h3>Ranking: readability (themes out of 16 where every series mark holds 3 to 1) and colour-blind safety (smallest neighbour difference)</h3>
@@ -327,6 +343,10 @@ details th:first-child,details td:first-child{text-align:start}
     var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-c', id);
     b.innerHTML = '<span class="rk">' + (n + 1) + '</span>' + NAME[id]; b.onclick = function () { curC = id; refresh(); }; cb.appendChild(b);
   });
+  var selC = document.getElementById('selC'), selT = document.getElementById('selT');
+  ORDER.forEach(function (id, n) { var o = document.createElement('option'); o.value = id; o.textContent = (n + 1) + '. ' + NAME[id]; selC.appendChild(o); });
+  KEYS.forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = ALL[k].name; selT.appendChild(o); });
+  selC.onchange = function () { curC = selC.value; refresh(); }; selT.onchange = function () { curK = selT.value; refresh(); };
   rawBox.onchange = function () { try { localStorage.setItem(SKEY, rawBox.checked ? '1' : '0'); } catch (_) {} refresh(); };
 
   /* ---------- tables ---------- */
@@ -370,7 +390,7 @@ details th:first-child,details td:first-child{text-align:start}
     CBAvatar.applyWith({ theme: curK });
     stage.style.setProperty('--c-act', use.act); stage.style.setProperty('--c-prev', use.prev); stage.style.setProperty('--c-acc', use.acc);
     use.ramp.forEach(function (c, i) { stage.style.setProperty('--c-r' + i, c); });
-    CUR = use;
+    CUR = use; selC.value = curC; selT.value = curK;
     document.querySelectorAll('#themes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === curK)); });
     document.querySelectorAll('#combos button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-c') === curC)); });
     document.querySelectorAll('#tbl tr[data-k]').forEach(function (x) { x.className = x.getAttribute('data-k') === curK ? 'on' : ''; });
