@@ -126,8 +126,9 @@
     return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(function (split) {
       if (split.unread) throw Object.assign(new Error('the grant list could not be read'), { unread: true });
       var heldBy = split.live || {}, seats = (split.seats || {})[id] || {};
-      if (!context.seatNamed) role = seats.adviser ? 'adviser' : 'auditor'; /* no &role on the address: the seat the grant gives (the adviser seat acts, as the grant list does) */
-      var grant = seats[role]; /* a seat the address names must be held: a store holding both gives each its own row */
+      var door = root.CBBooksGrantApi.doorsFor(split, id, ''); /* the ONE seat rule: only a door this login may use (the server's may_use) */
+      if (!context.seatNamed) role = door.open || (door.doors.indexOf('adviser') >= 0 ? 'adviser' : 'auditor'); /* no &role on the address: the seat this login's door gives */
+      var grant = door.doors.indexOf(role) >= 0 ? seats[role] : null; /* a seat the address names must be a door this login may use */
       if (!grant) {
         context = null;
         return false;
@@ -158,7 +159,8 @@
   function refuseInPlace(unread) {
     var host = root.document.getElementById('content');
     if (!host) return root.location.replace('/network.html');
-    host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '" role="alert">' + esc(words(unread ? 'Your client list could not be read. Nothing was opened.' : "You do not have current access to this client's books. Nothing was opened.")) + (unread ? ' <a href="" data-testid="acting-retry" onclick="location.reload();return false">' + esc(words('Try again')) + '</a> ·' : '') + ' <a href="/network.html" data-testid="acting-refused-back">' + esc(words('Back to My network')) + '</a></div>';
+    host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '"></div>';
+    root.CBShell.readFailed(host.firstChild, { what: words('Your client list'), status: unread ? 0 : 403, retry: unread ? function () { root.location.reload(); } : null, back: { href: '/network.html', label: words('Back to My network') } });
   }
   /** the page's way in: only on a live adviser grant, then the menu is cut to the books tabs; false = not entered */
   function openPage(base, token, menu, groups) {

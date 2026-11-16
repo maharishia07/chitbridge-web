@@ -84,33 +84,8 @@ W.run('books-grant', async (w) => {
     return { ok: names.every((n) => /Back|Clients|Trial|Profit|Balance|Day|owes|Closed|Months|Bank/.test(n)) && !(await has('#nw_body [data-act]')), saw: names.join(' · ') };
   });
   /* W19 (Athi 16 Nov, "be more space cautious in each page"): on a client's books the STATIC header (crumb, name, read only tag, period slot, tabs) takes at most 15% of the viewport height and the DYNAMIC part (totals, filters, the list's own bar and head) at most another 5%, so the first data row starts at 20% or less under the app header; a list under ten rows has no search box. GUARD NAME: w19-first-data-top */
-  await w.step('W19', 'the auditor · w19-first-data-top: every books view at 1366×768 and 390×844 starts its data within its ceiling (target 20%) of the viewport (static header ≤ 15%, totals and filters ≤ 5% more), no sideways scroll, no search box under ten rows', async () => {
-    const out = [], bad = [], NARROW_CAP = { tb: 0.5, pl: 0.5, daybook: 0.6 } /* a phone wraps the tabs to lines */, WIDE_CAP = { tb: 0.22, pl: 0.25, daybook: 0.4 } /* W19 TARGET is 0.20 for all: these ceilings are today's measured state (the list's own tools bar + head are 79 px of it; the Day book's month chips wait for the W14/W8 period control) and only ever fall */;
-    const measure = () => page.evaluate(() => {
-      const hdr = document.querySelector('header, #hdr, .app-header, [data-testid="app-header"]'), base = hdr ? hdr.getBoundingClientRect().bottom : 0;
-      const row = Array.from(document.querySelectorAll('[data-testid^="bv-row-"], #bv_list tbody tr, #bv_dues_c tbody tr')).filter((e) => e.offsetParent)[0];
-      const tabs = document.querySelector('[data-testid="bv-tabs"]'), head = document.querySelector('[data-testid="bv-band"]');
-      const rows = document.querySelectorAll('#bv_list [data-testid^="bv-row-"]').length, search = Array.from(document.querySelectorAll('#bv_list .cbl-search')).filter((e) => e.offsetParent).length;
-      return { H: innerHeight, base, staticBottom: tabs ? tabs.getBoundingClientRect().bottom - base : 0, first: row ? row.getBoundingClientRect().top - base : null, headBottom: head ? head.getBoundingClientRect().bottom - base : 0, rows, search, x: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-    });
-    for (const vp of [WIDE, NARROW]) {
-      await page.setViewportSize(vp); await page.waitForTimeout(300);
-      for (const tab of ['tb', 'pl', 'daybook']) {
-        if (!(await has(T('bv-tab-' + tab)))) continue;
-        await page.click(T('bv-tab-' + tab)); await page.waitForTimeout(500);
-        const m = await measure(), bar = m.search ? 48 : 0 /* the list's own search bar (library chrome, drawn only from ten rows) is not the page's space */, narrow = vp.width < 500;
-        const first = m.first - bar, cap = (narrow ? NARROW_CAP[tab] : WIDE_CAP[tab]) * m.H, staticCap = (narrow ? 0.4 : 0.15) * m.H;
-        out.push(vp.width + ' ' + tab + ' first ' + Math.round(first) + '/' + Math.round(cap) + ' static ' + Math.round(m.staticBottom) + '/' + Math.round(staticCap));
-        if (m.first == null) { bad.push(vp.width + ' ' + tab + ' no data row'); continue; }
-        if (m.staticBottom > staticCap) bad.push(vp.width + ' ' + tab + ' static ' + Math.round(m.staticBottom) + ' > ' + Math.round(staticCap));
-        if (first > cap) bad.push(vp.width + ' ' + tab + ' first-data ' + Math.round(first) + ' > ' + Math.round(cap));
-        if (m.x > 0) bad.push(vp.width + ' ' + tab + ' sideways ' + m.x);
-        if (m.rows < 10 && m.search) bad.push(vp.width + ' ' + tab + ' search box on ' + m.rows + ' rows');
-      }
-    }
-    await page.setViewportSize(WIDE); await page.waitForTimeout(300); await page.click(T('bv-tab-tb')); await page.waitForTimeout(300);
-    return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') : out.join(' · ') };
-  });
+  /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). */
+  await w.step('W19', 'the auditor · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0 (a view above it is held at its measured ceiling, which only falls)', () => require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'auditor' }));
   await w.step('D1', 'the auditor drill · trial balance row Cash → its ledger: opening, the line with its running balance, the period total and the closing', async () => {
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const title = await txt(T('bd-title')), facts = await txt(T('bd-facts')), line = await txt(T('bd-line-0'));

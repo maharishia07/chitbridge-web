@@ -1,0 +1,29 @@
+{
+ "about": "Views that cannot yet meet the first-data target (20% wide, 30% narrow), keyed <seat>.<view>.<width>, with the MEASURED fraction (sit-grund proof 16 Nov 2026, the first run of the widened guard). A number here may only fall; remove the line when the view meets the target.",
+ "ceilings": {
+  "auditor.tb.1366": 0.283,
+  "auditor.pl.1366": 0.312,
+  "auditor.bs.1366": 0.283,
+  "auditor.daybook.1366": 0.299,
+  "auditor.dues.1366": 0.342,
+  "auditor.periods.1366": 0.283,
+  "auditor.tb.390": 0.595,
+  "auditor.pl.390": 0.605,
+  "auditor.bs.390": 0.538,
+  "auditor.daybook.390": 0.676,
+  "auditor.dues.390": 0.517,
+  "auditor.periods.390": 0.46,
+  "accountant.tb.1366": 0.369,
+  "accountant.pl.1366": 0.369,
+  "accountant.bs.1366": 0.369,
+  "accountant.daybook.1366": 0.356,
+  "accountant.dues.1366": 0.399,
+  "accountant.periods.1366": 0.299,
+  "accountant.tb.390": 0.773,
+  "accountant.pl.390": 0.782,
+  "accountant.bs.390": 0.716,
+  "accountant.daybook.390": 0.754,
+  "accountant.dues.390": 0.687,
+  "accountant.periods.390": 0.641
+ }
+}

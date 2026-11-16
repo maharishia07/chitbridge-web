@@ -80,6 +80,8 @@
       N.held = (reply[2] || {}).live || {};
       N.ended = (reply[2] || {}).ended || {};
       N.seats = (reply[2] || {}).seats || {};
+      N.mine = (reply[2] || {}).mine || null;
+      N.unread = !!(reply[2] || {}).unread; /* the grant list could not be read: said as that, never as "Not in a network yet" */
       var s = (reply[0] && reply[0].store) || {};
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
@@ -176,6 +178,10 @@
   /* ── MY NETWORK ── */
   function paintMine(host) {
     if (N.opened) return paintOpened(host);
+    if (N.unread && !N.networks.length && !N.stores.length) {
+      host.innerHTML = '<div data-testid="nw-fail"></div>';
+      return root.CBShell.readFailed(host.firstChild, { what: T('Your clients'), status: 0, retry: start });
+    }
     if (!N.networks.length && !N.stores.length) {
       host.innerHTML =
         '<div class="empty" data-testid="nw-none"><div class="t">' +
@@ -354,32 +360,41 @@
   function rememberedSeat(id) {
     try { return root.localStorage.getItem(SEAT_KEY + id); } catch (failure) { quietSeat(failure); return null; } /* no storage: ask each time */
   }
-  function sitAs(id, name, preset) {
+  function forgetSeat(id) {
+    try { root.localStorage.removeItem(SEAT_KEY + id); } catch (failure) { quietSeat(failure); }
+  }
+  /** the seat is remembered only after the first books read of the client answered 200 (books-grant-view calls onRead): a refused choice is never stored. `at` = the screen and period the address named (a deep link, Back): kept, never cleared by the seat choice */
+  function sitAs(id, name, preset, at) {
     N.held[id] = N.seats[id][preset];
-    try { root.localStorage.setItem(SEAT_KEY + id, preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
+    N.seatToKeep = { id: id, preset: preset };
     N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: N.held[id].posting };
-    if (!N.popping) { N.view = ''; N.period = null; }
-    record(!!N.popping);
+    if (at) { N.view = at.view || ''; N.period = at.period || null; } else { N.view = ''; N.period = null; }
+    record(!!at);
     paint();
   }
-  function openSeat(id, name) {
-    var seats = N.seats[id] || {};
-    var saved = rememberedSeat(id);
-    if (!(seats.auditor && seats.adviser)) {
-      N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
-      if (!N.popping) { N.view = ''; N.period = null; }
-      record(!!N.popping);
-      paint();
-    } else if (seats[saved]) sitAs(id, name, saved);
-    else {
-      sheet('<h2 data-testid="nw-seat-title">' + esc(T('How do you want to open')) + ' ' + esc(name) + '?</h2>' +
-        '<p class="sub">' + esc(T('Your firm holds two kinds of access. Pick the one you are acting as now; it is remembered for this client.')) + '</p>' +
-        '<div class="nw-acts"><button data-cbsid="NET001-B07" type="button" class="act" data-seat="auditor" data-testid="nw-seat-auditor">' + esc(T('Open as auditor')) + '</button>' +
-        '<button data-cbsid="NET001-B08" type="button" class="act quiet" data-seat="adviser" data-testid="nw-seat-adviser">' + esc(T('Open as accountant')) + '</button></div>');
-      Array.prototype.forEach.call($('nw_sheet').querySelectorAll('[data-seat]'), function (b) {
-        b.onclick = function () { closeSheet(); sitAs(id, name, b.getAttribute('data-seat')); };
-      });
+  function keepSeat() {
+    var keep = N.seatToKeep;
+    if (!keep) return;
+    N.seatToKeep = null;
+    try { root.localStorage.setItem(SEAT_KEY + keep.id, keep.preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
+  }
+  function openSeat(id, name, at) {
+    var door = root.CBBooksGrantApi.doorsFor({ seats: N.seats, mine: N.mine }, id, rememberedSeat(id));
+    if (door.stale) forgetSeat(id); /* a stored seat the server no longer lets this login use is dropped */
+    if (door.refused) {
+      N.opened = null;
+      N.el.innerHTML = '<div data-testid="nw-refused"></div>';
+      root.CBShell.readFailed(N.el.firstChild, { what: name, status: 403, back: { href: '/network.html', label: T('Back to My network') } });
+      return;
     }
+    if (door.open) return sitAs(id, name, door.open, at);
+    sheet('<h2 data-testid="nw-seat-title">' + esc(T('How do you want to open')) + ' ' + esc(name) + '?</h2>' +
+      '<p class="sub">' + esc(T('Your firm holds two kinds of access. Pick the one you are acting as now; it is remembered for this client.')) + '</p>' +
+      '<div class="nw-acts"><button data-cbsid="NET001-B07" type="button" class="act" data-seat="auditor" data-testid="nw-seat-auditor">' + esc(T('Open as auditor')) + '</button>' +
+      '<button data-cbsid="NET001-B08" type="button" class="act quiet" data-seat="adviser" data-testid="nw-seat-adviser">' + esc(T('Open as accountant')) + '</button></div>');
+    Array.prototype.forEach.call($('nw_sheet').querySelectorAll('[data-seat]'), function (b) {
+      b.onclick = function () { closeSheet(); sitAs(id, name, b.getAttribute('data-seat'), at); };
+    });
   }
   /* ── l16 R4-2b: the client is in the address (?open=<client>&view=<screen>): every open client and every screen of its books is a history entry (pushState), Back and Forward restore it, and the page never falls back to the network list ── */
   function addressOfClient(id, view, period) {
@@ -411,14 +426,13 @@
       return;
     }
     N.view = view;
-    N.popping = true;
-    openSeat(id, N.held[id].grantor_name || T('this store'));
-    N.popping = false;
+    openSeat(id, N.held[id].grantor_name || T('this store'), { view: view, period: N.period });
   }
   function paintOpened(host) {
     N.handle = root.CBBooksGrantView.mount(host, {
       view: N.view || undefined,
       period: N.period || null,
+      onRead: keepSeat,
       onView: function (report, period) { N.view = report; N.period = period || null; record(false, report, N.period); },
       call: call,
       raw: function (path, headers) { return root.fetch((N.o.base || '') + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + N.o.token }, headers || {}) }); } /* a file: the same token and base as call, the answer left as bytes (cap-evidence.js) */,
@@ -690,14 +704,9 @@
     );
   }
 
-  function paintFail() {
-    N.el.innerHTML =
-      '<div class="empty" data-testid="nw-fail"><div class="t">' +
-      esc(T("Couldn't read your network")) +
-      '</div><button data-cbsid="NET001-B03" type="button" class="act" id="nw_retry" data-testid="nw-retry">' +
-      esc(T('Try again')) +
-      '</button></div>';
-    $('nw_retry').onclick = start;
+  function paintFail(failure) {
+    N.el.innerHTML = '<div data-testid="nw-fail"></div>';
+    root.CBShell.readFailed(N.el.firstChild, { what: T('Your network'), status: failure && failure.status, detail: failure && failure.status === 403 ? failure.message : '', retry: start });
   }
   function start() {
     N.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';
@@ -711,9 +720,7 @@
     N.openedFromLink = id;
     N.view = new root.URLSearchParams(root.location.search).get('view') || '';
     N.period = root.CBPeriodPick.fromAddress(root.location.search);
-    N.popping = true; /* the address already names this client: no new history entry */
-    openSeat(id, N.held[id].grantor_name || T('this store'));
-    N.popping = false;
+    openSeat(id, N.held[id].grantor_name || T('this store'), { view: N.view, period: N.period }); /* the address already names this client and screen: no new history entry, and the seat choice never clears them */
   }
   function reload() {
     return load().then(paint, paintFail);

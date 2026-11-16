@@ -145,6 +145,13 @@ W.run('books-adviser', async (w) => {
     const b = await txt(T('ba-band')), top = await page.$eval(T('ba-band'), (e) => e.getBoundingClientRect().top);
     return { ok: /Store One/.test(a) && /Store One, INR/.test(b) && top < 200, saw: a + ' | ' + b + ' | top ' + Math.round(top) };
   });
+  /* W19 / rule 4: the SAME first-data guard as the auditor's (e2e/lib/first-data-top.cjs), for the accountant seat: every client view by 20% / 30% of the screen, from y = 0 */
+  await w.step('W19', 'the firm · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0', async () => {
+    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    const r = await require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'accountant' });
+    await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-tabs'), { timeout: 10000 }); await page.waitForTimeout(300); /* back where F3 expects to be */
+    return r;
+  });
   await w.step('F3', 'the firm · "To review" lists the two waiting actions with their total and who prepared them; "To accept" offers no Accept', async () => {
     const list = await txt(T('ba-list')); await queue('accept');
     const none = !(await has(T('ba-accept'))); const note = await txt(T('ba-note')); await queue('review');

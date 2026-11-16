@@ -93,7 +93,7 @@ const has = (page, id) => page.locator('[data-testid="' + id + '"]').first().isV
   await page.goto(base + '/');
   await page.waitForSelector('[data-testid="practice-failed"]', { timeout: 20000 }).catch(() => {});
   ok('W5 known firm + 429: the calm "Try again" frame shows', await has(page, 'practice-failed'));
-  ok('W5 the retry button is there', await has(page, 'practice-retry'));
+  ok('W5 the retry button is there', await has(page, 'read-failed-retry'));
   await page.waitForTimeout(1500);
   ok('W5 no shop Home (areas) is drawn', !(await has(page, 'shell-areas')));
   await page.screenshot({ path: path.join(OUT, 'w5-failed.png') }).catch(() => {});
@@ -101,8 +101,8 @@ const has = (page, id) => page.locator('[data-testid="' + id + '"]').first().isV
   /* Try again: the first read is 429, the retry is answered for real */
   ({ ctx, page } = await open(browser, base, seats[u], '1', (n) => (n < 1 ? '429' : 'real')));
   await page.goto(base + '/');
-  await page.waitForSelector('[data-testid="practice-retry"]', { timeout: 20000 }).catch(() => {});
-  await page.locator('[data-testid="practice-retry"]').click().catch(() => {});
+  await page.waitForSelector('[data-testid="read-failed-retry"]', { timeout: 20000 }).catch(() => {});
+  await page.locator('[data-testid="read-failed-retry"]').click().catch(() => {});
   await page.waitForSelector('[data-testid="practice-list"]', { timeout: 20000 }).catch(() => {});
   ok('W5 Try again: the practice draws and the failed frame is gone', (await has(page, 'practice-list')) && !(await has(page, 'practice-failed')));
   await ctx.close();

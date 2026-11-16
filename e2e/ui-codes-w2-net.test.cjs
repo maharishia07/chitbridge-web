@@ -6,7 +6,7 @@
  * OWNS      the proof that every control of network-app.js, cap-suppliers.js, catalogue-lines.js, chit-sheet.js, rail-thread.js, rail-advice.js,
  *           register-form.js, signin-ui.js, signin-lab.html and the Copy-the-key button of cap-settings.js carries a data-cbsid, that each code sits
  *           INSIDE its own tag (the tag name and the text that follows the code are pinned, so a swap of two codes fails), that no code is written
- *           twice, and that the counts per file hold (56 coded elements in all).
+ *           twice, and that the counts per file hold (55 coded elements in all; NET001-B03 retired: the retry is CBShell.readFailed, CMP009-B01).
  *           Known limit: SCR054-B04 and SCR054-B08 are the same Back button drawn in two steps, so a swap of those two is not told apart.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-w2-net.test.cjs   (W2NET_MUTATE=remove or W2NET_MUTATE=swap must fail it)
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/screen-library
@@ -26,7 +26,6 @@ const WANT = [
   ["NET002-B01","app/network-app.js","button","type=\"button\" class=\"act\" id=\"nw_in\" data-testid=\"nw-offer-in\">'"],
   ["NET002-B02","app/network-app.js","button","type=\"button\" class=\"act quiet\" id=\"nw_outb\" data-testid=\"nw-off"],
   ["NET003-B01","app/network-app.js","button","type=\"button\" class=\"act\" id=\"nw_check\" data-testid=\"nw-check\"' "],
-  ["NET001-B03","app/network-app.js","button","type=\"button\" class=\"act\" id=\"nw_retry\" data-testid=\"nw-retry\">'"],
   ["BUS002-B01","app/cap-suppliers.js","button","type=\"button\" class=\"act\" data-testid=\"sup-add-open\">+ ' + esc(t"],
   ["BUS002-I01","app/cap-suppliers.js","input","class=\"inp\" id=\"sp_q\" data-testid=\"sup-add-q\" autocomplete=\"off\""],
   ["BUS002-I02","app/cap-suppliers.js","input","type=\"radio\" name=\"sp_kind\" value=\"resale\"' + (listKind !== 'own"],
@@ -111,7 +110,7 @@ for (const file of FILES) {
   check(dup.length === 0, file + ' writes no code twice' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
 }
 const perFile = (file) => source(file).match(/data-cbsid=\\?"(?:NET00[123]|SCR05[0-5]|SLB001)-[A-Z][0-9]{2}\\?"/g) || [];
-check(WANT.length === 56, 'the table holds 56 coded elements: ' + WANT.length);
+check(WANT.length === 55, 'the table holds 55 coded elements: ' + WANT.length);
 check(perFile('app/signin-ui.js').length === 14 && perFile('app/register-form.js').length === 8, 'signin-ui.js has 14 coded elements and register-form.js 8 (its four fields are ui.field mounts, UX-137 wave 3)');
 
 /** the register */

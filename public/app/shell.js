@@ -1819,8 +1819,33 @@
     working = name || null;
     paintWorking();
   }
+  /* ⭐ THE ONE FAILED-READ FRAME (firm frame P0, T2): every page that cannot read something draws THIS, never its own wording and never the server's raw word.
+     readFailed(host, { what, status, detail, retry, back })
+       what    the thing that could not be read, already in the person's words ("Your practice", "Your client list")
+       status  the HTTP status (0 / absent = no answer): 403 says access and uses the server's own sentence (detail); 429, 5xx and no answer say "could not be read, nothing was changed"
+       detail  the server's sentence for a 403 (never invented here); anything else is not printed
+       retry   a function: draws Try again (CMP009-B01); back  { href, label }: the way out
+     A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
+  function readFailed(host, o) {
+    if (!host) return null;
+    o = o || {};
+    var status = Number(o.status) || 0,
+      refused = status === 403,
+      sentence = refused
+        ? String(o.detail || '').trim() || T('You do not have access to this. Nothing was opened.')
+        : T('{what} could not be read. Nothing was changed.').replace('{what}', o.what || T('This page')),
+      back = o.back && o.back.href ? '<a class="cbsh-rf-back" href="' + esc(o.back.href) + '" data-testid="read-failed-back" style="margin-inline-start:12px">' + esc(o.back.label || T('Back')) + '</a>' : '';
+    host.innerHTML =
+      '<div class="cbsh-readfail" data-testid="read-failed" data-status="' + (refused ? '403' : status >= 500 ? '5xx' : status === 429 ? '429' : 'none') + '" role="alert" style="padding:12px 0">' +
+      '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' +
+      (typeof o.retry === 'function' ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
+    var again = host.querySelector('[data-testid="read-failed-retry"]');
+    if (again) again.onclick = o.retry;
+    return host.firstChild;
+  }
   root.CBShell = {
     setWorking: setWorking,
+    readFailed: readFailed,
     mount: mount,
     apiBase: apiBase,
     WORDS: W,

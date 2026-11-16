@@ -190,6 +190,7 @@
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
         viewState.answer = answer;
+        if (viewState.o.onRead) viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
         if (report.k === 'pl' && answer && answer.gross_profit) answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; /* the server's gross profit, named like its other totals */
         viewState.why = null;
         if (report.k === 'daybook' && viewState.mk) viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
@@ -199,7 +200,8 @@
       function (failure) {
         if (failure.status === 401) throw failure;
         viewState.answer = null;
-        viewState.why = failure.message || words("Couldn't open these books. Nothing was changed.");
+        viewState.why = true; /* the frame says it (CBShell.readFailed); the server's raw word is never printed */
+        viewState.failure = { status: failure.status || 0, detail: failure.status === 403 ? failure.message : '' };
       }
     );
   }
@@ -261,10 +263,11 @@
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
       (viewState.why ? '' : lockLines(report)) +
-      (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : '') +
+      (viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
       (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
+    if (viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: viewState.failure && viewState.failure.status, detail: viewState.failure && viewState.failure.detail, retry: function () { reload(); } });
     fillPeriodSlot(report);
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     if ($('bv_bank')) $('bv_bank').onclick = openBank;

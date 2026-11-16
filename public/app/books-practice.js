@@ -38,14 +38,13 @@
       return null;
     }
   }
-  var FAILED = { failed: true };
   function read(left) {
     left = left === undefined ? 3 : left;
     return root.fetch(base() + EP.practice.p, { method: EP.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
       if (r.status === 503 && left > 0) {
         return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1); });
       }
-      if (r.status === 429 || r.status >= 500) return FAILED; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
+      if (r.status === 429 || r.status >= 500) return { failed: true, status: r.status }; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
       if (!r.ok) return null; /* a login that may not read the practice (403) or a server without it: nothing is drawn */
       return r.json();
     });
@@ -432,7 +431,7 @@
   function settled(ms) {
     /* l16 W5: while a known firm's practice read has failed, nothing decides "a shop": the cards keep waiting for the retry */
     if (P.failedFirm) return settledOnce;
-    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(go, ms || SETTLE_CEILING, false); })]);
+    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(function () { if (hintRaw() !== "0" && !P.data) return; go(false); /* a firm or a login not yet known keeps waiting on the frame and its retry */ }, ms || SETTLE_CEILING + 50); })]);
   }
   /** what the last answer said (a firm or not) for THIS login, kept per browser only to word the loading frame and to decide whether Home holds its paint; the page never decides from it.
       Stored as "1:<token tail>" / "0:<token tail>" so another login in the same browser reads as unknown. */
@@ -502,21 +501,24 @@
     w.setAttribute('data-testid', 'practice-failed');
     w.setAttribute('role', 'alert');
     w.style.margin = '0 0 16px';
-    w.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + esc(tx('Your practice')) + '</h2><p class="sub">' + esc(tx("Can't load your practice right now")) + '</p>' +
-      '<button type="button" class="btn" data-testid="practice-retry">' + esc(tx('Try again')) + '</button>';
-    w.querySelector('button').onclick = function () {
+    /* a login known to be a firm is titled "Your practice"; a login the page does not know yet (a fresh browser) is titled "Home": the frame never claims what it has not been told */
+    var title = hintRaw() === '1' ? tx('Your practice') : tx('Home');
+    w.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + esc(title) + '</h2><div data-testid="practice-failed-frame"></div>';
+    areas.parentNode.insertBefore(w, areas);
+    root.CBShell.readFailed(w.lastChild, { what: tx('Your practice'), status: P.failStatus, retry: function () {
       P.failedFirm = false;
       P.token = null; /* the next tick reads again */
       var f = root.document.getElementById('bp_failed');
       if (f && f.parentNode) f.parentNode.removeChild(f);
       tick();
-    };
-    areas.parentNode.insertBefore(w, areas);
+    } });
   }
-  function failedRead() {
+  /** firm frame P0 (T1): only a login KNOWN to be a shop (hint 0) may paint shop cards when the practice read fails; a firm (hint 1) or a login not yet known (a fresh browser, no hint) stays held with the frame and its retry */
+  function failedRead(status) {
     P.pending = false;
-    if (hintRaw() === '1') { P.failedFirm = true; drawFailed(); return; } /* known firm: stay held, say so, offer the retry */
-    settle(); /* an unknown login or a known shop: the current behaviour */
+    P.failStatus = status || 0;
+    if (hintRaw() !== '0') { P.failedFirm = true; drawFailed(); return; }
+    settle(); /* a known shop: the shop Home, as before */
   }
   function tick() {
     var t = token();
@@ -528,7 +530,7 @@
       P.pending = true;
       P.since = Date.now();
       read().then(function (answer) {
-        if (answer === FAILED) return failedRead();
+        if (answer && answer.failed === true) return failedRead(answer.status);
         if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
         P.data = answer;
         hint(answer.own_trade === false);
@@ -536,7 +538,9 @@
         root.dispatchEvent(new root.Event('cb-practice'));
         settle();
         tick();
-      }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); failedRead(); });
+      }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); failedRead(0); });
+      /* a read that never answers is a failed read too (the 25 s hang): the frame, not the shop Home */
+      root.setTimeout(function () { if (P.token === t && P.pending && !P.data && !P.failedFirm) failedRead(0); }, SETTLE_CEILING);
     } else if (P.data && !root.document.getElementById('bp_practice')) draw();
     else if (P.pending && !P.data && (holding || Date.now() - P.since > 800)) drawWaiting();
   }
