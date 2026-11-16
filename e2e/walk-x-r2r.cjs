@@ -87,7 +87,7 @@ async function fixture(ctx) {
       return J(200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1541545 }], [{ code: '6010', name: 'Rent', amount_minor: 879500 }], Object.assign({ from }, AUD))); }
     if (p === '/api/books/trial-balance') return J(200, books.trialBalance([{ code: '1400', name: 'Cash', dr_minor: 1000000, cr_minor: 0 }, { code: '3000', name: 'Capital', dr_minor: 0, cr_minor: 1000000 }], AUD));
     if (p === '/api/books/daybook') return J(200, books.daybook([], Object.assign({ from: u.searchParams.get('from') || year.from, to: u.searchParams.get('to') || '2026-10-13' }, AUD)));
-    if (p === '/api/books/year/2026-27/status' || /^\/api\/books\/year\/[^/]+\/status$/.test(p)) return J(200, { fiscal_year: p.split('/')[4], closed: false, can_close: false, refusals: [{ name: 'months_open', why: 'Every month must be locked before the year closes.' }], months: [{ period: 1, status: 'open' }], next: '2027-28' });
+    if (p === '/api/books/year/2026-27/status' || /^\/api\/books\/year\/[^/]+\/status$/.test(p)) return J(200, { fiscal_year: p.split('/')[4], closed: false, can_close: false, can_close_if_lodged: false, refusals: [{ name: 'months_open', why: 'Every month must be locked before the year closes.' }], months: [{ period: 1, status: 'open' }], next: '2027-28' });
     if (p === '/api/books/attention') return J(200, {}); /* the Needs-attention strip's counts: none (marking off) — the daybook strip reads it */
     if (p === '/api/books/packs') return J(200, { packs: [] });
     if (p === '/api/books/dues') return J(200, books.dues([], AUD));
