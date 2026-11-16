@@ -261,6 +261,24 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .bks-just{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:6px}.bks-just .bks-sum{white-space:normal;flex:1 1 220px}#bk_body .bks-link{background:none;border:0;padding:0;min-height:32px;color:var(--accent);font-size:13px;text-decoration:underline;cursor:pointer}
 .bks-mini{display:inline-flex;align-items:center;gap:8px;min-width:0;font-size:13px}.bks-mini b{font-weight:600}.bks-mini .bks-sum{white-space:normal;overflow:visible;text-overflow:clip;flex:0 1 auto}#bk_body .bks-mini .bks-tog{min-height:28px;height:28px}
 .bks-wrap{overflow-x:auto}
+/* ⭐ THE BANK HOME (app/cap-bank-home.js): cards for unfinished months, the grid's month buttons, the trail over the lines — 32 px rows, tokens only */
+.bkh-cards{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.bkh-card{display:flex;align-items:center;gap:10px;min-height:40px;padding:4px 10px;border:1px solid var(--amber-b,var(--line));border-radius:8px;background:var(--amber-t,var(--surface))}
+.bkh-dot{color:var(--amber-d,var(--muted-2))}.bkh-words{flex:1 1 auto;min-width:0;font-size:14px}
+#bk_body .bkh-go,#bk_body .bkh-back{min-height:32px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font:inherit;font-size:13px;cursor:pointer}
+#bk_body .bkh-cell{min-height:32px;width:100%;border:0;background:none;color:inherit;font:inherit;cursor:pointer;border-radius:6px}
+#bk_body .bkh-cell:hover{background:var(--surface-2,var(--line))}
+.bks-grid .bkh-open{color:var(--amber-d,var(--ink,inherit))}.bks-grid .bkh-kept{color:var(--muted-2)}
+.bkh-key{margin-top:4px}
+#bk_body .bks-tog{white-space:nowrap;flex:none}
+.bkh-files{margin-top:8px}.bkh-files summary{cursor:pointer;min-height:32px;display:list-item;list-style-position:inside;line-height:32px;font-size:13px;color:var(--muted-2)}
+.bkh-trail{display:flex;align-items:center;gap:8px;min-height:24px;font-size:13.5px}
+.pe-bank.bk-loaded .pe-card.bks:has(.bkh-trail){padding:0;border:0;background:none;box-shadow:none}
+#bk_body .bkh-trail .bkh-back{min-height:24px;height:24px;padding:0 10px;font-size:13px}
+.pe-bank.bk-loaded .pe-card.bks:has(.bkh-trail){margin-bottom:-8px}
+.bkh-crumbs{color:var(--muted-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pe-bank.bk-home [data-testid="bank-form"] .pe-form,.pe-bank.bk-home [data-testid="bank-private"]{display:none}
+.pe-bank.bk-home [data-testid="bank-form"]:not(:has(#bk_out:not(:empty))){display:none}
 .bks-grid,.bks-files{border-collapse:collapse;width:100%;font-size:13px}
 .bks-grid th,.bks-grid td,.bks-files th,.bks-files td{height:32px;padding:0 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .bks-grid thead th,.bks-files thead th{color:var(--muted-2);font-weight:600;position:sticky;top:0;background:var(--surface)}
@@ -302,7 +320,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 #bk_body .bk-pop .bk-mi:hover{background:var(--hover)}
 body.bk-on .main{display:flex;flex-direction:column;overflow:hidden}
 body.bk-on .titlebar{display:none}
-body.bk-on .content{flex:1 1 auto;min-height:0;padding:10px 24px 8px;gap:8px}
+body.bk-on .content{flex:1 1 auto;min-height:0;padding:0 24px 2px;gap:8px}
 body.bk-on #bk_body,body.bk-on .pe-bank,body.bk-on #bk_res{display:flex;flex-direction:column;min-height:0;gap:8px}
 body.bk-on #bk_body,body.bk-on .pe-bank{flex:1 1 auto}
 body.bk-on #bk_res{flex:1 1 auto}
@@ -460,6 +478,7 @@ function go() {
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
 <script src="/app/cap-bank-statements.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
 <script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
 <script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->

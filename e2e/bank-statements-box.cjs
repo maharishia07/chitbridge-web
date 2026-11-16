@@ -113,7 +113,7 @@ function stand(pending) {
   const S = stand(), { ctx, p } = await open(S);
   await p.waitForSelector('[data-testid="bank-stmts-grid"]', { timeout: 10000 });
   const gaps = await p.locator('.bks-miss').count();
-  ok(gaps === 6 && /Nov missing/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months, every month reads "<Mon> missing" (' + gaps + ')');
+  ok(gaps === 6 && /Missing/.test(await p.textContent('.bks-grid')) && /Nov/.test(await p.textContent('.bks-grid')), 'the grid: one account, six months across, every month reads "Missing" (' + gaps + ')');
   ok(/Nothing kept yet/.test(await p.textContent('[data-testid="bank-stmts-sum"]')), 'the summary says so: "Nothing kept yet"');
   ok(/Kept on our server for the record period; visible to the accountant or auditor you give access\./.test(await p.textContent('[data-testid="bank-stmts-kept"]')), 'the box says, in its own line, where the file is kept and who sees it');
   /* W15-62: ONE door - the plain picker's file field and its sentence step aside; the quiet secondary lives in the box */
@@ -160,11 +160,12 @@ function stand(pending) {
 
   /* ── 5 · READ → THE ONE READER ── */
   const reads0 = S.reads.length;
+  await p.click('[data-testid="bank-stmts-filesbox"] summary'); /* the kept files sit in a closed list on the home (W15-84) */
   await p.locator('[data-testid="bank-stmts-file-f1"] [data-testid="bank-stmts-read"]').click();
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
   ok(S.reads.length === reads0 + 1 && S.reads[S.reads.length - 1].use === 'read' && !!S.reads[S.reads.length - 1].h.authorization, 'Read fetches the kept bytes with the seat\'s own headers (use=read)');
   ok(S.ledgerCalls.length >= 1 && /from=2026-09-01&to=2026-09-25/.test(S.ledgerCalls[S.ledgerCalls.length - 1]), 'the page\'s own reader took it: the ledger is read for the statement\'s dates (' + S.ledgerCalls[S.ledgerCalls.length - 1] + ')');
-  ok(await p.locator('[data-testid="bank-stmts-grid"]').count() === 0, 'the box folds once a statement is on screen, so the lines have the screen');
+  ok(await p.locator('[data-testid="bank-stmts-grid"]').count() === 0 && await p.locator('[data-testid="bank-home-trail"]').count() === 1, 'the home gives way once a statement is on screen: the trail (← Bank) is all that is left of the box (W15-84)');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-read-laptop.png') });
   const toBooks = S.reqs.filter((r) => r.m === 'POST' && /\/api\/books\/(events|payments|entries)/.test(r.u));
   ok(S.posts.length === 3 && toBooks.length === 0, 'nothing was posted to the books by Read (no entry, event or payment; only the three Add presses went to the box)' + (toBooks.length ? ' — ' + toBooks.map((r) => r.u).join(' ') : ''));
@@ -190,7 +191,7 @@ function stand(pending) {
 
   /* ── 7 · IDS · NO ERROR ── */
   const ids = ['BKS014-I12', 'BKS014-I13', 'BKS014-B41', 'BKS014-B42', 'BKS014-B43', 'BKS014-B44', 'BKS014-B45'];
-  const src = fs.readFileSync(path.join(PUB, 'app', 'cap-bank-statements.js'), 'utf8');
+  const src = fs.readFileSync(path.join(PUB, 'app', 'cap-bank-statements.js'), 'utf8') + fs.readFileSync(path.join(PUB, 'app', 'cap-bank-home.js'), 'utf8'); /* the missing-month button (B44) moved to the home */
   ok(ids.every((id) => src.indexOf('data-cbsid="' + id + '"') >= 0), 'every control the box draws wears its id (' + ids.join(' ') + ')');
   ok(!/\.parse\(/.test(src.replace(/CBBankRecon\.parse\(text, \{ format: 'auto'[^\n]*\n/, '')), 'the box holds no second parser: its only parse call is the reader\'s own, for the period');
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
