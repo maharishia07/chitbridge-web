@@ -2700,8 +2700,11 @@ function bkDvMount(el) {
     cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = e.evidence && CBEvidence.stateOf(e.evidence); return s ? s.word : ''; } }); /* CMP062: never cut to make room */
   if (BK.mk && BK.mk.state().may)
     cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
+  var pre = BK.dvPreset; /* a link from another page (BAS: See them) opens the list narrowed; once */
+  BK.dvPreset = null;
   return CBList.mount(el, {
     key: 'daybook',
+    preset: pre || undefined,
     t: tx,
     view: 'lines' /* the Day book reads as a line a record (Athi, 2026-10-02: "one after the other, so it is more readable") */,
     rows: function () {
