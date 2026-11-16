@@ -378,7 +378,7 @@ function go() {
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
-<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_POLICY_EP);</script>   <!-- CB_POLICY_EP (T3-P2-CRM): the Shop window reads and writes the policy flag showcase_template -->
+<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_POLICY_EP, { me: CB_SHOP_EP.me });</script>   <!-- CB_POLICY_EP (T3-P2-CRM): the Shop window reads and writes the policy flag showcase_template -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>
 <script src="/app/helpers.js"></script>
@@ -621,11 +621,12 @@ async function start() {
   }
   if (g !== CRM.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
-  /* the Ledger's one read: on → the Dues column and the dues alert exist; off (404) → neither is drawn, no blank column */
+  /* the Ledger's one read: /me says ledger_on (GET /books/health answers 404 LEDGER_OFF by design for a shop with none: a red failed request on the first screen).
+     on → the Dues column and the dues alert exist; off → neither is drawn, no blank column */
   try {
-    const reply = await api('booksHealth');
-    CRM.ledger = !!(reply && reply.enabled !== false);
-    if (reply && reply.country && reply.country.country && reply.country.country.code) SESSION.country = reply.country.country.code;
+    const reply = await api('me');
+    CRM.ledger = !!(reply && reply.ledger_on === true);
+    if (reply && reply.country) SESSION.country = reply.country;
   } catch (e) {
     /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */
     CRM.ledger = false;

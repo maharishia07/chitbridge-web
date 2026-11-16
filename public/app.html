@@ -6345,26 +6345,6 @@ function _renderApp() {
       })
       .catch(function () {});
   }
-  /* once per session: is the Ledger switched on for this shop? /api/books answers 404 when it is off, so the door
-     and the party blocks stay out of sight rather than opening onto an error. */
-  if (SESSION.token && role !== 'customer' && SESSION._booksChecked === undefined) {
-    SESSION._booksChecked = true;
-    api('booksHealth')
-      .then(function (reply) {
-        const was = SESSION.booksOn;
-        SESSION.booksOn = !!(reply && reply.enabled !== false);
-        if (SESSION.booksOn && !was) {
-          ensureCap('books')
-            .then(function () {
-              bgRenderApp();
-            })
-            .catch(function () {});
-        }
-      })
-      .catch(function () {
-        SESSION.booksOn = false;
-      });
-  }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if (SESSION.token && role !== 'customer' && SESSION._capsChecked === undefined) {
     SESSION._capsChecked = true;
@@ -6385,6 +6365,18 @@ function _renderApp() {
         // `unwrap()` returns j.entity for /me, so read both shapes.
         var _e = (reply && reply.entity) || reply || {};
         sessionFromMe(_e);
+        /* is the Ledger switched on for this shop? /me says (ledger_on), so the first screen asks GET /books/health for nothing: that route answers 404 LEDGER_OFF by design for a shop with none, a red failed request in the console.
+           The door and the party blocks stay out of sight when it is off. */
+        if (typeof _e.ledger_on === 'boolean') {
+          var _booksWas = SESSION.booksOn;
+          SESSION.booksOn = _e.ledger_on;
+          if (SESSION.booksOn && !_booksWas)
+            ensureCap('books')
+              .then(function () {
+                bgRenderApp();
+              })
+              .catch(function () {});
+        }
         /* ⭐ The entity's policy flags ride /me — the detail-page preference has to be known before any chit is
          opened, and a second fetch at boot would cost a round trip on the hottest path. */
         if (_e.policy_flags) SESSION.policy_flags = _e.policy_flags;

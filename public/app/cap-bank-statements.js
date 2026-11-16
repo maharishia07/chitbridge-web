@@ -56,6 +56,7 @@ async function bankStmtLoad() {
   }
   if (BKST.data && typeof bankHomeSigned === 'function') await bankHomeSigned().catch(() => {});
   bankStmtPaint();
+  if (typeof bankHomeDeepOnce === 'function') bankHomeDeepOnce(); /* a reload on #bank/<account>/<month> reopens that statement once the list is in */
 }
 const bkstMissing = (data) => (data ? data.cells.filter((cell) => cell.missing).length : 0);
 /** one line: what the box holds, said as the gap the person should fix */
@@ -119,6 +120,8 @@ function bankStmtToggle() {
   const open = BKST.open === null ? !(BKST.data && BKST.data.files.length) : BKST.open;
   BKST.open = !open;
   bankStmtPaint();
+  const press = document.querySelector('[data-testid="bank-stmts-toggle"]');
+  if (press) press.focus({ preventScroll: true }); /* the paint drew a new button: the keyboard stays on Add statement (Enter closed the box, focus must not fall to the page) */
 }
 
 /* ── Add statement ── */
