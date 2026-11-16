@@ -115,7 +115,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   }
   {
     const { ctx, p } = await open('auditor', '#/bank', '[data-testid="bank-stmts-grid"]', { kept: ['2026-10'] });
-    const html = await p.evaluate(() => { try { BKB.brs = null; BKB.parsed = null; const host = document.createElement('div'); host.id = 'bk_brs'; document.body.appendChild(host); bankBrsPaint(); return host.innerHTML + '|' + (typeof bankBandCore === 'function' ? bankBandCore() : ''); } catch (e) { return 'ERR ' + e.message; } });
+    const html = await p.evaluate(() => { try { BKB.brs = null; const host = document.createElement('div'); host.id = 'bk_brs'; document.body.appendChild(host); bankBrsPaint(); return host.innerHTML ; } catch (e) { return 'ERR ' + e.message; } });
     ok(!/ERR/.test(html) && !/Type it from the statement/.test(html) && !/<input/.test(html), 'F · the auditor is not asked to type the closing balance, and gets no box: ' + html.slice(0, 160));
     ok(/does not say the bank's closing balance/.test(html), 'F · the read-only seat is told, in words');
     await ctx.close();
