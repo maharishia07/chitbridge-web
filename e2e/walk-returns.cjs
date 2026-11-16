@@ -33,7 +33,11 @@ const AU_PERIODS = [
   ['2026-Q1', '2026-27 Q1 (Jul–Sep 2026)', '2026-07-01', '2026-09-30', '2026-10-28'], ['2026-Q2', '2026-27 Q2 (Oct–Dec 2026)', '2026-10-01', '2026-12-31', '2027-02-28'],
   ['2027-Q3', '2026-27 Q3 (Jan–Mar 2027)', '2027-01-01', '2027-03-31', '2027-04-28'], ['2027-Q4', '2026-27 Q4 (Apr–Jun 2027)', '2027-04-01', '2027-06-30', '2027-07-28'],
 ].map(([period, label, start, end, due]) => ({ period, label, frequency: 'quarterly', start, end, due, ended: end <= '2026-10-12' }));
-const box = (code, label, amount, tax, roles, accounts, note) => ({ code: String(code), label, amount_minor: amount, tax_minor: tax, roles, accounts, note: note || null });
+/* ACC-357: each box carries its ledgers' own amounts, largest first (the first ledger holds the box here), the count, and "and n more" past ten; G1 stands in for a shop with twelve sales places */
+const box = (code, label, amount, tax, roles, accounts, note) => {
+  const many = String(code) === 'G1' ? 12 : accounts.length;
+  return { code: String(code), label, amount_minor: amount, tax_minor: tax, roles, accounts: accounts.map((x, i) => Object.assign({}, x, { amount_minor: amount == null ? null : i === 0 ? amount : 0, tax_minor: tax == null ? null : i === 0 ? tax : 0 })), accounts_n: many, accounts_more_n: Math.max(0, many - 10), split_ok: true, note: note || null };
+};
 const A = { sales: { code: '4000', name: 'Sales' }, ret: { code: '4090', name: 'Sales returns and allowances' }, exp: { code: '4010', name: 'Export sales' }, free: { code: '4020', name: 'GST-free sales' },
   gstc: { code: '2200', name: 'GST collected' }, gstp: { code: '2210', name: 'GST paid' }, pur: { code: '5000', name: 'Purchases' }, rent: { code: '6010', name: 'Rent' }, pc: { code: '1060', name: 'Computers' } };
 function bas(simpler, period) {
@@ -194,7 +198,19 @@ W.run('returns', async (w) => {
     const ok = /^Business activity statement · 2026-27 Q1/.test(lines[0]) && lines.indexOf('1A\tGST on sales\t950.00') >= 0 && lines.indexOf('G11\tNon-capital purchases\t5000.00') >= 0 && /^To pay\t150\.00$/.test(lines[lines.length - 2]) && /Prepared, not lodged/.test(lines[lines.length - 1]);
     return { ok, saw: (await text(AU.page, '#pr_out')) + ' · ' + lines.length + ' lines: ' + lines[0] + ' | ' + lines[5] };
   });
+  await w.step('R4a', 'ACC-357: the Ledgers column is a count ("1 ledger ▸"; G1 "12 ledgers ▸"), the row opens below with its own header row, the ledgers and "and 2 more" past ten; the money at risk sits on the To pay line; the due date shows whole', async () => {
+    const n1a = await text(AU.page, '[data-testid="pr-count-1A"]'), n1 = await text(AU.page, '[data-testid="pr-count-G1"]');
+    await AU.page.click('[data-testid="pr-box-G1"]');
+    await AU.page.waitForSelector('[data-testid="pr-more-G1"]', { timeout: 8000 });
+    const more = await text(AU.page, '[data-testid="pr-more-G1"]'), panel = await text(AU.page, '[data-testid="pr-ledgers-G1"]');
+    const opt = await AU.page.$eval('#pr_p', (e) => e.options[e.selectedIndex].textContent);
+    await AU.page.screenshot({ path: require('path').join(__dirname, 'shots', 'l16-bas-bas-open-1366.png') }).catch(() => {});
+    const ok = /^1 ledger/.test(n1a) && /^12 ledgers/.test(n1) && /and 2 more/.test(more) && /^Ledger/.test(panel) && /due .*2026/.test(opt) && !/…/.test(opt);
+    return { ok, saw: n1a + ' · ' + n1 + ' · ' + more + ' · ' + opt };
+  });
   await w.step('R4', 'A box\'s ledger chip (1A -> 2200 GST collected) -> the Ledgers page opens on that ledger, for the quarter', async () => {
+    await AU.page.click('[data-testid="pr-box-1A"]'); /* ACC-357: the row opens BELOW with its ledgers; the ledger line then opens the entries */
+    await AU.page.waitForSelector('[data-testid="pr-ledgers-1A"] [data-testid="pr-open-1A-2200"]', { timeout: 8000 });
     await AU.page.click('[data-testid="pr-open-1A-2200"]');
     await AU.page.waitForFunction(() => /#ledgers/.test(location.hash), null, { timeout: 8000 });
     await AU.page.waitForFunction(() => (document.querySelector('#lg_out') || {}).textContent && /GST collected/.test(document.querySelector('#lt_pane').textContent), null, { timeout: 10000 }).catch(() => {});
@@ -259,6 +275,9 @@ W.run('returns', async (w) => {
   await w.step('R6', '390 px: the BAS paints and nothing scrolls sideways', async () => {
     await P.page.waitForSelector('[data-testid="pr-box-1A"]', { timeout: 15000 });
     await P.page.waitForTimeout(300);
+    await P.page.click('[data-testid="pr-box-1A"]'); /* ACC-357: the row open below, at 390 */
+    await P.page.waitForSelector('[data-testid="pr-ledgers-1A"]', { timeout: 8000 });
+    await P.page.screenshot({ path: require('path').join(__dirname, 'shots', 'l16-bas-bas-390.png') }).catch(() => {});
     const m = await P.page.evaluate(() => ({ d: document.documentElement.scrollWidth, main: document.querySelector('.main') ? document.querySelector('.main').scrollWidth <= document.querySelector('.main').clientWidth : true }));
     return { ok: m.d <= 390 && m.main && P.errs.length === 0, saw: 'document ' + m.d + ' px wide · main fits: ' + m.main };
   });

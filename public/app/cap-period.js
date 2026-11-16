@@ -1299,11 +1299,11 @@ function peReturnPaint(r) {
           'Period',
           peSel(
             'pr_p',
-            periods.map((item) => [item.period, item.label + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('not ended'))]),
+            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open'))]),
             P ? P.period : '',
             ' onchange="peReturnPick(\'period\', this.value)"'
           )
-        )
+        ).replace('<label class="pe-f">', '<label class="pe-f" style="grid-column:1/-1">') /* ACC-357: the period has the whole row, so its due date shows whole */
       : '') +
     (!isAE
       ? peField(
@@ -1358,11 +1358,13 @@ function peReturnPaint(r) {
     '<div class="supacts">' +
     peBtn('pr-copy', 'Copy figures', 'peReturnCopy(this)') +
     '</div><div id="pr_out" class="pe-slot"></div>' +
-    '<div class="pe-total" data-testid="pr-total"><span>' +
+    '<div class="pe-total" data-testid="pr-total" style="justify-content:flex-start"><span>' +
     esc(r.net_minor < 0 ? tx('Refund due') : tx('To pay')) +
     '</span><span class="mono">' +
     esc(peMoney(Math.abs(r.net_minor || 0), c)) +
-    '</span></div>' +
+    '</span>' +
+    peReturnRisk(r) +
+    '</div>' +
     peReturnClaimBand(r) +
     '<div class="pe-note" data-testid="pr-prepared">' +
     esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) +
@@ -1393,6 +1395,13 @@ function peReturnClaimBand(r) {
     esc(w.see) +
     '</button></div>'
   );
+}
+/** a phone: the period words drop their months in brackets so the due date shows whole (shorten words, never clip) */
+const peNarrow = () => typeof matchMedia === 'function' && matchMedia('(max-width:620px)').matches;
+/** ACC-357: the money at risk, on the To pay line — both figures are the server's (CBEvidence.claimRisk words them; nothing is added here) */
+function peReturnRisk(r) {
+  const words = typeof CBEvidence !== 'undefined' && CBEvidence.claimRisk ? CBEvidence.claimRisk(r.unsupported_input, r.net_minor, (minor) => peMoney(minor, r.currency)) : null;
+  return words ? '<span class="pe-risk" data-testid="pr-risk" style="font-size:13px;font-weight:400;color:var(--warn-2,#b45309)">· ' + esc(words) + '</span>' : '';
 }
 /** "See them": the Day book for the return's days, narrowed to Evidence = No tax invoice (the list's own preset, replaced once, then the list remembers as usual) */
 function peReturnSeeClaim() {
@@ -1486,23 +1495,9 @@ function peReturnList(r) {
     key: 'opens',
     label: tx('Ledgers'),
     prio: 3,
-    w: 280,
+    w: 120,
     html: true,
-    cell: (b) =>
-      (b.accounts || [])
-        .map(
-          (item) =>
-            '<button data-cbsid="BKS016-B06" type="button" class="optchip" data-testid="pr-open-' +
-            esc(b.code) +
-            '-' +
-            esc(item.code) +
-            '" onclick="peReturnOpen(\'' +
-            esc(item.code) +
-            '\')">' +
-            esc(item.code + ' ' + item.name) +
-            '</button>'
-        )
-        .join(' ') || peRetDash()
+    cell: (b) => (b.accounts_n ? '<span data-testid="pr-count-' + esc(b.code) + '">' + esc(txn('{count} ledger', '{count} ledgers', b.accounts_n)) + ' ▸</span>' : peRetDash())
   });
   PE_RET.api = CBList.mount(host, {
     key: 'return',
@@ -1512,11 +1507,31 @@ function peReturnList(r) {
     rowTid: (b) => 'pr-box-' + b.code,
     columns: cols,
     defaultCols: cols.map((x) => x.key) /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */,
-    onOpen: (b) => {
-      const a = (b.accounts || [])[0];
-      if (a) peReturnOpen(a.code);
-    }
+    next: (b) => peReturnLedgers(r, b, two) /* ACC-357: the row opens BELOW: one line per ledger with its amount for the period (a shop may have hundreds of places: the server sends the top ten) */
   });
+}
+/** the panel under a box: its own header row, one line per ledger (largest first, the server's figures), "and n more" when the server cut the list; each ledger opens its entries for the period */
+function peReturnLedgers(r, b, two) {
+  const c = r.currency,
+    grey = 'color:var(--grey);font-size:var(--fs-1)',
+    widths = two ? [130, 130] : [130],
+    money = (v) => (v == null ? peRetDash() : esc(peMoney(v, c)));
+  const head = CBList.nextRow(
+    ['<span style="' + grey + '">' + esc(tx('Ledger')) + '</span>'].concat(two ? ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>', '<span style="' + grey + '">' + esc(tx('VAT')) + '</span>'] : ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>']),
+    widths
+  );
+  const lines = (b.accounts || []).map((item) =>
+    CBList.nextRow(
+      [
+        '<button data-cbsid="BKS016-B06" type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" data-testid="pr-open-' + esc(b.code) + '-' + esc(item.code) + '" onclick="peReturnOpen(\'' + esc(item.code) + '\')">' + esc(item.code + ' ' + item.name) + '</button>'
+      ].concat(two ? [money(item.amount_minor), money(item.tax_minor)] : [money(item.amount_minor != null ? item.amount_minor : item.tax_minor)]),
+      widths
+    )
+  );
+  const more = b.accounts_more_n
+    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
+    : '';
+  return '<div data-testid="pr-ledgers-' + esc(b.code) + '">' + head + lines.join('') + more + '</div>';
 }
 /** a figure opens what it counts: the Ledgers page on that ledger, the period chip set to the return's period (the same ledger read the box was summed from) */
 function peReturnOpen(code) {
@@ -1524,13 +1539,14 @@ function peReturnOpen(code) {
     P = r && r.period;
   if (!P) return;
   if (typeof BK !== 'undefined') {
+    BK.backTo = { tab: 'gstclose', label: r.short || r.form, code: code == null ? null : String(code) }; /* ACC-357: the Ledgers head says Back to the BAS, and Back returns here */
     BK.lgp = { preset: 'custom', from: P.start, to: P.end };
-    if (BK.lt) {
+    if (BK.lt && code != null) {
       BK.lt.sel = null;
       BK.lt.last = { code: String(code), party: null };
       if (typeof bkLtPrefsSave === 'function') bkLtPrefsSave();
     }
-    BK.lgAcc = String(code);
+    if (code != null) BK.lgAcc = String(code);
   }
   if (typeof show === 'function') show('ledgers');
 }
