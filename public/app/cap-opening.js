@@ -83,7 +83,7 @@ function obNew() {
   OB.mode = 'new';
   OB.reason = '';
   OB.ref = 'grid:' + (typeof bkRef === 'function' ? bkRef() : String(Date.now()));
-  OB.date = (typeof bkYearStart === 'function' && bkYearStart()) || obToday();
+  OB.date = (OB.saved && OB.saved.default_date) || obToday(); /* the ledger's first day, from the server */
   OB.rows = ((OB.saved && OB.saved.pinned) || []).map(function (item) {
     return obRowOf(item.code, true);
   });
