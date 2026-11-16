@@ -42,7 +42,7 @@
   var MONTH_STATE = { open: 'Open', soft_locked: 'Closed', hard_locked: 'Closed for good' };
   function monthRows(answer) {
     var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
-    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
+    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
       return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
@@ -239,7 +239,7 @@
       band(report) +
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
-      (viewState.why ? '' : monthBar(report)) +
+      (viewState.why ? '' : monthBar(report) + lockLines(report)) +
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : '') +
       (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
@@ -319,6 +319,16 @@
   function periodLine(report) {
     if (report.k !== 'daybook' || viewState.day || !viewState.range) return '';
     return '<span class="tag" data-testid="bv-period">' + esc(words('Period')) + ' ' + esc(root.shopDay(viewState.range.from)) + ' – ' + esc(root.shopDay(viewState.range.to)) + '</span>';
+  }
+  /** W22: the firm's Months view, the lock in ONE line as Xero's lock date reads: "Books start Jul 2025" · "Locked to 31 Jan 2026" · "Open: Feb 2026 (gap)" — every word and date the server's (books_start, lock_date, gaps); months before the books start are not listed */
+  function lockLines(report) {
+    var a = viewState.answer;
+    if (report.k !== 'periods' || !a || !a.books_start) return '';
+    var names = typeof root.monthNames === 'function' ? root.monthNames('short') : [];
+    var monthOf = function (m) { var at = String(m.start_date || ''); return (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4); };
+    var lines = [['start', words('Books start') + ' ' + monthOf(a.books_start)], ['lock', a.lock_date ? words('Locked to') + ' ' + root.shopDay(a.lock_date) : words('Not locked from the books start')]];
+    if ((a.gaps || []).length) lines.push(['gap', words('Open') + ': ' + a.gaps.map(monthOf).join(', ') + ' (' + words('gap') + ')']);
+    return '<div class="nw-acts" data-testid="bv-lock-lines">' + lines.map(function (l) { return '<span class="tag" data-testid="bv-lock-' + l[0] + '">' + esc(l[1]) + '</span>'; }).join('') + '</div>';
   }
   function facts(report) {
     var items = report.facts
