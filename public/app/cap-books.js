@@ -358,6 +358,13 @@ async function booksDuesLoad(force) {
     BK.dues = BK.dues || {};
   }
   try {
+    var duesList = document.getElementById('bkl_dues') && CBList.get('dues'); /* W15-117: the rows are read again, a cleared party drops off ⚑ Needs you */
+    if (duesList) {
+      bkNeedsHead();
+      duesList.refresh();
+    }
+  } catch (failure) { bkQuiet('repaint-dues', failure); }
+  try {
     if (typeof paintCustList === 'function' && document.getElementById('cu_rows')) paintCustList();
   } catch (failure) { bkQuiet('repaint-customers', failure); }
   try {
@@ -2734,6 +2741,24 @@ function bkDvMount(el) {
   return CBList.mount(el, {
     key: 'daybook',
     preset: pre || undefined,
+    /* W15-116 / W15-117: ⚑ Needs you — the server's count over the range (/attention: no tax invoice, or an open query); the row's own flag and mark say which; Next › opens the next entry's evidence or query */
+    needs: {
+      count: function () {
+        return typeof CBAttention !== 'undefined' ? CBAttention.needs('bk_attn_db') : 0;
+      },
+      match: function (e) {
+        var st = bkDvEvState(e);
+        return !!((st && st.key === 'flag') || (BK.mk && BK.mk.row(e.entry_id) && BK.mk.row(e.entry_id).class === 'open'));
+      },
+      rank: function (e) {
+        return BK.mk && BK.mk.row(e.entry_id) && BK.mk.row(e.entry_id).class === 'open' ? 2 : 1;
+      },
+      onNext: function (e) {
+        var open = BK.mk && BK.mk.row(e.entry_id) && BK.mk.row(e.entry_id).class === 'open';
+        if (open) BK.mk.sheet(e.entry_id, {});
+        else if (BK.ev) BK.ev.sheet(e, {});
+      }
+    },
     t: tx,
     view: 'lines' /* the Day book reads as a line a record (Athi, 2026-10-02: "one after the other, so it is more readable") */,
     rows: function () {
@@ -2912,8 +2937,11 @@ async function bkDaybook(body) {
     bkEvidenceIngest(r.entries); /* CMP062: what stands behind each entry */
     /* W15-102: the Needs attention strip, the server's counts over the range — never counted here */
     body.innerHTML = '<div class="attn-col"><div id="bk_attn_db"></div><div id="bk_dvlist" data-testid="db-list"></div></div>';
-    if (typeof CBAttention !== 'undefined') CBAttention.mount(document.getElementById('bk_attn_db'), q);
     BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
+    if (typeof CBAttention !== 'undefined')
+      CBAttention.mount(document.getElementById('bk_attn_db'), q, function () {
+        if (BK.dv && BK.dv.api) BK.dv.api.refresh(); /* the count of ⚑ Needs you arrives with the strip's own read */
+      });
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
@@ -4727,7 +4755,18 @@ function bkDuesCols(c) {
       w: 230,
       html: true,
       cell: function (p) {
-        return esc(bkPartyLabel(p.party_id, p.name));
+        return esc(bkPartyLabel(p.party_id, p.name) || tx('Unnamed party'));
+      }
+    },
+    {
+      key: 'needs',
+      label: tx('Needs'),
+      prio: 2,
+      sort: 'needs',
+      w: 250,
+      html: true,
+      cell: function (p) {
+        return bkNeedChips(p);
       }
     },
     {
@@ -4997,9 +5036,14 @@ function bkOwedFlags(pid) {
  * State per party in BK.pb[pid]: { q: { state, band, sort, dir, page }, ans, busy }. A press (state · band · sort · page) sets q and reads again; nothing is filtered or counted here.
  */
 var BK_PB_LIMIT = 25;
+var BK_PB_TABS = [
+  ['needs', 'Needs you'],
+  ['open', 'Open'],
+  ['all', 'All']
+];
 function bkPbOf(pid, list) {
   BK.pb = BK.pb || {};
-  if (!BK.pb[pid]) BK.pb[pid] = { q: { state: 'open', band: '', sort: 'date', dir: 'desc', page: 1 }, ans: null, busy: false, list: list || 'dues' };
+  if (!BK.pb[pid]) BK.pb[pid] = { q: { tab: 'needs', paid: false, why: '', band: '', sort: 'date', dir: 'desc', page: 1 }, ans: null, busy: false, list: list || 'dues' };
   if (list) BK.pb[pid].list = list;
   return BK.pb[pid];
 }
@@ -5009,7 +5053,13 @@ async function bkPbRead(pid) {
   s.busy = true;
   try {
     var q = s.q,
-      reply = await api('booksPartyBills', { params: { id: pid }, query: { side: bkPartyKind(pid), state: q.state, band: q.band || undefined, sort: q.sort, dir: q.dir, page: q.page, limit: BK_PB_LIMIT } });
+      ask = { side: bkPartyKind(pid), tab: q.tab, why: q.why || undefined, band: q.band || undefined, page: q.page, limit: BK_PB_LIMIT };
+    if (q.tab === 'all' && q.paid) ask.state = 'paid';
+    if (q.tab !== 'needs') {
+      ask.sort = q.sort;
+      ask.dir = q.dir;
+    }
+    var reply = await api('booksPartyBills', { params: { id: pid }, query: ask });
     var marks = bkMarkControl();
     if (marks && reply && reply.mark_actions)
       marks.ingest(
@@ -5026,7 +5076,7 @@ async function bkPbRead(pid) {
   var lst = CBList.get(s.list);
   if (lst) lst.refresh();
 }
-/** a press on the bills of party `pid`: set one part of the question and read again (a new band, state or sort goes back to page 1) */
+/** a press on the bills of party `pid`: set one part of the question and read again (a new tab, band or sort goes back to page 1) */
 function bkPbSet(pid, patch, keepPage) {
   var s = bkPbOf(pid);
   Object.keys(patch).forEach(function (key) {
@@ -5047,7 +5097,9 @@ function bkPbPress(el) {
     s = pid && bkPbOf(pid);
   if (!s) return;
   if (act === 'band') bkPbSet(pid, { band: s.q.band === val ? '' : val });
-  else if (act === 'state') bkPbSet(pid, { state: val });
+  else if (act === 'tab') bkPbSet(pid, { tab: val, paid: false, why: '', band: '' });
+  else if (act === 'paid') bkPbSet(pid, { paid: !s.q.paid });
+  else if (act === 'why') bkPbSet(pid, { why: '' });
   else if (act === 'page') bkPbSet(pid, { page: Math.max(1, s.q.page + Number(val)) }, true);
 }
 function bkPbSort(key) {
@@ -5057,30 +5109,74 @@ function bkPbSort(key) {
   var wide = key === 'date' || key === 'amount' || key === 'owed' || key === 'days';
   bkPbSet(pid, { sort: key, dir: s.q.sort === key ? (s.q.dir === 'desc' ? 'asc' : 'desc') : wide ? 'desc' : 'asc' });
 }
-/** no terms = no due date: the link goes to the ONE terms editor (CB Finance › Terms) — never a second one here */
-function bkSetTermsLink() {
-  return '<a data-b="set-terms" data-cbsid="CMP044-C02" href="/finance.html#terms" onclick="event.stopPropagation()">' + esc(tx('Set terms')) + '</a>';
+/**
+ * ⭐ W15-115 · ONE ACTION A BILL — the why-chip says why the bill needs you, the button does the one thing that fixes it: Attach (a tax invoice) · Release (a hold) · Answer (a query or a dispute) · Pay / Receive · Set terms.
+ * Nothing posts by itself: Attach opens the file picker, Release asks first (W15-113), Pay opens the pay sheet, Answer opens the mark's sheet or the bill.
+ */
+function bkNeedAction(pid, row, kind) {
+  var word = row.action === 'pay' ? (kind === 'customer' ? 'Receive' : 'Pay') : BK_NEED[row.why] ? BK_NEED[row.why][1] : '';
+  if (!word) return '';
+  if (row.action === 'terms') return bkSetTermsLink();
+  if (row.action === 'attach' && !row.chit_id) return '';
+  return '<button type="button" class="cbl-tbtn bk-act" data-cbsid="CMP038-B01"' + bkMountAttribute('CMP038') + ' data-b="need-act-' + esc(row.action) + '" data-testid="bill-act-' + esc(row.ref) + '" onclick="event.stopPropagation();bkNeedDo(\'' + esc(pid) + "','" + esc(row.ref) + '\',this)">' + esc(tx(word)) + '</button>';
 }
-/** Status, said once: Paid · Part paid · Unpaid, then what a reviewer or the books hold on it — "On hold · No tax invoice" — with who and when on hover (the hold is a press that opens the mark's sheet) */
-function bkBillStatus(row) {
-  var m = row.mark,
-    held = m && (m.class === 'hold' || m.kind === 'on_hold'),
-    parts = ['<span class="optchip" data-b="standing-' + row.status + '"' + (row.status === 'unpaid' ? '' : ' style="color:var(--grey)"') + '>' + esc(tx(BK_STANDING[row.status])) + '</span>'];
-  var noInvoice = row.evidence_flag === 'no_tax_invoice';
-  if (held) {
-    /* ONE chip (W15-113): the hold and its reason inside it; who and when on hover, the press opens the mark's sheet */
-    var who = [m.by_name, m.at ? bkDate(m.at) : ''].filter(Boolean).join(' · ');
-    var sid = 'CMP058-B02'; /* the Day book's mark chip code (cap-mark.js), held in a name so the census reads it on the element */
-    parts.push('<button type="button" class="optchip" data-cbsid="' + sid + '" data-mk="open" data-id="' + esc(row.entry_id) + '" data-class="hold" data-b="mark-hold" style="color:var(--warn-2)" title="' + esc(who) + '" aria-label="' + esc(tx('On hold') + (noInvoice ? ' · ' + tx('no tax invoice') : '') + (who ? ' · ' + who : '')) + '">‖ ' + esc(tx('On hold') + (noInvoice ? ' · ' + tx('no tax invoice') : '')) + '</button>');
-  } else if (noInvoice) parts.push('<span class="optchip" data-b="no-tax-invoice" style="color:var(--warn-2)">⚠ ' + esc(tx('No tax invoice')) + '</span>');
-  if (row.disputed) parts.push('<span class="optchip" data-b="in-dispute" style="color:var(--warn-2)">' + esc(tx('In dispute')) + '</span>');
-  return '<span class="bk-st" style="display:inline-flex;gap:4px;flex-wrap:nowrap">' + parts.join(' ') + '</span>';
+async function bkNeedDo(pid, ref, button) {
+  var s = bkPbOf(pid),
+    row = ((s.ans && s.ans.bills) || []).filter(function (item) {
+      return item.ref === ref;
+    })[0];
+  if (!row) return;
+  var kind = bkPartyKind(pid),
+    marks = bkMarkControl();
+  if (row.action === 'pay') {
+    var party = BK.dues && BK.dues[pid];
+    payOpen(kind, pid, String((party && party.name) || ''));
+  } else if (row.action === 'attach') {
+    try {
+      var added = await cbAttachPick(JSON.stringify({ chit_id: row.chit_id }));
+      if (!added) return;
+    } catch (failure) {
+      bkQuiet('need-attach', failure);
+      return;
+    }
+    var held = row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold');
+    delete BK.owed[pid];
+    if (held && marks && row.entry_id) bkAskRelease(pid, row);
+    else bkPbSet(pid, {}, true);
+  } else if (row.action === 'release') bkAskRelease(pid, row);
+  else if (row.action === 'answer') {
+    if (marks && row.entry_id && row.reasons.indexOf('query') >= 0) marks.sheet(row.entry_id, { opener: button, title: bkBillTitle(row) });
+    else if (row.chit_id && typeof openChitSheet === 'function') openChitSheet(row.chit_id);
+  }
 }
-var BK_STATE_CHIPS = [
-  ['open', 'Open'],
-  ['paid', 'Paid'],
-  ['all', 'All']
-];
+function bkBillTitle(row) {
+  return [row.bill_no || row.ref, row.date ? bkDate(row.date) : ''].filter(Boolean).join(' · ');
+}
+/** W15-113: a tax invoice is attached to a held bill → offer to release the hold; the owner confirms, nothing releases by itself */
+function bkAskRelease(pid, row) {
+  var marks = bkMarkControl();
+  /* the hold is the AUDITOR's mark (api lib/mark-adopters: only grant:auditor sets): an owner who may not set one is told, not offered a button that would be refused */
+  if (marks && row.entry_id && !marks.mayCheck(row.entry_id)) {
+    if (typeof toast === 'function') toast(tx('The tax invoice is attached. The hold is the auditor\'s to release.'));
+    return bkPbSet(pid, {}, true);
+  }
+  if (!marks || !row.entry_id || typeof CBConfirm !== 'function') return bkPbSet(pid, {}, true);
+  CBConfirm(
+    tx('Release the hold?'),
+    '<p data-testid="release-body">' + esc(txf('{bill} is on hold. Take it off hold now?', { bill: bkBillTitle(row) })) + '</p>',
+    tx('Release'),
+    function () {
+      return marks.set(row.entry_id, 'clear', '', null).then(function () {
+        bkPbSet(pid, {}, true);
+        return booksDuesLoad(true);
+      });
+    },
+    false,
+    function () {
+      bkPbSet(pid, {}, true);
+    }
+  );
+}
 function bkPartyBillsHTML(pid, list, c) {
   var s = bkPbOf(pid, list),
     grey = 'color:var(--grey);font-size:var(--fs-1)';
@@ -5093,61 +5189,82 @@ function bkPartyBillsHTML(pid, list, c) {
   var amt = function (v) {
     return esc(bkMoney(Number(v), c));
   };
-  /* the age bands the server counted (the one ageing): each a chip that filters the bills below to that band; pressed again, it clears */
-  var bands = BK_FOLLOW.filter(function (item) {
-    return Number((a.bands || {})[item[0]]) > 0;
-  })
-    .map(function (item) {
-      var on = s.q.band === item[0];
-      return (
-        '<button type="button" class="cbl-nchip" data-cbsid="CMP033-B01" data-b="band-' + item[0] + '" data-pb-act="band" data-pb-val="' + item[0] + '" aria-pressed="' + on + '" onclick="bkPbPress(this)">' +
-        esc(bkFollowWord(item[0])) + ' <b>' + amt(a.bands[item[0]]) + '</b>' + (on ? ' ✕' : ' ▸') + '</button>'
-      );
-    })
-    .join('');
-  var states = BK_STATE_CHIPS.map(function (item) {
-    var n = (a.counts || {})[item[0]];
+  var kind = bkPartyKind(pid),
+    counts = a.counts || {},
+    on = s.q.tab;
+  /* the three tabs, the server's counts: Needs you (the default) · Open · All; Paid is a filter inside All */
+  var tabs = BK_PB_TABS.map(function (item) {
+    var n = counts[item[0]];
     return (
-      '<button type="button" class="cbl-nchip" data-cbsid="CMP033-B01" data-b="state-' + item[0] + '" data-pb-act="state" data-pb-val="' + item[0] + '" aria-pressed="' + (s.q.state === item[0]) + '" onclick="bkPbPress(this)">' +
-      esc(tx(item[1])) + (n != null ? ' ' + esc(String(n)) : '') + '</button>'
+      '<button type="button" class="cbl-nchip" data-cbsid="CMP036-K01"' + bkMountAttribute('CMP036') + ' data-b="tab-' + item[0] + '" data-testid="bills-tab-' + item[0] + '" data-pb-act="tab" data-pb-val="' + item[0] + '" aria-pressed="' + (on === item[0]) + '" onclick="bkPbPress(this)">' +
+      esc(tx(item[1])) + (n != null ? ' <b>' + esc(String(n)) + '</b>' : '') + '</button>'
     );
   }).join('');
+  if (on === 'all' && counts.paid != null)
+    tabs += '<button type="button" class="cbl-nchip" data-cbsid="CMP033-B01" data-b="paid-filter" data-pb-act="paid" aria-pressed="' + !!s.q.paid + '" onclick="bkPbPress(this)">' + esc(tx('Paid')) + ' ' + esc(String(counts.paid)) + (s.q.paid ? ' ✕' : '') + '</button>';
+  if (s.q.why)
+    tabs += '<button type="button" class="cbl-nchip" data-cbsid="CMP033-B01" data-b="why-filter" data-pb-act="why" aria-pressed="true" onclick="bkPbPress(this)">' + esc(tx(BK_NEED[s.q.why][0])) + ' ✕</button>';
+  /* the age bands the server counted (the one ageing): each a chip that filters the bills below to that band; two to a row on a phone */
+  var bands =
+    on === 'needs'
+      ? ''
+      : BK_FOLLOW.filter(function (item) {
+          return Number((a.bands || {})[item[0]]) > 0;
+        })
+          .map(function (item) {
+            var pressed = s.q.band === item[0],
+              word = bkFollowWord(item[0]),
+              cut = word.indexOf(' ') > 0 ? [word.slice(0, word.indexOf(' ')), word.slice(word.indexOf(' '))] : [word, ''];
+            return (
+              '<button type="button" class="cbl-nchip bk-band" data-cbsid="CMP033-B01" data-b="band-' + item[0] + '" data-pb-act="band" data-pb-val="' + item[0] + '" aria-pressed="' + pressed + '" onclick="bkPbPress(this)">' +
+              esc(cut[0]) + '<span class="bk-bw">' + esc(cut[1]) + '</span> <b>' + amt(a.bands[item[0]]) + '</b>' + (pressed ? ' ✕' : '') + '</button>'
+            );
+          })
+          .join('');
   var onAccount = Number(a.on_account_minor) > 0 ? '<span data-b="on-account">' + esc(txf('{amt} on account, counted against the oldest bills', { amt: bkMoney(a.on_account_minor, c) })) + '</span>' : '';
-  var strip = '<div class="cbl-nstrip" data-b="band-strip">' + (bands || '<span>' + esc(tx('Nothing is owed')) + '</span>') + onAccount + '</div><div class="cbl-nstrip" data-b="state-strip">' + states + '</div>';
+  var strip = '<div class="cbl-nstrip" data-b="tab-strip">' + tabs + '</div>' + (bands || onAccount ? '<div class="cbl-nstrip bk-bands" data-b="band-strip">' + bands + onAccount + '</div>' : '');
   var marks = bkMarkControl();
-  var rows = (a.bills || []).map(function (row, index) {
-    var late = row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue));
-    var left = row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + amt(row.owed_minor) + '</b>';
-    var held = row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold'); /* a hold is said ONCE, in Status; Reviewed holds the tick (and a query) only */
-    var reviewed = !held && marks && row.entry_id && marks.row(row.entry_id) ? marks.chip(row.entry_id) : '<span style="' + grey + '">—</span>';
-    return [
-      esc(bkDate(row.date)),
-      bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true),
-      row.no_terms && row.status !== 'paid' ? bkSetTermsLink(pid) : row.due_date ? esc(bkDate(row.due_date)) : '—',
-      late,
-      bkBillStatus(row),
-      amt(row.amount_minor),
-      left,
-      reviewed
-    ];
+  /* the columns, one list: a column the tab does not need is not drawn (Amount is the bill as it was: it says nothing more than Still owed until a bill is part paid, so only All shows it).
+     ln = the line a phone card puts it on (1 · 2 · 0 = left off a phone); end = pushed to the right of its line */
+  var sortable = on !== 'needs';
+  var spec = [
+    { k: 'date', label: 'Date', w: 92, sort: sortable, ln: 1, cell: function (row) { return esc(bkDate(row.date)); } },
+    { k: 'bill', label: 'Bill', sort: sortable, ln: 1, cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
+    { k: 'status', label: on === 'needs' ? 'Why' : 'Status', w: 200, ln: 1, cell: function (row) { return bkBillStatus(row, on); } },
+    { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? bkSetTermsLink(pid) : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
+    { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
+    { k: 'amount', label: 'Amount', w: 100, r: true, sort: sortable, ln: 0, only: 'all', cell: function (row) { return amt(row.amount_minor); } },
+    { k: 'owed', label: 'Still owed', w: 104, r: true, sort: sortable, ln: 2, end: true, cell: function (row) { return row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + amt(row.owed_minor) + '</b>'; } },
+    {
+      k: 'reviewed', label: 'Reviewed', w: 90, ln: 0,
+      cell: function (row) {
+        var held = row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold'); /* a hold is said ONCE, in Status; Reviewed holds the tick (and a query) only */
+        return !held && marks && row.entry_id && marks.row(row.entry_id) ? marks.chip(row.entry_id) : '<span style="' + grey + '">—</span>';
+      }
+    },
+    { k: 'act', label: ' ', w: 96, ln: 1, end: true, cell: function (row) { return bkNeedAction(pid, row, kind); } }
+  ].filter(function (col) {
+    return !col.only || col.only === on;
   });
   var table = CBList.nextTable({
     id: 'bills-' + pid,
     sort: { k: s.q.sort, dir: s.q.dir },
     act: 'bkPbSort',
-    empty: tx(s.q.state === 'open' ? 'No open bills' : 'No bills here'),
-    cols: [
-      { k: 'date', label: tx('Date'), w: 92, sort: true },
-      { k: 'bill', label: tx('Bill'), sort: true },
-      { k: 'due', label: tx('Due date'), w: 112, sort: true },
-      { k: 'days', label: tx('Days overdue'), w: 104, r: true, sort: true },
-      { k: 'status', label: tx('Status'), w: 230 },
-      { k: 'amount', label: tx('Amount'), w: 104, r: true, sort: true },
-      { k: 'owed', label: tx('Still owed'), w: 104, r: true, sort: true },
-      { k: 'reviewed', label: tx('Reviewed'), w: 130 }
-    ],
-    rows: rows
+    empty: tx(on === 'needs' ? 'Nothing here needs you' : on === 'open' ? 'No open bills' : 'No bills here'),
+    cols: spec.map(function (col) {
+      return { k: col.k, label: tx(col.label), w: col.w, r: col.r, sort: col.sort, ln: col.ln, end: col.end };
+    }),
+    rows: (a.bills || []).map(function (row, index) {
+      return spec.map(function (col) {
+        return col.cell(row, index);
+      });
+    })
   });
+  /* the clean bills fold into one line (W15-115): "✓ 130 bills in order" — pressed, they open on the Open tab */
+  var fold =
+    on === 'needs' && Number(counts.in_order) > 0
+      ? '<div class="cbl-nstrip" data-b="in-order"><button type="button" class="cbl-nchip" data-cbsid="CMP033-B01" data-testid="bills-in-order" data-pb-act="tab" data-pb-val="open" onclick="bkPbPress(this)">✓ ' + esc(txn('{count} bill in order', '{count} bills in order', Number(counts.in_order))) + ' ▸</button></div>'
+      : '';
   var pages = Math.max(1, Math.ceil(Number(a.total || 0) / BK_PB_LIMIT)),
     pager = '';
   if (pages > 1) {
@@ -5158,7 +5275,35 @@ function bkPartyBillsHTML(pid, list, c) {
       '<div class="cbl-nstrip" data-b="bills-pager">' + press('prev', tx('Previous'), s.q.page <= 1, -1) + press('next', tx('Next'), s.q.page >= pages, 1) +
       '<span>' + esc(txf('Page {n} of {m}', { n: s.q.page, m: pages })) + '</span></div>';
   }
-  return '<div data-pb="' + esc(pid) + '"' + (a.stale ? ' aria-busy="true" style="opacity:.6"' : '') + '>' + strip + '<div style="overflow-x:auto">' + table + '</div>' + pager + '</div>';
+  return '<div data-pb="' + esc(pid) + '"' + (a.stale ? ' aria-busy="true" style="opacity:.6"' : '') + '>' + strip + '<div class="bk-tabwrap">' + table + '</div>' + fold + pager + '</div>';
+}
+/** no terms = no due date: the link goes to the ONE terms editor (CB Finance › Terms) — never a second one here */
+function bkSetTermsLink() {
+  return '<a data-b="set-terms" data-cbsid="CMP044-C02" href="/finance.html#terms" onclick="event.stopPropagation()">' + esc(tx('Set terms')) + '</a>';
+}
+/** Status, said once: Paid · Part paid · Unpaid, then WHY the bill needs you in ONE chip — "On hold · no tax invoice" — with who and when on hover (the hold is a press that opens the mark's sheet). `tab` = the tab asking: the days late are a column, so "overdue" is a chip only on Needs you */
+function bkBillStatus(row, tab) {
+  var m = row.mark,
+    held = m && (m.class === 'hold' || m.kind === 'on_hold'),
+    reasons = row.reasons || [],
+    warn = 'style="color:var(--warn-2)"',
+    parts = ['<span class="optchip" data-b="standing-' + row.status + '"' + (row.status === 'unpaid' ? '' : ' style="color:var(--grey)"') + '>' + esc(tx(BK_STANDING[row.status])) + '</span>'];
+  if (reasons.indexOf('no_tax_invoice') >= 0 && held) {
+    /* ONE chip (W15-113): the hold and its reason inside it; who and when on hover, the press opens the mark's sheet */
+    var who = [m.by_name, m.at ? bkDate(m.at) : ''].filter(Boolean).join(' · ');
+    var sid = 'CMP058-B02'; /* the Day book's mark chip code (cap-mark.js), held in a name so the census reads it on the element */
+    parts.push('<button type="button" class="optchip" data-cbsid="' + sid + '" data-mk="open" data-id="' + esc(row.entry_id) + '" data-class="hold" data-b="mark-hold" ' + warn + ' title="' + esc(who) + '" aria-label="' + esc(tx('On hold') + ' · ' + tx('No tax invoice')) + '">‖ ' + esc(tx('On hold')) + ' · ' + esc(tx('no tax invoice')) + '</button>');
+  } else {
+    reasons.forEach(function (reason) {
+      if (reason === 'overdue' && tab !== 'needs') return; /* the Days overdue column already says it */
+      if (reason === 'no_terms' && tab !== 'needs') return; /* the Due date cell says it, with the link that fixes it */
+      var word = { disputed: 'In dispute', query: '? Open query', held: '‖ On hold', no_tax_invoice: '⚠ No tax invoice', no_terms: 'No terms', overdue: 'Overdue' }[reason];
+      parts.push('<span class="optchip" data-b="why-' + reason + '" ' + warn + '>' + esc(tx(word)) + '</span>');
+    });
+    if (parts.length > 2) parts.splice(2, parts.length - 2, '<span class="optchip" data-b="why-more" title="' + esc(reasons.map(function (r) { return tx(BK_NEED[r][0]); }).join(' · ')) + '">+' + (parts.length - 2) + '</span>'); /* one why-chip says the main reason; the rest are a count (the full list on hover) */
+  }
+  if (parts.length > 1 && row.status === 'unpaid') parts.shift(); /* "Unpaid" is every open bill: said only when nothing else is */
+  return '<span class="bk-st" style="display:inline-flex;gap:4px;flex-wrap:nowrap">' + parts.join(' ') + '</span>';
 }
 /** its next level (W15-108): an info strip (the age bands — each one a filter —, what has no due date, what is disputed) and then the bills as a real sub-table under its own header. The bands and every figure are the server's (GET /party/:id/bills); `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the bills read repaints THAT list) */
 function bkDuesNext(party, currency, list) {
@@ -5179,31 +5324,158 @@ function bkDuesNext(party, currency, list) {
   );
 }
 /* the Dues tab: what parties owe you and what you owe, grouped by side */
+/**
+ * ⭐ W15-114 · WHO NEEDS YOU, AND WHY — the server's reasons (api lib/books-needs), in the shopkeeper's words. Nothing is counted here: a party row carries `needs { bills, <reason>: n, overdue_minor }`
+ * and the answer carries the same by side. [word of a chip, the one action it offers]. A chip is a press: it opens that party on its Needs you tab, narrowed to that reason.
+ */
+var BK_NEED = {
+  disputed: ['disputed', 'Answer'],
+  query: ['open query', 'Answer'],
+  held: ['on hold', 'Release'],
+  no_tax_invoice: ['no tax invoice', 'Attach'],
+  no_terms: ['no terms', 'Set terms'],
+  overdue: ['overdue', 'Pay']
+};
+var BK_NEED_ORDER = ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 'overdue'];
+/** the chips of one party row: up to three reasons with their counts, then "+n"; each opens the party on its fix. Nothing wraps (one line a row). */
+function bkNeedChips(p) {
+  var n = p.needs || {},
+    kinds = BK_NEED_ORDER.filter(function (kind) {
+      return Number(n[kind]) > 0;
+    });
+  if (!kinds.length) return '';
+  var shown = kinds.slice(0, 3).map(function (kind) {
+    return (
+      '<button type="button" class="cbl-nchip bk-need" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="need-' + kind + '" data-testid="need-' + kind + '-' + esc(p.party_id) + '" onclick="bkNeedOpen(event,\'' + esc(p.party_id) + "','" + kind + '\')">' +
+      '<b>' + esc(String(n[kind])) + '</b> ' + esc(tx(BK_NEED[kind][0])) + '</button>'
+    );
+  });
+  if (kinds.length > 3) shown.push('<span class="bk-need-more" data-b="need-more">+' + (kinds.length - 3) + '</span>');
+  return '<span class="bk-needs" style="display:inline-flex;gap:4px;flex-wrap:nowrap;white-space:nowrap">' + shown.join('') + '</span>';
+}
+/** how urgent a party is: what is late (most money first), then how many bills need it */
+function bkNeedRank(p) {
+  var n = p.needs || {};
+  return (Number(n.overdue_minor) || 0) * 1000 + (Number(n.bills) || 0);
+}
+/** the answer's own sums for the page's side (receivables = customers, payables = suppliers; no side = both): { parties, bills, <reason>, overdue_minor } */
+function bkNeedsSum(side) {
+  var all = (BK.duesRaw && BK.duesRaw.needs) || {},
+    keys = side === 'rcv' ? ['customer'] : side === 'pay' ? ['supplier'] : ['customer', 'supplier'],
+    out = { parties: 0, bills: 0, overdue_minor: 0 };
+  BK_NEED_ORDER.forEach(function (kind) {
+    out[kind] = 0;
+  });
+  keys.forEach(function (key) {
+    var part = all[key];
+    if (!part) return;
+    Object.keys(out).forEach(function (field) {
+      if (part[field] == null) {
+        if (field === 'overdue_minor') out[field] = null;
+      } else if (out[field] != null) out[field] += Number(part[field]);
+    });
+  });
+  return out;
+}
+/** the Needs filter of the Dues list: any reason, or one of them (the header line presses it) */
+function bkNeedFilters() {
+  return [
+    {
+      key: 'need',
+      label: tx('Needs'),
+      all: tx('Needs'),
+      match: function (p, v) {
+        return v === 'any' ? !!(p.needs && p.needs.bills > 0) : !!(p.needs && Number(p.needs[v]) > 0);
+      },
+      options: [{ v: 'any', label: tx('Needs you') }].concat(
+        BK_NEED_ORDER.map(function (kind) {
+          return { v: kind, label: tx(BK_NEED[kind][0]) };
+        })
+      )
+    }
+  ];
+}
+/** the header line of Receivables / Payables: "12 suppliers need you · 8 no tax invoice · 3 no terms · A$4,210 overdue" — each a filter (a press again clears it) */
+function bkNeedsHead() {
+  var host = document.getElementById('bk_needs_head');
+  if (!host) return;
+  var side = BK.duesSide,
+    sum = bkNeedsSum(side),
+    c = (BK.duesRaw && BK.duesRaw.currency) || bkCur(),
+    list = typeof CBList !== 'undefined' && CBList.get('dues'),
+    on = (list && list.state().filt.need) || '';
+  var who = side === 'pay' ? ['supplier', 'suppliers'] : side === 'rcv' ? ['customer', 'customers'] : ['party', 'parties'];
+  var seg = function (kind, text) {
+    return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + '" data-testid="needs-head-' + kind + '" aria-pressed="' + (on === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
+  };
+  var parts = [];
+  if (sum.parties) parts.push(seg('any', esc(txn('{count} ' + who[0] + ' needs you', '{count} ' + who[1] + ' need you', sum.parties)).replace(/^([0-9][0-9,.]*)/, function (n) { return '<b>' + n + '</b>'; })));
+  if (sum.no_tax_invoice) parts.push(seg('no_tax_invoice', '<b>' + sum.no_tax_invoice + '</b> ' + esc(tx('no tax invoice'))));
+  if (sum.no_terms) parts.push(seg('no_terms', '<b>' + sum.no_terms + '</b> ' + esc(tx('without terms'))));
+  if (sum.disputed) parts.push(seg('disputed', '<b>' + sum.disputed + '</b> ' + esc(tx('disputed'))));
+  if (sum.query) parts.push(seg('query', '<b>' + sum.query + '</b> ' + esc(tx('open queries'))));
+  if (sum.held) parts.push(seg('held', '<b>' + sum.held + '</b> ' + esc(tx('on hold'))));
+  if (sum.overdue) parts.push(seg('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, c)) : sum.overdue) + '</b> ' + esc(tx('overdue'))));
+  if (typeof CBAttention !== 'undefined' && CBAttention.styles) CBAttention.styles(); /* the one strip look (Day book, Ledgers, BAS and this line) */
+  host.innerHTML = '<div class="attn-strip" role="status" data-testid="needs-head">' + (parts.length ? parts.join(' · ') : '<span class="attn-ok" data-b="needs-ok">✓ ' + esc(tx('Nobody needs you')) + '</span>') + '</div>';
+}
+/** a press on the header line: the list narrows to that reason; the same press again puts it back */
+function bkNeedsHeadPress(kind) {
+  var list = CBList.get('dues');
+  if (!list) return;
+  list.filter('need', list.state().filt.need === kind ? '' : kind);
+  bkNeedsHead();
+}
+/** a chip on a party row: that party opens on its Needs you tab, narrowed to the reason */
+function bkNeedOpen(event, pid, kind) {
+  event.stopPropagation();
+  bkPbSet(pid, { tab: 'needs', why: kind, paid: false, band: '' });
+  var list = CBList.get('dues');
+  if (list) list.open(pid, true);
+}
+/** the rows of the Dues list from the one /dues read the page holds: the parties with a balance, on the page's own side (Receivables also holds the advances paid; Payables holds no one who owes you) */
+function bkDuesRows(onlySide) {
+  var open = ((BK.duesRaw && BK.duesRaw.parties) || []).filter(function (item) {
+    return Number(item.balance_minor);
+  });
+  if (onlySide)
+    open = open.filter(function (item) {
+      return onlySide === 'rcv' ? bkDuesSide(item) === 'rcv' || bkDuesAdvance(item) : bkDuesSide(item) === 'pay' && !bkDuesAdvance(item);
+    });
+  return open;
+}
 async function bkDues(body, onlySide) {
   /* onlySide 'rcv' | 'pay' (CB Accounts: Receivables / Payables) opens the same list on that side */
   try {
     var reply = await api('booksDues');
     var c = reply && reply.currency;
     bkDuesStore(reply);
-    var open = ((reply && reply.parties) || []).filter(function (item) {
-      return Number(item.balance_minor);
-    });
-    /* the page's own side is the page, not a filter the person set: Receivables also holds the advances paid; Payables holds no one who owes you */
-    if (onlySide)
-      open = open.filter(function (item) {
-        return onlySide === 'rcv' ? bkDuesSide(item) === 'rcv' || bkDuesAdvance(item) : bkDuesSide(item) === 'pay' && !bkDuesAdvance(item);
-      });
+    BK.duesSide = onlySide || null;
+    var open = bkDuesRows(onlySide);
     var num = function (g) {
       return function (a, b) {
         return Number(g(a)) - Number(g(b));
       };
     };
-    body.innerHTML = '<div id="bkl_dues" data-testid="dues-list"></div>';
+    body.innerHTML = '<div class="attn-col"><div id="bk_needs_head"></div><div id="bkl_dues" data-testid="dues-list"></div></div>';
+    bkNeedsHead();
     CBList.mount(document.getElementById('bkl_dues'), {
       key: 'dues',
       t: tx,
       rows: function () {
-        return open;
+        return bkDuesRows(BK.duesSide);
+      },
+      /* W15-116 / W15-117: ⚑ Needs you — the server's count of parties, the row's own needs, the most late first; Next › opens the next party */
+      needs: {
+        count: function () {
+          return bkNeedsSum(BK.duesSide).parties;
+        },
+        match: function (p) {
+          return !!(p.needs && p.needs.bills > 0);
+        },
+        rank: function (p) {
+          return bkNeedRank(p);
+        }
       },
       id: function (p) {
         return p.party_id;
@@ -5273,9 +5545,16 @@ async function bkDues(body, onlySide) {
           cmp: function (left, right) {
             return String(left.oldest_due || '9999').localeCompare(String(right.oldest_due || '9999'));
           }
+        },
+        {
+          key: 'needs',
+          label: tx('Needs'),
+          cmp: function (left, right) {
+            return bkNeedRank(right) - bkNeedRank(left);
+          }
         }
       ],
-      filters: onlySide
+      filters: bkNeedFilters().concat(onlySide
         ? []
         : [
             {
@@ -5290,7 +5569,7 @@ async function bkDues(body, onlySide) {
                 return filterValue === 'pay' ? bkDuesSide(party) === 'pay' && !bkDuesAdvance(party) : bkDuesSide(party) === 'rcv' || bkDuesAdvance(party);
               }
             }
-          ],
+          ]),
       next: function (p) {
         return bkDuesNext(p, c);
       },
