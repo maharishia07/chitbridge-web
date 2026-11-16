@@ -89,13 +89,14 @@ function stand() {
     await ctx.route('**/api/**', (r0) => { const r = C.wrap(r0);
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
-      if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year and country, as the page reads them */
+      if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: books.csStatus('AU', 'Australia') })); /* the shop's year and country, as the page reads them */
       if (p === '/api/books/todo') return json(r, 200, []);
       if (p === '/api/books/accounts') return json(r, 200, { accounts: chart.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
       if (p === '/api/books/bank/log') return json(r, 200, { currency: 'INR', account: { account_id: 'acc-1500', code: '1500', name: 'Bank' }, marks: [], statements: S.signedBy ? S.signedBy[u.searchParams.get('account')] || [] : S.signed, posted: [], exceptions: [] });
       if (p === '/api/books/bank/rail') return json(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', books: { parties: [], open_items: [] }, rail_chits: [], parties: [], may: { ask: { ok: true } } });
       if (p === '/api/books/ledger/1500') { S.ledgerCalls.push(u.search); return json(r, 200, books.ledger('1500', 'Bank', [], { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: 10000000, closing_minor: 10000000 })); }
+      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, books.periods([]));
       if (p === '/api/books/events' && m === 'GET') return json(r, 200, books.eventsAnswer({ events: [], picks: {} }));
       if (p === '/api/books/bank/statement-files' && S.pending) return json(r, 503, { code: 'BOOKS_NOT_MIGRATED', error: 'The statements box arrives after the next update.', message: 'The statements box arrives after the next update.', detail: 'The statements box arrives after the next update.' });
       if (p === '/api/books/bank/statement-files' && m === 'GET') return json(r, 200, S.list(u.searchParams));

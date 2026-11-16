@@ -12,7 +12,9 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
-const C = require('./lib/contract.cjs');   /* every stand-in answer for a contract route is held to the API's shape (M43) */
+const C = require('./lib/contract.cjs');
+const crmApi = require('./lib/crm-api.cjs');
+const example = (key) => JSON.parse(JSON.stringify(C.load().routes.filter((e) => e.key === key)[0].example));   /* the contract's own example, edited (as walk-books-door does) */   /* every stand-in answer for a contract route is held to the API's shape (M43) */
 const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(c) + '.x'; };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Coastal', entity: 'Coastal Supplies' };
@@ -42,6 +44,9 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
         if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Coastal Supplies', currency_code: 'AUD', country: 'AU', capabilities: [], ...(old ? {} : { ledger_on: on }) } });
         if (p === '/api/books/health') return on ? json(r, 200, books.health()) : json(r, 404, { code: 'LEDGER_OFF', message: 'This shop has not switched the ledger on.' });
         if (p === '/api/books/todo') return json(r, 200, []);
+        if (p === '/api/crm/parties') return json(r, 200, crmApi.listPage([]));
+        if (p === '/api/crm/followups') return json(r, 200, crmApi.followups([]));
+        if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store = Object.assign({}, ex.store, { networks: [] }); return json(r, 200, ex); }
         return json(r, 200, {});
       });
       await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, OWNER);
