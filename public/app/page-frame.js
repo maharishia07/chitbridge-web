@@ -278,7 +278,7 @@
         ? {
             surface: opts.surface || opts.app,
             need: 'person',
-            registerHref: '/settings.html#/new',
+            registerHref: opts.deepLink ? undefined : '/settings.html#/new', /* T3: a deep-link page (network, accounts, Settings) never shows the register door; Home still does for a new browser */
             onIn: function () {
               root.location.reload();
             }

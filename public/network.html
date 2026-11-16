@@ -127,6 +127,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   var host = document.getElementById('nw');
   var app,
     frame = CBFrame.mount({
+      deepLink: true, /* T3: an ended session shows the plain sign-in window, no register door */
       app: 'network',
       kural: 'network',
       work: host,

@@ -1,0 +1,1 @@
+{ "about": "Views that cannot yet meet the first-data target (20% wide, 30% narrow), keyed <seat>.<view>.<width>, with the MEASURED fraction. A number here may only fall; remove the line when the view meets the target. Filled by the sit-grund proof run.", "ceilings": {} }

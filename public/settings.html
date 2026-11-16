@@ -240,6 +240,7 @@ function go() {
     else CBShop.mount(host);
   }
   frame = CBFrame.mount({
+    deepLink: true, /* T3: an ended session shows the plain sign-in window, no register door */
     app: 'settings',
     kural: 'settings',
     work: host,
