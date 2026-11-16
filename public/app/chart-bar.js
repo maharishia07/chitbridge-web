@@ -1,5 +1,8 @@
 /* app/chart-bar.js — CBChartBar: THE OPTIONS BAR AT THE TOP OF EVERY CHART PAGE (chart engine step 2, 16 Nov 2026 · REQ PM/REQ-CHART-ENGINE-2026-11-16.md section 4).
  * CARD 26-reporting-mis-and-bi/charts
+ * OWNER    cb-reports (palette and UI codes: cb-ux-locale; the pref keys: cb-settings)
+ * RISK     a chart page that fails to load the engine shows one sentence and its table; a lost pref write is held pending and sent again, never lost
+ * ID       CHT-BAR
  *
  * OWNS      mount(scope, options) — one sticky bar of four choices, the same everywhere: Colours (a menu: "Follow my avatar theme", then the combinations of CBDraw.COMBOS) ·
  *           Chart (a menu, only where the data fits more than one type; else a plain word) · the favourite star · the Readability switch. It applies the palette to the
@@ -19,10 +22,10 @@
   var TYPE_WORDS = { column: 'Columns', line: 'Line', bar: 'Ranked bars', stack: 'Stacked bar', pie: 'Pie', donut: 'Donut', area: 'Area', waterfall: 'Waterfall' };
   var FOLLOW = 'follow';
 
-  function say(text) {
+  function words(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
-  function esc(text) {
+  function escapeText(text) {
     return String(text == null ? '' : text).replace(/[&<>"']/g, function (char) {
       return '&#' + char.charCodeAt(0) + ';';
     });
@@ -62,18 +65,18 @@
   }
   /** Readability: the person's own setting; when they never set it, ON for the readability themes and OFF elsewhere (the larger crowd gets the vibrant default) */
   function readOf() {
-    var own = root.CBChartCap.get('chart_read');
+    var own = root.CBChartCap.chosen('chart_read');
     if (own === 'on' || own === 'off') return own;
     return AUTO_READ_THEMES.indexOf(themeKey()) >= 0 ? 'on' : 'off';
   }
   /** the favourite of a kind as { combo, type }, or null: stored as "<combination>-<type>" */
   function favouriteOf(kind) {
-    var text = root.CBChartCap.get('chart_fav_' + kind),
+    var text = root.CBChartCap.chosen('chart_fav_' + kind),
       at = text.lastIndexOf('-');
     return at > 0 ? { combo: text.slice(0, at), type: text.slice(at + 1) } : null;
   }
   function comboNames() {
-    var names = [[FOLLOW, say('Follow my avatar theme')]];
+    var names = [[FOLLOW, words('Follow my avatar theme')]];
     Object.keys(root.CBDraw.COMBOS).forEach(function (id) {
       names.push([id, root.CBDraw.COMBOS[id].name]);
     });
@@ -81,10 +84,10 @@
   }
   function selectHtml(code, testid, label, options, current) {
     return (
-      '<select data-cbsid="' + code + '" data-testid="' + testid + '" aria-label="' + esc(label) + '" title="' + esc(label) + '">' +
+      '<select data-cbsid="' + code + '" data-testid="' + testid + '" aria-label="' + escapeText(label) + '" title="' + escapeText(label) + '">' +
       options
         .map(function (option) {
-          return '<option value="' + esc(option[0]) + '"' + (option[0] === current ? ' selected' : '') + '>' + esc(option[1]) + '</option>';
+          return '<option value="' + escapeText(option[0]) + '"' + (option[0] === current ? ' selected' : '') + '>' + escapeText(option[1]) + '</option>';
         })
         .join('') +
       '</select>'
@@ -92,16 +95,16 @@
   }
   function barHtml(kind, types, state) {
     var typeOptions = types.map(function (type) {
-      return [type, say(TYPE_WORDS[type] || type)];
+      return [type, words(TYPE_WORDS[type] || type)];
     });
     return (
-      '<div class="chart-bar" data-cbsid="' + CODES.bar + '" data-testid="chart-bar" data-kind="' + esc(kind) + '" role="group" aria-label="' + esc(say('Chart options')) + '">' +
-      selectHtml(CODES.colours, 'chart-colours', say('Colours'), comboNames(), state.combo) +
+      '<div class="chart-bar" data-cbsid="' + CODES.bar + '" data-testid="chart-bar" data-kind="' + escapeText(kind) + '" role="group" aria-label="' + escapeText(words('Chart options')) + '">' +
+      selectHtml(CODES.colours, 'chart-colours', words('Colours'), comboNames(), state.combo) +
       (types.length > 1
-        ? selectHtml(CODES.type, 'chart-type', say('Chart type'), typeOptions, state.type)
-        : '<span class="chart-bar-one" data-testid="chart-type-one">' + esc(typeOptions[0][1]) + '</span>') +
-      '<button type="button" class="chart-bar-star" data-cbsid="' + CODES.star + '" data-testid="chart-fav" aria-pressed="false" aria-label="' + esc(say('Favourite')) + '" title="' + esc(say('Favourite: use this chart and these colours next time')) + '">☆</button>' +
-      '<label class="chart-bar-read" title="' + esc(say('Readability: every mark clearly visible against the page')) + '"><input type="checkbox" data-cbsid="' + CODES.read + '" data-testid="chart-read"> ' + esc(say('Readability')) + '</label>' +
+        ? selectHtml(CODES.type, 'chart-type', words('Chart type'), typeOptions, state.type)
+        : '<span class="chart-bar-one" data-testid="chart-type-one">' + escapeText(typeOptions[0][1]) + '</span>') +
+      '<button type="button" class="chart-bar-star" data-cbsid="' + CODES.star + '" data-testid="chart-fav" aria-pressed="false" aria-label="' + escapeText(words('Favourite')) + '" title="' + escapeText(words('Favourite: use this chart and these colours next time')) + '">☆</button>' +
+      '<label class="chart-bar-read" title="' + escapeText(words('Readability: every mark clearly visible against the page')) + '"><input type="checkbox" data-cbsid="' + CODES.read + '" data-testid="chart-read"> ' + escapeText(words('Readability')) + '</label>' +
       '</div>'
     );
   }
@@ -125,12 +128,44 @@
   function savedChoice(kind, types) {
     var fav = favouriteOf(kind),
       choice = {
-        combo: (fav && fav.combo) || root.CBChartCap.get('chart_theme') || FOLLOW,
+        combo: (fav && fav.combo) || root.CBChartCap.chosen('chart_theme') || FOLLOW,
         type: fav && types.indexOf(fav.type) >= 0 ? fav.type : types[0],
         read: readOf()
       };
     if (!root.CBDraw.COMBOS[choice.combo]) choice.combo = FOLLOW;
     return choice;
+  }
+
+  /** is this combination and type the person's favourite for the kind */
+  function isFavourite(kind, state) {
+    var current = favouriteOf(kind);
+    return !!current && current.combo === state.combo && current.type === state.type;
+  }
+
+  /** the four controls' events: a pick is saved at once (CBChartCap.set), the state changes, the page is told to redraw */
+  function bindBar(bar, state, kind, redraw) {
+    var star = bar.querySelector('[data-testid="chart-fav"]'),
+      read = bar.querySelector('[data-testid="chart-read"]'),
+      typeMenu = bar.querySelector('[data-testid="chart-type"]');
+    bar.querySelector('[data-testid="chart-colours"]').addEventListener('change', function (event) {
+      state.combo = event.target.value;
+      root.CBChartCap.set('chart_theme', state.combo === FOLLOW ? '' : state.combo);
+      redraw();
+    });
+    if (typeMenu)
+      typeMenu.addEventListener('change', function (event) {
+        state.type = event.target.value;
+        redraw();
+      });
+    star.addEventListener('click', function () {
+      root.CBChartCap.set('chart_fav_' + kind, isFavourite(kind, state) ? '' : state.combo + '-' + state.type);
+      redraw();
+    });
+    read.addEventListener('change', function () {
+      state.read = read.checked ? 'on' : 'off';
+      root.CBChartCap.set('chart_read', state.read);
+      redraw();
+    });
   }
 
   /**
@@ -146,49 +181,24 @@
     if (old) old.parentNode.removeChild(old);
     scope.insertAdjacentHTML('afterbegin', barHtml(kind, types, state));
     var bar = scope.querySelector('[data-testid="chart-bar"]'),
-      star = bar.querySelector('[data-testid="chart-fav"]'),
-      read = bar.querySelector('[data-testid="chart-read"]');
+      read = bar.querySelector('[data-testid="chart-read"]'),
+      typeMenu = bar.querySelector('[data-testid="chart-type"]'),
+      star = bar.querySelector('[data-testid="chart-fav"]');
     read.checked = state.read === 'on';
 
-    function isFavourite() {
-      var current = favouriteOf(kind);
-      return !!current && current.combo === state.combo && current.type === state.type;
-    }
     function redraw() {
       var palette = root.CBDraw.paletteOf(state.combo === FOLLOW ? '' : state.combo, tokensOf(scope), state.read);
       root.CBDraw.applyPalette(scope, palette, state.read);
-      star.setAttribute('aria-pressed', isFavourite() ? 'true' : 'false');
-      star.textContent = isFavourite() ? '★' : '☆';
+      star.setAttribute('aria-pressed', isFavourite(kind, state) ? 'true' : 'false');
+      star.textContent = isFavourite(kind, state) ? '★' : '☆';
       options.onChange({ combo: state.combo, type: state.type, read: state.read, palette: palette });
     }
-    bar.querySelector('[data-testid="chart-colours"]').addEventListener('change', function (event) {
-      state.combo = event.target.value;
-      root.CBChartCap.set('chart_theme', state.combo === FOLLOW ? '' : state.combo);
-      redraw();
-    });
-    var typeMenu = bar.querySelector('[data-testid="chart-type"]');
-    if (typeMenu)
-      typeMenu.addEventListener('change', function (event) {
-        state.type = event.target.value;
-        redraw();
-      });
-    star.addEventListener('click', function () {
-      root.CBChartCap.set('chart_fav_' + kind, isFavourite() ? '' : state.combo + '-' + state.type);
-      redraw();
-    });
-    read.addEventListener('change', function () {
-      state.read = read.checked ? 'on' : 'off';
-      root.CBChartCap.set('chart_read', state.read);
-      redraw();
-    });
+    bindBar(bar, state, kind, redraw);
     /* the server's answer can land after the page drew: take the person's saved choices again, once */
     root.document.addEventListener('cb:chartprefs', function again() {
       root.document.removeEventListener('cb:chartprefs', again);
       if (!scope.contains(bar)) return;
-      var fresh = savedChoice(kind, types);
-      state.combo = fresh.combo;
-      state.type = fresh.type;
-      state.read = fresh.read;
+      Object.assign(state, savedChoice(kind, types));
       bar.querySelector('[data-testid="chart-colours"]').value = state.combo;
       if (typeMenu) typeMenu.value = state.type;
       read.checked = state.read === 'on';

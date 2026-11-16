@@ -1,5 +1,8 @@
 /* app/chart-cap.js — CBChartCap: THE CHART ENGINE'S TWO DOORS (chart engine, 16 Nov 2026 · REQ PM/REQ-CHART-ENGINE-2026-11-16.md, critic points 2 and 4).
  * CARD 26-reporting-mis-and-bi/charts
+ * OWNER    cb-reports (palette and UI codes: cb-ux-locale; the pref keys: cb-settings)
+ * RISK     a chart page that fails to load the engine shows one sentence and its table; a lost pref write is held pending and sent again, never lost
+ * ID       CHT-CAP
  *
  * OWNS      ready() — the ONE loader: a page that draws no chart never fetches chart code; a page about to draw asks ready() and gets one promise
  *           (the files are injected once, in order, with the build query where the page has one). app.html's ensureCap('chart') is a call to it; finance
@@ -59,13 +62,14 @@
       var parsed = JSON.parse(store(PENDING) || '{}');
       return parsed && typeof parsed === 'object' ? parsed : {};
     } catch (error) {
+      unsent(error);
       return {};
     }
   }
   function pendingPut(marks) {
     store(PENDING, Object.keys(marks).length ? JSON.stringify(marks) : null);
   }
-  function get(key) {
+  function chosen(key) {
     return KEY.test(key) ? store('cb_' + key) || '' : '';
   }
   /** a chart key that did not reach the server: its pending mark stays, so the next hydrate or the 'online' event sends it again */
@@ -88,6 +92,11 @@
     }
     return Object.keys(found);
   }
+  /** the api's address: what the avatar was mounted with, else the page's own, else the one stored for it */
+  function baseOf(host) {
+    if (host.apiBase) return host.apiBase;
+    return root.CB_API || store('cb_api_base') || '';
+  }
   function doorOf() {
     var host = (root.CBAvatar && root.CBAvatar.host && root.CBAvatar.host()) || {},
       session = {};
@@ -96,15 +105,14 @@
     } catch (error) {
       unsent(error);
     }
-    var base = host.apiBase || root.CB_API || (root.localStorage && root.localStorage.getItem('cb_api_base')) || '';
-    return { base: base, token: host.token || session.token || '', off: host.sync === false };
+    return { base: baseOf(host), token: host.token || session.token || '', off: host.sync === false };
   }
   /** one chart key to the server, alone ('' removes it); the pending mark goes when the server answers ok:true with that value */
   function push(key) {
     var door = doorOf();
     if (door.off || !door.token || !root.fetch) return;
     var body = {};
-    body[key] = get(key);
+    body[key] = chosen(key);
     try {
       root
         .fetch(door.base + '/api/entities/me/prefs/ui', {
@@ -151,7 +159,7 @@
         } else push(key);
         return;
       }
-      if (server === get(key)) return;
+      if (server === chosen(key)) return;
       store('cb_' + key, server && VALUE.test(server) ? server : null);
       changed = true;
     });
@@ -165,5 +173,5 @@
   }
   if (root.addEventListener) root.addEventListener('online', retry);
 
-  root.CBChartCap = { ready: ready, get: get, set: set, hydrate: hydrate, pending: pendingGet };
+  root.CBChartCap = { ready: ready, chosen: chosen, set: set, hydrate: hydrate, pending: pendingGet };
 })(typeof window !== 'undefined' ? window : this);

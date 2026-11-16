@@ -525,10 +525,10 @@
   function channelsOf(colour) {
     var text = String(colour).trim();
     if (text.charAt(0) === '#') {
-      var hex = text.slice(1);
-      if (hex.length === 3) hex = hex.replace(/./g, '$&$&');
+      var digits = text.slice(1);
+      if (digits.length === 3) digits = digits.replace(/./g, '$&$&');
       return [0, 2, 4].map(function (at) {
-        return parseInt(hex.substr(at, 2), 16);
+        return parseInt(digits.substr(at, 2), 16);
       });
     }
     return (text.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
@@ -543,19 +543,19 @@
       });
       return 0.2126 * part[0] + 0.7152 * part[1] + 0.0722 * part[2];
     };
-    var high = Math.max(light(first), light(second)),
-      low = Math.min(light(first), light(second));
-    return (high + 0.05) / (low + 0.05);
+    var lighter = Math.max(light(first), light(second)),
+      darker = Math.min(light(first), light(second));
+    return (lighter + 0.05) / (darker + 0.05);
   }
   /** a mix of two colours, the first at share (0..1): the same as css color-mix(in srgb) */
   function mixOf(first, second, share) {
-    var one = channelsOf(first),
-      two = channelsOf(second);
+    var near = channelsOf(first),
+      other = channelsOf(second);
     return (
       'rgb(' +
       [0, 1, 2]
         .map(function (at) {
-          return Math.round(one[at] * share + two[at] * (1 - share));
+          return Math.round(near[at] * share + other[at] * (1 - share));
         })
         .join(',') +
       ')'

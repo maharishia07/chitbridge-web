@@ -60,7 +60,7 @@ const chartKeysIn = (body) => Object.keys(body).filter((k) => /^chart_/.test(k))
     assert.strictEqual(g.CBChartCap.set('chart_fav_series', 'ocean-column'), true);
     await tick();
     assert.deepStrictEqual(g.sent.map((s) => s.body), [{ chart_fav_series: 'ocean-column' }]);
-    assert.strictEqual(g.CBChartCap.get('chart_fav_series'), 'ocean-column');
+    assert.strictEqual(g.CBChartCap.chosen('chart_fav_series'), 'ocean-column');
     assert.deepStrictEqual(g.CBChartCap.pending(), {}, 'ok:true clears the mark');
   });
   await it('after a favourite is held, a theme change still carries no chart key', async () => {
@@ -70,14 +70,14 @@ const chartKeysIn = (body) => Object.keys(body).filter((k) => /^chart_/.test(k))
     g.A.set('theme', 'dark');
     await tick();
     g.sent.forEach((s) => assert.deepStrictEqual(chartKeysIn(s.body), []));
-    assert.strictEqual(g.CBChartCap.get('chart_fav_series'), 'ocean-column');
-    assert.strictEqual(g.CBChartCap.get('chart_read'), 'on');
+    assert.strictEqual(g.CBChartCap.chosen('chart_fav_series'), 'ocean-column');
+    assert.strictEqual(g.CBChartCap.chosen('chart_read'), 'on');
   });
   await it('the server is the truth: it sets a key, and a key it no longer holds resets the device', () => {
     const g = page({ ls: { cb_chart_theme: 'old' } });
     assert.strictEqual(g.A.hydrate({ chart_read: 'on' }), true);
-    assert.strictEqual(g.CBChartCap.get('chart_read'), 'on');
-    assert.strictEqual(g.CBChartCap.get('chart_theme'), '', 'cleared on the server → cleared here');
+    assert.strictEqual(g.CBChartCap.chosen('chart_read'), 'on');
+    assert.strictEqual(g.CBChartCap.chosen('chart_theme'), '', 'cleared on the server → cleared here');
   });
   await it('a key still pending here (the push never landed) is KEPT and sent again, alone', async () => {
     const g = page({ answer: { ok: false, pending: true } });
@@ -87,14 +87,14 @@ const chartKeysIn = (body) => Object.keys(body).filter((k) => /^chart_/.test(k))
     g.sent.length = 0;
     g.A.hydrate({});
     await tick();
-    assert.strictEqual(g.CBChartCap.get('chart_theme'), 'ocean', 'kept');
+    assert.strictEqual(g.CBChartCap.chosen('chart_theme'), 'ocean', 'kept');
     assert.deepStrictEqual(g.sent.map((s) => s.body), [{ chart_theme: 'ocean' }]);
   });
   await it('clearing a key sends it empty (= remove) and holds the removal until the server has it', async () => {
     const g = page({ ls: { cb_chart_theme: 'ocean' }, answer: { ok: false, pending: true } });
     g.CBChartCap.set('chart_theme', '');
     await tick();
-    assert.strictEqual(g.CBChartCap.get('chart_theme'), '');
+    assert.strictEqual(g.CBChartCap.chosen('chart_theme'), '');
     assert.deepStrictEqual(g.sent[0].body, { chart_theme: '' });
     assert.deepStrictEqual(g.CBChartCap.pending(), { chart_theme: '' });
   });
@@ -105,7 +105,7 @@ const chartKeysIn = (body) => Object.keys(body).filter((k) => /^chart_/.test(k))
     assert.strictEqual(g.CBChartCap.set('chart_fav_Series', 'a-b'), false, 'kinds are lower case');
     await tick();
     assert.strictEqual(g.sent.length, 0);
-    assert.strictEqual(g.CBChartCap.get('chart_theme'), '');
+    assert.strictEqual(g.CBChartCap.chosen('chart_theme'), '');
   });
   await it('CBChartCap.ready(): no script until asked; two asks make one load of the two files (the engine, the bar)', async () => {
     const g = page();

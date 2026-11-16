@@ -12,6 +12,7 @@
  *   B7 the Colour Vision theme switches Readability on by itself; the person can switch it off
  *   B8 a page with no chart (Home) has no bar
  *   B9 keyboard only: Tab to Colours, ArrowDown picks, Tab to Chart type, Tab to the star, Space presses it, Tab to Readability, Space switches it
+ *   B11 the words: every visible word of the bar goes through the string layer (tx, the page's locale words); where the engine could not load, e2e/chart-lazy.cjs L5 says the one sentence and keeps the table
  *   B10 1366 x 768 and 390 x 844: the bar fits, one line where it can, no horizontal scroll; pictures saved
  *
  *   NODE_PATH=$PWD/e2e/node_modules node e2e/chart-bar.cjs
@@ -154,5 +155,10 @@ W.run('chart-bar', async (w) => {
       return { ok: m.scroll <= 0 && m.sticky === 'sticky' && (width > 400 || m.barH <= 90), saw: JSON.stringify(m) };
     });
   }
+  await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
+  await w.step('B11', 'the words of the bar come through tx (the string layer): the labels are words, never keys', async () => {
+    const m = await page.evaluate(() => ({ labels: [...document.querySelectorAll('[data-testid="chart-bar"] [aria-label]')].map((e) => e.getAttribute('aria-label')), tx: typeof tx }));
+    return { ok: m.tx === 'function' && m.labels.length >= 3 && m.labels.every((x) => /^[A-Z][a-z]/.test(x)), saw: JSON.stringify(m) };
+  });
   if (w.errs.length) await w.step('E0', 'no page errors while walking', async () => ({ ok: false, saw: w.errs.slice(0, 2).join(' | ') }));
 });
