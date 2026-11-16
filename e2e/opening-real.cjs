@@ -1,5 +1,5 @@
 /* opening-real.cjs — l16-openbal · the opening balances routes against a REAL Postgres (a SIT box's throwaway api + database: C:/dev/shots/l16-openbal/box/ob-*.sh). No browser.
- * Run on the box (ob-api.sh): env API (http://127.0.0.1:3988), TESTER_CODE (+ _TZ), OUT. Shops seeded by ob-seed.cjs: obal-au (1 Jul year) and obal-in (1 Apr year), no opening yet, two customers, one supplier.
+ * Run on the box (ob-api.sh): env API (http://127.0.0.1:3988), TESTER_CODE (+ _TZ), OUT. Shops seeded by ob-seed.cjs: openbal-au (1 Jul year) and openbal-in (1 Apr year), no opening yet, two customers, one supplier.
  * EXPECTED (hand, before the run), cents: bank 1,234,050 Dr · debtors control 440,000 Dr = bills 330,000 + 110,000 · tax paid 20,000 Dr · creditors 220,000 Cr = one bill · tax collected 40,000 Cr.
  *   Debit 1,694,050 · Credit 260,000 · Difference 1,434,050 Cr until equity 1,434,050 Cr, then 0. Save while out → 422, nothing in Suspense. Bills 100,000 short of the typed debtors → refused.
  *   The same rows twice → 409 naming the entry. Replace bank → 1,230,450 with equity 1,430,450 and a reason → old reversed, new posted, trips read. A change that fails AFTER the reverse (a bill ref held by
@@ -71,8 +71,8 @@ async function run(handle, S) {
   if (lock.status === 200) await call('POST', '/api/books/periods/' + yrs.body.years[0].fiscal_year + '/0/unlock', { reason: 'done' });
 }
 (async () => {
-  await run('obal-au', { start: '2026-07-01', day2: '2026-07-02', billDate: '2026-06-20', due: '2026-07-31', taxPaid: '2210', taxColl: '2200' });
-  await run('obal-in', { start: '2026-04-01', day2: '2026-04-02', billDate: '2026-03-20', due: '2026-04-30', taxPaid: '2210', taxColl: '2200' });
+  await run('openbal-au', { start: '2026-07-01', day2: '2026-07-02', billDate: '2026-06-20', due: '2026-07-31', taxPaid: '2210', taxColl: '2200' });
+  await run('openbal-in', { start: '2026-04-01', day2: '2026-04-02', billDate: '2026-03-20', due: '2026-04-30', taxPaid: '2210', taxColl: '2200' });
   console.log('\nTRIPS ' + JSON.stringify(trips));
   fs.writeFileSync(path.join(process.env.OUT || '.', 'opening-real-trips.json'), JSON.stringify(trips, null, 1));
   console.log(pass + ' passed, ' + fail + ' failed');
