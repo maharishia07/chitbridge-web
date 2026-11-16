@@ -129,7 +129,10 @@
     var y = r.year_end;
     if (!y) return '—';
     if (y.first_year) return esc(tx('First year'));
-    return esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(day(y.end)) : esc(tx('bank not to year end')));
+    return esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(tx('bank not to year end')));
+  }
+  function shortDay(iso) {
+    try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return day(iso); }
   }
   function checkedCell(r) {
     var e = r.year_end && r.year_end.entries;
@@ -181,12 +184,12 @@
     };
     return [
       { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + esc(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', 190, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
+      num('status', 'Status', 190, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
       num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('yend', 'Year end', 200, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('yend', 'Year end', 190, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
       num('checked', 'Checked ' + yearLabel(), 110, checkedCell, function (r) { var e = r.year_end && r.year_end.entries; return e ? e.checked / (e.of || 1) : -1; }, { prio: 1 }),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
@@ -253,7 +256,7 @@
     var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
     P.list = root.CBList.mount(host, {
       key: 'practice-clients', t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: ['name', 'status', 'yend', 'checked', 'bank', 'queries', 'bas'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
+      columns: columns(), defaultCols: ['name', 'status', 'yend', 'checked', 'queries', 'bas'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') },
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
