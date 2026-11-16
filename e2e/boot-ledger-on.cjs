@@ -44,7 +44,7 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
       await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, OWNER);
       const p = await ctx.newPage();
       p.on('response', (rs) => { if (rs.status() >= 400 && /\/api\//.test(rs.url())) bad.push(rs.status() + ' ' + new URL(rs.url()).pathname); });
-      p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text().slice(0, 140)); });
+      p.on('console', (m) => { if (m.type() === 'error' && (m.location().url || '').indexOf('127.0.0.1') >= 0) errs.push(m.text().slice(0, 140)); }); /* the stand-in aborts every address outside the machine: only this page's own errors count */
       p.on('pageerror', (e) => errs.push('pageerror ' + e.message.slice(0, 140)));
       await p.goto(base + '/' + page);
       await p.waitForTimeout(2500);

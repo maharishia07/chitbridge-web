@@ -748,7 +748,8 @@ function chrome(view) {
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
   try {
-    if (hashPageOf() !== nav[0]) history.replaceState(null, '', '#' + nav[0]); /* the page's own deep address (#bank/<account>/<month>) stays: a reload or a bookmark reopens it */
+    /* the page's own deep address (#bank/<account>/<month>) stays through the first paint, so a reload or a bookmark reopens it (cap-bank-home bankHomeDeepOnce); a press on the menu after that names the page alone */
+    if (hashPageOf() !== nav[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) history.replaceState(null, '', '#' + nav[0]);
   } catch (_) {}
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
