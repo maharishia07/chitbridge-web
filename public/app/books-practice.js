@@ -105,6 +105,9 @@
       return { kind: p[1], value: n, label: word + ': ' + n, key: p[0] };
     });
   }
+  /* E17 (Athi 2 Nov: a code on every element): the practice pictures are on Home (HOM001), kind P = panel; CBDraw writes whichever codes it is passed (opts.codes). The same code on every part of a kind, as a tile row shares its code. */
+  var PIC_CODES = { status: { chart: 'HOM001-P01', part: 'HOM001-P02', legend: 'HOM001-P03' }, strip: { chart: 'HOM001-P05', part: 'HOM001-P06', legend: 'HOM001-P07' },
+    cmp: { chart: 'HOM001-P09', part: 'HOM001-P10', legend: 'HOM001-P11' }, pair: { chart: 'HOM001-P13', part: 'HOM001-P10', legend: 'HOM001-P11' } };
   /** the picture's colours for the theme on screen now (good / watch / bad have a dark set), measured by CBDraw itself; none when CBDraw cannot read the page */
   function paletteHere() {
     try { return root.CBDraw.paletteNow(null, root.document.getElementById('bp_practice') || root.document.documentElement); } catch (e) { return undefined; }
@@ -115,9 +118,9 @@
     var parts = picParts(shown, spec);
     if (!parts.length) return '';
     var narrow = root.innerWidth && root.innerWidth <= 700;
-    var svg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, title: tx(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
+    var svg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, codes: PIC_CODES.status, title: tx(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
     var total = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
-    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + esc(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-testid="practice-pic-count">' + esc(spec.unit ? total + ' ' + tx(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
+    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + esc(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-cbsid="HOM001-P04" data-testid="practice-pic-count">' + esc(spec.unit ? total + ' ' + tx(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
   }
   /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
      (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints
@@ -147,12 +150,12 @@
     var narrow = root.innerWidth && root.innerWidth <= 700, take = narrow ? 2 : 3, ranked = yoyRanked(clients), palette = paletteHere();
     var first = clients.filter(function (r) { return r.health && r.health.sales_yoy_from; })[0];
     var one = function (list, id, title) {
-      return list.length ? root.CBDraw.compare(list.slice(0, take).map(yoyRow), { palette: palette, width: narrow ? 280 : 250, labelW: narrow ? 92 : 80, id: id, tid: id, title: tx(title), desc: tx(title) + ': ' + list.slice(0, take).map(function (r) { return yoyRow(r).title; }).join('; ') }) : '';
+      return list.length ? root.CBDraw.compare(list.slice(0, take).map(yoyRow), { palette: palette, codes: PIC_CODES.cmp, width: narrow ? 280 : 250, labelW: narrow ? 92 : 80, id: id, tid: id, title: tx(title), desc: tx(title) + ': ' + list.slice(0, take).map(function (r) { return yoyRow(r).title; }).join('; ') }) : '';
     };
     var svgs = one(ranked.fall, 'bp-cmp-fall', 'Sales down most on last year') + (narrow ? '' : one(ranked.rise, 'bp-cmp-rise', 'Sales up most on last year'));
     if (!svgs) return '';
     var shown = Math.min(take, ranked.fall.length) + (narrow ? 0 : Math.min(take, ranked.rise.length));
-    return '<div class="bp-cmp" data-testid="practice-cmp" data-shown="' + shown + '" data-listed="' + clients.length + '"><span class="sub" data-testid="practice-cmp-caption">' + esc(tx('Sales to date vs last year') + (first ? ' · ' + day(first.health.sales_yoy_from) + ' – ' + day(first.health.sales_yoy_to) : '') + ' · ' + shown + ' ' + tx('of') + ' ' + clients.length + ' ' + tx('clients listed')) + '</span><div class="bp-cmp-row">' + svgs + '</div></div>';
+    return '<div class="bp-cmp" data-testid="practice-cmp" data-shown="' + shown + '" data-listed="' + clients.length + '"><span class="sub" data-cbsid="HOM001-P12" data-testid="practice-cmp-caption">' + esc(tx('Sales to date vs last year') + (first ? ' · ' + day(first.health.sales_yoy_from) + ' – ' + day(first.health.sales_yoy_to) : '') + ' · ' + shown + ' ' + tx('of') + ' ' + clients.length + ' ' + tx('clients listed')) + '</span><div class="bp-cmp-row">' + svgs + '</div></div>';
   }
   /** chart 2: this client's pair in the opened row, with the figures in words under it and the reason when there is no change */
   function pairHTML(r) {
@@ -160,8 +163,8 @@
     if (!root.CBDraw || !root.CBDraw.compare || !h || h.sales_ytd_minor == null || !h.sales_yoy_state) return '';
     var row = yoyRow(r), reason = yoyWords(h);
     row.label = tx('Sales');
-    var svg = root.CBDraw.compare([row], { palette: paletteHere(), mode: 'money', width: 340, labelW: 60, id: 'bp-pair-' + String(r.entity_id).slice(0, 8), tid: 'practice-pair-' + r.entity_id, title: tx('Sales this year and last year'), desc: row.title });
-    return '<div class="bp-pair" data-testid="practice-pair-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-testid="practice-pair-words-' + esc(r.entity_id) + '">' + esc(money(h.sales_ytd_minor, r.currency) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, r.currency) + ' ' + tx('last year') + (reason ? ' · ' + reason : '')) + '</span></div>';
+    var svg = root.CBDraw.compare([row], { palette: paletteHere(), codes: PIC_CODES.pair, mode: 'money', width: 340, labelW: 60, id: 'bp-pair-' + String(r.entity_id).slice(0, 8), tid: 'practice-pair-' + r.entity_id, title: tx('Sales this year and last year'), desc: row.title });
+    return '<div class="bp-pair" data-testid="practice-pair-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P14" data-testid="practice-pair-words-' + esc(r.entity_id) + '">' + esc(money(h.sales_ytd_minor, r.currency) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, r.currency) + ' ' + tx('last year') + (reason ? ' · ' + reason : '')) + '</span></div>';
   }
   /* REP-66: the opened row's months. The server's year_end carries how many months of the year are locked (the Month lock page's one rule, locked oldest first), so the first `locked` squares are locked and the rest open: no second read, no count made here. */
   function monthWords(y) {
@@ -177,8 +180,8 @@
     var y = r.year_end, months = y && !y.first_year && y.of > 0 ? monthWords(y) : null;
     if (!months || !root.CBDraw) return '';
     var words = { locked: tx('locked'), open: tx('open'), running: tx('running') };
-    var svg = root.CBDraw.monthStrip(months, { id: 'bp-strip-' + String(r.entity_id).slice(0, 8), tid: 'practice-strip-' + r.entity_id, title: tx('Months locked'), words: words, labels: true, palette: paletteHere() });
-    return '<div class="bp-strip" data-testid="practice-strip-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-testid="practice-strip-count-' + esc(r.entity_id) + '">FY' + esc(String(y.fy).replace(/^dd(dd)/, '$1')) + ' · ' + esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of) + ' ' + esc(tx('months locked')) + '</span></div>';
+    var svg = root.CBDraw.monthStrip(months, { id: 'bp-strip-' + String(r.entity_id).slice(0, 8), tid: 'practice-strip-' + r.entity_id, title: tx('Months locked'), codes: PIC_CODES.strip, words: words, labels: true, palette: paletteHere() });
+    return '<div class="bp-strip" data-testid="practice-strip-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P08" data-testid="practice-strip-count-' + esc(r.entity_id) + '">FY' + esc(String(y.fy).replace(/^dd(dd)/, '$1')) + ' · ' + esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of) + ' ' + esc(tx('months locked')) + '</span></div>';
   }
   function bandHTML(data) {
     var bands = (data.band && data.band.bands) || [], shown = bandShown(data);

@@ -140,6 +140,15 @@ console.log('compare (REP-66b): the nine hand-computed rows, geometry from the c
   check(D.compare([], {}) === '' && D.changeText(-0) === '0.0%' && D.changeText(null) === '', 'no rows is nothing; minus zero is 0.0%');
   const money = D.compare([{ label: 'Sales', now: 120, before: 150, changePct: -20, state: 'ok' }], { id: 'mm', tid: 'mm', mode: 'money', width: 320 });
   check(/data-testid="mm-before-0"/.test(money), 'money mode draws the pair on one scale (largest figure = the room)');
+  /* E17: the caller's codes (opts.codes) land on the picture's chart, parts and legend; with none passed, nothing is written and the output is unchanged */
+  const codes = { chart: 'T-P01', part: 'T-P02', legend: 'T-P03' }, count = (svg, c) => svg.split('data-cbsid="' + c + '"').length - 1;
+  const sb = D.statusBar([{ kind: 'good', value: 3, label: 'a: 3' }, { kind: 'watch', value: 2, label: 'b: 2' }], { id: 'sb', tid: 'sb', codes });
+  check(count(sb, 'T-P01') === 1 && count(sb, 'T-P02') === 2 && count(sb, 'T-P03') === 2, 'statusBar: one chart code, a part code per part, a legend code per figure');
+  const ms = D.monthStrip([{ label: 'Jan', state: 'locked' }, { label: 'Feb', state: 'open' }], { id: 'ms', tid: 'ms', labels: true, codes });
+  check(count(ms, 'T-P01') === 1 && count(ms, 'T-P02') === 2 && count(ms, 'T-P03') === 2, 'monthStrip: chart, a part per month, a legend per month label');
+  const cm = D.compare([{ label: 'A', now: 8, before: 10, changePct: -20, state: 'ok' }], { id: 'cc', tid: 'cc', codes });
+  check(count(cm, 'T-P01') === 1 && count(cm, 'T-P02') === 1 && count(cm, 'T-P03') === 2, 'compare: chart, a part per row, a legend for the label and for the change');
+  check(!/data-cbsid/.test(D.statusBar([{ kind: 'good', value: 3 }], { id: 'n', tid: 'n' })) && !/data-cbsid/.test(D.compare([{ label: 'A', now: 8, before: 10, changePct: -20 }], { id: 'n', tid: 'n' })), 'no codes passed: no data-cbsid');
 }
 
 console.log(failures ? failures + ' FAILED' : 'all ok');
