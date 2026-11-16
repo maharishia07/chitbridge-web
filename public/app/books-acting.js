@@ -92,11 +92,14 @@
   function auditAddressOf(store, tab) {
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=auditor#/' + (tab || 'bank');
   }
-  /** read the store from the page address: a page opened with ?acting=<store> works in that store's books as the adviser; null when it carries none */
+  /** read the store from the page address: a page opened with ?acting=<store> works in that store's books; null when it carries none.
+   * &role=auditor|adviser names the seat; with no &role (a typed, pasted or deep-linked address) the seat is the one the grant gives (confirmGrant). The address never grants anything. */
   function fromAddress(search) {
     var query = new URLSearchParams(search || '');
-    var id = query.get('acting');
-    return id ? enter({ id: id, name: '' }, query.get('role') === 'auditor' ? 'auditor' : 'adviser') : null;
+    var id = query.get('acting'), named = query.get('role');
+    var entered = id ? enter({ id: id, name: '' }, named === 'auditor' ? 'auditor' : 'adviser') : null;
+    if (entered) entered.seatNamed = named === 'auditor' || named === 'adviser';
+    return entered;
   }
   /** a page call(method, path, body, headers) of its own (token + base): no acting header, the grant list is the firm's own */
   function grantCall(base, token) {
@@ -114,11 +117,14 @@
     if (!context) return Promise.resolve(false);
     var id = context.store.id, role = context.role === 'auditor' ? 'auditor' : 'adviser';
     return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(function (split) {
-      var heldBy = split.live || {}, grant = ((split.seats || {})[id] || {})[role]; /* the seat the address names: a store holding both gives each its own row */
+      var heldBy = split.live || {}, seats = (split.seats || {})[id] || {};
+      if (!context.seatNamed) role = seats.adviser ? 'adviser' : 'auditor'; /* no &role on the address: the seat the grant gives (the adviser seat acts, as the grant list does) */
+      var grant = seats[role]; /* a seat the address names must be held: a store holding both gives each its own row */
       if (!grant) {
         context = null;
         return false;
       }
+      context.role = role;
       context.store.name = grant.grantor_name || root.CBBooksGrantApi.withHeld([], heldBy, words)[0].name;
       context.posting = grant.posting || '';
       return true;
@@ -139,6 +145,12 @@
   function mayCall(path) {
     return !context || context.role === 'owner' || path.indexOf('/api/books') === 0;
   }
+  /** no live grant for the store the address names: one sentence where the page is, the way back, nothing read */
+  function refuseInPlace() {
+    var host = root.document.getElementById('content');
+    if (!host) return root.location.replace('/network.html');
+    host.innerHTML = '<div class="en-why" data-testid="acting-refused" role="alert">' + esc(words("You do not have current access to this client's books. Nothing was opened.")) + ' <a href="/network.html" data-testid="acting-refused-back">' + esc(words('Back to My network')) + '</a></div>';
+  }
   /** the page's way in: only on a live adviser grant, then the menu is cut to the books tabs; false = not entered */
   function openPage(base, token, menu, groups) {
     if (!context) return Promise.resolve(true);
@@ -150,8 +162,8 @@
         keepTabs(menu, groups);
         return true;
       }
-      root.location.replace('/network.html');
-      return new Promise(function () {}); /* the page is leaving: nothing after this runs */
+      refuseInPlace();
+      return new Promise(function () {}); /* the page stops here: nothing of the client's books is read or drawn */
     });
   }
   /** a call outside /api/books* is refused here, before it is sent, while the page acts for a store */
