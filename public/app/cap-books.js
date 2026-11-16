@@ -2485,6 +2485,35 @@ function bkDbPeriod(preset, custom) {
   if (preset === 'custom' && custom && custom.from && custom.to) return { preset: 'custom', from: custom.from, to: custom.to };
   return { preset: 'fy', from: fy, to: today };
 }
+/** the period one step back (dir -1) or forward (+1) from the Day book's: a day, a month, a financial year, or the same span of a custom range; never past today. null when there is nowhere to go. */
+function bkDbStep(period, dir) {
+  var today = bkToday(),
+    day = function (text) {
+      return new Date(text + 'T00:00:00Z');
+    },
+    iso = function (date) {
+      return date.toISOString().slice(0, 10);
+    },
+    from = day(period.from),
+    to = day(period.to),
+    first,
+    last;
+  if (period.preset === 'today') {
+    first = last = new Date(to.getTime() + dir * 86400000);
+  } else if (period.preset === 'month') {
+    first = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + dir, 1));
+    last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0));
+  } else if (period.preset === 'fy') {
+    first = new Date(Date.UTC(from.getUTCFullYear() + dir, from.getUTCMonth(), from.getUTCDate()));
+    last = new Date(Date.UTC(first.getUTCFullYear() + 1, first.getUTCMonth(), first.getUTCDate() - 1));
+  } else {
+    var span = Math.round((to - from) / 86400000) + 1;
+    first = new Date(from.getTime() + dir * span * 86400000);
+    last = new Date(first.getTime() + (span - 1) * 86400000);
+  }
+  if (iso(first) > today) return null;
+  return { preset: period.preset, from: iso(first), to: iso(last) > today ? today : iso(last) };
+}
 function bkDbPeriodLabel(q, preset) {
   var o = { day: 'numeric', month: 'short' },
     oy = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -2607,21 +2636,35 @@ function bkDvHead() {
     },
     chips: chips,
     notices: notices,
-    /* ＋ Entry (cap-entry.js, loaded by CB Accounts): the one door to a manual entry, in the slot CBList gives the head — the page that loads cap-entry offers it, nobody else */
-    slot:
-      typeof enOpen === 'function' && !(typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'customer')
-        ? function (el) {
-            el.innerHTML =
-              '<button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' type="button" class="cbl-chip" data-testid="db-add" aria-label="' +
-              esc(tx('New entry')) +
-              '" style="cursor:pointer;min-height:44px;font-weight:700">＋ ' +
-              esc(tx('Entry')) +
-              '</button>';
-            el.firstChild.onclick = function () {
-              enOpen();
-            };
-          }
-        : undefined
+    /* the period stepper (‹ earlier · later ›, the Back / Next stops of the lists) and ＋ Entry (cap-entry.js, loaded by CB Accounts): the one door to a manual entry, in the slot CBList gives the head — the page that loads cap-entry offers it, nobody else */
+    slot: function (el) {
+      var cur = { preset: period.preset, from: dayRange.from, to: dayRange.to },
+        back = bkDbStep(cur, -1),
+        fwd = bkDbStep(cur, 1),
+        step = function (dir, to, tid, word, mark) {
+          return '<button data-cbsid="TSK006-B1' + (dir < 0 ? '4' : '5') + '"' + bkMountAttribute('TSK006') + ' type="button" class="cbl-chip" data-testid="' + tid + '" aria-label="' + esc(tx(word)) + '" title="' + esc(tx(word)) + '"' + (to ? '' : ' disabled') + ' style="min-height:44px;min-width:44px">' + mark + '</button>';
+        };
+      var canAdd = typeof enOpen === 'function' && !(typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'customer');
+      el.innerHTML =
+        step(-1, back, 'db-step-back', 'Earlier', '‹') + step(1, fwd, 'db-step-next', 'Later', '›') +
+        (canAdd
+          ? '<button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' type="button" class="cbl-chip" data-testid="db-add" aria-label="' + esc(tx('New entry')) + '" style="cursor:pointer;min-height:44px;font-weight:700">＋ ' + esc(tx('Entry')) + '</button>'
+          : '');
+      var go = function (to) {
+        return function () {
+          if (!to) return;
+          BK.dbp = to;
+          bkTab('daybook', true);
+        };
+      };
+      var buttons = el.querySelectorAll('button');
+      buttons[0].onclick = go(back);
+      buttons[1].onclick = go(fwd);
+      if (canAdd)
+        buttons[2].onclick = function () {
+          enOpen();
+        };
+    }
   };
 }
 /** W15-25 (cap-mark.js turn()): the Day book's two filter chips for Queries — "Waiting for you · n" (the owner has not answered) and "Answered · n" (the reviewer has the ball); pressing one shows only those rows, pressing it again shows all */
@@ -2887,21 +2930,79 @@ function bkEvidenceIngest(list) {
   BK.ev.ingest(list);
 }
 /** the Day book tab: one date range of entries, the strip and the to-do read together */
+/** 5-YEAR GROWTH (l16-scale): the Day book reads one page at a time, newest first (the server's keyset, ?limit · ?order=desc · ?after); "Older" asks for the next. Never the whole range. */
+var BK_PAGE = 100;
 async function bkDaybook(body) {
   var q = bkRange('db');
   try {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
-    var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues'), bkChequesLoad(), bkHealthLoad()]);
+    var rr = await Promise.all([api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc' }, q) }), api('booksDues'), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0];
     bkDuesStore(rr[1]); /* the same read names each entry's party (bkPartyLabel) */
     BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
+    /* the strip adds up the LAST day's sales from the entries held: while the page is still inside that day (a busy day), the next page is read too — a strip of half a day would be silent */
+    for (var more = 0; more < 5 && bkDvOpenDay(r, q); more++) r = await bkDvAppend(r, await api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc', after: r.next }, q) }));
+    BK.dv.r = r;
     bkMarksIngest(r);
     bkEvidenceIngest(r.entries); /* CMP062: what stands behind each entry */
-    body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
+    body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div><div id="bk_dvpager" data-testid="db-pager"></div>';
     BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
+    bkPagerPaint('bk_dvpager', 'db', r, 'Older', 'newest first', bkDvOlder);
+    bkDvCountsHook(r, q);
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
+}
+/** is the oldest entry held still on the range's last day, with more behind it? */
+function bkDvOpenDay(r, q) {
+  var list = r.entries || [];
+  return !!r.next && !!list.length && String(list[list.length - 1].posting_date || '').slice(0, 10) === q.to;
+}
+/** the next page joined to what is held (entries appended, the cursor and the range's totals the newest reply's) */
+async function bkDvAppend(r, reply) {
+  return Object.assign({}, reply, { entries: (r.entries || []).concat(reply.entries || []), count: (r.entries || []).length + (reply.entries || []).length });
+}
+/** "Older": the next page of the Day book, newest first */
+async function bkDvOlder() {
+  var d = BK.dv;
+  if (!d || !d.r || !d.r.next || d.busy) return;
+  d.busy = true;
+  try {
+    var reply = await api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc', after: d.r.next }, d.range) });
+    if (BK.dv !== d) return;
+    bkMarksIngest(reply);
+    bkEvidenceIngest(reply.entries);
+    d.r = await bkDvAppend(d.r, reply);
+    if (d.api) d.api.refresh();
+    bkPagerPaint('bk_dvpager', 'db', d.r, 'Older', 'newest first', bkDvOlder);
+  } catch (e) {
+    if (typeof toast === 'function') toast(tx('Could not load more'));
+  } finally {
+    d.busy = false;
+  }
+}
+/**
+ * THE HOOK for the server's counts (l16-finfix, "Needs attention"): the filter and Evidence counts of this list must come from the server over the whole range, not from the page held. When that route lands it is called
+ * here with the range, and its answer replaces the counts the filters draw; until then the filters work on the entries held and the pager says how many are held of how many there are.
+ */
+function bkDvCountsHook(r, range) {
+  BK.dv.counts = null; /* set from the server's counts route over the range when it exists */
+}
+/** the one pager line under a paged list: "↓ Older 100 · 100 of 7,701 · newest first" — nothing when the whole range is held. The button is the list unit's own "show more" (CMP037-B05) */
+function bkPagerPaint(id, key, r, word, order, onMore) {
+  var node = document.getElementById(id);
+  if (!node) return;
+  var held = key === 'lg' ? (r.lines || []).length : (r.entries || []).length,
+    total = Number(r.total || held);
+  if (!r.next && held >= total) {
+    node.innerHTML = '';
+    return;
+  }
+  node.innerHTML =
+    '<div class="cbl-end" data-testid="' + key + '-more"><button type="button" data-cbsid="CMP037-B05"' + bkMountAttribute('CMP037') + ' data-bk-more="' + key + '"' + (r.next ? '' : ' disabled') + '>↓ ' +
+    esc(tx(word)) + ' ' + Math.min(BK_PAGE, total - held) + '</button> <span data-testid="' + key + '-held">' + held + ' ' + esc(tx('of')) + ' ' + total + ' · ' + esc(tx(order)) + '</span></div>';
+  var button = node.querySelector('[data-bk-more]');
+  if (button) button.onclick = onMore;
 }
 
 /**
@@ -3297,7 +3398,32 @@ function bkLtTitle() {
 function bkLtPaneHTML() {
   var sel = BK.lt.sel;
   if (!sel) return emptyState('📒', tx('Pick a ledger'), esc(tx('Open a group on the left, then a ledger, to see its entries.')));
-  return '<div id="lg_out" data-testid="lg_out"></div>';
+  return '<div id="lg_out" data-testid="lg_out"></div><div id="lg_pager" data-testid="lg-pager"></div>';
+}
+/** "Next": the following page of this ledger (oldest first); its lines join the ones held, the running balance carries on from the server's own page opening */
+async function bkLgMore() {
+  var me = BK.lt.r,
+    sel = BK.lt.sel;
+  if (!me || !me.next || BK.lt.busy || !sel || sel.party) return;
+  BK.lt.busy = true;
+  try {
+    var reply = await api('booksLedger', { params: { account: sel.code }, query: Object.assign({ limit: BK_PAGE, after: me.next }, bkRange('lg')) });
+    if (BK.lt.r !== me) return;
+    var from = (me.lines || []).length;
+    (reply.lines || []).forEach(function (item, index) {
+      item._ix = from + index;
+    });
+    me.lines = (me.lines || []).concat(reply.lines || []);
+    me.next = reply.next;
+    me.page = reply.page;
+    bkMarksIngest(reply, reply.lines);
+    if (BK.lt.api) BK.lt.api.refresh();
+    bkPagerPaint('lg_pager', 'lg', me, 'Next', 'oldest first', bkLgMore);
+  } catch (e) {
+    if (typeof toast === 'function') toast(tx('Could not load more'));
+  } finally {
+    BK.lt.busy = false;
+  }
 }
 /* leave the open ledger and go back to the tree */
 function bkLtBack() {
@@ -3405,7 +3531,7 @@ async function bkLtLoad() {
       r = await api('booksStatement', { params: { id: sel.party } });
       BK.stmt[sel.party] = r;
     } else {
-      var rr = await Promise.all([api('booksLedger', { params: { account: sel.code }, query: bkRange('lg') }), ctrl ? booksDuesLoad(true) : null]);
+      var rr = await Promise.all([api('booksLedger', { params: { account: sel.code }, query: Object.assign({ limit: BK_PAGE }, bkRange('lg')) }), ctrl ? booksDuesLoad(true) : null]); /* 5-YEAR GROWTH: a page of the period, oldest first (its running balance runs from the opening); "Next" reads the following page */
       r = rr[0];
       if (ctrl) bkLtTreePaint();
     }
@@ -3420,6 +3546,7 @@ async function bkLtLoad() {
     }); /* a line's place in the statement is its row id */
     if (!sel.party) bkMarksIngest(r, r.lines); /* ACC-358: the same chip on each ledger line (read + reply; the owner never sets) */
     if (BK.lt.api) BK.lt.api.refresh({ filters: bkLgFilters() });
+    bkPagerPaint('lg_pager', 'lg', r, 'Next', 'oldest first', bkLgMore);
   } catch (e) {
     if (BK.lt.sel !== sel) return;
     BK.lt.err = e;
@@ -4014,28 +4141,8 @@ function bkLgJournal(l) {
       }
     ); /* the row then says "not on this page" (bkLgNext) */
   }
-  if (BK.lt.day) return Promise.resolve();
-  if (BK.lt.dayP) return BK.lt.dayP;
-  var list = (BK.lt.r && BK.lt.r.lines) || [],
-    ds = list
-      .map(function (x) {
-        return String(x.date || '').slice(0, 10);
-      })
-      .filter(Boolean)
-      .sort();
-  return (BK.lt.dayP = api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } })
-    .then(
-      function (reply) {
-        return reply;
-      },
-      function () {
-        return { entries: [], failed: true };
-      }
-    )
-    .then(function (reply) {
-      if (BK.lt.r === me) BK.lt.day = reply;
-      BK.lt.dayP = null;
-    }));
+  /* 5-YEAR GROWTH: no second read of the whole span's Day book — a line the server sends with no entry id says "not on this page" (bkLgNext); every line has one */
+  return Promise.resolve();
 }
 /** the opened entry, in place: its journal's Dr / Cr lines (the ledger you are in is bold) and ONE quiet line of the facts no visible column already shows */
 function bkLgNext(line, currency) {
