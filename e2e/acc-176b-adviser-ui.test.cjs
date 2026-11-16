@@ -90,9 +90,9 @@ check(core.includes('CBBooksActing.guard(ep)') && accounts.includes('CBBooksActi
 /* (11) round 2: an acting adviser prepares, hides the bank, is named right; the switch lists every client */
 A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
 check(A2.refusals([{ message: 'Only the owner may record this.' }, { message: 'Date is locked' }]).length === 1 && entry.includes('CBBooksActing.refusals(r.refusals)'), 'an acting adviser is not stopped by the owner-only preview sentence; the sheet asks CBBooksActing');
-check(!A2.hides('bank') && !A2.hides('tb') && A2.hides('compare') && /not open to an accountant/.test(A2.refusedFor()), 'acting: the bank is open to an adviser (the auditor keeps it hidden: e2e/adviser-bank.test.cjs); the refusal names an adviser');
+check(!A2.hides('bank') && !A2.hides('tb') && A2.hides('compare') && /not open to an accountant/.test(A2.refusedFor()), 'acting: the bank is open to an adviser (the auditor reads it, read only: e2e/adviser-bank.test.cjs); the refusal names an adviser');
 A2.enter({ id: 's2', name: 'Two' }, 'auditor');
-check(A2.hides('bank') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor');
+check(!A2.hides('bank') && A2.hides('tb') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor (the Bank is read-only open since audbank, the trial balance stays hidden)');
 const heldBy = { s1: { preset: 'adviser', grantor_name: 'One' }, s2: { preset: 'auditor', grantor_name: 'Two' } };
 check(A2.clientStores([{ entity_id: 's1', name: 'x' }, { entity_id: 's2', name: 'y' }, { entity_id: 's3', name: 'z' }], heldBy).map((c) => c.role).join() === 'adviser,auditor' && acting.includes("'Switch client'") && !acting.includes('Switch store'), 'the switch lists every client with its role (adviser and auditor), not only advisers');
 check(api.includes("out.live[id].preset !== 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
