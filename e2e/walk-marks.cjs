@@ -69,8 +69,9 @@ W.run('marks', async (w) => {
     }
     if (p === '/api/notifications' && m === 'GET') {
       /* the bell as the api gives it (lib/mark-notices): the owner hears each Query, the auditor each reply; every row names the entry */
-      const entryOf = (id) => { const n = E.indexOf(id); return { entry_no: 'JV-000' + (n + 1), posting_date: '2026-11-0' + (n + 3), currency: 'INR', total_minor: '88000' }; };
+      const entryOf = (id) => { const n = E.indexOf(id); return { entry_id: id, entry_no: 'JV-000' + (n + 1), posting_date: '2026-11-0' + (n + 3), currency: 'INR', total_minor: '88000' }; };
       const rows = S.bellFor === 'owner' ? S.sets.filter((x) => auditor(x.h) && x.b.kind === 'query').map((x, i) => ({ log_id: 'mk:' + i, action: 'mark_query', action_by_display_name: 'Fixture Auditor', detail: x.b.note, created_at: DAY(0), mark_entry: entryOf(x.b.subject_id) })) : S.replies.map((x, i) => ({ log_id: 'mr:' + i, action: 'mark_reply', action_by_display_name: 'Fixture Owner', detail: x.b.message_text, created_at: DAY(0), mark_entry: entryOf(E[1]) }));
+      if (S.ghost && S.bellFor === 'owner') rows.length = 0, rows.push({ log_id: 'mk:ghost', action: 'mark_query', action_by_display_name: 'Fixture Auditor', detail: 'Gone?', created_at: DAY(0), mark_entry: { entry_id: null, entry_no: 'JV-0009', posting_date: '2026-11-05', currency: 'INR', total_minor: '1000' } }); /* a row that names no entry id and a number nothing open carries */
       return J(r, 200, u.searchParams.get('count') ? { count: rows.length, total: rows.length, seen_at: null } : { notifications: rows, count: rows.length, total: rows.length, page: 1, limit: 30, seen_at: null });
     }
     if (p === '/api/books/daybook') {
@@ -188,6 +189,13 @@ W.run('marks', async (w) => {
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     const byDay = S.calls.some((c) => c.p === '/api/marks' && /open=1/.test(c.q) && /from=2026-11-04&to=2026-11-04/.test(c.q)); /* an older entry's Query is found by its OWN day, not the current month */
     return { ok: !off && fits && byDay && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
+  });
+  await w.step('B1c', 'W15-80 · a bell row whose entry is gone (no id, no open question by that number) says WHY in a toast: "reversed or removed", not "try again"', async () => {
+    S.ghost = true; await page.reload(); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
+    await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 }); await page.click(T('bell-row')); await page.waitForTimeout(1200);
+    const body = await page.evaluate(() => document.body.innerText); await shot('06e-owner-bell-entry-gone'); S.ghost = false;
+    return { ok: /This entry was reversed or removed/.test(body) && !/try again/.test(body) && (await page.locator(T('mk-sheet')).count()) === 0, saw: (body.match(/This entry was[^
+]*/) || ['no toast'])[0] };
   });
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
