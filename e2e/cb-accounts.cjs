@@ -77,7 +77,7 @@ function standIn(over) {
     accounts: [
       { code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1300-P00001', name: 'Ravi Stores', is_group: false },
       { code: '2100', name: 'Suppliers (Sundry Creditors)', is_group: false }, { code: '2100-P00003', name: 'Agro Mills', is_group: false },
-      { code: '1400', name: 'Cash', is_group: false }, { code: '1500', name: 'Bank', is_group: false }, { code: '1510', name: 'UPI collections', is_group: false },
+      { code: '1400', name: 'Cash', is_group: false }, { code: '1500', name: 'Bank', is_group: false, role: 'bank' }, { code: '1510', name: 'UPI collections', is_group: false },
       { code: '1200', name: 'Stock-in-hand', is_group: false }, { code: '2200', name: 'Output CGST', is_group: false }, { code: '2210', name: 'Input CGST', is_group: false },
       { code: '2220', name: 'TDS payable', is_group: false }, { code: '2900', name: 'Suspense', is_group: false },
       { code: '3000', name: 'Capital', is_group: false }, { code: '3900', name: 'Profit and loss (retained)', is_group: false },
