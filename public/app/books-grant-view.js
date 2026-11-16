@@ -10,13 +10,15 @@
  * is said in its own sentence, never as an empty table.
  *   CBBooksGrantView.mount(host, { call, member: { id, name, role }, onBack, onSwitch, stores, mountList, sheet, closeSheet }) → { destroy }
  *
+ * THE PERIOD (W8/W14/W15/W17/W18, Athi 16 Nov): ONE control (period-pick.js) at the right of the tabs line picks the year or a month for every read; the page opens on the year under review (the server's `under_review`) and the period rides the address (&fy= or &from=&to=). tb and bs read it as 'as at <to>', p&l and the day book as from – to.
+ *
  * ACC-176c: a trial balance, profit and loss or balance sheet row opens that account's ledger; a Day book row opens its entry (books-grant-drill.js).
  *
  * REUSE (named in the PR): CBBooksGrantDrill · CBList (via mountList) · CBBooksGrantApi (endpoints) · CBBooksActing (headers, banner, figure) · CBBooksActionsView (the queues) · the page's own call (token, base, 401)
  */
 (function (root) {
   'use strict';
-  var viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null, mk: null };
+  var viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null, mk: null, period: null, range: null, choices: undefined };
   /** where a reviewer lands: the auditor on the Day book (the entries are the job), the adviser on the trial balance */
   function viewKnown(k) {
     return k === ACTIONS || REPORTS.some(function (r) { return r.k === k; });
@@ -31,8 +33,8 @@
   var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170 };
   var REPORTS = [
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
-    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
-    { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
+    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
+    { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', MONEY], ['age_d0_30', '1–30', MONEY], ['age_d31_60', '31–60', MONEY], ['age_d61_90', '61–90', MONEY], ['age_d90_plus', '90+', MONEY], ['balance_minor', 'Total', MONEY]], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
@@ -47,6 +49,11 @@
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
       return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
     });
+  }
+  /** W20: the balance sheet's profit line is the profit of the period it is read at: "Profit 1 Jul 2025 – 30 Jun 2026", not a bare "Profit for the year" (api fy_from and the as-at day) */
+  function profitRow(row, a) {
+    if (row.role !== 'profit_to_date' || !a.fy_from || !a.asOf) return row;
+    return Object.assign({}, row, { name: words('Profit') + ' ' + root.shopDay(a.fy_from) + ' – ' + root.shopDay(a.asOf) });
   }
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -112,8 +119,12 @@
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
-    if (!viewState.day && report.k === 'daybook' && viewState.range) return { from: viewState.range.from, to: viewState.range.to };
-    if (!viewState.day || !report.day) return {};
+    var period = viewState.period;
+    if (!viewState.day) {
+      if (!period || !period.from || !report.day) return {};
+      if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
+      return { from: period.from, to: period.to }; /* p&l, day book: for the period */
+    }
     if (report.day === 'both') return { from: viewState.day, to: viewState.day };
     var q = {};
     q[report.day] = viewState.day;
@@ -121,43 +132,36 @@
   }
 
   /* ── the read ── */
-  /** the period the Day book opens on: the latest month WITH entries (the server's fiscal period rows carry start_date, end_date and entries), so it does not open on an empty today; none → the server's own default */
-  function findMonth() {
-    if (viewState.range !== undefined) return Promise.resolve();
-    return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { headers: root.CBBooksActing.headers() }).then(function (a) {
-      var busy = ((a && a.periods) || []).filter(function (p) { return Number(p.entries) > 0 && Number(p.period) >= 1 && p.start_date && p.end_date; }).sort(function (x, y) { return String(x.end_date) < String(y.end_date) ? -1 : 1; });
-      viewState.months = busy.map(function (p) { return { from: String(p.start_date).slice(0, 10), to: String(p.end_date).slice(0, 10), entries: Number(p.entries) }; });
-      var pick = defaultMonth(viewState.months);
-      viewState.range = pick.open ? { from: pick.open.from, to: pick.open.to } : null;
-      viewState.monthRule = pick.rule; /* the quiet line: which month was opened instead of the latest, and why */
-    }, function () { viewState.range = null; });
+  /** the period in force: the one value every read takes (and the Day book's `range`, kept as {from, to} for the marks and the empty line) */
+  function usePeriod(period) {
+    viewState.period = period;
+    viewState.range = period && period.from ? { from: period.from, to: period.to } : null;
   }
-  /** THE DEFAULT MONTH (one read, the periods rows): the latest month with entries; but when that month has 2 or fewer entries and the month before it has more, the month before opens and the latest keeps its chip. → { open, rule } */
-  var THIN_MONTH = 2;
-  function defaultMonth(months) {
-    var latest = months[months.length - 1], before = months[months.length - 2];
-    if (latest && before && latest.entries <= THIN_MONTH && before.entries > latest.entries) return { open: before, rule: { latest: latest, opened: before } };
-    return { open: latest || null, rule: null };
+  /** the choices of this client, read ONCE (GET /periods?marks=1: the year under review, each year, each month with its state and checked n of m); the period opens on the year under review unless the address named one */
+  function choose() {
+    if (viewState.choices !== undefined) return Promise.resolve();
+    return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { query: { marks: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) {
+      viewState.choices = a || null;
+      var named = root.CBPeriodPick.filled(viewState.period, a), review = a && a.under_review;
+      usePeriod(named || (review ? { kind: 'year', fy: review.fy, from: review.from, to: review.to } : null)); /* W15/W17: the year under review, never "this month" or "as at today" */
+    }, function () { viewState.choices = null; usePeriod(viewState.period && viewState.period.from ? viewState.period : null); });
   }
-  function monthWord(m) {
-    var names = typeof root.monthNames === 'function' ? root.monthNames('short') : [];
-    return (names[Number(m.from.slice(5, 7)) - 1] || m.from.slice(0, 7)) + ' ' + m.from.slice(0, 4);
+  /** the period control mounts into the named slot of the header line (CBBooksActing.periodSlot, W19): ONE function, ONE call in paint(); moving it is changing that call. Nothing in a refused or Actions screen. */
+  function fillPeriodSlot(report) {
+    var slot = $('bv_period_slot');
+    if (slot) slot.innerHTML = !report.k || viewState.why || !viewState.choices ? '' : root.CBPeriodPick.control(viewState.choices, viewState.period, pickPeriod);
   }
-  /** the Day book's month chips ("Oct 2026 · 9"), every month with entries, one press opens it; and the quiet line that says why an earlier month opened */
-  function monthBar(report) {
-    if (report.k !== 'daybook' || !viewState.months || !viewState.months.length || viewState.why) return '';
-    var on = !viewState.day && viewState.range ? viewState.range.from : '';
-    var chips = viewState.months.map(function (m) {
-      return '<button type="button" class="act ' + (m.from === on ? '' : 'quiet') + '" data-cbsid="NET005-B06" id="bv_month_' + esc(m.from.slice(0, 7).replace('-', '')) + '" data-month="' + esc(m.from) + '" aria-pressed="' + (m.from === on) + '" data-testid="bv-month-' + esc(m.from.slice(0, 7)) + '">' + esc(monthWord(m) + ' · ' + m.entries) + '</button>';
-    }).join('');
-    var rule = viewState.monthRule && on === viewState.monthRule.opened.from ? '<p class="sub" data-testid="bv-month-rule">' + esc(words('Opened on') + ' ' + monthWord(viewState.monthRule.opened) + ' ' + words('because') + ' ' + monthWord(viewState.monthRule.latest) + ' ' + words('has only') + ' ' + viewState.monthRule.latest.entries + ' ' + words(viewState.monthRule.latest.entries === 1 ? 'entry' : 'entries') + '. ' + words('Press its chip to see it.')) + '</p>' : '';
-    return '<div class="nw-acts bv-months" data-testid="bv-months" role="group" aria-label="' + esc(words('Months')) + '">' + chips + '</div>' + rule;
+  /** a period chosen: every view follows it (the typed day is dropped), the address records it */
+  function pickPeriod(period) {
+    usePeriod(period);
+    viewState.day = '';
+    tell();
+    reload().then(function () { var box = $('bv_period'); if (box) box.focus(); });
   }
-  /** a month chosen (a chip, or a Months row): its Day book, the whole month */
+  /** a Months row opens that month's Day book */
   function openMonth(from, to) {
-    var m = (viewState.months || []).filter(function (x) { return x.from === from; })[0] || (to ? { from: from, to: to } : null); /* a month with no entries opens too, from its own row */
-    if (!m) return;
-    viewState.range = { from: m.from, to: m.to };
+    var row = ((viewState.choices && viewState.choices.periods) || []).filter(function (p) { return String(p.start_date).slice(0, 10) === from; })[0];
+    usePeriod({ kind: 'month', fy: row ? row.fiscal_year : null, from: from, to: to });
     viewState.day = '';
     viewState.report = 'daybook';
     tell();
@@ -172,12 +176,21 @@
   function load() {
     if (onActions()) return Promise.resolve();
     var report = current();
-    return (report.k === 'daybook' || report.k === 'periods' ? findMonth() : Promise.resolve()).then(knowCurrency).then(function () { return readReport(report); });
+    if (report.k === 'periods') viewState.choices = undefined; /* the Months list is read fresh each time it is opened */
+    return choose().then(knowCurrency).then(function () { return report.k === 'periods' ? monthsOfPeriod() : readReport(report); });
+  }
+  /** the Months list: the months of the period's year, from the one read of the choices (no second trip) */
+  function monthsOfPeriod() {
+    var fy = viewState.period && viewState.period.fy;
+    viewState.answer = { periods: ((viewState.choices && viewState.choices.periods) || []).filter(function (p) { return !fy || p.fiscal_year === fy; }) };
+    viewState.why = null;
+    return Promise.resolve();
   }
   function readReport(report) {
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
         viewState.answer = answer;
+        if (report.k === 'pl' && answer && answer.gross_profit) answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; /* the server's gross profit, named like its other totals */
         viewState.why = null;
         if (report.k === 'daybook' && viewState.mk) viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
         if (report.k === 'daybook' && viewState.ev) viewState.ev.ingest(answer && answer.entries); /* CMP062: and its evidence */
@@ -234,7 +247,7 @@
   }
   /** l16 R4-2b: a screen of the client's books is a history entry: the page is told (onView) so Back and Forward can restore it */
   function tell() {
-    if (viewState.o.onView) viewState.o.onView(viewState.report);
+    if (viewState.o.onView) viewState.o.onView(viewState.report, viewState.period);
   }
   function wireBand() {
     var back = function () { root.CBBooksActing.leave(); viewState.o.onBack(); };
@@ -247,11 +260,12 @@
       band(report) +
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
-      (viewState.why ? '' : monthBar(report) + lockLines(report)) +
+      (viewState.why ? '' : lockLines(report)) +
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : '') +
       (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
+    fillPeriodSlot(report);
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     if ($('bv_bank')) $('bv_bank').onclick = openBank;
     Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-report]'), function (button) {
@@ -264,9 +278,6 @@
       };
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
-    Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-month]'), function (button) {
-      button.onclick = function () { openMonth(button.getAttribute('data-month')); };
-    });
     if (onActions()) mountQueues();
     else if (!viewState.why) { paintList(report); paintMarkBar(report); }
   }
@@ -352,13 +363,14 @@
   function totalRows(key, a) {
     var total = words('Total');
     if (key === 'tb' && a.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: a.total_dr_minor, cr_minor: a.total_cr_minor }];
-    if (key === 'pl' && a.profit_minor != null) return [{ _total: true, name: words('Profit'), amount_minor: a.profit_minor }];
+    if (key === 'pl' && a.profit_minor != null) return (a.gross_profit_minor != null ? [{ _total: true, name: words('Gross profit (sales less cost of sales)'), amount_minor: a.gross_profit_minor }] : []).concat([{ _total: true, name: words('Profit'), amount_minor: a.profit_minor }]);
     if (key === 'bs' && a.total_assets_minor != null) return [{ _total: true, side: words('Assets'), name: total, amount_minor: a.total_assets_minor }, { _total: true, side: words('Liabilities and equity'), name: total, amount_minor: a.total_liab_equity_minor }];
     return [];
   }
   /** a heading naming the date the figures stand at */
   function asAt(report) {
-    var date = viewState.day || (viewState.answer && (viewState.answer.asOf || viewState.answer.as_of || viewState.answer.to)) || '';
+    var a = viewState.answer || {}, date = viewState.day || a.asOf || a.as_of || a.to || '';
+    if (report.k === 'pl' && a.from && a.to && !viewState.day) return '<span class="tag" data-testid="bv-for">' + esc(words('For')) + ' ' + esc(root.shopDay(a.from)) + ' – ' + esc(root.shopDay(a.to)) + '</span>'; /* W18: a profit and loss is for a period, never "as at" a day */
     return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</span>' : '';
   }
   /** the Day pick (a report that can stand at one day) */
@@ -460,7 +472,7 @@
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
   function forget() {
-    viewState = { host: viewState.host, o: viewState.o, report: homeOf(viewState.o), day: '', answer: null, why: null, mk: viewState.mk };
+    viewState = { host: viewState.host, o: viewState.o, report: homeOf(viewState.o), day: '', answer: null, why: null, mk: viewState.mk, period: null, range: null, choices: undefined };
     newMarks();
   }
   /** after Open books: focus lands on the books heading (the acting band), not on a button that has gone */
@@ -470,7 +482,7 @@
     head.focus();
   }
   function mount(host, options) {
-    viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null };
+    viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null, period: options.period || null, range: null, choices: undefined };
     newMarks();
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
@@ -478,9 +490,11 @@
     Promise.resolve(reload()).then(focusHeading, focusHeading);
     return {
       /** Back or Forward to another screen of this client's books */
-      setView: function (report) {
-        if (!viewKnown(report) || report === viewState.report) return;
+      setView: function (report, period) {
+        var moved = period !== undefined && !root.CBPeriodPick.same(period && period.from ? period : viewState.period, viewState.period);
+        if (!viewKnown(report) || (report === viewState.report && !moved)) return;
         viewState.report = report;
+        if (period !== undefined) usePeriod(root.CBPeriodPick.filled(period, viewState.choices) || period);
         reload();
       },
       destroy: function () {

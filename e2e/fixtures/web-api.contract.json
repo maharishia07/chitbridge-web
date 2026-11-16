@@ -556,8 +556,14 @@
        "name": "Current Assets"
       },
       "net_of": [
-       { "code": "2200", "name": "Output CGST" },
-       { "code": "2210", "name": "Input CGST" }
+       {
+        "code": "2200",
+        "name": "Output CGST"
+       },
+       {
+        "code": "2210",
+        "name": "Input CGST"
+       }
       ]
      }
     ],
@@ -1332,7 +1338,17 @@
       "credit_limit_from": null,
       "over_limit": false,
       "last_remind": null,
-      "needs": { "parties": 0, "bills": 1, "disputed": 0, "query": 0, "held": 0, "no_tax_invoice": 0, "no_terms": 0, "overdue": 1, "overdue_minor": 118000 },
+      "needs": {
+       "parties": 0,
+       "bills": 1,
+       "disputed": 0,
+       "query": 0,
+       "held": 0,
+       "no_tax_invoice": 0,
+       "no_terms": 0,
+       "overdue": 1,
+       "overdue_minor": 118000
+      },
       "payable": {
        "total_minor": 59000,
        "buckets": {
@@ -1455,8 +1471,28 @@
     ],
     "total_minor": 59000,
     "needs": {
-     "customer": { "parties": 1, "bills": 1, "disputed": 0, "query": 0, "held": 0, "no_tax_invoice": 0, "no_terms": 0, "overdue": 1, "overdue_minor": 118000 },
-     "supplier": { "parties": 1, "bills": 1, "disputed": 0, "query": 0, "held": 0, "no_tax_invoice": 0, "no_terms": 0, "overdue": 1, "overdue_minor": 59000 }
+     "customer": {
+      "parties": 1,
+      "bills": 1,
+      "disputed": 0,
+      "query": 0,
+      "held": 0,
+      "no_tax_invoice": 0,
+      "no_terms": 0,
+      "overdue": 1,
+      "overdue_minor": 118000
+     },
+     "supplier": {
+      "parties": 1,
+      "bills": 1,
+      "disputed": 0,
+      "query": 0,
+      "held": 0,
+      "no_tax_invoice": 0,
+      "no_terms": 0,
+      "overdue": 1,
+      "overdue_minor": 59000
+     }
     },
     "payables": {
      "total_minor": 59000
@@ -1935,6 +1971,23 @@
   "GET /api/books/periods": {
    "status": 200,
    "example": {
+    "under_review": {
+     "fy": "2026-27",
+     "from": "2026-04-01",
+     "to": "2027-03-31"
+    },
+    "years": [
+     {
+      "fy": "2026-27",
+      "from": "2026-04-01",
+      "to": "2027-03-31",
+      "months": 12,
+      "locked": 0,
+      "entries": 0,
+      "checked": null,
+      "of": null
+     }
+    ],
     "periods": [
      {
       "entity_id": "11111111-1111-4111-8111-111111111111",
@@ -1964,7 +2017,9 @@
        }
       },
       "open_below_locked": true,
-      "lock_trail": []
+      "lock_trail": [],
+      "checked": 0,
+      "of": 0
      }
     ]
    },
@@ -1972,13 +2027,21 @@
     "periods[].return",
     "periods[].lock.first",
     "periods[].reopen.first",
-    "periods[].open_below_locked"
+    "periods[].open_below_locked",
+    "periods[].checked",
+    "periods[].of",
+    "years[].checked",
+    "years[].of"
    ],
    "also_optional": [
     "periods[].return",
     "periods[].lock.first",
     "periods[].reopen.first",
-    "periods[].open_below_locked"
+    "periods[].open_below_locked",
+    "periods[].checked",
+    "periods[].of",
+    "years[].checked",
+    "years[].of"
    ]
   },
   "GET /api/books/pl": {
@@ -2008,6 +2071,11 @@
     "total_income_minor": 100000,
     "total_expense_minor": 170000,
     "profit_minor": -70000,
+    "gross_profit": {
+     "sales_minor": 100000,
+     "cost_of_sales_minor": 50000,
+     "gross_profit_minor": 50000
+    },
     "profit_share_bp": -7000,
     "total_income_share_bp": 10000,
     "total_expense_share_bp": 17000,
@@ -2903,7 +2971,11 @@
     "unbilled": {
      "n": 0,
      "minor": 0,
-     "currency": null
+     "currency": null,
+     "by_currency": [],
+     "no_currency": 0,
+     "unpriced": 0,
+     "cost_hidden": false
     },
     "contact_prefs": {
      "migrated": false,
@@ -3007,15 +3079,6 @@
       "code": null,
       "why": null
      }
-    },
-    "unbilled": {
-     "n": 0,
-     "minor": 0,
-     "currency": null,
-     "by_currency": [],
-     "no_currency": 0,
-     "unpriced": 0,
-     "cost_hidden": false
     }
    },
    "optional": [
