@@ -1,7 +1,7 @@
-/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-entry · sha256 2be543dacee8719f2d706e9e3581b819a9566c8448caa8088a6e8b74367d880e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-entry · sha256 23c5df6856fe1d4f87e534b99f52c2b5b3310bc8fc7ec5d78d1bc9a8c7587eea — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-entry.js: WHAT A BANK-LINE PROPOSAL'S ENTRY CARRIES: the shape of the entry posting.post composed, and the tax inside a tax-inclusive expense.
- * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here) · notAParty (a narration that is an own-account transfer, a tax-office payment or a card settlement: no party, a whatIsThis answer instead).
+ * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here).
  * CALLED BY bank-recon.js (base → withTax, finish_ → entryOf) · bank-project.js reads the entry these make and nothing else.
  * FLOW bank statement → books, step "suggest" (docs/16-finance/BANK-TO-BOOKS-REQUIREMENT.md, Critic 14 Nov, item 3). CARD 16-finance/bank-reconciliation-and-bank-rail.
  * ONE calculation: no rate is written here and no tax is divided here. The rate and the credit rule are the pack's supply kind (pack.supplyKindOf), the sum is tax.splitLineTax,
@@ -176,25 +176,6 @@
     if (same) return { status: 'existing', id: same.id || same.name, name: same.name || same.id, kind: same.kind || null, did_you_mean: [] };
     return { status: 'new', name: name, kind: ctx.out ? 'supplier' : 'customer', basis: 'direction', did_you_mean: didYouMean_(nameKey_(name), ctx.parties) };
   }
-  /** the three things a narration can be before it is a payee, in the order tried: [the pack's keyword category, the whatIsThis id it proposes, the one side it is for (null = either)] */
-  var NOT_A_PARTY_ = [
-    ['own_transfer', 'transfer', null],
-    ['tax_office', 'tax_payment', 'out'],
-    ['card_settlement', 'card_settlement', 'in']
-  ];
-  /**
-   * notAParty(text, { rules, out, has }) → { kind, word, ask } or null: the narration names the shop's OWN account, the tax office or the card terminal's payout, so it is no supplier or customer.
-   * The WORDS are the pack's (pack.bank.keywords: own_transfer · tax_office · card_settlement, read through bank-recon's rules and its one whole-word test `has`); a pack with none gives null, so the engine stays neutral.
-   * kind is an id of whatIsThis(): the line is proposed as that answer (a transfer asks which own account), never as a new party.
-   */
-  function notAParty(text, ctx) {
-    for (var at = 0; at < NOT_A_PARTY_.length; at++) {
-      var row = NOT_A_PARTY_[at],
-        word = row[2] && row[2] !== (ctx.out ? 'out' : 'in') ? null : ctx.has(text, (ctx.rules && ctx.rules[row[0]]) || []);
-      if (word) return { kind: row[1], word: word, ask: row[1] === 'transfer' ? 'account' : null };
-    }
-    return null;
-  }
   /** the pack the answers are read against: the one given, else the one the options name; null when neither */
   function packOf_(opts) {
     var regulation = dep_('./regulation', 'CBRegulation');
@@ -354,7 +335,7 @@
     if (!taught.ok) return given.party ? { ok: false, why: taught.why } : composeOnce_(recon, line, event, taught.why, opts);
     return Object.assign({ taught: taught.rule, learned: true }, recon.suggest(line, Object.assign({}, opts, { learned: [taught.rule].concat((opts && opts.learned) || []) })));
   }
-  var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, notAParty: notAParty, eventOfAnswer: eventOf_, NOT_A_PARTY_CATEGORIES: NOT_A_PARTY_.map(function (row) { return row[0]; }), whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_ };
+  var EXPORTS = { withTax: withTax, entryOf: entryOf, newParty: newParty, whatIsThis: whatIsThis, resolve: resolve, nameKey: nameKey_ };
   /* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page takes window.CBBankEntry. */
   if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
   if (root && typeof root.window !== 'undefined') root.window.CBBankEntry = EXPORTS;

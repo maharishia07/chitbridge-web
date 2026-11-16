@@ -2,7 +2,7 @@
   "$comment": "The engines this platform ADOPTS from chitbridge-engines — ONE PIN PER ENGINE, so a rollout moves one engine at a time. Change a pin, then run: node ../chitbridge-engines/tools/adopt.cjs . — never edit an adopted file.",
   "pins": {
     "money": "1.96.0",
-    "tax-packs": "1.86.0",
+    "tax-packs": "1.98.0-l16sit.1",
     "tax-slab": "1.72.0",
     "tax": "1.86.0",
     "pricing": "1.92.0",
@@ -29,13 +29,13 @@
     "orderhub": "1.5.0",
     "rollup": "1.96.0",
     "convert": "1.96.0",
-    "bank-recon": "1.98.0-sitau.1",
+    "bank-recon": "1.98.0-l16sit.1",
     "rail": "1.29.0",
     "workflow": "1.33.0",
     "pack-kit": "1.97.0",
-    "reg-in": "1.86.0",
-    "reg-au": "1.98.0-sitau.1",
-    "reg-ae": "1.98.0-accfix.1",
+    "reg-in": "1.98.0-l16sit.1",
+    "reg-au": "1.98.0-l16sit.1",
+    "reg-ae": "1.98.0-l16sit.1",
     "reg-sg": "1.65.0",
     "reg-my": "1.65.0",
     "reg-us": "1.65.0",
@@ -47,7 +47,9 @@
     "bank-project": "1.97.0",
     "chart": "1.65.0",
     "accounts-packs": "1.79.0",
-    "posting": "1.97.0"
+    "posting": "1.97.0",
+    "reg-timing": "1.98.0-l16sit.1",
+    "bank-ask": "1.98.0-l16sit.1"
   },
   "adopt": {
     "money": [
@@ -151,11 +153,15 @@
     ],
     "posting": [
       "public/engine/posting.js"
+    ],
+    "bank-ask": [
+      "public/engine/bank-ask.js"
     ]
   },
   "bundles": {
     "public/engine/tax.js": [
       "pack-kit",
+      "reg-timing",
       "reg-in",
       "reg-au",
       "reg-ae",
@@ -196,26 +202,28 @@
     "orderhub": "c70a78a6839c10d41f6c43901f0557bd782463460e4af3f2e99d369a5012e9e5",
     "rollup": "3cf37376bcc687cfffda634eb25b055204ca844e507f3d4a3c7cf8c34a445a58",
     "convert": "55ecf63631a76502f85b36bb33f14432176ff014a64654b8548d2fd1503947eb",
-    "bank-recon": "a58c48f3d1f71a23c0b69ddc3b0f2ab734f0aa37f6a0d29e3dc483225b6145c1",
+    "bank-recon": "91a66bab4bf7bc682af7a5781812269d48603db30dfda2cfc0ab440e0beade70",
     "rail": "62146650c1ae4e0aa47c16625026f2d29039c4d05261c191f899bd0213f1b698",
     "workflow": "f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b",
-    "bank-project": "a51e3b1b4a4e8dab843783f8176bf7da046c473ffc52eeae70887060a740e0cb",
-    "bank-entry": "2be543dacee8719f2d706e9e3581b819a9566c8448caa8088a6e8b74367d880e",
+    "bank-project": "dd423a5671e672b96aab71b9562318b64867912a2eca1e03f650d611f2b84c5e",
+    "bank-entry": "23c5df6856fe1d4f87e534b99f52c2b5b3310bc8fc7ec5d78d1bc9a8c7587eea",
     "bank-statement-check": "9b94f9c75965381ae0f2088025935b9770f85e9aae9113c3e3326488258d32c4",
     "chart": "7201c432d50a3f35038f415cfef71c7ac1652c79ed3aadacca8cea3ec42fed37",
     "accounts-packs": "08ee7a753735b46bd480582cf2035e88f4f676f0442ddf585c279616a9c3775a",
     "posting": "d0cf6de25e4b15a495863ed9a0b2c9524ae8f435c87cfc3b777c4c234758a2e0",
+    "bank-ask": "774dab4412796128bd03ac07f919bf39dc4b8564f0a10896a2b11fb41cf600af",
     "pack-kit": "b5871899eb34a411c0be7853850bf904717328215b5f699986c16e739e291e68",
-    "reg-in": "6401cc34845b1471d2501451d92afc133576b065b73f5220d6c94140318b6bcd",
-    "reg-au": "c99de2ab375941f7065bebaa35316bb555a30bca2aeede1703e36db9d1a62eba",
-    "reg-ae": "255f2efa5d11a7f61f3d2df9000aa7796d705e8b96178f9832ead99be9a91e2f",
+    "reg-timing": "f28c641371f13ab4a7979d328a16c86b48ed1910fd2fe33f5a44766f63441d6e",
+    "reg-in": "0945d9df4bebc1c14eed53ab596d8a2b20a30a21cb882723264743b564b7eb49",
+    "reg-au": "75e9ced970becc7b4adde81ddd9a3d74dacd44781aae7686df8a1a592f30eb8f",
+    "reg-ae": "557533a850638f572e26561260b13979c90d7d102b2c7ef1f95530e884940f3d",
     "reg-sg": "d07e3859b59bc33cf86d157adb819df358101d2a253d7141beee09228c504639",
     "reg-my": "671367e9fd6eff4878f9b60cf4d9eee3d1204993161d74ac595182203c2c6c7c",
     "reg-us": "28eccd704db91bc66c3a8ff719c5e37f67ecdce9de5a669a5511dc13de0813dd",
     "reg-jp": "290797e22ae29bf0934a78e994a89228aa5d6ef2cd4a0244bf31105920315f2c",
     "regulation": "b6151bb7bdb6ce63aa4acba86e0d03e6b34c93fadb3b842f01d083171e4006fe",
     "country": "1dd04e6113583662f6ad0f5a27f3a5e0c941958988b9afdd514e5da70f79b5dc",
-    "tax-packs": "060e6c5883026c040b0e0d8fc979ae2563f5b992f01946b02e941acbc221bb80",
+    "tax-packs": "5d0778c5624811fd77f3e6899bfe15e2b3e4ed09ab5c11b64b01cc2895ae800b",
     "tax-slab": "80c25b62bb08491b8116ddf95090e93f24a700dc57132683be0b4fd4be6ec8fc",
     "tax": "da87a58d052162ce580c0e5e079fd6fe471a7a1e2fb6106460f5f6e2223947c4"
   }
