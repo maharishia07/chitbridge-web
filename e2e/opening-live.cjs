@@ -70,7 +70,7 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   ok(await p.locator('[data-testid="ob-save"]').isDisabled(), 'Save is off while the Difference is not 0');
   await p.screenshot({ path: path.join(OUT, 'ob-03-difference-1366.png') });
   const fromD = flat(await p.textContent('[data-testid="ob-from-bills-' + debtors + '"]')), fromC = flat(await p.textContent('[data-testid="ob-from-bills-' + creditors + '"]'));
-  ok(/4,400.00/.test(fromD) && /from 2 bills/.test(fromD) && /2,200.00/.test(fromC) && /from 1 bills/.test(fromC), 'a ledger with bills shows the bills total from the server, read-only (' + fromD + ' | ' + fromC + ')');
+  ok(/4,400.00/.test(fromD) && /from 2 bills/.test(fromD) && /2,200.00/.test(fromC) && /from 1 bill/.test(fromC), 'a ledger with bills shows the bills total from the server, read-only (' + fromD + ' | ' + fromC + ')');
   const foot = flat(await p.textContent('[data-testid="ob-tot"]'));
   ok(/16,940.50/.test(foot) && /2,600.00/.test(foot), 'the footer is the totals the server sent: ' + foot);
   await p.screenshot({ path: path.join(OUT, 'ob-04-bills-apart-1366.png') });
