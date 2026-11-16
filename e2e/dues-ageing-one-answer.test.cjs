@@ -20,13 +20,13 @@ const cx = vm.createContext({
   bkBillPart: (s) => '<i>' + (s && s.ref) + '</i>', bkBillNo: (no, ref) => no || ref,
   bkQuiet: (n, f, d) => d, bkCur: () => 'AUD', bkPartyKind: (pid) => (BK.dues[pid].side === 'supplier' ? 'supplier' : 'customer'),
   bkWaitN: () => ({}), bkWaitTodo: () => '', bkChequeNext: () => [], bkChequeStatus: (s) => s, bkOwedRead: () => {}, bkStmtRead: () => {}, bkDuesSide: (p) => (p.side === 'supplier' ? 'pay' : 'rcv'),
-  CBList: { nextRow: (cells) => '[' + cells.join(' | ') + ']', get: () => null },
+  CBList: { nextRow: (cells) => '[' + cells.join(' | ') + ']', get: () => null, nextTable: (o) => '[' + o.cols.map((c) => c.label).join('|') + ']' + o.rows.map((r) => '[' + r.join(' | ') + ']').join(' '), pager: () => '' }, bkMarkControl: () => null, api: async () => ({}), document: { getElementById: () => null },
   payAllocs: () => ALLOCS, PAY: null
 });
 let ALLOCS = [];
 cx.BK = { dues: {}, stmt: {}, owed: {}, mk: null };
 const BK = cx.BK;
-vm.runInContext(varText('BK_FOLLOW') + '\n' + src.match(/^var BK_STANDING = .*;$/m)[0] + '\n' + liftFns(FILE, ['bkFollowWord', 'bkDuesAge', 'bkDuesNext', 'bkBillStanding', 'bkBillFlags', 'bkOwedFlags', 'bkPartyBillsHTML', 'bkTodoCounts', 'payHeldBills']) +
+vm.runInContext(varText('BK_FOLLOW') + '\n' + src.match(/^var BK_STANDING = .*;$/m)[0] + '\n' + varText('BK_STATE_CHIPS') + '\nvar BK_PB_LIMIT = 25;\n' + liftFns(FILE, ['bkFollowWord', 'bkDuesAge', 'bkDuesNext', 'bkBillStanding', 'bkBillFlags', 'bkOwedFlags', 'bkPartyBillsHTML', 'bkPbOf', 'bkPbRead', 'bkSetTermsLink', 'bkBillStatus', 'bkTodoCounts', 'payHeldBills']) +
   '\nthis.f = { bkFollowWord, bkDuesAge, bkDuesNext, bkBillStanding, bkBillFlags, bkOwedFlags, bkPartyBillsHTML, bkTodoCounts, payHeldBills, BK_FOLLOW };', cx);
 const f = cx.f;
 let bad = 0;
@@ -40,8 +40,9 @@ ok(f.bkFollowWord('lt_1m') === '', 'a pack month bucket is no word of this scree
 /* Northside: 135,300 owed; 6,600 not due, the rest 31–60 late (the walk's AU numbers) */
 const north = { party_id: 'n', side: 'customer', balance_minor: 13530000, oldest_due: '2026-10-16', disputed_minor: 0, buckets: { not_due: 660000, lt_1m: 12870000 }, follow_up: FU({ not_due: 660000, d31_60: 12870000, worst: 'd31_60' }) };
 ok(f.bkDuesAge(north) === '31–60 days', 'the oldest-due cell says "31–60 days", not "Not due" (the AU pack buckets are not read)');
+BK.dues = { n: north };
 const next = f.bkDuesNext(north, 'AUD', 'dues');
-ok(/data-b="not_due">Current<\/span> \| M660000/.test(next) && /data-b="d31_60">31–60 days<\/span> \| M12870000/.test(next), 'the next level shows Current 6,600 and 31–60 days 128,700');
+ok(!/data-b="d31_60"/.test(next) && /Reading the bills/.test(next), 'the next level has ONE ageing, the bands of the bills panel (GET /party/:id/bills): no second list of age rows here');
 ok(!/Other/.test(next) && !/data-b="other"/.test(next), 'no "Other" row, whatever the pack sends');
 ok(f.bkDuesAge({ follow_up: FU({ not_due: 5 }) }) === 'Current' && f.bkDuesAge({ follow_up: FU({}) }) === '' && f.bkDuesAge({}) === '', 'all not yet due = Current; nothing owed or no answer = no word');
 
@@ -51,37 +52,36 @@ ok(/M100000 has no due date — aged from the bill date/.test(f.bkDuesNext(nodue
 
 /* Payables: the same five, from the supplier row */
 const metro = { party_id: 'm', side: 'supplier', balance_minor: -2125730, oldest_due: '2026-10-01', disputed_minor: 0, follow_up: FU({ d31_60: 2125730, worst: 'd31_60' }) };
-ok(/data-b="d31_60">31–60 days<\/span> \| M2125730/.test(f.bkDuesNext(metro, 'AUD', 'dues')), 'Payables: Metro 21,257.30 sits under 31–60 days, the same word as Receivables');
+BK.dues.m = metro;
+ok(/Reading the bills/.test(f.bkDuesNext(metro, 'AUD', 'dues')), 'Payables opens the same bills panel as Receivables');
 
 /* the Day book chip counts the customers the same word calls late */
 const counts = f.bkTodoCounts({ parties: [north, metro, { party_id: 'k', side: 'customer', follow_up: FU({ not_due: 800000 }) }, { party_id: 'x', side: 'customer' }] }, { cheques: [] }, {});
 ok(counts.overdue === 1, 'the Day book chip: 1 customer overdue = the customers whose follow_up has a late bucket (' + counts.overdue + ')');
 
-/* W15-95 · the bills with what is still owed */
+/* W15-95 / W15-107 · the bills, a page the server sends: Date · Bill · Due date · Days overdue · Status · Amount · Still owed · Reviewed */
 BK.dues = { n: north };
-BK.stmt.n = { lines: [
-  { entry_id: 'e1', date: '2026-08-03', ref: 'S042-01', source_chit_id: 'c1', source: { ref: 'S042-01', chit_id: 'c1', kind: 'sale' }, dr_minor: 5000000, cr_minor: 0 },
-  { entry_id: 'e2', date: '2026-08-20', ref: 'S042-02', source_chit_id: 'c2', source: { ref: 'S042-02', chit_id: 'c2', kind: 'sale' }, dr_minor: 6000000, cr_minor: 0 },
-  { entry_id: 'e3', date: '2026-10-01', ref: 'S042-03', source_chit_id: 'c3', source: { ref: 'S042-03', chit_id: 'c3', kind: 'sale' }, dr_minor: 5000000, cr_minor: 0 },
-  { entry_id: 'e4', date: '2026-11-10', ref: 'S042-04', source_chit_id: 'c4', source: { ref: 'S042-04', chit_id: 'c4', kind: 'sale' }, dr_minor: 660000, cr_minor: 0 },
-  { entry_id: 'r1', date: '2026-09-12', ref: 'RV/2026-27/000001', source_chit_id: 'cr', source: { ref: 'RV', chit_id: 'cr', kind: 'receipt' }, dr_minor: 0, cr_minor: 7920000, payment_id: 'p1', unapplied_minor: 7920000 }] };
-BK.owed.n = { checks: true, proposal: [
-  { entry_id: 'e2', due_minor: 5080000, open_minor: 6000000, disputed: false },
-  { entry_id: 'e3', due_minor: 5000000, open_minor: 5000000, disputed: false },
-  { entry_id: 'e4', due_minor: 660000, open_minor: 660000, disputed: false }] };
+const ans = { bills: [
+  { ref: 'c2', bill_no: 'S042-02', chit_id: 'c2', entry_id: 'e2', date: '2026-08-20', due_date: '2026-09-19', days_overdue: 58, band: 'd31_60', status: 'part', amount_minor: 6000000, owed_minor: 5080000, mark: null, evidence_flag: null },
+  { ref: 'c3', bill_no: 'S042-03', chit_id: 'c3', entry_id: 'e3', date: '2026-10-01', due_date: '2026-10-31', days_overdue: null, band: 'not_due', status: 'unpaid', amount_minor: 5000000, owed_minor: 5000000, mark: null, evidence_flag: null },
+  { ref: 'c5', bill_no: 'S042-05', chit_id: 'c5', entry_id: 'e5', date: '2026-09-01', due_date: null, days_overdue: 40, band: 'd31_60', status: 'unpaid', amount_minor: 100000, owed_minor: 100000, no_terms: true, mark: null, evidence_flag: null },
+  { ref: 'c6', bill_no: 'S042-06', chit_id: 'c6', entry_id: 'e6', date: '2026-08-03', due_date: '2026-09-02', days_overdue: 75, band: 'd61_90', status: 'unpaid', amount_minor: 900000, owed_minor: 900000, mark: { class: 'hold', kind: 'on_hold', by_name: 'Pat Auditor', at: '2026-11-15' }, evidence_flag: 'no_tax_invoice' }],
+  total: 4, page: 1, limit: 25, counts: { open: 4, paid: 1, all: 5 }, bands: { d0_30: 9570000, d31_60: 3960000, not_due: 5000000 }, on_account_minor: 7920000, checks: true };
+BK.pb = { n: { q: { state: 'open', band: '', sort: 'date', dir: 'desc', page: 1 }, ans, busy: false, list: 'dues' } };
 const bills = f.bkPartyBillsHTML('n', 'dues', 'AUD');
-ok(/S042-01<\/i> <span class="optchip" data-b="standing-paid"[^>]*>Paid<\/span> \| M5000000 \| <b data-b="owed">M0<\/b>/.test(bills), 'S042-01: amount 50,000 · still owed 0 · Paid');
-ok(/S042-02<\/i> <span class="optchip" data-b="standing-part"[^>]*>Part-paid<\/span> \| M6000000 \| <b data-b="owed">M5080000<\/b>/.test(bills), 'S042-02: amount 60,000 · still owed 50,800 · Part-paid');
-ok(/standing-unpaid[^>]*>Unpaid<\/span> \| M5000000 \| <b data-b="owed">M5000000<\/b>/.test(bills), 'S042-03: owed the whole 50,000 · Unpaid');
-ok(/Bills M16660000 · still owed M10740000/.test(bills), 'the carried totals: bills and still owed');
-ok(/Received M7920000 on D2026-09-12 · RV\/2026-27\/000001 · on account, counted against the oldest bills first/.test(bills), 'the receipt is said as the books hold it: on account, counted against the oldest bills first (not a made-up match)');
-ok(/data-b="owed-mismatch"[^>]*>The party owes M13530000 — these bills do not add up to it/.test(bills), 'two carried totals that disagree are said (here the stand-in balance is not the bills), never hidden');
-BK.owed.n = null;
-ok(!/Still owed|data-b="owed"/.test(f.bkPartyBillsHTML('n', 'dues', 'AUD')), 'while the owed read is out (or an older api): the plain bills, no invented owed column');
-BK.owed.n = { checks: true, failed: true, proposal: [] };
-ok(!/data-b="owed"/.test(f.bkPartyBillsHTML('n', 'dues', 'AUD')), 'a failed owed read: the plain bills');
-BK.owed.n = { proposal: [{ entry_id: undefined }] };
-ok(!/data-b="standing/.test(f.bkPartyBillsHTML('n', 'dues', 'AUD')), 'an answer that never heard of checks does not paint every bill Paid');
+ok(bills.includes('[Date|Bill|Due date|Days overdue|Status|Amount|Still owed|Reviewed]'), 'the sub-table columns, in order: Date · Bill · Due date · Days overdue · Status · Amount · Still owed · Reviewed');
+ok(/data-b="band-d0_30"[^>]*>1–30 days <b>M9570000<\/b>/.test(bills) && /data-b="band-d31_60"/.test(bills) && /data-b="band-not_due"/.test(bills) && !/band-d61_90|band-d90_plus/.test(bills), 'every non-zero band is a chip (1–30 days too: the line the walk missed); the zero ones are not shown');
+ok(/data-b="state-open"[^>]*aria-pressed="true"[^>]*>Open 4/.test(bills) && /data-b="state-paid"[^>]*aria-pressed="false"[^>]*>Paid 1/.test(bills) && /data-b="state-all"[^>]*>All 5/.test(bills), 'Open (default) · Paid · All, with the server counts');
+ok(/<i>S042-02<\/i>[^\n]*M6000000 \| <b data-b="owed">M5080000/.test(bills), 'S042-02: amount 60,000 · still owed 50,800');
+ok(/data-b="standing-part"[^>]*>Part paid</.test(bills) && /data-b="standing-unpaid"[^>]*>Unpaid</.test(bills), 'Part paid and Unpaid are said once, in the Status cell');
+ok(bills.includes('| 58 |') && bills.includes('| not due |'), 'days overdue: the number, or "not due"');
+ok(/data-b="set-terms"[^>]*>Set terms</.test(bills), 'a bill with no due date says "Set terms" in the Due date cell (the one terms editor)');
+ok(/‖ On hold · no tax invoice<\/button>/.test(bills) && !/data-b="no-tax-invoice"/.test(bills), 'a held bill with no tax invoice: ONE chip "‖ On hold · no tax invoice", no second chip');
+ok(/title="Pat Auditor · D2026-11-15"/.test(bills), 'who and when sit on the chip, on hover');
+ok(/M7920000 on account, counted against the oldest bills/.test(bills), 'money on account is said as the books hold it');
+ok(!/owed-mismatch/.test(bills), 'the old mismatch line is gone: the totals are the server\'s, one ageing');
+BK.pb.n.ans = null;
+ok(/Reading the bills…/.test(f.bkPartyBillsHTML('n', 'dues', 'AUD')), 'before the read lands: "Reading the bills…"');
 
 /* W15-96 · the hold and the tax-invoice flag beside Pay */
 const held = { against_ref: 'S042-19', bill_no: 'S042-19', due_date: '2026-10-01', mark: { class: 'hold', kind: 'on_hold', by_name: 'Pat Auditor', note: 'wait for the invoice' }, evidence_flag: 'no_tax_invoice' };
