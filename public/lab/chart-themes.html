@@ -1,12 +1,23 @@
 <!doctype html>
 <html lang="en" data-appearance-fixed>
-<!-- OWNS  a THROWAWAY SAMPLE (not product): the three MIS charts drawn in each of the avatar's 16 themes, so Athi can judge the chart palette by eye. Fixed sample numbers, no api, no storage.
+<!-- OWNS  a THROWAWAY SAMPLE (not product): the three MIS charts drawn in each of the avatar's 16 themes and in 12 colour combinations, so Athi can judge the chart palette by eye. Fixed sample numbers, no api, no storage.
      CALLED BY  nobody; opened by its address (public/lab/chart-themes.html), also served on a throwaway container on the sit-au host.
      REUSES  the avatar's own path: /engine/screen.js (CBScreen.APP_THEMES, the 16) and /app/avatar.js (CBAvatar.applyWith, the same apply every page uses; on a data-appearance-fixed page it never touches storage),
-             /app/ui-standard.js (CBUiStandard.contrastRatio, the one contrast helper). No theme colour is typed here: every colour is read back from the page after the avatar applied the theme.
+             /app/ui-standard.js (CBUiStandard.contrastRatio, the one contrast helper). No theme colour is typed here: every theme colour is read back from the page after the avatar applied the theme.
      THE ONE COPY  the :root block below is the app's CREAM base (public/app.html :root, which declares them inline and cannot be linked); a theme overrides it, cream overrides nothing.
-     RULE  (critic 16 Nov, REQ-MIS-SHOWCASE) actual = --ink solid; previous = color-mix(--ink 45%, --page) and must clear 3:1; plan = --ink outline; ONE accent mark in --accent-text; good/watch/bad = --ok/--prog/--disp, never themed away;
-           a fixed palette replaces the set for any theme that fails. -->
+     PUBLISHED HEXES, where each was read (nothing else is used; which colour does which job is this page's choice):
+       Okabe-Ito          https://siegal.bio.nyu.edu/color-palette/ (opened; 8 hexes, unnamed there). https://jfly.uni-koeln.de/color/ was opened too: image only, no hexes.
+       Tableau colour-blind   matplotlib lib/matplotlib/mpl-data/stylelib/tableau-colorblind10.mplstyle (opened, raw github).
+       Tableau classic    d3-scale-chromatic src/categorical/Tableau10.js (opened, raw github).
+       IBM Carbon         https://carbondesignsystem.com/data-visualization/color-palettes/ (opened; 14 hexes).
+       ColorBrewer Set2, Dark2, Paired   axismaps/colorbrewer export/colorbrewer.js (opened, raw github).
+       Viridis            BIDS/colormap colormaps.py (opened, raw github): entries 0, 64, 128, 192, 255 as floats, turned into hex here.
+       Teal and pink colour-blind safe, Cool blues to lime   the theme files ColorblindSafe-Longer.json and Waveform.json that Microsoft Learn's report-themes page links (page opened; both files opened).
+       NOT OPENED, so left out: the hexes of the built-in report themes (Executive, Frontier, Innovate, Bloom, Tidal, Divergent, Classic, City park, Classroom, Electric, Sunset, Twilight, Solar, Temperature, Storm).
+         The Learn page shows them as pictures only. The Valentine's Day theme was read but is red-led, and red is never a series colour here.
+     COLOUR-BLIND SIMULATION  Machado, Oliveira and Fernandes 2009, severity 1.0, protan and deutan matrices TYPED FROM MEMORY (the paper was not opened); the numbers are indicative.
+     RULE  plan is always an --ink outline; one accent mark; good/watch/bad are the theme's --ok/--prog/--disp, never series colours; red is never a series colour;
+           every series mark must clear 3:1 against the page or that combination falls back (to IBCS grey) for that theme. -->
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,12 +29,16 @@
 body{margin:0;background:var(--page);color:var(--ink);font:15px/1.4 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .wrap{max-width:1240px;margin:0 auto;padding:16px}
 h1{font-size:20px;margin:0 0 4px}
+h3{font-size:14px;margin:18px 0 4px}
 .lead{margin:0 0 12px;color:var(--grey);font-size:14px}
 .sample{display:inline-block;font:700 11px/1 ui-monospace,Menlo,Consolas,monospace;border:1px solid currentColor;border-radius:4px;padding:3px 6px;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;vertical-align:middle}
-.themes{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.lab{font-size:12px;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 3px}
+.themes{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
 .themes button{min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 .themes button[aria-pressed="true"]{border:2px solid var(--ink);font-weight:700}
-.themes .b{font-size:11px;margin-inline-start:4px;color:var(--grey)}
+.themes .rk{font-size:11px;color:var(--grey);margin-inline-end:4px}
+.themes .sep{flex-basis:100%;height:0}
+.raw{font-size:13px;margin:4px 0;display:flex;gap:6px;align-items:center}
 .status{margin:6px 0 12px;font-size:13px;color:var(--grey)}
 .status b{color:var(--ink)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -31,45 +46,67 @@ h1{font-size:20px;margin:0 0 4px}
 .card.wide{grid-column:1/-1}
 .card h2{font-size:15px;margin:0 0 2px;display:flex;gap:8px;align-items:center;justify-content:space-between}
 .sub{font-size:12px;color:var(--grey);margin:0 0 6px}
-.key{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink);margin:2px 0 4px}
-.key i{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-inline-end:5px;border-radius:2px}
+.key{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink);margin:2px 0 6px}
+.key span{display:inline-flex;align-items:center;gap:5px}
+.key i{display:inline-block;width:14px;height:14px;border-radius:3px;flex:none}
+.key i.ol{background:none;border:1.5px solid var(--ink)}
+.key i.ln{height:3px;border-radius:2px}
+.key i.dot{border-radius:50%}
 svg{display:block;width:100%;height:auto;overflow:visible}
 svg text{font-family:inherit}
 details{margin-top:6px;font-size:12px}
 details table{border-collapse:collapse;width:100%}
 details td,details th{padding:2px 6px;border-bottom:1px solid var(--line);text-align:end;font-variant-numeric:tabular-nums}
 details th:first-child,details td:first-child{text-align:start}
-.tbl{margin-top:14px;overflow-x:auto}
+.tbl{margin-top:8px;overflow-x:auto}
 .tbl table{border-collapse:collapse;width:100%;font-size:13px;background:var(--card);border:1px solid var(--line)}
-.tbl th,.tbl td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl th,.tbl td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:top}
 .tbl th:first-child,.tbl td:first-child{text-align:start}
+.tbl td.t{white-space:normal;text-align:start;min-width:140px}
 .tbl tr[data-k]{cursor:pointer}
 .tbl tr.on td{font-weight:700;background:color-mix(in srgb,var(--ink) 8%,var(--card))}
 .pass{color:var(--ok);font-weight:700}.fb{color:var(--prog);font-weight:700}
-@media (max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:16px}}
+.foot{font-size:12px;color:var(--grey);margin-top:12px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Chart palette across the 16 avatar themes <span class="sample">Sample</span></h1>
-  <p class="lead">A throwaway page, not product. The numbers are fixed samples. The themes are the avatar's own (pick one below, or from the table); the colours are whatever each theme gives the page.</p>
+  <p class="lead">A throwaway page, not product. The numbers are fixed samples. Pick a theme (the avatar's own) and a colour combination; each chart carries its legend. Combinations are ranked: the top 6 come first.</p>
+  <div class="lab">Colour combination</div>
+  <div class="themes" id="combos" role="group" aria-label="Colour combination"></div>
+  <label class="raw"><input type="checkbox" id="raw"> Show the raw colours even where a mark is under 3 to 1 (to judge the look; not the rule)</label>
+  <div class="lab">Theme</div>
   <div class="themes" id="themes" role="group" aria-label="Theme"></div>
   <div class="status" id="status" aria-live="polite"></div>
   <div id="stage" class="grid">
     <section class="card wide" aria-labelledby="t1"><h2 id="t1">Sales, this year against last year <span class="sample">Sample</span></h2>
-      <p class="sub">Twelve months, thousands. This year solid, last year grey, the plan as an outline.</p>
-      <div class="key"><span><i style="background:var(--c-act)"></i>This year</span><span><i style="background:var(--c-prev)"></i>Last year</span><span><i style="border:1.5px solid var(--c-plan)"></i>Plan</span></div>
+      <p class="sub">Twelve months, thousands. The plan is an outline.</p>
+      <div class="key" id="k1"></div>
       <div id="c1"></div><details><summary>Table</summary><div id="d1"></div></details></section>
     <section class="card" aria-labelledby="t2"><h2 id="t2">To collect, by age <span class="sample">Sample</span></h2>
-      <p class="sub">Thousands owed to you, ranked. One group needs a look.</p>
+      <p class="sub">Thousands owed to you, ranked. Calm to warm as the days grow.</p>
+      <div class="key" id="k2"></div>
       <div id="c2"></div><details><summary>Table</summary><div id="d2"></div></details></section>
     <section class="card" aria-labelledby="t3"><h2 id="t3">Cash, next 30 days <span class="sample">Sample</span></h2>
       <p class="sub">Expected balance each day, thousands. The lowest day is marked.</p>
+      <div class="key" id="k3"></div>
       <div id="c3"></div><details><summary>Table</summary><div id="d3"></div></details></section>
   </div>
-  <div class="tbl"><table id="tbl"><caption style="text-align:start;padding:6px 0;font-size:13px" id="cap"></caption>
-    <thead><tr><th>Theme</th><th>Actual</th><th>Previous</th><th>Accent</th><th>Watch</th><th>Result</th></tr></thead><tbody></tbody></table></div>
-  <p class="status">Ratios are against the page. Marks need 3 to 1. Watch is the theme's own amber against the page, shown for information.</p>
+
+  <h3>Power BI comparison: the visuals a finance dashboard uses, and what we cover</h3>
+  <div class="tbl"><table id="pbi"><thead><tr><th>Visual</th><th>Finance use</th><th>Our charts today</th></tr></thead><tbody></tbody></table></div>
+
+  <h3>Ranking: readability (themes out of 16 where every series mark holds 3 to 1) and colour-blind safety (smallest neighbour difference)</h3>
+  <div class="tbl"><table id="rank"><thead></thead><tbody></tbody></table></div>
+  <h3>Every theme and combination: the lowest series mark against the page (3 to 1 needed)</h3>
+  <div class="tbl"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  <h3>Colour-blind check: smallest difference (CIE76 delta E; 10 or more is told apart) between neighbouring series</h3>
+  <div class="tbl"><table id="cbt"><thead></thead><tbody></tbody></table></div>
+  <p class="foot">Neighbouring series: this year with last year, and each age bucket with the next. Simulation uses the Machado 2009 matrices, typed from memory, not checked against the paper.
+    Sources of the published colours: Okabe and Ito (siegal.bio.nyu.edu/color-palette), Tableau colour-blind (matplotlib style file) and Tableau classic (d3-scale-chromatic), IBM Carbon (carbondesignsystem.com, data visualisation colour palettes),
+    ColorBrewer (colorbrewer.js, Cynthia Brewer), Viridis (BIDS colormap), and the two report-theme files linked from Microsoft Learn's report-themes page. The built-in report themes' hexes were not opened (the page shows pictures), so they are left out. The visual list for the comparison is from general knowledge of the product; its documentation page was not opened.</p>
 </div>
 <script src="/engine/screen.js"></script>   <!-- CBScreen.APP_THEMES: the 16 themes -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar.applyWith: the avatar's own apply -->
@@ -77,125 +114,200 @@ details th:first-child,details td:first-child{text-align:start}
 <script>
 (function () {
   var ratio = CBUiStandard.contrastRatio;
-  var html = document.documentElement, stage = document.getElementById('stage');
+  var stage = document.getElementById('stage');
   var KEYS = Object.keys(CBAvatar.THEMES);
   var NEED = 3; /* WCAG 1.4.11, a mark */
-  /* the fixed fallback, by ground: the SPEC-colour-and-chart-style rp- values, used only when a theme fails */
-  var FIXED = {
-    light: { act: '#1F2A33', prev: '#7C858D', acc: '#3F66A6', page: null },
-    dark: { act: '#E6EAEF', prev: '#8B949E', acc: '#6892DB', page: null }
+
+  /* the published palettes (sources in the header comment). Red-led entries are left out of every set. */
+  var PUB = {
+    okabe: { name: 'Okabe-Ito', act: '#0072B2', prev: '#E69F00', acc: '#009E73', ramp: ['#0072B2', '#56B4E9', '#009E73', '#F0E442', '#E69F00'] },
+    tableau: { name: 'Tableau colour-blind', act: '#006BA4', prev: '#FF800E', acc: '#C85200', ramp: ['#006BA4', '#5F9ED1', '#FFBC79', '#FF800E', '#C85200'] },
+    classic: { name: 'Tableau classic', act: '#4e79a7', prev: '#f28e2c', acc: '#59a14f', ramp: ['#4e79a7', '#76b7b2', '#59a14f', '#edc949', '#f28e2c'] },
+    carbon: { name: 'IBM Carbon', act: '#6929c4', prev: '#1192e8', acc: '#005d5d', ramp: ['#005d5d', '#1192e8', '#6929c4', '#b28600', '#8a3800'] },
+    tealpink: { name: 'Teal and pink, colour-blind safe', act: '#074650', prev: '#009292', acc: '#480091', ramp: ['#074650', '#009292', '#6db6ff', '#fe6db6', '#914800'] },
+    coolblue: { name: 'Cool blues to lime', act: '#4584D3', prev: '#31B6FD', acc: '#4C45D3', ramp: ['#4584D3', '#5BD0B0', '#5BD078', '#A5D028', '#F5C040'] },
+    set2: { name: 'Brewer Set2 pastel', act: '#66c2a5', prev: '#fc8d62', acc: '#8da0cb', ramp: ['#8da0cb', '#66c2a5', '#a6d854', '#ffd92f', '#fc8d62'] },
+    dark2: { name: 'Brewer Dark2', act: '#1b9e77', prev: '#d95f02', acc: '#7570b3', ramp: ['#7570b3', '#1b9e77', '#66a61e', '#e6ab02', '#d95f02'] },
+    paired: { name: 'Brewer Paired', act: '#1f78b4', prev: '#a6cee3', acc: '#6a3d9a', ramp: ['#1f78b4', '#a6cee3', '#33a02c', '#fdbf6f', '#ff7f00'] },
+    viridis: { name: 'Viridis', act: '#3b518b', prev: '#5cc863', acc: '#21908d', ramp: ['#440154', '#3b518b', '#21908d', '#5cc863', '#fde725'] }
   };
+  var IDS = ['tint', 'ibcs'].concat(Object.keys(PUB));
+  var NAME = { tint: 'Theme tint', ibcs: 'IBCS grey' };
+  Object.keys(PUB).forEach(function (k) { NAME[k] = PUB[k].name; });
 
-  function tok(name) { return getComputedStyle(html).getPropertyValue(name).trim(); }
-  function rgb(c) { var m = String(c).match(/[\d.]+/g); if (/^#/.test(c)) { var h = c.slice(1); if (h.length === 3) h = h.replace(/./g, '$&$&'); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); } return m.slice(0, 3).map(Number); }
+  function tok(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function rgb(c) { c = String(c).trim(); if (/^#/.test(c)) { var h = c.slice(1); if (h.length === 3) h = h.replace(/./g, '$&$&'); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); } return c.match(/[\d.]+/g).slice(0, 3).map(Number); }
   function mix(a, b, pa) { var x = rgb(a), y = rgb(b); return 'rgb(' + [0, 1, 2].map(function (i) { return Math.round(x[i] * pa + y[i] * (1 - pa)); }).join(',') + ')'; } /* color-mix(in srgb, a pa, b) */
-  function lum(c) { return 0.2126 * lin(rgb(c)[0]) + 0.7152 * lin(rgb(c)[1]) + 0.0722 * lin(rgb(c)[2]); }
   function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
-  function r1(n) { return Math.round(n * 100) / 100; }
+  function r2(n) { return Math.round(n * 100) / 100; }
 
-  /* apply a theme through the avatar and read what it gave */
+  /* colour-blind simulation (linear RGB) and CIE76 difference */
+  var SIM = {
+    deutan: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+    protan: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]]
+  };
+  function simulate(c, kind) {
+    var l = rgb(c).map(lin);
+    if (!kind) return l;
+    return SIM[kind].map(function (row) { return Math.max(0, Math.min(1, row[0] * l[0] + row[1] * l[1] + row[2] * l[2])); });
+  }
+  function lab(l) {
+    var X = (0.4124 * l[0] + 0.3576 * l[1] + 0.1805 * l[2]) / 0.95047, Y = 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2], Z = (0.0193 * l[0] + 0.1192 * l[1] + 0.9505 * l[2]) / 1.08883;
+    var f = function (t) { return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; };
+    return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
+  }
+  function dE(a, b, kind) { var p = lab(simulate(a, kind)), q = lab(simulate(b, kind)); return Math.sqrt(Math.pow(p[0] - q[0], 2) + Math.pow(p[1] - q[1], 2) + Math.pow(p[2] - q[2], 2)); }
+  function minAdj(list, kind) { var m = 999; for (var i = 0; i < list.length - 1; i++) m = Math.min(m, dE(list[i], list[i + 1], kind)); return Math.round(m * 10) / 10; }
+  function cbOf(s) { var o = {}; ['', 'deutan', 'protan'].forEach(function (kind) { o[kind || 'normal'] = Math.min(minAdj([s.act, s.prev], kind), minAdj(s.ramp, kind)); }); o.min = Math.min(o.normal, o.deutan, o.protan); o.ok = o.min >= 10; return o; }
+
   function read(k) {
     CBAvatar.applyWith({ theme: k });
-    var page = tok('--paper'), ink = tok('--ink'), acc = tok('--blue'), prev = mix(ink, page, 0.45);
-    var res = { k: k, name: CBAvatar.THEMES[k].name, page: page, ink: ink, acc: acc, prev: prev, good: tok('--ok'), watch: tok('--prog'), bad: tok('--disp'),
-      rAct: r1(ratio(ink, page)), rPrev: r1(ratio(prev, page)), rAcc: r1(ratio(acc, page)), rWatch: r1(ratio(tok('--prog'), page)) };
-    res.pass = res.rAct >= NEED && res.rPrev >= NEED && res.rAcc >= NEED;
-    var set = lum(page) < 0.18 ? FIXED.dark : FIXED.light;
-    res.fixed = { act: set.act, prev: set.prev, acc: set.acc, rAct: r1(ratio(set.act, page)), rPrev: r1(ratio(set.prev, page)), rAcc: r1(ratio(set.acc, page)) };
-    return res;
+    return { k: k, name: CBAvatar.THEMES[k].name, page: tok('--paper'), ink: tok('--ink'), acc: tok('--blue'), prog: tok('--prog') };
   }
-  var ALL = {}, cur = null;
-  var want = (location.search.match(/theme=([\w]+)/) || [])[1];
-  KEYS.forEach(function (k) { ALL[k] = read(k); });
+  /* IBCS: actual ink, previous the lightest ink mix that clears 3:1 (follows the theme), a grey ramp */
+  function ibcs(t) {
+    var p = 30; for (; p <= 100; p += 5) { if (ratio(mix(t.ink, t.page, p / 100), t.page) >= NEED) break; }
+    return { act: t.ink, prev: mix(t.ink, t.page, p / 100), acc: t.acc, ramp: [0, 1, 2, 3, 4].map(function (i) { return mix(t.ink, t.page, (p + (100 - p) * i / 4) / 100); }), note: 'previous = ' + p + '% ink' };
+  }
+  /* Theme tint: actual the theme accent, previous a lighter tint of the SAME hue (as light as still clears 3:1), ramp from the accent toward the theme's own amber */
+  function tint(t) {
+    var p = 30; for (; p <= 100; p += 5) { if (ratio(mix(t.acc, t.page, p / 100), t.page) >= NEED) break; }
+    return { act: t.acc, prev: mix(t.acc, t.page, p / 100), acc: t.ink, ramp: [0, 0.2, 0.4, 0.6, 0.8].map(function (w) { return mix(t.prog, t.acc, w); }), note: 'previous = ' + p + '% accent' };
+  }
+  function build(t, id) {
+    var set = id === 'tint' ? tint(t) : id === 'ibcs' ? ibcs(t) : JSON.parse(JSON.stringify(PUB[id])), lo = 99;
+    [set.act, set.prev, set.acc].concat(set.ramp).forEach(function (c) { lo = Math.min(lo, ratio(c, t.page)); });
+    var ok = lo >= NEED;
+    return { id: id, set: set, lo: r2(lo), ok: ok, used: ok ? set : ibcs(t) };
+  }
 
-  function setVars(t) {
-    var use = t.pass ? { act: t.ink, prev: 'color-mix(in srgb, var(--ink) 45%, var(--paper))', acc: 'var(--accent-text)' } : t.fixed;
-    stage.style.setProperty('--c-act', use.act); stage.style.setProperty('--c-plan', use.act);
-    stage.style.setProperty('--c-prev', use.prev); stage.style.setProperty('--c-acc', use.acc);
-    stage.style.setProperty('--c-good', 'var(--ok)'); stage.style.setProperty('--c-watch', 'var(--prog)'); stage.style.setProperty('--c-bad', 'var(--disp)');
-    stage.style.setProperty('--c-grid', 'var(--line)');
-  }
+  var ALL = {}, RES = {};
+  KEYS.forEach(function (k) { ALL[k] = read(k); RES[k] = {}; IDS.forEach(function (id) { RES[k][id] = build(ALL[k], id); }); });
+  var HOLDS = {}, CBR = {}, SCORE = {};
+  IDS.forEach(function (id) { HOLDS[id] = KEYS.filter(function (k) { return RES[k][id].ok; }).length; CBR[id] = cbOf(RES.cream[id].set); SCORE[id] = HOLDS[id] / 16 * 50 + Math.min(CBR[id].min, 20) / 20 * 50; });
+  var ORDER = IDS.slice().sort(function (a, b) { return SCORE[b] - SCORE[a]; });
+
+  var q = function (n) { return (location.search.match(new RegExp(n + '=([\\w]+)')) || [])[1]; };
+  var curK = ALL[q('theme')] ? q('theme') : 'cream', curC = (q('combo') && NAME[q('combo')]) ? q('combo') : ORDER[0];
+  var rawBox = document.getElementById('raw'); rawBox.checked = q('raw') === '1';
 
   /* ---------- sample data (fixed) ---------- */
   var MON = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
   var LAST = [118, 124, 131, 127, 140, 152, 148, 155, 162, 170, 198, 214];
   var THIS = [126, 131, 128, 139, 151, 149, 160, 158, 171, 183, 204, 226];
   var PLAN = [125, 130, 135, 140, 148, 155, 158, 165, 170, 180, 200, 220];
-  var AGE = [['Not yet due', 184, 0], ['1 to 30 days', 96, 0], ['31 to 60 days', 52, 0], ['61 to 90 days', 38, 1], ['Over 90 days', 21, 0]];
+  var AGE = [['Not yet due', 184], ['1 to 30 days', 96], ['31 to 60 days', 52], ['61 to 90 days', 38], ['Over 90 days', 21]];
   var CASH = [142, 138, 131, 127, 120, 128, 121, 114, 109, 101, 96, 88, 92, 85, 76, 70, 64, 58, 51, 44, 38, 31, 36, 52, 61, 58, 67, 74, 82, 90];
   var NS = 'http://www.w3.org/2000/svg';
   function el(tag, a, txt) { var e = document.createElementNS(NS, tag); Object.keys(a || {}).forEach(function (n) { e.setAttribute(n, a[n]); }); if (txt != null) e.textContent = txt; return e; }
-  function svg(w, h, label) { var s = el('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img', 'aria-label': label }); return s; }
+  function svg(w, h, label) { return el('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img', 'aria-label': label }); }
   function tbl(head, rows) { return '<table><tr>' + head.map(function (x) { return '<th>' + x + '</th>'; }).join('') + '</tr>' + rows.map(function (r) { return '<tr>' + r.map(function (x) { return '<td>' + x + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>'; }
   function put(id, node) { var h = document.getElementById(id); h.textContent = ''; h.appendChild(node); }
   function width(id) { return Math.max(260, Math.floor(document.getElementById(id).getBoundingClientRect().width) || 320); }
+  function R(i) { return 'var(--c-r' + i + ')'; }
 
   function chart1() {
     var w = width('c1'), h = 230, L = 34, B = 22, T = 8, pw = w - L - 4, ph = h - B - T, max = 250, s = svg(w, h, 'Sample sales by month, this year against last year and plan');
-    [0, 100, 200].forEach(function (v) { var y = T + ph - v / max * ph; s.appendChild(el('line', { x1: L, x2: w - 4, y1: y, y2: y, stroke: 'var(--c-grid)', 'stroke-width': 1 })); s.appendChild(el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--grey)' }, v)); });
+    [0, 100, 200].forEach(function (v) { var y = T + ph - v / max * ph; s.appendChild(el('line', { x1: L, x2: w - 4, y1: y, y2: y, stroke: 'var(--line)', 'stroke-width': 1 })); s.appendChild(el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--grey)' }, v)); });
     var slot = pw / 12, bw = Math.max(5, Math.min(18, slot * 0.36));
     MON.forEach(function (m, i) {
       var cx = L + slot * i + slot / 2, yb = T + ph;
-      var hp = LAST[i] / max * ph, ha = THIS[i] / max * ph, hl = PLAN[i] / max * ph;
-      s.appendChild(el('rect', { x: cx - bw - 1, y: yb - hp, width: bw, height: hp, fill: 'var(--c-prev)' }));
-      s.appendChild(el('rect', { x: cx + 1, y: yb - ha, width: bw, height: ha, fill: 'var(--c-act)' }));
-      s.appendChild(el('rect', { x: cx - 0.25, y: yb - hl, width: bw + 2.5, height: hl, fill: 'none', stroke: 'var(--c-plan)', 'stroke-width': 1.5 }));
+      s.appendChild(el('rect', { x: cx - bw - 1, y: yb - LAST[i] / max * ph, width: bw, height: LAST[i] / max * ph, fill: 'var(--c-prev)' }));
+      s.appendChild(el('rect', { x: cx + 1, y: yb - THIS[i] / max * ph, width: bw, height: THIS[i] / max * ph, fill: 'var(--c-act)' }));
+      s.appendChild(el('rect', { x: cx - 0.25, y: yb - PLAN[i] / max * ph, width: bw + 2.5, height: PLAN[i] / max * ph, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1.5 }));
       s.appendChild(el('text', { x: cx, y: h - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--grey)' }, m));
     });
     put('c1', s);
+    document.getElementById('k1').innerHTML = '<span><i style="background:var(--c-act)"></i>This year</span><span><i style="background:var(--c-prev)"></i>Last year</span><span><i class="ol"></i>Plan</span>';
     document.getElementById('d1').innerHTML = tbl(['Month', 'This year', 'Last year', 'Plan'], MON.map(function (m, i) { return [m, THIS[i], LAST[i], PLAN[i]]; }));
   }
   function chart2() {
     var w = width('c2'), rh = 34, h = AGE.length * rh + 6, lab = Math.min(118, w * 0.38), s = svg(w, h, 'Sample amounts to collect by age, ranked'), max = 200, bw = w - lab - 78;
     AGE.forEach(function (r, i) {
-      var y = 4 + i * rh, len = r[1] / max * bw, col = r[2] ? 'var(--c-watch)' : 'var(--c-act)';
+      var y = 4 + i * rh, len = r[1] / max * bw, watch = i === 3;
       s.appendChild(el('text', { x: 0, y: y + 19, 'font-size': 12, fill: 'var(--ink)' }, r[0]));
-      s.appendChild(el('rect', { x: lab, y: y + 6, width: len, height: 18, fill: col }));
-      s.appendChild(el('text', { x: lab + len + 6, y: y + 19, 'font-size': 12, 'font-weight': 700, fill: r[2] ? 'var(--c-watch)' : 'var(--ink)' }, r[1] + (r[2] ? '  Watch' : '')));
+      s.appendChild(el('rect', { x: lab, y: y + 6, width: len, height: 18, fill: R(i) }));
+      s.appendChild(el('text', { x: lab + len + 6, y: y + 19, 'font-size': 12, 'font-weight': 700, fill: watch ? 'var(--prog)' : 'var(--ink)' }, r[1] + (watch ? '  Watch' : '')));
     });
     put('c2', s);
-    document.getElementById('d2').innerHTML = tbl(['Age', 'Owed', 'State'], AGE.map(function (r) { return [r[0], r[1], r[2] ? 'Watch' : '']; }));
+    document.getElementById('k2').innerHTML = AGE.map(function (r, i) { return '<span><i style="background:' + R(i) + '"></i>' + r[0] + '</span>'; }).join('');
+    document.getElementById('d2').innerHTML = tbl(['Age', 'Owed', 'State'], AGE.map(function (r, i) { return [r[0], r[1], i === 3 ? 'Watch' : '']; }));
   }
   function chart3() {
     var w = width('c3'), h = 200, L = 34, B = 22, T = 14, pw = w - L - 10, ph = h - B - T, max = 160, s = svg(w, h, 'Sample cash balance for the next 30 days, lowest day marked');
-    [0, 50, 100, 150].forEach(function (v) { var y = T + ph - v / max * ph; s.appendChild(el('line', { x1: L, x2: w - 6, y1: y, y2: y, stroke: 'var(--c-grid)', 'stroke-width': 1 })); s.appendChild(el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--grey)' }, v)); });
+    [0, 50, 100, 150].forEach(function (v) { var y = T + ph - v / max * ph; s.appendChild(el('line', { x1: L, x2: w - 6, y1: y, y2: y, stroke: 'var(--line)', 'stroke-width': 1 })); s.appendChild(el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--grey)' }, v)); });
     var X = function (i) { return L + i / 29 * pw; }, Y = function (v) { return T + ph - v / max * ph; }, lo = CASH.indexOf(Math.min.apply(null, CASH));
-    s.appendChild(el('polyline', { points: CASH.map(function (v, i) { return X(i) + ',' + Y(v); }).join(' '), fill: 'none', stroke: 'var(--c-act)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+    s.appendChild(el('polyline', { points: CASH.map(function (v, i) { return X(i) + ',' + Y(v); }).join(' '), fill: 'none', stroke: 'var(--c-act)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
     [1, 10, 20, 30].forEach(function (d) { s.appendChild(el('text', { x: X(d - 1), y: h - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--grey)' }, 'Day ' + d)); });
     s.appendChild(el('circle', { cx: X(lo), cy: Y(CASH[lo]), r: 6, fill: 'var(--c-acc)', stroke: 'var(--card)', 'stroke-width': 2 }));
-    var tx = X(lo) > w * 0.6 ? X(lo) - 10 : X(lo) + 10;
-    s.appendChild(el('text', { x: tx, y: Y(CASH[lo]) + 24, 'text-anchor': X(lo) > w * 0.6 ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--c-acc)' }, 'Lowest: day ' + (lo + 1) + ', ' + CASH[lo]));
+    s.appendChild(el('text', { x: X(lo) > w * 0.6 ? X(lo) - 10 : X(lo) + 10, y: Y(CASH[lo]) + 24, 'text-anchor': X(lo) > w * 0.6 ? 'end' : 'start', 'font-size': 12, 'font-weight': 700, fill: 'var(--ink)' }, 'Lowest: day ' + (lo + 1) + ', ' + CASH[lo]));
     put('c3', s);
+    document.getElementById('k3').innerHTML = '<span><i class="ln" style="background:var(--c-act)"></i>Cash balance</span><span><i class="dot" style="background:var(--c-acc)"></i>Lowest day</span>';
     document.getElementById('d3').innerHTML = tbl(['Day', 'Balance'], CASH.map(function (v, i) { return [i + 1, v + (i === lo ? ' (lowest)' : '')]; }));
   }
+  function draw() { chart1(); chart2(); chart3(); }
 
-  /* ---------- the switcher and the table ---------- */
-  var bar = document.getElementById('themes'), tb = document.querySelector('#tbl tbody');
-  KEYS.forEach(function (k) {
-    var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-k', k); b.setAttribute('aria-pressed', 'false'); b.textContent = ALL[k].name;
-    if (!ALL[k].pass) { var f = document.createElement('span'); f.className = 'b'; f.textContent = 'fallback'; b.appendChild(f); }
-    b.onclick = function () { choose(k); }; bar.appendChild(b);
-    var tr = document.createElement('tr'); tr.setAttribute('data-k', k); var t = ALL[k];
-    tr.innerHTML = '<td>' + t.name + '</td><td>' + t.rAct.toFixed(2) + '</td><td>' + t.rPrev.toFixed(2) + (t.rPrev < NEED ? ' x' : '') + '</td><td>' + t.rAcc.toFixed(2) + (t.rAcc < NEED ? ' x' : '') + '</td><td>' + t.rWatch.toFixed(2) + '</td><td class="' + (t.pass ? 'pass' : 'fb') + '">' + (t.pass ? 'Pass' : 'Fallback (' + t.fixed.rPrev.toFixed(2) + ' / ' + t.fixed.rAcc.toFixed(2) + ')') + '</td>';
-    tr.onclick = function () { choose(k); }; tb.appendChild(tr);
+  /* ---------- switchers ---------- */
+  var tb = document.getElementById('themes'), cb = document.getElementById('combos');
+  KEYS.forEach(function (k) { var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-k', k); b.textContent = ALL[k].name; b.onclick = function () { curK = k; refresh(); }; tb.appendChild(b); });
+  ORDER.forEach(function (id, n) {
+    if (n === 0 || n === 6) { var sp = document.createElement('div'); sp.className = 'sep'; cb.appendChild(sp); var l = document.createElement('div'); l.className = 'lab'; l.style.flexBasis = '100%'; l.textContent = n === 0 ? 'Top 6' : 'The rest'; cb.appendChild(l); }
+    var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-c', id);
+    b.innerHTML = '<span class="rk">' + (n + 1) + '</span>' + NAME[id]; b.onclick = function () { curC = id; refresh(); }; cb.appendChild(b);
   });
-  var nPass = KEYS.filter(function (k) { return ALL[k].pass; }).length;
-  document.getElementById('cap').textContent = nPass + ' of ' + KEYS.length + ' themes pass without the fallback. Fallback column: previous / accent ratios of the fixed set.';
+  rawBox.onchange = refresh;
 
-  function choose(k) {
-    cur = k; var t = ALL[k];
-    CBAvatar.applyWith({ theme: k });
-    setVars(t);
-    document.querySelectorAll('#themes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === k)); });
-    document.querySelectorAll('#tbl tr[data-k]').forEach(function (r) { r.className = r.getAttribute('data-k') === k ? 'on' : ''; });
-    document.getElementById('status').innerHTML = '<b>' + t.name + '</b>: actual ' + t.rAct.toFixed(2) + ', previous ' + t.rPrev.toFixed(2) + ', accent ' + t.rAcc.toFixed(2) + ' against the page. ' +
-      (t.pass ? '<b class="pass">Uses the theme colours.</b>' : '<b class="fb">Uses the fixed fallback palette</b> (previous ' + t.fixed.rPrev.toFixed(2) + ', accent ' + t.fixed.rAcc.toFixed(2) + ').');
+  /* ---------- tables ---------- */
+  var rt = document.querySelector('#rank thead'), rb = document.querySelector('#rank tbody');
+  rt.innerHTML = '<tr><th>Rank</th><th>Combination</th><th>Themes holding 3 to 1</th><th>Smallest neighbour difference (worst of normal, deuteranopia, protanopia)</th><th>Colour-blind safe</th><th>Score of 100</th></tr>';
+  ORDER.forEach(function (id, n) { var tr = document.createElement('tr'); tr.innerHTML = '<td>' + (n + 1) + '</td><td class="t">' + NAME[id] + '</td><td>' + HOLDS[id] + ' of 16</td><td>' + CBR[id].min + '</td><td class="' + (CBR[id].ok ? 'pass' : 'fb') + '">' + (CBR[id].ok ? 'Yes' : 'No') + '</td><td>' + Math.round(SCORE[id]) + '</td>'; rb.appendChild(tr); });
+
+  var thead = document.querySelector('#tbl thead'), tbody = document.querySelector('#tbl tbody');
+  thead.innerHTML = '<tr><th>Theme</th>' + ORDER.map(function (id) { return '<th>' + NAME[id] + '</th>'; }).join('') + '</tr>';
+  KEYS.forEach(function (k) {
+    var tr = document.createElement('tr'); tr.setAttribute('data-k', k);
+    tr.innerHTML = '<td>' + ALL[k].name + '</td>' + ORDER.map(function (id) { var r = RES[k][id]; return '<td class="' + (r.ok ? 'pass' : 'fb') + '">' + r.lo.toFixed(2) + (r.ok ? '' : ' fb') + '</td>'; }).join('');
+    tr.onclick = function () { curK = k; refresh(); }; tbody.appendChild(tr);
+  });
+
+  var cthead = document.querySelector('#cbt thead'), ctb = document.querySelector('#cbt tbody'), CBROWS = [];
+  cthead.innerHTML = '<tr><th>Combination (theme it was read on)</th><th>Normal</th><th>Deuteranopia</th><th>Protanopia</th><th>Told apart</th></tr>';
+  ORDER.forEach(function (id) { var th = [['cream']]; if (id === 'tint' || id === 'ibcs') th.push(['dark']); th.forEach(function (x) {
+    var c = cbOf(RES[x[0]][id].set); CBROWS.push({ id: id, theme: x[0], c: c });
+    var tr = document.createElement('tr'); tr.innerHTML = '<td class="t">' + NAME[id] + ' (' + ALL[x[0]].name + ')</td><td>' + c.normal + '</td><td>' + c.deutan + '</td><td>' + c.protan + '</td><td class="' + (c.ok ? 'pass' : 'fb') + '">' + (c.ok ? 'Yes' : 'No, some neighbours merge') + '</td>'; ctb.appendChild(tr); }); });
+
+  /* Power BI comparison: one table. Our column is what THIS sample and the written spec cover; nothing here is built product. */
+  var PBI = [
+    ['Clustered column / bar', 'This year against last year, by month; items ranked', 'Covered: columns with the plan outline (sales) and ranked horizontal bars (to collect)'],
+    ['Line', 'Cash balance, trend over time', 'Covered: cash for 30 days, lowest day marked'],
+    ['Combo (column and line)', 'Sales bars with a margin line', 'Missing. The spec rules out a second axis, so it would be two small charts one above the other'],
+    ['Area', 'Running totals, stacked cost over time', 'Missing'],
+    ['Waterfall', 'Profit bridge: sales, cost, tax, profit', 'Missing, and the best next addition for a finance view'],
+    ['Donut', 'Share of total', 'Left out on purpose: the spec says no pie'],
+    ['KPI card', 'One figure with its change', 'Partly: Home carries figure cards with a small trend; none is drawn in this sample'],
+    ['Gauge', 'Value against a target', 'Left out on purpose (no gauge); the spec uses a bullet bar for "against target", not drawn here'],
+    ['Matrix / table', 'Months by line, drill rows', 'Partly: a table sits under every chart; no pivot matrix'],
+    ['Treemap', 'Cost or stock by category', 'Missing'],
+    ['Scatter', 'Sales against profit per item', 'Missing; the spec allows it only for that one question, with labelled points'],
+    ['Slicer', 'Pick period, branch, product', 'Not in this sample (this page switches theme and colours only)']
+  ];
+  document.querySelector('#pbi tbody').innerHTML = PBI.map(function (r) { return '<tr><td class="t">' + r[0] + '</td><td class="t">' + r[1] + '</td><td class="t">' + r[2] + '</td></tr>'; }).join('');
+
+  function refresh() {
+    var t = ALL[curK], r = RES[curK][curC], raw = rawBox.checked, use = (r.ok || raw) ? r.set : r.used;
+    CBAvatar.applyWith({ theme: curK });
+    stage.style.setProperty('--c-act', use.act); stage.style.setProperty('--c-prev', use.prev); stage.style.setProperty('--c-acc', use.acc);
+    use.ramp.forEach(function (c, i) { stage.style.setProperty('--c-r' + i, c); });
+    document.querySelectorAll('#themes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === curK)); });
+    document.querySelectorAll('#combos button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-c') === curC)); });
+    document.querySelectorAll('#tbl tr[data-k]').forEach(function (x) { x.className = x.getAttribute('data-k') === curK ? 'on' : ''; });
+    document.getElementById('status').innerHTML = '<b>' + t.name + ' with ' + NAME[curC] + '</b> (rank ' + (ORDER.indexOf(curC) + 1) + '): lowest series mark ' + r.lo.toFixed(2) + ' against the page. ' +
+      (r.ok ? '<b class="pass">Holds (3 to 1).</b> ' + (r.set.note || '') : raw ? '<b class="fb">Raw colours shown; under 3 to 1, so the rule would use the IBCS grey here.</b>' : '<b class="fb">Under 3 to 1: falls back to IBCS grey for this theme.</b>');
     draw();
   }
-  function draw() { chart1(); chart2(); chart3(); }
-  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(draw, 120); });
-  window.MIS_RESULT = { pass: nPass, total: KEYS.length, rows: KEYS.map(function (k) { var t = ALL[k]; return { k: k, name: t.name, actual: t.rAct, previous: t.rPrev, accent: t.rAcc, watch: t.rWatch, pass: t.pass, fixedPrev: t.fixed.rPrev, fixedAcc: t.fixed.rAcc }; }) };
-  choose(ALL[want] ? want : 'cream');
+  var tmr; window.addEventListener('resize', function () { clearTimeout(tmr); tmr = setTimeout(draw, 120); });
+  window.MIS_RESULT = { order: ORDER, holds: HOLDS, cb: CBR, score: SCORE };
+  refresh();
 })();
 </script>
 </body>
