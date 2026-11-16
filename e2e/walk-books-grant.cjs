@@ -46,7 +46,7 @@ W.run('books-grant', async (w) => {
       if (p === '/api/books/periods') { /* W22: the books start Jul 2025, Jul-Jan locked, Feb open under later locked months; two empty months in 2024 sit before the start */
         const ex = example('GET ' + p), row = (fy, n, ym, status, entries) => Object.assign({}, ex.periods[0], { fiscal_year: fy, period: n, start_date: ym + '-01', end_date: ym + '-28', status, entries, sales_minor: 0, before_books: fy === '2024-25' ? true : undefined });
         const months = ['2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
-        return J(r, 200, Object.assign(ex, { periods: [row('2024-25', 1, '2024-07', 'open', 0), row('2024-25', 2, '2024-08', 'open', 0)].concat(months.map((ym, n) => row('2025-26', n + 1, ym, ym === '2026-02' ? 'open' : 'soft_locked', 3))), books_start: { fiscal_year: '2025-26', period: 1, start_date: '2025-07-01' }, lock_date: '2026-01-31', gaps: [{ fiscal_year: '2025-26', period: 8, start_date: '2026-02-01' }] }));
+        return J(r, 200, Object.assign(ex, { periods: [row('2024-25', 1, '2024-07', 'open', 0), row('2024-25', 2, '2024-08', 'open', 0)].concat(months.map((ym, n) => row('2025-26', n + 1, ym, ym === '2026-02' ? 'open' : 'soft_locked', 3))), under_review: { fy: '2025-26', from: '2025-07-01', to: '2026-06-30' }, books_start: { fiscal_year: '2025-26', period: 1, start_date: '2025-07-01' }, lock_date: '2026-01-31', gaps: [{ fiscal_year: '2025-26', period: 8, start_date: '2026-02-01' }] }));
       }
       const E1 = 'e0000000-0000-4000-8000-000000000001';
       const entry = { entry_id: E1, entry_no: 'JV-0001', posting_date: '2026-11-03', doc_date: '2026-11-03', event_type: 'sale', narration: 'Cash sale', source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: { chit_id: null, ref: 'B-9', kind: 'bill', counter: null, by: 'Asha', count: null, how: 'Cash', how_ref: null, split: null, bills: null, doc_at: '2026-11-03T09:00:00.000Z', recorded_at: '2026-11-03T09:05:00.000Z' }, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: 'Walk-in buyer', dr_minor: 123400, cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 123400, counter: null, rate: null }] };
@@ -74,7 +74,9 @@ W.run('books-grant', async (w) => {
   });
   await w.step('A2', 'the auditor · keyboard: focus "Open books", Enter → the header line names Store One with the read only tag, the trial balance is listed', async () => {
     await page.focus(T('nw-books-' + MEMBER)); await page.keyboard.press('Enter');
-    await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    await page.waitForSelector(T('bv-band'), { timeout: 10000 });
+    await page.click(T('bv-tab-tb')); /* acc17 (walk A2 was a test bug): the books open on the Day book of the year under review since the period merge, so the trial balance is the tab pressed, not the first screen */
+    await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const band = await txt(T('bv-band')), rows = await txt(T('bv-list'));
     const asked = S.calls.filter((c) => c.p === '/api/books/trial-balance');
     return { ok: /Store One/.test(band) && /read only/.test(band) && /Cash/.test(rows) && /1,234|1234/.test(rows) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER), saw: band + ' · ' + rows.slice(0, 80) + ' · header sent ' + asked.length + '×' };
@@ -87,6 +89,7 @@ W.run('books-grant', async (w) => {
   /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). */
   await w.step('W19', 'the auditor · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0 (a view above it is held at its measured ceiling, which only falls)', () => require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'auditor' }));
   await w.step('D1', 'the auditor drill · trial balance row Cash → its ledger: opening, the line with its running balance, the period total and the closing', async () => {
+    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book, and W19 leaves the last tab: the ledger is opened from the trial balance, so that tab is pressed first */
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const title = await txt(T('bd-title')), facts = await txt(T('bd-facts')), line = await txt(T('bd-line-0'));
     const asked = S.calls.filter((c) => c.p === "/api/books/ledger/1000");
@@ -148,6 +151,7 @@ W.run('books-grant', async (w) => {
   });
 
   await w.step('D6', 'the auditor drill · 390×844: trial balance → ledger sheet fits, no page scroll', async () => {
+    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book, and W19 leaves the last tab: the ledger is opened from the trial balance, so that tab is pressed first */
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const a = await noScroll(), sheet = await page.evaluate(() => { const d = document.getElementById('nw_sheet').getBoundingClientRect(); return d.width <= window.innerWidth + 1 && d.height <= window.innerHeight + 1; });
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
@@ -155,9 +159,9 @@ W.run('books-grant', async (w) => {
   });
 
   await w.step('A9', 'the auditor · Months: one lock line (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)); no month before Jul 2025 is listed', async () => {
-    await page.click(T('bv-tab-periods')); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 });
+    await page.click(T('bv-tab-periods')); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const lines = await txt(T('bv-lock-lines')), list = await txt(T('bv-list'));
-    return { ok: /Books start Jul 2025/.test(lines) && /Locked to .*Jan.* 2026/.test(lines) && /Open: Feb 2026 (gap)/.test(lines) && !/2024/.test(list) && /July 2025/.test(list), saw: lines + ' | ' + list.slice(0, 80) };
+    return { ok: /Books start Jul 2025/.test(lines) && /Locked to .*Jan.* 2026/.test(lines) && /Open: Feb 2026 \(gap\)/.test(lines) && !/2024/.test(list) && /July 2025/.test(list), saw: lines + ' | ' + list.slice(0, 80) };
   });
 
   /* ═══ the member ═══ */

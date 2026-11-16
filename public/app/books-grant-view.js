@@ -139,7 +139,7 @@
   }
   /** the choices of this client, read ONCE (GET /periods?marks=1: the year under review, each year, each month with its state and checked n of m); the period opens on the year under review unless the address named one */
   function choose() {
-    if (viewState.choices !== undefined) return Promise.resolve();
+    if (viewState.choices !== undefined || !alive()) return Promise.resolve();
     return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { query: { marks: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) {
       viewState.choices = a || null;
       var named = root.CBPeriodPick.filled(viewState.period, a), review = a && a.under_review;
@@ -177,12 +177,14 @@
     if (onActions()) return Promise.resolve();
     var report = current();
     if (report.k === 'periods') viewState.choices = undefined; /* the Months list is read fresh each time it is opened */
-    return choose().then(knowCurrency).then(function () { return report.k === 'periods' ? monthsOfPeriod() : readReport(report); });
+    return choose().then(function () { return alive() ? knowCurrency() : null; }).then(function () { return !alive() ? null : report.k === 'periods' ? monthsOfPeriod() : readReport(report); });
   }
   /** the Months list: the months of the period's year, from the one read of the choices (no second trip) */
   function monthsOfPeriod() {
     var fy = viewState.period && viewState.period.fy;
-    viewState.answer = { periods: ((viewState.choices && viewState.choices.periods) || []).filter(function (p) { return !fy || p.fiscal_year === fy; }) };
+    var c = viewState.choices || {};
+    /* E4: the lock line (books_start, lock_date, gaps) is the same /periods answer's: carried across, or lockLines() finds nothing to draw */
+    viewState.answer = { periods: (c.periods || []).filter(function (p) { return !fy || p.fiscal_year === fy; }), books_start: c.books_start || null, lock_date: c.lock_date || null, gaps: c.gaps || [] };
     viewState.why = null;
     return Promise.resolve();
   }
@@ -406,7 +408,7 @@
   function asAt(report) {
     var a = viewState.answer || {}, date = viewState.day || a.asOf || a.as_of || a.to || '';
     if (report.k === 'pl' && a.from && a.to && !viewState.day) return '<span class="tag" data-testid="bv-for">' + esc(words('For')) + ' ' + esc(root.shopDay(a.from)) + ' – ' + esc(root.shopDay(a.to)) + '</span>'; /* W18: a profit and loss is for a period, never "as at" a day */
-    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</span>' : '';
+    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs' || report.k === 'dues') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + '</span>' : '';
   }
   /** the Day pick (a report that can stand at one day) */
   function dayPick(report) {
@@ -499,8 +501,13 @@
     if (report.drill === 'entry') root.CBBooksGrantDrill.openEntry(ctx, row, ctx.currency, null);
     else if (row.code) root.CBBooksGrantDrill.openLedger(ctx, { code: row.code, name: row.name });
   }
+  /** E9: the client is still open (CBBooksActing holds its context). After "← Clients" the context is gone: a read still in flight must neither be sent without the store's header nor paint a band that names it */
+  function alive() {
+    return !!root.CBBooksActing.current();
+  }
   function reload() {
-    return load().then(paint, function () {
+    var mine = viewState;
+    return load().then(function () { if (alive() && viewState === mine) paint(); }, function () {
       if (viewState.o.onEnded) viewState.o.onEnded();
     });
   }

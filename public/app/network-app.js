@@ -442,9 +442,13 @@
       onEnded: N.o.onEnded,
       onSwitch: function (id, name) { openSeat(id, (N.held[id] && N.held[id].grantor_name) || name); },
       onBack: function () {
-        /* the client's own page goes up one level to the practice list: the entry this visit pushed is stepped back over; a page opened straight on the client goes to Home */
-        if (N.pushed && root.history.length > 1) root.history.back();
-        else root.location.assign('/');
+        /* E2 (Fable walk 17 Nov): "← Clients" goes to the practice list BY ADDRESS. history.back() stepped one TAB back (every screen of the books is a history entry), so the address and the screen disagreed and the list was never reached. The list is a new entry; Back from it returns to the client. */
+        var was = N.opened && N.opened.id;
+        N.opened = null; N.view = ''; N.period = null;
+        record(false);
+        paint();
+        var door = was && N.el && N.el.querySelector('[data-open-books="' + was + '"]'); /* focus lands on the "Open books" that opened it */
+        if (door) door.focus();
       }
     });
   }
