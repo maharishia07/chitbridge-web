@@ -793,6 +793,6 @@
     return out;
   }
 
-  var CBThread = { mount: mount, mountAll: mountAll, send: send, lead: function (L) { addCss(); return '<div class="rt"><div class="rt-list">' + leadHTML(L) + '</div></div>'; }, last: null, EP: CB_THREAD_EP, WORDS: W };
+  var CBThread = { when: when, /* the one date-time stamp (cap-mark.js reads it here, no copy) */ mount: mount, mountAll: mountAll, send: send, lead: function (L) { addCss(); return '<div class="rt"><div class="rt-list">' + leadHTML(L) + '</div></div>'; }, last: null, EP: CB_THREAD_EP, WORDS: W };
   root.CBThread = CBThread;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -81,13 +81,9 @@
   function fill(s, v) {
     return String(T(s)).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; });
   }
+  /* the one date-time stamp is CBThread.when (rail-thread.js loads first on both pages that load this file) */
   function when(ts) {
-    if (!ts) return '';
-    try {
-      if (typeof root.shopDateTime === 'function') return root.shopDateTime(ts);
-      if (root.CBLocale) return root.CBLocale.datetime(ts);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    return String(ts).replace('T', ' ').slice(0, 16);
+    return root.CBThread && root.CBThread.when ? root.CBThread.when(ts) : String(ts || '').replace('T', ' ').slice(0, 16);
   }
 
   /* ── look: theme tokens only, AA in light and dark (the same tokens rail-thread.js uses) ── */

@@ -227,7 +227,8 @@
     /* W15-108 (Athi, 15 Nov: "i have no idea which one is header, which one i can expand, which one is information"): a band is TINTED caps with its total at the right; a row that opens carries a bordered ▸ button and lights across the whole row;
        what it opens to is an INDENTED panel with a rule at its left, holding an info strip and then a real sub-table under its own grey header; information is never drawn like a button */
     '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);margin:0 0 6px 26px;padding:8px 12px 10px 14px;border-inline-start:3px solid var(--cl-blue);cursor:default;overflow-wrap:break-word;word-break:normal}',
-    '.cbl .cbl-row[aria-expanded]>.cbl-cell .cbl-tw,.cbl .cbl-row[aria-expanded] .cbl-tw{border:1px solid var(--cl-line);border-radius:6px;background:var(--cl-card);color:var(--cl-ink);width:24px;min-width:24px;min-height:24px;margin-inline:0 8px;font-size:calc(13px * var(--k,1))}',
+    '.cbl .cbl-row[aria-expanded]>.cbl-cell .cbl-tw,.cbl .cbl-row[aria-expanded] .cbl-tw{border:1px solid var(--cl-line);border-radius:6px;background:var(--cl-card);color:var(--cl-ink);font-size:calc(13px * var(--k,1))}/* the LOOK only (W15-108): its size is the tap rule below (32 px laptop, 44 px phone) - a width here out-ranks it (24 px drew, walk-list-tap 52 XX) */',
+    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-row[aria-expanded] .cbl-tw{margin-inline:-6px 6px}}' /* the bordered 44 px caret sits inside the card, not over its edge */,
     '.cbl .cbl-row[aria-expanded]:hover{background:var(--cl-hov)}.cbl .cbl-row[aria-expanded]:hover .cbl-tw{border-color:var(--cl-blue)}',
     '.cbl .cbl-group .fig{margin-inline-start:auto}',
     '.cbl .cbl-nstrip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:2px 0 8px;color:var(--cl-muted);font-size:calc(12px * var(--k,1))}',
