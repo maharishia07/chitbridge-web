@@ -34,15 +34,15 @@ of file each thing is; this says what already does the job.
 | 68 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
 | 68 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 68 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
-| 65 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 66 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
 | 64 | `adopt` | `remote-party.js` | local → the input names a business in THIS installation's namespace (or is an e-mail): |
 | 63 | `rows` | `cap-settings.js` |  |
 | 62 | `items` | `books-store.js` | PERF1: |
+| 61 | `read` | `books-grant-drill.js` |  |
 | 61 | `record` | `access-events.js` |  |
 | 61 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
-| 60 | `read` | `books-grant-drill.js` |  |
 | 59 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 59 | `host` | `chit-sheet.js` |  |
 | 57 | `toast` | `accounts-shell.js` |  |
