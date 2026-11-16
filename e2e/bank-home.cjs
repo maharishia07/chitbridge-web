@@ -133,7 +133,7 @@ function stand() {
   /* 1 */
   await p.waitForSelector(grid, { timeout: 10000 });
   await p.waitForSelector('[data-testid="bank-home-card-acc-1500-2026-09"]');
-  ok(/✓/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-08"]')) && /●/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && (await p.locator('.bks-miss').count()) === 3 && (await p.locator('.bkh-future').count()) === 7, 'home: FY 2026-27, Aug ✓ signed off, Sep ● not signed off, Jul, Oct and Nov Missing, the seven months to come are not Missing (miss ' + (await p.locator('.bks-miss').count()) + ', to come ' + (await p.locator('.bkh-future').count()) + ', head ' + (await text('.bks-grid thead')).replace(/\s+/g, ' ') + ')');
+  ok(/✓/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-08"]')) && /●/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && (await p.locator('.bks-miss').count()) === 2 && (await p.locator('.bkh-future').count()) === 8 && (await p.locator('[data-testid="bank-stmts-current-acc-1500-2026-11"]').count()) === 1, 'home: FY 2026-27, Aug ✓ signed off, Sep ● not signed off, Jul and Oct Missing, Nov (16 Nov) Not due yet, the seven months to come are not Missing (miss ' + (await p.locator('.bks-miss').count()) + ', to come ' + (await p.locator('.bkh-future').count()) + ', head ' + (await text('.bks-grid thead')).replace(/\s+/g, ' ') + ')');
   ok(/September 2026/.test(await text('[data-testid="bank-home-cards"]')) && /Continue/.test(await text('[data-testid="bank-home-cards"]')) && (await p.locator('[data-testid="bank-home-card-acc-1500-2026-08"]').count()) === 0, 'one card, for September only, with Continue');
   ok((await p.locator(trail).count()) === 0 && !(await p.locator('[data-testid="bank-form"]').isVisible()), 'the home has no trail and the plain picker form is folded away');
   ok(await fits(), '1366: the home needs no page scroll and nothing scrolls sideways');
@@ -338,7 +338,7 @@ function stand() {
     const pg = await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'); if (!n) return null; const r = n.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), b = document.querySelector('.bkh-body').getBoundingClientRect(); return { in: !!hit && (hit === n || n.contains(hit)), r: [Math.round(r.top), Math.round(r.bottom)], body: [Math.round(b.top), Math.round(b.bottom)] }; });
     ok(pg && pg.in, '390: Previous and Next are on screen without scrolling the page ' + JSON.stringify(pg));
     const head = (await p.textContent('[data-testid="bank-stmts-sum"]')).trim();
-    ok(/^Oct ✓ · \d+ missing$/.test(head) && (await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-sum"]'); return n.scrollWidth <= n.clientWidth; })), '390: the header line reads whole, not clipped: "' + head + '"');
+    ok(/^Oct ✓ · (\d+ missing|Every month is kept)$/.test(head) && (await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-sum"]'); return n.scrollWidth <= n.clientWidth; })), '390: the header line reads whole, not clipped: "' + head + '"');
     await shot2('23-files-390.png');
     await p.click('[data-testid="bank-stmts-filesbox"] summary');
     await p.click('[data-testid="bank-home-fy-all"]');

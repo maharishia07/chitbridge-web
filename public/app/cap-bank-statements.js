@@ -130,7 +130,8 @@ function bkstSignedLine() {
   const carried = BKST.data && BKST.data.unexplained;
   if (!carried || !carried.count) return '';
   const day = typeof shopDay === 'function' ? shopDay(carried.to) : String(carried.to || ''),
-    lines = (carried.by_currency || []).map((line) => bkMoney(line.unexplained_minor, line.currency));
+    several = (carried.by_currency || []).length > 1, /* two currencies: each figure names its own, so $ cannot be read as the other */
+    lines = (carried.by_currency || []).map((line) => bkMoney(line.unexplained_minor, line.currency) + (several ? ' (' + line.currency + ')' : ''));
   return ' · ' + txf('Signed off to {d}', { d: day }) + (lines.length ? ' · ' + txf('{a} unexplained', { a: lines.join(' · ') }) : '');
 }
 const bkstMissing = (data) => (data ? bkhTally(data, data.accounts).missing : 0);

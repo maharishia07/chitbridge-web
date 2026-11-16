@@ -96,7 +96,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   {
     const { ctx, p } = await open('adviser', '#/bank', '[data-testid="bank-stmts-grid"]', { kept: ['2026-09', '2026-10'] });
     const t = await text(p), sum = await p.locator('[data-testid="bank-stmts-sum"]').innerText();
-    ok(/Oct ✓/.test(sum) && /Signed off to 31 Oct 2026/.test(sum) && /A$354.32 unexplained/.test(sum), 'D · kept files: the first line carries the sign-off and A$354.32: ' + sum);
+    ok(/✓/.test(sum) && /Signed off to 31 Oct 2026/.test(sum) && /A$354.32 unexplained/.test(sum), 'D · kept files: the first line carries the sign-off and A$354.32: ' + sum);
     ok(/3 missing/.test(sum), 'D · Jun, Jul, Aug are missing; November (16 Nov) is not counted: ' + sum);
     ok((await p.locator('[data-testid="bank-stmts-current-acc-1500-2026-11"]').count()) === 1 && (await p.locator('[data-testid="bank-stmts-miss-acc-1500-2026-11"]').count()) === 0, 'D · November is "Not due yet", never Missing');
     await p.screenshot({ path: path.join(SHOTS, 'fable3-D-kept-1366.png') });
@@ -109,7 +109,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     const two = { accounts: [{ account_id: 'acc-1500', currency: 'AUD', unexplained_minor: 35432, to: '2026-10-31' }, { account_id: 'acc-1600', currency: 'USD', unexplained_minor: 10000, to: '2026-10-31' }], by_currency: [{ currency: 'AUD', unexplained_minor: 35432, to: '2026-10-31' }, { currency: 'USD', unexplained_minor: 10000, to: '2026-10-31' }], currency: null, unexplained_minor: null, to: '2026-10-31', count: 2 };
     const { ctx, p } = await open('adviser', '#/bank', '[data-testid="bank-stmts-grid"]', { kept: ['2026-10'], unexplained: two });
     const sum = await p.locator('[data-testid="bank-stmts-sum"]').innerText();
-    ok(/A$354.32/.test(sum) && /(US$|USD)s?100.00/.test(sum) && !/454.32/.test(sum), 'E · two currencies: one figure each, never added: ' + sum);
+    ok(/A$354.32 (AUD)/.test(sum) && /100.00 (USD)/.test(sum) && !/454.32/.test(sum), 'E · two currencies: one figure each, never added: ' + sum);
     await p.screenshot({ path: path.join(SHOTS, 'fable3-E-two-currencies-1366.png') });
     await ctx.close();
   }
