@@ -669,7 +669,7 @@
     if (byRole) return '<div class="emp-area" data-testid="emp-area-' + esc(item.id) + '">' + head + '<span class="sub">' + esc(T('Their role already opens this.')) + '</span></div>';
     var levels = item.levels || [];
     var pick = levels.length < 2 ? '' : levels.map(function (level) {
-      return '<label class="sub"><input data-cbsid="EMP001-I09" type="radio" name="emp_arealvl_' + esc(item.id) + '" value="' + esc(level) + '" data-testid="emp-area-level-' + esc(item.id) + '-' + esc(level) + '"' +
+      return '<label class="sub" style="display:block;margin:2px 0 0 10px"><input data-cbsid="EMP001-I09" type="radio" name="emp_arealvl_' + esc(item.id) + '" value="' + esc(level) + '" data-testid="emp-area-level-' + esc(item.id) + '-' + esc(level) + '"' +
         ((held ? held.level : levels[0]) === level ? ' checked' : '') + '> ' + esc(item[level] || level) + '</label>';
     }).join('');
     return '<div class="emp-area" data-testid="emp-area-' + esc(item.id) + '">' + head + pick + '</div>';
