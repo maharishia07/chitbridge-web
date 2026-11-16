@@ -570,11 +570,81 @@
     return accessibleSvg(width, height, { id: options.id || 'cd-strip', tid: options.tid || 'cd-strip', title: options.title, desc: desc, palette: options.palette }, inner);
   }
 
+  /* REP-66b: compare(rows, opts) — this year (solid) over last year (outline), one row per client or per figure, the change printed at the right. Every number comes in
+   * carried; the bars are geometry only. */
+  var CMP = { row: 14, labelW: 88, textW: 58, gap: 4, cap: 100 };
+  /** the change as the server carried it, printed: a sign for a rise or fall, no sign and no colour for zero (a fall that rounds to -0 reads 0.0%) */
+  function changeText(pct) {
+    var value = figure(pct);
+    if (value === null) return '';
+    if (value === 0) return '0.0%';
+    return (value > 0 ? '+' : '−') + Math.abs(value).toFixed(1) + '%';
+  }
+  /** the end of a bar drawn past the cap: two slanted cuts in the card colour, so a +900% is seen to be longer than the line */
+  function brokenEnd(x, y, h) {
+    var cut = function (dx) {
+      return '<line x1="' + (x + dx - 2).toFixed(1) + '" y1="' + (y + h).toFixed(1) + '" x2="' + (x + dx + 2).toFixed(1) + '" y2="' + y.toFixed(1) + '" style="stroke:var(--card,#fffdf8);stroke-width:1.5"/>';
+    };
+    return cut(-6) + cut(-2);
+  }
+  /** the two bars of one row: [outline of last year, solid this year] x/width; mode 'change' draws last year at half the room and this year at its carried change from there (capped at 0 and +100%), mode 'money' draws both on the one scale of the figures */
+  function compareBars(row, area, high, mode) {
+    var half = area / 2;
+    if (mode === 'money') {
+      var wOf = function (value) { return high > 0 ? Math.max(0, (figure(value) || 0) / high) * area : 0; };
+      return { before: wOf(row.before), now: wOf(row.now), broken: false };
+    }
+    var pct = figure(row.changePct), ratio = pct === null ? 1 : 1 + pct / 100;
+    return { before: half, now: Math.max(0, Math.min(2, ratio)) * half, broken: ratio > 2 };
+  }
+  function compareRow(row, index, layout) {
+    var y = index * layout.row, h = layout.row - 3, text = changeText(row.changePct), pct = figure(row.changePct);
+    var has = layout.mode === 'money' ? figure(row.now) !== null && figure(row.before) !== null : pct !== null; /* a change is the server's word: without it a change bar is not drawn */
+    var bars = compareBars(row, layout.area, layout.high, layout.mode), x0 = layout.labelW + CMP.gap;
+    var hatched = row.state === 'stale';
+    var label = String(row.label || '');
+    if (label.length > 13) label = label.slice(0, 12) + '…';
+    var glyph = pct === null || pct === 0 ? '' : pct > 0 ? '▲' : '▼';
+    var inner =
+      '<text x="0" y="' + (y + h - 2) + '" style="font:11px var(--sans,system-ui,sans-serif);fill:var(--ink,#2a2418)">' + escape(label) + '</text>';
+    if (has) {
+      inner +=
+        '<rect x="' + x0 + '" y="' + (y + 1) + '" width="' + bars.before.toFixed(1) + '" height="' + (h - 2) + '" rx="1" data-testid="' + layout.tid + '-before-' + index + '" style="fill:none;stroke:var(--rp-previous);stroke-width:1.5"/>' +
+        '<rect x="' + x0 + '" y="' + (y + 3.5) + '" width="' + bars.now.toFixed(1) + '" height="' + (h - 7) + '" data-testid="' + layout.tid + '-now-' + index + '" style="fill:' + (hatched ? 'url(#' + layout.id + '-hatch)' : 'var(--rp-actual)') + ';stroke:var(--rp-actual);stroke-width:' + (hatched ? 1 : 0) + '"/>' +
+        (bars.broken ? brokenEnd(x0 + bars.now, y + 3.5, h - 7) : '');
+    } else {
+      inner += '<line x1="' + x0 + '" x2="' + (x0 + layout.area) + '" y1="' + (y + h / 2).toFixed(1) + '" y2="' + (y + h / 2).toFixed(1) + '" style="stroke:var(--rp-previous);stroke-width:1;stroke-dasharray:2 3"/>';
+    }
+    var shown = text || String(row.words || '');
+    if (shown) {
+      inner += '<text x="' + layout.width + '" y="' + (y + h - 2) + '" text-anchor="end" data-testid="' + layout.tid + '-change-' + index + '" style="font:11px var(--mono,monospace);fill:var(--ink,#2a2418)">' +
+        (glyph ? '<tspan style="fill:' + (pct > 0 ? 'var(--rp-good)' : 'var(--rp-bad)') + '">' + glyph + '</tspan> ' : '') + escape(shown) + '</text>';
+    }
+    return '<g data-testid="' + layout.tid + '-row-' + index + '" data-state="' + escape(row.state || '') + '"><title>' + escape(row.title || '') + '</title>' + inner + '</g>';
+  }
+  /**
+   * compare(rows, opts) → '<svg …>' — rows [{ label, now, before, changePct, state, title, words }] (now/before the carried money, changePct the carried change or null, state the server's code
+   * ok|stale|…, words what is printed in place of a change when there is none); opts { width 320, id, tid, title, desc, palette, mode 'change'|'money', row 14, labelW }.
+   * A row with no change and no pair of figures draws a dashed empty line and its words. No rows → ''.
+   */
+  function compare(rows, opts) {
+    var options = opts || {}, list = rows || [];
+    if (!list.length) return '';
+    var width = options.width || 320, id = escape(options.id || 'cd-cmp'), rowH = options.row || CMP.row, labelW = options.labelW || CMP.labelW;
+    var area = Math.max(20, width - labelW - CMP.textW - CMP.gap * 2), high = 0;
+    list.forEach(function (row) { high = Math.max(high, figure(row.now) || 0, figure(row.before) || 0); });
+    var layout = { row: rowH, width: width, labelW: labelW, area: area, high: high, mode: options.mode || 'change', id: id, tid: escape(options.tid || 'cd-cmp') };
+    var inner = hatchDefs(id, 'var(--rp-actual)') + list.map(function (row, index) { return compareRow(row, index, layout); }).join('');
+    return accessibleSvg(width, list.length * rowH, { id: options.id || 'cd-cmp', tid: options.tid || 'cd-cmp', title: options.title, desc: options.desc, palette: options.palette }, inner);
+  }
+
   var CBDraw = {
     bars: bars,
     spark: spark,
     statusBar: statusBar,
     monthStrip: monthStrip,
+    compare: compare,
+    changeText: changeText,
     palette: palette,
     paletteNow: paletteNow,
     contrastRatio: contrastRatio,
