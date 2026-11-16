@@ -4583,7 +4583,7 @@ async function bkLedgers(body) {
     BK.lt.bal = rr[1];
     BK.lt.api = null;
     body.innerHTML =
-      '<div class="attn-flex"><div id="bk_attn_lg"></div>' +
+      '<div class="attn-flex">' +
       '<div id="bk_lt" class="lt' +
       (BK.lt.sel ? ' has-sel' : '') +
       '" data-testid="bk-lt" style="--lt-w:' +
@@ -4603,6 +4603,7 @@ async function bkLedgers(body) {
       '" aria-label="' +
       esc(tx('Hide the ledger list')) +
       '">⟨</button></div>' +
+      '<div id="bk_attn_lg" class="lt-attn" data-testid="lt-attn"></div>' + /* the Needs attention strip lives in the ledger list column: a row of its own over the pane cost the head 5% of the window (Ledgers head budget 20% / 30%); a list it opens scrolls in the column */
       '<div id="lt_tree" class="lt-list" data-testid="lt-tree" role="tree" aria-label="' +
       esc(tx('Ledgers by band')) +
       '"></div></nav>' +

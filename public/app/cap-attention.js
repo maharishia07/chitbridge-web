@@ -117,6 +117,7 @@
       '.attn-strip button.attn-chip{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:24px;padding:0 8px;border-radius:6px;font:inherit}.attn-strip button.attn-chip:hover{background:var(--hov,#f1f1f1)}.attn-strip button.attn-chip:focus-visible{outline:2px solid var(--blue,#2563eb)}' +
       '.attn-chip[aria-pressed="true"]{background:var(--blue-t,#e0e9ff);font-weight:700}.attn-ok{color:var(--ok-3,#1a7f3c);font-weight:600}' +
       '.attn-col{display:block}.attn-flex{display:flex;flex-direction:column;height:100%;min-height:0}.attn-flex>#bk_lt{flex:1 1 0;min-height:0;height:auto}' +
+      '.lt-attn{flex:0 0 auto;max-height:45%;overflow:auto;padding:4px 8px 0}.lt-attn .attn-strip{margin:0 0 4px;min-height:28px}' +
       '.attn-list{margin:0 0 10px}.attn-pager{display:flex;gap:8px;align-items:center;padding:6px 0}';
     root.document.head.appendChild(st);
   }
