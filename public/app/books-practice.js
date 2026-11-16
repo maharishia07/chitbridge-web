@@ -77,11 +77,17 @@
       ['ending', 'Access ends in 30 days', b.grants_ending_30, { ending: 'soon' }]
     ];
   }
+  /* a count tile that says nothing is not drawn (MIS critic, 16 Nov): 0, or every client (73 of 73), is no news; it stays a filter in the list; an active filter's tile stays so it can be turned off */
+  function tileShows(t, data, active) {
+    var total = (data.clients || []).length, n = Number(t[2]);
+    var on = active && Object.keys(t[3])[0] === Object.keys(active)[0] && t[3][Object.keys(t[3])[0]] === active[Object.keys(active)[0]];
+    return on || (n > 0 && !(total > 1 && n === total));
+  }
   function bandHTML(data) {
     var b = data.band;
     return (
       '<div class="bp-band" data-testid="practice-band" role="group" aria-label="' + esc(tx('Practice counts')) + '">' +
-      tiles(b).map(function (t) {
+      tiles(b).filter(function (t) { return tileShows(t, data, P.filter); }).map(function (t) {
         var on = P.filter && Object.keys(t[3])[0] === Object.keys(P.filter)[0] && t[3][Object.keys(t[3])[0]] === P.filter[Object.keys(P.filter)[0]];
         return (
           '<button type="button" class="bp-tile ' + esc(t[0]) + (on ? ' on' : '') + '" data-bp-filter="' + esc(JSON.stringify(t[3])) + '" aria-pressed="' + !!on + '" data-testid="practice-tile-' + esc(t[0]) + '">' +
