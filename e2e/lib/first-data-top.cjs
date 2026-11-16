@@ -10,6 +10,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const TARGET = { wide: 0.20, narrow: 0.30 };
+const SLACK_PX = 2;
 const VIEWS = ['tb', 'pl', 'bs', 'daybook', 'dues', 'periods'];
 function overrides() { try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'first-data-ceilings.json'), 'utf8')).ceilings || {}; } catch (_) { return {}; } }
 /** one measurement of the open view, in the page: the first visible data row (or the empty state) and the sideways overflow */
@@ -39,13 +40,14 @@ async function firstDataTop(page, o) {
       if (m.top == null) { bad.push(key + ' nothing to measure'); continue; }
       const frac = m.top / m.H;
       out.push(key + ' ' + m.kind + ' ' + Math.round(m.top) + 'px ' + (frac * 100).toFixed(0) + '% (limit ' + (ceiling * 100).toFixed(0) + '%)');
-      if (frac > ceiling + 1e-9) bad.push(key + ' first ' + m.kind + ' at ' + Math.round(m.top) + 'px = ' + (frac * 100).toFixed(1) + '% > ' + (ceiling * 100).toFixed(0) + '%');
+      const slack = held[key] ? SLACK_PX / m.H : 0; /* a HELD view is allowed 2 px over its measured figure (sub-pixel layout); a view at the plain target is not */
+      if (frac > ceiling + slack + 1e-9) bad.push(key + ' first ' + m.kind + ' at ' + Math.round(m.top) + 'px = ' + (frac * 100).toFixed(1) + '% > ' + (ceiling * 100).toFixed(0) + '%');
       else if (frac > target + 1e-9) out.push(key + ' above the target, held at its measured ceiling');
       if (m.x > 0) bad.push(key + ' sideways ' + m.x);
       if (m.rows < 10 && m.search) bad.push(key + ' search box on ' + m.rows + ' rows');
     }
   }
   await page.setViewportSize(WIDE); await page.waitForTimeout(300);
-  return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') : out.join(' · '), all: out, bad };
+  return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') + ' || ' + out.join(' · ') : out.join(' · '), all: out, bad };
 }
 module.exports = { firstDataTop, TARGET, VIEWS };

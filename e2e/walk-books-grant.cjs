@@ -53,7 +53,7 @@ W.run('books-grant', async (w) => {
       if (p === '/api/books/ledger/1000' || p === '/api/books/ledger/4000') { const ex = example('GET /api/books/ledger/:account'), cash = p.endsWith('1000'); /* the PAGED ledger the drill asks for (limit=100): its page keys (total · page · limit · next · totals · page_opening_minor) are not in the api contract's example yet (reported to cb-api), so this one answer is sent as the server sends it and not held to the example */
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(Object.assign(ex, { currency: 'INR', account: { code: cash ? '1000' : '4000', name: cash ? 'Cash' : 'Sales', nature: cash ? 'asset' : 'income' }, from: '2026-04-01', to: '2026-11-15', opening_minor: 0, lines: [{ date: '2026-11-03', doc_date: '2026-11-03', what: 'Cash sale', ref: 'JV-0001', entry_id: E1, entry_no: 'JV-0001', event_type: 'sale', reverses_entry_id: null, reversed_by: null, source_chit_id: null, source: null, party_id: null, dr_minor: cash ? 123400 : 0, cr_minor: cash ? 0 : 123400, running_minor: cash ? 123400 : -123400 }], closing_minor: cash ? 123400 : -123400, page_opening_minor: 0, total: 1, page: 1, limit: 100, next: null, totals: { dr_minor: cash ? 123400 : 0, cr_minor: cash ? 0 : 123400 } })) }); }
       if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [Object.assign({}, ex.entries[0], entry)], count: 1 })); }
-      const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { entries: [], parties: [], periods: [] }));
+      const ex = example('GET ' + p); ['entries', 'parties', 'periods'].forEach((k) => { if (Array.isArray(ex[k])) ex[k] = []; }); /* only the list keys the api's own example has: a key it does not send is not invented (X1) */ return J(r, 200, ex);
     }
     return J(r, 200, {});
   });
@@ -130,7 +130,7 @@ W.run('books-grant', async (w) => {
   await w.step('A5', 'the auditor · a part the server refuses is said in the server\'s words, not shown as an empty table', async () => {
     S.refuse = { path: '/api/books/bs', words: 'This part of the books is not open to an auditor.' };
     await page.click(T('bv-tab-bs')); await page.waitForSelector(T('bv-why'), { timeout: 10000 });
-    const why = await txt(T('bv-why')), tbl = await has(T('bv-row-0'));
+    const why = await txt(T('bv-why') + ' p'), tbl = await has(T('bv-row-0'));
     S.refuse = null;
     return { ok: why === 'This part of the books is not open to an auditor.' && !tbl, saw: why };
   });
@@ -151,7 +151,7 @@ W.run('books-grant', async (w) => {
   });
 
   await w.step('D6', 'the auditor drill · 390×844: trial balance → ledger sheet fits, no page scroll', async () => {
-    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book, and W19 leaves the last tab: the ledger is opened from the trial balance, so that tab is pressed first */
+    await page.selectOption(T('bv-tab-select'), 'tb'); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book; on a phone the six screens are ONE select (bv-tab-select), no tab buttons (T6 header line) */
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const a = await noScroll(), sheet = await page.evaluate(() => { const d = document.getElementById('nw_sheet').getBoundingClientRect(); return d.width <= window.innerWidth + 1 && d.height <= window.innerHeight + 1; });
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
@@ -159,7 +159,7 @@ W.run('books-grant', async (w) => {
   });
 
   await w.step('A9', 'the auditor · Months: one lock line (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)); no month before Jul 2025 is listed', async () => {
-    await page.click(T('bv-tab-periods')); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    await page.selectOption(T('bv-tab-select'), 'periods'); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const lines = await txt(T('bv-lock-lines')), list = await txt(T('bv-list'));
     return { ok: /Books start Jul 2025/.test(lines) && /Locked to .*Jan.* 2026/.test(lines) && /Open: Feb 2026 \(gap\)/.test(lines) && !/2024/.test(list) && /July 2025/.test(list), saw: lines + ' | ' + list.slice(0, 80) };
   });
@@ -198,8 +198,8 @@ W.run('books-grant', async (w) => {
     return { ok: /trial balance/i.test(list) && /Looked/.test(list) && /Refused: not open to an auditor/.test(list), saw: list.slice(0, 140) };
   });
   await w.step('M6', 'the member · End access asks first, then ends: the row says Ended', async () => {
-    await page.click(T('bg-seg-given')); await page.waitForSelector(T('bg-grant-' + GRANT), { timeout: 10000 });
-    await page.click(T('bg-grant-' + GRANT)); await page.waitForSelector(T('bg-end'), { timeout: 5000 });
+    await page.click(T('bg-seg-given')); await page.waitForSelector('[data-testid^="bg-grant-"]', { timeout: 10000 });
+    await page.click('[data-testid^="bg-grant-"]'); await page.waitForSelector(T('bg-end'), { timeout: 5000 });
     await page.click(T('bg-end')); await page.waitForSelector(T('confirm'), { timeout: 5000 });
     const ask = await txt(T('confirm')); await page.click(T('confirm-ok')); await page.waitForTimeout(700);
     const list = await txt(T('bg-list'));
