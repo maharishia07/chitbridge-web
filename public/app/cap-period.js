@@ -1299,7 +1299,7 @@ function peReturnPaint(r) {
           'Period',
           peSel(
             'pr_p',
-            periods.map((item) => [item.period, item.label + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open'))]),
+            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open'))]),
             P ? P.period : '',
             ' onchange="peReturnPick(\'period\', this.value)"'
           )
@@ -1395,6 +1395,8 @@ function peReturnClaimBand(r) {
     '</button></div>'
   );
 }
+/** a phone: the period words drop their months in brackets so the due date shows whole (shorten words, never clip) */
+const peNarrow = () => typeof matchMedia === 'function' && matchMedia('(max-width:620px)').matches;
 /** ACC-357: the money at risk, on the To pay line — both figures are the server's (CBEvidence.claimRisk words them; nothing is added here) */
 function peReturnRisk(r) {
   const words = typeof CBEvidence !== 'undefined' && CBEvidence.claimRisk ? CBEvidence.claimRisk(r.unsupported_input, r.net_minor, (minor) => peMoney(minor, r.currency)) : null;

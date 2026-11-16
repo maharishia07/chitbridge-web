@@ -94,7 +94,7 @@ const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) <
   ok(!h.includes('Total Equity') && (h.match(/>Equity</g) || []).length === 1, 'a pack group named like its section (Equity under Equity) is said once, with no second total');
   ok((h.match(/as at/g) || []).length === 1, 'as at is said once (the bar), not again in the Net assets line');
   ok(/<th class="num">A year ago/.test(h) && /<th class="num bk-wide">A month ago/.test(h), 'the narrow screen keeps a year ago and drops a month ago');
-  ok(/.bk-dl{background:none;border:0;padding:6px 0/.test(h), 'a ledger line is plain link text with a padded hit area, not a pill');
+  ok(h.includes('.bk-dl{background:none!important;border:0!important;padding:6px 0!important'), 'a ledger line is plain link text with a padded hit area, not a pill (it wins over the global button look)');
   ok(/data-testid="bs-balanced"[^>]*>✓ balances/.test(h), 'the chip compares the two carried totals: balances');
   reply = Object.assign({}, reply, { total_liab_equity_minor: 14061000 });
   b = body(); await cx.bkBS(b);

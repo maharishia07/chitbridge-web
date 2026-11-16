@@ -4576,7 +4576,7 @@ function bkDrillLink(code, name, tid, from, to, tab, label) {
   if (!code) return esc(name);
   return (
     '<button data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' type="button" class="bk-dl" aria-expanded="false" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkDrillToggle(this,\'' +
-    esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')" title="' + esc(tx('Show its entries below')) + '">' + esc(code + ' · ' + name) + ' ▸</button>'
+    esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')" title="' + esc(tx('Show its entries below')) + '">' + '<span class="bk-code">' + esc(code) + ' · </span>' + esc(name) + ' ▸</button>'
   );
 }
 /** open or close the entries of one ledger under its row: one read of ten, then the count and "Open all" */
@@ -4649,7 +4649,7 @@ function bkPeriodBar(o) {
 }
 /** the statements' own look: money columns right-aligned and equal, the narrow screen drops the percent columns, never a sideways scroll */
 function bkStmtCss() {
-  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none;border:0;padding:6px 0;min-height:0;line-height:1.2;font:inherit;color:var(--link,#1a5f8a);text-align:left;cursor:pointer;box-shadow:none}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide{display:none}}</style>';
+  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none!important;border:0!important;padding:6px 0!important;min-height:0!important;line-height:1.2!important;font:inherit!important;color:var(--link,#1a5f8a)!important;text-align:left;cursor:pointer;box-shadow:none!important;border-radius:0!important}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide,.bk-st .bk-code{display:none}.bk-st td,.bk-st th{padding:3px 4px}}</style>';
 }
 /** one statement row: label cell, then the figures the server carried (a figure list of { v, pct?, wide? }) */
 function bkStRow(cls, label, cells) {
