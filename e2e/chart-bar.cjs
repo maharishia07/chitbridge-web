@@ -113,7 +113,7 @@ W.run('chart-bar', async (w) => {
 
   /* the Colour Vision theme, nothing chosen about Readability */
   S.prefs = {};
-  await page.evaluate(() => { localStorage.setItem('cb_theme', 'cvd'); localStorage.removeItem('cb_chart_chart_read'); ['cb_chart_chart_read', 'cb_chart_chart_theme', 'cb_chart_chart_fav_series', 'cb_chart_pending'].forEach((k) => localStorage.removeItem(k)); });
+  await page.evaluate(() => { localStorage.setItem('cb_theme', 'cvd'); ['cb_chart_read', 'cb_chart_theme', 'cb_chart_fav_series', 'cb_chart_pending'].forEach((k) => localStorage.removeItem(k)); });
   await open('/finance.html#/reports/trend', '[data-testid="chart-bar"]');
   await w.step('B7', 'the Colour Vision theme switches Readability ON by itself; the person can switch it OFF', async () => {
     const auto = await page.evaluate(() => ({ on: document.querySelector('[data-testid="chart-read"]').checked, mode: document.querySelector('[data-testid="tr-chart"]').getAttribute('data-read'), theme: document.documentElement.getAttribute('data-theme') }));
@@ -121,7 +121,7 @@ W.run('chart-bar', async (w) => {
     const off = await page.getAttribute('[data-testid="tr-chart"]', 'data-read');
     return { ok: auto.on && auto.mode === 'on' && off === 'off', saw: JSON.stringify(auto) + '; after OFF ' + off };
   });
-  await page.evaluate(() => { localStorage.removeItem('cb_theme'); ['cb_chart_chart_read', 'cb_chart_pending'].forEach((k) => localStorage.removeItem(k)); });
+  await page.evaluate(() => { localStorage.removeItem('cb_theme'); ['cb_chart_read', 'cb_chart_pending'].forEach((k) => localStorage.removeItem(k)); });
   S.prefs = {};
 
   await open('/', '[data-testid="shell-facts-till"]');

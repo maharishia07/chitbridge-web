@@ -35,8 +35,9 @@ const GUARD = `(function (rootSel, page) {
   var mode = svg ? svg.getAttribute('data-read') : null;
   var out = { mode: mode, weakMarks: [], weakText: [], marks: 0, texts: 0 };
   if (!svg) return out;
-  [].forEach.call(svg.querySelectorAll('[data-testid^="tr-bar-"], [data-testid^="big-bar-"], rect, circle'), function (m) {
-    var fill = getComputedStyle(m).fill;
+  /* the series marks: every bar or dot of a series, and the last-year line (a hollow dot's fill is the card's own colour and is not a mark) */
+  [].forEach.call(svg.querySelectorAll('[data-testid*="-bar-"], [data-testid="cd-lastyear"]'), function (m) {
+    var fill = m.getAttribute('data-testid') === 'cd-lastyear' ? getComputedStyle(m).stroke : getComputedStyle(m).fill;
     if (!fill || fill === 'none' || /rgba\\(0, 0, 0, 0\\)/.test(fill)) return;
     out.marks++;
     var ratio = CBDraw.contrast(fill, page);
@@ -103,7 +104,7 @@ W.run('chart-a11y', async (w) => {
     for (const [theme, width, height] of looks) {
       await page.setViewportSize({ width, height });
       await page.goto(base + '/config.js');
-      await page.evaluate((t) => { try { localStorage.setItem('cb_theme', t); localStorage.setItem('cb_chart_chart_theme', 'okabe'); localStorage.setItem('cb_chart_chart_read', t === 'x' ? '' : 'off'); } catch (_) {} }, theme);
+      await page.evaluate((t) => { try { localStorage.setItem('cb_theme', t); localStorage.setItem('cb_chart_theme', 'okabe'); localStorage.setItem('cb_chart_read', 'off'); } catch (_) {} }, theme);
       await page.goto(base + '/finance.html#/reports/trend');
       await page.waitForSelector('[data-testid="chart-bar"]', { timeout: 20000 }).catch(() => {});
       await page.waitForTimeout(700);

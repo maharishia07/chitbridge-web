@@ -55,8 +55,10 @@
       prog: resolved(scope, 'var(--prog,var(--muted,#6f6450))')
     };
   }
+  /** the person's theme key (the avatar's own answer; the page's data-theme where the avatar is not loaded) */
   function themeKey() {
-    return (root.document.documentElement.getAttribute('data-theme') || '').toLowerCase();
+    var chosen = root.CBAvatar && root.CBAvatar.get ? root.CBAvatar.get().theme : '';
+    return String(chosen || root.document.documentElement.getAttribute('data-theme') || '').toLowerCase();
   }
   /** Readability: the person's own setting; when they never set it, ON for the readability themes and OFF elsewhere (the larger crowd gets the vibrant default) */
   function readOf() {
