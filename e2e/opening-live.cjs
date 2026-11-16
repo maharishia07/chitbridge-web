@@ -69,12 +69,11 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   ok(/14,340\.50/.test(d), 'Difference reads 14,340.50 (the server\'s figure): ' + d);
   ok(await p.locator('[data-testid="ob-save"]').isDisabled(), 'Save is off while the Difference is not 0');
   await p.screenshot({ path: path.join(OUT, 'ob-03-difference-1366.png') });
-  /* the control line: debtors typed 4,300 against bills 4,400 -> the pair is shown */
-  await cell(p, debtors, 'dr').fill('4300.00');
-  d = await diff(p);
-  ok(/apart/.test(d) && /4,400/.test(d) && /4,300/.test(d), 'bills against the typed debtors line: the server\'s pair is shown (' + d + ')');
+  const fromD = flat(await p.textContent('[data-testid="ob-from-bills-' + debtors + '"]')), fromC = flat(await p.textContent('[data-testid="ob-from-bills-' + creditors + '"]'));
+  ok(/4,400.00/.test(fromD) && /from 2 bills/.test(fromD) && /2,200.00/.test(fromC) && /from 1 bill/.test(fromC), 'a ledger with bills shows the bills total from the server, read-only (' + fromD + ' | ' + fromC + ')');
+  const foot = flat(await p.textContent('[data-testid="ob-tot"]'));
+  ok(/16,940.50/.test(foot) && /2,600.00/.test(foot), 'the footer is the totals the server sent: ' + foot);
   await p.screenshot({ path: path.join(OUT, 'ob-04-bills-apart-1366.png') });
-  await cell(p, debtors, 'dr').fill('');
   await p.waitForTimeout(600);
   await p.click('[data-testid="ob-balance"]');
   d = await diff(p);

@@ -139,6 +139,19 @@ function obField(id, minor, on, label) {
     ? bkMoneyInput({ id: id, tid: id, minor: minor, on: on, extra: 'aria-label="' + esc(label) + '" data-cbsid="CMP040-I01"' + obMount('CMP040') })
     : '<input class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(label) + '" inputmode="decimal">';
 }
+/** a ledger with bills shows the bills' total on its own side, read-only and greyed, "from n bills": the server's figure (the preview's pair), never a sum made here; every other cell is a money field */
+function obSideCell(row, i, side, total) {
+  var n = row.bills.filter(function (bill) {
+    return bill.party_id && bill.minor;
+  }).length;
+  if (obHasBills(row) && n && obSide(row) === side)
+    return (
+      '<div class="ob-num" data-testid="ob-from-bills-' + esc(row.code) + '" style="color:var(--grey)" title="' + esc(tx('Filled from its bills')) + '">' +
+      (total != null ? esc(bkMoney(total, OB.pv && OB.pv.currency)) : '…') +
+      '<br><small>' + esc(n === 1 ? tx('from 1 bill') : txf('from {n} bills', { n: n })) + '</small></div>'
+    );
+  return obField('ob_' + side + '_' + i, row[side], 'obCell(' + i + ",'" + side + "')", row.name + ' ' + tx(side === 'dr' ? 'Debit' : 'Credit'));
+}
 function obRowHtml(row, i) {
   var hint = obHasBills(row) && OB.pv ? obBillsTotalOf(row.code) : null; /* the server's bills total for this ledger, as a placeholder: the page sums nothing */
   var html =
@@ -158,8 +171,8 @@ function obRowHtml(row, i) {
         '</button>'
       : '') +
     '</div>' +
-    obField('ob_dr_' + i, row.dr, 'obCell(' + i + ",'dr')", row.name + ' ' + tx('Debit')) +
-    obField('ob_cr_' + i, row.cr, 'obCell(' + i + ",'cr')", row.name + ' ' + tx('Credit')) +
+    obSideCell(row, i, 'dr', hint) +
+    obSideCell(row, i, 'cr', hint) +
     '</div>';
   if (row.open && obHasBills(row)) html += obBillsHtml(row, i, hint);
   return html;
@@ -245,11 +258,10 @@ function obRowsOut() {
       one[side === 'cr' ? 'cr_minor' : 'dr_minor'] = bill.minor;
       out.push(one);
     });
-    if (row.dr || row.cr) {
+    if ((row.dr || row.cr) && !bills.length) {
       var own = { code: row.code };
       if (row.dr) own.dr_minor = row.dr;
       else own.cr_minor = row.cr;
-      if (bills.length) own.control = true; /* the typed total of those bills: checked against them, never posted */
       out.push(own);
     }
   });
@@ -296,8 +308,30 @@ async function obPreviewNow() {
 function obSideWord(side) {
   return side === 'dr' ? tx('Dr') : tx('Cr');
 }
+/** a ledger's bills-total cell follows its bills without a repaint of the grid (a repaint would drop the caret): read-only with bills, a money field without */
+function obBillCellsPaint() {
+  OB.rows.forEach(function (row, i) {
+    if (!obHasBills(row)) return;
+    var host = document.querySelector('[data-testid="ob-row-' + row.code + '"]');
+    var side = obSide(row);
+    var cell = host && host.children[side === 'dr' ? 1 : 2];
+    if (!cell) return;
+    var has = row.bills.some(function (bill) {
+      return bill.party_id && bill.minor;
+    });
+    var isRo = cell.getAttribute('data-testid') === 'ob-from-bills-' + row.code;
+    if (has) {
+      if (has && OB.pv && !OB.checking) cell.outerHTML = obSideCell(row, i, side, obBillsTotalOf(row.code));
+      else if (!isRo) cell.outerHTML = obSideCell(row, i, side, null);
+    } else if (isRo) {
+      cell.outerHTML = obSideCell(row, i, side, null);
+      row[side] = null;
+    }
+  });
+}
 /** paints the Difference sentence, the totals, the balance button and the Save state from the server's last answer — and nothing of its own */
 function obStatePaint() {
+  obBillCellsPaint();
   var diff = document.getElementById('ob_diff'),
     save = document.getElementById('ob_save'),
     tot = document.getElementById('ob_tot'),
