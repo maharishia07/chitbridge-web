@@ -5300,6 +5300,7 @@ function bkBillStatus(row, tab) {
       var word = { disputed: 'In dispute', query: '? Open query', held: '‖ On hold', no_tax_invoice: '⚠ No tax invoice', no_terms: 'No terms', overdue: 'Overdue' }[reason];
       parts.push('<span class="optchip" data-b="why-' + reason + '" ' + warn + '>' + esc(tx(word)) + '</span>');
     });
+    if (parts.length > 2) parts.splice(2, parts.length - 2, '<span class="optchip" data-b="why-more" title="' + esc(reasons.map(function (r) { return tx(BK_NEED[r][0]); }).join(' · ')) + '">+' + (parts.length - 2) + '</span>'); /* one why-chip says the main reason; the rest are a count (the full list on hover) */
   }
   if (parts.length > 1 && row.status === 'unpaid') parts.shift(); /* "Unpaid" is every open bill: said only when nothing else is */
   return '<span class="bk-st" style="display:inline-flex;gap:4px;flex-wrap:nowrap">' + parts.join(' ') + '</span>';
