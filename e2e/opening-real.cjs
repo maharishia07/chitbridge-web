@@ -15,6 +15,9 @@ async function run(handle, S) {
   const token = await L.signIn(handle);
   const call = async (m, u, b) => { const res = await fetch(L.API + u, { method: m, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: b === undefined ? undefined : JSON.stringify(b) }); const text = await res.text(); let json = {}; try { json = JSON.parse(text); } catch (_) {} return { status: res.status, body: json, trips: res.headers.get('x-db-trips') }; };
   const note = (name, r) => trips.push({ route: name, status: r.status, trips: r.trips == null ? null : Number(r.trips) });
+  const per = (await call('GET', '/api/books/periods')).body.periods || [];
+  const cset = (await call('GET', '/api/governance/country-setup')).body;
+  console.log('   periods ' + JSON.stringify(per.slice(0, 3).map((r) => [r.fiscal_year, r.period, r.start_date])) + ' · setup fy_start_month ' + cset.fy_start_month + ' · country ' + JSON.stringify(cset.country));
   const chart = (await call('GET', '/api/books/accounts')).body.accounts;
   const code = (role) => (chart.find((a) => a.role === role) || {}).code;
   const parties = (await call('GET', '/api/crm/parties')).body.parties || [];
@@ -44,6 +47,7 @@ async function run(handle, S) {
   ok(save.status === 200 && save.body.suspense_minor === 0 && /\//.test(save.body.entry_no || ''), 'Save at 0 → ' + save.status + ' ' + save.body.entry_no + ' suspense ' + save.body.suspense_minor);
   const saved = await call('GET', '/api/books/opening?date=' + D); note('GET /api/books/opening', saved);
   ok(saved.status === 200 && saved.body.lines.length === 7 && saved.body.lines.some((l) => l.bill_ref === 'INV-1' && l.bill_date === S.billDate && l.due_date === S.due) && saved.body.entries[0].at && saved.body.pinned.length >= 5, 'saved view: 7 lines, INV-1 with its bill date and due, who/when, pinned ' + (saved.body.pinned || []).length);
+  console.log('   saved bills ' + JSON.stringify(saved.body.lines.filter((l) => l.bill_ref).map((l) => [l.bill_ref, l.bill_date, l.due_date])));
   const dup = await call('POST', '/api/books/opening', { date: D, rows: rowsOnly({ equity: 1434050 }), client_ref: 'grid:B' + handle, require_balanced: true });
   ok(dup.status === 409 && new RegExp(save.body.entry_no).test(JSON.stringify(dup.body)), '9  the same rows again → 409 naming ' + save.body.entry_no);
   const noWhy = await call('POST', '/api/books/opening/replace', { date: D, rows: grid({ bank: 1230450, equity: 1430450 }), client_ref: 'grid:C' + handle, reason: '' });
