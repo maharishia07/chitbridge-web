@@ -154,8 +154,8 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   ok(await p.locator('[data-testid^="ob-row-"]').count() > codes.length, 'keyboard: Add a ledger works with the keys alone');
   await p.evaluate(() => document.querySelector('[data-testid="ob-save"]').focus());
   const saveDisabled = await p.locator('[data-testid="ob-save"]').isDisabled();
-  console.log('   save disabled? ' + saveDisabled + ' (equity unchanged: the Difference is open)');
-  ok(saveDisabled === true, 'keyboard: Save stays off while the Difference is open');
+  console.log('   save disabled? ' + saveDisabled + ' (the typed 12,304.50 matches the saved figure)');
+  ok(saveDisabled === false, 'keyboard: the amount typed with the keys balances the opening, so Save is on');
   await ctx.close();
   await b.close();
 
