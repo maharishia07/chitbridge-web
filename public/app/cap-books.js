@@ -4439,7 +4439,7 @@ async function bkLedgers(body) {
     BK.lt.bal = rr[1];
     BK.lt.api = null;
     body.innerHTML =
-      '<div class="attn-col"><div id="bk_attn_lg"></div>' +
+      '<div class="attn-flex"><div id="bk_attn_lg"></div>' +
       '<div id="bk_lt" class="lt' +
       (BK.lt.sel ? ' has-sel' : '') +
       '" data-testid="bk-lt" style="--lt-w:' +
@@ -5139,7 +5139,7 @@ function bkPartyBillsHTML(pid, list, c) {
     cols: [
       { k: 'date', label: tx('Date'), w: 92, sort: true },
       { k: 'bill', label: tx('Bill'), sort: true },
-      { k: 'due', label: tx('Due date'), w: 96, sort: true },
+      { k: 'due', label: tx('Due date'), w: 112, sort: true },
       { k: 'days', label: tx('Days overdue'), w: 104, r: true, sort: true },
       { k: 'status', label: tx('Status'), w: 230 },
       { k: 'amount', label: tx('Amount'), w: 104, r: true, sort: true },

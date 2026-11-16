@@ -72,7 +72,7 @@
         '<button type="button" class="attn-chip" data-cbsid="CMP033-B01" data-b="attn-' + item[0] + '" data-testid="attn-' + item[0] + '" aria-pressed="' + (s.kind === item[0]) + '" onclick="CBAttention.open(\'' + esc(host.id) + '\',\'' + item[0] + '\')">' +
         '<span aria-hidden="true">' + item[1] + '</span> <b>' + esc(String(n)) + '</b> ' + esc(tx(item[3] === 'flag' ? 'flag' : item[3] === 'none' ? 'none' : item[3] === 'nodoc' ? 'nodoc' : 'query')) + '</button>'
       );
-    }).join(' · ');
+    }).filter(Boolean).join(' · ');
     var body = total === 0 ? '<span class="attn-ok" data-b="attn-ok" data-testid="attn-ok">' + esc(tx('ok')) + '</span>' : chips;
     host.innerHTML = '<div class="attn-strip" role="status" data-testid="attn-strip"><b class="attn-t">' + esc(tx('title')) + '</b> ' + body + '</div>' + (s.list ? listHTML(host, s) : '');
   }
@@ -112,11 +112,11 @@
     var st = root.document.createElement('style');
     st.id = 'attn-css';
     st.textContent =
-      '.attn-strip{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding:6px 12px;margin:0 0 8px;border:1px solid var(--line,#d9d9d9);border-radius:10px;background:var(--card,#fff);font-size:var(--fs-1,13px)}' +
+      '.attn-strip{display:flex;flex-wrap:wrap;gap:2px 6px;align-items:center;padding:4px 12px;margin:0 0 6px;min-height:32px;border:1px solid var(--line,#d9d9d9);border-radius:10px;background:var(--card,#fff);font-size:var(--fs-1,13px)}' +
       '.attn-t{text-transform:uppercase;letter-spacing:.04em;font-size:11px;color:var(--grey,#666)}' +
-      '.attn-chip{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:24px;padding:0 6px;border-radius:6px}.attn-chip:hover{background:var(--hov,#f1f1f1)}.attn-chip:focus-visible{outline:2px solid var(--blue,#2563eb)}' +
+      '.attn-strip button.attn-chip{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:24px;padding:0 8px;border-radius:6px;font:inherit}.attn-strip button.attn-chip:hover{background:var(--hov,#f1f1f1)}.attn-strip button.attn-chip:focus-visible{outline:2px solid var(--blue,#2563eb)}' +
       '.attn-chip[aria-pressed="true"]{background:var(--blue-t,#e0e9ff);font-weight:700}.attn-ok{color:var(--ok-3,#1a7f3c);font-weight:600}' +
-      '.attn-col{display:flex;flex-direction:column;height:100%;min-height:0}.attn-col>#bk_dvlist,.attn-col>#bk_lt{flex:1 1 0;min-height:0;height:auto}' +
+      '.attn-col{display:block}.attn-flex{display:flex;flex-direction:column;height:100%;min-height:0}.attn-flex>#bk_lt{flex:1 1 0;min-height:0;height:auto}' +
       '.attn-list{margin:0 0 10px}.attn-pager{display:flex;gap:8px;align-items:center;padding:6px 0}';
     root.document.head.appendChild(st);
   }
