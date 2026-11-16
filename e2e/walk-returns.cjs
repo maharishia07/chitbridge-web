@@ -204,6 +204,7 @@ W.run('returns', async (w) => {
     await AU.page.waitForSelector('[data-testid="pr-more-G1"]', { timeout: 8000 });
     const more = await text(AU.page, '[data-testid="pr-more-G1"]'), panel = await text(AU.page, '[data-testid="pr-ledgers-G1"]');
     const opt = await AU.page.$eval('#pr_p', (e) => e.options[e.selectedIndex].textContent);
+    await AU.page.screenshot({ path: require('path').join(__dirname, 'shots', 'l16-bas-bas-open-1366.png') }).catch(() => {});
     const ok = /^1 ledger/.test(n1a) && /^12 ledgers/.test(n1) && /and 2 more/.test(more) && /^Ledger/.test(panel) && /due .*2026/.test(opt) && !/…/.test(opt);
     return { ok, saw: n1a + ' · ' + n1 + ' · ' + more + ' · ' + opt };
   });

@@ -4514,6 +4514,7 @@ async function bkTB(body) {
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
+      bkStmtCss() +
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
@@ -4574,7 +4575,7 @@ function bkFig(minor, c) {
 function bkDrillLink(code, name, tid, from, to, tab, label) {
   if (!code) return esc(name);
   return (
-    '<button data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' type="button" class="optchip" style="max-width:100%" aria-expanded="false" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkDrillToggle(this,\'' +
+    '<button data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' type="button" class="bk-dl" aria-expanded="false" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkDrillToggle(this,\'' +
     esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')" title="' + esc(tx('Show its entries below')) + '">' + esc(code + ' · ' + name) + ' ▸</button>'
   );
 }
@@ -4612,7 +4613,7 @@ async function bkDrillToggle(btn, code, from, to, tab, label) {
             })
             .join('')
         : '<span style="color:var(--grey)">' + esc(tx('No entries in this period')) + '</span>') +
-      (total > 0 ? '<div style="margin-top:4px"><button type="button" class="optchip" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')">' +
+      (total > 0 ? '<div style="margin-top:4px"><button type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')">' +
         esc(txn('Open the {count} entry ▸', 'Open all {count} entries ▸', total, { count: total })) + '</button></div>' : '') +
       '</div>';
   } catch (failure) {
@@ -4648,7 +4649,7 @@ function bkPeriodBar(o) {
 }
 /** the statements' own look: money columns right-aligned and equal, the narrow screen drops the percent columns, never a sideways scroll */
 function bkStmtCss() {
-  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide{display:none}}</style>';
+  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);text-align:left;cursor:pointer;box-shadow:none}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide{display:none}}</style>';
 }
 /** one statement row: label cell, then the figures the server carried (a figure list of { v, pct?, wide? }) */
 function bkStRow(cls, label, cells) {
