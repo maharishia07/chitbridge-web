@@ -77,7 +77,7 @@ function stand(pending) {
     ctx.on('request', (rq) => { S.reqs.push({ m: rq.method(), u: rq.url(), h: rq.headers(), d: rq.postData() || '' }); });
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
-      if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+      if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year (July to June) */
       if (p === '/api/books/todo') return json(r, 200, []);
       if (p === '/api/books/accounts') return json(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });

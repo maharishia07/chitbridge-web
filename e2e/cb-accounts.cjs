@@ -115,7 +115,7 @@ const claims = (h) => { try { return JSON.parse(Buffer.from(String(h || '').repl
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   S.calls.push(m + ' ' + p + u.search);
-  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
   /* "Your work" on the shell's rail: the API's keys (truncated · counts · lines · figures), nothing waiting */
   if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }, lines: [], figures: { orders_new: 0, tasks_mine: 0, orders_in: 0, orders_out: 0, tasks: 0, done: 0 } });
   if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: S.folders });
