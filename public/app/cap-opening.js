@@ -232,9 +232,6 @@ function obRender() {
   OB.body.innerHTML =
     '<div class="ob" data-testid="ob-root">' +
     obHeadHtml() +
-    (OB.mode === 'replace'
-      ? '<label style="display:flex;flex-direction:column;gap:3px">' + tx('Why are you changing it?') + '<input class="inp" data-cbsid="CMP040-I01"' + obMount('CMP040') + ' id="ob_why" data-testid="ob-why" value="' + esc(OB.reason) + '" oninput="obReason(this.value)" placeholder="' + esc(tx('For example: typing slip')) + '"></label>'
-      : '') +
     '<div class="ob-rows" data-testid="ob-rows"><div class="ob-row ob-hd"><div class="ob-name">' + tx('Ledger') + '</div><div class="ob-num">' + tx('Debit') + '</div><div class="ob-num">' + tx('Credit') + '</div></div>' +
     OB.rows.map(obRowHtml).join('') +
     '</div>' +
@@ -260,10 +257,6 @@ function obAddLedger() {
 function obDate(value) {
   OB.date = value;
   obPreviewSoon();
-}
-function obReason(value) {
-  OB.reason = value;
-  obStatePaint();
 }
 function obCell(i, side) {
   var row = OB.rows[i];
@@ -381,7 +374,6 @@ function obStatePaint() {
     bal = document.getElementById('ob_balance');
   if (!diff || !save) return;
   var pv = OB.pv;
-  var needReason = OB.mode === 'replace' && !String(OB.reason || '').trim();
   if (OB.checking || !pv) {
     diff.innerHTML = '<span style="color:var(--grey)">' + (pv || OB.checking ? tx('Checking…') : tx('Type the opening balances')) + '</span>';
     save.disabled = true;
@@ -405,8 +397,7 @@ function obStatePaint() {
     said = '<span class="ob-bad">' + esc(txf("Difference {amt}. Add owner's equity or fix a line.", { amt: bkMoney(pv.difference_minor, cur) + ' ' + obSideWord(pv.side) })) + '</span>';
   else said = '<span class="ob-ok">' + esc(tx('Difference')) + ' <b>' + esc(bkMoney(0, cur)) + '</b> · ' + esc(tx('Balanced')) + '</span>';
   diff.innerHTML = said;
-  save.disabled = !pv.can_save || needReason;
-  save.title = needReason ? tx('Say why first') : '';
+  save.disabled = !pv.can_save;
   if (tot) tot.textContent = pv.empty ? '' : tx('Debit') + ' ' + bkMoney(pv.debit_minor, cur) + ' · ' + tx('Credit') + ' ' + bkMoney(pv.credit_minor, cur);
   /* the balancing figure is the engine's Difference: offered once, when the owner's equity ledger is still empty */
   var equity = OB.rows.filter(function (row) {
@@ -430,7 +421,35 @@ function obBalance(i) {
 }
 
 /* ── save ── */
-async function obSave() {
+/** a change to what is saved asks why first, in the popup the bank page's Reopen and Month lock's Open again use (POP092, this screen's mount); the reason is kept with the change */
+function obSave() {
+  if (OB.mode !== 'replace') return obSaveGo();
+  OB.reason = '';
+  ui.dialog({
+    mount: bkDialogMount(5),
+    pop: 'POP092',
+    titleText: tx('Change the opening balances?'),
+    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
+    body:
+      '<label>' + tx('Why are you changing it?') + '<input class="inp" data-cbsid="CMP040-I01"' + obMount('CMP040') + ' id="ob_why" data-testid="ob-why" maxlength="200" autocomplete="off" placeholder="' + esc(tx('For example: typing slip')) + '"></label>' +
+      '<div id="ob_whyout" data-testid="ob-whyout" role="alert" style="color:var(--warn-2)"></div>',
+    footerHtml:
+      '<button type="button" data-cbsid="CMP003-B01"' + obMount('CMP003') + ' onclick="closeModal()">' + tx('Cancel') + '</button>' +
+      '<button type="button" class="supact-pri" data-cbsid="CMP042-B14"' + obMount('CMP042') + ' data-testid="ob-why-go" onclick="obReasonGo()">' + tx('Save change') + '</button>'
+  });
+}
+function obReasonGo() {
+  var box = document.getElementById('ob_why'),
+    out = document.getElementById('ob_whyout');
+  OB.reason = String((box && box.value) || '').trim();
+  if (!OB.reason) {
+    if (out) out.textContent = tx('Say why — the reason is kept');
+    return;
+  }
+  closeModal();
+  obSaveGo();
+}
+async function obSaveGo() {
   var btn = document.getElementById('ob_save');
   await bkOnce('opening-save', btn, async function () {
     try {
