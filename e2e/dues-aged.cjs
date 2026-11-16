@@ -48,14 +48,14 @@ const DUES = { currency: 'AUD', asOf: '2026-11-16', total_minor: 65000, parties:
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, FIRM);
     const p = await ctx.newPage(), threw = [];
     p.on('pageerror', (e) => threw.push(e.message));
-    await p.goto(base + '/accounts.html?acting=' + CLIENT + hash);
-    await p.waitForSelector('[data-testid="bv-dues-customers"]', { timeout: 20000, state: 'attached' }).catch(() => {});
+    await p.goto(base + '/network.html' + hash); /* the page that loads the firm's books view; the voice function needs no client open */
+    await p.waitForFunction(() => window.CBBooksGrantView, null, { timeout: 20000 }).catch(() => {});
     await p.waitForTimeout(2000);
     return { ctx, p, threw };
   }
   const text = (p, sel) => p.locator(sel).innerText().then((t) => t.replace(/\s+/g, ' '));
   { /* the owner's own voice: no client named */
-    const { ctx, p } = await open(1366, 768, '#/daybook');
+    const { ctx, p } = await open(1366, 768, '');
     const v = await p.evaluate(() => window.CBBooksGrantView.duesVoice(''));
     ok(v.customer === 'Customers owe you' && v.supplier === 'You owe suppliers', 'owner voice stays "Customers owe you" / "You owe suppliers"');
     const f = await p.evaluate(() => window.CBBooksGrantView.duesVoice('Acme Ltd'));
