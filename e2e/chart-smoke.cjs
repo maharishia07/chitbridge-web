@@ -112,5 +112,55 @@ if (!CBDraw.stackRows) {
   say(/color:var\(--on-accent\)/.test(stackHtml) && !/width:0/.test(stackHtml) && /Closed/.test(stackHtml), 'stackBar: each fill names its text colour; a zero part has no segment, but is in the key');
 }
 
+/* 4 — the waterfall (chart engine step 3): the server's figures only; a mismatch, a mixed currency or a non-whole figure is a sentence, never a bar */
+if (CBDraw.waterfall) {
+  const S = (key, kind, amount_minor, extra) => Object.assign({ key, label: key, kind, amount_minor, currency: 'AUD' }, extra || {});
+  const fmt = (step) => (step.amount_minor / 100).toFixed(2);
+  const draws = (steps, opts) => CBDraw.waterfall(steps, Object.assign({ tid: 'w', format: fmt }, opts || {}));
+  const refused = (steps, why, opts) => {
+    const out = draws(steps, opts);
+    return /data-state="mismatch"/.test(out) && out.includes('data-why="' + why + '"') && !/<rect/.test(out);
+  };
+  const bridge = [S('income', 'total', 4000), S('costs', 'minus', 2500), S('profit', 'total', 1500)];
+  sane('waterfall: income, costs, profit', draws(bridge));
+  say((draws(bridge).match(/data-testid="w-bar-/g) || []).length === 3 && /data-kind="minus"/.test(draws(bridge)) && /stroke-dasharray/.test(draws(bridge)), 'waterfall: three bars, the fall hollow and dashed');
+  const loss = draws([S('income', 'total', 4000), S('costs', 'minus', 14000), S('loss', 'total', -10000)]);
+  sane('waterfall: a loss crosses the baseline', loss);
+  const bottoms = [...loss.matchAll(/<rect x="[\d.]+" y="([\d.]+)" width="[\d.]+" height="([\d.]+)"/g)].map((m) => +m[1] + +m[2]);
+  say(bottoms.length === 3 && Math.max(...bottoms) > 0, 'waterfall: a loss draws three bars, inside the box');
+  say(refused([S('income', 'total', 4000), S('costs', 'minus', 2500), S('profit', 'total', 1501)], 'close'), 'waterfall: a total one minor unit off is refused');
+  say(refused([S('a', 'total', 100), S('b', 'plus', 50), S('c', 'total', 150), S('d', 'minus', 10), S('e', 'total', 141)], 'close'), 'waterfall: a mid-bridge total that fails is refused');
+  say(refused([S('income', 'total', 4000), S('costs', 'minus', 2500)], 'close'), 'waterfall: a bridge that ends on a step is refused');
+  say(refused([S('income', 'total', 4000), S('costs', 'minus', 2500, { currency: 'INR' }), S('profit', 'total', 1500)], 'currency'), 'waterfall: a mixed currency is refused');
+  say(refused([S('income', 'total', 4000, { currency: '' }), S('profit', 'total', 4000)], 'currency'), 'waterfall: a step with no currency is refused');
+  say(refused(bridge, 'currency', { currency: 'INR' }), "waterfall: a currency other than the shop's is refused");
+  [1.5, NaN, null, '4000', Infinity, 2 ** 60].forEach((odd) => say(refused([S('income', 'total', odd), S('profit', 'total', 4000)], 'figure'), 'waterfall: ' + String(odd) + ' is refused'));
+  say(refused([S('income', 'total', 4000), S('costs', 'minus', -5), S('profit', 'total', 4005)], 'figure'), 'waterfall: a negative fall is refused (the kind says the direction)');
+  say(refused([S('a', 'total', 1), S('a', 'plus', 0), S('b', 'total', 1)], 'key'), 'waterfall: two steps with one key are refused');
+  say(refused([S('a', 'total', 1), S('b', 'dip', 0)], 'kind'), 'waterfall: an unknown kind is refused');
+  say(refused([S('a', 'total', 1)], 'few') && refused([], 'few'), 'waterfall: fewer than two steps is refused (no invented shape)');
+  sane('waterfall: two totals, equal', draws([S('a', 'total', 700), S('b', 'total', 700)]));
+  sane('waterfall: a zero fall', draws([S('a', 'total', 700), S('b', 'minus', 0), S('c', 'total', 700)]));
+  sane('waterfall: a negative first total', draws([S('a', 'total', -700), S('b', 'plus', 700), S('c', 'total', 0)]));
+  sane('waterfall: 80-character labels', draws([S('a'.repeat(80), 'total', 100), S('b'.repeat(80), 'plus', 50), S('c'.repeat(80), 'total', 150)]));
+  const months = (n) => {
+    const out = [S('open', 'total', 0)];
+    let level = 0;
+    for (let i = 0; i < n; i++) {
+      const up = i % 3 !== 2,
+        amt = 1000 + i * 7;
+      out.push(S('m' + i, up ? 'plus' : 'minus', amt));
+      level += up ? amt : -amt;
+    }
+    out.push(S('close', 'total', level));
+    return out;
+  };
+  sane('waterfall: 84 months', draws(months(84), { width: 640 }));
+  say((draws(months(84)).match(/data-testid="w-bar-/g) || []).length === 86, 'waterfall: 84 months draw all 86 bars');
+  say(refused(months(120), 'many'), 'waterfall: 122 steps are refused, never sliced');
+  say(!/<text[^>]*>[^<]*\d+\.\d\d<\/text>/.test(draws(months(84))), 'waterfall: a long bridge prints no figure labels (the table below carries them)');
+}
+
 console.log('\n  ' + bad + ' problem' + (bad === 1 ? '' : 's') + '\n');
 process.exitCode = bad ? 1 : 0;
+

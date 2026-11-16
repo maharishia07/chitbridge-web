@@ -4451,10 +4451,53 @@ async function bkPL(body) {
       (Number(reply.profit_minor) >= 0 ? tx('Profit') : tx('Loss')) +
       ' ' +
       esc(bkMoney(Math.abs(reply.profit_minor || 0), c)) +
-      '</b></div>';
+      '</b></div><div id="pl_chart" data-testid="pl-chart" style="margin:6px 0"></div>';
+    bkPLBridge(body.querySelector('#pl_chart'), reply, c);
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
+}
+/** the profit bridge under the P&L's profit line: income, expenses, profit or loss, each the server's own figure (reply.total_income_minor, total_expense_minor, profit_minor); the
+ *  chart engine loads on demand, a page without it (or one that fails to load) keeps the figures above and shows nothing more; the chart compares, it adds nothing the person reads */
+function bkPLBridge(box, reply, c) {
+  if (!box || typeof CBChartCap === 'undefined') return;
+  var cur = String(c || '');
+  var profit = Number(reply.profit_minor);
+  var steps = [
+    { key: 'income', label: tx('Income'), kind: 'total', amount_minor: Number(reply.total_income_minor), currency: cur },
+    { key: 'expenses', label: tx('Expenses'), kind: 'minus', amount_minor: Number(reply.total_expense_minor), currency: cur },
+    { key: 'profit', label: profit >= 0 ? tx('Profit') : tx('Loss'), kind: 'total', amount_minor: profit, currency: cur }
+  ];
+  function draw(choice) {
+    var host = box.querySelector('[data-testid="pl-bridge"]');
+    if (!host) {
+      host = document.createElement('div');
+      host.setAttribute('data-testid', 'pl-bridge');
+      box.appendChild(host);
+    }
+    host.innerHTML =
+      CBDraw.waterfall(steps, {
+        width: Math.max(240, (box.clientWidth || 640) - 8),
+        height: 170,
+        id: 'pl',
+        tid: 'pl',
+        currency: cur,
+        read: choice && choice.read,
+        aria: tx('Income to profit') + '. ' + steps[2].label + ' ' + bkMoney(Math.abs(profit), c),
+        format: function (step) {
+          return step.label + ' ' + bkMoney(Math.abs(step.amount_minor), c);
+        }
+      });
+  }
+  CBChartCap.ready().then(
+    function () {
+      if (!document.body.contains(box)) return;
+      CBChartBar.mount(box, { kind: 'bridge', types: ['waterfall'], onChange: draw }); /* mount draws once, then on every pick */
+    },
+    function () {
+      box.innerHTML = '';
+    }
+  );
 }
 /* the Balance sheet tab: assets, liabilities and equity as of one date */
 async function bkBS(body) {

@@ -8,6 +8,7 @@
  *           kinds and drawings (the person's favourites are chart_fav_<kind> in ui_prefs; the api's lib/chart-prefs.js pins the same two lists) ·
  *           COMBOS and paletteOf(id, tokens, read) — the colour combinations as DATA, ONE place, and what a combination draws in the vibrant default and in
  *           the readable render · applyPalette(host, palette, read) — writes the palette as --ch-* tokens on a host and marks it data-read="on|off".
+ *           waterfall(steps, opts) — a bridge from one carried total to another (the server's integer figures; refuses a mismatch, a mixed currency, a non-whole figure)
  * CALLED BY app/cap-mis-trend.js (CB Finance › Reports › Trend) · app/cap-finance-cash.js (the running balance) · app/cap-admin.js (the MIS flow
  *           bar and sparkline) · app/shell.js (the Till card's teaser on Home) · public/testing.html (its four charts; internal, loads this by tag).
  * LOADED BY CBChartCap.ready() (app/avatar.js) — a page that draws no chart never fetches this file.
@@ -490,6 +491,122 @@
     return out;
   }
 
+  /* ── waterfall (chart engine step 3, 16 Nov 2026) ───────────────────────────────────────────────────────────────────────────────────────────
+   * A bridge from one carried total to another: [{ key, label, kind: 'total'|'plus'|'minus', amount_minor, currency, title }]. Every amount is the SERVER's integer
+   * minor-unit figure (a total is signed; a plus or minus is the server's own positive figure, the kind says the direction: no page negates anything).
+   * ONE CALCULATION: nothing printed here is computed. The ONLY sum is the closing check: the running level (integers, never pixels) is compared with EVERY total
+   *   the server carried; one that differs refuses the chart (the sum is the compare, never a figure shown or reused, as the Balance sheet compares its two totals).
+   * A refusal never drops a step or draws a wrong bridge: it returns one sentence (role=status, data-state="mismatch") and the caller's table stays. */
+  var WATERFALL_MAX = 120; /* a bridge is not sliced to the newest: slicing would drop its opening total, so more than this is refused */
+  var REFUSED_WORDS = {
+    few: 'A bridge needs at least two figures.',
+    many: 'Too many figures for one bridge.',
+    figure: 'A figure is not a whole amount, so the bridge is not drawn.',
+    currency: 'The figures are in different currencies, so the bridge is not drawn.',
+    key: 'Two steps share a name, so the bridge is not drawn.',
+    kind: 'A step is not a total, a rise or a fall, so the bridge is not drawn.',
+    close: 'The totals do not agree with the steps between them, so the bridge is not drawn.'
+  };
+  /** the one sentence that stands where a refused bridge would be; its words go through the page's tx() when it has one */
+  function refusedOf(code, step) {
+    var said = REFUSED_WORDS[code];
+    if (typeof root.tx === 'function') said = root.tx(said);
+    return '<p role="status" aria-live="polite" data-testid="cd-waterfall-refused" data-state="mismatch" data-why="' + code + '">' + escape(said) + (step ? ' (' + escape(step) + ')' : '') + '</p>';
+  }
+  /** why a list of steps may not be drawn, as [code, step label], or null. Integers in minor units; the compare of carried totals is the only sum. */
+  function waterfallFault(steps, currency) {
+    var level = 0,
+      seen = {};
+    if (steps.length < 2) return ['few'];
+    if (steps.length > WATERFALL_MAX) return ['many'];
+    for (var at = 0; at < steps.length; at++) {
+      var step = steps[at] || {};
+      if (step.kind !== 'total' && step.kind !== 'plus' && step.kind !== 'minus') return ['kind', step.label];
+      if (typeof step.amount_minor !== 'number' || !Number.isSafeInteger(step.amount_minor) || (step.kind !== 'total' && step.amount_minor < 0)) return ['figure', step.label];
+      if (!step.currency || step.currency !== (currency || steps[0].currency)) return ['currency', step.label];
+      if (seen[step.key]) return ['key', step.label];
+      seen[step.key] = 1;
+      if (step.kind === 'total') {
+        if (at > 0 && step.amount_minor !== level) return ['close', step.label];
+        level = step.amount_minor;
+      } else level += step.kind === 'plus' ? step.amount_minor : -step.amount_minor;
+    }
+    return steps[steps.length - 1].kind === 'total' ? null : ['close', steps[steps.length - 1].label];
+  }
+  /** each step's span on the scale: a total stands from zero, a rise or fall floats from the level before (integers; geometry only) */
+  function waterfallSpans(steps) {
+    var level = 0;
+    return steps.map(function (step) {
+      var from = step.kind === 'total' ? 0 : level,
+        to = step.kind === 'total' ? step.amount_minor : level + (step.kind === 'plus' ? step.amount_minor : -step.amount_minor);
+      level = to;
+      return { from: from, to: to };
+    });
+  }
+  /** one step's bar: total solid (--ch-act), rise solid (--ch-acc) with a triangle up, fall hollow and dashed (--ch-prev) with a triangle down: never colour alone, never a red series colour */
+  function waterfallBar(step, span, at, layout, testId, label) {
+    var top = Math.min(layout.yOf(span.from), layout.yOf(span.to)),
+      tall = Math.max(1, Math.abs(layout.yOf(span.from) - layout.yOf(span.to))),
+      left = at * layout.step + (layout.step - layout.width) / 2,
+      tone = step.kind === 'total' ? BAR : step.kind === 'plus' ? 'var(--ch-acc,var(--green-d,#1f6b46))' : LAST_YEAR,
+      look = step.kind === 'minus' ? 'fill:none;stroke:' + tone + ';stroke-width:1.5;stroke-dasharray:3 2' : 'fill:' + tone,
+      glyph = step.kind === 'plus' ? '▲ ' : step.kind === 'minus' ? '▼ ' : '';
+    return (
+      '<g data-testid="' + escape(testId + '-bar-' + step.key) + '" data-kind="' + step.kind + '"><title>' + escape(step.title || step.label || '') + '</title>' +
+      '<rect x="' + left.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + layout.width + '" height="' + tall.toFixed(1) + '" rx="2" style="' + look + '"/>' +
+      (label ? '<text x="' + (left + layout.width / 2).toFixed(1) + '" y="' + (top - 3).toFixed(1) + '" text-anchor="middle" style="font:10px var(--mono,monospace);fill:' + LABEL + '">' + glyph + escape(label) + '</text>' : '') +
+      '</g>'
+    );
+  }
+  /** the thin line from one bar's end level across to the next bar */
+  function waterfallJoin(span, at, layout) {
+    var y = layout.yOf(span.to).toFixed(1),
+      right = at * layout.step + (layout.step + layout.width) / 2;
+    return '<line x1="' + right.toFixed(1) + '" x2="' + ((at + 1) * layout.step + (layout.step - layout.width) / 2).toFixed(1) + '" y1="' + y + '" y2="' + y + '" style="stroke:' + BASELINE + ';stroke-width:1"/>';
+  }
+  /**
+   * waterfall(steps, opts) → '<svg …>' or the refusal sentence. steps as above, first to last; opts { width (the card's own width, 640), height (190), id, tid, aria, currency (the shop's; every
+   * step must carry it), format(step) → the words for a step's figure (the caller's money in the shop's currency; it gets the whole step), read }. The scale includes zero and the lowest
+   * level, so a loss draws below the baseline. Fewer than two steps or more than WATERFALL_MAX is refused, never sliced.
+   */
+  function waterfall(steps, opts) {
+    var options = opts || {},
+      list = steps || [],
+      fault = waterfallFault(list, options.currency);
+    if (fault) return refusedOf(fault[0], fault[1]);
+    var width = options.width || 640,
+      height = options.height || 190,
+      testId = options.tid || 'cd',
+      spans = waterfallSpans(list),
+      layout = geometryOf(
+        spans.map(function (span) {
+          return { value: span.to, line: span.from };
+        }),
+        width,
+        height,
+        escape(options.id || 'cd'),
+        { padTop: 24 }
+      ),
+      labelled = list.length <= 12,
+      every = Math.max(1, Math.ceil(LABEL_GAP / layout.step));
+    layout.width = Math.max(4, Math.min(layout.width, 72));
+    var body = list
+      .map(function (step, at) {
+        var label = labelled && options.format ? options.format(step) : '';
+        return waterfallBar(step, spans[at], at, layout, testId, label) + (at < list.length - 1 ? waterfallJoin(spans[at], at, layout) : '');
+      })
+      .join('');
+    return (
+      barsOpen(width, height, { aria: options.aria, svgTid: testId + '-waterfall', read: options.read }) +
+      zeroLineOf(width, layout) +
+      body +
+      labelsOf(list, layout, height, function (at, count) {
+        return labelled || at === 0 || at === count - 1 || at % every === 0;
+      }) +
+      '</svg>'
+    );
+  }
+
   /**
    * THE COLOUR COMBINATIONS, AS DATA, in ONE place. A combination is { name, act (this period), prev (the one before), acc (a third mark), ramp (five, calm to warm), pie? (six slice
    * colours), more? }. "Follow my avatar theme" is not here: it is the 'tint' rule below, resolved on the person's own theme, and it is what a person who chose nothing sees.
@@ -656,7 +773,7 @@
     host.setAttribute('data-read', read === 'on' ? 'on' : 'off');
   }
 
-  var CBDraw = { bars: bars, spark: spark, stackBar: stackBar, stackRows: stackRows, stackColumns: stackColumns, KINDS: KINDS, TYPES: TYPES, MAX_POINTS: MAX_POINTS, COMBOS: COMBOS, paletteOf: paletteOf, applyPalette: applyPalette, contrast: contrast, onColour: onColour, channelsOf: channelsOf, MARK_NEED: MARK_NEED, TEXT_NEED: TEXT_NEED };
+  var CBDraw = { bars: bars, spark: spark, stackBar: stackBar, stackRows: stackRows, stackColumns: stackColumns, waterfall: waterfall, KINDS: KINDS, TYPES: TYPES, MAX_POINTS: MAX_POINTS, COMBOS: COMBOS, paletteOf: paletteOf, applyPalette: applyPalette, contrast: contrast, onColour: onColour, channelsOf: channelsOf, MARK_NEED: MARK_NEED, TEXT_NEED: TEXT_NEED };
   if (typeof module !== 'undefined' && module.exports) module.exports = CBDraw;
   if (root) root.CBDraw = CBDraw;
 })(typeof window !== 'undefined' ? window : globalThis);
