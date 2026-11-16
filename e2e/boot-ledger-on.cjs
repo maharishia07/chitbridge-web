@@ -2,7 +2,7 @@
  * so app.html's once-per-session check and crm.html's boot read each put a red failed request in the console. /me now carries `ledger_on`.
  * Pattern: bank-home.cjs (Playwright, a stand-in API answering inside the page, a free port; nothing leaves the machine). Runs on a SIT box, never on the laptop.
  * For each page (app · crm · accounts · network) and each shop (the Coastal firm: ledger on · a shop with none): no failed request, no console error, no page error;
- * the shop with no ledger is NEVER asked GET /books/health, draws the off card on accounts and no Dues column on crm.
+ * (an api that says it) the shop with no ledger is NEVER asked GET /books/health, draws the off card on accounts and no Dues column on crm.
  * OUT=<dir> says where the shots go. */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -27,16 +27,18 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch();
-  for (const on of [true, false]) {
+  /* mode: true / false = an api that says ledger_on; 'old' / 'old-off' = an api older than the field (no ledger_on in /me): the page must ask GET /books/health the old way, never call every shop "off" */
+  for (const mode of [true, false, 'old', 'old-off']) {
+    const old = typeof mode === 'string', on = old ? mode === 'old' : mode;
     for (const page of ['app.html', 'crm.html', 'accounts.html', 'network.html']) {
-      const label = page + ' · ' + (on ? 'ledger on' : 'no ledger');
+      const label = page + ' · ' + (old ? 'old api, ' : '') + (on ? 'ledger on' : 'no ledger');
       const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
       await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
       const seen = [], bad = [], errs = [];
       await ctx.route('**/api/**', (r) => {
         const p = new URL(r.request().url()).pathname;
         seen.push(p);
-        if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Coastal Supplies', currency_code: 'AUD', country: 'AU', ledger_on: on, capabilities: [] } });
+        if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Coastal Supplies', currency_code: 'AUD', country: 'AU', capabilities: [], ...(old ? {} : { ledger_on: on }) } });
         if (p === '/api/books/health') return on ? json(r, 200, books.health()) : json(r, 404, { code: 'LEDGER_OFF', message: 'This shop has not switched the ledger on.' });
         if (p === '/api/books/todo') return json(r, 200, []);
         return json(r, 200, {});
@@ -48,9 +50,9 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
       p.on('pageerror', (e) => errs.push('pageerror ' + e.message.slice(0, 140)));
       await p.goto(base + '/' + page);
       await p.waitForTimeout(2500);
-      ok(bad.length === 0, label + ': no failed request' + (bad.length ? ' (' + bad.join(', ') + ')' : ''));
+      ok(bad.length === 0 || (old && !on), label + ': no failed request' + (bad.length ? ' (' + bad.join(', ') + ')' : ''));
       ok(errs.length === 0, label + ': a clean console' + (errs.length ? ' (' + errs[0] + ')' : ''));
-      if (!on) ok(seen.indexOf('/api/books/health') < 0, label + ': never asks GET /books/health');
+      if (!on && !old) ok(seen.indexOf('/api/books/health') < 0, label + ': never asks GET /books/health');
       if (page === 'accounts.html') ok((await p.locator('[data-testid="acc-off"]').count()) === (on ? 0 : 1), label + ': ' + (on ? 'the page opens' : 'the off card is shown'));
       if (page === 'crm.html' && !on) ok(!(await p.evaluate(() => (typeof CRM !== 'undefined' ? CRM.ledger : null))), label + ': no Dues column');
       await p.screenshot({ path: path.join(SHOTS, 'boot-' + page.replace('.html', '') + (on ? '-on' : '-off') + '.png') });
