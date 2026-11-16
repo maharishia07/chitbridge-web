@@ -20,7 +20,7 @@ if (typeof EP !== 'undefined') {
 }
 
 /** where the marks are kept: mode 'server' (shared record) · 'device' (the record is not set up yet) · 'error' (could not reach it); the rest is what the log said */
-var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', signing: false };
+var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', blind: false, signing: false };
 const bankStoreState_SHOWN = 4;
 /** a string made safe to put into the panel */
 const bksE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
@@ -54,7 +54,7 @@ function bankStoreReplay(marks) {
 }
 /** the marks of the picked account: the shared record when it answers, else this device's own copy (and the line says which) */
 async function bankStoreLoad(view) {
-  bankStoreState = Object.assign(bankStoreState, { view: view, acct: view.acct, statements: [], exceptions: [], say: '', chain: Promise.resolve() });
+  bankStoreState = Object.assign(bankStoreState, { view: view, acct: view.acct, statements: [], exceptions: [], say: '', blind: false, chain: Promise.resolve() });
   try {
     const log = (await api('booksBankLog', { query: { account: bankStoreState.view.acct, from: bankStoreState.view.from, to: bankStoreState.view.to }, fresh: true })) || {};
     bankStoreState.mode = 'server';
@@ -67,6 +67,7 @@ async function bankStoreLoad(view) {
   } catch (failure) {
     bankStoreState.mode = bksNotSetUp(failure) ? 'device' : 'error';
     bankStoreState.say = bksNotSetUp(failure) ? '' : bksWhy(failure);
+    bankStoreState.blind = bksCostBlind(failure);
     return bkbLoad('marks:' + bankStoreState.view.acct, {});
   }
 }
@@ -91,10 +92,12 @@ function bankStoreAppend(action) {
     .then(() => {
       bankStoreState.mode = 'server';
       bankStoreState.say = '';
+      bankStoreState.blind = false;
     })
     .catch((failure) => {
       bankStoreState.mode = bksNotSetUp(failure) ? 'device' : 'error';
       bankStoreState.say = bksNotSetUp(failure) ? '' : bksWhy(failure);
+      bankStoreState.blind = bksCostBlind(failure);
     })
     .then(bankStorePaintLine);
 }
@@ -105,7 +108,9 @@ const bankStoreNoteWords = () =>
     : tx('Kept on this device. A note never stops you accepting.');
 /** the one line saying where the marks are kept */
 const bankStoreLine = () =>
-  bankStoreState.mode === 'server'
+  bankStoreState.blind
+    ? bksCostBlindSay() /* the api's 403 COST_BLIND: said, not the "could not reach" line (silence is the bug) */
+    : bankStoreState.mode === 'server'
     ? tx('Marks and notes are kept for your accountant too.')
     : bankStoreState.mode === 'device'
       ? tx('Saved on this device until the next update')

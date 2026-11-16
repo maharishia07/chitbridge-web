@@ -23,6 +23,15 @@ const SAY = 'Your access does not include costs, so the bank statements are hidd
   ok((await f.bkstWhyNot(res(403, { code: 'COST_BLIND' }))) === SAY, '/statement-files/:id/file 403 COST_BLIND says the sentence');
   ok((await f.bkstWhyNot(res(403, null))) === 'This access has ended.', 'a 403 with no body keeps "This access has ended."');
   ok(/BKST\.mode = [^;]*bksCostBlind\(failure\) \? 'blind'/.test(stm) && /if \(BKST\.mode === 'blind'\) return bksCostBlindSay\(\)/.test(stm), '/statement-files list 403 sets mode blind and the Statements line says the sentence');
+  /* the Bank home: bankHomeSigned (the real function) meets a 403 COST_BLIND on /bank/log and the Statements line says the sentence, not "Kept" */
+  const { liftFns } = require('./lib/lift-fn.cjs');
+  const cx2 = vm.createContext({ tx: (s) => s, bkhSignedRange: () => ({}), BKST: { mode: 'server', data: { accounts: [{ code: '1100', account_id: 'a1' }] }, fileTotal: 0 }, BKH: { signed: {}, known: false, blind: false }, api: () => Promise.reject(log403) });
+  vm.runInContext(['bksCostBlind', 'bksCostBlindSay'].map((n) => line(store, n)).join('\n') + '\n' + liftFns('public/app/cap-bank-home.js', ['bankHomeSigned']) + '\n' + liftFns('public/app/cap-bank-statements.js', ['bkstSummary']) + '\nthis.g = { bankHomeSigned, bkstSummary };', cx2);
+  await cx2.g.bankHomeSigned();
+  ok(cx2.BKH.blind === true && cx2.BKH.known === false, 'bankHomeSigned records the 403 COST_BLIND (blind, not known)');
+  ok(cx2.g.bkstSummary() === SAY, 'the Bank home Statements line says the sentence, not "Kept": ' + cx2.g.bkstSummary());
+  /* the log line the Bank page paints (bankStoreLine) leads with the blind sentence; .say is never painted */
+  ok(/const bankStoreLine = \(\) =>\n  bankStoreState\.blind\n    \? bksCostBlindSay\(\)/.test(store) && (store.match(/bankStoreState\.blind = bksCostBlind\(failure\)/g) || []).length === 2, 'the log refusal paints through bankStoreLine at both catch paths');
   if (bad) { console.log(bad + ' FAILED'); process.exit(1); }
   console.log('all ok');
 })();

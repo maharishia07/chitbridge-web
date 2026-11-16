@@ -11,7 +11,7 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
-const BKH = { signed: {}, known: false, noPush: false, shown: 3, deepDone: false };
+const BKH = { signed: {}, known: false, blind: false, noPush: false, shown: 3, deepDone: false };
 const bkhE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 /** 'September 2026' for '2026-09', in the reader's language (a date helper, no money) */
 function bkhMonthLong(month) {
@@ -37,19 +37,22 @@ function bkhSignedRange() {
 async function bankHomeSigned() {
   const accounts = (BKST.data && BKST.data.accounts) || [],
     next = {};
-  let known = true;
+  let known = true,
+    blind = false;
   await Promise.all(
     accounts.map(async (account) => {
       try {
         const log = await api('booksBankLog', { query: Object.assign({ account: String(account.code), marks_limit: 0 }, bkhSignedRange()), fresh: true }); /* only the sign-offs, of the years on show: no marks, never the whole record */
         next[account.account_id] = (log && log.statements) || [];
-      } catch (_) {
+      } catch (failure) {
         known = false;
+        if (bksCostBlind(failure)) blind = true; /* said once on the Bank home (cap-bank-statements.js bkstSummary), never a silent "Kept" */
       }
     })
   );
   BKH.signed = next;
   BKH.known = known && accounts.length > 0;
+  BKH.blind = blind;
 }
 /* ── the financial year: one year on screen (W15-100). Its first month and its name are the shop's own (the country pack through bkYearStart and bkFyName); how far back the stepper reaches is the pack's record-keeping years ── */
 const bkhPad = (n) => (n < 10 ? '0' : '') + n;

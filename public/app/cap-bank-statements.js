@@ -129,7 +129,7 @@ const bkstMissing = (data) => (data ? bkhTally(data, data.accounts).missing : 0)
 /** one line: what the box holds, said as the gap the person should fix */
 function bkstSummary() {
   if (BKST.mode === 'device') return tx('Starts after an update. Your statement is still read on this device.');
-  if (BKST.mode === 'blind') return bksCostBlindSay();
+  if (BKST.mode === 'blind' || (typeof BKH !== 'undefined' && BKH.blind)) return bksCostBlindSay();
   if (BKST.mode === 'error') return tx('Could not read the statements kept.');
   const data = BKST.data;
   if (!data || !BKST.fileTotal) return data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet');
