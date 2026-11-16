@@ -537,13 +537,13 @@ function bkIsShopName(n) {
   return !!shop && String(n || '').trim() === String(shop).trim();
 }
 /** the bill's number as a link that opens the chit sheet, with its time — "Bill C2/26-27/0002 12:30" (the word is the caller's) */
-function bkBillPart(s, tid) {
+function bkBillPart(s, tid, noTime) {
   if (!s || !(s.ref || s.chit_id)) return '';
   var no = s.ref ? '<span class="mono">' + esc(s.ref) + '</span>' : esc(tx('Open'));
   var link = s.chit_id
     ? '<a data-cbsid="CMP044-C02"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>'
     : no;
-  return link + (s.doc_at ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : '');
+  return link + (s.doc_at && !noTime ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : '');
 }
 /* ⭐ HOW IT WAS PAID (Athi, 2026-10-01: "clearly segregate credit, cash, UPI") — a day: each tender with its amount */
 function bkHowPart(text, tid, cur) {
@@ -2851,9 +2851,11 @@ var BK_LT_BANDS = [
   { id: 'income', title: 'Income and expenses', blurb: 'nominal' },
   { id: 'capital', title: 'Your capital', blurb: 'what the owner has put in' }
 ];
+/** the Cash & bank ledgers: the codes the tree groups together and the ledger writes as Spent / Received */
+var BK_CASHBANK = /^1[45]\d\d/;
 /* [band, group, the codes it takes] — a code none of them claims lands in "Other" of its band, never nowhere */
 var BK_LT_GROUPS = [
-  ['things', 'Cash & bank', /^1[45]\d\d/],
+  ['things', 'Cash & bank', BK_CASHBANK],
   ['things', 'Stock & advances', /^(12|17|24)\d\d/],
   ['things', 'Duties & taxes', /^22[01]\d/],
   ['things', 'Taxes & suspense', /^(222|29)\d/],
@@ -3373,6 +3375,7 @@ function bkEntryWord(e) {
 }
 /** the Details cell: the kind and the bill, ONCE ("Expense C2/26-27/0007 11:44") — the entry number, the tender, the counter and who rang it live in ⚙ and in the opened entry */
 function bkLgDetails(l) {
+  /* W15-89: no time and no "recorded" note on the line — both live in the opened entry (bkLgNext) */
   var s = l.source || {},
     tid = 'stmt-src-' + l._ix,
     word = bkEntryWord(l),
@@ -3381,8 +3384,60 @@ function bkLgDetails(l) {
     out = word;
   if (s.kind === 'day') {
     if (s.count != null) out += ' · ' + esc(txn('{count} bill', '{count} bills', s.count));
-  } else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (text ? esc(text) + ' ' : '')) + bkBillPart(s, tid);
-  return out + bkRecordedHTML(l, tid) + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
+  } else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (text ? esc(text) + ' ' : '')) + bkBillPart(s, tid, true);
+  return out + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
+}
+/** a cash or bank ledger (not a party's, not a control account's): it reads Spent / Received, the way a bank register does (W15-88) */
+function bkLgIsBank(kind) {
+  var s = BK.lt.sel || {};
+  return kind === 'plain' && BK_CASHBANK.test(String(s.code || ''));
+}
+var BK_LG_MONEY_W = 150;
+/** a date or an amount stays on one line ("30 Sept", "₹1,200.00 Dr") — a narrow column clips the pane's spare room, never wraps the figure */
+function bkNoWrap(html) {
+  return '<span style="white-space:nowrap">' + html + '</span>';
+}
+/** the columns a ledger opens with (the opened entry's facts line reads the same list) */
+function bkLgDefaultCols(kind) {
+  return kind === 'control' ? ['date', 'party', 'what', 'amount'] : bkLgIsBank(kind) ? ['date', 'what', 'spent', 'received', 'bal'] : ['date', 'what', 'amount', 'bal'];
+}
+/** the money columns, in the order a ledger reads: Spent · Received (a cash or bank ledger) or Amount Dr/Cr (every other), then the running Balance — all one-line */
+function bkLgMoneyCols(c, ctrl, bank) {
+  var dash = bkLgDash(),
+    money = function (v, ix, word) {
+      return v ? bkNoWrap('<b data-testid="stmt-amt-' + ix + '">' + esc(bkMoney(v, c) + (word ? ' ' + tx(word) : '')) + '</b>') : dash;
+    },
+    base = { num: true, w: BK_LG_MONEY_W, html: true };
+  var out = bank
+    ? [
+        Object.assign({ key: 'spent', label: tx('Spent'), prio: 3, sort: 'spent', cell: function (l) { return money(l.cr_minor, l._ix); } }, base),
+        Object.assign({ key: 'received', label: tx('Received'), prio: 3, sort: 'received', cell: function (l) { return money(l.dr_minor, l._ix); } }, base)
+      ]
+    : [
+        Object.assign(
+          {
+            key: 'amount',
+            label: tx('Amount'),
+            prio: 3,
+            sort: 'amount',
+            cell: function (l) { return l.dr_minor ? money(l.dr_minor, l._ix, 'Dr') : money(l.cr_minor, l._ix, 'Cr'); }
+          },
+          base
+        )
+      ];
+  out.push({
+    key: 'bal',
+    label: tx('Balance'),
+    prio: ctrl ? 9 : 4,
+    sort: 'bal',
+    num: true,
+    w: 160,
+    html: true,
+    cell: function (l) {
+      return bkNoWrap(esc(bkDrCr(l.running_minor, c)));
+    }
+  });
+  return out;
 }
 /* the column list of the open ledger's grid (control account or one party) */
 function bkLgCols(c, kind) {
@@ -3391,7 +3446,9 @@ function bkLgCols(c, kind) {
   /* ONE flexible column (the designer's): Details takes what the others leave, so the default columns fill the pane and never spill sideways — a bill number is not broken across two lines. A width the person dragged wins (CBList remembers it). */
   var box = document.getElementById('lg_out'),
     avail = box ? box.clientWidth : 0,
-    whatW = Math.max(240, Math.min(560, avail - (112 + (ctrl ? 250 : 160) + 160) - 12));
+    bank = bkLgIsBank(kind),
+    moneyW = bank ? 2 * BK_LG_MONEY_W : BK_LG_MONEY_W,
+    whatW = Math.max(240, Math.min(560, avail - (112 + moneyW + 160 + (ctrl ? 250 : 0)) - 12));
   var cols = [
     {
       key: 'date',
@@ -3401,7 +3458,7 @@ function bkLgCols(c, kind) {
       w: 112,
       html: true,
       cell: function (l) {
-        return esc(bkDvFmt(String(l.date).slice(0, 10), { day: '2-digit', month: 'short' }));
+        return bkNoWrap(esc(bkDvFmt(String(l.date).slice(0, 10), { day: '2-digit', month: 'short' })));
       }
     }
   ];
@@ -3433,18 +3490,7 @@ function bkLgCols(c, kind) {
       },
       cell: bkLgDetails
     },
-    {
-      key: 'bal',
-      label: tx('Balance'),
-      prio: ctrl ? 9 : 3,
-      sort: 'bal',
-      num: true,
-      w: 160,
-      html: true,
-      cell: function (l) {
-        return esc(bkDrCr(l.running_minor, c));
-      }
-    },
+    ...bkLgMoneyCols(c, ctrl, bank),
     {
       key: 'entry',
       label: tx('Entry no.'),
@@ -3489,24 +3535,6 @@ function bkLgCols(c, kind) {
       }
     }
   );
-  /* the amount is ONE column, pinned at the end, written Dr / Cr — never a minus (the Debit / Credit pair became this) */
-  cols.push({
-    key: 'amount',
-    label: tx('Amount'),
-    prio: 4,
-    pin: 'end',
-    sort: 'amount',
-    num: true,
-    w: 160,
-    html: true,
-    cell: function (l) {
-      return l.dr_minor
-        ? '<b data-testid="stmt-amt-' + l._ix + '">' + esc(bkMoney(l.dr_minor, c) + ' ' + tx('Dr')) + '</b>'
-        : l.cr_minor
-          ? '<b data-testid="stmt-amt-' + l._ix + '">' + esc(bkMoney(l.cr_minor, c) + ' ' + tx('Cr')) + '</b>'
-          : dash;
-    }
-  });
   return cols;
 }
 /** a ledger's head is the CBList title row: the ledger's name, the period chip (the Day book's presets), ONE figures line, the notice when something needs a hand */
@@ -3687,7 +3715,7 @@ function bkLgMount(el) {
   var cur = function () {
     return (BK.lt.r && BK.lt.r.currency) || c0;
   };
-  var dflt = kind === 'control' ? ['date', 'party', 'what'] : kind === 'party' ? ['date', 'what', 'bal'] : ['date', 'what', 'bal'];
+  var dflt = bkLgDefaultCols(kind);
   return CBList.mount(el, {
     key: 'ledger-' + kind, foldHead: true /* the phone's head fold at every width: the title and the tools share a row on a laptop (head within 20% / 30%) */,
     t: tx,
@@ -3742,13 +3770,13 @@ function bkLgMount(el) {
       ].join(' ');
     },
     searchHint: tx('Search bill, party, amount'),
-    /* newest first, like a passbook app; the ▲▼ on Date reverses it */
+    /* OLDEST first: a ledger reads down with its running balance, and the Date header's ▲ (aria-sort ascending) is then true; ▼ reverses it (W15-87) */
     sorts: [
       {
         key: 'date',
-        label: tx('Newest first'),
+        label: tx('Oldest first'),
         cmp: function (a, b) {
-          return String(b.date).localeCompare(String(a.date)) || b._ix - a._ix;
+          return String(a.date).localeCompare(String(b.date)) || a._ix - b._ix;
         }
       },
       {
@@ -3785,10 +3813,24 @@ function bkLgMount(el) {
         cmp: by(function (l) {
           return Number(l.dr_minor || 0) - Number(l.cr_minor || 0);
         }, true)
+      },
+      {
+        key: 'spent',
+        label: tx('Spent'),
+        cmp: by(function (l) {
+          return Number(l.cr_minor || 0);
+        }, true)
+      },
+      {
+        key: 'received',
+        label: tx('Received'),
+        cmp: by(function (l) {
+          return Number(l.dr_minor || 0);
+        }, true)
       }
     ],
     filters: bkLgFilters(),
-    /* Month · Day · None, newest first. A group head says only "n shown": the API sends no month / day totals yet, and the page adds up no money (listed in the PR) */
+    /* Month · Day · None, in the sort's order (oldest first). A group head says only "n shown": the API sends no month / day totals yet, and the page adds up no money (listed in the PR) */
     group: {
       default: 'month',
       tid: 'lg',
@@ -3934,12 +3976,15 @@ function bkLgNext(line, currency) {
   } catch (failure) {
     shown = bkQuiet('grid-columns', failure, []);
   }
-  var defaultColumns = bkLgKind() === 'control' ? ['date', 'party', 'what'] : ['date', 'what', 'bal'],
+  var defaultColumns = bkLgDefaultCols(bkLgKind()),
     on = function (k) {
       return (shown.length ? shown : defaultColumns).indexOf(k) >= 0;
     },
     source = line.source || {},
     facts = [];
+  if (source.doc_at) facts.push(esc(bkTime(source.doc_at)));
+  var recorded = bkRecordedHTML(line, 'stmt-' + line._ix);
+  if (recorded) facts.push(recorded);
   if (!on('entry') && (line.entry_no || line.ref)) facts.push(esc(tx('Entry')) + ' <span class="mono">' + esc(line.entry_no || line.ref) + '</span>');
   if (!on('tender') && source.how) facts.push(esc(tx(source.how)));
   if (!on('counter') && source.counter) facts.push(esc(counterWord(source.counter)));
@@ -4249,11 +4294,28 @@ function bkLgFilters() {
   return list;
 }
 /** the last ledger this person had open comes back (on a wide page; a phone opens on the tree) — only if it is still on the chart */
+/** the ledger a first visit opens on: the shop's main bank ledger (the chart's role 'bank'), else the first Cash & bank ledger — never an empty "Pick a ledger" card (W15-90) */
+function bkLtMainBank() {
+  var first = null,
+    bank = null;
+  (BK.lt.model || []).forEach(function (band) {
+    band.groups.forEach(function (g) {
+      g.accts.forEach(function (a) {
+        if (!first && BK_CASHBANK.test(String(a.code))) first = a;
+        if (!bank && a.role === 'bank') bank = a;
+      });
+    });
+  });
+  return bank || first;
+}
 function bkLtRestore() {
   var l = BK.lt.last;
-  if (!l || BK.lt.sel || bkLtNarrow()) return;
-  if (!bkLtAcct(l.code)) return;
-  if (l.party && !(BK.dues && BK.dues[l.party])) return;
+  if (BK.lt.sel || bkLtNarrow()) return;
+  if (!l || !bkLtAcct(l.code) || (l.party && !(BK.dues && BK.dues[l.party]))) {
+    var main = bkLtMainBank();
+    l = main ? { code: main.code, party: null } : null;
+  }
+  if (!l) return;
   BK.lt.open['B:' + bkLtBand(l.code)] = true;
   var a = bkLtAcct(l.code),
     band = (BK.lt.model || []).filter(function (item) {
