@@ -37,10 +37,10 @@ t('a tile with no count or zero is left out, never drawn as 0; no parts = no pic
   assert.strictEqual(T.pictureHTML({ key: 'pipeline', tiles: [{ key: 'books_in', n: 0 }] }), '');
   assert.strictEqual(T.pictureHTML({ key: 'advisory', tiles: [{ key: 'cash_low', n: 3 }] }), '');
 });
-t('the picture lives in the tile grid (no new band) and the band carries it', () => {
-  T.use({ band: { bands: [{ key: 'pipeline', first: true, tiles: stages }] }, clients: [] });
-  const html = T.bandHTML({ band: { bands: [{ key: 'pipeline', first: true, tiles: stages }] }, clients: [] });
-  assert.ok(/<div class="bp-band">(<button[\s\S]*<\/button>)<div class="bp-pic"/.test(html), 'picture is the last cell of bp-band');
+t('the picture sits in the heading row, not in the band: the tile grid and the list do not move', () => {
+  const a = { band: { bands: [{ key: 'pipeline', first: true, tiles: stages }] }, clients: [] };
+  T.use(a);
+  assert.ok(!/bp-pic/.test(T.bandHTML(a)), 'the band holds tiles only');
 });
 const row = (y) => ({ entity_id: 'c1', name: 'C', year_end: y });
 t('opened row: the month strip has the year\'s months, the first `locked` are locked', () => {

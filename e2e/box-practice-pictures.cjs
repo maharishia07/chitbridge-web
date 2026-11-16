@@ -24,7 +24,7 @@ async function ctxOf(browser, vp, sess) {
   await ctx.route('http://localhost:3000/**', async (r) => {
     const u = new URL(r.request().url());
     if (u.pathname.includes('/events/stream')) return r.abort();
-    try { return r.fulfill({ response: await r.fetch({ url: API + u.pathname + u.search, headers: Object.assign({}, r.request().headers(), { origin: ORIGIN, referer: ORIGIN + '/' }) }) }); } catch (e) { return r.abort(); }
+    try { const got = await r.fetch({ url: API + u.pathname + u.search, headers: Object.assign({}, r.request().headers(), { origin: ORIGIN, referer: ORIGIN + '/' }) }); /* the api answers the origin it allows; the page is on another port, so say its own origin back */ return r.fulfill({ response: got, headers: Object.assign({}, got.headers(), { 'access-control-allow-origin': r.request().headers().origin || BASE }) }); } catch (e) { return r.abort(); }
   });
   const page = await ctx.newPage(); page.__bad = []; page.__fail = [];
   page.on('pageerror', (e) => page.__bad.push('THROW ' + e.message.slice(0, 160)));
@@ -50,12 +50,15 @@ const picOf = (page) => page.evaluate(() => {
     tiles, listTop: Math.round(rl.y), firstRowBottom: rf ? Math.round(rf.bottom) : null, vh: innerHeight, sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth, svgRight: Math.round(svg.getBoundingClientRect().right), vw: innerWidth };
 });
 const listTopWithoutPic = (page) => page.evaluate(() => { const p = document.querySelector('[data-testid="practice-pic"]'); p.style.display = 'none'; const t = Math.round(document.querySelector('[data-testid="practice-list"]').getBoundingClientRect().y); p.style.display = ''; return t; });
-const themeRows = (page) => page.evaluate(() => {
+const themeRows = (page, band, client) => page.evaluate(([band, client]) => {
   const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); const rgb = /^color\(/.test(c) ? m.slice(0, 3) : m.slice(0, 3).map((x) => x / 255); const f = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]); };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
   const themes = CBScreen.APP_THEMES, sec = document.getElementById('bp_practice'), out = [];
   Object.keys(themes).forEach((key) => {
-    const vars = themes[key].vars || {}; sec.setAttribute('style', Object.keys(vars).map((n) => n + ':' + vars[n]).join(';') + ';--page:var(--paper);background:var(--page);color:var(--ink)');
+    const vars = themes[key].vars || {}; /* cream sets nothing: the page's own tokens */ sec.setAttribute('style', Object.keys(vars).length ? Object.keys(vars).map((n) => n + ':' + vars[n]).join(';') + ';--page:var(--paper);background:var(--paper);color:var(--ink)' : 'background:var(--paper,#FCFAF5);color:var(--ink)');
+    /* draw again under this theme, the way a theme switch followed by a redraw does */
+    const pic = sec.querySelector('[data-testid="practice-pic"]'); if (pic && band) pic.outerHTML = CBPractice.parts.pictureHTML(band);
+    const sb = client && sec.querySelector('[data-testid="practice-strip-box-' + client.entity_id + '"]'); if (sb) sb.outerHTML = CBPractice.parts.stripHTML(client);
     const probe = document.createElement('div'); probe.style.cssText = 'background:var(--card)'; sec.appendChild(probe);
     const page = getComputedStyle(sec).backgroundColor, card = getComputedStyle(probe).backgroundColor; sec.removeChild(probe);
     const worst = { shapes: 99, text: 99, what: '' };
@@ -67,7 +70,7 @@ const themeRows = (page) => page.evaluate(() => {
     out.push({ key, dark: lum(page) < 0.3, shapes: +worst.shapes.toFixed(2), what: worst.what, text: +worst.text.toFixed(2) });
   });
   sec.removeAttribute('style'); return out;
-});
+}, [band, client]);
 (async () => {
   log('== rep66 walk ' + new Date().toISOString());
   const browser = await chromium.launch();
@@ -106,7 +109,7 @@ const themeRows = (page) => page.evaluate(() => {
         if (s) ok(k + '@' + n + ' the strip fits', s.right <= s.vw && s.sideways <= 0, 'right ' + s.right + ' sideways ' + s.sideways);
         await page.screenshot({ path: OUT + '/' + k + '-' + n + '-strip.png' });
         if (n === 1366 && k === 'acct') {
-          const rows = await themeRows(page), lowS = rows.filter((x) => x.shapes < 3), lowT = rows.filter((x) => x.text < 4.5);
+          const rows = await themeRows(page, S.data.band.bands.find((x) => x.key === 'pipeline'), c), lowS = rows.filter((x) => x.shapes < 3), lowT = rows.filter((x) => x.text < 4.5);
           ok('16 themes: strip + stage bar shapes >= 3:1', rows.length === 16 && lowS.length === 0, rows.length + ' themes; below 3: ' + (lowS.map((x) => x.key + ' ' + x.what + ' ' + x.shapes).join('; ') || 'none') + '; min ' + Math.min.apply(0, rows.map((x) => x.shapes)));
           ok('16 themes: figures >= 4.5:1', lowT.length === 0, 'below 4.5: ' + (lowT.map((x) => x.key + ' ' + x.text).join('; ') || 'none') + '; min ' + Math.min.apply(0, rows.map((x) => x.text)));
           log('  per theme ' + rows.map((x) => x.key + (x.dark ? '(d)' : '') + ' ' + x.shapes + '/' + x.text).join(' | '));
@@ -116,7 +119,7 @@ const themeRows = (page) => page.evaluate(() => {
     }
     if (n === 1366 && k === 'acct') {
       const tab = page.locator('[data-testid="practice-band-on_us"]'); if (await tab.count()) { await tab.click(); await sleep(500); }
-      const rows = await themeRows(page), lowS = rows.filter((x) => x.shapes < 3);
+      const rows = await themeRows(page, S.data.band.bands.find((x) => x.key === 'on_us'), null), lowS = rows.filter((x) => x.shapes < 3);
       ok('16 themes: on-us bar shapes >= 3:1', rows.length === 16 && lowS.length === 0, 'below 3: ' + (lowS.map((x) => x.key + ' ' + x.what + ' ' + x.shapes).join('; ') || 'none') + '; min ' + Math.min.apply(0, rows.map((x) => x.shapes)));
     }
     log('  bad ' + cut(page.__bad.splice(0), 400) + ' calls=' + calls + ' remaining=' + rem);

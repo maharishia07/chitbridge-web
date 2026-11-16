@@ -339,6 +339,17 @@
     }
     return (value.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
   }
+  /** WCAG contrast of two resolved colours: the fallback paletteNow uses on a page that does not load ui-standard.js (the Home); the same formula, and a theme sweep proves both agree */
+  function contrastRatio(first, second) {
+    var lum = function (text) {
+      var c = rgbOf(text).map(function (v) {
+        var u = v / 255;
+        return u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    return (Math.max(lum(first), lum(second)) + 0.05) / (Math.min(lum(first), lum(second)) + 0.05);
+  }
   /** `percent` of the first colour over the rest of the second: what CSS color-mix(in srgb, a percent, b) paints */
   function mix(first, second, percent) {
     var one = rgbOf(first),
@@ -390,8 +401,8 @@
         return style.getPropertyValue(name).trim() || fallback;
       };
     return palette(
-      { ink: read('--ink', '#2a2418'), page: read('--page', '#FCFAF5'), card: read('--card', '#fffdf8'), accent: read('--accent-text', read('--accent', '#1f5f5b')) },
-      contrast || (root.CBUiStandard && root.CBUiStandard.contrastRatio)
+      { ink: read('--ink', '#2a2418'), page: read('--paper', read('--page', '#FCFAF5')), card: read('--card', '#fffdf8'), accent: read('--accent-text', read('--accent', '#1f5f5b')) },
+      contrast || (root.CBUiStandard && root.CBUiStandard.contrastRatio) || contrastRatio
     );
   }
 
@@ -566,6 +577,7 @@
     monthStrip: monthStrip,
     palette: palette,
     paletteNow: paletteNow,
+    contrastRatio: contrastRatio,
     paletteStyle: paletteStyle,
     geometry: { status: statusGeometry, strip: stripGeometry },
     mix: mix

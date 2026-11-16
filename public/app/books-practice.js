@@ -106,15 +106,19 @@
       return { kind: p[1], value: n, label: word + ': ' + n, key: p[0] };
     });
   }
+  /** the picture's colours for the theme on screen now (good / watch / bad have a dark set), measured by CBDraw itself; none when CBDraw cannot read the page */
+  function paletteHere() {
+    try { return root.CBDraw.paletteNow(null, root.document.getElementById('bp_practice') || root.document.documentElement); } catch (e) { return undefined; }
+  }
   function pictureHTML(shown) {
     var spec = PIC[shown.key];
     if (!spec || !root.CBDraw) return '';
     var parts = picParts(shown, spec);
     if (!parts.length) return '';
     var narrow = root.innerWidth && root.innerWidth <= 700;
-    var svg = root.CBDraw.statusBar(parts, { width: narrow ? 112 : 260, id: spec.id, tid: spec.id, title: tx(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
+    var svg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, title: tx(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
     var total = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
-    return '<div class="bp-pic" data-testid="practice-pic" data-pic="' + esc(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-testid="practice-pic-count">' + esc(spec.unit ? total + ' ' + tx(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
+    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + esc(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-testid="practice-pic-count">' + esc(spec.unit ? total + ' ' + tx(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
   }
   /* REP-66: the opened row's months. The server's year_end carries how many months of the year are locked (the Month lock page's one rule, locked oldest first), so the first `locked` squares are locked and the rest open: no second read, no count made here. */
   function monthWords(y) {
@@ -130,7 +134,7 @@
     var y = r.year_end, months = y && !y.first_year && y.of > 0 ? monthWords(y) : null;
     if (!months || !root.CBDraw) return '';
     var words = { locked: tx('locked'), open: tx('open'), running: tx('running') };
-    var svg = root.CBDraw.monthStrip(months, { id: 'bp-strip-' + String(r.entity_id).slice(0, 8), tid: 'practice-strip-' + r.entity_id, title: tx('Months locked'), words: words, labels: true });
+    var svg = root.CBDraw.monthStrip(months, { id: 'bp-strip-' + String(r.entity_id).slice(0, 8), tid: 'practice-strip-' + r.entity_id, title: tx('Months locked'), words: words, labels: true, palette: paletteHere() });
     return '<div class="bp-strip" data-testid="practice-strip-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-testid="practice-strip-count-' + esc(r.entity_id) + '">FY' + esc(String(y.fy).replace(/^dd(dd)/, '$1')) + ' · ' + esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of) + ' ' + esc(tx('months locked')) + '</span></div>';
   }
   function bandHTML(data) {
@@ -144,7 +148,7 @@
       return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(t.n) + '</b><span>' + esc(tx(STAGE_WORDS[t.key] ? stageWord(t.key) : def[0])) + '</span></button>';
     }).join('');
     var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
-    return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + pictureHTML(shown) + '</div>' + note + '</div>';
+    return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + '</div>' + note + '</div>';
   }
   function ruleHTML(rule) {
     return (
@@ -373,7 +377,7 @@
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
-      '.bp-pic{grid-column:span 2;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 6px;min-width:0}.bp-pic .sub{font-size:12px}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}@media(max-width:700px){.bp-pic{grid-column:span 1}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
+      '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
     root.document.head.appendChild(s);
   }
@@ -393,7 +397,7 @@
     var door = root.document.getElementById('bcd_card');
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
-      '<div class="bp-head"><h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' +
+      '<div class="bp-head"><h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + (bandShown(P.data) ? pictureHTML(bandShown(P.data)) : '') +
       (P.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') + '</div>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
       (P.data.truncated ? '<p class="sub">' + esc(tx('Some clients are not shown.')) + '</p>' : '') +
       '<div id="bp_list" data-testid="practice-list"></div>';
