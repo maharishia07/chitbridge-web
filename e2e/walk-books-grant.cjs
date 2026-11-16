@@ -160,7 +160,7 @@ W.run('books-grant', async (w) => {
 
   await w.step('A9', 'the auditor · Months: one lock line (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)); no month before Jul 2025 is listed', async () => {
     await page.selectOption(T('bv-tab-select'), 'periods'); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
-    const lines = await txt(T('bv-lock-lines')), list = await txt(T('bv-list'));
+    const lines = await page.getAttribute(T('bv-lock-lines'), 'data-full'), list = await txt(T('bv-list'));
     return { ok: /Books start Jul 2025/.test(lines) && /Locked to .*Jan.* 2026/.test(lines) && /Open: Feb 2026 \(gap\)/.test(lines) && !/2024/.test(list) && /July 2025/.test(list), saw: lines + ' | ' + list.slice(0, 80) };
   });
 
