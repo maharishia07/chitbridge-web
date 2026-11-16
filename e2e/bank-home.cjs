@@ -89,7 +89,7 @@ function stand() {
     await ctx.route('**/api/**', (r0) => { const r = C.wrap(r0);
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
-      if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: books.csStatus('AU', 'Australia') })); /* the shop's year and country, as the page reads them */
+      if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { fiscal_year: '2026-27', from: '2026-07-01', start_month: 7 }, country: books.csStatus('AU', 'Australia') })); /* the shop's year and country, as the page reads them */
       if (p === '/api/books/todo') return json(r, 200, []);
       if (p === '/api/books/accounts') return json(r, 200, { accounts: chart.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
