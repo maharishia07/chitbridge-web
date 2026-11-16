@@ -256,7 +256,7 @@ function stand() {
     const topId = await p.locator('[data-testid^="bank-stmts-file-"]').first().getAttribute('data-testid');
     ok(/stmt-1509-2026-10/.test(await p.locator('[data-testid^="bank-stmts-file-"]').first().textContent()), 'newest on top: the first row is ' + (await p.locator('[data-testid^="bank-stmts-file-"]').first().textContent()).replace(/\s+/g, ' ').slice(0, 80));
     ok(await fitsNow(), '1366: the files list open: no page scroll');
-    ok(await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'), r = n.getBoundingClientRect(); return r.bottom <= window.innerHeight; }), '1366: Previous and Next are on screen');
+    ok(await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'), r = n.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!hit && (hit === n || n.contains(hit)); }), '1366: Previous and Next are on screen');
     await shot2('14-files-1366.png');
     await p.focus('[data-testid="bank-stmts-next"]');
     await p.keyboard.press('Enter');
@@ -317,8 +317,8 @@ function stand() {
       return { two: b.top >= a.bottom - 1, icon: c.width >= 24 && c.height >= 24, label: !!r.getAttribute('aria-label'), clip: l2.scrollWidth > l2.clientWidth ? 'cut' : 'whole', text: l1.textContent.trim() + ' / ' + l2.textContent.trim() };
     });
     ok(card && card.two && card.icon && card.label, '390: each file is two lines, "Account · month" with Read and Download as icon presses (24 px or more, labelled): ' + (card && card.text));
-    const pg = await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'), m = document.querySelector('.main'); if (!n) return null; const r = n.getBoundingClientRect(), mm = m.getBoundingClientRect(); return { in: r.top >= mm.top && r.bottom <= mm.bottom + 1 && r.bottom <= window.innerHeight }; });
-    ok(pg && pg.in, '390: Previous and Next are on screen without scrolling the page');
+    const pg = await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'); if (!n) return null; const r = n.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), b = document.querySelector('.bkh-body').getBoundingClientRect(); return { in: !!hit && (hit === n || n.contains(hit)), r: [Math.round(r.top), Math.round(r.bottom)], body: [Math.round(b.top), Math.round(b.bottom)] }; });
+    ok(pg && pg.in, '390: Previous and Next are on screen without scrolling the page ' + JSON.stringify(pg));
     const head = (await p.textContent('[data-testid="bank-stmts-sum"]')).trim();
     ok(/^Oct ✓ · \d+ missing$/.test(head) && (await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-sum"]'); return n.scrollWidth <= n.clientWidth; })), '390: the header line reads whole, not clipped: "' + head + '"');
     await shot2('23-files-390.png');
