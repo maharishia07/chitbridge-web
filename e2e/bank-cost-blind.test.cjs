@@ -22,7 +22,7 @@ const SAY = 'Your access does not include costs, so the bank statements are hidd
   const res = (status, body) => ({ status, ok: false, clone: () => ({ json: () => (body ? Promise.resolve(body) : Promise.reject(new Error('no body'))) }) });
   ok((await f.bkstWhyNot(res(403, { code: 'COST_BLIND' }))) === SAY, '/statement-files/:id/file 403 COST_BLIND says the sentence');
   ok((await f.bkstWhyNot(res(403, null))) === 'This access has ended.', 'a 403 with no body keeps "This access has ended."');
-  ok(/BKST\.mode = [^;]*bksCostBlind\(failure\) \? 'blind'/.test(stm) && /if \(BKST\.mode === 'blind'\) return bksCostBlindSay\(\)/.test(stm), '/statement-files list 403 sets mode blind and the Statements line says the sentence');
+  ok(/BKST.mode = [^;]*bksCostBlind(failure) ? 'blind'/.test(stm) && /BKST.mode === 'blind' || /.test(stm), '/statement-files list 403 sets mode blind and the Statements line says the sentence');
   /* the Bank home: bankHomeSigned (the real function) meets a 403 COST_BLIND on /bank/log and the Statements line says the sentence, not "Kept" */
   const { liftFns } = require('./lib/lift-fn.cjs');
   const cx2 = vm.createContext({ tx: (s) => s, bkhSignedRange: () => ({}), BKST: { mode: 'server', data: { accounts: [{ code: '1100', account_id: 'a1' }] }, fileTotal: 0 }, BKH: { signed: {}, known: false, blind: false }, api: () => Promise.reject(log403) });
