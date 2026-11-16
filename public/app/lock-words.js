@@ -5,7 +5,7 @@
  * CALLED BY cap-books.js (Month lock) · books-grant-view.js (the auditor's Months) · loaded by accounts.html and network.html
  * FLOW      whoOf(row, state) → { line, note, all[] } · whyOf(row, 'lock'|'reopen', monthNames) → the sentence
  * ⭐ NOTHING IS RE-DERIVED: names, days and reasons are the server's rows; a month locked before the trail existed has only locked_at, so the line says "Locked · day" and leaves the name out rather than guess it.
- *   CBLockWords.eventWords · .whoOf · .whyOf
+ *   CBLockWords.eventWords · .whoOf · .whyOf · .stateWord
  * CARD      16-finance/month-lock
  */
 (function (root) {
@@ -15,14 +15,21 @@
     Object.keys(holes || {}).forEach(function (key) { text = text.split('{' + key + '}').join(holes[key]); });
     return text;
   }
+  /** E14: a lock's moment is read in the SHOP's day (helpers shopDay: the shop's zone), never cut to its UTC date, so a lock made at 05:30 on 17 Nov reads 17 Nov */
   function dayOf(iso) {
-    var day = String(iso || '').slice(0, 10);
-    if (!day) return '—';
+    var text = String(iso || '');
+    if (!text) return '—';
     try {
-      return root.CBLocale && root.CBLocale.date ? root.CBLocale.date(day) : day;
+      if (typeof root.shopDay === 'function') return root.shopDay(text);
+      return root.CBLocale && root.CBLocale.date ? root.CBLocale.date(text.slice(0, 10)) : text.slice(0, 10);
     } catch (_) {
-      return day;
+      return text.slice(0, 10);
     }
+  }
+  /** E13: ONE word per month state, from the server's state names (GET /periods status): the owner's Month lock page and the firm's Months say the same */
+  var STATE = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
+  function stateWord(status) {
+    return say(STATE[status] || String(status || ''));
   }
   /** one trail row → "Locked by Eastlake owner · 15 Nov 2026" · "Opened again by Pat Lee · 3 Oct 2026 · Why: late bill" · "Closed for good by … · …" */
   function eventWords(ev) {
@@ -52,5 +59,5 @@
     if (kind === 'lock') return say('Lock {month} first.', { month: name });
     return /closed for good/.test(part.why) ? say(part.why) : say('Open {month} first.', { month: name });
   }
-  root.CBLockWords = { eventWords: eventWords, whoOf: whoOf, whyOf: whyOf };
+  root.CBLockWords = { eventWords: eventWords, whoOf: whoOf, whyOf: whyOf, stateWord: stateWord };
 })(typeof window !== 'undefined' ? window : globalThis);

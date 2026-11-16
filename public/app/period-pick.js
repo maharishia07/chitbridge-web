@@ -1,7 +1,7 @@
 /**
  * period-pick.js — THE PERIOD CONTROL of a firm looking at a client's books (Athi 16 Nov: W8 year switch, W14 one dropdown instead of 24 month chips, W15/W17 open on the year under review).
  *
- * OWNS      the ONE period {fy, from, to}: its words in the address (?fy=2025-26 or ?from=…&to=…), the dropdown lines ("Sep 2025 · 40 entries · locked · 40/40 checked"), and the control itself (the library Select, ui-select.js)
+ * OWNS      the ONE period {fy, from, to}: its words in the address (?fy=2025-26 or ?from=…&to=…), the dropdown lines ("Sep 2025 · 40 entries · Locked · 40/40 checked"), and the control itself (the library Select, ui-select.js)
  * CALLED BY books-grant-view.js (the six reads of a client's books) · network-app.js (the address)
  * FLOW      GET /api/books/periods?marks=1 → { under_review, years, periods } → options → one pick → { fy, from, to } → every view reads it (tb: as at `to` · p&l, day book: from–to · bs, dues: as at `to`)
  * CARD      04-network/ACC-176-AUDITOR-GRANT
@@ -33,7 +33,10 @@
   function line(parts) {
     return parts.filter(Boolean).join(' · ');
   }
-  var LOCKED = { soft_locked: 1, hard_locked: 1 };
+  /** E13: the month's state in the SAME word as the Month lock page and the firm's Months (CBLockWords.stateWord, from the server's state names) */
+  function stateOf(status) {
+    return root.CBLockWords ? root.CBLockWords.stateWord(status) : tx(status === 'soft_locked' || status === 'hard_locked' ? 'Locked' : 'Open');
+  }
 
   /** the period named in an address (?fy= or ?from=&to=), or null: the page then opens on the year under review */
   function fromAddress(search) {
@@ -73,7 +76,7 @@
   }
   /** one line of the dropdown for a month: "Sep 2025 · 40 entries · locked · 40/40 checked" */
   function monthLine(p) {
-    return line([monthWord(String(p.start_date).slice(0, 10)), entriesWord(p.entries), tx(LOCKED[p.status] ? 'locked' : 'open'), checkedWord(p.checked, p.of)]);
+    return line([monthWord(String(p.start_date).slice(0, 10)), entriesWord(p.entries), stateOf(p.status), checkedWord(p.checked, p.of)]);
   }
   /** one line for a year: "FY 2025-26 · 1 Jul 2025 – 30 Jun 2026 · 480 entries · 12 of 12 months locked · 470/480 checked" */
   function yearLine(y) {

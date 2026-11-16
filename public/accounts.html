@@ -934,6 +934,20 @@ async function accBills(body) {
     const rows = await api('folderChits', { params: { id: cur.folder_id }, query: { state: 'open' } });
     /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
     const list = Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
+    /* E19 (decided by practice: Xero's Bills to pay reads the payables ledger): the figure and the rows come from the BOOKS, the one GET /dues Dues paints (nothing is added up from chits).
+       A party with an open bill CHIT keeps its chit rows (pay, open the chit); a party the books owe or are owed that holds no open chit is a row of its own ("In your books"), so a loader's or a move-in's bills show here as they do in Dues. */
+    const supplierSide = cur.code === 'B-2100',
+      owed = await api('booksDues', { query: { side: supplierSide ? 'supplier' : 'customer' } }).catch(() => null),
+      dueParties = ((owed && owed.parties) || []).filter((p) => Number(p.balance_minor) !== 0),
+      haveChit = new Set(list.map((c) => String(c.counterparty_name || '').trim().toLowerCase())),
+      bookRows = dueParties
+        .filter((p) => !haveChit.has(String(p.name || '').trim().toLowerCase()))
+        .map((p) => ({ chit_id: 'books-' + p.party_id, books: true, counterparty_name: p.name, currency: owed.currency, value: Math.abs(Number(p.balance_minor)) / Math.pow(10, bkDec(owed.currency)), created_at: p.oldest_due, bill: { label: tx('In your books') } })),
+      rowsAll = list.concat(bookRows),
+      booksSide = !list.length && dueParties.length ? { n: dueParties.length, minor: Math.abs(Number(owed.total_minor) || 0), cur: owed.currency, supplier: supplierSide } : null,
+      booksLine = dueParties.length
+        ? '<p data-testid="bills-books-total" style="margin:8px 0;color:var(--muted)">' + esc(bkMoney(Math.abs(Number(owed.total_minor) || 0), owed.currency) + ' ' + (supplierSide ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + dueParties.length + ')') + '</p>'
+        : '';
     const word = (f) => (f.code === 'B-2100' ? 'Received' : 'Issued');
     const tabs =
       '<div class="tabs" role="group">' +
@@ -945,12 +959,12 @@ async function accBills(body) {
         .join('') +
       '</div>';
     const by = (f, num) => (a, b) => (num ? f(a) - f(b) : String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true }));
-    body.innerHTML = tabs + '<div id="bkl_bills" data-testid="bills-list"></div>';
+    body.innerHTML = tabs + booksLine + '<div id="bkl_bills" data-testid="bills-list"></div>';
     CBList.reset('bills'); /* the Received and the Issued tab are two lists: a search or an open row does not carry across */
     CBList.mount($('bkl_bills'), {
       key: 'bills',
       t: tx,
-      rows: () => list,
+      rows: () => rowsAll,
       id: (c) => c.chit_id,
       columns: accBillCols(),
       rowTid: (c) => 'bill-' + c.chit_id,
@@ -958,7 +972,7 @@ async function accBills(body) {
          and the number is what a shopkeeper reads a bill by. Narrower containers still drop to cards (CBList). */
       defaultCols: ['who', 'no', 'amount', 'date', 'step'],
       /* a bill's row opens its sheet; its caret opens who took it and when */
-      onOpen: (c) => openChitSheet(c.chit_id),
+      onOpen: (c) => (c.books ? undefined : openChitSheet(c.chit_id)),
       search: (c) => [c.counterparty_name, c.bill_no, c.manual_subject, c.auto_subject, (c.bill || {}).label, c.value].join(' '),
       sorts: [
         { key: 'date', label: tx('Newest first'), cmp: (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')) },
@@ -968,7 +982,9 @@ async function accBills(body) {
         { key: 'step', label: tx('Step'), cmp: by((c) => (c.bill || {}).label || '') }
       ],
       next: accBillNext,
-      empty: { title: tx('Nothing open') }
+      empty: booksSide
+        ? { title: tx('No bill chits are open'), sub: ' ' + bkMoney(booksSide.minor, booksSide.cur) + ' ' + (booksSide.supplier ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + booksSide.n + '). ' + tx('See') + ' ' + tx(booksSide.supplier ? 'Payables' : 'Receivables') + '.' }
+        : { title: tx('Nothing open') }
     });
   } catch (e) {
     body.innerHTML = bkErr(e);

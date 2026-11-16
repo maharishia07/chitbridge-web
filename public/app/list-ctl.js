@@ -1172,12 +1172,17 @@
       return I.r.filt[item.key];
     });
   }
+  /* E15: a row flagged _total is a total line the page appends (Who owes whom, the trial balance), not an item: "n shown" never counts it */
+  function itemCount(rows) {
+    return (rows || []).filter(function (row) { return !(row && row._total); }).length;
+  }
   function countText(I, m) {
-    var t = T(I, '{n} shown', { n: m.rows.length });
+    var shown = itemCount(m.rows);
+    var t = T(I, '{n} shown', { n: shown });
     if (remote(I)) {
       var tot = val(I.o.remote.total);
-      if (tot != null && tot !== m.rows.length) t += ' ' + T(I, 'of') + ' ' + tot;
-    } else if (m.rows.length !== m.all.length) t += ' ' + T(I, 'of') + ' ' + m.all.length;
+      if (tot != null && tot !== shown) t += ' ' + T(I, 'of') + ' ' + tot;
+    } else if (shown !== itemCount(m.all)) t += ' ' + T(I, 'of') + ' ' + itemCount(m.all);
     return t;
   }
   /* ── ⚑ NEEDS YOU (W15-116 / W15-117) — ONE toggle for every list, FIRST in the toolbar (left of the search), and the stepper that walks what it holds ──

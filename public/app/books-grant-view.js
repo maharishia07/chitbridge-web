@@ -41,13 +41,12 @@
   ];
 
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
-  var MONTH_STATE = { open: 'Open', soft_locked: 'Closed', hard_locked: 'Closed for good' };
   function monthRows(answer) {
     var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
     return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
-      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
+      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: root.CBLockWords ? root.CBLockWords.stateWord(p.status) : words(p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
     });
   }
   /** W20: the balance sheet's profit line is the profit of the period it is read at: "Profit 1 Jul 2025 – 30 Jun 2026", not a bare "Profit for the year" (api fy_from and the as-at day) */
@@ -145,6 +144,16 @@
       var named = root.CBPeriodPick.filled(viewState.period, a), review = a && a.under_review;
       usePeriod(named || (review ? { kind: 'year', fy: review.fy, from: review.from, to: review.to } : null)); /* W15/W17: the year under review, never "this month" or "as at today" */
     }, function () { viewState.choices = null; usePeriod(viewState.period && viewState.period.from ? viewState.period : null); });
+  }
+  /** E16: a mark changes the dropdown's "checked n/m" lines too: the choices are read again (the server's own counts, the same GET /periods?marks=1) and the slot repainted, the period kept */
+  function rereadChoices() {
+    if (!alive() || !viewState.choices) return;
+    root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { query: { marks: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) {
+      if (!alive() || !a) return;
+      viewState.choices = a;
+      var report = current();
+      if (report) fillPeriodSlot(report);
+    }, function () { /* the lines stay as they were; the next open reads them fresh */ });
   }
   /** the period control mounts into the named slot of the header line (CBBooksActing.periodSlot, W19): ONE function, ONE call in paint(); moving it is changing that call. Nothing in a refused or Actions screen. */
   function fillPeriodSlot(report) {
@@ -247,7 +256,8 @@
     return !isAdviser() && !viewState.why ? '<button data-cbsid="NET005-B02" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
   }
   function openBank() {
-    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank'));
+    var report = viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (viewState.period ? root.CBPeriodPick.toAddress(viewState.period) : ''); /* E10: the screen and the period ride to Bank and back */
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
   }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {
@@ -340,6 +350,7 @@
   }
   /** a mark set anywhere repaints the bar's count and, when All queries is open, its list */
   function onMarkChange() {
+    rereadChoices();
     if (!markBar) return;
     markBar.refresh().then(function () { if (viewState.queriesOnly) paintList(current()); });
   }
@@ -425,6 +436,11 @@
   function duesVoice(client) {
     return client ? { customer: words('Customers owe') + ' ' + client, supplier: client + ' ' + words('owes suppliers') } : { customer: words('Customers owe you'), supplier: words('You owe suppliers') };
   }
+  /** E15: the empty side of Who owes whom in the reader's voice, as the owner's own Dues says it ("Nobody owes you money" · "You owe nobody") */
+  function duesNobody(client, who) {
+    if (who === 'customer') return client ? words('Nobody owes') + ' ' + client : words('Nobody owes you money');
+    return client ? client + ' ' + words('owes nobody') : words('You owe nobody');
+  }
   /** the aged figures of one row (the server's follow_up, days past due) as the table's columns */
   function agedRow(row) {
     var fu = row.follow_up || {};
@@ -440,9 +456,11 @@
     var all = report.rows(viewState.answer || {}), voice = duesVoice(viewState.o && viewState.o.member && viewState.o.member.name), totals = (viewState.answer && viewState.answer.aged_totals) || {};
     host.innerHTML = '<h3 class="sub" data-testid="bv-dues-customers-head">' + esc(voice.customer) + '</h3><div id="bv_dues_c" data-testid="bv-dues-customers"></div><h3 class="sub" data-testid="bv-dues-suppliers-head">' + esc(voice.supplier) + '</h3><div id="bv_dues_s" data-testid="bv-dues-suppliers"></div>';
     ['customer', 'supplier'].forEach(function (who) {
-      var rows = all.filter(function (row) { return row.side === who; }).map(agedRow).concat(agedTotalRow(who, totals[who])).map(function (row, n) { return Object.assign({ _n: n }, row); });
+      var parties = all.filter(function (row) { return row.side === who; }).map(agedRow); /* E15: the server drops a party with nothing open; a side with no party is an empty sentence, never a lone Total row */
+      var rows = (parties.length ? parties.concat(agedTotalRow(who, totals[who])) : []).map(function (row, n) { return Object.assign({ _n: n }, row); });
       var config = listConfig(report, rows);
       config.key = 'books-grant-dues-' + who;
+      config.empty = { title: duesNobody(viewState.o && viewState.o.member && viewState.o.member.name, who) };
       viewState.o.mountList($(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), Object.assign({ foldHead: true }, config));
     });
   }

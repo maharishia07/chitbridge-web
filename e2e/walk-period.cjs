@@ -3,7 +3,7 @@
  * e2e/walk-period.cjs — THE PERIOD CONTROL of a firm viewing a client's books (Athi 16 Nov: W8 · W14 · W15 · W17 · W18 · W20), on a MOCKED api.
  *
  * OWNS      the proof that ONE dropdown in the header line picks the year or a month for every read: the page opens on the year under review (FY 2025-26 on Seed E), each line says
- *           "Sep 2025 · 40 entries · locked · 40/40 checked", the trial balance reads 'as at the year end', the P&L says "For 1 Jul 2025 – 30 Jun 2026" with a gross profit line, the Day book opens on
+ *           "Sep 2025 · 40 entries · Locked · 40/40 checked", the trial balance reads 'as at the year end', the P&L says "For 1 Jul 2025 – 30 Jun 2026" with a gross profit line, the Day book opens on
  *           the year, Who owes whom and Months follow it, the address carries &fy= (Back keeps it), switching the year moves every view. Fit at 1366x768 and 390x844 with no sideways scroll.
  * CALLED BY e2e/run-shard.cjs (walk-*.cjs) · the PR's CI walk
  * CARD      04-network/ACC-176-AUDITOR-GRANT
@@ -78,10 +78,10 @@ W.run('period', async (w) => {
     const dq = lastCall('/api/books/daybook'), where = await page.$eval(T('bv-period-slot'), (el) => el.closest('[data-testid="bv-band"]') !== null);
     return { ok: (await picked()) === 'y:2025-26' && dq.get('from') === '2025-07-01' && dq.get('to') === '2026-06-30' && where, saw: 'value ' + (await picked()) + ' · daybook ' + dq.get('from') + ' – ' + dq.get('to') + ' · in the header line ' + where };
   });
-  await w.step('P2', 'ONE dropdown replaces the month chips: each line says its state, e.g. "Sep 2025 · 40 entries · locked · 40/40 checked"; the year lines sit in the same list', async () => {
+  await w.step('P2', 'ONE dropdown replaces the month chips: each line says its state, e.g. "Sep 2025 · 40 entries · Locked · 40/40 checked"; the year lines sit in the same list', async () => {
     const lines = (await page.$$eval('#bv_period option', (os) => os.map((o) => o.textContent))).map(flat);
     const chips = await page.locator('[data-month]').count();
-    return { ok: lines.includes('Sep 2025 · 40 entries · locked · 40/40 checked') && lines.includes('Oct 2025 · 30 entries · locked · 12/30 checked') && lines.some((l) => /^FY 2025-26 · .*2025 – .*2026 · 70 entries · 12 of 12 months locked · 52\/70 checked$/.test(l)) && chips === 0, saw: lines.join(' | ') + ' · chips ' + chips };
+    return { ok: lines.includes('Sep 2025 · 40 entries · Locked · 40/40 checked') && lines.includes('Oct 2025 · 30 entries · Locked · 12/30 checked') && lines.some((l) => /^FY 2025-26 · .*2025 – .*2026 · 70 entries · 12 of 12 months locked · 52\/70 checked$/.test(l)) && chips === 0, saw: lines.join(' | ') + ' · chips ' + chips };
   });
   await w.step('P3', 'Trial balance: "As at" the year end (30 Jun 2026), not today', async () => {
     await tab('tb', T('bv-asat'));
@@ -98,10 +98,11 @@ W.run('period', async (w) => {
     const q = lastCall('/api/books/bs'), rows = await txt(T('bv-list'));
     return { ok: q.get('asOf') === '2026-06-30' && /Profit .*2025.*–.*2026/.test(rows) && !/Net profit/.test(rows), saw: 'asOf ' + q.get('asOf') + ' · ' + rows.slice(0, 120) };
   });
-  await w.step('P6', 'Who owes whom reads as at the year end; Months lists the months of the chosen year only', async () => {
+  await w.step('P6', 'Who owes whom reads as at the year end (capped at the shop day, E1); Months lists the months of the chosen year only', async () => {
     await tab('dues'); const d = lastCall('/api/books/dues');
     await tab('periods', T('bv-row-0')); const rows = await txt(T('bv-list'));
-    return { ok: d.get('asOf') === '2026-06-30' && /September 2025/.test(rows) && /October 2025/.test(rows) && !/March 2025/.test(rows), saw: 'dues asOf ' + d.get('asOf') + ' · ' + rows.slice(0, 120) };
+    const asOf = ['2026-06-30', new Date().toISOString().slice(0, 10)].sort()[0]; /* E1: the as-at is the earlier of the year end and the shop day, so a year still in progress is read as at today, never a future day */
+    return { ok: d.get('asOf') === asOf && /September 2025/.test(rows) && /October 2025/.test(rows) && !/March 2025/.test(rows), saw: 'dues asOf ' + d.get('asOf') + ' · ' + rows.slice(0, 120) };
   });
   await w.step('P7', 'the address carries the period (?fy=2025-26); switching the year moves EVERY view (fy=2024-25 in the address, the Day book, P&L, trial balance and dues read the other year)', async () => {
     const before = page.url();

@@ -96,8 +96,14 @@
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + (doing ? '&prepare=' + doing : '') + '#/daybook';
   }
   /** W15-71: the auditor's way to the client's Bank (and Month lock) on the books page: the same page, the auditor's seat, read only */
-  function auditAddressOf(store, tab) {
-    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=auditor#/' + (tab || 'bank');
+  function auditAddressOf(store, tab, carry) {
+    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=auditor' + (carry || '') + '#/' + (tab || 'bank');
+  }
+  /** E10: the screen and the period the firm was reading ride the address to Bank and back (&view= and &fy= or &from=&to=), so the way back returns to the same year, not the year under review */
+  function carriedOf(search) {
+    var query = new root.URLSearchParams(search || ''), out = '';
+    ['view', 'fy', 'from', 'to'].forEach(function (key) { if (query.get(key)) out += '&' + key + '=' + encodeURIComponent(query.get(key)); });
+    return out;
   }
   /** read the store from the page address: a page opened with ?acting=<store> works in that store's books; null when it carries none.
    * &role=auditor|adviser names the seat; with no &role (a typed, pasted or deep-linked address) the seat is the one the grant gives (confirmGrant). The address never grants anything. */
@@ -210,15 +216,15 @@
     );
   }
   /** l16 R4-2b: the client's books page (one level above a screen of the client's books): the network page opened on that client; the practice list is Home */
-  function clientAddress(store) {
-    return '/network.html?open=' + encodeURIComponent(store.id);
+  function clientAddress(store, carry) {
+    return '/network.html?open=' + encodeURIComponent(store.id) + (carry || '');
   }
   /** the breadcrumb on every client screen: Clients › <client> › <screen>. Clients leaves the client (to the practice list, Home); the client name is a link on a screen of the books, plain on the client's own page */
   function crumbs(screen, onScreen) {
     var who = esc(context.store.name || '');
     return (
       '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" title="' + who + (screen ? ' › ' + esc(screen) : '') + '"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
-      (onScreen ? '<a href="' + esc(clientAddress(context.store)) + '" data-testid="crumb-client">' + who + '</a>' : '<span data-testid="crumb-client">' + who + '</span>') +
+      (onScreen ? '<a href="' + esc(clientAddress(context.store, carriedOf(root.location.search))) + '" data-testid="crumb-client">' + who + '</a>' : '<span data-testid="crumb-client">' + who + '</span>') +
       (screen ? ' <span aria-hidden="true">›</span> <span id="ba_screen" aria-current="page" data-testid="crumb-screen">' + esc(screen) + '</span>' : '') + '</nav>'
     );
   }
@@ -312,7 +318,7 @@
     band.innerHTML = banner(undefined, labelOf ? labelOf((root.location.hash || '').replace(/^#[/]?/, '').split('/')[0]) : '', true);
     if (context.role === 'auditor') band.setAttribute('data-readonly', 'true');
     shell.parentNode.insertBefore(band, shell.nextSibling);
-    wireBanner(band, { onBack: function () { root.location.assign(clientAddress(context.store)); } });
+    wireBanner(band, { onBack: function () { root.location.assign(clientAddress(context.store, carriedOf(root.location.search))); } });
     if (/[?&]prepare=journal/.test(root.location.search)) openSheet({ kind: 'journal' });
   }
   /** the role a held grant gives on one store: an adviser grant acts, anything else reads */
@@ -354,5 +360,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: css, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: css, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);
