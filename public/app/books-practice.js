@@ -138,7 +138,19 @@
   }
   function checkedCell(r) {
     var e = r.year_end && r.year_end.entries;
-    return e ? esc(e.checked) + '/' + esc(e.of) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
+  /** W3 (Athi, 16 Nov): the Checked cell says the share WITH the counts, so a big book's 50% pending is not read like a small one's; the share rounds DOWN and is never 100% unless every entry is checked */
+  function checkedWords(e) {
+    if (!e) return '—';
+    if (!(e.of > 0)) return tx('No entries');
+    if (e.checked >= e.of) return tx('All') + ' ' + e.of + ' ' + tx('checked');
+    return Math.min(99, Math.floor((e.checked * 100) / e.of)) + '% · ' + e.checked + ' ' + tx('of') + ' ' + e.of;
+  }
+  /** entries still to check: the cell's sort, largest first (a client with no figure sorts last) */
+  function checkedLeft(r) {
+    var e = r.year_end && r.year_end.entries;
+    return e ? e.of - e.checked : -1;
+  }
+    return e ? esc(checkedWords(e)) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
   function detailHTML(r) {
@@ -192,7 +204,7 @@
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
       num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
       num('yend', 'Year end', 150, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
-      num('checked', 'Checked ' + yearLabel(), 110, checkedCell, function (r) { var e = r.year_end && r.year_end.entries; return e ? e.checked / (e.of || 1) : -1; }, { prio: 1 }),
+      num('checked', 'Checked ' + yearLabel(), 110, checkedCell, checkedLeft, { prio: 1, dir0: -1 }),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
       num('margin', 'Margin', 80, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
@@ -210,7 +222,7 @@
       by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
       by('queries', function (r) { return r.queries.open; }, 'Queries open'),
       by('bas', function (r) { return r.bas.due_date || '9999'; }, 'Return due'),
-      by('checked', function (r) { var e = r.year_end && r.year_end.entries; return e ? e.of - e.checked : -1; }, 'Entries left to check (year end)'),
+      by('checked', checkedLeft, 'Entries left to check (year end)'),
       by('yend', function (r) { return r.year_end ? r.year_end.locked : -1; }, 'Months locked (year end)'),
       by('unlocked', function (r) { return r.months_unlocked; }, 'Months not locked'),
       by('sales', function (r) { return r.health.sales_trend_pct; }, 'Sales vs 3-month average'),
@@ -225,7 +237,7 @@
     var f = function (key, label, options, match) { return { key: key, label: tx(label), all: tx('All'), options: options.map(function (o) { return { v: o[0], label: tx(o[1]) }; }), match: match }; };
     return [
       f('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
-      f('stage', 'Year end', [['books_in', 'Books in'], ['complete', 'Complete'], ['checked', 'Checked'], ['ready', 'Ready to file'], ['lodged', 'Marked lodged']], function (r, v) { return (r.stages_reached || []).indexOf(v) >= 0; }),
+      f('stage', 'Year end', [['books_in', 'Books in'], ['complete', 'Complete'], ['checked', 'Checked'], ['ready', 'Ready to file'], ['lodged', 'Marked lodged']], function (r, v) { return r.stage === v; }),
       f('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
       f('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
       f('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
@@ -417,5 +429,5 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start };
+  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: checkedWords, checkedLeft: checkedLeft };
 })(typeof window !== 'undefined' ? window : globalThis);
