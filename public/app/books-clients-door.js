@@ -65,7 +65,7 @@
       seen.token = t;
       seen.count = 0;
       /* l16 firmhome: the practice read comes first; a firm's Home draws the practice section, not this card, so the grants list is not asked for it (one call less per Home load) */
-      var practice = new root.Promise(function (go) { root.setTimeout(go, 0); }).then(function () { return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled(3000) : true; });
+      var practice = new root.Promise(function (go) { root.setTimeout(go, 0); }).then(function () { return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled() : true; });
       practice.then(function () {
         if (root.CBPractice && root.CBPractice.hasData()) return;
         return root.CBBooksGrantApi.held(call).then(function (held) { seen.count = Object.keys(held).length; tick(); });

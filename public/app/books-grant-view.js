@@ -18,6 +18,9 @@
   'use strict';
   var viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null, mk: null };
   /** where a reviewer lands: the auditor on the Day book (the entries are the job), the adviser on the trial balance */
+  function viewKnown(k) {
+    return k === ACTIONS || REPORTS.some(function (r) { return r.k === k; });
+  }
   function homeOf(options) {
     return options && options.member && options.member.role === 'adviser' ? 'tb' : 'daybook';
   }
@@ -149,6 +152,7 @@
     viewState.range = { from: m.from, to: m.to };
     viewState.day = '';
     viewState.report = 'daybook';
+    tell();
     reload();
   }
   /** GET /periods names no currency: a month's sales would print as a dash. The store's currency is learned once from the Day book's own answer (the period it opens on) */
@@ -207,11 +211,21 @@
   }
   /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
   function band() {
-    if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores);
+    if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores, screenName(), false);
     return (
-      '<div class="bv-band" role="status" data-testid="bv-band"><b>' + esc(words('Viewing')) + ' ' + esc(viewState.o.member.name) + ' — ' + esc(words('read only')) + '</b>' +
-      '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(words('Back to My network')) + '</button></div>'
+      '<div class="bv-band" role="status" data-testid="bv-band">' + root.CBBooksActing.crumbs(screenName(), false) + '<b>' + esc(words('Viewing')) + ' ' + esc(viewState.o.member.name) + ' — ' + esc(words('read only')) + '</b>' +
+      '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(words('Clients')) + '</button></div>'
     );
+  }
+  /** the name of the screen on show, for the breadcrumb */
+  function screenName() {
+    if (onActions()) return words('Queues');
+    var r = REPORTS.filter(function (x) { return x.k === viewState.report; })[0];
+    return r ? words(r.label) : '';
+  }
+  /** l16 R4-2b: a screen of the client's books is a history entry: the page is told (onView) so Back and Forward can restore it */
+  function tell() {
+    if (viewState.o.onView) viewState.o.onView(viewState.report);
   }
   function wireBand() {
     var back = function () { root.CBBooksActing.leave(); viewState.o.onBack(); };
@@ -234,6 +248,7 @@
     Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-report]'), function (button) {
       button.onclick = function () {
         viewState.report = button.getAttribute('data-report');
+        tell();
         reload().then(function () {
           $('bv_tab_' + viewState.report).focus();
         });
@@ -416,13 +431,19 @@
     head.focus();
   }
   function mount(host, options) {
-    viewState = { host: host, o: options, report: homeOf(options), day: '', answer: null, why: null, mk: null };
+    viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null };
     newMarks();
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
     Promise.resolve(reload()).then(focusHeading, focusHeading);
     return {
+      /** Back or Forward to another screen of this client's books */
+      setView: function (report) {
+        if (!viewKnown(report) || report === viewState.report) return;
+        viewState.report = report;
+        reload();
+      },
       destroy: function () {
         host.innerHTML = '';
       }

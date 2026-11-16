@@ -150,12 +150,20 @@
     var to = esc(tx('to')) + ' ' + esc(day(b.reconciled_to));
     return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + esc(r.entity_id) + '">' + esc(bankLeft(r)) + ' ' + esc(tx('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : esc(tx('Reconciled')) + ' <span class="sub">' + to + '</span>';
   }
+  /** l16 R4-2b: the client this person worked on last (set when a client's books are entered, books-acting.js): its row is marked, in view and focused when the list comes back */
+  function lastClient() {
+    try { return root.sessionStorage.getItem('cb_last_client') || ''; } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:last', failure); return ''; }
+  }
+  function isLast(r) {
+    var last = lastClient();
+    return !!last && String(r.entity_id) === last;
+  }
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
       return Object.assign({ key: key, label: tx(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', cell: function (r) { return r.name || r.entity_id.slice(0, 8); }, value: function (r) { return r.name || ''; } },
+      { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return esc(r.name || r.entity_id.slice(0, 8)) + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
       num('status', 'Status', 180, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
@@ -227,8 +235,13 @@
       key: 'practice-clients', t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
       columns: columns(), defaultCols: ['name', 'status', 'role', 'bank', 'queries', 'bas', 'checked', 'sales', 'look', 'books'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
-      empty: { title: tx('No clients match') }
+      empty: { title: tx('No clients match') },
+      rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
     });
+    if (!P.marked && lastClient()) {
+      P.marked = true;
+      root.setTimeout(function () { if (P.list && P.list.mark) P.list.mark(lastClient()); }, 0);
+    }
     host.onclick = function (ev) {
       var button = ev.target.closest && ev.target.closest('[data-bp-open]');
       if (button) openBooks(button.getAttribute('data-bp-open'));
@@ -242,6 +255,7 @@
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(2,1fr)}.bp-tile{padding:6px 8px}}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
+      '.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-clear{margin-inline-start:8px}';
     root.document.head.appendChild(s);
@@ -257,6 +271,7 @@
       section.setAttribute('data-testid', 'practice');
       areas.parentNode.insertBefore(section, areas);
     }
+    dropWaiting();
     var door = root.document.getElementById('bcd_card');
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
@@ -281,9 +296,39 @@
      they wait for the one practice read (at most `ms`) and then know which Home they are on. Never rejects. */
   var settleNow = null,
     settledOnce = new root.Promise(function (go) { settleNow = go; });
-  function settle() { if (settleNow) settleNow(true); }
+  function settle() { P.pending = false; dropWaiting(); if (settleNow) settleNow(true); }
+  /* l16 R4-2: the wait is for the ANSWER, not for 3 s. A practice answer held past 3 s used to let Home decide "not a firm": the auditor saw the shop Home and the page asked 31 calls against a budget of 8. The ceiling is
+     only a hang-guard (a read that never returns); a slow answer shows the loading frame (drawWaiting) and Home waits for it. */
+  var SETTLE_CEILING = 25000;
   function settled(ms) {
-    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(go, ms || 3000, false); })]);
+    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(go, ms || SETTLE_CEILING, false); })]);
+  }
+  /** what the last answer said (a firm or not), kept per browser only to word the loading frame; the page never decides from it */
+  function hint(set) {
+    try {
+      if (set !== undefined) root.localStorage.setItem('cb_practice_hint', set ? '1' : '0');
+      return root.localStorage.getItem('cb_practice_hint') === '1';
+    } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('practice:hint', failure);
+      return false;
+    }
+  }
+  function dropWaiting() {
+    var w = root.document.getElementById('bp_wait');
+    if (w && w.parentNode) w.parentNode.removeChild(w);
+  }
+  /** the practice frame while the one practice read is still out (after 0.8 s): a heading and a loading line, replaced by the practice when it answers, removed when it says there is none */
+  function drawWaiting() {
+    var areas = root.document.querySelector('[data-testid="shell-areas"]');
+    if (!areas || root.document.getElementById('bp_wait') || root.document.getElementById('bp_practice')) return;
+    var w = root.document.createElement('section');
+    w.id = 'bp_wait';
+    w.setAttribute('data-testid', 'practice-loading');
+    w.setAttribute('role', 'status');
+    w.setAttribute('aria-live', 'polite');
+    w.style.margin = '0 0 16px';
+    w.innerHTML = (hint() ? '<h2 style="margin:0 0 6px;font-size:18px">' + esc(tx('Your practice')) + '</h2>' : '') + '<p class="sub">' + esc(tx('Loading')) + '</p>';
+    areas.parentNode.insertBefore(w, areas);
   }
   function tick() {
     var t = token();
@@ -292,14 +337,18 @@
       P.token = t;
       P.data = null;
       P.drawn = false;
+      P.pending = true;
+      P.since = Date.now();
       read().then(function (answer) {
-        if (!answer || !answer.clients || !answer.clients.length) return settle();
+        if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
         P.data = answer;
+        hint(answer.own_trade === false);
         root.dispatchEvent(new root.Event('cb-practice'));
         settle();
         tick();
       }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); settle(); });
     } else if (P.data && !root.document.getElementById('bp_practice')) draw();
+    else if (P.pending && !P.data && Date.now() - P.since > 800) drawWaiting();
   }
   function start() {
     tick();

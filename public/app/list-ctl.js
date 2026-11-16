@@ -434,6 +434,22 @@
           filt: JSON.parse(JSON.stringify(R.filt))
         };
       },
+      /* mark(id) — l16 R4-2b: the row the person last worked on is highlighted, brought into view (the page of rows is widened if it lies past it) and takes keyboard focus; false when no such row */
+      mark: function (id) {
+        var rowId = String(id),
+          at = '[data-row="' + cssId(rowId) + '"]';
+        R.hl = rowId;
+        paintAll(I);
+        if (!el.querySelector(at)) {
+          I.limit = Math.max(I.limit || 50, allRows(I).length);
+          paintAll(I);
+        }
+        var node = el.querySelector(at);
+        if (!node) return false;
+        if (node.scrollIntoView) node.scrollIntoView({ block: 'center' });
+        node.focus();
+        return true;
+      },
       /* open(id, on) — a page opens (or closes, on === false) one row's next level itself: the call desk's Next moves to the row that follows (W1-CRM) */
       open: function (id, on) {
         var rowId = String(id);

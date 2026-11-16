@@ -88,6 +88,7 @@
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
     factsFailed: 'Could not read',
+    backToClients: 'Back to Clients',
     skip: 'Skip to content',
     state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' },
     setUp: 'Set up',
@@ -209,6 +210,7 @@
     '.cbsh-mark{width:28px;height:28px;border-radius:8px;background:var(--sh-green);color:var(--sh-on);display:grid;place-items:center;font-size:13px;font-weight:700;flex:0 0 auto}',
     '.cbsh-who{display:flex;align-items:center;gap:8px;border:0;background:none;padding:4px 9px;border-radius:8px;min-width:0}',
     '.cbsh-who:hover,.cbsh-hdr.open .cbsh-who{background:var(--sh-panel)}',
+    '.cbsh-working{display:inline-flex;align-items:center;flex:0 1 auto;min-width:96px;max-width:44%;min-height:44px;padding:0 10px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:13px;text-decoration:none;white-space:nowrap}.cbsh-working b{overflow:hidden;text-overflow:ellipsis;font-weight:700}@media(max-width:700px){.cbsh-working{max-width:52%}}',
     '.cbsh-who b{font-family:"Bricolage Grotesque",sans-serif;font-size:16px;font-weight:800;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.cbsh-who .chev{color:var(--sh-muted);font-size:10px;transition:transform .14s}',
     '.cbsh-hdr.open .cbsh-who .chev{transform:rotate(180deg)}',
@@ -1386,7 +1388,7 @@
     }
     /* the practice read comes first (books-practice.js settled): a firm's Home hides the shop cards and asks only for the cards it draws */
     function practiceFirst() {
-      return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled(3000) : root.Promise.resolve();
+      return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled() : root.Promise.resolve();
     }
     function isFirm() {
       return !!(root.CBPractice && root.CBPractice.isFirm && root.CBPractice.isFirm());
@@ -1788,10 +1790,35 @@
           root.CBShortcuts.mount(shell);
         });
       });
+    paintWorking();
     return shell;
   }
 
+  /* l16 R4-2b: the client being worked on is in the header, marked, with one press back to Clients (the practice list on Home). The books-acting unit names it (enter / leave); the bar is the shell's own, so no second header is built. */
+  var working = null;
+  function paintWorking() {
+    var bar = doc.querySelector('.cbsh-bar'),
+      old = doc.querySelector('[data-testid="shell-working"]');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    if (!bar || !working) return;
+    var link = doc.createElement('a');
+    link.className = 'cbsh-working';
+    link.href = '/';
+    link.setAttribute('data-cbsid', 'CMP033-B01');
+    link.setAttribute('data-testid', 'shell-working');
+    link.setAttribute('aria-label', working + '. ' + W.backToClients);
+    link.title = W.backToClients;
+    link.innerHTML = '<b>' + esc(working) + '</b><span aria-hidden="true">&nbsp;✕</span>';
+    var grow = bar.querySelector('.cbsh-grow');
+    bar.insertBefore(link, grow || null);
+    if (typeof stampMounts === 'function') stampMounts(link.parentNode);
+  }
+  function setWorking(name) {
+    working = name || null;
+    paintWorking();
+  }
   root.CBShell = {
+    setWorking: setWorking,
     mount: mount,
     apiBase: apiBase,
     WORDS: W,

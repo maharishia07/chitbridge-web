@@ -358,6 +358,8 @@
     N.held[id] = N.seats[id][preset];
     try { root.localStorage.setItem(SEAT_KEY + id, preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
     N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: N.held[id].posting };
+    if (!N.popping) N.view = '';
+    record(!!N.popping);
     paint();
   }
   function openSeat(id, name) {
@@ -365,6 +367,8 @@
     var saved = rememberedSeat(id);
     if (!(seats.auditor && seats.adviser)) {
       N.opened = { id: id, name: name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
+      if (!N.popping) N.view = '';
+      record(!!N.popping);
       paint();
     } else if (seats[saved]) sitAs(id, name, saved);
     else {
@@ -377,8 +381,43 @@
       });
     }
   }
+  /* ── l16 R4-2b: the client is in the address (?open=<client>&view=<screen>): every open client and every screen of its books is a history entry (pushState), Back and Forward restore it, and the page never falls back to the network list ── */
+  function addressOfClient(id, view) {
+    return '/network.html?open=' + encodeURIComponent(id) + (view ? '&view=' + encodeURIComponent(view) : '');
+  }
+  /** record the client now open (or the list, id null) in history: push a new entry (replace: the one the address already names, on a deep link or a restore) */
+  function record(replace, view) {
+    if (!root.history || !root.history.pushState) return;
+    var url = N.opened ? addressOfClient(N.opened.id, view != null ? view : N.view) : '/network.html';
+    if (root.location.pathname + root.location.search === url) return;
+    try {
+      root.history[replace ? 'replaceState' : 'pushState']({ cbClient: N.opened ? N.opened.id : null }, '', url);
+      if (!replace) N.pushed = (N.pushed || 0) + 1;
+    } catch (failure) { if (root.cbQuiet) root.cbQuiet('network:history', failure); }
+  }
+  /** Back or Forward: the address names the client and the screen; restore them (the seat chosen for that client is remembered), re-reading nothing the page already holds */
+  function onPop() {
+    var query = new root.URLSearchParams(root.location.search), id = query.get('open'), view = query.get('view') || '';
+    if (!N.el || !N.held) return;
+    if (!id || !N.held[id]) {
+      if (N.opened) { N.opened = null; N.view = ''; paint(); }
+      return;
+    }
+    if (N.opened && N.opened.id === id && N.handle) {
+      N.view = view;
+      if (view) N.handle.setView(view);
+      else N.handle.setView(N.homeView || '');
+      return;
+    }
+    N.view = view;
+    N.popping = true;
+    openSeat(id, N.held[id].grantor_name || T('this store'));
+    N.popping = false;
+  }
   function paintOpened(host) {
-    root.CBBooksGrantView.mount(host, {
+    N.handle = root.CBBooksGrantView.mount(host, {
+      view: N.view || undefined,
+      onView: function (report) { N.view = report; record(false, report); },
       call: call,
       raw: function (path, headers) { return root.fetch((N.o.base || '') + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + N.o.token }, headers || {}) }); } /* a file: the same token and base as call, the answer left as bytes (cap-evidence.js) */,
       member: N.opened,
@@ -387,11 +426,9 @@
       onEnded: N.o.onEnded,
       onSwitch: function (id, name) { openSeat(id, (N.held[id] && N.held[id].grantor_name) || name); },
       onBack: function () {
-        var id = N.opened.id;
-        N.opened = null;
-        paint();
-        var back = $('nw_books_' + id);
-        if (back) back.focus();
+        /* the client's own page goes up one level to the practice list: the entry this visit pushed is stepped back over; a page opened straight on the client goes to Home */
+        if (N.pushed && root.history.length > 1) root.history.back();
+        else root.location.assign('/');
       }
     });
   }
@@ -670,7 +707,10 @@
     try { id = new root.URLSearchParams(root.location.search).get('open'); } catch (failure) { if (root.cbQuiet) root.cbQuiet('network:open', failure); }
     if (!id || N.openedFromLink === id || !N.held[id]) return;
     N.openedFromLink = id;
+    N.view = new root.URLSearchParams(root.location.search).get('view') || '';
+    N.popping = true; /* the address already names this client: no new history entry */
     openSeat(id, N.held[id].grantor_name || T('this store'));
+    N.popping = false;
   }
   function reload() {
     return load().then(paint, paintFail);
@@ -686,6 +726,7 @@
     N.el = el;
     N.o = o || {};
     if (N.o.tab) N.tab = N.o.tab;
+    if (!N.popBound && root.addEventListener) { N.popBound = true; root.addEventListener('popstate', onPop); }
     start();
     return { reload: reload, go: go };
   }

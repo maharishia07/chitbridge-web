@@ -756,6 +756,7 @@ document.getElementById('acc_sheet').addEventListener('click', (e) => {
 /* ── which view, and its chrome ── */
 /** the PAGE the address names: the first segment of the # (`#bank/B-1100/2026-03` is the Bank page; the rest belongs to that page, cap-bank-home.js bankHomeRoute reads it) */
 const hashPageOf = () => (location.hash || '').replace(/^#\/?/, '').split('/')[0];
+let chromeSeen = false;
 function chrome(view) {
   const nav = NAV.find((item) => item[0] === view) || NAV[0];
   if (window.CBScreenId) CBScreenId.here('accounts', nav[0]); /* SCREEN-ID: the view on show is the screen the chip names */
@@ -768,7 +769,13 @@ function chrome(view) {
   $('summary').textContent = '';
   try {
     /* the page's own deep address (#bank/<account>/<month>) stays through the first paint, so a reload or a bookmark reopens it (cap-bank-home bankHomeDeepOnce); a press on the menu after that names the page alone */
-    if (hashPageOf() !== nav[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) history.replaceState(null, '', '#' + nav[0]);
+    if (hashPageOf() !== nav[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) {
+      /* l16 R4-2b: inside a client's books each screen is a real history entry (Back steps through the screens, never out to the network); the first paint and the shop owner's own pages replace as before */
+      const inClient = chromeSeen && window.CBBooksActing && CBBooksActing.current() && CBBooksActing.current().role !== 'owner' && hashPageOf() !== nav[0];
+      history[inClient ? 'pushState' : 'replaceState'](null, '', '#' + nav[0]);
+    }
+    chromeSeen = true;
+    if (window.CBBooksActing) CBBooksActing.setScreen(nav[1]);
   } catch (_) {}
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
@@ -1220,7 +1227,7 @@ async function start() {
   }
   if (!ON) return offCard();
   const first = hashPageOf();
-  show(NAV.some((item) => item[0] === first) ? first : CBBooksActing.firstTab()); CBBooksActing.startPage($, enOpen, SESSION.currency); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
+  show(NAV.some((item) => item[0] === first) ? first : CBBooksActing.firstTab()); CBBooksActing.startPage($, enOpen, SESSION.currency, (tab) => ((NAV.find((item) => item[0] === tab) || NAV.find((item) => item[0] === CBBooksActing.firstTab()) || [])[1]) || ''); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
 }
 
 /* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */

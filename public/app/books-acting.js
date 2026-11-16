@@ -33,14 +33,21 @@
     });
   }
   /** work in this store's books as this role ('adviser' · 'auditor' · 'owner'); another store than the one in hand clears everything of the first, first */
+  /** the header names the client being worked on (shell.js setWorking); nothing for the owner's own books */
+  function showWorking() {
+    if (root.CBShell && root.CBShell.setWorking) root.CBShell.setWorking(context && context.role !== 'owner' && context.store.name ? context.store.name : null);
+  }
   function enter(store, role, posting) {
     if (context && String(context.store.id) !== String(store.id)) clearAll();
+    try { root.sessionStorage.setItem('cb_last_client', String(store.id)); } catch (failure) { if (root.cbQuiet) root.cbQuiet('acting:last', failure); }
     context = { store: { id: String(store.id), name: store.name }, role: role, posting: posting || '', currency: context && context.store.id === String(store.id) ? context.currency : '' };
+    showWorking();
     return context;
   }
   function leave() {
     clearAll();
     context = null;
+    showWorking();
   }
   function current() {
     return context;
@@ -128,6 +135,7 @@
       context.role = role;
       context.store.name = grant.grantor_name || root.CBBooksGrantApi.withHeld([], heldBy, words)[0].name;
       context.posting = grant.posting || '';
+      showWorking();
       return true;
     });
   }
@@ -199,12 +207,34 @@
       }).join('') + '</select>'
     );
   }
-  /** the banner's markup: who this is for, in which currency, a way to another store (when the firm holds more than one) and the way back */
-  function banner(stores) {
+  /** l16 R4-2b: the client's books page (one level above a screen of the client's books): the network page opened on that client; the practice list is Home */
+  function clientAddress(store) {
+    return '/network.html?open=' + encodeURIComponent(store.id);
+  }
+  /** the breadcrumb on every client screen: Clients › <client> › <screen>. Clients leaves the client (to the practice list, Home); the client name is a link on a screen of the books, plain on the client's own page */
+  function crumbs(screen, onScreen) {
+    var who = esc(context.store.name || '');
+    return (
+      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" style="flex:1 0 100%;font-size:13px"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
+      (onScreen ? '<a href="' + esc(clientAddress(context.store)) + '" data-testid="crumb-client">' + who + '</a>' : '<span data-testid="crumb-client">' + who + '</span>') +
+      (screen ? ' <span aria-hidden="true">›</span> <span id="ba_screen" aria-current="page" data-testid="crumb-screen">' + esc(screen) + '</span>' : '') + '</nav>'
+    );
+  }
+  /** the screen's name in the breadcrumb, when the screen changes without a repaint of the band */
+  function setScreen(label) {
+    var node = root.document.getElementById('ba_screen');
+    if (node && label) node.textContent = label;
+  }
+  /** the band's one way back goes up ONE level: from a screen of the books to the client's page, from the client's page to the practice list */
+  function backLabel(onScreen) {
+    return onScreen ? (context.store.name || words('Clients')) : words('Clients');
+  }
+  /** the banner's markup: who this is for, in which currency, a way to another store (when the firm holds more than one), the breadcrumb and the way back one level (screen: the screen's name; onScreen: this is a screen of the books page, not the client's own page) */
+  function banner(stores, screen, onScreen) {
     if (!context) return '';
     return (
-      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band"><b>' + (context.role === 'auditor' ? esc(words('Viewing')) + ' ' + esc(context.store.name) + ' — ' + esc(words('read only')) : esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '')) + '</b>' +
-      '<span class="ba-tools">' + switchBox(stores) + '<button data-cbsid="NET006-B01" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(words('Back to My network')) + '</button></span></div>'
+      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + '<b>' + (context.role === 'auditor' ? esc(words('Viewing')) + ' ' + esc(context.store.name) + ' — ' + esc(words('read only')) : esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '')) + '</b>' +
+      '<span class="ba-tools">' + switchBox(stores) + '<button data-cbsid="NET006-B01" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(backLabel(onScreen)) + '</button></span></div>'
     );
   }
   /** wire the banner just drawn in `host`: Back, and the switch (a different store is entered, which clears the first one's drafts and caches, then the page repaints) */
@@ -247,17 +277,17 @@
     acts.innerHTML = done;
   }
   /** a page opened to act for a store (accounts.html): the frozen banner under the header, the way back, and, when asked (?prepare=journal), the journal sheet that PREPARES; byId is the page's element finder, openSheet its entry opener, currency the shop's */
-  function startPage(byId, openSheet, currency) {
+  function startPage(byId, openSheet, currency, labelOf) {
     if (!context) return;
     setCurrency(currency);
     var shell = byId('shell');
     var band = root.document.createElement('div');
     band.id = 'acting-band';
     band.setAttribute('data-testid', 'acting-band');
-    band.innerHTML = banner();
+    band.innerHTML = banner(undefined, labelOf ? labelOf((root.location.hash || '').replace(/^#[/]?/, '').split('/')[0]) : '', true);
     if (context.role === 'auditor') band.setAttribute('data-readonly', 'true');
     shell.parentNode.insertBefore(band, shell.nextSibling);
-    wireBanner(band, { onBack: function () { root.location.assign('/network.html'); } });
+    wireBanner(band, { onBack: function () { root.location.assign(clientAddress(context.store)); } });
     if (/[?&]prepare=journal/.test(root.location.search)) openSheet({ kind: 'journal' });
   }
   /** the role a held grant gives on one store: an adviser grant acts, anything else reads */
@@ -299,5 +329,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);
