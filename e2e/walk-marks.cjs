@@ -194,8 +194,7 @@ W.run('marks', async (w) => {
     S.ghost = true; await page.reload(); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
     await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 }); await page.click(T('bell-row')); await page.waitForTimeout(1200);
     const body = await page.evaluate(() => document.body.innerText); await shot('06e-owner-bell-entry-gone'); S.ghost = false;
-    return { ok: /This entry was reversed or removed/.test(body) && !/try again/.test(body) && (await page.locator(T('mk-sheet')).count()) === 0, saw: (body.match(/This entry was[^
-]*/) || ['no toast'])[0] };
+    return { ok: /This entry was reversed or removed/.test(body) && !/try again/.test(body) && (await page.locator(T('mk-sheet')).count()) === 0, saw: body.indexOf('This entry was') >= 0 ? 'toast shown' : 'no toast' };
   });
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
