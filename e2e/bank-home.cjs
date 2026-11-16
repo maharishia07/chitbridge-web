@@ -259,7 +259,7 @@ function stand() {
     await shot2('14-files-1366.png');
     await p.focus('[data-testid="bank-stmts-next"]');
     await p.keyboard.press('Enter');
-    await p.waitForFunction(() => /26–50 of/.test((document.querySelector('[data-testid="bank-stmts-pageof"]') || {}).textContent || ''));
+    await p.waitForFunction(() => /26–41 of 41/.test((document.querySelector('[data-testid="bank-stmts-pageof"]') || {}).textContent || ''));
     ok(S2.reqs.some((r) => /after=/.test(r.u)), 'keyboard: Next reads the next page from the server (a cursor, not a skip count)');
     await p.focus('[data-testid="bank-stmts-prev"]');
     await p.keyboard.press('Enter');
