@@ -66,6 +66,15 @@ details th:first-child,details td:first-child{text-align:start}
 .tbl tr[data-k]{cursor:pointer}
 .tbl tr.on td{font-weight:700;background:color-mix(in srgb,var(--ink) 8%,var(--card))}
 .pass{color:var(--ok);font-weight:700}.fb{color:var(--prog);font-weight:700}
+.shapes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.shapes figure{margin:0;text-align:center}
+.shapes figcaption{font-size:12px;color:var(--grey);margin-top:2px}
+.lg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 18px;margin-top:8px;font-size:13px}
+.lg div{display:grid;grid-template-columns:14px 1fr auto auto;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:3px 0}
+.lg i{width:14px;height:14px;border-radius:3px}
+.lg .n{font-variant-numeric:tabular-nums;text-align:end}.lg .p{font-weight:700;min-width:44px;text-align:end;font-variant-numeric:tabular-nums}
+.two{display:grid;grid-template-columns:minmax(200px,300px) 1fr;gap:16px;align-items:center}
+@media (max-width:760px){.shapes{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
 .foot{font-size:12px;color:var(--grey);margin-top:12px}
 @media (max-width:760px){.grid{grid-template-columns:1fr}}
 </style>
@@ -76,7 +85,7 @@ details th:first-child,details td:first-child{text-align:start}
   <p class="lead">A throwaway page, not product. The numbers are fixed samples. Pick a theme (the avatar's own) and a colour combination; each chart carries its legend. Combinations are ranked: the top 6 come first.</p>
   <div class="lab">Colour combination</div>
   <div class="themes" id="combos" role="group" aria-label="Colour combination"></div>
-  <label class="raw"><input type="checkbox" id="raw"> Show the raw colours even where a mark is under 3 to 1 (to judge the look; not the rule)</label>
+  <label class="raw"><input type="checkbox" id="raw"> Readability: hold every mark to 3 to 1 against the page, and fall back to the IBCS grey where a combination fails (off = the vibrant colours as published; your choice is remembered in this browser)</label>
   <div class="lab">Theme</div>
   <div class="themes" id="themes" role="group" aria-label="Theme"></div>
   <div class="status" id="status" aria-live="polite"></div>
@@ -93,6 +102,15 @@ details th:first-child,details td:first-child{text-align:start}
       <p class="sub">Expected balance each day, thousands. The lowest day is marked.</p>
       <div class="key" id="k3"></div>
       <div id="c3"></div><details><summary>Table</summary><div id="d3"></div></details></section>
+    <section class="card wide" aria-labelledby="t4"><h2 id="t4">Sales by category, five ways <span class="sample">Sample</span></h2>
+      <p class="sub">Thousands, largest first from 12 o'clock; slices under 3% fold into Other. Pie, donut, donut with the total, half-donut, then the stacked bar as the easier-to-read alternative.</p>
+      <div class="shapes"><figure><div id="p1"></div><figcaption>Pie</figcaption></figure><figure><div id="p2"></div><figcaption>Donut</figcaption></figure><figure><div id="p3"></div><figcaption>Donut with the total</figcaption></figure><figure><div id="p4"></div><figcaption>Half-donut</figcaption></figure></div>
+      <div class="lg" id="lg1"></div>
+      <div class="sub" style="margin-top:10px">The readable alternative: one bar, 100%</div><div id="sb1"></div></section>
+    <section class="card wide" aria-labelledby="t5"><h2 id="t5">To collect, by age, as a donut <span class="sample">Sample</span></h2>
+      <p class="sub">Five groups, calm to warm as the days grow. The same figures as the ranked bars above.</p>
+      <div class="two"><div id="p5"></div><div><div class="lg" id="lg2"></div></div></div>
+      <div class="sub" style="margin-top:10px">As one 100% bar</div><div id="sb2"></div></section>
   </div>
 
   <h3>Power BI comparison: the visuals a finance dashboard uses, and what we cover</h3>
@@ -120,16 +138,16 @@ details th:first-child,details td:first-child{text-align:start}
 
   /* the published palettes (sources in the header comment). Red-led entries are left out of every set. */
   var PUB = {
-    okabe: { name: 'Okabe-Ito', act: '#0072B2', prev: '#E69F00', acc: '#009E73', ramp: ['#0072B2', '#56B4E9', '#009E73', '#F0E442', '#E69F00'] },
-    tableau: { name: 'Tableau colour-blind', act: '#006BA4', prev: '#FF800E', acc: '#C85200', ramp: ['#006BA4', '#5F9ED1', '#FFBC79', '#FF800E', '#C85200'] },
-    classic: { name: 'Tableau classic', act: '#4e79a7', prev: '#f28e2c', acc: '#59a14f', ramp: ['#4e79a7', '#76b7b2', '#59a14f', '#edc949', '#f28e2c'] },
-    carbon: { name: 'IBM Carbon', act: '#6929c4', prev: '#1192e8', acc: '#005d5d', ramp: ['#005d5d', '#1192e8', '#6929c4', '#b28600', '#8a3800'] },
+    okabe: { name: 'Okabe-Ito', act: '#0072B2', prev: '#E69F00', acc: '#009E73', ramp: ['#0072B2', '#56B4E9', '#009E73', '#F0E442', '#E69F00'], more: ['#CC79A7'] },
+    tableau: { name: 'Tableau colour-blind', act: '#006BA4', prev: '#FF800E', acc: '#C85200', ramp: ['#006BA4', '#5F9ED1', '#FFBC79', '#FF800E', '#C85200'], more: ['#A2C8EC'] },
+    classic: { name: 'Tableau classic', act: '#4e79a7', prev: '#f28e2c', acc: '#59a14f', ramp: ['#4e79a7', '#76b7b2', '#59a14f', '#edc949', '#f28e2c'], more: ['#af7aa1'] },
+    carbon: { name: 'IBM Carbon', act: '#6929c4', prev: '#1192e8', acc: '#005d5d', ramp: ['#005d5d', '#1192e8', '#6929c4', '#b28600', '#8a3800'], more: ['#9f1853'] },
     tealpink: { name: 'Teal and pink, colour-blind safe', act: '#074650', prev: '#009292', acc: '#480091', ramp: ['#074650', '#009292', '#6db6ff', '#fe6db6', '#914800'] },
     coolblue: { name: 'Cool blues to lime', act: '#4584D3', prev: '#31B6FD', acc: '#4C45D3', ramp: ['#4584D3', '#5BD0B0', '#5BD078', '#A5D028', '#F5C040'] },
-    set2: { name: 'Brewer Set2 pastel', act: '#66c2a5', prev: '#fc8d62', acc: '#8da0cb', ramp: ['#8da0cb', '#66c2a5', '#a6d854', '#ffd92f', '#fc8d62'] },
-    dark2: { name: 'Brewer Dark2', act: '#1b9e77', prev: '#d95f02', acc: '#7570b3', ramp: ['#7570b3', '#1b9e77', '#66a61e', '#e6ab02', '#d95f02'] },
+    set2: { name: 'Brewer Set2 pastel', act: '#66c2a5', prev: '#fc8d62', acc: '#8da0cb', ramp: ['#8da0cb', '#66c2a5', '#a6d854', '#ffd92f', '#fc8d62'], more: ['#e78ac3'] },
+    dark2: { name: 'Brewer Dark2', act: '#1b9e77', prev: '#d95f02', acc: '#7570b3', ramp: ['#7570b3', '#1b9e77', '#66a61e', '#e6ab02', '#d95f02'], more: ['#e7298a'] },
     paired: { name: 'Brewer Paired', act: '#1f78b4', prev: '#a6cee3', acc: '#6a3d9a', ramp: ['#1f78b4', '#a6cee3', '#33a02c', '#fdbf6f', '#ff7f00'] },
-    viridis: { name: 'Viridis', act: '#3b518b', prev: '#5cc863', acc: '#21908d', ramp: ['#440154', '#3b518b', '#21908d', '#5cc863', '#fde725'] }
+    viridis: { name: 'Viridis', act: '#3b518b', prev: '#5cc863', acc: '#21908d', ramp: ['#440154', '#3b518b', '#21908d', '#5cc863', '#fde725'], pie: ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'] }
   };
   var IDS = ['tint', 'ibcs'].concat(Object.keys(PUB));
   var NAME = { tint: 'Theme tint', ibcs: 'IBCS grey' };
@@ -174,11 +192,20 @@ details th:first-child,details td:first-child{text-align:start}
     var p = 30; for (; p <= 100; p += 5) { if (ratio(mix(t.acc, t.page, p / 100), t.page) >= NEED) break; }
     return { act: t.acc, prev: mix(t.acc, t.page, p / 100), acc: t.ink, ramp: [0, 0.2, 0.4, 0.6, 0.8].map(function (w) { return mix(t.prog, t.acc, w); }), note: 'previous = ' + p + '% accent' };
   }
+  /* the six slice colours: the set's own, distinct (a published viridis list is used as published) */
+  function pieOf(s) {
+    if (s.pie) return s.pie;
+    var seen = {}, out = [];
+    [s.act, s.prev, s.acc].concat(s.ramp, s.more || []).forEach(function (c) { var key = rgb(c).join(); if (!seen[key]) { seen[key] = 1; out.push(c); } });
+    return out.slice(0, 6);
+  }
   function build(t, id) {
     var set = id === 'tint' ? tint(t) : id === 'ibcs' ? ibcs(t) : JSON.parse(JSON.stringify(PUB[id])), lo = 99;
-    [set.act, set.prev, set.acc].concat(set.ramp).forEach(function (c) { lo = Math.min(lo, ratio(c, t.page)); });
+    set.pie = pieOf(set);
+    set.pie.concat([set.act, set.prev, set.acc]).concat(set.ramp).forEach(function (c) { lo = Math.min(lo, ratio(c, t.page)); });
     var ok = lo >= NEED;
-    return { id: id, set: set, lo: r2(lo), ok: ok, used: ok ? set : ibcs(t) };
+    var used = ok ? set : ibcs(t); used.pie = used.pie || pieOf(used);
+    return { id: id, set: set, lo: r2(lo), ok: ok, used: used };
   }
 
   var ALL = {}, RES = {};
@@ -189,7 +216,8 @@ details th:first-child,details td:first-child{text-align:start}
 
   var q = function (n) { return (location.search.match(new RegExp(n + '=([\\w]+)')) || [])[1]; };
   var curK = ALL[q('theme')] ? q('theme') : 'cream', curC = (q('combo') && NAME[q('combo')]) ? q('combo') : ORDER[0];
-  var rawBox = document.getElementById('raw'); rawBox.checked = q('raw') === '1';
+  var rawBox = document.getElementById('raw'), SKEY = 'chart-sample-readability';
+  try { rawBox.checked = q('strict') === '1' || (q('strict') !== '0' && localStorage.getItem(SKEY) === '1'); } catch (_) { rawBox.checked = q('strict') === '1'; }
 
   /* ---------- sample data (fixed) ---------- */
   var MON = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
@@ -245,7 +273,51 @@ details th:first-child,details td:first-child{text-align:start}
     document.getElementById('k3').innerHTML = '<span><i class="ln" style="background:var(--c-act)"></i>Cash balance</span><span><i class="dot" style="background:var(--c-acc)"></i>Lowest day</span>';
     document.getElementById('d3').innerHTML = tbl(['Day', 'Balance'], CASH.map(function (v, i) { return [i + 1, v + (i === lo ? ' (lowest)' : '')]; }));
   }
-  function draw() { chart1(); chart2(); chart3(); }
+  var CUR = null;
+  /* sales by category: the raw list; slices under 3% fold into Other, the rest ordered largest first, Other last */
+  var CAT_RAW = [['Groceries', 400], ['Dairy', 260], ['Beverages', 180], ['Snacks', 140], ['Personal care', 90], ['Stationery', 14], ['Toys', 9]];
+  function fold(list) {
+    var total = list.reduce(function (a, r) { return a + r[1]; }, 0), big = list.filter(function (r) { return r[1] / total >= 0.03; }).sort(function (a, b) { return b[1] - a[1]; }), rest = list.filter(function (r) { return r[1] / total < 0.03; }).reduce(function (a, r) { return a + r[1]; }, 0);
+    if (rest) big.push(['Other', rest]);
+    return { total: total, items: big.map(function (r) { return { name: r[0], v: r[1], f: r[1] / total }; }) };
+  }
+  function pct(f) { return (f * 100).toFixed(1) + '%'; }
+  function textOn(c) { return ratio(c, '#ffffff') >= ratio(c, '#000000') ? '#ffffff' : '#000000'; }
+  function pt(cx, cy, r, a) { return [cx + r * Math.sin(a), cy - r * Math.cos(a)]; }
+  /* one pie or donut; o: inner (0 = pie, else a share of the radius), half, centre */
+  function pie(id, data, cols, o) {
+    var w = Math.min(width(id), 270), r1 = w / 2 - 4, r0 = r1 * (o.inner || 0), h = o.half ? r1 + 30 : w, cx = w / 2, cy = o.half ? r1 + 4 : w / 2, a = o.half ? -Math.PI / 2 : 0, span = o.half ? Math.PI : 2 * Math.PI;
+    var s = svg(w, h, o.label);
+    data.items.forEach(function (it, i) {
+      var a0 = a, a1 = a + it.f * span, large = a1 - a0 > Math.PI ? 1 : 0, p0 = pt(cx, cy, r1, a0), p1 = pt(cx, cy, r1, a1), q0 = pt(cx, cy, r0, a1), q1 = pt(cx, cy, r0, a0), d;
+      d = r0 ? 'M' + p0 + ' A' + r1 + ',' + r1 + ' 0 ' + large + ' 1 ' + p1 + ' L' + q0 + ' A' + r0 + ',' + r0 + ' 0 ' + large + ' 0 ' + q1 + ' Z' : 'M' + cx + ',' + cy + ' L' + p0 + ' A' + r1 + ',' + r1 + ' 0 ' + large + ' 1 ' + p1 + ' Z';
+      s.appendChild(el('path', { d: d, fill: cols[i], stroke: 'var(--card)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+      if (it.f >= (o.inner ? 0.09 : 0.07)) { var m = pt(cx, cy, r0 ? (r0 + r1) / 2 : r1 * 0.62, (a0 + a1) / 2); s.appendChild(el('text', { x: m[0], y: m[1] + 4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: textOn(cols[i]) }, Math.round(it.f * 100) + '%')); }
+      a = a1;
+    });
+    if (o.centre) { s.appendChild(el('text', { x: cx, y: cy + (o.half ? -2 : 2), 'text-anchor': 'middle', 'font-size': 20, 'font-weight': 700, fill: 'var(--ink)' }, data.total)); s.appendChild(el('text', { x: cx, y: cy + (o.half ? 14 : 18), 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--grey)' }, 'Total, thousands')); }
+    put(id, s);
+  }
+  function legend(id, data, cols) { document.getElementById(id).innerHTML = data.items.map(function (it, i) { return '<div><i style="background:' + cols[i] + '"></i><span>' + it.name + '</span><span class="n">' + it.v + '</span><span class="p">' + pct(it.f) + '</span></div>'; }).join(''); }
+  function bar100(id, data, cols) {
+    var w = width(id), s = svg(w, 44, 'Sample 100 percent bar'), x = 0;
+    data.items.forEach(function (it, i) {
+      var sw = it.f * w; s.appendChild(el('rect', { x: x, y: 4, width: sw, height: 34, fill: cols[i], stroke: 'var(--card)', 'stroke-width': 2.5 }));
+      if (sw >= 38) s.appendChild(el('text', { x: x + sw / 2, y: 26, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: textOn(cols[i]) }, Math.round(it.f * 100) + '%'));
+      x += sw;
+    });
+    put(id, s);
+  }
+  function pies() {
+    var cat = fold(CAT_RAW), cc = CUR.pie, ac = [0, 1, 2, 3, 4].map(function (i) { return CUR.ramp[i]; });
+    pie('p1', cat, cc, { label: 'Sample sales by category as a pie' }); pie('p2', cat, cc, { inner: 0.55, label: 'Sample sales by category as a donut' });
+    pie('p3', cat, cc, { inner: 0.6, centre: 1, label: 'Sample sales by category as a donut with the total' }); pie('p4', cat, cc, { inner: 0.55, half: 1, centre: 1, label: 'Sample sales by category as a half-donut' });
+    legend('lg1', cat, cc); bar100('sb1', cat, cc);
+    /* age keeps its own order (calm to warm by days), not largest first */
+    var o = fold(AGE.map(function (r) { return [r[0], r[1]]; })); o.items = AGE.map(function (r) { return { name: r[0], v: r[1], f: r[1] / o.total }; });
+    pie('p5', o, ac, { inner: 0.6, centre: 1, label: 'Sample amounts to collect by age as a donut' }); legend('lg2', o, ac); bar100('sb2', o, ac);
+  }
+  function draw() { chart1(); chart2(); chart3(); pies(); }
 
   /* ---------- switchers ---------- */
   var tb = document.getElementById('themes'), cb = document.getElementById('combos');
@@ -255,7 +327,7 @@ details th:first-child,details td:first-child{text-align:start}
     var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-c', id);
     b.innerHTML = '<span class="rk">' + (n + 1) + '</span>' + NAME[id]; b.onclick = function () { curC = id; refresh(); }; cb.appendChild(b);
   });
-  rawBox.onchange = refresh;
+  rawBox.onchange = function () { try { localStorage.setItem(SKEY, rawBox.checked ? '1' : '0'); } catch (_) {} refresh(); };
 
   /* ---------- tables ---------- */
   var rt = document.querySelector('#rank thead'), rb = document.querySelector('#rank tbody');
@@ -294,15 +366,16 @@ details th:first-child,details td:first-child{text-align:start}
   document.querySelector('#pbi tbody').innerHTML = PBI.map(function (r) { return '<tr><td class="t">' + r[0] + '</td><td class="t">' + r[1] + '</td><td class="t">' + r[2] + '</td></tr>'; }).join('');
 
   function refresh() {
-    var t = ALL[curK], r = RES[curK][curC], raw = rawBox.checked, use = (r.ok || raw) ? r.set : r.used;
+    var t = ALL[curK], r = RES[curK][curC], strict = rawBox.checked, use = (r.ok || !strict) ? r.set : r.used;
     CBAvatar.applyWith({ theme: curK });
     stage.style.setProperty('--c-act', use.act); stage.style.setProperty('--c-prev', use.prev); stage.style.setProperty('--c-acc', use.acc);
     use.ramp.forEach(function (c, i) { stage.style.setProperty('--c-r' + i, c); });
+    CUR = use;
     document.querySelectorAll('#themes button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === curK)); });
     document.querySelectorAll('#combos button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-c') === curC)); });
     document.querySelectorAll('#tbl tr[data-k]').forEach(function (x) { x.className = x.getAttribute('data-k') === curK ? 'on' : ''; });
     document.getElementById('status').innerHTML = '<b>' + t.name + ' with ' + NAME[curC] + '</b> (rank ' + (ORDER.indexOf(curC) + 1) + '): lowest series mark ' + r.lo.toFixed(2) + ' against the page. ' +
-      (r.ok ? '<b class="pass">Holds (3 to 1).</b> ' + (r.set.note || '') : raw ? '<b class="fb">Raw colours shown; under 3 to 1, so the rule would use the IBCS grey here.</b>' : '<b class="fb">Under 3 to 1: falls back to IBCS grey for this theme.</b>');
+      (r.ok ? '<b class="pass">Holds (3 to 1).</b> ' + (r.set.note || '') : !strict ? '<b class="fb">Vibrant colours shown; Readability would use the IBCS grey here.</b>' : '<b class="fb">Under 3 to 1: falls back to IBCS grey for this theme.</b>');
     draw();
   }
   var tmr; window.addEventListener('resize', function () { clearTimeout(tmr); tmr = setTimeout(draw, 120); });
