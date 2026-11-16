@@ -178,15 +178,34 @@ function bankSuggest(list, countryCode) {
 }
 /** licence: the tax id, India's PAN / AU's ACN, the standard licence rows, then the rest (India-only ids dropped elsewhere) */
 function licenceSuggest(list, countryCode, words) {
-  var isIndia = countryCode === 'IN',
-    panRows = list.filter(function (x) {
-      return x[1] === 'pan';
-    }); /* India's second id comes from the one list above, never a second literal */
-  var secondId = isIndia ? panRows : countryCode === 'AU' ? [['ACN', 'acn']] : [];
+  /* ACC-352: the second ids and the country's own licence rows are the PACK's (tax.registrationForm) — India's PAN, IEC · LUT · AD code; Australia's ACN — never a country test here.
+     A row another country's pack names as ITS own (an extraId) is dropped unless this pack names it; the list's own row (its words) is used when it has the tag. */
+  var form = shopRegForm(countryCode);
+  var secondId = form.secondIds.map(function (pair) {
+    return list.filter(function (x) { return x[1] === pair[1]; })[0] || pair;
+  });
+  var foreign = otherTags(form, 'extraIds');
   var rest = list.filter(function (x) {
-    return ['gstin', 'pan'].indexOf(x[1]) < 0 && (isIndia || ['iec', 'lut', 'ad_code'].indexOf(x[1]) < 0);
+    return ['gstin', 'pan'].indexOf(x[1]) < 0 && foreign.indexOf(x[1]) < 0;
   });
   return [[words.gstin, 'gstin']].concat(secondId, LICENCE_ROWS, rest);
+}
+/** the pack's registration form for a country (tax.registrationForm), else the neutral one: no second id, no extras */
+function shopRegForm(countryCode) {
+  var pack = typeof shopReg === 'function' ? shopReg(countryCode) : null,
+    form = pack && pack.tax && pack.tax.registrationForm;
+  return form || { schemes: ['regular'], idCheck: null, secondIds: [], extraIds: [], hintTags: [], railReturn: false };
+}
+/** the tags (of the form's list `key`: extraIds · hintTags) some OTHER registered pack calls its own and this one does not */
+function otherTags(form, key) {
+  var all = [];
+  try {
+    (window.CBRegulation ? CBRegulation.list() : []).forEach(function (pack) {
+      var f = pack && pack.tax && pack.tax.registrationForm;
+      ((f && f[key]) || []).forEach(function (tag) { if (all.indexOf(tag) < 0) all.push(tag); });
+    });
+  } catch (_) {}
+  return all.filter(function (tag) { return (form[key] || []).indexOf(tag) < 0; });
 }
 var SUGGEST_BY_TYPE = { identity: identitySuggest, bank: bankSuggest, licence: licenceSuggest };
 /** W23: a licence's standard rows — name · number · issuer · valid until — offered first in every country */
@@ -363,7 +382,7 @@ function vaultSectionHTML(sec, i) {
 }
 /** W19: a row's value hint by tag — India's 15-character GSTIN hint only on an Indian shop */
 function vaultRowHint(tag) {
-  return tag === 'gstin' && shopCc() !== 'IN' ? '' : VAULT_HINT[tag] || '';
+  return otherTags(shopRegForm(shopCc()), 'hintTags').indexOf(tag) >= 0 ? '' : VAULT_HINT[tag] || ''; /* ACC-352: a tag's length hint shows where the shop's pack names it (India's GSTIN) */
 }
 /** the name box's placeholder: "detail name — e.g." the section's first suggestion in the shop's own words */
 function vaultNamePlaceholder(type) {

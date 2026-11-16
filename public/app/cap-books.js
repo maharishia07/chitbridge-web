@@ -826,8 +826,8 @@ var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'TRN', 'ABN', 'VAT', 'TIN', 'CIN', 'UD
     under India's pack or none known. STD2: the pack's word is helpers.js taxIdWord (the one reader), not a second `p.abn ?` here */
 function bkTaxSchemes(t) {
   var p = (typeof shopReg === 'function' && shopReg()) || null,
-    w = p ? taxIdWord() : '',
-    list = w && TAX_SCHEMES.indexOf(w) >= 0 && w !== TAX_SCHEMES[0] ? [w, 'TIN', 'VAT'] : TAX_SCHEMES;
+    form = p && p.tax && p.tax.registrationForm,
+    list = form && form.partyIds ? form.partyIds : TAX_SCHEMES; /* ACC-352: the schemes a party may carry are the shop's PACK's (tax.registrationForm.partyIds); no pack = every scheme the server takes */
   return t && t.scheme && list.indexOf(t.scheme) < 0 ? [t.scheme].concat(list) : list;
 }
 function partyRowOf(kind, partyId) {
@@ -4767,14 +4767,25 @@ function bkBsDate() {
   bkTab('bs');
 }
 /** a side of the balance sheet: the pack's own chart heads, each with its ledgers and a subtotal, then the side's carried total */
-function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom) {
+/* l16-country: the words of a term group — the server sends 'current' | 'non_current' | 'unclassified' from the shop's own pack (never typed here per country) */
+var BK_TERM_WORDS = {
+  assets: { current: 'Current assets', non_current: 'Non-current assets', unclassified: 'Not classified' },
+  liabilities: { current: 'Current liabilities', non_current: 'Non-current liabilities', unclassified: 'Not classified' }
+};
+/** does the server's term grouping of a side say anything: at least one group the pack classed current or non-current (else the side keeps the pack's chart heads, as before) */
+function bkBsHasTerm(terms) {
+  return (terms || []).some(function (g) { return g.term === 'current' || g.term === 'non_current'; });
+}
+function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, terms, kind) {
+  if (bkBsHasTerm(terms)) heads = (terms || []).map(function (g) { return { code: g.term, term: g.term, name: tx(BK_TERM_WORDS[kind][g.term] || 'Not classified'), amount_minor: g.amount_minor, prior_month_minor: g.prior_month_minor, prior_year_minor: g.prior_year_minor }; });
+  var byTerm = bkBsHasTerm(terms);
   var cells = function (x) {
     return [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
   };
   var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="3"></td></tr>');
   (heads || []).forEach(function (g) {
-    var mine = (items || []).filter(function (x) { return (x.group ? x.group.code : null) === g.code; });
-    var same = !g.name || String(g.name).toLowerCase() === String(title).toLowerCase(); /* a group named like its section (Equity under Equity) is said once */
+    var mine = (items || []).filter(function (x) { return byTerm ? (x.term || 'unclassified') === g.term : (x.group ? x.group.code : null) === g.code; });
+    var same = !byTerm && (!g.name || String(g.name).toLowerCase() === String(title).toLowerCase()); /* a group named like its section (Equity under Equity) is said once */
     if (!same) out += bkStRow('bk-grp', esc(g.name), []).replace('</tr>', '<td colspan="3"></td></tr>');
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
@@ -4796,6 +4807,7 @@ async function bkBS(body) {
       custom = BK_BS.kind === 'custom',
       ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor),
       g = reply.groups || {},
+      tg = reply.term_groups || {},
       fyFrom = reply.fy_from || bkFyFrom();
     var opts = [['today', 'Today'], ['month', 'Last month end'], ['year', 'Last year end'], ['custom', 'Pick a date']];
     var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(reply.asOf) + '" onchange="bkBsDate()">' : '';
@@ -4812,14 +4824,30 @@ async function bkBS(body) {
         extra: '<span class="optchip" data-testid="bs-balanced" style="' + (ok && reply.net_assets_ok !== false ? 'color:var(--ok-2)' : 'color:var(--warn-2)') + '">' + (ok ? tx('✓ balances') : tx('⚠ does not balance')) + '</span>' }) +
       lead +
       '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th></tr></thead><tbody>' +
-      bkBsSide(tx('Assets'), reply.assets, g.assets, c, reply.total_assets_minor, was('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom) +
-      bkBsSide(tx('Liabilities'), reply.liabilities, g.liabilities, c, reply.total_liabilities_minor, was('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom) +
+      bkBsSide(tx('Assets'), reply.assets, g.assets, c, reply.total_assets_minor, was('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, tg.assets, 'assets') +
+      bkBsSide(tx('Liabilities'), reply.liabilities, g.liabilities, c, reply.total_liabilities_minor, was('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, tg.liabilities, 'liabilities') +
       bkBsSide(tx('Equity'), reply.equity, g.equity, c, reply.total_equity_minor, was('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom) +
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }]) +
-      '</tbody></table>';
+      '</tbody></table>' +
+      bkBsFoot(reply, c);
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
+}
+/** under the sheet: where its Current / Non-current split comes from (the pack's own standard), and — only where the country's pack asks for it — the ageing schedule (India: Schedule III) */
+function bkBsFoot(reply, c) {
+  var out = '';
+  if (reply.term_cite && (bkBsHasTerm((reply.term_groups || {}).assets) || bkBsHasTerm((reply.term_groups || {}).liabilities))) out += '<div class="bk-note" data-testid="bs-term-cite" style="padding:6px 0;color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Current and non-current as in') + ' ' + reply.term_cite) + '</div>';
+  var note = reply.ageing_note;
+  if (!note) return out;
+  ['receivable', 'payable'].forEach(function (side) {
+    var part = note[side];
+    if (!part) return;
+    out += '<table class="bk-st" data-testid="bs-ageing-' + side + '"><thead><tr><th>' + esc(tx(part.title)) + '</th><th class="num">' + esc(tx('Undisputed')) + '</th><th class="num">' + esc(tx('Disputed')) + '</th><th class="num">' + esc(tx('Total')) + '</th></tr></thead><tbody>' +
+      part.rows.map(function (r) { return bkStRow('', esc(tx(r.label)), [{ v: bkFig(r.undisputed_minor, c) }, { v: bkFig(r.disputed_minor, c) }, { v: bkFig(r.total_minor, c) }]); }).join('') +
+      bkStRow('bk-tot', esc(tx('Total')), [{ v: '' }, { v: '' }, { v: bkFig(part.total_minor, c) }]) + '</tbody></table>';
+  });
+  return out + '<div class="bk-note" style="padding:6px 0;color:var(--grey);font-size:var(--fs-1)">' + esc(note.cite) + '</div>';
 }
 /**
  * ⭐ ONE AGEING (W15-94, 2026-11-16): the server's days-past-due set (row.follow_up — engines CBLedger.ageing set 'followup', api books-engines.followRow), the same on

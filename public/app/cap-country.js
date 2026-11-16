@@ -140,6 +140,12 @@ function csuPack(code) {
     return null;
   }
 }
+/** ACC-352: what this country's registration screen offers, from its PACK (tax.registrationForm): the schemes, the second ids, whether the tax id is checked by the profile map. No pack = the neutral form: one scheme, nothing else. */
+function csuRegForm(code) {
+  var pack = csuPack(code),
+    form = pack && pack.tax && pack.tax.registrationForm;
+  return form || { schemes: ['regular'], idCheck: null, secondIds: [], extraIds: [], hintTags: [], railReturn: false };
+}
 /** the scheme's own word for the tax row: GST · GST · VAT (pack.tax.scheme); 'Tax' when no pack says */
 function csuScheme(code) {
   var pack = csuPack(code);
@@ -264,8 +270,8 @@ function csuYearFromPack(edit, sources) {
   var packRow = csuPackOf(edit.country),
     regulation = csuPack(edit.country);
   if (edit.fy) return;
-  edit.fy = (packRow && packRow.fy_start_month) || (regulation && regulation.fiscalYear && regulation.fiscalYear.startMonth) || (edit.country === 'IN' ? 4 : 1);
-  sources.fy_start_month = packRow || regulation || edit.country === 'IN' ? txf('the {c} pack', { c: csuCountryName(edit.country) }) : tx('the usual year');
+  edit.fy = (packRow && packRow.fy_start_month) || (regulation && regulation.fiscalYear && regulation.fiscalYear.startMonth) || 0; /* ACC-352: no pack year = not set, never India's April or a guessed January */
+  sources.fy_start_month = edit.fy ? txf('the {c} pack', { c: csuCountryName(edit.country) }) : '';
 }
 /** the prefill: the server's answer first (it knows what registration stored), else what the browser worked out (M196) — each with its source */
 function csuPrefill() {
@@ -538,7 +544,7 @@ function csuApplyCountry(country) {
     edit.fy = packRow.fy_start_month;
     CSU.src.fy_start_month = packName;
   }
-  if (country !== 'IN' && edit.scheme === 'composition') edit.scheme = 'regular';
+  if (csuRegForm(country).schemes.indexOf(edit.scheme) < 0) edit.scheme = 'regular'; /* a scheme this country's pack does not have (India's composition) goes back to regular */
   var zone = csuZoneFor(country, edit.timezone);
   edit.timezone = zone.value;
   CSU.src.timezone = zone.from;
@@ -611,7 +617,7 @@ function csuGstinWhy(number) {
 function csuTaxIdWhy(country, number) {
   var typed = String(number == null ? '' : number).trim();
   if (!typed) return '';
-  if (country === 'IN') {
+  if (csuRegForm(country).idCheck === 'profilemap') {
     if (!window.CBProfileMap) {
       /* load the engine once, then check again */
       if (!CSU.pmLoading) {
@@ -619,7 +625,7 @@ function csuTaxIdWhy(country, number) {
         var script = document.createElement('script');
         script.src = '/engine/profilemap.js';
         script.onload = function () {
-          if (CSU.edit && CSU.edit.country === 'IN') csuSet('number', CSU.edit.number);
+          if (CSU.edit && csuRegForm(CSU.edit.country).idCheck === 'profilemap') csuSet('number', CSU.edit.number);
         };
         document.head.appendChild(script);
       }
@@ -823,20 +829,20 @@ function csuSchemeInfo(scheme) {
 }
 /** the tax registration row: registered or not, India's regular / composition scheme, and the number */
 function csuTaxRow(e, sources) {
-  var india = e.country === 'IN';
-  var summary = csuTaxSummary(e, india);
-  return csuTaxRowHTML(e, sources, india, summary);
+  var hasScheme = csuRegForm(e.country).schemes.length > 1; /* a country whose pack offers more than one scheme (India: regular or composition) */
+  var summary = csuTaxSummary(e, hasScheme);
+  return csuTaxRowHTML(e, sources, hasScheme, summary);
 }
 /** what the Tax row says once answered: "Not set yet" while unknown (SET-49), else the scheme and number, or "Not registered" */
-function csuTaxSummary(e, india) {
+function csuTaxSummary(e, hasScheme) {
   if (e.registered === null) return esc(tx('Not set yet'));
   return e.registered
-    ? (india ? esc(e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + csuSchemeInfo(e.scheme) + ' · ' : esc(tx('Registered')) + ' · ') +
+    ? (hasScheme ? esc(e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + csuSchemeInfo(e.scheme) + ' · ' : esc(tx('Registered')) + ' · ') +
       esc(e.number || '')
     : esc(tx('Not registered'));
 }
 /** the Tax row painted: the registered pick (no default), India's scheme, and the number once registered */
-function csuTaxRowHTML(e, sources, india, summary) {
+function csuTaxRowHTML(e, sources, hasScheme, summary) {
   return csuRow(
     'tax',
     csuScheme(e.country),
@@ -853,7 +859,7 @@ function csuTaxRowHTML(e, sources, india, summary) {
         ],
         e.registered === null ? '' : e.registered ? 'yes' : 'no'
       ) +
-      (e.registered && india
+      (e.registered && hasScheme
         ? '<span style="display:flex;align-items:center;gap:6px">' +
           csuSel(
             'cs-tax-scheme',
