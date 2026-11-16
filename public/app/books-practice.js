@@ -266,6 +266,14 @@
     P.drawn = true;
     return true;
   }
+  /* l16 firmhome: Home's card facts and the "Your clients" card ask THIS first: a firm (clients, no trade of its own) hides the shop cards and asks for only what it draws, so
+     they wait for the one practice read (at most `ms`) and then know which Home they are on. Never rejects. */
+  var settleNow = null,
+    settledOnce = new root.Promise(function (go) { settleNow = go; });
+  function settle() { if (settleNow) settleNow(true); }
+  function settled(ms) {
+    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(go, ms || 3000, false); })]);
+  }
   function tick() {
     var t = token();
     if (!t) return;
@@ -274,11 +282,12 @@
       P.data = null;
       P.drawn = false;
       read().then(function (answer) {
-        if (!answer || !answer.clients || !answer.clients.length) return;
+        if (!answer || !answer.clients || !answer.clients.length) return settle();
         P.data = answer;
         root.dispatchEvent(new root.Event('cb-practice'));
+        settle();
         tick();
-      }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); });
+      }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); settle(); });
     } else if (P.data && !root.document.getElementById('bp_practice')) draw();
   }
   function start() {
@@ -287,5 +296,5 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { hasData: function () { return !!P.data; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start };
+  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start };
 })(typeof window !== 'undefined' ? window : globalThis);
