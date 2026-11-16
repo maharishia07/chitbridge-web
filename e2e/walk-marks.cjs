@@ -187,8 +187,8 @@ W.run('marks', async (w) => {
     await page.setViewportSize(NARROW); await page.waitForTimeout(400); await shot('06d-owner-bell-thread-phone');
     const fits = await page.evaluate(() => { const d = document.querySelector('dialog.mk-sheet').getBoundingClientRect(); return d.left >= 0 && d.right <= window.innerWidth + 1 && d.bottom <= window.innerHeight + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth; }); await page.setViewportSize(WIDE);
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-    const byDay = S.calls.some((c) => c.p === '/api/marks' && /open=1/.test(c.q) && /from=2026-11-04&to=2026-11-04/.test(c.q)); /* an older entry's Query is found by its OWN day, not the current month */
-    return { ok: !off && fits && byDay && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
+    const byId = S.calls.some((c) => c.p === '/api/marks' && c.q.indexOf('ids=' + E[1]) >= 0) && !S.calls.some((c) => c.p === '/api/marks' && /open=1/.test(c.q) && /from=2026-11-04&to=2026-11-04/.test(c.q)); /* W15-80: the row carries the entry id, so the thread is read BY ID: no look through the open list for a number */
+    return { ok: !off && fits && byId && /Why was rent posted/.test(q) && /JV-0002/.test(title), saw: 'disabled ' + off + ' · ' + title + ' · ' + q };
   });
   await w.step('B1c', 'W15-80 · a bell row whose entry is gone (no id, no open question by that number) says WHY in a toast: "reversed or removed", not "try again"', async () => {
     S.ghost = true; await page.reload(); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
