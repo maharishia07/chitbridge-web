@@ -102,6 +102,14 @@
       var said = preview.looksLike(item);
       return (ctx.inPanel && said ? '' : '<span class="bd-ask">' + escapeHtml(said || 'Suggested from the words on the statement.') + '</span> ') + '<button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>Yes, this is right</button>';
     }
+    /** BB-04: a card settlement that arrived net of the acquirer's fee: is the tax on that fee claimable? Asked (RQ1), never defaulted */
+    function feeTaxQuestion(item) {
+      return (
+        '<span class="bd-ask">' + escapeHtml('The card company kept ' + amountText(item.split.fee_minor) + ' as its fee. Is there ' + taxWordOf() + ' on it?') + '</span> ' +
+        '<button data-cbsid="BKS017-B21" type="button" class="bd-btn" data-act="feetax" data-v="tax"' + dataKey(item) + '>Yes, ' + taxWordOf() + ' on the fee</button> ' +
+        '<button data-cbsid="BKS017-B22" type="button" class="bd-btn" data-act="feetax" data-v="none"' + dataKey(item) + '>No ' + taxWordOf() + '</button>'
+      );
+    }
     function basisQuestion() {
       return (
         '<span class="bd-ask">' + escapeHtml('Is your GST on a cash or an accrual basis?') + '</span> ' +
@@ -109,7 +117,7 @@
         '<button data-cbsid="BKS017-B05"' + (cfg.gstIds ? ' id="bd_gst_accrual"' : '') + ' type="button" class="bd-btn" data-act="gst" data-v="accrual">Accrual</button>'
       );
     }
-    Object.assign(ctx, { nearBox, invoiceQuestion, tickBox, basisQuestion });
+    Object.assign(ctx, { nearBox, invoiceQuestion, feeTaxQuestion, tickBox, basisQuestion });
   }
   /** the tax kind question, the ONE question a held-back line asks next, and the note under a line; each function lands on the one shared `ctx` */
   function addAsks(ctx) {
@@ -129,6 +137,7 @@
       if (item.needs === 'may_be_in_books') return nearBox(item);
       if (item.needs === 'gst_basis') return '<span class="bd-why">Waiting for your GST basis, asked above.</span>';
       if (item.needs === 'tax_invoice') return invoiceQuestion(item);
+      if (item.needs === 'fee_tax') return ctx.feeTaxQuestion(item);
       if (item.needs === 'needs_tick') return tickBox(item);
       if (item.needs === 'tax_kind') return taxKindBox(item);
       return '';
@@ -406,6 +415,7 @@
       useacct: useAccount,
       taxuse: useTax,
       tick: function (key) { return cfg.controller().tick(key); },
+      feetax: function (key, target) { return cfg.controller().feeTax(key, target.getAttribute('data-v')); },
       inv: function (key, target) { var said = cfg.controller().invoice(key, target.getAttribute('data-v')); sameWords(key).concat(sameHeld(key)).forEach(function (other) { cfg.controller().invoice(other.key, target.getAttribute('data-v')); }); return said; },
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
       notmatch: function (key) { return cfg.controller().notMatch(key); },

@@ -25,6 +25,7 @@
   var NEEDS_WORDS = {
     gst_basis: 'Tax basis needed',
     tax_invoice: 'Tax invoice needed',
+    fee_tax: 'Tax on the fee needed',
     needs_tick: 'Needs your tick',
     may_be_in_books: 'May already be in your books',
     unbalanced: 'Entry does not balance',
@@ -35,7 +36,7 @@
     no_entry: 'Needs you'
   };
   /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
-  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'tax_invoice', 'needs_tick'];
+  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'fee_tax', 'tax_invoice', 'needs_tick'];
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
   var MATCH_WINDOW_DAYS = 3;
 
@@ -101,6 +102,9 @@
       line: statementLine,
       entry: projected.entry || null,
       against: (proposal && proposal.against) || null, /* the open invoice or bill the engine found this line to be (bank-recon open_item) */
+      split: (proposal && proposal.split) || null, /* BB-04: a card settlement net of its fee: { gross_minor, fee_minor, net_minor } */
+      openBills: (proposal && proposal.open_bills) || null, /* BB-10: the party's open bills a person picks from when no ONE set adds up to the payment */
+      allocateRefusal: (proposal && proposal.allocate_refusal) || null,
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
       needs: askedNeedOf_(blockers),
       blockers: blockers,
@@ -154,7 +158,7 @@
   /** the proposal for one line the books lack: what suggest() says, or, once the owner has answered the line, what CBBankEntry.resolve() composes from the answer (the same path, one taught rule) */
   function proposalFor(opts, preview, line, ref) {
     /* the person's tick (B5-01) and word on the tax invoice (B5-03) for THIS line ride into the same engine call */
-    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref] }),
+    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref], fee_tax: preview.feeTax[ref] }),
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
@@ -371,7 +375,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -446,6 +450,12 @@
           preview.invoice[key] = answer === 'held' ? 'held' : 'none';
         });
       },
+      /** BB-04: the person's word on the tax on a card settlement's fee (RQ1, never defaulted): 'tax' claims it, anything else books the whole fee as a cost with no tax */
+      feeTax: function (key, answer) {
+        return answerLine(opts, preview, key, function () {
+          preview.feeTax[key] = answer === 'tax' ? 'tax' : 'none';
+        });
+      },
       /** B5-02: pair this statement line with the books entry (by its id) it already is, or say it is new */
       pair: function (key, entryId) {
         return answerLine(opts, preview, key, function () {
@@ -482,7 +492,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);

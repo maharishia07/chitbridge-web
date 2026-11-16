@@ -30,6 +30,8 @@ function bkshLedger() {
 const bkshLateRows = () => (bankStoreState.posted || []).filter((row) => row.ref && CBBankLock.lateWords(row));
 const bkshLateRefs = () => bkshLateRows().map((row) => row.ref);
 const bkshLateOf = (ref) => CBBankLock.lateWords(bkshLateRows().filter((row) => row.ref === ref)[0]);
+/** the card sales the books still hold on the card clearing account (the rail's books answer, when it sends them): a settlement that arrives net of a fee is read against them (BB-04) */
+const bkshCardSales = () => ((bkshBook().rail && bkshBook().rail.books && bkshBook().rail.books.card_sales) || []).slice();
 /** the parties the books know, in the shape the engine compares names against: every customer and supplier of the shop (GET /bank/rail books), else the rail's own list */
 function bkshParties() {
   const all = (bkshBook().rail && bkshBook().rail.books && bkshBook().rail.books.parties) || [];
@@ -153,7 +155,7 @@ function bkshController() {
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     pairing: bkshPairing,
-    suggestOpts: Object.defineProperty({ country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
+    suggestOpts: Object.defineProperty({ country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
