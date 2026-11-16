@@ -78,13 +78,15 @@ function bkhCanStep(step) {
   return !!BKST.data && BKST.data.older > 0 && BKST.fy > BKST.cur - 40;
 }
 /** is there a signed-off statement (the reconciliation record) for this account and month: the SAME record the practice list's Bank column reads */
-const bkhSignedIn = (account, month) => (BKH.signed[account.account_id] || []).some((item) => String(item.period_to || '').slice(0, 7) === month);
+/** a sign-off covers every month from its period_from to its period_to (a year signed in one go is twelve months signed, not one); a record with no period_from covers its own end month only */
+const bkhCovers = (item, month) => String(item.period_from || item.period_to || '').slice(0, 7) <= month && month <= String(item.period_to || '').slice(0, 7);
+const bkhSignedIn = (account, month) => (BKH.signed[account.account_id] || []).some((item) => bkhCovers(item, month));
 /** 'missing' · 'signed' · 'open' (kept, lines to do) · 'unfiled' (signed off, but no file kept: the record is shown, never "Missing") · 'kept' (the sign-off record could not be read) · 'future' (a month not begun) · 'current' (the month in progress: not due yet, never "missing") */
 function bankHomeState(account, month, cell) {
   if ((!cell || cell.missing) && BKH.known && bkhSignedIn(account, month)) return 'unfiled'; /* l16 fable2 R2-2: the practice row says "unexplained to 31 Oct" from these sign-offs; the Bank page shows them too */
   if (!cell || cell.missing) return month > bkhThisMonth() ? 'future' : month === bkhThisMonth() ? 'current' : 'missing'; /* the month in progress is not due yet: its own state, never Missing */
   if (!BKH.known) return 'kept';
-  return (BKH.signed[account.account_id] || []).some((item) => String(item.period_to || '').slice(0, 7) === month) ? 'signed' : 'open';
+  return bkhSignedIn(account, month) ? 'signed' : 'open';
 }
 /** the count of each state over some accounts and an answer's months: { signed, open, kept, missing } */
 function bkhTally(data, accounts) {
@@ -178,12 +180,26 @@ function bankHomeCardsMore() {
   BKST.focus = 'bank-home-more';
   bankStmtPaint();
 }
+/** a year with no statement file kept, whose every month that has begun is signed off: ONE line instead of a grid of cells (never "Missing" for a signed month; nothing invented) */
+function bkhFoldedHtml(data) {
+  if (BKST.fileTotal || !BKH.known) return '';
+  const tallies = data.accounts.map((account) => ({ account, tally: bkhTally(data, [account]) }));
+  if (!tallies.length || tallies.some((row) => row.tally.missing || row.tally.signed || row.tally.open || row.tally.kept) || !tallies.some((row) => row.tally.unfiled)) return '';
+  const many = tallies.length > 1;
+  return (
+    '<div class="pe-note bkh-folded" data-testid="bank-home-folded">' +
+    tallies.filter((row) => row.tally.unfiled).map((row) => '<div data-testid="bank-home-folded-' + bkhE(row.account.account_id) + '">' + (many ? '<b>' + bkhE(bkstAccountName(row.account)) + '</b> · ' : '') + bkhE(txn('Signed off for {count} month, no statement file kept', 'Signed off for {count} months, no statement file kept', row.tally.unfiled)) + '</div>').join('') +
+    '</div>'
+  );
+}
 /** the grid: one row per account, the shown year's months across, the year's count at the end; a month with a statement opens its lines */
 function bankHomeGridHtml() {
   const data = BKST.data;
   if (!data || !data.accounts.length) return '';
   const head = '<tr><th scope="col">' + bkhE(tx('Account')) + '</th>' + data.months.map((month) => '<th scope="col">' + bkhE(bkstMonth(month)) + '</th>').join('') + '<th scope="col">' + bkhE(tx('This year')) + '</th></tr>',
     mayAdd = bankHomeMayAdd();
+  const folded = bkhFoldedHtml(data);
+  if (folded) return folded;
   const rows = data.accounts
     .map((account) => {
       const cells = data.months

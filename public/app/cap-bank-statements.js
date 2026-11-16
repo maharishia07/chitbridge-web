@@ -176,7 +176,7 @@ function bkstSummary() {
   if (BKST.mode === 'blind' || (typeof BKH !== 'undefined' && BKH.blind)) return bksCostBlindSay();
   if (BKST.mode === 'error') return tx('Could not read the statements kept.');
   const data = BKST.data;
-  if (!data || !BKST.fileTotal) return (data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet')) + bkstSignedLine();
+  if (!data || !BKST.fileTotal) return (data && data.older ? txf('{n} older statements kept', { n: data.older }) : (bkstSignedLine() ? tx('No statement file kept') : tx('Nothing kept yet'))) + bkstSignedLine();
   const gaps = bkstMissing(data),
     kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
   return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept')) + bkstSignedLine();
