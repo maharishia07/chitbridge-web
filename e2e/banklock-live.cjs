@@ -137,6 +137,7 @@ const count = (list, key) => list.filter((s) => s === key).length;
     const left = await page.locator('[data-testid="bank-lock-0"]').innerText().catch(() => '');
     console.log('   ' + who + ': ' + JSON.stringify({ in: count(st2, 'in'), lock: count(st2, 'lock'), ready: count(st2, 'ready'), need: count(st2, 'need') }) + ' | Difference ' + diffOf(bd2) + ' | ' + flat(left).slice(0, 80));
     ok(count(st2, 'in') === count(base0.states, 'in') + rows.length, who + ': in your books = the first ' + count(base0.states, 'in') + ' + the ' + rows.length + ' moved');
+    ok(new RegExp((count(base0.states, 'in') + rows.length) + ' of 12 in your books').test(bd2), who + ': the band counts them too (' + (/d+ of 12 in your books/.exec(bd2) || ['?'])[0] + ')');
     ok(diffOf(bd2) === diffOf(base0.band), who + ': the Difference is unchanged (' + diffOf(bd2) + ' = ' + diffOf(base0.band) + ')');
     const one = page.locator('[data-testid^="bank-row-"]', { hasText: /posted 1 Nov 2026/ }).first();
     if (await one.count() === 0) { const row = page.locator('[data-testid^="bank-row-"]').first(); await row.locator('[data-caret]').click().catch(() => {}); }
