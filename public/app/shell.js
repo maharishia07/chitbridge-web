@@ -1131,9 +1131,9 @@
         return e && sectionOf(e) === area;
       });
     }
-    /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five) */
+    /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five); a firm: only an area that still holds a card it keeps (l16 n12: no Selling/Money/Running/Trade/Labs rail) */
     function areasShown() {
-      return !S.manifest || !edition()
+      return !S.manifest || !(edition() || isFirm())
         ? AREAS
         : AREAS.filter(function (item) {
             return item === 'home' || entriesOf(item).length;

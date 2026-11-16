@@ -35,7 +35,7 @@ async function serve() {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   return { srv, base: 'http://127.0.0.1:' + srv.address().port };
 }
-async function open(browser, base, tok, vp, startUrl) {
+async function open(browser, base, tok, vp, startUrl, early) {
   const ctx = await browser.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
   await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, { token: tok.token, role: 'entity', name: tok.name });
   await ctx.route('http://localhost:3000/**', async (r) => {
@@ -52,10 +52,20 @@ async function open(browser, base, tok, vp, startUrl) {
   page.__calls = [];
   page.on('request', (r) => { const u = r.url(); if (u.includes('/api/') && !u.includes('/api/events/stream')) page.__calls.push(r.method() + ' ' + u.replace(/^https?:[/][/][^/]+/, '').slice(0, 90)); });
   page.on('pageerror', (e) => page.__threw.push(e.message));
-  await page.goto(base + startUrl);
+  await page.goto(base + startUrl, early ? { waitUntil: 'commit' } : undefined);
   return { ctx, page };
 }
 const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-testid="practice-list"] [data-testid^="practice-row-"]').length);
+/* what a firm must never see, read from the page: a shop area in the rail or the phone bar, a shop section, the two side buttons, the Your work strip */
+const shopSeen = (page) => page.evaluate(() => {
+  const vis = (n) => n.getClientRects().length > 0 && getComputedStyle(n).display !== 'none' && getComputedStyle(n).visibility !== 'hidden';
+  const out = [];
+  ['selling', 'money', 'running', 'trade', 'labs'].forEach((id) => { if (Array.from(document.querySelectorAll('.cbsh-nv[data-go="' + id + '"]')).some(vis)) out.push('nav-' + id); });
+  Array.from(document.querySelectorAll('[data-testid^="shell-area-"]')).forEach((n) => { const a = n.getAttribute('data-area'); if (a && a !== 'home' && a !== 'setup' && vis(n)) out.push('section-' + a); });
+  if (Array.from(document.querySelectorAll('[data-testid="shell-sidetools"] button, .cbsh-side')).some(vis)) out.push('sides');
+  if (Array.from(document.querySelectorAll('[data-testid="rail"], #railbox *')).some(vis)) out.push('your-work');
+  return out;
+});
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const { base } = await serve();
@@ -81,6 +91,17 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       ok(tag + ' the client list shows rows (up to 50 at a time of ' + truth.clients.length + ')', shown > 0 && shown <= Math.min(50, truth.clients.length) + 1, shown);
       const cards = await page.evaluate(() => ['till', 'marketing', 'storefront'].map((id) => document.querySelectorAll('[data-testid="shell-card-' + id + '"]').length));
       ok(tag + ' the shop cards (Till, Marketing, Online shop) are hidden on a firm Home', cards.every((n) => n === 0), JSON.stringify(cards));
+      /* l16 n12: a firm with no trade of its own sees no shop areas: no Selling/Money/Running/Trade/Labs in the rail or the phone bar, no We lean on / Leans on us buttons, no Your work strip (CBPractice.hidesShopCards, the one rule) */
+      const shopy = await page.evaluate(() => {
+        const vis = (n) => n.getClientRects().length > 0 && getComputedStyle(n).display !== 'none' && getComputedStyle(n).visibility !== 'hidden';
+        return {
+          nav: ['selling', 'money', 'running', 'trade', 'labs'].filter((id) => Array.from(document.querySelectorAll('.cbsh-nv[data-go="' + id + '"]')).some(vis)),
+          sections: Array.from(document.querySelectorAll('[data-testid^="shell-area-"]')).map((n) => n.getAttribute('data-area')).filter((a) => a && a !== 'home' && a !== 'setup'),
+          sides: Array.from(document.querySelectorAll('[data-testid="shell-sidetools"] button, .cbsh-side')).filter(vis).length,
+          work: Array.from(document.querySelectorAll('[data-testid="rail"], #railbox *')).filter(vis).length
+        };
+      });
+      ok(tag + ' no shop area in the rail / phone bar, none drawn on Home, no side panels, no Your work strip: ' + JSON.stringify(shopy), !shopy.nav.length && !shopy.sections.length && !shopy.sides && !shopy.work, JSON.stringify(shopy));
       ok(tag + ' no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), await page.evaluate(() => document.documentElement.scrollWidth + ' > ' + window.innerWidth));
       /* no heading wraps letter by letter: every column heading stays within two lines and no word of it is cut */
       const cut = await page.evaluate(() => {
@@ -134,6 +155,14 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
           console.log(tag + ' after Open books: ' + text);
           await page.screenshot({ path: path.join(OUT, firm + '-open-books-' + vp.tag + '.png') });
         }
+      }
+      /* l16 n12: no flash — a fresh load of the firm Home sampled every 0.4 s from the first byte: no shop area, side button or Your work strip at ANY sample */
+      {
+        const f = await open(b, base, tok, vp, '/', true), seen = [];
+        for (let n = 0; n < 15; n++) { seen.push(await shopSeen(f.page).catch(() => ['(page busy)'])); await pause(400); }
+        const bad = seen.map((x, n) => (x.length ? n * 0.4 + 's:' + x.join('+') : '')).filter(Boolean);
+        ok(tag + ' no flash of shop areas in 15 samples at 0.4 s', bad.length === 0, bad.join(' | '));
+        await f.ctx.close();
       }
       if (page.__threw.length) console.log(tag + ' page errors: ' + JSON.stringify(page.__threw.slice(0, 4)));
       await ctx.close();
