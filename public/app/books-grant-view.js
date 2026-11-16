@@ -137,7 +137,7 @@
     if (report.k !== 'daybook' || !viewState.months || !viewState.months.length || viewState.why) return '';
     var on = !viewState.day && viewState.range ? viewState.range.from : '';
     var chips = viewState.months.map(function (m) {
-      return '<button type="button" class="act ' + (m.from === on ? '' : 'quiet') + '" data-cbsid="NET005-B06" data-month="' + esc(m.from) + '" aria-pressed="' + (m.from === on) + '" data-testid="bv-month-' + esc(m.from.slice(0, 7)) + '">' + esc(monthWord(m) + ' · ' + m.entries) + '</button>';
+      return '<button type="button" class="act ' + (m.from === on ? '' : 'quiet') + '" data-cbsid="NET005-B06" id="bv_month_' + esc(m.from.slice(0, 7).replace('-', '')) + '" data-month="' + esc(m.from) + '" aria-pressed="' + (m.from === on) + '" data-testid="bv-month-' + esc(m.from.slice(0, 7)) + '">' + esc(monthWord(m) + ' · ' + m.entries) + '</button>';
     }).join('');
     var rule = viewState.monthRule && on === viewState.monthRule.opened.from ? '<p class="sub" data-testid="bv-month-rule">' + esc(words('Opened on') + ' ' + monthWord(viewState.monthRule.opened) + ' ' + words('because') + ' ' + monthWord(viewState.monthRule.latest) + ' ' + words('has only') + ' ' + viewState.monthRule.latest.entries + ' ' + words(viewState.monthRule.latest.entries === 1 ? 'entry' : 'entries') + '. ' + words('Press its chip to see it.')) + '</p>' : '';
     return '<div class="nw-acts" data-testid="bv-months" role="group" aria-label="' + esc(words('Months')) + '">' + chips + '</div>' + rule;
