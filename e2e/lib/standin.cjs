@@ -57,17 +57,22 @@ function pvMay(rows, channel, purpose) {   /* lib/privacy.mayMessage, newest fir
   if (r && !r.allowed) return { may: false, code: 'OPTED_OUT', why: 'They asked not to be messaged on ' + channel + '.' };
   return { may: true, code: 'LEGITIMATE_USE', why: 'Messages about their own orders are allowed.' };
 }
+/** lib/consent-standing (api SEC audit 2026-11-16): a staff yes written after the customer's own no (source self / reply) does not stand; rows newest first */
+const pvOwn = (x) => x.source === 'self' || x.source === 'reply';
+const pvStanding = (rows) => rows.filter((x, i) => !x.allowed || pvOwn(x) || !rows.slice(i + 1).find((o) => o.channel === x.channel && o.purpose === x.purpose && pvOwn(o) && !o.allowed));
 const pvRows = (P, party) => P.prefs.filter((x) => x.party_id === party).slice().reverse();
-function pvMayAll(rows) { const may = {}; PV_CH.forEach((c) => { may[c] = {}; PV_PU.forEach((p) => { may[c][p] = pvMay(rows, c, p); }); }); return may; }
+function pvMayAll(rows) { rows = pvStanding(rows); const may = {}; PV_CH.forEach((c) => { may[c] = {}; PV_PU.forEach((p) => { may[c][p] = pvMay(rows, c, p); }); }); return may; }
 const pvContactPrefs = (P, party) => ({ migrated: P.migrated, may: pvMayAll(P.migrated ? pvRows(P, party) : []) });
-function pvNote(P, party, b, by) {
+const PV_EVIDENCE = 'To note a yes to offers, say it came from staff (source: staff) and add a note of what the customer said, and when.';
+function pvNote(P, party, b, by, source) {
   const channel = String(b.channel || '').toLowerCase(), purpose = String(b.purpose || '').toLowerCase();
   if (PV_CH.indexOf(channel) < 0) return [400, errBody('Channel is phone, sms, whatsapp, email or chitbridge.', 'BAD_REQUEST')];
   if (PV_PU.indexOf(purpose) < 0) return [400, errBody('Purpose is service or marketing.', 'BAD_REQUEST')];
   if (typeof b.allowed !== 'boolean') return [400, errBody('Say yes or no.', 'BAD_REQUEST')];
+  if (source === 'staff' && b.allowed && purpose === 'marketing' && (b.source !== 'staff' || String(b.note || '').trim().length < 3)) return [400, errBody(PV_EVIDENCE, 'BAD_REQUEST')];
   const before = pvRows(P, party).find((r) => r.channel === channel && r.purpose === purpose);
   const withdrawn = !b.allowed && before && before.allowed && before.basis === 'consent';
-  const row = { pref_id: uuid(800 + (++P.seq)), party_id: party, channel, purpose, allowed: b.allowed, basis: purpose === 'marketing' ? 'consent' : 'legitimate_use', notice_version: null, noted_at: new Date(TD.nowMs() + P.seq * 1000).toISOString(), noted_by: by, withdrawn_at: withdrawn ? TD.nowIso() : null };
+  const row = { pref_id: uuid(800 + (++P.seq)), party_id: party, channel, purpose, allowed: b.allowed, basis: purpose === 'marketing' ? 'consent' : 'legitimate_use', notice_version: null, noted_at: new Date(TD.nowMs() + P.seq * 1000).toISOString(), noted_by: by, source: source || 'staff', withdrawn_at: withdrawn ? TD.nowIso() : null };
   P.prefs.push(row); return [201, { pref: Object.assign({}, row, { party_id: undefined }) }];
 }
 const reqShape = (r) => Object.assign({}, r, { late: !r.answered_at && Date.parse(r.due_at) < TD.nowMs(), answered_late: !!r.answered_at && Date.parse(r.answered_at) > Date.parse(r.due_at) });
@@ -90,7 +95,7 @@ function privRoute(S, r, q, u, p, m, body, owner) {
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/contact-prefs$/))) {
     if (!P.migrated) return J(r, 503, NOT_PV('b306'));
     const party = decodeURIComponent(x[1]);
-    if (m === 'POST') { const [st, o] = pvNote(P, party, body || {}, owner ? 'ent-walk' : 'act-2'); return J(r, st, o); }
+    if (m === 'POST') { const [st, o] = pvNote(P, party, body || {}, owner ? 'ent-walk' : 'act-2', 'staff'); return J(r, st, o); }
     return J(r, 200, { party_id: party, history: pvRows(P, party).map((h) => Object.assign({}, h, { party_id: undefined })), may: pvMayAll(pvRows(P, party)), law: pvLaw(P.country) });
   }
   if (p === '/api/crm/privacy-requests') {
@@ -118,7 +123,7 @@ function privRoute(S, r, q, u, p, m, body, owner) {
         may_consent: P.migrated ? { may: true, code: 'OK', why: null } : { may: false, code: 'PRIVACY_NOT_MIGRATED', why: 'Not set up yet at this shop. Ask the shop directly.' },
         may_request: P.reqsMigrated ? { may: true, code: 'OK', why: null } : { may: false, code: 'PRIVACY_NOT_MIGRATED', why: 'Not set up yet at this shop. Ask the shop directly.' } });
     }
-    if (p === '/api/privacy/me/consent' && m === 'POST') { if (!P.migrated) return J(r, 503, NOT_PV('b306')); const [st, o] = pvNote(P, me, body || {}, me); return J(r, st, st === 201 ? Object.assign(o, { may: pvMayAll(pvRows(P, me)) }) : o); }
+    if (p === '/api/privacy/me/consent' && m === 'POST') { if (!P.migrated) return J(r, 503, NOT_PV('b306')); const [st, o] = pvNote(P, me, body || {}, me, 'self'); return J(r, st, st === 201 ? Object.assign(o, { may: pvMayAll(pvRows(P, me)) }) : o); }
     if (p === '/api/privacy/me/requests' && m === 'POST') { if (!P.reqsMigrated) return J(r, 503, NOT_PV('b307')); const [st, o] = pvLog(P, Object.assign({}, body || {}, { who: 'Kumar' }), me); return J(r, st, o); }
   }
   return null;
