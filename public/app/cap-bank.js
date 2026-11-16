@@ -542,7 +542,13 @@ function bankChange(btn) {
   if (open && file) file.focus(); /* the form opens ABOVE the band that holds this button: the keyboard goes to its file box */
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
-const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
+/** the group a row counts in: the engine's, except a line the books hold by its own client_ref (posted in a later month because its own was locked, W15-85): the controller says it is in the books */
+const bkbRowGroup = (item) => {
+  const group = bkbGroupOf(item.status),
+    one = group !== 'matched' && typeof bkshItemOf === 'function' ? bkshItemOf(item) : null;
+  return one && one.state === 'in_books' ? 'matched' : group;
+};
+const bkbCount = (key) => BKB.rows.filter((item) => bkbRowGroup(item) === key).length;
 /** a signed period at nil: "Sign off again" lives in More on a phone, where the band has no room for the button (the band shows it from 760 px up) */
 function bankMoreSignAgain() {
   const fig = bankFigures();
