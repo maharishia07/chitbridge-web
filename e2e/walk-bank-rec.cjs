@@ -95,7 +95,7 @@ function stand() {
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       let body = null; try { body = r.request().postDataJSON(); } catch (_) {} if (m !== 'GET') S.bodies.push({ m, p, body });
-      if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+      if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return J(r, 200, []);
       if (p === '/api/books/periods') return J(r, 200, books.periods([]));
