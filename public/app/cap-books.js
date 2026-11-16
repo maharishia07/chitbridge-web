@@ -146,7 +146,7 @@ function bkCss() {
     '#bk_lt .lt-tools{display:flex;gap:6px;align-items:center;padding:8px 10px 8px 16px}',
     '#bk_lt .lt-search{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:0 10px;height:34px;font-size:var(--fs-2)}',
     '#bk_lt .lt-search input{border:0;outline:0;background:none;flex:1;min-width:0;font:inherit;color:var(--ink);padding:0;margin:0;height:auto;box-shadow:none}',
-    '#bk_lt .lt-search:focus-within{border-color:var(--blue)}',
+    '#bk_lt .lt-search:focus-within{border-color:var(--blue);outline:2px solid var(--accent);outline-offset:2px}',
     '#bk_lt .lt-btn{height:34px;min-height:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:0 10px;font:inherit;font-size:var(--fs-2)}',
     '#bk_lt .lt-ico{width:34px;padding:0}',
     '#bk_lt .lt-list{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px 6px 24px 8px}',
