@@ -131,7 +131,7 @@ function stand() {
   /* 1 */
   await p.waitForSelector(grid, { timeout: 10000 });
   await p.waitForSelector('[data-testid="bank-home-card-acc-1500-2026-09"]');
-  ok(/✓/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-08"]')) && /●/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && (await p.locator('.bks-miss').count()) === 3 && (await p.locator('.bkh-future').count()) === 7, 'home: FY 2026-27, Aug ✓ signed off, Sep ● not signed off, Jul, Oct and Nov Missing, the seven months to come are not Missing');
+  ok(/✓/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-08"]')) && /●/.test(await text('[data-testid="bank-stmts-have-acc-1500-2026-09"]')) && (await p.locator('.bks-miss').count()) === 3 && (await p.locator('.bkh-future').count()) === 7, 'home: FY 2026-27, Aug ✓ signed off, Sep ● not signed off, Jul, Oct and Nov Missing, the seven months to come are not Missing (miss ' + (await p.locator('.bks-miss').count()) + ', to come ' + (await p.locator('.bkh-future').count()) + ', head ' + (await text('.bks-grid thead')).replace(/\s+/g, ' ') + ')');
   ok(/September 2026/.test(await text('[data-testid="bank-home-cards"]')) && /Continue/.test(await text('[data-testid="bank-home-cards"]')) && (await p.locator('[data-testid="bank-home-card-acc-1500-2026-08"]').count()) === 0, 'one card, for September only, with Continue');
   ok((await p.locator(trail).count()) === 0 && !(await p.locator('[data-testid="bank-form"]').isVisible()), 'the home has no trail and the plain picker form is folded away');
   ok(await fits(), '1366: the home needs no page scroll and nothing scrolls sideways');
@@ -199,7 +199,7 @@ function stand() {
     }
     seq += 1;
     files.push(Object.assign(fileOf('fx' + seq, accts[0], '2026-09-20', '2026-10-10', 'cross-1500.csv', seq), { overlaps: true })); /* a file crossing Sep and Oct */
-    const S2 = { reqs: [], posts: [], reads: [], files, accts, signedBy: {}, ledgerCalls: [], pending: false };
+    const S2 = Object.assign(stand(), { files, accts, signedBy: {} });
     S2.signedBy['1500'] = monthsEnding('2026-03', 9).map((month) => ({ period_from: month + '-01', period_to: lastDay(month), at: '2026-09-02T01:00:00Z', by_name: 'Mayur', difference_minor: 0, tied: true, currency: 'INR' })); /* 2025-07 … 2026-03 signed off */
     const { ctx, p } = await open(S2, { accts, session: AU });
     const view = (w, h) => p.setViewportSize({ width: w, height: h }).then(() => p.waitForTimeout(350));
