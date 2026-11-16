@@ -18,6 +18,7 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
+const C = require('./lib/contract.cjs');   /* every stand-in answer for a contract route is held to the API's shape (M43) */
 const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' };
@@ -75,7 +76,7 @@ function stand(pending) {
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
     await ctx.clock.setFixedTime(new Date('2026-11-16T10:00:00+11:00')); /* ONE today */
     ctx.on('request', (rq) => { S.reqs.push({ m: rq.method(), u: rq.url(), h: rq.headers(), d: rq.postData() || '' }); });
-    await ctx.route('**/api/**', (r) => {
+    await ctx.route('**/api/**', (r0) => { const r = C.wrap(r0);
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year (July to June) */
@@ -196,6 +197,7 @@ function stand(pending) {
   const src = fs.readFileSync(path.join(PUB, 'app', 'cap-bank-statements.js'), 'utf8') + fs.readFileSync(path.join(PUB, 'app', 'cap-bank-home.js'), 'utf8'); /* the missing-month button (B44) moved to the home */
   ok(ids.every((id) => src.indexOf('data-cbsid="' + id + '"') >= 0), 'every control the box draws wears its id (' + ids.join(' ') + ')');
   ok(!/\.parse\(/.test(src.replace(/CBBankRecon\.parse\(text, \{ format: 'auto'[^\n]*\n/, '')), 'the box holds no second parser: its only parse call is the reader\'s own, for the period');
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await b.close(); srv.close();
   console.log('\n  bank-statements-box: ' + pass + ' passed, ' + fail + ' failed');

@@ -13,6 +13,7 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
+const C = require('./lib/contract.cjs');   /* every stand-in answer for a contract route is held to the API's shape (M43) */
 const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' };
@@ -85,7 +86,7 @@ function stand() {
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
     await ctx.clock.setFixedTime(new Date('2026-11-16T10:00:00+11:00')); /* ONE today for every walk */
     ctx.on('request', (rq) => { S.reqs.push({ m: rq.method(), u: rq.url(), h: rq.headers(), d: rq.postData() || '' }); });
-    await ctx.route('**/api/**', (r) => {
+    await ctx.route('**/api/**', (r0) => { const r = C.wrap(r0);
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', ledger_on: true } });
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { year: { start_month: 7, fiscal_year: '2026-27' }, country: { country: { code: 'AU' } } })); /* the shop's year and country, as the page reads them */
@@ -347,6 +348,8 @@ function stand() {
     async function shot2(name) { await p.screenshot({ path: path.join(SHOTS, name) }); }
   }
   await scale();
+
+  ok(...C.finish());
 
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await b.close(); srv.close();

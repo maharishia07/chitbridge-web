@@ -12,6 +12,7 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
+const C = require('./lib/contract.cjs');   /* every stand-in answer for a contract route is held to the API's shape (M43) */
 const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(c) + '.x'; };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Coastal', entity: 'Coastal Supplies' };
@@ -35,7 +36,7 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
       const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
       await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
       const seen = [], bad = [], errs = [];
-      await ctx.route('**/api/**', (r) => {
+      await ctx.route('**/api/**', (r0) => { const r = C.wrap(r0);
         const p = new URL(r.request().url()).pathname;
         seen.push(p);
         if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Coastal Supplies', currency_code: 'AUD', country: 'AU', capabilities: [], ...(old ? {} : { ledger_on: on }) } });
@@ -59,6 +60,7 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
       await ctx.close();
     }
   }
+  ok(...C.finish());
   await b.close(); srv.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });

@@ -13,6 +13,7 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
+const C = require('./lib/contract.cjs');   /* every stand-in answer for a contract route is held to the API's shape (M43) */
 const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const FIRM = { token: tok({ identity_id: 'ent-FIRM', identity_type: 'entity' }), role: 'entity', name: 'Pat Auditor', entity: 'Blue Gum Audit', country: 'AU', currency: 'AUD' };
@@ -69,7 +70,7 @@ function periodRows() {
     await ctx.clock.setFixedTime(new Date('2026-11-16T10:00:00+11:00'));
     const acting = /acting=/.test(url);
     ctx.on('request', (rq) => { if (/\/api\//.test(rq.url())) S.reqs.push({ m: rq.method(), u: new URL(rq.url()).pathname, h: rq.headers() }); });
-    await ctx.route('**/api/**', (r) => {
+    await ctx.route('**/api/**', (r0) => { const r = C.wrap(r0);
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method(), h = r.request().headers();
       if (p === '/api/entities/me') return json(r, 200, { entity: { display_name: 'Eastlake Fresh', currency_code: 'AUD' } });
       if (p === '/api/books-grants') return json(r, 200, { given: [], received: [{ grant_id: 'g1', grantor_entity: CLIENT, grantor_name: 'Eastlake Fresh', preset: 'auditor', state: 'live', revoked_at: null, ended_at: null }] });
@@ -214,6 +215,7 @@ function periodRows() {
     await ctx.close();
   }
   await b.close(); srv.close();
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
