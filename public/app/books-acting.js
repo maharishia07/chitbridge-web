@@ -126,8 +126,9 @@
     return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(function (split) {
       if (split.unread) throw Object.assign(new Error('the grant list could not be read'), { unread: true });
       var heldBy = split.live || {}, seats = (split.seats || {})[id] || {};
-      if (!context.seatNamed) role = seats.adviser ? 'adviser' : 'auditor'; /* no &role on the address: the seat the grant gives (the adviser seat acts, as the grant list does) */
-      var grant = seats[role]; /* a seat the address names must be held: a store holding both gives each its own row */
+      var door = root.CBBooksGrantApi.doorsFor(split, id, ''); /* the ONE seat rule: only a door this login may use (the server's may_use) */
+      if (!context.seatNamed) role = door.open || (door.doors.indexOf('adviser') >= 0 ? 'adviser' : 'auditor'); /* no &role on the address: the seat this login's door gives */
+      var grant = door.doors.indexOf(role) >= 0 ? seats[role] : null; /* a seat the address names must be a door this login may use */
       if (!grant) {
         context = null;
         return false;

@@ -88,7 +88,7 @@
   function heldSplit(call) {
     return callEndpoint(call, 'grantsList').then(
       function (answer) {
-        var out = { live: {}, ended: {}, seats: {} };
+        var out = { live: {}, ended: {}, seats: {}, mine: Array.isArray(answer && answer.seats) ? answer.seats : null }; /* mine: the seats THIS login holds, as the server says (null from an older api) */
         ((answer && answer.received) || []).forEach(function (grant) {
           var id = String(grant.grantor_entity);
           var isLive = grant.state === 'live' && !grant.revoked_at && !grant.ended_at;
@@ -103,6 +103,20 @@
         return failure && (failure.status === 401 || failure.status === 403) ? {} : { unread: true }; /* a login that may not list grants has none; a list that could not be read is said as that (l16 fable3), never as "no grant" */
       }
     );
+  }
+  /** ⭐ THE ONE SEAT RULE (firm frame P0): which door of this client this login opens, from what the SERVER says (received[].may_use = mayUseGrant, seats = holdsSeat), never a guess.
+   *  doors = the client's live grants whose row says may_use (a row without the key, from an older api, counts as usable: behave as before).
+   *  0 doors → { refused: true }. 1 door → open it. 2 doors and the login holds ONE seat → open that seat's door. 2 doors and the login holds both (or the api does not say) → the stored seat if it is still a door, else ask.
+   *  stale: the stored seat is not a door any more (drop it). The seat is stored by the caller only after the first books read answers 200. */
+  function doorsFor(split, id, saved) {
+    var rows = ((split && split.seats) || {})[String(id)] || {};
+    var doors = ['auditor', 'adviser'].filter(function (role) { return rows[role] && rows[role].may_use !== false; });
+    var mine = split && split.mine, stale = !!saved && doors.indexOf(saved) < 0;
+    if (!doors.length) return { doors: doors, refused: true, stale: stale };
+    if (doors.length === 1) return { doors: doors, open: doors[0], stale: stale };
+    if (mine && mine.length === 1 && doors.indexOf(mine[0]) >= 0) return { doors: doors, open: mine[0], stale: stale };
+    if (saved && !stale) return { doors: doors, open: saved, stale: false };
+    return { doors: doors, ask: true, stale: stale };
   }
   function held(call) {
     return heldSplit(call).then(function (split) { return split.live || {}; });
@@ -163,5 +177,5 @@
   function stateWords(state) {
     return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
+  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, doorsFor: doorsFor, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);

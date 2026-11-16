@@ -190,6 +190,7 @@
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
         viewState.answer = answer;
+        if (viewState.o.onRead) viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
         if (report.k === 'pl' && answer && answer.gross_profit) answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; /* the server's gross profit, named like its other totals */
         viewState.why = null;
         if (report.k === 'daybook' && viewState.mk) viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
