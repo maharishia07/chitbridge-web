@@ -625,7 +625,9 @@ async function start() {
      on → the Dues column and the dues alert exist; off → neither is drawn, no blank column */
   try {
     const reply = await api('me');
-    CRM.ledger = !!(reply && reply.ledger_on === true);
+    const me = (reply && reply.entity) || reply || {};
+    if (typeof me.ledger_on === 'boolean') CRM.ledger = me.ledger_on;
+    else CRM.ledger = await api('booksHealth').then(() => true, () => false); /* an api that does not say (no ledger_on): the old probe, 404 = off */
     if (reply && reply.country) SESSION.country = reply.country;
   } catch (e) {
     /* CX0: the shop's country — the pack's tax-id word (taxIdWord) on the party list and record */

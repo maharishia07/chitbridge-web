@@ -1193,8 +1193,9 @@ async function start() {
   if (t.others.length) return closeFirst(t);
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
-    const mine = await api('me');
-    if (!(mine && mine.ledger_on === true)) return offCard();
+    const mine = await api('me'),
+      me = (mine && mine.entity) || mine || {};
+    if (typeof me.ledger_on === 'boolean' && !me.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
     BK.waiting = (reply && reply.waiting) || [];
     if (reply && reply.year) BK.year = reply.year; /* the shop's year — cap-books bkFyNow / bkMonths paint it, never an April of their own */
