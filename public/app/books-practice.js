@@ -335,7 +335,7 @@
   if (holding) {
     root.document.documentElement.classList.add('bp-hold');
     var hs = root.document.createElement('style');
-    hs.textContent = 'html.bp-hold [data-testid="shell-areas"],html.bp-hold [data-testid="shell-sidetools"],html.bp-hold #railbox{display:none!important}';
+    hs.textContent = 'html.bp-hold [data-testid="shell-areas"],html.bp-hold [data-testid="shell-sidetools"],html.bp-hold #railbox{display:none!important}html.bp-hold .cbsh-nv:not([data-go="home"]){visibility:hidden}';
     (root.document.head || root.document.documentElement).appendChild(hs);
     root.setTimeout(release, SETTLE_CEILING + 500);
   }
