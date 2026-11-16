@@ -26,6 +26,11 @@ const bankStoreState_SHOWN = 4;
 const bksE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 /** true when the server says the shared record is not set up yet (503) */
 const bksNotSetUp = (failure) => !!failure && failure.status === 503;
+/** the api's 403 COST_BLIND (B3): this login may not see costs, so the bank statements and log are not its to read; ONE test and ONE sentence for every bank read (the body's code, from the error's own data) */
+const bksCostBlind = (failure) => !!failure && failure.status === 403 && !!failure.data && (failure.data.code === 'COST_BLIND' || (failure.data.error && failure.data.error.code === 'COST_BLIND'));
+const bksCostBlindSay = () => tx('Your access does not include costs, so the bank statements are hidden.');
+/** why a bank read failed, in words: the cost-blind sentence, else the server's own message */
+const bksWhy = (failure) => (bksCostBlind(failure) ? bksCostBlindSay() : (failure && failure.message) || '');
 
 /** the log's marks, oldest first, through the engine's own step; a mark the engine refuses is skipped, never invented */
 function bankStoreReplay(marks) {
@@ -61,7 +66,7 @@ async function bankStoreLoad(view) {
     return state;
   } catch (failure) {
     bankStoreState.mode = bksNotSetUp(failure) ? 'device' : 'error';
-    bankStoreState.say = bksNotSetUp(failure) ? '' : (failure && failure.message) || '';
+    bankStoreState.say = bksNotSetUp(failure) ? '' : bksWhy(failure);
     return bkbLoad('marks:' + bankStoreState.view.acct, {});
   }
 }
@@ -89,7 +94,7 @@ function bankStoreAppend(action) {
     })
     .catch((failure) => {
       bankStoreState.mode = bksNotSetUp(failure) ? 'device' : 'error';
-      bankStoreState.say = bksNotSetUp(failure) ? '' : (failure && failure.message) || '';
+      bankStoreState.say = bksNotSetUp(failure) ? '' : bksWhy(failure);
     })
     .then(bankStorePaintLine);
 }

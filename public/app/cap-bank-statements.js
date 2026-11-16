@@ -76,7 +76,7 @@ async function bankStmtLoad() {
     BKST.mode = 'server';
   } catch (failure) {
     BKST.data = null;
-    BKST.mode = failure && failure.status === 503 ? 'device' : 'error';
+    BKST.mode = failure && failure.status === 503 ? 'device' : bksCostBlind(failure) ? 'blind' : 'error';
   }
   if (BKST.data && typeof bankHomeSigned === 'function') await bankHomeSigned().catch(() => {});
   if (BKST.data && BKST.all) await bankStmtAllLoad();
@@ -129,6 +129,7 @@ const bkstMissing = (data) => (data ? bkhTally(data, data.accounts).missing : 0)
 /** one line: what the box holds, said as the gap the person should fix */
 function bkstSummary() {
   if (BKST.mode === 'device') return tx('Starts after an update. Your statement is still read on this device.');
+  if (BKST.mode === 'blind') return bksCostBlindSay();
   if (BKST.mode === 'error') return tx('Could not read the statements kept.');
   const data = BKST.data;
   if (!data || !BKST.fileTotal) return data && data.older ? txf('{n} older statements kept', { n: data.older }) : tx('Nothing kept yet');
@@ -359,7 +360,9 @@ function bkstFetchFile(id, use) {
     headers: Object.assign({ Authorization: 'Bearer ' + SESSION.token }, typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {})
   });
 }
-const bkstWhyNot = (res) => (res.status === 403 ? tx('This access has ended.') : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
+const bkstWhyNot = async (res) => (res.status === 403 && (await bkstBlind(res)) ? bksCostBlindSay() : res.status === 403 ? tx('This access has ended.') : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
+/** a 403 whose body says COST_BLIND (the file read has no api() wrapper, so the body is read here) */
+const bkstBlind = (res) => res.clone().json().then((j) => bksCostBlind({ status: res.status, data: j }), () => false);
 /** Read: the kept text goes to the page's ONE reader (bankTake), for the account it was kept against; nothing is parsed or hashed here */
 async function bankStmtRead(button) {
   return bankStmtReadFile(button.getAttribute('data-file'));
@@ -376,7 +379,7 @@ async function bankStmtReadFile(id, hint) {
   } catch (_) {
     return peBad('bks_out', tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
   }
-  if (!res.ok) return peBad('bks_out', bkstWhyNot(res));
+  if (!res.ok) return peBad('bks_out', await bkstWhyNot(res));
   const text = await res.text();
   const select = bkbEl('bk_acct');
   if (select) select.value = String(code);
@@ -397,7 +400,7 @@ async function bankStmtDownload(button) {
   } catch (_) {
     return peBad('bks_out', tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
   }
-  if (!res.ok) return peBad('bks_out', bkstWhyNot(res));
+  if (!res.ok) return peBad('bks_out', await bkstWhyNot(res));
   const url = URL.createObjectURL(await res.blob());
   const link = document.createElement('a');
   link.href = url;
