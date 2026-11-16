@@ -874,6 +874,23 @@ async function route(S, r) {
   ok(...C.finish());
   ok(threw.length === 0, 'no page error from Accounts' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   ok(offHost.filter((u) => !/fonts\.g|cdnjs\.cloudflare\.com\/ajax\/libs\/qrcode-generator/.test(u)).length === 0, 'nothing but the stand-in was reachable (the fonts and the QR script of the app page that Sign out opens, are refused)' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
+
+  /* ── 10 · THE PROFIT BRIDGE under the P&L (chart engine step 3): the owner and the auditor read Books here ── */
+  for (const [tag, viewport] of [['1366', { width: 1366, height: 768 }], ['390', { width: 390, height: 844 }]]) {
+    const { ctx, p } = await open(standIn(), { viewport });
+    await nav(p, 'pl');
+    await p.waitForSelector('[data-testid="pl-bridge"] svg', { timeout: 8000 }).catch(() => {});
+    await p.waitForTimeout(300);
+    const m = await p.evaluate(() => ({ bars: document.querySelectorAll('[data-testid^="pl-bar-"]').length, minus: document.querySelectorAll('[data-testid="pl-bar-expenses"][data-kind="minus"]').length,
+      bar: !!document.querySelector('[data-testid="pl-chart"] [data-testid="chart-bar"]'), table: !!document.querySelector('[data-testid="pl-profit"]'), refused: !!document.querySelector('[data-testid="cd-waterfall-refused"]'),
+      sw: document.documentElement.scrollWidth, iw: innerWidth, main: (() => { const e = document.querySelector('.main'); return e ? e.scrollWidth - e.clientWidth : 0; })() }));
+    ok(m.bars === 3 && m.minus === 1 && m.bar && m.table && !m.refused, 'P&L at ' + tag + ': the profit bridge (Income, Expenses, Profit) sits under the profit line, with the options bar; the figures stay');
+    ok(m.sw <= m.iw && m.main <= 0, 'P&L at ' + tag + ': no horizontal scroll (' + m.sw + ' of ' + m.iw + ')');
+    fs.mkdirSync(path.join(SHOTS, 'chart-step3'), { recursive: true });
+    await p.screenshot({ path: path.join(SHOTS, 'chart-step3', 'accounts-pl-' + tag + '.png') });
+    await ctx.close();
+  }
+
   await b.close(); srv.close();
   console.log('\n  cb-accounts: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
