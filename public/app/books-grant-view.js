@@ -34,7 +34,7 @@
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
-    { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [], panels: true },
+    { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', MONEY], ['age_d0_30', '1–30', MONEY], ['age_d31_60', '31–60', MONEY], ['age_d61_90', '61–90', MONEY], ['age_d90_plus', '90+', MONEY], ['balance_minor', 'Total', MONEY]], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
 
@@ -75,7 +75,7 @@
   }
   function figure(row, column) {
     var v = row[column[0]];
-    if (column[2] === MONEY) return moneyCell(row, column[0], v);
+    if (column[2] === MONEY) return narrowLabel(row, column, moneyCell(row, column[0], v));
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
     if (column[0] === 'lock_note') return v || '—'; /* html built from the server's trail, each line escaped */
     if (column[0] === 'party_ref') return partyCell(row, v); /* one painter: the party · ref, and under it who posted it when an adviser did */
@@ -89,10 +89,18 @@
     var text = v == null || v === '' ? '—' : String(v), by = row.posted_by_words ? '<div class="sub" data-testid="bv-posted-by">' + esc(words('posted') + ' ' + String(row.posted_by_words).replace(/^Posted /, '')) + '</div>' : '';
     return esc(text) + by;
   }
+  /** W21: on a phone the aged table is a card of values, so each aged figure names its bucket ("1–30 A$220.00"); on a wide screen the column head does that */
+  function narrowLabel(row, column, painted) {
+    var narrow = typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 600px)').matches;
+    var aged = /^age_/.test(column[0]) || (column[0] === 'balance_minor' && viewState.report === 'dues');
+    return narrow && painted && aged ? words(column[1]) + ' ' + painted : painted;
+  }
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
   function moneyCell(row, key, v) {
     if (key === 'sales_minor' && (v == null || v === '')) return words('No sales');
     if ((key === 'dr_minor' || key === 'cr_minor') && (v == null || v === '' || String(v) === '0')) return '';
+    if (/^age_/.test(key) && v != null && Number(v) === 0) return ''; /* W21: an empty bucket is blank, as the leaders print it */
+    if (/^age_/.test(key) && v == null) return '—';
     return minorWords(row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(v))) : v);
   }
   /** the firm's "Actions" tab is open: the queues, not a read */
@@ -364,12 +372,26 @@
     });
     viewState.o.mountList(host, Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows)));
   }
-  /** Who owes whom: two panels, customers owe you and you owe suppliers, no net total */
+  /** W21: the two headings in the reader's voice: a firm reads "Customers owe <client>" and "<client> owes suppliers"; the owner's own books say you (no member = the owner) */
+  function duesVoice(client) {
+    return client ? { customer: words('Customers owe') + ' ' + client, supplier: client + ' ' + words('owes suppliers') } : { customer: words('Customers owe you'), supplier: words('You owe suppliers') };
+  }
+  /** the aged figures of one row (the server's follow_up, days past due) as the table's columns */
+  function agedRow(row) {
+    var fu = row.follow_up || {};
+    return Object.assign({}, row, { age_not_due: fu.not_due, age_d0_30: fu.d0_30, age_d31_60: fu.d31_60, age_d61_90: fu.d61_90, age_d90_plus: fu.d90_plus });
+  }
+  /** the total row of one side: the server's own aged_totals (nothing is added up here) */
+  function agedTotalRow(who, total) {
+    if (!total) return [];
+    return [{ _total: true, name: words('Total'), side: who, age_not_due: total.not_due, age_d0_30: total.d0_30, age_d31_60: total.d31_60, age_d61_90: total.d61_90, age_d90_plus: total.d90_plus, balance_minor: total.balance_minor }];
+  }
+  /** Who owes whom: two aged tables, customers owe and the shop owes suppliers (Current · 1–30 · 31–60 · 61–90 · 90+ days past due), each with its total row, no net total */
   function paintDues(host, report) {
-    var all = report.rows(viewState.answer || {});
-    host.innerHTML = '<h3 class="sub">' + esc(words('Customers owe you')) + '</h3><div id="bv_dues_c" data-testid="bv-dues-customers"></div><h3 class="sub">' + esc(words('You owe suppliers')) + '</h3><div id="bv_dues_s" data-testid="bv-dues-suppliers"></div>';
+    var all = report.rows(viewState.answer || {}), voice = duesVoice(viewState.o && viewState.o.member && viewState.o.member.name), totals = (viewState.answer && viewState.answer.aged_totals) || {};
+    host.innerHTML = '<h3 class="sub" data-testid="bv-dues-customers-head">' + esc(voice.customer) + '</h3><div id="bv_dues_c" data-testid="bv-dues-customers"></div><h3 class="sub" data-testid="bv-dues-suppliers-head">' + esc(voice.supplier) + '</h3><div id="bv_dues_s" data-testid="bv-dues-suppliers"></div>';
     ['customer', 'supplier'].forEach(function (who) {
-      var rows = all.filter(function (row) { return row.side === who; }).map(function (row, n) { return Object.assign({ _n: n }, row); });
+      var rows = all.filter(function (row) { return row.side === who; }).map(agedRow).concat(agedTotalRow(who, totals[who])).map(function (row, n) { return Object.assign({ _n: n }, row); });
       var config = listConfig(report, rows);
       config.key = 'books-grant-dues-' + who;
       viewState.o.mountList($(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), Object.assign({ foldHead: true }, config));
@@ -466,5 +488,5 @@
       }
     };
   }
-  root.CBBooksGrantView = { mount: mount };
+  root.CBBooksGrantView = { mount: mount, duesVoice: duesVoice };
 })(typeof window !== 'undefined' ? window : globalThis);
