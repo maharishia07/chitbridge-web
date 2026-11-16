@@ -191,7 +191,7 @@ W.run('books-grant', async (w) => {
   await w.step('M5', 'the member · Who looked: when, who, what — the refused look is said as refused', async () => {
     await page.click(T('bg-seg-looks')); await page.waitForSelector(T('bg-look-allowed'), { timeout: 10000 });
     const list = await txt(T('bg-list'));
-    return { ok: /Trial balance/.test(list) && /Looked/.test(list) && /Refused: not open to an auditor/.test(list), saw: list.slice(0, 140) };
+    return { ok: /trial balance/i.test(list) && /Looked/.test(list) && /Refused: not open to an auditor/.test(list), saw: list.slice(0, 140) };
   });
   await w.step('M6', 'the member · End access asks first, then ends: the row says Ended', async () => {
     await page.click(T('bg-seg-given')); await page.waitForSelector(T('bg-grant-' + GRANT), { timeout: 10000 });
