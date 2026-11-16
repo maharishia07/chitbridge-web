@@ -4,9 +4,10 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..'), PUB = path.join(ROOT, 'public');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+const TODAY = require('./today.cjs');
 const API = process.env.API || 'http://127.0.0.1:3998';
 if (/railway|vercel/i.test(API)) throw new Error('STOP: production is never a target');
-const ymd = (tz, off) => { const d = new Date(Date.now() + off * 864e5); const p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d).split('-'); return p[0].slice(2) + p[1] + p[2]; };
+const ymd = (tz, off) => { const p = TODAY.dayPlus(off, TODAY.todayIn(tz)).split('-'); return p[0].slice(2) + p[1] + p[2]; };   /* the tester code is the server's real day in the zone: the day comes from the walks' one today (e2e/lib/today.cjs), never a raw clock */
 async function call(method, p, token, body) {
   const res = await fetch(API + p, { method, headers: Object.assign({ 'content-type': 'application/json' }, token ? { authorization: 'Bearer ' + token } : {}), body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await res.text(); let json; try { json = JSON.parse(text); } catch (_) { json = text; }
