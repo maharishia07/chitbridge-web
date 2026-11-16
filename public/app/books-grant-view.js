@@ -325,7 +325,7 @@
     if (report.k !== 'periods' || !a || !a.books_start) return '';
     var names = typeof root.monthNames === 'function' ? root.monthNames('short') : [];
     var monthOf = function (m) { var at = String(m.start_date || ''); return (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4); };
-    var lines = [['start', words('Books start') + ' ' + monthOf(a.books_start)], ['lock', a.lock_date ? words('Locked to') + ' ' + root.shopDay(a.lock_date) : words('No month is locked yet')]];
+    var lines = [['start', words('Books start') + ' ' + monthOf(a.books_start)], ['lock', a.lock_date ? words('Locked to') + ' ' + root.shopDay(a.lock_date) : words('Not locked from the books start')]];
     if ((a.gaps || []).length) lines.push(['gap', words('Open') + ': ' + a.gaps.map(monthOf).join(', ') + ' (' + words('gap') + ')']);
     return '<div class="nw-acts" data-testid="bv-lock-lines">' + lines.map(function (l) { return '<span class="tag" data-testid="bv-lock-' + l[0] + '">' + esc(l[1]) + '</span>'; }).join('') + '</div>';
   }
