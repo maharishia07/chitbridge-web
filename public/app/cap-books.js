@@ -5932,8 +5932,7 @@ function bkFyWord(w) {
   var m = bkMonths();
   return txf((w || 'This FY') + ' ({a}–{b})', { a: tx(m[0]), b: tx(m[11]) });
 }
-/** the period's status is a server enum — it becomes a word here, never shown raw */
-var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
+/** the period's status is a server enum — it becomes a word through CBLockWords.stateWord (ONE word per state, E13), never shown raw */
 /** W15-71: the seat that only READS the client's books (an auditor under a grant): every write control is left out, not greyed; the server refuses the writes too */
 function bkReadOnlySeat() {
   var seat = typeof CBBooksActing !== 'undefined' && CBBooksActing.current ? CBBooksActing.current() : null;
@@ -6083,7 +6082,7 @@ function bkLockRowsPaint() {
         '">' +
         (BK_PERIOD_SYM[st] || '') +
         ' ' +
-        esc(tx(BK_PERIOD_WORD[st] || st)) +
+        esc(CBLockWords.stateWord(st)) +
         (who.line || who.note ? '<div class="lk-who" data-testid="lk-who-' + p + '">' + esc([who.line, who.note].filter(Boolean).join('. ')) + '</div>' : '') +
         (who.all.length > 1 ? '<details class="lk-hist" data-testid="lk-hist-' + p + '"><summary>' + esc(txf('History ({n})', { n: who.all.length })) + '</summary><ul>' + who.all.map(function (words) { return '<li>' + esc(words) + '</li>'; }).join('') + '</ul></details>' : '') +
         '</td><td data-testid="lk-figs-' +
@@ -6170,7 +6169,7 @@ async function bkLockDo(what, period, reason) {
       confirm:
         what === 'hard'
           ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: fiscalYear })), yes: tx('Close for good') }
-          : null,
+          : { title: txf('Lock {m} {fy}?', { m: monthName, fy: fiscalYear }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }, /* E12: Lock is a commit, so it asks first in the library's confirm */
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {
         var status = answer && answer.period && answer.period.status;
@@ -6184,7 +6183,7 @@ async function bkLockDo(what, period, reason) {
             bkQuiet('periods-reload', failure);
           }); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
         var element = document.getElementById('lk_out');
-        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: fiscalYear, s: tx(BK_PERIOD_WORD[status] || 'Done') });
+        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: fiscalYear, s: status ? CBLockWords.stateWord(status) : tx('Done') });
       }
     }
   );

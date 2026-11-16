@@ -41,13 +41,12 @@
   ];
 
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
-  var MONTH_STATE = { open: 'Open', soft_locked: 'Closed', hard_locked: 'Closed for good' };
   function monthRows(answer) {
     var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
     return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
-      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
+      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: root.CBLockWords ? root.CBLockWords.stateWord(p.status) : words(p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
     });
   }
   /** W20: the balance sheet's profit line is the profit of the period it is read at: "Profit 1 Jul 2025 – 30 Jun 2026", not a bare "Profit for the year" (api fy_from and the as-at day) */
