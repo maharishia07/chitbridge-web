@@ -142,7 +142,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
     });
     /* rule 13 on the record: with CB Accounts OFF in the stand-in. With it on, the record's Ledger block (cap-books.js: the dues fact and the statement
        table) already overflows 390 px before this round — a CB Accounts finding, reported, not hidden; the Consent block itself is measured here. */
-    if (S) { S.ledgerOff = true; await page.evaluate(() => { try { localStorage.setItem('cb_crm_ledger', '0'); } catch (_) {} }); await page.reload(); await openRecord(key); await openConsent(); }   /* a reload: the same hash would not reboot the page */
+    if (S) { S.ledgerOff = true; await page.evaluate(() => { try { localStorage.setItem('cb_crm_ledger', '0'); } catch (_) {} }); await page.reload(); await openRecord(key); await openConsent(); await page.click(T('crm-consent-yes-email'), { timeout: 3000 }).catch(() => {}); }   /* the reason field open and the standing line shown, measured below; a reload: the same hash would not reboot the page */
     await rule13(w, 'R13a', 'the record with Consent open (Ledger off)', 'screen');
     if (S) S.ledgerOff = false;
 

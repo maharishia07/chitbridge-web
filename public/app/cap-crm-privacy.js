@@ -108,7 +108,12 @@ function crmConsentRows(cp) {
       ' ' +
       (m.may
         ? crmConsentBtn(item, 'marketing', false, 'No', why, 'crm-consent-no-' + item)
-        : crmConsentBtn(item, 'marketing', true, 'Yes', why, 'crm-consent-yes-' + item));
+        : crmConsentBtn(item, 'marketing', true, 'Yes', why, 'crm-consent-yes-' + item)) +
+      '<span class="hint" data-standing="' +
+      item +
+      '" data-testid="crm-consent-standing-' +
+      item +
+      '"></span>'; /* filled on open from the history: the customer's own no stands */
     var msgs =
       crmConsentChip(s, 'crm-consent-' + item + '-service') +
       ' ' +
@@ -150,6 +155,7 @@ function crmConsentHTML(p, rec) {
     crmConsentRows(cp) +
     '</div>' +
     (why && cp && cp.migrated ? '<div class="why" data-testid="crm-consent-why">' + esc(why) + '</div>' : '') +
+    '<div id="crm_consent_ask" data-testid="crm-consent-ask"></div>' +
     '<div class="hint" id="crm_consent_law" data-testid="crm-consent-law"></div>' +
     '<div class="hint" id="crm_consent_holders" data-testid="crm-consent-holders"></div>' +
     '<div id="crm_consent_hist" data-testid="crm-consent-hist"></div>' +
@@ -215,6 +221,7 @@ async function crmConsentOpen(p) {
   node = document.getElementById('crm_consent_law');
   if (!hist) return;
   if (node && r.law) node.innerHTML = r.law.known ? '<b>' + esc(r.law.short || r.law.law) + '</b> · ' + esc(r.law.consent) : esc(r.law.note || '');
+  crmConsentStanding(r);
   var rows = (r.history || []).map(function (item, index) {
     return Object.assign({ _i: index }, item);
   });
@@ -278,23 +285,84 @@ async function crmConsentOpen(p) {
     empty: { title: tx('Nothing noted yet.'), sub: tx('Say yes or no above when they tell you.') }
   });
 }
-/** a Yes / No / Stop / Allow → ONE POST (the same route the shopper's own page writes through); the record re-reads */
-async function crmConsentSet(p, ch, pu, allowed) {
+/** the customer's own no still stands: their newest own row (self / reply) on this channel's offers says no and the server's verdict is no — a staff yes after it does not lift it (api lib/consent-standing) */
+function crmConsentStandingNo(r, ch) {
+  var own = (r.history || []).filter(function (h) {
+    return h.channel === ch && h.purpose === 'marketing' && (h.source === 'self' || h.source === 'reply');
+  })[0];
+  var m = ((r.may || {})[ch] || {}).marketing || {};
+  return !!(own && !own.allowed && m.may === false);
+}
+/** say it plainly beside the toggle, per channel, from the history the api returned */
+function crmConsentStanding(r) {
+  CRM_CONSENT_CH.forEach(function (ch) {
+    var node = document.querySelector('[data-standing="' + ch + '"]');
+    if (node) node.textContent = crmConsentStandingNo(r, ch) ? tx('The customer said no themselves. Only their own yes lifts it.') : '';
+  });
+}
+/** a Yes to offers needs its reason: the field opens in the block, beside the rows (the api asks for source staff + a note of 3+ characters) */
+function crmConsentAsk(ch) {
+  var box = document.getElementById('crm_consent_ask');
+  if (!box) return;
+  box.innerHTML =
+    '<label>' +
+    esc(tx('Why is it a yes? What did they say, and when?')) +
+    '<input data-cbsid="CRM010-I03" class="inp" id="crm_consent_note" data-testid="crm-consent-note" maxlength="300" data-ch="' +
+    esc(ch) +
+    '" autocomplete="off"></label>' +
+    '<div id="crm_consent_note_err" class="why" role="alert" data-testid="crm-consent-note-err"></div>' +
+    '<div class="supacts">' +
+    '<button data-cbsid="CRM010-B08" type="button" class="act sm" data-crm="consentsave" data-testid="crm-consent-note-save">' +
+    esc(tx('Note yes')) +
+    '</button>' +
+    '<button data-cbsid="CRM010-B09" type="button" class="act sm ghost" data-crm="consentcancel" data-testid="crm-consent-note-cancel">' +
+    esc(tx('Cancel')) +
+    '</button></div>';
+  document.getElementById('crm_consent_note').focus();
+}
+function crmConsentAskClose() {
+  var box = document.getElementById('crm_consent_ask');
+  if (box) box.innerHTML = '';
+}
+/** the Save of the reason field: 3+ characters here first (inline), then the one POST */
+function crmConsentAskSave(p) {
+  var field = document.getElementById('crm_consent_note'),
+    err = document.getElementById('crm_consent_note_err');
+  if (!field) return;
+  var note = String(field.value || '').trim();
+  if (note.length < 3) {
+    err.textContent = tx('Add a short reason, at least 3 characters.');
+    return;
+  }
+  err.textContent = '';
+  crmConsentSet(p, field.getAttribute('data-ch'), 'marketing', true, note);
+}
+/** a Yes / No / Stop / Allow → ONE POST (the same route the shopper's own page writes through); the record re-reads. A staff Yes to offers carries source staff + its note */
+async function crmConsentSet(p, ch, pu, allowed, note) {
   if (PRV.busy) return;
   PRV.busy = true;
+  var field = document.getElementById('crm_consent_note_err');
   try {
-    await api('crmPrefSet', { params: { id: p.party_id }, body: { channel: ch, purpose: pu, allowed: allowed } });
+    var body = { channel: ch, purpose: pu, allowed: allowed };
+    if (allowed && pu === 'marketing') {
+      body.source = 'staff';
+      body.note = note;
+    }
+    await api('crmPrefSet', { params: { id: p.party_id }, body: body });
     toast(tx('Noted'));
     CRMR.keep.consentOpen = true;
     crmRecordOpen(CRM.route);
   } catch (e) {
-    toast(
-      e && e.status === 503
-        ? tx('Consent records start after an update. Nothing is lost.')
-        : e && e.status === 403
-          ? crmViewWhy()
-          : tx("Couldn't save that. Try again.")
-    );
+    var words = e && e.status === 400 ? answerWords(e.data) : '';
+    if (words && field) field.textContent = words; /* the api's own 400 words, on the field */
+    else
+      toast(
+        e && e.status === 503
+          ? tx('Consent records start after an update. Nothing is lost.')
+          : e && e.status === 403
+            ? crmViewWhy()
+            : tx("Couldn't save that. Try again.")
+      );
   } finally {
     PRV.busy = false;
   }
@@ -302,6 +370,18 @@ async function crmConsentSet(p, ch, pu, allowed) {
 /** the click door the record hands here (crmRecordClick → crmPrivacyClick): true when handled */
 function crmPrivacyClick(a, node) {
   var p = CRMR.p;
+  if (a === 'consent' && p && node.getAttribute('data-pu') === 'marketing' && node.getAttribute('data-v') === '1') {
+    crmConsentAsk(node.getAttribute('data-ch'));
+    return true;
+  }
+  if (a === 'consentsave' && p) {
+    crmConsentAskSave(p);
+    return true;
+  }
+  if (a === 'consentcancel') {
+    crmConsentAskClose();
+    return true;
+  }
   if (a === 'consent' && p) {
     crmConsentSet(p, node.getAttribute('data-ch'), node.getAttribute('data-pu'), node.getAttribute('data-v') === '1');
     return true;
