@@ -43,7 +43,7 @@ W.run('period', async (w) => {
       const sp = u.searchParams, day = (k) => sp.get(k);
       if (p === '/api/books/periods') {
         const ex = example('GET /api/books/periods'), row = ex.periods[0];
-        const month = (fy, period, start, end, entries, status, checked) => Object.assign({}, row, { fiscal_year: fy, period, start_date: start, end_date: end, entries, status, checked, of: entries, sales_minor: 0 });
+        const month = (fy, period, start, end, entries, status, checked) => Object.assign({}, row, { fiscal_year: fy, period, start_date: start, end_date: end, entries, status, checked, of: entries, sales_minor: 0, before_books: false });
         const all = [month('2025-26', 3, '2025-09-01', '2025-09-30', 40, 'soft_locked', 40), month('2025-26', 4, '2025-10-01', '2025-10-31', 30, 'soft_locked', 12), month('2024-25', 9, '2025-03-01', '2025-03-31', 10, 'hard_locked', 10)];
         return J(r, 200, { under_review: { fy: '2025-26', from: '2025-07-01', to: '2026-06-30' }, years: [{ fy: '2025-26', from: '2025-07-01', to: '2026-06-30', months: 12, locked: 12, entries: 70, checked: 52, of: 70 }, { fy: '2024-25', from: '2024-07-01', to: '2025-06-30', months: 12, locked: 12, entries: 10, checked: 10, of: 10 }], periods: all.filter((m) => !day('fy') || m.fiscal_year === day('fy')) });
       }
