@@ -29,6 +29,7 @@ const standin = require('./lib/standin.cjs');
 const HERE = path.resolve(__dirname, '..');
 const ROOT = path.resolve(process.env.PROBE_ROOT || HERE);
 const PUB = path.join(ROOT, 'public');
+const C = require('./lib/contract.cjs');   /* every /api/books, /api/crm and /api/work answer the stand-in serves is held to the API contract (contract.cjs check 4) */
 const BASELINE = path.join(__dirname, 'walk-probe-faults.baseline.json');
 const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : null; };
 const OUT = arg('--out'), BASEF = arg('--base'), WRITE = process.argv.includes('--write');
@@ -100,7 +101,7 @@ async function main() {
     if (q.method() === 'GET') { const p = new URL(q.url()).pathname, hit = EX.find((x) => same(x, p.split('/'))); if (hit && p !== '/api/entities/me' && p !== '/api/books/health') return r.fulfill({ status: 200, contentType: 'application/json', body: hit.body }); }
     /* a GET the stand-in has no answer for gets `{}`; PROBE_FALLBACK=array answers `[]` instead — a fault present under both is not the fixture's shape */
     const r2 = process.env.PROBE_FALLBACK === 'array' && q.method() === 'GET' ? new Proxy(r, { get: (t, k) => k === 'fulfill' ? (o) => t.fulfill(o && o.body === '{}' ? Object.assign({}, o, { body: '[]' }) : o) : (typeof t[k] === 'function' ? t[k].bind(t) : t[k]) }) : r;
-    return standin.route(S, r2);
+    return standin.route(S, C.wrap(r2, 'probe: '));
   });
   await ctx.addInitScript((s) => {
     window.__CB_SAFE_LOG = [];
@@ -221,6 +222,7 @@ async function main() {
   console.log('probe · ' + urls.length + ' pages · ' + keys.length + ' app screens · ' + screens + ' looks · ' + list.length + ' faults · ' + fresh.length + ' NEW vs ' + (bf ? path.basename(bf) : 'nothing'));
   fresh.forEach((f) => console.log('NEW · ' + f.kind + ' · ' + f.file + ' · ' + f.msg + ' · ' + f.screens.join(' | ')));
   if (WRITE) { fs.writeFileSync(BASELINE, JSON.stringify({ _: 'base faults of the fault probe (e2e/walk-probe-faults.cjs): a fault not listed here fails the walk. May only shrink.', faults: list.map((f) => ({ key: f.key, kind: f.kind, file: f.file, msg: f.msg })) }, null, 1)); console.log('baseline written: ' + list.length); }
-  process.exit(fresh.length && !WRITE ? 1 : 0);
+  const [held, heldSaid] = C.finish(); console.log((held ? 'ok  ' : 'XX  ') + heldSaid);
+  process.exit((fresh.length || !held) && !WRITE ? 1 : 0);
 }
 main().catch((e) => { console.error('probe stopped: ' + (e && e.stack || e)); process.exit(2); });
