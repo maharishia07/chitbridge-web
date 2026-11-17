@@ -6196,6 +6196,7 @@ function bkLockWhy(node) {
  */
 function bkLockReopen(period) {
   var monthName = tx(bkMonths()[period - 1] || String(period));
+  /* where-used: out-of-scope the mount is bkDialogMount(6): the host screen's own code plus -U26, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(6),
     pop: 'POP092',

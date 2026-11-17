@@ -48,7 +48,8 @@
     eventsTicket: row('POST', '/api/events/ticket'),
     notifications: row('GET', '/api/notifications'),
     notifSeen: row('POST', '/api/notifications/seen'),
-    notifDismiss: row('POST', '/api/notifications/dismiss')
+    notifDismiss: row('POST', '/api/notifications/dismiss'),
+    flagsList: row('GET', '/api/flags') /* a reply on my firm's note finds the note's client here (the same read the firm's work list makes) */
   };
   function ensureEP() {
     if (typeof EP === 'undefined' || !EP) return false;
@@ -73,7 +74,8 @@
     markGone: 'This entry was reversed or removed, so its question cannot be opened',
     aria: 'Activity',
     chit: 'a chit',
-    needs: 'Clearing needs the latest update on this system'
+    needs: 'Clearing needs the latest update on this system',
+    noteGone: 'This note was removed, so its client cannot be opened'
   };
   var KIND = {
     message_sent: ['💬', 'wrote about'],
@@ -146,7 +148,9 @@
     }
     /* W15-54: a mark notice (a Query asked, a reply) opens that record's thread: the entry id when the feed carries it, else its number (the open list names it) */
     var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', day: (item.mark_entry && item.mark_entry.posting_date) || '', title: subj } : null;
+    var note = item.action === 'note_reply' && item.mark_entry && item.mark_entry.entry_id ? String(item.mark_entry.entry_id) : '';
     return {
+      note: note,
       mark: mark && (mark.id || mark.no) ? mark : null,
       i: kind ? kind[0] : '•',
       mine: !!(item.assigned_to_me || item.dispute_for_me),
@@ -190,13 +194,25 @@
    * without core.js (the Home shell, index.html) hands the shell's apiBase + token, the way CBAvatar is given them, and the call is a
    * plain fetch with the bearer that unwraps the same {ok,data,error} envelope.
    */
+  /** ?a=1&b=2 of a plain object (the raw-fetch form of a call has no api() to do it); empty values are left out */
+  function queryOf(query) {
+    var text = Object.keys(query || {})
+      .filter(function (key) {
+        return query[key] !== '' && query[key] != null;
+      })
+      .map(function (key) {
+        return encodeURIComponent(key) + '=' + encodeURIComponent(query[key]);
+      })
+      .join('&');
+    return text ? '?' + text : '';
+  }
   function call(host, name, opts) {
     if (!host.apiBase && typeof api === 'function') return api(name, opts);
     var route = BELL_EP[name],
       tok = whoToken(host),
       base = host.apiBase || host.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
     return root
-      .fetch(base + route.p, {
+      .fetch(base + route.p + queryOf(opts && opts.query), {
         method: route.m,
         cache: 'no-store',
         headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
@@ -265,6 +281,7 @@
       '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
       (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '"' : ' disabled') +
       (x.order ? ' data-order="1"' : '') +
+      (x.note ? ' data-note-id="' + esc(x.note) + '"' : '') +
       '><span aria-hidden="true">' +
       x.i +
       '</span><span style="min-width:0">' +
@@ -447,6 +464,20 @@
         return ctl.load(hit ? [String(hit.subject_id)] : []).then(function () { show(hit ? String(hit.subject_id) : ''); });
       });
     }
+    /** a colleague's reply on my firm's note: the feed names the entry, not the client, so the firm's own list of notes (the work list's read) says whose it is; the client's Day book opens with that entry's note sheet (books-grant-view.js reads &note=) */
+    function openNote(entryId) {
+      return call(opts, 'flagsList', { query: { kind: 'note', limit: 200 } })
+        .then(function (reply) {
+          var hit = ((reply && reply.flags) || []).filter(function (flag) {
+            return flag.kind === 'note' && String(flag.subject_id) === entryId && flag.subject_entity;
+          })[0];
+          if (!hit) throw new Error('note not found');
+          root.location.assign('/network.html?open=' + encodeURIComponent(hit.subject_entity) + '&view=daybook&note=' + encodeURIComponent(entryId));
+        })
+        .catch(function () {
+          if (typeof root.toast === 'function') root.toast(T(W.noteGone));
+        });
+    }
     function onClick(ev) {
       ev.__cbbIn = true; /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
       var node = ev.target;
@@ -468,6 +499,13 @@
         else if (r.getAttribute('data-order') && !(root.CBEdition && root.CBEdition.hidesHref('/tasks.html')))
           root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
         else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
+        return;
+      }
+      var nt = node.closest('[data-testid="bell-row"]');
+      if (nt && nt.getAttribute('data-note-id')) {
+        bell.open = false;
+        paint();
+        openNote(nt.getAttribute('data-note-id'));
         return;
       }
       var mk = node.closest('[data-testid="bell-row"]');

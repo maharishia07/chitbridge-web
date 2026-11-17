@@ -130,6 +130,12 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
       await page.waitForTimeout(600);
       const states = await page.$$eval('[data-testid$="-box"]', (n) => n.map((b) => b.dataset.testid + ':' + (b.querySelector('svg') ? 'svg' : b.querySelector('[data-testid$="-error"]') ? 'ERROR' : 'words')));
       check(!states.some((x) => /ERROR/.test(x)) && states.length === 5, 'pictures ' + theme + '·' + width + ' five cards, none failed: ' + states.join(' '));
+      /* UX-137 register: every card and chart of the Pictures page wears its FIN008 code on the element a person sees (P01-P05 the cards, P06-P10 their charts), and the period buttons (FIN008-B03) have a name a reader hears */
+      const FIN008 = { 'FIN008-P01': 'pc-sales', 'FIN008-P02': 'pc-owed', 'FIN008-P03': 'pc-owe', 'FIN008-P04': 'pc-cash', 'FIN008-P05': 'pc-pl', 'FIN008-P06': 'pcs', 'FIN008-P07': 'pcowed', 'FIN008-P08': 'pcowe', 'FIN008-P09': 'pcpl', 'FIN008-P10': 'pcc' };
+      const worn = await page.evaluate((m) => Object.keys(m).filter((c) => { const n = document.querySelector('[data-testid="' + m[c] + '"]'); return !n || n.getAttribute('data-cbsid') !== c; }), FIN008);
+      check(worn.length === 0, 'pictures ' + theme + '·' + width + ' FIN008-P01..P10 each on its card or chart' + (worn.length ? ' MISSING ' + worn.join(' ') : ''));
+      const named = await page.evaluate(() => Array.from(document.querySelectorAll('[data-cbsid="FIN008-B03"]')).map((b) => (b.getAttribute('aria-label') || b.textContent || '').trim()));
+      check(named.length === 4 && named.every((x) => x.length > 0), 'pictures ' + theme + '·' + width + ' FIN008-B03 four period buttons, each with a name: ' + named.join(' / '));
       await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(300);
       const tag = 'pictures·' + theme + '·' + width;
       const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need), a = await audit(page, 'screen');
