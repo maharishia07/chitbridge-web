@@ -86,7 +86,8 @@
     dispute_resolved: ['✅', 'resolved a dispute on'],
     voided: ['🚫', 'voided'],
     mark_query: ['?', 'raised a Query on'],
-    mark_reply: ['💬', 'replied to the Query on']
+    mark_reply: ['💬', 'replied to the Query on'],
+    note_reply: ['💬', 'replied on your firm note on']
   };
   /** the ONE wording of a mark's subject (the bell and the Messages inbox both call it): a Query is on an ENTRY, never on a chit */
   function markSubject(entryNo) {
@@ -98,6 +99,7 @@
   /** a mark notice names its entry the way the books do: number · day (the shop's way) · amount in its own currency */
   function entryName(entry) {
     if (!entry) return '';
+    if (!entry.entry_no && entry.label) return String(entry.label); /* a firm note names its record the way its writer's page did (b877) */
     var day = entry.posting_date ? (typeof root.shopDay === 'function' ? root.shopDay(entry.posting_date) : entry.posting_date) : '',
       amount = entry.total_minor != null && entry.currency && typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(entry.total_minor), currency: entry.currency }) : '';
     return [entry.entry_no, day, amount].filter(Boolean).join(' · ');
@@ -121,6 +123,8 @@
     var kind = KIND[item.action],
       subj = item.mark_entry ? entryName(item.mark_entry) || markSubject() : item.action === 'mark_query' || item.action === 'mark_reply' ? markSubject() : item.manual_subject || item.auto_subject || T(W.chit),
       moment = '';
+    /* b877: a notice about a client's record names the CLIENT first (a firm with 150 clients knows where to go); the business's own notices carry no client */
+    var client = item.mark_client ? String(item.mark_client) : '';
     /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
     if (item.created_at) moment = localMoment(item.created_at);
     /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
@@ -149,7 +153,7 @@
       chit: item.chit_id || null,
       who: item.action_by_display_name || '',
       say: kind ? kind[1] : String(item.action || 'updated').replace(/_/g, ' '),
-      subj: subj,
+      subj: client && item.action !== 'message_sent' ? client + ' · ' + subj : subj,
       d: item.detail ? String(item.detail).slice(0, 90) : item.new_status || '',
       s: moment,
       id: item.log_id || null
