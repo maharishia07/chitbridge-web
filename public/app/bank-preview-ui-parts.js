@@ -19,13 +19,14 @@
     return item.state === 'in_books' && item.alreadyWhy ? '<span class="bd-why">' + escapeHtml(String(item.alreadyWhy).replace(/\s*\((?:ref )?bank:[^)]*\)/g, '').replace(/\s*\(\s*\)/g, '')) + '</span>' : ''; /* the line's internal reference is not for the reader */
   }
   /** every other thing holding a line back besides its entry and its one question, as tags */
-  function otherNeeds(item, tag) {
+  function otherNeeds(item, tag, escapeHtml) {
     return (item.blockers || [])
       .filter(function (code) {
         return code !== 'no_entry' && code !== item.needs;
       })
       .map(function (code) {
-        return tag('ask', preview.NEEDS_WORDS[code] || code);
+        var why = code === 'balance_break' ? preview.sentenceOf(code) : ''; /* the engine's own sentence, shown beside its label; the tick above clears it */
+        return tag('ask', preview.NEEDS_WORDS[code] || code) + (why ? ' <span class="bd-why">' + escapeHtml(why) + '</span>' : '');
       })
       .join(' ');
   }
@@ -103,8 +104,14 @@
     }
     /** B5-01: only the words on the bank line proposed this, no rule you taught and no party you know: it is added only when you say it is right */
     function tickBox(item) {
-      var said = preview.looksLike(item);
-      return (ctx.inPanel && said ? '' : '<span class="bd-ask">' + escapeHtml(said || 'Suggested from the words on the statement.') + '</span> ') + '<button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>Yes, this is right</button>';
+      var said = item.needs === 'balance_break' ? preview.sentenceOf('balance_break') : preview.looksLike(item);
+      return stayNote(item) + (ctx.inPanel && said ? '' : '<span class="bd-ask">' + escapeHtml(said || 'Suggested from the words on the statement.') + '</span> ') + '<button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>' + (item.needs === 'balance_break' ? 'Yes, this line is genuine' : 'Yes, this is right') + '</button>';
+    }
+    /** an over-payment the engine proposed: the part that stays on the party's account, said BEFORE the tick (the tick is what lets the server accept it, cap-bank-post.js); the figure is carried, never worked out */
+    function stayNote(item) {
+      if (!(item.onAccount > 0)) return '';
+      var who = item.event && item.event.type === 'payment_made' ? "supplier's" : "customer's";
+      return '<span class="bd-ask" data-testid="bd-stays-on-account">' + escapeHtml(amountText(item.onAccount) + ' stays on the ' + who + ' account.') + '</span> ';
     }
     Object.assign(ctx, { nearBox, invoiceQuestion, tickBox });
   }
@@ -141,17 +148,35 @@
         '<button data-cbsid="BKS017-B15" type="button" class="bd-btn" data-act="taxuse"' + dataKey(item) + '>Use this</button>'
       );
     }
+    /** BANK-new-15: a payment to the tax office that no lodged return explains asks WHICH tax it settles: the engine's own options (words from the pack), never a default; an answer goes through resolveLine, or says it is added as an entry */
+    function liabilityBox(item) {
+      var options = (item.what && item.what.options) || [];
+      return (
+        '<span class="bd-ask">' + escapeHtml(preview.sentenceOf('which_liability') || 'Which tax does this payment settle?') + '</span> ' +
+        options.map(function (one) {
+          return '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="liability"' + dataKey(item) + ' data-id="' + escapeHtml(one.id) + '" data-words="' + escapeHtml(one.words) + '">' + escapeHtml(one.words) + '</button>';
+        }).join(' ')
+      );
+    }
+    /** M-06: a loan repayment waits for the interest the OWNER types from the lender's statement (minor units are typed as the page shows money); never worked out, never remembered */
+    function interestBox(item) {
+      return '<span class="bd-ask">' + escapeHtml(preview.sentenceOf(item.needs) || "Type the interest from the lender's statement.") + '</span> ' +
+        '<input data-cbsid="BKS017-I02" class="bd-inp" type="text" inputmode="decimal" aria-label="Interest in this payment" data-act="interestfield" data-key="' + escapeHtml(item.key) + '"> ' +
+        '<button data-cbsid="BKS017-B15" type="button" class="bd-btn" data-act="interest"' + dataKey(item) + '>Use this interest</button>';
+    }
     /** the one question a held-back line asks next */
     function askedBox(item) {
       if (item.needs === 'may_be_in_books') return nearBox(item);
       if (item.needs === 'gst_basis') return '<span class="bd-why">Waiting for your ' + taxWordOf() + ' basis, asked above.</span>';
       if (item.needs === 'tax_invoice') return invoiceQuestion(item);
       if (item.needs === 'fee_tax') return ctx.feeTaxQuestion(item);
-      if (item.needs === 'needs_tick') return tickBox(item);
+      if (item.needs === 'which_liability') return liabilityBox(item);
+      if (item.needs === 'interest' || item.needs === 'interest_too_big') return interestBox(item);
+      if (item.needs === 'needs_tick' || item.needs === 'balance_break') return tickBox(item);
       if (item.needs === 'tax_kind') return taxKindBox(item);
       return '';
     }
-    Object.assign(ctx, { taxKindBox, askedBox });
+    Object.assign(ctx, { taxKindBox, liabilityBox, interestBox, askedBox });
   }
   /** the note under a line: the message of a line the sheet cannot finish, the line's note and the engine's own sentence; each function lands on the one shared `ctx` */
   function addLineNote(ctx) {
@@ -179,7 +204,7 @@
       var done = alreadyNote(item, escapeHtml);
       if (done) return done;
       var asked = askedBox(item),
-        others = otherNeeds(item, tag);
+        others = otherNeeds(item, tag, escapeHtml);
       return entryNote(item) + asked + (others ? ' ' + others : '') + reasonBox(item, asked) + sayBox(item);
     }
     /** the engine's own reason for a proposal as one sentence ("narration says \"X\" — card takings paid to the bank" is the engine's; a line it could not read says what to do) */
@@ -313,6 +338,7 @@
     }
     /** the boxes under an open row: the "What is this?" choices, the party and the account boxes once the person said it is something else, and why the last answer failed */
     function openBoxes(item) {
+      if (item.needs === 'which_liability') return item.resolveWhy ? tag('bad', item.resolveWhy) : ''; /* the engine asked which tax: that question is the whole answer, no second "What is this?" beside it */
       var kind = kindBox(item);
       return kind + (kind && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '');
     }

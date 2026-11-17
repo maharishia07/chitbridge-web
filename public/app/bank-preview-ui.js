@@ -57,7 +57,7 @@
   }
   /** the value of the select a line carries for this action (data-act) and key; '' when it is not on the page */
   function chosenIn(host, action, key) {
-    var found = Array.prototype.filter.call(host.querySelectorAll('select[data-act="' + action + '"]'), function (one) { return one.getAttribute('data-key') === key; })[0];
+    var found = Array.prototype.filter.call(host.querySelectorAll('select[data-act="' + action + '"],input[data-act="' + action + '"]'), function (one) { return one.getAttribute('data-key') === key; })[0];
     return found ? found.value : '';
   }
   /** a line's words without figures or punctuation, so two lines that say the same thing compare equal */
@@ -97,12 +97,29 @@
       if (!item || !item.event || !item.event.class) return { ok: false, why: 'This line has no account to carry the tax on.' };
       return cfg.controller().resolveLine(key, { account: item.event.class, tax_kind: kind });
     }
+    /** BANK-new-15: the owner says which tax the payment settles. The one the engine books on its single tax head (whatIsThis tax_payment.head) is the engine's existing answer; any other is said plainly to be added as an entry, never posted on the wrong head */
+    function useLiability(key, target) {
+      var engine = root.CBBankEntry,
+        listed = engine && engine.whatIsThis ? engine.whatIsThis({ country: cfg.country }).items || [] : [],
+        head = (listed.filter(function (one) { return one.id === 'tax_payment'; })[0] || {}).head;
+      if (head && target.getAttribute('data-id') === head) return cfg.controller().resolveLine(key, { kind: 'tax_payment' });
+      return { ok: false, line: true, why: target.getAttribute('data-words') + ' is not added from a bank line yet: add it as an entry in Books.' };
+    }
+    /** M-06: the interest the owner typed, as written on the lender's statement ("250.00"), taken to minor units by the money unit (toMinor, the shop's currency); a blank or non-number clears it */
+    function useInterest(key) {
+      var typed = String(chosenFor('interestfield', key) || '').replace(/[,s]/g, ''),
+        unit = root.CBMoney;
+      if (typed && !(+typed >= 0)) return { ok: false, line: true, why: 'Type the interest as a number, like 250.00.' };
+      return cfg.controller().interest(key, typed && unit && unit.toMinor ? unit.toMinor(+typed, cfg.currency) : '');
+    }
     return {
       gst: function (key, target) { return cfg.controller().answer('gst_basis', target.getAttribute('data-v')); },
       meant: function (key, target) { return cfg.controller().editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') }); },
       resolve: function (key) { return cfg.controller().resolveLine(key); },
       useacct: useAccount,
       taxuse: useTax,
+      interest: function (key) { return useInterest(key); },
+      liability: useLiability,
       tick: function (key) { return cfg.controller().tick(key); },
       feetax: function (key, target) { return cfg.controller().feeTax(key, target.getAttribute('data-v')); },
       inv: function (key, target) { var said = cfg.controller().invoice(key, target.getAttribute('data-v')); sameAccountLines(cfg, key).concat(sameHeldLines(cfg, key)).forEach(function (other) { cfg.controller().invoice(other.key, target.getAttribute('data-v')); }); return said; },
