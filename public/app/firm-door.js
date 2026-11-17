@@ -2,6 +2,7 @@
  * firm-door.js — FIRM-PARENT-DOOR (18 Nov 2026): HOW AN ACCOUNTING FIRM BECOMES A SHOP'S ACCOUNTANT OR AUDITOR, from a screen.
  *
  * OWNS      one card with an invite box and a list of the agency connections (a firm over its client): the owner's "Your accountant or auditor" (My books) and the firm's "Your clients: add a client" (the practice page). Ask by handle, Accept, Decline, Cancel, Remove.
+ * HOME      o.home (a firm with no client yet): the page above already says what happens next, so the card keeps its box and list and leaves out its own sentence.
  * CALLED BY books-grant-member.js (side 'owner', above "Access I gave") · books-practice.js (side 'firm', above the client list)
  * FLOW      mount(host, o) → GET /entities/lookup (own node, once) → GET /entities/:id/connections → keep the agency rows of this side → paint (CBList) → Ask / Accept / Decline / Cancel / Remove (CBAction) → reload. Accept on the owner side = approve, then the existing Give access sheet (o.giveTo) for the data consent.
  * CARD      04-network/connections-and-invitations
@@ -184,7 +185,7 @@
     }
     function paint() {
       host.innerHTML =
-        '<section class="fd-card" data-testid="' + tid('card') + '"><h3 class="fd-h">' + root.esc(words(copy.title)) + '</h3><div class="sub" data-testid="' + tid('note') + '">' + root.esc(words(copy.sub)) + '</div>' +
+        '<section class="fd-card" data-testid="' + tid('card') + '"><h3 class="fd-h">' + root.esc(words(copy.title)) + '</h3>' + (o.home ? '' : '<div class="sub" data-testid="' + tid('note') + '">' + root.esc(words(copy.sub)) + '</div>') + '
         '<div class="nw-acts fd-ask"><input data-cbsid="NET004-I06" id="fd_handle-' + side + '" class="inp" maxlength="80" autocomplete="off" data-testid="' + tid('handle') + '" aria-label="' + root.esc(words(copy.placeholder)) + '" placeholder="' + root.esc(words(copy.placeholder)) + '">' +
         '<button data-cbsid="NET004-B14" type="button" class="act" id="fd_add-' + side + '" data-testid="' + tid('add') + '">' + root.esc(words(copy.add)) + '</button></div>' +
         '<div class="nw-out" id="fd_out-' + side + '" data-testid="' + tid('out') + '" role="status"></div><div class="nw-list" id="fd_list-' + side + '" data-testid="' + tid('list') + '"></div></section>';
@@ -205,7 +206,7 @@
         ],
         actions: actionsOf(),
         search: function (row) { return row.name; },
-        empty: { title: words(copy.emptyTitle), body: words(copy.emptyBody) }
+        empty: { title: words(copy.emptyTitle), sub: words(copy.emptyBody) }
       };
       if (o.mountList) o.mountList(listHost, cfg);
       else {

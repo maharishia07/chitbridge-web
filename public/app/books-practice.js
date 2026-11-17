@@ -111,7 +111,12 @@
   }
   /** a firm: it holds clients by live grants and has no trade of its own: the DATA says so (the server's own_trade), never a trade switch */
   function isFirm() {
-    return !!(practiceKit.practiceState.data && practiceKit.practiceState.data.clients && practiceKit.practiceState.data.clients.length && practiceKit.practiceState.data.own_trade === false);
+    var data = practiceKit.practiceState.data;
+    return !!(data && data.clients && (data.clients.length || data.firm === true) && data.own_trade === false);
+  }
+  /** a firm that holds no client yet (new, or its last client left): the server says so (firm: true), or this login was a firm last time (the hint); its Home is the empty practice */
+  function emptyFirm(answer) {
+    return !!(answer && answer.clients && !answer.clients.length && answer.own_trade === false && (answer.firm === true || hintRaw() === '1'));
   }
   function hidesShopCards(id) {
     return isFirm() && !FIRM_KEEPS[id];
@@ -291,6 +296,7 @@
     if (!areas || !practiceKit.practiceState.data) return false;
     var section = sectionIn(areas);
     dropWaiting();
+    if (!practiceKit.practiceState.data.clients.length) return drawEmpty(section);
     var held = root.document.activeElement, heldId = held && section.contains(held) && held.getAttribute ? held.getAttribute('data-testid') : null; /* B3: where the keyboard was, put back after the redraw */
     var door = root.document.getElementById('bcd_card');
     if (door && door.parentNode) door.parentNode.removeChild(door);
@@ -300,6 +306,17 @@
     mountList();
     wireFlagButton(section);
     restoreFocus(section, heldId);
+    practiceKit.practiceState.drawn = true;
+    return true;
+  }
+  /** FIRM-PARENT-DOOR: a firm with no client yet. Its Home is the practice with the library's empty state, then "Add a client" (the same card) to act on it */
+  function drawEmpty(section) {
+    var door = root.document.getElementById('bcd_card');
+    if (door && door.parentNode) door.parentNode.removeChild(door);
+    section.innerHTML = '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + '</h2></div>' +
+      emptyState('📒', translate('No clients yet'), escapeHtml(translate('Add a client below. They accept, then give you access, and they show here.'))) +
+      '<div id="bp_door" data-testid="practice-door"></div>';
+    mountDoor({ home: true });
     practiceKit.practiceState.drawn = true;
     return true;
   }
@@ -326,9 +343,9 @@
     );
   }
   /** FIRM-PARENT-DOOR: "Add a client" and the asks waiting for an answer, above the client list (the same card and list as the owner's, from the firm's side) */
-  function mountDoor() {
+  function mountDoor(extra) {
     var host = root.document.getElementById('bp_door');
-    if (host && root.CBFirmDoor && !host.firstChild) root.CBFirmDoor.mount(host, { side: 'firm', token: token(), base: base() });
+    if (host && root.CBFirmDoor && !host.firstChild) root.CBFirmDoor.mount(host, Object.assign({ side: 'firm', token: token(), base: base() }, extra || {}));
   }
   /** the band tiles filter, the tabs switch the band, Show all clears */
   function wireSection(section) {
@@ -463,7 +480,7 @@
       practiceKit.practiceState.since = Date.now();
       read().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
-        if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
+        if (!emptyFirm(answer) && (!answer || !answer.clients || !answer.clients.length)) { hint(false); return settle(); }
         practiceKit.practiceState.data = answer;
         hint(answer.own_trade === false);
         markFirm();
