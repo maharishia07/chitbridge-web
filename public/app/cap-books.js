@@ -4733,8 +4733,10 @@ var BK_BS = { kind: 'today', step: 0, asOf: '' };
 /** a carried change or share (basis points) as a short percent: "+25.0%" or "12.5%"; "—" when the server had nothing to compare with */
 function bkPct(bp, signed) {
   if (bp == null) return '<span style="color:var(--grey)">—</span>';
-  var n = Number(bp) / 100;
-  return esc((signed && n > 0 ? '+' : '') + n.toFixed(1) + '%');
+  var n = Number(bp) / 100,
+    shown = n.toFixed(1);
+  if (Number(shown) === 0) return '0.0%'; /* a change that rounds to zero prints no sign: never "-0.0%" (critic finding 7) */
+  return esc((signed && n > 0 ? '+' : '') + shown + '%');
 }
 function bkSpan(from, to) {
   return bkDate(from) + ' – ' + bkDate(to);
