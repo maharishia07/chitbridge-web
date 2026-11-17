@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.97.0 · bank-statement-check · sha256 9b94f9c75965381ae0f2088025935b9770f85e9aae9113c3e3326488258d32c4 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0 · bank-statement-check · sha256 9b94f9c75965381ae0f2088025935b9770f85e9aae9113c3e3326488258d32c4 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-statement-check.js: "IS THIS THE RIGHT STATEMENT?" — the questions asked BEFORE any line of a bank statement is worked. PURE: no I/O, no clock (today is an argument), nothing saved.
  * OWNS check (account · continuity · overlap and gapDays · date sanity · what is already done) · maskAccount.
