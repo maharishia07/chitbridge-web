@@ -29,7 +29,9 @@
     flagsResolve: { m: 'POST', p: '/api/flags/:id/resolve' },
     flagsReopen: { m: 'POST', p: '/api/flags/:id/reopen' },
     flagsShare: { m: 'POST', p: '/api/flags/:id/share' },
-    flagsRemove: { m: 'POST', p: '/api/flags/:id/remove' }
+    flagsRemove: { m: 'POST', p: '/api/flags/:id/remove' },
+    flagsThread: { m: 'GET', p: '/api/flags/:id/messages' } /* → { flag, messages: [{ by_name, text, mine, at }], may: { reply: { ok, why } } } */,
+    flagsReply: { m: 'POST', p: '/api/flags/:id/messages' } /* { message_text } → the thread as it reads now */
   };
   root.CB_FLAG_EP = EPS;
 
@@ -58,6 +60,12 @@
     readFail: 'Could not read your bookmarks. This does not mean there are none.',
     none: 'Nothing saved on this yet.',
     privateNote: 'Your own bookmarks and notes. The client never sees them.',
+    replies: 'Replies from your firm',
+    replyLabel: 'Your reply',
+    reply: 'Reply',
+    replyNeeded: 'Write your reply first.',
+    threadFail: 'Could not read the replies. This does not mean there are none.',
+    me2: 'You',
     explain: 'Explain',
     explained: 'Explained',
     explainHelp: 'Your own note on why this account moved. The client never sees it.',
@@ -84,6 +92,7 @@
   var CSS =
     '.fl{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:var(--grey,#5E594D);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 9px;min-height:28px;cursor:pointer}' +
     '.fl-on{border-color:var(--ok,#2E8B57);color:var(--ok-3,#0F5132)}.fl-note{border-color:var(--warn,#B7791F);color:var(--warn-3,#7A4B00)}' +
+    '.fl-thread{display:flex;flex-direction:column;gap:6px;border-inline-start:3px solid var(--line,#DDD6C6);padding-inline-start:10px}.fl-msg{display:flex;flex-direction:column;gap:2px}.fl-msg.mine .fl-sub{font-weight:700}.fl-reply{min-height:56px;width:100%;box-sizing:border-box}' +
     '.fl:focus-visible{outline:2px solid var(--blue,#1f5fa8);outline-offset:2px}' +
     'dialog.fl-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16)}dialog.fl-sheet::backdrop{background:color-mix(in srgb,var(--ink,#1D1B16) 40%,transparent)}' +
     '.fl-in{padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 48px);overflow:auto;box-sizing:border-box}' +
@@ -231,10 +240,33 @@
       return '<li class="fl-item' + (done ? ' gone' : '') + '" data-flag="' + esc(f.flag_id) + '">' +
         '<div class="fl-sub">' + esc(T(noteKind ? W.kindNote : W.kindBookmark)) + ' · ' + esc(T(shared ? W.firm : W.me)) + (f.by_name ? ' · ' + esc(T(W.by)) + ' ' + esc(f.by_name) : '') + (done ? ' · ' + esc(T(W.resolvedBy)) + ' ' + esc(f.resolved_by || '') : '') + '</div>' +
         (noteKind ? '<div class="fl-text">' + esc(f.note) + '</div>' : '') +
+        (noteKind && shared ? '<div class="fl-thread" data-thread="' + esc(f.flag_id) + '" data-testid="fl-thread"></div>' : '') +
         '<div class="fl-row">' +
         (noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(f.flag_id) + '">' + esc(T(done ? W.reopen : W.resolve)) + '</button>' : '') +
         (!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(f.flag_id) + '">' + esc(T(W.shareFirm)) + '</button>' : '') +
         '<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(f.flag_id) + '">' + esc(T(armed === f.flag_id ? W.sure : W.remove)) + '</button></div></li>';
+    }
+    /** the replies of one shared note (the firm's own thread, never the client's): what the server says, its reply right with its sentence, and a reply box when it may */
+    var threads = {};
+    function threadHtml(flagId, a) {
+      if (a === false) return '<div class="fl-sub" data-tone="error">' + esc(T(W.threadFail)) + '</div>';
+      var msgs = (a.messages || []).map(function (m) {
+        return '<div class="fl-msg' + (m.mine ? ' mine' : '') + '"><div class="fl-sub">' + esc(m.mine ? T(W.me2) : m.by_name || '') + '</div><div class="fl-text">' + esc(m.text) + '</div></div>';
+      }).join('');
+      var may = (a.may && a.may.reply) || { ok: false, why: '' };
+      return (msgs ? '<div class="fl-sub">' + esc(T(W.replies)) + '</div>' + msgs : '') +
+        (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(T(W.replyLabel)) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(T(W.reply)) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
+    }
+    function fillThread(flagId) {
+      var node = dlg.querySelector('.fl-thread[data-thread="' + String(flagId).replace(/"/g, '') + '"]');
+      if (node && threads[flagId] !== undefined) node.innerHTML = threadHtml(flagId, threads[flagId]);
+    }
+    function loadThreads() {
+      [].forEach.call(dlg.querySelectorAll('.fl-thread[data-thread]'), function (node) {
+        var flagId = node.getAttribute('data-thread');
+        if (threads[flagId] !== undefined) return fillThread(flagId);
+        ask(cfg.call, 'flagsThread', { id: flagId }).then(function (a) { threads[flagId] = a || false; fillThread(flagId); }, function () { threads[flagId] = false; fillThread(flagId); });
+      });
     }
     function paint(keepNote) {
       var note = keepNote ? (dlg.querySelector('.fl-box') || {}).value || '' : '', flags = ctl.flags(id), mineBookmark = flags.filter(function (f) { return f.kind === 'bookmark' && open(f); })[0];
@@ -250,6 +282,7 @@
       if (mineBookmark) { var who0 = dlg.querySelector('input[name="fl_who"][value="' + (mineBookmark.visibility === 'me' ? 'me' : 'org') + '"]'); if (who0) who0.checked = true; }
       var box = dlg.querySelector('.fl-box');
       if (box && note) box.value = note;
+      loadThreads();
     }
     /** write one change; on an answer re-read this record (the server's own view, including what a colleague did) and repaint */
     function write(key, body, flagId) {
@@ -258,7 +291,7 @@
       return ask(cfg.call, key, { id: flagId, body: body }).then(function () {
         return kind === 'client' ? refreshClient() : ctl.load([id]);
       }).then(function () {
-        busy = false; armed = null; paint(false); say(T(W.done)); ctl.changed(id);
+        threads = {}; busy = false; armed = null; paint(false); say(T(W.done)); ctl.changed(id);
       }, function (failure) {
         busy = false; armed = null; say((failure && failure.message) || T(W.failed), true);
       });
@@ -285,6 +318,17 @@
         return add('note', text);
       }
       var flagId = b.getAttribute('data-id');
+      if (act === 'reply') {
+        var box = dlg.querySelector('textarea[data-reply="' + String(flagId).replace(/"/g, '') + '"]'), words = box ? (box.value || '').trim() : '';
+        if (!words) return say(T(W.replyNeeded), true);
+        if (busy) return;
+        busy = true;
+        return ask(cfg.call, 'flagsReply', { id: flagId, body: { message_text: words } }).then(function (a) {
+          busy = false; threads[flagId] = a || false; fillThread(flagId); say(T(W.done));
+        }, function (failure) {
+          busy = false; say((failure && failure.message) || T(W.failed), true);
+        });
+      }
       if (act === 'remove' && armed !== flagId) { armed = flagId; b.textContent = T(W.sure); return; } /* the second press commits: removing a note drops its words */
       return write({ resolve: 'flagsResolve', reopen: 'flagsReopen', share: 'flagsShare', remove: 'flagsRemove' }[act], null, flagId);
     });
