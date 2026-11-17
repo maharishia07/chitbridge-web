@@ -422,7 +422,7 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
       <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h4"/></svg></div>
       <div class="brand-text label"><span class="brand-name">Accounts</span></div>
     </div>
-    <nav class="nav scroll" id="nav" aria-label="Accounts"></nav>
+    <nav class="nav scroll" id="nav" aria-label="Accounts"><div class="bk-skel" aria-hidden="true"><i></i><i></i><i></i><i></i></div></nav>   <!-- first-impression W8: the frame is never bare while the scripts load; chrome() replaces both -->
     <div class="side-foot">
       <button data-cbsid="BKS001-B01" type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
         <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
@@ -438,7 +438,7 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
         <div class="summary" id="summary"></div>
       </div>
     </div>
-    <div class="content" id="content" data-testid="acc-content"></div>
+    <div class="content" id="content" data-testid="acc-content"><div class="bk-skel" aria-busy="true" data-testid="acc-first-paint"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
   </main>
 </div>
 <div id="toast"></div>

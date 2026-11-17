@@ -547,6 +547,7 @@
       columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') },
+      cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
     });
     if (!P.marked && lastClient()) {

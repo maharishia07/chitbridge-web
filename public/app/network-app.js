@@ -102,8 +102,22 @@
     return T(STAND[(n.membership && n.membership.state) || 'none'] || 'Not yet');
   }
 
+  /* a firm seat (auditor / adviser, N.opened.role: the books-acting seat, no new check) reading a client's books has no use for the shop's own rail (My network, Offers, Design, Who can see my books):
+     it is not drawn there, so the entry columns get the 232 px (first-impression W6); the way back is the "Clients" crumb and button in the client's own header */
+  function fitRail() {
+    var firm = !!(N.opened && N.opened.role && N.opened.role !== 'owner'), doc = root.document;
+    if (!doc || !doc.documentElement) return;
+    if (firm && !doc.getElementById('nw-rail-css')) {
+      var st = doc.createElement('style');
+      st.id = 'nw-rail-css';
+      st.textContent = 'html.nw-in-client #side{display:none!important}';
+      doc.head.appendChild(st);
+    }
+    doc.documentElement.classList.toggle('nw-in-client', firm);
+  }
   /* ── frame of the page: the tab strip and the one place a tab draws ── */
   function paint() {
+    fitRail();
     var tabs = [
       ['mine', T('My network')],
       ['offers', T('Offers')],
