@@ -92,7 +92,7 @@ box.CBLocale = { weekInfo: () => null };
 check(weekendIds() === 'F2 F3', 'a reader that answers nothing falls back to Sat + Sun');
 // the SHOP's country decides (the audited entity's calendar), never the viewer's chosen locale: the real reader, widened to take a region
 const locSrc = pub('engine', 'locale.js');
-check(/weekInfo: function (region)/.test(locSrc), 'CBLocale.weekInfo takes a region (one reader, widened, not copied)');
+check(locSrc.indexOf('weekInfo: function (region)') > 0, 'CBLocale.weekInfo takes a region (one reader, widened, not copied)');
 const reader = (viewer) => (region) => { const l = new Intl.Locale(/^[A-Za-z]{2}$/.test(region || '') ? 'en-' + String(region).toUpperCase() : viewer); return typeof l.getWeekInfo === 'function' ? l.getWeekInfo() : l.weekInfo; };
 const sat = [{ id: 'Fri', recorded_at: '2026-07-03T09:00:00.000Z' }, { id: 'Sat', recorded_at: '2026-07-04T09:00:00.000Z' }, { id: 'Sun', recorded_at: '2026-07-05T09:00:00.000Z' }];
 const flagged = (region) => sat.filter((r) => F.weekend(r, region)).map((r) => r.id).join('+');
@@ -108,7 +108,7 @@ const ctxFilters = F.filtersFor(null, { period: () => period, currency: () => 'A
 check(sat.filter((r) => ctxFilters.find((f) => f.key === 'time').match(r, 'weekend')).map((r) => r.id).join('+') === 'Fri+Sat', 'the Made filter follows the shop region from the view ctx');
 check(F.riskOf({ id: 'x', recorded_at: '2026-07-03T09:00:00.000Z', posting_date: '2026-07-03', amount_minor: 12345, made_by: 'a' }, period, 'AUD', 'SA').indexOf('At a weekend') >= 0 && F.riskOf({ id: 'x', recorded_at: '2026-07-03T09:00:00.000Z', posting_date: '2026-07-03', amount_minor: 12345 }, period, 'AUD', 'AU').indexOf('At a weekend') < 0, 'the Risk count follows the shop region (Friday risky in SA, not in AU)');
 const view = pub('app', 'books-grant-view.js');
-check(/sortDefault: report.k === 'daybook' ? { key: 'risk', dir: -1 }/.test(view) && /o.sortDefault/.test(pub('app', 'list-ctl.js')), 'the Day book opens sorted by Risk, most first (sortDefault, list-ctl widened)');
+check(view.indexOf("sortDefault: report.k === 'daybook' ? { key: 'risk', dir: -1 }") > 0 && pub('app', 'list-ctl.js').indexOf('o.sortDefault') > 0, 'the Day book opens sorted by Risk, most first (sortDefault, list-ctl widened)');
 delete box.CBLocale; box.CB_SHOP_TZ = 'Australia/Sydney';
 const src = pub('app', 'books-grant-filters.js');
 check(!/'Sat'|"Sat"/.test(src), 'no second weekend definition: Sat and Sun appear only in the ISO_DOW name table and the [6, 7] fallback (no quoted day names)');
