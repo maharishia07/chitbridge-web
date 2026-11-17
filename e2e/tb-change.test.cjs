@@ -2,6 +2,7 @@
  * tb-change.test.cjs — F3 (Fable RC walk 17 Nov): the trial balance's Change and % read on the account's OWN side, so the TB and the P&L agree for the same account.
  * OWNS      the proof of public/app/tb-change.js (CBTbChange.read) on the rows the api sends (net = debit − credit, change = now − last year, % of |last year|)
  * CALLED BY .github/workflows/ci.yml (Offline guards).  node e2e/tb-change.test.cjs
+ * CARD      14-accounting/statements-tb-pandl-bs-party-statement
  * HAND FIGURES (paper first, Seed E Client 001, as at 17 Nov 2026): Sales 4000 credit 5,474,000 now, 5,937,500 a year ago: the credit FELL 463,500 = 7.81% → reads −463,500 −7.8% (the P&L says the same);
  *           Client 006 FY 2025-26: Sales credit 15,993,000 now vs 1,145,000: ROSE 14,848,000 = 1296.8% → reads +14,848,000 +1296.8% Cr.
  */

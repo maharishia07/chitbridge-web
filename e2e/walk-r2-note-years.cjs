@@ -3,6 +3,7 @@
  * The firm seat opens a client on the year under review (FY 2025-26); a note on an entry of the running year (FY 2026-27) said "Nothing saved on this yet." although it exists.
  * Run on a SIT box against its api (never production): API=<loopback api> TESTER_CODE=<today's code, from the box env> OUT=<shots dir> CLIENT=<client entity id> node e2e/walk-r2-note-years.cjs
  * Writes are marked TEST-R2 and removed at the end. Presses, for a record in BOTH years: the bell row of a colleague's reply (&note=), and the Query link (&mark=&mday=). */
+// CARD      14-accounting/ledger-accounts-day-book-entries-reverse
 'use strict';
 const fs = require('fs'), path = require('path');
 const { chromium } = require('@playwright/test');
