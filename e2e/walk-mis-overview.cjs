@@ -42,7 +42,7 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
   const db = new Client({ connectionString: DB }); await db.connect();
   /* the api's own door: every table is row-level-secured on app.current_entity, so a read names the shop the way the api does (BEGIN · set_config · the query) — a bare read as the api's role sees no row */
   const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
-  const entity = claims.entity_id || claims.entity || claims.sub;
+  const entity = claims.entity_id || claims.identity_id;   /* an entity's identity id is its entity id */
   const one = async (sql, args) => {
     await db.query('BEGIN');
     try { await db.query("SELECT set_config('app.current_entity', $1, true)", [String(entity)]); return Number((await db.query(sql, [entity].concat(args))).rows[0].v); } finally { await db.query('ROLLBACK'); }
