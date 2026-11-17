@@ -17,7 +17,7 @@ check('every write is a CBAction', (door.match(/CBAction\.run\(/g) || []).length
 check('accept on the owner side ends in the existing Give access sheet (giveTo), not a copy of the form', door.includes('o.giveTo(row.name)') && !door.includes('grantsGive'));
 check('the endpoints are the ones the api serves, as plain paths (the registry names live in app.html: ep-aliases)', ["'/api/network'", "'/entities/lookup'", "'/connections'", "'/approve'", "'/decline'", "'/disconnect'", "'/connections'"].every((p) => door.includes(p.replace(/'/g, '').length ? p.slice(1, -1).startsWith('/api') ? p : p : p)) && !/{ m: '(GET|POST)', p:/.test(door));
 check('books-grant-member paints the owner card', /CBFirmDoor\.mount\(\$\('bg_door'\), \{\s*side: 'owner'/.test(member));
-check('the practice page paints the firm card', read('public/app/books-practice.js').includes("CBFirmDoor.mount(host, { side: 'firm'"));
+check('the practice page paints the firm card', read('public/app/books-practice.js').includes("CBFirmDoor.mount(host, Object.assign({ side: 'firm'"));
 check('network.html loads firm-door.js before books-grant-member.js', network.indexOf('firm-door.js') > 0 && network.indexOf('firm-door.js') < network.indexOf('books-grant-member.js'));
 check('index.html loads firm-door.js before books-practice.js', home.indexOf('firm-door.js') > 0 && home.indexOf('firm-door.js') < home.indexOf('books-practice.js'));
 check('CB_BUILD is 2026-11-18h', read('public/app.html').includes("'2026-11-18h'"));
