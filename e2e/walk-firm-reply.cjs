@@ -122,6 +122,33 @@ async function person(biz, tag, name, level) {
     check(errors.length === 0, 'no page error' + (errors.length ? ': ' + errors[0] : ''));
     await ctx.close();
   }
+  /* 3 · F1 (17 Nov): a Query notice is never a dead button. The auditor raises a Query; the OWNER's bell on HOME (no cap-mark.js there) shows it pressable, and the press lands on the Accounts Day book with that thread open */
+  {
+    const Q = 'Please send the cash slip for this entry ' + RUN;
+    const q = await R.j(api + '/api/marks', { method: 'POST', token: aud1.token, headers: { 'X-Books-For': C.id, 'X-Books-Role': 'auditor', 'Idempotency-Key': RUN + 'q1' }, body: { adopter: 'acc.audit', subject_id: E1.entry_id, kind: 'query', note: Q } });
+    check(q.status === 200 || q.status === 201, 'setup: the auditor raised a Query on the entry', JSON.stringify([q.status, q.b]).slice(0, 200));
+    for (const size of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
+      const ctx = await browser.newContext({ viewport: size }), tag = size.width + ' ';
+      await ctx.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, (r) => r.abort());
+      await ctx.addInitScript((a2) => { try { localStorage.setItem('cb_sess', JSON.stringify({ token: a2.t, role: 'entity', name: a2.n })); localStorage.setItem('cb_api_base', a2.api); } catch (_) {} }, { t: cOwner.token, n: cOwner.name, api });
+      const page = await ctx.newPage(), errors = [];
+      page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
+      await page.goto(web.url('/?api=' + encodeURIComponent(api)), { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('[data-testid="bell-btn"]', { timeout: 30000 });
+      await page.click('[data-testid="bell-btn"]');
+      await page.waitForSelector('[data-testid="bell-row"]', { timeout: 15000 });
+      const row = page.locator('[data-testid="bell-row"]').first();
+      check(!(await row.isDisabled()) && /raised a Query/.test(await row.innerText()), tag + 'on Home the Query notice is a pressable row (CMP038-B01), not a disabled button');
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'home-query-row-' + size.width + '.png') });
+      await row.click();
+      const sheet = await page.waitForSelector('dialog[data-testid="mk-sheet"][open]', { timeout: 30000 }).then(() => true, () => false);
+      check(sheet && /accounts\.html/.test(page.url()) && !/mark=/.test(page.url()), tag + 'the press lands on the Accounts Day book with the thread open and the address forgets the mark: ' + page.url().replace(/(api=)[^&#]+/, '$1…'));
+      check(sheet && (await page.evaluate((t) => document.querySelector('dialog[data-testid="mk-sheet"]').innerText.indexOf(t) >= 0, Q)), tag + 'the thread shows the question');
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'home-query-opened-' + size.width + '.png') });
+      check(errors.length === 0, tag + 'no page error' + (errors.length ? ': ' + errors[0] : ''));
+      await ctx.close();
+    }
+  }
   await browser.close(); stack.stop(); web.close();
   console.log('\n' + (failures ? failures + ' FAILED' : 'ALL PASS'));
   process.exit(failures ? 1 : 0);

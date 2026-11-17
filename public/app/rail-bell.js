@@ -49,7 +49,8 @@
     notifications: row('GET', '/api/notifications'),
     notifSeen: row('POST', '/api/notifications/seen'),
     notifDismiss: row('POST', '/api/notifications/dismiss'),
-    flagsList: row('GET', '/api/flags') /* a reply on my firm's note finds the note's client here (the same read the firm's work list makes) */
+    flagsList: row('GET', '/api/flags') /* a reply on my firm's note finds the note's client here (the same read the firm's work list makes) */,
+    practice: row('GET', '/api/books-grants/practice') /* a firm's notice names its client; the practice list says which client that is (paged) */
   };
   function ensureEP() {
     if (typeof EP === 'undefined' || !EP) return false;
@@ -75,7 +76,8 @@
     aria: 'Activity',
     chit: 'a chit',
     needs: 'Clearing needs the latest update on this system',
-    noteGone: 'This note was removed, so its client cannot be opened'
+    noteGone: 'This note was removed, so its client cannot be opened',
+    clientGone: 'This client is no longer in your practice, so the record cannot be opened'
   };
   var KIND = {
     message_sent: ['💬', 'wrote about'],
@@ -149,6 +151,10 @@
     /* W15-54: a mark notice (a Query asked, a reply) opens that record's thread: the entry id when the feed carries it, else its number (the open list names it) */
     var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', day: (item.mark_entry && item.mark_entry.posting_date) || '', title: subj } : null;
     var note = item.action === 'note_reply' && item.mark_entry && item.mark_entry.entry_id ? String(item.mark_entry.entry_id) : '';
+    if (mark) {
+      mark.client = client; /* a firm's notice: the client it is about (the owner's own notices carry none); its id when the feed carries it */
+      mark.clientId = item.mark_client_id ? String(item.mark_client_id) : '';
+    }
     return {
       note: note,
       mark: mark && (mark.id || mark.no) ? mark : null,
@@ -157,7 +163,7 @@
       chit: item.chit_id || null,
       who: item.action_by_display_name || '',
       say: kind ? kind[1] : String(item.action || 'updated').replace(/_/g, ' '),
-      subj: client && item.action !== 'message_sent' ? client + ' · ' + subj : subj,
+      subj: client && item.action !== 'message_sent' && subj.indexOf(client) !== 0 ? client + ' · ' + subj : subj /* a note on the CLIENT is titled with the client's name: said once */,
       d: item.detail ? String(item.detail).slice(0, 90) : item.new_status || '',
       s: moment,
       id: item.log_id || null
@@ -250,6 +256,19 @@
     return tok && role !== 'customer' ? tok : null;
   }
 
+  /** a Query notice pressed on a page that cannot open the thread arrives as ?mark=<entry id> (the owner's Accounts): read and forgotten from the address, the bell opens that thread once. A client's Day book (?open=) reads its own &mark= (books-grant-view.js) */
+  function askedMark() {
+    var id = '';
+    try {
+      var query = new root.URLSearchParams(root.location.search);
+      if (query.get('open') || !query.get('mark')) return '';
+      id = query.get('mark');
+      query.delete('mark');
+      if (root.history && root.history.replaceState) root.history.replaceState(root.history.state, '', root.location.pathname + (query.toString() ? '?' + query.toString() : '') + (root.location.hash || ''));
+    } catch (_) { /* no address to read (a test host): nothing arrived */ }
+    return id;
+  }
+
   /** the identity mount of a bell control (this screen's code + U1nn, the list control's rule); none until the page names its screen */
   function bellMount(component) {
     return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
@@ -279,7 +298,7 @@
   function recordHtml(x) {
     return (
       '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
-      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '"' : x.note ? '' : ' disabled') + /* a colleague's reply on my firm note carries its entry below (data-note-id): pressable */
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '" data-mark-client="' + esc(x.mark.client) + '" data-mark-client-id="' + esc(x.mark.clientId) + '"' : x.note ? '' : ' disabled') + /* a colleague's reply on my firm note carries its entry below (data-note-id): pressable */
       (x.order ? ' data-order="1"' : '') +
       (x.note ? ' data-note-id="' + esc(x.note) + '"' : '') +
       '><span aria-hidden="true">' +
@@ -472,11 +491,50 @@
             return flag.kind === 'note' && String(flag.subject_id) === entryId && flag.subject_entity;
           })[0];
           if (!hit) throw new Error('note not found');
-          root.location.assign('/network.html?open=' + encodeURIComponent(hit.subject_entity) + '&view=daybook&note=' + encodeURIComponent(entryId));
+          /* a note on the CLIENT carries the client's own id as its subject: the same address, the Day book then opens the client's sheet (books-grant-view.js) */
+          root.location.assign('/network.html?open=' + encodeURIComponent(hit.subject_entity) + '&view=daybook&note=' + encodeURIComponent(entryId) + '&nl=' + encodeURIComponent(String(hit.label || '').slice(0, 80)));
         })
         .catch(function () {
           if (typeof root.toast === 'function') root.toast(T(W.noteGone));
         });
+    }
+    /** the client a firm's notice is about: the id the feed carries, else the practice list's client of that NAME (paged; the exact name, first page that has it) */
+    function clientIdOf(row) {
+      var given = row.getAttribute('data-mark-client-id'),
+        name = row.getAttribute('data-mark-client');
+      if (given) return Promise.resolve(given);
+      var ask = function (page) {
+        return call(opts, 'practice', { query: { page: page, limit: 100 } }).then(function (reply) {
+          var hit = ((reply && reply.clients) || []).filter(function (c) {
+            return c.name === name;
+          })[0];
+          if (hit) return String(hit.entity_id);
+          return reply && reply.has_more && page < 8 ? ask(page + 1) : '';
+        });
+      };
+      return ask(1);
+    }
+    /**
+     * ONE behaviour per Query notice, on every page. Where the thread can open in place (the owner's own books, CBMark on the page) it opens; anywhere else the row is a LINK to the record:
+     * the owner's Accounts Day book (?mark=<entry>, opened on arrival below) or the client's Day book (&view=daybook&mark=<entry>, books-grant-view.js). A firm's row always goes to the client's Day book,
+     * for the thread is in the CLIENT's books and only that page speaks for them.
+     */
+    function goToMark(row) {
+      var id = row.getAttribute('data-mark-id') || '',
+        fail = function () {
+          if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        };
+      if (!row.getAttribute('data-mark-client')) {
+        root.location.assign('/accounts.html' + (id ? '?mark=' + encodeURIComponent(id) : '') + '#/daybook');
+        return Promise.resolve();
+      }
+      return clientIdOf(row).then(function (cid) {
+        if (!cid) {
+          if (typeof root.toast === 'function') root.toast(T(W.clientGone));
+          return;
+        }
+        root.location.assign('/network.html?open=' + encodeURIComponent(cid) + '&view=daybook' + (id ? '&mark=' + encodeURIComponent(id) + '&mday=' + encodeURIComponent(String(row.getAttribute('data-mark-day') || '').slice(0, 10)) : ''));
+      }, fail);
     }
     function onClick(ev) {
       ev.__cbbIn = true; /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
@@ -509,11 +567,12 @@
         return;
       }
       var mk = node.closest('[data-testid="bell-row"]');
-      if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null) && root.CBMark) {
+      if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null)) {
         bell.open = false;
         paint();
+        var inPlace = root.CBMark && typeof api === 'function' && !mk.getAttribute('data-mark-client');
         new Promise(function (done) {
-          done(openMark(mk));
+          done(inPlace ? openMark(mk) : goToMark(mk));
         }).catch(function () {
           if (typeof root.toast === 'function') root.toast(T(W.markFail));
         });
@@ -596,7 +655,13 @@
       return apiObj;
     } // signed out / a customer: no bell, no stream
     paint();
-    read();
+    var arrived = askedMark();
+    read().then(function () {
+      if (arrived && root.CBMark && typeof api === 'function')
+        openMark({ getAttribute: function (name) { return name === 'data-mark-id' ? arrived : ''; } }).catch(function () {
+          if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        });
+    });
     connect();
     return apiObj;
   }
