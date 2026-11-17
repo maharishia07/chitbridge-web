@@ -18,9 +18,9 @@ function prodOfferAskWords(offerDef, rules, ids) {
   );
 }
 /** the item ids after the change: the picked ones unioned in (add) or differenced out */
-function prodOfferNextIds(current, ids, add) {
+function prodOfferNextIds(current, ids, adding) {
   const list = Array.isArray(current) ? current.slice() : [];
-  if (!add) return list.filter((item) => ids.indexOf(item) < 0);
+  if (!adding) return list.filter((item) => ids.indexOf(item) < 0);
   ids.forEach((item) => {
     if (list.indexOf(item) < 0) list.push(item);
   });
@@ -57,42 +57,93 @@ function prodOfferAllWords(offerDef, rules) {
   );
 }
 /**
+ * ⚠️⚠️ THE RULES ARE ON THE VERSION, NOT ON THE DEFINITION — and reading the wrong one DESTROYS THE OFFER.
+ *
+ * `defList` JOINs definition_version and returns `rules`; `defGet` returns `{definition, versions}` and
+ * leaves `definition.rules` NULL. My first version read `d.rules || {}` from defGet, merged the product ids
+ * into an empty object, and saved that — so applying products to an offer silently erased its TERMS. The
+ * kind, the tiers, the percentage: gone. The offer still existed, still looked live on every screen, and did
+ * nothing at all. It happened to the test offer before this comment was written.
+ *
+ * ⭐ So the current version's rules are what we merge into, and the guard in prodOfferApply makes the loss impossible
+ * rather than merely unlikely.
+ */
+async function prodOfferRead(offerId) {
+  const reply = await api('defGet', { params: { id: offerId } });
+  const definition = (reply && reply.definition) || {};
+  const versions = (reply && reply.versions) || [];
+  const current =
+    versions.filter(function (item) {
+      return item.version === definition.current_version;
+    })[0] ||
+    versions[0] ||
+    {};
+  /* The kind is on the DEFINITION; joining it here is what lets the guard below pass for a form-authored offer. */
+  return { def: definition, rules: Object.assign({ kind: definition.sub_kind }, current.rules || definition.rules || {}) };
+}
+/**
+ * ⚠️⚠️ AN EMPTY item_ids LIST MEANS "EVERY PRODUCT", NOT "NONE" — see CBOffers.eligibleFor, where a missing
+ * selector matches every line. So removing the last product must DELETE the key, not leave it empty: an empty
+ * array would silently turn a targeted discount into a shop-wide one, which is the most expensive possible
+ * direction for that mistake.
+ */
+function prodOfferSetReach(rules, appliesTo, next) {
+  if (next.length) appliesTo.item_ids = next;
+  else delete appliesTo.item_ids;
+  if (Object.keys(appliesTo).length) rules.applies_to = appliesTo;
+  else delete rules.applies_to;
+}
+/** what the brand's stores had BEFORE this save — a released offer is now "changed", an unreleased one still is not out */
+function prodOfferNetworkWas(offerId) {
+  return (
+    (
+      ((typeof _DEFS !== 'undefined' && _DEFS.offer) || []).filter(function (item) {
+        return item.definition_id === offerId;
+      })[0] || {}
+    ).network || null
+  );
+}
+/** the toast after the save: the count, and (said at the moment it matters) that the stores do not have it yet (see netRelChip) */
+function prodOfferDoneWords(adding, count, networkWas) {
+  return (
+    (adding
+      ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', count)
+      : txn('{count} product taken off ✓', '{count} products taken off ✓', count)) +
+    (networkWas && networkWas.stores > 0
+      ? ' · ' +
+        txn(
+          'your {count} store gets it when you release it (Settings › Integrations › Network offers)',
+          'your {count} stores get it when you release it (Settings › Integrations › Network offers)',
+          networkWas.stores
+        )
+      : '')
+  );
+}
+/** after the save: the shelf and the edit form forget their copies, the picker closes, the catalogue is read fresh */
+async function prodOfferAfterSave() {
+  /* ⚠️ AND core.js's live shelf, which ctOffersEnsure re-reads from. It was dropped only when the bell's "shop changed"
+     arrived — a race the re-read usually won, so the tick showed the pre-attach offer ([OFF-01] / [OFF-02], 2026-09-17). */
+  if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
+  /* The Definitions/Setup edit form saves whole rules from ITS copy — it must not keep the pre-attach one. */
+  if (typeof CBDEF !== 'undefined' && CBDEF) CBDEF.mine = null;
+  closeModal();
+  UI.prodPicked.clear();
+  UI.prodPick = false;
+  await loadCatalogue('fresh');
+}
+/**
  * ⚠️ ONE WRITE, AND IT MERGES. The offer's reach is read, unioned (or differenced) with the selection, and saved
  * back as a new definition_version — so the change is versioned like any other change to a term of trade, and a
  * concurrent edit elsewhere cannot be silently flattened by a stale list held on this screen.
  */
-async function prodOfferApply(offerId, add) {
+async function prodOfferApply(offerId, adding) {
   const ids = Array.from(UI.prodPicked || []);
   if (!ids.length) return;
   showBusy(
-    add ? txn('Adding {count} product…', 'Adding {count} products…', ids.length) : txn('Removing {count} product…', 'Removing {count} products…', ids.length)
+    adding ? txn('Adding {count} product…', 'Adding {count} products…', ids.length) : txn('Removing {count} product…', 'Removing {count} products…', ids.length)
   );
   try {
-    /**
-     * ⚠️⚠️ THE RULES ARE ON THE VERSION, NOT ON THE DEFINITION — and reading the wrong one DESTROYS THE OFFER.
-     *
-     * `defList` JOINs definition_version and returns `rules`; `defGet` returns `{definition, versions}` and
-     * leaves `definition.rules` NULL. My first version read `d.rules || {}` from defGet, merged the product ids
-     * into an empty object, and saved that — so applying products to an offer silently erased its TERMS. The
-     * kind, the tiers, the percentage: gone. The offer still existed, still looked live on every screen, and did
-     * nothing at all. It happened to the test offer before this comment was written.
-     *
-     * ⭐ So the current version's rules are what we merge into, and the guard below makes the loss impossible
-     * rather than merely unlikely.
-     */
-    const reply = await api('defGet', { params: { id: offerId } });
-    const d = (reply && reply.definition) || {};
-    const vers = (reply && reply.versions) || [];
-    const curV =
-      vers.filter(function (item) {
-        return item.version === d.current_version;
-      })[0] ||
-      vers[0] ||
-      {};
-    /* The kind is on the DEFINITION; joining it here is what lets the guard below pass for a form-authored offer. */
-    const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
-    /* ⭐ ADDING products widens what the offer prices: ask first, showing the reach. Reads above change nothing; the first write is the defSave below. */
-
+    const { def: offerDef, rules } = await prodOfferRead(offerId);
     /**
      * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
      * join, anything — saving would replace a working offer with an empty one, and nothing downstream would
@@ -104,54 +155,17 @@ async function prodOfferApply(offerId, add) {
       toast(tx("Could not read that offer's terms, so nothing was changed. Open it in Catalogue setup first."), true);
       return;
     }
-    const at = Object.assign({}, rules.applies_to || {});
-    const next = prodOfferNextIds(at.item_ids, ids, add);
-    if (!(await prodOfferConfirm({ id: offerId, add: add, def: d, rules: rules, ids: ids, was: at.item_ids, next: next }))) return;
-
-    /**
-     * ⚠️⚠️ AN EMPTY item_ids LIST MEANS "EVERY PRODUCT", NOT "NONE" — see CBOffers.eligibleFor, where a missing
-     * selector matches every line. So removing the last product must DELETE the key, not leave it empty: an empty
-     * array would silently turn a targeted discount into a shop-wide one, which is the most expensive possible
-     * direction for that mistake.
-     */
-    if (next.length) at.item_ids = next;
-    else delete at.item_ids;
-    if (Object.keys(at).length) rules.applies_to = at;
-    else delete rules.applies_to;
-
-    /* what the brand's stores had BEFORE this save — a released offer is now "changed", an unreleased one still is not out */
-    const netWas =
-      (
-        ((typeof _DEFS !== 'undefined' && _DEFS.offer) || []).filter(function (x) {
-          return x.definition_id === offerId;
-        })[0] || {}
-      ).network || null;
+    /* ⭐ ADDING products widens what the offer prices: ask first, showing the reach. Reads above change nothing; the first write is the defSave below. */
+    const appliesTo = Object.assign({}, rules.applies_to || {});
+    const next = prodOfferNextIds(appliesTo.item_ids, ids, adding);
+    if (!(await prodOfferConfirm({ id: offerId, add: adding, def: offerDef, rules: rules, ids: ids, was: appliesTo.item_ids, next: next }))) return;
+    prodOfferSetReach(rules, appliesTo, next);
+    const networkWas = prodOfferNetworkWas(offerId);
     await api('defSave', { params: { id: offerId }, body: { rules: rules } });
-    /* ⚠️ AND core.js's live shelf, which ctOffersEnsure re-reads from. It was dropped only when the bell's "shop changed"
-       arrived — a race the re-read usually won, so the tick showed the pre-attach offer ([OFF-01] / [OFF-02], 2026-09-17). */
-    if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
-    /* The Definitions/Setup edit form saves whole rules from ITS copy — it must not keep the pre-attach one. */
-    if (typeof CBDEF !== 'undefined' && CBDEF) CBDEF.mine = null;
-    closeModal();
-    UI.prodPicked.clear();
-    UI.prodPick = false;
-    await loadCatalogue('fresh');
-    toast(
-      (add
-        ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
-        : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length)) +
-        /* ⭐ said at the moment it matters — the stores do not have this yet (see netRelChip) */
-        (netWas && netWas.stores > 0
-          ? ' · ' +
-            txn(
-              'your {count} store gets it when you release it (Settings › Integrations › Network offers)',
-              'your {count} stores get it when you release it (Settings › Integrations › Network offers)',
-              netWas.stores
-            )
-          : '')
-    );
-  } catch (e) {
-    toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e));
+    await prodOfferAfterSave();
+    toast(prodOfferDoneWords(adding, ids.length, networkWas));
+  } catch (failure) {
+    toast(MSG.fail(adding ? 'add to the offer' : 'remove from the offer', failure));
   } finally {
     /**
      * ⚠️ hideBusy IN A finally, NOT ONLY IN THE CATCH. My first version hid the overlay when the save FAILED and

@@ -39,6 +39,7 @@ function chitUnpayForget(row) {
   if (row.business_json) delete row.business_json.payment;
   if (row.header && row.header.business_json) delete row.header.business_json.payment;
 }
+/** Clear payment: refuse in words when the row cannot show amount and currency, ask, then write once and let the row forget its payment */
 async function chitUnpay(id) {
   const row = UI.rows && UI.rows.find((x) => x.id === id);
   const refusal = chitUnpayRefusal(row);
