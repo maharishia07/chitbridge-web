@@ -918,7 +918,7 @@
     link.className = 'cbsh-skip';
     link.href = '#cb-main';
     link.setAttribute('data-testid', 'skip-link');
-    link.textContent = W.skip;
+    link.textContent = T(W.skip); /* the catalogue says it (walk-locale: new words go through tx) */
     link.addEventListener('click', function (event) {
       var target = doc.querySelector('main') || doc.querySelector('[role="main"]');
       if (!target) return;

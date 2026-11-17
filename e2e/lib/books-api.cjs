@@ -33,11 +33,12 @@ const followOf = (b) => { const late = Object.keys(b).filter((k) => k !== 'not_d
 const noNeeds = () => ({ parties: 0, bills: 0, disputed: 0, query: 0, held: 0, no_tax_invoice: 0, no_terms: 0, overdue: 0, overdue_minor: 0 });
 const dueRow = (o) => { const row = Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) }); if (row.follow_up === undefined) row.follow_up = followOf(row.buckets); if (row.balance_words === undefined) row.balance_words = owesWords(row.balance_minor); if (row.needs === undefined) row.needs = noNeeds(); return row; };
 /** GET /api/books/dues */
-const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', needs: { customer: noNeeds(), supplier: noNeeds() }, parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
+const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', needs: { customer: noNeeds(), supplier: noNeeds() }, parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0), aged_totals: { customer: null, supplier: null } }, o || {});   /* aged_totals: the api's per-side ageing totals; none until a case names them */
 /** one row of GET /api/books/periods */
 const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', entries: 0, sales_minor: 0, lock: { may: true, why: '' }, reopen: { may: false, why: null }, lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
 /** GET /api/books/periods */
-const periods = (rows) => ({ periods: rows || [] });
+/* the api always names the year under review and lists the years (PERIOD, l17): a stand-in that has no case says the shop's current year and no years */
+const periods = (rows, o) => Object.assign({ under_review: { fy: '2026-27', from: '2026-04-01', to: '2027-03-31' }, years: [], periods: rows || [] }, o || {});
 module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
 
 /* ── the period-end answers ── */
