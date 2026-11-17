@@ -1922,7 +1922,8 @@ ctx.box = $(inst, ':scope > .cbl-list');
       ctx.box.__cblRO = new root.ResizeObserver(function () {
         if (inst.dead) return;
         var c = ctx.box.clientWidth > 0 && ctx.box.clientWidth <= 620;
-        if (c !== inst.card || (inst.auto && Math.abs(ctx.box.clientWidth - (inst.fitW || 0)) > 8)) {
+        /* a box that got NARROWER than the width the columns were fitted to always refits (4 px less left Cheques 2 px sideways, rule 13); a wider one waits for 8 px */
+        if (c !== inst.card || (inst.auto && (ctx.box.clientWidth < (inst.fitW || 0) || ctx.box.clientWidth - (inst.fitW || 0) > 8))) {
           paintTools(inst);
           paintList(inst);
         }
