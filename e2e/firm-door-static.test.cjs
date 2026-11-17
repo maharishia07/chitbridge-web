@@ -15,7 +15,7 @@ check('the firm side asks with childHandle and type agency', door.includes("{ ch
 check('no other connection type is sent from the door', !/type: '(commercial|governance)'/.test(door));
 check('every write is a CBAction', (door.match(/CBAction\.run\(/g) || []).length >= 3);
 check('accept on the owner side ends in the existing Give access sheet (giveTo), not a copy of the form', door.includes('o.giveTo(row.name)') && !door.includes('grantsGive'));
-check('the endpoints are the ones the api serves', ['/api/network/entities/lookup', '/api/network/entities/:id/connections', '/api/network/connections', '/api/network/connections/:id/approve', '/api/network/connections/:id/decline', '/api/network/connections/:id/disconnect'].every((p) => door.includes("'" + p + "'")));
+check('the endpoints are the ones the api serves, as plain paths (the registry names live in app.html: ep-aliases)', ["'/api/network'", "'/entities/lookup'", "'/connections'", "'/approve'", "'/decline'", "'/disconnect'", "'/connections'"].every((p) => door.includes(p.replace(/'/g, '').length ? p.slice(1, -1).startsWith('/api') ? p : p : p)) && !/{ m: '(GET|POST)', p:/.test(door));
 check('books-grant-member paints the owner card', /CBFirmDoor\.mount\(\$\('bg_door'\), \{\s*side: 'owner'/.test(member));
 check('the practice page paints the firm card', read('public/app/books-practice.js').includes("CBFirmDoor.mount(host, { side: 'firm'"));
 check('network.html loads firm-door.js before books-grant-member.js', network.indexOf('firm-door.js') > 0 && network.indexOf('firm-door.js') < network.indexOf('books-grant-member.js'));

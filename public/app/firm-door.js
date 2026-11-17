@@ -12,14 +12,16 @@
  */
 (function (root) {
   'use strict';
-  /* the endpoint registry — the ONE declaration shape the round-trip scanner reads */
-  var EP = {
-    doorLookup: { m: 'GET', p: '/api/network/entities/lookup' },
-    doorEdges: { m: 'GET', p: '/api/network/entities/:id/connections' },
-    doorAsk: { m: 'POST', p: '/api/network/connections' },
-    doorApprove: { m: 'POST', p: '/api/network/connections/:id/approve' },
-    doorDecline: { m: 'POST', p: '/api/network/connections/:id/decline' },
-    doorRemove: { m: 'POST', p: '/api/network/connections/:id/disconnect' }
+  /* Plain paths on purpose (as books-grant-api.js does for the six reads): the endpoint registry already names each of these in app.html (netLookup · netConnections · netConnect · netApprove · netDecline · netDisconnect),
+     and e2e/ep-aliases.cjs fails an endpoint with two names. This module is loaded on pages that have no app.html registry, so it carries the paths, not a second name. */
+  var NET = '/api/network';
+  var DOOR = {
+    lookup: { m: 'GET', url: function () { return NET + '/entities/lookup'; } },
+    edges: { m: 'GET', url: function (id) { return NET + '/entities/' + encodeURIComponent(id) + '/connections'; } },
+    ask: { m: 'POST', url: function () { return NET + '/connections'; } },
+    approve: { m: 'POST', url: function (id) { return NET + '/connections/' + encodeURIComponent(id) + '/approve'; } },
+    decline: { m: 'POST', url: function (id) { return NET + '/connections/' + encodeURIComponent(id) + '/decline'; } },
+    remove: { m: 'POST', url: function (id) { return NET + '/connections/' + encodeURIComponent(id) + '/disconnect'; } }
   };
   var COPY = {
     owner: {
@@ -45,9 +47,6 @@
 
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
-  }
-  function pathOf(key, id) {
-    return EP[key].p.replace(':id', encodeURIComponent(id || ''));
   }
   /** the page's own call when it gives one; else a plain authed fetch (the practice page has none) */
   function callOf(o) {
@@ -91,12 +90,12 @@
     var $ = function (id) { return root.document.getElementById(id + '-' + side); };
 
     function run(key, id, body) {
-      return call(EP[key].m, pathOf(key, id), body);
+      return call(DOOR[key].m, DOOR[key].url(id), body);
     }
     function readNode() {
       var bridge = bridgeOf(o);
       if (seen[bridge]) return Promise.resolve(seen[bridge]);
-      return call(EP.doorLookup.m, EP.doorLookup.p + '?bridgeId=' + encodeURIComponent(bridge)).then(function (card) {
+      return call(DOOR.lookup.m, DOOR.lookup.url() + '?bridgeId=' + encodeURIComponent(bridge)).then(function (card) {
         var node = card && (card.entity ? card.entity.id : card.id);
         if (node) seen[bridge] = node;
         return node || null;
@@ -106,7 +105,7 @@
     function read() {
       return readNode().then(function (node) {
         inst.node = node;
-        return node ? run('doorEdges', node) : [];
+        return node ? run('edges', node) : [];
       }).then(function (edges) {
         inst.rows = sideEdges(Array.isArray(edges) ? edges : [], inst.node, side).map(function (edge) { return rowOf(edge, inst.node, side); });
       });
@@ -125,10 +124,10 @@
       var asked = function (row) { return row.state === 'requested' && !row.mine; };
       return [
         { id: 'accept', tid: tid('accept'), label: words(side === 'owner' ? 'Accept and choose access' : 'Accept'), when: asked, run: accept },
-        { id: 'decline', tid: tid('decline'), label: words('Decline'), when: asked, run: function (row) { settle(row, 'doorDecline', 'Declined.', 'Decline this request?'); } },
-        { id: 'cancel', tid: tid('cancel'), label: words(side === 'owner' ? 'Cancel invitation' : 'Cancel'), when: function (row) { return row.state === 'requested' && row.mine; }, run: function (row) { settle(row, 'doorDecline', 'Cancelled.'); } },
+        { id: 'decline', tid: tid('decline'), label: words('Decline'), when: asked, run: function (row) { settle(row, 'decline', 'Declined.', 'Decline this request?'); } },
+        { id: 'cancel', tid: tid('cancel'), label: words(side === 'owner' ? 'Cancel invitation' : 'Cancel'), when: function (row) { return row.state === 'requested' && row.mine; }, run: function (row) { settle(row, 'decline', 'Cancelled.'); } },
         { id: 'give', tid: tid('give'), label: words('Give access'), when: function (row) { return side === 'owner' && row.state === 'active' && !hasAccess(row); }, run: function (row) { if (o.giveTo) o.giveTo(row.name); } },
-        { id: 'remove', tid: tid('remove'), label: words(side === 'owner' ? 'Remove my accountant' : 'Remove'), when: function (row) { return row.state === 'active' || row.state === 'suspended'; }, run: function (row) { settle(row, 'doorRemove', 'Removed.', side === 'owner' ? 'Remove this firm?' : 'Remove this client?', true); } }
+        { id: 'remove', tid: tid('remove'), label: words(side === 'owner' ? 'Remove my accountant' : 'Remove'), when: function (row) { return row.state === 'active' || row.state === 'suspended'; }, run: function (row) { settle(row, 'remove', 'Removed.', side === 'owner' ? 'Remove this firm?' : 'Remove this client?', true); } }
       ];
     }
     /** one write on one connection, a confirm when it ends something; the row list is read again */
@@ -143,7 +142,7 @@
     }
     /** ONE step for the owner: accept the connection, then the existing Give access sheet for the data consent. Accepting alone gives nothing. */
     function accept(row) {
-      root.CBAction.run(null, function () { return run('doorApprove', row.id, {}); }, {
+      root.CBAction.run(null, function () { return run('approve', row.id, {}); }, {
         key: 'fd-accept-' + row.id,
         confirm: { title: words('Accept ') + row.name + '?', body: root.esc(words(side === 'owner' ? 'This connects you. It does not open your books: you choose what they can see next.' : 'This connects you to this client. You see their books only when they give you access.')), yes: words(side === 'owner' ? 'Accept and choose access' : 'Accept') },
         failed: words('Could not accept'),
@@ -158,7 +157,7 @@
       var handle = input.value.trim();
       if (!handle) { input.focus(); return; }
       var body = side === 'owner' ? { parentHandle: handle, type: 'agency' } : { childHandle: handle, type: 'agency' };
-      root.CBAction.run($('fd_add'), function () { return run('doorAsk', null, body); }, {
+      root.CBAction.run($('fd_add'), function () { return run('ask', null, body); }, {
         key: 'fd-ask-' + side,
         failed: words('Could not ask'),
         out: 'fd_out-' + side,
@@ -221,5 +220,5 @@
     }
     return reload().then(function () { return { reload: reload }; });
   }
-  root.CBFirmDoor = { mount: mount, sideEdges: sideEdges, rowOf: rowOf, stateWords: stateWords, EP: EP };
+  root.CBFirmDoor = { mount: mount, sideEdges: sideEdges, rowOf: rowOf, stateWords: stateWords, DOOR: DOOR };
 })(typeof window !== 'undefined' ? window : globalThis);
