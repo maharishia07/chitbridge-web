@@ -22,6 +22,8 @@ var OV_PERIODS = [
   ['quarter', 'This quarter so far'],
   ['ytd', 'This year so far']
 ];
+/* UX-137: each control and picture wears its code (register BKS026-..., one row each in the docs SCREENS.json); a tile names its own */
+var OV_CODES = { retry: 'BKS026-B01', sales: 'BKS026-B02', income: 'BKS026-B03', profit: 'BKS026-B04', collect: 'BKS026-B05', pay: 'BKS026-B06', cash: 'BKS026-B07', figSales: 'BKS026-B08', figProfit: 'BKS026-B09', head: 'BKS026-P01', picSales: 'BKS026-P02', picProfit: 'BKS026-P03', pick: 'BKS026-S01' };
 var OV_SAME = { week: 'the same weekdays last year', mtd: 'the same dates last year', quarter: 'the same dates last year', ytd: 'the same dates last year' };
 
 function ovView(body) {
@@ -59,7 +61,7 @@ function ovMonth(day, form) {
 }
 function ovSelect() {
   return (
-    '<select class="inp" id="ov_pick" data-testid="ov-pick" aria-label="' + esc(tx('Which period')) + '" onchange="ovPick(this.value)">' +
+    '<select class="inp" id="ov_pick" data-cbsid="' + OV_CODES.pick + '" data-testid="ov-pick" aria-label="' + esc(tx('Which period')) + '" onchange="ovPick(this.value)">' +
     OV_PERIODS.map(function (item) {
       return '<option value="' + item[0] + '"' + (item[0] === OV.period ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>';
     }).join('') +
@@ -71,13 +73,13 @@ function ovHeadline(a) {
   var lead = a.income && a.income.minor != null ? { words: 'Income', fig: a.income } : a.sales && a.sales.minor != null ? { words: 'Sales', fig: a.sales } : null;
   if (!lead) return '';
   var change = lead.fig.change_bp != null ? ' (' + bkPct(lead.fig.change_bp, true) + ' ' + esc(tx('on')) + ' ' + esc(tx(OV_SAME[a.period.word])) + ')' : '';
-  return '<p data-testid="ov-headline" class="ov-head">' + esc(tx(lead.words)) + ' ' + esc(tx(OV_PERIODS.filter(function (x) { return x[0] === a.period.word; })[0][1]).toLowerCase()) + ': <b>' + esc(ovMoney(lead.fig.minor)) + '</b>' + change + '</p>';
+  return '<p data-cbsid="' + OV_CODES.head + '" data-testid="ov-headline" class="ov-head">' + esc(tx(lead.words)) + ' ' + esc(tx(OV_PERIODS.filter(function (x) { return x[0] === a.period.word; })[0][1]).toLowerCase()) + ': <b>' + esc(ovMoney(lead.fig.minor)) + '</b>' + change + '</p>';
 }
 /** one tile: a label, the figure, its note; a link into the page that holds the figure; absent → nothing */
 function ovTile(tid, label, minor, note, href) {
   if (minor == null) return '';
   return (
-    '<a class="ov-tile" href="' + href + '" data-testid="ov-' + tid + '"><span class="ov-l">' + esc(tx(label)) + '</span><span class="ov-v">' + esc(ovMoney(minor)) + '</span>' +
+    '<a class="ov-tile" href="' + href + '" data-cbsid="' + OV_CODES[tid] + '" data-testid="ov-' + tid + '"><span class="ov-l">' + esc(tx(label)) + '</span><span class="ov-v">' + esc(ovMoney(minor)) + '</span>' +
     (note ? '<span class="ov-n">' + note + '</span>' : '') + '</a>'
   );
 }
@@ -94,7 +96,7 @@ function ovTiles(a) {
     a.to_collect ? ovTile('collect', 'To collect', a.to_collect.minor, '', '#dues') : '',
     a.to_pay ? ovTile('pay', 'To pay', a.to_pay.minor, '', '#dues') : ''
   ];
-  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(cash.words) + '</span></a>');
+  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(cash.words) + '</span></a>');
   return '<div class="ov-tiles">' + tiles.join('') + '</div>';
 }
 /** THE CHART SLOT: today CBDraw.bars (the library helper); the MIS chart components (lane next/mischarts-web: 12 months, week vs week, 7 years) replace this one call, nothing else on the page changes */
@@ -114,9 +116,9 @@ function ovPicture(tid, title, list, key) {
   var box = document.getElementById('ov_main');
   var width = Math.max(240, Math.floor(((box && box.clientWidth) || 640) / (window.innerWidth > 900 ? 2 : 1)) - 24);
   return (
-    '<section class="ov-pic" data-testid="ov-' + tid + '"><h3>' + esc(tx(title)) + '</h3>' +
+    '<section class="ov-pic" data-cbsid="' + (tid === 'sales' ? OV_CODES.picSales : OV_CODES.picProfit) + '" data-testid="ov-pic-' + tid + '"><h3>' + esc(tx(title)) + '</h3>' +
     ovChart(points, { width: width, height: 130, id: 'ov' + tid, tid: 'ov-' + tid + '-svg', aria: tx(title) }) +
-    '<details><summary>' + esc(tx('Show the figures')) + '</summary><table class="bk-st"><tbody>' + rows.join('') + '</tbody></table></details></section>'
+    '<details><summary data-cbsid="' + (tid === 'sales' ? OV_CODES.figSales : OV_CODES.figProfit) + '" data-testid="ov-pic-' + tid + '-figures">' + esc(tx('Show the figures')) + '</summary><table class="bk-st"><tbody>' + rows.join('') + '</tbody></table></details></section>'
   );
 }
 function ovCss() {
@@ -133,7 +135,7 @@ function ovPaint() {
   if (!bar || !main) return;
   bar.innerHTML = ovCss() + '<div class="ov-bar">' + ovSelect() + (OV.state === 'ready' && OV.answer && OV.answer.sales && OV.answer.sales.through ? '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="ov-through">' + esc(txf('Books in to {date}', { date: bkDate(OV.answer.sales.through) })) + '</span>' : '') + '</div>';
   if (OV.state === 'loading') main.innerHTML = '<p class="hint">' + esc(tx('Loading…')) + '</p>';
-  else if (OV.state !== 'ready' || !OV.answer) main.innerHTML = '<p class="hint" data-testid="ov-error">' + esc(tx('This did not load.')) + ' <button class="btn" type="button" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></p>';
+  else if (OV.state !== 'ready' || !OV.answer) main.innerHTML = '<p class="hint" data-testid="ov-error">' + esc(tx('This did not load.')) + ' <button class="btn" type="button" data-cbsid="' + OV_CODES.retry + '" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></p>';
   else {
     var a = OV.answer;
     main.innerHTML = ovHeadline(a) + ovTiles(a) + '<div class="ov-pics">' + ovPicture('sales', 'Sales by month, tax in', a.bars || [], 'sold_minor') + ovPicture('profit', 'Profit by month', a.profit_by_month || [], 'profit_minor') + '</div>';
