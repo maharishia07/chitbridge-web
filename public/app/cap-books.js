@@ -404,6 +404,12 @@ function bkWhy(e, fallback) {
 function bkErr(e) {
   return esc(bkWhy(e, tx('Could not be read')));
 }
+/** STAFF-BOOKS: a view the server refuses this seat (403: the money reads are the owner's and the auditor's) says so in the server's own sentence, in the ONE empty/refused state (emptyState), never a raw error and never a blank pane.
+ *  Any other failure keeps bkErr's words. `what` names the view. */
+function bkRefused(e, what) {
+  if (!e || e.status !== 403) return bkErr(e);
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || "Only the owner or the shop's auditor may read these figures.")));
+}
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
 var BK = { dues: null, duesAt: 0, stmt: {}, owed: {}, tab: 'daybook' };
@@ -4342,7 +4348,7 @@ async function bkTB(body) {
       (comparison ? bkOverNote(reply.over_rule, currency, 'BKS004-P03', 'tb-over-note') : ''); /* the note sits UNDER the list: the first data row stays where it was */
     if (window.CBBankTbLine && reply.bank) CBBankTbLine.wire(body, reply.bank, bkTbBankOptions(reply, asOf));
   } catch (e) {
-    body.innerHTML = bkErr(e);
+    body.innerHTML = bkRefused(e, 'Trial balance');
   }
 }
 /**
@@ -4595,7 +4601,7 @@ async function bkPL(body) {
       bkPlSectionTotal(reply, comparison, currency, 'expense', tx('Total expenses')) +
       '</tbody></table>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
   } catch (e) {
-    body.innerHTML = bkErr(e);
+    body.innerHTML = bkRefused(e, 'Profit and loss');
   }
 }
 function bkBsPick(v) {
@@ -4689,7 +4695,7 @@ async function bkBS(body) {
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, currency), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
       '</tbody></table>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {
-    body.innerHTML = bkErr(e);
+    body.innerHTML = bkRefused(e, 'Balance sheet');
   }
 }
 /**
@@ -5838,7 +5844,7 @@ function bkLockRowHTML(item, index, isOwner) {
     '" class="num lk-ent">' +
     esc(String((info && info.entries) || 0)) +
     '</td><td class="num lk-sales">' +
-    (info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No sales'))) +
+    (info && info.sales_minor === undefined ? '—' : info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No sales'))) + /* STAFF-BOOKS: a seat that may not read figures gets none: a dash, never "No sales" */
     '</td><td class="lk-act">' +
     buttons +
     (buttons ? bkLockWhyHTML(month, state, info, rule.blocked, rule.blockWhy) : '') +
