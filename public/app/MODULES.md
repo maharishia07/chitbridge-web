@@ -115,7 +115,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (112)
+## Shared (113)
 
 | file | loading | what it is |
 |---|---|---|
@@ -170,6 +170,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `device-id.js` | eager | device-id.js — CBDevice: THIS BROWSER'S DEVICE ID, AND X-Device-Id ON EVERY CALL TO THE API (K-SEC PR A, 2026-10-21) |
 | `edition.js` | — | · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions |
 | `embed-host.js` | — | .html); CBEmbed.open is called in till.html only (Add a person: grep -n 'CBEmbed\.open' public) |
+| `firm-door.js` | — |  |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
 | `kural.js` | — |  |
@@ -272,7 +273,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `list-lab.html` | 14 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 11 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 9 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 46 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 47 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 14 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 22 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
@@ -296,4 +297,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*207 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*208 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

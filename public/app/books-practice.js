@@ -296,6 +296,7 @@
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML = sectionHTML();
     wireSection(section);
+    mountDoor();
     mountList();
     wireFlagButton(section);
     restoreFocus(section, heldId);
@@ -320,8 +321,14 @@
    '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
+   '<div id="bp_door" data-testid="practice-door"></div>' +
    '<div id="bp_list" data-testid="practice-list"></div>'
     );
+  }
+  /** FIRM-PARENT-DOOR: "Add a client" and the asks waiting for an answer, above the client list (the same card and list as the owner's, from the firm's side) */
+  function mountDoor() {
+    var host = root.document.getElementById('bp_door');
+    if (host && root.CBFirmDoor && !host.firstChild) root.CBFirmDoor.mount(host, { side: 'firm', token: token(), base: base() });
   }
   /** the band tiles filter, the tabs switch the band, Show all clears */
   function wireSection(section) {

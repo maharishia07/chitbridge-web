@@ -369,7 +369,7 @@
       });
   }
   function paintBooks(host) {
-    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, ownStore: root.CBBooksActing.ownStore(N.o.token, T('Your books')), sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
+    root.CBBooksGrantMember.mount(host, { call: call, token: N.o.token, parents: parentsOf, ownStore: root.CBBooksActing.ownStore(N.o.token, T('Your books')), sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
         N.tab = 'mine';
         paint();
       } });

@@ -134,6 +134,7 @@
     panel.host.innerHTML =
       backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
       '<button data-cbsid="NET004-B03" type="button" class="act" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
+      '<div id="bg_door" data-testid="bg-door"></div>' +
       '<div class="sub" data-testid="bg-note">' + esc(words('You choose who, in which role, and until when. Every look and every step is recorded.')) + '</div>' +
       noticeHtml() +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
@@ -146,13 +147,28 @@
     });
     if ($('bg_back')) $('bg_back').onclick = panel.o.onBack;
     greyGive();
-    $('bg_give').onclick = openGive;
+    $('bg_give').onclick = function () { openGive(); };
+    paintDoor();
     if ($('bg_seethem')) $('bg_seethem').onclick = function () { panel.view = 'posted'; panel.seeThem = false; reload(); };
     ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted })[panel.view]($('bg_list'));
   }
   /** what the server said beside its answer (a warning on a new grant, the actions a revoke withdrew), kept until the next read */
   function noticeHtml() {
     return panel.notice.length ? '<div class="nw-why" id="bg_notice" role="status" data-testid="bg-notice">' + panel.notice.map(esc).join(' ') + (panel.seeThem ? ' <button data-cbsid="NET004-B13" type="button" class="act quiet" id="bg_seethem" data-testid="bg-seethem">' + esc(words('See them')) + '</button>' : '') + '</div>' : '';
+  }
+  /** FIRM-PARENT-DOOR: the owner's card "Your accountant or auditor" above the list; its Accept ends in this screen's own Give access sheet */
+  function paintDoor() {
+    if (!root.CBFirmDoor || !$('bg_door')) return;
+    root.CBFirmDoor.mount($('bg_door'), {
+      side: 'owner', call: panel.o.call, mountList: panel.o.mountList, bridgeId: panel.o.bridgeId, token: panel.o.token, giveTo: giveTo, onChange: function () { panel.parentsStale = true; },
+      access: function () { return panel.given.filter(isOpen).map(function (grant) { return nameOf(grant.grantee_entity); }); }
+    });
+  }
+  /** after a firm is accepted: read the list again (it now names the firm as someone to give access to), then open Give access with that firm picked */
+  function giveTo(name) {
+    return readView().then(function () {
+      openGive(name);
+    });
   }
   /** the owner's queue: the owner works in his own books, so no header and his own entity as the store */
   function paintAccept(host) {
@@ -258,7 +274,7 @@
     );
   }
   /** open the Give access sheet for the network parents this store may open its books to */
-  function openGive() {
+  function openGive(pickName) {
     var parents = allParents();
     if (!parents.length) {
       panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('You have no network parent to give access to.')) + '</p>');
@@ -270,8 +286,14 @@
     $('bg_preset').onchange = readConsent;
     $('bg_yes').onchange = tickYes;
     $('bg_go').onclick = askGive;
+    pickParent(parents, pickName);
     readConsent();
     $('bg_who').focus();
+  }
+  /** the firm just accepted is picked in the Who box, when its name names exactly one business */
+  function pickParent(parents, name) {
+    var named = parents.filter(function (item) { return item.name === name; });
+    if (named.length === 1) $('bg_who').value = String(named[0].id);
   }
   /** Give access is held until yes is ticked */
   function tickYes() {
@@ -466,5 +488,5 @@
       return { reload: reload };
     });
   }
-  root.CBBooksGrantMember = { mount: mount };
+  root.CBBooksGrantMember = { mount: mount, giveTo: giveTo };
 })(typeof window !== 'undefined' ? window : globalThis);
