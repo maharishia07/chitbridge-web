@@ -44,7 +44,7 @@ LABS.forEach((f) => {
 });
 FRAMED.forEach((f) => {
   const h = read('public/' + f);
-  const m = /CBFrame\.mount\(\{[\s\S]*?skeleton:\s*\{[\s\S]*?sections:\s*(\[|[A-Z_]+\b)/.exec(h);   /* a literal list, or the page's own constant (settings.html SECTIONS) */
+  const m = /CBFrame\.mount\(\{[\s\S]*?skeleton:\s*\{[\s\S]*?sections:\s*(?:[A-Za-z_$][\w$]*\s*=\s*)?(\[|[A-Z_]+\b)/.exec(h);   /* a literal list (also kept in a name: network.html sideSections = [...]), or the page's own constant (settings.html SECTIONS) */
   if (!m) bad(f + ': CBFrame.mount must be given skeleton: { name, icon, sections }');
   else if (h.indexOf('href="/app/page-skeleton.css"') < 0) bad(f + ': must link /app/page-skeleton.css');
   else if (!/\.\.\/|<aside/.test('') && /<aside[^>]*class="side"/.test(h)) bad(f + ': draws its own sidebar — use the shared skeleton, never a copy');
