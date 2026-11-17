@@ -60,7 +60,6 @@ var CRM_EP = {
   crmGroupDel: { m: 'DELETE', p: '/api/crm/groups/:name', ok: 'y' }, // owner only → { name, removed }
   crmSegSend: { m: 'POST', p: '/api/crm/segments/:key/send', ok: 'y' } // { text, dry? } → dry: who may (by code); real: the one sender per allowed member
 };
-
 var CRM = {
   gen: 0,
   loadGen: 0,

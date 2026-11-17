@@ -38,7 +38,6 @@
  */
 (function (root) {
   'use strict';
-
   var CS = {
     id: null,
     chit: null,
@@ -97,7 +96,6 @@
       return false;
     }
   }
-
   /* ── what the chit read says, in one shape ─────────────────────────────────────────────────────── */
   /** RAIL-146: did the server take the money off this read (a co-assist who may not see cost)? the field it sends, never a sentence */
   function costHiddenOf(read) {
@@ -259,7 +257,6 @@
           ? step
           : 'pending';
   }
-
   /* ── THE ONE RULE for which icons a chit gets in its step. Not hard-coded per screen. ───────────────
      counter bill (mine, done)     Print · Return · Open page
      bill I received, not accepted Accept · Reject · Dispute · Goods in · Open page   (FX-F10W2: Reject asks the reason — it goes on the bill)

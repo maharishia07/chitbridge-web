@@ -45,14 +45,12 @@
 (function (root) {
   'use strict';
   if (root.CBAvatar) return;
-
   var doc = root.document;
   var K = root.CBScreen || {};
   var THEMES = K.APP_THEMES || {};
   var has = function (o, k) {
     return Object.prototype.hasOwnProperty.call(o, k);
   };
-
   /* H34 (Athi's black-box, 2026-10-09): a utility page never sends a customer into the workshop (app.html). UX-96 (NAV-MAP §6 item 10, 2026-10-19):
      Profile opens Settings › Your business, the owner has Settings on every page, and Support is NOT drawn until a support page exists (it used to
      loop to Home) — a page that has one passes onSupport or supportHref and the item appears. A page's own handler or href still wins; the workshop passes its own. */
@@ -100,7 +98,6 @@
     ['light', 'Light'],
     ['strong', 'Strong']
   ]; /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
-
   function lsGet(k, d) {
     try {
       return root.localStorage.getItem(k) || d;
@@ -118,7 +115,6 @@
       root.localStorage.removeItem(k);
     } catch (_) {}
   }
-
   /* ── what is saved ── */
   /* FIXED LOOK (the UI standard page, public/ui-standard.html): a page whose <html> carries data-appearance-fixed takes its look from CBAvatar.applyWith(), never from
      storage, and nothing here saves, pushes or reads cb_sess for it. OVERRIDE is null on every other page, so nothing changes there. */
@@ -150,7 +146,6 @@
       keys: pref('keys')
     };
   }
-
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
     /* TOUR-FIX1: a page that loads the theme library AFTER this file (the till: avatar.js, then /engine/screen.js) took an empty table here and

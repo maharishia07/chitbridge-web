@@ -281,7 +281,6 @@
       ['BIL002', 'supplierbill', 'Supplier bill', 'app/chit-sheet.js', 'a bill received']
     ]
   };
-
   /* ── the merge: one register in the browser ── */
   var ROWS = [],
     BYAPP = {},

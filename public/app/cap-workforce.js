@@ -146,7 +146,6 @@ async function acLoadDocs(id) {
     /* additive — its absence must not take the edit form down */
   }
 }
-
 /* ⚠️ `SESSION.entityId`, NOT `entity_id` — the snake_case name is never set anywhere, so this fallback was
    dead and the key silently collapsed to 'cb_aipolicy_me' whenever SESSION.name was absent. Two entities on
    one browser would then have shared one AI-policy store. Found by the read-but-never-written sweep in
