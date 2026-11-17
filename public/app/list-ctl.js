@@ -122,6 +122,7 @@
       var v = fn();
       return v === undefined ? dflt : v;
     } catch (_) {
+      if (root.__CB_SAFE_LOG && root.__CB_SAFE_LOG.push) root.__CB_SAFE_LOG.push({ w: 'list-ctl.safe', e: _ }); /* test-only flag (e2e/walk-probe-faults.cjs): a swallowed throw is written down; nothing changes for a user */
       return dflt;
     }
   }
