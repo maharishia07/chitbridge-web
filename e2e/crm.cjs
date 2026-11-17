@@ -57,7 +57,7 @@ async function route(S, r) {
   let body = null; try { body = q.postDataJSON(); } catch (_) {}
   if (m !== 'GET') S.bodies.push({ m, p, body });
   let x;
-  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', country: 'IN' } });   /* crm.html reads the shop's country from /me (SESSION.country → the pack's tax-id word GSTIN); with none known the page is neutral, never India (N2) */
   if (p === '/api/books/health') { if (!S.ledger) return J(r, 404, { error: 'Not found' }); return J(r, 200, books.health()); }
   if (p === '/api/books/enable' && m === 'POST') { S.ledger = true; return J(r, 200, { ok: true }); }
   if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(x[1]));
