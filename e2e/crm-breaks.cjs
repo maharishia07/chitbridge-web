@@ -9,7 +9,7 @@ const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
 /* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
 const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
-const PAGE = 'public/crm.html', HOME = 'public/app/cap-crm.js', REC = 'public/app/cap-crm-record.js';
+const PAGE = 'public/crm.html', HOME = 'public/app/cap-crm.js', REC = 'public/app/cap-crm-record.js', TLF = 'public/app/cap-crm-timeline.js';
 const H = 'e2e/crm.cjs';
 const BREAKS = [
   /* the five the task names */
@@ -39,8 +39,8 @@ const BREAKS = [
   ['a failed list shows the server\'s own message', HOME, `  return { title: tx("Couldn't load " + what + "."), sub: tx('Check the connection and try again.') };`, `  return { title: tx("Couldn't load " + what + "."), sub: (e && e.message) || '' };`, H],
   ['the Fix address button is dropped from Next', REC, `btn('fixaddr', 'Fix address', true, '', 'crm-next-fix')`, `''`, H],
   ['a minted party shows a Network ID', REC, "(!minted && p.bridge_id ? cell('Network ID', p.bridge_id, '—', 'crm-id-bridge') : '')", "cell('Network ID', p.bridge_id || 'CB00LOCAL0', '—', 'crm-id-bridge')", H],
-  ['the timeline reads the whole history in one go', REC, "      next = more ? T.next : '',", "      next = '',", H],
-  ['the timeline lists kinds that have nothing', REC, "(T.counts[item[0]] == null || T.counts[item[0]] > 0)", "(true)", H],
+  ['the timeline reads the whole history in one go', TLF, "      next = more ? T.next : '',", "      next = '',", H],
+  ['the timeline lists kinds that have nothing', TLF, "(T.counts[item[0]] == null || T.counts[item[0]] > 0)", "(true)", H],
   ['the unread dot is gone', REC, `(unread ? '<span class="udot" title="' + esc(tx('Unread')) + '"></span> ' : '')`, `''`, H],
   ['an internal message is not tagged', REC, `(e.kind === 'message_internal' ? '<span class="tagi">' + esc(tx('internal')) + '</span>' : '')`, `''`, H],
   ['a long call is not cut short', REC, "text.length > CRM_LONG ?", "text.length > 99999 ?", H],
