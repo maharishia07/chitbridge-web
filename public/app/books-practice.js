@@ -79,6 +79,7 @@
   var TILE = {
     books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Filed (owner's word)", { stage: 'lodged' }],
     bas_due_30: ['Due in 30 days', { bas: 'soon' }],
+    changed: ['Clients with changes since I checked', { changed: 'yes' }], /* rank 10: the server's count of clients with entries posted since THIS person said checked; the tile only filters, never re-sorts */
     queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Clients with entries to check (quarter)', { checked: 'behind' }], months_unlocked: ['Clients with months to lock', { unlocked: 'yes' }],
     cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]
   };
@@ -356,6 +357,15 @@
     var to = esc(tx('to')) + ' ' + esc(day(b.reconciled_to));
     return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + esc(r.entity_id) + '">' + esc(bankLeft(r)) + ' ' + esc(tx('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : esc(tx('Reconciled')) + ' <span class="sub">' + to + '</span>';
   }
+  /** rank 10: the quiet warning on a row, the server's own count (never added up here): 'N since I checked', or 'N since access began' before the first Mark as checked; a link to the changed entries (the Day book, newest first). Nothing shows when it is 0. */
+  var CHANGED_LINK = 'HOM001-B05';
+  function changedCell(r) {
+    var c = r.changed, A = root.CBBooksActing;
+    if (!c || !(c.n > 0)) return '';
+    var words = c.n + ' ' + tx(c.never ? 'since access began' : 'since I checked'), title = tx('Books changed since your last check') + (c.since ? ' · ' + day(c.since) : '');
+    var href = A && A.clientAddress ? A.clientAddress({ id: r.entity_id }, '&view=daybook&since=mine') : '';
+    return href ? '<a class="bp-link" href="' + esc(href) + '" title="' + esc(title) + '" data-cbsid="' + CHANGED_LINK + '" data-testid="practice-changed-' + esc(r.entity_id) + '">' + esc(words) + '</a>' : esc(words);
+  }
   /** l16 R4-2b: the client this person worked on last (set when a client's books are entered, books-acting.js): its row is marked, in view and focused when the list comes back */
   function lastClient() {
     try { return root.sessionStorage.getItem('cb_last_client') || ''; } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:last', failure); return ''; }
@@ -368,7 +378,7 @@
      (the four tiles); Advice shows the figures its rules read. The page knows which columns a band opens with; the server decides which band exists and what each tile counts. */
   var BAND_COLS = {
     pipeline: ['name', 'status', 'yend', 'checked', 'queries', 'bas'],
-    on_us: ['name', 'status', 'bank', 'queries', 'tocheck', 'unlocked'],
+    on_us: ['name', 'status', 'bank', 'queries', 'changed', 'tocheck', 'unlocked'],
     advisory: ['name', 'status', 'sales', 'margin', 'cash', 'profit']
   };
   function columns() {
@@ -381,6 +391,7 @@
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
+      num('changed', 'Changed', 130, changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed' }),
       num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
       num('yend', 'Year end', 230, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
       num('checked', 'Checked ' + yearLabel(), 110, checkedCell, checkedLeft, { prio: 1, dir0: -1 }),
@@ -391,7 +402,7 @@
       num('cash', 'Cash', 110, function (r) { return figureOrWhy(r, r.health.cash_minor, esc(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
       num('profit', 'Profit (qtr)', 110, function (r) { return figureOrWhy(r, r.health.profit_quarter_minor, esc(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
-      num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; })
+      num('look', 'My last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; })
     ];
   }
   /** A3P rank 1: the Year end band's work order: stage in the server's pipeline order (Books in first, Lodged last; a stage the list does not know, last), then the blocker, then the return due date, then the server's own order. */
@@ -418,7 +429,8 @@
       by('cash', function (r) { return r.health.cash_minor; }, 'Cash and bank'),
       by('profit', function (r) { return r.health.profit_quarter_minor; }, 'Profit this quarter'),
       by('ending', function (r) { return r.grant.expires_at || ''; }, 'Access ends'),
-      by('look', function (r) { return r.last_look || ''; }, 'Last look')
+      by('changed', function (r) { return r.changed ? r.changed.n : 0; }, 'Changes since I checked'),
+      by('look', function (r) { return r.last_look || ''; }, 'My last look')
     ]);
   }
   function filters() {
@@ -432,6 +444,7 @@
       f('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
       f('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
       f('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
+      f('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
       f('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
       f('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
     ];

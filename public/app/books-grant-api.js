@@ -19,6 +19,7 @@
     grantsChange: { m: 'PATCH', p: '/api/books-grants/:id' },
     grantsRevoke: { m: 'POST', p: '/api/books-grants/:id/revoke' },
     grantsLog: { m: 'GET', p: '/api/books-grants/log' } /* who looked at what, when — never the figures */,
+    practiceBaseline: { m: 'POST', p: '/api/books-grants/practice/baseline' } /* rank 10: { client, seen_to } the person's own Mark as checked; the firm's call, never sent under X-Books-For */,
     actionsList: { m: 'GET', p: '/api/books-actions' } /* { actions, total, page, limit }: state · mine · delegated · since · page · limit narrow it */,
     actionsGet: { m: 'GET', p: '/api/books-actions/:id' } /* one action with its steps[] */,
     actionsReview: { m: 'POST', p: '/api/books-actions/:id/review' } /* { store_id, body_hash }: a colleague of the preparer */,
