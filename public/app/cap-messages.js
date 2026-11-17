@@ -210,6 +210,17 @@ function msgWhen(s) {
     return String(s).slice(0, 10);
   }
 }
+/** a Query thread is answered from the entry in the Day book, not from here: the line that says so */
+function msgMarkHint() {
+  return '<div style="padding:0 14px 13px 32px;font-size:var(--fs-2);color:var(--grey)">Answer it from the entry in the Day book.</div>';
+}
+/** the thread row's two lines: what it is about (the entry of a Query, the order's particulars or subject) and what kind it is */
+function msgThreadTitle(m) {
+  var isMark = m.subject_type === 'mark';
+  var what = isMark ? esc(CBBell.markTitle(m.mark_entry_no)) : m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
+  var sub = isMark ? 'Query' : m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
+  return { isMark: isMark, what: what, sub: sub };
+}
 function messagesScreen() {
   var body;
   if (RPL.busy && !RPL.data)
@@ -229,11 +240,9 @@ function messagesScreen() {
         .map(function (item) {
           var m = item.latest,
             open = !!RPL.open[item.key],
-            isNew = item.unread > 0;
-          var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
-          var isMark = m.subject_type === 'mark';
-          var what = isMark ? esc(CBBell.markTitle(m.mark_entry_no)) : m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
-          var sub = isMark ? 'Query' : m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
+            isNew = item.unread > 0,
+            title = msgThreadTitle(m), isMark = title.isMark, what = title.what, sub = title.sub,
+            closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
           return (
             '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' +
             (isNew ? 'background:var(--blue-tint-bg);' : '') +
@@ -294,9 +303,7 @@ function messagesScreen() {
             (item.kept ? '1' : '.35') +
             '">📌</span>' +
             '</div>' +
-            (open && isMark
-              ? '<div style="padding:0 14px 13px 32px;font-size:var(--fs-2);color:var(--grey)">Answer it from the entry in the Day book.</div>'
-              : open
+            (open && isMark ? msgMarkHint() : open
               ? '<div style="padding:0 14px 13px 32px">' +
                 /**
                  * ⭐ THE JUMPS GO AT THE TOP — Athi, 2026-08-15: *"open order / task in the top."*
