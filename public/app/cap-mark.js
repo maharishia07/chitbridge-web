@@ -20,24 +20,31 @@
  */
 (function (root) {
   'use strict';
-  var doc = root.document;
+  var markKit = (root.CBMarkKit = root.CBMarkKit || {});
+  markKit.markText = markText;
+  markKit.fill = fill;
+  markKit.when = when;
+  markKit.addCss = addCss;
+  markKit.classOf = classOf;
+  markKit.ageWords = ageWords;
+  markKit.doc = root.document;
   var CHUNK = 200; /* the server's cap on ids in one read */
 
   /* the marks' own two routes + the thread pair (rail-thread.js declares those): ONE name each (e2e/ep-aliases.cjs) */
-  var EPS = {
+  var MARK_ENDPOINTS = {
     marksRead: { m: 'GET', p: '/api/marks' }, /* ?adopter= &ids=a,b  (a page) or ?adopter= &open=1 (the open list, with ageing and checked n of m) */
     marksSet: { m: 'POST', p: '/api/marks', idem: true } /* { adopter, subject_id, kind: checked|query|on_hold|removed, note } */
   };
-  root.CB_MARK_EP = EPS;
+  root.CB_MARK_EP = MARK_ENDPOINTS;
 
-  var CLASS = {
+  markKit.CLASS = {
     clear: { sym: '✓', word: 'Checked', tone: 'ok' },
     open: { sym: '?', word: 'Query', tone: 'ask' },
     hold: { sym: '‖', word: 'On hold', tone: 'hold' },
     reject: { sym: '✕', word: 'Not accepted', tone: 'bad' }
   };
   var SEND = { clear: 'checked', open: 'query', hold: 'on_hold', removed: 'removed' }; /* the neutral class → the kind the server takes */
-  var W = {
+  markKit.MARK_WORDS = {
     check: 'Check',
     notChecked: 'Not checked',
     altered: 'Changed after review',
@@ -75,11 +82,11 @@
     openQueries: 'Open queries',
     everyone: 'Everyone who can see this record'
   };
-  function T(s) {
+  function markText(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   function fill(s, v) {
-    return String(T(s)).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; });
+    return String(markText(s)).replace(/\{(\w+)\}/g, function (_, k) { return v[k] == null ? '' : v[k]; });
   }
   /* the one date-time stamp is CBThread.when (rail-thread.js loads first on both pages that load this file) */
   function when(ts) {
@@ -87,7 +94,7 @@
   }
 
   /* ── look: theme tokens only, AA in light and dark (the same tokens rail-thread.js uses) ── */
-  var CSS =
+  var MARK_CSS =
     '.mk{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:var(--ink,#1D1B16);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 10px;min-height:28px;cursor:pointer;white-space:nowrap;max-width:100%}' +
     '.mk:focus-visible{outline:2px solid var(--blue,#1f5fa8);outline-offset:2px}' +
     '.mk-s{font-size:var(--fs-2,14px);line-height:1}' +
@@ -131,12 +138,12 @@
     '@media (max-width:700px){.mk-ghost .mk-w{display:none}.mk-ghost .mk-n{display:inline}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:0;width:100vw;max-width:100vw;max-height:100dvh;border-radius:0}dialog.mk-sheet[open]{height:100dvh}}';
   var cssDone = false;
   function addCss() {
-    if (cssDone || !doc) return;
+    if (cssDone || !markKit.doc) return;
     cssDone = true;
-    var node = doc.createElement('style');
+    var node = markKit.doc.createElement('style');
     node.setAttribute('data-cbmark', '1');
-    node.textContent = CSS;
-    (doc.head || doc.documentElement).appendChild(node);
+    node.textContent = MARK_CSS;
+    (markKit.doc.head || markKit.doc.documentElement).appendChild(node);
   }
 
   var controls = []; /* every live control, so one repaint reaches every chip on the page */
@@ -144,16 +151,16 @@
   /* ── the one door to the server ── */
   function ensureEP() {
     if (typeof root.EP === 'undefined' || !root.EP) return false;
-    for (var k in EPS) if (!root.EP[k]) root.EP[k] = EPS[k];
+    for (var k in MARK_ENDPOINTS) if (!root.EP[k]) root.EP[k] = MARK_ENDPOINTS[k];
     return true;
   }
-  function qs(query) {
+  function queryString(query) {
     return Object.keys(query || {}).filter(function (n) { return query[n] !== '' && query[n] != null; }).map(function (n) { return encodeURIComponent(n) + '=' + encodeURIComponent(query[n]); }).join('&');
   }
-  function ask(c, key, o) {
+  function askMark(c, key, o) {
     o = o || {};
     if (c.cfg.transport) {
-      var ep = EPS[key], q = qs(o.query);
+      var ep = MARK_ENDPOINTS[key], q = queryString(o.query);
       return c.cfg.transport(ep.m, ep.p + (q ? '?' + q : ''), o.body);
     }
     ensureEP();
@@ -163,7 +170,7 @@
   /** the row's class: the server's neutral class, else its kind word */
   function classOf(row) {
     var k = row && (row.class || row.kind || row.state);
-    return CLASS[k] ? k : null;
+    return markKit.CLASS[k] ? k : null;
   }
   function listOf(answer) {
     var l = answer && (answer.marks || answer.rows || answer.items || (Array.isArray(answer) ? answer : []));
@@ -174,111 +181,103 @@
     return String(row.subject_id != null ? row.subject_id : row.id);
   }
 
-  function use(cfg) {
-    addCss();
-    var c = { cfg: cfg || {}, rows: {}, names: {}, may: null, on: false, sum: null, subs: [], failed: false };
-    ensureEP();
-    controls.push(c);
-    var ctl = {
-      /** ONE read for the whole page's ids (200 a call); then every chip repaints */
-      load: function (ids) {
-        var want = (ids || []).map(String).filter(function (id, n, all) { return id && all.indexOf(id) === n; }), parts = [];
-        for (var i = 0; i < want.length; i += CHUNK) parts.push(want.slice(i, i + CHUNK));
-        return Promise.all(parts.map(function (part) {
-          return ask(c, 'marksRead', { query: { adopter: c.cfg.adopter, ids: part.join(',') } }).then(function (a) {
-            c.failed = false;
-            listOf(a).forEach(function (row) { c.rows[idOf(row)] = row; });
-            if (a && a.actions) { c.may = a.actions; c.on = true; }
-            part.forEach(function (id) { if (!c.rows[id]) c.rows[id] = null; }); /* null: read, and no mark */
-          });
-        })).then(function () { paint(root.document); }, function () { c.failed = true; paint(root.document); });
-      },
-      /** the books lists carry the mark on each row (no extra trip): take them in, with the root's `mark_actions` (absent = marking is not switched on: no chip is drawn) */
-      ingest: function (list, answer, key) {
-        if (!answer || !answer.mark_actions) { c.on = false; return; }
-        c.on = true;
-        c.may = answer.mark_actions;
-        (list || []).forEach(function (e) {
-          if (!e || e.entry_id == null) return;
-          c.rows[String(e.entry_id)] = e.mark || null;
-          var name = recordName(e, answer);
-          if (name) c.names[String(e.entry_id)] = name;
+  /** ONE read for the whole page's ids (200 a call); then every chip repaints */
+  function loadMarks(state, ids) {
+      var want = (ids || []).map(String).filter(function (id, n, all) { return id && all.indexOf(id) === n; }), parts = [];
+      for (var i = 0; i < want.length; i += CHUNK) parts.push(want.slice(i, i + CHUNK));
+      return Promise.all(parts.map(function (part) {
+        return askMark(state, 'marksRead', { query: { adopter: state.cfg.adopter, ids: part.join(',') } }).then(function (a) {
+          state.failed = false;
+          listOf(a).forEach(function (row) { state.rows[idOf(row)] = row; });
+          if (a && a.actions) { state.may = a.actions; state.on = true; }
+          part.forEach(function (id) { if (!state.rows[id]) state.rows[id] = null; }); /* null: read, and no mark */
         });
-        paint(root.document);
-      },
-      row: function (id) { return c.rows[String(id)] || null; },
+      })).then(function () { paint(root.document); }, function () { state.failed = true; paint(root.document); });
+  }
+  /** the books lists carry the mark on each row (no extra trip): take them in, with the root's `mark_actions` (absent = marking is not switched on: no chip is drawn) */
+  function ingestMarks(state, list, answer, key) {
+      if (!answer || !answer.mark_actions) { state.on = false; return; }
+      state.on = true;
+      state.may = answer.mark_actions;
+      (list || []).forEach(function (e) {
+        if (!e || e.entry_id == null) return;
+        state.rows[String(e.entry_id)] = e.mark || null;
+        var name = markKit.recordName(e, answer);
+        if (name) state.names[String(e.entry_id)] = name;
+      });
+      paint(root.document);
+  }
+  /** whose turn a Query is, for THIS seat: 'waiting' (it waits for you) · 'answered' (it waits for the other side) · '' (no open Query) */
+  function turnOf(state, control, id) {
+      var r = state.rows[String(id)];
+      if (!r || classOf(r) !== 'open' || r.altered) return '';
+      var on = r.waiting_on || (Number(r.message_count) > 0 ? 'auditor' : 'owner');
+      return (on === 'owner') === !control.mayCheck(id) ? 'waiting' : 'answered';
+  }
+  /** the one write: Checked is one press; a Query needs its words, On hold takes a reason (the server says so too) */
+  function setMark(state, id, kind, note, button) {
+      var body = { adopter: state.cfg.adopter, subject_id: String(id), kind: SEND[kind] || kind };
+      if (note) body.note = note;
+      var out = state.outEl || null;
+      var run = root.CBAction && root.CBAction.run;
+      var go = function () { return askMark(state, 'marksSet', { body: body }); };
+      var done = function (v) { merge(state, v, String(id)); paint(root.document); fire(state); return v; };
+      if (!run) return go().then(done);
+      return run(button || null, go, { key: 'mk:' + state.cfg.adopter + ':' + id, busy: markText('Saving…'), out: out, done: markText(markKit.MARK_WORDS.saved), failed: markText(markKit.MARK_WORDS.failed), outcome: done });
+  }
+  /** the open list + checked n of m, ONE read */
+  function summaryOf(state) {
+      var span = typeof state.cfg.period === 'function' ? state.cfg.period() : null; /* the period the screen shows: the count is of THAT period (the server's default is the current month) */
+      return askMark(state, 'marksRead', { query: Object.assign({ adopter: state.cfg.adopter, open: 1 }, span && span.from && span.to ? { from: span.from, to: span.to } : {}) }).then(function (a) {
+        var list = (a && a.open) || [];
+        state.sum = { open: list, checked: num(a && a.checked), total: num(a && a.of), why: null };
+        if (a && a.actions) state.may = a.actions;
+        return state.sum;
+      }, function () { state.sum = null; return null; });
+  }
+  function useMark(cfg) {
+    addCss();
+    var state = { cfg: cfg || {}, rows: {}, names: {}, may: null, on: false, sum: null, subs: [], failed: false };
+    ensureEP();
+    controls.push(state);
+    var control = {
+      load: function (ids) { return loadMarks(state, ids); },
+      ingest: function (list, answer, key) { return ingestMarks(state, list, answer, key); },
+      row: function (id) { return state.rows[String(id)] || null; },
       /** the record in words ("JV-0002 · 12 Oct 2026 · A$880.00"), as the page last showed it; '' when the page never showed it */
-      nameOf: function (id) { return c.names[String(id)] || ''; },
-      /** whose turn a Query is, for THIS seat: 'waiting' (it waits for you) · 'answered' (you have answered, it waits for the other side) · '' (no open Query).
-       *  The server's `waiting_on` ('owner'|'auditor') when it sends one; until then: a Query with no reply waits for the owner, one with a reply waits for the reviewer. */
-      turn: function (id) {
-        var r = c.rows[String(id)];
-        if (!r || classOf(r) !== 'open' || r.altered) return '';
-        var on = r.waiting_on || (Number(r.message_count) > 0 ? 'auditor' : 'owner');
-        return (on === 'owner') === !ctl.mayCheck(id) ? 'waiting' : 'answered';
-      },
+      nameOf: function (id) { return state.names[String(id)] || ''; },
+      turn: function (id) { return turnOf(state, control, id); },
       /** the row's left bar: waiting for you = the full bar, answered = the quiet one */
       rowClass: function (id) {
-        var t = ctl.turn(id);
+        var t = control.turn(id);
         return t === 'waiting' ? 'mk-wait' : t === 'answered' ? 'mk-answered' : '';
       },
       /** the mark's neutral class for one record, for a filter or a count by the page: { state: 'none'|'clear'|'open'|'hold'|'reject', altered } — the server's words, nothing decided here (A3C) */
       markOf: function (id) {
-        var r = c.rows[String(id)];
+        var r = state.rows[String(id)];
         return { state: classOf(r) || 'none', altered: !!(r && (r.altered || r.recheck_needed)) };
       },
       mayCheck: function (id) {
-        var r = c.rows[String(id)], a = (r && r.actions) || c.may || {};
+        var r = state.rows[String(id)], a = (r && r.actions) || state.may || {};
         return !!(a.set && a.set.ok !== false && a.set.ok != null) || (a.set === true);
       },
       chip: function (id) {
-        return '<span class="mk-host" data-mark=\'' + esc(JSON.stringify({ adopter: c.cfg.adopter, id: String(id) })) + '\'>' + chipHTML(c, String(id)) + '</span>';
+        return '<span class="mk-host" data-mark=\'' + esc(JSON.stringify({ adopter: state.cfg.adopter, id: String(id) })) + '\'>' + markKit.chipHTML(state, String(id)) + '</span>';
       },
-      /** the one write: Checked is one press; a Query needs its words, On hold takes a reason (the server says so too) */
-      set: function (id, kind, note, button) {
-        var body = { adopter: c.cfg.adopter, subject_id: String(id), kind: SEND[kind] || kind };
-        if (note) body.note = note;
-        var out = c.outEl || null;
-        var run = root.CBAction && root.CBAction.run;
-        var go = function () { return ask(c, 'marksSet', { body: body }); };
-        var done = function (v) { merge(c, v, String(id)); paint(root.document); fire(c); return v; };
-        if (!run) return go().then(done);
-        return run(button || null, go, { key: 'mk:' + c.cfg.adopter + ':' + id, busy: T('Saving…'), out: out, done: T(W.saved), failed: T(W.failed), outcome: done });
-      },
+      set: function (id, kind, note, button) { return setMark(state, id, kind, note, button); },
       /** the Query sheet for one record (CMP059) */
-      sheet: function (id, o) { return openSheet(c, ctl, String(id), o || {}); },
-      /** the open list + checked n of m, ONE read */
-      summary: function () {
-        var span = typeof c.cfg.period === 'function' ? c.cfg.period() : null; /* the period the screen shows: the count is of THAT period (the server's default is the current month) */
-        return ask(c, 'marksRead', { query: Object.assign({ adopter: c.cfg.adopter, open: 1 }, span && span.from && span.to ? { from: span.from, to: span.to } : {}) }).then(function (a) {
-          var list = (a && a.open) || [];
-          c.sum = { open: list, checked: num(a && a.checked), total: num(a && a.of), why: null };
-          if (a && a.actions) c.may = a.actions;
-          return c.sum;
-        }, function () { c.sum = null; return null; });
-      },
-      onChange: function (fn) { c.subs.push(fn); },
-      state: function () { return { rows: c.rows, sum: c.sum, may: c.may, failed: c.failed }; },
-      destroy: function () { controls = controls.filter(function (x) { return x !== c; }); }
+      sheet: function (id, o) { return markKit.openSheet(state, control, String(id), o || {}); },
+      summary: function () { return summaryOf(state); },
+      onChange: function (fn) { state.subs.push(fn); },
+      state: function () { return { rows: state.rows, sum: state.sum, may: state.may, failed: state.failed }; },
+      destroy: function () { controls = controls.filter(function (x) { return x !== state; }); }
     };
-    c.ctl = ctl;
-    return ctl;
-  }
-  /** the record's name for a sheet title: its number, its day (the shop's way) and its amount in its own currency; whatever the row does not carry is left out (never the record id) */
-  function recordName(e, answer) {
-    var no = e.entry_no || e.subject_label;
-    if (!no) return '';
-    var day = e.posting_date || e.date, minor = e.total_minor != null ? e.total_minor : e.amount_minor;
-    if (minor == null && Array.isArray(e.lines)) minor = e.lines.reduce(function (sum, l) { return sum + Number(l.dr_minor || 0); }, 0); /* the Day book's own amount: the debit side of its lines */
-    if (minor == null) minor = Number(e.dr_minor) > 0 ? e.dr_minor : Number(e.cr_minor) > 0 ? e.cr_minor : null;
-    var cur = e.currency || (answer && answer.currency) || '';
-    var amount = '';
-    if (minor != null && cur) amount = typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(minor), currency: cur }) : String(minor) + ' ' + cur;
-    return [no, day ? (typeof root.shopDay === 'function' ? root.shopDay(String(day).slice(0, 10)) : String(day).slice(0, 10)) : '', amount].filter(Boolean).join(' · ');
+    state.ctl = control;
+    return control;
   }
   function num(n) { return n == null ? null : Number(n); }
   function fire(c) {
-    c.subs.forEach(function (fn) { try { fn(); } catch (_) { /* best effort: failing here changes nothing the user sees */ } });
+    c.subs.forEach(function (fn) { try { fn(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('mark:subscriber', failure); /* best effort: a listener's fault changes nothing the user sees */ } });
   }
   /** what a write answered becomes the row (the server's answer is the row; nothing is computed) */
   function merge(c, answer, id) {
@@ -292,41 +291,22 @@
   function ageWords(n) {
     n = Number(n);
     if (!(n >= 0)) return '';
-    return n < 1 ? T(W.today) : n === 1 ? T(W.day1) : fill(W.days, { n: n });
-  }
-  function chipHTML(c, id) {
-    var r = c.rows[id];
-    if (!c.on && !r) return '';
-    if (r === undefined) return '<span class="mk-none" aria-hidden="true">…</span>';
-    if (c.failed && !r) return '<span class="mk-none" role="img" aria-label="' + esc(T(W.readFail)) + '" title="' + esc(T(W.readFail)) + '">!</span>';
-    var cls = classOf(r), alt = r && (r.altered || r.recheck_needed);
-    if (!r || !cls) {
-      if (!c.ctl.mayCheck(id)) return '<span class="mk-none" title="' + esc(T(W.notChecked)) + '">—</span>';
-      return '<button type="button" class="mk mk-ghost" data-cbsid="CMP058-B01" data-mk="check" data-id="' + esc(id) + '" aria-label="' + esc(T(W.markChecked)) + '" title="' + esc(T(W.markChecked)) + '"><span class="mk-s" aria-hidden="true">○</span><span class="mk-w">' + esc(T(W.check)) + '</span><span class="mk-n">' + esc(T(W.notChecked)) + '</span></button>' +
-        ' <button type="button" class="mk mk-ghost" data-cbsid="CMP058-B05" data-mk="ask" data-id="' + esc(id) + '" aria-label="' + esc(T(W.askQuestion)) + '" title="' + esc(T(W.askQuestion)) + '"><span class="mk-s" aria-hidden="true">?</span><span class="mk-n">' + esc(T(W.queryWord)) + '</span></button>';
-    }
-    var k = CLASS[cls], word = (r.label && !alt) ? r.label : T(k.word), tone = 'mk-' + k.tone, sym = k.sym;
-    var turn = c.ctl.turn(id);
-    if (turn && !c.ctl.mayCheck(id)) word = turn === 'waiting' ? fill(W.questionFrom, { who: r.by_firm || r.by_name || T(W.theOther) }) : T(W.youAnswered); /* the owner's words: who asked, and whose turn it is (Athi, W15-25) */
-    if (alt) { word = r.recheck_needed && !r.altered ? T(W.recheck) : T(W.altered); tone = 'mk-alt'; sym = '⚠'; }
-    var age = (cls === 'open' || cls === 'hold') && r.age_days != null ? ' <span class="mk-age">· ' + esc(ageWords(r.age_days)) + '</span>' : '';
-    return '<button type="button" class="mk ' + tone + '" data-cbsid="CMP058-B02" data-mk="open" data-id="' + esc(id) + '" data-class="' + esc(cls) + '"' + (alt ? ' data-altered="1"' : '') +
-      ' aria-label="' + esc(word + (r.by_name ? ' ' + fill(W.by, { who: r.by_name }) : '')) + '" title="' + esc(word + (r.by_name ? ' ' + fill(W.by, { who: r.by_name }) : '')) + '"><span class="mk-s" aria-hidden="true">' + sym + '</span><span class="mk-w">' + esc(word) + age + '</span></button>';
+    return n < 1 ? markText(markKit.MARK_WORDS.today) : n === 1 ? markText(markKit.MARK_WORDS.day1) : fill(markKit.MARK_WORDS.days, { n: n });
   }
   /** repaint every host: a mark set in the sheet shows in the row behind it, in the drill and in the list, at once */
   function paint(scope) {
-    var nodes = (scope || doc).querySelectorAll ? (scope || doc).querySelectorAll('[data-mark]') : [];
+    var nodes = (scope || markKit.doc).querySelectorAll ? (scope || markKit.doc).querySelectorAll('[data-mark]') : [];
     Array.prototype.forEach.call(nodes, function (host) {
       var spec;
-      try { spec = JSON.parse(host.getAttribute('data-mark')); } catch (_) { return; }
+      try { spec = JSON.parse(host.getAttribute('data-mark')); } catch (failure) { if (root.cbQuiet) root.cbQuiet('mark:spec', failure); return; }
       for (var i = 0; i < controls.length; i++) {
-        if (controls[i].cfg.adopter === spec.adopter) { host.innerHTML = chipHTML(controls[i], String(spec.id)); return; }
+        if (controls[i].cfg.adopter === spec.adopter) { host.innerHTML = markKit.chipHTML(controls[i], String(spec.id)); return; }
       }
     });
   }
   function controlOf(host) {
     var spec;
-    try { spec = JSON.parse(host.getAttribute('data-mark')); } catch (_) { return null; }
+    try { spec = JSON.parse(host.getAttribute('data-mark')); } catch (failure) { if (root.cbQuiet) root.cbQuiet('mark:spec', failure); return null; }
     for (var i = 0; i < controls.length; i++) if (controls[i].cfg.adopter === spec.adopter) return controls[i];
     return null;
   }
@@ -334,7 +314,7 @@
   function keepFocus(host, pressed, done) {
     if (!done || typeof done.then !== 'function') return;
     done.then(function () {
-      if (pressed.isConnected === false || !doc.activeElement || doc.activeElement === doc.body) {
+      if (pressed.isConnected === false || !markKit.doc.activeElement || markKit.doc.activeElement === markKit.doc.body) {
         var next = host.querySelector('button[data-mk]');
         if (next && next.focus) next.focus();
       }
@@ -343,21 +323,22 @@
   /* one delegated press for every chip (captured: a row's own open handler never sees it) */
   var wired = false;
   function wire() {
-    if (wired || !doc) return;
+    if (wired || !markKit.doc) return;
     wired = true;
+    /** a press on a marker button: the Query sheet or the one write for that record */
     function onPress(event) {
-      var b = event.target.closest ? event.target.closest('button[data-mk]') : null;
-      if (!b) return;
-      var host = b.closest('[data-mark]'), c = host && controlOf(host);
-      if (!c) return;
+      var button = event.target.closest ? event.target.closest('button[data-mk]') : null;
+      if (!button) return;
+      var host = button.closest('[data-mark]'), hostControl = host && controlOf(host);
+      if (!hostControl) return;
       event.stopPropagation();
       event.preventDefault();
-      var id = b.getAttribute('data-id');
-      if (b.getAttribute('data-mk') === 'check') keepFocus(host, b, c.ctl.set(id, 'clear', '', b));
-      else c.ctl.sheet(id, { opener: b });
+      var id = button.getAttribute('data-id');
+      if (button.getAttribute('data-mk') === 'check') keepFocus(host, button, hostControl.ctl.set(id, 'clear', '', button));
+      else hostControl.ctl.sheet(id, { opener: button });
     }
-    doc.addEventListener('click', onPress, true);
-    doc.addEventListener('keydown', function (event) {
+    markKit.doc.addEventListener('click', onPress, true);
+    markKit.doc.addEventListener('keydown', function (event) {
       if ((event.key === 'Enter' || event.key === ' ') && event.target.closest && event.target.closest('button[data-mk]')) event.stopPropagation(); /* a chip's key is the chip's, not the row's */
     }, true);
   }
@@ -368,142 +349,45 @@
     if (!s) return '';
     var pct = s.total ? Math.round((100 * s.checked) / s.total) : 0;
     var n = (s.open || []).length;
-    return '<div class="mk-bar" data-testid="mk-bar" role="group" aria-label="' + esc(T(W.openQueries)) + '">' +
-      '<span class="mk-count" data-testid="mk-count">' + esc(fill(W.checkedOf, { n: s.checked, m: s.total })) + '</span>' +
+    return '<div class="mk-bar" data-testid="mk-bar" role="group" aria-label="' + esc(markText(markKit.MARK_WORDS.openQueries)) + '">' +
+      '<span class="mk-count" data-testid="mk-count">' + esc(fill(markKit.MARK_WORDS.checkedOf, { n: s.checked, m: s.total })) + '</span>' +
       (s.total ? '<span class="mk-meter" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' : '') +
-      '<button type="button" class="mk mk-ask" data-cbsid="CMP058-B03" data-mk-filter="1" aria-pressed="' + (o.on ? 'true' : 'false') + '" data-testid="mk-filter"><span class="mk-s" aria-hidden="true">?</span><span class="mk-w">' + esc(T(o.on ? W.allEntries : W.allQueries)) + ' · ' + n + '</span></button></div>';
+      '<button type="button" class="mk mk-ask" data-cbsid="CMP058-B03" data-mk-filter="1" aria-pressed="' + (o.on ? 'true' : 'false') + '" data-testid="mk-filter"><span class="mk-s" aria-hidden="true">?</span><span class="mk-w">' + esc(markText(o.on ? markKit.MARK_WORDS.allEntries : markKit.MARK_WORDS.allQueries)) + ' · ' + n + '</span></button></div>';
   }
   function queryRows(c, titleOf) {
     var list = (c.sum && c.sum.open) || [];
-    if (!list.length) return '<div class="mk-why" data-testid="mk-empty">' + esc(T(W.noQueries)) + '</div>';
+    if (!list.length) return '<div class="mk-why" data-testid="mk-empty">' + esc(markText(markKit.MARK_WORDS.noQueries)) + '</div>';
     return '<div class="mk-q" data-testid="mk-queries">' + list.map(function (r) {
-      var id = idOf(r), cls = classOf(r) || 'open', k = CLASS[cls];
+      var id = idOf(r), cls = classOf(r) || 'open', k = markKit.CLASS[cls];
       return '<button type="button" class="mk-qi" data-cbsid="CMP058-B04" data-mk-q="' + esc(id) + '" data-testid="mk-q-' + esc(id) + '"><span class="mk mk-' + k.tone + '" aria-hidden="true"><span class="mk-s">' + k.sym + '</span></span>' +
         '<span><b>' + esc((titleOf && titleOf(id, r)) || r.subject_label || id) + '</b><span class="t">' + esc(r.note || '') + '</span></span>' +
         '<span class="mk-age mk">' + esc(ageWords(r.age_days)) + '</span></button>';
     }).join('') + '</div>';
   }
 
-  /* ── CMP059 the Query sheet ── */
-  function openSheet(c, ctl, id, o) {
-    addCss();
-    var r = c.rows[id] || null, cls = classOf(r);
-    var dlg = doc.createElement('dialog');
-    dlg.className = 'mk-sheet';
-    dlg.setAttribute('data-cbsid', 'CMP059-D01');
-    dlg.setAttribute('data-pop', 'CMP059');
-    dlg.setAttribute('data-testid', 'mk-sheet');
-    dlg.setAttribute('aria-label', T(W.questionHead));
-    var act = (r && r.actions) || c.may || {};
-    var maySet = !!(act.set && act.set.ok !== false);
-    var altered = r && (r.altered || r.recheck_needed);
-    var word = cls ? (altered ? T(W.altered) : (r.label || T(CLASS[cls].word))) : T(W.notChecked);
-    var thread = r && r.thread_id;
-    var title = c.names[id] || o.title || (c.cfg.title && c.cfg.title(id)) || T(W.entryFallback);
-    /* the open query with its thread: the reply box IS the composer (no second box); else the one note box asks the question */
-    var replyOk = !!thread && !(act.reply && act.reply.ok === false) && (cls === 'open' || cls === 'hold' || !cls);
-    var noteMode = maySet && !replyOk;
-    var lead = r && r.note ? { who: r.by_name || '', at: r.at, text: r.note, mine: maySet, tid: 'mk-question' } : null;
-    dlg.innerHTML =
-      '<div class="mk-in"><div class="mk-hd"><div><h2 data-testid="mk-title">' + esc(title) + '</h2>' +
-      '<div class="mk-sub" data-testid="mk-state">' + (cls ? '<span class="mk mk-' + (altered ? 'alt' : CLASS[cls].tone) + '" style="cursor:default"><span class="mk-s" aria-hidden="true">' + (altered ? '⚠' : CLASS[cls].sym) + '</span> ' + esc(word) + '</span> ' + (r.by_name ? esc(fill(W.by, { who: r.by_name })) : '') + ' ' + esc(when(r.at)) : esc(word)) + '</div></div>' +
-      '<button type="button" class="mk-x" data-cbsid="CMP059-B01" data-mk-act="close" aria-label="' + esc(T(W.close)) + '">✕</button></div>' +
-      (altered ? '<div class="mk-warn" data-testid="mk-altered">' + esc(T(W.changedNote)) + '</div>' : '') +
-      '<div class="mk-body">' + (thread ? '<div id="mk_thread" data-testid="mk-thread"></div>' : '<div class="mk-spacer" data-testid="mk-thread">' + (lead && root.CBThread && root.CBThread.lead ? root.CBThread.lead(lead) : '') + '</div>') + '</div>' +
-      '<div class="mk-actbar" data-testid="mk-actbar">' +
-      (maySet
-        ? '<div class="mk-acts"><button type="button" class="mk-act ok" data-cbsid="CMP059-B02" data-mk-act="clear" data-testid="mk-set-clear">✓ ' + esc(T(W.markChecked)) + '</button>' +
-          '<button type="button" class="mk-act" data-cbsid="CMP059-B04" data-mk-act="hold" data-testid="mk-set-hold">‖ ' + esc(T(W.putOnHold)) + '</button>' +
-          (cls ? '<button type="button" class="mk-act" data-cbsid="CMP059-B05" data-mk-act="removed" data-testid="mk-set-removed">' + esc(T(W.takeOff)) + '</button>' : '') + '</div>'
-        : (act.set && act.set.why ? '<div class="mk-why" data-testid="mk-why">' + esc(act.set.why) + '</div>' : '')) +
-      '<div class="mk-out" role="status" data-testid="mk-out" data-tone=""></div></div>' +
-      (noteMode
-        ? '<label class="mk-sub" for="mk_note">' + esc(T(W.reasonLabel)) + ' · ' + esc(T(W.seenBy)) + '</label>' +
-          '<div class="mk-box"><textarea id="mk_note" rows="1" data-cbsid="CMP059-T01" data-testid="mk-note" maxlength="1000"></textarea>' +
-          '<button type="button" class="mk-act ask" data-cbsid="CMP059-B03" data-mk-act="open" data-testid="mk-set-open" aria-disabled="true">? ' + esc(T(W.askQuestion)) + '</button></div>'
-        : '') +
-      '</div>';
-    doc.body.appendChild(dlg);
-    var outEl = dlg.querySelector('[data-testid="mk-out"]'), note = dlg.querySelector('#mk_note');
-    c.outEl = outEl;
-    var close = function () {
-      c.outEl = null;
-      try { dlg.close(); } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-      if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
-      if (o.opener && o.opener.isConnected) { try { o.opener.focus(); } catch (_) { /* best effort */ } }
-    };
-    var askBtn = dlg.querySelector('[data-mk-act="open"]');
-    function syncAsk() {
-      if (askBtn) askBtn.setAttribute('aria-disabled', note && note.value.trim() ? 'false' : 'true');
-    }
-    if (note) {
-      note.addEventListener('input', function () {
-        syncAsk();
-        note.style.height = 'auto';
-        note.style.height = Math.min(note.scrollHeight + 2, 140) + 'px';
-      });
-      note.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && askBtn) { event.preventDefault(); askBtn.click(); } /* Enter asks, Shift+Enter is a new line */
-      });
-    }
-    dlg.addEventListener('click', function (event) {
-      var b = event.target.closest ? event.target.closest('[data-mk-act]') : null;
-      if (event.target === dlg) return close();
-      if (!b) return;
-      var a = b.getAttribute('data-mk-act');
-      if (a === 'close') return close();
-      var text = note ? note.value.trim() : '';
-      if (a === 'open' && !text) {
-        outEl.textContent = T(W.needWords);
-        outEl.setAttribute('data-tone', 'error');
-        if (note) note.focus();
-        return;
-      }
-      ctl.set(id, a, a === 'clear' ? '' : text, b).then(function (v) { if (v && v.ok) close(); });
-    });
-    dlg.addEventListener('cancel', function (event) { event.preventDefault(); close(); });
-    if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
-    if (thread && root.CBThread) {
-      root.CBThread.mount(dlg.querySelector('#mk_thread'), {
-        subject: { type: 'mark', id: thread },
-        transport: c.cfg.transport || null,
-        lead: lead,
-        fill: true,
-        focus: true,
-        above: dlg.querySelector('[data-testid="mk-actbar"]'),
-        actions: { message_external: replyOk ? { ok: true } : { ok: false, why: (act.reply && act.reply.why) || T(W.replyOff) } },
-        party: T(W.everyone),
-        readOnly: !replyOk && !(act.reply && act.reply.why),
-        context: { host: 'cap-mark', source: 'CMP059' }
-      });
-    }
-    (note || dlg.querySelector('[data-mk-act="close"]')).focus();
-    return { close: close, el: dlg };
-  }
-
   /** mount the bar for a host: [bar][the host's own list]; onFilter(on) flips the host's list to the open ones */
-  function bar(c, host, o) {
-    o = o || {};
+  function bar(markState, host, options) {
+    options = options || {};
     var state = { on: false };
     function show() {
-      host.innerHTML = barHTML(c, state);
+      host.innerHTML = barHTML(markState, state);
       var f = host.querySelector('[data-mk-filter]');
-      if (f) f.onclick = function () { state.on = !state.on; show(); if (o.onFilter) o.onFilter(state.on); };
+      if (f) f.onclick = function () { state.on = !state.on; show(); if (options.onFilter) options.onFilter(state.on); };
     }
-    var handle = { repaint: show, on: function () { return state.on; }, refresh: function () { return c.ctl.summary().then(show); } };
+    var handle = { repaint: show, on: function () { return state.on; }, refresh: function () { return markState.ctl.summary().then(show); } };
     return handle.refresh().then(function () { return handle; });
   }
 
   wire();
   root.CBMark = {
     use: function (cfg) {
-      var ctl = use(cfg), c = controls[controls.length - 1];
+      var ctl = useMark(cfg), c = controls[controls.length - 1];
       ctl.bar = function (host, o) { return bar(c, host, o); };
       ctl.queries = function (titleOf) { return queryRows(c, titleOf); };
       return ctl;
     },
     paint: paint,
     ageWords: ageWords,
-    CLASS: CLASS
+    CLASS: markKit.CLASS
   };
 })(typeof window !== 'undefined' ? window : globalThis);
