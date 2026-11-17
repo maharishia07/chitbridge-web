@@ -4645,6 +4645,21 @@ async function bkLedgers(body) {
     body.innerHTML = bkErr(e);
   }
 }
+/** RANK 9: the owner's bank agreement under the Trial balance: the ONE function (bank-tb-line.js) shared with the firm's books view; the sign-off is read from the api's `bank` block, never chosen or summed here */
+function bkTbBankOptions(reply, asOf) {
+  var cur = reply && reply.currency;
+  return {
+    money: function (minor, c) { return bkMoney(minor, c || cur); }, day: function (iso) { return typeof shopDay === 'function' ? shopDay(iso) : iso; }, tx: tx, txf: typeof txf === 'function' ? txf : tx,
+    codes: { note: 'ACC002-P01', open: 'ACC002-B61', at: 'ACC002-B62' }, ids: 'bk_tb_bank_',
+    onDay: function (day) { var box = document.getElementById('tb_asof'); if (box) box.value = day; bkTab('tb'); },
+    onOpen: function () {
+      var from = (reply && reply.fy_from) || '', query = new URLSearchParams(location.search || '');
+      if (from && asOf) { query.set('fy', from.slice(0, 4)); query.set('from', from); query.set('to', asOf); history.replaceState(null, '', location.pathname + '?' + query.toString() + location.hash); } /* the Bank page reads the period from the address */
+      if (typeof hashView === 'function') location.hash = 'bank';
+      else bkTab('bank');
+    }
+  };
+}
 /* the Trial balance tab: every account's debit and credit as of one date */
 async function bkTB(body) {
   var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
@@ -4679,6 +4694,7 @@ async function bkTB(body) {
       '">' +
       (ok ? tx('✓ balances') : tx('⚠ does not balance')) +
       '</span></div>' +
+      (window.CBBankTbLine && reply.bank ? CBBankTbLine.html(reply.bank, bkTbBankOptions(reply, asOf)) : '') +
       bkTable(
         [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }],
         rows,
@@ -4690,6 +4706,7 @@ async function bkTB(body) {
           esc(bkMoney(reply.total_cr_minor, c)) +
           '</b></td></tr>'
       );
+    if (window.CBBankTbLine && reply.bank) CBBankTbLine.wire(body, reply.bank, bkTbBankOptions(reply, asOf));
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
