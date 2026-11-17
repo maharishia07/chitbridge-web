@@ -11,11 +11,11 @@
   'use strict';
   var CBDraw = root.CBDraw;
   if (!CBDraw || !CBDraw.kit) return; /* chart-draw.js loads first */
-  var kit = CBDraw.kit;
-  var escape = kit.escape;
-  var figure = kit.figure;
-  var codeAttr = kit.codeAttr;
-  var accessibleSvg = kit.accessibleSvg;
+  var drawKit = CBDraw.kit;
+  var escape = drawKit.escape;
+  var figure = drawKit.figure;
+  var codeAttr = drawKit.codeAttr;
+  var accessibleSvg = drawKit.accessibleSvg;
 
   var KIND_VAR = { good: 'var(--rp-good)', watch: 'var(--rp-watch)', help: 'var(--rp-bad)' };
   var STATUS_GAP = 2,
@@ -133,6 +133,23 @@
       '<circle cx="' + (cell.x + half) + '" cy="' + (cell.y + half - 1) + '" r="2.5" style="fill:var(--rp-accent)"/>'
     );
   }
+  /** the <desc> of the strip: "Jan: locked, Feb: open, …" in the caller's words */
+  function stripDesc(cells, words) {
+    return cells
+      .map(function (cell) {
+        return (cell.month.label || '') + ': ' + (words[stateOf(cell.month)] || STRIP_WORDS[stateOf(cell.month)]);
+      })
+      .join(', ');
+  }
+  /** the label under each square, or '' when the caller did not ask for labels */
+  function stripLabels(cells, options) {
+    if (!options.labels) return '';
+    return cells
+      .map(function (cell) {
+            return '<text x="' + (cell.x + cell.size / 2) + '" y="' + STRIP.labelAt + '" text-anchor="middle"' + codeAttr(options.codes, 'legend') + ' style="font:9px var(--mono,monospace);fill:var(--rp-actual)">' + escape(cell.month.label || '') + '</text>';
+      })
+      .join('');
+  }
   /**
    * monthStrip(months, opts) → '<svg …>' — months [{ label (short: "Nov"), state: 'locked'|'open'|'running' }] oldest first (the caller passes 12);
    * opts { size 18, gap 4, id, tid, title, desc, words { locked, open, running } (the caller's translated words), labels (true draws each label), palette }.
@@ -140,30 +157,16 @@
    */
   function monthStrip(months, opts) {
     var options = opts || {},
-      words = options.words || STRIP_WORDS,
       cells = stripGeometry(months, options.size || STRIP.size, options.gap || STRIP.gap);
     if (!cells.length) return '';
     var width = cells[cells.length - 1].x + cells[cells.length - 1].size;
-    var desc =
-      options.desc ||
-      cells
-        .map(function (cell) {
-          return (cell.month.label || '') + ': ' + (words[stateOf(cell.month)] || STRIP_WORDS[stateOf(cell.month)]);
-        })
-        .join(', ');
-    var labels = options.labels
-      ? cells
-          .map(function (cell) {
-            return '<text x="' + (cell.x + cell.size / 2) + '" y="' + STRIP.labelAt + '" text-anchor="middle"' + codeAttr(options.codes, 'legend') + ' style="font:9px var(--mono,monospace);fill:var(--rp-actual)">' + escape(cell.month.label || '') + '</text>';
-          })
-          .join('')
-      : '';
+    var desc = options.desc || stripDesc(cells, options.words || STRIP_WORDS);
     var inner =
       cells
         .map(function (cell) {
           return stripSquare(cell, options.words, options.codes);
         })
-        .join('') + labels;
+        .join('') + stripLabels(cells, options);
     var height = options.labels ? STRIP.labelAt + 4 : cells[0].size + 2;
     return accessibleSvg(width, height, { id: options.id || 'cd-strip', tid: options.tid || 'cd-strip', title: options.title, desc: desc, palette: options.palette, codes: options.codes }, inner);
   }

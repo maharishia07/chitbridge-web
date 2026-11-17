@@ -197,6 +197,17 @@
     );
   }
 
+  /** the size, ids and colours of a bars chart, each with its default (REP-36: a caller that measured the colours passes them) */
+  function barsSettings(options) {
+    return {
+      width: options.width || 640,
+      height: options.height || 170,
+      id: escape(options.id || 'cd'),
+      testId: options.tid || 'cd',
+      actual: options.actual || BAR,
+      previous: options.previous || LAST_YEAR
+    };
+  }
   /**
    * bars(points, opts) → '<svg …>' — points [{ key, label, value|null, line|null, hatch, title, lineTitle }] oldest first;
    * opts { width, height, id (unique per page: the hatch pattern's id), aria (the sentence a screen reader hears), tid, top (words at the top-left: the scale) }.
@@ -206,13 +217,14 @@
     var options = opts || {},
       list = points || [];
     if (!list.length) return '';
-    var width = options.width || 640,
-      height = options.height || 170,
-      id = escape(options.id || 'cd'),
-      testId = options.tid || 'cd';
+    var settings = barsSettings(options),
+      width = settings.width,
+      height = settings.height,
+      id = settings.id,
+      testId = settings.testId;
     var layout = geometryOf(list, width, height, id);
-    layout.actual = options.actual || BAR;
-    layout.previous = options.previous || LAST_YEAR; /* REP-36: a caller that measured the previous colour (palette) passes it; the Trend page does not */
+    layout.actual = settings.actual;
+    layout.previous = settings.previous; /* REP-36: a caller that measured the previous colour (palette) passes it; the Trend page does not */
     var hatch = hatchDefs(id, layout.actual);
     var scaleWords = options.top ? '<text x="0" y="10" style="font:10px var(--mono,monospace);fill:' + LABEL + '">' + escape(options.top) + '</text>' : '';
     return (
