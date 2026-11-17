@@ -55,7 +55,8 @@
  */
 (function (root) {
   'use strict';
-  var doc = root.document;
+  var threadKit = (root.CBThreadKit = root.CBThreadKit || {});
+  threadKit.doc = root.document;
 
   /* ── the two routes, ONE name each (e2e/ep-aliases.cjs). app.html adds this to its EP beside CB_BOOKS_EP; a page without that
    line gets them at mount (ensureEP) — the attach-ui.js pattern. ── */
@@ -82,144 +83,6 @@
     return o.transport(ep.m, path + (q ? '?' + q : ''), opts.body);
   }
 
-  /* ── the words, one place (copy budget: a label, a verb, a sentence) ── */
-  var W = {
-    internal: '🔒 Internal',
-    external: '↔ External',
-    audInternal: '🔒 Team only — the other party never sees this',
-    audExternal: '↔ {party} sees this. It cannot be unsent',
-    audNoChannel: '{party} has no phone or e-mail on record and is not on the network; add one to send this',
-    audDispute: '⚑ Dispute — only its members see this',
-    send: 'Send',
-    write: 'Write a reply',
-    count1: '1 message',
-    countN: '{n} messages',
-    sending: 'Sending…',
-    sentInt: '🔒 Note added — team only',
-    sentExt: '↔ Sent — {party} notified',
-    sentWait: '⏳ Waiting for {where} — not delivered yet',
-    sentDisp: '⚑ Sent to the dispute',
-    empty: 'Type a message first',
-    none: 'No messages yet',
-    noneLine: 'Nothing on this line yet',
-    reading: 'Reading…',
-    readFail: 'Could not read the messages — this does not mean there are none',
-    failed: 'Not sent — try again',
-    you: 'You',
-    whole: 'Whole order',
-    about: 'About',
-    attach: '📎 Attach',
-    line: 'Line',
-    viewOnly: 'View only — you can read, not reply'
-  };
-  function T(s) {
-    return typeof tx === 'function' ? tx(s) : s;
-  }
-  function fill(s, v) {
-    return String(s).replace(/\{(\w+)\}/g, function (_, k) {
-      return v[k] == null ? '' : v[k];
-    });
-  }
-  /** RAIL-118: my message the other installation has not confirmed carries the mark until it does */
-  function unconfirmedMark(x) {
-    return x.ctp_unconfirmed ? '<div class="rt-why" data-testid="rt-unconfirmed" data-tone="warn">⏳ ' + esc(x.ctp_unconfirmed) + '</div>' : '';
-  }
-  /** RAIL-118: what a send says once it is made. A message to a business on another installation that is only QUEUED is not "notified" — say it is waiting (silence is the bug) */
-  function sentWords(thread, body, reply) {
-    var held = reply && reply.ctp && (reply.ctp.queued || reply.ctp.why);
-    if (thread.dispute_id) return T(W.sentDisp);
-    if (body.thread_type && body.thread_type !== 'external') return T(W.sentInt);
-    if (held) return reply.ctp.why || fill(T(W.sentWait), { where: thread.where || thread.party || T('the other side') });
-    return fill(T(W.sentExt), { party: thread.party || T('the other party') });
-  }
-  function when(ts) {
-    if (!ts) return '';
-    try {
-      if (typeof root.shopDateTime === 'function') return root.shopDateTime(ts); /* UX-123: the shop's zone */
-      if (root.CBLocale) return root.CBLocale.datetime(ts);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ } /* CU4: the one date-time stamp */
-    return String(ts).replace('T', ' ').slice(0, 16);
-  }
-  /** the sentence for an engine refusal word — the engine's own (CBRail.WHY) when the page loads /engine/rail.js, else the server's words */
-  function why(word, fallback) {
-    try {
-      var R = root.CBRail;
-      if (R && R.WHY && Object.prototype.hasOwnProperty.call(R.WHY, word)) return R.WHY[word];
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    return fallback || T(W.viewOnly);
-  }
-
-  /* ── CSS, once, prefixed rt- ── */
-  var CSS =
-    '.rt{display:flex;flex-direction:column;gap:8px;font-size:var(--fs-2,14px);color:var(--on-card,inherit)}' +
-    '.rt-comp{border:1px solid var(--line,#DDD6C6);border-radius:12px;padding:10px;background:var(--card,#fff)}' +
-    '.rt-comp.ext{background:var(--blue-tint-bg,#eef4fb)}.rt-comp.disp{border-color:var(--disp,#8E3517)}' +
-    '.rt-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:7px}' +
-    '.rt-ch{display:inline-flex;border:1px solid var(--line,#DDD6C6);border-radius:9px;overflow:hidden}' +
-    '.rt-ch button{border:0;background:var(--card,#fff);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:6px 11px;color:var(--grey,#5E594D);cursor:pointer;min-height:32px}' +
-    '.rt-ch button.on.int{background:var(--slate,#45596a);color:var(--on-slate,#fff)}.rt-ch button.on.ext{background:var(--blue,#1f5fa8);color:var(--on-accent,#fff)}' +
-    '.rt-ch button.off{opacity:.45;cursor:not-allowed;text-decoration:line-through}' +
-    '.rt-k{border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);border-radius:9px;font:inherit;font-size:var(--fs-1,12px);padding:4px 9px;cursor:pointer;color:var(--grey,#5E594D)}.rt-k.on{border-color:var(--blue,#1f5fa8);color:var(--blue,#1f5fa8);font-weight:700}' +
-    '.rt-sel{font:inherit;font-size:var(--fs-1,12px);border:1px solid var(--line,#DDD6C6);border-radius:9px;padding:5px 8px;background:var(--card,#fff);color:inherit;max-width:100%}' +
-    '.rt textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#DDD6C6);border-radius:9px;padding:9px;font:inherit;font-size:var(--fs-2,14px);min-height:56px;resize:vertical;background:var(--card,#fff);color:inherit}' +
-    '.rt-aud{font-size:var(--fs-1,12px);margin:6px 0;color:var(--grey,#5E594D)}.rt-aud.ext{color:var(--blue,#1f5fa8);font-weight:700}.rt-aud.disp{color:var(--disp,#8E3517);font-weight:700}' +
-    '.rt-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}' +
-    '.rt-send{border:0;color:var(--on-accent,#fff);border-radius:9px;font:inherit;font-size:var(--fs-2,14px);font-weight:700;padding:9px 16px;cursor:pointer;min-height:40px;background:var(--slate,#5f7682)}.rt-send.int{background:var(--slate,#45596a);color:var(--on-slate,#fff)}' +
-    '.rt-send.ext{background:var(--blue,#1f5fa8)}.rt-send.disp{background:var(--disp,#8E3517)}.rt-send[disabled]{opacity:.55;cursor:not-allowed}' +
-    '.rt-out{font-size:var(--fs-1,12px);min-height:1em}.rt-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.rt-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
-    '.rt-no{border:1px dashed var(--line,#DDD6C6);border-radius:9px;padding:9px 11px;color:var(--grey,#5E594D);font-size:var(--fs-2,14px)}' +
-    '.rt-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
-    '.rt-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;max-height:var(--rt-max,min(46vh,380px));min-height:64px;padding:4px 2px;overscroll-behavior:contain}' +
-    '.rt.fill{height:100%;min-height:0}.rt.fill .rt-list{flex:1 1 auto;max-height:none}.rt-n{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);align-self:center}' +
-    '.rt-above{display:flex;flex-direction:column;gap:6px}.rt-above:empty{display:none}' +
-    '.rt-box{display:flex;gap:8px;align-items:flex-end}.rt-box textarea{flex:1 1 auto;min-width:0;min-height:44px;max-height:140px;resize:none}.rt-box .rt-send{flex:0 0 auto;min-height:44px}' +
-    '.rt-m{border:1px solid var(--line,#DDD6C6);border-radius:14px 14px 14px 4px;padding:8px 12px;background:var(--card,#fff);max-width:86%;align-self:flex-start;box-sizing:border-box;overflow-wrap:anywhere}' +
-    '.rt-m.ext{border-inline-start:3px solid var(--blue,#1f5fa8)}.rt-m.disp{background:var(--danger-tint,#fbeeec);border-inline-start:3px solid var(--disp,#8E3517)}' +
-    '.rt-m.mine{align-self:flex-end;border-radius:14px 14px 4px 14px;background:var(--blue-tint-bg,#eef4fb);border-color:var(--blue-line,#B9D2EF)}' +
-    '.rt-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:var(--fs-1,12px);margin-bottom:3px}.rt-h b{color:var(--ink,#1D1B16)}.rt-h .rt-t{margin-inline-start:auto;color:var(--grey,#5E594D)}' +
-    '.rt-tag{border-radius:6px;padding:1px 7px;font-weight:700;font-size:var(--fs-1,12px)}.rt-tag.int{background:var(--blue-tint-bg,#eef4fb);color:var(--grey,#5f7682)}.rt-tag.ext{background:var(--blue-tint-bg,#eef4fb);color:var(--blue,#1f5fa8)}.rt-tag.disp{background:var(--danger-tint,#fbeeec);color:var(--disp,#8E3517)}.rt-tag.ln{background:var(--paper,#f4f1ea);color:var(--grey,#5E594D)}' +
-    '.rt-b{white-space:pre-wrap;line-height:1.45}.rt-att{margin-top:6px}.rt-empty{color:var(--grey,#5E594D);padding:8px 2px}';
-  var cssDone = false;
-  function addCss() {
-    if (cssDone || !doc) return;
-    cssDone = true;
-    var node = doc.createElement('style');
-    node.setAttribute('data-cbrt', '1');
-    node.textContent = CSS;
-    (doc.head || doc.documentElement).appendChild(node);
-  }
-
-  /* ── drafts: the typed text survives a repaint (and a reload when CBOffline is on the page) ── */
-  var DRAFTS = {};
-  function dkey(o) {
-    return 'rt.' + (o.subject ? o.subject.type + '.' : '') + o.chit_id + '.' + (o.line_id || '') + '.' + (o.dispute_id || '');
-  }
-  function draftGet(o) {
-    var k = dkey(o);
-    if (DRAFTS[k] != null) return DRAFTS[k];
-    try {
-      var C = root.CBOffline;
-      if (C && C.loadDraft) return C.loadDraft(k) || '';
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    return '';
-  }
-  function draftSet(o, v) {
-    var k = dkey(o);
-    DRAFTS[k] = v;
-    try {
-      var C = root.CBOffline;
-      if (C && C.saveDraft) C.saveDraft(k, v);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-  }
-  function draftClear(o) {
-    var k = dkey(o);
-    delete DRAFTS[k];
-    try {
-      var C = root.CBOffline;
-      if (C && C.clearDraft) C.clearDraft(k);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-  }
-
   /* ── eligibility: the engine's verdict per channel ── */
   function verdict(m, ch) {
     var a = m.actions || null,
@@ -242,13 +105,7 @@
       paint(m);
       return;
     }
-    var o = m.o,
-      q = {};
-    var ch = o.channel || 'both';
-    q.thread_type = ch === 'both' || o.dispute_id ? 'all' : ch;
-    if (o.line_id) q.line_id = o.line_id;
-    if (o.dispute_id) q.dispute = '1';
-    if (o.subject) q = {}; /* the mark's list takes no filter */
+    var o = m.o, ch = o.channel || 'both', q = listQuery(o);
     m.err = null;
     try {
       var reply = await viaApi(o, 'messages', { params: { id: o.chit_id }, query: q });
@@ -256,13 +113,7 @@
       /* ⚠️ FILTERED AGAIN CLIENT-SIDE, the subject's rows only: a line's thread never absorbs the chit's (pre-b155 servers ignore
        line_id); a dispute room shows ITS dispute's rows; the general thread shows NO dispute row — those live in the room, for
        the roster, and a row a non-member was never handed cannot appear here because this list is only what came back. */
-      list = list.filter(function (x) {
-        if (o.dispute_id) return x.is_dispute && String(x.dispute_id) === String(o.dispute_id);
-        if (x.is_dispute) return false;
-        if (o.line_id && x.line_id && String(x.line_id) !== String(o.line_id)) return false;
-        if (!o.subject && ch !== 'both' && x.thread_type !== ch) return false; /* a mark's thread has one channel and its rows carry no thread_type */
-        return true;
-      });
+      list = list.filter(function (x) { return rowKept(o, ch, x); });
       list.sort(function (first, second) {
         return String(first.created_at || '').localeCompare(String(second.created_at || ''));
       }); /* a chat: oldest first, the newest at the BOTTOM next to the reply box (Athi, 15 Nov walk W15-26/W15-28; it was newest first since 2026-08-15) */
@@ -271,11 +122,28 @@
       m.err = (e && e.message) || 'fail';
     }
     paint(m);
-    if (typeof o.onList === 'function' && m.rows) {
-      try {
-        o.onList(m.rows.slice(), o);
-      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    }
+    if (typeof o.onList === 'function' && m.rows) tellList(o, m.rows);
+  }
+  /** the host is told the rows it now holds; its own fault never stops the thread */
+  function tellList(o, rows) {
+    try {
+      o.onList(rows.slice(), o);
+    } catch (failure) { threadKit.quietly('thread:onList', failure); }
+  }
+  /** the question the list read asks: which threads, which line, which dispute (a mark's list takes no filter) */
+  function listQuery(o) {
+    if (o.subject) return {};
+    var ch = o.channel || 'both', q = { thread_type: ch === 'both' || o.dispute_id ? 'all' : ch };
+    if (o.line_id) q.line_id = o.line_id;
+    if (o.dispute_id) q.dispute = '1';
+    return q;
+  }
+  /** does this row belong to the subject on show (a dispute room's, a line's, or the general thread's channel) */
+  function rowKept(o, ch, x) {
+    if (o.dispute_id) return x.is_dispute && String(x.dispute_id) === String(o.dispute_id);
+    if (x.is_dispute) return false;
+    if (o.line_id && x.line_id && String(x.line_id) !== String(o.line_id)) return false;
+    return !(!o.subject && ch !== 'both' && x.thread_type !== ch); /* a mark's thread has one channel and its rows carry no thread_type */
   }
   /** the chit's actions when the host did not hand them over — one GET through the page's `chit` row, deduped by core */
   async function readActions(m) {
@@ -294,40 +162,59 @@
   function leadHTML(L) {
     return (
       '<div class="rt-m lead' + (L.mine ? ' mine' : '') + '" data-testid="rt-lead" data-side="' + (L.mine ? 'mine' : 'theirs') + '">' +
-      '<div class="rt-h"><b>' + esc(L.mine ? T(W.you) : L.who || '—') + '</b><span class="rt-t">' + esc(when(L.at)) + '</span></div>' +
+      '<div class="rt-h"><b>' + esc(L.mine ? threadKit.threadText(threadKit.THREAD_WORDS.you) : L.who || '—') + '</b><span class="rt-t">' + esc(threadKit.when(L.at)) + '</span></div>' +
       '<div class="rt-b"' + (L.tid ? ' data-testid="' + esc(L.tid) + '"' : '') + '>' + esc(L.text || '') + '</div></div>'
     );
   }
+  /** a dispute row's text goes through the page's decorator (who raised it); a fault in it changes nothing the person sees */
+  function decorated(o, x) {
+    if (!x.is_dispute || typeof o.decorate !== 'function') return null;
+    try {
+      return o.decorate(x.message_text || '');
+    } catch (failure) {
+      threadKit.quietly('thread:decorate', failure);
+      return null;
+    }
+  }
+  /** the row's tag: Dispute, or the channel (Internal / External) when the thread shows more than one */
+  function rowTag(m, x, cls) {
+    if (x.is_dispute) return '<span class="rt-tag disp">' + threadKit.threadText('⚑ Dispute') + '</span>';
+    if (channels(m).length <= 1 && !m.o.dispute_id) return '';
+    return '<span class="rt-tag ' + cls + '">' + threadKit.threadText(x.thread_type === 'external' ? threadKit.THREAD_WORDS.external : threadKit.THREAD_WORDS.internal) + '</span>';
+  }
+  /** the line a row is about, when the thread is not already one line's */
+  function rowLineTag(o, x) {
+    if (o.line_id || !x.line_id) return '';
+    var line = (o.lines || []).filter(function (item) {
+      return String(item.line_id) === String(x.line_id);
+    })[0];
+    return '<span class="rt-tag ln">' + esc(line ? line.label : threadKit.threadText(threadKit.THREAD_WORDS.line)) + '</span>';
+  }
+  /** the files attached to a row */
+  function rowAttachments(x) {
+    return x.attachments && x.attachments.length && typeof cbAttachList === 'function' ? '<div class="rt-att">' + cbAttachList(x.attachments) + '</div>' : '';
+  }
+  /** the Attach button under the message just sent (until the thread repaints) */
+  function rowAttachButton(m, x) {
+    var justSent = m.sent && String(m.sent.message_id) === String(x.message_id);
+    return justSent && typeof cbAttachButton === 'function' && !m.o.readOnly ? '<div class="rt-att">' + cbAttachButton({ chit_id: m.o.chit_id, message_id: x.message_id }) + '</div>' : '';
+  }
+  /** my row: sent under my name, or just sent from this copy, or marked mine by the host */
+  function rowIsMine(m, x) {
+    var o = m.o;
+    return !!(o.me && x.sender_display_name && String(x.sender_display_name) === String(o.me)) || !!(m.sent && String(m.sent.message_id) === String(x.message_id)) || x.mine === true;
+  }
+  /** the row's colour class: dispute, external or internal */
+  function rowClass(x) {
+    if (x.is_dispute) return 'disp';
+    return x.thread_type === 'external' ? 'ext' : 'int';
+  }
   function rowHTML(m, x) {
-    var o = m.o,
-      dec = null;
-    if (x.is_dispute && typeof o.decorate === 'function') {
-      try {
-        dec = o.decorate(x.message_text || '');
-      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    }
+    var o = m.o, dec = decorated(o, x);
     var body = dec && dec.body != null ? dec.body : x.message_text || '';
-    var mine =
-      !!(o.me && x.sender_display_name && String(x.sender_display_name) === String(o.me)) || (m.sent && String(m.sent.message_id) === String(x.message_id)) || x.mine === true;
-    var cls = x.is_dispute ? 'disp' : x.thread_type === 'external' ? 'ext' : 'int';
-    var tag = x.is_dispute
-      ? '<span class="rt-tag disp">' + T('⚑ Dispute') + '</span>'
-      : channels(m).length > 1 || o.dispute_id
-        ? '<span class="rt-tag ' + cls + '">' + T(x.thread_type === 'external' ? W.external : W.internal) + '</span>'
-        : '';
-    var ln = '';
-    if (!o.line_id && x.line_id) {
-      var L = (o.lines || []).filter(function (item) {
-        return String(item.line_id) === String(x.line_id);
-      })[0];
-      ln = '<span class="rt-tag ln">' + esc(L ? L.label : T(W.line)) + '</span>';
-    }
-    var atts =
-      x.attachments && x.attachments.length && typeof cbAttachList === 'function' ? '<div class="rt-att">' + cbAttachList(x.attachments) + '</div>' : '';
-    var attBtn =
-      m.sent && String(m.sent.message_id) === String(x.message_id) && typeof cbAttachButton === 'function' && !o.readOnly
-        ? '<div class="rt-att">' + cbAttachButton({ chit_id: o.chit_id, message_id: x.message_id }) + '</div>'
-        : '';
+    var mine = rowIsMine(m, x), cls = rowClass(x);
+    var tag = rowTag(m, x, cls), ln = rowLineTag(o, x);
+    var atts = rowAttachments(x), attBtn = rowAttachButton(m, x);
     return (
       '<div class="rt-m ' +
       cls +
@@ -343,35 +230,23 @@
       tag +
       ln +
       '<b>' +
-      esc(mine ? T(W.you) : x.sender_display_name || '—') +
+      esc(mine ? threadKit.threadText(threadKit.THREAD_WORDS.you) : x.sender_display_name || '—') +
       '</b>' +
       (dec && dec.by ? '<span class="rt-why">· ' + esc(dec.by) + '</span>' : '') +
       '<span class="rt-t">' +
-      esc(when(x.created_at)) +
+      esc(threadKit.when(x.created_at)) +
       '</span></div>' +
       '<div class="rt-b">' +
       esc(body) +
-      '</div>' + unconfirmedMark(x) +
+      '</div>' + threadKit.unconfirmedMark(x) +
       atts +
       attBtn +
       '</div>'
     );
   }
-  function composerHTML(m) {
-    var o = m.o,
-      ids = o.ids || {};
-    var list = channels(m),
-      can = list.filter(function (item) {
-        return allowed(m, item);
-      });
-    if (!can.length) {
-      var v = verdict(m, list[0]);
-      return '<div class="rt-no" data-testid="rt-no">' + esc(why(v.why, T(W.viewOnly))) + '</div>';
-    }
-    if (can.indexOf(m.channel) < 0) m.channel = can[0];
-    var disp = !!o.dispute_id,
-      ext = m.channel === 'external';
-    var toggle =
+  /** the channel toggle (Internal / External), when the thread has more than one */
+  function composerChannels(m, list) {
+    return (
       list.length > 1
         ? '<div class="rt-ch">' +
           list
@@ -389,24 +264,31 @@
                 '" data-testid="msg-channel-' +
                 item +
                 '"' +
-                (ok ? '' : ' aria-disabled="true" title="' + esc(why(nestedV.why)) + '"') +
+                (ok ? '' : ' aria-disabled="true" title="' + esc(threadKit.reasonWords(nestedV.why)) + '"') +
                 '>' +
-                esc(T(item === 'external' ? W.external : W.internal)) +
+                esc(threadKit.threadText(item === 'external' ? threadKit.THREAD_WORDS.external : threadKit.THREAD_WORDS.internal)) +
                 '</button>'
               );
             })
             .join('') +
           '</div>'
-        : '';
-    var offWhy = list
+        : ''
+    );
+  }
+  /** why each channel that is off is off */
+  function composerOffWhy(m, list) {
+    return list
       .filter(function (item) {
         return !allowed(m, item);
       })
       .map(function (item) {
-        return '<span class="rt-why" data-testid="rt-why-' + item + '">' + esc(why(verdict(m, item).why)) + '</span>';
+        return '<span class="rt-why" data-testid="rt-why-' + item + '">' + esc(threadKit.reasonWords(verdict(m, item).why)) + '</span>';
       })
       .join('');
-    var kinds =
+  }
+  /** the message kinds the host offers, when more than one */
+  function composerKinds(m, o) {
+    return (
       o.kinds && o.kinds.length > 1
         ? '<span class="rt-row" data-testid="rt-kinds">' +
           o.kinds
@@ -417,19 +299,23 @@
                 '" data-rt-act="kind" data-k="' +
                 esc(item) +
                 '">' +
-                esc(T(item.charAt(0).toUpperCase() + item.slice(1))) +
+                esc(threadKit.threadText(item.charAt(0).toUpperCase() + item.slice(1))) +
                 '</button>'
               );
             })
             .join('') +
           '</span>'
-        : '';
-    var lines =
+        : ''
+    );
+  }
+  /** the line a message is about, when the thread is not one line's */
+  function composerLines(m, o, disp) {
+    return (
       !o.line_id && !disp && o.lines && o.lines.length
         ? '<label class="rt-row">' +
-          esc(T(W.about)) +
+          esc(threadKit.threadText(threadKit.THREAD_WORDS.about)) +
           ' <select data-cbsid="SCR051-S01" class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
-          esc(T(W.whole)) +
+          esc(threadKit.threadText(threadKit.THREAD_WORDS.whole)) +
           '</option>' +
           o.lines
             .map(function (item) {
@@ -437,8 +323,28 @@
             })
             .join('') +
           '</select></label>'
-        : '';
-    var aud = disp ? T(W.audDispute) : ext ? fill(T(o.no_channel ? W.audNoChannel : W.audExternal), { party: o.party || T('the other party') }) : T(W.audInternal);
+        : ''
+    );
+  }
+  function composerHTML(m) {
+    var o = m.o,
+      ids = o.ids || {};
+    var list = channels(m),
+      can = list.filter(function (item) {
+        return allowed(m, item);
+      });
+    if (!can.length) {
+      var v = verdict(m, list[0]);
+      return '<div class="rt-no" data-testid="rt-no">' + esc(threadKit.reasonWords(v.why, threadKit.threadText(threadKit.THREAD_WORDS.viewOnly))) + '</div>';
+    }
+    if (can.indexOf(m.channel) < 0) m.channel = can[0];
+    var disp = !!o.dispute_id,
+      ext = m.channel === 'external';
+    var toggle = composerChannels(m, list);
+    var offWhy = composerOffWhy(m, list);
+    var kinds = composerKinds(m, o);
+    var lines = composerLines(m, o, disp);
+    var aud = disp ? threadKit.threadText(threadKit.THREAD_WORDS.audDispute) : ext ? threadKit.fill(threadKit.threadText(o.no_channel ? threadKit.THREAD_WORDS.audNoChannel : threadKit.THREAD_WORDS.audExternal), { party: o.party || threadKit.threadText('the other party') }) : threadKit.threadText(threadKit.THREAD_WORDS.audInternal);
     var tone = disp ? 'disp' : ext ? 'ext' : 'int';
     return (
       '<div class="rt-comp ' +
@@ -455,9 +361,9 @@
       '<div class="rt-box"><textarea data-cbsid="SCR051-T01" data-rt-act="text" rows="1" data-testid="' +
       esc(ids.text || 'msg-body') +
       '" aria-label="' +
-      esc(T(W.write)) +
+      esc(threadKit.threadText(threadKit.THREAD_WORDS.write)) +
       '" placeholder="' +
-      esc(o.reason ? T(o.reason) : o.no_channel && ext ? aud : T(W.write)) + /* a thread that cannot send says WHY in the box (the caller's own reason, else the no-channel sentence), never the generic prompt */
+      esc(o.reason ? threadKit.threadText(o.reason) : o.no_channel && ext ? aud : threadKit.threadText(threadKit.THREAD_WORDS.write)) + /* a thread that cannot send says WHY in the box (the caller's own reason, else the no-channel sentence), never the generic prompt */
       '">' +
       esc(m.text) +
       '</textarea>' +
@@ -466,20 +372,20 @@
       '" data-rt-act="send" data-testid="' +
       esc(ids.send || 'msg-send') +
       '">' +
-      esc(T(W.send)) +
+      esc(threadKit.threadText(threadKit.THREAD_WORDS.send)) +
       '</button></div>' +
       '<div class="rt-foot"><span class="rt-out" role="status" data-testid="rt-out" data-tone=""></span></div></div>'
     );
   }
   function listHTML(m) {
     var o = m.o;
-    if (m.err) return '<div class="rt-empty" data-testid="rt-err">' + esc(T(W.readFail)) + '</div>';
-    if (!m.rows) return '<div class="rt-empty">' + esc(T(W.reading)) + '</div>';
+    if (m.err) return '<div class="rt-empty" data-testid="rt-err">' + esc(threadKit.threadText(threadKit.THREAD_WORDS.readFail)) + '</div>';
+    if (!m.rows) return '<div class="rt-empty">' + esc(threadKit.threadText(threadKit.THREAD_WORDS.reading)) + '</div>';
     var lead = o.lead ? leadHTML(o.lead) : '';
-    if (!m.rows.length) return lead + (o.lead ? '' : '<div class="rt-empty" data-testid="rt-empty">' + esc(T(o.line_id ? W.noneLine : W.none)) + '</div>');
+    if (!m.rows.length) return lead + (o.lead ? '' : '<div class="rt-empty" data-testid="rt-empty">' + esc(threadKit.threadText(o.line_id ? threadKit.THREAD_WORDS.noneLine : threadKit.THREAD_WORDS.none)) + '</div>');
     return (
       '<div class="rt-n" data-testid="rt-count">' +
-      esc(fill(T(m.rows.length === 1 ? W.count1 : W.countN), { n: m.rows.length })) +
+      esc(threadKit.fill(threadKit.threadText(m.rows.length === 1 ? threadKit.THREAD_WORDS.count1 : threadKit.THREAD_WORDS.countN), { n: m.rows.length })) +
       '</div>' +
       lead +
       m.rows
@@ -489,15 +395,15 @@
         .join('')
     );
   }
-  function paint(m) {
-    if (!m.el || !m.el.isConnected) return;
-    var keep = m.el.querySelector('[data-rt-act="text"]');
-    if (keep) m.text = keep.value;
-    var hadFocus = !!keep && doc.activeElement === keep;
+  /** a host's node outlives the repaint: detach before the innerHTML wipe, put back after */
+  function detachAbove(m) {
     var above = m.o.above && m.o.above.nodeType ? m.o.above : null;
-    if (above && above.parentNode) above.parentNode.removeChild(above); /* a host's node outlives the repaint: detach before the innerHTML wipe, put back after */
-    var composer = m.o.readOnly ? '' : composerHTML(m);
-    m.el.innerHTML =
+    if (above && above.parentNode) above.parentNode.removeChild(above);
+    return above;
+  }
+  /** the thread's frame: the list, the slot a host's node goes back into, and the composer */
+  function frameHTML(m, composer) {
+    return (
       '<div class="rt' + (m.o.fill ? ' fill' : '') + '" data-testid="rt" data-chit="' +
       esc(m.o.chit_id) +
       '">' +
@@ -506,20 +412,31 @@
       '</div>' +
       '<div class="rt-above" data-testid="rt-above"></div>' +
       composer +
-      '</div>';
+      '</div>'
+    );
+  }
+  function paint(m) {
+    if (!m.el || !m.el.isConnected) return;
+    var keep = m.el.querySelector('[data-rt-act="text"]');
+    if (keep) m.text = keep.value;
+    var hadFocus = !!keep && threadKit.doc.activeElement === keep;
+    var above = detachAbove(m);
+    var composer = m.o.readOnly ? '' : composerHTML(m);
+    m.el.innerHTML = frameHTML(m, composer);
     var slot = m.el.querySelector('[data-testid="rt-above"]');
     if (above && slot) slot.appendChild(above);
     var list = m.el.querySelector('.rt-list');
     if (list) list.scrollTop = list.scrollHeight; /* opens on the newest */
-    if (hadFocus || (m.o.focus && !m.focused && m.rows)) {
-      var box = m.el.querySelector('[data-rt-act="text"]');
-      if (box) {
-        m.focused = true;
-        try {
-          box.focus({ preventScroll: true });
-        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-      }
-    }
+    if (hadFocus || (m.o.focus && !m.focused && m.rows)) focusComposer(m);
+  }
+  /** the reply box takes the keyboard (once for an opened thread, again when it held it before the repaint) */
+  function focusComposer(m) {
+    var box = m.el.querySelector('[data-rt-act="text"]');
+    if (!box) return;
+    m.focused = true;
+    try {
+      box.focus({ preventScroll: true });
+    } catch (failure) { threadKit.quietly('thread:focus', failure); }
   }
 
   /* ── the one send ── */
@@ -538,7 +455,7 @@
   }
   function emit(el, chit_id, result) {
     try {
-      (el || doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'thread', chit_id: chit_id, result: result } }));
+      (el || threadKit.doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'thread', chit_id: chit_id, result: result } }));
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   /** post ONE message through CBAction (busy · one press one write · outcome). btn may be null (a host's own control, or none). */
@@ -554,9 +471,9 @@
       },
       {
         key: 'rt:' + o.chit_id + ':' + (o.line_id || '') + ':' + (o.dispute_id || ''),
-        busy: T(W.sending),
+        busy: threadKit.threadText(threadKit.THREAD_WORDS.sending),
         out: say.out,
-        failed: T(W.failed),
+        failed: threadKit.threadText(threadKit.THREAD_WORDS.failed),
         outcome: say.outcome,
         onFail: say.onFail
       }
@@ -579,13 +496,8 @@
   }
 
   /* ── mount ── */
-  function mount(el, o) {
-    el = typeof el === 'string' ? doc.getElementById(el) : el;
-    if (o && o.subject && o.subject.id && !o.chit_id) o = Object.assign({}, o, { chit_id: o.subject.id, channel: 'external' }); /* CAP-25: a mark's thread: one channel, the subject id keys the drafts */
-    if (!el || !o || !o.chit_id) return null;
-    addCss();
-    ensureEP();
-    if (el.__cbthread) el.__cbthread.api.destroy();
+  /** the state of one mounted thread: its rows, the actions, the text typed so far and the first channel (the one asked for when allowed, else external when allowed, else internal) */
+  function threadState(el, o) {
     var m = {
       el: el,
       o: o,
@@ -595,7 +507,7 @@
       sent: null,
       kind: (o.kinds && o.kinds[0]) || 'info',
       line: '',
-      text: o.text != null ? String(o.text) : draftGet(o)
+      text: o.text != null ? String(o.text) : threadKit.draftGet(o)
     };
     /* first channel: the one asked for when allowed, else external when allowed, else internal */
     var want = o.dispute_id ? 'external' : o.thread_type || (o.channel && o.channel !== 'both' ? o.channel : 'external');
@@ -604,6 +516,16 @@
       : channels(m).filter(function (item) {
           return allowed(m, item);
         })[0] || want;
+    return m;
+  }
+  function mount(el, o) {
+    el = typeof el === 'string' ? threadKit.doc.getElementById(el) : el;
+    if (o && o.subject && o.subject.id && !o.chit_id) o = Object.assign({}, o, { chit_id: o.subject.id, channel: 'external' }); /* CAP-25: a mark's thread: one channel, the subject id keys the drafts */
+    if (!el || !o || !o.chit_id) return null;
+    threadKit.addCss();
+    ensureEP();
+    if (el.__cbthread) el.__cbthread.api.destroy();
+    var m = threadState(el, o);
 
     function onClick(event) {
       var node = event.target.closest ? event.target.closest('[data-rt-act]') : null;
@@ -629,7 +551,7 @@
       var node = ev.target;
       if (node.getAttribute('data-rt-act') === 'text') {
         m.text = node.value;
-        draftSet(o, node.value);
+        threadKit.draftSet(o, node.value);
         node.style.height = 'auto';
         node.style.height = Math.min(node.scrollHeight + 2, 140) + 'px'; /* grows with Shift+Enter lines, then scrolls inside */
       }
@@ -644,14 +566,14 @@
       var node = out();
       if (!text) {
         if (node) {
-          node.textContent = T(W.empty);
+          node.textContent = threadKit.threadText(threadKit.THREAD_WORDS.empty);
           node.setAttribute('data-tone', 'error');
         }
         return;
       }
       if (!allowed(m, m.channel)) {
         if (node) {
-          node.textContent = why(verdict(m, m.channel).why);
+          node.textContent = threadKit.reasonWords(verdict(m, m.channel).why);
           node.setAttribute('data-tone', 'error');
         }
         return;
@@ -661,11 +583,11 @@
         out: node,
         outcome: function (v) {
           m.sent = Object.assign({}, v || {}, { message_id: (v && v.message_id) || null });
-          draftClear(o);
+          threadKit.draftClear(o);
           m.text = '';
           var element = el.querySelector('[data-rt-act="text"]');
           if (element) element.value = ''; /* paint re-reads the box, so it is emptied in the DOM too */
-          var s = sentWords(o, body, v);
+          var s = threadKit.sentWords(o, body, v);
           var nestedNode = out();
           if (nestedNode) {
             nestedNode.textContent = s;
@@ -688,7 +610,7 @@
           /* the server's refusal in the server's words (a 403 carries `why`: the engine's word, its sentence preferred) */
           var w = words,
             d = e && e.data;
-          if (d && d.why) w = why(d.why, d.message || words);
+          if (d && d.why) w = threadKit.reasonWords(d.why, d.message || words);
           var element = out();
           if (element) {
             element.textContent = w;
@@ -737,7 +659,7 @@
           out: out(),
           outcome: function (v) {
             m.sent = v;
-            draftClear(o);
+            threadKit.draftClear(o);
             m.text = '';
             var node = el.querySelector('[data-rt-act="text"]');
             if (node) node.value = '';
@@ -752,7 +674,7 @@
             var d = e && e.data,
               node = out();
             if (node) {
-              node.textContent = d && d.why ? why(d.why, d.message || words) : words;
+              node.textContent = d && d.why ? threadKit.reasonWords(d.why, d.message || words) : words;
               node.setAttribute('data-tone', 'error');
             }
           }
@@ -776,7 +698,7 @@
     return post(a.button || null, o, body, { out: a.out || null, outcome: a.outcome || function () {}, onFail: a.onFail || null });
   }
   function mountAll(scope, base) {
-    scope = scope || doc;
+    scope = scope || threadKit.doc;
     if (!scope || !scope.querySelectorAll) return [];
     var out = [];
     Array.prototype.forEach.call(scope.querySelectorAll('[data-rt]'), function (el) {
@@ -793,6 +715,6 @@
     return out;
   }
 
-  var CBThread = { when: when, /* the one date-time stamp (cap-mark.js reads it here, no copy) */ mount: mount, mountAll: mountAll, send: send, lead: function (L) { addCss(); return '<div class="rt"><div class="rt-list">' + leadHTML(L) + '</div></div>'; }, last: null, EP: CB_THREAD_EP, WORDS: W };
+  var CBThread = { when: threadKit.when, /* the one date-time stamp (cap-mark.js reads it here, no copy) */ mount: mount, mountAll: mountAll, send: send, lead: function (L) { threadKit.addCss(); return '<div class="rt"><div class="rt-list">' + leadHTML(L) + '</div></div>'; }, last: null, EP: CB_THREAD_EP, WORDS: threadKit.THREAD_WORDS };
   root.CBThread = CBThread;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
