@@ -58,6 +58,7 @@ ok(!/<img|&#x?[0-9a-f]+;|[^\x00-\x7f]/i.test(html), 'the drawn menu holds no <im
 /* every svg in the page is the same 24 box, and the page's svg rule is the stroke family */
 const allSvg = [...src.matchAll(/<svg\b[^>]*>/g)].map((m) => m[0]);
 ok(allSvg.length >= 3 && allSvg.every((t) => /viewBox="0 0 24 24"/.test(t)), 'every <svg> in the page is viewBox 0 0 24 24 (' + allSvg.length + ' tags)', allSvg.filter((t) => !/viewBox="0 0 24 24"/.test(t)).join(' | '));
-const rule = /(?:^|\n)svg\{([^}]*)\}/.exec(src);
+const pageRules = src + '\n' + fs.readFileSync(path.join(__dirname, '..', 'public/app/accounts-page.css'), 'utf8'); /* the page's rules live in app/accounts-page.css */
+const rule = /(?:^|\n)svg\{([^}]*)\}/.exec(pageRules);
 ok(!!rule && /fill:none/.test(rule[1]) && /stroke:currentColor/.test(rule[1]) && /stroke-width:1\.8/.test(rule[1]) && /stroke-linecap:round/.test(rule[1]) && /stroke-linejoin:round/.test(rule[1]), 'the page svg rule is the stroke family: fill none, stroke currentColor, 1.8 wide, round caps and joins', rule && rule[1]);
 process.exitCode = bad ? 1 : 0;
