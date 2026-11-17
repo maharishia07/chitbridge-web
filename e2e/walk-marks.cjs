@@ -177,7 +177,7 @@ W.run('marks', async (w) => {
     const dot = await txt(T('bell-dot')); await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
     const row = await txt(T('bell-row')); await shot('06b-owner-bell');
     await page.keyboard.press('Escape');
-    return { ok: dot === '1' && /asked a question about/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
+    return { ok: dot === '1' && /raised a Query on/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
   });
   await w.step('B1b', 'W15-54 · the owner bell row for the Query is NOT disabled: pressing it opens the Query thread sheet on that entry (the same opener as the Day book chip)', async () => {
     if (!(await page.locator(T('bell-row')).isVisible())) await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
@@ -228,7 +228,7 @@ W.run('marks', async (w) => {
     S.bellFor = 'auditor'; await page.goto(base + '/network.html'); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
     const dot = await txt(T('bell-dot')); await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
     const row = await txt(T('bell-row')); await shot('08b-auditor-bell'); await page.keyboard.press('Escape');
-    return { ok: dot === '1' && /replied about/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
+    return { ok: dot === '1' && /replied to the Query on/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
   });
   await w.step('A6', 'the auditor · opens the Query: the owner\'s reply is in the thread; Mark checked clears it (one write), the bar says 2 of 3, no open queries', async () => {
     await openDaybook();
