@@ -1292,6 +1292,7 @@ async function peYearStatus() {
     st = (await api('perYearStatus', { params: { fy } })) || {};
   } catch (e) {
     const w = peWhy(e, tx('Could not be read'));
+    if (e && e.status === 403) { host.innerHTML = bkRefused(e, 'Year close'); return; } /* STAFF-BOOKS: the server's sentence in the one refused state */
     host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
     return;
   }
