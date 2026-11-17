@@ -29,12 +29,16 @@
     "orderhub": "1.5.0",
     "rollup": "1.96.0",
     "convert": "1.96.0",
+    "bank-json": "1.98.0",
+    "bank-brs": "1.98.0",
     "bank-recon": "1.98.0",
     "rail": "1.29.0",
     "workflow": "1.33.0",
     "pack-kit": "1.98.0",
     "reg-in": "1.86.0",
+    "reg-au-movein": "1.98.0",
     "reg-au": "1.98.0",
+    "reg-ae-law": "1.98.0",
     "reg-ae": "1.98.0",
     "reg-sg": "1.65.0",
     "reg-my": "1.65.0",
@@ -47,6 +51,7 @@
     "bank-project": "1.98.0",
     "chart": "1.65.0",
     "accounts-packs": "1.79.0",
+    "posting-voucher": "1.98.0",
     "posting": "1.98.0"
   },
   "adopt": {
@@ -125,6 +130,12 @@
     "convert": [
       "public/engine/convert.js"
     ],
+    "bank-json": [
+      "public/engine/bank-json.js"
+    ],
+    "bank-brs": [
+      "public/engine/bank-brs.js"
+    ],
     "bank-recon": [
       "public/engine/bank-recon.js"
     ],
@@ -149,6 +160,9 @@
     "accounts-packs": [
       "public/engine/accounts-packs.js"
     ],
+    "posting-voucher": [
+      "public/engine/posting-voucher.js"
+    ],
     "posting": [
       "public/engine/posting.js"
     ]
@@ -157,7 +171,9 @@
     "public/engine/tax.js": [
       "pack-kit",
       "reg-in",
+      "reg-au-movein",
       "reg-au",
+      "reg-ae-law",
       "reg-ae",
       "reg-sg",
       "reg-my",
@@ -177,7 +193,7 @@
     "variant": "2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946",
     "search": "3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa",
     "govcontext": "d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82",
-    "locale": "3533bd038c26579ed988a6250c4dc7aabee9f046b3e3743ffc55299f9f2fde5f",
+    "locale": "939c2b85de6f3fbb5daf1b5e068ba86396cef13ce7a8acbef521d697cda113b5",
     "units": "93626bcaf343cde1a56ca3fa554b8ed0a0e6cdf40e5ab6368fe3b332572b8219",
     "qty": "48f6fb0cc0338202b1b938193cff6e0e9b1ef1edc10cd36a27104e967d1b9fbe",
     "verdict": "fd056da9669edcf81ce3fc94b9505982628e56ec471b69005b6330fc27452f10",
@@ -196,7 +212,9 @@
     "orderhub": "c70a78a6839c10d41f6c43901f0557bd782463460e4af3f2e99d369a5012e9e5",
     "rollup": "3cf37376bcc687cfffda634eb25b055204ca844e507f3d4a3c7cf8c34a445a58",
     "convert": "55ecf63631a76502f85b36bb33f14432176ff014a64654b8548d2fd1503947eb",
-    "bank-recon": "a58c48f3d1f71a23c0b69ddc3b0f2ab734f0aa37f6a0d29e3dc483225b6145c1",
+    "bank-json": "c4bb2ef42cacb232af2eb1ec654c4b5d04db2af2932b0dafb5edd0287795bb98",
+    "bank-brs": "35902a1ab8920e1e392c7c95202a4d8729eea6d020ab38d293ac61df1fa409e5",
+    "bank-recon": "68bba956b8022251c87ca1b87f8dd49fd50b1ada89bcab65b287dd8f0230b70b",
     "rail": "62146650c1ae4e0aa47c16625026f2d29039c4d05261c191f899bd0213f1b698",
     "workflow": "f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b",
     "bank-project": "a51e3b1b4a4e8dab843783f8176bf7da046c473ffc52eeae70887060a740e0cb",
@@ -204,11 +222,14 @@
     "bank-statement-check": "9b94f9c75965381ae0f2088025935b9770f85e9aae9113c3e3326488258d32c4",
     "chart": "7201c432d50a3f35038f415cfef71c7ac1652c79ed3aadacca8cea3ec42fed37",
     "accounts-packs": "08ee7a753735b46bd480582cf2035e88f4f676f0442ddf585c279616a9c3775a",
-    "posting": "94318b43ea0b913f58bcfe94d63e93a31f0164881d585377dbf7ae0322aef05b",
+    "posting-voucher": "968a8885ddd0246ffe5460945570febc7f04ebf00fd3ad3e1c2442698a129578",
+    "posting": "64cb47a47ed2d9e6ae99383460076ad8a6bd82d3c015923c3090f9ec454c58cd",
     "pack-kit": "be0232520192a235624d0d056be699dac2db4394f5eb0686f6e3a812a557c522",
     "reg-in": "6401cc34845b1471d2501451d92afc133576b065b73f5220d6c94140318b6bcd",
-    "reg-au": "d22eed3e36e07f63b0c545a6cc101756d8e4a58746cba16f0741a6558f701a6c",
-    "reg-ae": "1b5694c3d844308959e8c0dda6249396ac89d0f0c44990d62d5509db21f11d20",
+    "reg-au-movein": "d7e729a109ab07919f92f8391ed9d6bcf3b9450b51991d911917e5198e2832ae",
+    "reg-au": "4dba0e10d943f1763349edf04b4b15fe0bdaa78dff6409b4d96f5a63d64cac2b",
+    "reg-ae-law": "b966245cecb5ab956ec5132d82ecb48ec731f8f7d44e0c01f7f9137f843eb7e2",
+    "reg-ae": "4757ae358d587d9c07e28015364b63bd918c3e7488d66df69f1532470d88688f",
     "reg-sg": "d07e3859b59bc33cf86d157adb819df358101d2a253d7141beee09228c504639",
     "reg-my": "671367e9fd6eff4878f9b60cf4d9eee3d1204993161d74ac595182203c2c6c7c",
     "reg-us": "28eccd704db91bc66c3a8ff719c5e37f67ecdce9de5a669a5511dc13de0813dd",
