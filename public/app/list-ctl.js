@@ -165,37 +165,9 @@
     I.off = [];
   }
 
-  /* ═════ MOUNT ═════ */
-  function mount(el, o) {
-    if (!el || !o) return null;
-    injectCss();
-    prune();
-    var key = String(o.key || el.id || 'list');
-    el.innerHTML = '';
-    if (el.__cbl) {
-      teardown(el.__cbl);
-      INST = INST.filter(function (x) {
-        return x !== el.__cbl;
-      });
-    }
-    var I = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
-    var R = STATE[key] || (STATE[key] = { q: '', filt: {}, open: {}, allOpen: false, sel: {}, selMode: false, gcol: {}, hl: null });
-    I.r = R;
-    /* a host may open the list already narrowed (a link from another page: Home's Suppliers -> the CRM list of suppliers): opts.preset = { filt:{ key: value } } replaces the remembered filters */
-    if (o.preset && o.preset.filt) {
-      R.filt = {};
-      Object.keys(o.preset.filt).forEach(function (item) {
-        R.filt[item] = o.preset.filt[item];
-      });
-    }
-    I.s = loadChoices(I);
-    el.__cbl = I;
-    el.classList.add('cbl');
-    el.setAttribute('data-cbl', key);
-    wire(I);
-    INST.push(I);
-    paintAll(I);
-    var api = {
+  /** the object mount gives back: refresh · destroy · el · filter · state · mark · open — what a page does with a mounted list */
+  function apiOf(I, R, el) {
+    return {
       refresh: function (x) {
         return refresh(I, x);
       },
@@ -255,6 +227,38 @@
         }
       }
     };
+  }
+  /* ═════ MOUNT ═════ */
+  function mount(el, o) {
+    if (!el || !o) return null;
+    injectCss();
+    prune();
+    var key = String(o.key || el.id || 'list');
+    el.innerHTML = '';
+    if (el.__cbl) {
+      teardown(el.__cbl);
+      INST = INST.filter(function (x) {
+        return x !== el.__cbl;
+      });
+    }
+    var I = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
+    var R = STATE[key] || (STATE[key] = { q: '', filt: {}, open: {}, allOpen: false, sel: {}, selMode: false, gcol: {}, hl: null });
+    I.r = R;
+    /* a host may open the list already narrowed (a link from another page: Home's Suppliers -> the CRM list of suppliers): opts.preset = { filt:{ key: value } } replaces the remembered filters */
+    if (o.preset && o.preset.filt) {
+      R.filt = {};
+      Object.keys(o.preset.filt).forEach(function (item) {
+        R.filt[item] = o.preset.filt[item];
+      });
+    }
+    I.s = loadChoices(I);
+    el.__cbl = I;
+    el.classList.add('cbl');
+    el.setAttribute('data-cbl', key);
+    wire(I);
+    INST.push(I);
+    paintAll(I);
+    var api = apiOf(I, R, el);
     I.api = api;
     return api;
   }
@@ -263,6 +267,16 @@
   function skey(I) {
     return 'cblist.' + (I.o.scope ? I.o.scope + '.' : '') + I.key;
   }
+  /** the page's own first order (opts.sortDefault: { key, dir }) when the person has not chosen one; null when it names none */
+  function sortDefaultOf(o) {
+    return o.sortDefault && o.sortDefault.key ? { key: o.sortDefault.key, dir: o.sortDefault.dir === -1 ? -1 : 1 } : null;
+  }
+  /** the view a person chose (lines or grid), else the page's, else grid */
+  function savedView(saved, o) {
+    if (saved.view === 'lines' || saved.view === 'grid') return saved.view;
+    return o.view === 'lines' ? 'lines' : 'grid';
+  }
+  /** the choices a person made on this list, read from the page's store or from this unit's own memory; the page's defaults for what was never chosen */
   function loadChoices(I) {
     var o = I.o,
       saved = null;
@@ -275,9 +289,9 @@
     var s = {
       cols: Array.isArray(saved.cols) && saved.cols.length ? saved.cols.slice() : null,
       widths: saved.widths && typeof saved.widths === 'object' ? saved.widths : {},
-      view: saved.view === 'lines' || saved.view === 'grid' ? saved.view : o.view === 'lines' ? 'lines' : 'grid',
+      view: savedView(saved, o),
       group: saved.group || (o.group && o.group.default) || null,
-      sort: saved.sort && saved.sort.key ? saved.sort : o.sortDefault && o.sortDefault.key ? { key: o.sortDefault.key, dir: o.sortDefault.dir === -1 ? -1 : 1 } : null /* sortDefault: the page's own first order, until the reader picks one */
+      sort: saved.sort && saved.sort.key ? saved.sort : sortDefaultOf(o) /* sortDefault: the page's own first order, until the reader picks one */
     };
     return s;
   }
@@ -1761,6 +1775,73 @@ ctx.vt = inst.o.views.tid || 'views';
     var words = T(list, '+{n} columns hidden — no room', { n: left });
     return ' <span class="cbl-noroom" data-testid="cols-more-' + keyText + '" title="' + esc(words) + '" aria-label="' + esc(words) + '">+' + left + '</span>';
   }
+  /** the ← or → button that moves a shown column one place (disabled at the edge); a spacer when the column is not shown */
+  function colMoveHTML(I, item, on, dir, edge) {
+    if (!on) return '<span class="cbl-mvsp"></span>';
+    var word = dir === '-1' ? 'Move {x} left' : 'Move {x} right';
+    return (
+      '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
+      esc(item.key) +
+      '" data-d="' + dir + '"' +
+      (edge ? ' disabled' : '') +
+      ' aria-label="' +
+      esc(T(I, word, { x: item.label })) +
+      '" title="' +
+      esc(T(I, word, { x: item.label })) +
+      '">' + (dir === '-1' ? '←' : '→') + '</button>'
+    );
+  }
+  /** L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
+  function colWidthButtonsHTML(I, item, on) {
+    if (!on) return '';
+    return ['-1', '1']
+      .map(function (dir) {
+        var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
+        return (
+          '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
+          esc(item.key) +
+          '" data-d="' + dir + '" data-testid="cols-wd-' + esc(item.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
+          esc(T(I, word, { x: item.label })) +
+          '" title="' +
+          esc(T(I, word, { x: item.label })) +
+          '">' + (dir === '1' ? '+' : '−') + '</button>'
+        );
+      })
+      .join('');
+  }
+  /** the tick box and name of one column in the chooser: the name column is always on, a shown column with no room says so */
+  function colTickHTML(I, item, on, view) {
+    return (
+      '<label' +
+      (item.key === view.top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') +
+      '><input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-col="' +
+      esc(item.key) +
+      '" data-testid="cols-' +
+      view.key +
+      '-' +
+      esc(item.key) +
+      '"' +
+      (on ? ' checked' : '') +
+      (item.key === view.top ? ' disabled' : '') +
+      '> ' +
+      esc(item.label || item.key) +
+      (on && view.noRoom.indexOf(item.key) >= 0
+        ? ' <span class="cbl-noroom" data-testid="cols-noroom-' + esc(item.key) + '">' + esc(T(I, 'hidden — no room')) + '</span>'
+        : '') +
+      '</label>'
+    );
+  }
+  /** one row of the columns chooser: move left, tick box and name, move right, narrower and wider (view: the name column, the list key, the columns with no room, how many are shown) */
+  function colRowHTML(I, item, index, on, view) {
+    return (
+      '<div class="cbl-colrow">' +
+      colMoveHTML(I, item, on, '-1', index === 0) +
+      colTickHTML(I, item, on, view) +
+      colMoveHTML(I, item, on, '1', index === view.count - 1) +
+      colWidthButtonsHTML(I, item, on) +
+      '</div>'
+    );
+  }
   function colsPop(I) {
     var all = choosable(I),
       shown = shownKeys(I),
@@ -1774,67 +1855,9 @@ ctx.vt = inst.o.views.tid || 'views';
       }),
       k = esc(I.key),
       nr = noRoomKeys(I).concat(leftOutKeys(I)); /* no room: a card's extra fields, and the columns the last paint left out (autoFit) */
-    function row(c, i, on) {
-      return (
-        '<div class="cbl-colrow">' +
-        (on
-          ? '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
-            esc(c.key) +
-            '" data-d="-1"' +
-            (i === 0 ? ' disabled' : '') +
-            ' aria-label="' +
-            esc(T(I, 'Move {x} left', { x: c.label })) +
-            '" title="' +
-            esc(T(I, 'Move {x} left', { x: c.label })) +
-            '">←</button>'
-          : '<span class="cbl-mvsp"></span>') +
-        '<label' +
-        (c.key === top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') +
-        '><input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-col="' +
-        esc(c.key) +
-        '" data-testid="cols-' +
-        k +
-        '-' +
-        esc(c.key) +
-        '"' +
-        (on ? ' checked' : '') +
-        (c.key === top ? ' disabled' : '') +
-        '> ' +
-        esc(c.label || c.key) +
-        (on && nr.indexOf(c.key) >= 0
-          ? ' <span class="cbl-noroom" data-testid="cols-noroom-' + esc(c.key) + '">' + esc(T(I, 'hidden — no room')) + '</span>'
-          : '') +
-        '</label>' +
-        (on
-          ? '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
-            esc(c.key) +
-            '" data-d="1"' +
-            (i === shown.length - 1 ? ' disabled' : '') +
-            ' aria-label="' +
-            esc(T(I, 'Move {x} right', { x: c.label })) +
-            '" title="' +
-            esc(T(I, 'Move {x} right', { x: c.label })) +
-            '">→</button>'
-          : '<span class="cbl-mvsp"></span>') +
-        /* L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
-        (on
-          ? ['-1', '1']
-              .map(function (dir) {
-                var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
-                return (
-                  '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
-                  esc(c.key) +
-                  '" data-d="' + dir + '" data-testid="cols-wd-' + esc(c.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
-                  esc(T(I, word, { x: c.label })) +
-                  '" title="' +
-                  esc(T(I, word, { x: c.label })) +
-                  '">' + (dir === '1' ? '+' : '−') + '</button>'
-                );
-              })
-              .join('')
-          : '') +
-        '</div>'
-      );
+    var view = { top: top, key: k, noRoom: nr, count: shown.length };
+    function row(item, index, on) {
+      return colRowHTML(I, item, index, on, view);
     }
     return (
       '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" data-pop="POP137" aria-label="' +
@@ -2188,19 +2211,19 @@ ctx.limit = inst.limit;
       '"></button>'
     );
   }
-  function headerHTML(list, cols, tpl, plainHead) {
-    var st = curSort(list);
-    var lead = leadOn(list) ? '<div class="cbl-hc" role="columnheader" aria-label="' + esc(T(list, 'Select')) + '"></div>' : '';
-    return (
-      '<div class="cbl-hdr lhead" role="row" style="grid-template-columns:' +
-      tpl +
-      '">' +
-      lead +
-      cols
-        .map(function (item) {
+  /** a column whose cells sit at the right: a number, money, or the pinned action column */
+  function rightAligned(item) {
+    return !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end');
+  }
+  /** the sort arrow of a heading: ▼ when sorted descending, ▲ ascending, ⇅ when it is not the sort */
+  function sortArrow(sorted, st) {
+    return sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅';
+  }
+  /** one column heading cell: its label, its sort button (inert while loading) and its filter and resize handles */
+  function headerCellHTML(item, st, plainHead, list) {
           var id = sortId(item),
             sorted = !!(st && id && st.key === id),
-            r = !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end'),
+            r = rightAligned(item),
             label = esc(item.label || item.key);
           return (
             '<div class="cbl-hc lhcell' +
@@ -2214,13 +2237,25 @@ ctx.limit = inst.limit;
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
                 '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
-                (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') +
+                sortArrow(sorted, st) +
                 '</span></button>'
               : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
             headerFilterHTML(list, item, plainHead) +
             headerResizeHTML(list, item, plainHead) +
             '</div>'
           );
+        }
+  function headerHTML(list, cols, tpl, plainHead) {
+    var st = curSort(list);
+    var lead = leadOn(list) ? '<div class="cbl-hc" role="columnheader" aria-label="' + esc(T(list, 'Select')) + '"></div>' : '';
+    return (
+      '<div class="cbl-hdr lhead" role="row" style="grid-template-columns:' +
+      tpl +
+      '">' +
+      lead +
+      cols
+        .map(function (item) {
+          return headerCellHTML(item, st, plainHead, list);
         })
         .join('') +
       '</div>'
@@ -2269,18 +2304,22 @@ var o = inst.o;
       (zb ? ' z' : '') +
       (it.g != null ? ' ing' : '');
   }
-  /** rowHTML, step 2 of 3 (part 2, lines 2431-2465 of the one function): runs on, nothing here ends the call */
-  function rowHTMLStep2(inst, it, cols, tpl, zb, ctx) {
-    ctx.cells = cols
-      .map(function (item, index) {
-        var amt = item.pin === 'end';
+  /** the extra classes of a body cell: the first one, the pinned action column strong and right, numbers and money right in mono, mono, the line a card gives an action */
+  function cellClasses(item, index) {
+    var amt = item.pin === 'end';
+    return (
+      (index === 0 ? ' first' : '') +
+      (amt ? ' r mono strong amt' : '') +
+      ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
+      (item.mono ? ' mono' : '') +
+      (item.cardAct ? ' cbl-actline' : '')
+    );
+  }
+  /** one body cell of a row: its classes (money and numbers right-aligned in mono, the pinned action column strong), its phone label, its test id and the expand caret on the first cell */
+  function rowCellHTML(item, index, ctx, inst) {
         return (
           '<div class="cbl-cell lcell' +
-          (index === 0 ? ' first' : '') +
-          (amt ? ' r mono strong amt' : '') +
-          ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
-          (item.mono ? ' mono' : '') +
-          (item.cardAct ? ' cbl-actline' : '') +
+          cellClasses(item, index) +
           '" data-l="' +
           esc(index === 0 || item.cardAct ? '' : item.label || '') +
           '" role="gridcell"' +
@@ -2304,7 +2343,13 @@ var o = inst.o;
           cellOf(inst, item, ctx.row) +
           '</div>'
         );
-      })
+      }
+  /** rowHTML, step 2 of 3 (part 2, lines 2431-2465 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep2(inst, it, cols, tpl, zb, ctx) {
+    ctx.cells = cols
+      .map(function (item, index) {
+          return rowCellHTML(item, index, ctx, inst);
+        })
       .join('');
   }
   /** rowHTML, step 3 of 3 (part 3, lines 2466-2483 of the one function): runs on, nothing here ends the call */
