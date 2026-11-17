@@ -629,6 +629,7 @@ async function start() {
     if (typeof me.ledger_on === 'boolean') CRM.ledger = me.ledger_on;
     else CRM.ledger = await api('booksHealth').then(() => true, () => false); /* an api that does not say (no ledger_on): the old probe, 404 = off */
     if (reply && reply.country) SESSION.country = reply.country;
+    if (me.currency_code) SESSION.currency = me.currency_code; /* the shop's own money (/me, as app.html does): the Pay popup, its ask and its band print the symbol through bkMoney; none stated -> no symbol (N1) */
   } catch (e) {
     /* /me failed: UNKNOWN, never "off" — the old probe decides (404 = off); CX0 country is just not set */
     CRM.ledger = await api('booksHealth').then(() => true, () => false);

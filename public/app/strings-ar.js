@@ -491,7 +491,10 @@
     'Nothing overdue': 'لا شيء متأخر',
     'Nothing waiting': 'لا شيء في الانتظار',
     'Notifications — who gets told, and how': 'الإشعارات — من يُبلَّغ وكيف',
-    'Notified by': 'أُبلغ بواسطة'
+    'Notified by': 'أُبلغ بواسطة',
+    /* MACHINE-WRITTEN (curqps, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the skip link and the Network menu entry; needs a native read before a customer sees them */
+    'Skip to content': 'انتقل إلى المحتوى',
+    'Who can see my books': 'من يمكنه الاطلاع على دفاتري'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
   try {
