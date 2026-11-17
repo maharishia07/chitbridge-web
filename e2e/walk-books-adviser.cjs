@@ -249,7 +249,7 @@ W.run('books-adviser', async (w) => {
   await w.step('G1', 'the owner · Give access: choose Adviser → the consent says what the firm can do; the warning the server answers is shown; the confirm names the role', async () => {
     await page.click(T('bg-seg-given')); await page.waitForSelector(T('bg-give'), { timeout: 10000 }); await page.click(T('bg-give')); await page.waitForSelector(T('bg-consent') + ' b', { timeout: 10000 });
     await page.selectOption(T('bg-preset'), 'adviser'); await page.waitForTimeout(500); const consent = await txt(T('bg-consent'));
-    if (await has(T('bg-post-owner_approves'))) await page.check(T('bg-post-owner_approves')); /* Give waits for the owner's choice of who posts: nothing is pre-selected */
+    await page.waitForSelector(T('bg-post-owner_approves'), { timeout: 8000 }).catch(() => {}); if (await has(T('bg-post-owner_approves'))) await page.check(T('bg-post-owner_approves')); /* Give waits for the owner's choice of who posts: nothing is pre-selected */
     await page.check(T('bg-yes')); await page.click(T('bg-go')); await page.waitForSelector(T('confirm'), { timeout: 5000 }); const ask = await txt(T('confirm')); await page.click(T('confirm-ok')); await page.waitForTimeout(900);
     const notice = await txt(T('bg-notice')), g = S.gives[0] || {};
     return { ok: /act in your books/.test(consent) && /They can do: post and reverse entries/.test(consent) && /prepare entries/.test(ask) && g.preset === 'adviser' && g.consent === true && /already holds the auditor role/.test(notice), saw: consent.slice(0, 120) + ' · ' + notice };
