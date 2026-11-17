@@ -14,16 +14,16 @@
 
   /** why this login may not post (the server decides; this only says it first, once); null when it may */
   function ownerRefusal(who) {
-    if (who && who.role === 'adviser') return who.posts ? null : txt('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.'); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
-    return who && who.role && who.role !== 'owner' ? txt('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
+    if (who && who.role === 'adviser') return who.posts ? null : catalogueText('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.'); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
+    return who && who.role && who.role !== 'owner' ? catalogueText('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
   }
   /** one catalogue sentence: the page's tx() when it has one */
-  function txt(s) {
+  function catalogueText(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   /** an adviser never makes a party (those doors are outside /api/books and refused): a line that needs a new one waits for the owner to add it */
   function newPartyRefusal(who, name) {
-    return who && who.role === 'adviser' ? (typeof root.txf === 'function' ? root.txf('Ask the owner to add {name} to the party list first, then add this line.', { name: name || txt('this party') }) : 'Ask the owner to add ' + (name || 'this party') + ' to the party list first, then add this line.') : null;
+    return who && who.role === 'adviser' ? (typeof root.txf === 'function' ? root.txf('Ask the owner to add {name} to the party list first, then add this line.', { name: name || catalogueText('this party') }) : 'Ask the owner to add ' + (name || 'this party') + ' to the party list first, then add this line.') : null;
   }
   /** the id of the party a party door answered with, whichever shape that door uses; null when it sent none */
   function idOfParty(reply) {
@@ -50,6 +50,18 @@
   var NOT_YET = { loan_taken: 'A loan received', loan_repaid: 'A loan repayment' };
   /** the event types this adapter posts: through POST /events, and through POST /payments for a party */
   var POSTABLE = Object.keys(KIND_KEYS).concat(Object.keys(PAYMENT_DIRECTION));
+  /** the tax the proposal carries, as the keys POST /events takes (the engine's own figures, nothing is worked out here): the input tax of an expense (with the person's word on the tax invoice), the output tax inside an other-income figure, the tax inside a card settlement's fee; {} when the line carries none */
+  function taxKeysOf(event, item) {
+    var taxRecord = item.tax;
+    if (!taxRecord || !(taxRecord.tax_minor > 0)) return {};
+    if (event.type === 'expense') {
+      /* the person's word that they hold the tax invoice (the server needs it at the pack's threshold; 'none' sends no tax at all) */
+      return taxRecord.invoice_answer === 'held' ? { input_tax_minor: taxRecord.tax_minor, tax_invoice: 'held' } : { input_tax_minor: taxRecord.tax_minor };
+    }
+    if (event.type === 'other_income' && taxRecord.direction === 'output') return { output_tax_minor: taxRecord.tax_minor }; /* the GST collected INSIDE the bank figure, the engine's own split: amount is the NET */
+    if (event.type === 'contra' && event.fee != null) return { fee_tax_minor: taxRecord.tax_minor }; /* a card settlement net of its fee: the taxRecord inside the fee, the engine's own figure; fee is the NET of it */
+    return {};
+  }
   /**
    * the body POST /events takes, built from the proposal's own event (the one posting.post composed the entry from): `kind` (the server reads kind, not type), the common fields, the
    * kind's own keys, the one client_ref. A taxed expense sends the NET as amount and the tax inside the bank figure as input_tax_minor, both the engine's own figures (nothing is worked out here).
@@ -60,12 +72,7 @@
     (KIND_KEYS[event.type] || []).forEach(function (key) {
       if (event[key] != null) body[key] = event[key];
     });
-    if (event.type === 'expense' && item.tax && item.tax.tax_minor > 0) {
-      body.input_tax_minor = item.tax.tax_minor;
-      if (item.tax.invoice_answer === 'held') body.tax_invoice = 'held'; /* the person's word that they hold the tax invoice (the server needs it at the pack's threshold; 'none' sends no tax at all) */
-    }
-    if (event.type === 'other_income' && item.tax && item.tax.direction === 'output' && item.tax.tax_minor > 0) body.output_tax_minor = item.tax.tax_minor; /* the GST collected INSIDE the bank figure, the engine's own split: amount is the NET */
-    if (event.type === 'contra' && event.fee != null && item.tax && item.tax.tax_minor > 0) body.fee_tax_minor = item.tax.tax_minor; /* a card settlement net of its fee: the tax inside the fee, the engine's own figure; fee is the NET of it */
+    Object.assign(body, taxKeysOf(event, item));
     if (event.type === 'tax_payment') Object.assign(body, { paid_from: 'bank' }); /* the whole figure, the statement account's mode (modeOf below); the api puts it on the pack's one tax head */
     if (item.moveTo) body.if_locked = 'next_open'; /* W15-85: the person chose to post this locked month's line in the next open month; the api adds the "<Month> locked" note (W15-85a, one wording) */
     return modeOf ? modeOf(body) : body;

@@ -19,15 +19,15 @@
     var rest = line.state === 'unexplained' ? fill('unexplained {a}', { a: o.money(line.unexplained_minor, cur) }) : say('nothing unexplained');
     return sign + ' · ' + rest + (line.moved_minor ? ' · ' + fill('books now differ from the figure signed by {a}', { a: o.money(line.moved_minor, cur) }) : '');
   }
-  function html(bank, o) {
+  function html(bank, options) {
     var lines = (bank || []).filter(Boolean);
     if (!lines.length) return '';
     var many = lines.length > 1;
-    return '<div class="pe-note bv-bankline" data-cbsid="' + esc(o.codes.note) + '" data-testid="bv-tb-bank">' + lines.map(function (line) {
-      var id = esc(o.ids + String(line.account_id)), act = '';
-      if (line.state === 'earlier') act = '<button type="button" class="act quiet" id="' + id + '_at" data-cbsid="' + esc(o.codes.at) + '" data-testid="bv-tb-bank-at-' + esc(line.account_id) + '" data-day="' + esc(line.period_to) + '">' + esc(o.txf('Trial balance at {d}', { d: o.day(line.period_to) })) + '</button>';
-      else if (line.state !== 'not_shared') act = '<button type="button" class="act quiet" id="' + id + '_open" data-cbsid="' + esc(o.codes.open) + '" data-testid="bv-tb-bank-open-' + esc(line.account_id) + '" data-account="' + esc(line.account_id) + '">' + esc(o.tx('Open Bank')) + '</button>';
-      return '<div data-testid="bv-tb-bank-' + esc(line.account_id) + '" data-state="' + esc(line.state) + '">' + (many ? '<b>' + esc(line.name || line.code) + '</b> · ' : '') + esc(wordsOf(line, o)) + ' ' + act + '</div>';
+    return '<div class="pe-note bv-bankline" data-cbsid="' + esc(options.codes.note) + '" data-testid="bv-tb-bank">' + lines.map(function (line) {
+      var id = esc(options.ids + String(line.account_id)), act = '';
+      if (line.state === 'earlier') act = '<button type="button" class="act quiet" id="' + id + '_at" data-cbsid="' + esc(options.codes.at) + '" data-testid="bv-tb-bank-at-' + esc(line.account_id) + '" data-day="' + esc(line.period_to) + '">' + esc(options.txf('Trial balance at {d}', { d: options.day(line.period_to) })) + '</button>';
+      else if (line.state !== 'not_shared') act = '<button type="button" class="act quiet" id="' + id + '_open" data-cbsid="' + esc(options.codes.open) + '" data-testid="bv-tb-bank-open-' + esc(line.account_id) + '" data-account="' + esc(line.account_id) + '">' + esc(options.tx('Open Bank')) + '</button>';
+      return '<div data-testid="bv-tb-bank-' + esc(line.account_id) + '" data-state="' + esc(line.state) + '">' + (many ? '<b>' + esc(line.name || line.code) + '</b> · ' : '') + esc(wordsOf(line, options)) + ' ' + act + '</div>';
     }).join('') + '</div>';
   }
   /** wire the buttons of a painted note: onOpen(line) and onDay(day); the lines are looked up by account id from the same `bank` */

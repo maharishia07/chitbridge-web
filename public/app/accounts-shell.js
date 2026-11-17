@@ -56,7 +56,6 @@ function chitPageHref(id) {
 function disputePageHref(id) {
   return CB_HOMES.disputes + encodeURIComponent(id);
 }
-
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {
   booksHealth: { m: 'GET', p: '/api/books/health', ok: 'y' }, // 404 = the Ledger is off for this shop → the door stays hidden
@@ -70,7 +69,6 @@ var CB_BOOKS_EP = {
   booksPartyBills: { m: 'GET', p: '/api/books/party/:id/bills', ok: 'y' }, // W15-107: one party's bills, open first, newest first, a page at a time (the row's sub-table)
   booksAttention: { m: 'GET', p: '/api/books/attention', ok: 'y' } // W15-102: the evidence counts of a range, or the entries behind one count
 };
-
 /* ── the party routes the app's Customers/Suppliers screens and CB CRM share (MOVED from app.html's EP, not copied: one name per endpoint,
    e2e/ep-aliases.cjs) — add a party, edit its fields, remove it, look someone up on ChitBridge ── */
 var CB_PARTY_EP = {

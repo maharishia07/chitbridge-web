@@ -8,7 +8,7 @@ const root = { Promise, tx: (s) => s, URLSearchParams, encodeURIComponent, docum
 const sandbox = vm.createContext({ module: { exports: {} }, window: root, globalThis: root, setInterval() {}, setTimeout() {}, URLSearchParams, encodeURIComponent });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'money.js'), 'utf8'), sandbox, { filename: 'money.js' });
 sandbox.CBMoney = sandbox.module.exports;
-for (const f of ['helpers.js', 'books-acting.js', 'books-practice.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'), sandbox, { filename: f });
+for (const f of ['helpers.js', 'books-acting.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'), sandbox, { filename: f });
 const T = root.CBPractice.parts;
 let bad = 0;
 const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };

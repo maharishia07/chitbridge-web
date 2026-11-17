@@ -31,8 +31,8 @@ const lum = (hex) => {
 };
 const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 
-const list = read('public/app/list-ctl.js');
-ok(/function gridRole\(unit, items\)[\s\S]{0,300}'treegrid'/.test(list) && /role="' \+ gridRole\(I, items\)/.test(list), 'list-ctl: the grid is a treegrid when a row opens or a group folds');
+const list = read('public/app/list-ctl.js') + read('public/app/list-ctl-css.js'); /* the unit and its stylesheet part */
+ok(/function gridRole\(unit, items\)[\s\S]{0,300}'treegrid'/.test(list) && /role="' \+ gridRole\((?:I|inst), (?:ctx\.)?items\)/.test(list), 'list-ctl: the grid is a treegrid when a row opens or a group folds');
 ok(/class="cbl-group" role="row"/.test(list) && /<b role="gridcell">/.test(list), 'list-ctl: a group head is a row whose parts are cells');
 ok(/class="cbl-lline" role="gridcell"/.test(list) && /class="cbl-lgist" role="gridcell"/.test(list), 'list-ctl: a lines row holds cells');
 ok(/\.cbl \.cbl-rz\{[^}]*width:24px/.test(list) && /\.cbl \.cbl-hf\{[^}]*min-width:24px;height:24px/.test(list), 'list-ctl: resize handle and filter button are 24 px targets');

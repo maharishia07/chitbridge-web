@@ -207,7 +207,7 @@
     };
   }
 
-  var MC = { keyWords: keyWords, salesPoints: salesPoints, salesTable: salesTable, duesRows: duesRows, plRows: plRows, cashPoints: cashPoints, monthPoints: monthPoints, monthTable: monthTable, profitPoints: profitPoints, weekdayPoints: weekdayPoints, weekdayTable: weekdayTable };
-  if (typeof module !== 'undefined' && module.exports) module.exports = MC;
-  if (root) root.MC = MC;
+  var misCharts = { keyWords: keyWords, salesPoints: salesPoints, salesTable: salesTable, duesRows: duesRows, plRows: plRows, cashPoints: cashPoints, monthPoints: monthPoints, monthTable: monthTable, profitPoints: profitPoints, weekdayPoints: weekdayPoints, weekdayTable: weekdayTable };
+  if (typeof module !== 'undefined' && module.exports) module.exports = misCharts;
+  if (root) root.MC = misCharts;
 })(typeof window !== 'undefined' ? window : globalThis);

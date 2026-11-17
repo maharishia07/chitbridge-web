@@ -365,6 +365,13 @@ function fcNext(dayRow) {
     '</div>'
   );
 }
+/** the GST chips of the head: what the next return owes, and (own line) what the ledgers owe from before its period — none when nothing is payable */
+function fcGstChips(reply) {
+  var chips = [];
+  if (reply.gst && Number(reply.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(reply.gst, reply.currency) });
+  if (reply.gst && reply.gst.earlier && Number(reply.gst.earlier.payable_minor) > 0) chips.push({ tid: 'fc-gst-earlier', text: fcEarlierChip(reply.gst, reply.currency) });
+  return chips;
+}
 /** the sentence on top (the server's words), what is left out, and GST — as the list's own notices and chips */
 function fcHead() {
   var reply = FC.r,
@@ -387,8 +394,9 @@ function fcHead() {
     }).length;
     if (quiet) chips.push({ tid: 'fc-quiet', text: txf('No money moved on {n} days', { n: quiet }) });
     if (reply.uncounted && reply.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: reply.uncounted.words });
-    if (reply.gst && Number(reply.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(reply.gst, reply.currency) });
-    if (reply.gst && reply.gst.earlier && Number(reply.gst.earlier.payable_minor) > 0) chips.push({ tid: 'fc-gst-earlier', text: fcEarlierChip(reply.gst, reply.currency) });
+    fcGstChips(reply).forEach(function (chip) {
+      chips.push(chip);
+    });
   }
   return { title: tx('Cash position'), notices: notices, chips: chips };
 }

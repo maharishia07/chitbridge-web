@@ -122,7 +122,9 @@ function enDlg() {
   node.addEventListener('close', function () {
     try {
       document.documentElement.style.overflow = '';
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+    } catch (failure) {
+      if (typeof cbQuiet === 'function') cbQuiet('entry: the page scroll was not restored', failure); /* best effort: nothing the person sees changes */
+    }
   });
   node.addEventListener('click', function (e) {
     if (e.target === node) enClose();
@@ -559,26 +561,8 @@ async function enOwnAdd(k) {
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
   var k = f.key,
-    v = EN.v[k] == null ? '' : EN.v[k],
-    lab = tx(
-      f.label ||
-        EN_LABEL[k] ||
-        {
-          party: 'Who',
-          ledger: 'Which ledger',
-          bank: 'Which bank',
-          asset_class: 'What kind',
-          loan: 'Which loan',
-          amount: 'How much',
-          date: 'Date',
-          paid_by: 'Paid by',
-          doc_no: 'Bill / receipt no.',
-          photo: 'Photo of the paper',
-          narration: 'Note',
-          text: k
-        }[f.kind] ||
-        k
-    ),
+    v = enValueOf(k),
+    lab = enFieldLabel(f),
     tid = 'en-f-' + k;
   var wrap = function (inner) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
@@ -841,150 +825,6 @@ function enItemsBody() {
   return EN.items.map(function (item) {
     return { name: String(item.name || '').trim(), qty: Number(item.qty), unit_price: Number(item.unit_price), gst_rate: String(item.gst_rate).trim() === '' ? 0 : Number(item.gst_rate) };
   });
-}
-/**
- * R106: the question before a debit note is saved — the party line of the SERVER's preview (its dr_minor is the note's ₹; never summed here), the bill
- * and the supplier as the row names them. null when this event does not ask.
- */
-function enAskWords() {
-  var question = EN.ev && EN_ASK[EN.ev.kind];
-  if (!question) return null;
-  /* the preview's party line: books-manual preview names it `party` (the id) and its golden type is personal */
-  var partyLine = ((EN.pv && EN.pv.lines) || []).filter(function (line) {
-    return (line.party || line.party_id || line.type === 'personal') && Number(line.dr_minor) > 0;
-  })[0];
-  var amount = partyLine ? bkMoney(partyLine.dr_minor, EN.pv.currency) : tx('this difference'),
-    supplierName = typeof bkPartyLabel === 'function' ? bkPartyLabel(EN.v.supplier || EN.v.party, '') : '';
-  return {
-    title: txf(question.title, { amt: amount, ref: EN.v.against_ref || '', who: supplierName || tx('the supplier') }),
-    body: esc(txf(question.body, { amt: amount, who: supplierName || tx('the supplier') })),
-    yes: tx(question.yes),
-    danger: false
-  };
-}
-
-/* ── the server's journal ── */
-/* the app's api() refuses a second POST to the same route while one is out, so the page asks one preview at a time and the newest answer wins (EN.seq) */
-function enAsk(body) {
-  var go = function () {
-    return api('booksPreview', { body: body });
-  };
-  var p = (EN.q || Promise.resolve()).then(go, go);
-  EN.q = p.catch(function () {});
-  return p;
-}
-/** the POST body for preview and save: the typed fields, with the amount parsed to minor units */
-function enBody() {
-  var b = { event: EN.ev.kind || EN.ev.id };
-  Object.keys(EN.v).forEach(function (item) {
-    if (EN.v[item] !== '' && EN.v[item] != null) b[item] = EN.v[item];
-  });
-  if (EN.v.amount != null && EN.v.amount !== '') {
-    b.amount_minor = bkMoneyMinor(EN.v.amount);
-    delete b.amount;
-  }
-  if (EN.ev.kind === 'journal')
-    b.lines = EN.lines.map(function (item) {
-      var o = { code: item.code };
-      o[item.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkMoneyMinor(item.amt);
-      return o;
-    });
-  else if (EN.items.length) b.lines = enItemsBody(); /* R106: the item lines, as typed */
-  return b;
-}
-/** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */
-function enWords(list, code, dateStep) {
-  return (list || []).map(function (item, index) {
-    var c = index === 0 && code ? code : null,
-      msg = typeof item === 'object' && item ? item.message : item;
-    return {
-      code: c || (typeof item === 'object' && item && item.code) || 'R' + index,
-      message: String(msg),
-      fix: c === 'PERIOD_LOCKED' ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' } : { label: tx('Change it'), step: enSteps()[1] }
-    };
-  });
-}
-/** the preview answer reduced to what the sheet compares and saves against */
-function enSeen(r) {
-  r = r || {};
-  return {
-    balanced: r.balanced === true,
-    voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null,
-    narration: (EN.v && EN.v.narration) || '' /* the API's preview echoes no note and no currency: the note is the one the person typed */,
-    lines: (r.lines || []).map(function (item) {
-      return Object.assign({}, item, { name: item.ledger || item.name });
-    }),
-    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(r.refusals) : r.refusals, r.code),
-    warnings: enWords(r.flags || r.warnings, null).map(function (item, index) {
-      return Object.assign(item, { code: 'FLAG' + index });
-    })
-  };
-}
-/** ask the server to preview the journal for the typed fields; a later call supersedes an earlier one */
-async function enPreview() {
-  var seq = ++EN.seq;
-  EN.pvBusy = true;
-  EN.err = null;
-  enPaint2();
-  try {
-    var r = await enAsk(enBody());
-    if (seq !== EN.seq) return;
-    EN.pv = enSeen(r);
-  } catch (e) {
-    if (seq !== EN.seq) return;
-    EN.pv = {
-      balanced: false,
-      refusals: [{ code: 'READ', message: bkWhy(e, tx('Could not check this entry')), fix: { label: tx('Try again'), retry: true } }],
-      lines: []
-    };
-  }
-  EN.pvBusy = false;
-  enPaint2();
-}
-function enPaint2() {
-  var node = document.getElementById('en_body');
-  if (!node) return;
-  if (EN.step === 4) {
-    node.innerHTML = '<h3 data-testid="en-step-4">' + esc(tx(enStepWord(4))) + '</h3>' + enPreviewHTML();
-    enActs();
-  }
-}
-/* a locked month is refused the moment the date is picked: the server's answer, shown under the date */
-async function enCheckDate() {
-  var seq = ++EN.seq,
-    d = EN.v.date;
-  EN.dateRef = null;
-  if (!EN.ev || !d) return;
-  /* the server has no date-only question: it is asked with what is filled in so far, and only its "month is locked" answer is read here */
-  try {
-    var r = await enAsk(enBody());
-    if (seq !== EN.seq) return;
-    EN.dateRef = r && r.code === 'PERIOD_LOCKED' ? enWords(r.refusals, r.code).slice(0, 1) : [];
-  } catch (e) {
-    if (seq !== EN.seq) return;
-    EN.dateRef = [{ code: 'READ', message: bkWhy(e, tx('Could not check this date')), fix: { label: tx('Try again'), retry: true } }];
-  }
-  var el = document.getElementById('en_dateref');
-  if (el) el.innerHTML = enRefusalHTML(EN.dateRef);
-  var node = document.getElementById('en_next');
-  if (node) node.disabled = !enStepReady(EN.step);
-}
-/** run the fix a warning or refusal offers (retry, go to a step or field) */
-function enFixGo(i, w) {
-  var list = w === 'date' ? EN.dateRef : EN.pv && EN.pv[w];
-  var x = list && list[i];
-  var node = (x && x.fix) || {};
-  if (node.retry) {
-    if (EN.step === 4) return enPreview();
-    return enCheckDate();
-  }
-  EN.pv = null;
-  EN.step = Number(node.step || 3);
-  enPaint();
-  if (node.focus) {
-    var el = document.querySelector('[data-testid="en-f-' + node.focus + '"]');
-    if (el) el.focus();
-  }
 }
 /* every refusal and every warning carries a button that takes the person to the fix */
 function enRefusalHTML(list, w) {

@@ -13,7 +13,7 @@
  */
 const fs = require('fs'), path = require('path');
 const mutate = process.env.EMP_ID_MUTATE || '';
-let src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-employees.js'), 'utf8').split('\r\n').join('\n');
+let src = ['cap-employees.js', 'cap-employees-copy.js'].map((name) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', name), 'utf8')).join('\n').split('\r\n').join('\n');
 if (mutate === 'remove') src = src.split('data-cbsid="EMP001-B01"').join('');
 if (mutate === 'swap') src = src.split('EMP001-B01').join('SWAPX').split('EMP001-B03').join('EMP001-B01').split('SWAPX').join('EMP001-B03');
 let failures = 0;

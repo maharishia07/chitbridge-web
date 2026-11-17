@@ -13,9 +13,7 @@
 <!-- ⭐ CB Finance — what the shop is owed, on its own page like CB Accounts and CB CRM (C:/dev/CB-FINANCE-PLAN.md round F1). The FRAME is theirs (sidebar · header ·
      tokens · CBAvatar · the kural band); the list is a CBList mount; the screen is app/cap-finance.js. Every figure (balance, limit, over-limit, interest) is the
      server's — the page paints, it computes nothing. Interest is SHOWN, never posted. Owner only: the server decides; anyone else sees the sentence, greyed. -->
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/fonts/cb-fonts.css">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/fonts/cb-fonts.css">
 <style>
 /* CB Accounts' tokens, as shipped (accounts.html) — there is no shared stylesheet yet, so the shell's own lines are repeated here (named in the PR) */
 :root{
@@ -304,7 +302,6 @@ dialog.sheet::backdrop{background:var(--scrim)}
       </button>
     </div>
   </aside>
-
   <main class="main">
     <div id="shell" data-testid="fin-shell"></div>   <!-- THE ONE HEADER (CBFrame → CBShell, SHELL-ONE): mark · CB Finance · chip · ⌂ Home · bell · avatar -->
     <div class="tools" id="tools"><div class="crumb" id="crumb"></div></div>
@@ -313,7 +310,6 @@ dialog.sheet::backdrop{background:var(--scrim)}
 </div>
 <dialog class="sheet" id="fin_sheet" data-pop="POP047" data-testid="fin-sheet"></dialog>
 <div id="toast"></div>
-
 <script>
 'use strict';
 /* ── the host globals the app's own files expect (app.html declares these with let/const; so does this page) ── */
@@ -343,11 +339,11 @@ function go() {
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP, CB_MIS_EP);</script>   <!-- CB_SHOP_EP (T3-P1-MONEY): `me` — the shop's country for Returns, the read Home and Settings make · CB_MIS_EP (T3-P4-ACCOUNT): the rail measured, GET /api/folders/mis — the Reports tab's one read -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>
-<script src="/app/helpers.js"></script>
-<script src="/app/list-ctl.js"></script>   <!-- CBList: the one list -->
+<script src="/app/helpers.js"></script><script src="/app/day-book-kind.js"></script>
+<script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: the one list -->
 <script src="/engine/tax.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
-<script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
+<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
 <script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears; this page's own sidebar stays -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
@@ -355,11 +351,11 @@ function go() {
 <script src="/app/chit-sheet.js"></script>
 <script src="/app/cap-folders.js"></script>
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
-<script src="/app/cap-books.js"></script>   <!-- payOpen · bkRemind · bkMoney · bkOwes — the Dues pieces Collections reuses -->
-<script src="/app/cap-entry.js"></script>   <!-- the ONE ＋ Entry door (R106): Payables › "Note a rate difference" opens it at kind debit_note; its Save asks first -->
-<script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06) -->
+<script src="/app/cap-books.js"></script><script src="/app/cap-books-cheques.js"></script>   <!-- payOpen · bkRemind · bkMoney · bkOwes — the Dues pieces Collections reuses -->
+<script src="/app/cap-entry.js"></script><script src="/app/cap-entry-preview.js"></script>   <!-- the ONE ＋ Entry door (R106): Payables › "Note a rate difference" opens it at kind debit_note; its Save asks first -->
+<script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06) -->
 <script src="/app/attach-ui.js"></script>
-<script src="/app/rail-thread.js"></script>   <!-- CBThread: Remind (M28) sends its message through the one composer -->
+<script src="/app/rail-thread-words.js"></script><script src="/app/rail-thread.js"></script>   <!-- CBThread: Remind (M28) sends its message through the one composer -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice: the payment advice OUT (M30) under the Pay outcome -->
 <script src="/app/one-person.js"></script>
 <script src="/engine/signin.js"></script>
@@ -373,9 +369,8 @@ function go() {
 <script src="/app/cap-repeat.js"></script>   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
 <script src="/app/cap-finance-cheques.js"></script>   <!-- Cheques tab (T3-P1-MONEY): the cheques held (cap-books.js's list and steps), the post-dated reminders, the owner's switch -->
 <script src="/app/cap-finance-returns.js"></script>   <!-- Returns tab (T3-P1-MONEY): country-first — India downloads the GSTR files the server builds; AU/AE are told where their return is prepared -->
-<script src="/engine/chart-draw.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
-<script src="/app/mis-charts.js"></script>   <!-- MC (MISCH): the MIS pictures' adapters — the server's answers to CBDraw shapes, no calculation; Trend reads its period words -->
-<script src="/app/cap-mis-pictures.js"></script>   <!-- Reports › Pictures (MISCH): sales · dues by age · income and expense · cash 30 days, each with its table -->
+<script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
+<script src="/app/mis-charts.js"></script><script src="/app/cap-mis-pictures.js"></script>   <!-- MC (MISCH): the MIS pictures' adapters — the server's answers to CBDraw shapes, no calculation; Trend reads its period words -->   <!-- Reports › Pictures (MISCH): sales · dues by age · income and expense · cash 30 days, each with its table -->
 <script src="/app/cap-mis-trend.js"></script>   <!-- Reports › Trend (RPT2): sales by week · month · quarter · year beside last year — rollup.series on the server, drawn here -->
 <script src="/app/cap-mis.js"></script>   <!-- Reports tab (T3-P4-ACCOUNT): the server's one measurement (lib/measure through GET /api/folders/mis) as one CBList; every number opens the list that holds it -->   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head -->

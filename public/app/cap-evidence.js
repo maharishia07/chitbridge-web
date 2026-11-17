@@ -18,10 +18,10 @@
   var doc = root.document;
   var seen = {}; /* entry_id → { entry, ctl }: the entries the page ingested, so a press finds its row */
 
-  function T(s) {
+  function evidenceText(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  var W = {
+  var EVIDENCE_WORDS = {
     flag: 'No tax invoice',
     none: 'No file',
     nodoc: 'No source',
@@ -44,7 +44,7 @@
     claimBox: 'the tax you claim',
     claimSee: 'See them'
   };
-  var CSS =
+  var EVIDENCE_CSS =
     '.ev{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:inherit;font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 10px;min-height:28px;cursor:pointer;white-space:nowrap}' +
     '.ev:focus-visible{outline:2px solid var(--blue,#1f5fa8);outline-offset:2px}' +
     '.ev-ok{border-color:var(--ok,#2E8B57);color:var(--ok-3,#0F5132)}' +
@@ -69,7 +69,7 @@
     cssDone = true;
     var node = doc.createElement('style');
     node.setAttribute('data-cbevidence', '1');
-    node.textContent = CSS;
+    node.textContent = EVIDENCE_CSS;
     (doc.head || doc.documentElement).appendChild(node);
   }
   function sizeWords(bytes) {
@@ -79,27 +79,27 @@
 
   /** the chip's state from what the server sent: { key, rank, tone, word } (key = the Day book's Evidence filter; rank = its sort, the ones needing action first) */
   function stateOf(ev) {
-    if (ev.flag === 'no_tax_invoice') return { key: 'flag', rank: 0, tone: 'warn', word: T(W.flag), sym: '⚠' };
-    if (ev.count > 0) return { key: 'held', rank: 3, tone: 'ok', word: T(W.evidence) + ' ' + ev.count, sym: '📎' };
-    if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: T(W.none), sym: '○' };
-    return { key: 'nodoc', rank: 2, tone: 'quiet', word: T(W.nodoc), sym: '○' };
+    if (ev.flag === 'no_tax_invoice') return { key: 'flag', rank: 0, tone: 'warn', word: evidenceText(EVIDENCE_WORDS.flag), sym: '⚠' };
+    if (ev.count > 0) return { key: 'held', rank: 3, tone: 'ok', word: evidenceText(EVIDENCE_WORDS.evidence) + ' ' + ev.count, sym: '📎' };
+    if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.none), sym: '○' };
+    return { key: 'nodoc', rank: 2, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.nodoc), sym: '○' };
   }
 
-  function use(cfg) {
+  function useEvidence(cfg) {
     addCss();
-    var ctl = {
+    var control = {
       cfg: cfg || {},
       /** remember the page's entries (the rows the chips stand on) */
       ingest: function (list) {
         (list || []).forEach(function (entry) {
-          if (entry && entry.entry_id) seen[String(entry.entry_id)] = { entry: entry, ctl: ctl };
+          if (entry && entry.entry_id) seen[String(entry.entry_id)] = { entry: entry, ctl: control };
         });
       },
       /** the chip for an entry (html); empty when the server sent no evidence (an older server) */
       chip: function (entry) {
         var ev = entry && entry.evidence;
         if (!ev || !entry.entry_id) return '';
-        if (!seen[String(entry.entry_id)]) ctl.ingest([entry]);
+        if (!seen[String(entry.entry_id)]) control.ingest([entry]);
         var s = stateOf(ev);
         return (
           '<button type="button" class="ev ev-' + s.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + s.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '">' +
@@ -107,10 +107,10 @@
         );
       },
       sheet: function (entry, o) {
-        return openSheet(ctl, entry, o || {});
+        return openSheet(control, entry, o || {});
       }
     };
-    return ctl;
+    return control;
   }
 
   /** the page a tab shows for a file: its name as the TITLE (a blob url alone would title the tab with a bare id) and the file in the browser's own viewer (a PDF in the PDF plugin, an image as an image) */
@@ -131,19 +131,19 @@
     a.remove();
   }
   var alive = []; /* the blob urls of opened files: kept until this page goes, so a tab that is reloaded still finds its file (nothing is stored beyond the page) */
-  if (root.addEventListener) root.addEventListener('pagehide', function () { alive.forEach(function (u) { try { root.URL.revokeObjectURL(u); } catch (_) { /* gone */ } }); alive = []; });
+  if (root.addEventListener) root.addEventListener('pagehide', function () { alive.forEach(function (u) { try { root.URL.revokeObjectURL(u); } catch (failure) { if (root.cbQuiet) root.cbQuiet('evidence:revoke', failure); /* gone */ } }); alive = []; });
 
   /** open one file through the seat's own door: images and PDFs in a new tab titled with the file's name; anything else downloads */
-  function openFile(ctl, file, out) {
+  function openFile(control, file, out) {
     function fail(text) {
       out.setAttribute('data-tone', 'error');
       out.textContent = text;
     }
     out.removeAttribute('data-tone');
     out.textContent = '';
-    return ctl.cfg.raw('/api/books/evidence/' + encodeURIComponent(file.id)).then(
+    return control.cfg.raw('/api/books/evidence/' + encodeURIComponent(file.id)).then(
       function (res) {
-        if (!res.ok) return fail(res.status === 403 ? T(W.ended) : T(W.failed));
+        if (!res.ok) return fail(res.status === 403 ? evidenceText(EVIDENCE_WORDS.ended) : evidenceText(EVIDENCE_WORDS.failed));
         return res.blob().then(function (blob) {
           var mime = String(blob.type || '').toLowerCase();
           var fileUrl = root.URL.createObjectURL(blob);
@@ -155,50 +155,65 @@
           pressLink(page, file.name, false);
         });
       },
-      function () { fail(T(W.failed)); }
+      function () { fail(evidenceText(EVIDENCE_WORDS.failed)); }
     );
   }
 
-  /** CMP063 the sheet */
-  function openSheet(ctl, entry, o) {
-    var ev = entry && entry.evidence;
-    if (!ev) return null;
-    addCss();
-    var dlg = doc.createElement('dialog');
-    dlg.className = 'ev-sheet';
-    dlg.setAttribute('data-cbsid', 'CMP063-D01');
-    dlg.setAttribute('data-pop', 'CMP063');
-    dlg.setAttribute('data-testid', 'ev-sheet');
-    var no = entry.entry_no || '';
-    dlg.setAttribute('aria-label', T(W.head).replace('{no}', no));
-    var flag = ev.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(ev.flag_why || T(W.flagWhy).replace('{tax}', (typeof packWord === 'function' && packWord('taxName')) || 'Tax')) + (ev.cite ? '<small>' + esc(T(W.rule)) + ': ' + esc(ev.cite) + '</small>' : '') + '</div>' : '';
-    var srcLine = ev.doc ? '<div data-testid="ev-source"><b>' + esc(T(W.source)) + '</b>: ' + esc(ev.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + esc(T(W.noSource)) + '</div>';
-    var files = (ev.files || []).length
-      ? '<ul class="ev-list" data-testid="ev-files">' + ev.files.map(function (f, n) {
-          return '<li><button type="button" class="ev-file" data-cbsid="CMP063-B02" data-ev-file="' + n + '" data-testid="ev-file-' + n + '"><b>' + esc(f.name) + '</b><span>' + esc(sizeWords(f.size)) + ' · ' + esc(T(W.open)) + '</span></button></li>';
-        }).join('') + '</ul>'
-      : ev.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + esc(T(W.noFiles)) + '</div>' : '';
-    dlg.innerHTML =
-      '<div class="ev-in"><div class="ev-hd"><h2 data-testid="ev-title">' + esc(T(W.head).replace('{no}', no)) + '</h2>' +
-      '<button type="button" class="ev-x" data-cbsid="CMP063-B01" data-ev-close="1" aria-label="' + esc(T(W.close)) + '">✕</button></div>' +
-      flag + srcLine + files + '<div class="ev-out" role="status" data-testid="ev-out"></div></div>';
-    (doc.body || doc.documentElement).appendChild(dlg);
-    var out = dlg.querySelector('.ev-out');
-    dlg.addEventListener('click', function (e) {
+  /** the sheet's file list (or the no-files line when the entry has a source but no file; nothing when it has no source) */
+  function filesHTML(evidence) {
+    var files = (evidence.files || []).length
+    ? '<ul class="ev-list" data-testid="ev-files">' + evidence.files.map(function (f, n) {
+        return '<li><button type="button" class="ev-file" data-cbsid="CMP063-B02" data-ev-file="' + n + '" data-testid="ev-file-' + n + '"><b>' + esc(f.name) + '</b><span>' + esc(sizeWords(f.size)) + ' · ' + esc(evidenceText(EVIDENCE_WORDS.open)) + '</span></button></li>';
+      }).join('') + '</ul>'
+    : evidence.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + esc(evidenceText(EVIDENCE_WORDS.noFiles)) + '</div>' : '';
+    return files;
+  }
+  /** the sheet's body: the flag's reason, where the entry's source is, and its files */
+  function sheetHTML(evidence, no) {
+    var flag = evidence.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(evidence.flag_why || evidenceText(EVIDENCE_WORDS.flagWhy).replace('{tax}', (typeof packWord === 'function' && packWord('taxName')) || 'Tax')) + (evidence.cite ? '<small>' + esc(evidenceText(EVIDENCE_WORDS.rule)) + ': ' + esc(evidence.cite) + '</small>' : '') + '</div>' : '';
+    var srcLine = evidence.doc ? '<div data-testid="ev-source"><b>' + esc(evidenceText(EVIDENCE_WORDS.source)) + '</b>: ' + esc(evidence.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + esc(evidenceText(EVIDENCE_WORDS.noSource)) + '</div>';
+    var files = filesHTML(evidence);
+    return (
+      '<div class="ev-in"><div class="ev-hd"><h2 data-testid="ev-title">' + esc(evidenceText(EVIDENCE_WORDS.head).replace('{no}', no)) + '</h2>' +
+      '<button type="button" class="ev-x" data-cbsid="CMP063-B01" data-ev-close="1" aria-label="' + esc(evidenceText(EVIDENCE_WORDS.close)) + '">✕</button></div>' +
+      flag + srcLine + files + '<div class="ev-out" role="status" data-testid="ev-out"></div></div>'
+    );
+  }
+  /** a press in the sheet closes it or opens a file; closing gives the focus back to the chip that opened it */
+  function wireSheet(dialog, control, evidence, options) {
+    var out = dialog.querySelector('.ev-out');
+    dialog.addEventListener('click', function (e) {
       var t = e.target && e.target.closest ? e.target.closest('button') : null;
       if (!t) return;
-      if (t.hasAttribute('data-ev-close')) dlg.close();
-      else if (t.hasAttribute('data-ev-file')) openFile(ctl, ev.files[Number(t.getAttribute('data-ev-file'))], out);
+      if (t.hasAttribute('data-ev-close')) dialog.close();
+      else if (t.hasAttribute('data-ev-file')) openFile(control, evidence.files[Number(t.getAttribute('data-ev-file'))], out);
     });
-    dlg.addEventListener('close', function () {
-      dlg.remove();
-      if (o.opener && o.opener.focus) try { o.opener.focus(); } catch (_) { /* the row repainted */ }
+    dialog.addEventListener('close', function () {
+      dialog.remove();
+      if (options.opener && options.opener.focus) try { options.opener.focus(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('evidence:focus', failure); /* the row repainted */ }
     });
-    if (dlg.showModal) dlg.showModal();
-    else dlg.setAttribute('open', '');
-    var first = dlg.querySelector('.ev-file') || dlg.querySelector('.ev-x');
+    return out;
+  }
+  /** CMP063 the sheet */
+  function openSheet(control, entry, options) {
+    var evidence = entry && entry.evidence;
+    if (!evidence) return null;
+    addCss();
+    var dialog = doc.createElement('dialog');
+    dialog.className = 'ev-sheet';
+    dialog.setAttribute('data-cbsid', 'CMP063-D01');
+    dialog.setAttribute('data-pop', 'CMP063');
+    dialog.setAttribute('data-testid', 'ev-sheet');
+    var no = entry.entry_no || '';
+    dialog.setAttribute('aria-label', evidenceText(EVIDENCE_WORDS.head).replace('{no}', no));
+    dialog.innerHTML = sheetHTML(evidence, no);
+    (doc.body || doc.documentElement).appendChild(dialog);
+    wireSheet(dialog, control, evidence, options);
+    if (dialog.showModal) dialog.showModal();
+    else dialog.setAttribute('open', '');
+    var first = dialog.querySelector('.ev-file') || dialog.querySelector('.ev-x');
     if (first) first.focus();
-    return dlg;
+    return dialog;
   }
 
   /* a press on a chip, anywhere on the page: capture phase, so the row behind it does not also open */
@@ -226,11 +241,11 @@
   function claimWarning(u, money) {
     if (!u || !(u.count > 0) || !(u.tax_minor > 0)) return null;
     addCss(); /* the warning band is painted by a page that has not opened the chip yet */
-    var text = T(u.count === 1 ? W.claimOne : W.claimMany)
+    var text = evidenceText(u.count === 1 ? EVIDENCE_WORDS.claimOne : EVIDENCE_WORDS.claimMany)
       .replace('{amount}', money(u.tax_minor))
-      .replace('{box}', u.box ? u.box : T(W.claimBox))
+      .replace('{box}', u.box ? u.box : evidenceText(EVIDENCE_WORDS.claimBox))
       .replace('{n}', String(u.count));
-    return { text: text, see: T(W.claimSee) };
+    return { text: text, see: evidenceText(EVIDENCE_WORDS.claimSee) };
   }
 
   /**
@@ -240,12 +255,12 @@
   function claimRisk(u, netMinor, money) {
     if (!u || !(u.count > 0) || u.net_if_unclaimed_minor == null) return null;
     var now = Number(u.net_if_unclaimed_minor),
-      kind = now < 0 ? ' ' + T('refund') : netMinor < 0 ? ' ' + T('to pay') : '';
-    return T(u.count === 1 ? W.claimRiskOne : W.claimRiskMany)
+      kind = now < 0 ? ' ' + evidenceText('refund') : netMinor < 0 ? ' ' + evidenceText('to pay') : '';
+    return evidenceText(u.count === 1 ? EVIDENCE_WORDS.claimRiskOne : EVIDENCE_WORDS.claimRiskMany)
       .replace('{amount}', money(Math.abs(now)))
       .replace('{kind}', kind)
       .replace('{n}', String(u.count));
   }
 
-  root.CBEvidence = { use: use, stateOf: stateOf, claimWarning: claimWarning, claimRisk: claimRisk, words: { flag: W.flag, none: W.none, nodoc: W.nodoc, held: 'File attached' } };
+  root.CBEvidence = { use: useEvidence, stateOf: stateOf, claimWarning: claimWarning, claimRisk: claimRisk, words: { flag: EVIDENCE_WORDS.flag, none: EVIDENCE_WORDS.none, nodoc: EVIDENCE_WORDS.nodoc, held: 'File attached' } };
 })(typeof window !== 'undefined' ? window : globalThis);

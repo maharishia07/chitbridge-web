@@ -22,6 +22,7 @@ function csThemeStyle(theme) {
     .join(';');
   return set + ';--page:var(--paper);--accent-text:var(--blue-d,#174A87);--grey:var(--grey,#6f6450)';
 }
+/** the twelve months of the sample bars: this year, last year, the hatched part-month and its titles */
 function csPoints() {
   return CS_MONTHS.map(function (name, at) {
     return {
@@ -40,6 +41,7 @@ function csStrip() {
     return { label: name, state: at < 9 ? 'locked' : at === 9 ? 'open' : 'running' };
   });
 }
+/** the five sample charts of one theme, each drawn with that theme's measured palette */
 function csCharts(key, palette) {
   return (
     '<div class="card"><b>Column with previous</b>' +
@@ -95,6 +97,7 @@ function csRow(key, theme, panel, contrast) {
   );
   return row;
 }
+/** draw one panel per theme, then the measured summary (and window.CB_CHART_SAMPLE for the e2e shot) */
 function csMount() {
   var contrast = CBUiStandard.contrastRatio;
   var themes = CBScreen.APP_THEMES;
@@ -108,14 +111,14 @@ function csMount() {
     grid.appendChild(panel);
     return csRow(key, themes[key], panel, contrast);
   });
-  var low = rows.filter(function (row) {
+  var belowThree = rows.filter(function (row) {
     return row.previous < 3;
   });
   var raised = rows.filter(function (row) {
     return row.previousMix > 55;
   });
   document.getElementById('summary').textContent =
-    'Previous clears 3:1 on the page and the card in ' + (rows.length - low.length) + ' of ' + rows.length + ' themes. ' +
+    'Previous clears 3:1 on the page and the card in ' + (rows.length - belowThree.length) + ' of ' + rows.length + ' themes. ' +
     (raised.length ? 'Mix raised above 55% in ' + raised.map(function (row) { return row.name; }).join(', ') + '.' : 'No theme needed more than the 55% mix.');
   window.CB_CHART_SAMPLE = rows;
 }

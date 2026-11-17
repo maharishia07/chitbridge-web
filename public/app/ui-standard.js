@@ -132,7 +132,6 @@ var CBUiStandard = (function () {
   var counters = { mount: 0, control: 0 };
   /** the waves data (public/app/ui-waves.json), read once by loadWaves(); null until it arrives */
   var wavesData = null;
-
   /* ── words: the page's own strings through tx(), the language held in the page (never in storage) ── */
   function words(text) {
     return tx(text);
@@ -173,7 +172,6 @@ var CBUiStandard = (function () {
     var lighter = Math.max(luminance(first), luminance(second)), darker = Math.min(luminance(first), luminance(second));
     return (lighter + 0.05) / (darker + 0.05);
   }
-
   /* ── the dialog host ui.dialog needs (same classes as app.html's modal) ── */
   function closeModal() {
     var host = document.getElementById('modalhost');

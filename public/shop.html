@@ -5,8 +5,7 @@
      FLOW  load → shopFrame (CBFrame bar) → the catalogue read → paint → cart → order (POST /api/orders)
      CARD storefront-and-catalogue/storefront -->
 <head>
-<meta charset="utf-8">
-<script src="/app/device-id.js"></script>
+<meta charset="utf-8"><script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -77,9 +76,7 @@
   .cbcat-was + .cbcat-offered::before{ content:'→ '; color:var(--grey,#8a949c); font-weight:400; }
   .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:12px 2px 6px; border-bottom:2px solid var(--accent); margin-top:4px; scroll-margin-top:64px; }
 </style>
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/fonts/cb-fonts.css">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/fonts/cb-fonts.css">
 </head>
 <body>
 <div id="shell" data-testid="shop-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): the bar — ⌂ Home is THIS shop's front -->
@@ -96,7 +93,7 @@
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
 <script src="/app/ui.js"></script>
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field draws every input on this page (label, hint, error, 44 px, --field-edge) -->   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
-<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="app/accounts-shell.js"></script>   <!-- INT6a-LOCALE: the string door (CBSTR · cbLang · tx) — the shop had none, so no language pack could load here -->
 <script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05); one home since T2-ENGONCE -->

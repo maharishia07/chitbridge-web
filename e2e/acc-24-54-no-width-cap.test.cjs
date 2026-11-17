@@ -19,8 +19,12 @@ const VIEW_W = 1920;
 let bad = 0;
 const ok = (c, m, why) => { console.log((c ? '  ok   ' : '  FAIL ') + m + (!c && why ? '\n          ' + why : '')); if (!c) bad++; };
 
-/** every <style> block of the page */
-const styleOf = (file) => [...fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8').matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, '')).join('\n');
+/** every <style> block of the page, and its own sheet linked from /app/ ((?:accounts|crm)-page.css), in page order */
+const styleOf = (file) => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8');
+  const parts = [...page.matchAll(/<style[^>]*>([\s\S]*?)<\/style>|<link rel="stylesheet" href="\/app\/((?:accounts|crm)-page.css)">/g)].map((m) => m[1] || fs.readFileSync(path.join(__dirname, '..', 'public', 'app', m[2]), 'utf8'));
+  return parts.map((css) => css.replace(/\/\*[\s\S]*?\*\//g, '')).join('\n');
+};
 
 /** does a media condition hold at VIEW_W? only width queries are understood; anything else (print, prefers-*, hover) is treated as not applying to this screen view */
 function mediaHolds(cond) {
@@ -61,7 +65,7 @@ const px = (v) => { const m = /^([\d.]+)px$/.exec(v); return m ? Number(m[1]) : 
 
 const CHAIN = /^(body|html|\.main|\.content|\.screen|#bk_body|\.wrap|\.app|main|\.page)$/;
 for (const [file, tag, expectContent] of [['accounts.html', 'ACC-24', /\.content\{padding:24px 40px 120px/], ['crm.html', 'ACC-54', /\.content\{padding:20px 24px 120px/]]) {
-  const raw = fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8');
+  const raw = fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '..', 'public', 'app', file.replace('.html', '-page.css')), 'utf8');
   const rules = rulesAt(styleOf(file));
   ok(rules.length > 40, tag + ' ' + file + ': the page CSS is read (' + rules.length + ' rules apply at ' + VIEW_W + ')');
   ok(rules.some((r) => r.sel === '.content'), tag + ' ' + file + ': the .content rule is among them');

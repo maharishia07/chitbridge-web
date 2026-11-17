@@ -59,10 +59,10 @@
   var seen = { token: null, count: 0 };
   /** one beat: a new sign-in reads the grants once; while the Home shell exists without the card (Home repaints, a sign-in after load) the card is drawn again */
   function tick() {
-    var t = token();
-    if (!t || !root.CBBooksGrantApi) return;
-    if (seen.token !== t) {
-      seen.token = t;
+    var tokenNow = token();
+    if (!tokenNow || !root.CBBooksGrantApi) return;
+    if (seen.token !== tokenNow) {
+      seen.token = tokenNow;
       seen.count = 0;
       /* l16 firmhome: the practice read comes first; a firm's Home draws the practice section, not this card, so the grants list is not asked for it (one call less per Home load) */
       var practice = new root.Promise(function (go) { root.setTimeout(go, 0); }).then(function () { return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled() : true; });

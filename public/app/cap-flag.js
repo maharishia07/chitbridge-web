@@ -21,7 +21,7 @@
   var CHUNK = 200; /* the server's cap on records in one read */
   var NOTE_MAX = 1000; /* one number with the server (lib/review-mark.js NOTE_MAX) */
 
-  var EPS = {
+  var FLAG_ENDPOINTS = {
     flagsQuery: { m: 'POST', p: '/api/flags/query' } /* { subject_kind, subject_entity, ids } → { flags: { id: [flag] } } */,
     flagsList: { m: 'GET', p: '/api/flags' } /* ?page= &limit= &kind= &subject_entity= → { flags, total, page, limit } */,
     flagsCounts: { m: 'GET', p: '/api/flags/counts' } /* → { open, bookmarks, notes } */,
@@ -33,9 +33,9 @@
     flagsThread: { m: 'GET', p: '/api/flags/:id/messages' } /* → { flag, messages: [{ by_name, text, mine, at }], may: { reply: { ok, why } } } */,
     flagsReply: { m: 'POST', p: '/api/flags/:id/messages' } /* { message_text } → the thread as it reads now */
   };
-  root.CB_FLAG_EP = EPS;
+  root.CB_FLAG_EP = FLAG_ENDPOINTS;
 
-  var W = {
+  var FLAG_WORDS = {
     saved: 'Saved',
     bookmark: 'Bookmark',
     bookmarked: 'Bookmarked',
@@ -81,10 +81,10 @@
     open: 'Open',
     more: 'Showing the newest {n}.'
   };
-  function T(s) {
+  function flagText(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  var CSS =
+  var FLAG_CSS =
     '.fl{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:var(--grey,#5E594D);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 9px;min-height:28px;cursor:pointer}' +
     '.fl-on{border-color:var(--ok,#2E8B57);color:var(--ok-3,#0F5132)}.fl-note{border-color:var(--warn,#B7791F);color:var(--warn-3,#7A4B00)}' +
     '.fl-thread{display:flex;flex-direction:column;gap:6px;border-inline-start:3px solid var(--line,#DDD6C6);padding-inline-start:10px}.fl-msg{display:flex;flex-direction:column;gap:2px}.fl-msg.mine .fl-sub{font-weight:700}.fl-reply{min-height:56px;width:100%;box-sizing:border-box}' +
@@ -108,94 +108,108 @@
     cssDone = true;
     var node = doc.createElement('style');
     node.setAttribute('data-cbflag', '1');
-    node.textContent = CSS;
+    node.textContent = FLAG_CSS;
     (doc.head || doc.documentElement).appendChild(node);
   }
 
   /** ONE door: the page's own call with NO headers (never X-Books-For) */
-  function ask(call, key, o) {
+  function askFlag(call, key, o) {
     o = o || {};
-    var path = EPS[key].p.replace(':id', encodeURIComponent(o.id == null ? '' : o.id));
+    var path = FLAG_ENDPOINTS[key].p.replace(':id', encodeURIComponent(o.id == null ? '' : o.id));
     var q = Object.keys(o.query || {}).filter(function (k) { return o.query[k] !== '' && o.query[k] != null; }).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(o.query[k]); }).join('&');
-    return call(EPS[key].m, path + (q ? '?' + q : ''), o.body);
+    return call(FLAG_ENDPOINTS[key].m, path + (q ? '?' + q : ''), o.body);
   }
   var gone = function (failure) { return !!failure && (failure.status === 503 || failure.status === 404 || failure.status === 403); };
 
   /** a flag counts when it is still open or resolved (the server never sends a removed one); bookmark and note are its two kinds */
   function open(f) { return f.state === 'open'; }
 
-  function use(cfg) {
+  /** the flags of these records (ONE read per 200); a refusal that means "not for you / not switched on" switches the chips off, any other failure keeps what was known and says so */
+  function loadFlags(cfg, state, kind, ids) {
+    var entity = typeof cfg.entity === 'function' ? cfg.entity() : null;
+    var list = (ids || []).map(String), jobs = [];
+    for (var i = 0; i < list.length; i += CHUNK) jobs.push(list.slice(i, i + CHUNK));
+    state.failed = false;
+    return Promise.all(jobs.map(function (part) {
+      return askFlag(cfg.call, 'flagsQuery', { body: { subject_kind: kind, subject_entity: entity, ids: part } }).then(function (a) {
+        part.forEach(function (id) { delete state.by[id]; });
+        var flags = (a && a.flags) || {};
+        Object.keys(flags).forEach(function (id) { state.by[id] = flags[id]; });
+      });
+    })).then(function () { state.off = false; state.ready = true; }, function (failure) {
+      state.ready = true;
+      if (gone(failure)) state.off = true; else state.failed = true;
+    });
+  }
+  /** the client list: flags from one GET /api/flags, grouped by record (a client's own id) */
+  function ingestFlags(state, kind, flags) {
+    state.by = {};
+    (flags || []).forEach(function (f) {
+      if (f.subject_kind !== kind) return;
+      (state.by[f.subject_id] = state.by[f.subject_id] || []).push(f);
+    });
+    state.off = false;
+    state.ready = true;
+  }
+  /** the chip (html); nothing when the server does not offer flags to this person */
+  /** the chip's word: Saved when bookmarked, Notes when only noted, Bookmark when nothing is kept */
+  function chipWord(star, n) {
+    if (star) return FLAG_WORDS.bookmarked;
+    return n ? FLAG_WORDS.notes : FLAG_WORDS.bookmark;
+  }
+  /** the chip's class: on when bookmarked, note when only noted */
+  function chipTone(star, n) {
+    if (star) return ' fl-on';
+    return n ? ' fl-note' : '';
+  }
+  function chipOf(state, kind, control, id, label) {
+    if (state.off || !state.ready || id == null || id === '') return '';
+    id = String(id);
+    if (label) state.label[id] = String(label);
+    if (kind === 'account') return explainChip(id, control.noted(id));
+    var star = control.bookmarked(id), n = control.noted(id), word = chipWord(star, n);
+    return '<button type="button" class="fl' + chipTone(star, n) + '" data-cbsid="CMP066-B01" data-fl="' + esc(id) + '" data-fl-k="' + kind + '" aria-haspopup="dialog" aria-label="' + esc(flagText(FLAG_WORDS.saved) + ': ' + flagText(word)) + '" title="' + esc(flagText(word)) + '" data-testid="fl-chip-' + esc(id) + '">' +
+      '<span aria-hidden="true">' + (star ? '★' : '☆') + '</span>' + (n ? '<span>' + n + '</span>' : '') + '</button>';
+  }
+  /** put every chip of this record (or every chip) under scope back as the control now says it */
+  function repaintChips(control, scope, id) {
+    if (!doc) return;
+    [].forEach.call((scope || doc).querySelectorAll(id == null ? '[data-fl]' : '[data-fl="' + String(id).replace(/"/g, '') + '"]'), function (node) {
+      var key = node.getAttribute('data-fl'), html = control.chip(key), holder = doc.createElement('span');
+      holder.innerHTML = html;
+      if (holder.firstChild) node.parentNode.replaceChild(holder.firstChild, node); else if (node.parentNode) node.parentNode.removeChild(node);
+    });
+  }
+  function useFlag(cfg) {
     addCss();
     cfg = cfg || {};
     var kind = cfg.kind === 'client' ? 'client' : cfg.kind === 'account' ? 'account' : 'posting';
-    var c = { by: {}, subs: [], off: false, failed: false, ready: false, label: {} };
-    var ctl = {
+    var state = { by: {}, subs: [], off: false, failed: false, ready: false, label: {} };
+    var control = {
       kind: kind,
-      /** the flags of these records (ONE read per 200). A refusal that means "not for you / not switched on" switches the chips off; any other failure keeps what was known and says it failed. */
-      load: function (ids) {
-        var entity = typeof cfg.entity === 'function' ? cfg.entity() : null;
-        var list = (ids || []).map(String), jobs = [];
-        for (var i = 0; i < list.length; i += CHUNK) jobs.push(list.slice(i, i + CHUNK));
-        c.failed = false;
-        return Promise.all(jobs.map(function (part) {
-          return ask(cfg.call, 'flagsQuery', { body: { subject_kind: kind, subject_entity: entity, ids: part } }).then(function (a) {
-            part.forEach(function (id) { delete c.by[id]; });
-            var flags = (a && a.flags) || {};
-            Object.keys(flags).forEach(function (id) { c.by[id] = flags[id]; });
-          });
-        })).then(function () { c.off = false; c.ready = true; }, function (failure) {
-          c.ready = true;
-          if (gone(failure)) c.off = true; else c.failed = true;
-        });
-      },
-      /** the client list: flags from one GET /api/flags, grouped by record (a client's own id) */
-      ingest: function (flags) {
-        c.by = {};
-        (flags || []).forEach(function (f) {
-          if (f.subject_kind !== kind) return;
-          (c.by[f.subject_id] = c.by[f.subject_id] || []).push(f);
-        });
-        c.off = false;
-        c.ready = true;
-      },
-      ready: function () { return c.ready; },
-      off: function () { return c.off; },
-      failed: function () { return c.failed; },
-      flags: function (id) { return c.by[String(id)] || []; },
-      bookmarked: function (id) { return ctl.flags(id).some(function (f) { return f.kind === 'bookmark' && open(f); }); },
-      noted: function (id) { return ctl.flags(id).filter(function (f) { return f.kind === 'note' && open(f); }).length; },
-      any: function (id) { return ctl.bookmarked(id) || ctl.noted(id) > 0; },
-      /** the chip (html); nothing when the server does not offer flags to this person */
-      chip: function (id, label) {
-        if (c.off || !c.ready || id == null || id === '') return '';
-        id = String(id);
-        if (label) c.label[id] = String(label);
-        if (kind === 'account') return explainChip(id, ctl.noted(id));
-        var star = ctl.bookmarked(id), n = ctl.noted(id), word = star ? W.bookmarked : n ? W.notes : W.bookmark;
-        return '<button type="button" class="fl' + (star ? ' fl-on' : n ? ' fl-note' : '') + '" data-cbsid="CMP066-B01" data-fl="' + esc(id) + '" data-fl-k="' + kind + '" aria-haspopup="dialog" aria-label="' + esc(T(W.saved) + ': ' + T(word)) + '" title="' + esc(T(word)) + '" data-testid="fl-chip-' + esc(id) + '">' +
-          '<span aria-hidden="true">' + (star ? '★' : '☆') + '</span>' + (n ? '<span>' + n + '</span>' : '') + '</button>';
-      },
-      /** put every chip of this record (or every chip) under scope back as the control now says it */
-      repaint: function (scope, id) {
-        if (!doc) return;
-        [].forEach.call((scope || doc).querySelectorAll(id == null ? '[data-fl]' : '[data-fl="' + String(id).replace(/"/g, '') + '"]'), function (node) {
-          var key = node.getAttribute('data-fl'), html = ctl.chip(key), holder = doc.createElement('span');
-          holder.innerHTML = html;
-          if (holder.firstChild) node.parentNode.replaceChild(holder.firstChild, node); else if (node.parentNode) node.parentNode.removeChild(node);
-        });
-      },
-      sheet: function (id, o) { return openSheet(cfg, c, ctl, String(id), o || {}, kind); },
-      onChange: function (fn) { c.subs.push(fn); },
-      changed: function (id) { c.subs.forEach(function (fn) { fn(id); }); ctl.repaint(doc, id); },
-      destroy: function () { c.subs = []; c.by = {}; }
+      load: function (ids) { return loadFlags(cfg, state, kind, ids); },
+      ingest: function (flags) { return ingestFlags(state, kind, flags); },
+      ready: function () { return state.ready; },
+      off: function () { return state.off; },
+      failed: function () { return state.failed; },
+      flags: function (id) { return state.by[String(id)] || []; },
+      bookmarked: function (id) { return control.flags(id).some(function (f) { return f.kind === 'bookmark' && open(f); }); },
+      noted: function (id) { return control.flags(id).filter(function (f) { return f.kind === 'note' && open(f); }).length; },
+      any: function (id) { return control.bookmarked(id) || control.noted(id) > 0; },
+      chip: function (id, label) { return chipOf(state, kind, control, id, label); },
+      repaint: function (scope, id) { return repaintChips(control, scope, id); },
+      sheet: function (id, o) { return openSheet(cfg, state, control, String(id), o || {}, kind); },
+      onChange: function (fn) { state.subs.push(fn); },
+      changed: function (id) { state.subs.forEach(function (fn) { fn(id); }); control.repaint(doc, id); },
+      destroy: function () { state.subs = []; state.by = {}; }
     };
-    live[kind] = ctl; /* the press below finds the control that painted the chip */
-    return ctl;
+    live[kind] = control; /* the press below finds the control that painted the chip */
+    return control;
   }
   /** the P&L's Explain (kind 'account'): one button, "Explain" until a note is written, then "Explained"; it opens the same sheet, a note only (no bookmark) */
   function explainChip(id, n) {
-    var word = n ? W.explained : W.explain;
-    return '<button type="button" class="fl' + (n ? ' fl-note' : '') + '" data-cbsid="CMP066-B02" data-fl="' + esc(id) + '" data-fl-k="account" aria-haspopup="dialog" aria-label="' + esc(T(word)) + '" title="' + esc(T(word)) + '" data-testid="fl-explain-' + esc(id) + '"><span>' + esc(T(word)) + '</span></button>';
+    var word = n ? FLAG_WORDS.explained : FLAG_WORDS.explain;
+    return '<button type="button" class="fl' + (n ? ' fl-note' : '') + '" data-cbsid="CMP066-B02" data-fl="' + esc(id) + '" data-fl-k="account" aria-haspopup="dialog" aria-label="' + esc(flagText(word)) + '" title="' + esc(flagText(word)) + '" data-testid="fl-explain-' + esc(id) + '"><span>' + esc(flagText(word)) + '</span></button>';
   }
   var live = {}; /* kind → the newest control of that kind on this page */
   /* a press on a chip, anywhere on the page: captured, so the row behind it does not also open (as cap-mark.js and cap-evidence.js do) */
@@ -214,134 +228,167 @@
   }
 
   /* ── CMP067 the Saved sheet ── */
-  function openSheet(cfg, c, ctl, id, o, kind) {
+  function sayInSheet(sheet, text, error) {
+    var out = sheet.dialog.querySelector('.fl-out');
+    if (out) { out.textContent = text || ''; if (error) out.setAttribute('data-tone', 'error'); else out.removeAttribute('data-tone'); }
+  }
+  function sheetWho(sheet) {
+    var chosen = sheet.dialog.querySelector('input[name="fl_who"]:checked');
+    return chosen && chosen.value === 'me' ? 'me' : 'org';
+  }
+  /** the first line of a saved item: its kind, who it is for, who wrote it, and that it is resolved */
+  function flagHead(flag) {
+    var shared = flag.visibility === 'org', noteKind = flag.kind === 'note', done = flag.state === 'resolved';
+    return '<div class="fl-sub">' + esc(flagText(noteKind ? FLAG_WORDS.kindNote : FLAG_WORDS.kindBookmark)) + ' · ' + esc(flagText(shared ? FLAG_WORDS.firm : FLAG_WORDS.me)) + (flag.by_name ? ' · ' + esc(flagText(FLAG_WORDS.by)) + ' ' + esc(flag.by_name) : '') + (done ? ' · ' + esc(flagText(FLAG_WORDS.resolvedBy)) + ' ' + esc(flag.resolved_by || '') : '') + '</div>';
+  }
+  /** the item's buttons: Resolve or Reopen (a note), Share with the firm (mine, still private), Remove (twice: the second press commits) */
+  function flagButtons(sheet, flag) {
+    var shared = flag.visibility === 'org', mine = flag.mine === true, noteKind = flag.kind === 'note', done = flag.state === 'resolved';
+    return (
+(noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(flag.flag_id) + '">' + esc(flagText(done ? FLAG_WORDS.reopen : FLAG_WORDS.resolve)) + '</button>' : '') +
+(!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(flag.flag_id) + '">' + esc(flagText(FLAG_WORDS.shareFirm)) + '</button>' : '') +
+'<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(flag.flag_id) + '">' + esc(flagText(sheet.armed === flag.flag_id ? FLAG_WORDS.sure : FLAG_WORDS.remove)) + '</button>'
+    );
+  }
+  function flagLine(sheet, flag) {
+    var shared = flag.visibility === 'org', noteKind = flag.kind === 'note', done = flag.state === 'resolved';
+    return '<li class="fl-item' + (done ? ' gone' : '') + '" data-flag="' + esc(flag.flag_id) + '">' +
+      flagHead(flag) +
+      (noteKind ? '<div class="fl-text">' + esc(flag.note) + '</div>' : '') +
+      (noteKind && shared ? '<div class="fl-thread" data-thread="' + esc(flag.flag_id) + '" data-testid="fl-thread"></div>' : '') +
+      '<div class="fl-row">' +
+      flagButtons(sheet, flag) + '</div></li>';
+  }
+  function threadHtml(sheet, flagId, a) {
+    if (a === false) return '<div class="fl-sub" data-tone="error">' + esc(flagText(FLAG_WORDS.threadFail)) + '</div>';
+    var msgs = (a.messages || []).map(function (m) {
+      return '<div class="fl-msg' + (m.mine ? ' mine' : '') + '"><div class="fl-sub">' + esc(m.mine ? flagText(FLAG_WORDS.me2) : m.by_name || '') + '</div><div class="fl-text">' + esc(m.text) + '</div></div>';
+    }).join('');
+    var may = (a.may && a.may.reply) || { ok: false, why: '' };
+    return (msgs ? '<div class="fl-sub">' + esc(flagText(FLAG_WORDS.replies)) + '</div>' + msgs : '') +
+      (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(flagText(FLAG_WORDS.replyLabel)) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(flagText(FLAG_WORDS.reply)) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
+  }
+  function fillThread(sheet, flagId) {
+    var node = sheet.dialog.querySelector('.fl-thread[data-thread="' + String(flagId).replace(/"/g, '') + '"]');
+    if (node && sheet.threads[flagId] !== undefined) node.innerHTML = threadHtml(sheet, flagId, sheet.threads[flagId]);
+  }
+  function loadThreads(sheet) {
+    [].forEach.call(sheet.dialog.querySelectorAll('.fl-thread[data-thread]'), function (node) {
+      var flagId = node.getAttribute('data-thread');
+      if (sheet.threads[flagId] !== undefined) return fillThread(sheet, flagId);
+      askFlag(sheet.cfg.call, 'flagsThread', { id: flagId }).then(function (a) { sheet.threads[flagId] = a || false; fillThread(sheet, flagId); }, function () { sheet.threads[flagId] = false; fillThread(sheet, flagId); });
+    });
+  }
+  /** the sheet's html: the title, who the item is for, the bookmark and note boxes, and the saved items */
+  function sheetBody(sheet, flags, mineBookmark) {
+    return (
+      '<div class="fl-in"><div class="fl-hd"><h2>' + esc(sheet.title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(flagText(FLAG_WORDS.close)) + '">✕</button></div>' +
+      '<div class="fl-sub">' + esc(flagText(sheet.kind === 'account' ? FLAG_WORDS.explainHelp : FLAG_WORDS.privateNote)) + '</div>' +
+      '<fieldset class="fl-who"><legend class="fl-sub">' + esc(flagText(FLAG_WORDS.who)) + '</legend>' +
+      '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(flagText(FLAG_WORDS.firm)) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(flagText(FLAG_WORDS.me)) + '</label></fieldset>' +
+      (mineBookmark || sheet.kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(flagText(FLAG_WORDS.bookmark)) + '</button></div>') +
+      '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(flagText(FLAG_WORDS.noteLabel)) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(flagText(sheet.kind === 'account' ? FLAG_WORDS.saveExplain : FLAG_WORDS.addNote)) + '</button></div>' +
+      '<div class="fl-out" role="status" aria-live="polite"></div>' +
+      flagListHTML(sheet, flags) +
+      '</div>'
+    );
+  }
+  /** the saved items of this record, or why there are none to show */
+  function flagListHTML(sheet, flags) {
+    if (sheet.state.failed) return '<div class="fl-out" data-tone="error">' + esc(flagText(FLAG_WORDS.readFail)) + '</div>';
+    if (!flags.length) return '<div class="fl-sub">' + esc(flagText(FLAG_WORDS.none)) + '</div>';
+    return '<ul class="fl-list" data-testid="fl-list">' + flags.map(function (item) { return flagLine(sheet, item); }).join('') + '</ul>';
+  }
+  function paintSheet(sheet, keepNote) {
+    var note = keepNote ? (sheet.dialog.querySelector('.fl-box') || {}).value || '' : '', flags = sheet.control.flags(sheet.id), mineBookmark = flags.filter(function (f) { return f.kind === 'bookmark' && open(f); })[0];
+    sheet.dialog.innerHTML = sheetBody(sheet, flags, mineBookmark);
+    if (mineBookmark) { var who0 = sheet.dialog.querySelector('input[name="fl_who"][value="' + (mineBookmark.visibility === 'me' ? 'me' : 'org') + '"]'); if (who0) who0.checked = true; }
+    var box = sheet.dialog.querySelector('.fl-box');
+    if (box && note) box.value = note;
+    loadThreads(sheet);
+  }
+  /** write one change; on an answer re-read this record (the server's own view, including what a colleague did) and repaint */
+  function writeFlag(sheet, key, body, flagId) {
+    if (sheet.busy) return;
+    sheet.busy = true;
+    return askFlag(sheet.cfg.call, key, { id: flagId, body: body }).then(function () {
+      return sheet.kind === 'client' ? refreshClient(sheet) : sheet.control.load([sheet.id]);
+    }).then(function () {
+      sheet.threads = {}; sheet.busy = false; sheet.armed = null; paintSheet(sheet, false); sayInSheet(sheet, flagText(FLAG_WORDS.done)); sheet.control.changed(sheet.id);
+    }, function (failure) {
+      sheet.busy = false; sheet.armed = null; sayInSheet(sheet, (failure && failure.message) || flagText(FLAG_WORDS.failed), true);
+    });
+  }
+  function refreshClient(sheet) {
+    return askFlag(sheet.cfg.call, 'flagsList', { query: { subject_entity: sheet.id, limit: CHUNK } }).then(function (a) {
+      sheet.state.by[sheet.id] = ((a && a.flags) || []).filter(function (f) { return f.subject_kind === 'client' && f.subject_id === sheet.id; });
+    });
+  }
+  function addFlagLine(sheet, flagKind, noteText) {
+    var body = { kind: flagKind, visibility: sheetWho(sheet), subject_kind: sheet.kind, subject_entity: sheet.entity, items: [{ id: sheet.id, label: String(sheet.title).slice(0, 80) }] };
+    if (flagKind === 'note') body.note = noteText;
+    return writeFlag(sheet, 'flagsAdd', body);
+  }
+  /** a press in the sheet: close, bookmark, note, reply, or the change of one flag (Remove asks twice) */
+  /** Resolve · Reopen · Share · Remove on one saved item; Remove asks twice (the second press commits: removing a note cannot be undone) */
+  function changeFlag(sheet, button, action, flagId) {
+    if (action === 'remove' && sheet.armed !== flagId) { sheet.armed = flagId; button.textContent = flagText(FLAG_WORDS.sure); return; } /* the second press commits: removing a note drops its words */
+    return writeFlag(sheet, { resolve: 'flagsResolve', reopen: 'flagsReopen', share: 'flagsShare', remove: 'flagsRemove' }[action], null, flagId);
+  }
+  function onSheetClick(sheet, event) {
+    var button = event.target.closest && event.target.closest('[data-act]');
+    if (!button) return;
+    var action = button.getAttribute('data-act');
+    if (action === 'close') return sheet.dialog.close();
+    if (action === 'bookmark') return addFlagLine(sheet, 'bookmark');
+    if (action === 'note') {
+      var text = (sheet.dialog.querySelector('.fl-box').value || '').trim();
+      if (!text) return sayInSheet(sheet, flagText(FLAG_WORDS.noteNeeded), true);
+      return addFlagLine(sheet, 'note', text);
+    }
+    var flagId = button.getAttribute('data-id');
+    if (action === 'reply') return sendReply(sheet, flagId);
+      return changeFlag(sheet, button, action, flagId);
+  }
+  /** send the reply typed under a shared note; the thread repaints with the answer */
+  function sendReply(sheet, flagId) {
+    var box = sheet.dialog.querySelector('textarea[data-reply="' + String(flagId).replace(/"/g, '') + '"]'), words = box ? (box.value || '').trim() : '';
+    if (!words) return sayInSheet(sheet, flagText(FLAG_WORDS.replyNeeded), true);
+    if (sheet.busy) return;
+    sheet.busy = true;
+    return askFlag(sheet.cfg.call, 'flagsReply', { id: flagId, body: { message_text: words } }).then(function (a) {
+      sheet.busy = false; sheet.threads[flagId] = a || false; fillThread(sheet, flagId); sayInSheet(sheet, flagText(FLAG_WORDS.done));
+    }, function (failure) {
+      sheet.busy = false; sayInSheet(sheet, (failure && failure.message) || flagText(FLAG_WORDS.failed), true);
+    });
+  }
+  function openSheet(cfg, state, control, id, options, kind) {
+    var sheet = { cfg: cfg, state: state, control: control, id: id, options: options, kind: kind };
     addCss();
-    var title = o.label || c.label[id] || id, dlg = doc.createElement('dialog'), entity = kind === 'client' ? id : typeof cfg.entity === 'function' ? cfg.entity() : null;
-    var armed = null, busy = false;
-    dlg.className = 'fl-sheet';
-    dlg.setAttribute('data-cbsid', 'CMP067-D01');
-    dlg.setAttribute('data-testid', 'fl-sheet');
-    dlg.setAttribute('aria-label', T(W.saved) + ': ' + title);
-    function say(text, error) {
-      var out = dlg.querySelector('.fl-out');
-      if (out) { out.textContent = text || ''; if (error) out.setAttribute('data-tone', 'error'); else out.removeAttribute('data-tone'); }
-    }
-    function who() {
-      var chosen = dlg.querySelector('input[name="fl_who"]:checked');
-      return chosen && chosen.value === 'me' ? 'me' : 'org';
-    }
-    function flagLine(f) {
-      var shared = f.visibility === 'org', mine = f.mine === true, noteKind = f.kind === 'note', done = f.state === 'resolved';
-      return '<li class="fl-item' + (done ? ' gone' : '') + '" data-flag="' + esc(f.flag_id) + '">' +
-        '<div class="fl-sub">' + esc(T(noteKind ? W.kindNote : W.kindBookmark)) + ' · ' + esc(T(shared ? W.firm : W.me)) + (f.by_name ? ' · ' + esc(T(W.by)) + ' ' + esc(f.by_name) : '') + (done ? ' · ' + esc(T(W.resolvedBy)) + ' ' + esc(f.resolved_by || '') : '') + '</div>' +
-        (noteKind ? '<div class="fl-text">' + esc(f.note) + '</div>' : '') +
-        (noteKind && shared ? '<div class="fl-thread" data-thread="' + esc(f.flag_id) + '" data-testid="fl-thread"></div>' : '') +
-        '<div class="fl-row">' +
-        (noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(f.flag_id) + '">' + esc(T(done ? W.reopen : W.resolve)) + '</button>' : '') +
-        (!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(f.flag_id) + '">' + esc(T(W.shareFirm)) + '</button>' : '') +
-        '<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(f.flag_id) + '">' + esc(T(armed === f.flag_id ? W.sure : W.remove)) + '</button></div></li>';
-    }
+    sheet.title = sheet.options.label || sheet.state.label[sheet.id] || sheet.id; sheet.dialog = doc.createElement('dialog'); sheet.entity = sheet.kind === 'client' ? sheet.id : typeof sheet.cfg.entity === 'function' ? sheet.cfg.entity() : null;
+    sheet.armed = null; sheet.busy = false;
+    sheet.dialog.className = 'fl-sheet';
+    sheet.dialog.setAttribute('data-cbsid', 'CMP067-D01');
+    sheet.dialog.setAttribute('data-testid', 'fl-sheet');
+    sheet.dialog.setAttribute('aria-label', flagText(FLAG_WORDS.saved) + ': ' + sheet.title);
     /** the replies of one shared note (the firm's own thread, never the client's): what the server says, its reply right with its sentence, and a reply box when it may */
-    var threads = {};
-    function threadHtml(flagId, a) {
-      if (a === false) return '<div class="fl-sub" data-tone="error">' + esc(T(W.threadFail)) + '</div>';
-      var msgs = (a.messages || []).map(function (m) {
-        return '<div class="fl-msg' + (m.mine ? ' mine' : '') + '"><div class="fl-sub">' + esc(m.mine ? T(W.me2) : m.by_name || '') + '</div><div class="fl-text">' + esc(m.text) + '</div></div>';
-      }).join('');
-      var may = (a.may && a.may.reply) || { ok: false, why: '' };
-      return (msgs ? '<div class="fl-sub">' + esc(T(W.replies)) + '</div>' + msgs : '') +
-        (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(T(W.replyLabel)) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(T(W.reply)) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
-    }
-    function fillThread(flagId) {
-      var node = dlg.querySelector('.fl-thread[data-thread="' + String(flagId).replace(/"/g, '') + '"]');
-      if (node && threads[flagId] !== undefined) node.innerHTML = threadHtml(flagId, threads[flagId]);
-    }
-    function loadThreads() {
-      [].forEach.call(dlg.querySelectorAll('.fl-thread[data-thread]'), function (node) {
-        var flagId = node.getAttribute('data-thread');
-        if (threads[flagId] !== undefined) return fillThread(flagId);
-        ask(cfg.call, 'flagsThread', { id: flagId }).then(function (a) { threads[flagId] = a || false; fillThread(flagId); }, function () { threads[flagId] = false; fillThread(flagId); });
-      });
-    }
-    function paint(keepNote) {
-      var note = keepNote ? (dlg.querySelector('.fl-box') || {}).value || '' : '', flags = ctl.flags(id), mineBookmark = flags.filter(function (f) { return f.kind === 'bookmark' && open(f); })[0];
-      dlg.innerHTML = '<div class="fl-in"><div class="fl-hd"><h2>' + esc(title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(T(W.close)) + '">✕</button></div>' +
-        '<div class="fl-sub">' + esc(T(kind === 'account' ? W.explainHelp : W.privateNote)) + '</div>' +
-        '<fieldset class="fl-who"><legend class="fl-sub">' + esc(T(W.who)) + '</legend>' +
-        '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(T(W.firm)) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(T(W.me)) + '</label></fieldset>' +
-        (mineBookmark || kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(T(W.bookmark)) + '</button></div>') +
-        '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(T(W.noteLabel)) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(T(kind === 'account' ? W.saveExplain : W.addNote)) + '</button></div>' +
-        '<div class="fl-out" role="status" aria-live="polite"></div>' +
-        (c.failed ? '<div class="fl-out" data-tone="error">' + esc(T(W.readFail)) + '</div>' : flags.length ? '<ul class="fl-list" data-testid="fl-list">' + flags.map(flagLine).join('') + '</ul>' : '<div class="fl-sub">' + esc(T(W.none)) + '</div>') +
-        '</div>';
-      if (mineBookmark) { var who0 = dlg.querySelector('input[name="fl_who"][value="' + (mineBookmark.visibility === 'me' ? 'me' : 'org') + '"]'); if (who0) who0.checked = true; }
-      var box = dlg.querySelector('.fl-box');
-      if (box && note) box.value = note;
-      loadThreads();
-    }
-    /** write one change; on an answer re-read this record (the server's own view, including what a colleague did) and repaint */
-    function write(key, body, flagId) {
-      if (busy) return;
-      busy = true;
-      return ask(cfg.call, key, { id: flagId, body: body }).then(function () {
-        return kind === 'client' ? refreshClient() : ctl.load([id]);
-      }).then(function () {
-        threads = {}; busy = false; armed = null; paint(false); say(T(W.done)); ctl.changed(id);
-      }, function (failure) {
-        busy = false; armed = null; say((failure && failure.message) || T(W.failed), true);
-      });
-    }
-    function refreshClient() {
-      return ask(cfg.call, 'flagsList', { query: { subject_entity: id, limit: CHUNK } }).then(function (a) {
-        c.by[id] = ((a && a.flags) || []).filter(function (f) { return f.subject_kind === 'client' && f.subject_id === id; });
-      });
-    }
-    function add(flagKind, noteText) {
-      var body = { kind: flagKind, visibility: who(), subject_kind: kind, subject_entity: entity, items: [{ id: id, label: String(title).slice(0, 80) }] };
-      if (flagKind === 'note') body.note = noteText;
-      return write('flagsAdd', body);
-    }
-    dlg.addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-act]');
-      if (!b) return;
-      var act = b.getAttribute('data-act');
-      if (act === 'close') return dlg.close();
-      if (act === 'bookmark') return add('bookmark');
-      if (act === 'note') {
-        var text = (dlg.querySelector('.fl-box').value || '').trim();
-        if (!text) return say(T(W.noteNeeded), true);
-        return add('note', text);
-      }
-      var flagId = b.getAttribute('data-id');
-      if (act === 'reply') {
-        var box = dlg.querySelector('textarea[data-reply="' + String(flagId).replace(/"/g, '') + '"]'), words = box ? (box.value || '').trim() : '';
-        if (!words) return say(T(W.replyNeeded), true);
-        if (busy) return;
-        busy = true;
-        return ask(cfg.call, 'flagsReply', { id: flagId, body: { message_text: words } }).then(function (a) {
-          busy = false; threads[flagId] = a || false; fillThread(flagId); say(T(W.done));
-        }, function (failure) {
-          busy = false; say((failure && failure.message) || T(W.failed), true);
-        });
-      }
-      if (act === 'remove' && armed !== flagId) { armed = flagId; b.textContent = T(W.sure); return; } /* the second press commits: removing a note drops its words */
-      return write({ resolve: 'flagsResolve', reopen: 'flagsReopen', share: 'flagsShare', remove: 'flagsRemove' }[act], null, flagId);
+    sheet.threads = {};
+    sheet.dialog.addEventListener('click', function (event) { onSheetClick(sheet, event); });
+    sheet.dialog.addEventListener('close', function () {
+      if (sheet.dialog.parentNode) sheet.dialog.parentNode.removeChild(sheet.dialog);
+      if (sheet.options.opener && sheet.options.opener.focus && sheet.options.opener.isConnected) sheet.options.opener.focus();
     });
-    dlg.addEventListener('close', function () {
-      if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
-      if (o.opener && o.opener.focus && o.opener.isConnected) o.opener.focus();
-    });
-    paint(false);
-    doc.body.appendChild(dlg);
-    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
-    var first = dlg.querySelector('[data-act="bookmark"]') || dlg.querySelector('.fl-box');
-    if (first && first.focus) first.focus();
-    return dlg;
+    paintSheet(sheet, false);
+    doc.body.appendChild(sheet.dialog);
+    if (sheet.dialog.showModal) sheet.dialog.showModal(); else sheet.dialog.setAttribute('open', '');
+    sheet.first = sheet.dialog.querySelector('[data-act="bookmark"]') || sheet.dialog.querySelector('.fl-box');
+    if (sheet.first && sheet.first.focus) sheet.first.focus();
+    return sheet.dialog;
   }
 
   /* ── the lists: for a firm's Home count and the client list ── */
-  function list(call, o) { return ask(call, 'flagsList', { query: { page: (o && o.page) || 1, limit: (o && o.limit) || CHUNK, kind: o && o.kind } }); }
-  function counts(call) { return ask(call, 'flagsCounts'); }
+  function list(call, o) { return askFlag(call, 'flagsList', { query: { page: (o && o.page) || 1, limit: (o && o.limit) || CHUNK, kind: o && o.kind } }); }
+  function counts(call) { return askFlag(call, 'flagsCounts'); }
   /** every open flag, newest first, up to three pages of 200 (more says so: total is returned as it is) */
   function listAll(call) {
     return list(call, { page: 1 }).then(function (first) {
@@ -357,41 +404,41 @@
   }
 
   /** the work list (CMP067): every open bookmark and note of this person's organisation they may read, on the one list control; a row opens the record's client */
-  function workList(o) {
+  function workList(options) {
     addCss();
-    var dlg = doc.createElement('dialog');
-    dlg.className = 'fl-sheet';
-    dlg.setAttribute('data-cbsid', 'CMP067-D02');
-    dlg.setAttribute('data-testid', 'fl-worklist');
-    dlg.setAttribute('aria-label', T(W.workHead));
-    dlg.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(T(W.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(T(W.close)) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
-    dlg.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-close]')) dlg.close(); });
-    dlg.addEventListener('close', function () { if (dlg.parentNode) dlg.parentNode.removeChild(dlg); if (o.opener && o.opener.isConnected && o.opener.focus) o.opener.focus(); });
-    doc.body.appendChild(dlg);
-    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
-    var out = dlg.querySelector('.fl-out'), host = dlg.querySelector('.fl-wl');
-    listAll(o.call).then(function (a) {
-      if (!a.flags.length) { host.innerHTML = '<div class="fl-sub">' + esc(T(W.workNone)) + '</div>'; return; }
-      if (a.total > a.flags.length) out.textContent = T(W.more).replace('{n}', a.flags.length);
-      var rows = a.flags.map(function (f) { return Object.assign({ client: (o.nameOf && o.nameOf(f.subject_entity)) || '' }, f); });
+    var dialog = doc.createElement('dialog');
+    dialog.className = 'fl-sheet';
+    dialog.setAttribute('data-cbsid', 'CMP067-D02');
+    dialog.setAttribute('data-testid', 'fl-worklist');
+    dialog.setAttribute('aria-label', flagText(FLAG_WORDS.workHead));
+    dialog.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(flagText(FLAG_WORDS.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(flagText(FLAG_WORDS.close)) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
+    dialog.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-close]')) dialog.close(); });
+    dialog.addEventListener('close', function () { if (dialog.parentNode) dialog.parentNode.removeChild(dialog); if (options.opener && options.opener.isConnected && options.opener.focus) options.opener.focus(); });
+    doc.body.appendChild(dialog);
+    if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', '');
+    var out = dialog.querySelector('.fl-out'), host = dialog.querySelector('.fl-wl');
+    listAll(options.call).then(function (answer) {
+      if (!answer.flags.length) { host.innerHTML = '<div class="fl-sub">' + esc(flagText(FLAG_WORDS.workNone)) + '</div>'; return; }
+      if (answer.total > answer.flags.length) out.textContent = flagText(FLAG_WORDS.more).replace('{n}', answer.flags.length);
+      var rows = answer.flags.map(function (f) { return Object.assign({ client: (options.nameOf && options.nameOf(f.subject_entity)) || '' }, f); });
       var clientCell = function (r) { return esc(r.client || String(r.subject_entity).slice(0, 8)); };
       if (!root.CBList) { host.innerHTML = '<ul class="fl-list">' + rows.map(function (r) { return '<li class="fl-item"><b>' + esc(r.label) + '</b> ' + clientCell(r) + '</li>'; }).join('') + '</ul>'; return; }
       root.CBList.mount(host, {
-        key: 'flags-worklist', t: T, rows: function () { return rows; }, id: function (r) { return r.flag_id; }, rowTid: function (r) { return 'fl-row-' + r.flag_id; },
+        key: 'flags-worklist', t: flagText, rows: function () { return rows; }, id: function (r) { return r.flag_id; }, rowTid: function (r) { return 'fl-row-' + r.flag_id; },
         defaultCols: ['label', 'client', 'kind', 'by'],
         columns: [
-          { key: 'label', label: T(W.colRecord), prio: 1, w: 200, keep: true, stretch: true, html: true, cell: function (r) { return esc(r.label) + (r.note ? '<div class="fl-sub">' + esc(r.note) + '</div>' : ''); }, value: function (r) { return r.label; } },
-          { key: 'client', label: T(W.colClient), prio: 1, w: 150, html: true, cell: clientCell, value: function (r) { return r.client; } },
-          { key: 'kind', label: T(W.colKind), prio: 2, w: 110, cell: function (r) { return T(r.kind === 'note' ? W.kindNote : W.kindBookmark) + (r.visibility === 'me' ? ' · ' + T(W.me) : ''); }, value: function (r) { return r.kind; } },
-          { key: 'by', label: T(W.colBy), prio: 3, w: 120, cell: function (r) { return r.by_name || ''; }, value: function (r) { return r.by_name || ''; } }
+          { key: 'label', label: flagText(FLAG_WORDS.colRecord), prio: 1, w: 200, keep: true, stretch: true, html: true, cell: function (r) { return esc(r.label) + (r.note ? '<div class="fl-sub">' + esc(r.note) + '</div>' : ''); }, value: function (r) { return r.label; } },
+          { key: 'client', label: flagText(FLAG_WORDS.colClient), prio: 1, w: 150, html: true, cell: clientCell, value: function (r) { return r.client; } },
+          { key: 'kind', label: flagText(FLAG_WORDS.colKind), prio: 2, w: 110, cell: function (r) { return flagText(r.kind === 'note' ? FLAG_WORDS.kindNote : FLAG_WORDS.kindBookmark) + (r.visibility === 'me' ? ' · ' + flagText(FLAG_WORDS.me) : ''); }, value: function (r) { return r.kind; } },
+          { key: 'by', label: flagText(FLAG_WORDS.colBy), prio: 3, w: 120, cell: function (r) { return r.by_name || ''; }, value: function (r) { return r.by_name || ''; } }
         ],
         search: function (r) { return [r.label, r.client, r.note].join(' '); },
-        onOpen: function (r) { if (o.onOpen) o.onOpen(r); },
-        empty: { title: T(W.workNone) }
+        onOpen: function (r) { if (options.onOpen) options.onOpen(r); },
+        empty: { title: flagText(FLAG_WORDS.workNone) }
       });
-    }, function (failure) { out.setAttribute('data-tone', 'error'); out.textContent = gone(failure) ? T(W.workNone) : T(W.readFail); });
-    return dlg;
+    }, function (failure) { out.setAttribute('data-tone', 'error'); out.textContent = gone(failure) ? flagText(FLAG_WORDS.workNone) : flagText(FLAG_WORDS.readFail); });
+    return dialog;
   }
 
-  root.CBFlag = { use: use, list: list, counts: counts, listAll: listAll, workList: workList, words: W, gone: gone };
+  root.CBFlag = { use: useFlag, list: list, counts: counts, listAll: listAll, workList: workList, words: FLAG_WORDS, gone: gone };
 })(typeof window !== 'undefined' ? window : globalThis);

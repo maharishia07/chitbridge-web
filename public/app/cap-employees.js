@@ -27,6 +27,7 @@
   var E = { people: [], may: { add: { ok: false, why: null } }, choices: [], counts: { on: 0, off: 0 }, el: null, o: {}, list: null, loaded: false };
   var HAT_OF = { editor: 'act', commenter: 'audit', viewer: 'view_only' }; /* sent beside access_level until b173 is run, as the workshop does */
   var STATE_WORD = { on: 'On', away: 'Away', off: 'Off' };
+  var Copy = root.CBEmployeesCopy; /* the sign-in name and its Copy control (cap-employees-copy.js) */
 
   function T(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -79,41 +80,6 @@
   }
 
   /* ── words ── */
-  /** the sign-in name AS TYPED at the sign-in screen, whole (asha01@mayur-restaurant.br): W15-59 - the short form failed when typed as shown, so it is never cut. */
-  function signInName(u) {
-    return String(u == null ? '' : u);
-  }
-  /** the sign-in name and its Copy control (library button, code EMP001-B14); the name's own element keeps its test id so it reads as the plain name */
-  function nameWithCopy(u, idTid, cls) {
-    var name = signInName(u);
-    return (
-      '<span class="' + cls + '" data-testid="' + idTid + '">' + esc(name) + '</span> ' +
-      (name ? '<button data-cbsid="EMP001-B14" type="button" class="act emp-copy" id="emp_copy" data-testid="emp-copy" data-copy="' + esc(name) + '">' + esc(T('Copy')) + '</button>' : '')
-    );
-  }
-  /** Copy: the whole sign-in name to the clipboard, said on the button itself (no toast to miss) */
-  function wireCopy() {
-    var b = $('emp_copy');
-    if (!b) return;
-    b.onclick = function () {
-      var text = b.getAttribute('data-copy') || '',
-        say = function (ok) {
-          b.textContent = T(ok ? 'Copied' : 'Select the name and copy it');
-        };
-      try {
-        root.navigator.clipboard.writeText(text).then(
-          function () {
-            say(true);
-          },
-          function () {
-            say(false);
-          }
-        );
-      } catch (_) {
-        say(false);
-      }
-    };
-  }
   function sinceWord(iso) {
     if (!iso) return T('Not yet');
     var d = Date.parse(iso);
@@ -242,7 +208,7 @@
         w: 230,
         mono: true,
         cell: function (p) {
-          return signInName(p.user_id) || '—';
+          return Copy.signInName(p.user_id) || '—';
         }
       },
       {
@@ -394,7 +360,7 @@
       }
     }
     $('emp_x').onclick = closeSheet;
-    wireCopy();
+    Copy.wireCopy();
   }
   function closeSheet() {
     var node = $('emp_sheet');
@@ -416,7 +382,7 @@
         esc(node.name) +
         '</h2>' +
         '<div class="emp-sub">' +
-        nameWithCopy(node.user_id, 'emp-userid', 'mono') +
+        Copy.nameWithCopy(node.user_id, 'emp-userid', 'mono') +
         ' ' +
         stateTag(node) +
         '</div>' +
@@ -725,8 +691,7 @@
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
         '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
-        '<div class="sub" data-testid="emp-add-keyhint">' + esc(T('4 to 12 letters or numbers')) + '</div>' +
-        '<div class="sub" id="emp_kn" data-testid="emp-add-keynote"></div>' +
+        '<div class="sub" data-testid="emp-add-keyhint">' + esc(T('4 to 12 letters or numbers')) + '</div>' + '<div class="sub" id="emp_kn" data-testid="emp-add-keynote"></div>' +
         '<label for="emp_l">' +
         esc(T('What they can do')) +
         '</label><select data-cbsid="EMP001-S02" class="inp" id="emp_l" data-testid="emp-add-level">' +
@@ -828,7 +793,7 @@
       : '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(reply)) + '</div>';
     return (
       '<h2 data-testid="emp-added">' + esc(T('Added')) + '</h2><div class="emp-sub"><b>' + esc(name) + '</b></div>' +
-      '<div>' + nameWithCopy((person && person.user_id) || (reply.actor && reply.actor.login_format), 'emp-added-id', 'mono') + '</div>' +
+      '<div>' + Copy.nameWithCopy((person && person.user_id) || (reply.actor && reply.actor.login_format), 'emp-added-id', 'mono') + '</div>' +
       codePart +
       '<button data-cbsid="EMP001-B13" type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>'
     );

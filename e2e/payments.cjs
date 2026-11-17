@@ -40,12 +40,10 @@ const FX = path.join(__dirname, 'fixtures', 'golden-parties.json');
 const TODAY = new Date().toISOString().slice(0, 10);
 const claims = (c) => { const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)); };
 const OWNER = { token: claims({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Athi', entity: 'Mayur Bhavan' };
-
 /* the words a balance may be written in, and what a minus in front of a figure looks like */
 const WORDS = /^(you owe|they owe you|settled)\b/i;
 const CRMWORDS = /^(↑ ₹[\d,.]+ you'll give|↓ ₹[\d,.]+ you'll get|settled|nothing yet)\b/i;   /* CB CRM says a due the shopkeeper's way (2026-10-09): a symbol AND a word AND a colour */
 const MINUS = /(^|[\s(>])[-−]\s?(₹|\d)/;
-
 function standIn() {
   const fx = crmApi.resolve(JSON.parse(fs.readFileSync(FX, 'utf8')), Date.now());
   /* M30: the advice side of the books — on_rail decides send vs share; failSend = the chit rail refusing; rows = what each payment remembers */
@@ -159,7 +157,6 @@ async function route(S, r) {
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
-
 (async () => {
   const srv = http.createServer((q, r) => {
     const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, ''), f = path.join(PUB, rel || 'index.html');
@@ -179,7 +176,6 @@ async function route(S, r) {
     await p.goto(base + url); return { ctx, p };
   }
   const bodyText = (p) => p.evaluate(() => document.body.innerText);
-
   /* ── E9 · crm.html ─────────────────────────────────────────────────────────── */
   {
     const S = standIn(), { ctx, p } = await open('/crm.html', S);
@@ -242,7 +238,6 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
   const ASK_OK = 'dialog[open] [data-testid="confirm-ok"]', ASK_NO = 'dialog[open] [data-testid="confirm-cancel"]';
   const askText = (p) => p.evaluate(() => { const d = document.querySelector('#cb_confirm'); return d ? d.textContent.replace(/\s+/g, ' ').trim() : ''; });
   const yesPay = async (p) => { await p.waitForSelector(ASK_OK, { timeout: 5000 }); await p.click(ASK_OK); };
-
   /* ── R102b · a payment asks first (walk 24 Oct): who, how much, how — Cancel writes nothing; Yes writes once ── */
   {
     const S = standIn(), { ctx, p } = await openPay('/crm.html', S);
@@ -268,7 +263,6 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     await p.screenshot({ path: path.join(PNG, 'PayAsk.png') }).catch(() => {});
     await ctx.close();
   }
-
   /* ── E10 · the door ── */
   {
     const S = standIn(), { ctx, p } = await openPay('/crm.html', S);

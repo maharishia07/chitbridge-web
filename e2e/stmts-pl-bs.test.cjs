@@ -24,7 +24,7 @@ const cx = vm.createContext({
   document: { getElementById: () => null },
   api: async () => reply
 });
-vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkBsSide', 'bkBS', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB']) +
+vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkPlQuery', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkBsSide', 'bkBS', 'bkBsLeadHTML', 'bkBsRange', 'bkBsBalancedChip', 'bkBsHasChange', 'bkBsWas', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB', 'bkTbRowHTML', 'bkTbBarHTML', 'bkTbTotalRowHTML']) +
   '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.bkTB=bkTB;this.BK={tbDay:""};this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
 
 let bad = 0;

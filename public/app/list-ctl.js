@@ -45,6 +45,8 @@
  */
 (function (root) {
   'use strict';
+  var wire; /* wire: set from app/list-ctl-wire.js at the end of this file */
+  var colByKey, cssId, onClick, refocusRz, resize; /* click: set from app/list-ctl-click.js at the end of this file */
   if (root.CBList) return;
 
   /* ── its own words: every string is written here in English and goes through the host's translator (opts.t) when one is given (see T) ── */
@@ -95,217 +97,8 @@
   }
 
   /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
-  var CSS = [
-    '.cbl{--cl-page:var(--page,var(--paper,#FCFAF5));--cl-card:var(--card,#FFFFFF);--cl-panel:var(--panel,#F3EFE6);--cl-line:var(--line,#DDD6C6);--cl-soft:var(--line-soft,#E6E0D2);--cl-hair:var(--hair,#F0ECE2);',
-    '--cl-ink:var(--ink,#1D1B16);--cl-muted:var(--muted,#5E594D);--cl-faint:var(--faint,#8A8374);--cl-ghost:var(--ghost,#A8A295);',
-    '--cl-gband:color-mix(in srgb,var(--cl-blue) 13%,var(--cl-page));--cl-zebra:var(--zebra,color-mix(in srgb,var(--cl-ink) 9%,var(--cl-card)));--cl-hov:color-mix(in srgb,var(--cl-blue) 8%,var(--cl-card));',
-    '--cl-green:var(--green,#16693F);--cl-amber-t:var(--amber-t,#FDF3DC);--cl-amber-b:var(--amber-b,#EFD39A);--cl-amber-i:var(--amber-i,#7A5205);',
-    '--cl-red-t:var(--red-t,#FBEAE3);--cl-red-b:var(--red-b,#E7B9A8);--cl-red-i:var(--red-i,#8E3517);',
-    '--cl-blue:var(--blue,#2F74C9);--cl-blue-t:var(--blue-t,#E4EEFA);--cl-blue-b:var(--blue-b,#B9D2EF);--cl-blue-i:var(--blue-i,#174A87);',
-    '--cl-shadow:var(--shadow,0 10px 28px rgba(29,27,22,.16));--cl-ui:var(--f-ui,"IBM Plex Sans","Segoe UI",system-ui,sans-serif);--cl-display:var(--f-display,"Bricolage Grotesque","Segoe UI",system-ui,sans-serif);--cl-num:var(--f-num,"IBM Plex Mono",ui-monospace,"Cascadia Mono",monospace);',
-    'display:flex;flex-direction:column;min-width:0;min-height:0;box-sizing:border-box;position:relative;background:var(--cl-page);color:var(--cl-ink);font:calc(15px * var(--k,1))/1.45 var(--cl-ui);container-type:inline-size;container-name:screen;text-align:start;letter-spacing:normal;text-transform:none}',
-    '.cbl *,.cbl *::before,.cbl *::after{box-sizing:border-box}',
-    '.cbl button,.cbl select,.cbl input{font:inherit;color:inherit}.cbl button{cursor:pointer;min-height:0;line-height:1.3}',
-    '.cbl :focus-visible{outline:2px solid var(--cl-blue);outline-offset:2px}',
-    '.cbl .cbl-num{font-family:var(--cl-num);font-variant-numeric:tabular-nums}',
-    /* row 1 · the title row */
-    '.cbl .cbl-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 20px 6px;border-bottom:1px solid var(--cl-soft);background:var(--cl-page)}',
-    '.cbl .cbl-title h1{font:800 calc(24px * var(--k,1))/1.1 var(--cl-display);margin:0;letter-spacing:-.01em;text-wrap:balance;color:var(--cl-ink)}',
-    '.cbl .cbl-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:3px 10px;margin:0;font-size:calc(13.5px * var(--k,1));white-space:nowrap}',
-    '.cbl .cbl-title .cbl-chip{white-space:normal;max-width:100%;min-width:0;text-align:start;border-radius:14px;line-height:1.3}',
-    '.cbl .cbl-chip.period{font-family:var(--cl-num);font-size:calc(13px * var(--k,1))}',
-    '.cbl .cbl-chip.warn{background:var(--cl-amber-t);border-color:var(--cl-amber-b);color:var(--cl-amber-i);font-weight:600}',
-    '.cbl .cbl-chip.bad{background:var(--cl-red-t);border-color:var(--cl-red-b);color:var(--cl-red-i);font-weight:600}',
-    '.cbl .cbl-chip.ask{background:var(--cl-blue-t);border-color:var(--cl-blue-b);color:var(--cl-blue-i);font-weight:600}.cbl .cbl-chip.ask[aria-pressed=true]{background:var(--cl-blue);border-color:var(--cl-blue);color:var(--on-accent,#fff)}',
-    '.cbl .cbl-chip.warn::before,.cbl .cbl-chip.bad::before{content:"⚠"}',
-    '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
-    /* row 2 · tools */
-    '.cbl .cbl-tools[hidden]{display:none}',
-    '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 6px;background:var(--cl-page)}',
-    '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
-    '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
-    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}', /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
-    '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
-    '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
-    '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
-    '.cbl .cbl-needs{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00);font-weight:600}.cbl .cbl-needs[aria-pressed="true"]{background:var(--warn,#B7791F);border-color:var(--warn-3,#7A4B00);color:var(--on-accent,#fff)}',
-    '.cbl .cbl-needs.clear{border-color:var(--cl-line);background:var(--cl-card);color:var(--grey,#5E594D);font-weight:400;cursor:default}.cbl .cbl-needs-prog{font-size:calc(13px * var(--k,1));color:var(--grey,#5E594D);white-space:nowrap}',
-    '.cbl .cbl-tools:has(.cbl-needs) .cbl-search{flex:1 1 120px}',
-    '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
-    '.cbl .cbl-glab{font-size:calc(12px * var(--k,1));color:var(--cl-muted);white-space:nowrap;margin-inline-end:-2px}',
-    '@media (max-width:1100px){.cbl .cbl-tools{gap:5px 6px;padding-inline:12px}.cbl .cbl-seg button{padding:0 6px}.cbl .cbl-count{padding:0 2px}.cbl .cbl-search{flex-basis:170px}}',
-    /* GROUP as one labelled dropdown ("Group ▾ None"): opts.group.as = 'select' */
-    '.cbl .cbl-gsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;height:34px;padding:0 6px 0 10px;margin:0}',
-    '.cbl .cbl-gsel .cbl-glab{margin:0;font-weight:600}',
-    '.cbl .cbl-gsel select{border:0;background:none;height:32px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
-    '.cbl .cbl-gsel:focus-within{border-color:var(--cl-blue)}',
-    /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
-    '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
-    '.cbl .cbl-views::-webkit-scrollbar{display:none}',
-    '.cbl .cbl-title .cbl-views.in-title{padding:0;background:none;overflow:visible;flex-wrap:wrap}',
-    '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
-    '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
-    '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
-    '.cbl .cbl-vtab[aria-selected="true"] .n{color:var(--cl-page)}',
-    /* a column heading's own filter (opts.columns[].hfilter = a filter key) */
-    '.cbl .cbl-hf{border:0;background:none;padding:0 2px;margin:0;color:var(--cl-blue-i);font-size:calc(11px * var(--k,1));line-height:1;cursor:pointer;border-radius:5px;min-width:24px;height:24px;flex:none;position:relative;z-index:3}',
-    '.cbl .cbl-hf.on{background:var(--cl-blue-t);font-weight:800}',
-    '.cbl .cbl-pop.hf{position:absolute;inset-inline-end:auto;min-width:170px;padding:6px;text-transform:none;letter-spacing:normal}',
-    '.cbl .cbl-pop.hf button{display:block;width:100%;text-align:start;border:0;background:none;border-radius:7px;padding:6px 10px;font-size:calc(13.5px * var(--k,1));color:var(--cl-ink)}',
-    '.cbl .cbl-pop.hf button:hover{background:var(--cl-hov)}',
-    '.cbl .cbl-pop.hf button[aria-checked="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:700}',
-    /* an action that this login may not do stays on screen, greyed, with its sentence */
-    '.cbl .cbl-act{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px}',
-    '.cbl .cbl-btn:disabled{opacity:.55;cursor:not-allowed}',
-    '.cbl .cbl-why{font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);max-width:26ch;line-height:1.3}',
-    '.cbl .cbl-seg{display:inline-flex;border:1px solid var(--cl-line);border-radius:9px;overflow:hidden;background:var(--cl-card);height:34px}',
-    '.cbl .cbl-seg button{border:0;background:none;padding:0 10px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--cl-soft);margin:0;border-radius:0}',
-    '.cbl .cbl-seg button:first-child{border-inline-start:0}',
-    '.cbl .cbl-seg button[aria-pressed="true"]{background:var(--cl-ink);color:var(--cl-page);font-weight:600}',
-    '.cbl .cbl-ico{width:34px;justify-content:center;padding:0}',
-    '.cbl .cbl-count{font-family:var(--cl-num);font-size:calc(13px * var(--k,1));color:var(--cl-muted);padding:0 4px;white-space:nowrap}',
-    '.cbl .cbl-fchips{display:flex;flex-wrap:wrap;gap:6px;width:100%}.cbl .cbl-fchips:empty{display:none}',
-    '.cbl .cbl-fchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);border-radius:999px;padding:1px 4px 1px 10px;font-size:calc(12.5px * var(--k,1))}',
-    '.cbl .cbl-fchip button{border:0;background:none;color:inherit;width:20px;height:20px;border-radius:50%;padding:0}',
-    '.cbl .cbl-anchor{position:relative}',
-    '.cbl .cbl-pop{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:20;background:var(--cl-card);border:1px solid var(--cl-line);border-radius:12px;box-shadow:var(--cl-shadow);padding:10px 12px;min-width:220px;max-height:min(70vh,480px);overflow:auto;font-size:calc(13.5px * var(--k,1));text-transform:none;font-weight:400;letter-spacing:normal;color:var(--cl-ink)}',
-    '.cbl .cbl-pop.left{inset-inline-end:auto;inset-inline-start:0}',
-    '.cbl .cbl-notes{display:flex;flex-direction:column;align-items:flex-start;gap:6px}',
-    '.cbl .cbl-pop h4{margin:4px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--cl-muted);font-weight:700}',
-    '.cbl .cbl-pop .f{display:grid;grid-template-columns:80px 1fr;align-items:center;gap:8px;margin:6px 0}',
-    '.cbl .cbl-pop select{border:1px solid var(--cl-line);border-radius:7px;background:var(--cl-card);padding:3px 6px}',
-    '.cbl .cbl-preset{display:grid;gap:2px}',
-    '.cbl .cbl-preset button{text-align:start;border:0;background:none;border-radius:7px;padding:5px 8px}',
-    '.cbl .cbl-preset button[aria-pressed="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
-    '.cbl .cbl-custom{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:calc(13px * var(--k,1))}',
-    '.cbl .cbl-custom input{border:1px solid var(--cl-line);border-radius:7px;padding:2px 6px;background:var(--cl-card);font-family:var(--cl-num);font-size:calc(12.5px * var(--k,1));width:128px}',
-    '.cbl .cbl-btn{border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:3px 10px;font-size:calc(13px * var(--k,1));font-weight:500}',
-    '.cbl .cbl-acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}',
-    '.cbl .cbl-colrow{display:flex;align-items:center;gap:6px;padding:2px 0}',
-    '.cbl .cbl-colrow label{flex:1 1 auto!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:7px!important;padding:3px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;margin:0;font-weight:400}',
-    '.cbl .cbl-colrow label:has(input:checked){background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
-    '.cbl .cbl-colrow input{accent-color:var(--cl-blue);width:14px;height:14px}',
-    '.cbl .cbl-mv{width:24px;height:24px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:6px;padding:0;font-size:calc(12px * var(--k,1));flex:0 0 auto}',
-    '.cbl .cbl-mv:disabled{opacity:.3;cursor:default}.cbl .cbl-mvsp{width:24px;flex:0 0 auto}',
-    '.cbl .cbl-noroom{font-size:calc(11.5px * var(--k,1));color:var(--cl-amber-i);margin-inline-start:4px}',
-    /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
-    '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
-    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
-    '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
-    '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
-    '.cbl .cbl-hc.r{justify-content:flex-end}',
-    '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
-    '.cbl .cbl-hc .sort{min-width:0;max-width:100%}.cbl .cbl-hc .sort .cbl-hl{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:start;line-height:1.25}',
-    /* the resize grip (24 px, centred on the column edge) covers the last 12 px of its cell: the filter caret stays inside that line and the last column's grip (24 px, inside) gets its room (QA-156) */
-    '.cbl .cbl-hc:last-child:has(.cbl-hf),.cbl .cbl-hc.r.sortable:last-child{padding-inline-end:26px}',
-    '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
-    '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
-    /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
-    '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
-    /* a 24 px filter button would make the header row 4 px taller: its cell gives the height back in padding */
-    '.cbl .cbl-hc:has(.cbl-hf){padding-block:5px}',
-    '.cbl .cbl-hc:has(.sort){padding-block:0}',/* a sortable heading: its 32 px tap target IS the row (7 px above and below it made the header 46 px and pushed the first Day book row to 232 px = 30.2%); the target stays 32 px */
-    '.cbl .cbl-hc:last-child > .cbl-rz::after{inset-inline-start:auto;inset-inline-end:4px}',
-    '.cbl .cbl-hc:last-child > .cbl-rz:hover::after,.cbl .cbl-hc:last-child > .cbl-rz:focus-visible::after,.cbl .cbl-hc:last-child > .cbl-rz.drag::after{inset-inline-start:auto;inset-inline-end:3px}',
-    '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:11px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
-    '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:10px;background:var(--cl-blue)}',
-    '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
-    /* ZEBRA (Athi, 2026-10-09): every other data row, one shade from a theme token (--zebra, else the ink mixed 4% into the card, so every theme keeps its contrast); a group head, the hover row and the selected row stay distinct; a multi-line row is ONE stripe */
-    '.cbl .cbl-row.z,.cbl .cbl-lrec.z{background:var(--cl-zebra)}',
-    '.cbl .cbl-row:hover{background:var(--cl-hov)}',
-    '.cbl .cbl-row.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
-    '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
-    '.cbl .cbl-cell.r{text-align:end}',
-    '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
-    '.cbl .cbl-cell.strong{font-weight:700}',
-    '.cbl .cbl-lead{padding:8px 0 8px 12px;display:flex;align-items:center}',
-    '.cbl .cbl-tw{display:inline-block;width:14px;color:var(--cl-faint);transition:transform .15s}',
-    '.cbl .cbl-open>.cbl-cell>.cbl-tw,.cbl .cbl-open .cbl-tw{transform:rotate(90deg)}',
-    '.cbl .cbl-link{color:var(--cl-blue);text-decoration:underline;text-underline-offset:2px;font-family:var(--cl-num);font-size:calc(13.5px * var(--k,1))}',
-    '.cbl .cbl-dim{color:var(--cl-faint)}',
-    '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 12px;background:var(--cl-gband);color:var(--cl-ink);border-top:1px solid var(--cl-line);border-bottom:1px solid var(--cl-line);border-inline-start:4px solid var(--cl-blue);font-size:calc(12px * var(--k,1));text-transform:uppercase;letter-spacing:.04em}',
-    '.cbl .cbl-row.ing>:first-child{padding-inline-start:28px}.cbl .cbl-lrec.ing{padding-inline-start:28px}',
-    '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(12px * var(--k,1));color:var(--cl-ink);text-transform:none;letter-spacing:0}',
-    /* W15-108 (Athi, 15 Nov: "i have no idea which one is header, which one i can expand, which one is information"): a band is TINTED caps with its total at the right; a row that opens carries a bordered ▸ button and lights across the whole row;
-       what it opens to is an INDENTED panel with a rule at its left, holding an info strip and then a real sub-table under its own grey header; information is never drawn like a button */
-    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);margin:0 0 6px 26px;padding:8px 12px 10px 14px;border-inline-start:3px solid var(--cl-blue);cursor:default;overflow-wrap:break-word;word-break:normal}',
-    '.cbl .cbl-row[aria-expanded]>.cbl-cell .cbl-tw,.cbl .cbl-row[aria-expanded] .cbl-tw{border:1px solid var(--cl-line);border-radius:6px;background:var(--cl-card);color:var(--cl-ink);font-size:calc(13px * var(--k,1))}/* the LOOK only (W15-108): its size is the tap rule below (32 px laptop, 44 px phone) - a width here out-ranks it (24 px drew, walk-list-tap 52 XX) */',
-    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-row[aria-expanded] .cbl-tw{margin-inline:-6px 6px}}' /* the bordered 44 px caret sits inside the card, not over its edge */,
-    '.cbl .cbl-row[aria-expanded]:hover{background:var(--cl-hov)}.cbl .cbl-row[aria-expanded]:hover .cbl-tw{border-color:var(--cl-blue)}',
-    '.cbl .cbl-group .fig{margin-inline-start:auto}',
-    '.cbl .cbl-nstrip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:2px 0 8px;color:var(--cl-muted);font-size:calc(12px * var(--k,1))}',
-    '.cbl .cbl-nstrip>span,.cbl .cbl-nstrip .cbl-nchip{padding:0}.cbl .cbl-nstrip b{color:var(--cl-ink);font-family:var(--cl-num);font-weight:600}',
-    '.cbl .cbl-nchip{border:1px solid var(--cl-line);border-radius:999px;background:var(--cl-card);color:var(--cl-ink);padding:2px 10px;min-height:24px;cursor:pointer;font:inherit}.cbl .cbl-nchip:hover{border-color:var(--cl-blue)}.cbl .cbl-nchip[aria-pressed="true"]{background:var(--cl-blue-t);border-color:var(--cl-blue);font-weight:700}',
-    '.cbl .cbl-ntab{min-width:1000px;display:flex;flex-direction:column;border:1px solid var(--cl-line);border-radius:8px;background:var(--cl-card);overflow:hidden}',
-    '.cbl .cbl-nthead{display:flex;align-items:center;background:var(--cl-gband);border-bottom:1px solid var(--cl-line);font-size:calc(11px * var(--k,1));text-transform:uppercase;letter-spacing:.04em;color:var(--cl-muted)}',
-    '.cbl .cbl-ntrow{display:flex;align-items:center;border-bottom:1px solid var(--cl-hair);font-size:calc(13.5px * var(--k,1))}.cbl .cbl-ntrow:last-child{border-bottom:0}',
-    '.cbl .cbl-ntc{flex:0 0 auto;padding:5px 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}.cbl .cbl-ntc.first{flex:1 1 90px}.cbl .cbl-ntc.r{text-align:end}',
-    '.cbl .cbl-ntc button.cbl-nsort{all:unset;cursor:pointer;display:inline-flex;gap:3px;align-items:center;min-height:24px;text-transform:inherit;letter-spacing:inherit}.cbl .cbl-ntc button.cbl-nsort:focus-visible{outline:2px solid var(--cl-blue)}',
-    '.cbl .cbl-nempty{padding:10px;color:var(--cl-muted)}',
-    '.cbl .cbl-ntab.cards{min-width:0}.cbl .bk-tabwrap{overflow-x:auto}.cbl .cbl-ntab.cards .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntc{overflow:visible}',
-    '@media (max-width:700px){.cbl .bk-tabwrap{overflow:visible}.cbl .cbl-ntab.cards .cbl-nthead{display:none}.cbl .cbl-ntab.cards .cbl-ntrow{flex-wrap:wrap;align-items:center;gap:2px 10px;padding:6px 8px}.cbl .cbl-ntab.cards .cbl-ntrow::after{content:"";flex:0 0 100%;order:2;height:0}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc{width:auto!important;padding:0;flex:0 0 auto;order:1}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="0"]{display:none}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="2"]{order:3}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.first{flex:0 0 auto}.cbl .bk-bands{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cbl .bk-bands .bk-bw{display:none}.cbl .bk-bands>span{grid-column:1/-1}}',
-    '.cbl .bk-needs .cbl-nchip{padding:0 8px;min-height:22px;font-size:calc(12px * var(--k,1))}.cbl .bk-needs .bk-need-more{color:var(--cl-muted)}',
-    '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
-    /* ☰ lines */
-    '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
-    '.cbl .cbl-lrec:hover{background:var(--cl-hov)}',
-    '.cbl .cbl-lrec.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
-    '.cbl .cbl-lline{display:flex;gap:4px 10px;align-items:baseline}',
-    '.cbl .cbl-lflow{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 0}',
-    '.cbl .cbl-lflow > span:not(:last-child)::after{content:"·";color:var(--cl-ghost);margin:0 7px}',
-    '.cbl .cbl-lamt{font-family:var(--cl-num);font-weight:700;white-space:nowrap}',
-    '.cbl .cbl-lgist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));padding-inline-start:22px;margin-top:1px}',
-    /* states */
-    '.cbl .cbl-state{padding:44px 20px;text-align:center;color:var(--cl-muted)}',
-    '.cbl .cbl-state .big{font:700 calc(18px * var(--k,1)) var(--cl-display);color:var(--cl-ink);margin-bottom:4px}',
-    '.cbl .cbl-state .cbl-btn{margin-top:10px}',
-    '.cbl .cbl-end{text-align:center;padding:12px 10px;font:calc(12px * var(--k,1)) var(--cl-num);color:var(--cl-muted)}',
-    '.cbl .cbl-end button{margin-inline-end:8px;border:1px solid var(--cl-blue);background:var(--cl-blue);color:var(--cl-card);border-radius:9px;padding:5px 11px;font-weight:700}',
-    '.cbl .cbl-skel{height:36px;margin:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--cl-hair),var(--cl-panel),var(--cl-hair));background-size:200% 100%;animation:cbl-sk 1.2s infinite linear}',
-    '@keyframes cbl-sk{to{background-position:-200% 0}}',
-    '@media (prefers-reduced-motion: reduce){.cbl .cbl-skel{animation:none}.cbl .cbl-tw{transition:none}}',
-    '.cbl .cbl-foot{padding:8px 12px;border-top:1px solid var(--cl-soft)}',
-    '.cbl .cbl-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
-    /* a phone, or any narrow pane: one card per row, label : value, nothing sideways (a container query, not the page width) */
-    '@container list (max-width: 620px){',
-    '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
-    '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
-    '.cbl .cbl-row .cbl-cell{padding:2px 0}',
-    '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}',
-    '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
-    '.cbl .cbl-row .cbl-cell.first{width:100%;font-weight:600}.cbl .cbl-row .cbl-cell.amt{margin-inline-start:auto}',
-    '.cbl .cbl-row .cbl-lead{position:absolute;inset-inline-end:8px;top:6px;padding:0}',
-    '.cbl .cbl-next{margin:-6px 10px 8px;border-radius:0 0 12px 12px;padding-inline-start:14px}',
-    '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
-    '}',
-    '@container screen (max-width: 640px){',
-    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(21px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
-    '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
-    '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
-    '}',
-    /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
-    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px 6px;margin-block:-8px;vertical-align:middle}/* REP-73 B5: a gap on the end side, so the box never sits over the first letter of the name (it was -9px on both sides) */.cbl .cbl-search input{align-self:stretch}',
-    '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
-    '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
-    '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
-    '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
-    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-w{display:none}.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button,.cbl .cbl-search,.cbl .cbl-gsel,.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:44px}',
-    '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:24px;height:24px}',
-    /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
-    '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
-    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px 4px;margin-block:0}',
-    /* UI9: a head that says reserve:true keeps its title row at the height of the chip the data will bring (chip-less lists keep their short row), so the toolbar below never jumps (QA-156) */
-    '.cbl .cbl-title.reserve h1{min-height:44px;display:flex;align-items:center}}',
-    /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
-    'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
-    /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
-    '.cbl input[data-selrow],.cbl input[data-col]{flex:none}',
-    '@media (max-width:' + PHONE_MAX + 'px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
-    '.cbl input[data-selrow]::before,.cbl input[data-col]::before{content:"";width:22px;height:22px;box-sizing:border-box;border:2px solid var(--cl-muted);border-radius:5px;background:var(--cl-card);color:var(--cl-card);font-size:15px;line-height:18px;text-align:center;font-weight:700}',
-    '.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{content:"✓";background:var(--cl-blue);border-color:var(--cl-blue)}.cbl input[data-col]:disabled{opacity:.5}}',
-    '@media (forced-colors: active){.cbl input[data-selrow]::before,.cbl input[data-col]::before{forced-color-adjust:none;background:Canvas;color:Canvas;border-color:ButtonText}.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{background:Highlight;color:HighlightText;border-color:Highlight}}',
-    '.cbl .cbl-viewpop{display:flex;flex-direction:column;gap:8px;align-items:stretch}.cbl .cbl-viewpop .cbl-seg{align-self:flex-start}.cbl .cbl-viewpop .cbl-ico{justify-content:flex-start}.cbl .cbl-viewpop .cbl-w{display:inline}'
-  ].join('\n');
+  if (!root.CBListParts || !root.CBListParts.css) throw new Error('app/list-ctl-css.js must load before app/list-ctl.js');
+  var CSS = root.CBListParts.css(PHONE_MAX); /* the stylesheet text lives in app/list-ctl-css.js (shrink W2, 2026-11-17) */
   function injectCss() {
     var d = root.document;
     if (!d || !d.head || d.getElementById('cblist_css')) return;
@@ -343,7 +136,6 @@
 
   var INST = []; /* every live mount; pruned when its element leaves the document */
   var STATE = {}; /* key → the choices that must survive a repaint (search, filters, open rows) */
-  var DRAG = null;
 
   function prune() {
     INST = INST.filter(function (item) {
@@ -373,6 +165,69 @@
     I.off = [];
   }
 
+  /** the object mount gives back: refresh · destroy · el · filter · state · mark · open — what a page does with a mounted list */
+  function apiOf(inst, rstate, el) {
+    return {
+      refresh: function (x) {
+        return refresh(inst, x);
+      },
+      destroy: function () {
+        teardown(inst);
+        INST = INST.filter(function (y) {
+          return y !== inst;
+        });
+        if (el.__cbl === inst) {
+          el.__cbl = null;
+          el.innerHTML = '';
+          el.classList.remove('cbl');
+        }
+      },
+      el: el,
+      /* filter(key, value) — a page sets (or, with '' , clears) one of its own filters: the header line of Receivables presses "no tax invoice" */
+      filter: function (name, value) {
+        if (value) rstate.filt[name] = value;
+        else delete rstate.filt[name];
+        resetLimit(inst);
+        paintAll(inst);
+      },
+      state: function () {
+        return {
+          cols: inst.s.cols.slice(),
+          widths: JSON.parse(JSON.stringify(inst.s.widths)),
+          view: inst.s.view,
+          group: inst.s.group,
+          sort: inst.s.sort,
+          q: rstate.q,
+          filt: JSON.parse(JSON.stringify(rstate.filt))
+        };
+      },
+      /* mark(id) — l16 R4-2b: the row the person last worked on is highlighted, brought into view (the page of rows is widened if it lies past it) and takes keyboard focus; false when no such row */
+      mark: function (id) {
+        var rowId = String(id),
+          at = '[data-row="' + cssId(rowId) + '"]';
+        rstate.hl = rowId;
+        paintAll(inst);
+        if (!el.querySelector(at)) {
+          inst.limit = Math.max(inst.limit || 50, allRows(inst).length);
+          paintAll(inst);
+        }
+        var node = el.querySelector(at);
+        if (!node) return false;
+        if (node.scrollIntoView) node.scrollIntoView({ block: 'center' });
+        node.focus();
+        return true;
+      },
+      /* open(id, on) — a page opens (or closes, on === false) one row's next level itself: the call desk's Next moves to the row that follows (W1-CRM) */
+      open: function (id, on) {
+        var rowId = String(id);
+        if (isOpen(inst, rowId) !== (on !== false)) toggleRow(inst, rowId, true);
+        else {
+          rstate.hl = rowId;
+          refocusRow(inst, rowId);
+        }
+      }
+    };
+  }
   /* ═════ MOUNT ═════ */
   function mount(el, o) {
     if (!el || !o) return null;
@@ -386,9 +241,9 @@
         return x !== el.__cbl;
       });
     }
-    var I = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
+    var inst = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
     var R = STATE[key] || (STATE[key] = { q: '', filt: {}, open: {}, allOpen: false, sel: {}, selMode: false, gcol: {}, hl: null });
-    I.r = R;
+    inst.r = R;
     /* a host may open the list already narrowed (a link from another page: Home's Suppliers -> the CRM list of suppliers): opts.preset = { filt:{ key: value } } replaces the remembered filters */
     if (o.preset && o.preset.filt) {
       R.filt = {};
@@ -396,74 +251,15 @@
         R.filt[item] = o.preset.filt[item];
       });
     }
-    I.s = loadChoices(I);
-    el.__cbl = I;
+    inst.s = loadChoices(inst);
+    el.__cbl = inst;
     el.classList.add('cbl');
     el.setAttribute('data-cbl', key);
-    wire(I);
-    INST.push(I);
-    paintAll(I);
-    var api = {
-      refresh: function (x) {
-        return refresh(I, x);
-      },
-      destroy: function () {
-        teardown(I);
-        INST = INST.filter(function (y) {
-          return y !== I;
-        });
-        if (el.__cbl === I) {
-          el.__cbl = null;
-          el.innerHTML = '';
-          el.classList.remove('cbl');
-        }
-      },
-      el: el,
-      /* filter(key, value) — a page sets (or, with '' , clears) one of its own filters: the header line of Receivables presses "no tax invoice" */
-      filter: function (name, value) {
-        if (value) R.filt[name] = value;
-        else delete R.filt[name];
-        resetLimit(I);
-        paintAll(I);
-      },
-      state: function () {
-        return {
-          cols: I.s.cols.slice(),
-          widths: JSON.parse(JSON.stringify(I.s.widths)),
-          view: I.s.view,
-          group: I.s.group,
-          sort: I.s.sort,
-          q: R.q,
-          filt: JSON.parse(JSON.stringify(R.filt))
-        };
-      },
-      /* mark(id) — l16 R4-2b: the row the person last worked on is highlighted, brought into view (the page of rows is widened if it lies past it) and takes keyboard focus; false when no such row */
-      mark: function (id) {
-        var rowId = String(id),
-          at = '[data-row="' + cssId(rowId) + '"]';
-        R.hl = rowId;
-        paintAll(I);
-        if (!el.querySelector(at)) {
-          I.limit = Math.max(I.limit || 50, allRows(I).length);
-          paintAll(I);
-        }
-        var node = el.querySelector(at);
-        if (!node) return false;
-        if (node.scrollIntoView) node.scrollIntoView({ block: 'center' });
-        node.focus();
-        return true;
-      },
-      /* open(id, on) — a page opens (or closes, on === false) one row's next level itself: the call desk's Next moves to the row that follows (W1-CRM) */
-      open: function (id, on) {
-        var rowId = String(id);
-        if (isOpen(I, rowId) !== (on !== false)) toggleRow(I, rowId, true);
-        else {
-          R.hl = rowId;
-          refocusRow(I, rowId);
-        }
-      }
-    };
-    I.api = api;
+    wire(inst);
+    INST.push(inst);
+    paintAll(inst);
+    var api = apiOf(inst, R, el);
+    inst.api = api;
     return api;
   }
 
@@ -471,6 +267,16 @@
   function skey(I) {
     return 'cblist.' + (I.o.scope ? I.o.scope + '.' : '') + I.key;
   }
+  /** the page's own first order (opts.sortDefault: { key, dir }) when the person has not chosen one; null when it names none */
+  function sortDefaultOf(o) {
+    return o.sortDefault && o.sortDefault.key ? { key: o.sortDefault.key, dir: o.sortDefault.dir === -1 ? -1 : 1 } : null;
+  }
+  /** the view a person chose (lines or grid), else the page's, else grid */
+  function savedView(saved, o) {
+    if (saved.view === 'lines' || saved.view === 'grid') return saved.view;
+    return o.view === 'lines' ? 'lines' : 'grid';
+  }
+  /** the choices a person made on this list, read from the page's store or from this unit's own memory; the page's defaults for what was never chosen */
   function loadChoices(I) {
     var o = I.o,
       saved = null;
@@ -483,9 +289,9 @@
     var s = {
       cols: Array.isArray(saved.cols) && saved.cols.length ? saved.cols.slice() : null,
       widths: saved.widths && typeof saved.widths === 'object' ? saved.widths : {},
-      view: saved.view === 'lines' || saved.view === 'grid' ? saved.view : o.view === 'lines' ? 'lines' : 'grid',
+      view: savedView(saved, o),
       group: saved.group || (o.group && o.group.default) || null,
-      sort: saved.sort && saved.sort.key ? saved.sort : o.sortDefault && o.sortDefault.key ? { key: o.sortDefault.key, dir: o.sortDefault.dir === -1 ? -1 : 1 } : null /* sortDefault: the page's own first order, until the reader picks one */
+      sort: saved.sort && saved.sort.key ? saved.sort : sortDefaultOf(o) /* sortDefault: the page's own first order, until the reader picks one */
     };
     return s;
   }
@@ -537,7 +343,7 @@
   function allRows(inst) {
     return viewRows(inst) || baseRows(inst);
   }
-  function rid(I, row, i) {
+  function rowIdOf(I, row, i) {
     var v = I.o.id ? I.o.id(row) : row && row.id;
     return String(v == null ? 'r' + i : v);
   }
@@ -679,29 +485,29 @@
     /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
        Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
        3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
-    var fixed = 0, free = [], natural = {}, sc = null;
+    var fixed = 0, free = [], natural = {}, stretchCol = null;
     cols.forEach(function (c) {
       if (typeof list.s.widths[c.key] === 'number') fixed += widthOf(list, c);
       else { free.push(c); natural[c.key] = auto[c.key]; }
-      if (c.key === auto.stretch) sc = c;
+      if (c.key === auto.stretch) stretchCol = c;
     });
-    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
+    var floor = stretchCol && natural[stretchCol.key] != null ? Math.min(natural[stretchCol.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[stretchCol.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (stretchCol === cols[0] ? AUTO_FIRST : 0))) : 0;
     var live = free.slice(), hide = [];
     var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
     var squeeze = function (shrink) {
       live.forEach(function (c) { auto[c.key] = natural[c.key]; });
-      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
-      if (sc && auto[sc.key] != null && over > 0) {
-        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
+      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== stretchCol && c.pin !== 'end'; });
+      if (stretchCol && auto[stretchCol.key] != null && over > 0) {
+        auto[stretchCol.key] = Math.max(floor, auto[stretchCol.key] - over);
         over = need() - avail;
       }
       for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
         var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(list, c)); }, 0);
         if (room <= 0) break;
-        var cut = Math.min(over, room);
+        var reduction = Math.min(over, room);
         others.forEach(function (c) {
           var share = Math.max(0, auto[c.key] - minW(list, c));
-          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+          auto[c.key] = Math.round(auto[c.key] - (reduction * share) / room);
         });
         over = need() - avail;
       }
@@ -711,7 +517,7 @@
     while (over > 0 && !list.card && !list.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
       var leave = null;
       live.forEach(function (c) {
-        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
+        if (c !== stretchCol && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
       });
       if (!leave) break;
       hide.push(leave.key);
@@ -719,12 +525,12 @@
       over = squeeze(false);
     }
     if (over > 0) over = squeeze(true);
-    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(list, sc), auto[sc.key] - over); /* last resort: below its floor */
+    if (over > 0 && stretchCol && auto[stretchCol.key] != null) auto[stretchCol.key] = Math.max(minW(list, stretchCol), auto[stretchCol.key] - over); /* last resort: below its floor */
     return hide;
   }
   /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
-  function autoFit(I, cols, rows, avail) {
+  function autoFit(inst, cols, rows, avail) {
     var auto = {},
       sample = rows.slice(0, AUTO_SAMPLE),
       chars = {},
@@ -733,7 +539,7 @@
     cols.forEach(function (c) {
       var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
       sample.forEach(function (row) {
-        var cell = cellOf(I, c, row),
+        var cell = cellOf(inst, c, row),
           len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[\s>]/g) || []).length * 7 : 0); /* a button in the cell is wider than its words: its padding counts */
         if (len > n) n = len;
       });
@@ -745,16 +551,16 @@
         if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
       });
     auto.stretch = named ? named.key : best ? best.key : null;
-    var shortPx = inkWidths(I, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
+    var shortPx = inkWidths(inst, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
     cols.forEach(function (c) {
-      if (typeof I.s.widths[c.key] === 'number') return;
+      if (typeof inst.s.widths[c.key] === 'number') return;
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
-      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
-      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(I, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(inst, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
+      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(inst, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
     });
-    var hide = fitWidths(I, cols, auto, chars, avail);
-    I.auto = sample.length ? auto : null;
-    I.leftOut = hide;
+    var hide = fitWidths(inst, cols, auto, chars, avail);
+    inst.auto = sample.length ? auto : null;
+    inst.leftOut = hide;
     return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
   }
   /** autoFit, then the toolbar says so when the number of columns left out changed (the "+2" cue) */
@@ -932,7 +738,7 @@
       mode = groupMode(I);
     if (!g || !g.by || mode === 'none')
       return rows.map(function (item, index) {
-        return { row: item, id: rid(I, item, index) };
+        return { row: item, id: rowIdOf(I, item, index) };
       });
     var buckets = {},
       order = [],
@@ -941,7 +747,7 @@
       var k = safe(function () {
           return g.by(item, mode);
         }, null),
-        it = { row: item, id: rid(I, item, index), g: k ? String(k[1]) : null };
+        it = { row: item, id: rowIdOf(I, item, index), g: k ? String(k[1]) : null };
       if (!k) {
         loose.push(it);
         return;
@@ -1093,41 +899,62 @@
     if (isPhone() || foldPeriod) return foldPeriod || foldsToOneChip(chips, notes) ? foldedChipHTML(list, h, foldPeriod) : inline;
     return foldsToOneChip([], notes) ? chips.map(chipHTML).join('') + foldedChipHTML(list, { chips: [], notices: notes, period: h.period }, false) : inline;
   }
-  function paintTitle(list) {
-    var h = head(list),
-      box = $(list, ':scope > .cbl-title');
-    if (!h || !(h.title || h.period || h.slot || (h.notices && h.notices.length) || (h.chips && h.chips.length))) {
-      if (box) box.remove();
-      return;
+  /** paintTitle, step 1 of 5 (part 1, lines 1097-1098 of the one function): runs on, nothing here ends the call */
+  function paintTitleStep1(list, ctx) {
+ctx.h = head(list);
+ctx.box = $(list, ':scope > .cbl-title');
+  }
+  /** paintTitle, step 2 of 5 (part 2, lines 1099-1102 of the one function): true when it handled the call and nothing else should run */
+  function paintTitleStep2(list, ctx) {
+    if (!ctx.h || !(ctx.h.title || ctx.h.period || ctx.h.slot || (ctx.h.notices && ctx.h.notices.length) || (ctx.h.chips && ctx.h.chips.length))) {
+      if (ctx.box) ctx.box.remove();
+      return true;
     }
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-title';
-      box.setAttribute('data-cbl-part', 'title');
-      list.el.insertBefore(box, list.el.firstChild);
+    return false;
+  }
+  /** paintTitle, step 3 of 5 (the data-cbl-part part, lines 1103-1113 of the one function): runs on, nothing here ends the call */
+  function paintTitleCblPart(list, ctx) {
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-title';
+      ctx.box.setAttribute('data-cbl-part', 'title');
+      list.el.insertBefore(ctx.box, list.el.firstChild);
     }
-    var out = '';
-    if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
-    var chips = h.chips || [],
-      notes = h.notices || [],
-      foldPeriod = !!h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
-    if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
-    out += titleChipsHTML(list, h, foldPeriod);
+    ctx.out = '';
+    if (ctx.h.title) ctx.out += '<h1>' + esc(ctx.h.title) + '</h1>';
+    var chips = ctx.h.chips || [];
+var notes = ctx.h.notices || [];
+ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
+  }
+  /** paintTitle, step 4 of 5 (part 4, lines 1114-1123 of the one function): runs on, nothing here ends the call */
+  function paintTitleStep4(list, ctx) {
+    if (ctx.h.period && !ctx.foldPeriod) ctx.out += periodChipHTML(list, ctx.h.period);
+    ctx.out += titleChipsHTML(list, ctx.h, ctx.foldPeriod);
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
     if (list.o.views && list.o.views.inTitle)
-      out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
-    if (typeof h.slot === 'function')
-      out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
-    box.classList.toggle('reserve', !!h.reserve);
-    box.innerHTML = out;
+      ctx.out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
+    if (typeof ctx.h.slot === 'function')
+      ctx.out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
+    ctx.box.classList.toggle('reserve', !!ctx.h.reserve);
+    ctx.box.innerHTML = ctx.out;
     if (list.o.views && list.o.views.inTitle) paintViews(list);
-    if (typeof h.slot === 'function') {
-      var node = box.querySelector(':scope > .cbl-slot');
+  }
+  /** paintTitle, step 5 of 5 (part 5, lines 1124-1130 of the one function): runs on, nothing here ends the call */
+  function paintTitleStep5(list, ctx) {
+    if (typeof ctx.h.slot === 'function') {
+      var node = ctx.box.querySelector(':scope > .cbl-slot');
       if (node)
         safe(function () {
-          h.slot(node);
+          ctx.h.slot(node);
         });
     }
+  }
+  function paintTitle(list) {
+  var ctx = {},
+    steps = [paintTitleStep1, paintTitleStep2, paintTitleCblPart, paintTitleStep4, paintTitleStep5];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, ctx)) return;
+  }
   }
   /** the period's own popover; its words and controls (periodInner) also sit in the folded chip's popover on a tiny phone */
   function periodPop(I, p) {
@@ -1212,10 +1039,10 @@
     return Number(n) > 0 ? Number(n) : 0;
   }
   /** the rows that need the person, most urgent first (the page's own match and rank; no search, no filter) */
-  function needsRows(I) {
-    var spec = needsOf(I);
+  function needsRows(inst) {
+    var spec = needsOf(inst);
     if (!spec) return [];
-    var rows = allRows(I).filter(function (row) {
+    var rows = allRows(inst).filter(function (row) {
       return safe(function () {
         return spec.match(row);
       }, false);
@@ -1271,7 +1098,7 @@
     var rows = needsRows(I);
     if (!spec || !rows.length) return;
     var ids = rows.map(function (row, index) {
-        return rid(I, row, index);
+        return rowIdOf(I, row, index);
       }),
       at = ids.indexOf(String(R.hl)),
       pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
@@ -1378,14 +1205,15 @@
       '</span>'
     );
   }
-  function viewToolsHTML(list, keyText, testIds, toolOptions, groupHtml) {
-    var listOptions = list.o,
-      runState = list.r,
-      viewState = list.s,
-      toolsHtml = '';
+  /** viewToolsHTML, step 1 of 2 (part 1, lines 1403-1434 of the one function): runs on, nothing here ends the call */
+  function viewToolsHTMLStep1(list, keyText, testIds, toolOptions, groupHtml, ctx) {
+ctx.listOptions = list.o;
+ctx.runState = list.r;
+var viewState = list.s;
+ctx.toolsHtml = '';
     var expand = hasNext(list) ? expandAllHTML(list, keyText, testIds) : '';
-    toolsHtml = viewChoiceHTML(list, keyText);
-    toolsHtml +=
+    ctx.toolsHtml = viewChoiceHTML(list, keyText);
+    ctx.toolsHtml +=
       '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' +
       keyText +
       '" data-testid="cols-btn-' +
@@ -1400,8 +1228,8 @@
       '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span>' + leftOutCue(list, keyText) + '</button>' +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>';
-    if (listOptions.csv !== false && toolOptions.csv !== false)
-      toolsHtml +=
+    if (ctx.listOptions.csv !== false && toolOptions.csv !== false)
+      ctx.toolsHtml +=
         '<button type="button" data-cbsid="CMP037-B01"' + mountAttribute('CMP037') + ' class="cbl-tbtn cbl-ico" data-cbl-csv data-testid="' +
         esc(testIds.csv || 'cbl-csv-' + keyText) +
         '" title="' +
@@ -1410,19 +1238,29 @@
         esc(T(list, 'Download CSV')) +
         '">⬇' +
         '<span class="cbl-w"> ' + esc(T(list, 'CSV')) + '</span></button>';
-    toolsHtml = groupHtml == null ? expand + toolsHtml : viewMenuHTML(list, keyText, groupHtml + expand + toolsHtml);
-    if (listOptions.bulk && listOptions.bulk.length)
-      toolsHtml +=
+    ctx.toolsHtml = groupHtml == null ? expand + ctx.toolsHtml : viewMenuHTML(list, keyText, groupHtml + expand + ctx.toolsHtml);
+  }
+  /** viewToolsHTML, step 2 of 2 (part 2, lines 1435-1445 of the one function): runs on, nothing here ends the call */
+  function viewToolsHTMLStep2(list, keyText, testIds, toolOptions, groupHtml, ctx) {
+    if (ctx.listOptions.bulk && ctx.listOptions.bulk.length)
+      ctx.toolsHtml +=
         '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
-        (runState.selMode ? ' on' : '') +
+        (ctx.runState.selMode ? ' on' : '') +
         '" data-cbl-selmode data-testid="cbl-select-' +
         keyText +
         '" aria-pressed="' +
-        !!runState.selMode +
+        !!ctx.runState.selMode +
         '">☑ ' +
         esc(T(list, 'Select')) +
         '</button>';
-    return toolsHtml;
+  }
+  function viewToolsHTML(list, keyText, testIds, toolOptions, groupHtml) {
+  var ctx = {},
+    steps = [viewToolsHTMLStep1, viewToolsHTMLStep2];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, keyText, testIds, toolOptions, groupHtml, ctx)) return;
+  }
+  return ctx.toolsHtml;
   }
   /** the Group by choice (a select or a row of pressed toggles, CMP035 / CMP034); on a phone it goes into the View popover */
   function groupToolsHTML(list, keyText) {
@@ -1497,85 +1335,98 @@
     var bar = $(list, ':scope > .cbl-tools');
     if (bar) bar.hidden = !!(list.o.tools && list.o.tools.bar === false);
   }
-  function paintToolsBar(list) {
-    paintViews(list);
-    var box = $(list, ':scope > .cbl-tools');
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-tools';
-      box.setAttribute('data-cbl-part', 'tools');
-      box.setAttribute('role', 'toolbar');
-      box.setAttribute('aria-label', T(list, 'View'));
+  /** paintToolsBar, step 1 of 7 (the data-cbl-part part, lines 1501-1518 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarCblPart(list, ctx) {
+paintViews(list);
+    ctx.box = $(list, ':scope > .cbl-tools');
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-tools';
+      ctx.box.setAttribute('data-cbl-part', 'tools');
+      ctx.box.setAttribute('role', 'toolbar');
+      ctx.box.setAttribute('aria-label', T(list, 'View'));
       var node = $(list, ':scope > .cbl-list');
-      list.el.insertBefore(box, node);
+      list.el.insertBefore(ctx.box, node);
     }
-    var o = list.o,
-      R = list.r,
-      s = list.s,
-      m = matched(list),
-      fn = activeFilters(list).length,
-      k = esc(list.key),
-      sorts = sortChoices(list);
-    var tids = o.tids || {},
-      tl = o.tools || {},
-      h =
-        needsHTML(list) +
-        (tl.search === false
+    ctx.o = list.o;
+ctx.R = list.r;
+var s = list.s;
+ctx.m = matched(list);
+ctx.fn = activeFilters(list).length;
+ctx.k = esc(list.key);
+ctx.sorts = sortChoices(list);
+  }
+  /** paintToolsBar, step 2 of 7 (part 2, lines 1519-1535 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep2(list, ctx) {
+    ctx.tids = ctx.o.tids || {};
+ctx.tl = ctx.o.tools || {};
+ctx.h = needsHTML(list) +
+        (ctx.tl.search === false
           ? ''
           : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP045-I01"' + mountAttribute('CMP045') + ' data-cbl-q id="cbl-q-' +
-            k +
+            ctx.k +
             '" data-testid="listctl-search-' +
-            k +
+            ctx.k +
             '" placeholder="' +
-            esc(o.searchHint || T(list, 'Search')) +
+            esc(ctx.o.searchHint || T(list, 'Search')) +
             '" value="' +
-            esc(R.q) +
+            esc(ctx.R.q) +
             '" aria-label="' +
             esc(T(list, 'Search')) +
             '"></div>');
+  }
+  /** paintToolsBar, step 3 of 7 (part 3, lines 1539-1558 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep3(list, ctx) {
     /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
        goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand. T3-CATALOGUE (widened, additively): a server-paged list that DECLARES
        filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
-    if ((o.filters && o.filters.length) || ((!remote(list) || o.remote.filters === true) && sorts.length > 1)) {
-      h +=
+    if ((ctx.o.filters && ctx.o.filters.length) || ((!remote(list) || ctx.o.remote.filters === true) && ctx.sorts.length > 1)) {
+      ctx.h +=
         '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn' +
-        (fn ? ' on' : '') +
+        (ctx.fn ? ' on' : '') +
         '" data-cbl-pop="filt" id="cbl-filt-' +
-        k +
+        ctx.k +
         '" data-testid="cbl-filters-' +
-        k +
+        ctx.k +
         '" aria-haspopup="dialog" aria-expanded="' +
         (list.pop === 'filt') +
         '">' +
         esc(T(list, 'Filters')) +
         ' ▾' +
-        (fn ? ' <span class="badge">' + fn + '</span>' : '') +
+        (ctx.fn ? ' <span class="badge">' + ctx.fn + '</span>' : '') +
         '</button>' +
-        (list.pop === 'filt' ? filtPop(list, sorts) : '') +
+        (list.pop === 'filt' ? filtPop(list, ctx.sorts) : '') +
         '</span>';
     }
-    var narrow = isNarrowList(list),
-      groupHtml = groupToolsHTML(list, k);
-    if (!narrow) h += groupHtml;
-    h += viewToolsHTML(list, k, tids, tl, narrow ? groupHtml : null);
-    if (tl.count !== false)
-      h +=
+    ctx.narrow = isNarrowList(list);
+ctx.groupHtml = groupToolsHTML(list, ctx.k);
+  }
+  /** paintToolsBar, step 4 of 7 (part 4, lines 1559-1569 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep4(list, ctx) {
+    if (!ctx.narrow) ctx.h += ctx.groupHtml;
+    ctx.h += viewToolsHTML(list, ctx.k, ctx.tids, ctx.tl, ctx.narrow ? ctx.groupHtml : null);
+    if (ctx.tl.count !== false)
+      ctx.h +=
         '<span class="cbl-count" id="cbl-count-' +
-        k +
+        ctx.k +
         '" data-testid="' +
-        esc(tids.count || list.key + '-count') +
+        esc(ctx.tids.count || list.key + '-count') +
         '" aria-live="polite">' +
-        esc(countText(list, m)) +
-        '</span>'; /* tools.count:false — a host that already says the count (one count on a screen) */
-    if (o.bulk && o.bulk.length && R.selMode) {
+        esc(countText(list, ctx.m)) +
+        '</span>';
+  }
+  /** paintToolsBar, step 5 of 7 (part 5, lines 1570-1594 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep5(list, ctx) {
+    /* tools.count:false — a host that already says the count (one count on a screen) */
+    if (ctx.o.bulk && ctx.o.bulk.length && ctx.R.selMode) {
       var n = selectedRows(list).length;
-      h +=
+      ctx.h +=
         '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' +
-        k +
+        ctx.k +
         '"><button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selall>' +
         esc(T(list, 'Select all shown')) +
         '</button>' +
-        o.bulk
+        ctx.o.bulk
           .map(function (item) {
             return (
               '<button type="button" data-cbsid="CMP037-B04"' + mountAttribute('CMP037') + ' class="cbl-btn" data-bulk="' +
@@ -1592,18 +1443,21 @@
           .join('') +
         '</span>';
     }
-    h +=
+  }
+  /** paintToolsBar, step 6 of 7 (part 6, lines 1595-1626 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep6(list, ctx) {
+    ctx.h +=
       '<div class="cbl-fchips">' +
       activeFilters(list)
         .map(function (item) {
           var ov = fopts(item).filter(function (x) {
-            return x.v === R.filt[item.key];
+            return x.v === ctx.R.filt[item.key];
           })[0];
           return (
             '<span class="cbl-fchip">' +
             esc(item.label || item.key) +
             ': ' +
-            esc(ov ? ov.label : R.filt[item.key]) +
+            esc(ov ? ov.label : ctx.R.filt[item.key]) +
             '<button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' data-unfilt="' +
             esc(item.key) +
             '" aria-label="' +
@@ -1613,29 +1467,39 @@
         })
         .join('') +
       '</div>';
-    if (list.pop && String(list.pop).indexOf('hf:') === 0) h += hfPop(list);
-    var ae = root.document.activeElement,
-      keepId = ae && box.contains(ae) ? ae.id : '',
-      ss = null,
-      se = null;
-    if (keepId && ae.setSelectionRange) {
+    if (list.pop && String(list.pop).indexOf('hf:') === 0) ctx.h += hfPop(list);
+    var ae = root.document.activeElement;
+ctx.keepId = ae && ctx.box.contains(ae) ? ae.id : '';
+ctx.ss = null;
+ctx.se = null;
+    if (ctx.keepId && ae.setSelectionRange) {
       try {
-        ss = ae.selectionStart;
-        se = ae.selectionEnd;
+        ctx.ss = ae.selectionStart;
+        ctx.se = ae.selectionEnd;
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
-    box.innerHTML = h;
-    if (keepId) {
-      var back = box.querySelector('#' + cssId(keepId));
+  }
+  /** paintToolsBar, step 7 of 7 (part 7, lines 1627-1638 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep7(list, ctx) {
+    ctx.box.innerHTML = ctx.h;
+    if (ctx.keepId) {
+      var back = ctx.box.querySelector('#' + cssId(ctx.keepId));
       if (back) {
         back.focus();
-        if (ss != null) {
+        if (ctx.ss != null) {
           try {
-            back.setSelectionRange(ss, se);
+            back.setSelectionRange(ctx.ss, ctx.se);
           } catch (_) { /* best effort: failing here changes nothing the user sees */ }
         }
       }
     }
+  }
+  function paintToolsBar(list) {
+  var ctx = {},
+    steps = [paintToolsBarCblPart, paintToolsBarStep2, paintToolsBarStep3, paintToolsBarStep4, paintToolsBarStep5, paintToolsBarStep6, paintToolsBarStep7];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, ctx)) return;
+  }
   }
   /* the saved views: tabs that set the list's own filters. A tab is lit when the filters in force are exactly its own. */
   function viewMatches(I, v, row) {
@@ -1695,59 +1559,75 @@
     });
     return out;
   }
-  function paintViews(I) {
-    var list = I.o.views && I.o.views.items,
-      inT = !!(I.o.views && I.o.views.inTitle),
-      box = $(I, inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
-    if (!list || !list.length || remote(I)) {
-      if (box) box.remove();
-      return;
+  /** paintViews, step 1 of 3 (part 1, lines 1746-1752 of the one function): true when it handled the call and nothing else should run */
+  function paintViewsStep1(inst, ctx) {
+ctx.list = inst.o.views && inst.o.views.items;
+ctx.inT = !!(inst.o.views && inst.o.views.inTitle);
+ctx.box = $(inst, ctx.inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
+    if (!ctx.list || !ctx.list.length || remote(inst)) {
+      if (ctx.box) ctx.box.remove();
+      return true;
     }
-    if (!box && inT) return; /* no title row painted (yet): paintTitle paints the tabs with it */
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-views';
-      box.setAttribute('data-cbl-part', 'views');
-      box.setAttribute('role', 'tablist');
-      box.setAttribute('aria-label', T(I, 'Views'));
-      var node = $(I, ':scope > .cbl-tools'),
-        l = $(I, ':scope > .cbl-list');
-      I.el.insertBefore(box, node || l);
+    return false;
+  }
+  /** paintViews, step 2 of 3 (the data-cbl-part part, lines 1753-1765 of the one function): true when it handled the call and nothing else should run */
+  function paintViewsCblPart(inst, ctx) {
+    if (!ctx.box && ctx.inT) return true; /* no title row painted (yet): paintTitle paints the tabs with it */
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-views';
+      ctx.box.setAttribute('data-cbl-part', 'views');
+      ctx.box.setAttribute('role', 'tablist');
+      ctx.box.setAttribute('aria-label', T(inst, 'Views'));
+      var node = $(inst, ':scope > .cbl-tools'),
+        l = $(inst, ':scope > .cbl-list');
+      inst.el.insertBefore(ctx.box, node || l);
     }
-    var rows = baseRows(I),
-      vt = I.o.views.tid || 'views';
-    box.innerHTML = list
+    ctx.rows = baseRows(inst);
+ctx.vt = inst.o.views.tid || 'views';
+    return false;
+  }
+  /** paintViews, step 3 of 3 (part 3, lines 1766-1797 of the one function): runs on, nothing here ends the call */
+  function paintViewsStep3(inst, ctx) {
+    ctx.box.innerHTML = ctx.list
       .map(function (item) {
         var n = (
             typeof item.rows === 'function'
               ? safe(function () {
                   return item.rows();
                 }, [])
-              : rows.filter(function (row) {
-                  return viewMatches(I, item, row);
+              : ctx.rows.filter(function (row) {
+                  return viewMatches(inst, item, row);
                 })
           ).length,
-          on = viewOn(I, item);
+          on = viewOn(inst, item);
         return (
           '<button type="button" data-cbsid="CMP036-K01"' + mountAttribute('CMP036') + ' role="tab" class="cbl-vtab" data-view-tab="' +
           esc(item.key) +
           '" aria-selected="' +
           on +
           '" data-testid="' +
-          esc(vt) +
+          esc(ctx.vt) +
           '-' +
           esc(item.key) +
           '"' +
-          (item.tip ? ' title="' + esc(T(I, item.tip)) + '"' : '') +
+          (item.tip ? ' title="' + esc(T(inst, item.tip)) + '"' : '') +
           '>' +
           (item.iconHtml || '') +
-          (item.labelHtml || esc(T(I, item.label))) +
+          (item.labelHtml || esc(T(inst, item.label))) +
           ' <span class="n">' +
           n +
           '</span></button>'
         );
       })
       .join('');
+  }
+  function paintViews(I) {
+  var ctx = {},
+    steps = [paintViewsStep1, paintViewsCblPart, paintViewsStep3];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, ctx)) return;
+  }
   }
   /* the filter behind a column heading: a small menu of that filter's own choices (the same state as Filters ▾) */
   function hfPop(list) {
@@ -1895,6 +1775,73 @@
     var words = T(list, '+{n} columns hidden — no room', { n: left });
     return ' <span class="cbl-noroom" data-testid="cols-more-' + keyText + '" title="' + esc(words) + '" aria-label="' + esc(words) + '">+' + left + '</span>';
   }
+  /** the ← or → button that moves a shown column one place (disabled at the edge); a spacer when the column is not shown */
+  function colMoveHTML(I, item, on, dir, edge) {
+    if (!on) return '<span class="cbl-mvsp"></span>';
+    var word = dir === '-1' ? 'Move {x} left' : 'Move {x} right';
+    return (
+      '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
+      esc(item.key) +
+      '" data-d="' + dir + '"' +
+      (edge ? ' disabled' : '') +
+      ' aria-label="' +
+      esc(T(I, word, { x: item.label })) +
+      '" title="' +
+      esc(T(I, word, { x: item.label })) +
+      '">' + (dir === '-1' ? '←' : '→') + '</button>'
+    );
+  }
+  /** L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
+  function colWidthButtonsHTML(I, item, on) {
+    if (!on) return '';
+    return ['-1', '1']
+      .map(function (dir) {
+        var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
+        return (
+          '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
+          esc(item.key) +
+          '" data-d="' + dir + '" data-testid="cols-wd-' + esc(item.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
+          esc(T(I, word, { x: item.label })) +
+          '" title="' +
+          esc(T(I, word, { x: item.label })) +
+          '">' + (dir === '1' ? '+' : '−') + '</button>'
+        );
+      })
+      .join('');
+  }
+  /** the tick box and name of one column in the chooser: the name column is always on, a shown column with no room says so */
+  function colTickHTML(I, item, on, view) {
+    return (
+      '<label' +
+      (item.key === view.top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') +
+      '><input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-col="' +
+      esc(item.key) +
+      '" data-testid="cols-' +
+      view.key +
+      '-' +
+      esc(item.key) +
+      '"' +
+      (on ? ' checked' : '') +
+      (item.key === view.top ? ' disabled' : '') +
+      '> ' +
+      esc(item.label || item.key) +
+      (on && view.noRoom.indexOf(item.key) >= 0
+        ? ' <span class="cbl-noroom" data-testid="cols-noroom-' + esc(item.key) + '">' + esc(T(I, 'hidden — no room')) + '</span>'
+        : '') +
+      '</label>'
+    );
+  }
+  /** one row of the columns chooser: move left, tick box and name, move right, narrower and wider (view: the name column, the list key, the columns with no room, how many are shown) */
+  function colRowHTML(I, item, index, on, view) {
+    return (
+      '<div class="cbl-colrow">' +
+      colMoveHTML(I, item, on, '-1', index === 0) +
+      colTickHTML(I, item, on, view) +
+      colMoveHTML(I, item, on, '1', index === view.count - 1) +
+      colWidthButtonsHTML(I, item, on) +
+      '</div>'
+    );
+  }
   function colsPop(I) {
     var all = choosable(I),
       shown = shownKeys(I),
@@ -1908,67 +1855,9 @@
       }),
       k = esc(I.key),
       nr = noRoomKeys(I).concat(leftOutKeys(I)); /* no room: a card's extra fields, and the columns the last paint left out (autoFit) */
-    function row(c, i, on) {
-      return (
-        '<div class="cbl-colrow">' +
-        (on
-          ? '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
-            esc(c.key) +
-            '" data-d="-1"' +
-            (i === 0 ? ' disabled' : '') +
-            ' aria-label="' +
-            esc(T(I, 'Move {x} left', { x: c.label })) +
-            '" title="' +
-            esc(T(I, 'Move {x} left', { x: c.label })) +
-            '">←</button>'
-          : '<span class="cbl-mvsp"></span>') +
-        '<label' +
-        (c.key === top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') +
-        '><input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-col="' +
-        esc(c.key) +
-        '" data-testid="cols-' +
-        k +
-        '-' +
-        esc(c.key) +
-        '"' +
-        (on ? ' checked' : '') +
-        (c.key === top ? ' disabled' : '') +
-        '> ' +
-        esc(c.label || c.key) +
-        (on && nr.indexOf(c.key) >= 0
-          ? ' <span class="cbl-noroom" data-testid="cols-noroom-' + esc(c.key) + '">' + esc(T(I, 'hidden — no room')) + '</span>'
-          : '') +
-        '</label>' +
-        (on
-          ? '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
-            esc(c.key) +
-            '" data-d="1"' +
-            (i === shown.length - 1 ? ' disabled' : '') +
-            ' aria-label="' +
-            esc(T(I, 'Move {x} right', { x: c.label })) +
-            '" title="' +
-            esc(T(I, 'Move {x} right', { x: c.label })) +
-            '">→</button>'
-          : '<span class="cbl-mvsp"></span>') +
-        /* L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
-        (on
-          ? ['-1', '1']
-              .map(function (dir) {
-                var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
-                return (
-                  '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
-                  esc(c.key) +
-                  '" data-d="' + dir + '" data-testid="cols-wd-' + esc(c.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
-                  esc(T(I, word, { x: c.label })) +
-                  '" title="' +
-                  esc(T(I, word, { x: c.label })) +
-                  '">' + (dir === '1' ? '+' : '−') + '</button>'
-                );
-              })
-              .join('')
-          : '') +
-        '</div>'
-      );
+    var view = { top: top, key: k, noRoom: nr, count: shown.length };
+    function row(item, index, on) {
+      return colRowHTML(I, item, index, on, view);
     }
     return (
       '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" data-pop="POP137" aria-label="' +
@@ -2001,155 +1890,175 @@
     );
   }
 
-  /* the rows area: header (sticky) + rows, or one of the four states */
-  function paintList(I) {
-    var box = $(I, ':scope > .cbl-list');
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-list';
-      box.setAttribute('tabindex', '0');
-      box.setAttribute('data-cbl-part', 'list');
-      I.el.appendChild(box);
+  /** paintList, step 1 of 10 (the data-cbl-part part, lines 2006-2028 of the one function): runs on, nothing here ends the call */
+  function paintListCblPart(inst, ctx) {
+ctx.box = $(inst, ':scope > .cbl-list');
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-list';
+      ctx.box.setAttribute('tabindex', '0');
+      ctx.box.setAttribute('data-cbl-part', 'list');
+      inst.el.appendChild(ctx.box);
     }
-    box.setAttribute('aria-label', T(I, 'Rows'));
-    if (!box.__cblScroll) {
-      box.__cblScroll = true;
-      box.addEventListener(
+    ctx.box.setAttribute('aria-label', T(inst, 'Rows'));
+    if (!ctx.box.__cblScroll) {
+      ctx.box.__cblScroll = true;
+      ctx.box.addEventListener(
         'scroll',
         function () {
-          if (I.o.onScroll)
+          if (inst.o.onScroll)
             safe(function () {
-              I.o.onScroll(box);
+              inst.o.onScroll(ctx.box);
             });
         },
         { passive: true }
       );
     }
-    I.card = box.clientWidth > 0 && box.clientWidth <= 620;
-    if (!box.__cblRO && root.ResizeObserver) {
-      box.__cblRO = new root.ResizeObserver(function () {
-        if (I.dead) return;
-        var c = box.clientWidth > 0 && box.clientWidth <= 620;
-        if (c !== I.card || (I.auto && Math.abs(box.clientWidth - (I.fitW || 0)) > 8)) {
-          paintTools(I);
-          paintList(I);
+    inst.card = ctx.box.clientWidth > 0 && ctx.box.clientWidth <= 620;
+  }
+  /** paintList, step 2 of 10 (part 2, lines 2029-2056 of the one function): runs on, nothing here ends the call */
+  function paintListStep2(inst, ctx) {
+    if (!ctx.box.__cblRO && root.ResizeObserver) {
+      ctx.box.__cblRO = new root.ResizeObserver(function () {
+        if (inst.dead) return;
+        var c = ctx.box.clientWidth > 0 && ctx.box.clientWidth <= 620;
+        if (c !== inst.card || (inst.auto && Math.abs(ctx.box.clientWidth - (inst.fitW || 0)) > 8)) {
+          paintTools(inst);
+          paintList(inst);
         }
       });
       try {
-        box.__cblRO.observe(box);
+        ctx.box.__cblRO.observe(ctx.box);
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
-    var keepTop = box.scrollTop,
-      o = I.o,
-      R = I.r,
-      s = I.s,
-      cols = shownCols(I),
-      tpl = template(I, cols);
-    if (I.io) {
+    ctx.keepTop = ctx.box.scrollTop;
+ctx.o = inst.o;
+ctx.R = inst.r;
+ctx.s = inst.s;
+ctx.cols = shownCols(inst);
+ctx.tpl = template(inst, ctx.cols);
+    if (inst.io) {
       try {
-        I.io.disconnect();
+        inst.io.disconnect();
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-      I.io = null;
+      inst.io = null;
     }
-    I.el.classList.toggle('tbllines', s.view === 'lines');
-    var state = typeof o.state === 'function' ? o.state() : o.state;
-    var hdr = headerHTML(I, cols, tpl, state === 'loading');
-    if (state === 'loading') {
-      box.innerHTML =
-        '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
-      setHdrH(I, box);
-      return;
+    inst.el.classList.toggle('tbllines', ctx.s.view === 'lines');
+    ctx.state = typeof ctx.o.state === 'function' ? ctx.o.state() : ctx.o.state;
+    ctx.hdr = headerHTML(inst, ctx.cols, ctx.tpl, ctx.state === 'loading');
+  }
+  /** paintList, step 3 of 10 (part 3, lines 2057-2081 of the one function): true when it handled the call and nothing else should run */
+  function paintListStep3(inst, ctx) {
+    if (ctx.state === 'loading') {
+      ctx.box.innerHTML =
+        '<div class="cbl-grid" role="grid" aria-busy="true">' + (ctx.s.view === 'grid' ? ctx.hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
+      setHdrH(inst, ctx.box);
+      return true;
     }
-    if (state === 'error') {
+    if (ctx.state === 'error') {
       /* ⚠️ a caller may hand a plain SENTENCE (cap-finance did). A string has a native .sub() method (String.prototype.sub),
          so er.sub printed "function sub() { [native code] }" on screen. A string is the title; only an object has parts. */
-      var er = val(o.error);
+      var er = val(ctx.o.error);
       er = typeof er === 'string' ? { title: er } : er || {};
-      box.innerHTML =
+      ctx.box.innerHTML =
         '<div class="cbl-state" role="alert" data-testid="cbl-error-' +
-        esc(I.key) +
+        esc(inst.key) +
         '"><div class="big">' +
-        esc(er.title || T(I, 'The list could not load.')) +
+        esc(er.title || T(inst, 'The list could not load.')) +
         '</div>' +
-        esc(er.sub || T(I, 'Nothing was lost. Try again in a moment.')) +
+        esc(er.sub || T(inst, 'Nothing was lost. Try again in a moment.')) +
         '<br><button type="button" data-cbsid="CMP009-B01"' + mountAttribute('CMP009') + ' class="cbl-btn" data-cbl-retry>' +
-        esc(T(I, 'Try again')) +
+        esc(T(inst, 'Try again')) +
         '</button></div>';
-      return;
+      return true;
     }
-    var m = matched(I),
-      items = itemsOf(I, m.rows);
-    if (m.rows.length && s.view === 'grid') {
-      cols = fitCols(I, cols, m.rows, box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
-      I.fitW = box.clientWidth;
-      tpl = template(I, cols);
-      hdr = headerHTML(I, cols, tpl, false);
+    ctx.m = matched(inst);
+ctx.items = itemsOf(inst, ctx.m.rows);
+    return false;
+  }
+  /** paintList, step 4 of 10 (part 4, lines 2082-2087 of the one function): runs on, nothing here ends the call */
+  function paintListStep4(inst, ctx) {
+    if (ctx.m.rows.length && ctx.s.view === 'grid') {
+      ctx.cols = fitCols(inst, ctx.cols, ctx.m.rows, ctx.box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
+      inst.fitW = ctx.box.clientWidth;
+      ctx.tpl = template(inst, ctx.cols);
+      ctx.hdr = headerHTML(inst, ctx.cols, ctx.tpl, false);
     }
-    if (!m.rows.length) {
-      var narrowed = isNarrowed(I);
-      if (m.all.length && narrowed && !remote(I)) {
-        box.innerHTML =
+  }
+  /** paintList, step 5 of 10 (part 5, lines 2088-2127 of the one function): true when it handled the call and nothing else should run */
+  function paintListStep5(inst, ctx) {
+    if (!ctx.m.rows.length) {
+      var narrowed = isNarrowed(inst);
+      if (ctx.m.all.length && narrowed && !remote(inst)) {
+        ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +
-          esc(I.key) +
+          esc(inst.key) +
           '"><div class="big">' +
-          esc(T(I, 'Nothing matches.')) +
+          esc(T(inst, 'Nothing matches.')) +
           '</div>' +
-          esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) +
+          esc(ctx.R.q ? '“' + ctx.R.q + '” ' + T(inst, 'matches nothing here.') : T(inst, 'These filters match nothing here.')) +
           '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clear>' +
-          esc(T(I, 'Clear search and filters')) +
+          esc(T(inst, 'Clear search and filters')) +
           '</button></div>';
-      } else if (remote(I) && narrowed) {
-        box.innerHTML =
+      } else if (remote(inst) && narrowed) {
+        ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +
-          esc(I.key) +
+          esc(inst.key) +
           '"><div class="big">' +
-          esc(T(I, 'Nothing matches.')) +
+          esc(T(inst, 'Nothing matches.')) +
           '</div>' +
-          esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) +
+          esc(ctx.R.q ? '“' + ctx.R.q + '” ' + T(inst, 'matches nothing here.') : T(inst, 'These filters match nothing here.')) +
           '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clear>' +
-          esc(T(I, 'Clear search and filters')) +
+          esc(T(inst, 'Clear search and filters')) +
           '</button></div>' +
-          footHTML(I);
+          footHTML(inst);
       } else {
-        var em = val(o.empty);
+        var em = val(ctx.o.empty);
         em = typeof em === 'string' ? { title: em } : em || {}; /* same trap as er above */
-        box.innerHTML =
+        ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-empty-' +
-          esc(I.key) +
+          esc(inst.key) +
           '"><div class="big">' +
-          esc(em.title || T(I, 'Nothing recorded yet.')) +
+          esc(em.title || T(inst, 'Nothing recorded yet.')) +
           '</div>' +
           esc(em.sub || '') +
           '</div>' +
-          footHTML(I);
+          footHTML(inst);
       }
-      return;
+      return true;
     }
+    return false;
+  }
+  /** paintList, step 6 of 10 (part 6, lines 2129-2139 of the one function): runs on, nothing here ends the call */
+  function paintListStep6(inst, ctx) {
     /* the rows that can be drawn: a collapsed group's rows are not among them (so a collapsed group never leaves a "show more" behind) */
-    items = items.filter(function (x) {
-      return x.group != null || !(x.g != null && R.gcol[x.g]);
+    ctx.items = ctx.items.filter(function (x) {
+      return x.group != null || !(x.g != null && ctx.R.gcol[x.g]);
     });
-    var drawn = 0,
-      count = 0,
-      total = items.filter(function (x) {
+    ctx.drawn = 0;
+ctx.count = 0;
+ctx.total = ctx.items.filter(function (x) {
         return x.group == null;
-      }).length,
-      limit = I.limit;
-    if (limit > total) limit = I.limit = Math.max(50, Math.min(limit, total));
-    var body = '';
-    for (var index = 0; index < items.length; index++) {
-      var it = items[index];
+      }).length;
+ctx.limit = inst.limit;
+    if (ctx.limit > ctx.total) ctx.limit = inst.limit = Math.max(50, Math.min(ctx.limit, ctx.total));
+    ctx.body = '';
+  }
+  /** paintList, step 7 of 10 (part 7, lines 2140-2168 of the one function): runs on, nothing here ends the call */
+  function paintListStep7(inst, ctx) {
+    for (var index = 0; index < ctx.items.length; index++) {
+      var it = ctx.items[index];
       if (it.group != null) {
-        count = 0; /* the stripe starts again under each group head */
-        var shut = !!R.gcol[it.gkey],
-          gt = o.group && o.group.tid;
-        body +=
+        ctx.count = 0; /* the stripe starts again under each group head */
+        var shut = !!ctx.R.gcol[it.gkey],
+          gt = ctx.o.group && ctx.o.group.tid;
+        ctx.body +=
           '<div class="cbl-group" role="row" tabindex="0" aria-expanded="' +
           !shut +
           '" data-g="' +
           esc(it.gkey) +
           '"' +
-          (gt || o.group.headTid ? ' data-testid="' + esc(o.group.headTid ? o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') +
+          (gt || ctx.o.group.headTid ? ' data-testid="' + esc(ctx.o.group.headTid ? ctx.o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') +
           ' style="cursor:pointer"><span class="cbl-tw" aria-hidden="true">' +
           (shut ? '▸' : '▾') +
           '</span><b role="gridcell">' +
@@ -2161,71 +2070,89 @@
           '</span></div>';
         continue;
       }
-      if (!remote(I) && drawn >= limit) break;
-      drawn++;
-      var zb = count++ % 2 === 1; /* ZEBRA: the 2nd, 4th … data row of the list (or of its group) */
-      body += s.view === 'grid' ? rowHTML(I, it, cols, tpl, zb) : lineHTML(I, it, cols, zb);
+      if (!remote(inst) && ctx.drawn >= ctx.limit) break;
+      ctx.drawn++;
+      var zb = ctx.count++ % 2 === 1; /* ZEBRA: the 2nd, 4th … data row of the list (or of its group) */
+      ctx.body += ctx.s.view === 'grid' ? rowHTML(inst, it, ctx.cols, ctx.tpl, zb) : lineHTML(inst, it, ctx.cols, zb);
     }
-    var end;
-    if (!remote(I) && drawn < total)
-      end =
+  }
+  /** paintList, step 8 of 10 (part 8, lines 2169-2190 of the one function): runs on, nothing here ends the call */
+  function paintListStep8(inst, ctx) {
+    /* ctx.end starts undefined */
+    if (!remote(inst) && ctx.drawn < ctx.total)
+      ctx.end =
         '<div class="cbl-end" data-cbl-sentinel data-testid="cbl-more-' +
-        esc(I.key) +
+        esc(inst.key) +
         '"><button type="button" data-cbsid="CMP037-B05"' + mountAttribute('CMP037') + ' data-cbl-more>' +
-        esc(T(I, '↓ Show {n} more', { n: Math.min(50, total - drawn) })) +
+        esc(T(inst, '↓ Show {n} more', { n: Math.min(50, ctx.total - ctx.drawn) })) +
         '</button> <span>' +
-        drawn +
+        ctx.drawn +
         ' ' +
-        esc(T(I, 'of')) +
+        esc(T(inst, 'of')) +
         ' ' +
-        total +
+        ctx.total +
         '</span></div>';
     else
-      end = remote(I)
+      ctx.end = remote(inst)
         ? ''
         : '<div class="cbl-end" data-testid="cbl-end-' +
-          esc(I.key) +
+          esc(inst.key) +
           '">' +
-          esc(T(I, 'end of list')) +
-          '</div>'; /* the count is said once, in the tools — not again here (ai-eye E-3/E-13) */
-    box.innerHTML =
+          esc(T(inst, 'end of list')) +
+          '</div>';
+  }
+  /** paintList, step 9 of 10 (part 9, lines 2191-2204 of the one function): runs on, nothing here ends the call */
+  function paintListStep9(inst, ctx) {
+    /* the count is said once, in the tools — not again here (ai-eye E-3/E-13) */
+    ctx.box.innerHTML =
       '<div class="cbl-grid' +
-      (s.view === 'lines' ? ' cbl-lines' : '') +
-      (I.auto ? ' cbl-fit' : '') +
-      '" role="' + gridRole(I, items) + '" aria-rowcount="' +
-      total +
+      (ctx.s.view === 'lines' ? ' cbl-lines' : '') +
+      (inst.auto ? ' cbl-fit' : '') +
+      '" role="' + gridRole(inst, ctx.items) + '" aria-rowcount="' +
+      ctx.total +
       '">' +
-      (s.view === 'grid' ? hdr : '') +
-      body +
+      (ctx.s.view === 'grid' ? ctx.hdr : '') +
+      ctx.body +
       '</div>' +
-      end +
-      footHTML(I);
-    setHdrH(I, box);
-    box.scrollTop = keepTop;
-    if (!remote(I) && drawn < total) {
-      var sent = box.querySelector('[data-cbl-sentinel]');
+      ctx.end +
+      footHTML(inst);
+    setHdrH(inst, ctx.box);
+    ctx.box.scrollTop = ctx.keepTop;
+  }
+  /** paintList, step 10 of 10 (the data-cbl-sentinel part, lines 2205-2228 of the one function): runs on, nothing here ends the call */
+  function paintListCblSentinel(inst, ctx) {
+    if (!remote(inst) && ctx.drawn < ctx.total) {
+      var sent = ctx.box.querySelector('[data-cbl-sentinel]');
       if (sent && root.IntersectionObserver) {
         try {
-          I.io = new root.IntersectionObserver(
+          inst.io = new root.IntersectionObserver(
             function (list) {
               if (
                 list.some(function (e) {
                   return e.isIntersecting;
                 })
               ) {
-                I.limit += 50;
-                paintList(I);
+                inst.limit += 50;
+                paintList(inst);
               }
             },
-            { root: box, rootMargin: '0px' }
+            { root: ctx.box, rootMargin: '0px' }
           );
-          I.io.observe(sent);
+          inst.io.observe(sent);
         } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
-    var node = $(I, '.cbl-count');
-    if (node) node.textContent = countText(I, m);
-    resolveNext(I);
+    var node = $(inst, '.cbl-count');
+    if (node) node.textContent = countText(inst, ctx.m);
+    resolveNext(inst);
+  }
+  /* the rows area: header (sticky) + rows, or one of the four states */
+  function paintList(I) {
+  var ctx = {},
+    steps = [paintListCblPart, paintListStep2, paintListStep3, paintListStep4, paintListStep5, paintListStep6, paintListStep7, paintListStep8, paintListStep9, paintListCblSentinel];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, ctx)) return;
+  }
   }
   function footHTML(I) {
     var f = I.o.remote && I.o.remote.foot;
@@ -2284,8 +2211,42 @@
       '"></button>'
     );
   }
+  /** a column whose cells sit at the right: a number, money, or the pinned action column */
+  function rightAligned(item) {
+    return !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end');
+  }
+  /** the sort arrow of a heading: ▼ when sorted descending, ▲ ascending, ⇅ when it is not the sort */
+  function sortArrow(sorted, st) {
+    return sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅';
+  }
+  /** one column heading cell: its label, its sort button (inert while loading) and its filter and resize handles */
+  function headerCellHTML(item, sortState, plainHead, list) {
+          var id = sortId(item),
+            sorted = !!(sortState && id && sortState.key === id),
+            r = rightAligned(item),
+            label = esc(item.label || item.key);
+          return (
+            '<div class="cbl-hc lhcell' +
+            (r ? ' r' : '') +
+            (id ? ' sortable' : '') +
+            '" role="columnheader" aria-sort="' +
+            (sorted ? (sortState.dir === -1 ? 'descending' : 'ascending') : 'none') +
+            '">' +
+            (id
+              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
+                (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
+                '>' +
+                '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
+                sortArrow(sorted, sortState) +
+                '</span></button>'
+              : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
+            headerFilterHTML(list, item, plainHead) +
+            headerResizeHTML(list, item, plainHead) +
+            '</div>'
+          );
+        }
   function headerHTML(list, cols, tpl, plainHead) {
-    var st = curSort(list);
+    var sortState = curSort(list);
     var lead = leadOn(list) ? '<div class="cbl-hc" role="columnheader" aria-label="' + esc(T(list, 'Select')) + '"></div>' : '';
     return (
       '<div class="cbl-hdr lhead" role="row" style="grid-template-columns:' +
@@ -2294,29 +2255,7 @@
       lead +
       cols
         .map(function (item) {
-          var id = sortId(item),
-            sorted = !!(st && id && st.key === id),
-            r = !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end'),
-            label = esc(item.label || item.key);
-          return (
-            '<div class="cbl-hc lhcell' +
-            (r ? ' r' : '') +
-            (id ? ' sortable' : '') +
-            '" role="columnheader" aria-sort="' +
-            (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') +
-            '">' +
-            (id
-              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
-                (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
-                '>' +
-                '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
-                (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') +
-                '</span></button>'
-              : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
-            headerFilterHTML(list, item, plainHead) +
-            headerResizeHTML(list, item, plainHead) +
-            '</div>'
-          );
+          return headerCellHTML(item, sortState, plainHead, list);
         })
         .join('') +
       '</div>'
@@ -2348,32 +2287,39 @@
       : '';
     return (tid ? ' data-testid="' + esc(tid) + '"' : '') + a;
   }
-  function rowHTML(I, it, cols, tpl, zb) {
-    var row = it.row,
-      id = it.id,
-      R = I.r,
-      nx = hasNext(I),
-      open = nx && isOpen(I, id),
-      o = I.o;
-    var cls =
-      (o.rowClass
+  /** rowHTML, step 1 of 3 (part 1, lines 2416-2430 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep1(inst, entry, cols, tpl, zebra, ctx) {
+ctx.row = entry.row;
+ctx.id = entry.id;
+var R = inst.r;
+ctx.nx = hasNext(inst);
+ctx.open = ctx.nx && isOpen(inst, ctx.id);
+var o = inst.o;
+    ctx.cls = (o.rowClass
         ? safe(function () {
-            return o.rowClass(row);
+            return o.rowClass(ctx.row);
           }, '')
         : '') +
-      (R.hl === id && o.hl !== false ? ' sel' : '') +
-      (zb ? ' z' : '') +
-      (it.g != null ? ' ing' : '');
-    var cells = cols
-      .map(function (item, index) {
-        var amt = item.pin === 'end';
+      (R.hl === ctx.id && o.hl !== false ? ' sel' : '') +
+      (zebra ? ' z' : '') +
+      (entry.g != null ? ' ing' : '');
+  }
+  /** the extra classes of a body cell: the first one, the pinned action column strong and right, numbers and money right in mono, mono, the line a card gives an action */
+  function cellClasses(item, index) {
+    var amt = item.pin === 'end';
+    return (
+      (index === 0 ? ' first' : '') +
+      (amt ? ' r mono strong amt' : '') +
+      ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
+      (item.mono ? ' mono' : '') +
+      (item.cardAct ? ' cbl-actline' : '')
+    );
+  }
+  /** one body cell of a row: its classes (money and numbers right-aligned in mono, the pinned action column strong), its phone label, its test id and the expand caret on the first cell */
+  function rowCellHTML(item, index, ctx, inst) {
         return (
           '<div class="cbl-cell lcell' +
-          (index === 0 ? ' first' : '') +
-          (amt ? ' r mono strong amt' : '') +
-          ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
-          (item.mono ? ' mono' : '') +
-          (item.cardAct ? ' cbl-actline' : '') +
+          cellClasses(item, index) +
           '" data-l="' +
           esc(index === 0 || item.cardAct ? '' : item.label || '') +
           '" role="gridcell"' +
@@ -2381,43 +2327,58 @@
             ? ' data-testid="' +
               esc(
                 safe(function () {
-                  return item.tid(row);
+                  return item.tid(ctx.row);
                 }, '')
               ) +
               '"'
             : '') +
           '>' +
-          (index === 0 && nx
+          (index === 0 && ctx.nx
             ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' +
-              esc(T(I, open ? 'Collapse' : 'Expand')) +
+              esc(T(inst, ctx.open ? 'Collapse' : 'Expand')) +
               '" aria-expanded="' +
-              !!open +
+              !!ctx.open +
               '">▸</span>'
             : '') +
-          cellOf(I, item, row) +
+          cellOf(inst, item, ctx.row) +
           '</div>'
         );
-      })
+      }
+  /** rowHTML, step 2 of 3 (part 2, lines 2431-2465 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep2(inst, it, cols, tpl, zb, ctx) {
+    ctx.cells = cols
+      .map(function (item, index) {
+          return rowCellHTML(item, index, ctx, inst);
+        })
       .join('');
-    var lead = leadOn(I) ? '<div class="cbl-lead" role="gridcell">' + leadCell(I, row, id) + '</div>' : '';
-    var out =
-      '<div class="cbl-row lrow grow' +
-      (open ? ' cbl-open open' : '') +
-      (cls ? ' ' + esc(cls) : '') +
+  }
+  /** rowHTML, step 3 of 3 (part 3, lines 2466-2483 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep3(inst, entry, cols, tpl, zebra, ctx) {
+    var lead = leadOn(inst) ? '<div class="cbl-lead" role="gridcell">' + leadCell(inst, ctx.row, ctx.id) + '</div>' : '';
+    ctx.out = '<div class="cbl-row lrow grow' +
+      (ctx.open ? ' cbl-open open' : '') +
+      (ctx.cls ? ' ' + esc(ctx.cls) : '') +
       '" role="row" data-row="' +
-      esc(id) +
+      esc(ctx.id) +
       '" tabindex="0"' +
-      (nx ? ' aria-expanded="' + !!open + '"' : '') +
+      (ctx.nx ? ' aria-expanded="' + !!ctx.open + '"' : '') +
       ' style="grid-template-columns:' +
       tpl +
       '"' +
-      rowAttrs(I, row, id) +
+      rowAttrs(inst, ctx.row, ctx.id) +
       '>' +
       lead +
-      cells +
+      ctx.cells +
       '</div>';
-    if (open) out += nextHTML(I, row, id);
-    return out;
+    if (ctx.open) ctx.out += nextHTML(inst, ctx.row, ctx.id);
+  }
+  function rowHTML(I, it, cols, tpl, zb) {
+  var ctx = {},
+    steps = [rowHTMLStep1, rowHTMLStep2, rowHTMLStep3];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, it, cols, tpl, zb, ctx)) return;
+  }
+  return ctx.out;
   }
   function leadCell(I, row, id) {
     if (
@@ -2431,30 +2392,33 @@
       }, '');
     return '<input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
   }
-  function lineHTML(I, it, cols, zb) {
-    var row = it.row,
-      id = it.id,
-      nx = hasNext(I),
-      open = nx && isOpen(I, id),
-      o = I.o,
-      pin = cols.filter(function (item) {
+  /** lineHTML, step 1 of 5 (part 1, lines 2499-2515 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep1(inst, entry, cols, zebra, ctx) {
+ctx.row = entry.row;
+ctx.id = entry.id;
+ctx.nx = hasNext(inst);
+ctx.open = ctx.nx && isOpen(inst, ctx.id);
+ctx.o = inst.o;
+ctx.pin = cols.filter(function (item) {
         return item.pin === 'end';
       })[0];
-    var cls =
-      (o.rowClass
+    ctx.cls = (ctx.o.rowClass
         ? safe(function () {
-            return o.rowClass(row);
+            return ctx.o.rowClass(ctx.row);
           }, '')
         : '') +
-      (I.r.hl === id && o.hl !== false ? ' sel' : '') +
-      (zb ? ' z' : '') +
-      (it.g != null ? ' ing' : '');
-    var flow = cols
+      (inst.r.hl === ctx.id && ctx.o.hl !== false ? ' sel' : '') +
+      (zebra ? ' z' : '') +
+      (entry.g != null ? ' ing' : '');
+  }
+  /** lineHTML, step 2 of 5 (part 2, lines 2516-2544 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep2(inst, entry, cols, zebra, ctx) {
+    ctx.flow = cols
       .filter(function (item) {
         return item.pin !== 'end';
       })
       .map(function (item) {
-        var v = cellOf(I, item, row),
+        var v = cellOf(inst, item, ctx.row),
           t = plain(v);
         if (!t || t === '—') return '';
         return (
@@ -2467,7 +2431,7 @@
             ? ' data-testid="' +
               esc(
                 safe(function () {
-                  return item.tid(row);
+                  return item.tid(ctx.row);
                 }, '')
               ) +
               '"'
@@ -2478,35 +2442,50 @@
         );
       })
       .join('');
-    var gist = o.gist
+  }
+  /** lineHTML, step 3 of 5 (part 3, lines 2545-2550 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep3(inst, it, cols, zb, ctx) {
+    ctx.gist = ctx.o.gist
       ? safe(function () {
-          return o.gist(row);
+          return ctx.o.gist(ctx.row);
         }, '')
       : '';
-    var lead = leadOn(I) ? '<span class="cbl-lead" style="padding:0 8px 0 0">' + leadCell(I, row, id) + '</span>' : '';
-    var out =
-      '<div class="cbl-lrec lrow' +
-      (open ? ' cbl-open open' : '') +
-      (cls ? ' ' + esc(cls) : '') +
+    ctx.lead = leadOn(inst) ? '<span class="cbl-lead" style="padding:0 8px 0 0">' + leadCell(inst, ctx.row, ctx.id) + '</span>' : '';
+  }
+  /** lineHTML, step 4 of 5 (part 4, lines 2551-2571 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep4(inst, entry, cols, zebra, ctx) {
+    ctx.out = '<div class="cbl-lrec lrow' +
+      (ctx.open ? ' cbl-open open' : '') +
+      (ctx.cls ? ' ' + esc(ctx.cls) : '') +
       '" role="row" data-row="' +
-      esc(id) +
+      esc(ctx.id) +
       '" tabindex="0"' +
-      (nx ? ' aria-expanded="' + !!open + '"' : '') +
-      rowAttrs(I, row, id) +
+      (ctx.nx ? ' aria-expanded="' + !!ctx.open + '"' : '') +
+      rowAttrs(inst, ctx.row, ctx.id) +
       '><div class="cbl-lline" role="gridcell">' +
-      lead +
-      (nx
-        ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>'
+      ctx.lead +
+      (ctx.nx
+        ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' + esc(T(inst, ctx.open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!ctx.open + '">▸</span>'
         : '') +
       '<span class="cbl-lflow">' +
-      flow +
+      ctx.flow +
       '</span>' +
-      (pin ? '<span class="cbl-lamt">' + cellOf(I, pin, row) + '</span>' : '') +
+      (ctx.pin ? '<span class="cbl-lamt">' + cellOf(inst, ctx.pin, ctx.row) + '</span>' : '') +
       '</div>' +
-      (gist ? '<div class="cbl-lgist" role="gridcell"' + (o.gistTid ? ' data-testid="' + esc(o.gistTid(row)) + '"' : '') + '>' + esc(gist) + '</div>' : '') +
+      (ctx.gist ? '<div class="cbl-lgist" role="gridcell"' + (ctx.o.gistTid ? ' data-testid="' + esc(ctx.o.gistTid(ctx.row)) + '"' : '') + '>' + esc(ctx.gist) + '</div>' : '') +
       '</div>';
-    if (open) out += nextHTML(I, row, id);
-    return out;
+  }
+  /** lineHTML, step 5 of 5 (part 5, lines 2572-2572 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep5(inst, it, cols, zb, ctx) {
+    if (ctx.open) ctx.out += nextHTML(inst, ctx.row, ctx.id);
+  }
+  function lineHTML(I, it, cols, zb) {
+  var ctx = {},
+    steps = [lineHTMLStep1, lineHTMLStep2, lineHTMLStep3, lineHTMLStep4, lineHTMLStep5];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, it, cols, zb, ctx)) return;
+  }
+  return ctx.out;
   }
   /* what a row opens to: the page's markup (trusted by contract), then the row actions the unit draws itself */
   function nextHTML(I, row, id) {
@@ -2622,7 +2601,7 @@
   function selectedRows(I) {
     var ids = I.r.sel;
     return allRows(I).filter(function (item, index) {
-      return ids[rid(I, item, index)];
+      return ids[rowIdOf(I, item, index)];
     });
   }
 
@@ -2704,7 +2683,7 @@
     var all = allRows(I),
       r = null;
     all.forEach(function (x, index) {
-      if (r == null && rid(I, x, index) === id) r = x;
+      if (r == null && rowIdOf(I, x, index) === id) r = x;
     });
     return r;
   }
@@ -2800,529 +2779,6 @@
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
-  /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
-  function wire(I) {
-    var el = I.el;
-    /* every listener is remembered so teardown can remove it: a list mounted again on the same element must not leave the old one answering too */
-    I.off = [];
-    var on = function (type, fn) {
-      var h = function (ev) {
-        if (!I.dead) fn(ev);
-      };
-      el.addEventListener(type, h);
-      I.off.push([type, h]);
-    };
-    on('click', function (ev) {
-      onClick(I, ev);
-    });
-    on('input', function (ev) {
-      var t = ev.target;
-      if (t.hasAttribute && t.hasAttribute('data-cbl-q')) {
-        setQ(I, t.value);
-      }
-    });
-    on('change', function (ev) {
-      onChange(I, ev);
-    });
-    on('keydown', function (ev) {
-      onKey(I, ev);
-    });
-    on('pointerdown', function (ev) {
-      onPointerDown(I, ev);
-    });
-    on('dblclick', function (ev) {
-      var node = ev.target.closest && ev.target.closest('[data-rz]');
-      if (!node) return;
-      delete I.s.widths[node.getAttribute('data-rz')];
-      saveChoices(I);
-      paintList(I);
-      refocusRz(I, node.getAttribute('data-rz'));
-    });
-  }
-  function refocusRz(I, k) {
-    var node = I.el.querySelector('[data-rz="' + k + '"]');
-    if (node) node.focus();
-  }
-  function onClick(list, ev) {
-    var node = ev.target;
-    if (!node.closest) return;
-    var b = node.closest('button,[data-row],input[type=checkbox],select'),
-      R = list.r,
-      s = list.s,
-      o = list.o;
-    var pop = node.closest('.cbl-pop');
-    var hcell = node.closest('.cbl-hc');
-    if (hcell && !node.closest('.cbl-rz') && !node.closest('[data-sort]') && !node.closest('[data-hf]') && list.el.contains(hcell)) {
-      var sbtn = hcell.querySelector('[data-sort]');
-      if (sbtn) {
-        sbtn.click();
-        return;
-      }
-    }
-    var gh = node.closest('[data-g]');
-    if (gh && list.el.contains(gh) && !(b && b.hasAttribute('data-row'))) {
-      if (list.pop) {
-        list.pop = null;
-        paintTitle(list);
-        paintTools(list);
-      }
-      R.gcol[gh.getAttribute('data-g')] = !R.gcol[gh.getAttribute('data-g')];
-      paintList(list);
-      var g2 = list.el.querySelector('[data-g="' + cssId(gh.getAttribute('data-g')) + '"]');
-      if (g2) g2.focus();
-      return;
-    }
-    if (!b) {
-      if (list.pop && !pop) closePop(list);
-      return;
-    }
-    if (b.hasAttribute('data-rz')) return;
-    if (b.hasAttribute('data-cbl-pop')) {
-      togglePop(list, b.getAttribute('data-cbl-pop'));
-      return;
-    }
-    if (b.hasAttribute('data-hf')) {
-      var er = list.el.getBoundingClientRect(),
-        br = b.getBoundingClientRect();
-      list.hfAt = { l: Math.max(4, Math.min(br.left - er.left, er.width - 190)), t: br.bottom - er.top + 4 };
-      togglePop(list, 'hf:' + b.getAttribute('data-hf'));
-      paintList(list);
-      return;
-    }
-    if (b.hasAttribute('data-hfv')) {
-      var hk = b.getAttribute('data-hfk'),
-        hv = b.getAttribute('data-hfv');
-      if (hv) R.filt[hk] = hv;
-      else delete R.filt[hk];
-      list.pop = null;
-      resetLimit(list);
-      if (query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintAll(list);
-      return;
-    }
-    if (b.hasAttribute('data-view-tab')) {
-      var vw = ((o.views && o.views.items) || []).filter(function (x) {
-        return x.key === b.getAttribute('data-view-tab');
-      })[0];
-      if (vw) {
-        if (o.views.merge) {
-          /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
-          var wasLit = viewOn(list, vw);
-          viewKeys(list).forEach(function (item) {
-            delete R.filt[item];
-          });
-          if (!wasLit)
-            Object.keys(vw.filt || {}).forEach(function (item) {
-              R.filt[item] = vw.filt[item];
-            });
-        } else {
-          R.filt = {};
-          Object.keys(vw.filt || {}).forEach(function (item) {
-            R.filt[item] = vw.filt[item];
-          });
-        }
-        list.pop = null;
-        resetLimit(list);
-        paintAll(list);
-      }
-      return;
-    }
-    if (list.pop && !pop) {
-      /* any other click outside the popover closes it, then does its own job */ list.pop = null;
-      paintTitle(list);
-      paintTools(list);
-    }
-    var d = b.dataset || {};
-    if (b.hasAttribute('data-period')) {
-      var pp = head(list).period;
-      if (pp) {
-        list.pv = d.period;
-        if (d.period !== 'custom') {
-          list.pop = null;
-          list.pv = null;
-        }
-        safe(function () {
-          pp.onPick(d.period, null);
-        });
-        paintTitle(list);
-        paintTools(list);
-      }
-      return;
-    }
-    if (d.notice != null) {
-      var n = (head(list).notices || [])[+d.notice];
-      if (list.pop === 'notes') {
-        list.pop = null;
-        paintTitle(list);
-      }
-      if (n && n.onOpen)
-        safe(function () {
-          n.onOpen();
-        });
-      return;
-    }
-    if (d.group) {
-      s.group = d.group;
-      resetLimit(list);
-      saveChoices(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintTools(list);
-      return;
-    }
-    if (d.view) {
-      s.view = d.view;
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-needs')) {
-      needsToggle(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-needs-next')) {
-      needsNext(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-exp')) {
-      R.allOpen = !R.allOpen;
-      R.open = {};
-      paintTools(list);
-      paintList(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-csv')) {
-      download(list);
-      return;
-    }
-    if (d.unfilt) {
-      delete R.filt[d.unfilt];
-      resetLimit(list);
-      if (query(list)) paintTools(list);
-      else paintAll(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-clearf')) {
-      R.filt = {};
-      resetLimit(list);
-      list.pop = null;
-      if (query(list)) paintTools(list);
-      else paintAll(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-clear')) {
-      R.filt = {};
-      R.q = '';
-      list.pop = null;
-      resetLimit(list);
-      if (query(list)) paintTools(list);
-      paintAll(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-retry')) {
-      if (o.onRetry)
-        safe(function () {
-          o.onRetry();
-        });
-      return;
-    }
-    if (b.hasAttribute('data-cbl-more')) {
-      list.limit += 50;
-      paintList(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-resetcols')) {
-      s.cols = null;
-      s.widths = {};
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-selmode')) {
-      R.selMode = !R.selMode;
-      if (!R.selMode) R.sel = {};
-      paintTools(list);
-      paintList(list);
-      return;
-    }
-    if (b.hasAttribute('data-cbl-selall')) {
-      matched(list).rows.forEach(function (item, index) {
-        R.sel[rid(list, item, index)] = true;
-      });
-      paintTools(list);
-      paintList(list);
-      return;
-    }
-    if (d.bulk) {
-      var bk = (o.bulk || []).filter(function (x) {
-        return x.id === d.bulk;
-      })[0];
-      if (bk)
-        safe(function () {
-          bk.run(selectedRows(list));
-        });
-      return;
-    }
-    if (d.mv) {
-      var set = shownKeys(list).slice(),
-        i = set.indexOf(d.mv),
-        j = i + +d.d;
-      if (i < 0 || j < 0 || j >= set.length) return;
-      set.splice(j, 0, set.splice(i, 1)[0]);
-      s.cols = set;
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      return;
-    }
-    if (d.wd) {
-      resize(list, d.wd, +d.d * 16, false);
-      paintTools(list);
-      var again = list.el.querySelector('[data-wd="' + d.wd + '"][data-d="' + d.d + '"]');
-      if (again) again.focus();
-      return;
-    }
-    if (d.col) return; /* the checkbox acts on 'change' */
-    if (d.sort) {
-      /* a server-sorted page decides its own direction: it is told which heading was clicked */
-      if (remote(list)) {
-        query(list, 'sort', { key: d.sort }, true);
-        return;
-      }
-      var cur = curSort(list),
-        col = columns(list).filter(function (item) {
-          return sortId(item) === d.sort;
-        })[0],
-        d0 = col && col.dir0 === -1 ? -1 : 1;
-      s.sort = cur && cur.key === d.sort ? { key: d.sort, dir: -cur.dir } : { key: d.sort, dir: d0 };
-      resetLimit(list);
-      saveChoices(list);
-      paintList(list);
-      return;
-    }
-    if (d.act) {
-      var act = (o.actions || []).filter(function (x) {
-          return x.id === d.act;
-        })[0],
-        row = rowById(list, d.actrow);
-      if (act && row)
-        safe(function () {
-          act.run(row);
-        });
-      return;
-    }
-    if (b.hasAttribute('data-selrow')) {
-      return;
-    }
-    if (b.hasAttribute('data-caret') || node.closest('[data-caret]')) {
-      var rr = node.closest('[data-row]');
-      if (rr) toggleRow(list, rr.getAttribute('data-row'), false);
-      return;
-    }
-    var rowEl = node.closest('[data-row]');
-    if (rowEl && b === rowEl) {
-      /* a control the page drew inside a cell (a link, a chip, a button with its own onclick) keeps its own job */
-      var inner = node.closest('a,button,input,select,textarea,label,[onclick],[data-nolist]');
-      if (inner && inner !== rowEl && rowEl.contains(inner)) return;
-      openRow(list, rowEl.getAttribute('data-row'), ev);
-    }
-  }
-  function onChange(list, ev) {
-    var node = ev.target,
-      R = list.r,
-      s = list.s;
-    if (node.hasAttribute('data-col')) {
-      var k = node.getAttribute('data-col'),
-        set = shownKeys(list).slice(),
-        i = set.indexOf(k);
-      if (node.checked && i < 0) set.push(k);
-      else if (!node.checked && i >= 0 && k !== topKey(list)) set.splice(i, 1);
-      s.cols = set;
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      refocusCol(list, k);
-      return;
-    }
-    if (node.hasAttribute('data-gsel')) {
-      s.group = node.value;
-      resetLimit(list);
-      saveChoices(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintTools(list);
-      var gs = list.el.querySelector('#cbl-gsel-' + cssId(list.key));
-      if (gs) gs.focus();
-      return;
-    }
-    if (node.hasAttribute('data-filt')) {
-      var fk = node.getAttribute('data-filt');
-      if (node.value) R.filt[fk] = node.value;
-      else delete R.filt[fk];
-      resetLimit(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintTools(list);
-      var f = list.el.querySelector('#cbl-f-' + cssId(list.key) + '-' + cssId(fk));
-      if (f) f.focus();
-      return;
-    }
-    if (node.hasAttribute('data-cbl-sort')) {
-      var cur = s.sort ? s.sort.dir : 1;
-      s.sort = { key: node.value, dir: 1 };
-      resetLimit(list);
-      saveChoices(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      }
-      var ss = list.el.querySelector('#cbl-sort-' + cssId(list.key));
-      if (ss) ss.focus();
-      return;
-    }
-    if (node.hasAttribute('data-selrow')) {
-      var id = node.getAttribute('data-selrow');
-      if (node.checked) R.sel[id] = true;
-      else delete R.sel[id];
-      paintTools(list);
-      return;
-    }
-    if (node.hasAttribute('data-cbl-from') || node.hasAttribute('data-cbl-to')) {
-      var p = head(list).period,
-        fr = list.el.querySelector('[data-cbl-from]'),
-        to = list.el.querySelector('[data-cbl-to]');
-      if (p && fr && to && fr.value && to.value) {
-        p.custom = { from: fr.value, to: to.value };
-        list.pv = null;
-        list.pop = null;
-        safe(function () {
-          p.onPick('custom', p.custom);
-        });
-      }
-    }
-  }
-  function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
-  }
-  function refocusCol(I, k) {
-    var node = I.el.querySelector('[data-col="' + k + '"]');
-    if (node) node.focus();
-  }
-
-  function onKey(list, event) {
-    var node = event.target,
-      k = event.key;
-    if (k === 'Escape' && list.pop) {
-      event.preventDefault();
-      closePop(list, true);
-      return;
-    }
-    if (node.hasAttribute && node.hasAttribute('data-rz') && (k === 'ArrowLeft' || k === 'ArrowRight')) {
-      event.preventDefault();
-      var rtl = root.getComputedStyle(list.el).direction === 'rtl',
-        dlt = (k === 'ArrowRight' ? 8 : -8) * (rtl ? -1 : 1);
-      resize(list, node.getAttribute('data-rz'), dlt, true);
-      return;
-    }
-    if (node.hasAttribute && node.hasAttribute('data-g') && (k === 'Enter' || k === ' ')) {
-      event.preventDefault();
-      node.click();
-      return;
-    }
-    var rowEl = node.closest && node.closest('[data-row]');
-    if (rowEl && node === rowEl) {
-      if (k === 'Enter' || k === ' ') {
-        event.preventDefault();
-        openRow(list, rowEl.getAttribute('data-row'), event);
-        return;
-      }
-      if (k === 'ArrowRight' && hasNext(list) && !isOpen(list, rowEl.getAttribute('data-row'))) {
-        event.preventDefault();
-        toggleRow(list, rowEl.getAttribute('data-row'), true);
-        return;
-      }
-      if (k === 'ArrowLeft' && hasNext(list) && isOpen(list, rowEl.getAttribute('data-row'))) {
-        event.preventDefault();
-        toggleRow(list, rowEl.getAttribute('data-row'), true);
-        return;
-      }
-      if (k === 'ArrowDown' || k === 'ArrowUp') {
-        event.preventDefault();
-        var all = [].slice.call(list.el.querySelectorAll('[data-row]')),
-          i = all.indexOf(rowEl),
-          nx = all[i + (k === 'ArrowDown' ? 1 : -1)];
-        if (nx) {
-          nx.focus();
-          if (list.o.hl === false) return;
-          list.r.hl = nx.getAttribute('data-row');
-          [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (element) {
-            element.classList.remove('sel');
-          });
-          nx.classList.add('sel');
-        }
-      }
-    }
-  }
-
-  /* adjustable columns: pointer (mouse and touch), ← → in 8 px, double-click resets; never narrower than the label; remembered */
-  function colByKey(I, key) {
-    return columns(I).filter(function (item) {
-      return item.key === key;
-    })[0];
-  }
-  function resize(I, key, delta, kb) {
-    var c = colByKey(I, key);
-    if (!c) return;
-    I.s.widths[key] = Math.max(minW(I, c), widthOf(I, c) + delta);
-    saveChoices(I);
-    paintList(I);
-    if (kb) refocusRz(I, key);
-  }
-  function applyTpl(I) {
-    var tpl = template(I, shownCols(I));
-    [].forEach.call(I.el.querySelectorAll('.cbl-hdr,.cbl-row'), function (node) {
-      node.style.gridTemplateColumns = tpl;
-    });
-  }
-  function onPointerDown(I, event) {
-    var node = event.target.closest && event.target.closest('[data-rz]');
-    if (!node) return;
-    var c = colByKey(I, node.getAttribute('data-rz'));
-    if (!c) return;
-    event.preventDefault();
-    DRAG = { I: I, key: c.key, x: event.clientX, w: widthOf(I, c), c: c, btn: node };
-    node.classList.add('drag');
-    try {
-      node.setPointerCapture(event.pointerId);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    root.document.addEventListener('pointermove', onPointerMove);
-    root.document.addEventListener('pointerup', onPointerUp);
-    root.document.addEventListener('pointercancel', onPointerUp);
-  }
-  function onPointerMove(ev) {
-    if (!DRAG) return;
-    var I = DRAG.I,
-      rtl = root.getComputedStyle(I.el).direction === 'rtl';
-    I.s.widths[DRAG.key] = Math.max(minW(I, DRAG.c), DRAG.w + (ev.clientX - DRAG.x) * (rtl ? -1 : 1));
-    applyTpl(I);
-  }
-  function onPointerUp() {
-    if (!DRAG) return;
-    var I = DRAG.I;
-    DRAG.btn.classList.remove('drag');
-    root.document.removeEventListener('pointermove', onPointerMove);
-    root.document.removeEventListener('pointerup', onPointerUp);
-    root.document.removeEventListener('pointercancel', onPointerUp);
-    DRAG = null;
-    saveChoices(I);
-  }
 
   /* one document-level listener each: a click anywhere outside a mounted list closes its popover; a resize refits every list to its window */
   if (root.document && root.document.addEventListener) {
@@ -3487,6 +2943,20 @@
       : '<div class="cbl-nempty">' + esc(o.empty || '') + '</div>';
     return '<div class="cbl-ntab' + (cards ? ' cards' : '') + '" role="table" data-nt="' + esc(o.id || '') + '"><div class="cbl-nthead" role="row">' + head + '</div>' + body + '</div>';
   }
+
+  /* click: 20 statements live in app/list-ctl-click.js (shrink W2, 2026-11-17); the page loads that file before this one */
+  if (!root.CBListParts || !root.CBListParts.click) throw new Error('app/list-ctl-click.js must load before app/list-ctl.js');
+  root.CBListParts.click.bind({ closePop: closePop, columns: columns, curSort: curSort, download: download, head: head, matched: matched, minW: minW, needsNext: needsNext, needsToggle: needsToggle, openRow: openRow, paintAll: paintAll, paintList: paintList, paintTitle: paintTitle, paintTools: paintTools, query: query, remote: remote, resetLimit: resetLimit, rowById: rowById, rowIdOf: rowIdOf, safe: safe, saveChoices: saveChoices, selectedRows: selectedRows, shownKeys: shownKeys, sortId: sortId, togglePop: togglePop, toggleRow: toggleRow, viewKeys: viewKeys, viewOn: viewOn, widthOf: widthOf });
+  colByKey = root.CBListParts.click.colByKey;
+  cssId = root.CBListParts.click.cssId;
+  onClick = root.CBListParts.click.onClick;
+  refocusRz = root.CBListParts.click.refocusRz;
+  resize = root.CBListParts.click.resize;
+
+  /* wire: 16 statements live in app/list-ctl-wire.js (shrink W2, 2026-11-17); the page loads that file before this one */
+  if (!root.CBListParts || !root.CBListParts.wire) throw new Error('app/list-ctl-wire.js must load before app/list-ctl.js');
+  root.CBListParts.wire.bind({ closePop: closePop, colByKey: colByKey, cssId: cssId, hasNext: hasNext, head: head, isOpen: isOpen, minW: minW, onClick: onClick, openRow: openRow, paintList: paintList, paintTools: paintTools, query: query, refocusRz: refocusRz, resetLimit: resetLimit, resize: resize, safe: safe, saveChoices: saveChoices, setQ: setQ, shownCols: shownCols, shownKeys: shownKeys, template: template, toggleRow: toggleRow, topKey: topKey, widthOf: widthOf });
+  wire = root.CBListParts.wire.wire;
 
   root.CBList = { mount: mount, nextRow: nextRow, nextTable: nextTable, get: get, reset: reset, every: every, pager: pager };
 })(typeof window !== 'undefined' ? window : this);
