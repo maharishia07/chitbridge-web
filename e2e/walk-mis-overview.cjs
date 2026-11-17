@@ -112,7 +112,8 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
         const owedRow = await page.$$eval('[data-testid="ov-pic-owed"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
         check(owedRow.length === 5, 'owed by age table has 5 age rows');
         const cashWords = await page.textContent('[data-testid="ov-pic-cashline-legend"]');
-        check(cashWords === ov.cash.words, 'cash words = the server sentence');
+        /* the page writes the sentence's money in the page's one format (8c5ca4f5: A$ for AUD); the server's own sentence says "AUD 1.00" */
+        check(cashWords === String(ov.cash.words).replace(/\bAUD\s+/g, 'A$'), 'cash words = the server sentence (AUD 1.00 read as A$1.00)');
       }
       await snap('overview-' + tag);
     }
