@@ -73,7 +73,7 @@
     var a = viewState.answer, rule = a && a.over_rule;
     if (report.k !== 'pl' || !a || !a.compare || !rule || rule.pct_bp == null || rule.min_minor == null) return '';
     var amount = minorWords(rule.min_minor).replace(/[.,]0+$/, '');
-    return '<style>.bv-over,.bv-over>*{background:var(--ask-t)}.bv-over-dot{color:var(--ask-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P01" data-testid="bv-cmp-note">' + esc(words('Highlighted') + ': ' + words('change of') + ' ' + rule.pct_bp / 100 + '% ' + words('and') + ' ' + amount + ' ' + words('or more')) + '</div>';
+    return '<style>.bv-over,.bv-over>*{background:var(--ask-t)}.bv-over-dot{color:var(--ask-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(words('Highlighted') + ': ' + words('change of') + ' ' + rule.pct_bp / 100 + '% ' + words('and') + ' ' + amount + ' ' + words('or more')) + '</div>';
   }
   function side(list, name) {
     return (list || []).map(function (row) {
@@ -239,7 +239,7 @@
   }
   /* ── rank 10: changed since my last check. The Day book can be read as "the entries posted since THIS person last pressed Mark as checked on this client" (api: GET /daybook?since=mine; the server holds the check point and
      the count, this page adds nothing up). Mark as checked sends back the watermark the list carried (seen_to), never a moment of its own. The act is the person's own (POST /api/books-grants/practice/baseline), never the client's. ── */
-  var SINCE_LIMIT = 500, MARK_CODE = 'NET005-B07', TOGGLE_CODE = 'NET005-B06';
+  var SINCE_LIMIT = 500, MARK_CODE = 'NET005-B09', TOGGLE_CODE = 'NET005-B08';
   function sinceAsked() {
     try { return new root.URLSearchParams(root.location.search).get('since') === 'mine'; } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:since', failure); return false; }
   }
