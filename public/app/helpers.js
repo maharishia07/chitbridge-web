@@ -155,21 +155,10 @@ function moneyCellRead(cell) {
   return cell !== null && typeof cell === 'object' ? moneyRead(cell) : { amount: Number(cell || 0), currency: null };
 }
 /**
- * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS. Athi, 2026-08-21: *"we have a couple of places
- * sum is there; what I want is a single group sum, gold standard."*
- *
- * ⚠⚠ THE PLATFORM ALREADY HAD THIS RULE IN TWO PLACES AND BROKE IT IN A THIRD. `lib/money.js` THROWS on mixed
- * currencies rather than adding them; `_gsMoney` in cap-folders renders them side by side and says *"a figure
- * spanning two currencies means nothing, most convincingly when it looks tidy"*. The select bar did
- * `rows.reduce((a,c) => a + c.amt, 0)` and labelled the result with the READER's currency — so ticking a
- * ₹500 chit and a $2,000 chit read as one tidy total in a currency belonging to neither.
- *
- * ⚠️ IT IS THE TIDINESS THAT MAKES IT DANGEROUS. A wrong number that looks broken gets questioned; a wrong
- * number that looks like a total gets used.
- *
- * ⚠️ MISSING CURRENCY FALLS BACK TO THE READER'S, and that is a real decision rather than a shrug: a row
- * with no currency is almost always the reader's own, and grouping it under 'unknown' would split one honest
- * total into two for a field nobody filled in.
+ * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS (Athi, 2026-08-21: "a single group sum, gold standard").
+ * ⚠️ lib/money.js THROWS on mixed currencies and _gsMoney (cap-folders) shows them side by side; the select bar once added a ₹500 chit and a $2,000 chit
+ * into one tidy total in the READER's currency. A wrong number that looks like a total gets used, so a sum never spans two currencies.
+ * ⚠️ A MISSING CURRENCY FALLS BACK TO THE READER'S (a row with none is almost always their own): grouping it under 'unknown' would split one honest total in two.
  */
 function cbSumByCurrency(rows, amtKey, curKey) {
   var by = {};
@@ -404,37 +393,6 @@ function shopDateTime(ts, opts) {
     }
   }
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
-}
-/** ONE rule: which day-book group an entry belongs to — the owner Day book (cap-books.js) and the auditor/firm Day book (books-grant-view.js) both read it (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
-/* [group, the event_type pattern, the source.kind it also takes] — the first row that fits wins, so the order is the rule */
-var DAY_BOOK_KINDS = [
-  ['Returns', /return|credit_note|debit_note/, 'credit_note'],
-  ['Purchases', /purchase/, null],
-  ['Expenses', /expense/, 'expense'],
-  ['Sales', /sale|walkin/, 'day'],
-  ['Receipts', /received|receipt/, 'receipt'],
-  ['Payments', /payment/, 'payment']
-];
-/** ONE rule: the line of a Day book entry that names its party (the first with one): the owner Day book (cap-books.js bkDvParty) and the auditor Day book (books-grant-view.js) both read it */
-function dayBookPartyLine(entry) {
-  return ((entry && entry.lines) || []).filter(function (line) {
-    return line.party_name || line.party_id;
-  })[0];
-}
-/** "Kensington Strata · HP-INV-1": the party and the document number a Day book row stands on (R70: one source for the owner and the auditor); the entry's own words when it has neither (an opening, a hand-keyed journal) */
-function dayBookPartyRef(entry) {
-  var line = dayBookPartyLine(entry),
-    ref = entry && entry.source && entry.source.ref;
-  return [line && line.party_name, ref].filter(Boolean).join(' · ') || (entry && entry.narration) || '';
-}
-function dayBookKind(entry) {
-  var type = String((entry && entry.event_type) || ''),
-    sourceKind = String((entry && entry.source && entry.source.kind) || '');
-  var hit = DAY_BOOK_KINDS.filter(function (row) {
-    return row[1].test(type) || (row[2] !== null && row[2] === sourceKind);
-  })[0];
-  if (hit) return hit[0];
-  return sourceKind === 'bill' ? 'Sales' : 'Other';
 }
 /**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.

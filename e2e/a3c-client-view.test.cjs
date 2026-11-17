@@ -16,9 +16,7 @@ const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (
 const box = { URLSearchParams, setTimeout, console };
 box.window = box; box.globalThis = box;
 vm.createContext(box);
-const helpers = src('helpers.js');
-const kinds = helpers.slice(helpers.indexOf('var DAY_BOOK_KINDS'), helpers.indexOf('/** ONE rule: the line of a Day book entry that names its party'))
-  + helpers.slice(helpers.indexOf('function dayBookKind'), helpers.indexOf('/**\n * l16 polish (R09)'));
+const kinds = src('day-book-kind.js'); /* moved out of helpers.js: the Day book's group and party line */
 vm.runInContext(kinds, box);
 vm.runInContext(src('cap-evidence.js'), box);
 vm.runInContext(src('books-grant-filters.js'), box);
