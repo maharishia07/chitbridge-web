@@ -35,7 +35,7 @@
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
+    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', MONEY], ['age_d0_30', '1–30', MONEY], ['age_d31_60', '31–60', MONEY], ['age_d61_90', '61–90', MONEY], ['age_d90_plus', '90+', MONEY], ['balance_minor', 'Total', MONEY]], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
@@ -119,6 +119,7 @@
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
     var period = viewState.period;
+    if (report.k === 'daybook' && viewState.since) return { since: 'mine', limit: SINCE_LIMIT }; /* rank 10: the server reads this person's check point; no date range (a back-dated entry is the finding) */
     if (!viewState.day) {
       if (!period || !period.from || !report.day) return {};
       if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
@@ -197,10 +198,64 @@
     viewState.why = null;
     return Promise.resolve();
   }
+  /* ── rank 10: changed since my last check. The Day book can be read as "the entries posted since THIS person last pressed Mark as checked on this client" (api: GET /daybook?since=mine; the server holds the check point and
+     the count, this page adds nothing up). Mark as checked sends back the watermark the list carried (seen_to), never a moment of its own. The act is the person's own (POST /api/books-grants/practice/baseline), never the client's. ── */
+  var SINCE_LIMIT = 500, MARK_CODE = 'NET005-B07', TOGGLE_CODE = 'NET005-B06';
+  function sinceAsked() {
+    try { return new root.URLSearchParams(root.location.search).get('since') === 'mine'; } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:since', failure); return false; }
+  }
+  /** when and by whom an entry was posted (the server's recorded_at, shown in the shop day) */
+  function recordedText(e) {
+    return e && e.recorded_at ? root.shopDay(e.recorded_at) + (e.recorded_by ? ' · ' + e.recorded_by : '') : '';
+  }
+  /** the one control: Changed since my last check (a toggle on the Day book), and in that view the count and Mark as checked */
+  function sinceBar() {
+    var on = viewState.since, seen = viewState.seen, info = seen && seen.since;
+    var toggle = '<button type="button" class="act quiet" id="bv_since" aria-pressed="' + on + '" data-cbsid="' + TOGGLE_CODE + '" data-testid="bv-since">' + esc(words(on ? 'Back to the period' : 'Changed since my last check')) + '</button>';
+    var line = '';
+    if (on && seen) {
+      var n = Number(seen.total || 0), shown = ((viewState.answer && viewState.answer.entries) || []).length, whole = n <= shown, from = info && info.never ? words('your access began') : info && info.at ? root.shopDay(info.at) : '';
+      line = '<span class="sub" data-testid="bv-since-line">' + esc(n + ' ' + words(n === 1 ? 'entry posted since' : 'entries posted since') + ' ' + from) + '</span>' +
+        (n > 0 && !whole ? '<span class="sub" data-testid="bv-since-more">' + esc(words('Showing the newest') + ' ' + shown + '. ' + words('Mark as checked waits until every entry is listed.')) + '</span>' : '') +
+        (n > 0 && whole ? '<button type="button" class="act" id="bv_mark_checked" data-cbsid="' + MARK_CODE + '" data-testid="bv-mark-checked">' + esc(words('Mark as checked')) + '</button>' : '');
+    }
+    return '<div class="bv-since" data-testid="bv-since-bar" role="group" aria-label="' + esc(words('Changed since my last check')) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:4px 0">' + toggle + line + '</div>';
+  }
+  function setSince(on) {
+    viewState.since = on;
+    viewState.seen = null;
+    if (root.history && root.history.replaceState) {
+      try {
+        var query = new root.URLSearchParams(root.location.search);
+        if (on) query.set('since', 'mine'); else query.delete('since');
+        root.history.replaceState(root.history.state, '', root.location.pathname + (query.toString() ? '?' + query.toString() : '') + (root.location.hash || ''));
+      } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:since-address', failure); }
+    }
+    reload().then(function () { var b = $('bv_since'); if (b) b.focus(); });
+  }
+  /** Mark as checked: asks first (it sets this client's count to 0 for this person), names the client and the point; then the server stores it */
+  function markChecked() {
+    var seen = viewState.seen, name = (viewState.o.member && viewState.o.member.name) || words('this client');
+    if (!seen || !seen.to || typeof root.CBConfirm !== 'function') return;
+    var body = esc(words('Entries posted up to') + ' ' + root.shopDay(seen.to) + ' ' + words('will stop counting as changed. Anything posted after will still count.'));
+    root.CBConfirm(words('Mark') + ' ' + name + ' ' + words('as checked?'), body, words('Mark as checked'), function () {
+      root.CBBooksGrantApi.run(viewState.o.call, 'practiceBaseline', { body: { client: viewState.o.member.id, seen_to: seen.to } }).then(function () {
+        if (root.toast) root.toast(words('Checked. Changes count from here.'));
+        reload().then(function () { var b = $('bv_since'); if (b) b.focus(); });
+      }, function (failure) {
+        if (root.toast) root.toast((failure && failure.message) || words('We could not save that. Nothing was changed.'));
+      });
+    });
+  }
+  function wireSince() {
+    if ($('bv_since')) $('bv_since').onclick = function () { setSince(!viewState.since); };
+    if ($('bv_mark_checked')) $('bv_mark_checked').onclick = markChecked;
+  }
   function readReport(report) {
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
         viewState.answer = answer;
+        viewState.seen = report.k === 'daybook' && viewState.since && answer ? { to: answer.seen_to, total: answer.total, since: answer.since } : null; /* rank 10: the watermark of what this screen listed: Mark as checked sends it back */
         if (viewState.o.onRead) viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
         if (report.k === 'pl' && answer && answer.gross_profit) answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; /* the server's gross profit, named like its other totals */
         viewState.why = null;
@@ -307,6 +362,7 @@
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
       (viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
+      (!viewState.why && report.k === 'daybook' ? sinceBar() : '') +
       (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
@@ -324,6 +380,7 @@
       };
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
+    wireSince();
     if (onActions()) mountQueues();
     else if (!viewState.why) { paintList(report); paintMarkBar(report); }
   }
@@ -528,7 +585,8 @@
   }
   /** the Mark column is drawn only when the server says marking is on */
   function shownCols(report) {
-    return report.cols.filter(function (column) { return column[2] !== 'mark' || markable(report); });
+    var cols = report.cols.filter(function (column) { return column[2] !== 'mark' || markable(report); });
+    return report.k === 'daybook' && viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
   var SEARCH_FROM = 10, BAR_FROM = 12;
@@ -572,7 +630,7 @@
           .join(' ');
       },
       onOpen: report.drill ? function (row) { drill(report, row); } : report.k === 'periods' ? function (row) { if (row.start_date && row.end_date) openMonth(String(row.start_date).slice(0, 10), String(row.end_date).slice(0, 10)); } : undefined, /* a Months row opens that month's Day book */
-      empty: { title: words('Nothing to show here'), body: words(viewState.day || !viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
+      empty: report.k === 'daybook' && viewState.since ? { title: words('Nothing has changed since your last check'), body: words('No entries were posted since then.') } : { title: words('Nothing to show here'), body: words(viewState.day || !viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
     };
   }
   /** a row opens what is behind it (ACC-176c): an account's ledger (a code on the row), or the journal entry a Day book row is; books-grant-drill.js paints both, read only */
@@ -594,7 +652,7 @@
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
   function forget() {
-    viewState = { host: viewState.host, o: viewState.o, report: homeOf(viewState.o), day: '', answer: null, why: null, mk: viewState.mk, period: null, range: null, choices: undefined };
+    viewState = { host: viewState.host, o: viewState.o, report: homeOf(viewState.o), day: '', answer: null, why: null, mk: viewState.mk, period: null, range: null, choices: undefined, since: false, seen: null };
     newMarks();
   }
   /** after Open books: focus lands on the books heading (the acting band), not on a button that has gone */
@@ -605,7 +663,7 @@
     head.focus();
   }
   function mount(host, options) {
-    viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null, period: options.period || null, range: null, choices: undefined };
+    viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null, period: options.period || null, range: null, choices: undefined, since: sinceAsked(), seen: null };
     newMarks();
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
