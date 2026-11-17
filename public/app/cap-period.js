@@ -306,8 +306,7 @@ async function peAssetsList() {
     r = await api('perAssets');
   } catch (e) {
     const w = peWhy(e, tx('Could not be read'));
-    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
-    return;
+    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>'; return;
   }
   PE.assets = (r && r.assets) || [];
   const list = (r && r.net_block) || [];
