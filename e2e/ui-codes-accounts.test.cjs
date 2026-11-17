@@ -24,7 +24,8 @@ const SET = {
   'app/cap-bank-store.js': 'BKS014-B08',
   'app/cap-bank-home.js': 'BKS014-B49 BKS014-B50 BKS014-B51 BKS014-B53 BKS014-B48 BKS014-B52 BKS014-B44 BKS014-B47 BKS014-B46',
   'app/cap-bank-sheet.js': 'BKS014-B17 BKS014-B16 BKS014-B60 BKS014-B61 BKS014-B62 BKS014-B63 BKS014-B64',
-  'app/cap-bank-statements.js': 'BKS014-B41 BKS014-B45 BKS014-I12 BKS014-I13 BKS014-B42 BKS014-B43',
+  'app/cap-bank-statements.js': 'BKS014-B41 BKS014-B45 BKS014-B42 BKS014-B43',
+  'app/cap-bank-statements-add.js': 'BKS014-I12 BKS014-I13',
   'app/cap-move-in.js': 'BKS024-S01 BKS024-I01 BKS024-I02 BKS024-S02 BKS024-B01 BKS024-B02',
   'app/cap-compare.js': 'BKS007-S01 BKS007-B01 BKS007-B02 BKS007-B03 BKS007-B04 BKS007-B05 BKS007-B06 BKS007-B07 BKS007-S02 BKS007-I01 BKS007-B08 BKS007-I02 BKS007-I03 BKS007-I04 BKS007-S03',
   'app/cap-fx.js': 'BKS025-B01 BKS025-I01 BKS025-I02 BKS025-I03 BKS025-I04 BKS025-S01 BKS025-I05 BKS025-B02 BKS025-B03 BKS025-B04'
@@ -33,7 +34,7 @@ const SET = {
 const NEAR = [
   ['accounts.html', 'id="toggleNav"', 'BKS001-B01'], ['accounts.html', 'acc-switch-on', 'BKS001-B07'], ['accounts.html', 'close-first-go', 'BKS001-B06'],
   ['app/cap-period.js', 'data-testid="py-close"', 'BKS016-B09'], ['app/cap-period.js', 'data-testid="py-lodged"', 'BKS016-I02'], ['app/cap-period.js', 'id="pdp_run"', 'BKS016-B03'],
-  ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank-rows.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-file"', 'BKS014-I13'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B42'],
+  ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank-rows.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements-add.js', 'data-testid="bank-stmts-file"', 'BKS014-I13'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B42'],
   ['app/cap-move-in.js', 'id="mi-asat"', 'BKS024-I01'], ['app/cap-move-in.js', 'data-testid="mi-again"', 'BKS024-B02'],
   ['app/cap-compare.js', 'data-testid="cmp-pick"', 'BKS007-S01'], ['app/cap-compare.js', 'data-testid="cmp-new"', 'BKS007-B08'], ['app/cap-compare.js', 'id="cmp-label"', 'BKS007-I02'],
   ['app/cap-fx.js', 'data-testid="fx-add"', 'BKS025-B01'], ['app/cap-fx.js', 'id="fx_cur"', 'BKS025-I02'], ['app/cap-fx.js', 'data-testid="lk-fx-revalue"', 'BKS025-B04']

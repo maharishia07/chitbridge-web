@@ -657,14 +657,14 @@ function bankFigures() {
   const worked = BKB.brs;
   if (!worked || !worked.ok) return null;
   const plain = (minor) => (minor < 0 ? bkbFig(-minor) + ' ' + tx('overdrawn') : bkbFig(minor)),
-    gap = worked.bank_balance_minor - worked.book_balance_minor,
+    difference = worked.bank_balance_minor - worked.book_balance_minor,
     notIn = bkbCount('books'),
     notBank = bkbCount('bank');
   return {
     statement: plain(worked.bank_balance_minor),
     books: plain(worked.book_balance_minor),
-    gap: bkbFig(Math.abs(gap)),
-    dir: gap > 0 ? tx('the statement is higher than your books') : gap < 0 ? tx('your books are higher than the statement') : '' /* which side is higher: the two carried figures, set side by side */,
+    gap: bkbFig(Math.abs(difference)),
+    dir: difference > 0 ? tx('the statement is higher than your books') : difference < 0 ? tx('your books are higher than the statement') : '' /* which side is higher: the two carried figures, set side by side */,
     parts: [
       notIn ? txn('{count} line not yet in your books', '{count} lines not yet in your books', notIn) : '',
       notBank ? txn('{count} line not yet on the statement', '{count} lines not yet on the statement', notBank) : ''
@@ -672,7 +672,7 @@ function bankFigures() {
       .filter(Boolean)
       .join(' · '),
     unexplained: bkbFig(Math.abs(worked.difference_minor)),
-    nil: gap === 0 && worked.difference_minor === 0
+    nil: difference === 0 && worked.difference_minor === 0
   };
 }
 /** the opening-balance question, ON THE PAGE: the statement's own opening figure against the books' balance the day before it starts (two carried figures, compared). Unanswered, Add is held. Null when they agree or one is not stated. */
@@ -727,11 +727,11 @@ function bankFinish() {
   return bankBandCore() + (typeof bkshLockNotice === 'function' ? bkshLockNotice() : ''); /* W15-85: a locked month is said under the band, before any work */
 }
 function bankBandCore() {
-  const fig = bankFigures();
-  const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
-  if (!fig && !bkbMayAct())
+  const figures = bankFigures();
+  const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(figures) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
+  if (!figures && !bkbMayAct())
     return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + (BKB.tab === 'brs' ? '' : bkbE(tx("This file does not say the bank's closing balance."))) + '</span>' + acts + '</div>'; /* l16 R5 R3-3: the sign-off view says it once, in the box under the record (bankBrsPaint); the band says it on the other tabs. l16 fable3 R3-3: a read-only seat is told, never asked to type */
-  if (!fig)
+  if (!figures)
     return (
       '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) + '</span>' +
       /* W15-75: the answer is typed HERE, in one step (the same box and button the Statement tab has: the library money input and button) */
@@ -751,9 +751,9 @@ function bankBandCore() {
       parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
       booksOpening_minor: BKB.ledgerRaw ? BKB.ledgerRaw.opening_minor : null, accountNumber: bkbHeldNumber(), previous: bkbPreviousStatement()
     }),
-    statement: fig.statement, books: fig.books, difference: fig.gap,
+    statement: figures.statement, books: figures.books, difference: figures.gap,
     toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: P.lines.length,
-    unexplained: fig.unexplained && /[1-9]/.test(fig.unexplained) ? fig.unexplained : '', nil: fig.nil
+    unexplained: figures.unexplained && /[1-9]/.test(figures.unexplained) ? figures.unexplained : '', nil: figures.nil
   });
 }
 /**
@@ -885,8 +885,8 @@ function bkbBrsList(title, list, testId) {
   return '<div class="pe-sub">' + bkbE(tx(title)) + '</div><div class="pe-rows" data-testid="' + testId + '">' + rows + '</div>';
 }
 /** the statement's own rows of the reconciliation, one line each (the engine's labels and figures) */
-function bkbBrsRows(brs) {
-  return brs.rows
+function bkbBrsRows(statement) {
+  return statement.rows
     .map(
       (line, index) =>
         '<div class="pe-row" data-testid="brs-row-' +
@@ -906,11 +906,11 @@ function bkbBrsVerdict(brs) {
     : '<div class="pe-warn" data-testid="brs-untied">⚠ ' + bkbE(brs.note || '') + '</div>';
 }
 /** the page when there is no reconciliation to show: no closing balance on the file (read only: nothing to type; else a box to type it in) or the engine's refusal; '' when there is one */
-function bkbBrsGate(brs) {
-  if (!brs && !bkbMayAct()) {
+function bkbBrsGate(statement) {
+  if (!statement && !bkbMayAct()) {
     return '<div class="pe-card" data-testid="bank-bal-ask"><div class="pe-note">' + bkbE(tx("This file does not say the bank's closing balance.")) + '</div></div>'; /* l16 fable3 R3-3: read only, no box to type in */
   }
-  if (!brs) {
+  if (!statement) {
     return (
       '<div class="pe-card" data-testid="bank-bal-ask"><div class="pe-note">' +
       bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) +
@@ -921,7 +921,7 @@ function bkbBrsGate(brs) {
       '</div></div>'
     );
   }
-  return brs.ok ? '' : '<div class="pe-bad" data-testid="bank-brs-bad">' + bkbE(brs.why) + '</div>';
+  return statement.ok ? '' : '<div class="pe-bad" data-testid="bank-brs-bad">' + bkbE(statement.why) + '</div>';
 }
 function bankBrsPaint() {
   const host = bkbEl('bk_brs');
@@ -931,21 +931,21 @@ function bankBrsPaint() {
     host.innerHTML = gate;
     return;
   }
-  const brs = BKB.brs;
+  const statement = BKB.brs;
   host.innerHTML =
     '<div class="pe-card" id="bk_brs_print" data-testid="bank-brs-card"><h2 class="brs-title" data-testid="bank-brs-title">' +
-    bkbE(txf('Bank reconciliation · {account} · {d}', { account: bkbAcctName(), d: bkDate(brs.asOf) })) +
+    bkbE(txf('Bank reconciliation · {account} · {d}', { account: bkbAcctName(), d: bkDate(statement.asOf) })) +
     '</h2>' +
     (typeof bankStoreSignedWords === 'function' && bankStoreSignedWords() ? '<div class="pe-ok brs-signed" data-testid="bank-brs-signed">✓ ' + bkbE(bankStoreSignedWords()) + '</div>' : '') +
     '<div class="pe-sub">' +
-    bkbE(txf('Bank statement as at {d}', { d: bkDate(brs.asOf) })) +
+    bkbE(txf('Bank statement as at {d}', { d: bkDate(statement.asOf) })) +
     '</div><div class="pe-rows">' +
-    bkbBrsRows(brs) +
+    bkbBrsRows(statement) +
     '</div>' +
-    bkbBrsVerdict(brs) +
-    bkbBrsList('Cheques issued, not yet presented', brs.issued_not_presented || [], 'brs-issued') +
-    bkbBrsList('Cheques deposited, not yet credited', brs.deposited_not_credited || [], 'brs-deposited') +
-    bkbBrsList('Credits by the bank not in your books', brs.bank_credits_not_in_books || [], 'brs-bankcr') +
-    bkbBrsList('Debits by the bank not in your books', brs.bank_debits_not_in_books || [], 'brs-bankdr') +
+    bkbBrsVerdict(statement) +
+    bkbBrsList('Cheques issued, not yet presented', statement.issued_not_presented || [], 'brs-issued') +
+    bkbBrsList('Cheques deposited, not yet credited', statement.deposited_not_credited || [], 'brs-deposited') +
+    bkbBrsList('Credits by the bank not in your books', statement.bank_credits_not_in_books || [], 'brs-bankcr') +
+    bkbBrsList('Debits by the bank not in your books', statement.bank_debits_not_in_books || [], 'brs-bankdr') +
     '</div>';
 }

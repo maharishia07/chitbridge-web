@@ -261,8 +261,8 @@
     ];
   }
   /** the whole stylesheet text for a phone breakpoint (the standard's 700 px): the parts in order, one rule group a line */
-  function css(phoneMax) {
+  function cssText(phoneMax) {
     return [].concat(cssPart1(phoneMax), cssPart2(phoneMax), cssPart3(phoneMax), cssPart4(phoneMax), cssPart5(phoneMax), cssPart6(phoneMax), cssPart7(phoneMax), cssPart8(phoneMax)).join('\n');
   }
-  root.CBListParts.css = css;
+  root.CBListParts.css = cssText;
 })(typeof window !== 'undefined' ? window : this);

@@ -166,17 +166,17 @@
   }
 
   /** the object mount gives back: refresh · destroy · el · filter · state · mark · open — what a page does with a mounted list */
-  function apiOf(I, R, el) {
+  function apiOf(inst, rstate, el) {
     return {
       refresh: function (x) {
-        return refresh(I, x);
+        return refresh(inst, x);
       },
       destroy: function () {
-        teardown(I);
+        teardown(inst);
         INST = INST.filter(function (y) {
-          return y !== I;
+          return y !== inst;
         });
-        if (el.__cbl === I) {
+        if (el.__cbl === inst) {
           el.__cbl = null;
           el.innerHTML = '';
           el.classList.remove('cbl');
@@ -185,31 +185,31 @@
       el: el,
       /* filter(key, value) — a page sets (or, with '' , clears) one of its own filters: the header line of Receivables presses "no tax invoice" */
       filter: function (name, value) {
-        if (value) R.filt[name] = value;
-        else delete R.filt[name];
-        resetLimit(I);
-        paintAll(I);
+        if (value) rstate.filt[name] = value;
+        else delete rstate.filt[name];
+        resetLimit(inst);
+        paintAll(inst);
       },
       state: function () {
         return {
-          cols: I.s.cols.slice(),
-          widths: JSON.parse(JSON.stringify(I.s.widths)),
-          view: I.s.view,
-          group: I.s.group,
-          sort: I.s.sort,
-          q: R.q,
-          filt: JSON.parse(JSON.stringify(R.filt))
+          cols: inst.s.cols.slice(),
+          widths: JSON.parse(JSON.stringify(inst.s.widths)),
+          view: inst.s.view,
+          group: inst.s.group,
+          sort: inst.s.sort,
+          q: rstate.q,
+          filt: JSON.parse(JSON.stringify(rstate.filt))
         };
       },
       /* mark(id) — l16 R4-2b: the row the person last worked on is highlighted, brought into view (the page of rows is widened if it lies past it) and takes keyboard focus; false when no such row */
       mark: function (id) {
         var rowId = String(id),
           at = '[data-row="' + cssId(rowId) + '"]';
-        R.hl = rowId;
-        paintAll(I);
+        rstate.hl = rowId;
+        paintAll(inst);
         if (!el.querySelector(at)) {
-          I.limit = Math.max(I.limit || 50, allRows(I).length);
-          paintAll(I);
+          inst.limit = Math.max(inst.limit || 50, allRows(inst).length);
+          paintAll(inst);
         }
         var node = el.querySelector(at);
         if (!node) return false;
@@ -220,10 +220,10 @@
       /* open(id, on) — a page opens (or closes, on === false) one row's next level itself: the call desk's Next moves to the row that follows (W1-CRM) */
       open: function (id, on) {
         var rowId = String(id);
-        if (isOpen(I, rowId) !== (on !== false)) toggleRow(I, rowId, true);
+        if (isOpen(inst, rowId) !== (on !== false)) toggleRow(inst, rowId, true);
         else {
-          R.hl = rowId;
-          refocusRow(I, rowId);
+          rstate.hl = rowId;
+          refocusRow(inst, rowId);
         }
       }
     };
@@ -241,9 +241,9 @@
         return x !== el.__cbl;
       });
     }
-    var I = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
+    var inst = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
     var R = STATE[key] || (STATE[key] = { q: '', filt: {}, open: {}, allOpen: false, sel: {}, selMode: false, gcol: {}, hl: null });
-    I.r = R;
+    inst.r = R;
     /* a host may open the list already narrowed (a link from another page: Home's Suppliers -> the CRM list of suppliers): opts.preset = { filt:{ key: value } } replaces the remembered filters */
     if (o.preset && o.preset.filt) {
       R.filt = {};
@@ -251,15 +251,15 @@
         R.filt[item] = o.preset.filt[item];
       });
     }
-    I.s = loadChoices(I);
-    el.__cbl = I;
+    inst.s = loadChoices(inst);
+    el.__cbl = inst;
     el.classList.add('cbl');
     el.setAttribute('data-cbl', key);
-    wire(I);
-    INST.push(I);
-    paintAll(I);
-    var api = apiOf(I, R, el);
-    I.api = api;
+    wire(inst);
+    INST.push(inst);
+    paintAll(inst);
+    var api = apiOf(inst, R, el);
+    inst.api = api;
     return api;
   }
 
@@ -485,29 +485,29 @@
     /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
        Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
        3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
-    var fixed = 0, free = [], natural = {}, sc = null;
+    var fixed = 0, free = [], natural = {}, stretchCol = null;
     cols.forEach(function (c) {
       if (typeof list.s.widths[c.key] === 'number') fixed += widthOf(list, c);
       else { free.push(c); natural[c.key] = auto[c.key]; }
-      if (c.key === auto.stretch) sc = c;
+      if (c.key === auto.stretch) stretchCol = c;
     });
-    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
+    var floor = stretchCol && natural[stretchCol.key] != null ? Math.min(natural[stretchCol.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[stretchCol.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (stretchCol === cols[0] ? AUTO_FIRST : 0))) : 0;
     var live = free.slice(), hide = [];
     var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
     var squeeze = function (shrink) {
       live.forEach(function (c) { auto[c.key] = natural[c.key]; });
-      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
-      if (sc && auto[sc.key] != null && over > 0) {
-        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
+      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== stretchCol && c.pin !== 'end'; });
+      if (stretchCol && auto[stretchCol.key] != null && over > 0) {
+        auto[stretchCol.key] = Math.max(floor, auto[stretchCol.key] - over);
         over = need() - avail;
       }
       for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
         var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(list, c)); }, 0);
         if (room <= 0) break;
-        var cut = Math.min(over, room);
+        var reduction = Math.min(over, room);
         others.forEach(function (c) {
           var share = Math.max(0, auto[c.key] - minW(list, c));
-          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+          auto[c.key] = Math.round(auto[c.key] - (reduction * share) / room);
         });
         over = need() - avail;
       }
@@ -517,7 +517,7 @@
     while (over > 0 && !list.card && !list.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
       var leave = null;
       live.forEach(function (c) {
-        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
+        if (c !== stretchCol && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
       });
       if (!leave) break;
       hide.push(leave.key);
@@ -525,12 +525,12 @@
       over = squeeze(false);
     }
     if (over > 0) over = squeeze(true);
-    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(list, sc), auto[sc.key] - over); /* last resort: below its floor */
+    if (over > 0 && stretchCol && auto[stretchCol.key] != null) auto[stretchCol.key] = Math.max(minW(list, stretchCol), auto[stretchCol.key] - over); /* last resort: below its floor */
     return hide;
   }
   /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
-  function autoFit(I, cols, rows, avail) {
+  function autoFit(inst, cols, rows, avail) {
     var auto = {},
       sample = rows.slice(0, AUTO_SAMPLE),
       chars = {},
@@ -539,7 +539,7 @@
     cols.forEach(function (c) {
       var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
       sample.forEach(function (row) {
-        var cell = cellOf(I, c, row),
+        var cell = cellOf(inst, c, row),
           len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[\s>]/g) || []).length * 7 : 0); /* a button in the cell is wider than its words: its padding counts */
         if (len > n) n = len;
       });
@@ -551,16 +551,16 @@
         if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
       });
     auto.stretch = named ? named.key : best ? best.key : null;
-    var shortPx = inkWidths(I, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
+    var shortPx = inkWidths(inst, cols.filter(function (c) { return c.key !== auto.stretch && c.pin !== 'end'; }), sample);
     cols.forEach(function (c) {
-      if (typeof I.s.widths[c.key] === 'number') return;
+      if (typeof inst.s.widths[c.key] === 'number') return;
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
-      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
-      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(I, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(inst, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
+      if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(inst, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
     });
-    var hide = fitWidths(I, cols, auto, chars, avail);
-    I.auto = sample.length ? auto : null;
-    I.leftOut = hide;
+    var hide = fitWidths(inst, cols, auto, chars, avail);
+    inst.auto = sample.length ? auto : null;
+    inst.leftOut = hide;
     return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
   }
   /** autoFit, then the toolbar says so when the number of columns left out changed (the "+2" cue) */
@@ -1039,10 +1039,10 @@ ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes
     return Number(n) > 0 ? Number(n) : 0;
   }
   /** the rows that need the person, most urgent first (the page's own match and rank; no search, no filter) */
-  function needsRows(I) {
-    var spec = needsOf(I);
+  function needsRows(inst) {
+    var spec = needsOf(inst);
     if (!spec) return [];
-    var rows = allRows(I).filter(function (row) {
+    var rows = allRows(inst).filter(function (row) {
       return safe(function () {
         return spec.match(row);
       }, false);
@@ -2220,9 +2220,9 @@ ctx.limit = inst.limit;
     return sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅';
   }
   /** one column heading cell: its label, its sort button (inert while loading) and its filter and resize handles */
-  function headerCellHTML(item, st, plainHead, list) {
+  function headerCellHTML(item, sortState, plainHead, list) {
           var id = sortId(item),
-            sorted = !!(st && id && st.key === id),
+            sorted = !!(sortState && id && sortState.key === id),
             r = rightAligned(item),
             label = esc(item.label || item.key);
           return (
@@ -2230,14 +2230,14 @@ ctx.limit = inst.limit;
             (r ? ' r' : '') +
             (id ? ' sortable' : '') +
             '" role="columnheader" aria-sort="' +
-            (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') +
+            (sorted ? (sortState.dir === -1 ? 'descending' : 'ascending') : 'none') +
             '">' +
             (id
               ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
                 '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
-                sortArrow(sorted, st) +
+                sortArrow(sorted, sortState) +
                 '</span></button>'
               : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
             headerFilterHTML(list, item, plainHead) +
@@ -2246,7 +2246,7 @@ ctx.limit = inst.limit;
           );
         }
   function headerHTML(list, cols, tpl, plainHead) {
-    var st = curSort(list);
+    var sortState = curSort(list);
     var lead = leadOn(list) ? '<div class="cbl-hc" role="columnheader" aria-label="' + esc(T(list, 'Select')) + '"></div>' : '';
     return (
       '<div class="cbl-hdr lhead" role="row" style="grid-template-columns:' +
@@ -2255,7 +2255,7 @@ ctx.limit = inst.limit;
       lead +
       cols
         .map(function (item) {
-          return headerCellHTML(item, st, plainHead, list);
+          return headerCellHTML(item, sortState, plainHead, list);
         })
         .join('') +
       '</div>'
@@ -2288,9 +2288,9 @@ ctx.limit = inst.limit;
     return (tid ? ' data-testid="' + esc(tid) + '"' : '') + a;
   }
   /** rowHTML, step 1 of 3 (part 1, lines 2416-2430 of the one function): runs on, nothing here ends the call */
-  function rowHTMLStep1(inst, it, cols, tpl, zb, ctx) {
-ctx.row = it.row;
-ctx.id = it.id;
+  function rowHTMLStep1(inst, entry, cols, tpl, zebra, ctx) {
+ctx.row = entry.row;
+ctx.id = entry.id;
 var R = inst.r;
 ctx.nx = hasNext(inst);
 ctx.open = ctx.nx && isOpen(inst, ctx.id);
@@ -2301,8 +2301,8 @@ var o = inst.o;
           }, '')
         : '') +
       (R.hl === ctx.id && o.hl !== false ? ' sel' : '') +
-      (zb ? ' z' : '') +
-      (it.g != null ? ' ing' : '');
+      (zebra ? ' z' : '') +
+      (entry.g != null ? ' ing' : '');
   }
   /** the extra classes of a body cell: the first one, the pinned action column strong and right, numbers and money right in mono, mono, the line a card gives an action */
   function cellClasses(item, index) {
@@ -2353,7 +2353,7 @@ var o = inst.o;
       .join('');
   }
   /** rowHTML, step 3 of 3 (part 3, lines 2466-2483 of the one function): runs on, nothing here ends the call */
-  function rowHTMLStep3(inst, it, cols, tpl, zb, ctx) {
+  function rowHTMLStep3(inst, entry, cols, tpl, zebra, ctx) {
     var lead = leadOn(inst) ? '<div class="cbl-lead" role="gridcell">' + leadCell(inst, ctx.row, ctx.id) + '</div>' : '';
     ctx.out = '<div class="cbl-row lrow grow' +
       (ctx.open ? ' cbl-open open' : '') +
@@ -2393,9 +2393,9 @@ var o = inst.o;
     return '<input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
   }
   /** lineHTML, step 1 of 5 (part 1, lines 2499-2515 of the one function): runs on, nothing here ends the call */
-  function lineHTMLStep1(inst, it, cols, zb, ctx) {
-ctx.row = it.row;
-ctx.id = it.id;
+  function lineHTMLStep1(inst, entry, cols, zebra, ctx) {
+ctx.row = entry.row;
+ctx.id = entry.id;
 ctx.nx = hasNext(inst);
 ctx.open = ctx.nx && isOpen(inst, ctx.id);
 ctx.o = inst.o;
@@ -2408,11 +2408,11 @@ ctx.pin = cols.filter(function (item) {
           }, '')
         : '') +
       (inst.r.hl === ctx.id && ctx.o.hl !== false ? ' sel' : '') +
-      (zb ? ' z' : '') +
-      (it.g != null ? ' ing' : '');
+      (zebra ? ' z' : '') +
+      (entry.g != null ? ' ing' : '');
   }
   /** lineHTML, step 2 of 5 (part 2, lines 2516-2544 of the one function): runs on, nothing here ends the call */
-  function lineHTMLStep2(inst, it, cols, zb, ctx) {
+  function lineHTMLStep2(inst, entry, cols, zebra, ctx) {
     ctx.flow = cols
       .filter(function (item) {
         return item.pin !== 'end';
@@ -2453,7 +2453,7 @@ ctx.pin = cols.filter(function (item) {
     ctx.lead = leadOn(inst) ? '<span class="cbl-lead" style="padding:0 8px 0 0">' + leadCell(inst, ctx.row, ctx.id) + '</span>' : '';
   }
   /** lineHTML, step 4 of 5 (part 4, lines 2551-2571 of the one function): runs on, nothing here ends the call */
-  function lineHTMLStep4(inst, it, cols, zb, ctx) {
+  function lineHTMLStep4(inst, entry, cols, zebra, ctx) {
     ctx.out = '<div class="cbl-lrec lrow' +
       (ctx.open ? ' cbl-open open' : '') +
       (ctx.cls ? ' ' + esc(ctx.cls) : '') +
