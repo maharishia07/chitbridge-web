@@ -167,8 +167,8 @@ W.run('x-r2r', async (w) => {
     });
     await w.step('Y3', 'Month lock names month 1 "' + FIRST + '" and month 12 "' + LAST + '"; its figures are in ' + SYM, async () => {
       await open(page, base, 'lock');
-      const m1 = (await page.locator(T('lk-row-1') + ' b').first().innerText().catch(() => '')).trim(), m12 = (await page.locator(T('lk-row-12') + ' b').first().innerText().catch(() => '')).trim();
-      const figs = await page.$$eval('[data-testid^="lk-figs-"]', (a) => a.map((x) => x.innerText).join(' '));
+      const m1 = (await page.locator(T('lk-row-1') + ' th').first().innerText().catch(() => '')).trim(), m12 = (await page.locator(T('lk-row-12') + ' th').first().innerText().catch(() => '')).trim();
+      const figs = await page.$$eval('[data-testid^="lk-row-"] .lk-sales', (a) => a.map((x) => x.innerText).join(' '))   /* dc25019a: Month lock is one table - the month is the row head, its sales a cell of its own */;
       const symOk = (figs.match(/A\$|₹|\$/g) || []).every((x) => x === SYM);   /* every money figure the months show is in the shop's money (a month with no sales shows none) */
       return { ok: m1 === FIRST && m12 === LAST && symOk, saw: m1 + ' … ' + m12 + ' · ' + (figs.slice(0, 60) || 'no figures') };
     });
