@@ -27,6 +27,7 @@
  * Screenshots: png/CRMLedger.png (the CRM record with its balance in words) · png/Pay.png (the one popup: bills, line, band) · png/PayOutcome.png (what happened, in words)
  */
 'use strict';
+/* 17 Nov (walkfix): ONE Receive per record (l16 CRM UX 2664a890, crm.cjs L16-2): a late-dues party shows it in the Next band as crm-next-pay, else in the action row as crm-act-pay - the same action, so the walk finds either */
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), PNG = path.join(ROOT, 'png');
@@ -124,7 +125,7 @@ async function route(S, r) {
     if (S.adv.failSend) return J(r, 500, { error: 'Failed', message: 'The rail did not answer.' });
     return J(r, 200, { message: 'Chit sent successfully', chit_id: 'chit-adv-' + S.adv.sends.length, auto_subject: b.manual_subject || '', is_draft: false, recipients: 1, fan_out: { to: 1, cc: 0, for: 0 }, summary: {} });
   }
-  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' }, country: 'IN' });   /* crm.html reads the shop's country from /me (SESSION.country -> its pack's currency); with none known a page shows no symbol (N1) */
   if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/dues') return J(r, 200, books.dues(DUES, { asOf: TODAY }));
   /* M29 · E4: the reverse route — the stand-in records what it was asked and answers as routes/books.js does (the mirror, the bills reopened, the words) */
@@ -198,7 +199,7 @@ async function route(S, r) {
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html ledger section opened: still no minus');
     const stmt = await p.$$eval('[data-testid="stmt-opening"],[data-testid="stmt-closing"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(stmt.every((t) => / (Dr|Cr)$|^\D*0(\.0+)?$/.test(t)), 'E9 crm.html statement: opening and closing are Dr / Cr (' + stmt.join(' | ') + ')');
-    const btn = await p.evaluate(() => { const e = document.querySelector('[data-testid="crm-act-pay"]'); return e ? getComputedStyle(e).backgroundColor : null; });
+    const btn = await p.evaluate(() => { const e = document.querySelector('[data-testid="crm-act-pay"], [data-testid="crm-next-pay"]'); return e ? getComputedStyle(e).backgroundColor : null; });
     if (btn) ok(btn !== 'rgba(0, 0, 0, 0)' && btn !== 'rgb(255, 255, 255)', 'the Pay / Receive button takes the primary look from bkCss (' + btn + ')');
     fs.mkdirSync(PNG, { recursive: true });
     await p.screenshot({ path: path.join(PNG, 'CRMLedger.png') });
@@ -222,17 +223,20 @@ async function route(S, r) {
   /* ── the one Pay popup, opened from the CRM record of Agro Mills (P-0001) — the third door ── */
   const text = (p, id) => p.evaluate((i) => { const e = document.querySelector('[data-testid="' + i + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, id);
   const posts = (S) => S.pay.posts.length;
-  async function openPay(url, S, o) {
+  let CUR = null, OPENED = null;   /* the stand-in of the popup now open: type() waits on ITS preview */
+async function openPay(url, S, o) {
+    CUR = S;
     const { ctx, p } = await open(url || '/crm.html', S);
     await p.waitForSelector('[data-testid="crm-row-P-0001"]', { timeout: 15000 });
     await p.click('[data-testid="crm-row-P-0001"]');
     await p.waitForSelector('[data-testid="crm-rec-name"]', { timeout: 15000 });
     try { await p.click('[data-testid="crm-sec-ledger"]', { timeout: 3000 }); } catch (_) {}
-    await p.waitForSelector('[data-testid="crm-act-pay"]', { timeout: 15000 });
+    await p.waitForSelector('[data-testid="crm-act-pay"], [data-testid="crm-next-pay"]', { timeout: 15000 });
     return { ctx, p };
   }
-  const popup = async (p) => { await p.click('[data-testid="crm-act-pay"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 }); };
-  const type = async (p, amt) => { await p.fill('[data-testid="pay_amt"]', amt); await p.waitForFunction(() => { const e = document.getElementById('pay_left'); return e && !/Type the amount/.test(e.textContent); }, null, { timeout: 8000 }); await p.waitForTimeout(150); };
+  /* 17 Nov (walkfix): Receive/Pay now opens FILLED with the dues total and Bank first (l16 2664a890, cap-books.js payOpenTotal). These walks drive a typed amount by cash: say so once, here; the bank-first default is checked in 'opens filled' below */
+const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-testid="crm-next-pay"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 }); OPENED = await p.evaluate(() => ({ mode: document.getElementById('pay_mode').value, amt: document.getElementById('pay_amt').value })); await p.selectOption('[data-testid="pay_mode"]', 'cash'); await p.waitForTimeout(150); };
+  const type = async (p, amt) => { const want = Math.round(Number(String(amt).replace(/,/g, '')) * 100); await p.fill('[data-testid="pay_amt"]', amt); await p.waitForFunction(() => { const e = document.getElementById('pay_left'); return e && !/Type the amount/.test(e.textContent); }, null, { timeout: 8000 }); for (let i = 0; i < 40 && CUR; i++) { const pv = CUR.pay.previews[CUR.pay.previews.length - 1]; if (pv && pv.amount_minor === want) break; await p.waitForTimeout(100); } await p.waitForTimeout(150); };   /* the popup opens filled, so wait for the preview of the TYPED amount */
   const closeIf = (p) => p.evaluate(() => { if (typeof closeModal === 'function') closeModal(); });
   /* R102b: Record asks first (the app's own <dialog open>, no role attribute) — the Yes tap that writes */
   const ASK_OK = 'dialog[open] [data-testid="confirm-ok"]', ASK_NO = 'dialog[open] [data-testid="confirm-cancel"]';
@@ -242,7 +246,9 @@ async function route(S, r) {
   /* ── R102b · a payment asks first (walk 24 Oct): who, how much, how — Cancel writes nothing; Yes writes once ── */
   {
     const S = standIn(), { ctx, p } = await openPay('/crm.html', S);
-    await popup(p); await type(p, '2000');
+    await popup(p);
+    ok(OPENED && OPENED.mode === 'bank' && /481.65/.test(OPENED.amt), 'L16-2 · Pay opens FILLED with what is owed (481.65) and Bank first (' + JSON.stringify(OPENED) + ')');
+    await type(p, '2000');
     await p.click('[data-testid="pay_record"]');
     await p.waitForSelector(ASK_OK, { timeout: 5000 });
     const ask1 = await askText(p);
@@ -357,7 +363,7 @@ async function route(S, r) {
     await p.click('[data-testid="pay_done"]');
     await p.waitForTimeout(400);
     const ledBal = await text(p, 'party-balance');
-    ok(!/settled/.test(ledBal) && /advance|owe/i.test(ledBal + outBal) && await p.locator('[data-testid="crm-act-pay"]').isVisible(), 'M30-1c the ledger behind the box repaints with the new balance and stays open (' + ledBal + ' · answer: ' + outBal + ')');
+    ok(!/settled/.test(ledBal) && /advance|owe/i.test(ledBal + outBal) && await p.locator('[data-testid="crm-act-pay"], [data-testid="crm-next-pay"]').isVisible(), 'M30-1c the ledger behind the box repaints with the new balance and stays open (' + ledBal + ' · answer: ' + outBal + ')');
     await ctx.close();
   }
   /* ── E11 · owner 2026-10-08: W1 only when there is an allocation ── */

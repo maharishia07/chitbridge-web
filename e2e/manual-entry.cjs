@@ -114,12 +114,12 @@ async function route(S, r) {
     /* the API refuses a reversal with no reason (lib/books B.reverseEntry: "A reversal needs a reason.", 422) */
     if (!String(body().reason || '').trim()) return J(r, 422, { error: 'A reversal needs a reason.', message: 'A reversal needs a reason.' });
     return J(r, 200, { ok: true, entry_id: 'mj10', entry_no: 'MJ/2026-27/000010', posting_date: TODAY, moved: false, reverses: 'MJ/2026-27/000009', reverses_entry_id: x[1], items: 0, reopened: [], words: 'Reversed MJ/2026-27/000009 — ₹10,000 — by MJ/2026-27/000010.' }); }
-  if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', from: TODAY, to: TODAY, entries: ENTRIES, count: ENTRIES.length });
+  if (p === '/api/books/daybook') return J(r, 200, books.daybook(ENTRIES, { from: TODAY, to: TODAY }));
   if (p === '/api/books/dues') return J(r, 200, books.dues([
     { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', buckets: { not_due: 0, lt_6m: 300000, m6_1y: 0, y1_2: 0, y2_3: 0, gt_3y: 0 } },
     { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', buckets: { not_due: -150000, lt_1y: 0, y1_2: 0, y2_3: 0, gt_3y: 0 } }], { asOf: TODAY }));
   if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', asOf: TODAY, cheques: [], pdc_reminders: [], remind: { on: true, lead_days: 7, from: null, may_set: true, why_not: null } });
-  if (p === '/api/books/periods') return J(r, 200, { periods: [] });
+  if (p === '/api/books/periods') return J(r, 200, books.periods([]));
   return J(r, 404, { error: 'no stand-in for ' + p });
 }
 

@@ -68,9 +68,10 @@ const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { d
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */
 const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code ? { code } : {});
 /** GET /api/books/daybook */
-const daybook = (entries, o) => Object.assign({ currency: 'INR', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
+const daybook = (entries, o) => Object.assign({ currency: 'INR', country: 'IN', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
-const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
+/* 17 Nov: the api now sends no_narration (a person wrote none) and recorded_at on EVERY day-book entry (routes/books.js daybook), and the shop's country on the answer */
+const entry = (e) => Object.assign({ no_narration: false, recorded_at: '2026-10-03T05:00:00.000Z', doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
 /** GET /api/books/returns for a country whose return is not made from these books (India: GSTR-1 / 3B come from the bills, via the rail) - the contract's `GET /api/books/returns #rail` answer, every key */
 const returnsRail = (o) => Object.assign({ form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: "Your GSTR-1 and GSTR-3B are made from your bills, not from these books. Close and pay the month's GST here.", rail: '/api/tax/gstr' }, o || {});
 /** the period answer of POST /periods/:fy/:p/lock|unlock */
