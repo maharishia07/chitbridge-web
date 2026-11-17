@@ -94,7 +94,7 @@ function go() {
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the money field reads its marks and number reader from it -->
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
 <script src="/app/bank-tb-line.js"></script><script src="/app/tb-change.js"></script>
-<script src="/app/cap-books.js"></script>
+<script src="/app/cap-books.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-party.js"></script>
 <script src="/app/cap-attention.js"></script>   <!-- W15-102: the Needs attention strip (Day book · Ledgers · BAS) — the server counts -->
 <script src="/app/cap-opening.js"></script><script src="/app/cap-opening-years.js"></script><script src="/app/cap-opening-bills.js"></script>   <!-- Setup › Opening balances (l16): the grid, the live Difference from the server, what is saved, the year strip -->
 <script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
@@ -107,7 +107,7 @@ function go() {
 <script src="/engine/chart.js"></script><script src="/engine/accounts-packs.js"></script><script src="/engine/posting-voucher.js"></script><script src="/engine/posting.js"></script><script src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
 <script src="/engine/bank-json.js"></script><script src="/engine/bank-brs.js"></script><script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/cap-entry.js"></script><script src="/app/cap-entry-preview.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
-<script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
+<script src="/app/cap-period.js"></script><script src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
 <script src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
 <script src="/app/cap-bank-statements.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
