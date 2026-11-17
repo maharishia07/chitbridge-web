@@ -315,7 +315,7 @@
     var door = root.document.getElementById('bcd_card');
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML = '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + '</h2></div>' +
-      emptyState('📒', translate('No clients yet'), escapeHtml(translate('Add a client below. They accept, then give you access, and they show here.'))) +
+      emptyState('📒', translate('No clients yet'), escapeHtml(translate('Add a client below. They accept, then give you access.'))) +
       '<div id="bp_door" data-testid="practice-door"></div>';
     mountDoor({ home: true });
     practiceKit.practiceState.drawn = true;

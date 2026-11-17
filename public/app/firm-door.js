@@ -27,21 +27,21 @@
   var COPY = {
     owner: {
       title: 'Your accountant or auditor',
-      sub: 'Invite your firm by its handle. They connect only when you accept, and they see your books only when you give access.',
+      sub: 'Invite your firm by handle. They see your books only when you give access.',
       placeholder: 'Your firm\'s handle',
       add: 'Invite',
-      emptyTitle: 'No accountant or auditor connected',
-      emptyBody: 'Invite your firm above, or wait for its request.',
-      asked: 'Invited. They decide.'
+      emptyTitle: 'No accountant or auditor',
+      emptyBody: 'Invite your firm above.',
+      asked: 'Invited.'
     },
     firm: {
       title: 'Add a client',
-      sub: 'Ask a business by its handle or bridge id. They connect when they accept, and you see their books when they give access.',
+      sub: 'Add a business by handle or bridge id. You see their books only when they give access.',
       placeholder: 'Client handle or bridge id',
       add: 'Add a client',
-      emptyTitle: 'No client requests yet',
+      emptyTitle: 'No clients yet',
       emptyBody: 'Add a client above.',
-      asked: 'Asked. They decide.'
+      asked: 'Request sent.'
     }
   };
   var seen = {}; /* the own node id, per bridge id: read once, never twice */
@@ -136,19 +136,19 @@
     function actionsOf() {
       var asked = function (row) { return row.state === 'requested' && !row.mine; };
       return [
-        { id: 'accept', tid: tid('accept'), label: words(side === 'owner' ? 'Accept and choose access' : 'Accept'), when: asked, run: accept },
+        { id: 'accept', tid: tid('accept'), label: words('Accept'), when: asked, run: accept },
         { id: 'decline', tid: tid('decline'), label: words('Decline'), when: asked, run: function (row) { settle(row, 'decline', 'Declined.', 'Decline this request?'); } },
-        { id: 'cancel', tid: tid('cancel'), label: words(side === 'owner' ? 'Cancel invitation' : 'Cancel'), when: function (row) { return row.state === 'requested' && row.mine; }, run: function (row) { settle(row, 'decline', 'Cancelled.'); } },
+        { id: 'cancel', tid: tid('cancel'), label: words('Cancel'), when: function (row) { return row.state === 'requested' && row.mine; }, run: function (row) { settle(row, 'decline', 'Cancelled.'); } },
         { id: 'give', tid: tid('give'), label: words('Give access'), when: function (row) { return side === 'owner' && row.state === 'active' && !hasAccess(row); }, run: function (row) { if (o.giveTo) o.giveTo(row.name); } },
-        { id: 'remove', tid: tid('remove'), label: words(side === 'owner' ? 'Remove my accountant' : 'Remove'), when: function (row) { return row.state === 'active' || row.state === 'suspended'; }, run: function (row) { settle(row, 'remove', 'Removed.', side === 'owner' ? 'Remove this firm?' : 'Remove this client?', true); } }
+        { id: 'remove', tid: tid('remove'), label: words('Remove'), when: function (row) { return row.state === 'active' || row.state === 'suspended'; }, run: function (row) { settle(row, 'remove', 'Removed.', side === 'owner' ? 'Remove this firm?' : 'Remove this client?', true); } }
       ];
     }
     /** one write on one connection, a confirm when it ends something; the row list is read again */
     function settle(row, key, done, question, danger) {
       root.CBAction.run(null, function () { return run(key, row.id, {}); }, {
         key: 'fd-' + key + '-' + row.id,
-        confirm: question ? { title: words(question), body: '<b>' + root.esc(row.name) + '</b> ' + root.esc(words(danger ? 'will no longer be able to open your books through this connection.' : 'will be told it was declined.')), yes: words(danger ? 'Remove' : 'Decline'), danger: !!danger } : undefined,
-        failed: words('Could not do that'),
+        confirm: question ? { title: words(question), body: '<b>' + root.esc(row.name) + '</b> ' + root.esc(words(danger ? (side === 'owner' ? 'can no longer open your books.' : 'is no longer your client.') : 'will be told.')), yes: words(danger ? 'Remove' : 'Decline'), danger: !!danger } : undefined,
+        failed: words('Could not do it'),
         done: words(done),
         outcome: function () { changed(); }
       });
@@ -157,7 +157,7 @@
     function accept(row) {
       root.CBAction.run(null, function () { return run('approve', row.id, {}); }, {
         key: 'fd-accept-' + row.id,
-        confirm: { title: words('Accept ') + row.name + '?', body: root.esc(words(side === 'owner' ? 'This connects you. It does not open your books: you choose what they can see next.' : 'This connects you to this client. You see their books only when they give you access.')), yes: words(side === 'owner' ? 'Accept and choose access' : 'Accept') },
+        confirm: { title: words('Accept ') + row.name + '?', body: root.esc(words(side === 'owner' ? 'Your books stay closed until you give access.' : 'You see their books only when they give access.')), yes: words('Accept') },
         failed: words('Could not accept'),
         done: side === 'owner' ? undefined : words('Accepted.'),
         outcome: function () {
@@ -172,7 +172,7 @@
       var body = side === 'owner' ? { parentHandle: handle, type: 'agency' } : { childHandle: handle, type: 'agency' };
       root.CBAction.run($('fd_add'), function () { return run('ask', null, body); }, {
         key: 'fd-ask-' + side,
-        failed: words('Could not ask'),
+        failed: words(side === 'owner' ? 'Could not invite' : 'Could not add'),
         out: 'fd_out-' + side,
         outcome: function () { input.value = ''; changed().then(function () { say(copy.asked); }); },
         onFail: function (why, failure) { grey(why, failure); }
@@ -197,7 +197,7 @@
     }
     function paint() {
       host.innerHTML =
-        '<section class="fd-card" data-testid="' + tid('card') + '"><h3 class="fd-h">' + root.esc(words(copy.title)) + '</h3>' + (o.home ? '' : '<div class="sub" data-testid="' + tid('note') + '">' + root.esc(words(copy.sub)) + '</div>') + '
+        '<section class="fd-card" data-testid="' + tid('card') + '"><h3 class="fd-h">' + root.esc(words(copy.title)) + '</h3>' + (o.home ? '' : '<div class="sub" data-testid="' + tid('note') + '">' + root.esc(words(copy.sub)) + '</div>') +
         '<div class="nw-acts fd-ask"><input data-cbsid="NET004-I06" id="fd_handle-' + side + '" class="inp" maxlength="80" autocomplete="off" data-testid="' + tid('handle') + '" aria-label="' + root.esc(words(copy.placeholder)) + '" placeholder="' + root.esc(words(copy.placeholder)) + '">' +
         '<button data-cbsid="NET004-B14" type="button" class="act" id="fd_add-' + side + '" data-testid="' + tid('add') + '">' + root.esc(words(copy.add)) + '</button></div>' +
         '<div class="nw-out" id="fd_out-' + side + '" data-testid="' + tid('out') + '" role="status"></div><div class="nw-list" id="fd_list-' + side + '" data-testid="' + tid('list') + '"></div></section>';
@@ -227,7 +227,7 @@
       }
     }
     function paintFail() {
-      host.innerHTML = '<section class="fd-card" data-testid="' + tid('card') + '"><h3 class="fd-h">' + root.esc(words(copy.title)) + '</h3><div class="sub" role="status" data-testid="' + tid('fail') + '">' + root.esc(words('Could not read your connections.')) + '</div>' +
+      host.innerHTML = '<section class="fd-card" data-testid="' + tid('card') + '"><h3 class="fd-h">' + root.esc(words(copy.title)) + '</h3><div class="sub" role="status" data-testid="' + tid('fail') + '">' + root.esc(words('Could not load the list.')) + '</div>' +
         '<button data-cbsid="NET004-B15" type="button" class="act" id="fd_retry-' + side + '" data-testid="' + tid('retry') + '">' + root.esc(words('Try again')) + '</button></section>';
       $('fd_retry').onclick = reload;
     }
