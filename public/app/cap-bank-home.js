@@ -11,7 +11,8 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
-const BKH = { signed: {}, known: false, blind: false, noPush: false, shown: 3, deepDone: false };
+const BANK_HOME = { signed: {}, known: false, blind: false, noPush: false, shown: 3, deepDone: false };
+window.BKH = BANK_HOME; /* the name accounts.html and cap-bank-statements.js read */
 const bkhE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 /** 'September 2026' for '2026-09', in the reader's language (a date helper, no money) */
 function bkhMonthLong(month) {
@@ -50,9 +51,9 @@ async function bankHomeSigned() {
       }
     })
   );
-  BKH.signed = next;
-  BKH.known = known && accounts.length > 0;
-  BKH.blind = blind;
+  BANK_HOME.signed = next;
+  BANK_HOME.known = known && accounts.length > 0;
+  BANK_HOME.blind = blind;
 }
 /* ── the financial year: one year on screen (W15-100). Its first month and its name are the shop's own (the country pack through bkYearStart and bkFyName); how far back the stepper reaches is the pack's record-keeping years ── */
 const bkhPad = (n) => (n < 10 ? '0' : '') + n;
@@ -80,12 +81,18 @@ function bkhCanStep(step) {
 /** is there a signed-off statement (the reconciliation record) for this account and month: the SAME record the practice list's Bank column reads */
 /** a sign-off covers every month from its period_from to its period_to (a year signed in one go is twelve months signed, not one); a record with no period_from covers its own end month only */
 const bkhCovers = (item, month) => String(item.period_from || item.period_to || '').slice(0, 7) <= month && month <= String(item.period_to || '').slice(0, 7);
-const bkhSignedIn = (account, month) => (BKH.signed[account.account_id] || []).some((item) => bkhCovers(item, month));
+const bkhSignedIn = (account, month) => (BANK_HOME.signed[account.account_id] || []).some((item) => bkhCovers(item, month));
+/** the state of a month with no statement: still to come, in progress (not due yet, never Missing) or missing */
+function bkhGapState(month) {
+  const now = bkhThisMonth();
+  return month > now ? 'future' : month === now ? 'current' : 'missing';
+}
 /** 'missing' · 'signed' · 'open' (kept, lines to do) · 'unfiled' (signed off, but no file kept: the record is shown, never "Missing") · 'kept' (the sign-off record could not be read) · 'future' (a month not begun) · 'current' (the month in progress: not due yet, never "missing") */
 function bankHomeState(account, month, cell) {
-  if ((!cell || cell.missing) && BKH.known && bkhSignedIn(account, month)) return 'unfiled'; /* l16 fable2 R2-2: the practice row says "unexplained to 31 Oct" from these sign-offs; the Bank page shows them too */
-  if (!cell || cell.missing) return month > bkhThisMonth() ? 'future' : month === bkhThisMonth() ? 'current' : 'missing'; /* the month in progress is not due yet: its own state, never Missing */
-  if (!BKH.known) return 'kept';
+  const gap = !cell || cell.missing;
+  if (gap && BANK_HOME.known && bkhSignedIn(account, month)) return 'unfiled'; /* l16 fable2 R2-2: the practice row says "unexplained to 31 Oct" from these sign-offs; the Bank page shows them too */
+  if (gap) return bkhGapState(month); /* the month in progress is not due yet: its own state, never Missing */
+  if (!BANK_HOME.known) return 'kept';
   return bkhSignedIn(account, month) ? 'signed' : 'open';
 }
 /** the count of each state over some accounts and an answer's months: { signed, open, kept, missing } */
@@ -108,15 +115,15 @@ function bkhTallyWords(tally) {
 const bankHomeMayAdd = () => typeof bkbMayAct === 'function' && bkbMayAct();
 /** ‹ FY 2024-25 · FY 2025-26 · FY 2026-27 › and All years: the year on screen, one step either way */
 function bankHomeFyHtml() {
-  const fy = BKST.fy,
-    can = (step) => bkhCanStep(step),
-    btn = (cbsid, tid, step, text, label) => '<button ' + cbsid + ' type="button" class="bks-btn bkh-step" data-testid="' + tid + '" onclick="bankHomeFyStep(' + step + ')" aria-label="' + bkhE(label) + '"' + (can(step) ? '' : ' disabled') + '>' + bkhE(text) + '</button>';
+  const financialYear = BKST.financialYear,
+    canStep = (step) => bkhCanStep(step),
+    btn = (cbsid, tid, step, text, label) => '<button ' + cbsid + ' type="button" class="bks-btn bkh-step" data-testid="' + tid + '" onclick="bankHomeFyStep(' + step + ')" aria-label="' + bkhE(label) + '"' + (canStep(step) ? '' : ' disabled') + '>' + bkhE(text) + '</button>';
   return (
-    '<div class="bkh-fy" data-testid="bank-home-fy" role="group" aria-label="' + bkhE(tx('Financial year')) + '">' +
-    btn('data-cbsid="BKS014-B49"', 'bank-home-fy-prev', -1, '‹ ' + (can(-1) ? bkhFyLabel(fy - 1) : ''), tx('Earlier year')) +
-    '<b class="bkh-fynow" data-testid="bank-home-fy-now" aria-live="polite">' + bkhE(bkhFyLabel(fy)) + '</b>' +
-    btn('data-cbsid="BKS014-B50"', 'bank-home-fy-next', 1, (can(1) ? bkhFyLabel(fy + 1) : '') + ' ›', tx('Later year')) +
-    (bkhRetention() ? '<button data-cbsid="BKS014-B51" type="button" class="bks-btn bkh-step" data-testid="bank-home-fy-all" aria-pressed="' + !!BKST.all + '" onclick="bankHomeAllYears()">' + bkhE(tx('All years')) + '</button>' : '') +
+    '<div class="bkh-financialYear" data-testid="bank-home-financialYear" role="group" aria-label="' + bkhE(tx('Financial year')) + '">' +
+    btn('data-cbsid="BKS014-B49"', 'bank-home-financialYear-prev', -1, '‹ ' + (canStep(-1) ? bkhFyLabel(financialYear - 1) : ''), tx('Earlier year')) +
+    '<b class="bkh-fynow" data-testid="bank-home-financialYear-now" aria-live="polite">' + bkhE(bkhFyLabel(financialYear)) + '</b>' +
+    btn('data-cbsid="BKS014-B50"', 'bank-home-financialYear-next', 1, (canStep(1) ? bkhFyLabel(financialYear + 1) : '') + ' ›', tx('Later year')) +
+    (bkhRetention() ? '<button data-cbsid="BKS014-B51" type="button" class="bks-btn bkh-step" data-testid="bank-home-financialYear-all" aria-pressed="' + !!BKST.all + '" onclick="bankHomeAllYears()">' + bkhE(tx('All years')) + '</button>' : '') +
     '</div>'
   );
 }
@@ -170,8 +177,8 @@ function bankHomeCardsHtml() {
     );
   };
   const all = !!BKST.cards,
-    shown = all ? open : open.slice(0, BKH.shown),
-    rest = open.length - BKH.shown;
+    shown = all ? open : open.slice(0, BANK_HOME.shown),
+    rest = open.length - BANK_HOME.shown;
   const more = rest > 0 ? '<button data-cbsid="BKS014-B52" type="button" class="bks-link bkh-more" data-testid="bank-home-more" aria-expanded="' + all + '" onclick="bankHomeCardsMore()">' + bkhE(all ? tx('Show fewer') : txf('and {n} more', { n: rest })) + '</button>' : '';
   return '<div class="bkh-cards' + (all ? ' bkh-cards-all' : '') + '" data-testid="bank-home-cards">' + shown.map(card).join('') + more + '</div>';
 }
@@ -182,7 +189,7 @@ function bankHomeCardsMore() {
 }
 /** a year with no statement file kept, whose every month that has begun is signed off: ONE line instead of a grid of cells (never "Missing" for a signed month; nothing invented) */
 function bkhFoldedHtml(data) {
-  if (BKST.fileTotal || !BKH.known) return '';
+  if (BKST.fileTotal || !BANK_HOME.known) return '';
   const tallies = data.accounts.map((account) => ({ account, tally: bkhTally(data, [account]) }));
   if (!tallies.length || tallies.some((row) => row.tally.missing || row.tally.signed || row.tally.open || row.tally.kept) || !tallies.some((row) => row.tally.unfiled)) return '';
   const many = tallies.length > 1;
@@ -192,46 +199,61 @@ function bkhFoldedHtml(data) {
     '</div>'
   );
 }
+/** the head row of the grid: Account · the shown year's months · This year */
+function bkhHeadRowHtml(data) {
+  return '<tr><th scope="col">' + bkhE(tx('Account')) + '</th>' + data.months.map((month) => '<th scope="col">' + bkhE(bkstMonth(month)) + '</th>').join('') + '<th scope="col">' + bkhE(tx('This year')) + '</th></tr>';
+}
+/** one line per account: its monthly sign-offs "n of m" (named when there is more than one account) */
+function bkhSignedLinesHtml(data) {
+  const many = data.accounts.length > 1,
+    count = data.months.length;
+  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: count })) + '</div>'; }).join('');
+}
+/** a month with no statement: the month in progress, a month not yet due, a month signed off with no file kept, or a gap (the person who may add gets the button to add it) */
+function bkhGapCellHtml(state, account, month, key, mayAdd) {
+      if (state === 'current') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap bkh-future" data-testid="bank-stmts-current-' + key + '" title="' + bkhE(tx('Not due yet')) + '"><span aria-hidden="true">·</span><span class="sr-only">' + bkhE(tx('Not due yet')) + '</span></td>';
+      if (state === 'future') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap bkh-future" data-testid="bank-stmts-future-' + key + '"><span aria-hidden="true">·</span></td>';
+      if (state === 'unfiled') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-unfiled-' + key + '" title="' + bkhE(tx('Signed off; no statement file is kept for this month')) + '">' + bkhE(tx('Signed off')) + '</span></td>';
+      if (state === 'missing')
+  return mayAdd
+          ? '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + key + '" data-acct="' + bkhE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkhE(tx('Add a statement for this account')) + '">' + bkhE(tx('Not signed off')) + '</button></td>'
+          : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + bkhE(tx('Not signed off')) + '</span></td>';
+  return '';
+}
+/** a month with a statement kept: its press (open the lines), its mark, its count and the crossed-statements warning */
+function bkhHaveCellHtml(account, month, cell, state, key) {
+      const crossed = cell.overlaps === true,
+  mark = state === 'open' ? '●' : state === 'signed' ? '✓' : '◦',
+  word = state === 'signed' ? tx('Signed off') : state === 'open' ? tx('Not signed off yet') : tx('Kept'),
+  warn = crossed ? tx('Two statements cover this month') : '';
+      return (
+  '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-have bkh-' + state + '" data-testid="bank-stmts-have-' + key + '"><button data-cbsid="BKS014-B47" type="button" class="bkh-cell" data-testid="bank-home-month-' + key + '" data-acct="' + bkhE(account.account_id) + '" data-month="' + bkhE(month) + '" onclick="bankHomePress(this)" title="' + bkhE(word + ' · ' + bkhMonthLong(month) + (warn ? ' · ' + warn : '')) + '" aria-label="' + bkhE(bkstAccountName(account) + ', ' + bkhMonthLong(month) + ', ' + word + (warn ? ', ' + warn : '')) + '"><span aria-hidden="true">' + mark + '</span> ' + bkhE(String(cell.file_ids.length)) + (crossed ? ' <span class="bks-flag" data-testid="bank-stmts-cross-' + key + '" aria-hidden="true">⚠</span>' : '') + '</button></td>'
+      );
+}
+/** one month of one account: a gap cell, or the press that opens its lines */
+function bkhMonthCellHtml(account, month, mayAdd) {
+  const cell = bkhCellOf(account, month),
+  state = bankHomeState(account, month, cell),
+  key = bkhE(account.account_id) + '-' + bkhE(month);
+  if (['current', 'future', 'unfiled', 'missing'].indexOf(state) >= 0) return bkhGapCellHtml(state, account, month, key, mayAdd);
+  return bkhHaveCellHtml(account, month, cell, state, key);
+}
+/** one row of the grid: the account and its months across, the year's tally at the end */
+function bkhAccountRowHtml(data, account, mayAdd) {
+  const cells = data.months.map((month) => bkhMonthCellHtml(account, month, mayAdd)).join('');
+  return '<tr><th scope="row" title="' + bkhE(bkstAccountName(account)) + '">' + bkhE(bkstAccountName(account)) + '</th>' + cells + '<td class="bkh-tally" data-testid="bank-home-tally-' + bkhE(account.account_id) + '">' + bkhE(bkhTallyWords(bkhTally(data, [account]))) + '</td></tr>';
+}
 /** the grid: one row per account, the shown year's months across, the year's count at the end; a month with a statement opens its lines */
 function bankHomeGridHtml() {
   const data = BKST.data;
   if (!data || !data.accounts.length) return '';
-  const head = '<tr><th scope="col">' + bkhE(tx('Account')) + '</th>' + data.months.map((month) => '<th scope="col">' + bkhE(bkstMonth(month)) + '</th>').join('') + '<th scope="col">' + bkhE(tx('This year')) + '</th></tr>',
-    mayAdd = bankHomeMayAdd();
+  const mayAdd = bankHomeMayAdd();
   const folded = bkhFoldedHtml(data);
   if (folded) return folded;
-  const many = data.accounts.length > 1,
-    count = data.months.length,
-    signedLines = data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: count })) + '</div>'; }).join('');
-  const rows = data.accounts
-    .map((account) => {
-      const cells = data.months
-        .map((month) => {
-          const cell = bkhCellOf(account, month),
-            state = bankHomeState(account, month, cell),
-            key = bkhE(account.account_id) + '-' + bkhE(month);
-          if (state === 'current') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap bkh-future" data-testid="bank-stmts-current-' + key + '" title="' + bkhE(tx('Not due yet')) + '"><span aria-hidden="true">·</span><span class="sr-only">' + bkhE(tx('Not due yet')) + '</span></td>';
-          if (state === 'future') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap bkh-future" data-testid="bank-stmts-future-' + key + '"><span aria-hidden="true">·</span></td>';
-          if (state === 'unfiled') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-unfiled-' + key + '" title="' + bkhE(tx('Signed off; no statement file is kept for this month')) + '">' + bkhE(tx('Signed off')) + '</span></td>';
-          if (state === 'missing')
-            return mayAdd
-              ? '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + key + '" data-acct="' + bkhE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkhE(tx('Add a statement for this account')) + '">' + bkhE(tx('Not signed off')) + '</button></td>'
-              : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + bkhE(tx('Not signed off')) + '</span></td>';
-          const crossed = cell.overlaps === true,
-            mark = state === 'open' ? '●' : state === 'signed' ? '✓' : '◦',
-            word = state === 'signed' ? tx('Signed off') : state === 'open' ? tx('Not signed off yet') : tx('Kept'),
-            warn = crossed ? tx('Two statements cover this month') : '';
-          return (
-            '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-have bkh-' + state + '" data-testid="bank-stmts-have-' + key + '"><button data-cbsid="BKS014-B47" type="button" class="bkh-cell" data-testid="bank-home-month-' + key + '" data-acct="' + bkhE(account.account_id) + '" data-month="' + bkhE(month) + '" onclick="bankHomePress(this)" title="' + bkhE(word + ' · ' + bkhMonthLong(month) + (warn ? ' · ' + warn : '')) + '" aria-label="' + bkhE(bkstAccountName(account) + ', ' + bkhMonthLong(month) + ', ' + word + (warn ? ', ' + warn : '')) + '"><span aria-hidden="true">' + mark + '</span> ' + bkhE(String(cell.file_ids.length)) + (crossed ? ' <span class="bks-flag" data-testid="bank-stmts-cross-' + key + '" aria-hidden="true">⚠</span>' : '') + '</button></td>'
-          );
-        })
-        .join('');
-      return '<tr><th scope="row" title="' + bkhE(bkstAccountName(account)) + '">' + bkhE(bkstAccountName(account)) + '</th>' + cells + '<td class="bkh-tally" data-testid="bank-home-tally-' + bkhE(account.account_id) + '">' + bkhE(bkhTallyWords(bkhTally(data, [account]))) + '</td></tr>';
-    })
-    .join('');
+  const rows = data.accounts.map((account) => bkhAccountRowHtml(data, account, mayAdd)).join('');
   return (
-    '<div class="pe-note bkh-signed" data-testid="bank-home-signed">' + signedLines + '</div>' +
-    '<div class="bks-wrap bkh-gridwrap"><table class="bks-grid" data-testid="bank-stmts-grid"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="pe-note bkh-signed" data-testid="bank-home-signed">' + bkhSignedLinesHtml(data) + '</div>' +
+    '<div class="bks-wrap bkh-gridwrap"><table class="bks-grid" data-testid="bank-stmts-grid"><thead>' + bkhHeadRowHtml(data) + '</thead><tbody>' + rows + '</tbody></table></div>' +
     '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off yet')) + ' · ' + bkhE(tx('no statement kept')) + '</div>'
   );
 }
@@ -262,14 +284,16 @@ function bankHomeTrailHtml() {
 function bankHomeEnter() {
   if (BKB.view === 'lines') return;
   BKB.view = 'lines';
-  if (BKH.noPush) {
-    BKH.noPush = false; /* the browser's Forward brought us here: the entry is in the history already */
+  if (BANK_HOME.noPush) {
+    BANK_HOME.noPush = false; /* the browser's Forward brought us here: the entry is in the history already */
     return;
   }
   const month = String(BKB.to || '').slice(0, 7);
   try {
     history.pushState({ bk: 1 }, '', '#bank/' + encodeURIComponent(BKB.acct) + (month ? '/' + month : ''));
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('bank-home-history', failure);
+  }
 }
 /** Back: one step in the browser's history when the lines were entered from the home (the popstate paints the home), else straight to the home */
 function bankHomeBack() {
@@ -281,14 +305,16 @@ function bankHomeShow() {
   BKB.view = 'home';
   try {
     if (/^#bank\//.test(location.hash)) history.replaceState(null, '', '#bank');
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('bank-home-history', failure);
+  }
   const res = bkbEl('bk_res'),
     out = bkbEl('bk_out');
   if (res) res.innerHTML = '';
   if (out) out.innerHTML = '';
   bankLayout(false, false);
   bankHomeClass();
-  if (BKST.mode === 'server') bankStmtLoad().then(bankHomeFocus).catch(() => {});
+  if (BKST.mode === 'server') bankStmtLoad().then(bankHomeFocus).catch((failure) => bkQuiet('bank-home-load', failure));
   else bankStmtPaint();
 }
 /** the pane wears bk-home while the box is the page (the plain picker folds; it stays when the box is not ready) */
@@ -301,26 +327,30 @@ function bankHomeFocus() {
   const node = document.querySelector('.bkh-cell,.bkh-go,.bks-tog');
   if (node) node.focus({ preventScroll: true });
 }
+/** is this account and month the statement whose lines are on screen */
+function bkhShowing(code, month) {
+  return BKB.view === 'lines' && String(BKB.acct) === code && String(BKB.to || '').slice(0, 7) === month;
+}
 /** the browser's Back and Forward: #bank is the home, #bank/<code>/<YYYY-MM> is that statement's lines */
 function bankHomeRoute() {
   if (!/^#bank(\/|$)/.test(location.hash) || !bkbEl('bk_stmts')) return;
-  const hit = /^#bank\/([^/]+)\/(\d{4}-\d{2})$/.exec(location.hash);
-  if (!hit) return BKB.view === 'lines' ? bankHomeShow() : undefined;
-  const code = decodeURIComponent(hit[1]);
-  if (BKB.view === 'lines' && String(BKB.acct) === code && String(BKB.to || '').slice(0, 7) === hit[2]) return;
+  const route = /^#bank\/([^/]+)\/(\d{4}-\d{2})$/.exec(location.hash);
+  if (!route) return BKB.view === 'lines' ? bankHomeShow() : undefined;
+  const code = decodeURIComponent(route[1]);
+  if (bkhShowing(code, route[2])) return;
   const account = bkhAccountByCode(code),
-    cell = account ? bkhCellOf(account, hit[2]) : null;
+    cell = account ? bkhCellOf(account, route[2]) : null;
   if (cell && !cell.missing) {
     BKB.view = 'home'; /* the entry is already in the history: bankHomeEnter pushes none */
-    BKH.noPush = true;
-    return bankHomeOpen(account, hit[2]);
+    BANK_HOME.noPush = true;
+    return bankHomeOpen(account, route[2]);
   }
   bankHomeShow();
 }
 /** once, when the first list has come in: a reload or a bookmark on #bank/<account>/<month> opens that account's month (the same route the browser's Back and Forward walk) */
 function bankHomeDeepOnce() {
-  if (BKH.deepDone) return;
-  BKH.deepDone = true;
+  if (BANK_HOME.deepDone) return;
+  BANK_HOME.deepDone = true;
   if (BKST.mode === 'server') bankHomeRoute();
 }
 window.addEventListener('popstate', bankHomeRoute);
