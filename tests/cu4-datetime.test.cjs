@@ -33,11 +33,11 @@ assert(/2026|٢٠٢٦/.test(seen['en-GB']), 'fmtDateTime keeps the year: ' + see
 assert.strictEqual(fmtDateTime(null), '', 'a missing stamp prints nothing');
 
 /* the copies are gone: no `dateTime` typo, no private date+time joins, no always-₹ inr_ */
-for (const f of ['app.html', 'app/rail-advice.js', 'app/rail-thread.js', 'app/chit-sheet.js', 'app/cap-admin.js', 'app/cap-chit2.js', 'app/helpers.js']) {
+for (const f of ['app.html', 'app/rail-advice.js', 'app/rail-thread.js', 'app/rail-thread-words.js', 'app/chit-sheet.js', 'app/cap-admin.js', 'app/cap-chit2.js', 'app/helpers.js']) {
   const s = P(f);
   assert(!/CBLocale\.dateTime\b/.test(s), f + ': CBLocale.dateTime does not exist');
   assert(!/\binr_\s*\(/.test(s), f + ': inr_ is retired — inr prints the shop\'s currency');
   assert(!/fmtDateTime\([^)]*\)\.split\(/.test(s), f + ': a date is CBLocale.date, not a split date-time');
 }
-for (const f of ['app/rail-advice.js', 'app/rail-thread.js', 'app/chit-sheet.js']) assert(/CBLocale\.datetime\(ts\)/.test(P(f)), f + ': when() calls CBLocale.datetime');
+for (const f of ['app/rail-advice.js', 'app/rail-thread-words.js', 'app/chit-sheet.js']) assert(/CBLocale\.datetime\(ts\)/.test(P(f)), f + ': when() calls CBLocale.datetime');
 console.log('cu4-datetime: all ok');
