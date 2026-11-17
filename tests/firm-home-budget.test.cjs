@@ -11,11 +11,11 @@ const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
 const B = JSON.parse(rd('e2e/firm-home-calls.budget.json'));
 ok(Number.isInteger(B.firm_home_calls_max) && B.firm_home_calls_max <= 15, 'the firm Home budget is a whole number of 15 or less (' + B.firm_home_calls_max + ')');
 ok(/firm-home-calls\.budget\.json/.test(rd('e2e/walk-firm-practice.cjs')) && /firm_home_calls_max/.test(rd('e2e/walk-firm-practice.cjs')), 'walk-firm-practice.cjs counts the calls against the budget file');
-const sh = rd('public/app/shell.js');
-ok(/function factsOnce\(/.test(sh) && /factsCache\[url\]/.test(sh), 'shell.js asks each card URL once per load (factsOnce)');
+const sh = rd('public/app/shell.js') + rd('public/app/shell-facts.js'); /* the cards' read moved to shell-facts.js */
+ok(/function factsOnce\(/.test(sh) && /ctx\.cache\[url\]/.test(sh), 'shell.js asks each card URL once per load (factsOnce)');
 ok(/function practiceFirst\(/.test(sh) && /CBPractice\.settled/.test(sh), 'shell.js waits for the practice read before asking cards');
 ok(/function whenSeen\(/.test(sh) && /isFirm\(\) && !!root\.IntersectionObserver/.test(sh), 'a firm Home asks a card when it comes into view');
-ok(/shown\(\)\.forEach\(function \(e\) \{\s*if \(!e \|\| e\.state !== 'built'/.test(sh), 'only the cards drawn (shown) are asked, never the ones a firm hides');
+ok(/shown\(\)\.forEach\(function \(card\) \{\s*if \(!card \|\| card\.state !== 'built'/.test(sh), 'only the cards drawn (shown) are asked, never the ones a firm hides');
 const ix = rd('index.html');
 ok(/ledgerSaid\(\)\.then/.test(ix) && /on === false/.test(ix), 'Home does not ask GET /books/health when /me says the ledger is off');
 ok(/SHELL\.facts \? SHELL\.facts\(rail\.facts\)/.test(ix), 'Your work shares the Tasks card ask');
