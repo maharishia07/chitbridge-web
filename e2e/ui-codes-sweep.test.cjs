@@ -35,7 +35,7 @@ const CODES = [
 /** codes the books-access and network scripts already wore on the element; this PR gave them their register rows */
 const ROWS_ONLY = [
   ['app/books-grant-member.js', ['NET004-B03', 'NET004-B04', 'NET004-B05', 'NET004-B06', 'NET004-B07', 'NET004-B08', 'NET004-B09', 'NET004-I01', 'NET004-I02', 'NET004-I03', 'NET004-I04', 'NET004-I05', 'NET004-S01']],
-  ['app/books-grant-view.js', ['NET005-B01', 'NET005-B02']],
+  ['app/books-grant-view.js', ['NET005-B01', 'NET005-B02', 'NET005-B10']],
   ['app/books-grant-reports.js', ['NET005-I01']],
   ['app/books-grant-drill.js', ['NET005-B04', 'NET005-B05']],
   ['app/network-app.js', ['NET001-B05']],
