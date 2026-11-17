@@ -79,7 +79,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   {
     const part = await open('auditor', '#/bank', '[data-testid="bank-stmts-grid"]', { q: '&fy=2025-26' });
     const t = await text(part.p);
-    ok(/Missing/.test(t) && await part.p.locator('[data-testid="bank-home-folded"]').count() === 0, 'sign-off for one month only: the other months stay Missing, grid kept (nothing invented)');
+    ok(/Not signed off/.test(t) && await part.p.locator('[data-testid="bank-home-folded"]').count() === 0, 'sign-off for one month only: the other months say Not signed off, grid kept (nothing invented)');
     await part.ctx.close();
   }
   await b.close(); srv.close();
