@@ -112,7 +112,7 @@
     }
     function basisQuestion() {
       return (
-        '<span class="bd-ask">' + escapeHtml('Is your GST on a cash or an accrual basis?') + '</span> ' +
+        '<span class="bd-ask">' + escapeHtml('Is your ' + taxWordOf() + ' on a cash or an accrual basis?') + '</span> ' +
         '<button data-cbsid="BKS017-B04"' + (cfg.gstIds ? ' id="bd_gst_cash"' : '') + ' type="button" class="bd-btn" data-act="gst" data-v="cash">Cash</button> ' +
         '<button data-cbsid="BKS017-B05"' + (cfg.gstIds ? ' id="bd_gst_accrual"' : '') + ' type="button" class="bd-btn" data-act="gst" data-v="accrual">Accrual</button>'
       );
@@ -135,7 +135,7 @@
     /** the one question a held-back line asks next */
     function askedBox(item) {
       if (item.needs === 'may_be_in_books') return nearBox(item);
-      if (item.needs === 'gst_basis') return '<span class="bd-why">Waiting for your GST basis, asked above.</span>';
+      if (item.needs === 'gst_basis') return '<span class="bd-why">Waiting for your ' + taxWordOf() + ' basis, asked above.</span>';
       if (item.needs === 'tax_invoice') return invoiceQuestion(item);
       if (item.needs === 'fee_tax') return ctx.feeTaxQuestion(item);
       if (item.needs === 'needs_tick') return tickBox(item);

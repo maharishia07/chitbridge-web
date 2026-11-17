@@ -33,7 +33,7 @@
     files: 'Files held',
     close: 'Close',
     open: 'Open',
-    flagWhy: 'GST is claimed on this purchase and no tax invoice is held on it.',
+    flagWhy: '{tax} is claimed on this purchase and no tax invoice is held on it.',
     rule: 'Rule read',
     failed: 'Could not open that file. Nothing was changed.',
     ended: 'Access to these books has ended.',
@@ -171,7 +171,7 @@
     dlg.setAttribute('data-testid', 'ev-sheet');
     var no = entry.entry_no || '';
     dlg.setAttribute('aria-label', T(W.head).replace('{no}', no));
-    var flag = ev.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(ev.flag_why || T(W.flagWhy)) + (ev.cite ? '<small>' + esc(T(W.rule)) + ': ' + esc(ev.cite) + '</small>' : '') + '</div>' : '';
+    var flag = ev.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(ev.flag_why || T(W.flagWhy).replace('{tax}', (typeof packWord === 'function' && packWord('taxName')) || 'Tax')) + (ev.cite ? '<small>' + esc(T(W.rule)) + ': ' + esc(ev.cite) + '</small>' : '') + '</div>' : '';
     var srcLine = ev.doc ? '<div data-testid="ev-source"><b>' + esc(T(W.source)) + '</b>: ' + esc(ev.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + esc(T(W.noSource)) + '</div>';
     var files = (ev.files || []).length
       ? '<ul class="ev-list" data-testid="ev-files">' + ev.files.map(function (f, n) {

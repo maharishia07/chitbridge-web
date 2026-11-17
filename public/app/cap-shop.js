@@ -149,8 +149,6 @@ var VAULT_SUGGEST = {
   ],
   other: []
 };
-/** the bank's own code word per pack (W19: no IFSC on an AU shop) — [label, tag]; the IBAN/SWIFT pair everywhere after it */
-var BANK_CODE_WORDS = { IN: ['IFSC code', 'ifsc'], AU: ['BSB', 'bsb'], AE: ['IBAN', 'iban'] };
 /** a section's suggestions in the shop's own words (FX-QA1 · W19): the identity's tax id, region and postal code from the pack (packWord, helpers.js),
     the bank's code word per pack, the licence's first rows per pack (ABN/ACN · TRN · GSTIN/PAN) — the TAG stays, so a form's pre-fill finds
     `state` / `pincode` / `gstin` whatever the row is called (an AU shop's "Postcode" and "ABN", a UAE shop's "Emirate" and "TRN") */
@@ -169,7 +167,7 @@ function identitySuggest(list, countryCode, words) {
 }
 /** bank: the pack's own code word (BSB · IBAN · IFSC) replaces India's IFSC row, third in the list */
 function bankSuggest(list, countryCode) {
-  var codeWord = BANK_CODE_WORDS[countryCode] || BANK_CODE_WORDS.IN,
+  var codeWord = bankCodeWord(countryCode),
     others = list.filter(function (x) {
       return x[1] !== 'ifsc';
     });

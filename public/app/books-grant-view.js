@@ -104,8 +104,9 @@
   }
   /** a group key (trade_debtors, gst_and_statutory) as words */
   function groupWords(key) {
-    var text = String(key).split('_').join(' ');
-    return words(text.charAt(0).toUpperCase() + text.slice(1)).split('Gst').join('GST');
+    var tax = (typeof root.packWord === 'function' && root.packWord('taxName')) || '';
+    var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : part; }).join(' ');
+    return words(text.charAt(0).toUpperCase() + text.slice(1));
   }
   /** an entry whose Evidence state is "No source" (no document to attach to: not a fault; the pill stays for No tax invoice, No file and a held file); the state is cap-evidence.js's own (stateOf), never re-decided here */
   function noSourceRow(row) {

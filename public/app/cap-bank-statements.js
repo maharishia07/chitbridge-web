@@ -401,7 +401,7 @@ function bkstFilesMount() {
 function bkstFetchFile(id, use) {
   return fetch(CFG.API_BASE + '/api/books/bank/statement-files/' + encodeURIComponent(id) + '/file?use=' + use, {
     cache: 'no-store',
-    headers: Object.assign({ Authorization: 'Bearer ' + SESSION.token }, typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {})
+    headers: CBBooksActing.authHeaders()
   });
 }
 const bkstWhyNot = async (res) => (res.status === 403 && (await bkstBlind(res)) ? bksCostBlindSay() : res.status === 403 ? tx('This access has ended.') : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));

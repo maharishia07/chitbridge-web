@@ -12,20 +12,20 @@ function fn(text, name) {
 }
 let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
 
-/* ── M141: Add missing posts against the ledger the statement belongs to ── */
-const bank = src('cap-bank.js'), opened = [];
-const cx = vm.createContext({ BKB: { acct: '1520', file: { hash: 'h' }, accts: [{ code: '1500', role: 'bank' }, { code: '1520', role: 'card' }, { code: '1530', role: null }] },
-  bkMinorText: (m) => String(m / 100), toast() {}, tx: (x) => x, enOpen: (p) => opened.push(p), bkbEventWord: () => '' });   /* INT5b: BR1's bankAdd names the event it will learn (bkbEventWord) */
-vm.runInContext(fn(bank, 'bkbModeOf') + fn(bank, 'bankAdd'), cx);
-const charge = { amount_minor: 590, stmt: { date: '2026-10-10', narration: 'CHARGES', row: 3 }, sugg: { event: { type: 'expense', class: 'bank_charges', narration: 'Bank charges' } } };
-cx.bankAdd(charge);
-ok(opened[0].kind === 'expense' && opened[0].v.paid_from === 'card', 'M141: a bank charge on the Card settlements statement (1520) is paid from card — Cr 1520, not Bank 1500');
-cx.BKB.acct = '1500'; cx.bankAdd(charge);
-ok(opened[1].v.paid_from === 'bank', 'M141: the same charge on the Bank statement still posts to Bank');
-cx.BKB.acct = '1530'; cx.bankAdd(charge);
-ok(opened[2].kind === null, 'M141: a ledger with no payment mode is never guessed — the sheet opens at "What happened?"');
-cx.BKB.acct = '1520'; cx.bankAdd({ amount_minor: 100, stmt: { date: '2026-10-10', narration: 'X', row: 4 }, sugg: { event: { type: 'contra', from: 'bank', to: 'cash' } } });
-ok(opened[3].v.from === 'card' && opened[3].v.to === 'cash', 'M141: a contra suggestion takes the statement\'s mode in place of the fixed bank');
+/* ── M141: Add missing posts against the ledger the statement belongs to (FIN-117: the in-app Bank sheet, cap-bank-sheet.js bkshModeOf, swaps the fixed "bank" of an entry for the statement's own ledger) ── */
+const bank = src('cap-bank.js'), sheet = src('cap-bank-sheet.js');
+const book = { acct: '1520', accts: [{ code: '1500', role: 'bank' }, { code: '1520', role: 'card' }, { code: '1530', role: null }] };
+const cx = vm.createContext({ bkshBook: () => book });
+vm.runInContext(fn(bank, 'bkbModeOf') + fn(sheet, 'bkshModeOf'), cx);
+const charge = { paid_from: 'bank', into: undefined, from: undefined, to: undefined };
+ok(cx.bkshModeOf(charge).paid_from === 'card', 'M141: a bank charge on the Card settlements statement (1520) is paid from card — Cr 1520, not Bank 1500');
+book.acct = '1500';
+ok(cx.bkshModeOf(charge).paid_from === 'bank', 'M141: the same charge on the Bank statement still posts to Bank');
+book.acct = '1530';
+ok(cx.bkshModeOf(charge) === charge, 'M141: a ledger with no payment mode is never guessed — the entry is left as it came');
+book.acct = '1520';
+const contra = cx.bkshModeOf({ from: 'bank', to: 'cash' });
+ok(contra.from === 'card' && contra.to === 'cash', 'M141: a contra suggestion takes the statement mode in place of the fixed bank');
 
 /* ── M137: a supplier with a Dr balance is an advance, never under To pay ── */
 const books = src('cap-books.js'), cb = vm.createContext({});
@@ -36,7 +36,8 @@ ok(cb.bkDuesSide(paidAhead) === 'pay', 'M137: the ledger tree still files the su
 
 /* ── M136/M139/M132/M138: the words and the doors are in the source the page runs ── */
 ok(/Nobody owes you money/.test(books) && /You owe nobody/.test(books), 'M136: the empty sides say "Nobody owes you money" / "You owe nobody"');
-ok(/filters: onlySide\s*\?\s*\[\]/.test(books), 'M136: a page\'s own side is not a filter chip');
+/* l16 needsyou (90b30d51): the Needs filter is on every list; only the Side chip is left off a page's own side */
+ok(/filters: bkNeedFilters\(\)\.concat\(onlySide\s*\?\s*\[\]/.test(books), 'M136: a page\'s own side is not a filter chip');
 ok(/These filters match nothing here/.test(src('list-ctl.js')) && !/These filters'\) \+ ' '\) \+ esc\(T\(I, 'matches/.test(src('list-ctl.js')), 'M136: "These filters match nothing here" (grammar)');
 const acc = fs.readFileSync(__dirname + '/../public/accounts.html', 'utf8');
 ok(/\['bills', 'Unpaid bills'/.test(acc), 'M139: the menu says "Unpaid bills"');
