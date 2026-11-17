@@ -72,5 +72,22 @@ console.log('cash 30 days');
   const gap = D.cashLine([{ value: 1 }, { value: null }, { value: 2 }, { value: 3 }], { id: 'g', tid: 'g' });
   check((/ d="([^"]*)"/.exec(gap)[1].match(/M/g) || []).length === 2, 'the line breaks at a day with no figure');
 }
+console.log('overview adapters (months · profit · weekdays)');
+{
+  const bars = [
+    { from: '2026-09-01', to: '2026-09-30', running: false, sold_minor: 1000, last_year_minor: 800 },
+    { from: '2026-10-01', to: '2026-10-28', running: true, sold_minor: null, last_year_minor: null }
+  ];
+  const m = MC.monthPoints(bars, deps);
+  check(m[0].value === 1000 && m[0].line === 800 && !m[0].hatch && m[1].value === null && m[1].line === null && m[1].hatch, 'month bars: value and last-year line as the server sent them, the running month hatched, a missing month null (never 0)');
+  const t = MC.monthTable(bars, 'sold_minor', deps, true);
+  check(t.rows.length === 2 && t.rows[0][1] === '—' && t.rows[1][2] === 'AUD 8.00', 'month table: newest first, a missing figure is a dash');
+  const p = MC.profitPoints([{ from: '2026-09-01', running: false, profit_minor: -300 }], deps);
+  check(p[0].value === -300 && p[0].line === null, 'profit keeps its sign and has no last-year line');
+  const days = [{ iso: 1, day: '2026-10-26', sold_minor: 500, last_year_day: '2025-10-27', last_year_minor: 400 }, { iso: 2, day: '2026-10-27', sold_minor: null, last_year_day: '2025-10-28', last_year_minor: null }];
+  const w = MC.weekdayPoints(days, Object.assign({}, deps, { date: (t, o) => new Date(t).toISOString().slice(0, 10) + ':' + o.weekday }));
+  check(w[0].value === 500 && w[0].line === 400 && w[0].label === '2026-10-26:short' && w[1].value === null && w[1].line === null, 'weekday bars: this week solid, same weekday last year the line, a day with no figure null');
+  check(MC.weekdayTable(days, deps).rows.length === 2 && D.bars(w, { id: 'w', tid: 'w' }).indexOf('w-bar-2026-10-26') > 0, 'weekday table has one row a day and the bars draw');
+}
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
 process.exit(failures ? 1 : 0);

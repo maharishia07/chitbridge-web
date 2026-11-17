@@ -5,8 +5,9 @@
  *   This page formats (money bkMoney → CBLocale in the shop's currency; a percent bkPct, basis points) and draws (CBDraw). It adds, rounds and compares NOTHING.
  * ⭐ ABSENT IS NOT DRAWN: a figure the server did not send (no sales yet, no last year, a seat without costs) has no tile; the page never prints a 0 for an unknown figure, and never says "not available".
  * ⭐ "SO FAR": a running period says so in its own words; the comparison is the same dates last year (a week: the same weekdays of the same week).
+ * ⭐ THE PICTURES are the MIS components, one per kind (app/mis-charts.js adapters → CBDraw): sales by month against last year (bars + line) · this week by weekday against the same week last year · profit by month · owed to you / you owe by age (hbars) · cash for 30 days (cashLine). Profit per item stays out (REP-29) and the screen says so.
  * ⭐ NEVER COLOUR ALONE: bars solid, the running month hatched (CBDraw), a table under each picture, a change is a signed percent.
- * Host globals (accounts.html): api · EP · esc · tx · txf · bkMoney · bkPct · bkDate · CBDraw · CBLocale.
+ * Host globals (accounts.html): MC (app/mis-charts.js) · api · EP · esc · tx · txf · bkMoney · bkPct · bkDate · CBDraw · CBLocale.
  * OWNS      OV (this view's state) and the How we are doing view (ovView · ovLoad · ovPaint)
  * CALLED BY public/accounts.html (BK.views.overview)
  * FLOW      #overview → ovView() → ovLoad() → GET /api/books/overview?period= → ovPaint(): headline · tiles · two pictures with their tables
@@ -52,11 +53,6 @@ function ovPick(period) {
 function ovMoney(minor) {
   return bkMoney(minor, OV.answer && OV.answer.currency);
 }
-/** a month's name for a bar, from its first day */
-function ovMonth(day, form) {
-  var parts = /^(\d{4})-(\d{2})/.exec(day || '');
-  return parts ? CBLocale.date(Date.UTC(+parts[1], +parts[2] - 1, 15), { month: form, year: form === 'long' ? 'numeric' : '2-digit' }) : '';
-}
 function ovSelect() {
   return (
     '<select class="inp" id="ov_pick" data-testid="ov-pick" aria-label="' + esc(tx('Which period')) + '" onchange="ovPick(this.value)">' +
@@ -97,34 +93,83 @@ function ovTiles(a) {
   if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(cash.words) + '</span></a>');
   return '<div class="ov-tiles">' + tiles.join('') + '</div>';
 }
-/** THE CHART SLOT: today CBDraw.bars (the library helper); the MIS chart components (lane next/mischarts-web: 12 months, week vs week, 7 years) replace this one call, nothing else on the page changes */
-function ovChart(points, opts) {
-  return CBDraw.bars(points, opts);
+/** the words deps the adapters (app/mis-charts.js) take: the one text, money and date makers of this page */
+function ovDeps() {
+  return { tx: tx, money: bkMoney, date: CBLocale.date, cur: OV.answer && OV.answer.currency };
 }
-/** one picture and its table (a table under every chart): points [{ from, running, value }] oldest first */
-function ovPicture(tid, title, list, key) {
-  var points = list.map(function (item) {
-    var name = ovMonth(item.from, 'long') + (item.running ? ' · ' + tx('so far') : '');
-    return { key: item.from, label: ovMonth(item.from, 'short'), value: item[key], hatch: !!item.running, title: name + ' · ' + (item[key] == null ? tx('no figure') : ovMoney(item[key])) };
-  });
-  if (!points.some(function (point) { return point.value != null; })) return '';
-  var rows = points.map(function (point) {
-    return '<tr><td>' + esc(point.title.split(' · ')[0] + (point.hatch ? ' ' + tx('(so far)') : '')) + '</td><td class="num">' + (point.value == null ? '<span style="color:var(--grey)">—</span>' : esc(ovMoney(point.value))) + '</td></tr>';
-  });
+/** a card's chart width, so it is drawn at the size it shows (no scaling surprise at 390): half the page on a wide screen, all of it on a narrow one */
+function ovWidth() {
   var box = document.getElementById('ov_main');
-  var width = Math.max(240, Math.floor(((box && box.clientWidth) || 640) / (window.innerWidth > 900 ? 2 : 1)) - 24);
+  return Math.max(220, Math.floor(((box && box.clientWidth) || 640) / (window.innerWidth > 900 ? 2 : 1)) - 28);
+}
+/** the table under a chart (a table under every chart): head + rows from the adapter, behind "Show the figures" */
+function ovTable(table, code) {
+  if (!table || !table.rows.length) return '';
   return (
-    '<section class="ov-pic" data-testid="ov-' + tid + '"><h3>' + esc(tx(title)) + '</h3>' +
-    ovChart(points, { width: width, height: 130, id: 'ov' + tid, tid: 'ov-' + tid + '-svg', aria: tx(title) }) +
-    '<details><summary>' + esc(tx('Show the figures')) + '</summary><table class="bk-st"><tbody>' + rows.join('') + '</tbody></table></details></section>'
+    '<details><summary data-cbsid="' + code + '">' + esc(tx('Show the figures')) + '</summary><table class="bk-st"><thead><tr>' +
+    table.head.map(function (cell, i) { return '<th scope="col"' + (i ? ' class="num"' : '') + '>' + esc(cell) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    table.rows.map(function (row) { return '<tr>' + row.map(function (cell, i) { return '<td' + (i ? ' class="num"' : '') + '>' + esc(cell) + '</td>'; }).join('') + '</tr>'; }).join('') +
+    '</tbody></table></details>'
   );
+}
+/** one picture card: title, the chart (the adapter's points through the ONE CBDraw component of its kind), its legend line and its table; nothing to draw → no card, never an empty frame */
+function ovCard(tid, code, title, svg, legend, table, tableCode) {
+  if (!svg) return '';
+  return (
+    '<section class="ov-pic" data-testid="ov-' + tid + '" data-cbsid="' + code + '"><h3>' + esc(tx(title)) + '</h3>' + svg +
+    (legend ? '<p class="ov-n" data-testid="ov-' + tid + '-legend">' + esc(legend) + '</p>' : '') + ovTable(table, tableCode) + '</section>'
+  );
+}
+function ovHas(points) {
+  return points.some(function (point) { return point.value !== null && point.value !== undefined; });
+}
+/** sales by month against the same month last year (bars + the dashed line), and sales by weekday: this ISO week against the same week last year */
+function ovSalesCards(a) {
+  var deps = ovDeps(),
+    months = MC.monthPoints(a.bars, deps),
+    days = MC.weekdayPoints(a.weekdays, deps);
+  return (
+    ovCard('sales', 'BKS026-P02', 'Sales by month, tax in', ovHas(months) ? CBDraw.bars(months, { width: ovWidth(), height: 140, id: 'ovsales', tid: 'ov-sales', aria: tx('Sales by month, tax in') }) : '', tx('Solid = sales · line = same time last year · hatched = the month so far'), MC.monthTable(a.bars, 'sold_minor', deps, true), 'BKS026-B08') +
+    ovCard('weekday', 'BKS026-P04', 'This week by weekday', ovHas(days) ? CBDraw.bars(days, { width: ovWidth(), height: 140, id: 'ovweek', tid: 'ov-weekday', aria: tx('Sales by weekday this week') }) : '', tx('Solid = this week · line = the same weekday last year'), MC.weekdayTable(a.weekdays, deps), 'BKS026-B10')
+  );
+}
+function ovProfitCard(a) {
+  if (!a.profit_by_month) return '';
+  var deps = ovDeps(),
+    points = MC.profitPoints(a.profit_by_month, deps);
+  return ovCard('profit', 'BKS026-P03', 'Profit by month', ovHas(points) ? CBDraw.bars(points, { width: ovWidth(), height: 140, id: 'ovprofit', tid: 'ov-profit', aria: tx('Profit by month') }) : '', tx('Hatched = the month so far'), MC.monthTable(a.profit_by_month, 'profit_minor', deps, false), 'BKS026-B09');
+}
+/** what customers owe and what we owe, each by age (hbars); a side the server did not send has no card */
+function ovDuesCard(a, side) {
+  var deps = ovDeps(),
+    out = MC.duesRows(a, side, deps),
+    key = side === 'customer' ? 'owed' : 'owe',
+    title = side === 'customer' ? 'Owed to you, by age' : 'You owe, by age';
+  if (!out.rows.some(function (row) { return row.value > 0; })) return '';
+  var svg = CBDraw.hbars(out.rows, { width: ovWidth(), id: 'ov' + key, tid: 'ov-' + key + '-hb', title: tx(title), desc: out.rows.map(function (r) { return r.title; }).join(', ') });
+  return ovCard(key, side === 'customer' ? 'BKS026-P05' : 'BKS026-P06', title, svg, tx('Hatched = late'), out.table, side === 'customer' ? 'BKS026-B11' : 'BKS026-B12');
+}
+/** cash for the next 30 days (the cash view's own series, lowest day and words) */
+function ovCashCard(a) {
+  if (!a.cash || !a.cash.series || !a.cash.series.length) return '';
+  var deps = ovDeps(),
+    out = MC.cashPoints(a.cash, deps);
+  var svg = CBDraw.cashLine(out.points, { width: ovWidth(), height: 140, id: 'ovcash', tid: 'ov-cashline-svg', title: tx('Cash for the next 30 days'), desc: a.cash.words || '', startWords: out.startWords, endWords: out.endWords, lowestAt: out.lowestAt, lowestWords: out.lowestWords });
+  return ovCard('cashline', 'BKS026-P07', 'Cash, next 30 days', svg, a.cash.words || '', out.table, 'BKS026-B13');
+}
+/** profit PER ITEM is not drawn: it needs what each item cost (REP-29); the screen says so, never an empty chart */
+function ovItemNote() {
+  return '<p class="ov-n" data-testid="ov-item-note" data-cbsid="BKS026-P08">' + esc(tx('Profit per item needs the cost of each item, so it is not shown yet.')) + '</p>';
+}
+function ovPictures(a) {
+  return '<div class="ov-pics">' + ovSalesCards(a) + ovProfitCard(a) + ovDuesCard(a, 'customer') + ovDuesCard(a, 'supplier') + ovCashCard(a) + '</div>' + ovItemNote();
 }
 function ovCss() {
   return (
     '<style>.ov{padding:0 12px 12px}.ov-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}.ov-head{margin:4px 0 8px;font:600 var(--fs-3,17px) var(--sans,sans-serif);color:var(--ink,#2a2418)}' +
     '.ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}.ov-tile{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line-3,#d8ccb0);border-radius:8px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);text-decoration:none}' +
     '.ov-l{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-v{font:700 var(--fs-3,17px) var(--sans,sans-serif)}.ov-n{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-wide{grid-column:1/-1}' +
-    '.ov-pics{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:901px){.ov-pics{grid-template-columns:1fr 1fr}}.ov-pic{border:1px solid var(--line-3,#d8ccb0);border-radius:8px;padding:6px 10px;background:var(--card,#fffdf8);min-width:0;overflow:hidden}.ov-pic h3{margin:0 0 2px;font-size:var(--fs-2,14px)}.ov-pic details{font-size:var(--fs-1,12px)}.ov .bk-st .num{text-align:right}</style>'
+    '.ov-pics{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:901px){.ov-pics{grid-template-columns:1fr 1fr}}.ov-pic{border:1px solid var(--line-3,#d8ccb0);border-radius:8px;padding:6px 10px;background:var(--card,#fffdf8);min-width:0;overflow:hidden}.ov-pic h3{margin:0 0 2px;font-size:var(--fs-2,14px)}.ov-pic details{font-size:var(--fs-1,12px)}.ov .bk-st .num{text-align:right}.ov-pic .bk-st{width:100%;border-collapse:collapse}.ov-pic .bk-st th{text-align:start;color:var(--muted,#6f6450);font-weight:500}</style>'
   );
 }
 function ovPaint() {
@@ -136,7 +181,7 @@ function ovPaint() {
   else if (OV.state !== 'ready' || !OV.answer) main.innerHTML = '<p class="hint" data-testid="ov-error">' + esc(tx('This did not load.')) + ' <button class="btn" type="button" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></p>';
   else {
     var a = OV.answer;
-    main.innerHTML = ovHeadline(a) + ovTiles(a) + '<div class="ov-pics">' + ovPicture('sales', 'Sales by month, tax in', a.bars || [], 'sold_minor') + ovPicture('profit', 'Profit by month', a.profit_by_month || [], 'profit_minor') + '</div>';
+    main.innerHTML = ovHeadline(a) + ovTiles(a) + ovPictures(a);
   }
 }
 window.addEventListener('resize', function () {
