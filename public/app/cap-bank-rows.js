@@ -21,7 +21,7 @@ function bkbLineRows() {
     } else row = { item: null, result: null, standing: '', narration: found.narration || '', date: found.date, out: !found.in, amount_minor: found.amount_minor, kind: '', gst: '', sure: '', look: false, status: found.status === 'suggested' ? 'ready' : 'need' };
     if (group === 'matched') row.status = 'in';
     else if (group === 'bank') row.status = 'books';
-    return Object.assign(row, { id: found.id, found });
+    return Object.assign(row, { id: found.id, raw: found });
   });
   CBBankLines.markLookAlikes(rows);
   return rows;
