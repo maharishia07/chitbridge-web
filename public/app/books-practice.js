@@ -10,7 +10,7 @@
  */
 (function (root) {
   'use strict';
-  var P = { token: null, data: null, drawn: false, filter: null, list: null, band: null };
+  var P = { token: null, data: null, drawn: false, filter: null, list: null, band: null, fl: null, flOff: false, flReady: false, flTotal: 0 };
   /* l16 n12: what a firm with no trade of its own KEEPS of the shop's Home, by id: its own Setup (the business, account, plan, policy, privacy, standards, connectors). Everything else is shop: every other card, so
      every area that would hold only those cards (the left rail), and the two shop panels named by id here: 'sides' (We lean on / Leans on us) and 'rail' (Your work). ONE list, ONE test (hidesShopCards). */
   var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1 };
@@ -47,6 +47,64 @@
       if (r.status === 429 || r.status >= 500) return { failed: true, status: r.status }; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
       if (!r.ok) return null; /* a login that may not read the practice (403) or a server without it: nothing is drawn */
       return r.json();
+    });
+  }
+  /* W2/W3 (private bookmarks, cap-flag.js): the firm's OWN bookmarks and notes. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the firm's organisation, never a client's. */
+  function flagCall(method, path, body) {
+    return root.fetch(base() + path, { method: method, cache: 'no-store', headers: { Authorization: 'Bearer ' + token(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) { var e = new Error(j.detail || j.message || j.error || 'API ' + r.status); e.status = r.status; e.code = j.code; throw e; }
+        return j;
+      });
+    });
+  }
+  function withFlag(then) {
+    if (root.CBFlag) return then();
+    var tag = root.document.createElement('script');
+    tag.src = '/app/cap-flag.js';
+    tag.onload = then;
+    root.document.head.appendChild(tag);
+  }
+  function flagsOn() {
+    return !!P.fl && P.flReady && !P.flOff;
+  }
+  /** the Home count: every open bookmark and note of this firm that this person may read; a press opens the work list */
+  function flagButton() {
+    return flagsOn() && P.flTotal > 0 ? '<button type="button" class="bp-bandtab" data-cbsid="CMP067-B08" data-bp-flags="1" data-testid="practice-flags">' + esc(tx('Bookmarks and notes')) + ' · ' + esc(P.flTotal) + '</button>' : '';
+  }
+  function clientName(id) {
+    var row = ((P.data && P.data.clients) || []).filter(function (r) { return String(r.entity_id) === String(id); })[0];
+    return row ? row.name : '';
+  }
+  function openFlagList(opener) {
+    root.CBFlag.workList({ call: flagCall, nameOf: clientName, opener: opener, onOpen: function (f) {
+      var A = root.CBBooksActing, to = A && A.clientAddress ? A.clientAddress({ id: f.subject_entity }, f.subject_kind === 'posting' ? '&view=daybook' : '') : '';
+      root.location.href = to || '/network.html?open=' + encodeURIComponent(f.subject_entity);
+    } });
+  }
+  function wireFlagButton(scope) {
+    var b = scope.querySelector('[data-bp-flags]');
+    if (b) b.onclick = function () { openFlagList(b); };
+  }
+  /** the flags answered (or the server does not offer them): the count and the Saved column and filter appear; the list is given its new columns, never rebuilt */
+  function flagsPaint() {
+    var slot = root.document.querySelector('[data-bp-flagslot]');
+    if (slot) { slot.innerHTML = flagButton(); wireFlagButton(slot); }
+    if (P.list && P.list.refresh) P.list.refresh({ columns: columns(), filters: filters(), defaultCols: colsOf((bandShown(P.data) || {}).key || 'pipeline') });
+  }
+  function flagsStart() {
+    if (P.flStarted === P.token) return;
+    P.flStarted = P.token;
+    withFlag(function () {
+      P.fl = root.CBFlag.use({ call: flagCall, kind: 'client' });
+      P.fl.onChange(function () {
+        root.CBFlag.counts(flagCall).then(function (a) { P.flTotal = (a && a.open) || 0; flagsPaint(); }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:flag-counts', failure); });
+      });
+      root.CBFlag.listAll(flagCall).then(function (a) { P.fl.ingest(a.flags); P.flTotal = a.total; P.flReady = true; flagsPaint(); }, function (failure) {
+        P.flOff = root.CBFlag.gone(failure); /* not switched on, or not for this person: no chip, no count; any other failure says nothing rather than "none" */
+        P.flReady = true;
+        flagsPaint();
+      });
     });
   }
   /** a firm: it holds clients by live grants and has no trade of its own: the DATA says so (the server's own_trade), never a trade switch */
@@ -402,7 +460,8 @@
       num('cash', 'Cash', 110, function (r) { return figureOrWhy(r, r.health.cash_minor, esc(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
       num('profit', 'Profit (qtr)', 110, function (r) { return figureOrWhy(r, r.health.profit_quarter_minor, esc(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
-      num('look', 'My last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; })
+      num('look', 'My last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
+      num('saved', 'Saved', 80, function (r) { return flagsOn() ? P.fl.chip(r.entity_id, r.name) : ''; }, function (r) { return flagsOn() && P.fl.any(r.entity_id) ? 1 : 0; }, { prio: 1, keep: true }) /* CMP066: my own bookmark of this client */
     ];
   }
   /** A3P rank 1: the Year end band's work order: stage in the server's pipeline order (Books in first, Lodged last; a stage the list does not know, last), then the blocker, then the return due date, then the server's own order. */
@@ -447,7 +506,7 @@
       f('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
       f('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
       f('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
-    ];
+    ].concat(flagsOn() ? [f('saved', 'Saved', [['bookmarked', 'Bookmarked'], ['noted', 'With a note']], function (r, v) { return v === 'noted' ? P.fl.noted(r.entity_id) > 0 : P.fl.bookmarked(r.entity_id); })] : []);
   }
   /* A3P rank 5: on Year end a client opens where its blocker is (the server's stage_blocker): months → Months · bank → Bank · not checked or a query → Day book, the year picked; no blocker or no year → the client as before */
   var BLOCKER_VIEW = { months: 'periods', bank: 'bank', checked: 'daybook', queries: 'daybook' };
@@ -466,6 +525,10 @@
     tag.onload = then;
     root.document.head.appendChild(tag);
   }
+  /** the columns a band opens with, and the Saved column once the firm's flags have answered and are on */
+  function colsOf(bandKey) {
+    return (BAND_COLS[bandKey] || BAND_COLS.pipeline).concat(flagsOn() ? ['saved'] : []);
+  }
   function mountList() {
     var host = root.document.getElementById('bp_list');
     if (!host) return;
@@ -478,7 +541,7 @@
     var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
     P.list = root.CBList.mount(host, {
       key: 'practice-clients-' + bandKey, t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: BAND_COLS[bandKey] || BAND_COLS.pipeline, next: function (r) { return detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
+      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') },
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
@@ -522,7 +585,7 @@
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
       '<div class="bp-head"><h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + (bandShown(P.data) ? pictureHTML(bandShown(P.data)) : '') +
-      (P.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') + '</div>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
+      (P.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
       (P.data.truncated ? '<p class="sub">' + esc(tx('Some clients are not shown.')) + '</p>' : '') +
       '<div id="bp_list" data-testid="practice-list"></div>';
     [].forEach.call(section.querySelectorAll('[data-bp-filter]'), function (b) {
@@ -538,6 +601,7 @@
     var clear = section.querySelector('[data-bp-clear]');
     if (clear) clear.onclick = function () { P.filter = null; draw(); };
     mountList();
+    wireFlagButton(section);
     if (heldId) {
       var back = section.querySelector('[data-testid="' + heldId + '"]') || section.querySelector('.bp-tile.on') || section.querySelector('.bp-tile');
       if (back && back.focus) back.focus();
@@ -652,6 +716,7 @@
       P.token = t;
       P.data = null;
       P.drawn = false;
+      P.fl = null; P.flReady = false; P.flOff = false; P.flTotal = 0; /* another login: its own flags */
       P.pending = true;
       P.since = Date.now();
       read().then(function (answer) {
@@ -661,6 +726,7 @@
         hint(answer.own_trade === false);
         markFirm();
         root.dispatchEvent(new root.Event('cb-practice'));
+        flagsStart(); /* a firm's own bookmarks: one more read, after the practice drew */
         settle();
         tick();
       }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); failedRead(0); });

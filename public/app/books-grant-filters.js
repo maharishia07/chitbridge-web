@@ -14,7 +14,7 @@
  */
 (function (root) {
   'use strict';
-  var PARAM = { mark: 'dbf_mark', ev: 'dbf_ev', kind: 'dbf_kind', rec: 'dbf_rec', time: 'dbf_time', round: 'dbf_round', by: 'dbf_by', narr: 'dbf_narr', ye: 'dbf_ye' };
+  var PARAM = { mark: 'dbf_mark', ev: 'dbf_ev', kind: 'dbf_kind', rec: 'dbf_rec', time: 'dbf_time', round: 'dbf_round', by: 'dbf_by', narr: 'dbf_narr', ye: 'dbf_ye', flag: 'dbf_flag' };
   var NIGHT_FROM = 20, NIGHT_TO = 7; /* after hours: from 20:00 and before 07:00, shop time */
   var DAY_MS = 86400000;
 
@@ -93,9 +93,14 @@
   function opts(list) {
     return list.map(function (o) { return { v: o[0], label: words(o[1]) }; });
   }
+  /** my private bookmarks and notes (cap-flag.js): a flag never changes "Checked n of m", and this filter never reads a mark */
+  function flagFilter(fl) {
+    return { key: 'flag', label: words('Saved'), all: words('All'), options: opts([['bookmarked', 'Bookmarked'], ['noted', 'With a note']]), match: function (row, v) { return v === 'noted' ? fl.noted(row.entry_id) > 0 : fl.bookmarked(row.entry_id); } };
+  }
   /** ctx (optional, widens the three): { period: () => {from,to}, currency: () => code, rows: () => entries } — read when a row is judged, so a new period or page is followed */
   function filtersFor(mk, ctx) {
     ctx = ctx || {};
+    var fl = ctx.fl || null;
     var period = function () { return ctx.period ? ctx.period() : null; }, cur = function () { return ctx.currency ? ctx.currency() : ''; };
     var EV = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No source', held: 'File attached' }; /* the chip's own words: one wording per state */
     return [
@@ -108,7 +113,7 @@
       { key: 'narr', label: words('Narration'), all: words('All'), options: opts([['none', 'None written']]), match: function (row) { return noNarration(row); } },
       { key: 'ye', label: words('Year end'), all: words('All'), options: opts([['dated', 'Dated after it'], ['recorded', 'Recorded after it']]), match: function (row, v) { var p = period() || {}, d = String(row.posting_date || '').slice(0, 10); return v === 'dated' ? !!p.to && d > String(p.to).slice(0, 10) : afterEnd(row, p) && d <= String(p.to).slice(0, 10) && (!p.from || d >= String(p.from).slice(0, 10)); } },
       { key: 'kind', label: words('Type'), all: words('All'), options: opts([['Sales', 'Sales'], ['Purchases', 'Purchases'], ['Expenses', 'Expenses'], ['Returns', 'Returns'], ['Receipts', 'Receipts'], ['Payments', 'Payments'], ['Other', 'Journals and other']]), match: function (row, v) { return kindOf(row) === v; } }
-    ];
+    ].concat(fl && !fl.off() ? [flagFilter(fl)] : []);
   }
   /** the choices in force → the address words (only the ones set) */
   function toAddress(filt) {
