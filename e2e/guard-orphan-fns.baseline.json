@@ -6,7 +6,6 @@
   "bkOwedRead public/app/cap-books.js",
   "bkRangeHTML public/app/cap-books.js",
   "bkStmtRead public/app/cap-books.js",
-  "bkshPartyOf public/app/cap-bank-sheet.js",
   "cardNote public/till.html",
   "cbAttachFlush public/app/attach-ui.js",
   "cbAttachSafeText public/app/attach-ui.js",
