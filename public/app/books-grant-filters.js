@@ -12,7 +12,7 @@
  */
 (function (root) {
   'use strict';
-  var PARAM = { mark: 'dbf_mark', ev: 'dbf_ev', kind: 'dbf_kind' };
+  var PARAM = { mark: 'dbf_mark', ev: 'dbf_ev', kind: 'dbf_kind', flag: 'dbf_flag' };
 
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -39,13 +39,17 @@
   function opts(list) {
     return list.map(function (o) { return { v: o[0], label: words(o[1]) }; });
   }
-  function filtersFor(mk) {
+  /** my private bookmarks and notes (cap-flag.js): a flag never changes "Checked n of m", and this filter never reads a mark */
+  function flagFilter(fl) {
+    return { key: 'flag', label: words('Saved'), all: words('All'), options: opts([['bookmarked', 'Bookmarked'], ['noted', 'With a note']]), match: function (row, v) { return v === 'noted' ? fl.noted(row.entry_id) > 0 : fl.bookmarked(row.entry_id); } };
+  }
+  function filtersFor(mk, fl) {
     var EV = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No source', held: 'File attached' }; /* the chip's own words: one wording per state */
     return [
       { key: 'mark', label: words('Mark'), all: words('All'), options: opts([['notchecked', 'Not checked'], ['checked', 'Checked'], ['hold', 'On hold'], ['query', 'Queried']]), match: function (row, v) { var st = markState(mk, row).state; return v === 'checked' ? isChecked(mk, row) : v === 'notchecked' ? !isChecked(mk, row) : v === 'hold' ? st === 'hold' : st === 'open'; } },
       { key: 'ev', label: words('Evidence'), all: words('All'), options: opts([['flag', EV.flag], ['none', EV.none], ['nodoc', EV.nodoc], ['held', EV.held]]), match: function (row, v) { return evidenceKey(row) === v; } },
       { key: 'kind', label: words('Type'), all: words('All'), options: opts([['Sales', 'Sales'], ['Purchases', 'Purchases'], ['Expenses', 'Expenses'], ['Returns', 'Returns'], ['Receipts', 'Receipts'], ['Payments', 'Payments'], ['Other', 'Journals and other']]), match: function (row, v) { return kindOf(row) === v; } }
-    ];
+    ].concat(fl && !fl.off() ? [flagFilter(fl)] : []);
   }
   /** the choices in force → the address words (only the ones set) */
   function toAddress(filt) {

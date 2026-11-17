@@ -30,12 +30,12 @@
   var ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
   /* the Day book's seven columns fit one 1366 screen beside the menu (Entry · Date · Kind · Party · ref · Amount · Evidence · Mark) */
-  var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170 };
+  var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170, flag: 70 };
   var REPORTS = [
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
+    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark'], ['flag', 'Saved', 'flag']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', MONEY], ['age_d0_30', '1–30', MONEY], ['age_d31_60', '31–60', MONEY], ['age_d61_90', '61–90', MONEY], ['age_d90_plus', '90+', MONEY], ['balance_minor', 'Total', MONEY]], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
@@ -83,6 +83,7 @@
     var v = row[column[0]];
     if (column[2] === MONEY) return narrowLabel(row, column, moneyCell(row, column[0], v));
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
+    if (column[2] === 'flag') return viewState.fl ? viewState.fl.chip(row.entry_id, flagLabel(row)) : ''; /* CMP066: my own bookmark; never the client's, never the mark */
     if (column[0] === 'lock_note') return v || '—'; /* html built from the server's trail, each line escaped */
     if (column[0] === 'party_ref') return partyCell(row, v); /* one painter: the party · ref, and under it who posted it when an adviser did */
     if (column[2] === 'evidence') return viewState.ev ? viewState.ev.chip(row) : '—'; /* CMP062: what stands behind the row (cap-evidence.js) */
@@ -251,6 +252,7 @@
     if ($('bv_since')) $('bv_since').onclick = function () { setSince(!viewState.since); };
     if ($('bv_mark_checked')) $('bv_mark_checked').onclick = markChecked;
   }
+  var flagsRead = null; /* the flags read of the Day book just answered (cap-flag.js load): readReport waits for it so the Saved column and its filter paint with the rows */
   function readReport(report) {
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
@@ -261,6 +263,7 @@
         viewState.why = null;
         if (report.k === 'daybook' && viewState.mk) viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
         if (report.k === 'daybook' && viewState.ev) viewState.ev.ingest(answer && answer.entries); /* CMP062: and its evidence */
+        if (report.k === 'daybook' && viewState.fl) flagsRead = viewState.fl.load(((answer && answer.entries) || []).map(function (e) { return e.entry_id; }).filter(Boolean)); /* CMP066: my bookmarks of these entries, ONE read per 200; a failed read draws no chip rather than saying none */
         root.CBBooksActing.setCurrency(answer && answer.currency);
       },
       function (failure) {
@@ -269,7 +272,7 @@
         viewState.why = true; /* the frame says it (CBShell.readFailed); the server's raw word is never printed */
         viewState.failure = { status: failure.status || 0, detail: failure.status === 403 ? failure.message : '' };
       }
-    );
+    ).then(function () { var held = flagsRead; flagsRead = null; return held; }); /* the page paints once the flags answered (or failed: never a reason to hold the books back) */
   }
 
   /* ── the screen ── */
@@ -416,8 +419,26 @@
   function newEvidence() {
     viewState.ev = root.CBEvidence && viewState.o.raw ? root.CBEvidence.use({ raw: function (path) { return viewState.o.raw(path, root.CBBooksActing.headers()); } }) : null;
   }
+  /** my private bookmarks and notes on this client's entries (cap-flag.js): the page's own call and NO X-Books-For, so a flag lands in MY organisation, never the client's */
+  function newFlags() {
+    if (viewState.fl) viewState.fl.destroy();
+    viewState.fl = root.CBFlag && viewState.o.call && viewState.o.member ? root.CBFlag.use({ call: viewState.o.call, kind: 'posting', entity: function () { return viewState.o.member.id; } }) : null;
+    if (viewState.fl) viewState.fl.onChange(onFlagChange);
+  }
+  function flagsOn() {
+    return !!viewState.fl && !viewState.fl.off();
+  }
+  /** the entry's words on the flag: number and day, plain text, at most 80 characters (the server keeps them as the label) */
+  function flagLabel(row) {
+    return String(row.entry_no || '') + (row.posting_date ? ' · ' + root.shopDay(row.posting_date) : '');
+  }
+  /** a flag changed: the chips repaint themselves; a list narrowed to Saved is drawn again so a row that no longer matches leaves it */
+  function onFlagChange() {
+    if (viewState.dbf && viewState.dbf.flag && alive()) paintList(current());
+  }
   function newMarks() {
     newEvidence();
+    newFlags();
     if (viewState.mk) viewState.mk.destroy();
     viewState.queriesOnly = false;
     if (!root.CBMark || onActions()) { viewState.mk = null; return; }
@@ -520,7 +541,7 @@
   function narrowDaybook(host, config) {
     var F = root.CBBooksGrantFilters;
     if (!F) return;
-    var all = F.filtersFor(viewState.mk);
+    var all = F.filtersFor(viewState.mk, flagsOn() ? viewState.fl : null);
     config.filters = all.filter(function (f) { return f.key !== 'mark' || markable({ k: 'daybook' }); });
     if (viewState.dbf === undefined) viewState.dbf = F.fromAddress(root.location.search); /* the first Day book of this client reads the address; later ones, what the person chose */
     var kept = {};
@@ -535,7 +556,7 @@
     if (!root.history || !root.history.replaceState) return;
     try {
       var query = new root.URLSearchParams(root.location.search);
-      ['dbf_mark', 'dbf_ev', 'dbf_kind'].forEach(function (k) { query.delete(k); });
+      ['dbf_mark', 'dbf_ev', 'dbf_kind', 'dbf_flag'].forEach(function (k) { query.delete(k); });
       var more = F.toAddress(viewState.dbf), text = query.toString() + (more ? (query.toString() ? '&' : '') + more : '');
       var url = root.location.pathname + (text ? '?' + text : '') + (root.location.hash || '');
       if (url !== root.location.pathname + root.location.search + (root.location.hash || '')) root.history.replaceState(root.history.state, '', url);
@@ -609,7 +630,7 @@
   }
   /** the Mark column is drawn only when the server says marking is on */
   function shownCols(report) {
-    var cols = report.cols.filter(function (column) { return column[2] !== 'mark' || markable(report); });
+    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || markable(report)) && (column[2] !== 'flag' || flagsOn()); });
     return report.k === 'daybook' && viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
@@ -631,12 +652,12 @@
       },
       columns: shownCols(report).map(function (column, i) {
         return {
-          html: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref' || column[0] === 'lock_note',
+          html: column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref' || column[0] === 'lock_note',
           key: column[0],
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === MONEY ? 1 : 2,
           num: column[2] === MONEY,
-          keep: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
+          keep: column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
           w: DAYBOOK_W[column[0]] || (column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180),
           cell: function (row) {
             return figure(row, column);

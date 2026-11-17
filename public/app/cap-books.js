@@ -2767,6 +2767,8 @@ function bkDvMount(el) {
     };
   });
   if (BK.ev) filters.push(bkDvEvidenceFilter(ents));
+  if (bkFlagsOn())
+    filters.push({ key: 'flag', label: tx('Saved'), all: tx('Saved'), match: function (e, v) { return v === 'noted' ? BK.fl.noted(e.entry_id) > 0 : BK.fl.bookmarked(e.entry_id); }, options: [{ v: 'bookmarked', label: tx('Bookmarked') }, { v: 'noted', label: tx('With a note') }] }); /* CMP066: my own bookmarks, never the Checked n of m */
   var by = function (f, num) {
     return function (a, b) {
       var x = f(a),
@@ -2779,6 +2781,8 @@ function bkDvMount(el) {
     cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = e.evidence && CBEvidence.stateOf(e.evidence); return s ? s.word : ''; } }); /* CMP062: never cut to make room */
   if (BK.mk && BK.mk.state().may)
     cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
+  if (bkFlagsOn())
+    cols.splice(cols.length - 1, 0, { key: 'flag', label: tx('Saved'), prio: 2, w: 80, keep: true, html: true, cell: function (e) { return BK.fl.chip(e.entry_id, String(e.entry_no || '') + (e.posting_date ? ' · ' + e.posting_date : '')); }, value: function (e) { return BK.fl.bookmarked(e.entry_id) ? 1 : 0; } }); /* CMP066 */
   var pre = BK.dvPreset; /* a link from another page (BAS: See them) opens the list narrowed; once */
   BK.dvPreset = null;
   return CBList.mount(el, {
@@ -2955,6 +2959,35 @@ function bkEvidenceIngest(list) {
     });
   BK.ev.ingest(list);
 }
+/**
+ * CMP066 (cap-flag.js): the owner's own private bookmarks and notes on this business's entries. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the caller's own organisation.
+ * Only on the business's OWN books (not while acting for a client: the firm's seats are the grant view's); the subject is this business's own id.
+ */
+function bkFlagCall(method, path, body) {
+  return fetch(CFG.API_BASE + path, { method: method, cache: 'no-store', headers: { Authorization: 'Bearer ' + SESSION.token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      if (!r.ok) { var e = new Error(j.detail || j.message || j.error || 'API ' + r.status); e.status = r.status; e.code = j.code; throw e; }
+      return j;
+    });
+  });
+}
+function bkFlagsOn() {
+  return !!BK.fl && !BK.fl.off() && BK.fl.ready();
+}
+function bkFlagsIngest(list) {
+  if (typeof CBFlag === 'undefined' || !SESSION.entityId || (typeof CBBooksActing !== 'undefined' && CBBooksActing.current())) return;
+  if (!BK.fl) BK.fl = CBFlag.use({ call: bkFlagCall, kind: 'posting', entity: function () { return SESSION.entityId; } });
+  var fl = BK.fl;
+  fl.load((list || []).map(function (e) { return e.entry_id; }).filter(Boolean)).then(function () {
+    var host = document.getElementById('bk_dvlist'), d = BK.dv;
+    if (BK.fl !== fl || !d || !host) return;
+    if (bkFlagsOn() && !d.flDrawn) {
+      d.flDrawn = true; /* the Saved column and filter exist only once the answer is in: the list is drawn again, once */
+      if (d.api && d.api.destroy) d.api.destroy();
+      d.api = bkDvMount(host);
+    } else if (d.api) d.api.refresh();
+  });
+}
 /** the Day book tab: one date range of entries, the strip and the to-do read together */
 /** 5-YEAR GROWTH (l16-scale): the Day book reads one page at a time, newest first (the server's keyset, ?limit · ?order=desc · ?after); "Older" asks for the next. Never the whole range. */
 var BK_PAGE = 100;
@@ -2984,6 +3017,7 @@ async function bkDaybook(body) {
     BK.dv.r = r;
     bkMarksIngest(r);
     bkEvidenceIngest(r.entries); /* CMP062: what stands behind each entry */
+    bkFlagsIngest(r.entries); /* CMP066: and my bookmarks of them (one read; the list is drawn again when it answers) */
     /* W15-102: the Needs attention strip, the server's counts over the range — never counted here */
     body.innerHTML = '<div class="attn-col"><div id="bk_attn_db"></div><div id="bk_dvlist" data-testid="db-list"></div></div><div id="bk_dvpager" data-testid="db-pager"></div>';
     BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
@@ -3016,6 +3050,7 @@ async function bkDvOlder() {
     if (BK.dv !== d) return;
     bkMarksIngest(reply);
     bkEvidenceIngest(reply.entries);
+    bkFlagsIngest(reply.entries); /* CMP066 */
     d.r = await bkDvAppend(d.r, reply);
     if (d.api) d.api.refresh();
     bkPagerPaint('bk_dvpager', 'db', d.r, 'Older', 'newest first', bkDvOlder);
