@@ -312,6 +312,7 @@ const walk = async (w) => {
     const a = await inView();
     await page.click('[data-testid="lk-pop-close"]');
     /* the same popup holding a CBList ("and N more"): the list scrolls in its own .cbl-list, its column header stays, the popup body does not move */
+    for (const part of ['css', 'click', 'wire']) await page.addScriptTag({ url: base + '/app/list-ctl-' + part + '.js' });   /* the list control's three parts load BEFORE the unit (list-ctl.js throws without them) */
     await page.addScriptTag({ url: base + '/app/list-ctl.js' });
     await page.evaluate(() => {
       const host = document.createElement('div'); host.id = 'ux112-host'; document.body.appendChild(host);

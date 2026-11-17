@@ -308,10 +308,11 @@ W.run('returns', async (w) => {
         const m = await X.page.evaluate(() => {
           const rgb = (c) => { const v = (String(c).match(/[\d.]+/g) || []).map(Number); return v.length >= 3 ? { hex: '#' + v.slice(0, 3).map((n) => Math.round(n).toString(16).padStart(2, '0')).join(''), a: v.length > 3 ? v[3] : 1 } : null; };
           const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const b = rgb(getComputedStyle(e).backgroundColor); if (b && b.a > 0.5) return b.hex; } return '#ffffff'; };
-          const els = Array.from(document.querySelectorAll('[data-testid^="lk-row-"] b, [data-testid^="lk-state-"], [data-testid="lk_fy"]'));
+/* Month lock is one table since dc25019a: the month name is the row header (th), no longer a b */
+          const els = Array.from(document.querySelectorAll('[data-testid^="lk-row-"] th, [data-testid^="lk-state-"], [data-testid="lk_fy"]'));
           const pairs = els.map((e) => ({ t: e.textContent.trim().slice(0, 20), fg: rgb(getComputedStyle(e).color).hex, bg: bgOf(e) }));
           const clipped = els.filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible').map((e) => e.textContent.trim().slice(0, 20));
-          const rows = Array.from(document.querySelectorAll('[data-testid^="lk-row-"] b')).map((b) => b.textContent.trim());
+          const rows = Array.from(document.querySelectorAll('[data-testid^="lk-row-"] th')).map((b) => b.textContent.trim());
           const main = document.querySelector('.main');
           return { rows, fy: (document.querySelector('[data-testid="lk_fy"]') || {}).value, pairs, clipped, doc: document.documentElement.scrollWidth, iw: innerWidth,
             mainFits: main ? main.scrollWidth <= main.clientWidth + 1 : true, appLinks: document.querySelectorAll('a[href*="app.html"]').length, theme: document.documentElement.getAttribute('data-theme') };

@@ -59,7 +59,6 @@ const SKIP = {
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
 const KNOWN = {
-  'walk-bill.cjs': 'BF1 open: the walk wants "Poori has no tax rate" on screen; M40 puts the names behind Fix › — Athi decides (TEST-LOG BF1)',
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
 /**

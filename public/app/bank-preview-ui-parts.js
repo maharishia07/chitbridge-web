@@ -418,6 +418,7 @@
     addAsks(ctx);
     addLineNote(ctx);
     addParties(ctx);
+    addChoices(ctx);
     addKinds(ctx);
     addRowState(ctx);
     addRowPieces(ctx);
