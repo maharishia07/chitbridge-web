@@ -173,7 +173,7 @@ function cmpBig(n, w, tid) {
   return (
     '<div style="min-width:96px"><div class="mono" data-testid="' +
     tid +
-    '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.1">' +
+    '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.3">' +
     esc(String(n || 0)) +
     '</div><div style="color:var(--grey);font-size:var(--fs-1)">' +
     esc(w) +

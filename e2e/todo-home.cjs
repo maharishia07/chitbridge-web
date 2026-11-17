@@ -54,7 +54,7 @@ const SEVERAL = [
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
       if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return S.status ? J(r, S.status, { error: 'internal detail that must never reach the screen' }) : (S.rawTodo ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(S.todo) }) /* the page's defensive per-item 503 is not an API shape: not held to the contract */ : J(r, 200, S.todo.map((x) => Object.assign({ items: [] }, x))));
-      if (p === '/api/books/periods') return J(r, 200, { periods: [] });
+      if (p === '/api/books/periods') return J(r, 200, books.periods([]));
       /* A1: this shop is India's - the contract's rail answer (the returns screen says the GST return is made from the bills, not from these books) */
       if (p === '/api/books/returns') return J(r, 200, books.returnsRail());
       if (p.startsWith('/api/books')) return J(r, 200, {});
@@ -73,7 +73,7 @@ const SEVERAL = [
     const S = stand(SEVERAL), { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="todo-list"]', { timeout: 15000 });
     const labels = await p.$$eval('#nav .nav-btn', (x) => x.map((e) => e.getAttribute('aria-label')));
-    ok(labels[0] === 'To do' && labels[1] === 'Day book', 'To do is first in the sidebar, before Day book (' + labels.slice(0, 3).join(' · ') + ')');
+    ok(labels[0] === 'To do' && labels.indexOf('Day book') > 0, 'To do is first in the sidebar, before Day book (the MIS overview "How we are doing", merged 232f497d, sits between) (' + labels.slice(0, 3).join(' · ') + ')');
     ok(await p.evaluate(() => document.querySelector('.nav-btn.active').getAttribute('aria-label')) === 'To do' && (await p.textContent('#title')).trim() === 'To do', 'Accounts opens on To do, and it is the lit entry');
     ok(S.calls.filter((c) => c === 'GET /api/books/todo').length === 1, 'one read of GET /api/books/todo');
     const rows = await p.$$eval('.todo-row', (r) => r.map((x) => ({ kind: x.getAttribute('data-kind'), n: x.querySelector('.todo-n').textContent.trim(), words: x.querySelector('.todo-words').textContent.trim(), btn: Array.from(x.querySelectorAll('button')).map((b) => b.textContent.trim()), sym: x.querySelector('.todo-sym').textContent.trim() })));

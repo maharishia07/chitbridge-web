@@ -101,12 +101,13 @@ W.run('finance-cash', async (w) => {
   await w.step('C2', 'Cash -> the page asked for 7 days and only READ: nothing was written', async () => {
     return { ok: /days=7/.test(S.asked[0] || '') && S.writes.length === 0, saw: 'asked ' + (S.asked[0] || 'nothing') + '; writes ' + S.writes.length };
   });
-  await w.step('C3', 'Cash -> seven day rows; today is marked; the shortfall day says Short and its balance in Cr words (₹15,000 Cr); the opening is the server\'s ₹50,000', async () => {
+  await w.step('C3', 'Cash -> the four money days (of seven) as rows, the quiet days one chip; today is marked; the shortfall day says Short and its balance in Cr words (₹15,000 Cr); the opening is the server\'s ₹50,000', async () => {
     const n = await rows(), t0 = await txt('[data-testid="fc-row-' + dayN(0) + '"]'), t3 = await txt('[data-testid="fc-row-' + D3 + '"]'), op = await txt('[data-testid="fc-opening"]');
     /* the page's own day (bkToday, the shop's local day) must be the stand-in's day 0 — it was the UTC day before F3b, a day behind every IST morning */
     const pageDay = await page.evaluate(() => (typeof bkToday === 'function' ? bkToday() : 'no bkToday')).catch(() => 'threw');
     const today = await page.locator('[data-testid^="fc-row-"]:has-text("Today")').count();
-    return { ok: n === 7 && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /short\s*₹?\s*15,000(\.00)?/.test(t3) && /50,000(\.00)?/.test(op) && !/\b(Dr|Cr)\b/.test(t3 + op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
+    const quiet = await txt('[data-testid="fc-quiet"]');   /* l16-fin-ux dc25019a: only money days (and today) are listed; the other days are ONE chip */
+    return { ok: n === 4 && /No money moved on 3 days/.test(quiet) && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /short\s*₹?\s*15,000(\.00)?/.test(t3) && /50,000(\.00)?/.test(op) && !/\b(Dr|Cr)\b/.test(t3 + op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
   });
   await w.step('C4', 'Cash -> the bars: one per day, the shortfall day\'s is the red one, the lowest day is labelled (short ₹15,000)', async () => {
     const bars = await page.locator('[data-testid^="fc-bar-"]').count(), neg = await page.locator('[data-testid^="fc-bar-"][data-neg="true"]').count(), low = (await page.locator('[data-testid="fc-low-label"]').first().textContent().catch(() => '')) || '';
@@ -128,10 +129,10 @@ W.run('finance-cash', async (w) => {
     const t = await txt('[data-testid="fc-uncounted"]');
     return { ok: /₹12,000 overdue from 1 party is not counted until it is promised or paid\./.test(t), saw: '"' + t + '"' };
   });
-  await w.step('C8', 'Cash -> 30 days -> the page asks the server again (days=30), thirty rows, the GST chip now says the challan is inside the window', async () => {
+  await w.step('C8', 'Cash -> 30 days -> the page asks the server again (days=30), the money days only (today + 3 + the GST day), the GST chip now says the challan is inside the window', async () => {
     await page.click('[data-testid="fc-days-30"]'); await page.waitForTimeout(700);
     const n = await rows(), gst = await txt('[data-testid="fc-gst"]'), pressed = await page.locator('[data-testid="fc-days-30"][aria-pressed="true"]').count();
-    return { ok: /days=30/.test(S.asked[S.asked.length - 1] || '') && n === 30 && /GST/.test(gst) && /8,000/.test(gst) && !/after this window/.test(gst) && pressed === 1 && S.writes.length === 0, saw: 'asked ' + S.asked[S.asked.length - 1] + '; ' + n + ' rows; gst chip "' + gst + '"; writes ' + S.writes.length };
+    return { ok: /days=30/.test(S.asked[S.asked.length - 1] || '') && n === 5 && /GST/.test(gst) && /8,000/.test(gst) && !/after this window/.test(gst) && pressed === 1 && S.writes.length === 0, saw: 'asked ' + S.asked[S.asked.length - 1] + '; ' + n + ' rows; gst chip "' + gst + '"; writes ' + S.writes.length };
   });
   await w.step('C8b', 'Cash (the pack will not guess the return date: AE without its stagger) -> the chip says the pack\'s word, the figure and the server\'s sentence — no date, nothing counted', async () => {
     S.mode = 'nodate'; await open(); await page.waitForTimeout(500);
@@ -168,7 +169,7 @@ W.run('finance-cash', async (w) => {
     const words = await page.locator('[data-testid="fc-words"], [data-testid="fc-list"] .cbl-chip').count(), bars = await page.locator('[data-testid^="fc-bar-"]').count(), n = await rows();
     const wide = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
     await page.setViewportSize({ width: 1280, height: 860 });
-    return { ok: words >= 1 && bars === 7 && n === 7 && wide, saw: 'notices/chips ' + words + '; bars ' + bars + '; rows ' + n + '; no sideways scroll ' + wide };
+    return { ok: words >= 1 && bars === 7 && n === 4 && wide, saw: 'notices/chips ' + words + '; bars ' + bars + '; rows ' + n + '; no sideways scroll ' + wide };
   });
   await w.step('M43', 'the stand-in answered every /api/books call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   if (w.errs.length) await w.step('E0', 'no page errors while walking', async () => ({ ok: false, saw: w.errs.slice(0, 2).join(' | ') }));
