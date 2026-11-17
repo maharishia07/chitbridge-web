@@ -23,14 +23,12 @@ const ROOT = path.join(__dirname, '..');
 const PUB = process.env.CBA_PUB || path.join(ROOT, 'public');        /* CBA_PUB=<dir> runs against another copy (cb-accounts-breaks.cjs) */
 const SHOTS = path.join(__dirname, 'shots');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
-
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
-
 /* the menu's views in the menu's order (A1), plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
   ['todo', 'To do', '[data-testid="todo-list"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
@@ -49,7 +47,6 @@ const VIEWS = [
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
   ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
 ];
-
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
 const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
   entry_id: 'e-' + date, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null,   /* PERF1 / M29: a ledger line names its entry and its reversal pair (the contract's keys; the journal's entry_id is the same 'e-' + date) */

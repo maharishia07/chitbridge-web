@@ -25,7 +25,8 @@ const SAY = 'Your access does not include costs, so the bank statements are hidd
   ok(stm.includes("bksCostBlind(failure) ? 'blind' : 'error'") && stm.includes("BKST.mode === 'blind' || "), '/statement-files list 403 sets mode blind and the Statements line says the sentence');
   /* the Bank home: bankHomeSigned (the real function) meets a 403 COST_BLIND on /bank/log and the Statements line says the sentence, not "Kept" */
   const { liftFns } = require('./lib/lift-fn.cjs');
-  const cx2 = vm.createContext({ tx: (s) => s, bkhSignedRange: () => ({}), BKST: { mode: 'server', data: { accounts: [{ code: '1100', account_id: 'a1' }] }, fileTotal: 0 }, BKH: { signed: {}, known: false, blind: false }, api: () => Promise.reject(log403) });
+  const homeState = { signed: {}, known: false, blind: false }; /* cap-bank-home.js keeps it as BANK_HOME and publishes it as window.BKH */
+  const cx2 = vm.createContext({ tx: (s) => s, bkhSignedRange: () => ({}), BKST: { mode: 'server', data: { accounts: [{ code: '1100', account_id: 'a1' }] }, fileTotal: 0 }, BANK_HOME: homeState, BKH: homeState, api: () => Promise.reject(log403) });
   vm.runInContext(['bksCostBlind', 'bksCostBlindSay'].map((n) => line(store, n)).join('\n') + '\n' + liftFns('public/app/cap-bank-home.js', ['bankHomeSigned']) + '\n' + liftFns('public/app/cap-bank-statements.js', ['bkstSummary']) + '\nthis.g = { bankHomeSigned, bkstSummary };', cx2);
   await cx2.g.bankHomeSigned();
   ok(cx2.BKH.blind === true && cx2.BKH.known === false, 'bankHomeSigned records the 403 COST_BLIND (blind, not known)');

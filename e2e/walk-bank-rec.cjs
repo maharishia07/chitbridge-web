@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * e2e/walk-bank-rec.cjs — BANK RECONCILIATION THROUGH THE RAIL, WALKED (round BR1: accounts.html#bank · app/cap-bank.js · engines bank-recon v1.44.1).
+ * e2e/walk-bank-rec.cjs — BANK RECONCILIATION THROUGH THE RAIL, WALKED (round BR1: accounts.html#bank · app/cap-bank.js · app/cap-bank-rows.js (the lines and their actions) · engines bank-recon v1.44.1).
  * A fixture HDFC-shaped statement is read IN THE BROWSER and put against THREE things: the line ↔ the other party's payment chit (M30 advice, from
  * GET /api/books/bank/rail) ↔ the ledger entry. The API is a stand-in answering inside the page; every /api/books answer is held to the API contract.
  *

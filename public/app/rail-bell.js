@@ -37,7 +37,9 @@
  */
 (function (root) {
   'use strict';
-  var doc = root.document;
+  var bellKit = (root.CBBellKit = root.CBBellKit || {});
+  bellKit.call = call;
+  bellKit.doc = root.document;
 
   /* the four routes, ONE name each — the names app.html registers; a page without them gets them at mount (the attach-ui pattern) */
   /* built by row() so a second literal of the same route is not declared: these are app.html's four names, registered only when the page has not (e2e/ep-aliases.cjs) */
@@ -56,142 +58,6 @@
     if (typeof EP === 'undefined' || !EP) return false;
     for (var k in BELL_EP) if (!EP[k]) EP[k] = BELL_EP[k];
     return true;
-  }
-  function T(words) {
-    return typeof tx === 'function' ? tx(words) : words;
-  }
-
-  var W = {
-    title: 'Activity',
-    none: 'No activity yet',
-    clear: 'Clear all',
-    cleared: 'Activity cleared',
-    forYou: 'For you',
-    rest: 'Everything else',
-    ask: 'Clear all activity?',
-    askBody: 'This clears your Activity list. The events are kept — chits, statuses and disputes are unchanged.',
-    readFail: 'Could not read your activity — try again',
-    markFail: 'That question could not be opened — try again',
-    markGone: 'This entry was reversed or removed, so its question cannot be opened',
-    aria: 'Activity',
-    chit: 'a chit',
-    needs: 'Clearing needs the latest update on this system',
-    noteGone: 'This note was removed, so its client cannot be opened',
-    clientGone: 'This client is no longer in your practice, so the record cannot be opened'
-  };
-  var KIND = {
-    message_sent: ['💬', 'wrote about'],
-    delivered_line: ['📦', 'recorded a delivery on'],
-    assigned_line: ['👤', 'assigned a line on'],
-    status_completed: ['✅', 'completed'],
-    status_cancelled: ['🚫', 'cancelled'],
-    accepted: ['✍️', 'accepted'],
-    dispute_raised: ['⚑', 'raised a dispute on'],
-    dispute_resolved: ['✅', 'resolved a dispute on'],
-    voided: ['🚫', 'voided'],
-    mark_query: ['?', 'raised a Query on'],
-    mark_reply: ['💬', 'replied to the Query on'],
-    note_reply: ['💬', 'replied on your firm note on']
-  };
-  /** the ONE wording of a mark's subject (the bell and the Messages inbox both call it): a Query is on an ENTRY, never on a chit */
-  function markSubject(entryNo) {
-    return entryNo ? String(entryNo) : 'an entry';
-  }
-  function markTitle(entryNo) {
-    return 'Query on ' + markSubject(entryNo);
-  }
-  /** a mark notice names its entry the way the books do: number · day (the shop's way) · amount in its own currency */
-  function entryName(entry) {
-    if (!entry) return '';
-    if (!entry.entry_no && entry.label) return String(entry.label); /* a firm note names its record the way its writer's page did (b877) */
-    var day = entry.posting_date ? (typeof root.shopDay === 'function' ? root.shopDay(entry.posting_date) : entry.posting_date) : '',
-      amount = entry.total_minor != null && entry.currency && typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(entry.total_minor), currency: entry.currency }) : '';
-    return [entry.entry_no, day, amount].filter(Boolean).join(' · ');
-  }
-  /** the moment a feed row happened, as the reader's LOCAL time: CBLocale first, then the browser's own format, then the raw text */
-  function localMoment(createdAt) {
-    var shape = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
-    try {
-      return root.CBLocale.datetime(createdAt, shape);
-    } catch (_) {
-      try {
-        var date = new Date(createdAt);
-        return isNaN(date) ? String(createdAt).replace('T', ' ').slice(0, 16) : date.toLocaleString(undefined, shape);
-      } catch (_2) {
-        return String(createdAt).slice(0, 16);
-      }
-    }
-  }
-  /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
-  function line(item) {
-    var kind = KIND[item.action],
-      subj = item.mark_entry ? entryName(item.mark_entry) || markSubject() : item.action === 'mark_query' || item.action === 'mark_reply' ? markSubject() : item.manual_subject || item.auto_subject || T(W.chit),
-      moment = '';
-    /* b877: a notice about a client's record names the CLIENT first (a firm with 150 clients knows where to go); the business's own notices carry no client */
-    var client = item.mark_client ? String(item.mark_client) : '';
-    /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
-    if (item.created_at) moment = localMoment(item.created_at);
-    /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
-    if (item.purpose === 'order' && item.action === 'delivered' && item.direction === 'received') {
-      var amt = fmtMoney(item.total_value, item.currency_code, ''),
-        list = [item.order_channel === 'online' ? '🌐 ' + T('Online') : '', item.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
-      return {
-        i: '🛍️',
-        mine: !!(item.assigned_to_me || item.dispute_for_me),
-        chit: item.chit_id || null,
-        order: true,
-        who: item.action_by_display_name || '',
-        say: T('sent a new order'),
-        subj: '',
-        d: [amt, list].filter(Boolean).join(' · '),
-        s: moment,
-        id: item.log_id || null
-      };
-    }
-    /* W15-54: a mark notice (a Query asked, a reply) opens that record's thread: the entry id when the feed carries it, else its number (the open list names it) */
-    var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', day: (item.mark_entry && item.mark_entry.posting_date) || '', title: subj } : null;
-    var note = item.action === 'note_reply' && item.mark_entry && item.mark_entry.entry_id ? String(item.mark_entry.entry_id) : '';
-    if (mark) {
-      mark.client = client; /* a firm's notice: the client it is about (the owner's own notices carry none); its id when the feed carries it */
-      mark.clientId = item.mark_client_id ? String(item.mark_client_id) : '';
-    }
-    return {
-      note: note,
-      mark: mark && (mark.id || mark.no) ? mark : null,
-      i: kind ? kind[0] : '•',
-      mine: !!(item.assigned_to_me || item.dispute_for_me),
-      chit: item.chit_id || null,
-      who: item.action_by_display_name || '',
-      say: kind ? kind[1] : String(item.action || 'updated').replace(/_/g, ' '),
-      subj: client && item.action !== 'message_sent' && subj.indexOf(client) !== 0 ? client + ' · ' + subj : subj /* a note on the CLIENT is titled with the client's name: said once */,
-      d: item.detail ? String(item.detail).slice(0, 90) : item.new_status || '',
-      s: moment,
-      id: item.log_id || null
-    };
-  }
-
-  var CSS =
-    '.cbb{position:relative;display:inline-block}' +
-    '.cbb-btn{position:relative;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#1D1B16);border-radius:9px;font:inherit;font-size:var(--fs-2,14px);min-width:36px;min-height:32px;padding:3px 9px;cursor:pointer}' +
-    '@media (max-width:620px){.cbb-btn{min-width:28px;padding:2px 4px}}' /* a phone header holds the page action, the bell, Home and the avatar on one line */ +
-    '.cbb-dot{position:absolute;top:-6px;inset-inline-end:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--disp,#8E3517);color:var(--on-accent,#fff);font-size:var(--fs-1,12px);font-weight:800;line-height:18px;text-align:center;padding:0 4px;box-sizing:border-box}' +
-    '.cbb-panel{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:60;width:min(360px,92vw);max-height:70vh;overflow:auto;border:1px solid var(--line,#DDD6C6);border-radius:12px;background:var(--card,#fff);color:var(--ink,#1D1B16);box-shadow:0 8px 24px var(--shadow,rgba(0,0,0,.14));font-size:var(--fs-2,14px);text-align:start}' +
-    '.cbb-hd{padding:10px 12px;font-weight:800;border-bottom:1px solid var(--line,#DDD6C6)}' +
-    '.cbb-sec{padding:8px 12px 3px;font-size:var(--fs-1,12px);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey,#5E594D)}' +
-    '.cbb-row{display:flex;gap:9px;padding:8px 12px;border:0;border-bottom:1px solid var(--line,#DDD6C6);cursor:pointer;background:none;width:100%;text-align:start;font:inherit;color:inherit}' +
-    '.cbb-row:hover{background:var(--paper,#f4f1ea)}.cbb-row[disabled]{cursor:default}' +
-    '.cbb-t{line-height:1.35}.cbb-d{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cbb-s{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
-    '.cbb-none{padding:14px 12px;color:var(--grey,#5E594D)}.cbb-ft{display:flex;gap:8px;align-items:center;padding:8px 12px}' +
-    '.cbb-clear{margin-inline-start:auto;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:inherit;border-radius:9px;font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:6px 12px;cursor:pointer;min-height:32px}' +
-    '.cbb-clear[disabled]{opacity:.55;cursor:not-allowed}.cbb-out{font-size:var(--fs-1,12px)}.cbb-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}';
-  var cssDone = false;
-  function addCss() {
-    if (cssDone || !doc) return;
-    cssDone = true;
-    var node = doc.createElement('style');
-    node.setAttribute('data-cbbell', '1');
-    node.textContent = CSS;
-    (doc.head || doc.documentElement).appendChild(node);
   }
 
   /** the token of a signed-in person of the shop, or null (signed out, or a customer login) */
@@ -215,19 +81,20 @@
   function call(host, name, opts) {
     if (!host.apiBase && typeof api === 'function') return api(name, opts);
     var route = BELL_EP[name],
-      tok = whoToken(host),
+      tokenOf = whoToken(host),
       base = host.apiBase || host.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
     return root
       .fetch(base + route.p + queryOf(opts && opts.query), {
         method: route.m,
         cache: 'no-store',
-        headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+        headers: { Authorization: 'Bearer ' + tokenOf, 'Content-Type': 'application/json' },
         body: opts && opts.body ? JSON.stringify(opts.body) : undefined
       })
       .then(function (reply) {
         return reply
           .json()
-          .catch(function () {
+          .catch(function (failure) {
+            if (root.cbQuiet) root.cbQuiet('bell:reply-json', failure);
             return {};
           })
           .then(function (j) {
@@ -251,9 +118,9 @@
 
   function whoToken(host) {
     if (Object.prototype.hasOwnProperty.call(host, 'person') && !host.person) return null; // the host says nobody is signed in (a token may still be saved)
-    var tok = host.token || (typeof SESSION !== 'undefined' && SESSION && SESSION.token) || null;
+    var tokenOf = host.token || (typeof SESSION !== 'undefined' && SESSION && SESSION.token) || null;
     var role = (typeof SESSION !== 'undefined' && SESSION && SESSION.role) || '';
-    return tok && role !== 'customer' ? tok : null;
+    return tokenOf && role !== 'customer' ? tokenOf : null;
   }
 
   /** a Query notice pressed on a page that cannot open the thread arrives as ?mark=<entry id> (the owner's Accounts): read and forgotten from the address, the bell opens that thread once. A client's Day book (?open=) reads its own &mark= (books-grant-view.js) */
@@ -269,96 +136,13 @@
     return id;
   }
 
-  /** the identity mount of a bell control (this screen's code + U1nn, the list control's rule); none until the page names its screen */
-  function bellMount(component) {
-    return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
-  }
-
-  /** the popup-code chip of this popover (a literal POP code, the one the register holds for it); nothing on a page without screen-id.js */
-  function bellChip(code, place) {
-    return root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(code, place) : '';
-  }
-
-  /** the bell button with its count dot, as markup */
-  function bellButtonHtml(bell) {
-    var dot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
-    return (
-      '<button type="button" class="cbb-btn" data-cbsid="CMP030-B01"' + bellMount('CMP030') + ' data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
-      (bell.open ? 'true' : 'false') +
-      '" aria-label="' +
-      esc(T(W.aria)) +
-      (bell.count ? ' (' + bell.count + ')' : '') +
-      '">🔔' +
-      dot +
-      '</button>'
-    );
-  }
-
-  /** one notification row, as markup */
-  function recordHtml(x) {
-    return (
-      '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
-      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '" data-mark-client="' + esc(x.mark.client) + '" data-mark-client-id="' + esc(x.mark.clientId) + '"' : x.note ? '' : ' disabled') + /* a colleague's reply on my firm note carries its entry below (data-note-id): pressable */
-      (x.order ? ' data-order="1"' : '') +
-      (x.note ? ' data-note-id="' + esc(x.note) + '"' : '') +
-      '><span aria-hidden="true">' +
-      x.i +
-      '</span><span style="min-width:0">' +
-      '<div class="cbb-t">' +
-      (x.who ? '<b>' + esc(x.who) + '</b> ' : '') +
-      esc(x.say) +
-      ' <b>' +
-      esc(x.subj) +
-      '</b></div>' +
-      (x.d ? '<div class="cbb-d">' + esc(x.d) + '</div>' : '') +
-      '<div class="cbb-s">' +
-      esc(x.s) +
-      '</div></span></button>'
-    );
-  }
-
-  /** the open panel: title, the rows (yours first) or the error / empty line, and the footer with Clear all */
-  function panelHtml(bell) {
-    var items = bell.rows.map(line),
-      mine = items.filter(function (x) {
-        return x.mine;
-      }),
-      rest = items.filter(function (x) {
-        return !x.mine;
-      });
-    var body = bell.err
-      ? '<div class="cbb-none" data-testid="bell-error">' + esc(T(W.readFail)) + '</div>'
-      : items.length
-        ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(recordHtml).join('') : '') +
-          (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(recordHtml).join('') : '')
-        : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
-    return (
-      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" data-pop="POP113" aria-label="' +
-      esc(T(W.title)) +
-      '"><div class="cbb-hd">' + bellChip('POP113', 'margin-inline-end:8px') +
-      esc(T(W.title)) +
-      '</div>' +
-      body +
-      '<div class="cbb-ft"><span class="cbb-out" data-testid="bell-out" data-tone="' +
-      esc(bell.tone) +
-      '">' +
-      esc(bell.out) +
-      '</span>' +
-      '<button type="button" class="cbb-clear" data-cbsid="CMP014-B01"' + bellMount('CMP014') + ' data-testid="bell-clear"' +
-      (items.length ? '' : ' disabled') +
-      '>' +
-      esc(T(W.clear)) +
-      '</button></div></div>'
-    );
-  }
-
   function mount(el, opts) {
-    el = typeof el === 'string' ? doc.getElementById(el) : el;
+    el = typeof el === 'string' ? bellKit.doc.getElementById(el) : el;
     if (!el) return null;
     opts = opts || {};
     if (el.__cbbell) el.__cbbell.destroy();
     sweep();
-    addCss();
+    bellKit.addCss();
     ensureEP();
     var bell = { rows: [], count: 0, open: false, es: null, up: false, backoff: 5000, timer: null, dead: false, err: false, out: '', tone: '' };
     if (!el.getAttribute('data-testid')) el.setAttribute('data-testid', 'bell');
@@ -367,7 +151,7 @@
 
     function paint() {
       if (bell.dead) return;
-      el.innerHTML = bellButtonHtml(bell) + (bell.open ? panelHtml(bell) : '');
+      el.innerHTML = bellKit.bellButtonHtml(bell) + (bell.open ? bellKit.panelHtml(bell) : '');
     }
     function setCount(total) {
       total = Number(total) || 0;
@@ -444,142 +228,21 @@
             setCount(0);
             paint();
           })
-          .catch(function () { /* a failed clear leaves the list as it was; the next read says the truth */ });
+          .catch(function (failure) { if (root.cbQuiet) root.cbQuiet('bell:seen', failure); /* a failed clear leaves the list as it was; the next read says the truth */ });
         read();
       }
     }
-    /** W15-54: the owner's bell row for a Query opens the Query thread sheet through the Day book's own opener (CBMark's sheet: one thread, one composer) */
-    /** the page's endpoint table is a lexical const (not window.EP), so cap-mark cannot fill it: the two mark reads are added here, from cap-mark's own list */
-    function markEndpoints() {
-      if (typeof EP !== 'undefined' && root.CB_MARK_EP)
-        Object.keys(root.CB_MARK_EP).forEach(function (key) {
-          if (!EP[key]) EP[key] = root.CB_MARK_EP[key];
-        });
-    }
-    function openMark(row) {
-      var ctl = bell.mk || (bell.mk = root.CBMark.use({
-          adopter: 'acc.audit',
-          period: function () {
-            return bell.mkDay ? { from: bell.mkDay, to: bell.mkDay } : null; /* the open list answers for the CURRENT month unless asked: an older entry's Query is found by its own day */
-          },
-          call: function (key, o) {
-            markEndpoints();
-            return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
-          }
-        })),
-        title = row.getAttribute('data-mark-title') || '',
-        id = row.getAttribute('data-mark-id'),
-        no = row.getAttribute('data-mark-no');
-      bell.mkDay = String(row.getAttribute('data-mark-day') || '').slice(0, 10);
-      var show = function (subject) {
-        if (subject) ctl.sheet(subject, { title: title });
-        else if (typeof root.toast === 'function') root.toast(T(W.markGone)); /* no id and no open question by that number: say why, not "try again" */
-      };
-      if (id) return ctl.load([id]).then(function () { show(id); });
-      return ctl.summary().then(function (sum) {
-        var hit = ((sum && sum.open) || []).filter(function (m) {
-          return no && String(m.subject_label || '').indexOf(no) === 0;
-        })[0];
-        return ctl.load(hit ? [String(hit.subject_id)] : []).then(function () { show(hit ? String(hit.subject_id) : ''); });
-      });
-    }
-    /** a colleague's reply on my firm's note: the feed names the entry, not the client, so the firm's own list of notes (the work list's read) says whose it is; the client's Day book opens with that entry's note sheet (books-grant-view.js reads &note=) */
-    function openNote(entryId) {
-      return call(opts, 'flagsList', { query: { kind: 'note', limit: 200 } })
-        .then(function (reply) {
-          var hit = ((reply && reply.flags) || []).filter(function (flag) {
-            return flag.kind === 'note' && String(flag.subject_id) === entryId && flag.subject_entity;
-          })[0];
-          if (!hit) throw new Error('note not found');
-          /* a note on the CLIENT carries the client's own id as its subject: the same address, the Day book then opens the client's sheet (books-grant-view.js) */
-          root.location.assign('/network.html?open=' + encodeURIComponent(hit.subject_entity) + '&view=daybook&note=' + encodeURIComponent(entryId) + '&nl=' + encodeURIComponent(String(hit.label || '').slice(0, 80)));
-        })
-        .catch(function () {
-          if (typeof root.toast === 'function') root.toast(T(W.noteGone));
-        });
-    }
-    /** the client a firm's notice is about: the id the feed carries, else the practice list's client of that NAME (paged; the exact name, first page that has it) */
-    function clientIdOf(row) {
-      var given = row.getAttribute('data-mark-client-id'),
-        name = row.getAttribute('data-mark-client');
-      if (given) return Promise.resolve(given);
-      var ask = function (page) {
-        return call(opts, 'practice', { query: { page: page, limit: 100 } }).then(function (reply) {
-          var hit = ((reply && reply.clients) || []).filter(function (c) {
-            return c.name === name;
-          })[0];
-          if (hit) return String(hit.entity_id);
-          return reply && reply.has_more && page < 8 ? ask(page + 1) : '';
-        });
-      };
-      return ask(1);
-    }
-    /**
-     * ONE behaviour per Query notice, on every page. Where the thread can open in place (the owner's own books, CBMark on the page) it opens; anywhere else the row is a LINK to the record:
-     * the owner's Accounts Day book (?mark=<entry>, opened on arrival below) or the client's Day book (&view=daybook&mark=<entry>, books-grant-view.js). A firm's row always goes to the client's Day book,
-     * for the thread is in the CLIENT's books and only that page speaks for them.
-     */
-    function goToMark(row) {
-      var id = row.getAttribute('data-mark-id') || '',
-        fail = function () {
-          if (typeof root.toast === 'function') root.toast(T(W.markFail));
-        };
-      if (!row.getAttribute('data-mark-client')) {
-        root.location.assign('/accounts.html' + (id ? '?mark=' + encodeURIComponent(id) : '') + '#/daybook');
-        return Promise.resolve();
-      }
-      return clientIdOf(row).then(function (cid) {
-        if (!cid) {
-          if (typeof root.toast === 'function') root.toast(T(W.clientGone));
-          return;
-        }
-        root.location.assign('/network.html?open=' + encodeURIComponent(cid) + '&view=daybook' + (id ? '&mark=' + encodeURIComponent(id) + '&mday=' + encodeURIComponent(String(row.getAttribute('data-mark-day') || '').slice(0, 10)) + '&nl=' + encodeURIComponent(String(row.getAttribute('data-mark-title') || '').slice(0, 80)) : '')); /* nl: the entry's own label (number · day · amount), so the thread is titled by it, never "This entry" */
-      }, fail);
-    }
-    function onClick(ev) {
-      ev.__cbbIn = true; /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
-      var node = ev.target;
+    function onClick(event) {
+      event.__cbbIn = true; /* this press was ours: its target is repainted away, so the document handler cannot tell by contains() */
+      var node = event.target;
       if (!node.closest) return;
       if (node.closest('[data-testid="bell-btn"]')) {
         toggle();
         return;
       }
-      var r = node.closest('[data-testid="bell-row"]');
-      if (r && r.getAttribute('data-chit')) {
-        var id = r.getAttribute('data-chit');
-        bell.open = false;
-        paint();
-        if (typeof opts.onOpen === 'function') opts.onOpen(id);
-        else if (typeof root.openChitSheet === 'function') root.openChitSheet(id);
-        else if (typeof root.openChit === 'function') root.openChit(id);
-        /* O4: a page with no chit sheet (Home) sends the press to where the chit opens - never closes the list and does nothing.
-         TO1b (REQUIREMENT §6): a NEW ORDER opens in Tasks & Orders — the shop's task — not the CRM's list; AX1: unless this edition leaves Tasks out (the CRM's chit, then) */
-        else if (r.getAttribute('data-order') && !(root.CBEdition && root.CBEdition.hidesHref('/tasks.html')))
-          root.location.href = '/tasks.html?open=' + encodeURIComponent(id);
-        else root.location.href = '/crm.html#/chits?open=' + encodeURIComponent(id);
-        return;
-      }
-      var nt = node.closest('[data-testid="bell-row"]');
-      if (nt && nt.getAttribute('data-note-id')) {
-        bell.open = false;
-        paint();
-        openNote(nt.getAttribute('data-note-id'));
-        return;
-      }
-      var mk = node.closest('[data-testid="bell-row"]');
-      if (mk && (mk.getAttribute('data-mark-id') !== null || mk.getAttribute('data-mark-no') !== null)) {
-        bell.open = false;
-        paint();
-        var inPlace = root.CBMark && typeof api === 'function' && !mk.getAttribute('data-mark-client');
-        new Promise(function (done) {
-          done(inPlace ? openMark(mk) : goToMark(mk));
-        }).catch(function () {
-          if (typeof root.toast === 'function') root.toast(T(W.markFail));
-        });
-        return;
-      }
-      var c = node.closest('[data-testid="bell-clear"]');
-      if (c && !c.disabled) clearAll(c);
+      if (bellKit.pressRow(bell, opts, node, paint)) return;
+      var clear = node.closest('[data-testid="bell-clear"]');
+      if (clear && !clear.disabled) clearAll(clear);
     }
     function clearAll(btn) {
       if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function')
@@ -591,16 +254,16 @@
         },
         {
           key: 'bell:clear',
-          confirm: { title: T(W.ask), body: esc(T(W.askBody)), yes: T(W.clear) },
+          confirm: { title: bellKit.bellText(bellKit.BELL_WORDS.ask), body: esc(bellKit.bellText(bellKit.BELL_WORDS.askBody)), yes: bellKit.bellText(bellKit.BELL_WORDS.clear) },
           outcome: function () {
             bell.rows = [];
-            bell.out = T(W.cleared);
+            bell.out = bellKit.bellText(bellKit.BELL_WORDS.cleared);
             bell.tone = 'ok';
             setCount(0);
             paint();
           },
           onFail: function (w, e) {
-            bell.out = e && e.code === 'NOTIF_DISMISS_NOT_MIGRATED' ? T(W.needs) : w;
+            bell.out = e && e.code === 'NOTIF_DISMISS_NOT_MIGRATED' ? bellKit.bellText(bellKit.BELL_WORDS.needs) : w;
             bell.tone = 'error';
             paint();
           }
@@ -622,8 +285,8 @@
     }
 
     el.addEventListener('click', onClick);
-    doc.addEventListener('click', onDoc);
-    doc.addEventListener('keydown', onKey);
+    bellKit.doc.addEventListener('click', onDoc);
+    bellKit.doc.addEventListener('keydown', onKey);
     var apiObj = {
       el: el,
       refresh: read,
@@ -640,8 +303,8 @@
         }
         bell.es = null;
         el.removeEventListener('click', onClick);
-        doc.removeEventListener('click', onDoc);
-        doc.removeEventListener('keydown', onKey);
+        bellKit.doc.removeEventListener('click', onDoc);
+        bellKit.doc.removeEventListener('keydown', onKey);
         el.innerHTML = '';
         delete el.__cbbell;
         var i = LIVE.indexOf(apiObj);
@@ -658,13 +321,13 @@
     var arrived = askedMark();
     read().then(function () {
       if (arrived && root.CBMark && typeof api === 'function')
-        openMark({ getAttribute: function (name) { return name === 'data-mark-id' ? arrived : ''; } }).catch(function () {
-          if (typeof root.toast === 'function') root.toast(T(W.markFail));
+        bellKit.openMark(bell, opts, { getAttribute: function (name) { return name === 'data-mark-id' ? arrived : ''; } }).catch(function () {
+          if (typeof root.toast === 'function') root.toast(bellKit.bellText(bellKit.BELL_WORDS.markFail));
         });
     });
     connect();
     return apiObj;
   }
 
-  root.CBBell = { mount: mount, line: line, EP: BELL_EP, markTitle: markTitle };
+  root.CBBell = { mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle };
 })(typeof window !== 'undefined' ? window : this);

@@ -31,7 +31,6 @@ if (typeof EP !== 'undefined') {
     c2Reprice: { m: 'POST', p: '/api/chits/:id/reprice', ok: 'y' } // preview:true computes, writes nothing
   });
 }
-
 var C2 = {
   id: null,
   side: 'them',

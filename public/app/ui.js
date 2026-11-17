@@ -2,28 +2,18 @@
  * ui.js — THE STANDARD ACTION SET AND ITS FACTORIES (UX-137, DISCIPLINES §3a). One component per everyday action
  * (Save, Done, Cancel, Close, Back, Add, Remove, Reload, Open); a screen never hand-writes the markup, it MOUNTS one.
  * Improve a component here and every mount on every screen improves.
- *
  * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch; CMP032 batch job note: the state of a saved job in words, and how it ended) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
  * CALLED BY  28 pages by <script src> (grep -lE 'src="/?app/ui.js' public/*.html; 14 Nov 2026): the small apps, the labs, the shop pages, app.html, standards.html (not index.html, not till.html).
- *            Callers of ui.action / ui.dialog / ui.progress (grep -lE 'ui\.(action|dialog|progress)\b' public/*.html public/app/*.js): the pages accounts, app, cart-design, crm, finance,
- *            offer-lab-next, settings, shop, standards, tasks and ui-standard; the scripts cap-books, cap-categories, the six CRM screens (cap-crm, -calls, -groups, -leads, -privacy, -record),
- *            cap-print, cap-settings, chit-price-moved, chit-sheet, screen-id, shell and ui-standard.
- * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
- *            (app.html) for the dialog. It adds no second confirm dialog and no second dialog path.
- * KEYBOARD   a native <button>: Tab reaches it, Enter and Space press it, the focus ring is the theme's; Esc closes a dialog (modal()) and so
- *            leaves Cancel/Close/Not now unpressed; Enter on a form commits through its Save only; a disabled action stays focusable-visible with its reason.
- * REGISTER   each component is CMP### in SCREENS.json with its own element CMP###-B01; each use is a mount
- *            <screen>-U## written as data-cbmount; the element carries data-cbsid = the component element code.
+ *            Callers of ui.action / ui.dialog / ui.progress: grep -lE 'ui.(action|dialog|progress)' public/*.html public/app/*.js (pages, the CRM screens, cap-books, chit-sheet, shell and more).
+ * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal() (app.html) for the dialog. It adds no second confirm dialog and no second dialog path.
+ * KEYBOARD   a native <button>: Tab reaches it, Enter and Space press it, the focus ring is the theme's; Esc closes a dialog (modal()) and so leaves Cancel/Close/Not now unpressed; Enter on a form commits through its Save only; a disabled action stays focusable-visible with its reason.
+ * REGISTER   each component is CMP### in SCREENS.json with its own element CMP###-B01; each use is a mount <screen>-U## written as data-cbmount; the element carries data-cbsid = the component element code.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * FLOW       none (a drawing library). Spec: PM/UX-137-ROLLOUT.md sections 3a, 8 and C (factories).
- *
- * THE RULES IT ENFORCES (it throws, because silence is the bug):
- *   - an unknown component, a property outside the schema, or an override of a fixed one is refused;
- *   - a SAVE must say what it is: effect 'preference' (a plain preference save or an autosave: no confirm) or
- *     'commit' (post, send, pay, approve, mint: confirms first, with its reach). REMOVE is always a commit;
- *   - a commit with a handler of its own (onPress) needs a confirm {title, body, yes}; a commit whose page handler
- *     already confirms says so with confirmedBy: 'page' (legacy handlers move to onPress, one at a time).
+ * THE RULES IT ENFORCES (it throws, because silence is the bug): an unknown component, a property outside the schema or an override of a fixed one is refused;
+ * a SAVE says its effect ('preference': no confirm · 'commit': confirms first, with its reach; REMOVE is always a commit); a commit with its own onPress needs a
+ * confirm {title, body, yes}, or confirmedBy: 'page' when the page handler already confirms (legacy handlers move to onPress, one at a time).
  */
 var CBUi = (function () {
   var MOUNT_CODE = /^[A-Z]{3}\d{3}(?:-D\d{2})?-U\d{2,3}$/; /* two digits at least: the UI standard page alone mounts more than 99 (19 components x 6 states) */
@@ -35,9 +25,7 @@ var CBUi = (function () {
   ];
   /* CMP057 Command: the closed verb list of the register (docs toolset/ui-identity/ui-stamp.cjs VERBS); the caller picks one, the component never invents a verb */
   var COMMAND_VERBS = ['SAVE', 'CANCEL', 'CONFIRM', 'OPEN', 'CLOSE', 'ADD', 'REMOVE', 'CHANGE', 'CHOOSE', 'ENTER', 'TICK', 'MOVE', 'RELOAD', 'PREVIEW', 'PRINT', 'INSTALL', 'RENAME', 'CONNECT', 'POST', 'DOWNLOAD'];
-  /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
-     (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
-     with an aria-label and a tooltip. Everything else shows icon and label. */
+  /* ICONS (Athi 10 Nov): one icon per component; a mount's look is 'icon' or 'icon+label'. Icon alone only for close, search, add, menu, back, edit, help and never for a commit; it sits in a 44 px target with an aria-label and a tooltip. */
   /* the three glyphs that failed (tofu on minimal Android fonts; emoji ignore the theme colour) are drawn as inline SVG: currentColor, sized in em, decorative */
   var SVG_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">';
   var ICON_SVG_SEARCH = SVG_OPEN + '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
@@ -104,10 +92,7 @@ var CBUi = (function () {
     /* the main app's dark top bar (app.html .topbar): its own look is drawn there, the size is the one tap rule */
     topbar: { primary: 'cbtb', quiet: 'cbtb' }
   };
-  /**
-   * The components. label is the English tx() key; shown is the visible text (icon or glyph where the width is tight);
-   * verb is the fcode verb (closed list in docs toolset/ui-identity/ui-stamp.cjs VERBS); effect null = the mount must declare it.
-   */
+  /** The components. label is the English tx() key; shown is the visible text (icon or glyph where the width is tight); verb is the fcode verb (closed list in docs toolset/ui-identity/ui-stamp.cjs VERBS); effect null = the mount must declare it. */
   var ACTION_SET = {
     save: { code: 'CMP001', element: 'CMP001-B01', label: 'Save', shown: 'Save', verb: 'SAVE', effect: null, effectFixed: false, tone: 'primary' },
     dialog: { code: 'CMP002', element: 'CMP002-D01', label: 'Dialog', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
@@ -402,10 +387,7 @@ var CBUi = (function () {
     var reason = disabledReason(options);
     return reason === null ? '' : '<span id="' + whyId(options) + '" class="cbui-sr">' + escapeText(reason) + '</span>';
   }
-  /**
-   * The tap rule for a control a screen still draws itself (a nonButton component: the books' commands): the attributes that put it under the one size rule
-   * (compact: 32 px on a desktop, 44 on a phone) and make sure that rule's stylesheet is in. It changes no look and no press; the screen keeps its own handler.
-   */
+  /** The tap rule for a control a screen still draws itself (a nonButton component: the books' commands): the attributes that put it under the one size rule (compact: 32 px on a desktop, 44 on a phone) and make sure that rule's stylesheet is in. It changes no look and no press; the screen keeps its own handler. */
   function tapAttributes(name) {
     var component = ACTION_SET[name];
     if (!component || !component.nonButton) refuse('tap: "' + name + '" is not a component a screen draws itself');
@@ -699,12 +681,7 @@ var CBUi = (function () {
   function dialogBody(options) {
     return '<div class="mbody"' + ownAttrs(options.bodyId, options.testid, options.bodyStyle) + '>' + (options.body || '') + '</div>';
   }
-  /**
-   * ui.dialog({ mount, title | titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bodyId, bodyStyle, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
-   * modal(); the corner X is modal()'s own .mx. Actions are standard components only, Cancel/Close first, the primary last.
-   * pop is the popup's register code (POP###): it is written on the header (data-pop) and shown as the quote-me chip. footerHtml is for a footer the
-   * caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialog invents none. Not wired yet: onClose.
-   */
+  /** ui.dialog({ mount, title | titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bodyId, bodyStyle, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's modal(); the corner X is modal()'s own .mx. Actions are standard components only, Cancel/Close first, the primary last. pop is the popup's register code (POP###), written on the header (data-pop). footerHtml is for a footer the caller keeps drawing itself (a step wizard); its buttons carry their own codes. Not wired yet: onClose. */
   function dialog(options) {
     options = options || {};
     var list = checkDialog(options);
@@ -713,9 +690,7 @@ var CBUi = (function () {
     focusFirstField();
   }
   /* ── CMP020 PROGRESS (Athi 10 Nov): one component, three levels (Nielsen response-time limits, Apple HIG, Material).
-     1  under about 1 s  nothing shows: the indicator waits PROGRESS_DELAY_MS, so a quick reply never flashes
-     2  1 to 10 s        inline: the pressed button goes busy (spinner CMP022 + words), disabled, no second press; a list uses CBList's own skeleton rows
-     3  over 10 s        a panel through ui.dialog: a bar (CMP021) or "Step n of m", one plain line, Cancel only when the caller gives a safe cancel
+     under ~1 s nothing shows (PROGRESS_DELAY_MS) · 1 to 10 s inline: the pressed button goes busy (CMP022 + words), no second press · over 10 s a ui.dialog panel: a bar (CMP021) or "Step n of m", Cancel only when the caller gives a safe cancel.
      The words sit in a role=status aria-live=polite region (WCAG 4.1.3); the panel takes focus and gives it back. Colours are theme tokens only. */
   var PROGRESS_DELAY_MS = 400;
   var PROGRESS_CSS =
@@ -874,10 +849,7 @@ var CBUi = (function () {
   function delayOf(delay) {
     return delay == null ? PROGRESS_DELAY_MS : delay;
   }
-  /**
-   * LEVEL 3: ui.progress.start({ mount, label, steps | total, line, cancel, delay }) -> { step(line), set(n, line), done(), fail(message) }.
-   * Nothing shows for the first delay (400 ms); then a panel with the bar or "Step n of m". Cancel appears only when the caller passes a safe cancel().
-   */
+  /** LEVEL 3: ui.progress.start({ mount, label, steps | total, line, cancel, delay }) -> { step(line), set(n, line), done(), fail(message) }. Nothing shows for the first delay (400 ms); then a panel with the bar or "Step n of m". Cancel appears only when the caller passes a safe cancel(). */
   function startProgress(options) {
     options = options || {};
     if (!MOUNT_CODE.test(options.mount || '')) refuse('progress: mount must be a screen mount code like ACC002-U01');
@@ -1053,9 +1025,8 @@ var CBUi = (function () {
   }
   /**
    * ui.progress.batch({ mount, total, label, unit, cancel, delay }) -> { done(n), failed(n | [names], reason), finish(), cancel() }.
-   * done(n) adds n finished items; failed adds n failed ones (a list of names gives the summary its list). finish() ends it: a short summary stays on the panel
-   * (with Done) when anything failed or the panel was open; a quiet batch that ended inside the delay shows nothing. cancel() works only when the caller gave a safe cancel().
-   * Callers wrap the work in try { ... } finally { batch.finish(); } so the leave-the-page guard never sticks after an error.
+   * done(n) adds n finished items; failed adds n failed ones (a list of names gives the summary its list). finish() ends it: a short summary stays (with Done) when anything failed or the panel was open;
+   * a quiet batch that ended inside the delay shows nothing. cancel() works only with a safe cancel(). Wrap the work in try { ... } finally { batch.finish(); } so the leave-the-page guard never sticks.
    */
   function batchProgress(options) {
     options = options || {};

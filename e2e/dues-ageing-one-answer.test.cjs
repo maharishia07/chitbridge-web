@@ -26,7 +26,7 @@ const cx = vm.createContext({
 let ALLOCS = [];
 cx.BK = { dues: {}, stmt: {}, owed: {}, mk: null };
 const BK = cx.BK;
-vm.runInContext(varText('BK_FOLLOW') + '\n' + src.match(/^var BK_STANDING = .*;$/m)[0] + '\n' + varText('BK_PB_TABS') + '\n' + src.match(/^var BK_NEED = \{[\s\S]*?\n\};$/m)[0] + '\n' + src.match(/^var BK_NEED_ORDER = .*;$/m)[0] + '\nvar BK_PB_LIMIT = 25;\n' + liftFns(FILE, ['bkFollowWord', 'bkDuesAge', 'bkDuesNext', 'bkBillStanding', 'bkBillFlags', 'bkOwedFlags', 'bkPartyBillsHTML', 'bkPbOf', 'bkPbRead', 'bkSetTermsLink', 'bkBillStatus', 'bkNeedAction', 'bkTodoCounts', 'payHeldBills']) +
+vm.runInContext(varText('BK_FOLLOW') + '\n' + src.match(/^var BK_STANDING = .*;$/m)[0] + '\n' + varText('BK_PB_TABS') + '\n' + src.match(/^var BK_NEED = \{[\s\S]*?\n\};$/m)[0] + '\n' + src.match(/^var BK_NEED_ORDER = .*;$/m)[0] + '\nvar BK_PB_LIMIT = 25;\n' + liftFns(FILE, ['bkFollowWord', 'bkDuesAge', 'bkDuesNext', 'bkBillStanding', 'bkBillFlags', 'bkOwedFlags', 'bkPartyBillsHTML', 'bkPbStripHTML', 'bkPbTableHTML', 'bkPbPagerHTML', 'bkPbOf', 'bkPbRead', 'bkPbRequest', 'bkPbIngestMarks', 'bkSetTermsLink', 'bkBillStatus', 'bkNeedAction', 'bkTodoCounts', 'payHeldBills']) +
   '\nthis.f = { bkFollowWord, bkDuesAge, bkDuesNext, bkBillStanding, bkBillFlags, bkOwedFlags, bkPartyBillsHTML, bkTodoCounts, payHeldBills, BK_FOLLOW, bkBillStatus };', cx);
 const f = cx.f;
 let bad = 0;

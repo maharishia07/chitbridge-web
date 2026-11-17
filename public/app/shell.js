@@ -49,6 +49,11 @@
   if (root.CBShell) return;
   var doc = root.document;
 
+  /* a page that did not load shell-facts.js (promo.html is a till copy, bar mode): no cards to read, nothing to lead */
+  var NO_FACTS = {
+    create: function (ctx) { return { isFirm: function () { return false; }, read: function () {}, once: ctx.get }; },
+    painters: function () { var none = function () { return ''; }; return { cardState: none, factsHTML: none, trendHTML: none, lineHTML: none }; }
+  };
   var W = {
     areas: { home: 'Home', selling: 'Selling', money: 'Money', running: 'Running', trade: 'Trade', labs: 'Labs', setup: 'Setup', more: 'More' },
     caption: { selling: 'Selling', money: 'Money', running: 'Running it', trade: 'Trade', labs: 'Labs', setup: 'What it all stands on' },
@@ -134,6 +139,9 @@
   function T(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
+  /* the Home cards' read (queue · retry · one ask per URL · lead by the data · firm lazy read) and painters: shell-facts.js */
+  var factsLib = root.CBShellFacts || NO_FACTS,
+    cards = factsLib.painters(W, T); /* a Home card's state · facts line · trend teaser (shell-facts.js) */
   /* ⭐ the frame's words are said AGAIN when a language pack lands: every pack calls renderApp() on its way out (strings-*.js), and a page
      defines its own renderApp AFTER the frame is drawn — so the global is held behind a setter: the page's function runs, then the frame's
      resay (⌂ Home · the title · the switcher · the areas). One place; no page copies it (walk-locale: "Home" was plain English on every page). */
@@ -403,10 +411,10 @@
   var FONTS_HREF = '/fonts/cb-fonts.css';
   function addFonts(options) {
     if (!doc || !doc.head || (options && options.fonts === false)) return;
-    var has = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
+    var hasFontLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
       return /[/]fonts[/]cb-fonts[.]css/.test(nestedLink.getAttribute('href') || '');
     });
-    if (has) return;
+    if (hasFontLink) return;
     var link = doc.createElement('link');
     link.id = 'cbsh-fonts';
     link.rel = 'stylesheet';
@@ -682,51 +690,6 @@
     });
   }
 
-  /* ── a Home card's STATE (walk 17 Oct, Athi: "represent the status, active / not active") ── the server's facts `state` when it says;
-     until every card does, a line marked tone 'dn' is needs_you and any other line in_use; no lines, no state */
-  function cardState(answer, lines) {
-    if (answer && W.state[answer.state]) return answer.state;
-    if (!lines.length) return '';
-    return lines.some(function (line) {
-      return line && line.tone === 'dn';
-    })
-      ? 'needs_you'
-      : 'in_use';
-  }
-  function stateHTML(state) {
-    return (
-      '<span class="st ' +
-      state +
-      '" data-testid="shell-state" data-state="' +
-      state +
-      '">' +
-      (state === 'not_started' ? '○ ' : '● ') +
-      esc(T(W.state[state])) +
-      '</span>'
-    );
-  }
-  /* a card's facts on its tile: NOT STARTED says so and invites (never "No X yet" — the tile is already the link); otherwise ONE line, and
-     two or more → a +n badge with every line in the drop-down (.more) */
-  function factsHTML(card, lines, state, nestedLineHTML) {
-    var badge = state ? stateHTML(state) : '';
-    if (state === 'not_started') return badge + '<span class="f">' + esc(T(W.setUp)) + ' ›</span>';
-    if (lines.length < 2) return badge + lines.map(nestedLineHTML).join('');
-    return (
-      badge +
-      nestedLineHTML(lines[0]) +
-      '<span class="more-n" title="' +
-      esc(W.moreTitle(lines.length)) +
-      '">+' +
-      (lines.length - 1) +
-      ' ' +
-      esc(T(W.moreWord)) +
-      '</span><span class="more" data-testid="shell-more-' +
-      esc(card.id) +
-      '">' +
-      lines.map(nestedLineHTML).join('') +
-      '</span>'
-    );
-  }
   /* Home's "Needs you" strip: only the cards whose state is needs_you, each a door; hidden when none (every tile stays below it). Returns the state. */
   var needsByCard = {};
   function noteNeeds(card, state, routeOf) {
@@ -748,75 +711,6 @@
         })
         .join('');
     return state;
-  }
-  /**
-   * RPT2: the Till card's teaser — the server's figures.trend (8 weeks' sales, the engine's change vs last year) as a sparkline + words, a door
-   * into Reports › Trend. Nothing from the server → nothing drawn (omit, never 0); CBDraw absent (a page without it) → nothing.
-   */
-  function trendHTML(trend) {
-    if (!trend || !root.CBDraw) return '';
-    var change = trend.vs_last_year_pct,
-      locale = root.CBLocale;
-    var amount = change == null ? '' : locale && locale.number ? locale.number(Math.abs(change), { maximumFractionDigits: 1 }) : String(Math.abs(change));
-    var words = change == null ? '' : (change > 0 ? '↑ +' : change < 0 ? '↓ −' : '= ') + amount + '% ' + T(W.vsLastYear);
-    var spark = root.CBDraw.spark(trend.spark, {
-      width: 64,
-      height: 16,
-      stroke: 'var(--sh-green-d,#2d6a4f)',
-      aria: T(W.salesWeeks) + (words ? ', ' + words : ''),
-      tid: 'shell-fact-spark'
-    });
-    if (!spark) return '';
-    return (
-      '<span class="f trendf"><span class="act trend" role="link" tabindex="0" data-href="/finance.html#/reports/trend/week" data-testid="shell-fact-trend">' +
-      spark +
-      esc(words) +
-      '</span></span>'
-    );
-  }
-  /* a fact line's words: the server names an amount or a moment ({money} {time} {date} {when}) and sends it as data (money:{amount,currency}, at: ISO);
-     the reader's locale words it — "₹420", "09:33", "today 09:40" — never "INR 420.00" or an ISO date */
-  function lineWords(t) {
-    var L = root.CBLocale,
-      at = t.at,
-      m = t.money,
-      text = String(t.text == null ? '' : t.text);
-    var time = function () {
-      try {
-        return (L && L.time && L.time(at)) || '';
-      } catch (_) {
-        return '';
-      }
-    };
-    var date = function () {
-      try {
-        return (L && L.date && L.date(at)) || String(at || '').slice(0, 10);
-      } catch (_) {
-        return String(at || '').slice(0, 10);
-      }
-    };
-    var sameDay = function () {
-      var day = new Date(at),
-        n = new Date();
-      return !isNaN(day) && day.getFullYear() === n.getFullYear() && day.getMonth() === n.getMonth() && day.getDate() === n.getDate();
-    };
-    return text
-      .replace(/{(money|time|date|when)}/g, function (_, k) {
-        if (k === 'money') return m ? (L && L.money && L.money(m.amount, m.currency)) || m.currency + ' ' + m.amount : '';
-        if (k === 'time') return time();
-        if (k === 'date') return date();
-        return (sameDay() ? W.today : date()) + ' ' + time();
-      })
-      .trim();
-  }
-  /* each built entry's facts: GET its URL → { lines:[ 'text' | { text, tone:'dn', money?, at?, act?:{ label, href } } ] }, at most two lines; act = the button that clears the line */
-  function lineHTML(l) {
-    var t = typeof l === 'string' ? { text: l } : l || {};
-    var act =
-      t.act && t.act.label && t.act.href
-        ? ' <span class="act" role="link" tabindex="0" data-href="' + esc(t.act.href) + '" data-testid="shell-fact-act">' + esc(t.act.label) + ' ›</span>'
-        : '';
-    return '<span class="f' + (t.tone === 'dn' ? ' dn' : '') + '">' + esc(lineWords(t)) + act + '</span>';
   }
   /* each tab's badge = how many of its tiles Need you; More shows a dot when any tile behind it does (tabOf maps a tile's section to the phone's tab) */
   function paintBadges(shellEl) {
@@ -967,6 +861,7 @@
     var $ = function (s) {
       return el.querySelector(s);
     };
+    var facts = factsLib.create({ el: el, person: person, S: S, $: $, get: get, shown: shown, routeOf: routeOf, W: W, noteNeeds: noteNeeds, cardState: cards.cardState, paintBadges: paintBadges, factsHTML: cards.factsHTML, lineHTML: cards.lineHTML, trendHTML: cards.trendHTML });
     var node = $('.cbsh-hdr'),
       sheet = $('.cbsh-sheet'),
       who = $('.cbsh-who'),
@@ -1133,7 +1028,7 @@
     }
     /* the areas this showing has: Home always; another area only if the edition draws something in it (the full app: all five); a firm: only an area that still holds a card it keeps (l16 n12: no Selling/Money/Running/Trade/Labs rail) */
     function areasShown() {
-      return !S.manifest || !(edition() || isFirm())
+      return !S.manifest || !(edition() || facts.isFirm())
         ? AREAS
         : AREAS.filter(function (item) {
             return item === 'home' || entriesOf(item).length;
@@ -1310,131 +1205,16 @@
     root.addEventListener('cb-practice', function () {
       if (mode !== 'home' || !S.manifest) return;
       paintAreas();
-      readFacts();
+      facts.read();
     });
     /* the header lands after the tiles: a shop tile that was greyed for want of an id opens now */
     function reopenShopTile() {
       if (mode !== 'home' || !S.manifest || !shopIdOf()) return;
       greyedEntries(el, S.manifest).forEach(function (entry) {
         el.querySelector('.cbsh-box.off[data-id="' + entry.id + '"]').outerHTML = card(entry);
-        readFacts(entry.id);
+        facts.read(entry.id);
       });
     }
-    /* R-HOME (l16 polish g): the areas lead by the DATA, not the trade: an area whose cards are in use or need you comes before an area that is all "not started" (a books shop opens on
-       Money, not on Marketing). Stable: areas the data does not tell apart keep the manifest's order; Labs and Setup stay last. */
-    var LEAD_LAST = { labs: 1, setup: 1 };
-    function leadByData() {
-      var holder = $('.cbsh-more');
-      if (!holder) return;
-      if (isFirm()) return; /* l16 firmhome: a firm's Home is led by its practice and reads cards as they come into view, so the areas are not reshuffled under the reader */
-      if (factsRunning || factsQueue.length) return; /* l16: the order is set ONCE, when every card has answered or failed: a card that is still waiting (or was shed) must not reshuffle the sections per load */
-      var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
-      /* rank: an area with a card that needs you (2) outranks one that is only in use (1), which outranks one not started (0); Money, once it holds any money fact (in use or
-         needing you), leads outright (R48 + the 30-second rule: bank, owed to you, you owe, GST due are in view on a laptop). Same data, same order on every load (R51). */
-      var score = function (sec) {
-        var area = sec.getAttribute('data-area');
-        if (LEAD_LAST[area]) return -1;
-        var rank = sec.querySelector('[data-state="needs_you"]') ? 2 : sec.querySelector('[data-state="in_use"]') ? 1 : 0;
-        return area === 'money' && rank ? 30 : rank * 10; /* the 30-second rule: the books hold money facts (a money card in use or needing you) -> Money leads, above every other area, by the data and not by trade */
-      };
-      var ordered = secs
-        .map(function (sec, n) { return { sec: sec, n: n, s: score(sec) }; })
-        .sort(function (a, b) { return b.s - a.s || a.n - b.n; });
-      if (ordered.some(function (x, n) { return x.sec !== secs[n]; })) ordered.forEach(function (x) { holder.appendChild(x.sec); });
-    }
-    /* l16 home-fix: the api sheds over its in-flight cap (503 SERVER_BUSY; pool 10 x 1.6 = 16) and Home asked for ~20 cards at once, so the cards read "—" on every load.
-       The cards are read FACTS_PARALLEL at a time, and a SERVER_BUSY is asked again after the server's own Retry-After (at most FACTS_RETRIES times). One place: every card's read goes through it. */
-    var FACTS_PARALLEL = 4,
-      FACTS_RETRIES = 3,
-      factsQueue = [],
-      factsRunning = 0;
-    function factsGet(url, left) {
-      return get(url).catch(function (err) {
-        if (!err || err.status !== 503 || !(left > 0)) throw err;
-        return new Promise(function (go) {
-          root.setTimeout(go, (err.retryAfter || 2) * 1000);
-        }).then(function () {
-          return factsGet(url, left - 1);
-        });
-      });
-    }
-    function factsNext() {
-      while (factsRunning < FACTS_PARALLEL && factsQueue.length) {
-        var job = factsQueue.shift();
-        factsRunning += 1;
-        factsGet(job.url, FACTS_RETRIES).then(job.ok, job.no).then(function () {
-          factsRunning -= 1;
-          factsNext();
-          if (!factsRunning && !factsQueue.length) leadByData();
-        });
-      }
-    }
-    function factsRead(url) {
-      return new Promise(function (ok, no) {
-        factsQueue.push({ url: url, ok: ok, no: no });
-        factsNext();
-      });
-    }
-    /* l16 firmhome: ONE ask per card URL per page load (several cards share a URL, and Home draws its areas again once the practice has answered, which used to ask every card a second time;
-       the reply is kept and the card is painted from it). A failed ask is forgotten so the next paint asks again. */
-    var factsCache = {};
-    function factsOnce(url) {
-      if (!factsCache[url])
-        factsCache[url] = factsRead(url).catch(function (err) {
-          delete factsCache[url];
-          throw err;
-        });
-      return factsCache[url];
-    }
-    /* the practice read comes first (books-practice.js settled): a firm's Home hides the shop cards and asks only for the cards it draws */
-    function practiceFirst() {
-      return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled() : root.Promise.resolve();
-    }
-    function isFirm() {
-      return !!(root.CBPractice && root.CBPractice.isFirm && root.CBPractice.isFirm());
-    }
-    /* a firm's Home asks a card's facts when the card comes into view (the practice fills the first screen; the cards are below it, or on another phone tab): a card nobody has scrolled to is not asked for */
-    function whenSeen(spot, fn) {
-      var io = new root.IntersectionObserver(
-        function (list) {
-          if (!list.some(function (i) { return i.isIntersecting; })) return;
-          io.disconnect();
-          fn();
-        },
-        { rootMargin: '100px' }
-      );
-      io.observe(spot);
-    }
-    function paintFacts(e, spot) {
-      factsOnce(e.facts)
-        .then(function (reply) {
-          var lines = (reply && reply.lines) || [],
-            state = noteNeeds(e, cardState(reply, lines), routeOf);
-          paintBadges(el);
-          spot.innerHTML = factsHTML(e, lines, state, lineHTML) + trendHTML(reply && reply.figures && reply.figures.trend);
-          leadByData();
-        })
-        .catch(function () {
-          spot.innerHTML = '<span class="f" title="' + esc(W.factsFailed) + '">—</span>';
-        });
-    }
-    function readFacts(onlyId) {
-      if (!person || !S.manifest) return;
-      (onlyId ? root.Promise.resolve() : practiceFirst()).then(function () {
-        var lazy = !onlyId && isFirm() && !!root.IntersectionObserver;
-        shown().forEach(function (e) {
-          if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
-          var spot = $('[data-testid="shell-facts-' + e.id + '"]');
-          if (!spot) return;
-          if (lazy)
-            whenSeen(spot, function () {
-              paintFacts(e, spot);
-            });
-          else paintFacts(e, spot);
-        });
-      });
-    }
-
     function mark(id) {
       S.area = id;
       [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (element) {
@@ -1716,7 +1496,7 @@
         if (mode === 'home') {
           paintAreas();
           if (first !== 'home') go(first);
-          readFacts();
+          facts.read();
         }
         if (mode === 'app') paintSwitcher();
       });
@@ -1770,7 +1550,7 @@
         return root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest;
       } /* N18: the Home page reads the manifest's top-level `rail` from the one copy the shell fetched — never a second fetch; AX1: the edition's entries only */,
       edition: edition,
-      facts: function (url) { return factsOnce(url); } /* l16 firmhome: the Home page's Your work read shares the card's one ask (and its retry on SERVER_BUSY) */,
+      facts: function (url) { return facts.once(url); } /* l16 firmhome: the Home page's Your work read shares the card's one ask (and its retry on SERVER_BUSY) */,
       sides: sidesApi,
       ready: Promise.all([manP, hdrP, kuralP, sidesApi ? sidesApi.ready : null]).then(function () {
         return api;
@@ -1828,21 +1608,28 @@
        detail  the server's sentence for a 403 (never invented here); anything else is not printed
        retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; back  { href, label }: the way out
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
-  function readFailed(host, o) {
+  /** the sentence a failed read says: a 403 uses the server's own words (detail), anything else says it could not be read and nothing was changed */
+  function readFailedSentence(options, refused) {
+    if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
+    return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
+  }
+  /** the way out of a failed read: a link, only when the page gave one */
+  function readFailedBack(options) {
+    return options.back && options.back.href ? '<a class="cbsh-rf-back" href="' + esc(options.back.href) + '" data-testid="read-failed-back" style="margin-inline-start:12px">' + esc(options.back.label || T('Back')) + '</a>' : '';
+  }
+  function readFailed(host, options) {
     if (!host) return null;
-    o = o || {};
-    var status = Number(o.status) || 0,
+    options = options || {};
+    var status = Number(options.status) || 0,
       refused = status === 403,
-      sentence = refused
-        ? String(o.detail || '').trim() || T('You do not have access to this. Nothing was opened.')
-        : T('{what} could not be read. Nothing was changed.').replace('{what}', o.what || T('This page')),
-      back = o.back && o.back.href ? '<a class="cbsh-rf-back" href="' + esc(o.back.href) + '" data-testid="read-failed-back" style="margin-inline-start:12px">' + esc(o.back.label || T('Back')) + '</a>' : '';
+      sentence = readFailedSentence(options, refused),
+      back = readFailedBack(options);
     host.innerHTML =
       '<div class="cbsh-readfail" data-testid="read-failed" data-status="' + (refused ? '403' : status >= 500 ? '5xx' : status === 429 ? '429' : 'none') + '" role="alert" style="padding:12px 0">' +
       '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' +
-      (typeof o.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
+      (typeof options.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
     var again = host.querySelector('[data-testid="read-failed-retry"]');
-    if (again) again.onclick = o.retry;
+    if (again) again.onclick = options.retry;
     return host.firstChild;
   }
   root.CBShell = {

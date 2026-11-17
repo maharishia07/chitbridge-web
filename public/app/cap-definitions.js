@@ -166,7 +166,6 @@ var CBDEF_AUTHORABLE = {
       'rule the destination or the product imposes.'
   }
 };
-
 /**
  * ⭐ WORKED EXAMPLES — Athi: *"a link to its webpage, for example hs code, how it is used etc, some kind of
  * usage so the users can connect the context"*.
@@ -226,7 +225,6 @@ var CBDEF_EG = {
     eg: 'GRADE-A / GRADE-B'
   }
 };
-
 /* ── the registries, read live ───────────────────────────────────────────────────────────────────────────────── */
 function cbDefRegistries() {
   var out = [];
@@ -478,7 +476,6 @@ function cbDefRegistries() {
 
   return out;
 }
-
 /* The one-line reason each order model exists. ⚠️ Kept as PROSE about a rule that lives in cart-ui — not a second
    copy of the rule. If these ever disagree, cart-ui is right and this text is stale. */
 function cbDefModelNote(k) {
@@ -609,7 +606,6 @@ function cbDefOfferLabel(k) {
     }[k] || k
   );
 }
-
 /* ── my definitions: load, author, edit, retire ──────────────────────────────────────────────────────────────── */
 
 /**

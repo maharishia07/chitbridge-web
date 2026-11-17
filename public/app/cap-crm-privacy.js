@@ -1,5 +1,5 @@
 /* cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy).
- * OWNS      the Consent block on a party record (crmConsentHTML, crmConsentMount, crmConsentSet) · the privacy register (crmPrivacy, a CBList) · Log a request (crmPrivReqOpen) · Answer (crmPrivAnswerOpen)
+ * OWNS      the Consent block on a party record (crmConsentHTML, crmConsentMount, crmConsentSet) · the privacy register (crmPrivacy, a CBList), Log a request (crmPrivReqOpen) and Answer (crmPrivAnswerOpen) live in cap-crm-privacy-register.js
  * CALLED BY crm.html (<script src>, after cap-crm-record.js) · cap-crm.js (crmRoute → crmPrivacy on #/privacy) · cap-crm-record.js (crmConsentHTML, crmConsentMount, and crmRecordClick → crmPrivacyClick)
  * FLOW      a record opens → crmConsentHTML draws the block → crmConsentMount, on open, crmConsentOpen reads crmPrefs → Yes/No → crmConsentSet (crmPrefSet) → CBAction · #/privacy → crmPrivLoad → the register → Log / Answer sheets
  * CARD      11-crm-and-marketing/crm-privacy
@@ -198,6 +198,16 @@ async function crmConsentHolders() {
   }
 }
 /** on open: the history (what · when · how given · withdrawn) and the law's words — one GET, a CBList mount; could-not-read in words */
+/** the history could not be read: say why in words (503: the consent records start after an update) and offer Try again */
+function crmConsentHistFailed(hist, e) {
+  hist.removeAttribute('data-loaded');
+  hist.innerHTML =
+    '<div class="hint" data-testid="crm-consent-hist-err">' +
+    esc(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : tx("Couldn't read the consent history.")) +
+    ' <button data-cbsid="CMP009" type="button" class="crm-mini" data-crm="consentretry">' +
+    esc(tx('Try again')) +
+    '</button></div>';
+}
 async function crmConsentOpen(p) {
   var hist = document.getElementById('crm_consent_hist'),
     node = document.getElementById('crm_consent_law');
@@ -207,13 +217,7 @@ async function crmConsentOpen(p) {
   try {
     r = await api('crmPrefs', { params: { id: p.party_id } });
   } catch (e) {
-    hist.removeAttribute('data-loaded');
-    hist.innerHTML =
-      '<div class="hint" data-testid="crm-consent-hist-err">' +
-      esc(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : tx("Couldn't read the consent history.")) +
-      ' <button data-cbsid="CMP009" type="button" class="crm-mini" data-crm="consentretry">' +
-      esc(tx('Try again')) +
-      '</button></div>';
+    crmConsentHistFailed(hist, e);
     return;
   }
   hist = document.getElementById('crm_consent_hist');
@@ -300,14 +304,14 @@ function crmConsentStanding(r) {
   });
 }
 /** a Yes to offers needs its reason: the field opens in the block, beside the rows (the api asks for source staff + a note of 3+ characters) */
-function crmConsentAsk(ch) {
+function crmConsentAsk(channel) {
   var box = document.getElementById('crm_consent_ask');
   if (!box) return;
   box.innerHTML =
     '<label>' +
     esc(tx('Why is it a yes? What did they say, and when?')) +
     '<input data-cbsid="CRM010-I03" class="inp" id="crm_consent_note" data-testid="crm-consent-note" maxlength="300" data-ch="' +
-    esc(ch) +
+    esc(channel) +
     '" autocomplete="off"></label>' +
     '<div id="crm_consent_note_err" class="why" role="alert" data-testid="crm-consent-note-err"></div>' +
     '<div class="supacts">' +
@@ -324,7 +328,7 @@ function crmConsentAskClose() {
   if (box) box.innerHTML = '';
 }
 /** the Save of the reason field: 3+ characters here first (inline), then the one POST */
-function crmConsentAskSave(p) {
+function crmConsentAskSave(party) {
   var field = document.getElementById('crm_consent_note'),
     err = document.getElementById('crm_consent_note_err');
   if (!field) return;
@@ -334,7 +338,7 @@ function crmConsentAskSave(p) {
     return;
   }
   err.textContent = '';
-  crmConsentSet(p, field.getAttribute('data-ch'), 'marketing', true, note);
+  crmConsentSet(party, field.getAttribute('data-ch'), 'marketing', true, note);
 }
 /** a Yes / No / Stop / Allow → ONE POST (the same route the shopper's own page writes through); the record re-reads. A staff Yes to offers carries source staff + its note */
 async function crmConsentSet(p, ch, pu, allowed, note) {
@@ -367,58 +371,61 @@ async function crmConsentSet(p, ch, pu, allowed, note) {
   }
 }
 /** the click door the record hands here (crmRecordClick → crmPrivacyClick): true when handled */
-function crmPrivacyClick(a, node) {
-  var p = CRMR.p;
-  if (a === 'consent' && p && node.getAttribute('data-pu') === 'marketing' && node.getAttribute('data-v') === '1') {
-    crmConsentAsk(node.getAttribute('data-ch'));
+var CRM_PRIV_CLICKS = {
+  consent: function (node, party) {
+    if (!party) return false;
+    if (node.getAttribute('data-pu') === 'marketing' && node.getAttribute('data-v') === '1') crmConsentAsk(node.getAttribute('data-ch'));
+    else crmConsentSet(party, node.getAttribute('data-ch'), node.getAttribute('data-pu'), node.getAttribute('data-v') === '1');
     return true;
-  }
-  if (a === 'consentsave' && p) {
-    crmConsentAskSave(p);
+  },
+  consentsave: function (node, party) {
+    if (!party) return false;
+    crmConsentAskSave(party);
     return true;
-  }
-  if (a === 'consentcancel') {
+  },
+  consentcancel: function () {
     crmConsentAskClose();
     return true;
-  }
-  if (a === 'consent' && p) {
-    crmConsentSet(p, node.getAttribute('data-ch'), node.getAttribute('data-pu'), node.getAttribute('data-v') === '1');
+  },
+  consentretry: function (node, party) {
+    if (!party) return false;
+    crmConsentOpen(party);
     return true;
-  }
-  if (a === 'consentretry' && p) {
-    crmConsentOpen(p);
+  },
+  privreq: function (node, party) {
+    if (!party) return false;
+    crmGo('#/privacy?party=' + encodeURIComponent(party.party_id) + '&who=' + encodeURIComponent(party.display_name || '') + '&add=1');
     return true;
-  }
-  if (a === 'privreq' && p) {
-    crmGo('#/privacy?party=' + encodeURIComponent(p.party_id) + '&who=' + encodeURIComponent(p.display_name || '') + '&add=1');
-    return true;
-  }
-  if (a === 'prvadd') {
+  },
+  prvadd: function () {
     crmPrivReqOpen(PRV.params);
     return true;
-  }
-  if (a === 'prvsave') {
+  },
+  prvsave: function () {
     crmPrivReqSave();
     return true;
-  }
-  if (a === 'prvanswer') {
+  },
+  prvanswer: function (node) {
     crmPrivAnswerOpen(node.getAttribute('data-id'));
     return true;
-  }
-  if (a === 'prvanswersave') {
+  },
+  prvanswersave: function (node) {
     crmPrivAnswerSave(node.getAttribute('data-id'));
     return true;
-  }
-  if (a === 'prvpage') {
+  },
+  prvpage: function (node) {
     PRV.page = Math.max(1, Number(node.getAttribute('data-v')) || 1);
     crmPrivLoad();
     return true;
-  }
-  if (a === 'prvretry') {
+  },
+  prvretry: function () {
     crmPrivLoad();
     return true;
   }
-  return false;
+};
+function crmPrivacyClick(a, node) {
+  var handler = Object.prototype.hasOwnProperty.call(CRM_PRIV_CLICKS, a) ? CRM_PRIV_CLICKS[a] : null;
+  return handler ? handler(node, CRMR.p) : false;
 }
 /** wired by crmRecordPaint's mounts: the Consent <details> loads its history the first time it opens (and stays open after a Yes/No) */
 function crmConsentMount(p) {
@@ -433,376 +440,4 @@ function crmConsentMount(p) {
     CRMR.keep.consentOpen = false;
     node.open = true;
   }
-}
-
-/* ═══ 2 · THE REGISTER — #/privacy: every request to see, correct, erase, withdraw, nominate or complain, on the law's clock ═══ */
-function crmPrivacy(frame, params) {
-  PRV.params = params || {};
-  crmBar(
-    '<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>',
-    crmEdit()
-      ? '<button data-cbsid="CRM010-B03" type="button" class="act sm" data-crm="prvadd" data-testid="crm-prv-add">+ ' + esc(tx('Log a request')) + '</button>'
-      : crmViewOnlyBtn('crm-prv-add', '+ ' + tx('Log a request'), crmViewWhy()),
-    true
-  );
-  var node = document.getElementById('screen');
-  node.className = 'screen flush';
-  node.innerHTML = '<div id="crm_prv" data-testid="crm-prv-list"></div>';
-  if (PRV.api && PRV.api.destroy) {
-    try {
-      PRV.api.destroy();
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-  }
-  var el = document.getElementById('crm_prv');
-  var due = function (r) {
-    if (r.answered_at)
-      return (
-        '<span class="tag' +
-        (r.answered_late ? ' amber' : ' green') +
-        '">' +
-        esc(tx(CRM_REQ_OUT[r.outcome] || 'Answered')) +
-        (r.answered_late ? ' · ' + esc(tx('late')) : '') +
-        '</span>'
-      );
-    return (
-      '<span class="tag' +
-      (r.late ? ' amber' : '') +
-      '" data-testid="crm-prv-due-' +
-      r.request_id +
-      '">' +
-      (r.late ? esc(tx('Late')) + ' · ' : '') +
-      esc(bkDate(r.due_at)) +
-      '</span>'
-    ); /* amber: AA in both themes (rule 13); the word says late */
-  };
-  PRV.api = CBList.mount(el, {
-    key: 'crm-privacy',
-    t: tx,
-    rows: function () {
-      return PRV.state === 'ready' ? PRV.rows : [];
-    },
-    id: function (r) {
-      return r.request_id;
-    },
-    rowTid: function (r) {
-      return 'crm-prv-' + r.request_id;
-    },
-    columns: [
-      {
-        key: 'who',
-        label: 'Who',
-        prio: 1,
-        w: 220,
-        cell: function (r) {
-          return r.who;
-        }
-      },
-      {
-        key: 'kind',
-        label: 'Asked for',
-        prio: 2,
-        w: 160,
-        cell: function (r) {
-          return tx(CRM_REQ_KIND[r.kind] || r.kind);
-        }
-      },
-      { key: 'due', label: 'Due', prio: 3, w: 170, html: true, cell: due },
-      {
-        key: 'received',
-        label: 'Received',
-        prio: 4,
-        w: 130,
-        cell: function (r) {
-          return bkDate(r.received_at);
-        }
-      },
-      {
-        key: 'country',
-        label: 'Law of',
-        prio: 5,
-        w: 90,
-        cell: function (r) {
-          return r.country || '—';
-        }
-      },
-      {
-        key: 'answer',
-        label: 'Answer',
-        prio: 6,
-        w: 300,
-        cell: function (r) {
-          return r.answer || '—';
-        }
-      }
-    ],
-    defaultCols: ['who', 'kind', 'due'],
-    cardMax: 3,
-    fill: true,
-    head: function () {
-      var chips = [];
-      if (PRV.state === 'ready' && PRV.late) chips.push({ text: crmPlural(PRV.late, 'late', 'late'), tid: 'crm-prv-late' });
-      if (PRV.state === 'ready' && !PRV.open && PRV.total) chips.push({ text: tx('All answered'), tid: 'crm-prv-allanswered' });
-      return { title: tx('Privacy requests'), chips: chips };
-    },
-    state: function () {
-      return PRV.state === 'loading' ? 'loading' : PRV.state === 'error' ? 'error' : null;
-    },
-    error: function () {
-      return crmErrWords(PRV.err, 'privacy requests');
-    },
-    onRetry: function () {
-      crmPrivLoad();
-    },
-    empty: function () {
-      return PRV.state === 'notyet'
-        ? { title: tx('Privacy requests start after an update.'), sub: tx('Nothing is lost.') }
-        : { title: tx('No privacy requests.'), sub: tx('Log one when a person asks to see, correct or erase their data.') };
-    },
-    filters: [
-      {
-        key: 'open',
-        label: tx('State'),
-        all: tx('All'),
-        options: [{ v: '1', label: tx('Open') }],
-        match: function () {
-          return true;
-        }
-      }
-    ],
-    remote: {
-      total: function () {
-        return PRV.total;
-      },
-      onQuery: function (q) {
-        PRV.openOnly = q.filt.open === '1';
-        PRV.page = 1;
-        crmPrivLoad();
-      },
-      foot: crmPrivFoot
-    },
-    actions: [
-      {
-        id: 'answer',
-        label: tx('Answer'),
-        icon: '✓',
-        tid: 'crm-prv-answer',
-        why: function (r) {
-          return r.answered_at ? tx('Answered once') : PRV.mayAnswer ? '' : PRV.why || tx('Only the owner answers');
-        },
-        run: function (r) {
-          crmPrivAnswerOpen(r.request_id);
-        }
-      }
-    ]
-  });
-  if (!frame) {
-    crmPrivLoad();
-    if (PRV.params.add === '1' && crmEdit()) crmPrivReqOpen(PRV.params);
-  }
-}
-/** the page's own pager under the rows (the unit's `foot`): the server's total · page · limit, two buttons */
-function crmPrivFoot() {
-  if (PRV.state !== 'ready' || !PRV.total) return '';
-  var pages = Math.max(1, Math.ceil(PRV.total / PRV.limit));
-  if (pages <= 1) return '';
-  return (
-    '<span data-testid="crm-prv-page">' +
-    esc(txf('Page {p} of {n}', { p: PRV.page, n: pages })) +
-    '</span> ' +
-    '<button data-cbsid="CRM010-B04" type="button" class="crm-mini" data-crm="prvpage" data-v="' +
-    (PRV.page - 1) +
-    '"' +
-    (PRV.page <= 1 ? ' disabled' : '') +
-    ' data-testid="crm-prv-prev">‹ ' +
-    esc(tx('Previous')) +
-    '</button> ' +
-    '<button data-cbsid="CRM010-B05" type="button" class="crm-mini" data-crm="prvpage" data-v="' +
-    (PRV.page + 1) +
-    '"' +
-    (PRV.page >= pages ? ' disabled' : '') +
-    ' data-testid="crm-prv-next">' +
-    esc(tx('Next')) +
-    ' ›</button>'
-  );
-}
-async function crmPrivLoad() {
-  PRV.state = 'loading';
-  crmPrivRefresh();
-  try {
-    var q = { page: PRV.page, limit: PRV.limit };
-    if (PRV.openOnly) q.open = '1';
-    var reply = await api('crmPrivReqs', { query: q });
-    /* core.js api() collapses { requests[], … } to the array and carries total · page · limit · open · late · may_answer · why on it (SIBS) */
-    PRV.rows = Array.isArray(reply) ? reply : reply.requests || [];
-    PRV.total = Number(reply.total) || PRV.rows.length;
-    PRV.open = Number(reply.open) || 0;
-    PRV.late = Number(reply.late) || 0;
-    PRV.mayAnswer = !!reply.may_answer;
-    PRV.why = reply.why || null;
-    PRV.limit = Number(reply.limit) || PRV.limit;
-    PRV.state = 'ready';
-    PRV.err = null;
-  } catch (e) {
-    PRV.state = e && e.status === 503 ? 'notyet' : 'error';
-    PRV.err = e;
-  }
-  crmPrivRefresh();
-}
-function crmPrivRefresh() {
-  var a = PRV.api;
-  if (a && document.getElementById('crm_prv')) a.refresh();
-  if (CRM.route && CRM.route.view === 'privacy') crmNav('privacy');
-} /* the nav's late count follows the load */
-
-/* ── Log a request (who · what · when · which law) — the owner or staff; the date the law sets is the SERVER's ── */
-function crmPrivReqOpen(pre) {
-  pre = pre || {};
-  var kinds = Object.keys(CRM_REQ_KIND)
-    .map(function (item) {
-      return '<option value="' + item + '">' + esc(tx(CRM_REQ_KIND[item])) + '</option>';
-    })
-    .join('');
-  ui.dialog({
-    mount: 'CRM010-U201',
-    pop: 'POP103',
-    title: 'Log a privacy request',
-    testid: 'crm-prv-sheet',
-    body:
-      '<label>' +
-      esc(tx('Who asked?')) +
-      '<input data-cbsid="CRM010-I01" class="inp" id="crm_prv_who" data-testid="crm-prv-who" value="' +
-      esc(pre.who || '') +
-      '" placeholder="' +
-      esc(tx('Name, phone or e-mail')) +
-      '"></label>' +
-      '<label>' +
-      esc(tx('Asked for')) +
-      '<select data-cbsid="CRM010-S01" class="inp" id="crm_prv_kind" data-testid="crm-prv-kind">' +
-      kinds +
-      '</select></label>' +
-      '<label>' +
-      esc(tx('Received on')) +
-      '<input data-cbsid="CRM010-I02" class="inp" id="crm_prv_when" data-testid="crm-prv-when" type="date" value="' +
-      esc(crmLocalISO(new Date())) +
-      '" style="width:auto"></label>' +
-      '<input type="hidden" id="crm_prv_party" value="' +
-      esc(pre.party || '') +
-      '">' +
-      '<div class="hint">' +
-      esc(tx('The answer date follows the shop’s country’s law.')) +
-      '</div>' +
-      '<div id="crm_prv_msg" class="hint" role="status" data-testid="crm-prv-msg"></div>',
-    footerHtml:
-      ui.footerAction({ name: 'cancel', options: { mount: 'CRM010-U201' } }) +
-      '<button data-cbsid="CRM010-B06" type="button" class="pri" data-crm="prvsave" data-testid="crm-prv-save">' +
-      esc(tx('Log')) +
-      '</button>'
-  });
-  document.getElementById('crm_prv_who').focus();
-}
-async function crmPrivReqSave() {
-  if (PRV.busy) return;
-  var node = function (id) {
-      return String((document.getElementById(id) || {}).value || '').trim();
-    },
-    msg = document.getElementById('crm_prv_msg');
-  if (!node('crm_prv_who')) {
-    msg.textContent = tx('Who asked? A name, phone or e-mail.');
-    return;
-  }
-  PRV.busy = true;
-  try {
-    var body = { who: node('crm_prv_who'), kind: node('crm_prv_kind'), received_at: new Date(node('crm_prv_when') + 'T09:00:00').toISOString() };
-    if (node('crm_prv_party')) body.party_id = node('crm_prv_party');
-    await api('crmPrivReqAdd', { body: body });
-    closeModal();
-    toast(tx('Logged'));
-    PRV.page = 1;
-    crmPrivLoad();
-  } catch (e) {
-    msg.textContent = crmPrivWhy(e);
-  } finally {
-    PRV.busy = false;
-  }
-}
-/* ── Answer: once, by the owner; what was done or why not ── */
-function crmPrivAnswerOpen(id) {
-  var r = PRV.rows.filter(function (x) {
-    return x.request_id === id;
-  })[0];
-  if (!r) return;
-  if (!PRV.mayAnswer) {
-    toast(PRV.why || tx('Only the owner answers'));
-    return;
-  }
-  ui.dialog({
-    mount: 'CRM010-U202',
-    pop: 'POP102',
-    titleText: tx('Answer') + ' · ' + r.who,
-    testid: 'crm-prv-answer-sheet',
-    body:
-      '<div class="kv"><b>' +
-      esc(tx('Asked for')) +
-      '</b><span>' +
-      esc(tx(CRM_REQ_KIND[r.kind] || r.kind)) +
-      ' · ' +
-      esc(tx('due')) +
-      ' ' +
-      esc(bkDate(r.due_at)) +
-      '</span></div>' +
-      (r.kind === 'erase'
-        ? '<div class="hint" data-testid="crm-prv-erase-note">' +
-          esc(tx('Erasure runs through the platform’s lifecycle path. Record the outcome here.')) +
-          '</div>'
-        : '') +
-      '<label>' +
-      esc(tx('Outcome')) +
-      '<select data-cbsid="CRM010-S02" class="inp" id="crm_prv_out" data-testid="crm-prv-out">' +
-      Object.keys(CRM_REQ_OUT)
-        .map(function (item) {
-          return '<option value="' + item + '">' + esc(tx(CRM_REQ_OUT[item])) + '</option>';
-        })
-        .join('') +
-      '</select></label>' +
-      '<label>' +
-      esc(tx('What was done, or why not')) +
-      '<textarea data-cbsid="CRM010-T01" class="inp" id="crm_prv_ans" data-testid="crm-prv-ans" rows="3"></textarea></label>' +
-      '<div id="crm_prv_amsg" class="hint" role="status" data-testid="crm-prv-amsg"></div>',
-    footerHtml:
-      ui.footerAction({ name: 'cancel', options: { mount: 'CRM010-U202' } }) +
-      '<button data-cbsid="CRM010-B07" type="button" class="pri" data-crm="prvanswersave" data-id="' +
-      esc(id) +
-      '" data-testid="crm-prv-answer-save">' +
-      esc(tx('Answer')) +
-      '</button>'
-  });
-  document.getElementById('crm_prv_ans').focus();
-}
-async function crmPrivAnswerSave(id) {
-  if (PRV.busy) return;
-  var node = function (k) {
-      return String((document.getElementById(k) || {}).value || '').trim();
-    },
-    msg = document.getElementById('crm_prv_amsg');
-  if (!node('crm_prv_ans')) {
-    msg.textContent = tx('Write what was done, or why not.');
-    return;
-  }
-  PRV.busy = true;
-  try {
-    await api('crmPrivReqAnswer', { params: { id: id }, body: { outcome: node('crm_prv_out'), answer: node('crm_prv_ans') } });
-    closeModal();
-    toast(tx('Answered'));
-    crmPrivLoad();
-  } catch (e) {
-    msg.textContent = crmPrivWhy(e);
-  } finally {
-    PRV.busy = false;
-  }
-}
-/** the server's refusal in the shop's words (its `why` or `message` when it is a sentence; never a raw error) */
-function crmPrivWhy(e) {
-  if (e && e.status === 503) return tx('Privacy requests start after an update. Nothing is lost.');
-  var m = e && e.data && (e.data.why || e.data.message); /* core.js api(): e.status + e.data = the answer's own body */
-  return m && e.status < 500 ? String(m) : tx("Couldn't save that. Try again.");
 }

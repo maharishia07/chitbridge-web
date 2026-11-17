@@ -2,6 +2,7 @@
  * OWNS      the flow of reading a statement on the device, putting each line against the books, showing the books AS THEY WILL READ once the ready lines are in
  *           (nothing saved), the confirm popup that says what the press will reach, and posting the confirmed lines ONE AT A TIME through an INJECTED post adapter.
  *           The demo page (public/bank-demo.html) and the app (public/app/cap-bank-post.js) differ ONLY in that adapter.
+ * SPLIT     a line's words and its shape (STATE_WORDS · NEEDS_WORDS · moneyText · dateText · lineOf) are app/bank-preview-line.js, loaded before this file (shrink W2, 2026-11-17).
  * CALLED BY public/app/bank-demo.js (the no-login showcase) · later the Bank view (cap-bank.js) through one call-in.
  * FLOW      create(opts) → load(text) → recon.parse · recon.match · recon.suggest → project.project() → view() → confirmText() → CBLabKit.confirm → postReady(onLine) → read again
  * CARD      16-finance/bank-reconciliation-and-bank-rail   (requirement: docs 16-finance/BANK-TO-BOOKS-REQUIREMENT.md, "Critic 14 Nov")
@@ -20,101 +21,15 @@
  */
 (function (root) {
   'use strict';
-  var STATE_WORDS = { in_books: 'In your books', proposed: 'Ready to add', check: 'Needs you', needs_you: 'Needs you', posted: 'Added', failed: 'Not added', closed: 'Month closed' };
-  /** why a proposed line is held back, in the words the line shows (B5-01/02/03: a held-back line says so ON the line, never a silent "Ready") */
-  var NEEDS_WORDS = {
-    gst_basis: 'Tax basis needed',
-    tax_invoice: 'Tax invoice needed',
-    fee_tax: 'Tax on the fee needed',
-    needs_tick: 'Needs your tick',
-    may_be_in_books: 'May already be in your books',
-    unbalanced: 'Entry does not balance',
-    refused: 'The books refused this entry',
-    bank_leg_mismatch: "Entry does not match the bank line's amount",
-    tax_kind: 'Tax needed',
-    not_here: 'Not added from a bank line yet: record it in Books, then load the statement again',
-    no_entry: 'Needs you'
-  };
-  /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
-  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'fee_tax', 'tax_invoice', 'needs_tick'];
+  var Line = root.CBBankPreviewLine || (typeof require === 'function' ? require('./bank-preview-line.js') : null); /* loaded first: app/bank-preview-line.js — a line's words and its shape */
+  var STATE_WORDS = Line.STATE_WORDS,
+    NEEDS_WORDS = Line.NEEDS_WORDS,
+    minorOf = Line.minorOf,
+    moneyText = Line.moneyText,
+    dateText = Line.dateText,
+    lineOf_ = Line.lineOf;
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
   var MATCH_WINDOW_DAYS = 3;
-
-  /** the minor amount of a money value { amount_minor } (or of a bare minor number); 0 when there is none */
-  function minorOf(money) {
-    if (money && typeof money === 'object') return +money.amount_minor || 0;
-    return +money || 0;
-  }
-  /** a carried amount as text in its own currency: "AUD 2,200.00"; the digits come from the money unit, never a fixed 2 */
-  function moneyText(money, currency) {
-    var minor = minorOf(money),
-      code = (money && money.currency) || currency,
-      unit = root.CBMoney,
-      digits = unit && unit.decimals && code ? unit.decimals(code) : 2;
-    var text = (Math.abs(minor) / Math.pow(10, digits)).toLocaleString('en-AU', { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    return (code ? code + ' ' : '') + (minor < 0 ? '-' : '') + text;
-  }
-  /** "5 Nov 2026" from 'YYYY-MM-DD'; '' when there is no date */
-  function dateText(iso) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
-    if (!m) return '';
-    var month = new Date(Date.UTC(+m[1], +m[2] - 1, 1)).toLocaleDateString('en-AU', { month: 'short', timeZone: 'UTC' });
-    return Number(m[3]) + ' ' + month + ' ' + m[1];
-  }
-
-  /** a line's standing: its state, the words for it and whether it may be posted; a locked month holds a line the books do not have yet (never one already in them) */
-  function standingOf_(projected, closed) {
-    if (closed) return { state: 'closed', why: closed.words, ready: false };
-    return { state: projected.state, why: projected.why || '', ready: !!projected.ready };
-  }
-  /** the new-party proposal (with its did-you-mean) that names this statement line, or null */
-  function partyProposalFor_(toCreate, lineIndex) {
-    return (
-      toCreate.filter(function (proposal) {
-        return proposal.lines.indexOf(lineIndex) >= 0;
-      })[0] || null
-    );
-  }
-  /** the one blocker the person answers next, by the order they are asked; null when none of them is held */
-  function askedNeedOf_(blockers) {
-    return (
-      ASKED_.filter(function (code) {
-        return blockers.indexOf(code) >= 0;
-      })[0] || null
-    );
-  }
-  /** what the engine carried about a line besides its entry: the tax record, what made the proposal, the books entries it may already be */
-  function carriedOf_(projected) {
-    return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [], what: projected.what || null };
-  }
-  /** the statement line (index i) joined to what the engine said about it, ready to paint and to post */
-  function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate, moved) {
-    var blockers = projected.blockers || [],
-      locked = lockedMonth && projected.state !== 'in_books' ? lockedMonth(statementLine.date) : null,
-      /* W15-85: the person chose "Post in <next month> instead" for this month: the line is worked as any other and posts on the first day of the next open month, its own date kept */
-      moveTo = locked && locked.next && moved && moved[locked.key] ? locked : null,
-      closed = moveTo ? null : locked,
-      named = partyProposalFor_(toCreate, projected.i);
-    var item = {
-      key: projected.ref,
-      ref: projected.ref,
-      i: projected.i,
-      line: statementLine,
-      entry: projected.entry || null,
-      against: (proposal && proposal.against) || null, /* the open invoice or bill the engine found this line to be (bank-recon open_item) */
-      split: (proposal && proposal.split) || null, /* BB-04: a card settlement net of its fee: { gross_minor, fee_minor, net_minor } */
-      openBills: (proposal && proposal.open_bills) || null, /* BB-10: the party's open bills a person picks from when no ONE set adds up to the payment */
-      allocateRefusal: (proposal && proposal.allocate_refusal) || null,
-      event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
-      needs: askedNeedOf_(blockers),
-      blockers: blockers,
-      closed: closed,
-      moveTo: moveTo,
-      party: projected.party ? Object.assign({}, projected.party) : null,
-      didYouMean: (named && named.did_you_mean) || []
-    };
-    return Object.assign(item, carriedOf_(projected), standingOf_(projected, closed));
-  }
 
   /* ── the controller's steps, each on its own: they take the options and the one state object `preview`, so create() only joins them ── */
   /** the words for why the page cannot work yet (the engine did not load); null when it can */
@@ -462,14 +377,19 @@
           preview.pairs[key] = entryId;
         });
       },
-      /** the pairs the person made this session, { line ref → books entry id }: the host's page reads them so its band counts the same lines the sheet does */
-      pairsMade: function () {
-        return Object.assign({}, preview.pairs);
-      },
       notMatch: function (key) {
         return answerLine(opts, preview, key, function () {
           preview.notMatch[key] = true;
         });
+      }
+    };
+  }
+  /** what the person made of the months and the pairs this session: the pairs the host's band counts, and the locked months posted in the next open month (W15-85) */
+  function monthMethods(opts, preview) {
+    return {
+      /** the pairs the person made this session, { line ref → books entry id }: the host's page reads them so its band counts the same lines the sheet does */
+      pairsMade: function () {
+        return Object.assign({}, preview.pairs);
       },
       /** W15-85: post the lines of a locked month (its key 'YYYY-MM') in the next open month instead (on), or take that back (off); the lines are worked again either way */
       moveLocked: function (monthKey, on) {
@@ -493,7 +413,7 @@
    */
   function create(opts) {
     var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, pairs: {}, notMatch: {}, moved: {} };
-    return Object.assign(answerMethods(opts, preview), checkAnswers(opts, preview), {
+    return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
       },

@@ -10,7 +10,7 @@
  */
 (function (root) {
   'use strict';
-  function say(sentence, holes) {
+  function sayWords(sentence, holes) {
     var text = typeof root.tx === 'function' ? root.tx(sentence) : sentence;
     Object.keys(holes || {}).forEach(function (key) { text = text.split('{' + key + '}').join(holes[key]); });
     return text;
@@ -29,35 +29,46 @@
   /** E13: ONE word per month state, from the server's state names (GET /periods status): the owner's Month lock page and the firm's Months say the same */
   var STATE = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
   function stateWord(status) {
-    return say(STATE[status] || String(status || ''));
+    return sayWords(STATE[status] || String(status || ''));
   }
   /** one trail row → "Locked by Eastlake owner · 15 Nov 2026" · "Opened again by Pat Lee · 3 Oct 2026 · Why: late bill" · "Closed for good by … · …" */
   function eventWords(ev) {
     var holes = { who: ev.by_name || '', date: dayOf(ev.at) };
-    if (ev.action === 'unlocked') return (ev.by_name ? say('Opened again by {who} · {date}', holes) : say('Opened again · {date}', holes)) + (ev.reason ? ' · ' + say('Why: {reason}', { reason: ev.reason }) : '');
-    if (ev.to === 'hard_locked') return ev.by_name ? say('Closed for good by {who} · {date}', holes) : say('Closed for good · {date}', holes);
-    return ev.by_name ? say('Locked by {who} · {date}', holes) : say('Locked · {date}', holes);
+    if (ev.action === 'unlocked') return (ev.by_name ? sayWords('Opened again by {who} · {date}', holes) : sayWords('Opened again · {date}', holes)) + (ev.reason ? ' · ' + sayWords('Why: {reason}', { reason: ev.reason }) : '');
+    if (ev.to === 'hard_locked') return ev.by_name ? sayWords('Closed for good by {who} · {date}', holes) : sayWords('Closed for good · {date}', holes);
+    return ev.by_name ? sayWords('Locked by {who} · {date}', holes) : sayWords('Locked · {date}', holes);
+  }
+  /** the month's own line: its last trail row, else (a month locked before the trail) the lock's own moment; '' when nobody ever touched it */
+  function whoLine(row, state, last) {
+    if (last) return eventWords(last);
+    var locked = state === 'soft_locked' || state === 'hard_locked';
+    return locked && row && row.locked_at ? eventWords({ action: 'locked', to: state, at: row.locked_at, by_name: null }) : '';
+  }
+  /** why an open month still cannot be locked or reopened: a later month stays locked */
+  function whoNote(row, state, last) {
+    var locked = state === 'soft_locked' || state === 'hard_locked';
+    if (locked || !row || !row.open_below_locked) return '';
+    return sayWords(last && last.action === 'unlocked' ? 'Later months stay locked.' : 'A later month is locked.');
   }
   /** the month's line under its state and its whole history (newest first): { line, note, all } — line is '' when nobody ever touched the month; note says why an open month sits under locked ones */
   function whoOf(row, state) {
     var trail = (row && row.lock_trail) || [],
-      last = trail[trail.length - 1] || null,
-      locked = state === 'soft_locked' || state === 'hard_locked',
-      line = '';
-    if (last) line = eventWords(last);
-    else if (locked && row && row.locked_at) line = eventWords({ action: 'locked', to: state, at: row.locked_at, by_name: null });
-    var note = !locked && row && row.open_below_locked ? say(last && last.action === 'unlocked' ? 'Later months stay locked.' : 'A later month is locked.') : '';
-    return { line: line, note: note, all: trail.slice().reverse().map(eventWords) };
+      last = trail[trail.length - 1] || null;
+    return { line: whoLine(row, state, last), note: whoNote(row, state, last), all: trail.slice().reverse().map(eventWords) };
+  }
+  /** the month a Lock or Open again waits for, in the shop's month names ("July 2026"); '' when the server named none */
+  function firstMonthName(part, monthNames) {
+    var at = part && part.first;
+    return at ? ((monthNames || [])[Number(at.period) - 1] || '') + ' ' + String(at.start_date || '').slice(0, 4) : '';
   }
   /** "Lock July 2026 first." / "Open September 2026 first." — the month a Lock or Open again waits for, in the shop's own month names (the list is in financial-year order, index = period - 1); the server's sentence when it names none */
   function whyOf(row, kind, monthNames) {
     var part = row && row[kind],
-      at = part && part.first,
-      name = at ? ((monthNames || [])[Number(at.period) - 1] || '') + ' ' + String(at.start_date || '').slice(0, 4) : '';
+      name = firstMonthName(part, monthNames);
     if (!part || !part.why) return '';
-    if (!name.trim()) return say(part.why);
-    if (kind === 'lock') return say('Lock {month} first.', { month: name });
-    return /closed for good/.test(part.why) ? say(part.why) : say('Open {month} first.', { month: name });
+    if (!name.trim()) return sayWords(part.why);
+    if (kind === 'lock') return sayWords('Lock {month} first.', { month: name });
+    return /closed for good/.test(part.why) ? sayWords(part.why) : sayWords('Open {month} first.', { month: name });
   }
   root.CBLockWords = { eventWords: eventWords, whoOf: whoOf, whyOf: whyOf, stateWord: stateWord };
 })(typeof window !== 'undefined' ? window : globalThis);

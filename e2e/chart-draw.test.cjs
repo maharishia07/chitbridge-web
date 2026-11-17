@@ -22,6 +22,8 @@ const ctx = { console, esc: (s) => String(s == null ? '' : s).replace(/[&<>"]/g,
 ctx.window = ctx;
 vm.createContext(ctx);
 vm.runInContext(read('engine/chart-draw.js'), ctx, { filename: 'engine/chart-draw.js' });
+vm.runInContext(read('engine/chart-draw-status.js'), ctx, { filename: 'engine/chart-draw-status.js' });
+vm.runInContext(read('engine/chart-draw-rows.js'), ctx, { filename: 'engine/chart-draw-rows.js' });
 const D = ctx.CBDraw;
 
 console.log('the Trend chart is unchanged by the lift (a fixed fixture, byte-compared by hash)');

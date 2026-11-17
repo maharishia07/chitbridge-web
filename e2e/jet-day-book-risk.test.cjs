@@ -107,7 +107,7 @@ check(flagged('IN') === 'Sun', 'IN shop: Sunday alone (got ' + flagged('IN') + '
 const ctxFilters = F.filtersFor(null, { period: () => period, currency: () => 'AUD', region: () => 'SA', rows: () => sat });
 check(sat.filter((r) => ctxFilters.find((f) => f.key === 'time').match(r, 'weekend')).map((r) => r.id).join('+') === 'Fri+Sat', 'the Made filter follows the shop region from the view ctx');
 check(F.riskOf({ id: 'x', recorded_at: '2026-07-03T09:00:00.000Z', posting_date: '2026-07-03', amount_minor: 12345, made_by: 'a' }, period, 'AUD', 'SA').indexOf('At a weekend') >= 0 && F.riskOf({ id: 'x', recorded_at: '2026-07-03T09:00:00.000Z', posting_date: '2026-07-03', amount_minor: 12345 }, period, 'AUD', 'AU').indexOf('At a weekend') < 0, 'the Risk count follows the shop region (Friday risky in SA, not in AU)');
-const view = pub('app', 'books-grant-view.js');
+const view = pub('app', 'books-grant-view.js') + ['reports', 'cells', 'marks', 'list'].map((part) => pub('app', 'books-grant-' + part + '.js')).join('\n');
 /* fb9f8fb2 (decided 17 Nov): the Day book opens in book order, not risk-first; Risk stays the one column the reader sorts, most risks first on a press (dir0 -1) */
 check(view.indexOf('sortDefault') < 0 && view.indexOf("sort: column[2] === 'risk' ? true") > 0 && view.indexOf("dir0: column[2] === 'risk' ? -1") > 0, 'the Day book opens in book order; a press on Risk sorts most risks first');
 delete box.CBLocale; box.CB_SHOP_TZ = 'Australia/Sydney';

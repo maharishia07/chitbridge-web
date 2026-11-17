@@ -8,15 +8,15 @@ const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
 /* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
 const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
-const ENT = 'public/app/cap-entry.js', A = 'e2e/manual-entry.cjs';
+const ENT = 'public/app/cap-entry.js', ENP = 'public/app/cap-entry-preview.js', A = 'e2e/manual-entry.cjs';
 const BREAKS = [
   /* the two the task names */
   ["the page computes a line's amount", ENT, "        l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '',", "        l.dr_minor ? esc(bkMoney(Math.round(l.dr_minor * 1.18), c)) : '',", A],
   ['Save is on while the server says it does not balance', ENT, `return !!(pv && pv.balanced === true && !(pv.refusals || []).length`, `return !!(pv && !(pv.refusals || []).length`, A],
   /* the rest */
   ['Save is on while the server refuses the entry', ENT, `&& !(pv.refusals || []).length && !EN.pvBusy`, `&& !EN.pvBusy`, A],
-  ["the page sends a different amount than was typed", ENT, "    b.amount_minor = bkMoneyMinor(EN.v.amount);", "    b.amount_minor = bkMoneyMinor(EN.v.amount) + 1;", A],
-  ['a locked month is not refused at the date', ENT, `EN.dateRef = r && r.code === 'PERIOD_LOCKED' ? enWords(r.refusals, r.code).slice(0, 1) : [];`, `EN.dateRef = [];`, A],
+  ["the page sends a different amount than was typed", ENP, "    b.amount_minor = bkMoneyMinor(EN.v.amount);", "    b.amount_minor = bkMoneyMinor(EN.v.amount) + 1;", A],
+  ['a locked month is not refused at the date', ENP, `EN.dateRef = r && r.code === 'PERIOD_LOCKED' ? enWords(r.refusals, r.code).slice(0, 1) : [];`, `EN.dateRef = [];`, A],
   /* three layers stand in the way of a second post (the page's EN.saving, bkOnce, and api()'s own in-flight lock): the break removes all three */
   ["a double tap posts twice", ENT, "  await bkOnce('entry-save', btn, async function () {\n    /* R106: a money promise asks first, INSIDE the busy guard (a second press while the question is open is dropped — the R102b lesson) */\n    var question = enAskWords();\n    if (question && typeof CBAction !== 'undefined' && (await CBAction.ask(question)) !== true) return;\n    await enSaveWrite();\n  });\n}\n/** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */\nasync function enSaveWrite() {\n  EN.saving = true;\n  var body = enBody();\n  body.client_ref = EN.ref;\n  if (EN.photo) body.attachment = EN.photo;\n  try {\n    var reply = await api('booksEventPost', { body: body });", "  await (function (k, b, fn) { return fn(); })('entry-save', btn, async function () {\n    /* R106: a money promise asks first, INSIDE the busy guard (a second press while the question is open is dropped — the R102b lesson) */\n    var question = enAskWords();\n    if (question && typeof CBAction !== 'undefined' && (await CBAction.ask(question)) !== true) return;\n    await enSaveWrite();\n  });\n}\n/** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */\nasync function enSaveWrite() {\n  var body = enBody();\n  body.client_ref = EN.ref;\n  if (EN.photo) body.attachment = EN.photo;\n  try {\n    var reply = await api('booksEventPost', { body: body, params: { n: Math.random() } });", A],
   ['a retry loses its client_ref', ENT, `body.client_ref = EN.ref;`, `body.client_ref = bkRef();`, A],

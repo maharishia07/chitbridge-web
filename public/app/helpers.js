@@ -10,7 +10,6 @@
  * FLOW  loaded early on each page (app.html: after core.js) → every panel and small app calls these pure functions; emptyState draws the one empty-state action button (SCR038-B01)
  * CARD  29-qa-test-tooling-ux-locale-and-design-system/helpers
  */
-
 /* ⭐ ACC-206 D1: THE ONE WEB READ OF A CHIT'S BILL TOTAL (tax-in) from its header summary_json: money.total, else total_value, else `raw` (the detail column), else null.
    READ ONLY, never worked out: the same order as api lib/counter-bill.js standingCopy (minus the invoice arm; a list row carries none). A chit made before 2 Nov holds
    total_value = NET beside money.total = tax-in; reading money.total first shows 189, not 180. Whether two stored copies AGREE (agree:false / legacy_net) is decided by
@@ -51,7 +50,6 @@ function billChipHTML(wire) {
 function deepClone(x) {
   return JSON.parse(JSON.stringify(x));
 }
-
 /* ⭐ T2-WEBPRIMS: THE ONE esc — every page loads this file first and calls it; 43 private copies were deleted, and they disagreed on "'"
    (30 escaped it, this home did not). Text and attribute safe either quote: & < > " '. e2e/prim-homes.cjs fails a second definition. */
 function esc(v) {
@@ -82,7 +80,6 @@ function scrErr(e, subject, retry) {
     '</div>'
   );
 }
-
 function cap(s) {
   return s[0].toUpperCase() + s.slice(1);
 }
@@ -125,10 +122,8 @@ function bankCodeWord(cc) {
 }
 /** the branch-code rule of the country's bank: the pack's own (pack.bank.branchCode) first, else the table above; null = a free, neutral branch code */
 function bankBranchRule(cc) {
-  var pack = shopReg(cc), own = pack && pack.bank && pack.bank.branchCode;
-  if (own) return own;
-  var row = PACK_WORDS[packRowKey(pack, cc)];
-  return row && row.branch ? Object.assign({ word: row.bankCode[0] }, row.branch) : null;
+  var pack = shopReg(cc), row = PACK_WORDS[packRowKey(pack, cc)];
+  return (pack && pack.bank && pack.bank.branchCode) || (row && row.branch ? Object.assign({ word: row.bankCode[0] }, row.branch) : null);
 }
 /** which PACK_WORDS row: the registered pack's id, else (no registry on the page) the country code the caller passed */
 function packRowKey(pack, countryCode) {
@@ -161,27 +156,15 @@ function packHasHsn() {
 function payModeOpts() {
   return payHasUpi() ? '<option value="upi">UPI</option>' : '';
 }
-
 /** CUR-1 slice 5: a row's amount cell as { amount, currency }: a money value adds under ITS OWN currency (never dropped as NaN), a bare cell has none */
 function moneyCellRead(cell) {
   return cell !== null && typeof cell === 'object' ? moneyRead(cell) : { amount: Number(cell || 0), currency: null };
 }
 /**
- * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS. Athi, 2026-08-21: *"we have a couple of places
- * sum is there; what I want is a single group sum, gold standard."*
- *
- * ⚠⚠ THE PLATFORM ALREADY HAD THIS RULE IN TWO PLACES AND BROKE IT IN A THIRD. `lib/money.js` THROWS on mixed
- * currencies rather than adding them; `_gsMoney` in cap-folders renders them side by side and says *"a figure
- * spanning two currencies means nothing, most convincingly when it looks tidy"*. The select bar did
- * `rows.reduce((a,c) => a + c.amt, 0)` and labelled the result with the READER's currency — so ticking a
- * ₹500 chit and a $2,000 chit read as one tidy total in a currency belonging to neither.
- *
- * ⚠️ IT IS THE TIDINESS THAT MAKES IT DANGEROUS. A wrong number that looks broken gets questioned; a wrong
- * number that looks like a total gets used.
- *
- * ⚠️ MISSING CURRENCY FALLS BACK TO THE READER'S, and that is a real decision rather than a shrug: a row
- * with no currency is almost always the reader's own, and grouping it under 'unknown' would split one honest
- * total into two for a field nobody filled in.
+ * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS (Athi, 2026-08-21: "a single group sum, gold standard").
+ * ⚠️ lib/money.js THROWS on mixed currencies and _gsMoney (cap-folders) shows them side by side; the select bar once added a ₹500 chit and a $2,000 chit
+ * into one tidy total in the READER's currency. A wrong number that looks like a total gets used, so a sum never spans two currencies.
+ * ⚠️ A MISSING CURRENCY FALLS BACK TO THE READER'S (a row with none is almost always their own): grouping it under 'unknown' would split one honest total in two.
  */
 function cbSumByCurrency(rows, amtKey, curKey) {
   var by = {};
@@ -201,7 +184,6 @@ function cbSumByCurrency(rows, amtKey, curKey) {
       return second.total - first.total;
     });
 }
-
 /**
  * Render what cbSumByCurrency returns. One currency prints as a plain amount; several print side by side with
  * the reason stated, because a reader seeing two figures will otherwise wonder which one is the answer.
@@ -292,7 +274,6 @@ function loader(label) {
     '</div></div>'
   );
 }
-
 /**
  * ⚠️⚠️ CCY_LOCALE IS GONE, AND ITS REMOVAL IS THE POINT. It mapped a CURRENCY to a LOCALE — INR→en-IN,
  * USD→en-US — and then formatted money with the locale of the MONEY instead of the locale of the READER.
@@ -417,37 +398,6 @@ function shopDateTime(ts, opts) {
   }
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
 }
-/** ONE rule: which day-book group an entry belongs to — the owner Day book (cap-books.js) and the auditor/firm Day book (books-grant-view.js) both read it (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
-/* [group, the event_type pattern, the source.kind it also takes] — the first row that fits wins, so the order is the rule */
-var DAY_BOOK_KINDS = [
-  ['Returns', /return|credit_note|debit_note/, 'credit_note'],
-  ['Purchases', /purchase/, null],
-  ['Expenses', /expense/, 'expense'],
-  ['Sales', /sale|walkin/, 'day'],
-  ['Receipts', /received|receipt/, 'receipt'],
-  ['Payments', /payment/, 'payment']
-];
-/** ONE rule: the line of a Day book entry that names its party (the first with one): the owner Day book (cap-books.js bkDvParty) and the auditor Day book (books-grant-view.js) both read it */
-function dayBookPartyLine(entry) {
-  return ((entry && entry.lines) || []).filter(function (line) {
-    return line.party_name || line.party_id;
-  })[0];
-}
-/** "Kensington Strata · HP-INV-1": the party and the document number a Day book row stands on (R70: one source for the owner and the auditor); the entry's own words when it has neither (an opening, a hand-keyed journal) */
-function dayBookPartyRef(entry) {
-  var line = dayBookPartyLine(entry),
-    ref = entry && entry.source && entry.source.ref;
-  return [line && line.party_name, ref].filter(Boolean).join(' · ') || (entry && entry.narration) || '';
-}
-function dayBookKind(entry) {
-  var type = String((entry && entry.event_type) || ''),
-    sourceKind = String((entry && entry.source && entry.source.kind) || '');
-  var hit = DAY_BOOK_KINDS.filter(function (row) {
-    return row[1].test(type) || (row[2] !== null && row[2] === sourceKind);
-  })[0];
-  if (hit) return hit[0];
-  return sourceKind === 'bill' ? 'Sales' : 'Other';
-}
 /**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
  * A bare day (YYYY-MM-DD) is a calendar day, read in UTC so no zone moves it; a moment goes through shopDateTime with the year. Unreadable -> the dash.
@@ -520,7 +470,6 @@ function monthNames(form) {
   }
   return out;
 }
-
 /* ⭐ T3-P1-MONEY: THE ONE GSTR DOWNLOAD — the offline-tool JSON GET /api/tax/gstr builds (tax-lines gstr1 · gstr3b, the one builder), saved as a file
    named gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json. The workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js)
    both call this; neither builds a second. → Promise<filename>; a failure rejects with api()'s error — the caller says its own sentence. */
@@ -540,7 +489,6 @@ function gstrDownload(month, form) {
     return name;
   });
 }
-
 function jwtPayload(t) {
   try {
     const text = String(t || '').split('.')[1];

@@ -7,18 +7,19 @@
  */
 'use strict';
 function obBillsTotalOf(code) {
-  var pair = ((OB.pv && OB.pv.bills) || []).filter(function (item) {
+  var pair = ((OPENING.pv && OPENING.pv.bills) || []).filter(function (item) {
     return String(item.code) === String(code);
   })[0];
   return pair ? pair.bills_minor : null;
 }
+/** the party <option>s of a bills row: customers under Debtors, suppliers under Creditors (the party already chosen stays listed) */
 function obPartyOptions(row, chosen) {
   var want = row.role === 'creditors' ? 'supplier' : 'customer';
   return (
     '<option value="">' +
     esc(tx('Choose')) +
     '</option>' +
-    (OB.parties || [])
+    (OPENING.parties || [])
       .filter(function (item) {
         return item[want] || item.party_id === chosen;
       })
@@ -28,6 +29,7 @@ function obPartyOptions(row, chosen) {
       .join('')
   );
 }
+/** the bill rows under a ledger: party · bill no · date · due · amount, each edit going to obBillIn, and the bills' total (the server's, from the preview) */
 function obBillsHtml(row, i, total) {
   var rows = row.bills
     .map(function (bill, j) {
@@ -46,30 +48,31 @@ function obBillsHtml(row, i, total) {
     '<div class="ob-bills" data-testid="ob-bills-box-' + esc(row.code) + '">' +
     rows +
     '<div><button type="button" class="supact" data-cbsid="CMP007-B01"' + obMount('CMP007') + ' data-testid="ob_badd_' + i + '" onclick="obBillAdd(' + i + ')">' + tx('+ Add a bill') + '</button>' +
-    (total != null ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('Bills add to {amt}', { amt: bkMoney(total, OB.pv && OB.pv.currency) })) + '</span>' : '') +
+    (total != null ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('Bills add to {amt}', { amt: bkMoney(total, OPENING.pv && OPENING.pv.currency) })) + '</span>' : '') +
     '</div></div>'
   );
 }
 async function obEnsureParties() {
-  if (OB.parties) return;
+  if (OPENING.parties) return;
   try {
     var reply = await api('crmParties');
-    OB.parties = (reply && reply.parties) || [];
-  } catch (e) {
-    OB.parties = [];
+    OPENING.parties = (reply && reply.parties) || [];
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('opening:parties', failure);
+    OPENING.parties = [];
   }
 }
 function obBillAdd(i) {
-  OB.rows[i].bills.push({ party_id: '', ref: '', date: '', due: '', minor: null });
+  OPENING.rows[i].bills.push({ party_id: '', ref: '', date: '', due: '', minor: null });
   obRender();
 }
 function obBillDel(i, j) {
-  OB.rows[i].bills.splice(j, 1);
+  OPENING.rows[i].bills.splice(j, 1);
   obRender();
   obPreviewSoon();
 }
 function obBillIn(i, j, field, value) {
-  var bill = OB.rows[i].bills[j];
+  var bill = OPENING.rows[i].bills[j];
   if (field === 'minor') {
     var minor = bkMoneyRead('ob_ba_' + i + '_' + j);
     bill.minor = isFinite(minor) && minor > 0 ? minor : null;
@@ -78,14 +81,14 @@ function obBillIn(i, j, field, value) {
 }
 /** a ledger with bills shows the bills' total on its own side, read-only and greyed, "from n bills": the server's figure (the preview's pair), never a sum made here; every other cell is a money field */
 function obSideCell(row, i, side, total) {
-  var n = row.bills.filter(function (bill) {
+  var billCount = row.bills.filter(function (bill) {
     return bill.party_id && bill.minor;
   }).length;
-  if (obHasBills(row) && n && obSide(row) === side)
+  if (obHasBills(row) && billCount && obSide(row) === side)
     return (
       '<div class="ob-num" data-testid="ob-from-bills-' + esc(row.code) + '" style="color:var(--grey)" title="' + esc(tx('Filled from its bills')) + '">' +
-      (total != null ? esc(bkMoney(total, OB.pv && OB.pv.currency)) : '…') +
-      '<br><small>' + esc(n === 1 ? tx('from 1 bill') : txf('from {n} bills', { n: n })) + '</small></div>'
+      (total != null ? esc(bkMoney(total, OPENING.pv && OPENING.pv.currency)) : '…') +
+      '<br><small>' + esc(billCount === 1 ? tx('from 1 bill') : txf('from {n} bills', { n: billCount })) + '</small></div>'
     );
   return obField('ob_' + side + '_' + i, row[side], 'obCell(' + i + ",'" + side + "')", row.name + ' ' + tx(side === 'dr' ? 'Debit' : 'Credit'));
 }
@@ -102,8 +105,9 @@ function obSwitchHtml(row, i) {
     '<option value="dr"' + (side === 'dr' ? ' selected' : '') + '>' + esc(tx('Dr')) + '</option><option value="cr"' + (side === 'cr' ? ' selected' : '') + '>' + esc(tx('Cr')) + '</option></select>'
   );
 }
+/** the phone's Dr/Cr switch on a row: the figure moves to the other side and the preview reads again */
 function obSwitch(i, side) {
-  var row = OB.rows[i],
+  var row = OPENING.rows[i],
     other = side === 'dr' ? 'cr' : 'dr';
   row.view = side;
   if (row[other]) {

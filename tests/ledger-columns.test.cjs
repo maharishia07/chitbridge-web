@@ -80,7 +80,7 @@ it('W15-87 · the first Date sort is oldest first, so the default ▲ (ascending
 it('W15-89 · the Details line has no time and no recorded note; the opened entry has both', () => {
   const d = fn('bkLgDetails');
   assert(!/bkRecordedHTML/.test(d) && /bkBillPart\(s, tid, true\)/.test(d));
-  const n = fn('bkLgNext');
+  const n = fn('bkLgNext') + fn('bkLgFacts');
   assert(/bkRecordedHTML\(line/.test(n) && /bkTime\(source\.doc_at\)/.test(n));
   assert(/function bkBillPart\(s, tid, noTime\)/.test(src) && /s\.doc_at && !noTime/.test(src));
 });
@@ -101,7 +101,7 @@ console.log(pass + ' passed');
 {
   const sb2 = { BK: { lt: { sel: { code: '6010' } } }, tx: (s) => s, esc: (s) => String(s), txn: (a) => a, bkLgKind: () => 'plain', bkEntryWord: (l) => l.what, BK_SRC_WORD: {}, bkBillPart: () => '', bkLineChips: () => '' };
   vm.createContext(sb2);
-  vm.runInContext([fn('bkLgOtherWords'), fn('bkLgDetails')].join('\n') + '\nthis.__d = { bkLgOtherWords, bkLgDetails };', sb2);
+  vm.runInContext([fn('bkLgOtherWords'), fn('bkLgPlainOther'), fn('bkLgWhatHTML'), fn('bkLgDetails')].join('\n') + '\nthis.__d = { bkLgOtherWords, bkLgDetails };', sb2);
   const D = sb2.__d;
   it('W15-89b · "Rent · Metro Trade Supplies" in place of the bare "Expense S042-20"; the bank\'s words and the entry number step back', () => {
     const l = { _ix: 0, what: 'Expense S042-20', ref: 'S042-20', other: { code: '6300', name: 'Rent' }, party_name: 'Metro Trade Supplies' };

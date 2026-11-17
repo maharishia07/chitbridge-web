@@ -20,7 +20,7 @@ if (typeof EP !== 'undefined') {
     booksOpeningYears: { m: 'GET', p: '/api/books/opening/years' }
   });
 }
-var OB = { mode: 'new', date: '', rows: [], chart: [], parties: null, pv: null, checking: false, again: false, timer: null, ref: null, saved: null, years: null, reason: '', body: null };
+var OPENING = { mode: 'new', date: '', rows: [], chart: [], parties: null, pv: null, checking: false, again: false, timer: null, ref: null, saved: null, years: null, reason: '', body: null };
 var OB_SOURCE = { typed: 'Typed', moved_in: 'Moved in', posted: 'Entered' }; /* a source KIND the server keeps → the words the page says (no system is named in code) */
 
 /* ── words and small helpers ── */
@@ -33,6 +33,7 @@ function obSide(row) {
 function obHasBills(row) {
   return row.role === 'debtors' || row.role === 'creditors';
 }
+/** the page's own styles, added once (tokens only, no colour of its own) */
 function obCss() {
   if (document.getElementById('ob-css')) return;
   var node = document.createElement('style');
@@ -63,17 +64,17 @@ function obToday() {
 /* ── load ── */
 async function obView(body) {
   obCss();
-  OB.body = body;
+  OPENING.body = body;
   body.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + tx('Reading…') + '</div>';
   try {
-    var got = await Promise.all([api('booksOpeningSaved', { fresh: true }), api('booksAccounts'), api('booksOpeningYears', { fresh: true })]);
-    OB.saved = got[0];
-    OB.chart = ((got[1] && got[1].accounts) || []).filter(function (item) {
+    var loaded = await Promise.all([api('booksOpeningSaved', { fresh: true }), api('booksAccounts'), api('booksOpeningYears', { fresh: true })]);
+    OPENING.saved = loaded[0];
+    OPENING.chart = ((loaded[1] && loaded[1].accounts) || []).filter(function (item) {
       return !item.is_group && item.active !== false && item.role !== 'suspense';
     });
-    OB.years = got[2];
-    OB.ref = null;
-    if (OB.saved && OB.saved.lines && OB.saved.lines.length) obShowSaved();
+    OPENING.years = loaded[2];
+    OPENING.ref = null;
+    if (OPENING.saved && OPENING.saved.lines && OPENING.saved.lines.length) obShowSaved();
     else obNew();
   } catch (e) {
     body.innerHTML = '<div data-testid="ob-err" style="color:var(--warn-2)">' + esc(obErr(e, tx('Could not be read'))) + '</div>';
@@ -81,31 +82,31 @@ async function obView(body) {
 }
 /** a new opening: the ledgers the pack pins, empty, the shop's first day of the year */
 function obNew() {
-  OB.mode = 'new';
-  OB.reason = '';
-  OB.ref = 'grid:' + (typeof bkRef === 'function' ? bkRef() : String(Date.now()));
-  OB.date = (OB.saved && OB.saved.default_date) || obToday(); /* the ledger's first day, from the server */
-  OB.rows = ((OB.saved && OB.saved.pinned) || []).map(function (item) {
+  OPENING.mode = 'new';
+  OPENING.reason = '';
+  OPENING.ref = 'grid:' + (typeof bkRef === 'function' ? bkRef() : String(Date.now()));
+  OPENING.date = (OPENING.saved && OPENING.saved.default_date) || obToday(); /* the ledger's first day, from the server */
+  OPENING.rows = ((OPENING.saved && OPENING.saved.pinned) || []).map(function (item) {
     return obRowOf(item.code, true);
   });
-  OB.pv = null;
+  OPENING.pv = null;
   obRender();
 }
 function obRowOf(code, pinned) {
   var account =
-    OB.chart.filter(function (item) {
+    OPENING.chart.filter(function (item) {
       return String(item.code) === String(code);
     })[0] || {};
   return { code: String(code), name: account.name || String(code), role: account.role || null, dr: null, cr: null, bills: [], open: false, pinned: !!pinned };
 }
 /** the saved lines → grid rows for a change: a party line is a bill under its ledger, the rest are the ledger's own figure */
 function obEdit() {
-  OB.mode = 'replace';
-  OB.reason = '';
-  OB.ref = 'grid:' + (typeof bkRef === 'function' ? bkRef() : String(Date.now()));
-  OB.date = OB.saved.date;
+  OPENING.mode = 'replace';
+  OPENING.reason = '';
+  OPENING.ref = 'grid:' + (typeof bkRef === 'function' ? bkRef() : String(Date.now()));
+  OPENING.date = OPENING.saved.date;
   var rows = [];
-  var pinnedCodes = ((OB.saved && OB.saved.pinned) || []).map(function (item) {
+  var pinnedCodes = ((OPENING.saved && OPENING.saved.pinned) || []).map(function (item) {
     return String(item.code);
   });
   function rowFor(code) {
@@ -119,7 +120,7 @@ function obEdit() {
     return found;
   }
   pinnedCodes.forEach(rowFor);
-  OB.saved.lines.forEach(function (line) {
+  OPENING.saved.lines.forEach(function (line) {
     if (line.role === 'suspense') return;
     var row = rowFor(line.code);
     if (line.party_id) {
@@ -128,8 +129,8 @@ function obEdit() {
     } else if (line.dr_minor) row.dr = (row.dr || 0) + line.dr_minor;
     else row.cr = (row.cr || 0) + line.cr_minor;
   });
-  OB.rows = rows;
-  OB.pv = null;
+  OPENING.rows = rows;
+  OPENING.pv = null;
   obRender();
   obPreviewNow();
 }
@@ -140,8 +141,9 @@ function obField(id, minor, on, label) {
     ? bkMoneyInput({ id: id, tid: id, minor: minor, on: on, extra: 'aria-label="' + esc(label) + '" data-cbsid="CMP040-I01"' + obMount('CMP040') })
     : '<input class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(label) + '" inputmode="decimal">';
 }
+/** one ledger's row in the grid: name, Debit and Credit fields, and its Bills button for Customers and Suppliers */
 function obRowHtml(row, i) {
-  var hint = obHasBills(row) && OB.pv ? obBillsTotalOf(row.code) : null; /* the server's bills total for this ledger, as a placeholder: the page sums nothing */
+  var hint = obHasBills(row) && OPENING.pv ? obBillsTotalOf(row.code) : null; /* the server's bills total for this ledger, as a placeholder: the page sums nothing */
   var html =
     '<div class="ob-row' +
     (row.pinned ? ' ob-pin' : '') +
@@ -166,12 +168,13 @@ function obRowHtml(row, i) {
   if (row.open && obHasBills(row)) html += obBillsHtml(row, i, hint);
   return html;
 }
+/** the grid's header: the start date, the Difference slot and the Save button */
 function obHeadHtml() {
-  var fixed = OB.mode === 'replace';
+  var fixed = OPENING.mode === 'replace';
   return (
     '<div class="ob-head" data-testid="ob-head"><label style="display:flex;gap:6px;align-items:center">' +
     tx('Start date') +
-    '<input class="inp" type="date" data-cbsid="CMP040-I02"' + obMount('CMP040') + ' id="ob_date" data-testid="ob_date" value="' + esc(OB.date) + '"' + (fixed ? ' disabled' : '') + ' onchange="obDate(this.value)"></label>' +
+    '<input class="inp" type="date" data-cbsid="CMP040-I02"' + obMount('CMP040') + ' id="ob_date" data-testid="ob_date" value="' + esc(OPENING.date) + '"' + (fixed ? ' disabled' : '') + ' onchange="obDate(this.value)"></label>' +
     '<div class="ob-diff" id="ob_diff" data-testid="ob-diff" role="status" aria-live="polite"></div>' +
     '<span id="ob_balance"></span>' +
     '<button type="button" class="supact-pri" data-cbsid="CMP042-B14"' + obMount('CMP042') + ' id="ob_save" data-testid="ob-save" onclick="obSave()" disabled>' + (fixed ? tx('Save change') : tx('Save')) + '</button>' +
@@ -179,19 +182,20 @@ function obHeadHtml() {
     '</div>'
   );
 }
+/** paint the whole page from the rows held, then ask the server for its check */
 function obRender() {
-  if (!OB.body) return;
-  var picked = OB.rows.map(function (row) {
+  if (!OPENING.body) return;
+  var picked = OPENING.rows.map(function (row) {
     return row.code;
   });
-  var more = OB.chart.filter(function (item) {
+  var more = OPENING.chart.filter(function (item) {
     return picked.indexOf(String(item.code)) < 0;
   });
-  OB.body.innerHTML =
+  OPENING.body.innerHTML =
     '<div class="ob" data-testid="ob-root">' +
     obHeadHtml() +
     '<div class="ob-rows" data-testid="ob-rows"><div class="ob-row ob-hd"><div class="ob-name">' + tx('Ledger') + '</div><div class="ob-num">' + tx('Debit') + '</div><div class="ob-num">' + tx('Credit') + '</div></div>' +
-    OB.rows.map(obRowHtml).join('') +
+    OPENING.rows.map(obRowHtml).join('') +
     '</div>' +
     '<div class="ob-foot"><select class="inp" data-cbsid="CMP041-S01"' + obMount('CMP041') + ' id="ob_more" data-testid="ob-more" aria-label="' + esc(tx('Add a ledger')) + '"><option value="">' + esc(tx('Add a ledger')) + '</option>' +
     more
@@ -207,17 +211,18 @@ function obRender() {
 function obAddLedger() {
   var pick = document.getElementById('ob_more');
   if (!pick || !pick.value) return;
-  OB.rows.push(obRowOf(pick.value, false));
+  OPENING.rows.push(obRowOf(pick.value, false));
   obRender();
-  var last = document.getElementById('ob_dr_' + (OB.rows.length - 1));
+  var last = document.getElementById('ob_dr_' + (OPENING.rows.length - 1));
   if (last) last.focus();
 }
 function obDate(value) {
-  OB.date = value;
+  OPENING.date = value;
   obPreviewSoon();
 }
+/** a typed Debit or Credit: keep it as minor units on its row and ask the server for the check again */
 function obCell(i, side) {
-  var row = OB.rows[i];
+  var row = OPENING.rows[i];
   var value = bkMoneyRead('ob_' + side + '_' + i);
   row[side] = isFinite(value) && value > 0 ? value : null;
   if (row[side]) {
@@ -229,15 +234,15 @@ function obCell(i, side) {
   obPreviewSoon();
 }
 function obToggle(i) {
-  OB.rows[i].open = !OB.rows[i].open;
-  if (OB.rows[i].open && !OB.rows[i].bills.length) OB.rows[i].bills.push({ party_id: '', ref: '', date: '', due: '', minor: null });
+  OPENING.rows[i].open = !OPENING.rows[i].open;
+  if (OPENING.rows[i].open && !OPENING.rows[i].bills.length) OPENING.rows[i].bills.push({ party_id: '', ref: '', date: '', due: '', minor: null });
   obEnsureParties().then(obRender);
 }
 
 /* ── the rows the server is asked about ── */
 function obRowsOut() {
   var out = [];
-  OB.rows.forEach(function (row) {
+  OPENING.rows.forEach(function (row) {
     var side = obSide(row);
     var bills = row.bills.filter(function (bill) {
       return bill.party_id && bill.minor;
@@ -248,10 +253,10 @@ function obRowsOut() {
       out.push(one);
     });
     if ((row.dr || row.cr) && !bills.length) {
-      var own = { code: row.code };
-      if (row.dr) own.dr_minor = row.dr;
-      else own.cr_minor = row.cr;
-      out.push(own);
+      var ownLine = { code: row.code };
+      if (row.dr) ownLine.dr_minor = row.dr;
+      else ownLine.cr_minor = row.cr;
+      out.push(ownLine);
     }
   });
   return out;
@@ -259,39 +264,40 @@ function obRowsOut() {
 
 /* ── the live check: the server's Difference ── */
 function obPreviewSoon() {
-  OB.pv = null;
-  OB.checking = true;
+  OPENING.pv = null;
+  OPENING.checking = true;
   obStatePaint();
-  clearTimeout(OB.timer);
-  OB.timer = setTimeout(obPreviewNow, 350);
+  clearTimeout(OPENING.timer);
+  OPENING.timer = setTimeout(obPreviewNow, 350);
 }
+/** ask the server for the Difference of the rows held; a newer answer wins and one still out asks again when it lands */
 async function obPreviewNow() {
-  clearTimeout(OB.timer);
-  if (OB.sending) {
-    OB.again = true;
+  clearTimeout(OPENING.timer);
+  if (OPENING.sending) {
+    OPENING.again = true;
     return;
   } /* the app sends one preview at a time; the newest rows go next */
   var rows = obRowsOut();
   if (!rows.length) {
-    OB.pv = { debit_minor: 0, credit_minor: 0, difference_minor: 0, side: null, bills: [], refusals: [], can_save: false, empty: true };
-    OB.checking = false;
+    OPENING.pv = { debit_minor: 0, credit_minor: 0, difference_minor: 0, side: null, bills: [], refusals: [], can_save: false, empty: true };
+    OPENING.checking = false;
     obStatePaint();
     return;
   }
-  OB.sending = true;
-  OB.checking = true;
+  OPENING.sending = true;
+  OPENING.checking = true;
   try {
-    var reply = await api('booksOpeningPreview', { body: { rows: rows, date: OB.date, replace: OB.mode === 'replace' } });
-    if (!OB.again) OB.pv = reply;
+    var reply = await api('booksOpeningPreview', { body: { rows: rows, date: OPENING.date, replace: OPENING.mode === 'replace' } });
+    if (!OPENING.again) OPENING.pv = reply;
   } catch (e) {
-    OB.pv = { refusals: [{ name: 'ERR', why: obErr(e, tx('Could not check')) }], can_save: false, bills: [] };
+    OPENING.pv = { refusals: [{ name: 'ERR', why: obErr(e, tx('Could not check')) }], can_save: false, bills: [] };
   }
-  OB.sending = false;
-  if (OB.again) {
-    OB.again = false;
+  OPENING.sending = false;
+  if (OPENING.again) {
+    OPENING.again = false;
     return obPreviewNow();
   }
-  OB.checking = false;
+  OPENING.checking = false;
   obStatePaint();
 }
 function obSideWord(side) {
@@ -299,76 +305,91 @@ function obSideWord(side) {
 }
 /** a ledger's bills-total cell follows its bills without a repaint of the grid (a repaint would drop the caret): read-only with bills, a money field without */
 function obBillCellsPaint() {
-  OB.rows.forEach(function (row, i) {
-    if (!obHasBills(row)) return;
-    var host = document.querySelector('[data-testid="ob-row-' + row.code + '"]');
-    var side = obSide(row);
-    var cell = host && host.children[side === 'dr' ? 1 : 2];
-    if (!cell) return;
-    var has = row.bills.some(function (bill) {
-      return bill.party_id && bill.minor;
-    });
-    var isRo = cell.getAttribute('data-testid') === 'ob-from-bills-' + row.code;
-    if (has) {
-      if (has && OB.pv && !OB.checking) cell.outerHTML = obSideCell(row, i, side, obBillsTotalOf(row.code));
-      else if (!isRo) cell.outerHTML = obSideCell(row, i, side, null);
-    } else if (isRo) {
-      cell.outerHTML = obSideCell(row, i, side, null);
-      row[side] = null;
-    }
+  OPENING.rows.forEach(function (row, i) {
+    if (obHasBills(row)) obBillCellPaint(row, i);
   });
+}
+/** one bills ledger's total cell: read-only "from n bills" once a bill has a party and an amount, a money field again when the last bill goes */
+function obBillCellPaint(row, i) {
+  var host = document.querySelector('[data-testid="ob-row-' + row.code + '"]');
+  var side = obSide(row);
+  var cell = host && host.children[side === 'dr' ? 1 : 2];
+  if (!cell) return;
+  var hasBills = row.bills.some(function (bill) {
+    return bill.party_id && bill.minor;
+  });
+  var isReadOnly = cell.getAttribute('data-testid') === 'ob-from-bills-' + row.code;
+  if (hasBills) {
+    if (OPENING.pv && !OPENING.checking) cell.outerHTML = obSideCell(row, i, side, obBillsTotalOf(row.code));
+    else if (!isReadOnly) cell.outerHTML = obSideCell(row, i, side, null);
+  } else if (isReadOnly) {
+    cell.outerHTML = obSideCell(row, i, side, null);
+    row[side] = null;
+  }
 }
 /** paints the Difference sentence, the totals, the balance button and the Save state from the server's last answer — and nothing of its own */
 function obStatePaint() {
   obBillCellsPaint();
   var diff = document.getElementById('ob_diff'),
     save = document.getElementById('ob_save'),
-    tot = document.getElementById('ob_tot'),
-    bal = document.getElementById('ob_balance');
+    totals = document.getElementById('ob_tot'),
+    balanceHost = document.getElementById('ob_balance');
   if (!diff || !save) return;
-  var pv = OB.pv;
-  if (OB.checking || !pv) {
-    diff.innerHTML = '<span style="color:var(--grey)">' + (pv || OB.checking ? tx('Checking…') : tx('Type the opening balances')) + '</span>';
-    save.disabled = true;
-    if (tot) tot.textContent = '';
-    if (bal) bal.innerHTML = '';
+  var preview = OPENING.pv;
+  if (OPENING.checking || !preview) {
+    obStateWaiting(diff, save, [totals, balanceHost], preview);
     return;
   }
-  var cur = pv.currency;
-  var said = '';
-  if (pv.empty) said = '<span style="color:var(--grey)">' + esc(tx('Type the opening balances')) + '</span>';
-  else if (pv.refusals && pv.refusals.length)
-    said =
+  diff.innerHTML = obDifferenceHtml(preview);
+  save.disabled = !preview.can_save;
+  if (totals) totals.textContent = obTotalsWords(preview);
+  if (balanceHost) balanceHost.innerHTML = obBalanceButtonHtml(preview);
+}
+/** while the server's answer is out (or before there is one): "Checking…" or the prompt, Save off, totals and balance button cleared */
+function obStateWaiting(diff, save, cleared, preview) {
+  diff.innerHTML = '<span style="color:var(--grey)">' + (preview || OPENING.checking ? tx('Checking…') : tx('Type the opening balances')) + '</span>';
+  save.disabled = true;
+  cleared.forEach(function (node) {
+    if (node) node.textContent = '';
+  });
+}
+/** "Debit x · Credit y" from the server's totals; nothing when nothing is typed */
+function obTotalsWords(preview) {
+  return preview.empty ? '' : tx('Debit') + ' ' + bkMoney(preview.debit_minor, preview.currency) + ' · ' + tx('Credit') + ' ' + bkMoney(preview.credit_minor, preview.currency);
+}
+/** the sentence in the Difference slot, all from the server's answer: empty · the refusals · how far apart the sides are · balanced */
+function obDifferenceHtml(preview) {
+  var currency = preview.currency;
+  if (preview.empty) return '<span style="color:var(--grey)">' + esc(tx('Type the opening balances')) + '</span>';
+  if (preview.refusals && preview.refusals.length)
+    return (
       '<span class="ob-bad" data-testid="ob-refusal">' +
-      pv.refusals
+      preview.refusals
         .map(function (item) {
           return esc(item.why);
         })
         .join(' ') +
-      '</span>';
-  else if (pv.difference_minor)
-    said = '<span class="ob-bad">' + esc(txf("Difference {amt}. Add owner's equity or fix a line.", { amt: bkMoney(pv.difference_minor, cur) + ' ' + obSideWord(pv.side) })) + '</span>';
-  else said = '<span class="ob-ok">' + esc(tx('Difference')) + ' <b>' + esc(bkMoney(0, cur)) + '</b> · ' + esc(tx('Balanced')) + '</span>';
-  diff.innerHTML = said;
-  save.disabled = !pv.can_save;
-  if (tot) tot.textContent = pv.empty ? '' : tx('Debit') + ' ' + bkMoney(pv.debit_minor, cur) + ' · ' + tx('Credit') + ' ' + bkMoney(pv.credit_minor, cur);
-  /* the balancing figure is the engine's Difference: offered once, when the owner's equity ledger is still empty */
-  var equity = OB.rows.filter(function (row) {
+      '</span>'
+    );
+  if (preview.difference_minor)
+    return '<span class="ob-bad">' + esc(txf("Difference {amt}. Add owner's equity or fix a line.", { amt: bkMoney(preview.difference_minor, currency) + ' ' + obSideWord(preview.side) })) + '</span>';
+  return '<span class="ob-ok">' + esc(tx('Difference')) + ' <b>' + esc(bkMoney(0, currency)) + '</b> · ' + esc(tx('Balanced')) + '</span>';
+}
+/** the balancing figure is the engine's Difference: offered once, when the owner's equity ledger is still empty */
+function obBalanceButtonHtml(preview) {
+  var equity = OPENING.rows.filter(function (row) {
     return row.role === 'capital';
   })[0];
-  var idx = equity ? OB.rows.indexOf(equity) : -1;
-  if (bal) {
-    bal.innerHTML =
-      idx >= 0 && pv.difference_minor && !equity.dr && !equity.cr && (!pv.refusals || !pv.refusals.length)
-        ? '<button type="button" class="supact" data-cbsid="CMP042-B14"' + obMount('CMP042') + ' data-testid="ob-balance" onclick="obBalance(' + idx + ')">' + esc(txf('Balance with {name}', { name: equity.name })) + '</button>'
-        : '';
-  }
+  var idx = equity ? OPENING.rows.indexOf(equity) : -1;
+  return idx >= 0 && preview.difference_minor && !equity.dr && !equity.cr && (!preview.refusals || !preview.refusals.length)
+    ? '<button type="button" class="supact" data-cbsid="CMP042-B14"' + obMount('CMP042') + ' data-testid="ob-balance" onclick="obBalance(' + idx + ')">' + esc(txf('Balance with {name}', { name: equity.name })) + '</button>'
+    : '';
 }
 function obBalance(i) {
-  var pv = OB.pv;
+  var pv = OPENING.pv;
   if (!pv || !pv.difference_minor) return;
-  OB.rows[i][pv.side] = pv.difference_minor; /* the server's figure, put in the ledger that balances it */
-  OB.rows[i][pv.side === 'dr' ? 'cr' : 'dr'] = null;
+  OPENING.rows[i][pv.side] = pv.difference_minor; /* the server's figure, put in the ledger that balances it */
+  OPENING.rows[i][pv.side === 'dr' ? 'cr' : 'dr'] = null;
   obRender();
   obPreviewNow();
 }
@@ -376,8 +397,8 @@ function obBalance(i) {
 /* ── save ── */
 /** a change to what is saved asks why first, in the popup the bank page's Reopen and Month lock's Open again use (POP092, this screen's mount); the reason is kept with the change */
 function obSave() {
-  if (OB.mode !== 'replace') return obSaveGo();
-  OB.reason = '';
+  if (OPENING.mode !== 'replace') return obSaveGo();
+  OPENING.reason = '';
   /* where-used: out-of-scope the mount is bkDialogMount(5): the host screen's own code plus -U25, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(5),
@@ -392,28 +413,30 @@ function obSave() {
       '<button type="button" class="supact-pri" data-cbsid="CMP042-B14"' + obMount('CMP042') + ' data-testid="ob-why-go" onclick="obReasonGo()">' + tx('Save change') + '</button>'
   });
 }
+/** Edit asks WHY first: the reason is kept and the page opens the grid for the change */
 function obReasonGo() {
   var box = document.getElementById('ob_why'),
     out = document.getElementById('ob_whyout');
-  OB.reason = String((box && box.value) || '').trim();
-  if (!OB.reason) {
+  OPENING.reason = String((box && box.value) || '').trim();
+  if (!OPENING.reason) {
     if (out) out.textContent = tx('Say why — the reason is kept');
     return;
   }
   closeModal();
   obSaveGo();
 }
+/** press Save: send the rows (with the reason when it is a change) and show what the server kept */
 async function obSaveGo() {
   var btn = document.getElementById('ob_save');
   await bkOnce('opening-save', btn, async function () {
     try {
       var rows = obRowsOut();
       var reply;
-      if (OB.mode === 'replace') reply = await api('booksOpeningReplace', { body: { rows: rows, date: OB.date, reason: OB.reason, client_ref: OB.ref } });
-      else reply = await api('booksOpening', { body: { rows: rows, date: OB.date, client_ref: OB.ref, require_balanced: true } });
+      if (OPENING.mode === 'replace') reply = await api('booksOpeningReplace', { body: { rows: rows, date: OPENING.date, reason: OPENING.reason, client_ref: OPENING.ref } });
+      else reply = await api('booksOpening', { body: { rows: rows, date: OPENING.date, client_ref: OPENING.ref, require_balanced: true } });
       toast(txf('Saved as {no}.', { no: (reply && reply.entry_no) || '' }));
-      OB.ref = null;
-      await obView(OB.body);
+      OPENING.ref = null;
+      await obView(OPENING.body);
     } catch (e) {
       toast(obErr(e, tx('Could not save')));
       if (btn) btn.disabled = false;
@@ -430,17 +453,18 @@ function obSourceWord(kind) {
   return tx(OB_SOURCE[kind] || OB_SOURCE.posted);
 }
 function obPartyName(id) {
-  var hit = (OB.parties || []).filter(function (item) {
+  var hit = (OPENING.parties || []).filter(function (item) {
     return item.party_id === id;
   })[0];
   return hit ? (hit.party_no ? hit.party_no + ' · ' : '') + (hit.name || hit.display_name || '') : '';
 }
+/** the saved view: who entered it, when and from where, every line the server kept, and the year strip */
 async function obShowSaved() {
-  OB.mode = 'saved';
+  OPENING.mode = 'saved';
   await obEnsureParties();
-  var saved = OB.saved,
-    cur = saved.currency;
-  var who = (saved.entries || [])
+  var saved = OPENING.saved,
+    currency = saved.currency;
+  var savedBy = (saved.entries || [])
     .map(function (entry) {
       return (
         '<div data-testid="ob-source" style="font-size:var(--fs-1);color:var(--grey)"><b>' +
@@ -458,14 +482,14 @@ async function obShowSaved() {
       return (
         '<div class="ob-row" data-testid="ob-saved-row"><div class="ob-name"><span class="mono">' + esc(line.code) + '</span> ' + esc(line.name || '') +
         (line.party_id ? '<small>' + esc(obPartyName(line.party_id) + (line.bill_ref ? ' · ' + line.bill_ref : '') + (line.due_date ? ' · ' + tx('due') + ' ' + line.due_date : '')) + '</small>' : '') +
-        '</div><div class="ob-num">' + (line.dr_minor ? esc(bkMoney(line.dr_minor, cur)) : '') + '</div><div class="ob-num">' + (line.cr_minor ? esc(bkMoney(line.cr_minor, cur)) : '') + '</div></div>'
+        '</div><div class="ob-num">' + (line.dr_minor ? esc(bkMoney(line.dr_minor, currency)) : '') + '</div><div class="ob-num">' + (line.cr_minor ? esc(bkMoney(line.cr_minor, currency)) : '') + '</div></div>'
       );
     })
     .join('');
-  OB.body.innerHTML =
+  OPENING.body.innerHTML =
     '<div class="ob" data-testid="ob-root"><div class="ob-head"><b>' + tx('Opening balances') + '</b><span>' + esc(tx('from') + ' ' + (bkDate ? bkDate(saved.date) : saved.date)) + '</span><span style="flex:1"></span>' +
     '<button type="button" class="supact-pri" data-cbsid="CMP012-B01"' + obMount('CMP012') + ' data-testid="ob-edit" onclick="obEdit()">' + tx('Edit') + '</button></div>' +
-    who +
+    savedBy +
     '<div class="ob-rows" data-testid="ob-rows"><div class="ob-row ob-hd"><div class="ob-name">' + tx('Ledger') + '</div><div class="ob-num">' + tx('Debit') + '</div><div class="ob-num">' + tx('Credit') + '</div></div>' + rows + '</div>' +
     '<div id="ob_years" data-testid="ob-years">' + obYearsHtml() + '</div></div>';
 }

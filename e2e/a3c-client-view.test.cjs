@@ -16,9 +16,7 @@ const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (
 const box = { URLSearchParams, setTimeout, console };
 box.window = box; box.globalThis = box;
 vm.createContext(box);
-const helpers = src('helpers.js');
-const kinds = helpers.slice(helpers.indexOf('var DAY_BOOK_KINDS'), helpers.indexOf('/** ONE rule: the line of a Day book entry that names its party'))
-  + helpers.slice(helpers.indexOf('function dayBookKind'), helpers.indexOf('/**\n * l16 polish (R09)'));
+const kinds = src('day-book-kind.js'); /* moved out of helpers.js: the Day book's group and party line */
 vm.runInContext(kinds, box);
 vm.runInContext(src('cap-evidence.js'), box);
 vm.runInContext(src('books-grant-filters.js'), box);
@@ -80,16 +78,16 @@ check(seen[0].query.from === '2025-07-01' && seen[0].query.to === '2026-06-30', 
 check(seen[1].query.to === '2026-03-31' && seen[1].query.from === undefined, 'a typed day still wins (as at that day)');
 check(seen[2].query.from === undefined && seen[2].query.to === undefined, 'no period picked: the server default, as before');
 const view = src('books-grant-view.js');
-check(/period: viewState\.period/.test(view), 'the view hands its period to the drill');
+check(/period: grantKit\.viewState\.period/.test(view), 'the view hands its period to the drill');
 
 /* rank 8: focus kept, a key that marks */
 let cap = src('cap-mark.js');
 if (mutate === 'focus') cap = cap.replace('next.focus()', '0');
-let keys = view;
+let keys = src('books-grant-list.js');
 if (mutate === 'typing') keys = keys.replace('/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || ', '');
-check(/keepFocus\(host, b, c\.ctl\.set\(id, 'clear', '', b\)\)/.test(cap) && /next\.focus\(\)/.test(cap), 'a Check hands the focus to the row new chip, not the page top');
+check(/keepFocus\(host, button, hostControl\.ctl\.set\(id, 'clear', '', button\)\)/.test(cap) && /next\.focus\(\)/.test(cap), 'a Check hands the focus to the row new chip, not the page top');
 check(/event\.key !== 'c' && event\.key !== 'q'/.test(keys) && /\^\(INPUT\|TEXTAREA\|SELECT\)\$/.test(keys) && /ctrlKey \|\| event\.metaKey \|\| event\.altKey/.test(keys), 'c and q act only on a row, never in Search or with a modifier');
-check(/mk\.markOf\(entry\.entry_id\)\.state === 'none'/.test(keys) && /mk\.mayCheck\(entry\.entry_id\)/.test(keys), 'c writes only the auditor own Check, only where the server says the seat may and the entry carries no mark (one write per entry, one stamp each, no bulk)');
+check(/mark\.markOf\(entry\.entry_id\)\.state === 'none'/.test(keys) && /mark\.mayCheck\(entry\.entry_id\)/.test(keys), 'c writes only the auditor own Check, only where the server says the seat may and the entry carries no mark (one write per entry, one stamp each, no bulk)');
 check(!/\b(POST|PUT|PATCH|DELETE)\b/.test(src('books-grant-filters.js')), 'the filters file has no write');
 
 process.exit(failures ? 1 : 0);

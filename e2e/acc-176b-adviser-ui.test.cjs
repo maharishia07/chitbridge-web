@@ -15,7 +15,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 
 let failures = 0;
 const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (!ok) failures++; };
 
-let acting = read('books-acting.js'), actions = read('books-actions-view.js'), api = read('books-grant-api.js'), member = read('books-grant-member.js'), view = read('books-grant-view.js');
+let acting = read('books-acting.js'), actions = read('books-actions-view.js'), api = read('books-grant-api.js'), member = read('books-grant-member.js'), view = read('books-grant-view.js') + ['reports', 'cells', 'marks', 'list'].map((part) => read('books-grant-' + part + '.js')).join('\n');
 if (mutate === 'store') acting = acting.replace('{ store_id: context && context.store.id }', '{}');
 if (mutate === 'clear') acting = acting.replace('if (context && String(context.store.id) !== String(store.id)) clearAll();', '');
 if (mutate === 'late') actions = actions.replace('if (root.CBBooksActing.current().store.id !== asked) return false;', '');
@@ -67,7 +67,7 @@ const codeList = mine.map((t) => t.code);
 check(new Set(codeList).size === codeList.length - 0 || codeList.filter((c, i) => codeList.indexOf(c) !== i).every((c) => c === 'NET007-B01'), 'no code written twice (NET007-B01 is the one generated queue tab)');
 /* (9) prepare: the entry sheet PREPARES under an adviser, from the owner's books page opened for the store */
 const pub = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8');
-const entry = pub('app/cap-entry.js'), core = pub('app/core.js'), accounts = pub('accounts.html');
+const entry = pub('app/cap-entry.js') + pub('app/cap-entry-preview.js'), core = pub('app/core.js'), accounts = pub('accounts.html');
 check(entry.includes("enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost'"), 'Save under an adviser grant prepares; any other login posts as before');
 check(acting.includes("body({ kind: 'journal', body: journal, client_ref: entry.client_ref, working_month: month })") && acting.includes('if (!entry.date) throw'), 'prepare sends store_id, kind journal, the body, client_ref and working_month, and needs the date');
 check(core.includes("typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}") && core.includes('...actingHeaders()'), 'every request of a page acting for a store carries its headers; other pages send none');
@@ -89,19 +89,19 @@ check(entry.includes("p: '/api/books-actions', idem: 'attempt' }") && entry.incl
 check(core.includes('CBBooksActing.guard(ep)') && accounts.includes('CBBooksActing.openPage(') && acting.includes('confirmGrant(base, token)') && acting.includes('keepTabs(menu, groups)') && !acting.includes('actingName'), 'the page enters only on a live adviser grant, the name comes from the grant row, the core refuses a call outside /api/books*');
 /* (11) round 2: an acting adviser prepares, hides the bank, is named right; the switch lists every client */
 A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
-check(A2.refusals([{ message: 'Only the owner may record this.' }, { message: 'Date is locked' }]).length === 1 && entry.includes('CBBooksActing.refusals(r.refusals)'), 'an acting adviser is not stopped by the owner-only preview sentence; the sheet asks CBBooksActing');
+check(A2.refusals([{ message: 'Only the owner may record this.' }, { message: 'Date is locked' }]).length === 1 && entry.includes('CBBooksActing.refusals(reply.refusals)'), 'an acting adviser is not stopped by the owner-only preview sentence; the sheet asks CBBooksActing');
 check(!A2.hides('bank') && !A2.hides('tb') && A2.hides('compare') && /not open to an accountant/.test(A2.refusedFor()), 'acting: the bank is open to an adviser (the auditor reads it, read only: e2e/adviser-bank.test.cjs); the refusal names an adviser');
 A2.enter({ id: 's2', name: 'Two' }, 'auditor');
 check(!A2.hides('bank') && A2.hides('tb') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor (the Bank is read-only open since audbank, the trial balance stays hidden)');
 const heldBy = { s1: { preset: 'adviser', grantor_name: 'One' }, s2: { preset: 'auditor', grantor_name: 'Two' } };
 check(A2.clientStores([{ entity_id: 's1', name: 'x' }, { entity_id: 's2', name: 'y' }, { entity_id: 's3', name: 'z' }], heldBy).map((c) => c.role).join() === 'adviser,auditor' && acting.includes("'Switch client'") && !acting.includes('Switch store'), 'the switch lists every client with its role (adviser and auditor), not only advisers');
-check(api.includes("out.live[id].preset !== 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
-check(view.includes('num: column[2] === MONEY') && view.includes('groupWords') && view.includes('paintDues') && !view.includes("facts: [['total_minor'") && view.includes('totalRows') && view.includes('monthRows') && view.includes('usePeriod'), 'the grant screens: money right-aligned, group words, two dues panels without a net, totals row, the month of the books');
+check(api.includes("out.live[id].preset === 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
+check(view.includes('num: isNumberColumn(column)') && view.includes('groupWords') && view.includes('paintDues') && !view.includes("facts: [['total_minor'") && view.includes('totalRows') && view.includes('monthRows') && view.includes('usePeriod'), 'the grant screens: money right-aligned, group words, two dues panels without a net, totals row, the month of the books');
 /* (9) round 2b: parents from the answer, the firm's client list, ended grants, the front door */
-const net = read('network-app.js'), door = read('books-clients-door.js');
+const net = read('network-app.js') + ' ' + read('network-books.js'), door = read('books-clients-door.js');
 check(member.includes('answer.parents') && member.includes('allParents()') && member.includes('entity_id'), 'Give access: the parents the server names (governance, commercial, agency) join the network list, once each');
 check(api.includes('clientColumns') && api.includes("'since'") && api.includes("'until'") && api.includes("['city', 'km', 'purpose']") && net.includes('clientColumns(cols, N, T)'), 'the client list of a firm: Role, Since, Until; no City, Distance or purpose columns');
-check(api.includes('heldSplit') && api.includes('endedWords') && net.includes('nw-ended-') && net.includes('N.ended'), 'ended grants are listed with their state in words and no Open books');
+check(api.includes('heldSplit') && api.includes('endedWords') && net.includes('nw-ended-') && (net.includes('N.ended') || net.includes('page.ended')), 'ended grants are listed with their state in words and no Open books');
 check(door.includes('home-your-clients') && door.includes('/network.html') && read('../app.html').includes('books-clients-door.js'), 'Home: a login with live received grants gets a "Your clients" card to My network');
 check(view.includes('foldHead: true') && view.includes("setAttribute('tabindex', '-1')") && view.includes('focusHeading'), 'books view: the list head folds; focus moves to the heading on open');
 /* (8) the header names live in one file */

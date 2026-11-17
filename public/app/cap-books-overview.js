@@ -8,7 +8,7 @@
  * ⭐ THE PICTURES are the MIS components, one per kind (app/mis-charts.js adapters → CBDraw): sales by month against last year (bars + line) · this week by weekday against the same week last year · profit by month · owed to you / you owe by age (hbars) · cash for 30 days (cashLine). Profit per item stays out (REP-29) and the screen says so.
  * ⭐ NEVER COLOUR ALONE: bars solid, the running month hatched (CBDraw), a table under each picture, a change is a signed percent.
  * Host globals (accounts.html): MC (app/mis-charts.js) · api · EP · esc · tx · txf · bkMoney · bkPct · bkDate · CBDraw · CBLocale.
- * OWNS      OV (this view's state) and the How we are doing view (ovView · ovLoad · ovPaint)
+ * OWNS      OVERVIEW (this view's state) and the How we are doing view (ovView · ovLoad · ovPaint)
  * CALLED BY public/accounts.html (BK.views.overview)
  * FLOW      #overview → ovView() → ovLoad() → GET /api/books/overview?period= → ovPaint(): headline · tiles · two pictures with their tables
  * Flow step: R2R · reports (docs/process/flows.json).
@@ -16,7 +16,7 @@
 'use strict';
 if (typeof EP !== 'undefined') Object.assign(EP, { booksOverview: { m: 'GET', p: '/api/books/overview', ok: 'y' } /* owner · adviser · auditor: how the business is doing, one read (the seat decides the keys) */ });
 
-var OV = { period: 'ytd', answer: null, state: 'loading', gen: 0, timer: null };
+var OVERVIEW = { period: 'ytd', answer: null, state: 'loading', gen: 0, timer: null };
 var OV_PERIODS = [
   ['week', 'This week so far'],
   ['mtd', 'This month so far'],
@@ -33,33 +33,33 @@ function ovView(body) {
 }
 /** one read; a newer read wins; a failure is a sentence and a button, never a half page */
 async function ovLoad() {
-  var generation = ++OV.gen;
-  OV.state = 'loading';
+  var generation = ++OVERVIEW.gen;
+  OVERVIEW.state = 'loading';
   ovPaint();
   try {
-    var answer = await api('booksOverview', { query: { period: OV.period } });
-    if (generation !== OV.gen) return;
-    OV.answer = answer || null;
-    OV.state = 'ready';
+    var answer = await api('booksOverview', { query: { period: OVERVIEW.period } });
+    if (generation !== OVERVIEW.gen) return;
+    OVERVIEW.answer = answer || null;
+    OVERVIEW.state = 'ready';
   } catch (error) {
-    if (generation !== OV.gen) return;
+    if (generation !== OVERVIEW.gen) return;
     if (typeof cblog === 'function') cblog('error', 'overview: ' + ((error && error.message) || error));
-    OV.state = 'error';
+    OVERVIEW.state = 'error';
   }
   ovPaint();
 }
 function ovPick(period) {
-  OV.period = period;
+  OVERVIEW.period = period;
   ovLoad();
 }
 function ovMoney(minor) {
-  return bkMoney(minor, OV.answer && OV.answer.currency);
+  return bkMoney(minor, OVERVIEW.answer && OVERVIEW.answer.currency);
 }
 function ovSelect() {
   return (
     '<select class="inp" id="ov_pick" data-cbsid="' + OV_CODES.pick + '" data-testid="ov-pick" aria-label="' + esc(tx('Which period')) + '" onchange="ovPick(this.value)">' +
     OV_PERIODS.map(function (item) {
-      return '<option value="' + item[0] + '"' + (item[0] === OV.period ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>';
+      return '<option value="' + item[0] + '"' + (item[0] === OVERVIEW.period ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>';
     }).join('') +
     '</select>'
   );
@@ -82,22 +82,23 @@ function ovTile(tid, label, minor, note, href) {
 function ovChange(fig) {
   return fig && fig.change_bp != null ? bkPct(fig.change_bp, true) + ' ' + esc(tx('on last year')) : '';
 }
-function ovTiles(a) {
-  var s = a.sales || {},
-    cash = a.cash;
+/** the headline tiles (sales · income · profit · to collect · to pay · cash): a figure the server did not send has no tile */
+function ovTiles(answer) {
+  var salesFig = answer.sales || {},
+    cash = answer.cash;
   var tiles = [
-    ovTile('sales', 'Sales, tax in', s.minor, ovChange(s) + (s.partial ? ' · ' + esc(tx('books began part-way')) : ''), '#daybook'),
-    a.income ? ovTile('income', 'Income, tax out', a.income.minor, ovChange(a.income), '#pl') : '',
-    a.profit ? ovTile('profit', 'Profit', a.profit.minor, ovChange(a.profit), '#pl') : '',
-    a.to_collect ? ovTile('collect', 'To collect', a.to_collect.minor, '', '#dues') : '',
-    a.to_pay ? ovTile('pay', 'To pay', a.to_pay.minor, '', '#dues') : ''
+    ovTile('sales', 'Sales, tax in', salesFig.minor, ovChange(salesFig) + (salesFig.partial ? ' · ' + esc(tx('books began part-way')) : ''), '#daybook'),
+    answer.income ? ovTile('income', 'Income, tax out', answer.income.minor, ovChange(answer.income), '#pl') : '',
+    answer.profit ? ovTile('profit', 'Profit', answer.profit.minor, ovChange(answer.profit), '#pl') : '',
+    answer.to_collect ? ovTile('collect', 'To collect', answer.to_collect.minor, '', '#dues') : '',
+    answer.to_pay ? ovTile('pay', 'To pay', answer.to_pay.minor, '', '#dues') : ''
   ];
-  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(ovMoneyWords(cash.words, OV.answer && OV.answer.currency)) + '</span></a>');
+  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(ovMoneyWords(cash.words, OVERVIEW.answer && OVERVIEW.answer.currency)) + '</span></a>');
   return '<div class="ov-tiles">' + tiles.join('') + '</div>';
 }
 /** the words deps the adapters (app/mis-charts.js) take: the one text, money and date makers of this page */
 function ovDeps() {
-  return { tx: tx, money: bkMoney, date: CBLocale.date, cur: OV.answer && OV.answer.currency };
+  return { tx: tx, money: bkMoney, date: CBLocale.date, cur: OVERVIEW.answer && OVERVIEW.answer.currency };
 }
 /** a card's chart width, so it is drawn at the size it shows (no scaling surprise at 390): half the page on a wide screen, all of it on a narrow one */
 function ovWidth() {
@@ -182,21 +183,22 @@ function ovCss() {
     '.ov-pics{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:901px){.ov-pics{grid-template-columns:1fr 1fr}}.ov-pic{border:1px solid var(--line-3,#d8ccb0);border-radius:8px;padding:6px 10px;background:var(--card,#fffdf8);min-width:0;overflow:hidden}.ov-pic h3{margin:0 0 2px;font-size:var(--fs-2,14px)}.ov-pic details{font-size:var(--fs-1,12px)}.ov .bk-st .num{text-align:right}.ov-pic .bk-st{width:100%;border-collapse:collapse}.ov-pic .bk-st th{text-align:start;color:var(--muted,#6f6450);font-weight:500}</style>'
   ].join('');
 }
+/** paint the bar and the main area for the state the view is in: loading · error with a retry · the answer (headline, tiles, pictures) */
 function ovPaint() {
   var bar = document.getElementById('ov_bar'),
     main = document.getElementById('ov_main');
   if (!bar || !main) return;
-  bar.innerHTML = ovCss() + '<div class="ov-bar">' + ovSelect() + (OV.state === 'ready' && OV.answer && OV.answer.sales && OV.answer.sales.through ? '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="ov-through">' + esc(txf('Books in to {date}', { date: bkDate(OV.answer.sales.through) })) + '</span>' : '') + '</div>';
-  if (OV.state === 'loading') main.innerHTML = '<p class="hint">' + esc(tx('Loading…')) + '</p>';
-  else if (OV.state !== 'ready' || !OV.answer) main.innerHTML = '<p class="hint" data-testid="ov-error">' + esc(tx('This did not load.')) + ' <button class="btn" type="button" data-cbsid="' + OV_CODES.retry + '" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></p>';
+  bar.innerHTML = ovCss() + '<div class="ov-bar">' + ovSelect() + (OVERVIEW.state === 'ready' && OVERVIEW.answer && OVERVIEW.answer.sales && OVERVIEW.answer.sales.through ? '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="ov-through">' + esc(txf('Books in to {date}', { date: bkDate(OVERVIEW.answer.sales.through) })) + '</span>' : '') + '</div>';
+  if (OVERVIEW.state === 'loading') main.innerHTML = '<p class="hint">' + esc(tx('Loading…')) + '</p>';
+  else if (OVERVIEW.state !== 'ready' || !OVERVIEW.answer) main.innerHTML = '<p class="hint" data-testid="ov-error">' + esc(tx('This did not load.')) + ' <button class="btn" type="button" data-cbsid="' + OV_CODES.retry + '" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></p>';
   else {
-    var a = OV.answer;
-    main.innerHTML = ovHeadline(a) + ovTiles(a) + ovPictures(a);
+    var answer = OVERVIEW.answer;
+    main.innerHTML = ovHeadline(answer) + ovTiles(answer) + ovPictures(answer);
   }
 }
 window.addEventListener('resize', function () {
-  clearTimeout(OV.timer);
-  OV.timer = setTimeout(function () {
-    if (document.getElementById('ov_main') && OV.state === 'ready') ovPaint();
+  clearTimeout(OVERVIEW.timer);
+  OVERVIEW.timer = setTimeout(function () {
+    if (document.getElementById('ov_main') && OVERVIEW.state === 'ready') ovPaint();
   }, 150);
 });

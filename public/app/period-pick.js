@@ -13,10 +13,10 @@
   'use strict';
   var MOUNT = 'NET005-U01'; /* the library Select's mount code on this screen (register NET005) */
 
-  function tx(text) {
+  function phrase(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
-  function day(iso) {
+  function shopDayOf(iso) {
     return typeof root.shopDay === 'function' ? root.shopDay(iso) : iso;
   }
   function monthWord(iso) {
@@ -24,18 +24,18 @@
     return (names[Number(iso.slice(5, 7)) - 1] || iso.slice(0, 7)) + ' ' + iso.slice(0, 4);
   }
   function entriesWord(n) {
-    return Number(n) === 0 ? tx('no entries') : Number(n) + ' ' + tx(Number(n) === 1 ? 'entry' : 'entries');
+    return Number(n) === 0 ? phrase('no entries') : Number(n) + ' ' + phrase(Number(n) === 1 ? 'entry' : 'entries');
   }
   /** "40/40 checked", or nothing at all when the server sent no count */
   function checkedWord(checked, of) {
-    return checked == null || of == null || Number(of) === 0 ? '' : checked + '/' + of + ' ' + tx('checked');
+    return checked == null || of == null || Number(of) === 0 ? '' : checked + '/' + of + ' ' + phrase('checked');
   }
   function line(parts) {
     return parts.filter(Boolean).join(' · ');
   }
   /** E13: the month's state in the SAME word as the Month lock page and the firm's Months (CBLockWords.stateWord, from the server's state names) */
   function stateOf(status) {
-    return root.CBLockWords ? root.CBLockWords.stateWord(status) : tx(status === 'soft_locked' || status === 'hard_locked' ? 'Locked' : 'Open');
+    return root.CBLockWords ? root.CBLockWords.stateWord(status) : phrase(status === 'soft_locked' || status === 'hard_locked' ? 'Locked' : 'Open');
   }
 
   /** the period named in an address (?fy= or ?from=&to=), or null: the page then opens on the year under review */
@@ -80,7 +80,7 @@
   }
   /** one line for a year: "FY 2025-26 · 1 Jul 2025 – 30 Jun 2026 · 480 entries · 12 of 12 months locked · 470/480 checked" */
   function yearLine(y) {
-    return line(['FY ' + y.fy, day(y.from) + ' – ' + day(y.to), entriesWord(y.entries), y.locked + ' ' + tx('of') + ' ' + y.months + ' ' + tx('months locked'), checkedWord(y.checked, y.of)]);
+    return line(['FY ' + y.fy, shopDayOf(y.from) + ' – ' + shopDayOf(y.to), entriesWord(y.entries), y.locked + ' ' + phrase('of') + ' ' + y.months + ' ' + phrase('months locked'), checkedWord(y.checked, y.of)]);
   }
   /** the dropdown's options, newest year first, each year's line then its months that hold entries; a range typed in the address that is none of these is added at the top */
   function optionsOf(answer, period) {
@@ -91,12 +91,12 @@
         out.push({ value: 'm:' + String(p.start_date).slice(0, 10) + '|' + String(p.end_date).slice(0, 10), label: '   ' + monthLine(p) });
       });
     });
-    if (period && !out.some(function (o) { return o.value === valueOf(period); })) out.unshift({ value: valueOf(period), label: day(period.from) + ' – ' + day(period.to) });
+    if (period && !out.some(function (o) { return o.value === valueOf(period); })) out.unshift({ value: valueOf(period), label: shopDayOf(period.from) + ' – ' + shopDayOf(period.to) });
     return out;
   }
   /** "For 1 Jul 2025 – 30 Jun 2026" words of a period, for a heading */
   function words(period) {
-    return period ? day(period.from) + ' – ' + day(period.to) : '';
+    return period ? shopDayOf(period.from) + ' – ' + shopDayOf(period.to) : '';
   }
   /** the control: the library Select (ui.select), one line per year and month; onPick(period) when one is chosen. '' when the server named no period to choose from (a books with no months) or the library is not on the page. */
   function control(answer, period, onPick) {

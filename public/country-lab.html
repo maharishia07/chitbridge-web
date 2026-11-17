@@ -234,12 +234,9 @@
   @media (max-width:760px){ .cp-allscroll{ display:none; } .cp-one{ display:table; border:1px solid var(--line,#e7e3d8); border-radius:8px; background:var(--card,#fff); } .cp-all-pick{ display:block; } .cp-one .cp-rule{ position:static; min-width:0; width:42%; } .cp-one td{ min-width:0; } .cp-allwrap{ padding:12px 16px; } }
   @media (max-width:760px){ .cp{ grid-template-columns:1fr; } .cp-side{ border-right:0; border-bottom:1px solid var(--line,#e7e3d8); } .cp-list{ display:none; } .cp-select{ display:block; } .cp-main{ padding:12px 16px; } .cp-grid{ grid-template-columns:1fr; } }
 </style>
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/fonts/cb-fonts.css">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/fonts/cb-fonts.css">
 </head>
 <body>
-
 <!-- CL3: the work area CBFrame puts in the standard main pane (the shell header and the sidebar are drawn around it) -->
 <div id="cl" data-testid="cl-work">
 <!-- ⚠️ THE ENGINES' ABSENCE IS ANNOUNCED (the Conversion lab's rule): a missing engine is a fact, and a fact belongs on the screen. -->
@@ -331,7 +328,7 @@
 <script src="/app/one-person.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
-<script src="/app/shell.js"></script>
+<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>
 <script src="/app/kural.js"></script>
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>

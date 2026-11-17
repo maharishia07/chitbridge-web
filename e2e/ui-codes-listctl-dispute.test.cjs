@@ -68,7 +68,9 @@ FILES.forEach((f) => {
 
 /* the pager pair draws the same markup as before the code moved into a name */
 const win = { document: undefined };
-vm.runInNewContext(mutated('list-ctl.js', read('list-ctl.js')), { window: win, self: win, globalThis: win, console });
+const listContext = vm.createContext({ window: win, self: win, globalThis: win, console });
+['list-ctl-css.js', 'list-ctl-click.js', 'list-ctl-wire.js'].forEach((part) => vm.runInContext(read(part), listContext, { filename: part })); /* the unit's parts load before it */
+vm.runInContext(mutated('list-ctl.js', read('list-ctl.js')), listContext, { filename: 'list-ctl.js' });
 const L = win.CBList;
 check(!!(L && L.pager), 'CBList.pager is exported');
 if (L && L.pager) {

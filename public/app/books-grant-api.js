@@ -88,22 +88,35 @@
   /** held(call) → { <member entity id>: the live grant this business holds on its books }: a login that may not list grants gets {} and the list shows nothing extra */
   function heldSplit(call) {
     return callEndpoint(call, 'grantsList').then(
-      function (answer) {
-        var out = { live: {}, ended: {}, seats: {}, mine: Array.isArray(answer && answer.seats) ? answer.seats : null }; /* mine: the seats THIS login holds, as the server says (null from an older api) */
-        ((answer && answer.received) || []).forEach(function (grant) {
-          var id = String(grant.grantor_entity);
-          var isLive = grant.state === 'live' && !grant.revoked_at && !grant.ended_at;
-          if (isLive) { out.seats[id] = out.seats[id] || {}; out.seats[id][grant.preset === 'adviser' ? 'adviser' : 'auditor'] = grant; } /* every live grant, by the seat it gives */
-          if (isLive && (!out.live[id] || out.live[id].preset !== 'adviser')) out.live[id] = grant; /* both an auditor and an adviser grant live: the adviser one acts */
-          else if (!isLive && grant.state !== 'edge_off') out.ended[id] = grant; /* ended or ran out: listed, quiet, no actions */
-        });
-        Object.keys(out.live).forEach(function (id) { delete out.ended[id]; });
-        return out;
-      },
+      function (answer) { return splitOfGrants(answer); },
       function (failure) {
         return failure && (failure.status === 401 || failure.status === 403) ? {} : { unread: true }; /* a login that may not list grants has none; a list that could not be read is said as that (l16 fable3), never as "no grant" */
       }
     );
+  }
+  /** the grants list as the books door wants it: live, ended, the seats each client gives and the seats this login holds */
+  function splitOfGrants(answer) {
+    var out = { live: {}, ended: {}, seats: {}, mine: Array.isArray(answer && answer.seats) ? answer.seats : null }; /* mine: the seats THIS login holds, as the server says (null from an older api) */
+    ((answer && answer.received) || []).forEach(function (grant) { sortGrant(out, grant); });
+    Object.keys(out.live).forEach(function (id) { delete out.ended[id]; });
+    return out;
+  }
+  /** one grant of the list is sorted: a live one by the seat it gives and as the client's live grant (the adviser one wins), an ended one into the quiet list */
+  function sortGrant(out, grant) {
+    var id = String(grant.grantor_entity);
+    var isLive = grant.state === 'live' && !grant.revoked_at && !grant.ended_at;
+    if (isLive) keepLiveGrant(out, id, grant);
+    if (isLive && !adviserHolds(out, id)) out.live[id] = grant; /* both an auditor and an adviser grant live: the adviser one acts */
+    else if (!isLive && grant.state !== 'edge_off') out.ended[id] = grant; /* ended or ran out: listed, quiet, no actions */
+  }
+  /** a live grant, by the seat it gives (every one) */
+  function keepLiveGrant(out, id, grant) {
+    out.seats[id] = out.seats[id] || {};
+    out.seats[id][grant.preset === 'adviser' ? 'adviser' : 'auditor'] = grant;
+  }
+  /** is the client's live grant already an adviser's (it acts, an auditor grant does not replace it) */
+  function adviserHolds(out, id) {
+    return !!out.live[id] && out.live[id].preset === 'adviser';
   }
   /** ⭐ THE ONE SEAT RULE (firm frame P0): which door of this client this login opens, from what the SERVER says (received[].may_use = mayUseGrant, seats = holdsSeat), never a guess.
    *  doors = the client's live grants whose row says may_use (a row without the key, from an older api, counts as usable: behave as before).
@@ -112,12 +125,16 @@
   function doorsFor(split, id, saved) {
     var rows = ((split && split.seats) || {})[String(id)] || {};
     var doors = ['auditor', 'adviser'].filter(function (role) { return rows[role] && rows[role].may_use !== false; });
-    var mine = split && split.mine, stale = !!saved && doors.indexOf(saved) < 0;
-    if (!doors.length) return { doors: doors, refused: true, stale: stale };
-    if (doors.length === 1) return { doors: doors, open: doors[0], stale: stale };
-    if (mine && mine.length === 1 && doors.indexOf(mine[0]) >= 0) return { doors: doors, open: mine[0], stale: stale };
-    if (saved && !stale) return { doors: doors, open: saved, stale: false };
-    return { doors: doors, ask: true, stale: stale };
+    var stale = !!saved && doors.indexOf(saved) < 0;
+    return Object.assign({ doors: doors, stale: stale }, doorChoice(doors, split && split.mine, saved, stale));
+  }
+  /** what to do with the doors: refuse (none), open the only one, open the one seat this login holds, open the saved one, or ask */
+  function doorChoice(doors, mine, saved, stale) {
+    if (!doors.length) return { refused: true };
+    if (doors.length === 1) return { open: doors[0] };
+    if (mine && mine.length === 1 && doors.indexOf(mine[0]) >= 0) return { open: mine[0] };
+    if (saved && !stale) return { open: saved };
+    return { ask: true };
   }
   function held(call) {
     return heldSplit(call).then(function (split) { return split.live || {}; });
