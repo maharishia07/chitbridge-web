@@ -116,9 +116,16 @@
   function isAdviser() {
     return viewState.o.member.role === 'adviser';
   }
+  /** JET (ASA 560): "Year end · Dated after it" is pressed (the list's choice, or the address on the first read): the Day book reads the days after the period, through the same route */
+  function afterYearEnd() {
+    var F = root.CBBooksGrantFilters, chosen = viewState.dbf !== undefined ? viewState.dbf : F ? F.fromAddress(root.location.search) : {};
+    return !!F && chosen.ye === 'dated';
+  }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
-    var period = viewState.period;
+    var period = viewState.period, after = report.k === 'daybook' && !viewState.day && afterYearEnd() && root.CBBooksGrantFilters.afterRange(period);
+    viewState.yeRead = !!after; /* JET: which days the Day book was read for, so a change of the Year end filter knows whether to read again */
+    if (after) return after;
     if (!viewState.day) {
       if (!period || !period.from || !report.day) return {};
       if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
@@ -463,7 +470,7 @@
   function narrowDaybook(host, config) {
     var F = root.CBBooksGrantFilters;
     if (!F) return;
-    var all = F.filtersFor(viewState.mk);
+    var all = F.filtersFor(viewState.mk, { period: function () { return viewState.period; }, currency: function () { return viewState.answer && viewState.answer.currency; }, rows: function () { return (viewState.answer && viewState.answer.entries) || []; } });
     config.filters = all.filter(function (f) { return f.key !== 'mark' || markable({ k: 'daybook' }); });
     if (viewState.dbf === undefined) viewState.dbf = F.fromAddress(root.location.search); /* the first Day book of this client reads the address; later ones, what the person chose */
     var kept = {};
@@ -475,10 +482,11 @@
     var F = root.CBBooksGrantFilters, inst = host.__cbl;
     if (!F || !inst || !inst.r) return;
     viewState.dbf = JSON.parse(JSON.stringify(inst.r.filt || {})); /* the list's own remembered choices (api.state() also needs its column choices, which a fresh list has not made) */
+    if (afterYearEnd() !== !!viewState.yeRead && current().k === 'daybook' && !viewState.day) reload(); /* Year end · Dated after it is a different read (the days after the period): once per change, never in a loop */
     if (!root.history || !root.history.replaceState) return;
     try {
       var query = new root.URLSearchParams(root.location.search);
-      ['dbf_mark', 'dbf_ev', 'dbf_kind'].forEach(function (k) { query.delete(k); });
+      F.paramNames().forEach(function (k) { query.delete(k); });
       var more = F.toAddress(viewState.dbf), text = query.toString() + (more ? (query.toString() ? '&' : '') + more : '');
       var url = root.location.pathname + (text ? '?' + text : '') + (root.location.hash || '');
       if (url !== root.location.pathname + root.location.search + (root.location.hash || '')) root.history.replaceState(root.history.state, '', url);
