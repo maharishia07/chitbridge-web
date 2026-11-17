@@ -5547,10 +5547,6 @@ function savedItemNames(sv) {
       })
     : null;
 }
-function savedItemCount(sv) {
-  var n = savedItemNames(sv);
-  return n ? n.length : null;
-}
 /** ⭐ the "N items linked" row's own onclick — looked up by id (same shape openSaved()/setStatus() already
  *  take) rather than closing over `sv` in a giant inline handler string. */
 function openSavedItemsOverlay(id) {
