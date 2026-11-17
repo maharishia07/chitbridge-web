@@ -205,14 +205,14 @@
     viewState.period = period;
     viewState.range = period && period.from ? { from: period.from, to: period.to } : null;
   }
-  /** the choices of this client, read ONCE (GET /periods?marks=1: the year under review, each year, each month with its state and checked n of m); the period opens on the year under review unless the address named one */
+  /** the choices of this client, read ONCE (GET /periods?marks=1: the year under review, each year, each month with its state and checked n of m); the period opens on the year under review (current FY only when none) unless the address named one */
   /** fix1117 F3: the first screen is never an empty period. A client whose first financial year has not ended has no year under review (the api says null), and a year under review may hold no entries: either way the books open on the latest year that holds entries (the api's years, newest first), so "Checked 0 of 0 · Nothing to show" never greets a client with entries. RC walk 17 Nov: the current year with entries comes first (below) */
   function periodWithEntries(choices, review) {
     var years = (choices && choices.years) || [], busy = years.filter(function (y) { return Number(y.entries) > 0; })[0];
     var today = new Date().toISOString().slice(0, 10), now = years.filter(function (y) { return Number(y.entries) > 0 && String(y.from).slice(0, 10) <= today && today <= String(y.to).slice(0, 10); })[0];
-    if (now) return { fy: now.fy, from: now.from, to: now.to }; /* F3 step 6 (Fable RC walk 17 Nov): the CURRENT financial year, when it holds entries, as Xero and MYOB open the current period; the year under review (a closed year) is one pick away */
     var held = review && years.filter(function (y) { return y.fy === review.fy; })[0];
-    if (review && (!held || Number(held.entries) > 0 || !busy)) return review;
+    if (review && (!held || Number(held.entries) > 0 || !busy)) return review; /* fyreview 17 Nov: a FIRM seat opens the client on the year under review, the value Home year-end band and the practice list show (the api under_review, read once here); Xero Practice and CaseWare open the engagement period. The OWNER books are another screen and keep the current year */
+    if (now) return { fy: now.fy, from: now.from, to: now.to }; /* no year under review, or it holds nothing: the CURRENT financial year, when it holds entries, as Xero and MYOB open the current period; the year under review (a closed year) is one pick away */
     return busy ? { fy: busy.fy, from: busy.from, to: busy.to } : review;
   }
   function choose() {
