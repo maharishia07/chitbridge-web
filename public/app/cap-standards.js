@@ -93,8 +93,7 @@ var STANDARDS = [
       'Our case shape already WAS Given/When/Then (pre / step / expected), so nothing is translated — the file is rendered and read back, and all 110 real cases round-trip unchanged.',
     s: 'live',
     limit: 'the format, not the Cucumber runner',
-    /* STD-COMPARE (15 Oct 2026): Partly → In force. Nothing is missing from what was adopted: GET /api/testing/cases/gherkin writes the board as .feature text and
-       POST /api/testing/cases/gherkin reads it back (chitbridge-api routes/testing.js; tests/testing-board-writes.test.cjs). The runner is a decision, a stated limit. */
+    /* STD-COMPARE (15 Oct 2026): Partly → In force. Nothing is missing from what was adopted: GET /api/testing/cases/gherkin writes the board as .feature text and POST /api/testing/cases/gherkin reads it back (chitbridge-api routes/testing.js; tests/testing-board-writes.test.cjs). The runner is a decision, a stated limit. */
     note: 'Proof: chitbridge-api routes/testing.js writes and reads .feature text (tests/testing-board-writes.test.cjs). The FORMAT is adopted; Cucumber the RUNNER is deliberately not — every “When I click the row” would need a step definition, a second codebase mapping sentences onto clicks.',
     at: 'Testing — export/import .feature',
     go: 'testing',
@@ -245,7 +244,6 @@ var STANDARDS = [
     go: 'locale',
     why: 'A translator can be handed a file instead of a codebase.'
   },
-
   {
     id: 'wcag-1.4.3',
     pa: 'settings',
@@ -445,7 +443,6 @@ var STANDARDS = [
     go: 'appearance',
     why: 'Arabic became possible in one sweep instead of a parallel stylesheet nobody would maintain.'
   },
-
   {
     id: 'rfc7386',
     pa: 'catalogue',
@@ -746,7 +743,6 @@ var STANDARDS = [
     go: 'network',
     why: '"Chennai" is a city, a port and three terminals. A shipment needs to know which.'
   },
-
   /**
    * ⭐ IAM STANDARDS — added after Athi asked *"can you check any specific standard should be followed as part
    * of this IAM, if so and if it is within our control"*. The last clause is the useful one: several IAM
@@ -853,7 +849,14 @@ var STANDARDS = [
     go: '',
     why: 'Would let people sign in with an existing account — at the cost of who vouches for the signature on a chit.'
   },
-
+  {
+    id: 'rfc6749', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'part', at: 'Sign-in', go: '', added: '2026-11-18',
+    n: 'RFC 6749 (OAuth 2.0)', w: 'Authorization framework: the code a sign-in provider hands back, exchanged for a token', p: 'A sign-in provider vouches for you with a code we exchange, never your password', m: 'Named by the sign-in providers; not yet checked end to end', note: 'The OAuth 2.0 authorization code flow the sign-in providers use. Link: https://www.rfc-editor.org/rfc/rfc6749.html', why: 'Every provider speaks the same flow, so a reviewer audits one thing.'
+  },
+  {
+    id: 'rfc9207', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'part', at: 'Sign-in', go: '', added: '2026-11-18',
+    n: 'RFC 9207 (OAuth issuer identification)', w: 'The sign-in answer says which provider sent it, so a code from the wrong one is refused', p: 'A sign-in answer is checked for who sent it', m: 'Named by the sign-in providers; not yet checked end to end', note: 'The iss parameter on the authorization response that the sign-in providers check. Link: https://www.rfc-editor.org/rfc/rfc9207.html', why: 'Stops a code meant for one provider being replayed at another.'
+  },
   {
     id: 'jwt',
     pa: 'signin',
@@ -907,7 +910,6 @@ var STANDARDS = [
     go: '',
     why: 'Isolation that survives a mistake in application code, because the database refuses rather than trusting the query.'
   },
-
   {
     id: 'incoterms',
     pa: 'tasks',
@@ -983,7 +985,6 @@ var STANDARDS = [
     go: '',
     why: 'Payment instructions a bank can consume without a bespoke file.'
   },
-
   /**
    * ⭐ ADOPTED 2026-10-02/03 — the laws and standards the Books and the GST engine were built to, added to the register on 2026-10-03
    * (docs/design/standards/REQUIREMENT.md). `added` marks them so a reader can see they are new; their statuses are the ones
@@ -1533,7 +1534,6 @@ var STANDARDS = [
     why: 'The first document any privacy auditor asks for, in every country.',
     added: '2026-10-13'
   },
-
   /**
    * ⭐ ROUND CO2 (2026-10-13) — security controls + evidence, from docs/research/COMPLIANCE-OBLIGATIONS-2026-10.md (K5 · K6 · K10) for
    * India, Australia and the UAE. Each row says what is IN FORCE in the product, what is not, and where a reviewer sees the proof
