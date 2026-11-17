@@ -124,6 +124,18 @@
     if (!total) return [];
     return [{ _total: true, name: grantKit.words('Total'), side: who, age_not_due: total.not_due, age_d0_30: total.d0_30, age_d31_60: total.d31_60, age_d61_90: total.d61_90, age_d90_plus: total.d90_plus, balance_minor: total.balance_minor }];
   }
+  /** FC-M10: the tie-out line under Who owes whom, from the server's own tb_control (each side's list total beside the trial balance's control, the difference named; nothing is added or compared here):
+   *  "Agrees with trial balance · Debtors A$5,440.00" or "Differs from trial balance · Debtors by A$70.00 · see Trial balance"; a side the reader may not see (null figures) is left out */
+  function tieOutLine(control) {
+    var sides = [['customer', 'Debtors'], ['supplier', 'Creditors']].filter(function (side) { return control && control[side[0]] && control[side[0]].tb_minor != null; });
+    if (!sides.length) return '';
+    var shown = function (minor) { return grantKit.minorWords(String(Math.abs(Number(minor)))); }; /* a supplier's is negative as the rows are; painted as an amount, like the Total column */
+    var off = sides.filter(function (side) { return Number(control[side[0]].differs_minor) !== 0; });
+    var text = off.length
+      ? grantKit.words('Differs from trial balance') + ' · ' + off.map(function (side) { return grantKit.words(side[1]) + ' ' + grantKit.words('by') + ' ' + shown(control[side[0]].differs_minor); }).join(' · ') + ' · ' + grantKit.words('see Trial balance')
+      : grantKit.words('Agrees with trial balance') + ' · ' + sides.map(function (side) { return grantKit.words(side[1]) + ' ' + shown(control[side[0]].tb_minor); }).join(' · ');
+    return '<div class="tag bv-dues-tie' + (off.length ? ' warn' : '') + '" data-testid="bv-dues-tb">' + esc(text) + '</div>';
+  }
   /** Who owes whom: two aged tables, customers owe and the shop owes suppliers (Current · 1–30 · 31–60 · 61–90 · 90+ days past due), each with its total row, no net total */
   function paintDues(host, report) {
     var all = report.rows(grantKit.viewState.answer || {}), voice = duesVoice(grantKit.viewState.o && grantKit.viewState.o.member && grantKit.viewState.o.member.name), totals = (grantKit.viewState.answer && grantKit.viewState.answer.aged_totals) || {};
@@ -134,7 +146,7 @@
       var empty = !partiesOf(all, who).length, tid = who === 'customer' ? 'customers' : 'suppliers', id = who === 'customer' ? 'bv_dues_c' : 'bv_dues_s';
       return '<div class="bv-dues-side' + (empty ? ' bv-dues-nil' : '') + '"><h3 class="sub" data-testid="bv-dues-' + tid + '-head">' + esc(heads[who]) + '</h3>' +
         (empty ? '<span class="tag" id="' + id + '" data-testid="bv-dues-' + tid + '">' + esc(duesNobody(member, who)) + '</span>' : '<div id="' + id + '" data-testid="bv-dues-' + tid + '"></div>') + '</div>';
-    }).join('');
+    }).join('') + tieOutLine(grantKit.viewState.answer && grantKit.viewState.answer.tb_control);
     ['customer', 'supplier'].forEach(function (who) {
       var parties = partiesOf(all, who).map(agedRow);
       if (!parties.length) return; /* said in the heading line above */ /* E15: the server drops a party with nothing open; a side with no party is an empty sentence, never a lone Total row */
