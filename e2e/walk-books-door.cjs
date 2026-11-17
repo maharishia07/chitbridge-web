@@ -57,11 +57,12 @@ W.run('books-door', async (w) => {
   await w.step('D4', 'Who looked lists the event', async () => {
     await page.click(T('bg-seg-looks')); await page.waitForSelector(T('bg-look-allowed'), { timeout: 10000 });
     const list = await txt(T('bg-list'));
-    return { ok: /Trial balance/.test(list) && /Looked/.test(list) && S.logCalls > 0, saw: list.slice(0, 100) };
+    /* ACC-176b round 3: a logged route is said in plain words (books-grant-words.js: 'opened the trial balance'), under the What they did column */
+    return { ok: /opened the trial balance/i.test(list) && /what they did/i.test(list) && S.logCalls > 0, saw: list.slice(0, 160) };
   });
   await w.step('D5', 'End access asks first, then ends: the row says Ended', async () => {
-    await page.click(T('bg-seg-given')); await page.waitForSelector(T('bg-grant-' + GRANT), { timeout: 10000 });
-    await page.click(T('bg-grant-' + GRANT)); await page.waitForSelector(T('bg-end'), { timeout: 5000 });
+    await page.click(T('bg-seg-given')); await page.waitForSelector(T('bg-grant-firm-' + FIRM), { timeout: 10000 });
+    await page.click(T('bg-grant-firm-' + FIRM)); await page.waitForSelector(T('bg-end'), { timeout: 5000 });
     await page.click(T('bg-end')); await page.waitForSelector(T('confirm'), { timeout: 5000 });
     await page.click(T('confirm-ok')); await page.waitForTimeout(700);
     const list = await txt(T('bg-list'));
