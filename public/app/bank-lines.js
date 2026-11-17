@@ -155,9 +155,9 @@
       { key: 'dir', label: 'Money', all: 'In and out', options: function (rows) { return distinct(rows, function (row) { return row.out ? 'out' : 'in'; }, function (value) { return sayText(value === 'out' ? 'Money out' : 'Money in'); }); }, match: function (row, value) { return (row.out ? 'out' : 'in') === value; } },
       { key: 'week', label: 'Date', all: 'Any date', options: weeks, match: function (row, value) { return weekOf(row.date) === value; } },
       { key: 'band', label: 'Amount', all: 'Any amount', options: function (rows) { return BANDS.filter(function (band) { return rows.some(function (row) { return band[2](row.amount_minor); }); }).map(function (band) { return { v: band[0], label: sayText(band[1]) }; }); }, match: function (row, value) { return bandOf(row.amount_minor) === value; } },
-      { key: 'kind', label: 'What it looks like', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.kind; }, T); }, match: function (row, value) { return row.kind === value; } },
-      { key: 'gst', label: 'Tax', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.gst; }, T); }, match: function (row, value) { return row.gst === value; } },
-      { key: 'sure', label: 'How sure', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.sure; }, T); }, match: function (row, value) { return row.sure === value; } },
+      { key: 'kind', label: 'What it looks like', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.kind; }, sayText); }, match: function (row, value) { return row.kind === value; } },
+      { key: 'gst', label: 'Tax', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.gst; }, sayText); }, match: function (row, value) { return row.gst === value; } },
+      { key: 'sure', label: 'How sure', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.sure; }, sayText); }, match: function (row, value) { return row.sure === value; } },
       { key: 'look', label: 'Look-alikes', all: 'Any', options: function (rows) { return rows.some(function (row) { return row.look; }) ? [{ v: 'yes', label: sayText('Same day, same amount') }] : []; }, match: function (row, value) { return value === 'yes' && row.look; } }
     ].map(function (def) { return filterOf(cfg, def); });
   }
@@ -186,7 +186,7 @@
     return Object.assign(
       {
         key: cfg.key,
-        t: T,
+        t: sayText,
         rows: function () { return sorted(cfg.rows()); },
         id: function (row) { return row.id; },
         rowTid: cfg.tid || function (row) { return 'bank-row-' + row.id; },

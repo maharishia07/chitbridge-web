@@ -155,7 +155,7 @@
   }
   /** the note under a line: the message of a line the sheet cannot finish, the line's note and the engine's own sentence; each function lands on the one shared `ctx` */
   function addLineNote(ctx) {
-    var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, tag = ctx.tag, entryNote = ctx.entryNote, askedBox = ctx.askedBox;
+    var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, tag = ctx.tag, entryNote = ctx.entryNote, askedBox = ctx.askedBox, dataKey = ctx.dataKey;
     /** what a line says under its state: the entry it would make, the ONE question it asks next, and every other thing holding it back (none is dropped) */
     /** the message of a line the sheet cannot finish (a tax payment, a loan, a transfer between own accounts, a card settlement with tax), ON THE LINE with its one step; the words are the controller's (item.say) or the refusal this line was given */
     function sayBox(item) {
