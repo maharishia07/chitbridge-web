@@ -70,7 +70,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, FIRM);
     const p = await ctx.newPage(), threw = [];
     p.on('pageerror', (e) => threw.push(e.message));
-    await p.goto(base + '/accounts.html?acting=' + CLIENT + (role === 'auditor' ? '&role=auditor' : '') + (opt.q || '') + hash);
+    await p.goto(base + '/accounts.html' + (role === 'owner' ? '?x=1' : '?acting=' + CLIENT + (role === 'auditor' ? '&role=auditor' : '')) + (opt.q || '') + hash);
     await p.waitForSelector(wait, { timeout: 20000, state: 'attached' });
     await p.waitForTimeout(2500);
     return { ctx, p, S, threw };
@@ -79,7 +79,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   for (const width of [1366, 390]) {
   const line = (p) => p.locator('[data-testid="bv-tb-bank"]').innerText().catch(() => '');
     {
-      const { ctx, p, threw } = await open('auditor', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.reconciled] });
+      const { ctx, p, threw } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.reconciled] });
       const t = await line(p);
       ok(/Signed off to 30 Jun 2026/.test(t) && /Statement A[$]203,360[.]00/.test(t) && /nothing unexplained/.test(t) && !/differ|Difference/.test(t), width + ' · P9.1b reconciled with a timing item (statement differs from books, nothing unexplained): ' + t);
       ok(await p.locator('[data-testid="bv-tb-bank-open-acc-1500"]').count() === 1 && await p.locator('[data-cbsid="ACC002-P01"]').count() === 1, width + ' · the note and its Open Bank button carry their register codes');
@@ -89,18 +89,18 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
       await ctx.close();
     }
     {
-      const { ctx, p } = await open('auditor', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.unexplained] });
+      const { ctx, p } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.unexplained] });
       const t = await line(p);
       ok(/unexplained A[$]500[.]00/.test(t) && !/nothing unexplained/.test(t), width + ' · P9.2 unexplained is absolute (stored -50,000): ' + t);
       await ctx.close();
     }
     {
-      const { ctx, p } = await open('auditor', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.moved] });
+      const { ctx, p } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.moved] });
       ok(/books now differ from the figure signed by A[$]100[.]00/.test(await line(p)), width + ' · P9.9 books moved after sign-off');
       await ctx.close();
     }
     {
-      const { ctx, p, S } = await open('auditor', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.earlier] });
+      const { ctx, p, S } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.earlier] });
       const t = await line(p);
       ok(/Signed off to 31 May 2026/.test(t) && /Statement A[$]150,000[.]00/.test(t) && /no difference shown/.test(t) && !/unexplained/.test(t), width + ' · P9.3 earlier: date and statement as signed, no difference: ' + t);
       await p.locator('[data-testid="bv-tb-bank-at-acc-1500"]').click();
@@ -109,13 +109,13 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
       await ctx.close();
     }
     {
-      const { ctx, p } = await open('auditor', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.never, LINE.none_by_date, LINE.not_shared] });
+      const { ctx, p } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.never, LINE.none_by_date, LINE.not_shared] });
       const t = await line(p);
       ok(/No bank sign-off yet/.test(t) && /No sign-off on or before this date/.test(t) && /not shared with you/.test(t), width + ' · P9.4 / P9.4b / not shared, each in words: ' + t);
       await ctx.close();
     }
     {
-      const { ctx, p } = await open('auditor', '#/tb', '[data-testid="tb-balanced"]', { width, tb: null });
+      const { ctx, p } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: null });
       ok((await line(p)) === '', width + ' · the table not migrated: no block, the page says nothing');
       await ctx.close();
     }

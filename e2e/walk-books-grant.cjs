@@ -41,7 +41,7 @@ W.run('books-grant', async (w) => {
     if (p.indexOf('/api/books/') === 0) {
       if (h['x-books-for'] !== MEMBER) return J(r, 403, { error: 'No access has been given for these books.', message: 'No access has been given for these books.' });
       if (S.refuse && p === S.refuse.path) return J(r, 403, { error: S.refuse.words, message: S.refuse.words, code: 'GRANT_ROUTE_NOT_LISTED' });
-      if (p === '/api/books/trial-balance') { const ex = example('GET /api/books/trial-balance'); return J(r, 200, Object.assign(ex, { currency: 'INR', rows: [line(ex.rows[0], { code: '1000', name: 'Cash', group: 'Assets', dr_minor: 123400, cr_minor: 0 }), line(ex.rows[0], { code: '4000', name: 'Sales', group: 'Income', dr_minor: 0, cr_minor: 123400 })], total_dr_minor: 123400, total_cr_minor: 123400, balanced: true })); }
+      if (p === '/api/books/trial-balance') { const ex = example('GET /api/books/trial-balance'); return J(r, 200, Object.assign(ex, { currency: 'INR', rows: [line(ex.rows[0], { code: '1000', name: 'Cash', group: 'Assets', dr_minor: 123400, cr_minor: 0 }), line(ex.rows[0], { code: '4000', name: 'Sales', group: 'Income', dr_minor: 0, cr_minor: 123400 })], total_dr_minor: 123400, total_cr_minor: 123400, balanced: true, bank: [{ account_id: 'acc-1000', code: '1000', name: 'Cash', currency: 'INR', state: 'reconciled', period_to: ex.asOf || '2026-06-30', statement_minor: 125400, books_signed_minor: 123400, unexplained_minor: 0, books_now_minor: 123400, moved_minor: 0, signed_at: null }] })); }
       if (p === '/api/books/pl') { const ex = example('GET /api/books/pl'); return J(r, 200, Object.assign(ex, { currency: 'INR', income: [line(ex.income[0], { code: '4000', name: 'Sales', amount_minor: 500000 })], expense: [line(ex.expense[0], { code: '5000', name: 'Rent', amount_minor: 100000 })], total_income_minor: 500000, total_expense_minor: 100000, profit_minor: 400000 })); }
       if (p === '/api/books/periods') { /* W22: the books start Jul 2025, Jul-Jan locked, Feb open under later locked months; two empty months in 2024 sit before the start */
         const ex = example('GET ' + p), row = (fy, n, ym, status, entries) => Object.assign({}, ex.periods[0], { fiscal_year: fy, period: n, start_date: ym + '-01', end_date: ym + '-28', status, entries, sales_minor: 0, before_books: fy === '2024-25' ? true : undefined });
@@ -79,7 +79,8 @@ W.run('books-grant', async (w) => {
     await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const band = await txt(T('bv-band')), rows = await txt(T('bv-list'));
     const asked = S.calls.filter((c) => c.p === '/api/books/trial-balance');
-    return { ok: /Store One/.test(band) && /read only/.test(band) && /Cash/.test(rows) && /1,234|1234/.test(rows) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER), saw: band + ' · ' + rows.slice(0, 80) + ' · header sent ' + asked.length + '×' };
+    const bankLine = await txt(T('bv-tb-bank')).catch(() => ''); /* RANK 9: the bank agreement of the day, under the trial balance, with its Open Bank button */
+    return { ok: /Signed off to/.test(bankLine) && /Statement/.test(bankLine) && /nothing unexplained/.test(bankLine) && (await has(T('bv-tb-bank-open-acc-1000'))) && /Store One/.test(band) && /read only/.test(band) && /Cash/.test(rows) && /1,234|1234/.test(rows) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER), saw: band + ' · ' + rows.slice(0, 80) + ' · header sent ' + asked.length + '×' };
   });
   await w.step('A3', 'the auditor · the view has no write control (every button is Back or a report)', async () => {
     const names = await page.$$eval(T('bv-band') + ' button,' + T('bv-tabs') + ' button', (els) => els.map((e) => e.textContent.trim()));
