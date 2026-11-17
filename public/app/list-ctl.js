@@ -45,6 +45,8 @@
  */
 (function (root) {
   'use strict';
+  var wire; /* wire: set from app/list-ctl-wire.js at the end of this file */
+  var colByKey, cssId, onClick, refocusRz, resize; /* click: set from app/list-ctl-click.js at the end of this file */
   if (root.CBList) return;
 
   /* ── its own words: every string is written here in English and goes through the host's translator (opts.t) when one is given (see T) ── */
@@ -95,217 +97,8 @@
   }
 
   /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
-  var CSS = [
-    '.cbl{--cl-page:var(--page,var(--paper,#FCFAF5));--cl-card:var(--card,#FFFFFF);--cl-panel:var(--panel,#F3EFE6);--cl-line:var(--line,#DDD6C6);--cl-soft:var(--line-soft,#E6E0D2);--cl-hair:var(--hair,#F0ECE2);',
-    '--cl-ink:var(--ink,#1D1B16);--cl-muted:var(--muted,#5E594D);--cl-faint:var(--faint,#8A8374);--cl-ghost:var(--ghost,#A8A295);',
-    '--cl-gband:color-mix(in srgb,var(--cl-blue) 13%,var(--cl-page));--cl-zebra:var(--zebra,color-mix(in srgb,var(--cl-ink) 9%,var(--cl-card)));--cl-hov:color-mix(in srgb,var(--cl-blue) 8%,var(--cl-card));',
-    '--cl-green:var(--green,#16693F);--cl-amber-t:var(--amber-t,#FDF3DC);--cl-amber-b:var(--amber-b,#EFD39A);--cl-amber-i:var(--amber-i,#7A5205);',
-    '--cl-red-t:var(--red-t,#FBEAE3);--cl-red-b:var(--red-b,#E7B9A8);--cl-red-i:var(--red-i,#8E3517);',
-    '--cl-blue:var(--blue,#2F74C9);--cl-blue-t:var(--blue-t,#E4EEFA);--cl-blue-b:var(--blue-b,#B9D2EF);--cl-blue-i:var(--blue-i,#174A87);',
-    '--cl-shadow:var(--shadow,0 10px 28px rgba(29,27,22,.16));--cl-ui:var(--f-ui,"IBM Plex Sans","Segoe UI",system-ui,sans-serif);--cl-display:var(--f-display,"Bricolage Grotesque","Segoe UI",system-ui,sans-serif);--cl-num:var(--f-num,"IBM Plex Mono",ui-monospace,"Cascadia Mono",monospace);',
-    'display:flex;flex-direction:column;min-width:0;min-height:0;box-sizing:border-box;position:relative;background:var(--cl-page);color:var(--cl-ink);font:calc(15px * var(--k,1))/1.45 var(--cl-ui);container-type:inline-size;container-name:screen;text-align:start;letter-spacing:normal;text-transform:none}',
-    '.cbl *,.cbl *::before,.cbl *::after{box-sizing:border-box}',
-    '.cbl button,.cbl select,.cbl input{font:inherit;color:inherit}.cbl button{cursor:pointer;min-height:0;line-height:1.3}',
-    '.cbl :focus-visible{outline:2px solid var(--cl-blue);outline-offset:2px}',
-    '.cbl .cbl-num{font-family:var(--cl-num);font-variant-numeric:tabular-nums}',
-    /* row 1 · the title row */
-    '.cbl .cbl-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 20px 6px;border-bottom:1px solid var(--cl-soft);background:var(--cl-page)}',
-    '.cbl .cbl-title h1{font:800 calc(24px * var(--k,1))/1.1 var(--cl-display);margin:0;letter-spacing:-.01em;text-wrap:balance;color:var(--cl-ink)}',
-    '.cbl .cbl-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:3px 10px;margin:0;font-size:calc(13.5px * var(--k,1));white-space:nowrap}',
-    '.cbl .cbl-title .cbl-chip{white-space:normal;max-width:100%;min-width:0;text-align:start;border-radius:14px;line-height:1.3}',
-    '.cbl .cbl-chip.period{font-family:var(--cl-num);font-size:calc(13px * var(--k,1))}',
-    '.cbl .cbl-chip.warn{background:var(--cl-amber-t);border-color:var(--cl-amber-b);color:var(--cl-amber-i);font-weight:600}',
-    '.cbl .cbl-chip.bad{background:var(--cl-red-t);border-color:var(--cl-red-b);color:var(--cl-red-i);font-weight:600}',
-    '.cbl .cbl-chip.ask{background:var(--cl-blue-t);border-color:var(--cl-blue-b);color:var(--cl-blue-i);font-weight:600}.cbl .cbl-chip.ask[aria-pressed=true]{background:var(--cl-blue);border-color:var(--cl-blue);color:var(--on-accent,#fff)}',
-    '.cbl .cbl-chip.warn::before,.cbl .cbl-chip.bad::before{content:"⚠"}',
-    '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
-    /* row 2 · tools */
-    '.cbl .cbl-tools[hidden]{display:none}',
-    '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 6px;background:var(--cl-page)}',
-    '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
-    '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
-    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}', /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
-    '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
-    '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
-    '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
-    '.cbl .cbl-needs{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00);font-weight:600}.cbl .cbl-needs[aria-pressed="true"]{background:var(--warn,#B7791F);border-color:var(--warn-3,#7A4B00);color:#fff}',
-    '.cbl .cbl-needs.clear{border-color:var(--cl-line);background:var(--cl-card);color:var(--grey,#5E594D);font-weight:400;cursor:default}.cbl .cbl-needs-prog{font-size:calc(13px * var(--k,1));color:var(--grey,#5E594D);white-space:nowrap}',
-    '.cbl .cbl-tools:has(.cbl-needs) .cbl-search{flex:1 1 120px}',
-    '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
-    '.cbl .cbl-glab{font-size:calc(12px * var(--k,1));color:var(--cl-muted);white-space:nowrap;margin-inline-end:-2px}',
-    '@media (max-width:1100px){.cbl .cbl-tools{gap:5px 6px;padding-inline:12px}.cbl .cbl-seg button{padding:0 6px}.cbl .cbl-count{padding:0 2px}.cbl .cbl-search{flex-basis:170px}}',
-    /* GROUP as one labelled dropdown ("Group ▾ None"): opts.group.as = 'select' */
-    '.cbl .cbl-gsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;height:34px;padding:0 6px 0 10px;margin:0}',
-    '.cbl .cbl-gsel .cbl-glab{margin:0;font-weight:600}',
-    '.cbl .cbl-gsel select{border:0;background:none;height:32px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
-    '.cbl .cbl-gsel:focus-within{border-color:var(--cl-blue)}',
-    /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
-    '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
-    '.cbl .cbl-views::-webkit-scrollbar{display:none}',
-    '.cbl .cbl-title .cbl-views.in-title{padding:0;background:none;overflow:visible;flex-wrap:wrap}',
-    '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
-    '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
-    '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
-    '.cbl .cbl-vtab[aria-selected="true"] .n{color:var(--cl-page)}',
-    /* a column heading's own filter (opts.columns[].hfilter = a filter key) */
-    '.cbl .cbl-hf{border:0;background:none;padding:0 2px;margin:0;color:var(--cl-blue-i);font-size:calc(11px * var(--k,1));line-height:1;cursor:pointer;border-radius:5px;min-width:24px;height:24px;flex:none;position:relative;z-index:3}',
-    '.cbl .cbl-hf.on{background:var(--cl-blue-t);font-weight:800}',
-    '.cbl .cbl-pop.hf{position:absolute;inset-inline-end:auto;min-width:170px;padding:6px;text-transform:none;letter-spacing:normal}',
-    '.cbl .cbl-pop.hf button{display:block;width:100%;text-align:start;border:0;background:none;border-radius:7px;padding:6px 10px;font-size:calc(13.5px * var(--k,1));color:var(--cl-ink)}',
-    '.cbl .cbl-pop.hf button:hover{background:var(--cl-hov)}',
-    '.cbl .cbl-pop.hf button[aria-checked="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:700}',
-    /* an action that this login may not do stays on screen, greyed, with its sentence */
-    '.cbl .cbl-act{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px}',
-    '.cbl .cbl-btn:disabled{opacity:.55;cursor:not-allowed}',
-    '.cbl .cbl-why{font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);max-width:26ch;line-height:1.3}',
-    '.cbl .cbl-seg{display:inline-flex;border:1px solid var(--cl-line);border-radius:9px;overflow:hidden;background:var(--cl-card);height:34px}',
-    '.cbl .cbl-seg button{border:0;background:none;padding:0 10px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--cl-soft);margin:0;border-radius:0}',
-    '.cbl .cbl-seg button:first-child{border-inline-start:0}',
-    '.cbl .cbl-seg button[aria-pressed="true"]{background:var(--cl-ink);color:var(--cl-page);font-weight:600}',
-    '.cbl .cbl-ico{width:34px;justify-content:center;padding:0}',
-    '.cbl .cbl-count{font-family:var(--cl-num);font-size:calc(13px * var(--k,1));color:var(--cl-muted);padding:0 4px;white-space:nowrap}',
-    '.cbl .cbl-fchips{display:flex;flex-wrap:wrap;gap:6px;width:100%}.cbl .cbl-fchips:empty{display:none}',
-    '.cbl .cbl-fchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);border-radius:999px;padding:1px 4px 1px 10px;font-size:calc(12.5px * var(--k,1))}',
-    '.cbl .cbl-fchip button{border:0;background:none;color:inherit;width:20px;height:20px;border-radius:50%;padding:0}',
-    '.cbl .cbl-anchor{position:relative}',
-    '.cbl .cbl-pop{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:20;background:var(--cl-card);border:1px solid var(--cl-line);border-radius:12px;box-shadow:var(--cl-shadow);padding:10px 12px;min-width:220px;max-height:min(70vh,480px);overflow:auto;font-size:calc(13.5px * var(--k,1));text-transform:none;font-weight:400;letter-spacing:normal;color:var(--cl-ink)}',
-    '.cbl .cbl-pop.left{inset-inline-end:auto;inset-inline-start:0}',
-    '.cbl .cbl-notes{display:flex;flex-direction:column;align-items:flex-start;gap:6px}',
-    '.cbl .cbl-pop h4{margin:4px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--cl-muted);font-weight:700}',
-    '.cbl .cbl-pop .f{display:grid;grid-template-columns:80px 1fr;align-items:center;gap:8px;margin:6px 0}',
-    '.cbl .cbl-pop select{border:1px solid var(--cl-line);border-radius:7px;background:var(--cl-card);padding:3px 6px}',
-    '.cbl .cbl-preset{display:grid;gap:2px}',
-    '.cbl .cbl-preset button{text-align:start;border:0;background:none;border-radius:7px;padding:5px 8px}',
-    '.cbl .cbl-preset button[aria-pressed="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
-    '.cbl .cbl-custom{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:calc(13px * var(--k,1))}',
-    '.cbl .cbl-custom input{border:1px solid var(--cl-line);border-radius:7px;padding:2px 6px;background:var(--cl-card);font-family:var(--cl-num);font-size:calc(12.5px * var(--k,1));width:128px}',
-    '.cbl .cbl-btn{border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:3px 10px;font-size:calc(13px * var(--k,1));font-weight:500}',
-    '.cbl .cbl-acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}',
-    '.cbl .cbl-colrow{display:flex;align-items:center;gap:6px;padding:2px 0}',
-    '.cbl .cbl-colrow label{flex:1 1 auto!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:7px!important;padding:3px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;margin:0;font-weight:400}',
-    '.cbl .cbl-colrow label:has(input:checked){background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
-    '.cbl .cbl-colrow input{accent-color:var(--cl-blue);width:14px;height:14px}',
-    '.cbl .cbl-mv{width:24px;height:24px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:6px;padding:0;font-size:calc(12px * var(--k,1));flex:0 0 auto}',
-    '.cbl .cbl-mv:disabled{opacity:.3;cursor:default}.cbl .cbl-mvsp{width:24px;flex:0 0 auto}',
-    '.cbl .cbl-noroom{font-size:calc(11.5px * var(--k,1));color:var(--cl-amber-i);margin-inline-start:4px}',
-    /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
-    '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
-    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
-    '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
-    '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
-    '.cbl .cbl-hc.r{justify-content:flex-end}',
-    '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
-    '.cbl .cbl-hc .sort{min-width:0;max-width:100%}.cbl .cbl-hc .sort .cbl-hl{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:start;line-height:1.25}',
-    /* the resize grip (24 px, centred on the column edge) covers the last 12 px of its cell: the filter caret stays inside that line and the last column's grip (24 px, inside) gets its room (QA-156) */
-    '.cbl .cbl-hc:last-child:has(.cbl-hf),.cbl .cbl-hc.r.sortable:last-child{padding-inline-end:26px}',
-    '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
-    '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
-    /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
-    '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
-    /* a 24 px filter button would make the header row 4 px taller: its cell gives the height back in padding */
-    '.cbl .cbl-hc:has(.cbl-hf){padding-block:5px}',
-    '.cbl .cbl-hc:has(.sort){padding-block:0}',/* a sortable heading: its 32 px tap target IS the row (7 px above and below it made the header 46 px and pushed the first Day book row to 232 px = 30.2%); the target stays 32 px */
-    '.cbl .cbl-hc:last-child > .cbl-rz::after{inset-inline-start:auto;inset-inline-end:4px}',
-    '.cbl .cbl-hc:last-child > .cbl-rz:hover::after,.cbl .cbl-hc:last-child > .cbl-rz:focus-visible::after,.cbl .cbl-hc:last-child > .cbl-rz.drag::after{inset-inline-start:auto;inset-inline-end:3px}',
-    '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:11px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
-    '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:10px;background:var(--cl-blue)}',
-    '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
-    /* ZEBRA (Athi, 2026-10-09): every other data row, one shade from a theme token (--zebra, else the ink mixed 4% into the card, so every theme keeps its contrast); a group head, the hover row and the selected row stay distinct; a multi-line row is ONE stripe */
-    '.cbl .cbl-row.z,.cbl .cbl-lrec.z{background:var(--cl-zebra)}',
-    '.cbl .cbl-row:hover{background:var(--cl-hov)}',
-    '.cbl .cbl-row.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
-    '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
-    '.cbl .cbl-cell.r{text-align:end}',
-    '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
-    '.cbl .cbl-cell.strong{font-weight:700}',
-    '.cbl .cbl-lead{padding:8px 0 8px 12px;display:flex;align-items:center}',
-    '.cbl .cbl-tw{display:inline-block;width:14px;color:var(--cl-faint);transition:transform .15s}',
-    '.cbl .cbl-open>.cbl-cell>.cbl-tw,.cbl .cbl-open .cbl-tw{transform:rotate(90deg)}',
-    '.cbl .cbl-link{color:var(--cl-blue);text-decoration:underline;text-underline-offset:2px;font-family:var(--cl-num);font-size:calc(13.5px * var(--k,1))}',
-    '.cbl .cbl-dim{color:var(--cl-faint)}',
-    '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:6px 12px;background:var(--cl-gband);color:var(--cl-ink);border-top:1px solid var(--cl-line);border-bottom:1px solid var(--cl-line);border-inline-start:4px solid var(--cl-blue);font-size:calc(12px * var(--k,1));text-transform:uppercase;letter-spacing:.04em}',
-    '.cbl .cbl-row.ing>:first-child{padding-inline-start:28px}.cbl .cbl-lrec.ing{padding-inline-start:28px}',
-    '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(12px * var(--k,1));color:var(--cl-ink);text-transform:none;letter-spacing:0}',
-    /* W15-108 (Athi, 15 Nov: "i have no idea which one is header, which one i can expand, which one is information"): a band is TINTED caps with its total at the right; a row that opens carries a bordered ▸ button and lights across the whole row;
-       what it opens to is an INDENTED panel with a rule at its left, holding an info strip and then a real sub-table under its own grey header; information is never drawn like a button */
-    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);margin:0 0 6px 26px;padding:8px 12px 10px 14px;border-inline-start:3px solid var(--cl-blue);cursor:default;overflow-wrap:break-word;word-break:normal}',
-    '.cbl .cbl-row[aria-expanded]>.cbl-cell .cbl-tw,.cbl .cbl-row[aria-expanded] .cbl-tw{border:1px solid var(--cl-line);border-radius:6px;background:var(--cl-card);color:var(--cl-ink);font-size:calc(13px * var(--k,1))}/* the LOOK only (W15-108): its size is the tap rule below (32 px laptop, 44 px phone) - a width here out-ranks it (24 px drew, walk-list-tap 52 XX) */',
-    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-row[aria-expanded] .cbl-tw{margin-inline:-6px 6px}}' /* the bordered 44 px caret sits inside the card, not over its edge */,
-    '.cbl .cbl-row[aria-expanded]:hover{background:var(--cl-hov)}.cbl .cbl-row[aria-expanded]:hover .cbl-tw{border-color:var(--cl-blue)}',
-    '.cbl .cbl-group .fig{margin-inline-start:auto}',
-    '.cbl .cbl-nstrip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:2px 0 8px;color:var(--cl-muted);font-size:calc(12px * var(--k,1))}',
-    '.cbl .cbl-nstrip>span,.cbl .cbl-nstrip .cbl-nchip{padding:0}.cbl .cbl-nstrip b{color:var(--cl-ink);font-family:var(--cl-num);font-weight:600}',
-    '.cbl .cbl-nchip{border:1px solid var(--cl-line);border-radius:999px;background:var(--cl-card);color:var(--cl-ink);padding:2px 10px;min-height:24px;cursor:pointer;font:inherit}.cbl .cbl-nchip:hover{border-color:var(--cl-blue)}.cbl .cbl-nchip[aria-pressed="true"]{background:var(--cl-blue-t);border-color:var(--cl-blue);font-weight:700}',
-    '.cbl .cbl-ntab{min-width:1000px;display:flex;flex-direction:column;border:1px solid var(--cl-line);border-radius:8px;background:var(--cl-card);overflow:hidden}',
-    '.cbl .cbl-nthead{display:flex;align-items:center;background:var(--cl-gband);border-bottom:1px solid var(--cl-line);font-size:calc(11px * var(--k,1));text-transform:uppercase;letter-spacing:.04em;color:var(--cl-muted)}',
-    '.cbl .cbl-ntrow{display:flex;align-items:center;border-bottom:1px solid var(--cl-hair);font-size:calc(13.5px * var(--k,1))}.cbl .cbl-ntrow:last-child{border-bottom:0}',
-    '.cbl .cbl-ntc{flex:0 0 auto;padding:5px 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}.cbl .cbl-ntc.first{flex:1 1 90px}.cbl .cbl-ntc.r{text-align:end}',
-    '.cbl .cbl-ntc button.cbl-nsort{all:unset;cursor:pointer;display:inline-flex;gap:3px;align-items:center;min-height:24px;text-transform:inherit;letter-spacing:inherit}.cbl .cbl-ntc button.cbl-nsort:focus-visible{outline:2px solid var(--cl-blue)}',
-    '.cbl .cbl-nempty{padding:10px;color:var(--cl-muted)}',
-    '.cbl .cbl-ntab.cards{min-width:0}.cbl .bk-tabwrap{overflow-x:auto}.cbl .cbl-ntab.cards .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntc{overflow:visible}',
-    '@media (max-width:700px){.cbl .bk-tabwrap{overflow:visible}.cbl .cbl-ntab.cards .cbl-nthead{display:none}.cbl .cbl-ntab.cards .cbl-ntrow{flex-wrap:wrap;align-items:center;gap:2px 10px;padding:6px 8px}.cbl .cbl-ntab.cards .cbl-ntrow::after{content:"";flex:0 0 100%;order:2;height:0}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc{width:auto!important;padding:0;flex:0 0 auto;order:1}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="0"]{display:none}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="2"]{order:3}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.first{flex:0 0 auto}.cbl .bk-bands{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cbl .bk-bands .bk-bw{display:none}.cbl .bk-bands>span{grid-column:1/-1}}',
-    '.cbl .bk-needs .cbl-nchip{padding:0 8px;min-height:22px;font-size:calc(12px * var(--k,1))}.cbl .bk-needs .bk-need-more{color:var(--cl-muted)}',
-    '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
-    /* ☰ lines */
-    '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
-    '.cbl .cbl-lrec:hover{background:var(--cl-hov)}',
-    '.cbl .cbl-lrec.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
-    '.cbl .cbl-lline{display:flex;gap:4px 10px;align-items:baseline}',
-    '.cbl .cbl-lflow{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 0}',
-    '.cbl .cbl-lflow > span:not(:last-child)::after{content:"·";color:var(--cl-ghost);margin:0 7px}',
-    '.cbl .cbl-lamt{font-family:var(--cl-num);font-weight:700;white-space:nowrap}',
-    '.cbl .cbl-lgist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));padding-inline-start:22px;margin-top:1px}',
-    /* states */
-    '.cbl .cbl-state{padding:44px 20px;text-align:center;color:var(--cl-muted)}',
-    '.cbl .cbl-state .big{font:700 calc(18px * var(--k,1)) var(--cl-display);color:var(--cl-ink);margin-bottom:4px}',
-    '.cbl .cbl-state .cbl-btn{margin-top:10px}',
-    '.cbl .cbl-end{text-align:center;padding:12px 10px;font:calc(12px * var(--k,1)) var(--cl-num);color:var(--cl-muted)}',
-    '.cbl .cbl-end button{margin-inline-end:8px;border:1px solid var(--cl-blue);background:var(--cl-blue);color:var(--cl-card);border-radius:9px;padding:5px 11px;font-weight:700}',
-    '.cbl .cbl-skel{height:36px;margin:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--cl-hair),var(--cl-panel),var(--cl-hair));background-size:200% 100%;animation:cbl-sk 1.2s infinite linear}',
-    '@keyframes cbl-sk{to{background-position:-200% 0}}',
-    '@media (prefers-reduced-motion: reduce){.cbl .cbl-skel{animation:none}.cbl .cbl-tw{transition:none}}',
-    '.cbl .cbl-foot{padding:8px 12px;border-top:1px solid var(--cl-soft)}',
-    '.cbl .cbl-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
-    /* a phone, or any narrow pane: one card per row, label : value, nothing sideways (a container query, not the page width) */
-    '@container list (max-width: 620px){',
-    '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
-    '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
-    '.cbl .cbl-row .cbl-cell{padding:2px 0}',
-    '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}',
-    '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
-    '.cbl .cbl-row .cbl-cell.first{width:100%;font-weight:600}.cbl .cbl-row .cbl-cell.amt{margin-inline-start:auto}',
-    '.cbl .cbl-row .cbl-lead{position:absolute;inset-inline-end:8px;top:6px;padding:0}',
-    '.cbl .cbl-next{margin:-6px 10px 8px;border-radius:0 0 12px 12px;padding-inline-start:14px}',
-    '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
-    '}',
-    '@container screen (max-width: 640px){',
-    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(21px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
-    '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
-    '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
-    '}',
-    /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
-    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px 6px;margin-block:-8px;vertical-align:middle}/* REP-73 B5: a gap on the end side, so the box never sits over the first letter of the name (it was -9px on both sides) */.cbl .cbl-search input{align-self:stretch}',
-    '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
-    '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
-    '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
-    '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
-    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-w{display:none}.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button,.cbl .cbl-search,.cbl .cbl-gsel,.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:44px}',
-    '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:24px;height:24px}',
-    /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
-    '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
-    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px 4px;margin-block:0}',
-    /* UI9: a head that says reserve:true keeps its title row at the height of the chip the data will bring (chip-less lists keep their short row), so the toolbar below never jumps (QA-156) */
-    '.cbl .cbl-title.reserve h1{min-height:44px;display:flex;align-items:center}}',
-    /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
-    'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
-    /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
-    '.cbl input[data-selrow],.cbl input[data-col]{flex:none}',
-    '@media (max-width:' + PHONE_MAX + 'px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
-    '.cbl input[data-selrow]::before,.cbl input[data-col]::before{content:"";width:22px;height:22px;box-sizing:border-box;border:2px solid var(--cl-muted);border-radius:5px;background:var(--cl-card);color:var(--cl-card);font-size:15px;line-height:18px;text-align:center;font-weight:700}',
-    '.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{content:"✓";background:var(--cl-blue);border-color:var(--cl-blue)}.cbl input[data-col]:disabled{opacity:.5}}',
-    '@media (forced-colors: active){.cbl input[data-selrow]::before,.cbl input[data-col]::before{forced-color-adjust:none;background:Canvas;color:Canvas;border-color:ButtonText}.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{background:Highlight;color:HighlightText;border-color:Highlight}}',
-    '.cbl .cbl-viewpop{display:flex;flex-direction:column;gap:8px;align-items:stretch}.cbl .cbl-viewpop .cbl-seg{align-self:flex-start}.cbl .cbl-viewpop .cbl-ico{justify-content:flex-start}.cbl .cbl-viewpop .cbl-w{display:inline}'
-  ].join('\n');
+  if (!root.CBListParts || !root.CBListParts.css) throw new Error('app/list-ctl-css.js must load before app/list-ctl.js');
+  var CSS = root.CBListParts.css(PHONE_MAX); /* the stylesheet text lives in app/list-ctl-css.js (shrink W2, 2026-11-17) */
   function injectCss() {
     var d = root.document;
     if (!d || !d.head || d.getElementById('cblist_css')) return;
@@ -343,7 +136,6 @@
 
   var INST = []; /* every live mount; pruned when its element leaves the document */
   var STATE = {}; /* key → the choices that must survive a repaint (search, filters, open rows) */
-  var DRAG = null;
 
   function prune() {
     INST = INST.filter(function (item) {
@@ -537,7 +329,7 @@
   function allRows(inst) {
     return viewRows(inst) || baseRows(inst);
   }
-  function rid(I, row, i) {
+  function rowIdOf(I, row, i) {
     var v = I.o.id ? I.o.id(row) : row && row.id;
     return String(v == null ? 'r' + i : v);
   }
@@ -932,7 +724,7 @@
       mode = groupMode(I);
     if (!g || !g.by || mode === 'none')
       return rows.map(function (item, index) {
-        return { row: item, id: rid(I, item, index) };
+        return { row: item, id: rowIdOf(I, item, index) };
       });
     var buckets = {},
       order = [],
@@ -941,7 +733,7 @@
       var k = safe(function () {
           return g.by(item, mode);
         }, null),
-        it = { row: item, id: rid(I, item, index), g: k ? String(k[1]) : null };
+        it = { row: item, id: rowIdOf(I, item, index), g: k ? String(k[1]) : null };
       if (!k) {
         loose.push(it);
         return;
@@ -1292,7 +1084,7 @@ ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes
     var rows = needsRows(I);
     if (!spec || !rows.length) return;
     var ids = rows.map(function (row, index) {
-        return rid(I, row, index);
+        return rowIdOf(I, row, index);
       }),
       at = ids.indexOf(String(R.hl)),
       pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
@@ -2764,7 +2556,7 @@ ctx.pin = cols.filter(function (item) {
   function selectedRows(I) {
     var ids = I.r.sel;
     return allRows(I).filter(function (item, index) {
-      return ids[rid(I, item, index)];
+      return ids[rowIdOf(I, item, index)];
     });
   }
 
@@ -2846,7 +2638,7 @@ ctx.pin = cols.filter(function (item) {
     var all = allRows(I),
       r = null;
     all.forEach(function (x, index) {
-      if (r == null && rid(I, x, index) === id) r = x;
+      if (r == null && rowIdOf(I, x, index) === id) r = x;
     });
     return r;
   }
@@ -2942,632 +2734,6 @@ ctx.pin = cols.filter(function (item) {
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
-  /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
-  function wire(I) {
-    var el = I.el;
-    /* every listener is remembered so teardown can remove it: a list mounted again on the same element must not leave the old one answering too */
-    I.off = [];
-    var on = function (type, fn) {
-      var h = function (ev) {
-        if (!I.dead) fn(ev);
-      };
-      el.addEventListener(type, h);
-      I.off.push([type, h]);
-    };
-    on('click', function (ev) {
-      onClick(I, ev);
-    });
-    on('input', function (ev) {
-      var t = ev.target;
-      if (t.hasAttribute && t.hasAttribute('data-cbl-q')) {
-        setQ(I, t.value);
-      }
-    });
-    on('change', function (ev) {
-      onChange(I, ev);
-    });
-    on('keydown', function (ev) {
-      onKey(I, ev);
-    });
-    on('pointerdown', function (ev) {
-      onPointerDown(I, ev);
-    });
-    on('dblclick', function (ev) {
-      var node = ev.target.closest && ev.target.closest('[data-rz]');
-      if (!node) return;
-      delete I.s.widths[node.getAttribute('data-rz')];
-      saveChoices(I);
-      paintList(I);
-      refocusRz(I, node.getAttribute('data-rz'));
-    });
-  }
-  function refocusRz(I, k) {
-    var node = I.el.querySelector('[data-rz="' + k + '"]');
-    if (node) node.focus();
-  }
-  /** onClick, step 1 of 15 (the data-row part, lines 2847-2862 of the one function): true when it handled the call and nothing else should run */
-  function onClickRow(list, event, ctx) {
-ctx.node = event.target;
-    if (!ctx.node.closest) return true;
-    ctx.b = ctx.node.closest('button,[data-row],input[type=checkbox],select');
-ctx.R = list.r;
-ctx.s = list.s;
-ctx.o = list.o;
-    ctx.pop = ctx.node.closest('.cbl-pop');
-    var hcell = ctx.node.closest('.cbl-hc');
-    if (hcell && !ctx.node.closest('.cbl-rz') && !ctx.node.closest('[data-sort]') && !ctx.node.closest('[data-hf]') && list.el.contains(hcell)) {
-      var sbtn = hcell.querySelector('[data-sort]');
-      if (sbtn) {
-        sbtn.click();
-        return true;
-      }
-    }
-    ctx.gh = ctx.node.closest('[data-g]');
-    return false;
-  }
-  /** onClick, step 2 of 15 (the data-row part, lines 2863-2874 of the one function): true when it handled the call and nothing else should run */
-  function onClickRow2(list, event, ctx) {
-    if (ctx.gh && list.el.contains(ctx.gh) && !(ctx.b && ctx.b.hasAttribute('data-row'))) {
-      if (list.pop) {
-        list.pop = null;
-        paintTitle(list);
-        paintTools(list);
-      }
-      ctx.R.gcol[ctx.gh.getAttribute('data-g')] = !ctx.R.gcol[ctx.gh.getAttribute('data-g')];
-      paintList(list);
-      var g2 = list.el.querySelector('[data-g="' + cssId(ctx.gh.getAttribute('data-g')) + '"]');
-      if (g2) g2.focus();
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 3 of 15 (the data-rz part, lines 2875-2891 of the one function): true when it handled the call and nothing else should run */
-  function onClickRz(list, event, ctx) {
-    if (!ctx.b) {
-      if (list.pop && !ctx.pop) closePop(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-rz')) return true;
-    if (ctx.b.hasAttribute('data-cbl-pop')) {
-      togglePop(list, ctx.b.getAttribute('data-cbl-pop'));
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-hf')) {
-      var er = list.el.getBoundingClientRect(),
-        br = ctx.b.getBoundingClientRect();
-      list.hfAt = { l: Math.max(4, Math.min(br.left - er.left, er.width - 190)), t: br.bottom - er.top + 4 };
-      togglePop(list, 'hf:' + ctx.b.getAttribute('data-hf'));
-      paintList(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 4 of 15 (the data-hfv part, lines 2892-2904 of the one function): true when it handled the call and nothing else should run */
-  function onClickHfv(list, event, ctx) {
-    if (ctx.b.hasAttribute('data-hfv')) {
-      var hk = ctx.b.getAttribute('data-hfk'),
-        hv = ctx.b.getAttribute('data-hfv');
-      if (hv) ctx.R.filt[hk] = hv;
-      else delete ctx.R.filt[hk];
-      list.pop = null;
-      resetLimit(list);
-      if (query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintAll(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 5 of 15 (the data-view-tab part, lines 2905-2931 of the one function): true when it handled the call and nothing else should run */
-  function onClickViewTab(list, event, ctx) {
-    if (ctx.b.hasAttribute('data-view-tab')) {
-      var vw = ((ctx.o.views && ctx.o.views.items) || []).filter(function (x) {
-        return x.key === ctx.b.getAttribute('data-view-tab');
-      })[0];
-      if (vw) {
-        if (ctx.o.views.merge) {
-          /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
-          var wasLit = viewOn(list, vw);
-          viewKeys(list).forEach(function (item) {
-            delete ctx.R.filt[item];
-          });
-          if (!wasLit)
-            Object.keys(vw.filt || {}).forEach(function (item) {
-              ctx.R.filt[item] = vw.filt[item];
-            });
-        } else {
-          ctx.R.filt = {};
-          Object.keys(vw.filt || {}).forEach(function (item) {
-            ctx.R.filt[item] = vw.filt[item];
-          });
-        }
-        list.pop = null;
-        resetLimit(list);
-        paintAll(list);
-      }
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 6 of 15 (the data-period part, lines 2932-2953 of the one function): true when it handled the call and nothing else should run */
-  function onClickPeriod(list, event, ctx) {
-    if (list.pop && !ctx.pop) {
-      /* any other click outside the popover closes it, then does its own job */ list.pop = null;
-      paintTitle(list);
-      paintTools(list);
-    }
-    ctx.d = ctx.b.dataset || {};
-    if (ctx.b.hasAttribute('data-period')) {
-      var pp = head(list).period;
-      if (pp) {
-        list.pv = ctx.d.period;
-        if (ctx.d.period !== 'custom') {
-          list.pop = null;
-          list.pv = null;
-        }
-        safe(function () {
-          pp.onPick(ctx.d.period, null);
-        });
-        paintTitle(list);
-        paintTools(list);
-      }
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 7 of 15 (part 7, lines 2954-2982 of the one function): true when it handled the call and nothing else should run */
-  function onClickStep7(list, event, ctx) {
-    if (ctx.d.notice != null) {
-      var n = (head(list).notices || [])[+ctx.d.notice];
-      if (list.pop === 'notes') {
-        list.pop = null;
-        paintTitle(list);
-      }
-      if (n && n.onOpen)
-        safe(function () {
-          n.onOpen();
-        });
-      return true;
-    }
-    if (ctx.d.group) {
-      ctx.s.group = ctx.d.group;
-      resetLimit(list);
-      saveChoices(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintTools(list);
-      return true;
-    }
-    if (ctx.d.view) {
-      ctx.s.view = ctx.d.view;
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 8 of 15 (the data-cbl-needs part, lines 2983-3008 of the one function): true when it handled the call and nothing else should run */
-  function onClickCblNeeds(list, event, ctx) {
-    if (ctx.b.hasAttribute('data-cbl-needs')) {
-      needsToggle(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-needs-next')) {
-      needsNext(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-exp')) {
-      ctx.R.allOpen = !ctx.R.allOpen;
-      ctx.R.open = {};
-      paintTools(list);
-      paintList(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-csv')) {
-      download(list);
-      return true;
-    }
-    if (ctx.d.unfilt) {
-      delete ctx.R.filt[ctx.d.unfilt];
-      resetLimit(list);
-      if (query(list)) paintTools(list);
-      else paintAll(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 9 of 15 (the data-cbl-clearf part, lines 3009-3037 of the one function): true when it handled the call and nothing else should run */
-  function onClickCblClearf(list, event, ctx) {
-    if (ctx.b.hasAttribute('data-cbl-clearf')) {
-      ctx.R.filt = {};
-      resetLimit(list);
-      list.pop = null;
-      if (query(list)) paintTools(list);
-      else paintAll(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-clear')) {
-      ctx.R.filt = {};
-      ctx.R.q = '';
-      list.pop = null;
-      resetLimit(list);
-      if (query(list)) paintTools(list);
-      paintAll(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-retry')) {
-      if (ctx.o.onRetry)
-        safe(function () {
-          ctx.o.onRetry();
-        });
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-more')) {
-      list.limit += 50;
-      paintList(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 10 of 15 (the data-cbl-resetcols part, lines 3038-3060 of the one function): true when it handled the call and nothing else should run */
-  function onClickCblResetcols(list, event, ctx) {
-    if (ctx.b.hasAttribute('data-cbl-resetcols')) {
-      ctx.s.cols = null;
-      ctx.s.widths = {};
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-selmode')) {
-      ctx.R.selMode = !ctx.R.selMode;
-      if (!ctx.R.selMode) ctx.R.sel = {};
-      paintTools(list);
-      paintList(list);
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-cbl-selall')) {
-      matched(list).rows.forEach(function (item, index) {
-        ctx.R.sel[rid(list, item, index)] = true;
-      });
-      paintTools(list);
-      paintList(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 11 of 15 (part 11, lines 3061-3082 of the one function): true when it handled the call and nothing else should run */
-  function onClickStep11(list, event, ctx) {
-    if (ctx.d.bulk) {
-      var bk = (ctx.o.bulk || []).filter(function (x) {
-        return x.id === ctx.d.bulk;
-      })[0];
-      if (bk)
-        safe(function () {
-          bk.run(selectedRows(list));
-        });
-      return true;
-    }
-    if (ctx.d.mv) {
-      var set = shownKeys(list).slice(),
-        i = set.indexOf(ctx.d.mv),
-        j = i + +ctx.d.d;
-      if (i < 0 || j < 0 || j >= set.length) return true;
-      set.splice(j, 0, set.splice(i, 1)[0]);
-      ctx.s.cols = set;
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 12 of 15 (the data-wd part, lines 3083-3090 of the one function): true when it handled the call and nothing else should run */
-  function onClickWd(list, event, ctx) {
-    if (ctx.d.wd) {
-      resize(list, ctx.d.wd, +ctx.d.d * 16, false);
-      paintTools(list);
-      var again = list.el.querySelector('[data-wd="' + ctx.d.wd + '"][data-d="' + ctx.d.d + '"]');
-      if (again) again.focus();
-      return true;
-    }
-    if (ctx.d.col) return true;
-    return false;
-  }
-  /** onClick, step 13 of 15 (part 13, lines 3091-3107 of the one function): true when it handled the call and nothing else should run */
-  function onClickStep13(list, event, ctx) {
-    /* the checkbox acts on 'change' */
-    if (ctx.d.sort) {
-      /* a server-sorted page decides its own direction: it is told which heading was clicked */
-      if (remote(list)) {
-        query(list, 'sort', { key: ctx.d.sort }, true);
-        return true;
-      }
-      var cur = curSort(list),
-        col = columns(list).filter(function (item) {
-          return sortId(item) === ctx.d.sort;
-        })[0],
-        d0 = col && col.dir0 === -1 ? -1 : 1;
-      ctx.s.sort = cur && cur.key === ctx.d.sort ? { key: ctx.d.sort, dir: -cur.dir } : { key: ctx.d.sort, dir: d0 };
-      resetLimit(list);
-      saveChoices(list);
-      paintList(list);
-      return true;
-    }
-    return false;
-  }
-  /** onClick, step 14 of 15 (the data-selrow part, lines 3108-3127 of the one function): true when it handled the call and nothing else should run */
-  function onClickSelrow(list, event, ctx) {
-    if (ctx.d.act) {
-      var act = (ctx.o.actions || []).filter(function (x) {
-          return x.id === ctx.d.act;
-        })[0],
-        row = rowById(list, ctx.d.actrow);
-      if (act && row)
-        safe(function () {
-          act.run(row);
-        });
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-selrow')) {
-      return true;
-    }
-    if (ctx.b.hasAttribute('data-caret') || ctx.node.closest('[data-caret]')) {
-      var rr = ctx.node.closest('[data-row]');
-      if (rr) toggleRow(list, rr.getAttribute('data-row'), false);
-      return true;
-    }
-    ctx.rowEl = ctx.node.closest('[data-row]');
-    return false;
-  }
-  /** onClick, step 15 of 15 (the data-nolist part, lines 3128-3133 of the one function): true when it handled the call and nothing else should run */
-  function onClickNolist(list, event, ctx) {
-    if (ctx.rowEl && ctx.b === ctx.rowEl) {
-      /* a control the page drew inside a cell (a link, a chip, a button with its own onclick) keeps its own job */
-      var inner = ctx.node.closest('a,button,input,select,textarea,label,[onclick],[data-nolist]');
-      if (inner && inner !== ctx.rowEl && ctx.rowEl.contains(inner)) return true;
-      openRow(list, ctx.rowEl.getAttribute('data-row'), event);
-    }
-    return false;
-  }
-  function onClick(list, ev) {
-  var ctx = {},
-    steps = [onClickRow, onClickRow2, onClickRz, onClickHfv, onClickViewTab, onClickPeriod, onClickStep7, onClickCblNeeds, onClickCblClearf, onClickCblResetcols, onClickStep11, onClickWd, onClickStep13, onClickSelrow, onClickNolist];
-  for (var at = 0; at < steps.length; at++) {
-    if (steps[at](list, ev, ctx)) return;
-  }
-  }
-  /** onChange, step 1 of 4 (the data-col part, lines 3240-3255 of the one function): true when it handled the call and nothing else should run */
-  function onChangeCol(list, event, ctx) {
-ctx.node = event.target;
-ctx.R = list.r;
-ctx.s = list.s;
-    if (ctx.node.hasAttribute('data-col')) {
-      var k = ctx.node.getAttribute('data-col'),
-        set = shownKeys(list).slice(),
-        i = set.indexOf(k);
-      if (ctx.node.checked && i < 0) set.push(k);
-      else if (!ctx.node.checked && i >= 0 && k !== topKey(list)) set.splice(i, 1);
-      ctx.s.cols = set;
-      saveChoices(list);
-      paintTools(list);
-      paintList(list);
-      refocusCol(list, k);
-      return true;
-    }
-    return false;
-  }
-  /** onChange, step 2 of 4 (the data-gsel part, lines 3256-3280 of the one function): true when it handled the call and nothing else should run */
-  function onChangeGsel(list, event, ctx) {
-    if (ctx.node.hasAttribute('data-gsel')) {
-      ctx.s.group = ctx.node.value;
-      resetLimit(list);
-      saveChoices(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintTools(list);
-      var gs = list.el.querySelector('#cbl-gsel-' + cssId(list.key));
-      if (gs) gs.focus();
-      return true;
-    }
-    if (ctx.node.hasAttribute('data-filt')) {
-      var fk = ctx.node.getAttribute('data-filt');
-      if (ctx.node.value) ctx.R.filt[fk] = ctx.node.value;
-      else delete ctx.R.filt[fk];
-      resetLimit(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      } else paintTools(list);
-      var f = list.el.querySelector('#cbl-f-' + cssId(list.key) + '-' + cssId(fk));
-      if (f) f.focus();
-      return true;
-    }
-    return false;
-  }
-  /** onChange, step 3 of 4 (the data-cbl-sort part, lines 3281-3300 of the one function): true when it handled the call and nothing else should run */
-  function onChangeCblSort(list, event, ctx) {
-    if (ctx.node.hasAttribute('data-cbl-sort')) {
-      var cur = ctx.s.sort ? ctx.s.sort.dir : 1;
-      ctx.s.sort = { key: ctx.node.value, dir: 1 };
-      resetLimit(list);
-      saveChoices(list);
-      if (!query(list)) {
-        paintTools(list);
-        paintList(list);
-      }
-      var ss = list.el.querySelector('#cbl-sort-' + cssId(list.key));
-      if (ss) ss.focus();
-      return true;
-    }
-    if (ctx.node.hasAttribute('data-selrow')) {
-      var id = ctx.node.getAttribute('data-selrow');
-      if (ctx.node.checked) ctx.R.sel[id] = true;
-      else delete ctx.R.sel[id];
-      paintTools(list);
-      return true;
-    }
-    return false;
-  }
-  /** onChange, step 4 of 4 (the data-cbl-from part, lines 3301-3313 of the one function): runs on, nothing here ends the call */
-  function onChangeCblFrom(list, event, ctx) {
-    if (ctx.node.hasAttribute('data-cbl-from') || ctx.node.hasAttribute('data-cbl-to')) {
-      var p = head(list).period,
-        fr = list.el.querySelector('[data-cbl-from]'),
-        to = list.el.querySelector('[data-cbl-to]');
-      if (p && fr && to && fr.value && to.value) {
-        p.custom = { from: fr.value, to: to.value };
-        list.pv = null;
-        list.pop = null;
-        safe(function () {
-          p.onPick('custom', p.custom);
-        });
-      }
-    }
-  }
-  function onChange(list, ev) {
-  var ctx = {},
-    steps = [onChangeCol, onChangeGsel, onChangeCblSort, onChangeCblFrom];
-  for (var at = 0; at < steps.length; at++) {
-    if (steps[at](list, ev, ctx)) return;
-  }
-  }
-  function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
-  }
-  function refocusCol(I, k) {
-    var node = I.el.querySelector('[data-col="' + k + '"]');
-    if (node) node.focus();
-  }
-
-  /** onKey, step 1 of 3 (the data-rz part, lines 3344-3357 of the one function): true when it handled the call and nothing else should run */
-  function onKeyRz(list, event, ctx) {
-ctx.node = event.target;
-ctx.k = event.key;
-    if (ctx.k === 'Escape' && list.pop) {
-      event.preventDefault();
-      closePop(list, true);
-      return true;
-    }
-    if (ctx.node.hasAttribute && ctx.node.hasAttribute('data-rz') && (ctx.k === 'ArrowLeft' || ctx.k === 'ArrowRight')) {
-      event.preventDefault();
-      var rtl = root.getComputedStyle(list.el).direction === 'rtl',
-        dlt = (ctx.k === 'ArrowRight' ? 8 : -8) * (rtl ? -1 : 1);
-      resize(list, ctx.node.getAttribute('data-rz'), dlt, true);
-      return true;
-    }
-    return false;
-  }
-  /** onKey, step 2 of 3 (the data-g part, lines 3358-3363 of the one function): true when it handled the call and nothing else should run */
-  function onKeyG(list, event, ctx) {
-    if (ctx.node.hasAttribute && ctx.node.hasAttribute('data-g') && (ctx.k === 'Enter' || ctx.k === ' ')) {
-      event.preventDefault();
-      ctx.node.click();
-      return true;
-    }
-    ctx.rowEl = ctx.node.closest && ctx.node.closest('[data-row]');
-    return false;
-  }
-  /** onKey, step 3 of 3 (the data-row part, lines 3364-3395 of the one function): true when it handled the call and nothing else should run */
-  function onKeyRow(list, event, ctx) {
-    if (ctx.rowEl && ctx.node === ctx.rowEl) {
-      if (ctx.k === 'Enter' || ctx.k === ' ') {
-        event.preventDefault();
-        openRow(list, ctx.rowEl.getAttribute('data-row'), event);
-        return true;
-      }
-      if (ctx.k === 'ArrowRight' && hasNext(list) && !isOpen(list, ctx.rowEl.getAttribute('data-row'))) {
-        event.preventDefault();
-        toggleRow(list, ctx.rowEl.getAttribute('data-row'), true);
-        return true;
-      }
-      if (ctx.k === 'ArrowLeft' && hasNext(list) && isOpen(list, ctx.rowEl.getAttribute('data-row'))) {
-        event.preventDefault();
-        toggleRow(list, ctx.rowEl.getAttribute('data-row'), true);
-        return true;
-      }
-      if (ctx.k === 'ArrowDown' || ctx.k === 'ArrowUp') {
-        event.preventDefault();
-        var all = [].slice.call(list.el.querySelectorAll('[data-row]')),
-          i = all.indexOf(ctx.rowEl),
-          nx = all[i + (ctx.k === 'ArrowDown' ? 1 : -1)];
-        if (nx) {
-          nx.focus();
-          if (list.o.hl === false) return true;
-          list.r.hl = nx.getAttribute('data-row');
-          [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (element) {
-            element.classList.remove('sel');
-          });
-          nx.classList.add('sel');
-        }
-      }
-    }
-    return false;
-  }
-  function onKey(list, event) {
-  var ctx = {},
-    steps = [onKeyRz, onKeyG, onKeyRow];
-  for (var at = 0; at < steps.length; at++) {
-    if (steps[at](list, event, ctx)) return;
-  }
-  }
-
-  /* adjustable columns: pointer (mouse and touch), ← → in 8 px, double-click resets; never narrower than the label; remembered */
-  function colByKey(I, key) {
-    return columns(I).filter(function (item) {
-      return item.key === key;
-    })[0];
-  }
-  function resize(I, key, delta, kb) {
-    var c = colByKey(I, key);
-    if (!c) return;
-    I.s.widths[key] = Math.max(minW(I, c), widthOf(I, c) + delta);
-    saveChoices(I);
-    paintList(I);
-    if (kb) refocusRz(I, key);
-  }
-  function applyTpl(I) {
-    var tpl = template(I, shownCols(I));
-    [].forEach.call(I.el.querySelectorAll('.cbl-hdr,.cbl-row'), function (node) {
-      node.style.gridTemplateColumns = tpl;
-    });
-  }
-  function onPointerDown(I, event) {
-    var node = event.target.closest && event.target.closest('[data-rz]');
-    if (!node) return;
-    var c = colByKey(I, node.getAttribute('data-rz'));
-    if (!c) return;
-    event.preventDefault();
-    DRAG = { I: I, key: c.key, x: event.clientX, w: widthOf(I, c), c: c, btn: node };
-    node.classList.add('drag');
-    try {
-      node.setPointerCapture(event.pointerId);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-    root.document.addEventListener('pointermove', onPointerMove);
-    root.document.addEventListener('pointerup', onPointerUp);
-    root.document.addEventListener('pointercancel', onPointerUp);
-  }
-  function onPointerMove(ev) {
-    if (!DRAG) return;
-    var I = DRAG.I,
-      rtl = root.getComputedStyle(I.el).direction === 'rtl';
-    I.s.widths[DRAG.key] = Math.max(minW(I, DRAG.c), DRAG.w + (ev.clientX - DRAG.x) * (rtl ? -1 : 1));
-    applyTpl(I);
-  }
-  function onPointerUp() {
-    if (!DRAG) return;
-    var I = DRAG.I;
-    DRAG.btn.classList.remove('drag');
-    root.document.removeEventListener('pointermove', onPointerMove);
-    root.document.removeEventListener('pointerup', onPointerUp);
-    root.document.removeEventListener('pointercancel', onPointerUp);
-    DRAG = null;
-    saveChoices(I);
-  }
 
   /* one document-level listener each: a click anywhere outside a mounted list closes its popover; a resize refits every list to its window */
   if (root.document && root.document.addEventListener) {
@@ -3732,6 +2898,20 @@ ctx.k = event.key;
       : '<div class="cbl-nempty">' + esc(o.empty || '') + '</div>';
     return '<div class="cbl-ntab' + (cards ? ' cards' : '') + '" role="table" data-nt="' + esc(o.id || '') + '"><div class="cbl-nthead" role="row">' + head + '</div>' + body + '</div>';
   }
+
+  /* click: 20 statements live in app/list-ctl-click.js (shrink W2, 2026-11-17); the page loads that file before this one */
+  if (!root.CBListParts || !root.CBListParts.click) throw new Error('app/list-ctl-click.js must load before app/list-ctl.js');
+  root.CBListParts.click.bind({ closePop: closePop, columns: columns, curSort: curSort, download: download, head: head, matched: matched, minW: minW, needsNext: needsNext, needsToggle: needsToggle, openRow: openRow, paintAll: paintAll, paintList: paintList, paintTitle: paintTitle, paintTools: paintTools, query: query, remote: remote, resetLimit: resetLimit, rowById: rowById, rowIdOf: rowIdOf, safe: safe, saveChoices: saveChoices, selectedRows: selectedRows, shownKeys: shownKeys, sortId: sortId, togglePop: togglePop, toggleRow: toggleRow, viewKeys: viewKeys, viewOn: viewOn, widthOf: widthOf });
+  colByKey = root.CBListParts.click.colByKey;
+  cssId = root.CBListParts.click.cssId;
+  onClick = root.CBListParts.click.onClick;
+  refocusRz = root.CBListParts.click.refocusRz;
+  resize = root.CBListParts.click.resize;
+
+  /* wire: 16 statements live in app/list-ctl-wire.js (shrink W2, 2026-11-17); the page loads that file before this one */
+  if (!root.CBListParts || !root.CBListParts.wire) throw new Error('app/list-ctl-wire.js must load before app/list-ctl.js');
+  root.CBListParts.wire.bind({ closePop: closePop, colByKey: colByKey, cssId: cssId, hasNext: hasNext, head: head, isOpen: isOpen, minW: minW, onClick: onClick, openRow: openRow, paintList: paintList, paintTools: paintTools, query: query, refocusRz: refocusRz, resetLimit: resetLimit, resize: resize, safe: safe, saveChoices: saveChoices, setQ: setQ, shownCols: shownCols, shownKeys: shownKeys, template: template, toggleRow: toggleRow, topKey: topKey, widthOf: widthOf });
+  wire = root.CBListParts.wire.wire;
 
   root.CBList = { mount: mount, nextRow: nextRow, nextTable: nextTable, get: get, reset: reset, every: every, pager: pager };
 })(typeof window !== 'undefined' ? window : this);
