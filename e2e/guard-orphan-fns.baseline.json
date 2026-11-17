@@ -3,7 +3,6 @@
  "orphans": [
   "appearancePush public/app.html",
   "bkBillStanding public/app/cap-books.js",
-  "bkLockNote public/app/cap-books.js",
   "bkOwedRead public/app/cap-books.js",
   "bkRangeHTML public/app/cap-books.js",
   "bkStmtRead public/app/cap-books.js",
