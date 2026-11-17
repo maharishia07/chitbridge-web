@@ -372,6 +372,25 @@ document.getElementById('acc_sheet').addEventListener('click', (e) => {
 /** the PAGE the address names: the first segment of the # (`#bank/B-1100/2026-03` is the Bank page; the rest belongs to that page, cap-bank-home.js bankHomeRoute reads it) */
 const hashPageOf = () => (location.hash || '').replace(/^#\/?/, '').split('/')[0];
 let chromeSeen = false;
+/** inside a client's books (an adviser seat, not the owner's own) a screen change after the first paint is a real history entry */
+function inClientBooks(view) {
+  const acting = window.CBBooksActing && CBBooksActing.current();
+  return !!(chromeSeen && acting && acting.role !== 'owner' && hashPageOf() !== view[0]);
+}
+/** the address follows the view, and the acting band names the screen (a failure here never stops the paint) */
+function chromeAddress(viewRow) {
+  try {
+    /* the page's own deep address (#bank/<account>/<month>) stays through the first paint, so a reload or a bookmark reopens it (cap-bank-home bankHomeDeepOnce); a press on the menu after that names the page alone */
+    if (hashPageOf() !== viewRow[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) {
+      /* l16 R4-2b: inside a client's books each screen is a real history entry (Back steps through the screens, never out to the network); the first paint and the shop owner's own pages replace as before */
+      history[inClientBooks(viewRow) ? 'pushState' : 'replaceState'](null, '', '#' + viewRow[0]);
+    }
+    chromeSeen = true;
+    if (window.CBBooksActing) CBBooksActing.setScreen(viewRow[1]);
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('accounts: the address was not kept', failure);
+  }
+}
 function chrome(view) {
   const nav = NAV.find((item) => item[0] === view) || NAV[0];
   if (window.CBScreenId) CBScreenId.here('accounts', nav[0]); /* SCREEN-ID: the view on show is the screen the chip names */
@@ -382,16 +401,7 @@ function chrome(view) {
   $('title').hidden = false;
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
-  try {
-    /* the page's own deep address (#bank/<account>/<month>) stays through the first paint, so a reload or a bookmark reopens it (cap-bank-home bankHomeDeepOnce); a press on the menu after that names the page alone */
-    if (hashPageOf() !== nav[0] || (typeof BKH !== 'undefined' && BKH.deepDone)) {
-      /* l16 R4-2b: inside a client's books each screen is a real history entry (Back steps through the screens, never out to the network); the first paint and the shop owner's own pages replace as before */
-      const inClient = chromeSeen && window.CBBooksActing && CBBooksActing.current() && CBBooksActing.current().role !== 'owner' && hashPageOf() !== nav[0];
-      history[inClient ? 'pushState' : 'replaceState'](null, '', '#' + nav[0]);
-    }
-    chromeSeen = true;
-    if (window.CBBooksActing) CBBooksActing.setScreen(nav[1]);
-  } catch (_) {}
+  chromeAddress(nav);
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
 BK.onTab = (t) => chrome(t);
@@ -533,6 +543,29 @@ function accBillNext(c) {
     '</div>'
   );
 }
+/** E19: the books' Dues beside the open bill chits - a party the books owe (or are owed) that holds no open chit is a row of its own ("In your books"); nothing is added up from chits */
+/** the open bill chits of a folder read (api() may collapse {chits:[…]} to the array) */
+function billChitList(rows) {
+  return Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
+}
+async function accBillsFromBooks(folder, list) {
+  const supplierSide = folder.code === 'B-2100',
+    owed = await api('booksDues', { query: { side: supplierSide ? 'supplier' : 'customer' } }).catch((failure) => {
+      if (typeof cbQuiet === 'function') cbQuiet('accounts: the books dues were not read, the chit rows stand alone', failure);
+      return null;
+    }),
+    dueParties = ((owed && owed.parties) || []).filter((p) => Number(p.balance_minor) !== 0),
+    haveChit = new Set(list.map((c) => String(c.counterparty_name || '').trim().toLowerCase())),
+    bookRows = dueParties
+      .filter((p) => !haveChit.has(String(p.name || '').trim().toLowerCase()))
+      .map((p) => ({ chit_id: 'books-' + p.party_id, books: true, counterparty_name: p.name, currency: owed.currency, value: Math.abs(Number(p.balance_minor)) / Math.pow(10, bkDec(owed.currency)), created_at: p.oldest_due, bill: { label: tx('In your books') } })),
+    rowsAll = list.concat(bookRows),
+    booksSide = !list.length && dueParties.length ? { n: dueParties.length, minor: Math.abs(Number(owed.total_minor) || 0), cur: owed.currency, supplier: supplierSide } : null,
+    booksLine = dueParties.length
+      ? '<p data-testid="bills-books-total" style="margin:8px 0;color:var(--muted)">' + esc(bkMoney(Math.abs(Number(owed.total_minor) || 0), owed.currency) + ' ' + (supplierSide ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + dueParties.length + ')') + '</p>'
+      : '';
+  return { rowsAll, booksSide, booksLine };
+}
 async function accBills(body) {
   try {
     /* the folder list arrives through cap-folders.js's own splitter (_foldersFrom → UI.sysFolders), as the app reads it */
@@ -548,21 +581,10 @@ async function accBills(body) {
     const cur = sys.find((item) => item.code === ACC.billTab);
     const rows = await api('folderChits', { params: { id: cur.folder_id }, query: { state: 'open' } });
     /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
-    const list = Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
+    const list = billChitList(rows);
     /* E19 (decided by practice: Xero's Bills to pay reads the payables ledger): the figure and the rows come from the BOOKS, the one GET /dues Dues paints (nothing is added up from chits).
        A party with an open bill CHIT keeps its chit rows (pay, open the chit); a party the books owe or are owed that holds no open chit is a row of its own ("In your books"), so a loader's or a move-in's bills show here as they do in Dues. */
-    const supplierSide = cur.code === 'B-2100',
-      owed = await api('booksDues', { query: { side: supplierSide ? 'supplier' : 'customer' } }).catch(() => null),
-      dueParties = ((owed && owed.parties) || []).filter((p) => Number(p.balance_minor) !== 0),
-      haveChit = new Set(list.map((c) => String(c.counterparty_name || '').trim().toLowerCase())),
-      bookRows = dueParties
-        .filter((p) => !haveChit.has(String(p.name || '').trim().toLowerCase()))
-        .map((p) => ({ chit_id: 'books-' + p.party_id, books: true, counterparty_name: p.name, currency: owed.currency, value: Math.abs(Number(p.balance_minor)) / Math.pow(10, bkDec(owed.currency)), created_at: p.oldest_due, bill: { label: tx('In your books') } })),
-      rowsAll = list.concat(bookRows),
-      booksSide = !list.length && dueParties.length ? { n: dueParties.length, minor: Math.abs(Number(owed.total_minor) || 0), cur: owed.currency, supplier: supplierSide } : null,
-      booksLine = dueParties.length
-        ? '<p data-testid="bills-books-total" style="margin:8px 0;color:var(--muted)">' + esc(bkMoney(Math.abs(Number(owed.total_minor) || 0), owed.currency) + ' ' + (supplierSide ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + dueParties.length + ')') + '</p>'
-        : '';
+    const { rowsAll, booksSide, booksLine } = await accBillsFromBooks(cur, list);
     const word = (f) => (f.code === 'B-2100' ? 'Received' : 'Issued');
     const tabs =
       '<div class="tabs" role="group">' +
@@ -792,6 +814,45 @@ function countryCard(d) {
 }
 
 /* ═══ START ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+/** T7: a screen the address names that this seat cannot open (#/returns on a client's books) is SAID, never swapped for another tab; true = said */
+function seatClosed() {
+  const asked = hashPageOf(), acting = CBBooksActing.current();
+  if (acting && acting.role !== 'owner' && asked && !NAV.some((item) => item[0] === asked)) {
+    card('<div id="seat_closed" data-testid="acc-seat-closed"></div>', true);
+    CBShell.readFailed($('seat_closed'), { what: '', status: 403, detail: tx('This screen is not open to your seat. Nothing was opened.'), back: { href: CBBooksActing.clientAddress(acting.store), label: tx('Back to this client') } });
+    return true;
+  }
+  return false;
+}
+/** /me says whether the Ledger is on (ledger_on); a failed read is UNKNOWN, never "off" — start() falls through to the old probe, whose 404 is the only "off" */
+async function readProfile() {
+  try {
+    const mine = await api('me');
+    return (mine && mine.entity) || mine || {};
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('accounts: /me was not read, the ledger probe decides', failure);
+    return {};
+  }
+}
+/** the ledger's health answer into the page: waiting, year, currency, country (CX0) */
+function noteHealth(reply) {
+  const health = reply || {};
+  BK.waiting = health.waiting || [];
+  if (health.year) BK.year = health.year; /* the shop's year — cap-books bkFyNow / bkMonths paint it, never an April of their own */
+  if (health.currency) BK.cur = health.currency; /* the ledger's money — bkCur's answer when a figure names none */
+  ON = !!(reply && reply.enabled !== false);
+  if (health.currency) SESSION.currency = health.currency; /* CX0: the ledger's currency (AUD · AED · INR) — Receive / Pay send it; 'INR' typed here refused an AU shop (routes/books.js:520) */
+  const countryCode = health.country && health.country.country && health.country.country.code;
+  if (countryCode) SESSION.country = countryCode; /* CX0: the shop's country (CS1 status) — the pack's words on this page (shopReg) */
+}
+/** ⭐ UI9: the WHOLE frame at once — the menu, the title and the rows' room — before anything is read; the views then fill only the rows. */
+function paintFrame() {
+  const f0 = hashPageOf(),
+    v0 = NAV.some((item) => item[0] === f0) ? f0 : CBBooksActing.firstTab();
+  chrome(v0);
+  if (v0 !== 'ledgers')
+    $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
+}
 async function start() {
   SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
@@ -810,25 +871,9 @@ async function start() {
     }
   );
   whoPaint(); await CBBooksActing.openPage(CFG.API_BASE, SESS.token, NAV, NAV_GROUPS); /* ACC-176b: acting enters only on a live adviser grant (else leaves); the menu keeps the /api/books tabs */
-  /* T7: a screen the address names that this seat cannot open (#/returns on a client's books) is SAID, never swapped for another tab */
-  {
-    const asked = hashPageOf(), acting = CBBooksActing.current();
-    if (acting && acting.role !== 'owner' && asked && !NAV.some((item) => item[0] === asked)) {
-      card('<div id="seat_closed" data-testid="acc-seat-closed"></div>', true);
-      CBShell.readFailed($('seat_closed'), { what: '', status: 403, detail: tx('This screen is not open to your seat. Nothing was opened.'), back: { href: CBBooksActing.clientAddress(acting.store), label: tx('Back to this client') } });
-      return;
-    }
-  }
+  if (seatClosed()) return;
   const g = ++ACC.gen;
-  /* ⭐ UI9: the WHOLE frame at once — the menu, the title and the rows' room — before anything is read; the views then fill only the rows.
-     (The Ledger's answer below can still turn this into the "not switched on" card; nothing here reads or writes.) */
-  {
-    const f0 = hashPageOf(),
-      v0 = NAV.some((item) => item[0] === f0) ? f0 : CBBooksActing.firstTab();
-    chrome(v0);
-    if (v0 !== 'ledgers')
-      $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
-  }
+  paintFrame();
   /* ⭐ ONE BROWSER, ONE SHOP: nothing is read until this browser holds no other shop's fingerprint */
   let t;
   try {
@@ -840,24 +885,10 @@ async function start() {
   if (t.others.length) return closeFirst(t);
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
-    let me = {};
-    try {
-      const mine = await api('me');
-      me = (mine && mine.entity) || mine || {};
-    } catch (_) {
-      me = {}; /* /me failed: UNKNOWN, never "off" — fall through to the old probe, whose 404 is the only "off" */
-    }
-    if (typeof me.ledger_on === 'boolean' && !me.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
+    const profile = await readProfile();
+    if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
-    BK.waiting = (reply && reply.waiting) || [];
-    if (reply && reply.year) BK.year = reply.year; /* the shop's year — cap-books bkFyNow / bkMonths paint it, never an April of their own */
-    if (reply && reply.currency) BK.cur = reply.currency; /* the ledger's money — bkCur's answer when a figure names none */
-    ON = !!(reply && reply.enabled !== false);
-    if (reply && reply.currency)
-      SESSION.currency =
-        reply.currency; /* CX0: the ledger's currency (AUD · AED · INR) — Receive / Pay send it; 'INR' typed here refused an AU shop (routes/books.js:520) */
-    if (reply && reply.country && reply.country.country && reply.country.country.code)
-      SESSION.country = reply.country.country.code; /* CX0: the shop's country (CS1 status) — the pack's words on this page (shopReg) */
+    noteHealth(reply);
   } catch (e) {
     if (e && e.status === 404) return offCard();
     if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
