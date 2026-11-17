@@ -185,9 +185,11 @@
     if (column[2] === 'mark') return 190;
     return column[2] === grantKit.MONEY ? 140 : 180;
   }
+  /** the Day book's phone card, in lines: entry no + amount, then day · kind · party, then the chips (evidence, mark, risk, saved); a word beside a chip says nothing the chip does not (nl) */
+  var DAYBOOK_CARD = { entry_no: { cl: 1 }, amount_minor: { cl: 1, nl: true }, posting_date: { cl: 2, nl: true }, kind: { cl: 2, nl: true }, party_ref: { cl: 2, nl: true }, evidence: { nl: true }, mark: { nl: true }, flag: { nl: true } };
   /** one column of the list: how it is headed, sized, sorted, kept and painted */
-  function listColumn(column, index) {
-    return {
+  function listColumn(column, index, all, report) {
+    return Object.assign({}, report && report.k === 'daybook' ? DAYBOOK_CARD[column[0]] : null, {
       html: isHtmlColumn(column),
       key: column[0],
       label: grantKit.words(column[1]),
@@ -203,7 +205,7 @@
         if (column[2] === 'risk') return (row.risk_list || []).length;
         return row[column[0]] == null ? '' : String(row[column[0]]);
       }
-    };
+    });
   }
   /** what a click on a row opens: an account's ledger or an entry (drill), a Months row's Day book; nothing else */
   function rowOpener(report) {
@@ -230,7 +232,7 @@
       rowTid: function (row) {
         return 'bv-row-' + row._n;
       },
-      columns: shownCols(report).map(listColumn),
+      columns: shownCols(report).map(function (column, index) { return listColumn(column, index, null, report); }),
       search: function (row) {
         return report.cols
           .map(function (column) {

@@ -298,5 +298,19 @@ ctx.k = event.key;
     DRAG = null;
     saveChoices(I);
   }
+  /* "/" opens Search: the GitHub / Gmail / Slack convention (a bare "/" moves focus to the page's search box and types nothing). It never fires while typing in a field, with a modifier, or under an open dialog. */
+  function onSlash(ev) {
+    if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.defaultPrevented) return;
+    var node = ev.target;
+    if (node && node.tagName && /^(INPUT|SELECT|TEXTAREA)$/.test(node.tagName)) return;
+    if (node && (node.isContentEditable || (node.closest && node.closest('dialog[open],[role=dialog],[aria-modal=true]')))) return;
+    var boxes = [].slice.call(root.document.querySelectorAll('[data-cbl-q]')).filter(function (box) {
+      return box.getClientRects().length && !box.disabled;
+    });
+    if (!boxes.length) return;
+    ev.preventDefault();
+    boxes[boxes.length - 1].focus();
+  }
+  if (root.document && root.document.addEventListener) root.document.addEventListener('keydown', onSlash);
   root.CBListParts.wire = { bind: bind, wire };
 })(typeof window !== 'undefined' ? window : this);

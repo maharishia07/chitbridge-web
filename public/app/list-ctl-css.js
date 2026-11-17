@@ -205,7 +205,10 @@
       '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
       '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
       '.cbl .cbl-row .cbl-cell{padding:2px 0}',
-      '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}'
+      '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}',
+      /* a card of lines (a column says cl 1 or 2; the rest are chips on the last line): head = name left, amount right; under it the facts; then the chips. One spacer after each line, so 5 cards fit a phone */
+      '.cbl .cbl-row:has(.cl1) .cbl-cell{order:4}.cbl .cbl-row:has(.cl1) .cbl-cell.cl1{order:0}.cbl .cbl-row:has(.cl1) .cbl-cell.cl2{order:2}.cbl .cbl-row:has(.cl1)::before{content:"";flex:0 0 100%;order:1}.cbl .cbl-row:has(.cl1)::after{content:"";flex:0 0 100%;order:3}',
+      '.cbl .cbl-row .cbl-cell.first.cl1{width:auto;flex:1 1 0;min-width:0}.cbl .cbl-row .cbl-cell.cl2{color:var(--cl-mute,inherit)}.cbl .cbl-row:has(.cl1) .cbl-cell{padding-block:1px}'
   ];
   /** the list unit's stylesheet, part 7 of 8 (the remaining small rules): one string per rule group, tokens only with a fallback for each */
   function cssPart7(phoneMax) {
