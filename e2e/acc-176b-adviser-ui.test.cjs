@@ -15,7 +15,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 
 let failures = 0;
 const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (!ok) failures++; };
 
-let acting = read('books-acting.js'), actions = read('books-actions-view.js'), api = read('books-grant-api.js'), member = read('books-grant-member.js'), view = read('books-grant-view.js');
+let acting = read('books-acting.js'), actions = read('books-actions-view.js'), api = read('books-grant-api.js'), member = read('books-grant-member.js'), view = read('books-grant-view.js') + ['reports', 'cells', 'marks', 'list'].map((part) => read('books-grant-' + part + '.js')).join('\n');
 if (mutate === 'store') acting = acting.replace('{ store_id: context && context.store.id }', '{}');
 if (mutate === 'clear') acting = acting.replace('if (context && String(context.store.id) !== String(store.id)) clearAll();', '');
 if (mutate === 'late') actions = actions.replace('if (root.CBBooksActing.current().store.id !== asked) return false;', '');
@@ -98,7 +98,7 @@ check(A2.clientStores([{ entity_id: 's1', name: 'x' }, { entity_id: 's2', name: 
 check(api.includes("out.live[id].preset !== 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
 check(view.includes('num: column[2] === MONEY') && view.includes('groupWords') && view.includes('paintDues') && !view.includes("facts: [['total_minor'") && view.includes('totalRows') && view.includes('findMonth'), 'the grant screens: money right-aligned, group words, two dues panels without a net, totals row, the month of the books');
 /* (9) round 2b: parents from the answer, the firm's client list, ended grants, the front door */
-const net = read('network-app.js'), door = read('books-clients-door.js');
+const net = read('network-app.js') + ' ' + read('network-books.js'), door = read('books-clients-door.js');
 check(member.includes('answer.parents') && member.includes('allParents()') && member.includes('entity_id'), 'Give access: the parents the server names (governance, commercial, agency) join the network list, once each');
 check(api.includes('clientColumns') && api.includes("'since'") && api.includes("'until'") && api.includes("['city', 'km', 'purpose']") && net.includes('clientColumns(cols, N, T)'), 'the client list of a firm: Role, Since, Until; no City, Distance or purpose columns');
 check(api.includes('heldSplit') && api.includes('endedWords') && net.includes('nw-ended-') && net.includes('N.ended'), 'ended grants are listed with their state in words and no Open books');

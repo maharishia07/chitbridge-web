@@ -15,7 +15,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'ut
 let failures = 0;
 const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (!ok) failures++; };
 
-let member = read('app/books-grant-member.js'), view = read('app/books-grant-view.js'), api = read('app/books-grant-api.js'), drill = read('app/books-grant-drill.js'), net = read('app/network-app.js');
+let member = read('app/books-grant-member.js'), view = read('app/books-grant-view.js') + ['reports', 'cells', 'marks', 'list'].map((part) => read('app/books-grant-' + part + '.js')).join('\n'), api = read('app/books-grant-api.js'), drill = read('app/books-grant-drill.js'), net = read('app/network-app.js') + ' ' + read('app/network-books.js');
 if (mutate === 'write') view += "\nvar x = CBAction.run(null, function () { return call('POST', '/api/books/x'); });";
 if (mutate === 'noid') member = member.replace(' id="bg_give"', '');
 if (mutate === 'drillwrite') drill += "\nvar x = call('POST', '/api/books/x');";
@@ -56,8 +56,8 @@ const strip = (t) => t.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 check(!/CBAction/.test(drill) && !/\b(POST|PATCH|PUT|DELETE)\b/.test(strip(drill)) && !/csv|export|download|print/i.test(strip(drill).split('csv: false').join('')), 'the drill has no write verb, no CBAction and no export');
 check(/headers: root\.CBBooksActing\.headers\(\)/.test(drill) && (drill.match(/CBBooksGrantApi\.run\(/g) || []).length === 1, 'every read of the drill goes through the one run() with the acting headers');
 check(/readLedger: '\/api\/books\/ledger\/:account'/.test(api) && /'readLedger'/.test(drill) && /'readDaybook'/.test(drill), 'the drill reads the ledger and the day book by their registered names');
-check((view.match(/drill: 'ledger'/g) || []).length === 3 && /drill: 'entry'/.test(view) && /onOpen: report\.drill/.test(view), 'trial balance, profit and loss, balance sheet rows open a ledger; a Day book row opens its entry');
-check(/\['amount_minor', 'Amount', MONEY\]/.test(view) && /onOpen: function \(row\) \{ openLedger/.test(drill) && /openEntry\(ctx, entry, answer.currency/.test(drill), 'the Day book shows each entry amount; an entry line opens its account, a ledger line opens its entry');
+check((view.match(/drill: 'ledger'/g) || []).length === 3 && /drill: 'entry'/.test(view) && /if \(report\.drill\) return function/.test(view), 'trial balance, profit and loss, balance sheet rows open a ledger; a Day book row opens its entry');
+check(/\['amount_minor', 'Amount', grantKit\.MONEY\]/.test(view) && /onOpen: function \(row\) \{ openLedger/.test(drill) && /openEntry\(ctx, entry, answer.currency/.test(drill), 'the Day book shows each entry amount; an entry line opens its account, a ledger line opens its entry');
 check(/'Opening'/.test(drill) && /'Total debit'/.test(drill) && /'Total credit'/.test(drill) && /running_minor/.test(drill) && /'Closing'/.test(drill), 'the ledger shows opening, running balance, the period total and the closing as the server carried them');
 check((drill.match(/csv: false/g) || []).length === 2 && /csv: false/.test(view), 'no list of the auditor view or its drill carries the CSV button');
 check(/limit: PAGE/.test(drill) && /after/.test(drill), 'a ledger is read a page at a time (limit + the server cursor)');

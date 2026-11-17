@@ -38,7 +38,8 @@ const ROWS_ONLY = [
   ['app/books-grant-view.js', ['NET005-B01', 'NET005-B02']],
   ['app/books-grant-reports.js', ['NET005-I01']],
   ['app/books-grant-drill.js', ['NET005-B04', 'NET005-B05']],
-  ['app/network-app.js', ['NET001-B04', 'NET001-B05']]
+  ['app/network-app.js', ['NET001-B05']],
+  ['app/network-books.js', ['NET001-B04']]
 ];
 
 const read = (f) => {
