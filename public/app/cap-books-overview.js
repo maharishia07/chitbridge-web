@@ -167,12 +167,12 @@ function ovPictures(a) {
   return '<div class="ov-pics">' + ovSalesCards(a) + ovProfitCard(a) + ovDuesCard(a, 'customer') + ovDuesCard(a, 'supplier') + ovCashCard(a) + '</div>' + ovItemNote();
 }
 function ovCss() {
-  return (
-    '<style>.ov{padding:0 12px 12px}.ov-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}.ov-head{margin:4px 0 8px;font:600 var(--fs-3,17px) var(--sans,sans-serif);color:var(--ink,#2a2418)}' +
-    '.ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}.ov-tile{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line-3,#d8ccb0);border-radius:8px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);text-decoration:none}' +
-    '.ov-l{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-v{font:700 var(--fs-3,17px) var(--sans,sans-serif)}.ov-n{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-wide{grid-column:1/-1}' +
+  return [
+    '<style>.ov{padding:0 12px 12px}.ov-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}.ov-head{margin:4px 0 8px;font:600 var(--fs-3,17px) var(--sans,sans-serif);color:var(--ink,#2a2418)}',
+    '.ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}.ov-tile{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line-3,#d8ccb0);border-radius:8px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);text-decoration:none}',
+    '.ov-l{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-v{font:700 var(--fs-3,17px) var(--sans,sans-serif)}.ov-n{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-wide{grid-column:1/-1}',
     '.ov-pics{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:901px){.ov-pics{grid-template-columns:1fr 1fr}}.ov-pic{border:1px solid var(--line-3,#d8ccb0);border-radius:8px;padding:6px 10px;background:var(--card,#fffdf8);min-width:0;overflow:hidden}.ov-pic h3{margin:0 0 2px;font-size:var(--fs-2,14px)}.ov-pic details{font-size:var(--fs-1,12px)}.ov .bk-st .num{text-align:right}.ov-pic .bk-st{width:100%;border-collapse:collapse}.ov-pic .bk-st th{text-align:start;color:var(--muted,#6f6450);font-weight:500}</style>'
-  );
+  ].join('');
 }
 function ovPaint() {
   var bar = document.getElementById('ov_bar'),
