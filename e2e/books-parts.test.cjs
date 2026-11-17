@@ -54,7 +54,9 @@ for (const part of PARTS) {
   check(names.length > 3, 'defines its functions (a part with nothing in it is a dead file)');
   check(names.every((name) => !(name in parentFns)), 'the parent ' + path.basename(part.parent) + ' no longer defines any of them (one place each)');
   check(names.every((name) => (text.match(new RegExp('^(?:async )?function ' + name + '[(]', 'gm')) || []).length === 1), 'no function is defined twice inside the part');
-  check(names.every((name) => mainFns[name] === own[name] || CHANGED_BEFORE_SPLIT.includes(name)), 'every function is the main branch text, unchanged (moved, not rewritten)');
+  /* before the split lands main's parent holds each function (moved, not rewritten); once it has landed main's parent no longer does, and the proof was this check run before the merge */
+  const landed = names.every((name) => !(name in mainFns));
+  check(landed || names.every((name) => mainFns[name] === own[name] || CHANGED_BEFORE_SPLIT.includes(name)), 'every function is the main branch text, unchanged (moved, not rewritten)' + (landed ? ' — the split is on main already, so nothing is left to compare' : ''));
   check(/OWNS[\s\S]*CALLED BY[\s\S]*CARD\s+\S+\/\S+/.test(text.slice(0, 1500)), 'the header names what it OWNS, who it is CALLED BY and its CARD');
   /* cream and dark, 1366 wide and 390 wide, AA contrast: the part paints with the page's tokens and states no colour of its own */
   const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');

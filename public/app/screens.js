@@ -2278,7 +2278,7 @@ window.CBSCREENS = {
 "testAsk":{"code":"POP085","file":"cap-testing.js","ambiguous":false},
 "supportForm":{"code":"POP087","file":"app.html","ambiguous":false},
 "supportOpen":{"code":"POP088","file":"app.html","ambiguous":false},
-"partyEditOpen":{"code":"POP089","file":"cap-books.js","ambiguous":false},
+"partyEditOpen":{"code":"POP089","file":"cap-books-party.js","ambiguous":false},
 "payOpen":{"code":"POP090","file":"cap-books.js","ambiguous":false},
 "bankAsk":{"code":"POP091","file":null,"ambiguous":false},
 "bankNote":{"code":"POP092","file":null,"ambiguous":false},
