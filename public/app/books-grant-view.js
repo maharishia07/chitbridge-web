@@ -735,7 +735,7 @@
   function listConfig(report, rows) {
     return {
       key: 'books-grant-' + report.k,
-      sortDefault: report.k === 'daybook' ? { key: 'risk', dir: -1 } : undefined /* auditor practice: the highest risk on top; a sort the reader chose is kept over it */,
+      /* R4 17 Nov: no first sort. The Day book opens in the book's own order (day, then number: the api's order); the risk-first order opened it with the three after-period-end entries of June 2026 above July 2025 and, at 1366, the Risk column is not even in view to explain why. Most risks first is one press on Risk (kept for the reader), or the Risk filters below */
       csv: false /* read only: no copy of the books leaves this screen */,
       tools: { search: rows.length >= SEARCH_FROM, bar: rows.length > BAR_FROM } /* W19: a short list is read at a glance; no search box under ten rows, no tools bar up to twelve (T6: first data by 20% / 30%) */,
       defaultCols: shownCols(report).map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
@@ -755,7 +755,7 @@
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || (column[2] === MONEY && CMP_COLS.indexOf(column[0]) < 0) ? 1 : 2, /* Last year and % go first on a narrow screen: the amount and its change stay */
           num: column[2] === MONEY || column[2] === PCT || column[2] === DRCR || column[2] === 'risk',
-          sort: column[2] === 'risk' ? true : undefined, dir0: column[2] === 'risk' ? -1 : undefined, /* Risk is the one Day book column the reader sorts: most risks first (the page opens that way; a press turns it) */
+          sort: column[2] === 'risk' ? true : undefined, dir0: column[2] === 'risk' ? -1 : undefined, /* Risk is the one Day book column the reader sorts: most risks first (a press on the header; the page opens in book order) */
           keep: column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
           w: DAYBOOK_W[column[0]] || (column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180),
           cell: function (row) {
@@ -845,7 +845,7 @@
     if (member.id && asked.note === String(member.id) && root.CBFlag && viewState.o.call) {
       var client = root.CBFlag.use({ call: viewState.o.call, kind: 'client', entity: function () { return member.id; } });
       if (!client.off()) client.load([asked.note]).then(function () { client.sheet(asked.note, { label: member.name }); });
-    } else if (viewState.fl && !viewState.fl.off()) viewState.fl.sheet(asked.note, { label: asked.label || undefined }); /* the entry's words (the note's own label), never its raw id */
+    } else if (viewState.fl && !viewState.fl.off()) viewState.fl.load([asked.note]).then(function () { viewState.fl.sheet(asked.note, { label: asked.label || undefined }); }); /* R2 17 Nov: the note is read by its OWN id (POST /flags/query is not windowed by year): an entry outside the year the Day book opened on has no chip row loaded, so the sheet said 'Nothing saved'. The entry's words (the note's own label), never its raw id */
   }
   function mount(host, options) {
     var asked = pendingNote;
