@@ -515,7 +515,7 @@ async function peGstView(body) {
     return;
   }
   if (!peOwner()) {
-    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(PE_OWNER_ONLY_CLOSES);
+    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(peOwnerOnlyCloses());
     return;
   }
   let L;
@@ -890,8 +890,8 @@ function peReturnBasFields(returnAnswer) {
       peSel(
         'pr_s',
         [
-          ['1', 'Simpler BAS'],
-          ['0', 'Full BAS']
+          ['1', txf('Simpler {name}', { name: peReturnName() })],
+          ['0', txf('Full {name}', { name: peReturnName() })]
         ],
         asked.simpler === false ? '0' : '1',
         ' onchange="peReturnPick(\'simpler\', this.value)"'
@@ -1019,7 +1019,7 @@ const peRetReadOnly = (r) => {
 /** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
 function peReturnCloseSection(r) {
   if (peRetReadOnly(r)) return '<div class="pe-card" data-testid="pr-readonly"><div class="pe-note">' + esc(tx(peRetReadOnly(r))) + '</div></div>';
-  return peOwner() ? peReturnCloseCard(r) : peNoOwner(PE_OWNER_ONLY_CLOSES);
+  return peOwner() ? peReturnCloseCard(r) : peNoOwner(peOwnerOnlyCloses());
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
@@ -1083,7 +1083,7 @@ function peReturnList(r) {
   if (two)
     cols.push({
       key: 'tax',
-      label: tx('VAT'),
+      label: peTaxWord(),
       prio: 1,
       num: true,
       w: 150,
@@ -1110,10 +1110,6 @@ function peReturnList(r) {
     next: (b) => peReturnLedgers(r, b, two) /* ACC-357: the row opens BELOW: one line per ledger with its amount for the period (a shop may have hundreds of places: the server sends the top ten) */
   });
 }
-/** the head of the tax column under a return box: the pack's own word for its tax (words.taxName), else the neutral "Tax" */
-function peTaxColumnWord() {
-  return (typeof packWord === 'function' && packWord('taxName')) || tx('Tax');
-}
 /** the panel under a box: its own header row, one line per ledger (largest first, the server's figures), "and n more" when the server cut the list; each ledger opens its entries for the period */
 function peReturnLedgers(answer, b, taxColumns) {
   const c = answer.currency,
@@ -1121,7 +1117,7 @@ function peReturnLedgers(answer, b, taxColumns) {
     widths = taxColumns ? [130, 130] : [130],
     money = (v) => (v == null ? peRetDash() : esc(peMoney(v, c)));
   const head = CBList.nextRow(
-    ['<span style="' + grey + '">' + esc(tx('Ledger')) + '</span>'].concat(taxColumns ? ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>', '<span style="' + grey + '">' + esc(peTaxColumnWord()) + '</span>'] : ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>']),
+    ['<span style="' + grey + '">' + esc(tx('Ledger')) + '</span>'].concat(taxColumns ? ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>', '<span style="' + grey + '">' + esc(peTaxWord()) + '</span>'] : ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>']),
     widths
   );
   const lines = (b.accounts || []).map((item) =>

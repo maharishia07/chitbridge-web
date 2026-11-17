@@ -11,6 +11,7 @@ vm.runInNewContext(pub('engine/chart-draw.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-status.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-rows.js'), ctx, {});
 root.CBDraw = root.CBDraw || ctx.CBDraw;
+vm.runInNewContext(pub('app/helpers.js'), ctx, {}); /* the page loads helpers.js first: the one esc · fmtMoney · monthNames */
 for (const part of ['books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(pub('app/' + part), ctx, {});
 const T = root.CBPractice.parts;
 let bad = 0;

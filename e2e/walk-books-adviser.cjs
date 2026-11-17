@@ -32,16 +32,18 @@ W.run('books-adviser', async (w) => {
   const { page, ctx, base } = w;
   const S = { calls: [], by: {}, given: [], fail: {}, delayList: null, gives: [] };
   const stamp = (id, name, role) => ({ identity_id: id, name, firm: 'Kumar and Co', role, at: DAY(-1), reason: null });
-  const make = (store, n, over) => heldAction(Object.assign({
+  /* 4d894bf8 (Polish R19): a queue row is named by its narration (body.narration), no longer by the client ref - the stand-in puts the ref there so the rows stay findable */
+  const named = (a) => { a.body = Object.assign({}, a.body, { narration: a.client_ref }); return a; };
+  const make = (store, n, over) => named(heldAction(Object.assign({
     action_id: 'd0000000-0000-4000-8000-0000000000' + store.slice(-2) + n, store, kind: 'journal', state: 'waiting_review', client_ref: 'REF-' + store.slice(-1) + n, body_hash: 'hash-' + store.slice(-1) + n,
     total_minor: 100000 * n, currency: store === S2 ? 'AUD' : 'INR', body: { lines: [{ account: '1000', dr_minor: 100000 * n }, { account: '4000', cr_minor: 100000 * n }] },
-    prepared: stamp(COLLEAGUE, 'Priya Nair', 'preparer'), reviewed: null, closed: null, access_ended: false, entry_id: null }, over));
+    prepared: stamp(COLLEAGUE, 'Priya Nair', 'preparer'), reviewed: null, closed: null, access_ended: false, entry_id: null }, over)));
   const reset = () => {
     S.by = {};
     S.by[S1] = [make(S1, 1), make(S1, 2, { prepared: stamp(ME, 'Me Myself', 'preparer') })];
     S.by[S2] = [make(S2, 1), make(S2, 2)];
     S.by[OWN] = [1, 2, 3].map((n) => make(OWN, n, { state: 'waiting_accept', reviewed: stamp('id-rev', 'Ravi Menon', 'reviewer') }));
-    S.by[OWN][2].client_ref = 'REF-BAD';
+    S.by[OWN][2].client_ref = 'REF-BAD'; S.by[OWN][2].body.narration = 'REF-BAD';
     S.given = [{ grant_id: G1, grantor_entity: OWN, grantee_entity: BRAND, preset: 'auditor', can_see_costs: true, purpose: 'Year-end audit', granted_at: DAY(-5), expires_at: DAY(200), revoked_at: null, state: 'live' }];
   };
   reset();

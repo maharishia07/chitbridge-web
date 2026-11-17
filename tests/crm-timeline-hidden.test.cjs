@@ -21,9 +21,10 @@ globalThis.bkToMinor = (v) => Math.round(v * 100); globalThis.bkDate = (d) => d;
 globalThis.cbIsRawId = () => false; globalThis.CRM_KIND = {}; globalThis.CRM_CHANNEL = {}; globalThis.CRMR = { p: null, added: '' };
 globalThis.CRM = { ledger: true, currency: 'INR' };
 globalThis.crmRolesList = (r) => r; globalThis.crmRealEmail = (v) => v; globalThis.crmPlural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+globalThis.crmDocWord = () => 'Bill'; globalThis.crmWhen = (s) => s; globalThis.crmDocDay = (s) => s; globalThis.crmLocalISO = (d) => d.toISOString().slice(0, 10);
 globalThis.crmNoDate = (s) => s; globalThis.crmEntryWhat = globalThis.crmEntryState = () => '';
 eval(
-  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
+  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmWhenCell'), fn(rec, 'crmTlCols')].join(NL) +
     NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.unbilledMoney = crmUnbilledMoney; globalThis.chip = crmDueChip; globalThis.listCell = crmDueListCell; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
 );
 const amountCell = (e) => cols().filter((c) => c.key === 'amount')[0].cell(e);

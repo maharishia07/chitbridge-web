@@ -462,7 +462,10 @@
     'Nothing overdue': 'कुछ भी विलंबित नहीं',
     'Nothing waiting': 'कुछ भी प्रतीक्षा में नहीं',
     'Notifications — who gets told, and how': 'सूचनाएँ — किसे बताया जाए, और कैसे',
-    'Notified by': 'किसने सूचित किया'
+    'Notified by': 'किसने सूचित किया',
+    /* MACHINE-WRITTEN (curqps, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the skip link and the Network menu entry; needs a native read before a customer sees them */
+    'Skip to content': 'सामग्री पर जाएँ',
+    'Who can see my books': 'मेरी बही कौन देख सकता है'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) hi[k] = pack[k];
   try {
@@ -789,6 +792,8 @@
     'Figure card': 'आँकड़ा कार्ड',
     'CMP061.label': 'आद्याक्षर बैज',
     'Initials badge': 'आद्याक्षर बैज',
+    'CMP064.label': 'स्थिति आइकन',
+    'CMP065.label': 'बैंक विवरण पट्टी',
     'CMP055.required': 'आवश्यक',
     'Required': 'आवश्यक',
     'CMP055.badnumber': 'यह संख्या नहीं है। केवल अंक लिखें, जैसे 1234.5',

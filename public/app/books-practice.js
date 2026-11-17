@@ -12,8 +12,8 @@
   'use strict';
   var practiceKit = (root.CBPracticeKit = root.CBPracticeKit || {});
   practiceKit.translate = translate;
-  practiceKit.escapeHtml = escapeHtml;
-  practiceKit.money = money;
+  var escapeHtml = (practiceKit.escapeHtml = function (s) { return esc(s); }); /* the one esc (helpers.js) */
+  practiceKit.money = minorText;
   practiceKit.dayWords = dayWords;
   practiceKit.practiceState = { token: null, data: null, drawn: false, filter: null, list: null, band: null, fl: null, flOff: false, flReady: false, flTotal: 0 };
   /* l16 n12: what a firm with no trade of its own KEEPS of the shop's Home, by id: its own Setup (the business, account, plan, policy, privacy, standards, connectors). Everything else is shop: every other card, so
@@ -119,10 +119,9 @@
   function hidesShopCards(id) {
     return isFirm() && !FIRM_KEEPS[id];
   }
-  function money(minor, currency) {
-    if (minor == null) return '—';
-    var major = Number(minor) / 100;
-    return root.CBLocale && root.CBLocale.money ? root.CBLocale.money(major, currency || 'AUD') : (currency || '') + ' ' + major.toFixed(2);
+  /* minor units in, the one formatter (helpers.js fmtMoney) out; a missing figure is a dash */
+  function minorText(minor, currency) {
+    return minor == null ? '—' : fmtMoney({ amount_minor: minor, currency: currency }, currency);
   }
   function dayWords(value) {
     return value ? (typeof root.shopDay === 'function' ? root.shopDay(value) : String(value).slice(0, 10)) : '—';
@@ -161,8 +160,8 @@
       num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return escapeHtml(practiceKit.trend(r)); }, function (r) { return practiceKit.trend(r); }),
       num('margin', 'Margin', 80, function (r) { return practiceKit.figureOrWhy(r, r.health.gross_margin_pct, escapeHtml(r.health.gross_margin_pct) + '%'); }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
-      num('cash', 'Cash', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.cash_minor, escapeHtml(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
-      num('profit', 'Profit (qtr)', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.profit_quarter_minor, escapeHtml(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
+      num('cash', 'Cash', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.cash_minor, escapeHtml(minorText(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
+      num('profit', 'Profit (qtr)', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.profit_quarter_minor, escapeHtml(minorText(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return escapeHtml(dayWords(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
       num('look', 'My last look', 100, function (r) { return escapeHtml(dayWords(r.last_look)); }, function (r) { return r.last_look || ''; }),
       num('saved', 'Saved', 80, function (r) { return flagsOn() ? practiceKit.practiceState.fl.chip(r.entity_id, r.name) : ''; }, function (r) { return flagsOn() && practiceKit.practiceState.fl.any(r.entity_id) ? 1 : 0; }, { prio: 1, keep: true }) /* CMP066: my own bookmark of this client */

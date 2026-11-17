@@ -6,8 +6,8 @@
  * CALLED BY .github/workflows/ci.yml (Offline guards). No browser, no network, no sibling repo.
  *   node e2e/acc-104-accounts-icon-family.test.cjs
  *
- * THE HAND CASE: the NAV table lists 24 views: todo, daybook, ledgers, tb, pl, bs, compare, receivables, payables, dues, bills, cheques, bank, lock, closingstock, assets, accruals, gstclose, yearclose, packs,
- * opening, accounts, movein, rates - 24 views, 24 icons, 24 <path> drawn.
+ * THE HAND CASE: the NAV table lists 26 views: todo, overview (MIS How we are doing, b24803af), daybook, ledgers, tb, pl, bs, compare, receivables, payables, dues, bills, cheques, bank, lock, closingstock, assets, accruals, gstclose, yearclose, packs,
+ * opening, accounts, movein, access (books-grant door, bd2f5b55), rates - 26 views, 26 icons, 26 <path> drawn.
  */
 'use strict';
 const fs = require('fs');
@@ -26,8 +26,8 @@ const end = src.indexOf('\n];\n', start);
 ok(start > 0 && end > start, 'the NAV table is found in accounts.html');
 const sb = vm.createContext({});
 const NAV = vm.runInContext('(' + src.slice(start + 'const NAV = '.length, end + 2) + ')', sb);
-const WANT = ['todo', 'daybook', 'ledgers', 'tb', 'pl', 'bs', 'compare', 'receivables', 'payables', 'dues', 'bills', 'cheques', 'bank', 'lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose', 'packs', 'opening', 'accounts', 'movein', 'rates'];
-ok(JSON.stringify(NAV.map((n) => n[0])) === JSON.stringify(WANT), 'NAV lists the 24 views, in menu order (' + NAV.length + ')', NAV.map((n) => n[0]).join());
+const WANT = ['todo', 'overview', 'daybook', 'ledgers', 'tb', 'pl', 'bs', 'compare', 'receivables', 'payables', 'dues', 'bills', 'cheques', 'bank', 'lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose', 'packs', 'opening', 'accounts', 'movein', 'access', 'rates'];
+ok(JSON.stringify(NAV.map((n) => n[0])) === JSON.stringify(WANT), 'NAV lists the 26 views, in menu order (' + NAV.length + ')', NAV.map((n) => n[0]).join());
 
 const nonAscii = (s) => /[^\x20-\x7e]/.test(s);
 const coords = (d) => {

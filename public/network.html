@@ -127,17 +127,29 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   }
   var API = query.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('nw');
+  var sideSections = [];
+  /* a language pack lands after the first paint and calls renderApp(): the menu's words go through the catalogue again (walk-locale: "Who can see my books") */
+  window.renderApp = function () {
+    sideSections.forEach(function (item) {
+      var button = document.querySelector('.nav-btn[data-sec="' + item.k + '"]'),
+        word = typeof tx === 'function' ? tx(item.label) : item.label;
+      if (!button) return;
+      button.setAttribute('aria-label', word);
+      var span = button.querySelector('.label');
+      if (span) span.textContent = word;
+    });
+  };
   var app,
     frame = CBFrame.mount({
-      deepLink: true, /* T3: an ended session shows the plain sign-in window, no register door */
       app: 'network',
       kural: 'network',
+      deepLink: true, /* T3: an ended session shows the plain sign-in window, no register door */
       work: host,
       skeleton: {
         name: 'Network',
         icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5',
         active: location.hash === '#books' ? 'books' : 'mine' /* the Accounts door lands here (#books) */,
-        sections: [
+        sections: sideSections = [
           { k: 'mine', label: 'My network', icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5' },
           { k: 'offers', label: 'Offers', icon: 'M20 12l-8 8-8-8V4h8zM8.5 8.5h.01' },
           { k: 'design', label: 'Design', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 7l3 3' },

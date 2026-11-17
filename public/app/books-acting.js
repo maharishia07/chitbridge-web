@@ -60,6 +60,15 @@
     if (context.role === 'adviser') out[root.CBBooksGrantApi.ROLE_HEADER] = 'adviser';
     return out;
   }
+  /** the seat's own token, and nothing else (a private call, a file read that carries no store): the ONE place a books screen reads the session's token */
+  function tokenHeader() {
+    var token = typeof SESSION !== 'undefined' && SESSION ? SESSION.token : '';
+    return token ? { Authorization: 'Bearer ' + token } : {};
+  }
+  /** the token plus the acting headers: every read and write into a store's books goes out with exactly these */
+  function authHeaders() {
+    return Object.assign(tokenHeader(), headers());
+  }
   /** a write's body: `store_id` is the store this screen is open on, so a stale tab is refused by the server instead of saved */
   function body(fields) {
     return Object.assign({ store_id: context && context.store.id }, fields);
@@ -382,5 +391,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: headerCss, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: headerCss, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, tokenHeader: tokenHeader, authHeaders: authHeaders, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

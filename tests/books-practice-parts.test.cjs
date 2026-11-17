@@ -20,7 +20,10 @@ const t = (name, fn) => { try { fn(); console.log('  ok  ', name); } catch (e) {
 
 function load(tx) {
   const root = { Promise, tx, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {}, remove() {}, toggle() {} } }, querySelector: () => null, getElementById: () => null }, location: { hostname: 'x' }, localStorage: { getItem: () => null, setItem() {} } };
-  ['public/app/books-practice-band.js', 'public/app/books-practice-cells.js', 'public/app/books-practice.js'].forEach((part) => vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', part), 'utf8'), { window: root, globalThis: root, setInterval() {}, setTimeout() {} }, {}));
+  const sandbox = vm.createContext({ module: { exports: {} }, window: root, globalThis: root, setInterval() {}, setTimeout() {} }); /* the page loads helpers.js first: the one esc · fmtMoney · monthNames */
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'money.js'), 'utf8'), sandbox, { filename: 'money.js' });
+  sandbox.CBMoney = sandbox.module.exports;
+  ['helpers.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js'].forEach((part) => vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), sandbox, { filename: part }));
   return root;
 }
 const world = load((s) => s);

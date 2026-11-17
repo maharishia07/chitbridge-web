@@ -461,7 +461,10 @@
     'Nothing overdue': 'Rien en retard',
     'Nothing waiting': 'Rien en attente',
     'Notifications — who gets told, and how': 'Notifications — qui est prévenu, et comment',
-    'Notified by': 'Notifié par'
+    'Notified by': 'Notifié par',
+    /* MACHINE-WRITTEN (curqps, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the skip link and the Network menu entry; needs a native read before a customer sees them */
+    'Skip to content': 'Aller au contenu',
+    'Who can see my books': 'Qui peut voir mes comptes'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];
   try {
@@ -788,6 +791,8 @@
     'Figure card': 'Carte de chiffre',
     'CMP061.label': 'Pastille d\'initiales',
     'Initials badge': 'Pastille d\'initiales',
+    'CMP064.label': 'Icône d’état',
+    'CMP065.label': 'Bandeau du relevé bancaire',
     'CMP055.required': 'Obligatoire',
     'Required': 'Obligatoire',
     'CMP055.badnumber': 'Ce n\'est pas un nombre. Tapez des chiffres seulement, comme 1234.5',

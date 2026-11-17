@@ -310,8 +310,8 @@ function whoPaint() {
   const sessionToken = SESS ? SESS.token : null;
   if (FRAME && FRAME.token === sessionToken && (FRAME.session ? FRAME.session.token : null) === sessionToken) return;
   FRAME = CBFrame.mount({
-    deepLink: true, /* T3: an ended session shows the plain sign-in window, no register door */
     app: 'accounts',
+    deepLink: true, /* T3: an ended session shows the plain sign-in window, no register door */
     host: $('shell'),
     signin: false,
     avatar: {

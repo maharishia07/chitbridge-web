@@ -358,11 +358,11 @@
       '" data-testid="rt-aud">' +
       esc(aud) +
       '</div>' +
-      '<div class="rt-box"><textarea data-cbsid="SCR051-T01" data-rt-act="text" rows="1" data-testid="' +
+      '<div class="rt-box"><textarea data-cbsid="SCR051-T01" data-rt-act="text" data-testid="' +
       esc(ids.text || 'msg-body') +
       '" aria-label="' +
       esc(threadKit.threadText(threadKit.THREAD_WORDS.write)) +
-      '" placeholder="' +
+      '" rows="1" placeholder="' +
       esc(o.reason ? threadKit.threadText(o.reason) : o.no_channel && ext ? aud : threadKit.threadText(threadKit.THREAD_WORDS.write)) + /* a thread that cannot send says WHY in the box (the caller's own reason, else the no-channel sentence), never the generic prompt */
       '">' +
       esc(thread.text) +

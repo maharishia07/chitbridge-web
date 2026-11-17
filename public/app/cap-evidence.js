@@ -21,11 +21,6 @@
   function evidenceText(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
-  }
   var EVIDENCE_WORDS = {
     flag: 'No tax invoice',
     none: 'No file',
@@ -38,7 +33,7 @@
     files: 'Files held',
     close: 'Close',
     open: 'Open',
-    flagWhy: 'GST is claimed on this purchase and no tax invoice is held on it.',
+    flagWhy: '{tax} is claimed on this purchase and no tax invoice is held on it.',
     rule: 'Rule read',
     failed: 'Could not open that file. Nothing was changed.',
     ended: 'Access to these books has ended.',
@@ -56,7 +51,7 @@
     '.ev-warn{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00)}' +
     '.ev-quiet{color:var(--grey,#5E594D);font-weight:600}' +
     'dialog.ev-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16)}' +
-    'dialog.ev-sheet::backdrop{background:rgba(0,0,0,.4)}' +
+    'dialog.ev-sheet::backdrop{background:var(--scrim,rgba(0,0,0,.4))}' +
     '.ev-in{padding:14px 16px;display:flex;flex-direction:column;gap:10px}' +
     '.ev-hd{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.ev-hd h2{margin:0;font-size:var(--fs-3,17px)}' +
     '.ev-x{border:0;background:transparent;font:inherit;font-size:20px;line-height:1;min-width:44px;min-height:44px;cursor:pointer;color:var(--grey,#5E594D)}' +
@@ -107,8 +102,8 @@
         if (!seen[String(entry.entry_id)]) control.ingest([entry]);
         var s = stateOf(ev);
         return (
-          '<button type="button" class="ev ev-' + s.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + escapeHtml(entry.entry_id) + '" data-tone="' + s.tone + '" data-testid="ev-chip-' + escapeHtml(entry.entry_no || entry.entry_id) + '">' +
-          '<span aria-hidden="true">' + s.sym + '</span> ' + escapeHtml(s.word) + '</button>'
+          '<button type="button" class="ev ev-' + s.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + s.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '">' +
+          '<span aria-hidden="true">' + s.sym + '</span> ' + esc(s.word) + '</button>'
         );
       },
       sheet: function (entry, o) {
@@ -120,9 +115,9 @@
 
   /** the page a tab shows for a file: its name as the TITLE (a blob url alone would title the tab with a bare id) and the file in the browser's own viewer (a PDF in the PDF plugin, an image as an image) */
   function viewerPage(name, kind, fileUrl) {
-    var label = escapeHtml(name || 'file');
+    var label = esc(name || 'file');
     var body = kind === 'pdf' ? '<embed type="application/pdf" src="' + fileUrl + '">' : '<img alt="' + label + '" src="' + fileUrl + '">';
-    return '<!doctype html><html><head><meta charset="utf-8"><title>' + label + '</title><style>html,body{margin:0;height:100%;background:#525659}embed{width:100%;height:100%;display:block}img{max-width:100%;max-height:100%;display:block;margin:0 auto}</style></head><body>' + body + '</body></html>';
+    return '<!doctype html><html><head><meta charset="utf-8"><title>' + label + '</title><style>html,body{margin:0;height:100%;background:var(--viewer-bg,#525659)}embed{width:100%;height:100%;display:block}img{max-width:100%;max-height:100%;display:block;margin:0 auto}</style></head><body>' + body + '</body></html>';
   }
   /** a link pressed on the page: the browser opens the tab itself, with no opener (a script that opens about:blank and sets its address later loses the blob: Chrome keys a blob url to the page that made it) */
   function pressLink(href, name, download) {
@@ -166,16 +161,16 @@
 
   /** the sheet's body: the flag's reason, where the entry's source is, and its files */
   function sheetHTML(evidence, no) {
-    var flag = evidence.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + escapeHtml(evidence.flag_why || evidenceText(EVIDENCE_WORDS.flagWhy)) + (evidence.cite ? '<small>' + escapeHtml(evidenceText(EVIDENCE_WORDS.rule)) + ': ' + escapeHtml(evidence.cite) + '</small>' : '') + '</div>' : '';
-    var srcLine = evidence.doc ? '<div data-testid="ev-source"><b>' + escapeHtml(evidenceText(EVIDENCE_WORDS.source)) + '</b>: ' + escapeHtml(evidence.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + escapeHtml(evidenceText(EVIDENCE_WORDS.noSource)) + '</div>';
+    var flag = evidence.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(evidence.flag_why || evidenceText(EVIDENCE_WORDS.flagWhy).replace('{tax}', (typeof packWord === 'function' && packWord('taxName')) || 'Tax')) + (evidence.cite ? '<small>' + esc(evidenceText(EVIDENCE_WORDS.rule)) + ': ' + esc(evidence.cite) + '</small>' : '') + '</div>' : '';
+    var srcLine = evidence.doc ? '<div data-testid="ev-source"><b>' + esc(evidenceText(EVIDENCE_WORDS.source)) + '</b>: ' + esc(evidence.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + esc(evidenceText(EVIDENCE_WORDS.noSource)) + '</div>';
     var files = (evidence.files || []).length
       ? '<ul class="ev-list" data-testid="ev-files">' + evidence.files.map(function (f, n) {
-          return '<li><button type="button" class="ev-file" data-cbsid="CMP063-B02" data-ev-file="' + n + '" data-testid="ev-file-' + n + '"><b>' + escapeHtml(f.name) + '</b><span>' + escapeHtml(sizeWords(f.size)) + ' · ' + escapeHtml(evidenceText(EVIDENCE_WORDS.open)) + '</span></button></li>';
+          return '<li><button type="button" class="ev-file" data-cbsid="CMP063-B02" data-ev-file="' + n + '" data-testid="ev-file-' + n + '"><b>' + esc(f.name) + '</b><span>' + esc(sizeWords(f.size)) + ' · ' + esc(evidenceText(EVIDENCE_WORDS.open)) + '</span></button></li>';
         }).join('') + '</ul>'
-      : evidence.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + escapeHtml(evidenceText(EVIDENCE_WORDS.noFiles)) + '</div>' : '';
+      : evidence.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + esc(evidenceText(EVIDENCE_WORDS.noFiles)) + '</div>' : '';
     return (
-      '<div class="ev-in"><div class="ev-hd"><h2 data-testid="ev-title">' + escapeHtml(evidenceText(EVIDENCE_WORDS.head).replace('{no}', no)) + '</h2>' +
-      '<button type="button" class="ev-x" data-cbsid="CMP063-B01" data-ev-close="1" aria-label="' + escapeHtml(evidenceText(EVIDENCE_WORDS.close)) + '">✕</button></div>' +
+      '<div class="ev-in"><div class="ev-hd"><h2 data-testid="ev-title">' + esc(evidenceText(EVIDENCE_WORDS.head).replace('{no}', no)) + '</h2>' +
+      '<button type="button" class="ev-x" data-cbsid="CMP063-B01" data-ev-close="1" aria-label="' + esc(evidenceText(EVIDENCE_WORDS.close)) + '">✕</button></div>' +
       flag + srcLine + files + '<div class="ev-out" role="status" data-testid="ev-out"></div></div>'
     );
   }

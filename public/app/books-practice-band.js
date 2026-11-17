@@ -80,7 +80,7 @@
   }
   /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
      (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints
-     money through money(). A client whose books stop early, whose last year is short or absent, or who holds two currencies is never ranked; the opened row says why in words. */
+     money through minorText(). A client whose books stop early, whose last year is short or absent, or who holds two currencies is never ranked; the opened row says why in words. */
   var YOY_WORDS = { stale: 'Books in to', short_last_year: 'No full last year yet', no_last_year: 'No last year to compare yet', mixed: 'Two currencies: not compared' };
   function yoyDates(h) {
     return h && h.sales_yoy_from ? practiceKit.dayWords(h.sales_yoy_from) + ' – ' + practiceKit.dayWords(h.sales_yoy_to) + ' / ' + practiceKit.dayWords(h.sales_prev_from) + ' – ' + practiceKit.dayWords(h.sales_prev_to) : '';

@@ -9,7 +9,9 @@
    Repeating entries: CRUD /recurring, post or skip a due one. Accruals: POST /accruals (comes back on the first day of the next month), POST /accruals/:ref/reverse.
    There is no list of accruals on the API yet: the page shows the ones that are DUE to turn back (the To-do feed's own list) and the ones made in this visit. */
 /** the sentence a reader who is not the owner sees where the Close card would be (ACC-229): one wording, two places */
-const PE_OWNER_ONLY_CLOSES = 'Only the owner closes and pays GST';
+/** the pack's own tax word (GST · VAT · Tax) from the one reader packWord; no tax name is typed in this file */
+const peTaxWord = () => (typeof packWord === 'function' && packWord('taxName')) || tx('Tax');
+const peOwnerOnlyCloses = () => txf('Only the owner closes and pays {name}', { name: peTaxWord() });
 const PE_FREQ = [
   ['monthly', 'Every month'],
   ['quarterly', 'Every 3 months'],

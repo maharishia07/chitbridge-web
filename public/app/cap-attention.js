@@ -39,9 +39,6 @@
   var translate = function (k) {
     return typeof root.tx === 'function' ? root.tx(ATTENTION_WORDS[k] || k) : ATTENTION_WORDS[k] || k;
   };
-  var escapeHtml = function (v) {
-    return typeof root.esc === 'function' ? root.esc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
-  };
   function key(id) {
     return STATE[id] || (STATE[id] = { counts: null, kind: '', page: 1, list: null, failed: false });
   }
@@ -56,11 +53,11 @@
     var slot = key(host.id),
       counts = slot.counts;
     if (slot.failed) {
-      host.innerHTML = '<div class="attn-strip" data-b="attn-failed">' + escapeHtml(translate('failed')) + '</div>';
+      host.innerHTML = '<div class="attn-strip" data-b="attn-failed">' + esc(translate('failed')) + '</div>';
       return;
     }
     if (!counts) {
-      host.innerHTML = '<div class="attn-strip" data-b="attn-reading">' + escapeHtml(translate('reading')) + '</div>';
+      host.innerHTML = '<div class="attn-strip" data-b="attn-reading">' + esc(translate('reading')) + '</div>';
       return;
     }
     var total = 0;
@@ -70,21 +67,21 @@
       total += n;
       if (!n) return '';
       return (
-        '<button type="button" class="attn-chip" data-cbsid="CMP033-B01" data-b="attn-' + item[0] + '" data-testid="attn-' + item[0] + '" aria-pressed="' + (slot.kind === item[0]) + '" onclick="CBAttention.open(\'' + escapeHtml(host.id) + '\',\'' + item[0] + '\')">' +
-        '<span aria-hidden="true">' + item[1] + '</span> <b>' + escapeHtml(String(n)) + '</b> ' + escapeHtml(translate(item[3] === 'flag' ? 'flag' : item[3] === 'none' ? 'none' : item[3] === 'nodoc' ? 'nodoc' : 'query')) + '</button>'
+        '<button type="button" class="attn-chip" data-cbsid="CMP033-B01" data-b="attn-' + item[0] + '" data-testid="attn-' + item[0] + '" aria-pressed="' + (slot.kind === item[0]) + '" onclick="CBAttention.open(\'' + esc(host.id) + '\',\'' + item[0] + '\')">' +
+        '<span aria-hidden="true">' + item[1] + '</span> <b>' + esc(String(n)) + '</b> ' + esc(translate(item[3] === 'flag' ? 'flag' : item[3] === 'none' ? 'none' : item[3] === 'nodoc' ? 'nodoc' : 'query')) + '</button>'
       );
     }).filter(Boolean).join(' · ');
-    var body = total === 0 ? '<span class="attn-ok" data-b="attn-ok" data-testid="attn-ok">' + escapeHtml(translate('ok')) + '</span>' : chips;
-    host.innerHTML = '<div class="attn-strip" role="status" data-testid="attn-strip"><b class="attn-t">' + escapeHtml(translate('title')) + '</b> ' + body + '</div>' + (slot.list ? listHTML(host, slot) : '');
+    var body = total === 0 ? '<span class="attn-ok" data-b="attn-ok" data-testid="attn-ok">' + esc(translate('ok')) + '</span>' : chips;
+    host.innerHTML = '<div class="attn-strip" role="status" data-testid="attn-strip"><b class="attn-t">' + esc(translate('title')) + '</b> ' + body + '</div>' + (slot.list ? listHTML(host, slot) : '');
   }
   function listHTML(host, slot) {
     var list = slot.list,
       rows = (list.entries || []).map(function (e) {
         return [
-          escapeHtml(typeof root.bkDate === 'function' ? root.bkDate(e.posting_date) : e.posting_date),
-          '<span class="mono">' + escapeHtml(e.entry_no) + '</span>',
-          escapeHtml(e.narration || e.event_type || ''),
-          e.total_minor == null ? '—' : escapeHtml(typeof root.bkMoney === 'function' ? root.bkMoney(e.total_minor) : e.total_minor)
+          esc(typeof root.bkDate === 'function' ? root.bkDate(e.posting_date) : e.posting_date),
+          '<span class="mono">' + esc(e.entry_no) + '</span>',
+          esc(e.narration || e.event_type || ''),
+          e.total_minor == null ? '—' : esc(typeof root.bkMoney === 'function' ? root.bkMoney(e.total_minor) : e.total_minor)
         ];
       });
     var table = root.CBList.nextTable({
@@ -101,7 +98,7 @@
     });
     var pages = Math.max(1, Math.ceil(Number(list.count || 0) / LIMIT)),
       press = function (side, off, step) {
-        return '<button type="button" data-cbsid="CMP037-' + (side === 'prev' ? 'B06' : 'B07') + '" class="act quiet cbl-pgbtn" data-testid="attn-' + side + '"' + (off ? ' disabled' : '') + ' onclick="CBAttention.page(\'' + escapeHtml(host.id) + '\',' + step + ')">' + (side === 'prev' ? '‹ ' + escapeHtml(translate('prev')) : escapeHtml(translate('next')) + ' ›') + '</button>';
+        return '<button type="button" data-cbsid="CMP037-' + (side === 'prev' ? 'B06' : 'B07') + '" class="act quiet cbl-pgbtn" data-testid="attn-' + side + '"' + (off ? ' disabled' : '') + ' onclick="CBAttention.page(\'' + esc(host.id) + '\',' + step + ')">' + (side === 'prev' ? '‹ ' + esc(translate('prev')) : esc(translate('next')) + ' ›') + '</button>';
       };
     return (
       '<div class="attn-list" data-testid="attn-list"><div class="cbl" style="overflow-x:auto">' + table + '</div>' +

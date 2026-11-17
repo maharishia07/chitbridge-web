@@ -10,7 +10,6 @@
  * FLOW  loaded early on each page (app.html: after core.js) → every panel and small app calls these pure functions; emptyState draws the one empty-state action button (SCR038-B01)
  * CARD  29-qa-test-tooling-ux-locale-and-design-system/helpers
  */
-
 /* ⭐ ACC-206 D1: THE ONE WEB READ OF A CHIT'S BILL TOTAL (tax-in) from its header summary_json: money.total, else total_value, else `raw` (the detail column), else null.
    READ ONLY, never worked out: the same order as api lib/counter-bill.js standingCopy (minus the invoice arm; a list row carries none). A chit made before 2 Nov holds
    total_value = NET beside money.total = tax-in; reading money.total first shows 189, not 180. Whether two stored copies AGREE (agree:false / legacy_net) is decided by
@@ -51,7 +50,6 @@ function billChipHTML(wire) {
 function deepClone(x) {
   return JSON.parse(JSON.stringify(x));
 }
-
 /* ⭐ T2-WEBPRIMS: THE ONE esc — every page loads this file first and calls it; 43 private copies were deleted, and they disagreed on "'"
    (30 escaped it, this home did not). Text and attribute safe either quote: & < > " '. e2e/prim-homes.cjs fails a second definition. */
 function esc(v) {
@@ -82,7 +80,6 @@ function scrErr(e, subject, retry) {
     '</div>'
   );
 }
-
 function cap(s) {
   return s[0].toUpperCase() + s.slice(1);
 }
@@ -105,18 +102,28 @@ function shopReg(cc) {
    A row names only the words that differ; a missing word is the neutral one. A page without the registry (Home loads no engine/tax.js) keys the
    row by the country code the caller passes — each pack's id is its country's code. */
 var PACK_WORDS = {
-  IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
-  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', returnName: 'BAS', cash: 'Bank' },
-  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', returnName: 'VAT return' },
+  IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State', bankCode: ['IFSC code', 'ifsc'], branch: { hint: 'an 11-character IFSC code' } },
+  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', cash: 'Bank', bankCode: ['BSB', 'bsb'], branch: { hint: 'a 6-digit BSB, for example 062-000', example: '062-000', pattern: '^[0-9]{3}-?[0-9]{3}$' } },
+  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', bankCode: ['IBAN', 'iban'] },
   US: { stock: 'Inventory' }
 };
-var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
+var PACK_WORDS_NONE = { taxName: 'Tax', taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
 function packWord(kind, cc) {
   var p = shopReg(cc),
-    own = p && p.words && p.words[kind];
+    own = p && ((p.words && p.words[kind]) || (kind === 'returnName' && p.returns && p.returns.short));  /* the return's name is the pack's own returns.short (BAS, VAT return), never typed here */
   if (own) return own;
   var w = PACK_WORDS[packRowKey(p, cc)] || PACK_WORDS_NONE;
   return w[kind] || PACK_WORDS_NONE[kind] || '';
+}
+/** the bank's own code word [label, tag] per country (IFSC · BSB · IBAN): the one table, read by the shop vault and the Bank details form. India's IFSC when no pack is known (the vault's old default) */
+function bankCodeWord(cc) {
+  var row = PACK_WORDS[packRowKey(shopReg(cc), cc)];
+  return (row && row.bankCode) || PACK_WORDS.IN.bankCode;
+}
+/** the branch-code rule of the country's bank: the pack's own (pack.bank.branchCode) first, else the table above; null = a free, neutral branch code */
+function bankBranchRule(cc) {
+  var pack = shopReg(cc), row = PACK_WORDS[packRowKey(pack, cc)];
+  return (pack && pack.bank && pack.bank.branchCode) || (row && row.branch ? Object.assign({ word: row.bankCode[0] }, row.branch) : null);
 }
 /** which PACK_WORDS row: the registered pack's id, else (no registry on the page) the country code the caller passed */
 function packRowKey(pack, countryCode) {
@@ -149,7 +156,6 @@ function packHasHsn() {
 function payModeOpts() {
   return payHasUpi() ? '<option value="upi">UPI</option>' : '';
 }
-
 /** CUR-1 slice 5: a row's amount cell as { amount, currency }: a money value adds under ITS OWN currency (never dropped as NaN), a bare cell has none */
 function moneyCellRead(cell) {
   return cell !== null && typeof cell === 'object' ? moneyRead(cell) : { amount: Number(cell || 0), currency: null };
@@ -178,7 +184,6 @@ function cbSumByCurrency(rows, amtKey, curKey) {
       return second.total - first.total;
     });
 }
-
 /**
  * Render what cbSumByCurrency returns. One currency prints as a plain amount; several print side by side with
  * the reason stated, because a reader seeing two figures will otherwise wonder which one is the answer.
@@ -269,7 +274,6 @@ function loader(label) {
     '</div></div>'
   );
 }
-
 /**
  * ⚠️⚠️ CCY_LOCALE IS GONE, AND ITS REMOVAL IS THE POINT. It mapped a CURRENCY to a LOCALE — INR→en-IN,
  * USD→en-US — and then formatted money with the locale of the MONEY instead of the locale of the READER.
@@ -466,7 +470,6 @@ function monthNames(form) {
   }
   return out;
 }
-
 /* ⭐ T3-P1-MONEY: THE ONE GSTR DOWNLOAD — the offline-tool JSON GET /api/tax/gstr builds (tax-lines gstr1 · gstr3b, the one builder), saved as a file
    named gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json. The workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js)
    both call this; neither builds a second. → Promise<filename>; a failure rejects with api()'s error — the caller says its own sentence. */
@@ -486,7 +489,6 @@ function gstrDownload(month, form) {
     return name;
   });
 }
-
 function jwtPayload(t) {
   try {
     const text = String(t || '').split('.')[1];

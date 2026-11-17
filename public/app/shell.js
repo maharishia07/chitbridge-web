@@ -1317,6 +1317,8 @@
         titleWord = $('.cbsh-title .tw');
       if (homeWord) homeWord.textContent = T(W.areas.home);
       if (homeLink) homeLink.setAttribute('aria-label', T(W.areas.home));
+      var skipLink = doc && doc.querySelector('[data-testid="skip-link"]'); /* added before any pack can land: said again with the rest of the frame */
+      if (skipLink) skipLink.textContent = T(W.skip);
       if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
       paintSwitcher();
       AREAS.concat(['more']).forEach(function (area) {

@@ -49,7 +49,8 @@ check(/consent: \$\('bg_yes'\)\.checked/.test(member) && /disabled aria-disabled
 
 /* (5) Open books only with a live grant */
 check(/function booksCell/.test(net) && /N\.held\[String\(s\.entity_id\)\]\s*\?/.test(net) && /state === 'live'/.test(api), '"Open books" is drawn only for a store in the live-grant map');
-check(/\.then\(\s*function \(answer\)[^]*?function \(\) \{\s*return \{\};/.test(api), 'a login the server refuses the grant list sees no extra button');
+/* l16 fable3 (fb73d8f5): a refused login (401/403) still gets {} - no extra button; a list that could not be read is { unread: true }, said as that, never as "no grant" */
+check(/\.then\(\s*function \(answer\)[^]*?failure\.status === 401 \|\| failure\.status === 403\) \? \{\} : \{ unread: true \}/.test(api), 'a login the server refuses the grant list sees no extra button (an unreadable list is said as unread)');
 
 /* (7) ACC-176c the drill: ledger and entry, read only, with the header, one way to each read */
 const strip = (t) => t.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '');

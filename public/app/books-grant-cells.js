@@ -29,12 +29,12 @@
     var a = grantKit.viewState.answer, rule = a && a.over_rule;
     if (!a || !compareDrawn(report) || !rule || rule.pct_bp == null || rule.min_minor == null) return '';
     var amount = minorWords(rule.min_minor).replace(/[.,]0+$/, '');
-    return '<style>.bv-over,.bv-over>*{background:var(--ask-t)}.bv-over-dot{color:var(--ask-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(grantKit.words('Highlighted') + ': ' + grantKit.words('change of') + ' ' + rule.pct_bp / 100 + '% ' + grantKit.words('and') + ' ' + amount + ' ' + grantKit.words('or more')) + '</div>';
+    return '<style>.bv-over,.bv-over>*{background:var(--amber-t)}.bv-over-dot{color:var(--amber-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(grantKit.words('Highlighted') + ': ' + grantKit.words('change of') + ' ' + rule.pct_bp / 100 + '% ' + grantKit.words('and') + ' ' + amount + ' ' + grantKit.words('or more')) + '</div>';
   }
   /** NET005-P05: under the Day book, the fixed hours and day counts the Risk column and its filters use (one sentence; not a setting) */
   function riskNote(report) {
     if (report.k !== 'daybook' || grantKit.viewState.since) return '';
-    return '<style>.bv-risk{display:inline-block;min-width:1.6em;text-align:center;border-radius:10px;padding:0 6px;background:var(--ask-t);color:var(--ask-i);font-weight:600}.bv-risknote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-risknote" data-cbsid="NET005-P05" data-testid="bv-risk-note">' + esc(grantKit.words('Risk counts one point for each of: recorded after the period end · over 7 days late · at a weekend · after hours (8 pm to 7 am) · a round sum (multiple of 100) · no narration.')) + '</div>';
+    return '<style>.bv-risk{display:inline-block;min-width:1.6em;text-align:center;border-radius:10px;padding:0 6px;background:var(--amber-t);color:var(--amber-i);font-weight:600}.bv-risknote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-risknote" data-cbsid="NET005-P05" data-testid="bv-risk-note">' + esc(grantKit.words('Risk counts one point for each of: recorded after the period end · over 7 days late · at a weekend · after hours (8 pm to 7 am) · a round sum (multiple of 100) · no narration.')) + '</div>';
   }
   /** a figure in the answer's currency, the way the books screens paint it (CBBooksActing.money) */
   function minorWords(minor) {
@@ -42,8 +42,9 @@
   }
   /** a group key (trade_debtors, gst_and_statutory) as words */
   function groupWords(key) {
-    var text = String(key).split('_').join(' ');
-    return grantKit.words(text.charAt(0).toUpperCase() + text.slice(1)).split('Gst').join('GST');
+    var tax = (typeof root.packWord === 'function' && root.packWord('taxName')) || '';
+    var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : part; }).join(' ');
+    return grantKit.words(text.charAt(0).toUpperCase() + text.slice(1));
   }
   /** an entry whose Evidence state is "No source" (no document to attach to: not a fault; the pill stays for No tax invoice, No file and a held file); the state is cap-evidence.js's own (stateOf), never re-decided here */
   function noSourceRow(row) {

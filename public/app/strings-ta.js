@@ -461,7 +461,10 @@
     'Nothing overdue': 'எதுவும் தாமதமில்லை',
     'Nothing waiting': 'எதுவும் காத்திருக்கவில்லை',
     'Notifications — who gets told, and how': 'அறிவிப்புகள் — யாருக்குச் சொல்லப்படுகிறது, எப்படி',
-    'Notified by': 'யாரால் அறிவிக்கப்பட்டது'
+    'Notified by': 'யாரால் அறிவிக்கப்பட்டது',
+    /* MACHINE-WRITTEN (curqps, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the skip link and the Network menu entry; needs a native read before a customer sees them */
+    'Skip to content': 'உள்ளடக்கத்திற்குச் செல்',
+    'Who can see my books': 'என் கணக்குகளை யார் பார்க்கலாம்'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ta[k] = pack[k];
   try {
@@ -788,6 +791,8 @@
     'Figure card': 'எண் அட்டை',
     'CMP061.label': 'முதலெழுத்து சின்னம்',
     'Initials badge': 'முதலெழுத்து சின்னம்',
+    'CMP064.label': 'நிலை ஐகான்',
+    'CMP065.label': 'வங்கி அறிக்கைப் பட்டை',
     'CMP055.required': 'தேவை',
     'Required': 'தேவை',
     'CMP055.badnumber': 'இது எண் அல்ல. இலக்கங்கள் மட்டும் எழுதுங்கள், எ.கா. 1234.5',

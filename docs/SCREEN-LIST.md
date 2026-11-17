@@ -33,6 +33,8 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | BKS023 | Shop ledgers | Accounts | /accounts.html | /accounts.html#accounts · Accounts › Shop ledgers |
 | BKS024 | Move in | Accounts | /accounts.html | /accounts.html#movein · Accounts › Move in |
 | BKS025 | Rates | Accounts | /accounts.html | /accounts.html#rates · Accounts › Rates |
+| BKS026 | How we are doing | Accounts | /accounts.html | /accounts.html#overview · Accounts › How we are doing |
+| BKS027 | Who can see my books | Accounts | /accounts.html | /accounts.html#access · Accounts › Who can see my books |
 | FIN001 | Collections | Finance | /finance.html | /finance.html#/collections · Finance › Collections |
 | FIN002 | Payables | Finance | /finance.html | /finance.html#/payables · Finance › Payables |
 | FIN003 | Cash | Finance | /finance.html | /finance.html#/cash · Finance › Cash |
@@ -100,6 +102,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | CVL001 | Conversion Lab | Conversion Lab | /conversion-lab.html | /conversion-lab.html · the Country Lab |
 | NLB001 | Network Lab | Network Lab | /network-design.html | /network-design.html · Home › Labs |
 | LLB001 | List Lab | List Lab | /list-lab.html | /list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark |
+| CHS001 | Chart helper sample | Chart sample | /chart-sample.html | /chart-sample.html · the shared chart helper in the 16 themes (REP-36) |
 | SLB001 | Sign-in Lab | Sign-in Lab | /signin-lab.html | /signin-lab.html · the one sign-in window on a bare page |
 | SHL001 | Shell Lab | Shell Lab | /shell-lab.html | /shell-lab.html · the shell on a bare page |
 | UIS001 | Components | UI standard | /ui-standard.html | /ui-standard.html · Standards › Web design |
