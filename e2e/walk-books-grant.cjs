@@ -17,6 +17,7 @@ const T = (id) => '[data-testid="' + id + '"]';
 const WIDE = { width: 1366, height: 768 }, NARROW = { width: 390, height: 844 };
 const MEMBER = 'a0000000-0000-4000-8000-000000000001', OTHER = 'a0000000-0000-4000-8000-000000000002', BRAND = 'b0000000-0000-4000-8000-000000000009';
 const GRANT = 'c0000000-0000-4000-8000-000000000001';
+const NOTE_ENTRY = 'e0000000-0000-4000-8000-000000000005'; /* an entry of the running year: the Day book (the year under review) does not list it */
 const DAY = (n) => new Date(W.nowMs() + n * 86400000).toISOString();
 
 W.run('books-grant', async (w) => {
@@ -32,6 +33,11 @@ W.run('books-grant', async (w) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
+    /* AUD-RC-2 (18 Nov): a firm note on an entry OUTSIDE the Day book's window: only POST /flags/query (by id, not windowed by year) holds it */
+    if (p === '/api/flags/query') { const ids = (JSON.parse(q.postData() || '{}').ids) || []; const flags = {}; ids.forEach((id) => { if (id === NOTE_ENTRY) flags[id] = [{ flag_id: '9', kind: 'note', visibility: 'org', subject_kind: 'posting', subject_entity: MEMBER, subject_id: NOTE_ENTRY, label: 'PY/2026-27/000005', note: 'rc2 firm note on the running year', state: 'open', seat: 'auditor', author_name: 'Seed Auditor', author_id: 'x', mine: true, created_at: DAY(-1) }]; }); return J(r, 200, { flags }); }
+    if (p === '/api/flags/9/messages') return J(r, 200, { flag: { flag_id: '9' }, messages: [{ by_name: 'Seed Accountant', text: 'rc2 colleague reply', mine: false, at: DAY(-1) }], may: { reply: { ok: true } } });
+    if (p === '/api/flags/counts') return J(r, 200, { open: 1, bookmarks: 0, notes: 1 });
+    if (p === '/api/flags') return J(r, 200, { flags: [], total: 0, page: 1, limit: 30 });
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
     if (p === '/api/books-grants/log') return J(r, 200, { looks: [{ at: DAY(-1), grant_id: GRANT, grantee_entity: BRAND, actor_identity_id: 'x', route_pattern: 'GET /trial-balance', query_shape: null, status: 200, outcome: 'allowed' }, { at: DAY(-2), grant_id: GRANT, grantee_entity: BRAND, actor_identity_id: 'x', route_pattern: 'GET /packs', query_shape: null, status: 403, outcome: 'not_listed' }] });
@@ -211,6 +217,18 @@ W.run('books-grant', async (w) => {
     const lines = await page.getAttribute(T('bv-lock-lines'), 'data-full'), list = await txt(T('bv-list'));
     return { ok: /Books start Jul 2025/.test(lines) && /Locked to .*Jan.* 2026/.test(lines) && /Open: Feb 2026 \(gap\)/.test(lines) && !/2024/.test(list) && /July 2025/.test(list), saw: lines + ' | ' + list.slice(0, 80) };
   });
+
+  /* AUD-RC-2 (18 Nov): the bell's row of a colleague's reply on my note on an entry of the running year opens the note WITH its thread, though the Day book does not list that entry (the note is read by its own id) */
+  for (const [name, vp, theme] of [['1366', WIDE, 'light'], ['1366', WIDE, 'dark'], ['390', NARROW, 'light'], ['390', NARROW, 'dark']]) {
+    await w.step('R2-' + name + '-' + theme, 'the auditor · bell deep link (&note=) to an entry the Day book does not list, at ' + name + ' ' + theme + ': the sheet opens titled with the entry words, shows the note and the colleague reply, never the empty-sheet words', async () => {
+      await page.setViewportSize(vp); await page.evaluate((t) => { try { localStorage.setItem('cb_theme', t); } catch (_) {} }, theme);
+      await page.goto(base + '/network.html?open=' + MEMBER + '&view=daybook&note=' + NOTE_ENTRY + '&nl=' + encodeURIComponent('PY/2026-27/000005'));
+      await page.waitForSelector(T('fl-sheet'), { timeout: 15000 }); await page.waitForSelector(T('fl-thread') + ' *', { timeout: 10000 }).catch(() => {});
+      const sheet = await txt(T('fl-sheet')), a = await noScroll();
+      return { ok: sheet.indexOf('PY/2026-27/000005') >= 0 && /rc2 firm note on the running year/.test(sheet) && /rc2 colleague reply/.test(sheet) && !/Nothing saved/.test(sheet) && a.x && ((await page.evaluate(() => document.documentElement.getAttribute('data-theme') || 'light')) === 'dark') === (theme === 'dark'), saw: sheet.slice(0, 200) + ' · no sideways ' + a.x };
+    });
+    await page.keyboard.press('Escape');
+  }
 
   /* ═══ the member ═══ */
   await page.setViewportSize(WIDE);
