@@ -12,7 +12,7 @@
  *   the caller's own binding. The server decides who may flag what and answers a refusal in words, which the sheet shows; this file decides nothing.
  * ⭐ A read that failed never says "none": the chips say nothing and the sheet says the read failed. A server that has not switched flags on (503) or does not give this person the right (404) draws no chips (off()).
  *
- *   CBFlag.use({ call, kind: 'posting' | 'client', entity?: () => subject client id }) → { load(ids) · ingest(flags) · chip(id, label) · repaint(scope) · bookmarked(id) · noted(id) · any(id) · sheet(id, { label, opener }) · onChange(fn) · off() · destroy() }
+ *   CBFlag.use({ call, kind: 'posting' | 'client' | 'account', entity?: () => subject client id }) → { load(ids) · ingest(flags) · chip(id, label) · repaint(scope) · bookmarked(id) · noted(id) · any(id) · sheet(id, { label, opener }) · onChange(fn) · off() · destroy() }
  *   CBFlag.list(call, { page, limit }) → { flags, total } · CBFlag.counts(call) → { open, bookmarks, notes } · CBFlag.listAll(call) → every open flag, up to 3 pages · CBFlag.workList({ call, nameOf, onOpen, mountList }) → a sheet of every open flag
  */
 (function (root) {
@@ -58,6 +58,10 @@
     readFail: 'Could not read your bookmarks. This does not mean there are none.',
     none: 'Nothing saved on this yet.',
     privateNote: 'Your own bookmarks and notes. The client never sees them.',
+    explain: 'Explain',
+    explained: 'Explained',
+    explainHelp: 'Your own note on why this account moved. The client never sees it.',
+    saveExplain: 'Save explanation',
     workHead: 'Bookmarks and notes',
     workNone: 'You have no open bookmarks or notes.',
     colRecord: 'Record',
@@ -119,7 +123,7 @@
   function use(cfg) {
     addCss();
     cfg = cfg || {};
-    var kind = cfg.kind === 'client' ? 'client' : 'posting';
+    var kind = cfg.kind === 'client' ? 'client' : cfg.kind === 'account' ? 'account' : 'posting';
     var c = { by: {}, subs: [], off: false, failed: false, ready: false, label: {} };
     var ctl = {
       kind: kind,
@@ -162,6 +166,7 @@
         if (c.off || !c.ready || id == null || id === '') return '';
         id = String(id);
         if (label) c.label[id] = String(label);
+        if (kind === 'account') return explainChip(id, ctl.noted(id));
         var star = ctl.bookmarked(id), n = ctl.noted(id), word = star ? W.bookmarked : n ? W.notes : W.bookmark;
         return '<button type="button" class="fl' + (star ? ' fl-on' : n ? ' fl-note' : '') + '" data-cbsid="CMP066-B01" data-fl="' + esc(id) + '" data-fl-k="' + kind + '" aria-haspopup="dialog" aria-label="' + esc(T(W.saved) + ': ' + T(word)) + '" title="' + esc(T(word)) + '" data-testid="fl-chip-' + esc(id) + '">' +
           '<span aria-hidden="true">' + (star ? '★' : '☆') + '</span>' + (n ? '<span>' + n + '</span>' : '') + '</button>';
@@ -182,6 +187,11 @@
     };
     live[kind] = ctl; /* the press below finds the control that painted the chip */
     return ctl;
+  }
+  /** the P&L's Explain (kind 'account'): one button, "Explain" until a note is written, then "Explained"; it opens the same sheet, a note only (no bookmark) */
+  function explainChip(id, n) {
+    var word = n ? W.explained : W.explain;
+    return '<button type="button" class="fl' + (n ? ' fl-note' : '') + '" data-cbsid="CMP066-B02" data-fl="' + esc(id) + '" data-fl-k="account" aria-haspopup="dialog" aria-label="' + esc(T(word)) + '" title="' + esc(T(word)) + '" data-testid="fl-explain-' + esc(id) + '"><span>' + esc(T(word)) + '</span></button>';
   }
   var live = {}; /* kind → the newest control of that kind on this page */
   /* a press on a chip, anywhere on the page: captured, so the row behind it does not also open (as cap-mark.js and cap-evidence.js do) */
@@ -229,11 +239,11 @@
     function paint(keepNote) {
       var note = keepNote ? (dlg.querySelector('.fl-box') || {}).value || '' : '', flags = ctl.flags(id), mineBookmark = flags.filter(function (f) { return f.kind === 'bookmark' && open(f); })[0];
       dlg.innerHTML = '<div class="fl-in"><div class="fl-hd"><h2>' + esc(title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(T(W.close)) + '">✕</button></div>' +
-        '<div class="fl-sub">' + esc(T(W.privateNote)) + '</div>' +
+        '<div class="fl-sub">' + esc(T(kind === 'account' ? W.explainHelp : W.privateNote)) + '</div>' +
         '<fieldset class="fl-who"><legend class="fl-sub">' + esc(T(W.who)) + '</legend>' +
         '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(T(W.firm)) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(T(W.me)) + '</label></fieldset>' +
-        (mineBookmark ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(T(W.bookmark)) + '</button></div>') +
-        '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(T(W.noteLabel)) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(T(W.addNote)) + '</button></div>' +
+        (mineBookmark || kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(T(W.bookmark)) + '</button></div>') +
+        '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(T(W.noteLabel)) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(T(kind === 'account' ? W.saveExplain : W.addNote)) + '</button></div>' +
         '<div class="fl-out" role="status" aria-live="polite"></div>' +
         (c.failed ? '<div class="fl-out" data-tone="error">' + esc(T(W.readFail)) + '</div>' : flags.length ? '<ul class="fl-list" data-testid="fl-list">' + flags.map(flagLine).join('') + '</ul>' : '<div class="fl-sub">' + esc(T(W.none)) + '</div>') +
         '</div>';

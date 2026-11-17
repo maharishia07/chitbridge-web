@@ -94,7 +94,7 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
       const tag = theme + '·' + width;
       if (theme === 'cream' && width === 1366) check(first <= FIRST_DATA_MS, 'first data (headline) in ' + first + ' ms, ceiling ' + FIRST_DATA_MS);
       const cards = await page.$$eval('.ov-pic', (n) => n.map((x) => x.dataset.testid));
-      check(['ov-sales', 'ov-weekday', 'ov-profit', 'ov-owed', 'ov-owe', 'ov-cashline'].every((c) => cards.includes(c)), tag + ' six picture cards: ' + cards.join(' '));
+      check(['ov-pic-sales', 'ov-pic-weekday', 'ov-pic-profit', 'ov-pic-owed', 'ov-pic-owe', 'ov-pic-cashline'].every((c) => cards.includes(c)), tag + ' six picture cards: ' + cards.join(' '));
       check(await page.$('[data-testid="ov-item-note"]') !== null, tag + ' profit per item says it is not shown');
       const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need), a = await audit(page, 'ov_main');
       const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped ' + x), a.scroll.map((x) => 'scroll ' + x), a.cover.map((x) => 'covered ' + x));
@@ -103,15 +103,15 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
         /* what is painted = what the server sent (formatted, never summed) */
         const sales = await page.textContent('[data-testid="ov-sales"] .ov-v');
         check(sales === await fmt(ov.sales.minor), 'tile Sales = server ' + ov.sales.minor + ' → "' + sales + '"');
-        const rows = await page.$$eval('[data-testid="ov-sales"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
-        const newest = rows[0];
+        const rows = await page.$$eval('[data-testid="ov-pic-sales"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
+        const newest = rows[rows.length - 1];
         check(newest[1] === await fmt(ov.bars[11].sold_minor), 'sales table newest month = server bar ' + ov.bars[11].sold_minor);
-        const wrows = await page.$$eval('[data-testid="ov-weekday"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
+        const wrows = await page.$$eval('[data-testid="ov-pic-weekday"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
         const monday = week.weekdays[0];
         check(wrows.length === 7, 'weekday table has 7 rows');
-        const owedRow = await page.$$eval('[data-testid="ov-owed"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
+        const owedRow = await page.$$eval('[data-testid="ov-pic-owed"] details tbody tr', (n) => n.map((r) => [...r.cells].map((c) => c.textContent)));
         check(owedRow.length === 5, 'owed by age table has 5 age rows');
-        const cashWords = await page.textContent('[data-testid="ov-cashline-legend"]');
+        const cashWords = await page.textContent('[data-testid="ov-pic-cashline-legend"]');
         check(cashWords === ov.cash.words, 'cash words = the server sentence');
       }
       await snap('overview-' + tag);

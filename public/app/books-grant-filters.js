@@ -1,20 +1,20 @@
 /**
  * books-grant-filters.js — A3C rank 3 (auditor paper 17 Nov): REVIEW BY EXCEPTION on the Day book. The filters the one list control (list-ctl.js `filters:`) draws above the auditor's Day book.
  *
- * OWNS      the filters Mark · Evidence · Type, the journal-risk filters (JET, ASA 240: Recorded · Made · Round sum · Made by · Narration) and Year end (ASA 560), each with its own address word (&dbf_mark= &dbf_ev= &dbf_kind= &dbf_rec= &dbf_time= &dbf_round= &dbf_by= &dbf_narr= &dbf_ye=, so a reload or a shared link opens the same narrowing)
+ * OWNS      the filters Mark · Evidence · Type, the journal-risk filters (JET, ASA 240: Recorded · Made · Round sum · Made by · Narration) and Year end (ASA 560), each with its own address word (&dbf_mark= &dbf_ev= &dbf_kind= &dbf_rec= &dbf_time= &dbf_round= &dbf_by= &dbf_narr= &dbf_ye= &dbf_risk=, so a reload or a shared link opens the same narrowing)
  * CALLED BY books-grant-view.js (the Day book's list configuration)
  * FLOW      filtersFor(mk) → the list's `filters:` → each choice is answered by the SAME three one-definitions the rows already paint: the mark control's class of the entry (cap-mark.js markOf) ·
  *           the evidence chip's key (cap-evidence.js stateOf) · the Day book's kind (helpers.js dayBookKind). Nothing is counted or decided here: the list counts what matches.
  * CARD      04-network/ACC-176-AUDITOR-GRANT
  *
- * JET RULES (one definition each, read-only; nothing is calculated: a day compared to a day, a clock hour, a remainder): recordedDay = the day of `recorded_at` in the SHOP's zone (window.CB_SHOP_TZ, else the viewer's) · afterEnd = recordedDay later than the period's end · daysLate = days from `posting_date` to recordedDay · weekend = Sat or Sun · afterHours = before 07:00 or from 20:00 · round = a whole multiple of 100 or 1,000 major units (the currency's own decimals, CBMoney.decimals) · noNarration = the server's `no_narration`. `rec=afterend` and `ye=recorded` (dated inside the period, recorded after its end) are the SAME afterEnd.
+ * JET RULES (one definition each, read-only; nothing is calculated: a day compared to a day, a clock hour, a remainder): recordedDay = the day of `recorded_at` in the SHOP's zone (window.CB_SHOP_TZ, else the viewer's) · afterEnd = recordedDay later than the period's end · daysLate = days from `posting_date` to recordedDay · weekend = the region's rest days (CBLocale.weekInfo, the one reader; Sat and Sun only as its fallback) · afterHours = before 07:00 or from 20:00 · round = a whole multiple of 100 or 1,000 major units (the currency's own decimals, CBMoney.decimals) · noNarration = the server's `no_narration`. RISK = how many of those six an entry trips (riskOf: after period end · over 7 days late · weekend · after hours · round multiple of 100 · no narration), one point each, nothing weighted; the Risk column shows the count and the Any risk filter keeps the rows with one or more. `rec=afterend` and `ye=recorded` (dated inside the period, recorded after its end) are the SAME afterEnd.
  *
  * "Not checked" is everything the bar's "Checked n of m" does not count: no mark, a check that changed after review, a query, a hold, a refusal. So Not checked = m − n and Checked + Not checked = every row (tests/a3c-day-book-exception).
  *   CBBooksGrantFilters.carry(search, clientId) · .filtersFor(mk) · .markState(mk, row) · .evidenceKey(row) · .kindOf(row) · .toAddress(filt) · .fromAddress(search)
  */
 (function (root) {
   'use strict';
-  var PARAM = { mark: 'dbf_mark', ev: 'dbf_ev', kind: 'dbf_kind', rec: 'dbf_rec', time: 'dbf_time', round: 'dbf_round', by: 'dbf_by', narr: 'dbf_narr', ye: 'dbf_ye', flag: 'dbf_flag' };
+  var PARAM = { mark: 'dbf_mark', ev: 'dbf_ev', kind: 'dbf_kind', rec: 'dbf_rec', time: 'dbf_time', round: 'dbf_round', by: 'dbf_by', narr: 'dbf_narr', ye: 'dbf_ye', flag: 'dbf_flag', risk: 'dbf_risk' };
   var NIGHT_FROM = 20, NIGHT_TO = 7; /* after hours: from 20:00 and before 07:00, shop time */
   var DAY_MS = 86400000;
 
@@ -40,7 +40,7 @@
   function kindOf(row) {
     return root.dayBookKind(row);
   }
-  /** a moment in the shop's zone → { day: 'YYYY-MM-DD', dow: 'Sat', hour: 0-23 }; null when it is not a moment */
+  /** a moment in the shop's zone → { day: 'YYYY-MM-DD', dow: the short weekday name, hour: 0-23 }; null when it is not a moment */
   function zoned(iso) {
     if (!iso || isNaN(new Date(iso).getTime())) return null;
     var o = { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', hourCycle: 'h23' };
@@ -65,9 +65,15 @@
     if (!rd || !pd) return 0;
     return Math.max(0, Math.round((Date.parse(rd + 'T00:00:00Z') - Date.parse(pd + 'T00:00:00Z')) / DAY_MS));
   }
+  var ISO_DOW = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+  /** the ONE weekend answer: the region's rest days as ISO numbers (1 Mon .. 7 Sun) from CBLocale.weekInfo (CLDR; the reader Admin shows as "x + y is the weekend here"); Sat + Sun only where the reader gives none */
+  function weekendDays() {
+    var wi = root.CBLocale && root.CBLocale.weekInfo ? root.CBLocale.weekInfo() : null;
+    return wi && wi.weekend && wi.weekend.length ? wi.weekend : [6, 7];
+  }
   function weekend(row) {
     var z = zoned(row && row.recorded_at);
-    return !!z && (z.dow === 'Sat' || z.dow === 'Sun');
+    return !!z && weekendDays().indexOf(ISO_DOW[z.dow]) >= 0;
   }
   function afterHours(row) {
     var z = zoned(row && row.recorded_at);
@@ -77,6 +83,20 @@
   function round(row, step, currency) {
     var minor = Number(row && row.amount_minor), dec = root.CBMoney && root.CBMoney.decimals ? root.CBMoney.decimals(currency) : 2;
     return isFinite(minor) && minor > 0 && minor % (step * Math.pow(10, dec)) === 0;
+  }
+  var LATE_DAYS = 7; /* "late" in the Risk count = over 7 days, the Recorded filter's first step (shown on the page) */
+  /** the six JET rules, each ONE definition above: [key, words, test(row, period, currency)] in the order the page lists them */
+  var RULES = [
+    ['afterend', 'After period end', function (row, period) { return afterEnd(row, period); }],
+    ['late', 'Over 7 days late', function (row) { return daysLate(row) > LATE_DAYS; }],
+    ['weekend', 'At a weekend', function (row) { return weekend(row); }],
+    ['night', 'After hours', function (row) { return afterHours(row); }],
+    ['round', 'Round sum', function (row, period, currency) { return round(row, 100, currency); }],
+    ['narr', 'No narration', function (row) { return noNarration(row); }]
+  ];
+  /** the rules this row trips, as their words (a list; its length is the Risk count) */
+  function riskOf(row, period, currency) {
+    return RULES.filter(function (rule) { return rule[2](row, period, currency); }).map(function (rule) { return words(rule[1]); });
   }
   function noNarration(row) {
     return !!(row && row.no_narration);
@@ -106,6 +126,7 @@
     return [
       { key: 'mark', label: words('Mark'), all: words('All'), options: opts([['notchecked', 'Not checked'], ['checked', 'Checked'], ['hold', 'On hold'], ['query', 'Queried']]), match: function (row, v) { var st = markState(mk, row).state; return v === 'checked' ? isChecked(mk, row) : v === 'notchecked' ? !isChecked(mk, row) : v === 'hold' ? st === 'hold' : st === 'open'; } },
       { key: 'ev', label: words('Evidence'), all: words('All'), options: opts([['flag', EV.flag], ['none', EV.none], ['nodoc', EV.nodoc], ['held', EV.held]]), match: function (row, v) { return evidenceKey(row) === v; } },
+      { key: 'risk', label: words('Risk'), all: words('All'), options: opts([['any', 'Any risk']]), match: function (row) { return riskOf(row, period(), cur()).length > 0; } },
       { key: 'rec', label: words('Recorded'), all: words('All'), options: opts([['afterend', 'After period end'], ['late7', 'Over 7 days late'], ['late30', 'Over 30 days late'], ['late90', 'Over 90 days late']]), match: function (row, v) { return v === 'afterend' ? afterEnd(row, period()) : daysLate(row) > Number(String(v).replace('late', '')); } },
       { key: 'time', label: words('Made'), all: words('All'), options: opts([['weekend', 'At a weekend'], ['night', 'After hours']]), match: function (row, v) { return v === 'weekend' ? weekend(row) : afterHours(row); } },
       { key: 'round', label: words('Round sum'), all: words('All'), options: opts([['100', 'Multiple of 100'], ['1000', 'Multiple of 1,000']]), match: function (row, v) { return round(row, Number(v), cur()); } },
@@ -142,5 +163,5 @@
     var end = Date.parse(String(period.to).slice(0, 10) + 'T00:00:00Z');
     return { from: new Date(end + DAY_MS).toISOString().slice(0, 10), to: new Date(end + 366 * DAY_MS).toISOString().slice(0, 10) };
   }
-  root.CBBooksGrantFilters = { paramNames: paramNames, afterRange: afterRange, recordedDay: recordedDay, afterEnd: afterEnd, daysLate: daysLate, weekend: weekend, afterHours: afterHours, round: round, noNarration: noNarration, makers: makers, carry: carry, filtersFor: filtersFor, markState: markState, isChecked: isChecked, evidenceKey: evidenceKey, kindOf: kindOf, toAddress: toAddress, fromAddress: fromAddress };
+  root.CBBooksGrantFilters = { paramNames: paramNames, afterRange: afterRange, recordedDay: recordedDay, afterEnd: afterEnd, daysLate: daysLate, weekend: weekend, weekendDays: weekendDays, riskOf: riskOf, afterHours: afterHours, round: round, noNarration: noNarration, makers: makers, carry: carry, filtersFor: filtersFor, markState: markState, isChecked: isChecked, evidenceKey: evidenceKey, kindOf: kindOf, toAddress: toAddress, fromAddress: fromAddress };
 }(typeof window !== 'undefined' ? window : globalThis));

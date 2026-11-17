@@ -165,7 +165,7 @@
   function monthTable(list, key, deps, withLast) {
     return {
       head: withLast ? [deps.tx('Month'), deps.tx('Sales'), deps.tx('Last year')] : [deps.tx('Month'), deps.tx('Profit')],
-      rows: (list || []).slice().reverse().map(function (item) {
+      rows: (list || []).map(function (item) {
         var name = monthWords(String(item.from).slice(0, 7), 'long', deps) + (item.running ? ' ' + deps.tx('(so far)') : '');
         return withLast ? [name, moneyOrDash(item[key], deps), moneyOrDash(item.last_year_minor, deps)] : [name, moneyOrDash(item[key], deps)];
       })
