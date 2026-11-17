@@ -606,9 +606,10 @@
       return node.workdays().indexOf(iso) >= 0;
     },
 
-    weekInfo: function () {
+    /** the rest days of a REGION when one is named (the audited shop's, an auditor's journal-entry test), else of the reader's own locale; ISO 1 Mon .. 7 Sun */
+    weekInfo: function (region) {
       try {
-        var l = new Intl.Locale(node.locale());
+        var l = new Intl.Locale(/^[A-Za-z]{2}$/.test(region || '') ? 'en-' + String(region).toUpperCase() : node.locale());
         if (typeof l.getWeekInfo === 'function') return l.getWeekInfo() || null;
         return l.weekInfo || null;
       } catch (_) {
