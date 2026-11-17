@@ -68,17 +68,17 @@ function enWords(list, code, dateStep) {
   });
 }
 /** the preview answer reduced to what the sheet compares and saves against */
-function enSeen(r) {
-  r = r || {};
+function enSeen(reply) {
+  reply = reply || {};
   return {
-    balanced: r.balanced === true,
-    voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null,
+    balanced: reply.balanced === true,
+    voucher: reply.voucher ? { series: reply.voucher.series, kind: reply.voucher.type } : null,
     narration: (EN.v && EN.v.narration) || '' /* the API's preview echoes no note and no currency: the note is the one the person typed */,
-    lines: (r.lines || []).map(function (item) {
+    lines: (reply.lines || []).map(function (item) {
       return Object.assign({}, item, { name: item.ledger || item.name });
     }),
-    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(r.refusals) : r.refusals, r.code),
-    warnings: enWords(r.flags || r.warnings, null).map(function (item, index) {
+    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(reply.refusals) : reply.refusals, reply.code),
+    warnings: enWords(reply.flags || reply.warnings, null).map(function (item, index) {
       return Object.assign(item, { code: 'FLAG' + index });
     })
   };

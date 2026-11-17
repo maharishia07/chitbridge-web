@@ -122,7 +122,9 @@ function enDlg() {
   node.addEventListener('close', function () {
     try {
       document.documentElement.style.overflow = '';
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+    } catch (failure) {
+      if (typeof cbQuiet === 'function') cbQuiet('entry: the page scroll was not restored', failure); /* best effort: nothing the person sees changes */
+    }
   });
   node.addEventListener('click', function (e) {
     if (e.target === node) enClose();

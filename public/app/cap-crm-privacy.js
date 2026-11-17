@@ -300,14 +300,14 @@ function crmConsentStanding(r) {
   });
 }
 /** a Yes to offers needs its reason: the field opens in the block, beside the rows (the api asks for source staff + a note of 3+ characters) */
-function crmConsentAsk(ch) {
+function crmConsentAsk(channel) {
   var box = document.getElementById('crm_consent_ask');
   if (!box) return;
   box.innerHTML =
     '<label>' +
     esc(tx('Why is it a yes? What did they say, and when?')) +
     '<input data-cbsid="CRM010-I03" class="inp" id="crm_consent_note" data-testid="crm-consent-note" maxlength="300" data-ch="' +
-    esc(ch) +
+    esc(channel) +
     '" autocomplete="off"></label>' +
     '<div id="crm_consent_note_err" class="why" role="alert" data-testid="crm-consent-note-err"></div>' +
     '<div class="supacts">' +
@@ -324,7 +324,7 @@ function crmConsentAskClose() {
   if (box) box.innerHTML = '';
 }
 /** the Save of the reason field: 3+ characters here first (inline), then the one POST */
-function crmConsentAskSave(p) {
+function crmConsentAskSave(party) {
   var field = document.getElementById('crm_consent_note'),
     err = document.getElementById('crm_consent_note_err');
   if (!field) return;
@@ -334,7 +334,7 @@ function crmConsentAskSave(p) {
     return;
   }
   err.textContent = '';
-  crmConsentSet(p, field.getAttribute('data-ch'), 'marketing', true, note);
+  crmConsentSet(party, field.getAttribute('data-ch'), 'marketing', true, note);
 }
 /** a Yes / No / Stop / Allow → ONE POST (the same route the shopper's own page writes through); the record re-reads. A staff Yes to offers carries source staff + its note */
 async function crmConsentSet(p, ch, pu, allowed, note) {
@@ -367,58 +367,61 @@ async function crmConsentSet(p, ch, pu, allowed, note) {
   }
 }
 /** the click door the record hands here (crmRecordClick → crmPrivacyClick): true when handled */
-function crmPrivacyClick(a, node) {
-  var p = CRMR.p;
-  if (a === 'consent' && p && node.getAttribute('data-pu') === 'marketing' && node.getAttribute('data-v') === '1') {
-    crmConsentAsk(node.getAttribute('data-ch'));
+var CRM_PRIV_CLICKS = {
+  consent: function (node, party) {
+    if (!party) return false;
+    if (node.getAttribute('data-pu') === 'marketing' && node.getAttribute('data-v') === '1') crmConsentAsk(node.getAttribute('data-ch'));
+    else crmConsentSet(party, node.getAttribute('data-ch'), node.getAttribute('data-pu'), node.getAttribute('data-v') === '1');
     return true;
-  }
-  if (a === 'consentsave' && p) {
-    crmConsentAskSave(p);
+  },
+  consentsave: function (node, party) {
+    if (!party) return false;
+    crmConsentAskSave(party);
     return true;
-  }
-  if (a === 'consentcancel') {
+  },
+  consentcancel: function () {
     crmConsentAskClose();
     return true;
-  }
-  if (a === 'consent' && p) {
-    crmConsentSet(p, node.getAttribute('data-ch'), node.getAttribute('data-pu'), node.getAttribute('data-v') === '1');
+  },
+  consentretry: function (node, party) {
+    if (!party) return false;
+    crmConsentOpen(party);
     return true;
-  }
-  if (a === 'consentretry' && p) {
-    crmConsentOpen(p);
+  },
+  privreq: function (node, party) {
+    if (!party) return false;
+    crmGo('#/privacy?party=' + encodeURIComponent(party.party_id) + '&who=' + encodeURIComponent(party.display_name || '') + '&add=1');
     return true;
-  }
-  if (a === 'privreq' && p) {
-    crmGo('#/privacy?party=' + encodeURIComponent(p.party_id) + '&who=' + encodeURIComponent(p.display_name || '') + '&add=1');
-    return true;
-  }
-  if (a === 'prvadd') {
+  },
+  prvadd: function () {
     crmPrivReqOpen(PRV.params);
     return true;
-  }
-  if (a === 'prvsave') {
+  },
+  prvsave: function () {
     crmPrivReqSave();
     return true;
-  }
-  if (a === 'prvanswer') {
+  },
+  prvanswer: function (node) {
     crmPrivAnswerOpen(node.getAttribute('data-id'));
     return true;
-  }
-  if (a === 'prvanswersave') {
+  },
+  prvanswersave: function (node) {
     crmPrivAnswerSave(node.getAttribute('data-id'));
     return true;
-  }
-  if (a === 'prvpage') {
+  },
+  prvpage: function (node) {
     PRV.page = Math.max(1, Number(node.getAttribute('data-v')) || 1);
     crmPrivLoad();
     return true;
-  }
-  if (a === 'prvretry') {
+  },
+  prvretry: function () {
     crmPrivLoad();
     return true;
   }
-  return false;
+};
+function crmPrivacyClick(a, node) {
+  var handler = Object.prototype.hasOwnProperty.call(CRM_PRIV_CLICKS, a) ? CRM_PRIV_CLICKS[a] : null;
+  return handler ? handler(node, CRMR.p) : false;
 }
 /** wired by crmRecordPaint's mounts: the Consent <details> loads its history the first time it opens (and stays open after a Yes/No) */
 function crmConsentMount(p) {

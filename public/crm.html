@@ -274,6 +274,20 @@ function crmCard(html, bad) {
 }
 
 /* ═══ START ═══ */
+/** the Ledger's one read: /me says ledger_on (GET /books/health answers 404 LEDGER_OFF by design for a shop with none: a red failed request on the first screen).
+    on → the Dues column and the dues alert exist; off → neither is drawn, no blank column */
+async function readLedgerSwitch() {
+  try {
+    const reply = await api('me');
+    const shop = (reply && reply.entity) || reply || {};
+    if (typeof shop.ledger_on === 'boolean') CRM.ledger = shop.ledger_on;
+    else CRM.ledger = await api('booksHealth').then(() => true, () => false); /* an api that does not say (no ledger_on): the old probe, 404 = off */
+    if (reply && reply.country) SESSION.country = reply.country;
+  } catch (failure) {
+    /* /me failed: UNKNOWN, never "off" — the old probe decides (404 = off); CX0 country is just not set */
+    CRM.ledger = await api('booksHealth').then(() => true, () => false);
+  }
+}
 async function start() {
   SESS = session();
   if (!SESS) return signedOut('');
@@ -312,18 +326,7 @@ async function start() {
   }
   if (g !== CRM.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
-  /* the Ledger's one read: /me says ledger_on (GET /books/health answers 404 LEDGER_OFF by design for a shop with none: a red failed request on the first screen).
-     on → the Dues column and the dues alert exist; off → neither is drawn, no blank column */
-  try {
-    const reply = await api('me');
-    const me = (reply && reply.entity) || reply || {};
-    if (typeof me.ledger_on === 'boolean') CRM.ledger = me.ledger_on;
-    else CRM.ledger = await api('booksHealth').then(() => true, () => false); /* an api that does not say (no ledger_on): the old probe, 404 = off */
-    if (reply && reply.country) SESSION.country = reply.country;
-  } catch (e) {
-    /* /me failed: UNKNOWN, never "off" — the old probe decides (404 = off); CX0 country is just not set */
-    CRM.ledger = await api('booksHealth').then(() => true, () => false);
-  }
+  await readLedgerSwitch();
   try {
     localStorage.setItem('cb_crm_ledger', CRM.ledger ? '1' : '0');
   } catch (_) {}
