@@ -1,6 +1,6 @@
 /**
  * cap-evidence.js — CMP062 the Evidence chip and CMP063 the Evidence sheet: what stands behind a books row (ASA 500: the auditor vouches an entry to its source).
- * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: an opening balance, a receipt or a journal, so nothing to attach to), or, for a purchase that claims GST above the tax-invoice threshold with no file,
+ * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: an opening balance, a receipt or a journal, so nothing to attach to; the firm, owner and adviser Day books paint a quiet dash there, not a pill), or, for a purchase that claims GST above the tax-invoice threshold with no file,
  * No tax invoice (a warning). A press opens the sheet: the source document (its number) and its files; a file opens in a new tab.
  *
  * OWNS      the chip html · the sheet · the one door a file is read through (GET /api/books/evidence/:id, with the seat's own headers, never cached)
