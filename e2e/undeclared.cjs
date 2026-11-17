@@ -67,6 +67,25 @@ const SHARED = (function () {
 /* QA-71 · measured 19 Oct 2026 on main. May only go down. */
 const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 81);
 let bad = [];
+/**
+ * A SPLIT MODULE IS ONE UNIT (shrink W2, 2026-11-17). A size split moved declarations into sibling part files
+ * (cap-books.js -> cap-books-tree.js, cap-books-cheques.js ...) that the page loads right after the parent in
+ * one scope, so a name a part reads is declared in the parent or another part. The unit of a file is the
+ * shortest app/ prefix (split on '-') that is a real file, plus every app/ file starting with that prefix + '-'.
+ * Declarations are gathered per file first, then a name counts as declared if ANY file of the unit declares it.
+ */
+const UNIT_ROOT = (function () {
+  const names = new Set(fs.readdirSync(path.join(PUB, 'app')).filter((n) => /\.js$/.test(n)).map((n) => n.slice(0, -3)));
+  return function (f) {
+    if (path.basename(path.dirname(f)) !== 'app') return null;
+    const seg = path.basename(f, '.js').split('-');
+    for (let i = 1; i <= seg.length; i++) { const p = seg.slice(0, i).join('-'); if (names.has(p)) return p; }
+    return null;
+  };
+})();
+const scanned = new Map();   /* file -> { code, DECLARED, used } */
+const unitOf = new Map();    /* unit root -> [files] */
+files.forEach((f) => { const u = UNIT_ROOT(f); if (u) { if (!unitOf.has(u)) unitOf.set(u, []); unitOf.get(u).push(f); } });
 files.forEach((f) => {
   let src = fs.readFileSync(f, 'utf8');
   /**
@@ -155,8 +174,16 @@ files.forEach((f) => {
     }
   }
 
+  scanned.set(f, { code, DECLARED, used });
+});
+files.forEach((f) => {
+  const { code, DECLARED, used } = scanned.get(f);
+  const u = UNIT_ROOT(f);
+  const parts = (u && unitOf.get(u).length > 1 ? unitOf.get(u) : []).filter((g) => g !== f).map((g) => scanned.get(g));
   used.forEach((name) => {
     if (KNOWN.has(name)) return;
+    const declRe = new RegExp('\\b' + name + '\\s*[:=]\\s*(?:function|\\{|\\[)');
+    if (parts.some((p) => p.DECLARED.has(name) || declRe.test(p.code))) return;   /* declared in a part of the same unit */
     if (SHARED.has(name)) return;   /* declared in app.html, shared into every capability */
     /* declared here in any of the shapes this codebase uses? */
     /**

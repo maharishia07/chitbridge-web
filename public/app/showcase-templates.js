@@ -236,23 +236,37 @@
       '</div></article>'
     );
   }
-  function menuRow(i, c, t) {
+  /* menuRow and serviceCard are one markup with a different tag, class, text-block style and note separator: the shape names those four */
+  var MENU_SHAPE = { tag: 'div', cls: 'sc-row', tStyle: '', noteBr: '' };
+  var SVC_SHAPE = { tag: 'article', cls: 'sc-svc', tStyle: ' style="flex:1;min-width:0"', noteBr: '<br>' };
+  function itemBlock(shape, i, c, t) {
     return (
-      '<div class="sc-row" data-item="' +
+      '<' +
+      shape.tag +
+      ' class="' +
+      shape.cls +
+      '" data-item="' +
       esc(i.id) +
       '" data-cat="' +
       esc(i.category || '') +
       '">' +
       (i.photo ? photo(i, 'sc-th') : '') +
-      '<div class="sc-t"><b>' +
+      '<div class="sc-t"' +
+      shape.tStyle +
+      '><b>' +
       esc(i.name) +
       '</b>' +
-      (i.note ? '<small>' + esc(i.note) + '</small>' : '') +
+      (i.note ? shape.noteBr + '<small>' + esc(i.note) + '</small>' : '') +
       '</div>' +
       priceOf(i, c, t) +
       act(i, t) +
-      '</div>'
+      '</' +
+      shape.tag +
+      '>'
     );
+  }
+  function menuRow(i, c, t) {
+    return itemBlock(MENU_SHAPE, i, c, t);
   }
   function specRow(i, c, t) {
     return (
@@ -278,22 +292,7 @@
     );
   }
   function serviceCard(i, c, t) {
-    return (
-      '<article class="sc-svc" data-item="' +
-      esc(i.id) +
-      '" data-cat="' +
-      esc(i.category || '') +
-      '">' +
-      (i.photo ? photo(i, 'sc-th') : '') +
-      '<div class="sc-t" style="flex:1;min-width:0"><b>' +
-      esc(i.name) +
-      '</b>' +
-      (i.note ? '<br><small>' + esc(i.note) + '</small>' : '') +
-      '</div>' +
-      priceOf(i, c, t) +
-      act(i, t) +
-      '</article>'
-    );
+    return itemBlock(SVC_SHAPE, i, c, t);
   }
 
   /** the ONE data contract. Copies named fields only — nothing else of the catalogue row survives (cost cannot ride along). */
