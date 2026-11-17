@@ -102,9 +102,9 @@ function shopReg(cc) {
    A row names only the words that differ; a missing word is the neutral one. A page without the registry (Home loads no engine/tax.js) keys the
    row by the country code the caller passes — each pack's id is its country's code. */
 var PACK_WORDS = {
-  IN: { taxName: 'GST', taxId: 'GSTIN', postcode: 'PIN', region: 'State', bankCode: ['IFSC code', 'ifsc'], branch: { hint: 'an 11-character IFSC code' } },
-  AU: { taxName: 'GST', taxId: 'ABN', postcode: 'Postcode', region: 'State', cash: 'Bank', bankCode: ['BSB', 'bsb'], branch: { hint: 'a 6-digit BSB, for example 062-000', example: '062-000', pattern: '^[0-9]{3}-?[0-9]{3}$' } },
-  AE: { taxName: 'VAT', taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', bankCode: ['IBAN', 'iban'] },
+  IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State', bankCode: ['IFSC code', 'ifsc'], branch: { hint: 'an 11-character IFSC code' } },
+  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', cash: 'Bank', bankCode: ['BSB', 'bsb'], branch: { hint: 'a 6-digit BSB, for example 062-000', example: '062-000', pattern: '^[0-9]{3}-?[0-9]{3}$' } },
+  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', bankCode: ['IBAN', 'iban'] },
   US: { stock: 'Inventory' }
 };
 var PACK_WORDS_NONE = { taxName: 'Tax', taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
