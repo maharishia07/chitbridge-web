@@ -739,11 +739,8 @@ function bankBandCore() {
  * an api field and a migration, which is the owner's decision), so another device or the adviser's seat does not see it until then.
  * Figures cited from the walker's knowledge, not looked up in this round: cb-country to cite-check before a requirement is written.
  */
-/** the country's own branch-code rule is the PACK's (pack.bank.branchCode { word, hint, example, pattern }, a pack member cb-country adds: country rules are data); with none the code is a free, neutral 'Branch code' */
-const bkbBranchRule = () => {
-  const pack = typeof shopReg === 'function' ? shopReg(bkbCountry()) : null;
-  return (pack && pack.bank && pack.bank.branchCode) || null;
-};
+/** the country's branch-code rule: helpers.js bankBranchRule (the pack's own first, else the one table); null = a free, neutral 'Branch code' */
+const bkbBranchRule = () => bankBranchRule(bkbCountry());
 const bkbBranchWords = () => {
   const rule = bkbBranchRule();
   return rule ? [rule.word, rule.hint] : ['Branch code', 'the branch code, if your bank has one'];
