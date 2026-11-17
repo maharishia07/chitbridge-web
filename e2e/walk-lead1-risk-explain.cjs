@@ -18,9 +18,9 @@ const MEMBER = 'a0000000-0000-4000-8000-000000000001', OTHER = 'a0000000-0000-40
 const GRANT = 'c0000000-0000-4000-8000-000000000001';
 const DAY = (n) => new Date(W.nowMs() + n * 86400000).toISOString();
 /* HAND-COMPUTED (viewer zone Australia/Sydney, period 1 Jul 2025 - 30 Jun 2026; Risk = after end + over 7 days late + weekend + after hours + round x100 + no narration):
- *   E1 3 (end, late, round) - E2 1 (narration) - E3 3 (weekend, night, round) - E4 2 (night, narration) - E5 3 (end, late, round) - E6 1 (night) - E7 3 (end, weekend, round) - E8 0
+ *   E1 3 (end, late, round) - E2 1 (narration) - E3 3 (weekend, night, round) - E4 2 (night, narration) - E5 3 (end, late, round) - E6 1 (night) - E7 3 (end, weekend, round) - E8..E13 0
  *   Any risk keeps 7 of 8; sorted most first: 3 3 3 3 2 1 1.  Fri+Sat region (Asia/Riyadh): F1 Fri 1 - F2 Sat 1 - F3 Sun 0 - F4 Fri 00:30 (Thu 21:30 UTC) 2 (weekend + after hours) */
-const AU = [['E1', '2026-06-30', '2026-07-14T02:00:00.000Z', 150000, 'Ann', true], ['E2', '2026-06-15', '2026-06-15T22:30:00.000Z', 12345, 'Bob', false], ['E3', '2026-06-20', '2026-06-20T13:00:00.000Z', 1000000, 'Ann', true], ['E4', '2026-06-10', '2026-06-10T19:30:00.000Z', 100, 'Bob', false], ['E5', '2026-05-01', '2026-07-20T00:00:00.000Z', 5000000, 'Cara', true], ['E6', '2026-06-30', '2026-06-30T13:30:00.000Z', 777700, 'Cara', true], ['E7', '2026-07-05', '2026-07-05T01:00:00.000Z', 20000, 'Ann', true], ['E8', '2026-06-17', '2026-06-17T00:00:00.000Z', 550, 'Ann', true]];
+const AU = [['E1', '2026-06-30', '2026-07-14T02:00:00.000Z', 150000, 'Ann', true], ['E2', '2026-06-15', '2026-06-15T22:30:00.000Z', 12345, 'Bob', false], ['E3', '2026-06-20', '2026-06-20T13:00:00.000Z', 1000000, 'Ann', true], ['E4', '2026-06-10', '2026-06-10T19:30:00.000Z', 100, 'Bob', false], ['E5', '2026-05-01', '2026-07-20T00:00:00.000Z', 5000000, 'Cara', true], ['E6', '2026-06-30', '2026-06-30T13:30:00.000Z', 777700, 'Cara', true], ['E7', '2026-07-05', '2026-07-05T01:00:00.000Z', 20000, 'Ann', true], ['E8', '2026-06-17', '2026-06-17T00:00:00.000Z', 550, 'Ann', true]].concat([9, 10, 11, 12, 13].map((n) => ['E' + n, '2026-06-17', '2026-06-17T00:00:00.000Z', 550 + n, 'Ann', true])); /* E9..E13: five more clean rows, so the list has 13 rows and draws its tools bar (a list of 12 or fewer has none) */
 const FRI = [['F1', '2026-06-26', '2026-06-26T09:00:00.000Z', 12345, 'Ann', true], ['F2', '2026-06-27', '2026-06-27T09:00:00.000Z', 12345, 'Ann', true], ['F3', '2026-06-28', '2026-06-28T09:00:00.000Z', 12345, 'Ann', true], ['F4', '2026-06-26', '2026-06-25T21:30:00.000Z', 12345, 'Ann', true]];
 
 const run = async (w) => {
@@ -31,7 +31,8 @@ const run = async (w) => {
   const J = (r, status, body) => C.json(r, status, body);
   const example = (key) => { const hit = C.load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };
   const line = (ex, over) => Object.assign({}, ex, over);
-  const entryOf = (s, n) => ({ entry_id: 'e0000000-0000-4000-8000-00000000000' + (n + 1), entry_no: 'JV-' + s[0], posting_date: s[1], doc_date: s[1], event_type: 'journal', narration: s[5] ? 'Written' : 'Journal', no_narration: !s[5], recorded_at: s[2], made_by: s[4], source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: null, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: null, dr_minor: s[3], cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: s[3], counter: null, rate: null }] });
+  const entryOf = (s, n) => Object.assign({}, BASE, { entry_id: 'e0000000-0000-4000-8000-' + String(n + 1).padStart(12, '0'), entry_no: 'JV-' + s[0], posting_date: s[1], doc_date: s[1], event_type: 'journal', narration: s[5] ? 'Written' : 'Journal', no_narration: !s[5], recorded_at: s[2], made_by: s[4], source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: null, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: null, dr_minor: s[3], cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: s[3], counter: null, rate: null }] });
+  let BASE = {};
   const flagOf = (b, item, n) => ({ flag_id: String(100 + n), kind: b.kind, visibility: b.visibility || 'org', subject_kind: b.subject_kind, subject_entity: b.subject_entity, subject_id: String(item.id).toLowerCase(), label: item.label, note: b.note || null, state: 'open', seat: 'auditor', mine: true, by_name: 'Ann Auditor', created_at: DAY(0) });
   const handler = async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
@@ -39,7 +40,7 @@ const run = async (w) => {
     if (p === '/api/flags/query') { const b = JSON.parse(q.postData() || '{}'), flags = {}; S.flags.filter((f) => f.subject_kind === b.subject_kind && (b.ids || []).indexOf(f.subject_id) >= 0).forEach((f) => { (flags[f.subject_id] = flags[f.subject_id] || []).push(f); }); return J(r, 200, { subject_kind: b.subject_kind, subject_entity: b.subject_entity, flags }); }
     if (p === '/api/flags' && m === 'POST') { const b = JSON.parse(q.postData() || '{}'); S.posts.push(b); const made = (b.items || []).map((item, n) => flagOf(b, item, S.flags.length + n)); S.flags = S.flags.concat(made); return J(r, 200, { created: made.length, already: 0, flags: made }); }
     if (p.indexOf('/api/flags') === 0) return J(r, 404, { error: 'We could not find that.' });
-    if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); return J(r, 200, Object.assign(ex, { currency: 'INR', entries: S.set.map(entryOf), count: S.set.length })); }
+    if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); BASE = ex.entries[0] || {}; return J(r, 200, Object.assign(ex, { currency: 'INR', entries: S.set.map(entryOf), count: S.set.length })); }
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
@@ -68,32 +69,32 @@ const run = async (w) => {
       const entry = { entry_id: E1, entry_no: 'JV-0001', posting_date: '2026-11-03', doc_date: '2026-11-03', event_type: 'sale', narration: 'Cash sale', source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: { chit_id: null, ref: 'B-9', kind: 'bill', counter: null, by: 'Asha', count: null, how: 'Cash', how_ref: null, split: null, bills: null, doc_at: '2026-11-03T09:00:00.000Z', recorded_at: '2026-11-03T09:05:00.000Z' }, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: 'Walk-in buyer', dr_minor: 123400, cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 123400, counter: null, rate: null }] };
       if (p === '/api/books/ledger/1000' || p === '/api/books/ledger/4000') { const ex = example('GET /api/books/ledger/:account'), cash = p.endsWith('1000'); /* the PAGED ledger the drill asks for (limit=100): its page keys (total · page · limit · next · totals · page_opening_minor) are not in the api contract's example yet (reported to cb-api), so this one answer is sent as the server sends it and not held to the example */
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(Object.assign(ex, { currency: 'INR', account: { code: cash ? '1000' : '4000', name: cash ? 'Cash' : 'Sales', nature: cash ? 'asset' : 'income' }, from: '2026-04-01', to: '2026-11-15', opening_minor: 0, lines: [{ date: '2026-11-03', doc_date: '2026-11-03', what: 'Cash sale', ref: 'JV-0001', entry_id: E1, entry_no: 'JV-0001', event_type: 'sale', reverses_entry_id: null, reversed_by: null, source_chit_id: null, source: null, party_id: null, dr_minor: cash ? 123400 : 0, cr_minor: cash ? 0 : 123400, running_minor: cash ? 123400 : -123400 }], closing_minor: cash ? 123400 : -123400, page_opening_minor: 0, total: 1, page: 1, limit: 100, next: null, totals: { dr_minor: cash ? 123400 : 0, cr_minor: cash ? 0 : 123400 } })) }); }
-      if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [Object.assign({}, ex.entries[0], entry)], count: 1 })); }
+      if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); BASE = ex.entries[0] || {}; return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [Object.assign({}, ex.entries[0], entry)], count: 1 })); }
       const ex = example('GET ' + p); ['entries', 'parties', 'periods'].forEach((k) => { if (Array.isArray(ex[k])) ex[k] = []; }); /* only the list keys the api's own example has: a key it does not send is not invented (X1) */ return J(r, 200, ex);
     }
     return J(r, 200, {});
   };
   await ctx.route(base + '/api/**', handler);
-  const init = (c) => c.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
-  await init(ctx);
+  const init = (c, loc) => c.addInitScript((a) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', a[0]); localStorage.setItem('cb_locale', a[1]); } catch (_) {} }, [W.session('Fixture Owner', 'Fixture Shop'), loc]); /* the region the person chose (CBLocale), which is what the weekend reads */
+  await init(ctx, 'en-AU');
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const has = (sel) => page.locator(sel).count().then((n) => n > 0);
   const noScroll = () => page.evaluate(() => ({ y: document.documentElement.scrollHeight <= window.innerHeight + 1, x: document.documentElement.scrollWidth <= window.innerWidth + 1 }));
   const openBooks = async (pg) => { await pg.goto(base + '/network.html'); await pg.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 }); await pg.click(T('nw-books-' + MEMBER)); await pg.waitForSelector(T('bv-band'), { timeout: 10000 }); await pg.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await pg.waitForTimeout(500); };
   const riskCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => { const n = r.querySelector('[data-testid="bv-risk"]'); return n ? Number(n.textContent) : 0; }));
-  const entryCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d/) || [''])[0]));
+  const entryCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d+/) || [''])[0]));
 
   await page.setViewportSize(WIDE);
   await openBooks(page);
-  await w.step('R1', 'Day book, region Australia (Sat+Sun): the Risk column counts E1..E8 = 3,1,3,2,3,1,3,0 as hand-computed', async () => {
+  await w.step('R1', 'Day book, region Australia (Sat+Sun): the Risk column counts E1..E8 = 3,1,3,2,3,1,3,0 then five clean rows 0, as hand-computed', async () => {
     const got = await riskCol(page), names = await entryCol(page);
-    return { ok: got.join(',') === '3,1,3,2,3,1,3,0' && names.join(',') === 'JV-E1,JV-E2,JV-E3,JV-E4,JV-E5,JV-E6,JV-E7,JV-E8', saw: names.join(',') + ' -> ' + got.join(',') };
+    return { ok: got.join(',') === '3,1,3,2,3,1,3,0,0,0,0,0,0' && names.length === 13, saw: names.join(',') + ' -> ' + got.join(',') };
   });
   await w.step('R2', 'the rule sentence is on the page and names the fixed constants (7 days, 8 pm to 7 am, multiple of 100)', async () => {
     const note = await txt(T('bv-risk-note'));
     return { ok: /over 7 days late/.test(note) && /8 pm to 7 am/.test(note) && /multiple of 100/.test(note) && /weekend/.test(note), saw: note.slice(0, 160) };
   });
-  await w.step('R3', 'Any risk keeps 7 rows (E1..E7), not the clean E8', async () => {
+  await w.step('R3', 'Any risk keeps 7 rows (E1..E7), not the six clean ones', async () => {
     await page.click(T('cbl-filters-books-grant-daybook')); await page.selectOption(T('listctl-filter-risk'), 'any'); await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     const names = await entryCol(page);
     return { ok: names.join(',') === 'JV-E1,JV-E2,JV-E3,JV-E4,JV-E5,JV-E6,JV-E7', saw: names.join(',') };
@@ -131,7 +132,7 @@ const run = async (w) => {
   });
   /* the region's weekend: a SECOND browser context in Saudi Arabia (Asia/Riyadh, ar-SA: CLDR weekend Fri+Sat) */
   const c2 = await w.contextAt({ timezoneId: 'Asia/Riyadh', locale: 'ar-SA' });
-  await c2.route(base + '/api/**', handler); await init(c2);
+  await c2.route(base + '/api/**', handler); await init(c2, 'ar-SA');
   const p2 = await c2.newPage(); await p2.setViewportSize(WIDE);
   S.set = FRI;
   await w.step('W1', 'Day book, region Saudi Arabia (Fri+Sat weekend): Friday and Saturday flag, Sunday does not; Thursday 21:30 UTC (Friday 00:30 shop time) flags twice (F1..F4 = 1,1,0,2)', async () => {
