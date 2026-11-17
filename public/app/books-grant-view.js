@@ -535,7 +535,7 @@
     if (!root.CBMark || onActions()) { viewState.mk = null; return; }
     viewState.mk = root.CBMark.use({
       adopter: 'acc.audit',
-      period: function () { return viewState.day ? { from: viewState.day, to: viewState.day } : viewState.range; },
+      period: function () { return viewState.markDay ? { from: viewState.markDay, to: viewState.markDay } : viewState.day ? { from: viewState.day, to: viewState.day } : viewState.range; },
       transport: function (method, path, body) {
         var headers = Object.assign({}, root.CBBooksActing.headers());
         if (method !== 'GET') headers['Idempotency-Key'] = (root.crypto && root.crypto.randomUUID ? root.crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -806,26 +806,46 @@
   }
   /** a firm's bell row for a colleague's reply on my note arrives as &note=<entry id>: read and forgotten from the address when this script loads (the network page rewrites its address before it mounts the Day book), the Day book then opens that entry's note sheet once (cap-flag.js, kind 'posting') */
   function askedNote() {
-    var id = '';
+    var id = '', mark = '', day = '', label = '';
     try {
       var query = new root.URLSearchParams(root.location.search);
       id = query.get('note') || '';
-      if (id && root.history && root.history.replaceState) {
+      mark = query.get('mark') || '';
+      day = (query.get('mday') || '').slice(0, 10);
+      label = (query.get('nl') || '').slice(0, 80);
+      if ((id || mark) && root.history && root.history.replaceState) {
         query.delete('note');
+        query.delete('mark');
+        query.delete('mday');
+        query.delete('nl');
         root.history.replaceState(root.history.state, '', root.location.pathname + (query.toString() ? '?' + query.toString() : '') + (root.location.hash || ''));
       }
     } catch (failure) {
       if (root.cbQuiet) root.cbQuiet('books-grant:note-address', failure);
     }
-    return id;
+    return { note: id, mark: mark, day: day, label: label };
   }
   var pendingNote = askedNote();
-  function openAskedNote(id) {
-    if (id && viewState.report === 'daybook' && viewState.fl && !viewState.fl.off()) viewState.fl.sheet(id, {});
+  /**
+   * the bell's rows arrive here (rail-bell.js): &note=<id> a colleague's reply on my note (an entry's, or the CLIENT's own: its id is the client's, the sheet then carries the client's NAME),
+   * &mark=<entry id> a Query on this client's books (its thread opens, the entry named by its own number)
+   */
+  function openAskedNote(asked) {
+    if (!asked || viewState.report !== 'daybook') return;
+    var member = viewState.o.member || {};
+    if (asked.mark && viewState.mk) {
+      viewState.markDay = asked.day; /* the open list answers for the CURRENT window: an older entry's thread is found by its own day */
+      viewState.mk.load([asked.mark]).then(function () { viewState.markDay = ''; viewState.mk.sheet(asked.mark, {}); });
+    }
+    if (!asked.note) return;
+    if (member.id && asked.note === String(member.id) && root.CBFlag && viewState.o.call) {
+      var client = root.CBFlag.use({ call: viewState.o.call, kind: 'client', entity: function () { return member.id; } });
+      if (!client.off()) client.load([asked.note]).then(function () { client.sheet(asked.note, { label: member.name }); });
+    } else if (viewState.fl && !viewState.fl.off()) viewState.fl.sheet(asked.note, { label: asked.label || undefined }); /* the entry's words (the note's own label), never its raw id */
   }
   function mount(host, options) {
     var asked = pendingNote;
-    pendingNote = '';
+    pendingNote = null;
     viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null, period: options.period || null, range: null, choices: undefined, since: sinceAsked(), seen: null };
     newMarks();
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
