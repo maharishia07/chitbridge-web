@@ -13,7 +13,6 @@
   "cbAttachStaged public/app/attach-ui.js",
   "cbAttachUnstage public/app/attach-ui.js",
   "counterMint public/app.html",
-  "csuMonthWord public/app/cap-country.js",
   "densitySet public/till.html",
   "ean13ok public/till.html",
   "editKeep public/offer-lab-next.html",
