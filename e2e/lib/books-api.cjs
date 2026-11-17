@@ -33,7 +33,7 @@ const followOf = (b) => { const late = Object.keys(b).filter((k) => k !== 'not_d
 const noNeeds = () => ({ parties: 0, bills: 0, disputed: 0, query: 0, held: 0, no_tax_invoice: 0, no_terms: 0, overdue: 0, overdue_minor: 0 });
 const dueRow = (o) => { const row = Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) }); if (row.follow_up === undefined) row.follow_up = followOf(row.buckets); if (row.balance_words === undefined) row.balance_words = owesWords(row.balance_minor); if (row.needs === undefined) row.needs = noNeeds(); return row; };
 /** GET /api/books/dues */
-const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', needs: { customer: noNeeds(), supplier: noNeeds() }, parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
+const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', needs: { customer: noNeeds(), supplier: noNeeds() }, parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0), aged_totals: { customer: { not_due: 0, d0_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0, worst: null, no_terms_minor: 0, terms: 'ok', balance_minor: 0 }, supplier: null } }, o || {});
 /** one row of GET /api/books/periods */
 const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', entries: 0, sales_minor: 0, lock: { may: true, why: '' }, reopen: { may: false, why: null }, lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
 /** GET /api/books/periods */
@@ -67,7 +67,7 @@ const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { d
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */
 const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code ? { code } : {});
 /** GET /api/books/daybook */
-const daybook = (entries, o) => Object.assign({ currency: 'INR', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
+const daybook = (entries, o) => Object.assign({ currency: 'INR', country: 'IN', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
 const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
 /** GET /api/books/returns for a country whose return is not made from these books (India: GSTR-1 / 3B come from the bills, via the rail) - the contract's `GET /api/books/returns #rail` answer, every key */

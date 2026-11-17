@@ -42,8 +42,9 @@ const DUES = { currency: 'AUD', asOf: '2026-11-16', total_minor: 65000, parties:
       if (p === '/api/books-grants') return json(r, 200, { given: [], received: [G] });
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { currency: 'AUD', year: { fiscal_year: '2026-27', from: '2026-07-01', start_month: 7 }, country: books.csStatus('AU', 'Australia') }));
       if (p === '/api/books/dues') return json(r, 200, DUES);
-      if (p === '/api/books/daybook') return json(r, 200, { entries: [], total: 0 });
+      if (p === '/api/books/daybook') return json(r, 200, books.daybook([], { currency: 'AUD', country: 'AU' }));
       if (p === '/api/books/todo') return json(r, 200, []);
+      if (p === '/api/network-offers') return json(r, 200, C.example('GET /api/network-offers'));
       return json(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, FIRM);
@@ -63,7 +64,7 @@ const DUES = { currency: 'AUD', asOf: '2026-11-16', total_minor: 65000, parties:
     ok(f.customer === 'Customers owe Acme Ltd' && f.supplier === 'Acme Ltd owes suppliers', 'firm voice names the client');
     await ctx.close();
   }
-  console.log('  --  api contract (advisory, owed: the stand-in lacks keys the api sends) ' + C.finish()[1].slice(0, 400));
+  ok(...C.finish());
   await b.close(); srv.close();
   console.log('\n' + (fail ? 'FAIL' : 'all ok') + ': ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

@@ -41,16 +41,17 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
       if (p === '/api/books/attention') return grants.some((g) => g.preset === 'adviser') ? json(r, 200, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), total: 0, no_tax_invoice: 0, no_file: 0, no_source: 0, open_queries: null, needs: 0 }) : refused(r, 'GRANT_ROUTE_NOT_LISTED', 'This part of the books is not open to an auditor.');
       if (p === '/api/books/fx-revalue') return refused(r, 'GRANT_ROUTE_NOT_LISTED', 'This part of the books is not open to a grant.');
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { currency: 'AUD', year: { fiscal_year: '2026-27', from: '2026-07-01', start_month: 7 }, country: books.csStatus('AU', 'Australia') }));
-      if (p === '/api/books/accounts') return json(r, 200, { accounts: [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }].map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: null }, a)) });
-      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, { periods: [1, 2, 3, 4].map((n) => Object.assign(books.periodRow('2026-27', n, 'open'), { start_date: '2026-' + String(n + 6).padStart(2, '0') + '-01', end_date: '2026-' + String(n + 6).padStart(2, '0') + '-28' })) });
+      if (p === '/api/books/accounts') return json(r, 200, { accounts: [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }].map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: null, nature: 'asset', active: true }, a)) });
+      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, { under_review: { fy: '2026-27', from: '2026-07-01', to: '2027-06-30' }, years: [{ fy: '2026-27', from: '2026-07-01', to: '2027-06-30', months: 12, locked: 0, entries: 0, checked: null, of: null }], periods: [1, 2, 3, 4].map((n) => Object.assign(books.periodRow('2026-27', n, 'open'), { start_date: '2026-' + String(n + 6).padStart(2, '0') + '-01', end_date: '2026-' + String(n + 6).padStart(2, '0') + '-28' })) });
       if (p === '/api/books/bank/log') return json(r, 200, { currency: 'AUD', account: { account_id: 'acc-1500', code: '1500', name: 'Bank' }, marks: [], marks_next: null, statements: [{ period_from: '2026-10-01', period_to: '2026-10-31', currency: 'AUD', difference_minor: 35432, closing_bank_minor: 0, closing_books_minor: 0, opening_minor: 0, by_name: 'Pat', at: '2026-11-02T01:00:00Z' }], posted: [], exceptions: [] });
       if (p === '/api/books/bank/statement-files') {
         const months = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
         return json(r, 200, { currency: 'AUD', months, accounts: [{ account_id: 'acc-1500', code: '1500', name: 'Bank', label: null }], cells: months.map((month) => ({ account_id: 'acc-1500', month, missing: true, file_ids: [], overlaps: false, newest_id: null, newest_name: null })), files: [], total: 0, next: null, older: 0 });
       }
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
-      if (p === '/api/books/daybook') return json(r, 200, { entries: [], total: 0 });
+      if (p === '/api/books/daybook') return json(r, 200, books.daybook([], { currency: 'AUD', country: 'AU' }));
       if (p === '/api/books/todo') return json(r, 200, []);
+      if (p === '/api/books/cheques') return json(r, 200, C.example('GET /api/books/cheques'));
       return json(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, FIRM);
@@ -66,9 +67,9 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   const here = (p) => new URL(p.url()).pathname;
   const BANK = '[data-testid="bank-stmts-grid"]', BAND = '[data-testid="ba-band"]', NO = '[data-testid="acting-refused"]';
   const cases = [
-    ['A', [G()], 'acting=' + CLIENT, BANK, true, /Eastlake Fresh[sS]*read only/],
+    ['A', [G()], 'acting=' + CLIENT, BANK, true, /Eastlake Fresh[\s\S]*read only/],
     ['B', [G({ preset: 'adviser' })], 'acting=' + CLIENT, BANK, true, /Acting for Eastlake Fresh/],
-    ['C', [G()], 'acting=' + CLIENT + '&role=auditor', BANK, true, /Eastlake Fresh[sS]*read only/],
+    ['C', [G()], 'acting=' + CLIENT + '&role=auditor', BANK, true, /Eastlake Fresh[\s\S]*read only/],
     ['D', [G({ state: 'revoked', revoked_at: '2026-11-01' })], 'acting=' + CLIENT, NO, false, /no longer|not.*access/i],
     ['E', [G({ grantor_entity: 'ent-OTHER' })], 'acting=' + CLIENT, NO, false, /no longer|not.*access/i],
     ['F', [G()], 'acting=' + CLIENT + '&role=adviser', NO, false, /no longer|not.*access/i]
@@ -92,7 +93,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     ok(here(p) === '/accounts.html' && (await p.locator(BAND).count()) === 0 && (await p.locator(NO).count()) === 0, 'G · no acting: no band, no refusal');
     await ctx.close();
   }
-  console.log('  --  api contract (advisory, owed: the stand-in lacks keys the api sends) ' + C.finish()[1].slice(0, 400));
+  ok(...C.finish());
   await b.close();
   srv.close();
   console.log('\n' + (fail ? 'FAIL' : 'all ok') + ': ' + pass + ' passed, ' + fail + ' failed');
