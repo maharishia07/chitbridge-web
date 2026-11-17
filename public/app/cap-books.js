@@ -27,6 +27,8 @@ if (typeof EP !== 'undefined') {
     booksTB: { m: 'GET', p: '/api/books/trial-balance' },
     booksPL: { m: 'GET', p: '/api/books/pl' },
     booksBS: { m: 'GET', p: '/api/books/bs' },
+    booksLoans: { m: 'GET', p: '/api/books/loans' } /* the bank line's loan picker: ref, lender, opening, what is still owed (the api owns the figures) */,
+    booksGstLodged: { m: 'GET', p: '/api/books/gst/lodged' } /* the net each tax close of a year declared lodged carried, per period (closed_at is the close day, never a lodgement date) */,
     booksLoanEmi: { m: 'POST', p: '/api/books/loans/:ref/emi', idem: 'attempt' } /* M-06: a loan instalment, the bank's split as given (the api owns the route) */,
     booksPayRecord: { m: 'POST', p: '/api/books/payments', idem: 'attempt' /* FIN-63: one key per attempt */ },
     booksPayPreview: { m: 'POST', p: '/api/books/payments/preview' } /* M26: the bills table + the duplicate warnings; writes nothing */,

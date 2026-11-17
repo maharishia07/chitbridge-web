@@ -22,7 +22,8 @@ const check = (ok, words) => { console.log((ok ? 'ok   ' : 'FAIL ') + words); if
 /* the over-payment mock: the real suggest, then ONE line named COOGEE says it paid A$500.00 more than the open invoice */
 /* the web's vendored AU pack (inside tax.js) predates bank.tax_liabilities, so the ATO lines are handed the engines checkout's own list (read from its reg-au.js, never typed here) */
 const LIABILITIES = (() => { try { const m = /tax_liabilities:\s*(\[[^\]]*\])/.exec(fs.readFileSync(path.join(ENG, 'reg-au.js'), 'utf8')); return m ? JSON.stringify(eval(m[1])) : '[]'; } catch (e) { return '[]'; } })();
-const MOCK = ';(function(){var s=CBBankRecon.suggest,L=' + LIABILITIES + ';CBBankRecon.suggest=function(l,o){if(/ATO/.test(l.narration||"")&&window.CBRegulation){var pk=window.CBRegulation.resolve({country:"AU"});o=Object.assign({},o,{pack:Object.assign({},pk,{bank:Object.assign({},pk.bank,{tax_liabilities:L})})});}var r=s.call(this,l,o);if(/COOGEE/.test(l.narration||"")&&r&&r.event){r.against=[{against_ref:"inv-2",bill_no:"INV 2",amount_minor:225000}];r.on_account_minor=50000;r.basis="open_item";}return r;};})();';
+const MOCK = ';(function(){var s=CBBankRecon.suggest,L=' + LIABILITIES + ';CBBankRecon.suggest=function(l,o){if(/ATO/.test(l.narration||"")&&window.CBRegulation){var pk=window.CBRegulation.resolve({country:"AU"});o=Object.assign({},o,{pack:Object.assign({},pk,{bank:Object.assign({},pk.bank,{tax_liabilities:L})})});}if(/LODGED/.test(l.narration||""))o=Object.assign({},o,{lodged_bas:[{period:"2026-Q1",net_minor:600000}]});var r=s.call(this,l,o);if(/COOGEE/.test(l.narration||"")&&r&&r.event){r.against=[{against_ref:"inv-2",bill_no:"INV 2",amount_minor:225000}];r.on_account_minor=50000;r.basis="open_item";}return r;};})();';
+const LOAN_CSV = ["Date,Description,Debit Amount,Credit Amount,Balance", "12/10/2026,WESTPAC LOAN REPAYMENT 5521,1500.00,,16350.00", "13/10/2026,ATO PAYMENT BAS LODGED 77,6000.00,,10350.00"].join(String.fromCharCode(10)) + String.fromCharCode(10);
 const BREAK_CSV = 'Date,Description,Debit Amount,Credit Amount,Balance\n02/10/2026,DIRECT DEBIT ORIGIN ENERGY 7721,242.00,,18258.00\n09/10/2026,MONTHLY ACCOUNT FEE,12.00,,17000.00\n10/10/2026,TRANSFER TO J SMITH,2000.00,,15000.00\n';
 
 function serve() {
@@ -129,6 +130,40 @@ async function walkOne(browser, base, scheme, width, height) {
   check(!(await text(p2)).includes(sentence), tag + ': the tick clears the balance warning');
   check(!errors.length, tag + ': no page error' + (errors.length ? ' ' + errors[0] : ''));
   await c2.close();
+  /* (d) a loan instalment: the library picker lists the loans with what each owes, the owner types the interest, the line is ready; (e) an ATO payment equal to a lodged BAS net is proposed as GST, not asked */
+  const c3 = await browser.newContext({ viewport: { width, height }, colorScheme: scheme });
+  const p3 = await c3.newPage();
+  p3.on('pageerror', (e) => errors.push(String(e)));
+  await p3.goto(base + '/bank-demo.html');
+  await p3.waitForSelector('#bd_list [data-row]');
+  const input3 = (await p3.locator('#bd_file').isVisible()) || (await p3.locator('#bd_file').count()) ? '#bd_file' : '#bd_file2';
+  await p3.setInputFiles(input3, { name: 'loan.csv', mimeType: 'text/csv', buffer: Buffer.from(LOAN_CSV) });
+  await p3.waitForSelector('#bd_cur_sel');
+  await p3.fill('#bd_cur_sel', 'AUD');
+  await p3.click('[data-act=curuse]');
+  await p3.waitForSelector('#bd_list [data-row]');
+  await open(p3, 'LODGED');
+  const lodgedSaid = await text(p3);
+  check(!(await p3.locator('#bd_list [data-act=liability]').count()) && !/Which tax does this payment settle/.test(lodgedSaid) && /Dr GST collected 6,000.00/.test(lodgedSaid), tag + ': an ATO payment equal to a lodged BAS net asks no liability, it is proposed as GST (Dr GST collected 6,000.00)');
+  await shape(p3, tag, shotOf(p3), '6-lodged-bas');
+  await open(p3, 'WESTPAC LOAN');
+  await p3.locator('#bd_list [data-act=kindacct-loan_repaid]').first().selectOption('secured_loan'); /* the account the engine lists for a loan, as the owner would choose it */
+  await p3.locator('#bd_list [data-act=kind][data-kind=loan_repaid]').first().click();
+  await open(p3, 'WESTPAC LOAN'); /* the answered line repaints closed: open it again for its next question */
+  const pick = p3.locator('#bd_list [data-testid=bd-loan-pick]');
+  check((await pick.count()) === 1, tag + ': the loan picker is on the loan instalment line');
+  const options = await pick.locator('option').allTextContents();
+  check(options.length === 3 && /Westpac · LOAN-1 · owes .*12,000.00/.test(options[1]) && /Uncle Raj · LOAN-2 · owes .*5,000.00/.test(options[2]), tag + ': each loan shows what it still owes (' + options.join(' | ') + ')');
+  await shape(p3, tag, shotOf(p3), '7-loan-pick');
+  await p3.locator('#bd_list [data-act=interest]').first().click();
+  check(/Choose which loan/.test(await text(p3)), tag + ': interest without a loan says choose the loan');
+  await pick.selectOption('LOAN-1');
+  await p3.locator('#bd_list [data-act=interestfield]').first().fill('250.00');
+  await p3.locator('#bd_list [data-act=interest]').first().click();
+  check(!(await p3.locator('#bd_list [data-act=interest]').count()), tag + ': loan and interest answered, the question is gone');
+  await shape(p3, tag, shotOf(p3), '8-loan-ready');
+  check(!errors.length, tag + ': no page error after the loan walk');
+  await c3.close();
 }
 (async () => {
   if (process.env.CB_SERVE_ONLY) { const s = await serve(); console.log("PORT " + s.address().port); return; }

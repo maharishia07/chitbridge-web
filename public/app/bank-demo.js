@@ -67,6 +67,7 @@
         return { lines: books.lines.slice(), opening_minor: books.opening_minor, posted_refs: books.lines.map(function (line) { return line.ref; }).filter(Boolean) };
       },
       post: demoPost,
+      loans: function () { return root.CBBankDemoSample.LOANS; } /* the sample loan the repayment line can name: no server, nothing posted anywhere */,
       statementCurrency: function () {
         return files.statementCurrency();
       },

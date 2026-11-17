@@ -75,5 +75,11 @@ const ok = (n) => console.log('ok  ' + n) || ran++;
   assert.strictEqual((await post2(Object.assign({}, loan, { loanRef: 'L-1', interestMinor: 999999 }))).ok, false, 'interest above the payment is refused');
   assert.strictEqual(LINE.lineOf({ ref: 'r', i: 0, state: 'needs_you', blockers: ['no_entry', 'interest'] }, {}, null, null, []).needs, 'interest');
   ok('drawings posts as an event; a loan repayment posts to /loans/:ref/emi only with a picked loan and the owner-typed interest (125,000.00 principal + 25,000.00 interest hand-computed from 1,500.00 and 250.00)');
+  /* the loan picker and the lodged BAS nets are wired to the api reads (GET /books/loans, GET /books/gst/lodged), one picker, nothing worked out in web */
+  const books = fs.readFileSync(pub('app/cap-books.js'), 'utf8'), bank = fs.readFileSync(pub('app/cap-bank.js'), 'utf8'), sheet = fs.readFileSync(pub('app/cap-bank-sheet.js'), 'utf8'), prev = fs.readFileSync(pub('app/bank-preview.js'), 'utf8');
+  assert.ok(/booksLoans: { m: 'GET', p: '/api/books/loans'/.test(books) && /booksGstLodged: { m: 'GET', p: '/api/books/gst/lodged'/.test(books), 'the two reads are in the api table');
+  assert.ok(/net_minor: one.net_minor/.test(bank) && /lodged_bas: bkshBook().lodged/.test(sheet), 'the lodged net of each period reaches suggest as lodged_bas');
+  assert.ok(/loanRef: preview.loan[item.key]/.test(prev) && /BKS017-S11/.test(ui) && /Choose which loan this pays/.test(ui) && /outstanding_minor/.test(ui), 'the picked loan rides into the post and the picker shows what each owes');
+  ok('the loan picker and lodged_bas are wired to GET /loans and GET /gst/lodged');
   console.log(ran + ' checks passed');
 })().catch((e) => { console.error('FAIL', e && e.stack || e); process.exit(1); });

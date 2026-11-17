@@ -8,7 +8,7 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account · BKS017-B09 yes, this is right
  *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-B19 what this line is (one step) · BKS017-S10 which account that answer names · BKS017-I02 new party name · BKS017-S04 new party kind
- *           BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
+ *           BKS017-S11 which loan a repayment pays · BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
  * ⭐ Written for pages with no inline script (the demo's CSP): everything is data-act on a button, one delegated listener on the host.
  */
 (function (root) {
@@ -107,6 +107,8 @@
     }
     /** M-06: the interest the owner typed, as written on the lender's statement ("250.00"), taken to minor units by the money unit (toMinor, the shop's currency); a blank or non-number clears it */
     function useInterest(key) {
+      var loan = chosenFor('loanfield', key);
+      if (cfg.controller().loans().length) { if (!loan) return { ok: false, line: true, why: 'Choose which loan this pays.' }; cfg.controller().loan(key, loan); }
       var typed = String(chosenFor('interestfield', key) || '').replace(/[,s]/g, ''),
         unit = root.CBMoney;
       if (typed && !(+typed >= 0)) return { ok: false, line: true, why: 'Type the interest as a number, like 250.00.' };

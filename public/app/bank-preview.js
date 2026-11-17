@@ -238,7 +238,7 @@
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
     try {
-      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key] }));
+      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] }));
       preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
@@ -290,7 +290,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -378,6 +378,16 @@
           else preview.interest[key] = +minor;
         });
       },
+      /** the loans the host reads (GET /books/loans): [{ ref, lender, opening_minor, outstanding_minor, currency }]; none when the host has no read (the demo) */
+      loans: function () { return (opts.loans && opts.loans()) || []; },
+      loanOf: function (key) { return preview.loan[key] || ''; },
+      /** the loan the owner picked for a loan instalment line, by its ref; a ref the host did not list, or blank, clears it (the line asks again) */
+      loan: function (key, ref) {
+        return answerLine(opts, preview, key, function () {
+          var known = ((opts.loans && opts.loans()) || []).some(function (one) { return one.ref === ref; });
+          if (ref && known) preview.loan[key] = ref; else delete preview.loan[key];
+        });
+      },
       /** B5-02: pair this statement line with the books entry (by its id) it already is, or say it is new */
       pair: function (key, entryId) {
         return answerLine(opts, preview, key, function () {
@@ -419,7 +429,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, pairs: {}, notMatch: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);

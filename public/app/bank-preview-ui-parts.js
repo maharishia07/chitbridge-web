@@ -158,9 +158,17 @@
         }).join(' ')
       );
     }
+    /** which loan a repayment line pays: the shop's own loans (GET /books/loans, through the controller) in the ONE select, each with what it still owes (the api's figure, never worked out here); nothing when the host lists none */
+    function loanBox(item) {
+      var loans = cfg.controller().loans();
+      if (!loans.length) return '';
+      var picked = cfg.controller().loanOf ? cfg.controller().loanOf(item.key) : '';
+      return '<span class="bd-ask">Which loan does this pay?</span> <select data-cbsid="BKS017-S11" class="bd-inp" data-testid="bd-loan-pick" aria-label="Which loan" data-act="loanfield" data-key="' + escapeHtml(item.key) + '"><option value="">Choose a loan</option>' +
+        loans.map(function (one) { return '<option value="' + escapeHtml(one.ref) + '"' + (picked === one.ref ? ' selected' : '') + '>' + escapeHtml((one.lender || one.ref) + ' · ' + one.ref + ' · owes ' + ctx.amountText({ amount_minor: one.outstanding_minor, currency: one.currency })) + '</option>'; }).join('') + '</select> ';
+    }
     /** M-06: a loan repayment waits for the interest the OWNER types from the lender's statement (minor units are typed as the page shows money); never worked out, never remembered */
     function interestBox(item) {
-      return '<span class="bd-ask">' + escapeHtml(preview.sentenceOf(item.needs) || "Type the interest from the lender's statement.") + '</span> ' +
+      return loanBox(item) + '<span class="bd-ask">' + escapeHtml(preview.sentenceOf(item.needs) || "Type the interest from the lender's statement.") + '</span> ' +
         '<input data-cbsid="BKS017-I02" class="bd-inp" type="text" inputmode="decimal" aria-label="Interest in this payment" data-act="interestfield" data-key="' + escapeHtml(item.key) + '"> ' +
         '<button data-cbsid="BKS017-B15" type="button" class="bd-btn" data-act="interest"' + dataKey(item) + '>Use this interest</button>';
     }
