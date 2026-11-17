@@ -25,7 +25,8 @@ const SET = {
   'app/cap-finance-cheques.js': 'FIN006-B01 FIN006-I01 FIN006-I02 FIN006-B02 FIN006-B03 FIN006-B04',
   'app/cap-finance-returns.js': 'FIN007-S01 FIN007-B01 FIN007-B02',
   'app/cap-mis.js': 'FIN008-B02',
-  'app/cap-mis-trend.js': 'FIN008-B01'
+  'app/cap-mis-trend.js': 'FIN008-B01',
+  'app/cap-mis-pictures.js': 'FIN008-B04 FIN008-B03'
 };
 /** [file, marker the tag carries within 6 lines of its code, the code it must wear] */
 const NEAR = [
@@ -37,7 +38,8 @@ const NEAR = [
   ['app/cap-repeat.js', 'data-testid="rp-run-due"', 'FIN005-B02'], ['app/cap-repeat.js', 'id="rp_every"', 'FIN005-I01'], ['app/cap-repeat.js', 'id="rp_c_note"', 'FIN005-I13'], ['app/cap-repeat.js', 'data-testid="rp-c-send"', 'FIN005-B03'],
   ['app/cap-finance-cheques.js', 'data-testid="fq-switch"', 'FIN006-B01'], ['app/cap-finance-cheques.js', 'id="fq_days"', 'FIN006-I02'],
   ['app/cap-finance-returns.js', 'id="fr_month"', 'FIN007-S01'], ['app/cap-finance-returns.js', 'data-testid="fr-gstr1"', 'FIN007-B01'],
-  ['app/cap-mis.js', 'fm-period-', 'FIN008-B02'], ['app/cap-mis-trend.js', 'tr-tab-', 'FIN008-B01']
+  ['app/cap-mis.js', 'fm-period-', 'FIN008-B02'], ['app/cap-mis-trend.js', 'tr-tab-', 'FIN008-B01'],
+  ['app/cap-mis-pictures.js', 'pc-tab-', 'FIN008-B03'], ['app/cap-mis-pictures.js', 'table-btn', 'FIN008-B04']
 ];
 const read = (f) => {
   let t = fs.readFileSync(path.join(PUB, f), 'utf8').split('\r\n').join('\n');
@@ -58,7 +60,7 @@ for (const f of Object.keys(SET)) {
 }
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 47, 'the page has 47 coded element definitions: ' + Object.keys(all).length);
+check(Object.keys(all).length === 49, 'the page has 49 coded element definitions: ' + Object.keys(all).length);
 
 for (const [f, marker, code] of NEAR) {
   const lines = src[f].split('\n'), at = lines.findIndex((l) => l.indexOf('data-cbsid="' + code + '"') >= 0);

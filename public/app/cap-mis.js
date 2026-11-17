@@ -119,6 +119,7 @@ var FM_ROWS = [
 var FM_COLS = ['all', 'received', 'sent'];
 
 async function fmLoad(quiet) {
+  if (pcOn()) return pcLoad(); /* MISCH: #/reports/pictures (app/cap-mis-pictures.js) */
   if (trOn()) return trLoad(quiet); /* RPT2: #/reports/trend is the Trend view (app/cap-mis-trend.js) */
   var g = ++FM.gen;
   if (!quiet) {
@@ -318,6 +319,7 @@ function fmViews(current) {
     '" data-testid="fm-views" style="margin:10px 20px 0">' +
     link('measures', '#/reports', 'Measures') +
     link('trend', '#/reports/trend', 'Trend') +
+    link('pictures', '#/reports/pictures', 'Pictures') +
     '</nav>'
   );
 }
@@ -327,6 +329,7 @@ function fmDeniedWords() {
     : { title: tx('Could not read the reports.'), sub: tx('Nothing was lost. Try again.') };
 }
 function fmMount(frame) {
+  if (pcOn()) return pcMount(); /* MISCH: the Pictures view (app/cap-mis-pictures.js) */
   if (trOn()) return trMount(frame); /* RPT2: the Trend view (app/cap-mis-trend.js) */
   var node = document.getElementById('screen');
   if (!node) return;

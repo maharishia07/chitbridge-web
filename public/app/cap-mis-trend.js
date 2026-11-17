@@ -10,7 +10,7 @@
  * ⭐ NEVER COLOUR ALONE: bars solid, last year a dashed line with hollow dots, part of a period hatched, missing an empty tick — the legend names each.
  * Better than the usual "sales vs last year" report because a part period is never compared as if whole: the engine refuses the change, and the
  *   bar says why in its own note, instead of printing "↓ 60%" for a shop's first, short year.
- * Host globals (finance.html): api · EP (CB_MIS_EP tillTrend) · esc · tx · txn · bkMoney · CBList · CBLocale · CBDraw · ftNav · fmViews.
+ * Host globals (finance.html): MC (app/mis-charts.js) · api · EP (CB_MIS_EP tillTrend) · esc · tx · txn · bkMoney · CBList · CBLocale · CBDraw · ftNav · fmViews.
  * OWNS      TR (this view's state) and the Trend view of CB Finance › Reports (trMount · trLoad · trPaint · trPaintChart)
  * CALLED BY public/finance.html (script tag) · public/app/cap-mis.js (trOn · trLoad · trMount: fmMount and fmLoad hand #/reports/trend here)
  * FLOW  #/reports/trend[/week|month|quarter|year] → trMount() → trLoad() → GET /api/till/summary?compare=1&period= → trPaintTop() + trPaintChart() + CBList rows
@@ -80,28 +80,12 @@ function trSlots() {
   return (TR.answer && TR.answer.slots) || [];
 }
 
-/* ── words for a period key (the key is the engine's; the words are the reader's locale) ── */
-function trMonthWords(key, form) {
-  var parts = /^(\d{4})-(\d{2})$/.exec(key);
-  return parts ? CBLocale.date(Date.UTC(+parts[1], +parts[2] - 1, 15), { month: form, year: form === 'long' ? 'numeric' : '2-digit' }) : key;
+/* ── words for a period key (the key is the engine's; the words are the reader's locale) — app/mis-charts.js MC.keyWords, the one place ── */
+function trDeps() {
+  return { tx: tx, money: bkMoney, date: CBLocale.date, cur: TR.answer && TR.answer.currency };
 }
-function trFiscalWords(year) {
-  return /^\d{4}-\d{2}$/.test(year) ? tx('FY') + ' ' + year : year;
-}
-/** a fiscal year written short for a bar's label: 'FY 2026-27' → 'FY 26-27', '2026' stays */
-function trShortYear(words) {
-  return words.replace(/\d{2}(\d{2})-(\d{2})$/, '$1-$2');
-}
-/** { label (under a bar), title (a sentence's name for it) } of one slot key */
 function trKeyWords(key, period) {
-  var text = String(key),
-    parts;
-  if (period === 'week' && (parts = /^(\d{4})-W(\d{2})$/.exec(text)))
-    return { label: 'W' + parts[2], title: tx('Week') + ' ' + Number(parts[2]) + ', ' + parts[1] };
-  if (period === 'month') return { label: trMonthWords(text, 'short'), title: trMonthWords(text, 'long') };
-  if (period === 'quarter' && (parts = /^(.+)-Q([1-4])$/.exec(text)))
-    return { label: 'Q' + parts[2] + ' ' + trShortYear(parts[1]), title: 'Q' + parts[2] + ' · ' + trFiscalWords(parts[1]) };
-  return { label: trShortYear(trFiscalWords(text)), title: trFiscalWords(text) };
+  return MC.keyWords(key, period, trDeps());
 }
 
 /* ── one slot, in words (every figure the server's) ── */
@@ -197,19 +181,7 @@ function trPaintTop() {
 
 /* ── the chart: sales bars, last year's line, hatched = part of a period; the legend names each shape ── */
 function trPoints() {
-  return trSlots().map(function (slot) {
-    var words = trKeyWords(slot.key, TR.period),
-      lastYear = slot.last_year || {};
-    return {
-      key: slot.key,
-      label: words.label,
-      value: slot.gross_minor,
-      line: lastYear.gross_minor,
-      hatch: !!(slot.coverage.partial || slot.coverage.short),
-      title: words.title + ' · ' + (slot.gross_minor === null ? tx('missing') : trMoney(slot.gross_minor)),
-      lineTitle: tx('Last year') + ' · ' + trMoney(lastYear.gross_minor)
-    };
-  });
+  return MC.salesPoints(trSlots(), TR.period, trDeps());
 }
 /** one legend entry: a small drawing of the shape, then its words */
 function trLegendKey(drawing, words) {
