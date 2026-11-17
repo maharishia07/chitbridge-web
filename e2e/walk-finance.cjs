@@ -65,6 +65,7 @@ W.run('finance', async (w) => {
   const open = async (until) => { await page.goto(base + '/finance.html'); await page.waitForSelector(until || '[data-testid^="fin-row-"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400); };
   const rows = () => page.locator('[data-testid^="fin-row-"]').count();
 
+  await page.setViewportSize({ width: 1366, height: 768 });   /* the house desktop standard (Athi, 17 Nov); the walk had inherited the helper's 1280 */
   await open();
 
   await w.step('F1', 'Collections -> only the three customers who owe us are listed (no supplier, no settled customer), each named with its number', async () => {
@@ -178,7 +179,7 @@ W.run('finance', async (w) => {
       });
     }
   }
-  await page.setViewportSize({ width: 1280, height: 860 });
+  await page.setViewportSize({ width: 1366, height: 768 });
   await w.step('M43', 'the stand-in answered every /api/books call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   w.note('F12', 'Batch Remind (select parties -> Remind -> the queue sheet, one Remind after another) and a Remind that reaches the message composer', 'needs the chit + rail-thread stand-in (walk-rail-two-sided); not asserted here');
 });

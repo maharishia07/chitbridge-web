@@ -104,7 +104,7 @@ W.run('books-adviser', async (w) => {
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: S1, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: S2, name: 'Store Two', city: 'Sydney', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') {
       const adviser = u.searchParams.get('preset') === 'adviser', costs = u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.';
-      return J(r, 200, adviser ? { headline: 'Let your adviser firm act in your books', can_read: ['everything you can see in your books'], can_do: ['post and reverse entries', 'lock and unlock a month, and close the year'], cannot: ['act outside your books', 'hide what it did'], costs, rights: 'You can end this at any time.' }
+      return J(r, 200, adviser ? { headline: 'Let your adviser firm act in your books', can_read: ['everything you can see in your books'], can_do: ['post and reverse entries', 'lock and unlock a month, and close the year'], cannot: ['act outside your books', 'hide what it did'], costs, rights: 'You can end this at any time.', posting_choices: [{ value: 'adviser_posts', words: 'Your accountant posts for you' }, { value: 'owner_approves', words: 'You approve each post' }] /* the api names who-posts for an adviser role; the form is held until one is picked (paintPosting) */ }
         : { headline: 'Let your network parent read your books', can_read: ['your trial balance'], cannot: ['change or add anything'], costs, rights: 'You can end this at any time.' });
     }
     if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: S.given, received: [{ grant_id: G1, grantor_entity: S1, grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }, { grant_id: G2, grantor_entity: S2, grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }] });
@@ -184,7 +184,8 @@ W.run('books-adviser', async (w) => {
     return { ok: /Priya Nair/.test(d) && /REF-11|Journal/.test(await txt(T('ba-list'))) && /lines/.test(d), saw: d.slice(0, 100) };
   });
   await w.step('F8', 'the firm · a stale tab: the server says STORE_MISMATCH and the page says it in a plain sentence, nothing saved', async () => {
-    await queue('review'); S.by[S1].push(make(S1, 3)); await page.reload(); await openStore(S1); await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-review'), { timeout: 10000 }); await page.waitForTimeout(400);
+    await queue('review'); S.by[S1].push(make(S1, 3)); await page.reload(); await page.waitForTimeout(1200); if (await has(T('nw-books-' + S1))) await openStore(S1); else await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 });   /* a reload keeps the acting store (the address carries it): the books view is already there, no Open books to press */
+    await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-review'), { timeout: 10000 }); await page.waitForTimeout(400);
     S.fail.mismatch = true; await pickRow(idOf(S1, 3)); await page.click(T('ba-review')); await confirmYes();
     const out = await txt(T('ba-out'));
     return { ok: out === 'This page is open on another store than the one you are working in. Nothing was saved. Open the store again.', saw: out };
@@ -248,13 +249,14 @@ W.run('books-adviser', async (w) => {
   await w.step('G1', 'the owner · Give access: choose Adviser → the consent says what the firm can do; the warning the server answers is shown; the confirm names the role', async () => {
     await page.click(T('bg-seg-given')); await page.waitForSelector(T('bg-give'), { timeout: 10000 }); await page.click(T('bg-give')); await page.waitForSelector(T('bg-consent') + ' b', { timeout: 10000 });
     await page.selectOption(T('bg-preset'), 'adviser'); await page.waitForTimeout(500); const consent = await txt(T('bg-consent'));
-    if (await has(T('bg-post-owner_approves'))) await page.check(T('bg-post-owner_approves')); /* Give waits for the owner's choice of who posts: nothing is pre-selected */
+    await page.waitForSelector(T('bg-post-owner_approves'), { timeout: 8000 }).catch(() => {}); if (await has(T('bg-post-owner_approves'))) await page.check(T('bg-post-owner_approves')); /* Give waits for the owner's choice of who posts: nothing is pre-selected */
     await page.check(T('bg-yes')); await page.click(T('bg-go')); await page.waitForSelector(T('confirm'), { timeout: 5000 }); const ask = await txt(T('confirm')); await page.click(T('confirm-ok')); await page.waitForTimeout(900);
     const notice = await txt(T('bg-notice')), g = S.gives[0] || {};
     return { ok: /act in your books/.test(consent) && /They can do: post and reverse entries/.test(consent) && /prepare entries/.test(ask) && g.preset === 'adviser' && g.consent === true && /already holds the auditor role/.test(notice), saw: consent.slice(0, 120) + ' · ' + notice };
   });
   await w.step('G2', 'the owner · End access says how many waiting actions it withdrew', async () => {
-    await page.click(T('bg-grant-' + G1)); await page.waitForSelector(T('bg-end'), { timeout: 5000 }); await page.click(T('bg-end')); await confirmYes();
+    const seen = await page.$$eval('[data-testid^="bg-"]', (x) => x.map((e) => e.getAttribute('data-testid')).join(' ')); if (!(await has('[data-testid^="bg-grant-"]'))) return { ok: false, saw: 'no row for the grant; the page shows: ' + seen.slice(0, 600) };
+    await page.click('[data-testid^="bg-grant-"]')   /* ACC-176b round 3: ONE row per firm (id firm-<grantee>), not per grant */; await page.waitForSelector(T('bg-end'), { timeout: 5000 }); await page.click(T('bg-end')); await confirmYes();
     const notice = await txt(T('bg-notice'));
     return { ok: /2 waiting actions were withdrawn\. Nothing was posted\./.test(notice), saw: notice };
   });

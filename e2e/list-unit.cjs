@@ -240,7 +240,8 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
   const wmin = await hdrWidth(p, 'date');
   ok(wmin >= 64 && wmin < w0, 'it never goes narrower than the label (' + wmin + ' px)');
   await p.dblclick('.cbl-rz[data-rz="date"]');
-  ok(Math.abs(await hdrWidth(p, 'date') - 110) < 1.5, 'double-click resets to the declared width');
+  const wReset = await hdrWidth(p, 'date');
+  ok(Math.abs(wReset - w0) < 1.5, 'double-click resets to its own fitted width, the one before any drag (R47: columns are fitted to their ink, no longer the declared px) (' + w0 + ' -> ' + wReset + ')');
 
   /* ─────────────────────────── 5 · DRAG, RELOAD ─────────────────────────── */
   console.log('\n== list-unit: adjustable columns ==');

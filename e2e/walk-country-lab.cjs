@@ -81,15 +81,15 @@ const walk = async (w) => {
     return { ok, saw: r.chip + ' · pack-less: ' + without.join(' ') };
   });
 
-  await w.step('L2', 'IN -> AU: every row read from the packs and marked - INR -> AUD, April -> July, state-split GST -> one head, BAS with its boxes', async () => {
+  await w.step('L2', 'IN -> AU: every row read from the packs and marked - INR -> AUD, April -> July, state-split GST -> one head, BAS with its nine boxes', async () => {
     await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
     const v = await verdicts(page);
     const cur = await full(page, 'currency'), fy = await full(page, 'fy'), sch = await full(page, 'scheme');
     const ret = await full(page, 'returns'), led = await full(page, 'ledgers');
     const ok = Object.keys(v).length === 16 && Object.entries(v).every(([k, x]) => x === (k === 'voucher' ? 'Same' : 'Changes'))   /* CTRY-39: six more rows; IN and AU share one voucher shape */
       && /INR/.test(cur) && /AUD/.test(cur) && /April/.test(fy) && /July/.test(fy) && /split by state/.test(sch) && /border/.test(sch) && /heads gst/.test(sch)
-      && /none in the pack/.test(ret) && /no returns member/.test(ret) && /BAS/.test(ret) && /8 boxes/.test(ret) && /added/.test(led) && /renamed/.test(led);
-    return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'Changes').length + ' different (voucher numbers the same) · ' + ret.slice(0, 70) };
+      && /none in the pack/.test(ret) && /no returns member/.test(ret) && /BAS/.test(ret) && /9 boxes/.test(ret)   /* reg-au adopted in v1.97.0 (4f0bda0a) carries nine BAS boxes, not eight */ && /added/.test(led) && /renamed/.test(led);
+    return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'Changes').length + ' different (voucher numbers the same) · ' + ret.slice(0, 400) + ' · ledgers ' + led.slice(0, 200) + ' · scheme ' + sch.slice(0, 200) };
   });
 
   await w.step('L3', 'IN -> AU: the ABN box answers from the pack (a wrong digit is said); the GSTIN box from the profile-map engine', async () => {

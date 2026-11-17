@@ -166,7 +166,9 @@ async function route(S, r) {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch(), threw = [], offHost = [];
+  let CUR = null, OPENED = null;   /* the stand-in of the popup now open: type() waits on ITS preview */
   async function open(url, S) {
+    CUR = S;   /* type() waits on the stand-in of the page now open */
     const ctx = await b.newContext({ viewport: { width: 1366, height: 800 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => { offHost.push(r.request().url()); return r.abort(); });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -219,8 +221,7 @@ async function route(S, r) {
   /* ── the one Pay popup, opened from the CRM record of Agro Mills (P-0001) — the third door ── */
   const text = (p, id) => p.evaluate((i) => { const e = document.querySelector('[data-testid="' + i + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, id);
   const posts = (S) => S.pay.posts.length;
-  let CUR = null, OPENED = null;   /* the stand-in of the popup now open: type() waits on ITS preview */
-async function openPay(url, S, o) {
+  async function openPay(url, S, o) {
     CUR = S;
     const { ctx, p } = await open(url || '/crm.html', S);
     await p.waitForSelector('[data-testid="crm-row-P-0001"]', { timeout: 15000 });
@@ -391,7 +392,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     const sum = (side) => DUES.filter((d) => (side === 'rcv' ? d.balance_minor > 0 : d.balance_minor < 0)).reduce((t, d) => t + d.balance_minor, 0);
     ok(/they owe you ₹3,000\.00/.test(hr) && /you owe ₹2,500\.00/.test(hp) && sum('rcv') === 300000 && sum('pay') === -250000, 'E10 each heading carries its total in words, equal to the /dues balances (' + hr + ' | ' + hp + ')');
     ok(await p.locator('[data-testid="dues-pay-c1"]').innerText() === 'Receive' && await p.locator('[data-testid="dues-pay-s1"]').innerText() === 'Pay' && await p.locator('[data-testid="dues-remind-c1"]').count() === 1 && await p.locator('[data-testid="dues-remind-s1"]').count() === 0, 'E10 To collect rows say Receive and Remind; To pay rows say Pay and have no Remind');
-    ok((await text(p, 'dues-c1')).indexOf('61–90 days') >= 0 && /01 Aug 2026/.test(await text(p, 'dues-c1')), 'E10 a row shows its age bucket and its due date (' + (await text(p, 'dues-c1')) + ')');
+    ok(/Ravi Stores/.test(await text(p, 'dues-c1')) && /₹3,000.00/.test(await text(p, 'dues-c1')), 'E10 a row names the party and what is owed; the ageing is said once, in the ageing chips and the bill lines, no longer on the row (l16 one ageing, 7da93b84) (' + (await text(p, 'dues-c1')) + ')');
     const url0 = p.url();
     await p.click('[data-testid="dues-pay-s1"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 });
     ok(p.url() === url0 && /^Pay ·/.test(await text(p, 'pay_title')) && await p.locator('[data-testid="pay_remind"]').count() === 0, 'E10 a Dues row\'s Pay opens the same pay_amt popup without leaving the page (no "remind me" on what you owe)');
@@ -434,7 +435,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     ok(prev.party_id === 's1' && prev.direction === 'out' && prev.amount_minor === 500000, 'the ₹5,000 ledger test: the preview is for Agro Mills (s1), to pay, 5,000 (' + JSON.stringify(prev) + ')');
     ok(/₹1,279\.88 stays with .* as an advance/.test(await text(p, 'pay_left')), 'the ₹5,000 ledger test: ₹1,279.88 stays as an advance (' + (await text(p, 'pay_left')) + ')');
     await p.waitForSelector('[data-testid="pay_band"]:not([hidden])', { timeout: 8000 }); await p.click('[data-testid="pay_ack"]'); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
-    ok(S.pay.posts.length === 1 && S.pay.posts[0].party_id === 's1' && /^Paid ₹5,000 cash to Agro Mills\. /.test(await text(p, 'pay_outcome')), 'the ₹5,000 ledger test: ONE payment is recorded for s1 and the outcome names it (' + (await text(p, 'pay_outcome')) + ')');
+    ok(S.pay.posts.length === 1 && S.pay.posts[0].party_id === 's1' && /^Paid ₹5,000 by bank to Agro Mills\. /.test(await text(p, 'pay_outcome')), 'the ₹5,000 ledger test: ONE payment is recorded for s1 and the outcome names it - by bank, the opened-filled default (2664a890) (' + (await text(p, 'pay_outcome')) + ')');
     await ctx.close();
   }
   /* ── E4 · M29 reverse from the row: the statement's payment row → Reverse → reason → ONE POST /entries/:id/reverse; the row repaints "reversed by"; the Day book was never read ── */

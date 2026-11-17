@@ -48,7 +48,7 @@ W.run('marks', async (w) => {
     if (p === '/api/marks' && m === 'GET' && u.searchParams.get('open')) {
       const open = Object.keys(S.marks).map((id) => mark(id, h)).filter((x) => x.open).map((x) => Object.assign(x, { subject_label: 'JV-000' + (E.indexOf(x.subject_id) + 1), posting_date: '2026-11-04' }));
       const checked = Object.keys(S.marks).filter((id) => S.marks[id].class === 'clear' && !S.marks[id].altered).length;
-      return J(r, 200, { adopter: 'acc.audit', from: '2026-11-01', to: '2026-11-15', open, total_open: open.length, checked, of: u.searchParams.get('from') === '2026-11-01' && u.searchParams.get('to') === '2026-11-30' ? 3 : 0, /* the server counts the period it is asked about; with none it is the current month (empty here) */ oldest_age_days: open.length ? 3 : null, vocabulary: VOC, actions: acts(h) });
+      return J(r, 200, { adopter: 'acc.audit', from: '2026-11-01', to: '2026-11-15', open, total_open: open.length, checked, of: u.searchParams.get('from') && u.searchParams.get('to') && u.searchParams.get('from') <= '2026-11-01' && u.searchParams.get('to') >= '2026-11-30' ? 3 : 0, /* the server counts the period asked: the Day book now opens on the whole year (a9483f9b), which holds the three November entries */ /* the server counts the period it is asked about; with none it is the current month (empty here) */ oldest_age_days: open.length ? 3 : null, vocabulary: VOC, actions: acts(h) });
     }
     if (p === '/api/marks' && m === 'GET' && u.searchParams.get('ids')) return J(r, 200, { adopter: 'acc.audit', marks: u.searchParams.get('ids').split(',').map((id) => mark(id, h)).filter(Boolean), actions: acts(h) }); /* the list of marks for ids (the bell opens one record without the Day book) */
     if (p === '/api/marks' && m === 'POST') {
@@ -116,10 +116,10 @@ W.run('marks', async (w) => {
     const a = await noScroll(); await shot('00b-phone-labels'); await page.setViewportSize(WIDE); await page.waitForTimeout(300);
     return { ok: words.length === 3 && words.every((x) => /Not checked/.test(x) && /Query/.test(x)) && a.y && a.x, saw: words.join(' // ') + ' · scroll ' + a.y + '/' + a.x };
   });
-  await w.step('A0', 'the auditor · the Day book opens non-empty on its own: no day typed, the period shown, the date in words, the kind in words', async () => {
-    const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await txt(T('bv-period')), row = await txt(T('bv-row-0'));
+  await w.step('A0', 'the auditor · the Day book opens non-empty on its own, on the whole financial year (a9483f9b): no day typed, the period shown, the date in words, the kind in words', async () => {
+    const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await page.locator('body').innerText(), row = await txt(T('bv-row-0'));
     await shot('00-auditor-daybook-opens-on-its-own');
-    return { ok: first.includes('from=2026-11-01') && first.includes('to=2026-11-30') && day === '' && period.includes('1 Nov 2026 – 30 Nov 2026') && row.includes('Sales') && row.includes('3 Nov 2026') && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
+    return { ok: first.includes('from=2026-04-01') && first.includes('to=2027-03-31') && day === '' && period.includes('1 Apr 2026 – 31 Mar 2027') && row.includes('Sales') && row.includes('3 Nov 2026') && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
   });
   await w.step('A2', 'the auditor · ONE press on a row\'s Check: one write (checked), the chip says Checked, the bar says 1 of 3', async () => {
     await page.click(chip(0) + ' button[data-mk="check"]'); await page.waitForSelector(chip(0) + ' [data-class="clear"]', { timeout: 8000 });
@@ -285,6 +285,7 @@ W.run('marks', async (w) => {
   });
   await w.step('S1', 'two grants on one client: the firm is asked which seat, nothing is picked silently; "Open as auditor" opens read only with no Prepare a journal', async () => {
     S.both = true; await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
+    await page.evaluate(() => Object.keys(localStorage).filter((k) => k.indexOf('cb_seat:') === 0).forEach((k) => localStorage.removeItem(k)));   /* the earlier steps opened this client with its one seat, which the page remembers (29714ef3); S1 is the FIRST time two seats exist */
     await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('nw-seat-title'), { timeout: 8000 });
     const asked = await page.locator(T('bv-band')).count(); await shot('14-seat-choice');
     await page.click(T('nw-seat-auditor')); await page.waitForSelector(T('bv-band'), { timeout: 8000 });

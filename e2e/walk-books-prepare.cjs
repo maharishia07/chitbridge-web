@@ -60,7 +60,7 @@ W.run('books-prepare', async (w) => {
     S.calls.push({ m, p, h, body: m === 'POST' ? body(q) : null });
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Kumar and Co', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: S1, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: S2, name: 'Store Two', city: 'Sydney', km: 9, purpose: 'Snacks' }] });
-    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], received: [{ grant_id: G1, grantor_entity: S1, grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }] });
+    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], received: [{ grant_id: G1, grantor_entity: S1, grantor_name: 'Store One', grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }] });
     if (p.indexOf('/api/books') === 0) {
       if (h['x-books-for'] !== S1 || h['x-books-role'] !== 'adviser') return refuse(r, 403, 'BOOKS_GRANT_NONE', 'No access has been given for these books.');
       if (p === '/api/books-actions' && m === 'POST') {
@@ -109,10 +109,11 @@ W.run('books-prepare', async (w) => {
   await w.step('P4', 'the sheet · Save PREPARES: one POST /api/books-actions with store_id, kind journal, the body with its date, client_ref and working_month; nothing is posted; it says "Prepared, waiting for review"', async () => {
     await page.click(T('en-save')); await page.waitForSelector(T('en-prepared'), { timeout: 10000 });
     const said = await txt(T('en-prepared')), why = await txt('#en_body'), sent = S.prepared[0] || {};
-    return { ok: S.prepared.length === 1 && S.posted.length === 0 && sent.store_id === S1 && sent.kind === 'journal' && sent.body && String(sent.body.date || '').length === 10 && sent.body.lines.length === 2 && !!sent.client_ref && /^\d{4}-\d{2}$/.test(sent.working_month || '') && /Prepared, waiting for review/.test(said) && /Nothing is posted yet/.test(why), saw: said + ' · prepared ' + S.prepared.length + ' posted ' + S.posted.length + ' lines ' + (sent.body && sent.body.lines && sent.body.lines.length) + ' · why: ' + why.slice(0, 80) + ' · ' + JSON.stringify({ kind: sent.kind, date: sent.body && sent.body.date, ref: sent.client_ref, month: sent.working_month }) };
+    return { ok: S.prepared.length === 1 && S.posted.length === 0 && sent.store_id === S1 && sent.kind === 'journal' && sent.body && String(sent.body.date || '').length === 10 && sent.body.lines.length === 2 && !!sent.client_ref && /^\d{4}-\d{2}$/.test(sent.working_month || '') && /Prepared, waiting for review/.test(said) && /not posted until then/.test(why), saw: said + ' · prepared ' + S.prepared.length + ' posted ' + S.posted.length + ' lines ' + (sent.body && sent.body.lines && sent.body.lines.length) + ' · why: ' + why.slice(0, 80) + ' · ' + JSON.stringify({ kind: sent.kind, date: sent.body && sent.body.date, ref: sent.client_ref, month: sent.working_month }) };
   });
   await w.step('P5', 'the firm · back in the workspace, "Prepared by my team" lists the journal, waiting for review', async () => {
-    await page.click(T('en-done')); await page.click(T('ba-back')); await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
+    await page.click(T('en-done')); await page.click(T('ba-back')); await page.waitForTimeout(800); if (!(await page.locator(T('nw-books-' + S1)).count())) await page.goto(base + '/network.html');   /* Back goes to the firm's Clients, which a firm login now lands on as its practice (W4): the workspace list is network.html */
+    await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
     await page.click(T('nw-books-' + S1)); await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 }); await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-team'), { timeout: 10000 });
     await page.click(T('ba-q-team')); await page.waitForTimeout(600);
     const list = await txt(T('ba-list'));

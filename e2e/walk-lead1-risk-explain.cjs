@@ -40,7 +40,7 @@ const run = async (w) => {
     if (p === '/api/flags/query') { const b = JSON.parse(q.postData() || '{}'), flags = {}; S.flags.filter((f) => f.subject_kind === b.subject_kind && (b.ids || []).indexOf(f.subject_id) >= 0).forEach((f) => { (flags[f.subject_id] = flags[f.subject_id] || []).push(f); }); return J(r, 200, { subject_kind: b.subject_kind, subject_entity: b.subject_entity, flags }); }
     if (p === '/api/flags' && m === 'POST') { const b = JSON.parse(q.postData() || '{}'); S.posts.push(b); const made = (b.items || []).map((item, n) => flagOf(b, item, S.flags.length + n)); S.flags = S.flags.concat(made); return J(r, 200, { created: made.length, already: 0, flags: made }); }
     if (p.indexOf('/api/flags') === 0) return J(r, 404, { error: 'We could not find that.' });
-    if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); BASE = ex.entries[0] || {}; return J(r, 200, Object.assign(ex, { currency: 'INR', entries: S.set.map(entryOf), count: S.set.length })); }
+    if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); BASE = ex.entries[0] || {}; return J(r, 200, Object.assign(ex, { currency: 'INR', country: S.set === FRI ? 'SA' : 'AU' /* 75b665c3: the weekend is the AUDITED shop's calendar - the api's daybook answer names its country */, entries: S.set.map(entryOf), count: S.set.length })); }
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
@@ -99,11 +99,12 @@ const run = async (w) => {
     const names = await entryCol(page);
     return { ok: names.join(',') === 'JV-E01,JV-E02,JV-E03,JV-E04,JV-E05,JV-E06,JV-E07', saw: names.join(',') };
   });
-  await w.step('R4', 'Risk sorts: a press, then a second press = most risks first (3,3,3,3,2,1,1)', async () => {
+  await w.step('R4', 'Risk sorts: the first press = most risks first (75b665c3: 3,3,3,3,2,1,1), a second press reverses it', async () => {
     const head = page.locator('.cbl-hc .sort', { hasText: 'Risk' }).first();
+    const opened = await riskCol(page);
     await head.click(); await page.waitForTimeout(300); const first = await riskCol(page);
     await head.click(); await page.waitForTimeout(300); const second = await riskCol(page);
-    return { ok: first.join(',') === '1,1,2,3,3,3,3' && second.join(',') === '3,3,3,3,2,1,1', saw: 'press 1: ' + first.join(',') + ' - press 2: ' + second.join(',') };
+    return { ok: first.join(',') === '3,3,3,3,2,1,1' && second.join(',') === '1,1,2,3,3,3,3', saw: 'opened: ' + opened.join(',') + ' - press 1: ' + first.join(',') + ' - press 2: ' + second.join(',') };
   });
   await w.step('R5', 'Risk fits 390x844 with no sideways page scroll', async () => {
     await page.setViewportSize(NARROW); await page.waitForTimeout(400); const s = await noScroll(); await page.setViewportSize(WIDE);
