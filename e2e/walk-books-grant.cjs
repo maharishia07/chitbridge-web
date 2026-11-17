@@ -87,7 +87,7 @@ W.run('books-grant', async (w) => {
     await page.focus(T('nw-books-' + MEMBER)); await page.keyboard.press('Enter');
     await page.waitForSelector(T('bv-band'), { timeout: 10000 });
     await page.click(T('bv-tab-tb')); /* acc17 (walk A2 was a test bug): the books open on the Day book of the year under review since the period merge, so the trial balance is the tab pressed, not the first screen */
-    await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    await page.waitForSelector(T('bv-tb-bank'), { timeout: 10000 }); /* listreg 17 Nov: wait on a trial-balance-only element; bv-row-0 is also drawn by the Day book, so the read raced the tab switch */
     const band = await txt(T('bv-band')), rows = await txt(T('bv-list'));
     const asked = S.calls.filter((c) => c.p === '/api/books/trial-balance');
     const bankLine = await txt(T('bv-tb-bank')).catch(() => ''); /* RANK 9: the bank agreement of the day, under the trial balance, with its Open Bank button */
