@@ -299,11 +299,14 @@ ctx.k = event.key;
     saveChoices(I);
   }
   /* "/" opens Search: the GitHub / Gmail / Slack convention (a bare "/" moves focus to the page's search box and types nothing). It never fires while typing in a field, with a modifier, or under an open dialog. */
+  function slashIsTyping(target) {
+    if (!target) return false;
+    if (target.tagName && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return true;
+    return !!(target.isContentEditable || (target.closest && target.closest('dialog[open],[role=dialog],[aria-modal=true]')));
+  }
   function onSlash(keyEvent) {
     if (keyEvent.key !== '/' || keyEvent.ctrlKey || keyEvent.metaKey || keyEvent.altKey || keyEvent.defaultPrevented) return;
-    var target = keyEvent.target;
-    if (target && target.tagName && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
-    if (target && (target.isContentEditable || (target.closest && target.closest('dialog[open],[role=dialog],[aria-modal=true]')))) return;
+    if (slashIsTyping(keyEvent.target)) return;
     var searchBoxes = [].slice.call(root.document.querySelectorAll('[data-cbl-q]')).filter(function (searchBox) {
       return searchBox.getClientRects().length && !searchBox.disabled;
     });
