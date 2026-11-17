@@ -80,15 +80,17 @@
   }
   /** the three reads of load() into the page state: the store, the stores it can see, the grants it holds */
   function noteLoad(reply) {
-    N.held = (reply[2] || {}).live || {};
-    N.ended = (reply[2] || {}).ended || {};
-    N.seats = (reply[2] || {}).seats || {};
-    N.mine = (reply[2] || {}).mine || null;
-    N.unread = !!(reply[2] || {}).unread; /* the grant list could not be read: said as that, never as "Not in a network yet" */
-    var storeBlock = (reply[0] && reply[0].store) || {};
+    var grants = reply[2] || {},
+      answer = reply[0] || {};
+    N.held = grants.live || {};
+    N.ended = grants.ended || {};
+    N.seats = grants.seats || {};
+    N.mine = grants.mine || null;
+    N.unread = !!grants.unread; /* the grant list could not be read: said as that, never as "Not in a network yet" */
+    var storeBlock = answer.store || {};
     N.networks = storeBlock.networks || [];
     N.notices = storeBlock.price_notices || [];
-    N.may = reply[0].may_design || N.may;
+    N.may = answer.may_design || N.may;
     N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], Object.assign({}, N.ended, N.held), T);
   }
   function offers() {

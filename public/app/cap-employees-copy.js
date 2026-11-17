@@ -8,9 +8,10 @@
  */
 (function (root) {
   'use strict';
-  function T(s) {
-    return typeof root.tx === 'function' ? root.tx(s) : s;
+  function words(text) {
+    return typeof root.tx === 'function' ? root.tx(text) : text;
   }
+  /** one element by id */
   function $(id) {
     return root.document.getElementById(id);
   }
@@ -23,7 +24,7 @@
     var name = signInName(u);
     return (
       '<span class="' + cls + '" data-testid="' + idTid + '">' + esc(name) + '</span> ' +
-      (name ? '<button data-cbsid="EMP001-B14" type="button" class="act emp-copy" id="emp_copy" data-testid="emp-copy" data-copy="' + esc(name) + '">' + esc(T('Copy')) + '</button>' : '')
+      (name ? '<button data-cbsid="EMP001-B14" type="button" class="act emp-copy" id="emp_copy" data-testid="emp-copy" data-copy="' + esc(name) + '">' + esc(words('Copy')) + '</button>' : '')
     );
   }
   /** Copy: the whole sign-in name to the clipboard, said on the button itself (no toast to miss) */
@@ -33,7 +34,7 @@
     copyButton.onclick = function () {
       var text = copyButton.getAttribute('data-copy') || '',
         showResult = function (ok) {
-          copyButton.textContent = T(ok ? 'Copied' : 'Select the name and copy it');
+          copyButton.textContent = words(ok ? 'Copied' : 'Select the name and copy it');
         };
       try {
         root.navigator.clipboard.writeText(text).then(

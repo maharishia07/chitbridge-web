@@ -6,7 +6,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shell.js'), 'utf8');
-const from = src.indexOf('  function readFailed(host, o) {'), to = src.indexOf('  root.CBShell = {');
+const from = src.indexOf('  /** the sentence a failed read says'), to = src.indexOf('  root.CBShell = {');
 assert(from > 0 && to > from, 'readFailed is in shell.js');
 const T = (s) => s;
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -403,10 +403,10 @@
   var FONTS_HREF = '/fonts/cb-fonts.css';
   function addFonts(options) {
     if (!doc || !doc.head || (options && options.fonts === false)) return;
-    var has = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
+    var hasFontLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
       return /[/]fonts[/]cb-fonts[.]css/.test(nestedLink.getAttribute('href') || '');
     });
-    if (has) return;
+    if (hasFontLink) return;
     var link = doc.createElement('link');
     link.id = 'cbsh-fonts';
     link.rel = 'stylesheet';
@@ -1360,9 +1360,9 @@
     }
     function factsNext() {
       while (factsRunning < FACTS_PARALLEL && factsQueue.length) {
-        var job = factsQueue.shift();
+        var queued = factsQueue.shift();
         factsRunning += 1;
-        factsGet(job.url, FACTS_RETRIES).then(job.ok, job.no).then(function () {
+        factsGet(queued.url, FACTS_RETRIES).then(queued.ok, queued.no).then(function () {
           factsRunning -= 1;
           factsNext();
           if (!factsRunning && !factsQueue.length) leadByData();
@@ -1395,15 +1395,15 @@
     }
     /* a firm's Home asks a card's facts when the card comes into view (the practice fills the first screen; the cards are below it, or on another phone tab): a card nobody has scrolled to is not asked for */
     function whenSeen(spot, fn) {
-      var io = new root.IntersectionObserver(
+      var observer = new root.IntersectionObserver(
         function (list) {
           if (!list.some(function (i) { return i.isIntersecting; })) return;
-          io.disconnect();
+          observer.disconnect();
           fn();
         },
         { rootMargin: '100px' }
       );
-      io.observe(spot);
+      observer.observe(spot);
     }
     function paintFacts(e, spot) {
       factsOnce(e.facts)
@@ -1826,21 +1826,28 @@
        detail  the server's sentence for a 403 (never invented here); anything else is not printed
        retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; back  { href, label }: the way out
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
-  function readFailed(host, o) {
+  /** the sentence a failed read says: a 403 uses the server's own words (detail), anything else says it could not be read and nothing was changed */
+  function readFailedSentence(options, refused) {
+    if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
+    return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
+  }
+  /** the way out of a failed read: a link, only when the page gave one */
+  function readFailedBack(options) {
+    return options.back && options.back.href ? '<a class="cbsh-rf-back" href="' + esc(options.back.href) + '" data-testid="read-failed-back" style="margin-inline-start:12px">' + esc(options.back.label || T('Back')) + '</a>' : '';
+  }
+  function readFailed(host, options) {
     if (!host) return null;
-    o = o || {};
-    var status = Number(o.status) || 0,
+    options = options || {};
+    var status = Number(options.status) || 0,
       refused = status === 403,
-      sentence = refused
-        ? String(o.detail || '').trim() || T('You do not have access to this. Nothing was opened.')
-        : T('{what} could not be read. Nothing was changed.').replace('{what}', o.what || T('This page')),
-      back = o.back && o.back.href ? '<a class="cbsh-rf-back" href="' + esc(o.back.href) + '" data-testid="read-failed-back" style="margin-inline-start:12px">' + esc(o.back.label || T('Back')) + '</a>' : '';
+      sentence = readFailedSentence(options, refused),
+      back = readFailedBack(options);
     host.innerHTML =
       '<div class="cbsh-readfail" data-testid="read-failed" data-status="' + (refused ? '403' : status >= 500 ? '5xx' : status === 429 ? '429' : 'none') + '" role="alert" style="padding:12px 0">' +
       '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' +
-      (typeof o.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
+      (typeof options.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
     var again = host.querySelector('[data-testid="read-failed-retry"]');
-    if (again) again.onclick = o.retry;
+    if (again) again.onclick = options.retry;
     return host.firstChild;
   }
   root.CBShell = {
