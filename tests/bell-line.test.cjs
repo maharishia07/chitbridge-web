@@ -1,5 +1,6 @@
 /**
  * tests/bell-line.test.cjs — O3: a NEW incoming order's bell row says "sent a new order", shows the amount and is in LOCAL time (never "delivered", never UTC text).
+ * CARD      22-channels-capture-and-messaging/notifications-and-the-bell
  * Run: node tests/bell-line.test.cjs
  */
 'use strict';

@@ -245,9 +245,9 @@
   function flagButtons(sheet, flag) {
     var shared = flag.visibility === 'org', mine = flag.mine === true, noteKind = flag.kind === 'note', done = flag.state === 'resolved';
     return (
-(noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(flag.flag_id) + '">' + esc(flagText(done ? FLAG_WORDS.reopen : FLAG_WORDS.resolve)) + '</button>' : '') +
-(!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(flag.flag_id) + '">' + esc(flagText(FLAG_WORDS.shareFirm)) + '</button>' : '') +
-'<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(flag.flag_id) + '">' + esc(flagText(sheet.armed === flag.flag_id ? FLAG_WORDS.sure : FLAG_WORDS.remove)) + '</button>'
+(noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(flag.flag_id) + '">' + esc((done ? flagText('Reopen') : flagText('Resolve'))) + '</button>' : '') +
+(!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(flag.flag_id) + '">' + esc(flagText('Share with my firm')) + '</button>' : '') +
+'<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(flag.flag_id) + '">' + esc((sheet.armed === flag.flag_id ? flagText('Remove? Press again') : flagText('Remove'))) + '</button>'
     );
   }
   function flagLine(sheet, flag) {
@@ -266,7 +266,7 @@
     }).join('');
     var may = (a.may && a.may.reply) || { ok: false, why: '' };
     return (msgs ? '<div class="fl-sub">' + esc(flagText(FLAG_WORDS.replies)) + '</div>' + msgs : '') +
-      (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(flagText(FLAG_WORDS.replyLabel)) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(flagText(FLAG_WORDS.reply)) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
+      (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(flagText('Your reply')) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(flagText('Reply')) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
   }
   function fillThread(sheet, flagId) {
     var node = sheet.dialog.querySelector('.fl-thread[data-thread="' + String(flagId).replace(/"/g, '') + '"]');
@@ -282,12 +282,12 @@
   /** the sheet's html: the title, who the item is for, the bookmark and note boxes, and the saved items */
   function sheetBody(sheet, flags, mineBookmark) {
     return (
-      '<div class="fl-in"><div class="fl-hd"><h2>' + esc(sheet.title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(flagText(FLAG_WORDS.close)) + '">✕</button></div>' +
+      '<div class="fl-in"><div class="fl-hd"><h2>' + esc(sheet.title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(flagText('Close')) + '">✕</button></div>' +
       '<div class="fl-sub">' + esc(flagText(sheet.kind === 'account' ? FLAG_WORDS.explainHelp : FLAG_WORDS.privateNote)) + '</div>' +
       '<fieldset class="fl-who"><legend class="fl-sub">' + esc(flagText(FLAG_WORDS.who)) + '</legend>' +
-      '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(flagText(FLAG_WORDS.firm)) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(flagText(FLAG_WORDS.me)) + '</label></fieldset>' +
-      (mineBookmark || sheet.kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(flagText(FLAG_WORDS.bookmark)) + '</button></div>') +
-      '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(flagText(FLAG_WORDS.noteLabel)) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(flagText(sheet.kind === 'account' ? FLAG_WORDS.saveExplain : FLAG_WORDS.addNote)) + '</button></div>' +
+      '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(flagText('My firm')) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(flagText('Only me')) + '</label></fieldset>' +
+      (mineBookmark || sheet.kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(flagText('Bookmark')) + '</button></div>') +
+      '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(flagText('Your note')) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc((sheet.kind === 'account' ? flagText('Save explanation') : flagText('Add note'))) + '</button></div>' +
       '<div class="fl-out" role="status" aria-live="polite"></div>' +
       flagListHTML(sheet, flags) +
       '</div>'
@@ -411,7 +411,7 @@
     dialog.setAttribute('data-cbsid', 'CMP067-D02');
     dialog.setAttribute('data-testid', 'fl-worklist');
     dialog.setAttribute('aria-label', flagText(FLAG_WORDS.workHead));
-    dialog.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(flagText(FLAG_WORDS.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(flagText(FLAG_WORDS.close)) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
+    dialog.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(flagText(FLAG_WORDS.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(flagText('Close')) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
     dialog.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-close]')) dialog.close(); });
     dialog.addEventListener('close', function () { if (dialog.parentNode) dialog.parentNode.removeChild(dialog); if (options.opener && options.opener.isConnected && options.opener.focus) options.opener.focus(); });
     doc.body.appendChild(dialog);

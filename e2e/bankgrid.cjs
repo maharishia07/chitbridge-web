@@ -7,7 +7,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
-const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer the stand-in serves for a route in the api contract is checked (e2e/contract.cjs holds this) */
+const json = (r, status, o) => C.json(r, status, o);
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const FIRM = { token: tok({ identity_id: 'ent-FIRM', identity_type: 'entity' }), role: 'entity', name: 'Pat Accountant', entity: 'Blue Gum Books', country: 'AU', currency: 'AUD' };
 const CLIENT = 'ent-CL';
@@ -41,8 +42,8 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
       if (p === '/api/books/attention') return role === 'adviser' ? json(r, 200, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), total: 0, no_tax_invoice: 0, no_file: 0, no_source: 0, open_queries: null, needs: 0 }) : refused(r, 'GRANT_ROUTE_NOT_LISTED', 'This part of the books is not open to an auditor.');
       if (p === '/api/books/fx-revalue') return refused(r, 'GRANT_ROUTE_NOT_LISTED', 'This part of the books is not open to a grant.');
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { currency: 'AUD', year: { fiscal_year: '2026-27', from: '2026-07-01', start_month: 7 }, country: books.csStatus('AU', 'Australia') }));
-      if (p === '/api/books/accounts') return json(r, 200, { accounts: [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }].map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: null }, a)) });
-      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, { periods: [1, 2, 3, 4].map((n) => Object.assign(books.periodRow('2026-27', n, 'open'), { start_date: '2026-' + String(n + 6).padStart(2, '0') + '-01', end_date: '2026-' + String(n + 6).padStart(2, '0') + '-28' })) });
+      if (p === '/api/books/accounts') return json(r, 200, { accounts: [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }].map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: null, nature: 'asset', active: true }, a)) });
+      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, { under_review: { fy: '2026-27', from: '2026-07-01', to: '2027-06-30' }, years: [{ fy: '2026-27', from: '2026-07-01', to: '2027-06-30', months: 12, locked: 0, entries: 0, checked: null, of: null }], periods: [1, 2, 3, 4].map((n) => Object.assign(books.periodRow('2026-27', n, 'open'), { start_date: '2026-' + String(n + 6).padStart(2, '0') + '-01', end_date: '2026-' + String(n + 6).padStart(2, '0') + '-28' })) });
       if (p === '/api/books/bank/log') return json(r, 200, { currency: 'AUD', account: { account_id: 'acc-1500', code: '1500', name: 'Bank' }, marks: [], marks_next: null, statements: (opt.wide ? [{ period_from: '2025-07-01', period_to: '2026-10-31', currency: 'AUD', difference_minor: 0, closing_bank_minor: 20286000, closing_books_minor: 20286000, opening_minor: 0, by_name: 'Pat', at: '2026-11-02T01:00:00Z' }] : []).concat([{ period_from: '2026-10-01', period_to: '2026-10-31', currency: 'AUD', difference_minor: 35432, closing_bank_minor: 99900, closing_books_minor: 64468, opening_minor: 0, by_name: 'Pat', at: '2026-11-02T01:00:00Z' }, { period_from: '2026-06-01', period_to: '2026-06-30', currency: 'AUD', difference_minor: 0, closing_bank_minor: 20336000, closing_books_minor: 20286000, opening_minor: 0, by_name: 'Pat', at: '2026-07-02T01:00:00Z' }]), posted: [], exceptions: [] });
       if (p === '/api/books/bank/statement-files') {
         const to = u.searchParams.get('to') || '2026-11', ty = Number(to.slice(0, 4)), tm = Number(to.slice(5, 7)), months = [5, 4, 3, 2, 1, 0].map((k) => { const t = ty * 12 + tm - 1 - k; return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0'); });
@@ -52,7 +53,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
         return json(r, 200, Object.assign({ currency: 'AUD', today: '2026-11-16', months, unexplained, accounts: [{ account_id: 'acc-1500', code: '1500', name: 'Bank', label: null }], cells: months.map((month) => ({ account_id: 'acc-1500', month, missing: !(opt.kept || []).includes(month), file_ids: (opt.kept || []).includes(month) ? ['f-' + month] : [], overlaps: false, newest_id: (opt.kept || []).includes(month) ? 'f-' + month : null, newest_name: (opt.kept || []).includes(month) ? month + '.csv' : null })), files: kept, total: kept.length, next: null, older: 0 }, asOf ? { signed_as_at: { asOf, accounts: signed } } : {}));
       }
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
-      if (p === '/api/books/daybook') return json(r, 200, { entries: [], total: 0 });
+      if (p === '/api/books/daybook') return json(r, 200, books.daybook([], { currency: 'AUD', country: 'AU' }));
       if (p === '/api/books/todo') return json(r, 200, []);
       return json(r, 200, {});
     });
@@ -82,6 +83,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     ok(/Not signed off/.test(t) && await part.p.locator('[data-testid="bank-home-folded"]').count() === 0, 'sign-off for one month only: the other months say Not signed off, grid kept (nothing invented)');
     await part.ctx.close();
   }
+  ok(...C.finish());
   await b.close(); srv.close();
   console.log(pass + ' ok / ' + fail + ' fail'); process.exit(fail ? 1 : 0);
 })();

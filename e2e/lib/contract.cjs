@@ -132,4 +132,6 @@ function finish() {
   return [bad.length === 0, 'every answer the stand-in served for a route in the API contract has the API\'s keys, nesting and types (' + STATE.checked + ' answers over ' + STATE.routes.size + ' routes)'
     + (bad.length ? ' - ' + bad.slice(0, process.env.CONTRACT_ALL ? 99 : 4).map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : '')];
 }
-module.exports = { FILE, FAMILIES, HELD, load, problems, entriesFor, check, wrap, json, finish, STATE };
+/** a deep copy of the contract's own example for one route key ("GET /api/x") - a stand-in that has no builder of its own answers with this */
+function example(key) { const hit = load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; }
+module.exports = { example, FILE, FAMILIES, HELD, load, problems, entriesFor, check, wrap, json, finish, STATE };

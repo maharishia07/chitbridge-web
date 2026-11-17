@@ -156,7 +156,7 @@
   }
   /** which columns stay on a narrow screen: the first, the name, the party and the amounts (1), the rest go first (2) Last year and % go first on a narrow screen: the amount and its change stay */
   function columnPriority(column, index) {
-    if (index === 0 || column[0] === 'name' || column[0] === 'party_ref') return 1;
+    if (index === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === 'risk') return 1;
     return column[2] === grantKit.MONEY && grantKit.CMP_COLS.indexOf(column[0]) < 0 ? 1 : 2;
   }
   /** a column's width: its own in the Day book, else by what it holds */

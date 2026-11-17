@@ -14,7 +14,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
-const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer the stand-in serves for a route in the api contract is checked (e2e/contract.cjs holds this) */
+const json = (r, status, o) => C.json(r, status, o);
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const FIRM = { token: tok({ identity_id: 'ent-FIRM', identity_type: 'entity' }), role: 'entity', name: 'Pat Accountant', entity: 'Blue Gum Books', country: 'AU', currency: 'AUD' };
 const CLIENT = 'ent-CL';
@@ -48,8 +49,8 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
       if (p === '/api/books/attention') return role === 'adviser' ? json(r, 200, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), total: 0, no_tax_invoice: 0, no_file: 0, no_source: 0, open_queries: null, needs: 0 }) : refused(r, 'GRANT_ROUTE_NOT_LISTED', 'This part of the books is not open to an auditor.');
       if (p === '/api/books/fx-revalue') return refused(r, 'GRANT_ROUTE_NOT_LISTED', 'This part of the books is not open to a grant.');
       if (p === '/api/books/health') return json(r, 200, Object.assign(books.health(), { currency: 'AUD', year: { fiscal_year: '2026-27', from: '2026-07-01', start_month: 7 }, country: books.csStatus('AU', 'Australia') }));
-      if (p === '/api/books/accounts') return json(r, 200, { accounts: [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }].map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: null }, a)) });
-      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, { periods: [1, 2, 3, 4].map((n) => Object.assign(books.periodRow('2026-27', n, 'open'), { start_date: '2026-' + String(n + 6).padStart(2, '0') + '-01', end_date: '2026-' + String(n + 6).padStart(2, '0') + '-28' })) });
+      if (p === '/api/books/accounts') return json(r, 200, { accounts: [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }].map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: null, nature: 'asset', active: true }, a)) });
+      if (p === '/api/books/periods' && m === 'GET') return json(r, 200, { under_review: { fy: '2026-27', from: '2026-07-01', to: '2027-06-30' }, years: [{ fy: '2026-27', from: '2026-07-01', to: '2027-06-30', months: 12, locked: 0, entries: 0, checked: null, of: null }], periods: [1, 2, 3, 4].map((n) => Object.assign(books.periodRow('2026-27', n, 'open'), { start_date: '2026-' + String(n + 6).padStart(2, '0') + '-01', end_date: '2026-' + String(n + 6).padStart(2, '0') + '-28' })) });
       if (p === '/api/books/bank/log') return json(r, 200, { currency: 'AUD', account: { account_id: 'acc-1500', code: '1500', name: 'Bank' }, marks: [], marks_next: null, statements: [{ period_from: '2026-10-01', period_to: '2026-10-31', currency: 'AUD', difference_minor: 35432, closing_bank_minor: 0, closing_books_minor: 0, opening_minor: 0, by_name: 'Pat', at: '2026-11-02T01:00:00Z' }], posted: [], exceptions: [] });
       if (p === '/api/books/bank/statement-files') {
         const months = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
@@ -58,8 +59,9 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
         return json(r, 200, { currency: 'AUD', today: '2026-11-16', months, unexplained, accounts: [{ account_id: 'acc-1500', code: '1500', name: 'Bank', label: null }], cells: months.map((month) => ({ account_id: 'acc-1500', month, missing: !(opt.kept || []).includes(month), file_ids: (opt.kept || []).includes(month) ? ['f-' + month] : [], overlaps: false, newest_id: (opt.kept || []).includes(month) ? 'f-' + month : null, newest_name: (opt.kept || []).includes(month) ? month + '.csv' : null })), files: kept, total: kept.length, next: null, older: 0 });
       }
       if (p === '/api/books/dues') return json(r, 200, books.dues([]));
-      if (p === '/api/books/daybook') return json(r, 200, { entries: [], total: 0 });
+      if (p === '/api/books/daybook') return json(r, 200, books.daybook([], { currency: 'AUD', country: 'AU' }));
       if (p === '/api/books/todo') return json(r, 200, []);
+      if (p === '/api/books/cheques') return json(r, 200, C.example('GET /api/books/cheques'));
       return json(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, FIRM);
@@ -87,7 +89,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   {
     const { ctx, p } = await open('adviser', '#/bank', '[data-testid="bank-stmts-grid"]');
     const t = await text(p);
-    ok(/Nothing kept yet/.test(t) && /Signed off to 31 Oct 2026/.test(t) && !/2026-10-31/.test(t) && /A\$354\.32 unexplained/.test(t), 'B · the Bank says what the practice row says: signed off to 31 Oct, A$354.32 unexplained: ' + t.slice(t.indexOf('Statements'), t.indexOf('Statements') + 160));
+    ok(/No statement file kept/.test(t) && /Signed off to 31 Oct 2026/.test(t) && !/2026-10-31/.test(t) && /A\$354\.32 unexplained/.test(t), 'B · the Bank says what the practice row says: signed off to 31 Oct, A$354.32 unexplained: ' + t.slice(t.indexOf('Statements'), t.indexOf('Statements') + 160));
     ok((await p.locator('[data-testid="bank-stmts-unfiled-acc-1500-2026-10"]').count()) === 1 && (await p.locator('[data-testid="bank-stmts-miss-acc-1500-2026-10"]').count()) === 0, 'B · October is "Signed off", not "Missing"');
     ok((await p.locator('[data-testid="bank-stmts-miss-acc-1500-2026-09"]').count()) === 1, 'B · September (no sign-off) stays Missing');
     await p.screenshot({ path: path.join(SHOTS, 'fable2-B-bank.png') });
@@ -109,7 +111,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     const two = { accounts: [{ account_id: 'acc-1500', currency: 'AUD', unexplained_minor: 35432, to: '2026-10-31' }, { account_id: 'acc-1600', currency: 'USD', unexplained_minor: 10000, to: '2026-10-31' }], by_currency: [{ currency: 'AUD', unexplained_minor: 35432, to: '2026-10-31' }, { currency: 'USD', unexplained_minor: 10000, to: '2026-10-31' }], currency: null, unexplained_minor: null, to: '2026-10-31', count: 2 };
     const { ctx, p } = await open('adviser', '#/bank', '[data-testid="bank-stmts-grid"]', { kept: ['2026-10'], unexplained: two });
     const sum = await p.locator('[data-testid="bank-stmts-sum"]').innerText();
-    ok(/A[$]354[.]32 [(]AUD[)]/.test(sum) && /100[.]00 [(]USD[)]/.test(sum) && !/454[.]32/.test(sum), 'E · two currencies: one figure each, never added: ' + sum);
+    ok(/A[$]354[.]32 AUD/.test(sum) && /100[.]00 USD/.test(sum) && !/454[.]32/.test(sum), 'E · two currencies: one figure each, never added: ' + sum);
     await p.screenshot({ path: path.join(SHOTS, 'fable3-E-two-currencies-1366.png') });
     await ctx.close();
   }
@@ -123,14 +125,14 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
   {
     const { ctx, p } = await open('adviser', '#/bank', '[data-testid="acting-unread"]', { grants: 500 });
     const t = await text(p);
-    ok(/could not be read/.test(t) && !/do not have current access/.test(t) && (await p.locator('[data-testid="acting-retry"]').count()) === 1, 'G · a failed grant list says it could not be read, with Try again: ' + t.slice(0, 160));
+    ok(/could not be read/.test(t) && !/do not have access/.test(t) && (await p.locator('[data-testid="read-failed-retry"]').count()) === 1, 'G · a failed grant list says it could not be read, with Try again: ' + t.slice(0, 160));
     await p.screenshot({ path: path.join(SHOTS, 'fable3-G-unread-1366.png') });
     await ctx.close();
   }
   {
     const { ctx, p } = await open('adviser', '#/bank', '[data-testid="acting-refused"]', { grants: 403 });
     const t = await text(p);
-    ok(/do not have current access/.test(t) && (await p.locator('[data-testid="acting-unread"]').count()) === 0, 'G · a real refusal (403) keeps "no current access"');
+    ok(/do not have access/.test(t) && (await p.locator('[data-testid="acting-unread"]').count()) === 0, 'G · a real refusal (403) keeps "no current access"');
     await ctx.close();
   }
   {
@@ -139,6 +141,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     ok(S.bad.length === 0, 'C · no 4xx in the auditor seat: ' + JSON.stringify(S.bad));
     await ctx.close();
   }
+  ok(...C.finish());
   await b.close();
   srv.close();
   console.log('\n' + (fail ? 'FAIL' : 'all ok') + ': ' + pass + ' passed, ' + fail + ' failed');

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // @type: unit
+// UNIT      29/Editions (shop / auditor / …)
 /**
  * pm-53-edition-chip.test.cjs — PM-53 (proof 2026-11-14): the 'Auditor view' edition chip in the bar is a BUTTON that opens the Edition choice, and the x
  * beside it goes back to Everything (public/app/shell.js editionChipsHTML / wireEditionChips / openEditionChoice, the real code, over a stand-in page).

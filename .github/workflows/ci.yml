@@ -110,6 +110,8 @@ jobs:
           node e2e/chart-smoke.cjs
           node e2e/crm-groups-guard.cjs
           node e2e/messages-threads.test.cjs
+          node e2e/tb-change.test.cjs
+          node tests/bell-line.test.cjs
           node e2e/currency-distinct.cjs
           node e2e/defs-batch.test.cjs
           node e2e/developer-words.cjs
@@ -349,6 +351,7 @@ jobs:
           node tests/acc342-todo-no-action.test.cjs
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
+          node tests/till-pay-qr-link.test.cjs
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
         run: node e2e/cmdb-records.cjs
       - name: Every stand-in that answers /api/books or /api/crm holds its answers to the API contract (M43)

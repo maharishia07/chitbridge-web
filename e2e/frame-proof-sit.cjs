@@ -2,6 +2,7 @@
 /**
  * frame-proof-sit.cjs — firm frame P0 proof T1-T8 on a SIT box (sit-grund, a throwaway api+web pair against the seeded firm), read-only: lead.cjs blocks every write.
  * OWNS     the proof run of the REQ PM/REQ-FIRM-FRAME-P0-2026-11-16.md: 429 / 500 / offline / never-answers on the practice read, the six failed client reads, the seat sheet, the deep link, first data by 20% / 30%, the signed-out pages.
+ * UNIT      14/Practice door (accountant opens a client)
  * CALLED BY by hand on the box: the playwright image with /w (lead.cjs from fable-lead, BASE and API pointed at the throwaway pair) and /e2e (this repo's e2e). ONE sign-in per seat per run; the code lives in the environment only.
  */
 const L = require('/w/lead.cjs');

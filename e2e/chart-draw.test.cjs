@@ -5,6 +5,7 @@
  * mix, or whose accent falls to ink, is PRINTED, never hidden).
  * Run: node e2e/chart-draw.test.cjs   (exit 1 on any failure)
  */
+// UNIT      26/Charts
 'use strict';
 const fs = require('fs'),
   path = require('path'),
