@@ -76,18 +76,20 @@
         return { stores: [] };
       }),
       root.CBBooksGrantApi.heldSplit(call)
-    ]).then(function (reply) {
-      N.held = (reply[2] || {}).live || {};
-      N.ended = (reply[2] || {}).ended || {};
-      N.seats = (reply[2] || {}).seats || {};
-      N.mine = (reply[2] || {}).mine || null;
-      N.unread = !!(reply[2] || {}).unread; /* the grant list could not be read: said as that, never as "Not in a network yet" */
-      var s = (reply[0] && reply[0].store) || {};
-      N.networks = s.networks || [];
-      N.notices = s.price_notices || [];
-      N.may = reply[0].may_design || N.may;
-      N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], Object.assign({}, N.ended, N.held), T);
-    });
+    ]).then(noteLoad);
+  }
+  /** the three reads of load() into the page state: the store, the stores it can see, the grants it holds */
+  function noteLoad(reply) {
+    N.held = (reply[2] || {}).live || {};
+    N.ended = (reply[2] || {}).ended || {};
+    N.seats = (reply[2] || {}).seats || {};
+    N.mine = (reply[2] || {}).mine || null;
+    N.unread = !!(reply[2] || {}).unread; /* the grant list could not be read: said as that, never as "Not in a network yet" */
+    var storeBlock = (reply[0] && reply[0].store) || {};
+    N.networks = storeBlock.networks || [];
+    N.notices = storeBlock.price_notices || [];
+    N.may = reply[0].may_design || N.may;
+    N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], Object.assign({}, N.ended, N.held), T);
   }
   function offers() {
     var out = [];
@@ -108,10 +110,10 @@
     var firm = !!(N.opened && N.opened.role && N.opened.role !== 'owner'), doc = root.document;
     if (!doc || !doc.documentElement) return;
     if (firm && !doc.getElementById('nw-rail-css')) {
-      var st = doc.createElement('style');
-      st.id = 'nw-rail-css';
-      st.textContent = 'html.nw-in-client #side{display:none!important}';
-      doc.head.appendChild(st);
+      var railStyle = doc.createElement('style');
+      railStyle.id = 'nw-rail-css';
+      railStyle.textContent = 'html.nw-in-client #side{display:none!important}';
+      doc.head.appendChild(railStyle);
     }
     doc.documentElement.classList.toggle('nw-in-client', firm);
   }

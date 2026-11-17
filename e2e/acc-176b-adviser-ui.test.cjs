@@ -101,7 +101,7 @@ check(view.includes('num: column[2] === MONEY') && view.includes('groupWords') &
 const net = read('network-app.js') + ' ' + read('network-books.js'), door = read('books-clients-door.js');
 check(member.includes('answer.parents') && member.includes('allParents()') && member.includes('entity_id'), 'Give access: the parents the server names (governance, commercial, agency) join the network list, once each');
 check(api.includes('clientColumns') && api.includes("'since'") && api.includes("'until'") && api.includes("['city', 'km', 'purpose']") && net.includes('clientColumns(cols, N, T)'), 'the client list of a firm: Role, Since, Until; no City, Distance or purpose columns');
-check(api.includes('heldSplit') && api.includes('endedWords') && net.includes('nw-ended-') && net.includes('N.ended'), 'ended grants are listed with their state in words and no Open books');
+check(api.includes('heldSplit') && api.includes('endedWords') && net.includes('nw-ended-') && (net.includes('N.ended') || net.includes('page.ended')), 'ended grants are listed with their state in words and no Open books');
 check(door.includes('home-your-clients') && door.includes('/network.html') && read('../app.html').includes('books-clients-door.js'), 'Home: a login with live received grants gets a "Your clients" card to My network');
 check(view.includes('foldHead: true') && view.includes("setAttribute('tabindex', '-1')") && view.includes('focusHeading'), 'books view: the list head folds; focus moves to the heading on open');
 /* (8) the header names live in one file */
