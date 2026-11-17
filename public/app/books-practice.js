@@ -302,8 +302,10 @@
   /** the year-end cells: the same figures the Complete and Checked tiles count (the server's year_end), never the quarter */
   function yendCell(r) {
     var y = r.year_end;
-    if (!y) return '—';
-    if (y.first_year) return esc(tx('First year'));
+    /* fix1117 F4: an older seed or a client with no year-end answer still reads: the stage when there is one, else the bank's own words (F2), never a bare dash */
+    if (!y && !r.stage) return r.bank && r.bank.state === 'unexplained' ? esc(bankWords(r)) : '—';
+    if (y && y.first_year) return esc(tx('First year'));
+    if (!y) return '<span class="bp-yend" data-cbsid="HOM001-P16"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>';
     var figures = esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(bankWords(r)));
     /* F4 (17 Nov): ONE line per client, the stage and the one blocker; the figures sit in the title and one press away on the sheet (no second statement of the blocker, so the row is not two lines) */
     return r.stage ? '<span class="bp-yend" data-cbsid="HOM001-P16" title="' + esc(figures.replace(/<[^>]*>/g, '')) + '"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>' : figures;
@@ -311,8 +313,8 @@
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {
     var y = r.year_end, b = r.stage_blocker, n;
-    if (!b) return '';
-    if (b === 'months') { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
+    if (!b) return r.bank && r.bank.state === 'unexplained' ? ' · ' + esc(bankWords(r)) : ''; /* fix1117 F2: no blocker named, the bank's unexplained amount (the row's own field) still shows */
+    if (b === 'months' && y) { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
     if (b === 'bank') return ' · ' + esc(bankWords(r));
     if (b === 'checked') return ' · ' + esc(tx('not checked'));
     if (b === 'queries') return ' · ' + esc(r.queries.open) + ' ' + esc(tx(r.queries.open === 1 ? 'query open' : 'queries open'));
@@ -342,6 +344,7 @@
   }
   function checkedCell(r) {
     var e = r.year_end && r.year_end.entries;
+    if (!e && r.checked && r.checked.of > 0) e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
     return e ? esc(checkedWords(e)) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
@@ -565,7 +568,7 @@
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
-      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;gap:8px}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
+      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;min-width:0}.bp-fig>b,.bp-fig>a{min-width:0;overflow-wrap:anywhere}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
     root.document.head.appendChild(s);
   }
   function draw() {

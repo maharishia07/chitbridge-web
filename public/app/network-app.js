@@ -443,6 +443,7 @@
       onSwitch: function (id, name) { openSeat(id, (N.held[id] && N.held[id].grantor_name) || name); },
       onBack: function () {
         /* E2 (Fable walk 17 Nov): "← Clients" goes to the practice list BY ADDRESS. history.back() stepped one TAB back (every screen of the books is a history entry), so the address and the screen disagreed and the list was never reached. The list is a new entry; Back from it returns to the client. */
+        if (N.cameFromHome) { root.location.assign('/'); return; } /* fix1117 F1 (walk 17 Nov): a client opened from the practice Home goes back to that Home (the practice list), never to the network page's old client list (acc17 E2 sent it there) */
         var was = N.opened && N.opened.id;
         N.opened = null; N.view = ''; N.period = null;
         record(false);
@@ -722,6 +723,7 @@
     try { id = new root.URLSearchParams(root.location.search).get('open'); } catch (failure) { if (root.cbQuiet) root.cbQuiet('network:open', failure); }
     if (!id || N.openedFromLink === id || !N.held[id]) return;
     N.openedFromLink = id;
+    N.cameFromHome = true; /* fix1117 F1: opened from the practice Home's link, so "← Clients" returns there */
     N.view = new root.URLSearchParams(root.location.search).get('view') || '';
     N.period = root.CBPeriodPick.fromAddress(root.location.search);
     openSeat(id, N.held[id].grantor_name || T('this store'), { view: N.view, period: N.period }); /* the address already names this client and screen: no new history entry, and the seat choice never clears them */

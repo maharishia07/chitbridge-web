@@ -200,6 +200,9 @@ function bankHomeGridHtml() {
     mayAdd = bankHomeMayAdd();
   const folded = bkhFoldedHtml(data);
   if (folded) return folded;
+  const many = data.accounts.length > 1,
+    count = data.months.length,
+    signedLines = data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: count })) + '</div>'; }).join('');
   const rows = data.accounts
     .map((account) => {
       const cells = data.months
@@ -212,8 +215,8 @@ function bankHomeGridHtml() {
           if (state === 'unfiled') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-unfiled-' + key + '" title="' + bkhE(tx('Signed off; no statement file is kept for this month')) + '">' + bkhE(tx('Signed off')) + '</span></td>';
           if (state === 'missing')
             return mayAdd
-              ? '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + key + '" data-acct="' + bkhE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkhE(tx('Add a statement for this account')) + '">' + bkhE(tx('Missing')) + '</button></td>'
-              : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + bkhE(tx('Missing')) + '</span></td>';
+              ? '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + key + '" data-acct="' + bkhE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkhE(tx('Add a statement for this account')) + '">' + bkhE(tx('Not signed off')) + '</button></td>'
+              : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + bkhE(tx('Not signed off')) + '</span></td>';
           const crossed = cell.overlaps === true,
             mark = state === 'open' ? '●' : state === 'signed' ? '✓' : '◦',
             word = state === 'signed' ? tx('Signed off') : state === 'open' ? tx('Not signed off yet') : tx('Kept'),
@@ -227,8 +230,9 @@ function bankHomeGridHtml() {
     })
     .join('');
   return (
+    '<div class="pe-note bkh-signed" data-testid="bank-home-signed">' + signedLines + '</div>' +
     '<div class="bks-wrap bkh-gridwrap"><table class="bks-grid" data-testid="bank-stmts-grid"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off yet')) + ' · ' + bkhE(tx('Missing')) + '</div>'
+    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off yet')) + ' · ' + bkhE(tx('no statement kept')) + '</div>'
   );
 }
 /** a month pressed, or Continue: that statement's lines */

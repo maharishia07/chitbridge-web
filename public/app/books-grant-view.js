@@ -169,11 +169,19 @@
     viewState.range = period && period.from ? { from: period.from, to: period.to } : null;
   }
   /** the choices of this client, read ONCE (GET /periods?marks=1: the year under review, each year, each month with its state and checked n of m); the period opens on the year under review unless the address named one */
+  /** fix1117 F3: the first screen is never an empty period. A client whose first financial year has not ended has no year under review (the api says null), and a year under review may hold no entries: either way the books open on the latest year that holds entries (the api's years, newest first), so "Checked 0 of 0 · Nothing to show" never greets a client with entries */
+  function periodWithEntries(choices, review) {
+    var years = (choices && choices.years) || [], busy = years.filter(function (y) { return Number(y.entries) > 0; })[0];
+    var held = review && years.filter(function (y) { return y.fy === review.fy; })[0];
+    if (review && (!held || Number(held.entries) > 0 || !busy)) return review;
+    return busy ? { fy: busy.fy, from: busy.from, to: busy.to } : review;
+  }
   function choose() {
     if (viewState.choices !== undefined || !alive()) return Promise.resolve();
     return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { query: { marks: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) {
       viewState.choices = a || null;
       var named = root.CBPeriodPick.filled(viewState.period, a), review = a && a.under_review;
+      review = periodWithEntries(a, review);
       usePeriod(named || (review ? { kind: 'year', fy: review.fy, from: review.from, to: review.to } : null)); /* W15/W17: the year under review, never "this month" or "as at today" */
     }, function () { viewState.choices = null; usePeriod(viewState.period && viewState.period.from ? viewState.period : null); });
   }
@@ -550,7 +558,7 @@
   }
   /** a heading naming the date the figures stand at */
   function asAt(report) {
-    var a = viewState.answer || {}, date = viewState.day || a.shown_as_at || a.asOf || a.as_of || a.to || '', running = !viewState.day && a.shown_as_at && a.asOf && a.shown_as_at < a.asOf; /* F5: an unfinished year says the shop day the api carried (shown_as_at), never its end */
+    var a = viewState.answer || {}, date = viewState.day || a.shown_as_at || a.asOf || a.as_of || a.to || '', asked = report.day === 'asOf' ? queryOf(report).asOf : '', running = !viewState.day && a.shown_as_at && ((a.asOf && a.shown_as_at < a.asOf) || (asked && a.shown_as_at < asked)); /* fix1117 F5: the api caps asOf at the shop day, so the year's end we ASKED for is what says the year is still running */ /* F5: an unfinished year says the shop day the api carried (shown_as_at), never its end */
     if (report.k === 'pl' && a.from && a.to && !viewState.day) return '<span class="tag" data-testid="bv-for">' + esc(words('For')) + ' ' + esc(root.shopDay(a.from)) + ' – ' + esc(root.shopDay(a.to)) + '</span>'; /* W18: a profit and loss is for a period, never "as at" a day */
     return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs' || report.k === 'dues') ? '<span class="tag" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(root.shopDay(date)) + (running ? ' · ' + esc(words('year to date')) : '') + '</span>' : '';
   }
