@@ -75,11 +75,11 @@
   }
   /** the question before an adviser POSTS straight into a client's books (adviser_posts): the amount from the preview (the server's total, in its currency), the client, "straight into", and a danger yes; owner_approves asks nothing */
   function postAsk(preview) {
-    var who = context ? context.store.name : '';
+    var actingTag = context ? context.store.name : '';
     var amount = preview && preview.total_dr_minor != null ? figure(preview.total_dr_minor, preview.currency) : '';
     return {
-      title: words('Post') + (amount ? ' ' + amount : ' ' + words('this entry')) + ' ' + words('for') + ' ' + who + '?',
-      body: '<b>' + esc(words('This goes straight into')) + ' ' + esc(who) + esc("'s books.") + '</b> ' + esc(words('Nobody approves it first. Every action is recorded.')),
+      title: words('Post') + (amount ? ' ' + amount : ' ' + words('this entry')) + ' ' + words('for') + ' ' + actingTag + '?',
+      body: '<b>' + esc(words('This goes straight into')) + ' ' + esc(actingTag) + esc("'s books.") + '</b> ' + esc(words('Nobody approves it first. Every action is recorded.')),
       yes: words('Post'),
       danger: true
     };
@@ -128,23 +128,28 @@
   /** the page opened with ?acting=<id> enters only when the firm holds a LIVE ADVISER grant on that id; the banner's name and the grant's posting come from the grant row, never from the address. false: not entered (context dropped) */
   function confirmGrant(base, token) {
     if (!context) return Promise.resolve(false);
-    var id = context.store.id, role = context.role === 'auditor' ? 'auditor' : 'adviser';
-    return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(function (split) {
-      if (split.unread) throw Object.assign(new Error('the grant list could not be read'), { unread: true });
-      var heldBy = split.live || {}, seats = (split.seats || {})[id] || {};
-      var door = root.CBBooksGrantApi.doorsFor(split, id, ''); /* the ONE seat rule: only a door this login may use (the server's may_use) */
-      if (!context.seatNamed) role = door.open || (door.doors.indexOf('adviser') >= 0 ? 'adviser' : 'auditor'); /* no &role on the address: the seat this login's door gives */
-      var grant = door.doors.indexOf(role) >= 0 ? seats[role] : null; /* a seat the address names must be a door this login may use */
-      if (!grant) {
-        context = null;
-        return false;
-      }
-      context.role = role;
-      context.store.name = grant.grantor_name || root.CBBooksGrantApi.withHeld([], heldBy, words)[0].name;
-      context.posting = grant.posting || '';
-      showWorking();
-      return true;
-    });
+    return root.CBBooksGrantApi.heldSplit(grantCall(base, token)).then(enterSeat);
+  }
+  /** the grants list answered: enter the seat this login's door gives (or the one the address names), or not at all */
+  function enterSeat(split) {
+    if (split.unread) throw Object.assign(new Error('the grant list could not be read'), { unread: true });
+    var id = context.store.id, heldBy = split.live || {}, seats = (split.seats || {})[id] || {};
+    var door = root.CBBooksGrantApi.doorsFor(split, id, ''), role = seatRole(door); /* the ONE seat rule: only a door this login may use (the server's may_use) */
+    var grant = door.doors.indexOf(role) >= 0 ? seats[role] : null; /* a seat the address names must be a door this login may use */
+    if (!grant) {
+      context = null;
+      return false;
+    }
+    context.role = role;
+    context.store.name = grant.grantor_name || root.CBBooksGrantApi.withHeld([], heldBy, words)[0].name;
+    context.posting = grant.posting || '';
+    showWorking();
+    return true;
+  }
+  /** the seat: the address's own when it names one, else the seat this login's door gives (the adviser's, when both are open) */
+  function seatRole(door) {
+    if (context.seatNamed) return context.role === 'auditor' ? 'auditor' : 'adviser';
+    return door.open || (door.doors.indexOf('adviser') >= 0 ? 'adviser' : 'auditor'); /* no &role on the address: the seat this login's door gives */
   }
   /** this store's grant lets the adviser POST (the owner chose adviser_posts); anything else prepares */
   function posts() {
@@ -168,13 +173,18 @@
     host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '"></div>';
     root.CBShell.readFailed(host.firstChild, { what: words('Your client list'), status: unread ? 0 : 403, retry: unread ? function () { root.location.reload(); } : null, back: { href: '/network.html', label: words('Back to My network') } });
   }
+  /** the menu entry the address names (an auditor with none lands on Bank) */
+  function openingScreen(menu) {
+    var asked = String(root.location.hash || '').replace(/^#\/?/, '').split(/[/?]/)[0], hit = null;
+    for (var i = 0; i < menu.length; i++) if (menu[i][0] === asked) hit = menu[i];
+    if (!hit && context && context.role === 'auditor') hit = ['bank', 'Bank'];
+    return hit;
+  }
   /** the first second of a client's books, before the grant read answers: the screen's own word as the title and the page's skeleton rows, never the bare "Accounts" frame (first-impression W8; the grant read is untouched) */
   function paintOpening(menu) {
     var doc = root.document, title = doc && doc.getElementById('title'), host = doc && doc.getElementById('content');
     if (!title || !host) return;
-    var asked = String(root.location.hash || '').replace(/^#\/?/, '').split(/[/?]/)[0], hit = null;
-    for (var i = 0; i < menu.length; i++) if (menu[i][0] === asked) hit = menu[i];
-    if (!hit && context && context.role === 'auditor') hit = ['bank', 'Bank'];
+    var hit = openingScreen(menu);
     if (hit) title.textContent = words(hit[1]);
     host.innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-opening"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
   }
@@ -232,10 +242,10 @@
   }
   /** the breadcrumb on every client screen: Clients › <client> › <screen>. Clients leaves the client (to the practice list, Home); the client name is a link on a screen of the books, plain on the client's own page */
   function crumbs(screen, onScreen) {
-    var who = esc(context.store.name || '');
+    var actingTag = esc(context.store.name || '');
     return (
-      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" title="' + who + (screen ? ' › ' + esc(screen) : '') + '"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
-      (onScreen ? '<a href="' + esc(clientAddress(context.store, carriedOf(root.location.search))) + '" data-testid="crumb-client">' + who + '</a>' : '<span data-testid="crumb-client">' + who + '</span>') +
+      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" title="' + actingTag + (screen ? ' › ' + esc(screen) : '') + '"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
+      (onScreen ? '<a href="' + esc(clientAddress(context.store, carriedOf(root.location.search))) + '" data-testid="crumb-client">' + actingTag + '</a>' : '<span data-testid="crumb-client">' + actingTag + '</span>') +
       (screen ? ' <span aria-hidden="true">›</span> <span id="ba_screen" aria-current="page" data-testid="crumb-screen">' + esc(screen) + '</span>' : '') + '</nav>'
     );
   }
@@ -255,17 +265,17 @@
   /** the banner's markup: who this is for, in which currency, a way to another store (when the firm holds more than one), the breadcrumb and the way back one level (screen: the screen's name; onScreen: this is a screen of the books page, not the client's own page) */
   function banner(stores, screen, onScreen, extra) {
     if (!context) return '';
-    css();
-    var who = context.role === 'auditor'
+    headerCss();
+    var actingTag = context.role === 'auditor'
       ? '<span class="tag bv-ro" data-testid="bv-readonly">' + esc(words('read only')) + '</span>'
       : '<b class="bv-ro ba-acting" data-testid="ba-acting" title="' + esc(words('Acting for') + ' ' + context.store.name + (context.currency ? ', ' + context.currency : '')) + '"><span class="ba-sr">' + esc(words('Acting for')) + ' ' + esc(context.store.name) + (context.currency ? ', ' + esc(context.currency) : '') + '</span><span aria-hidden="true">' + esc(roleWord(context.role)) + (context.currency ? ' · ' + esc(context.currency) : '') + '</span></b>';
     return (
-      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + who + (extra || '') + periodSlot() +
+      '<div class="bv-band ba-band" id="ba_band" role="status" data-testid="ba-band">' + crumbs(screen, onScreen) + actingTag + (extra || '') + periodSlot() +
       '<span class="ba-tools">' + switchBox(stores) + '<button data-cbsid="NET006-B01" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(backLabel(onScreen)) + '</button></span></div>'
     );
   }
   /** ONE header line for a firm in a client's books (T6, first data by 20% / 30%): who and where, the date, the period and the way back on a single 28 px line; a phone's second line holds the screen pick and the period. Drawn once for both pages (network.html, accounts.html). */
-  function css() {
+  function headerCss() {
     var doc = root.document;
     if (!doc || doc.getElementById('ba-hdr-css')) return;
     var style = doc.createElement('style');
@@ -354,10 +364,10 @@
   }
   /** who an adviser posted an entry for, as the api stamps it (posted_by { name, firm } | null): the adviser sees "by Pat Lee for <client>", the owner "Posted by Pat Lee, <firm>"; '' for an entry nobody posted for the client */
   function postedByWords(entry, short) {
-    var who = entry && entry.posted_by;
-    if (!who || !who.name) return '';
-    if (context && context.role === 'adviser') return short ? fill('by {name}', { name: who.name }) : fill('by {name} for {client}', { name: who.name, client: context.store.name });
-    return who.firm && who.firm !== who.name ? fill('Posted by {name}, {firm}', { name: who.name, firm: who.firm }) : fill('Posted by {name}', { name: who.name });
+    var actingTag = entry && entry.posted_by;
+    if (!actingTag || !actingTag.name) return '';
+    if (context && context.role === 'adviser') return short ? fill('by {name}', { name: actingTag.name }) : fill('by {name} for {client}', { name: actingTag.name, client: context.store.name });
+    return actingTag.firm && actingTag.firm !== actingTag.name ? fill('Posted by {name}, {firm}', { name: actingTag.name, firm: actingTag.firm }) : fill('Posted by {name}', { name: actingTag.name });
   }
   /** a tab this page does not offer while acting for a client (the bank for neither role now; the books-only pages for both) */
   function hides(tab) {
@@ -372,5 +382,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: css, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
+  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: headerCss, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

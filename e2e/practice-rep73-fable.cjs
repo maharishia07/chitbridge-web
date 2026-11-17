@@ -4,7 +4,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const root = { Promise, tx: (s) => s, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {}, remove() {}, toggle() {} } }, querySelector: () => null, getElementById: () => null }, location: { hostname: 'x' }, localStorage: { getItem: () => null, setItem() {} } };
-vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'books-practice.js'), 'utf8'), { window: root, globalThis: root, setInterval() {}, setTimeout() {} }, {});
+for (const part of ['books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), { window: root, globalThis: root, setInterval() {}, setTimeout() {} }, {});
 const P = root.CBPractice, T = P.parts || {};
 let bad = 0;
 const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };

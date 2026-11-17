@@ -11,7 +11,7 @@ vm.runInNewContext(pub('engine/chart-draw.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-status.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-rows.js'), ctx, {});
 root.CBDraw = root.CBDraw || ctx.CBDraw;
-vm.runInNewContext(pub('app/books-practice.js'), ctx, {});
+for (const part of ['books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(pub('app/' + part), ctx, {});
 const T = root.CBPractice.parts;
 let bad = 0;
 const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };

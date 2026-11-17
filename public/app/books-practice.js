@@ -10,15 +10,20 @@
  */
 (function (root) {
   'use strict';
-  var P = { token: null, data: null, drawn: false, filter: null, list: null, band: null, fl: null, flOff: false, flReady: false, flTotal: 0 };
+  var practiceKit = (root.CBPracticeKit = root.CBPracticeKit || {});
+  practiceKit.translate = translate;
+  practiceKit.escapeHtml = escapeHtml;
+  practiceKit.money = money;
+  practiceKit.dayWords = dayWords;
+  practiceKit.practiceState = { token: null, data: null, drawn: false, filter: null, list: null, band: null, fl: null, flOff: false, flReady: false, flTotal: 0 };
   /* l16 n12: what a firm with no trade of its own KEEPS of the shop's Home, by id: its own Setup (the business, account, plan, policy, privacy, standards, connectors). Everything else is shop: every other card, so
      every area that would hold only those cards (the left rail), and the two shop panels named by id here: 'sides' (We lean on / Leans on us) and 'rail' (Your work). ONE list, ONE test (hidesShopCards). */
   var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1 };
-  var EP = { practice: { m: 'GET', p: '/api/books-grants/practice' } };
-  function tx(s) {
+  var PRACTICE_ENDPOINT = { practice: { m: 'GET', p: '/api/books-grants/practice' } };
+  function translate(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function esc(s) {
+  function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
   function base() {
@@ -40,7 +45,7 @@
   }
   function read(left) {
     left = left === undefined ? 3 : left;
-    return root.fetch(base() + EP.practice.p, { method: EP.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
+    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p, { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
       if (r.status === 503 && left > 0) {
         return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1); });
       }
@@ -52,7 +57,7 @@
   /* W2/W3 (private bookmarks, cap-flag.js): the firm's OWN bookmarks and notes. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the firm's organisation, never a client's. */
   function flagCall(method, path, body) {
     return root.fetch(base() + path, { method: method, cache: 'no-store', headers: { Authorization: 'Bearer ' + token(), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) {
+      return r.json().catch(function (failure) { if (root.cbQuiet) root.cbQuiet('practice:flag-json', failure); return {}; }).then(function (j) {
         if (!r.ok) { var e = new Error(j.detail || j.message || j.error || 'API ' + r.status); e.status = r.status; e.code = j.code; throw e; }
         return j;
       });
@@ -66,14 +71,14 @@
     root.document.head.appendChild(tag);
   }
   function flagsOn() {
-    return !!P.fl && P.flReady && !P.flOff;
+    return !!practiceKit.practiceState.fl && practiceKit.practiceState.flReady && !practiceKit.practiceState.flOff;
   }
   /** the Home count: every open bookmark and note of this firm that this person may read; a press opens the work list */
   function flagButton() {
-    return flagsOn() && P.flTotal > 0 ? '<button type="button" class="bp-bandtab" data-cbsid="CMP067-B08" data-bp-flags="1" data-testid="practice-flags">' + esc(tx('Bookmarks and notes')) + ' · ' + esc(P.flTotal) + '</button>' : '';
+    return flagsOn() && practiceKit.practiceState.flTotal > 0 ? '<button type="button" class="bp-bandtab" data-cbsid="CMP067-B08" data-bp-flags="1" data-testid="practice-flags">' + escapeHtml(translate('Bookmarks and notes')) + ' · ' + escapeHtml(practiceKit.practiceState.flTotal) + '</button>' : '';
   }
   function clientName(id) {
-    var row = ((P.data && P.data.clients) || []).filter(function (r) { return String(r.entity_id) === String(id); })[0];
+    var row = ((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []).filter(function (r) { return String(r.entity_id) === String(id); })[0];
     return row ? row.name : '';
   }
   function openFlagList(opener) {
@@ -90,26 +95,26 @@
   function flagsPaint() {
     var slot = root.document.querySelector('[data-bp-flagslot]');
     if (slot) { slot.innerHTML = flagButton(); wireFlagButton(slot); }
-    if (P.list && P.list.refresh) P.list.refresh({ columns: columns(), filters: filters(), defaultCols: colsOf((bandShown(P.data) || {}).key || 'pipeline') });
+    if (practiceKit.practiceState.list && practiceKit.practiceState.list.refresh) practiceKit.practiceState.list.refresh({ columns: columns(), filters: filters(), defaultCols: colsOf((practiceKit.bandShown(practiceKit.practiceState.data) || {}).key || 'pipeline') });
   }
   function flagsStart() {
-    if (P.flStarted === P.token) return;
-    P.flStarted = P.token;
+    if (practiceKit.practiceState.flStarted === practiceKit.practiceState.token) return;
+    practiceKit.practiceState.flStarted = practiceKit.practiceState.token;
     withFlag(function () {
-      P.fl = root.CBFlag.use({ call: flagCall, kind: 'client' });
-      P.fl.onChange(function () {
-        root.CBFlag.counts(flagCall).then(function (a) { P.flTotal = (a && a.open) || 0; flagsPaint(); }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:flag-counts', failure); });
+      practiceKit.practiceState.fl = root.CBFlag.use({ call: flagCall, kind: 'client' });
+      practiceKit.practiceState.fl.onChange(function () {
+        root.CBFlag.counts(flagCall).then(function (a) { practiceKit.practiceState.flTotal = (a && a.open) || 0; flagsPaint(); }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:flag-counts', failure); });
       });
-      root.CBFlag.listAll(flagCall).then(function (a) { P.fl.ingest(a.flags); P.flTotal = a.total; P.flReady = true; flagsPaint(); }, function (failure) {
-        P.flOff = root.CBFlag.gone(failure); /* not switched on, or not for this person: no chip, no count; any other failure says nothing rather than "none" */
-        P.flReady = true;
+      root.CBFlag.listAll(flagCall).then(function (a) { practiceKit.practiceState.fl.ingest(a.flags); practiceKit.practiceState.flTotal = a.total; practiceKit.practiceState.flReady = true; flagsPaint(); }, function (failure) {
+        practiceKit.practiceState.flOff = root.CBFlag.gone(failure); /* not switched on, or not for this person: no chip, no count; any other failure says nothing rather than "none" */
+        practiceKit.practiceState.flReady = true;
         flagsPaint();
       });
     });
   }
   /** a firm: it holds clients by live grants and has no trade of its own: the DATA says so (the server's own_trade), never a trade switch */
   function isFirm() {
-    return !!(P.data && P.data.clients && P.data.clients.length && P.data.own_trade === false);
+    return !!(practiceKit.practiceState.data && practiceKit.practiceState.data.clients && practiceKit.practiceState.data.clients.length && practiceKit.practiceState.data.own_trade === false);
   }
   function hidesShopCards(id) {
     return isFirm() && !FIRM_KEEPS[id];
@@ -119,314 +124,10 @@
     var major = Number(minor) / 100;
     return root.CBLocale && root.CBLocale.money ? root.CBLocale.money(major, currency || 'AUD') : (currency || '') + ' ' + major.toFixed(2);
   }
-  function day(value) {
+  function dayWords(value) {
     return value ? (typeof root.shopDay === 'function' ? root.shopDay(value) : String(value).slice(0, 10)) : '—';
   }
-  var STATUS_CLASS = { help: 'red', watch: 'amber', good: 'green', none: '' };
   var ROLE = { adviser: 'Accountant', auditor: 'Auditor' };
-  /* REP-73: the bands are the server's (data.band.bands, in its order, the first one open); the page knows each tile's WORDS and the list filter it opens, never which band comes first, which tile is hidden or a count.
-     tile key → [label, the filter it opens]; every count is the size of that filter on the list (the server counts them from the same rows). */
-  var BAND_NAME = { pipeline: 'Year end', on_us: 'On us today', advisory: 'Advice' };
-  /* REP-73 B6: ONE name per stage, on the tile, the filter chip, the filter's choices and the row. The last two stages say what the firm's country calls filing the return: the server sends them
-     (lib/books-practice words, from the country pack's filingVerb: lodge · file); until it does the neutral words stand. Never a country branch here. */
-  var STAGE_WORDS = { books_in: 'Books in', complete: 'Complete', checked: 'Checked', ready: 'Ready to file', lodged: "Filed (owner's word)" };
-  function stageWord(key) {
-    var w = (P.data && P.data.words) || {};
-    return key === 'ready' && w.ready ? w.ready : key === 'lodged' && w.done ? w.done : STAGE_WORDS[key] || key;
-  }
-  var TILE = {
-    books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Filed (owner's word)", { stage: 'lodged' }],
-    bas_due_30: ['Due in 30 days', { bas: 'soon' }],
-    changed: ['Clients with changes since I checked', { changed: 'yes' }], /* rank 10: the server's count of clients with entries posted since THIS person said checked; the tile only filters, never re-sorts */
-    queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Clients with entries to check (quarter)', { checked: 'behind' }], months_unlocked: ['Clients with months to lock', { unlocked: 'yes' }],
-    cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]
-  };
-  function sameFilter(f, g) {
-    return !!f && !!g && JSON.stringify(f) === JSON.stringify(g);
-  }
-  /** the band shown: the one the person chose, else the one the server opened first */
-  function bandShown(data) {
-    var bands = (data.band && data.band.bands) || [];
-    return bands.filter(function (x) { return x.key === P.band; })[0] || bands.filter(function (x) { return x.first; })[0] || bands[0] || null;
-  }
-  /* REP-66 (practice pictures, Athi 16 Nov): ONE small picture per band, drawn by CBDraw (the one chart helper), inside the tile grid's own free cell so the list never moves down.
-     Every figure is a tile's n (the server's count); the picture adds nothing of its own and never invents a part: a tile with no count is left out. Its text equivalent is the svg <desc>
-     and the visible caption under it. Year end: clients by CURRENT stage (the tiles sum to the clients). On us today: the work left, each part labelled in its own unit. */
-  var PIC = {
-    pipeline: { id: 'bp-pic-stage', title: 'Clients by year-end stage', unit: 'clients', parts: [['books_in', 'help'], ['complete', 'watch'], ['checked', 'watch'], ['ready', 'good'], ['lodged', 'good']] },
-    on_us: { id: 'bp-pic-left', title: 'Work left on us', unit: '', parts: [['bank_unexplained', 'help'], ['to_check', 'watch'], ['months_unlocked', 'watch']] }
-  };
-  function picParts(shown, spec) {
-    var byKey = {};
-    shown.tiles.forEach(function (t) { byKey[t.key] = t; });
-    return spec.parts.filter(function (p) { var t = byKey[p[0]]; return TILE[p[0]] && t && typeof t.n === 'number' && t.n > 0; }).map(function (p) {
-      var n = byKey[p[0]].n, word = tx(STAGE_WORDS[p[0]] ? stageWord(p[0]) : TILE[p[0]][0]);
-      return { kind: p[1], value: n, label: word + ': ' + n, key: p[0] };
-    });
-  }
-  /* E17 (Athi 2 Nov: a code on every element): the practice pictures are on Home (HOM001), kind P = panel; CBDraw writes whichever codes it is passed (opts.codes). The same code on every part of a kind, as a tile row shares its code. */
-  var PIC_CODES = { status: { chart: 'HOM001-P01', part: 'HOM001-P02', legend: 'HOM001-P03' }, strip: { chart: 'HOM001-P05', part: 'HOM001-P06', legend: 'HOM001-P07' },
-    cmp: { chart: 'HOM001-P09', part: 'HOM001-P10', legend: 'HOM001-P11' }, pair: { chart: 'HOM001-P13', part: 'HOM001-P10', legend: 'HOM001-P11' } };
-  /** the picture's colours for the theme on screen now (good / watch / bad have a dark set), measured by CBDraw itself; none when CBDraw cannot read the page */
-  function paletteHere() {
-    try { return root.CBDraw.paletteNow(null, root.document.getElementById('bp_practice') || root.document.documentElement); } catch (e) { return undefined; }
-  }
-  function pictureHTML(shown) {
-    var spec = PIC[shown.key];
-    if (!spec || !root.CBDraw) return '';
-    var parts = picParts(shown, spec);
-    if (!parts.length) return '';
-    var narrow = root.innerWidth && root.innerWidth <= 700;
-    var svg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, codes: PIC_CODES.status, title: tx(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
-    var total = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
-    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + esc(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-cbsid="HOM001-P04" data-testid="practice-pic-count">' + esc(spec.unit ? total + ' ' + tx(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
-  }
-  /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
-     (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints
-     money through money(). A client whose books stop early, whose last year is short or absent, or who holds two currencies is never ranked; the opened row says why in words. */
-  var YOY_WORDS = { stale: 'Books in to', short_last_year: 'No full last year yet', no_last_year: 'No last year to compare yet', mixed: 'Two currencies: not compared' };
-  function yoyDates(h) {
-    return h && h.sales_yoy_from ? day(h.sales_yoy_from) + ' – ' + day(h.sales_yoy_to) + ' / ' + day(h.sales_prev_from) + ' – ' + day(h.sales_prev_to) : '';
-  }
-  function yoyWords(h) {
-    var w = YOY_WORDS[h.sales_yoy_state];
-    return w ? tx(w) + (h.sales_yoy_state === 'stale' ? ' ' + day(h.sales_through) : '') : '';
-  }
-  function yoyRow(r) {
-    var h = r.health, cur = r.currency;
-    return { label: r.name || String(r.entity_id).slice(0, 8), now: h.sales_ytd_minor, before: h.sales_prev_ytd_minor, changePct: h.sales_yoy_pct, state: h.sales_yoy_state,
-      title: (r.name || '') + ' · ' + money(h.sales_ytd_minor, cur) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, cur) + ' ' + tx('last year') + ' · ' + yoyDates(h) };
-  }
-  /** chart 1: the listed clients whose sales fell most and rose most (only state ok; the bar is the carried change), the caption says how many of the list it shows */
-  function yoyRanked(clients) {
-    var ok = clients.filter(function (r) { return r.health && r.health.sales_yoy_state === 'ok' && r.health.sales_yoy_pct != null; });
-    var by = function (sign) { return function (a, b) { return sign * (a.health.sales_yoy_pct - b.health.sales_yoy_pct); }; };
-    return { fall: ok.filter(function (r) { return r.health.sales_yoy_pct < 0; }).sort(by(1)), rise: ok.filter(function (r) { return r.health.sales_yoy_pct > 0; }).sort(by(-1)) };
-  }
-  function compareHTML(data) {
-    var clients = data.clients || [];
-    if (!root.CBDraw || !root.CBDraw.compare || !clients.length) return '';
-    var narrow = root.innerWidth && root.innerWidth <= 700, take = narrow ? 2 : 3, ranked = yoyRanked(clients), palette = paletteHere();
-    var first = clients.filter(function (r) { return r.health && r.health.sales_yoy_from; })[0];
-    var one = function (list, id, title) {
-      return list.length ? root.CBDraw.compare(list.slice(0, take).map(yoyRow), { palette: palette, codes: PIC_CODES.cmp, width: narrow ? 280 : 250, labelW: narrow ? 92 : 80, id: id, tid: id, title: tx(title), desc: tx(title) + ': ' + list.slice(0, take).map(function (r) { return yoyRow(r).title; }).join('; ') }) : '';
-    };
-    var svgs = one(ranked.fall, 'bp-cmp-fall', 'Sales down most on last year') + (narrow ? '' : one(ranked.rise, 'bp-cmp-rise', 'Sales up most on last year'));
-    if (!svgs) return '';
-    var shown = Math.min(take, ranked.fall.length) + (narrow ? 0 : Math.min(take, ranked.rise.length));
-    return '<div class="bp-cmp" data-testid="practice-cmp" data-shown="' + shown + '" data-listed="' + clients.length + '"><span class="sub" data-cbsid="HOM001-P12" data-testid="practice-cmp-caption">' + esc(tx('Sales to date vs last year') + (first ? ' · ' + day(first.health.sales_yoy_from) + ' – ' + day(first.health.sales_yoy_to) : '') + ' · ' + shown + ' ' + tx('of') + ' ' + clients.length + ' ' + tx('clients listed')) + '</span><div class="bp-cmp-row">' + svgs + '</div></div>';
-  }
-  /** chart 2: this client's pair in the opened row, with the figures in words under it and the reason when there is no change */
-  function pairHTML(r) {
-    var h = r.health;
-    if (!root.CBDraw || !root.CBDraw.compare || !h || h.sales_ytd_minor == null || !h.sales_yoy_state) return '';
-    var row = yoyRow(r), reason = yoyWords(h);
-    row.label = tx('Sales');
-    var svg = root.CBDraw.compare([row], { palette: paletteHere(), codes: PIC_CODES.pair, mode: 'money', width: 340, labelW: 60, id: 'bp-pair-' + String(r.entity_id).slice(0, 8), tid: 'practice-pair-' + r.entity_id, title: tx('Sales this year and last year'), desc: row.title });
-    return '<div class="bp-pair" data-testid="practice-pair-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P14" data-testid="practice-pair-words-' + esc(r.entity_id) + '">' + esc(money(h.sales_ytd_minor, r.currency) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, r.currency) + ' ' + tx('last year') + (reason ? ' · ' + reason : '')) + '</span></div>';
-  }
-  /* REP-66: the opened row's months. The server's year_end carries how many months of the year are locked (the Month lock page's one rule, locked oldest first), so the first `locked` squares are locked and the rest open: no second read, no count made here. */
-  function monthWords(y) {
-    var start = String(y.start || '').slice(0, 7).split('-'), year = Number(start[0]), month = Number(start[1]) - 1, out = [];
-    if (!year || month < 0) return null;
-    for (var i = 0; i < y.of; i++) {
-      var d = new Date(Date.UTC(year, month + i, 1));
-      out.push({ label: new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' }).format(d), state: i < y.locked ? 'locked' : 'open' });
-    }
-    return out;
-  }
-  function stripHTML(r) {
-    var y = r.year_end, months = y && !y.first_year && y.of > 0 ? monthWords(y) : null;
-    if (!months || !root.CBDraw) return '';
-    var words = { locked: tx('locked'), open: tx('open'), running: tx('running') };
-    var svg = root.CBDraw.monthStrip(months, { id: 'bp-strip-' + String(r.entity_id).slice(0, 8), tid: 'practice-strip-' + r.entity_id, title: tx('Months locked'), codes: PIC_CODES.strip, words: words, labels: true, palette: paletteHere() });
-    return '<div class="bp-strip" data-testid="practice-strip-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P08" data-testid="practice-strip-count-' + esc(r.entity_id) + '">FY' + esc(String(y.fy).replace(/^dd(dd)/, '$1')) + ' · ' + esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of) + ' ' + esc(tx('months locked')) + '</span></div>';
-  }
-  /* A3P rank 6: the entries tile counts the work: the entries to check (the server's tile.entries), with the clients behind in its words; every other tile is its n. The filter under the tile is unchanged: its rows are the n clients. */
-  function tileFigure(t) {
-    return t.key === 'to_check' && typeof t.entries === 'number' ? Number(t.entries).toLocaleString() : t.n;
-  }
-  function tileWords(t, def) {
-    if (t.key === 'to_check' && typeof t.entries === 'number') return tx('Entries to check') + ' · ' + t.n + ' ' + tx(t.n === 1 ? 'client' : 'clients');
-    return tx(STAGE_WORDS[t.key] ? stageWord(t.key) : def[0]);
-  }
-  function bandHTML(data) {
-    var bands = (data.band && data.band.bands) || [], shown = bandShown(data);
-    if (!shown) return '';
-    var tabs = bands.length > 1 ? '<div class="bp-bands" role="tablist" aria-label="' + esc(tx('Practice bands')) + '">' + bands.map(function (x) {
-      return '<button type="button" role="tab" class="bp-bandtab' + (x.key === shown.key ? ' on' : '') + '" aria-selected="' + (x.key === shown.key) + '" data-cbsid="CMP036-D01" data-bp-band="' + esc(x.key) + '" data-testid="practice-band-' + esc(x.key) + '">' + esc(tx(BAND_NAME[x.key] || x.key)) + '</button>';
-    }).join('') + '</div>' : '';
-    var tiles = shown.tiles.filter(function (t) { return TILE[t.key]; }).map(function (t) {
-      var def = TILE[t.key], on = sameFilter(P.filter, def[1]);
-      return '<button type="button" class="bp-tile ' + esc(t.key) + (on ? ' on' : '') + '" data-cbsid="CMP060-D01" data-bp-filter="' + esc(JSON.stringify(def[1])) + '" aria-pressed="' + on + '"' + (t.key === 'lodged' ? ' title="' + esc(tx('Marked lodged by the owner: the returns were lodged outside these books, on the owner’s word')) + '"' : '') + ' data-testid="practice-tile-' + esc(t.key) + '"><b>' + esc(tileFigure(t)) + '</b><span>' + esc(tileWords(t, def)) + '</span></button>';
-    }).join('');
-    var note = shown.costs_not_shared ? '<p class="bp-note sub" data-testid="practice-costs-note">' + esc(shown.costs_not_shared) + ' ' + esc(tx('clients: costs not shared')) + '</p>' : '';
-    return '<div class="bp-bandbox" data-testid="practice-band" data-band="' + esc(shown.key) + '" role="group" aria-label="' + esc(tx('Practice counts')) + '">' + tabs + '<div class="bp-band">' + tiles + (shown.key === 'advisory' ? compareHTML(data) : '') + '</div>' + note + '</div>';
-  }
-  function ruleHTML(rule) {
-    return (
-      '<p class="bp-rule sub" data-testid="practice-rule">' + esc(tx('Needs help')) + ': ' + esc(tx('cash under')) + ' ' + rule.help.cash_days_below + ' ' + esc(tx('days of bills')) + ', ' + esc(tx('sales down')) + ' ' + rule.help.sales_down_pct + '%, ' + esc(tx('loss')) + ' ' + rule.help.loss_months_running + ' ' + esc(tx('months running')) +
-      '. ' + esc(tx('Watch')) + ': ' + esc(tx('sales down')) + ' ' + rule.watch.sales_down_pct + '%, ' + esc(tx('loss this quarter')) + '. ' + esc(tx('The firm can change this.')) + '</p>'
-    );
-  }
-  /** the band on screen now: the server's first one until a tab is pressed */
-  function bandNow() {
-    return (P.data && bandShown(P.data) || {}).key || 'pipeline';
-  }
-  function statusCell(r) {
-    /* A3P rank 1: on Year end the Status is a chip only (the reasons move to the opened row), so Due fits at 1366 */
-    var why = bandNow() !== 'pipeline' && r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + esc(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
-    return '<span class="tag ' + (STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + esc(r.entity_id) + '">' + esc(tx(r.health.words)) + '</span>' + why;
-  }
-  function trend(r) {
-    var v = r.health.sales_trend_pct;
-    return v == null ? '—' : (v > 0.5 ? '▲ ' : v < -0.5 ? '▼ ' : '► ') + (v > 0 ? '+' : '') + Math.round(v) + '%';
-  }
-  function basCell(r) {
-    if (!r.bas.due_date) return '—';
-    return esc(r.bas.form || '') + ' ' + esc(day(r.bas.due_date)) + (r.bas.due_in_days != null && r.bas.due_in_days <= 30 ? ' <span class="sub">(' + esc(r.bas.due_in_days) + ' ' + esc(tx('days')) + ')</span>' : '');
-  }
-  /** the queries of a client in words: "2 waiting on client" · "1 on us" (with its age once over 14 days) · "—" */
-  function queriesCell(r) {
-    var q = r.queries, parts = [];
-    if (!q.open) return '—';
-    if (q.on_client) parts.push(esc(q.on_client) + ' ' + esc(tx('waiting on client')));
-    if (q.on_us) parts.push(esc(q.on_us) + ' ' + esc(tx('on us')) + (q.waiting_over_14 ? ' <span class="sub">(' + esc(q.oldest_days) + ' ' + esc(tx('days')) + ')</span>' : ''));
-    return parts.join(' · ');
-  }
-  /** the last year end's label for the header, from the server's own year_end (the pack's label as stored: '2025-26' → FY25-26) */
-  function yearLabel() {
-    var row = ((P.data && P.data.clients) || []).filter(function (r) { return r.year_end; })[0];
-    return row ? 'FY' + String(row.year_end.fy).replace(/^dd(dd)/, '$1') : '';
-  }
-  /** the year-end cells: the same figures the Complete and Checked tiles count (the server's year_end), never the quarter */
-  function yendCell(r) {
-    var y = r.year_end;
-    /* fix1117 F4: an older seed or a client with no year-end answer still reads: the stage when there is one, else the bank's own words (F2), never a bare dash */
-    if (!y && !r.stage) return r.bank && r.bank.state === 'unexplained' ? esc(bankWords(r)) : '—';
-    if (y && y.first_year) return esc(tx('First year'));
-    if (!y) return '<span class="bp-yend" data-cbsid="HOM001-P16"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>';
-    var figures = esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(bankWords(r)));
-    /* F4 (17 Nov): ONE line per client, the stage and the one blocker; the figures sit in the title and one press away on the sheet (no second statement of the blocker, so the row is not two lines) */
-    return r.stage ? '<span class="bp-yend" data-cbsid="HOM001-P16" title="' + esc(figures.replace(/<[^>]*>/g, '')) + '"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>' : figures;
-  }
-  /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
-  function blockerWords(r) {
-    var y = r.year_end, b = r.stage_blocker, n;
-    if (!b) return r.bank && r.bank.state === 'unexplained' ? ' · ' + esc(bankWords(r)) : ''; /* fix1117 F2: no blocker named, the bank's unexplained amount (the row's own field) still shows */
-    if (b === 'months' && y) { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
-    if (b === 'bank') return ' · ' + esc(bankWords(r));
-    if (b === 'checked') return ' · ' + esc(tx('not checked'));
-    if (b === 'queries') return ' · ' + esc(r.queries.open) + ' ' + esc(tx(r.queries.open === 1 ? 'query open' : 'queries open'));
-    return '';
-  }
-  /** F1 (17 Nov): the bank's words from the one answer the Bank page reads (the client's newest sign-off, bank.state / unexplained_minor / reconciled_to): the same words the Bank page uses ('{a} unexplained' · 'Signed off to {d}'), never a second wording; 'bank not to year end' only when the answer carries no sign-off figure */
-  function bankWords(r) {
-    var b = r.bank || {};
-    if (b.state === 'none') return tx('no bank statement signed');
-    if (b.state === 'unexplained') return tx('{a} unexplained').replace('{a}', bankLeft(r));
-    return b.reconciled_to ? tx('Signed off to {d}').replace('{d}', day(b.reconciled_to)) : tx('bank not to year end');
-  }
-  function shortDay(iso) {
-    try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return day(iso); }
-  }
-  /** W3 (Athi, 16 Nov): the Checked cell says the share WITH the counts, so a big book's 50% pending is not read like a small one's; the share rounds DOWN and is never 100% unless every entry is checked */
-  function checkedWords(e) {
-    if (!e) return '—';
-    if (!(e.of > 0)) return tx('No entries');
-    if (e.checked >= e.of) return tx('All') + ' ' + e.of + ' ' + tx('checked');
-    return Math.min(99, Math.floor((e.checked * 100) / e.of)) + '% · ' + e.checked + ' ' + tx('of') + ' ' + e.of;
-  }
-  /** entries still to check: the cell's sort, largest first (a client with no figure sorts last) */
-  function checkedLeft(r) {
-    var e = r.year_end && r.year_end.entries;
-    return e ? e.of - e.checked : -1;
-  }
-  function checkedCell(r) {
-    var e = r.year_end && r.year_end.entries;
-    if (!e && r.checked && r.checked.of > 0) e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
-    return e ? esc(checkedWords(e)) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
-  }
-  /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
-  /** B7: why a figure is not there, from the server's health.withheld: costs the grant does not show → "costs not shared"; more than one currency → said so; null otherwise (then "—" is no data). Never 0. */
-  function withheldWord(r, notCosts) {
-    var w = (r.health && r.health.withheld) || {};
-    return w.costs && !notCosts ? tx('costs not shared') : w.currencies ? tx('more than one currency') : '';
-  }
-  /** notCosts: a figure no cost gate hides (the cash in bank): only a mixed currency explains its absence */
-  function figureOrWhy(r, value, shown, notCosts) {
-    return value == null ? esc(withheldWord(r, notCosts) || '—') : shown;
-  }
-  /* A3P rank 2: the opened Year end row is the year-end sheet: five facts from the row's own year_end, queries and bas (the figures in the cells, never a second read), each a link into that client with the year picked.
-     Addresses come from CBBooksActing (the one place that builds them): the client's screen (&view=, &fy=) and the auditor's Bank. No year_end (books not on): one sentence, no link. */
-  var SHEET_LINK = 'HOM001-P15';
-  function sheetAddress(r, view) {
-    var A = root.CBBooksActing, fy = r.year_end && r.year_end.fy;
-    if (!A || !fy) return '';
-    var carry = '&fy=' + encodeURIComponent(fy), store = { id: r.entity_id };
-    return view === 'bank' ? A.auditAddressOf(store, 'bank', carry) : A.clientAddress(store, '&view=' + encodeURIComponent(view) + carry);
-  }
-  function sheetLine(r, key, label, value, view) {
-    var href = sheetAddress(r, view), text = '<b>' + value + '</b>';
-    return '<div class="bp-fig" data-testid="practice-sheet-' + key + '-' + esc(r.entity_id) + '"><span class="sub">' + esc(tx(label)) + '</span>' +
-      (href ? '<a class="bp-link" href="' + esc(href) + '" data-cbsid="' + SHEET_LINK + '" data-testid="practice-sheet-go-' + key + '-' + esc(r.entity_id) + '">' + text + '</a>' : text) + '</div>';
-  }
-  function sheetHTML(r) {
-    var y = r.year_end;
-    if (!y) return '<p class="sub" data-testid="practice-sheet-none-' + esc(r.entity_id) + '">' + esc(tx('Books are not on for this client yet.')) + '</p>';
-    var e = y.entries, q = r.queries, locked = esc(y.locked) + ' ' + esc(tx('of')) + ' ' + esc(y.of);
-    return '<div class="bp-sheet" data-testid="practice-sheet-' + esc(r.entity_id) + '">' +
-      sheetLine(r, 'months', 'Months locked', locked, 'periods') +
-      sheetLine(r, 'bank', 'Bank to year end', y.bank_to_end ? esc(tx('Yes, to')) + ' ' + esc(shortDay(y.end)) : esc(tx('Not yet')), 'bank') +
-      sheetLine(r, 'checked', 'Entries checked', e ? esc(e.checked) + ' ' + esc(tx('of')) + ' ' + esc(e.of) : '—', 'daybook') +
-      sheetLine(r, 'queries', 'Queries', q.open ? queriesCell(r) : esc(tx('None')), 'daybook') +
-      sheetLine(r, 'due', 'Return due', r.bas.due_date ? basCell(r) : esc(tx('No date')), 'periods') + '</div>';
-  }
-  function whyLine(r) {
-    var h = r.health;
-    return h.reasons && h.reasons.length ? '<p class="sub">' + esc(tx('Why')) + ': ' + esc(h.reasons.join(' · ')) + '</p>' : '';
-  }
-  function detailHTML(r, band) {
-    if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + sheetHTML(r) + stripHTML(r) + pairHTML(r) + whyLine(r) + '</div>';
-    var h = r.health, held = withheldWord(r) || tx('Not shown');
-    var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + esc(tx(label)) + '</span><b>' + value + '</b></div>'; };
-    return (
-      '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + stripHTML(r) + pairHTML(r) +
-      line('Sales vs 3-month average', esc(trend(r))) +
-      line('Margin this quarter', figureOrWhy(r, h.gross_margin_pct, esc(h.gross_margin_pct) + '%')) +
-      line('Cash and bank', figureOrWhy(r, h.cash_minor, esc(money(h.cash_minor, r.currency)), true)) +
-      line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
-      line('Cash for those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
-      line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
-      line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(bankLeft(r)) + ' ' + esc(tx('unexplained'))) +
-      line('Profit this quarter', figureOrWhy(r, h.profit_quarter_minor, esc(money(h.profit_quarter_minor, r.currency)))) +
-      line('Months not locked', esc(r.months_unlocked)) +
-      line('Access ends', esc(day(r.grant.expires_at))) +
-      whyLine(r) +
-      '</div>'
-    );
-  }
-  /** what is left unexplained, as the api carries it: one figure per currency (CUR-1), never two currencies added; an older answer's one figure in the client's currency */
-  function bankLeft(r) {
-    var b = r.bank, lines = b.by_currency || [];
-    return lines.length ? lines.map(function (l) { return money(l.unexplained_minor, l.currency); }).join(' · ') : money(b.unexplained_minor, b.currency || r.currency);
-  }
-  /** the bank as the client's signed statements carry it: reconciled to a date, or the amount left unexplained, or no statement signed */
-  function bankCell(r) {
-    var b = r.bank;
-    if (b.state === 'none') return '<span class="sub">' + esc(tx('No statement')) + '</span>';
-    var to = esc(tx('to')) + ' ' + esc(day(b.reconciled_to));
-    return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + esc(r.entity_id) + '">' + esc(bankLeft(r)) + ' ' + esc(tx('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : esc(tx('Reconciled')) + ' <span class="sub">' + to + '</span>';
-  }
-  /** rank 10: the quiet warning on a row, the server's own count (never added up here): 'N since I checked', or 'N since access began' before the first Mark as checked; a link to the changed entries (the Day book, newest first). Nothing shows when it is 0. */
-  var CHANGED_LINK = 'HOM001-B05';
-  function changedCell(r) {
-    var c = r.changed, A = root.CBBooksActing;
-    if (!c || !(c.n > 0)) return '';
-    var words = c.n + ' ' + tx(c.never ? 'since access began' : 'since I checked'), title = tx('Books changed since your last check') + (c.since ? ' · ' + day(c.since) : '');
-    var href = A && A.clientAddress ? A.clientAddress({ id: r.entity_id }, '&view=daybook&since=mine') : '';
-    return href ? '<a class="bp-link" href="' + esc(href) + '" title="' + esc(title) + '" data-cbsid="' + CHANGED_LINK + '" data-testid="practice-changed-' + esc(r.entity_id) + '">' + esc(words) + '</a>' : esc(words);
-  }
   /** l16 R4-2b: the client this person worked on last (set when a client's books are entered, books-acting.js): its row is marked, in view and focused when the list comes back */
   function lastClient() {
     try { return root.sessionStorage.getItem('cb_last_client') || ''; } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:last', failure); return ''; }
@@ -444,46 +145,46 @@
   };
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
-      return Object.assign({ key: key, label: tx(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
+      return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + esc(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + esc(tx('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', bandNow() === 'pipeline' ? 150 : 260, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
-      num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
-      num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
-      num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
-      num('changed', 'Changed', 130, changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
-      num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('yend', 'Year end', 230, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
-      num('checked', 'Checked ' + yearLabel(), 110, checkedCell, checkedLeft, { prio: 1, dir0: -1 }),
-      num('tocheck', 'To check (qtr)', 100, function (r) { return esc(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
-      num('unlocked', 'Months not locked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
-      num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
-      num('margin', 'Margin', 80, function (r) { return figureOrWhy(r, r.health.gross_margin_pct, esc(r.health.gross_margin_pct) + '%'); }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
-      num('cash', 'Cash', 110, function (r) { return figureOrWhy(r, r.health.cash_minor, esc(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
-      num('profit', 'Profit (qtr)', 110, function (r) { return figureOrWhy(r, r.health.profit_quarter_minor, esc(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
-      num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
-      num('look', 'My last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
-      num('saved', 'Saved', 80, function (r) { return flagsOn() ? P.fl.chip(r.entity_id, r.name) : ''; }, function (r) { return flagsOn() && P.fl.any(r.entity_id) ? 1 : 0; }, { prio: 1, keep: true }) /* CMP066: my own bookmark of this client */
+      { key: 'name', label: translate('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
+      num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
+      num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
+      num('queries', 'Queries', 120, practiceKit.queriesCell, function (r) { return r.queries.open; }),
+      num('changed', 'Changed', 130, practiceKit.changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
+      num('bas', 'Due', 120, practiceKit.basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
+      num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('checked', 'Checked ' + practiceKit.yearLabel(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
+      num('tocheck', 'To check (qtr)', 100, function (r) { return escapeHtml(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
+      num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
+      num('sales', 'Sales trend', 90, function (r) { return escapeHtml(practiceKit.trend(r)); }, function (r) { return practiceKit.trend(r); }),
+      num('margin', 'Margin', 80, function (r) { return practiceKit.figureOrWhy(r, r.health.gross_margin_pct, escapeHtml(r.health.gross_margin_pct) + '%'); }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
+      num('cash', 'Cash', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.cash_minor, escapeHtml(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
+      num('profit', 'Profit (qtr)', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.profit_quarter_minor, escapeHtml(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
+      num('ending', 'Ends', 100, function (r) { return escapeHtml(dayWords(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
+      num('look', 'My last look', 100, function (r) { return escapeHtml(dayWords(r.last_look)); }, function (r) { return r.last_look || ''; }),
+      num('saved', 'Saved', 80, function (r) { return flagsOn() ? practiceKit.practiceState.fl.chip(r.entity_id, r.name) : ''; }, function (r) { return flagsOn() && practiceKit.practiceState.fl.any(r.entity_id) ? 1 : 0; }, { prio: 1, keep: true }) /* CMP066: my own bookmark of this client */
     ];
   }
   /** A3P rank 1: the Year end band's work order: stage in the server's pipeline order (Books in first, Lodged last; a stage the list does not know, last), then the blocker, then the return due date, then the server's own order. */
   var BLOCKERS = ['months', 'bank', 'checked', 'queries'];
   function workOrder(a, b) {
-    var stages = (((P.data && P.data.band) || {}).pipeline || []).map(function (x) { return x.key; });
+    var stages = (((practiceKit.practiceState.data && practiceKit.practiceState.data.band) || {}).pipeline || []).map(function (x) { return x.key; });
     var at = function (list, key) { var i = list.indexOf(key); return i < 0 ? list.length : i; };
     var due = function (r) { return (r.bas && r.bas.due_date) || '9999'; };
     return at(stages, a.stage) - at(stages, b.stage) || at(BLOCKERS, a.stage_blocker) - at(BLOCKERS, b.stage_blocker) || (due(a) < due(b) ? -1 : due(a) > due(b) ? 1 : 0) || a._n - b._n;
   }
   function sorts(band) {
-    var by = function (k, get, text) { return { key: k, label: tx(text), cmp: function (a, b) { var x = get(a), y = get(b); return typeof x === 'string' || typeof y === 'string' ? String(x).localeCompare(String(y)) : (x == null ? -1e18 : x) - (y == null ? -1e18 : y); } }; };
-    return (band === 'pipeline' ? [{ key: 'pipeline', label: tx('Work order'), cmp: workOrder }] : []).concat([
+    var by = function (k, get, text) { return { key: k, label: translate(text), cmp: function (a, b) { var x = get(a), y = get(b); return typeof x === 'string' || typeof y === 'string' ? String(x).localeCompare(String(y)) : (x == null ? -1e18 : x) - (y == null ? -1e18 : y); } }; };
+    return (band === 'pipeline' ? [{ key: 'pipeline', label: translate('Work order'), cmp: workOrder }] : []).concat([
       by('urgency', function (r) { return r._n; }, 'Most urgent first'),
       by('name', function (r) { return r.name || ''; }, 'Client'),
       by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
       by('queries', function (r) { return r.queries.open; }, 'Queries open'),
       by('bas', function (r) { return r.bas.due_date || '9999'; }, 'Return due'),
-      by('checked', checkedLeft, 'Entries left to check (year end)'),
+      by('checked', practiceKit.checkedLeft, 'Entries left to check (year end)'),
       by('yend', function (r) { return r.year_end ? r.year_end.locked : -1; }, 'Months locked (year end)'),
       by('unlocked', function (r) { return r.months_unlocked; }, 'Months not locked'),
       by('sales', function (r) { return r.health.sales_trend_pct; }, 'Sales vs 3-month average'),
@@ -496,28 +197,28 @@
     ]);
   }
   function filters() {
-    var f = function (key, label, options, match) { return { key: key, label: tx(label), all: tx('All'), options: options.map(function (o) { return { v: o[0], label: tx(o[1]) }; }), match: match }; };
+    var filterOf = function (key, label, options, match) { return { key: key, label: translate(label), all: translate('All'), options: options.map(function (o) { return { v: o[0], label: translate(o[1]) }; }), match: match }; };
     return [
-      f('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
-      f('stage', 'Year end', ['books_in', 'complete', 'checked', 'ready', 'lodged'].map(function (k) { return [k, stageWord(k)]; }), function (r, v) { return r.stage === v; }),
-      f('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
-      f('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
-      f('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
-      f('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
-      f('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
-      f('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
-      f('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
-      f('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
-      f('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
-    ].concat(flagsOn() ? [f('saved', 'Saved', [['bookmarked', 'Bookmarked'], ['noted', 'With a note']], function (r, v) { return v === 'noted' ? P.fl.noted(r.entity_id) > 0 : P.fl.bookmarked(r.entity_id); })] : []);
+      filterOf('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
+      filterOf('stage', 'Year end', ['books_in', 'complete', 'checked', 'ready', 'lodged'].map(function (k) { return [k, practiceKit.stageWord(k)]; }), function (r, v) { return r.stage === v; }),
+      filterOf('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
+      filterOf('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
+      filterOf('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
+      filterOf('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
+      filterOf('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
+      filterOf('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
+      filterOf('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
+      filterOf('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
+      filterOf('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
+    ].concat(flagsOn() ? [filterOf('saved', 'Saved', [['bookmarked', 'Bookmarked'], ['noted', 'With a note']], function (r, v) { return v === 'noted' ? practiceKit.practiceState.fl.noted(r.entity_id) > 0 : practiceKit.practiceState.fl.bookmarked(r.entity_id); })] : []);
   }
   /* A3P rank 5: on Year end a client opens where its blocker is (the server's stage_blocker): months → Months · bank → Bank · not checked or a query → Day book, the year picked; no blocker or no year → the client as before */
   var BLOCKER_VIEW = { months: 'periods', bank: 'bank', checked: 'daybook', queries: 'daybook' };
   /* F3: a client whose blocker is entries opens the Day book already narrowed to them (the Day book's own Mark filter words, read from the address by books-grant-filters.js): not checked · queried */
   var BLOCKER_MARK = { checked: 'notchecked', queries: 'query' };
   function openBooks(id, band) {
-    var r = band === 'pipeline' ? (P.data.clients || []).filter(function (x) { return String(x.entity_id) === String(id); })[0] : null;
-    var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) + (BLOCKER_MARK[r.stage_blocker] ? '&dbf_mark=' + BLOCKER_MARK[r.stage_blocker] : '') : '';
+    var r = band === 'pipeline' ? (practiceKit.practiceState.data.clients || []).filter(function (x) { return String(x.entity_id) === String(id); })[0] : null;
+    var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? practiceKit.sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) + (BLOCKER_MARK[r.stage_blocker] ? '&dbf_mark=' + BLOCKER_MARK[r.stage_blocker] : '') : '';
     root.location.href = to || '/network.html?open=' + encodeURIComponent(id);
   }
   /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
@@ -536,95 +237,124 @@
     var host = root.document.getElementById('bp_list');
     if (!host) return;
     if (!root.CBList) return withList(mountList);
-    if (P.list) {
-      try { P.list.destroy(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:destroy', failure); }
-    }
-    var bandKey = (bandShown(P.data) || {}).key || 'pipeline';
+    dropOldList();
+    var bandKey = (practiceKit.bandShown(practiceKit.practiceState.data) || {}).key || 'pipeline';
     if (root.CBList.reset) root.CBList.reset('practice-clients-' + bandKey);
-    var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
-    P.list = root.CBList.mount(host, {
-      key: 'practice-clients-' + bandKey, t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
-      search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
-      empty: { title: tx('No clients match') },
-      cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
-      rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
-    });
-    if (!P.marked && lastClient()) {
-      P.marked = true;
-      root.setTimeout(function () { if (P.list && P.list.mark) P.list.mark(lastClient()); }, 0);
-    }
+    var rows = practiceKit.practiceState.data.clients.map(function (r, n) { r._n = n; return r; });
+    practiceKit.practiceState.list = root.CBList.mount(host, listOptions(rows, bandKey));
+    markLastClient();
     host.onclick = function (ev) {
       var button = ev.target.closest && ev.target.closest('[data-bp-open]');
       if (button) { ev.preventDefault(); openBooks(button.getAttribute('data-bp-open'), bandKey); }
     };
   }
-  function css() {
+  /** the list left from the last paint is destroyed first */
+  function dropOldList() {
+    if (practiceKit.practiceState.list) {
+      try { practiceKit.practiceState.list.destroy(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:destroy', failure); }
+    }
+  }
+  /** the first paint marks the last client the person worked on (the row to come back to) */
+  function markLastClient() {
+    if (!practiceKit.practiceState.marked && lastClient()) {
+      practiceKit.practiceState.marked = true;
+      root.setTimeout(function () { if (practiceKit.practiceState.list && practiceKit.practiceState.list.mark) practiceKit.practiceState.list.mark(lastClient()); }, 0);
+    }
+  }
+  /** the client list: its key, rows, columns, sorts, filters, search and empty state */
+  function listOptions(rows, bandKey) {
+    return {
+      key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
+      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : { filt: {} },
+      search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
+      empty: { title: translate('No clients match') },
+      cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
+      rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
+    };
+  }
+  function practiceCss() {
     if (root.document.getElementById('bp_css')) return;
-    var s = root.document.createElement('style');
-    s.id = 'bp_css';
-    s.textContent =
+    var styleNode = root.document.createElement('style');
+    styleNode.id = 'bp_css';
+    styleNode.textContent =
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--accent,#1b4d3e);color:var(--on-accent,#fff);border-color:var(--accent,#1b4d3e)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
       '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;min-width:0}.bp-fig>b,.bp-fig>a{min-width:0;overflow-wrap:anywhere}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
-    root.document.head.appendChild(s);
+    root.document.head.appendChild(styleNode);
   }
   function draw() {
     var areas = root.document.querySelector('[data-testid="shell-areas"]');
-    if (!areas || !P.data) return false;
+    if (!areas || !practiceKit.practiceState.data) return false;
+    var section = sectionIn(areas);
+    dropWaiting();
+    var held = root.document.activeElement, heldId = held && section.contains(held) && held.getAttribute ? held.getAttribute('data-testid') : null; /* B3: where the keyboard was, put back after the redraw */
+    var door = root.document.getElementById('bcd_card');
+    if (door && door.parentNode) door.parentNode.removeChild(door);
+    section.innerHTML = sectionHTML();
+    wireSection(section);
+    mountList();
+    wireFlagButton(section);
+    restoreFocus(section, heldId);
+    practiceKit.practiceState.drawn = true;
+    return true;
+  }
+  /** the practice section above the areas (made once, with its styles) */
+  function sectionIn(areas) {
     var section = root.document.getElementById('bp_practice');
     if (!section) {
-      css();
+      practiceCss();
       section = root.document.createElement('section');
       section.id = 'bp_practice';
       section.setAttribute('data-testid', 'practice');
       areas.parentNode.insertBefore(section, areas);
     }
-    dropWaiting();
-    var held = root.document.activeElement, heldId = held && section.contains(held) && held.getAttribute ? held.getAttribute('data-testid') : null; /* B3: where the keyboard was, put back after the redraw */
-    var door = root.document.getElementById('bcd_card');
-    if (door && door.parentNode) door.parentNode.removeChild(door);
-    section.innerHTML =
-      '<div class="bp-head"><h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + (bandShown(P.data) ? pictureHTML(bandShown(P.data)) : '') +
-      (P.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (bandShown(P.data) && bandShown(P.data).key === 'advisory' ? ruleHTML(P.data.rule) : '') + bandHTML(P.data) +
-      (P.data.truncated ? '<p class="sub">' + esc(tx('Some clients are not shown.')) + '</p>' : '') +
-      '<div id="bp_list" data-testid="practice-list"></div>';
+    return section;
+  }
+  /** the section's head, band and the slot for the list, from the server's counts */
+  function sectionHTML() {
+    return (
+   '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
+   (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
+   '<div id="bp_list" data-testid="practice-list"></div>'
+    );
+  }
+  /** the band tiles filter, the tabs switch the band, Show all clears */
+  function wireSection(section) {
     [].forEach.call(section.querySelectorAll('[data-bp-filter]'), function (b) {
       b.onclick = function () {
         var f = JSON.parse(b.getAttribute('data-bp-filter'));
-        P.filter = P.filter && JSON.stringify(P.filter) === JSON.stringify(f) ? null : f;
+        practiceKit.practiceState.filter = practiceKit.practiceState.filter && JSON.stringify(practiceKit.practiceState.filter) === JSON.stringify(f) ? null : f;
         draw();
-      };
+    };
     });
     [].forEach.call(section.querySelectorAll('[data-bp-band]'), function (b) {
-      b.onclick = function () { P.band = b.getAttribute('data-bp-band'); P.filter = null; draw(); };
+      b.onclick = function () { practiceKit.practiceState.band = b.getAttribute('data-bp-band'); practiceKit.practiceState.filter = null; draw(); };
     });
     var clear = section.querySelector('[data-bp-clear]');
-    if (clear) clear.onclick = function () { P.filter = null; draw(); };
-    mountList();
-    wireFlagButton(section);
-    if (heldId) {
-      var back = section.querySelector('[data-testid="' + heldId + '"]') || section.querySelector('.bp-tile.on') || section.querySelector('.bp-tile');
-      if (back && back.focus) back.focus();
-    }
-    P.drawn = true;
-    return true;
+    if (clear) clear.onclick = function () { practiceKit.practiceState.filter = null; draw(); };
+  }
+  /** where the keyboard was is put back (B3), else on the first tile */
+  function restoreFocus(section, heldId) {
+    if (!heldId) return;
+    var back = section.querySelector('[data-testid="' + heldId + '"]') || section.querySelector('.bp-tile.on') || section.querySelector('.bp-tile');
+    if (back && back.focus) back.focus();
   }
   /* l16 firmhome: Home's card facts and the "Your clients" card ask THIS first: a firm (clients, no trade of its own) hides the shop cards and asks for only what it draws, so
      they wait for the one practice read (at most `ms`) and then know which Home they are on. Never rejects. */
   var settleNow = null,
     settledOnce = new root.Promise(function (go) { settleNow = go; });
-  function settle() { P.pending = false; release(); dropWaiting(); if (settleNow) settleNow(true); }
+  function settle() { practiceKit.practiceState.pending = false; release(); dropWaiting(); if (settleNow) settleNow(true); }
   /* l16 R4-2: the wait is for the ANSWER, not for 3 s. A practice answer held past 3 s used to let Home decide "not a firm": the auditor saw the shop Home and the page asked 31 calls against a budget of 8. The ceiling is
      only a hang-guard (a read that never returns); a slow answer shows the loading frame (drawWaiting) and Home waits for it. */
   var SETTLE_CEILING = 25000;
   function settled(ms) {
     /* l16 W5: while a known firm's practice read has failed, nothing decides "a shop": the cards keep waiting for the retry */
-    if (P.failedFirm) return settledOnce;
-    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(function () { if (hintRaw() !== "0" && !P.data) return; go(false); /* a firm or a login not yet known keeps waiting on the frame and its retry */ }, ms || SETTLE_CEILING + 50); })]);
+    if (practiceKit.practiceState.failedFirm) return settledOnce;
+    return root.Promise.race([settledOnce, new root.Promise(function (go) { root.setTimeout(function () { if (hintRaw() !== "0" && !practiceKit.practiceState.data) return; go(false); /* a firm or a login not yet known keeps waiting on the frame and its retry */ }, ms || SETTLE_CEILING + 50); })]);
   }
   /** what the last answer said (a firm or not) for THIS login, kept per browser only to word the loading frame and to decide whether Home holds its paint; the page never decides from it.
       Stored as "1:<token tail>" / "0:<token tail>" so another login in the same browser reads as unknown. */
@@ -655,10 +385,10 @@
   }
   if (holding) {
     root.document.documentElement.classList.add('bp-hold');
-    var hs = root.document.createElement('style');
-    hs.textContent = 'html.bp-hold [data-testid="shell-areas"],html.bp-hold [data-testid="shell-sidetools"],html.bp-hold #railbox{display:none!important}html.bp-hold .cbsh-nv:not([data-go="home"]){visibility:hidden}';
-    (root.document.head || root.document.documentElement).appendChild(hs);
-    root.setTimeout(function () { if (!P.failedFirm) release(); }, SETTLE_CEILING + 500);
+    var hideStyle = root.document.createElement('style');
+    hideStyle.textContent = 'html.bp-hold [data-testid="shell-areas"],html.bp-hold [data-testid="shell-sidetools"],html.bp-hold #railbox{display:none!important}html.bp-hold .cbsh-nv:not([data-go="home"]){visibility:hidden}';
+    (root.document.head || root.document.documentElement).appendChild(hideStyle);
+    root.setTimeout(function () { if (!practiceKit.practiceState.failedFirm) release(); }, SETTLE_CEILING + 500);
   }
   /* l16 n12: a firm's Home draws neither the two side buttons (We lean on / Leans on us) nor the Your work strip: one class, set from the one rule, hides them with no flash (the hold above covers the wait) */
   function markFirm() {
@@ -675,32 +405,32 @@
   function drawWaiting() {
     var areas = root.document.querySelector('[data-testid="shell-areas"]');
     if (!areas || root.document.getElementById('bp_wait') || root.document.getElementById('bp_practice')) return;
-    var w = root.document.createElement('section');
-    w.id = 'bp_wait';
-    w.setAttribute('data-testid', 'practice-loading');
-    w.setAttribute('role', 'status');
-    w.setAttribute('aria-live', 'polite');
-    w.style.margin = '0 0 16px';
-    w.innerHTML = (hint() ? '<h2 style="margin:0 0 6px;font-size:18px">' + esc(tx('Your practice')) + '</h2>' : '') + '<p class="sub">' + esc(tx('Loading')) + '</p>';
-    areas.parentNode.insertBefore(w, areas);
+    var waitingBox = root.document.createElement('section');
+    waitingBox.id = 'bp_wait';
+    waitingBox.setAttribute('data-testid', 'practice-loading');
+    waitingBox.setAttribute('role', 'status');
+    waitingBox.setAttribute('aria-live', 'polite');
+    waitingBox.style.margin = '0 0 16px';
+    waitingBox.innerHTML = (hint() ? '<h2 style="margin:0 0 6px;font-size:18px">' + escapeHtml(translate('Your practice')) + '</h2>' : '') + '<p class="sub">' + escapeHtml(translate('Loading')) + '</p>';
+    areas.parentNode.insertBefore(waitingBox, areas);
   }
   /** l16 W5: a login known to be a firm (hint 1) whose practice read failed (429 / 5xx / no answer): a calm frame with a retry, never the shop Home. An unknown login keeps hold-then-decide. */
   function drawFailed() {
     dropWaiting();
     var areas = root.document.querySelector('[data-testid="shell-areas"]');
     if (!areas || root.document.getElementById('bp_failed')) return;
-    var w = root.document.createElement('section');
-    w.id = 'bp_failed';
-    w.setAttribute('data-testid', 'practice-failed');
-    w.setAttribute('role', 'alert');
-    w.style.margin = '0 0 16px';
+    var failedBox = root.document.createElement('section');
+    failedBox.id = 'bp_failed';
+    failedBox.setAttribute('data-testid', 'practice-failed');
+    failedBox.setAttribute('role', 'alert');
+    failedBox.style.margin = '0 0 16px';
     /* a login known to be a firm is titled "Your practice"; a login the page does not know yet (a fresh browser) is titled "Home": the frame never claims what it has not been told */
-    var title = hintRaw() === '1' ? tx('Your practice') : tx('Home');
-    w.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + esc(title) + '</h2><div data-testid="practice-failed-frame"></div>';
-    areas.parentNode.insertBefore(w, areas);
-    root.CBShell.readFailed(w.lastChild, { what: tx('Your practice'), status: P.failStatus, retry: function () {
-      P.failedFirm = false;
-      P.token = null; /* the next tick reads again */
+    var title = hintRaw() === '1' ? translate('Your practice') : translate('Home');
+    failedBox.innerHTML = '<h2 style="margin:0 0 6px;font-size:18px">' + escapeHtml(title) + '</h2><div data-testid="practice-failed-frame"></div>';
+    areas.parentNode.insertBefore(failedBox, areas);
+    root.CBShell.readFailed(failedBox.lastChild, { what: translate('Your practice'), status: practiceKit.practiceState.failStatus, retry: function () {
+      practiceKit.practiceState.failedFirm = false;
+      practiceKit.practiceState.token = null; /* the next tick reads again */
       var f = root.document.getElementById('bp_failed');
       if (f && f.parentNode) f.parentNode.removeChild(f);
       tick();
@@ -708,25 +438,25 @@
   }
   /** firm frame P0 (T1): only a login KNOWN to be a shop (hint 0) may paint shop cards when the practice read fails; a firm (hint 1) or a login not yet known (a fresh browser, no hint) stays held with the frame and its retry */
   function failedRead(status) {
-    P.pending = false;
-    P.failStatus = status || 0;
-    if (hintRaw() !== '0') { P.failedFirm = true; drawFailed(); return; }
+    practiceKit.practiceState.pending = false;
+    practiceKit.practiceState.failStatus = status || 0;
+    if (hintRaw() !== '0') { practiceKit.practiceState.failedFirm = true; drawFailed(); return; }
     settle(); /* a known shop: the shop Home, as before */
   }
   function tick() {
-    var t = token();
-    if (!t) return;
-    if (P.token !== t) {
-      P.token = t;
-      P.data = null;
-      P.drawn = false;
-      P.fl = null; P.flReady = false; P.flOff = false; P.flTotal = 0; /* another login: its own flags */
-      P.pending = true;
-      P.since = Date.now();
+    var tokenNow = token();
+    if (!tokenNow) return;
+    if (practiceKit.practiceState.token !== tokenNow) {
+      practiceKit.practiceState.token = tokenNow;
+      practiceKit.practiceState.data = null;
+      practiceKit.practiceState.drawn = false;
+      practiceKit.practiceState.fl = null; practiceKit.practiceState.flReady = false; practiceKit.practiceState.flOff = false; practiceKit.practiceState.flTotal = 0; /* another login: its own flags */
+      practiceKit.practiceState.pending = true;
+      practiceKit.practiceState.since = Date.now();
       read().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
         if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
-        P.data = answer;
+        practiceKit.practiceState.data = answer;
         hint(answer.own_trade === false);
         markFirm();
         root.dispatchEvent(new root.Event('cb-practice'));
@@ -735,18 +465,18 @@
         tick();
       }, function (failure) { if (root.cbQuiet) root.cbQuiet('practice:read', failure); failedRead(0); });
       /* a read that never answers is a failed read too (the 25 s hang): the frame, not the shop Home */
-      root.setTimeout(function () { if (P.token === t && P.pending && !P.data && !P.failedFirm) failedRead(0); }, SETTLE_CEILING);
-    } else if (P.data && !root.document.getElementById('bp_practice')) draw();
-    else if (P.pending && !P.data && (holding || Date.now() - P.since > 800)) drawWaiting();
+      root.setTimeout(function () { if (practiceKit.practiceState.token === tokenNow && practiceKit.practiceState.pending && !practiceKit.practiceState.data && !practiceKit.practiceState.failedFirm) failedRead(0); }, SETTLE_CEILING);
+    } else if (practiceKit.practiceState.data && !root.document.getElementById('bp_practice')) draw();
+    else if (practiceKit.practiceState.pending && !practiceKit.practiceState.data && (holding || Date.now() - practiceKit.practiceState.since > 800)) drawWaiting();
   }
   function start() {
     tick();
-    if (!P.timer) P.timer = root.setInterval(tick, 1000);
-    if (holding) { var quick = root.setInterval(function () { if (!holding || P.data) return root.clearInterval(quick); drawWaiting(); }, 60); }
+    if (!practiceKit.practiceState.timer) practiceKit.practiceState.timer = root.setInterval(tick, 1000);
+    if (holding) { var quick = root.setInterval(function () { if (!holding || practiceKit.practiceState.data) return root.clearInterval(quick); drawWaiting(); }, 60); }
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!P.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: checkedWords, checkedLeft: checkedLeft,
+  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { bankWords: bankWords, openBooks: openBooks, use: function (d) { P.data = d; P.band = null; P.filter = null; }, compareHTML: compareHTML, pairHTML: pairHTML, yendCell: yendCell, detailHTML: detailHTML, sorts: sorts, statusCell: statusCell, workOrder: workOrder, sheetHTML: sheetHTML, pictureHTML: pictureHTML, stripHTML: stripHTML, columns: columns, filters: filters, bandHTML: bandHTML, stageWord: stageWord, BAND_COLS: BAND_COLS } };
+    parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

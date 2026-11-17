@@ -114,27 +114,27 @@
     return list.map(function (o) { return { v: o[0], label: words(o[1]) }; });
   }
   /** my private bookmarks and notes (cap-flag.js): a flag never changes "Checked n of m", and this filter never reads a mark */
-  function flagFilter(fl) {
-    return { key: 'flag', label: words('Saved'), all: words('All'), options: opts([['bookmarked', 'Bookmarked'], ['noted', 'With a note']]), match: function (row, v) { return v === 'noted' ? fl.noted(row.entry_id) > 0 : fl.bookmarked(row.entry_id); } };
+  function flagFilter(flagHelper) {
+    return { key: 'flag', label: words('Saved'), all: words('All'), options: opts([['bookmarked', 'Bookmarked'], ['noted', 'With a note']]), match: function (row, v) { return v === 'noted' ? flagHelper.noted(row.entry_id) > 0 : flagHelper.bookmarked(row.entry_id); } };
   }
   /** ctx (optional, widens the three): { period: () => {from,to}, currency: () => code, region: () => the AUDITED SHOP's country code (its weekend is the test's calendar, never the viewer's), rows: () => entries } — read when a row is judged, so a new period or page is followed */
-  function filtersFor(mk, ctx) {
+  function filtersFor(markHelper, ctx) {
     ctx = ctx || {};
-    var fl = ctx.fl || null;
-    var period = function () { return ctx.period ? ctx.period() : null; }, cur = function () { return ctx.currency ? ctx.currency() : ''; }, reg = function () { return ctx.region ? ctx.region() : ''; };
-    var EV = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No source', held: 'File attached' }; /* the chip's own words: one wording per state */
+    var flagHelper = ctx.fl || null;
+    var period = function () { return ctx.period ? ctx.period() : null; }, currencyOf = function () { return ctx.currency ? ctx.currency() : ''; }, regionOf = function () { return ctx.region ? ctx.region() : ''; };
+    var EVIDENCE_WORDS = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No source', held: 'File attached' }; /* the chip's own words: one wording per state */
     return [
-      { key: 'mark', label: words('Mark'), all: words('All'), options: opts([['notchecked', 'Not checked'], ['checked', 'Checked'], ['hold', 'On hold'], ['query', 'Queried']]), match: function (row, v) { var st = markState(mk, row).state; return v === 'checked' ? isChecked(mk, row) : v === 'notchecked' ? !isChecked(mk, row) : v === 'hold' ? st === 'hold' : st === 'open'; } },
-      { key: 'ev', label: words('Evidence'), all: words('All'), options: opts([['flag', EV.flag], ['none', EV.none], ['nodoc', EV.nodoc], ['held', EV.held]]), match: function (row, v) { return evidenceKey(row) === v; } },
-      { key: 'risk', label: words('Risk'), all: words('All'), options: opts([['any', 'Any risk']]), match: function (row) { return riskOf(row, period(), cur(), reg()).length > 0; } },
+      { key: 'mark', label: words('Mark'), all: words('All'), options: opts([['notchecked', 'Not checked'], ['checked', 'Checked'], ['hold', 'On hold'], ['query', 'Queried']]), match: function (row, v) { var st = markState(markHelper, row).state; return v === 'checked' ? isChecked(markHelper, row) : v === 'notchecked' ? !isChecked(markHelper, row) : v === 'hold' ? st === 'hold' : st === 'open'; } },
+      { key: 'ev', label: words('Evidence'), all: words('All'), options: opts([['flag', EVIDENCE_WORDS.flag], ['none', EVIDENCE_WORDS.none], ['nodoc', EVIDENCE_WORDS.nodoc], ['held', EVIDENCE_WORDS.held]]), match: function (row, v) { return evidenceKey(row) === v; } },
+      { key: 'risk', label: words('Risk'), all: words('All'), options: opts([['any', 'Any risk']]), match: function (row) { return riskOf(row, period(), currencyOf(), regionOf()).length > 0; } },
       { key: 'rec', label: words('Recorded'), all: words('All'), options: opts([['afterend', 'After period end'], ['late7', 'Over 7 days late'], ['late30', 'Over 30 days late'], ['late90', 'Over 90 days late']]), match: function (row, v) { return v === 'afterend' ? afterEnd(row, period()) : daysLate(row) > Number(String(v).replace('late', '')); } },
-      { key: 'time', label: words('Made'), all: words('All'), options: opts([['weekend', 'At a weekend'], ['night', 'After hours']]), match: function (row, v) { return v === 'weekend' ? weekend(row, reg()) : afterHours(row); } },
-      { key: 'round', label: words('Round sum'), all: words('All'), options: opts([['100', 'Multiple of 100'], ['1000', 'Multiple of 1,000']]), match: function (row, v) { return round(row, Number(v), cur()); } },
+      { key: 'time', label: words('Made'), all: words('All'), options: opts([['weekend', 'At a weekend'], ['night', 'After hours']]), match: function (row, v) { return v === 'weekend' ? weekend(row, regionOf()) : afterHours(row); } },
+      { key: 'round', label: words('Round sum'), all: words('All'), options: opts([['100', 'Multiple of 100'], ['1000', 'Multiple of 1,000']]), match: function (row, v) { return round(row, Number(v), currencyOf()); } },
       { key: 'by', label: words('Made by'), all: words('All'), options: function () { return makers(ctx.rows ? ctx.rows() : []).map(function (n) { return { v: n, label: n }; }); }, match: function (row, v) { return madeBy(row) === v; } },
       { key: 'narr', label: words('Narration'), all: words('All'), options: opts([['none', 'None written']]), match: function (row) { return noNarration(row); } },
       { key: 'ye', label: words('Year end'), all: words('All'), options: opts([['dated', 'Dated after it'], ['recorded', 'Recorded after it']]), match: function (row, v) { var p = period() || {}, d = String(row.posting_date || '').slice(0, 10); return v === 'dated' ? !!p.to && d > String(p.to).slice(0, 10) : afterEnd(row, p) && d <= String(p.to).slice(0, 10) && (!p.from || d >= String(p.from).slice(0, 10)); } },
       { key: 'kind', label: words('Type'), all: words('All'), options: opts([['Sales', 'Sales'], ['Purchases', 'Purchases'], ['Expenses', 'Expenses'], ['Returns', 'Returns'], ['Receipts', 'Receipts'], ['Payments', 'Payments'], ['Other', 'Journals and other']]), match: function (row, v) { return kindOf(row) === v; } }
-    ].concat(fl && !fl.off() ? [flagFilter(fl)] : []);
+    ].concat(flagHelper && !flagHelper.off() ? [flagFilter(flagHelper)] : []);
   }
   /** the choices in force → the address words (only the ones set) */
   function toAddress(filt) {

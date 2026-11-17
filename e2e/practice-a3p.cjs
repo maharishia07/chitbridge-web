@@ -4,7 +4,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const root = { Promise, tx: (s) => s, URLSearchParams, encodeURIComponent, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {}, remove() {}, toggle() {} } } }, localStorage: { getItem() { return null; } }, location: { hostname: 'x', search: '' } };
-for (const f of ['books-acting.js', 'books-practice.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'), { window: root, globalThis: root, setInterval() {}, setTimeout() {}, URLSearchParams, encodeURIComponent }, {});
+for (const f of ['books-acting.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'), { window: root, globalThis: root, setInterval() {}, setTimeout() {}, URLSearchParams, encodeURIComponent }, {});
 const T = root.CBPractice.parts;
 let bad = 0;
 const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };
