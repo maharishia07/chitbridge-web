@@ -51,7 +51,7 @@
     '.ev-warn{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00)}' +
     '.ev-quiet{color:var(--grey,#5E594D);font-weight:600}' +
     'dialog.ev-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16)}' +
-    'dialog.ev-sheet::backdrop{background:rgba(0,0,0,.4)}' +
+    'dialog.ev-sheet::backdrop{background:var(--scrim,rgba(0,0,0,.4))}' +
     '.ev-in{padding:14px 16px;display:flex;flex-direction:column;gap:10px}' +
     '.ev-hd{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.ev-hd h2{margin:0;font-size:var(--fs-3,17px)}' +
     '.ev-x{border:0;background:transparent;font:inherit;font-size:20px;line-height:1;min-width:44px;min-height:44px;cursor:pointer;color:var(--grey,#5E594D)}' +
@@ -117,7 +117,7 @@
   function viewerPage(name, kind, fileUrl) {
     var label = esc(name || 'file');
     var body = kind === 'pdf' ? '<embed type="application/pdf" src="' + fileUrl + '">' : '<img alt="' + label + '" src="' + fileUrl + '">';
-    return '<!doctype html><html><head><meta charset="utf-8"><title>' + label + '</title><style>html,body{margin:0;height:100%;background:#525659}embed{width:100%;height:100%;display:block}img{max-width:100%;max-height:100%;display:block;margin:0 auto}</style></head><body>' + body + '</body></html>';
+    return '<!doctype html><html><head><meta charset="utf-8"><title>' + label + '</title><style>html,body{margin:0;height:100%;background:var(--viewer-bg,#525659)}embed{width:100%;height:100%;display:block}img{max-width:100%;max-height:100%;display:block;margin:0 auto}</style></head><body>' + body + '</body></html>';
   }
   /** a link pressed on the page: the browser opens the tab itself, with no opener (a script that opens about:blank and sets its address later loses the blob: Chrome keys a blob url to the page that made it) */
   function pressLink(href, name, download) {

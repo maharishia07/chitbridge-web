@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-EhckPRN4XdILXpTmTbO3AC5El6bhyNISTVrAVK8LFqo='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Chart helper, in every theme</title>
 <style>
 :root{--page:#FCFAF5;--card:#fffdf8;--ink:#2a2418;--grey:#6f6450;--line:#e6dcc6;--accent-text:#1f5f5b;--paper:#FCFAF5}
@@ -26,8 +26,13 @@ h1{font-size:20px;margin:0 0 4px}
 .nums{font:12px/1.5 ui-monospace,monospace;margin:0;color:var(--ink)}
 .nums span.bad{font-weight:700}
 </style>
+<link rel="stylesheet" href="/app/lab-kit.css">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/cb-fonts.css">
 </head>
 <body>
+<div id="shell"></div>   <!-- THE ONE HEADER (CBFrame → CBShell), mounted by the hashed script below, signed out, nothing fetched -->
 <main>
 <h1>Chart helper, in every theme</h1>
 <p class="lead">Demo figures. Each panel is one of the 16 themes. The numbers under it are measured on that theme's page and card with the standard's own contrast function.</p>
@@ -43,9 +48,15 @@ h1{font-size:20px;margin:0 0 4px}
 <script src="/app/strings-fr.js"></script>
 <script src="/app/strings-ui-standard.js"></script>
 <script src="/engine/screen.js"></script>
+<script src="/app/avatar.js"></script>
+<script src="/app/one-person.js"></script>
+<script src="/app/screen-id.js"></script>
 <script src="/engine/chart-draw.js"></script>
 <script src="/app/ui.js"></script>
 <script src="/app/ui-standard.js"></script>
+<script src="/app/shell.js"></script>
+<script src="/app/page-frame.js"></script>
 <script src="/app/chart-sample.js"></script>
+<script>if (window.CBFrame) CBFrame.mount({ app: 'chart-sample', bar: true, signin: false, anonymous: true, manifest: { entries: [] }, host: document.getElementById('shell'), title: { icon: '▓', name: 'Chart helper sample' } });</script>   <!-- the one header; its hash is in the page CSP (script-src), so no other inline script runs -->
 </body>
 </html>

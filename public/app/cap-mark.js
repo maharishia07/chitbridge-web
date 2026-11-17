@@ -112,7 +112,7 @@
     'dialog.mk-sheet[open]{display:flex;flex-direction:column;height:min(680px,calc(100dvh - 24px))}' +
     '.mk-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}.mk-body>#mk_thread{flex:1 1 auto;min-height:0}.mk-spacer{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;overflow-y:auto}' +
     '.mk-actbar{display:flex;flex-direction:column;gap:6px}.mk-box{display:flex;gap:8px;align-items:flex-end}.mk-box textarea{flex:1 1 auto;min-width:0;min-height:44px;max-height:140px;resize:none}' +
-    'dialog.mk-sheet::backdrop{background:rgba(0,0,0,.4)}' +
+    'dialog.mk-sheet::backdrop{background:var(--scrim,rgba(0,0,0,.4))}' +
     '.mk-in{padding:14px 16px;display:flex;flex-direction:column;gap:9px;flex:1 1 auto;min-height:0}' +
     '.mk-hd{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.mk-hd h2{margin:0;font-size:var(--fs-3,17px)}' +
     '.mk-x{border:0;background:transparent;font:inherit;font-size:20px;line-height:1;min-width:44px;min-height:44px;cursor:pointer;color:var(--grey,#5E594D)}' +

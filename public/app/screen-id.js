@@ -64,7 +64,8 @@
           ['BKS023', 'accounts', 'Shop ledgers'],
           ['BKS024', 'movein', 'Move in'],
           ['BKS025', 'rates', 'Rates'],
-          ['BKS026', 'overview', 'How we are doing']
+          ['BKS026', 'overview', 'How we are doing'],
+          ['BKS027', 'access', 'Who can see my books']
         ]
       },
       {
@@ -240,6 +241,7 @@
       },
       { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] },
       { app: 'list-lab', name: 'List Lab', page: '/list-lab.html', rows: [['LLB001', null, 'List Lab', "/list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark"]] },
+      { app: 'chart-sample', name: 'Chart sample', page: '/chart-sample.html', rows: [['CHS001', null, 'Chart helper sample', '/chart-sample.html · the shared chart helper in the 16 themes (REP-36)']] },
       { app: 'signin-lab', name: 'Sign-in Lab', page: '/signin-lab.html', rows: [['SLB001', null, 'Sign-in Lab', '/signin-lab.html · the one sign-in window on a bare page']] },
       { app: 'shell-lab', name: 'Shell Lab', page: '/shell-lab.html', rows: [['SHL001', null, 'Shell Lab', '/shell-lab.html · the shell on a bare page']] },
       {
