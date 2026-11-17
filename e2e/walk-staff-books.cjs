@@ -16,6 +16,7 @@ const { standIn, route } = require('./lib/standin.cjs');
 const books = require('./lib/books-api.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const { audit } = require('./lib/rule13.cjs');
+const C = require('./lib/contract.cjs'); /* every answer this walk serves for a contract route is held to docs/contracts/web-api.json (e2e/fixtures/web-api.contract.json) */
 
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), OUT = process.env.OUT || path.join(__dirname, 'shots');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -62,7 +63,7 @@ const VIEWS = [['tb', 'Trial balance'], ['pl', 'P&L'], ['bs', 'Balance sheet'], 
           const url = new URL(r.request().url());
           if (url.pathname === '/api/books/periods') {
             periodCalls.push(seat);
-            return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(books.periods(monthRows(seat === 'owner'), { years: [{ fy: '2026-27', from: '2026-04-01', to: '2027-03-31' }] })) });
+            return C.json(r, 200, books.periods(monthRows(seat === 'owner')));
           }
           if (seat === 'staff') return r.fulfill({ status: 403, contentType: 'application/problem+json', body: JSON.stringify(refusal) });
           return r.fallback();
@@ -110,6 +111,9 @@ const VIEWS = [['tb', 'Trial balance'], ['pl', 'P&L'], ['bs', 'Balance sheet'], 
       }
     }
   }
+  /* the months answer this walk serves (the owner's and the staff seat's) is held to the contract; the stand-in's own baseline answers are held by e2e/contract.cjs */
+  const badMonths = C.STATE.bad.filter((b) => /periods/.test(b.where));
+  ok(badMonths.length === 0, 'the months answer of both seats has the keys, nesting and types the API sends' + (badMonths.length ? ' - ' + badMonths[0].problems.slice(0, 3).join('; ') : ''));
   await browser.close(); srv.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
