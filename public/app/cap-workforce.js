@@ -1313,7 +1313,7 @@ function acDetailHTML() {
       <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select data-cbsid="BUS005-S04" class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(
         UI.acts || []
       )
-        .filter((item) => item.id !== x.id && hatAssignable(item.hat))
+        .filter((item) => item.id !== x.id && hatAssignable(item))
         .map((item) => '<option value="' + esc(item.id) + '"' + (x.del === item.id ? ' selected' : '') + '>' + esc(item.name) + '</option>')
         .join('')}</select>
       <label class="fl">${tx('Max concurrent tasks')}</label><input data-cbsid="BUS005-I06" class="inp" id="ac_emax" inputmode="numeric" value="${x.max || ''}" style="width:120px">
@@ -1344,7 +1344,7 @@ function acDetailHTML() {
       '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">' +
       hatLabel(x.hat) +
       '</span>' +
-      (hatAssignable(x.hat) ? '' : ' <span style="font-size:var(--fs-1);color:var(--grey)">not assignable</span>');
+      (hatAssignable(x) ? '' : ' <span style="font-size:var(--fs-1);color:var(--grey)">not assignable</span>');
     const coversFor = (UI.acts || []).filter((item) => item.del === x.id).map((item) => acLbl(item));
     const prof = `<div class="sec">${tx('Profile')}</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
       ${kv('Name', esc(x.name))}

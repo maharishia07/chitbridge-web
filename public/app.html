@@ -22050,8 +22050,15 @@ function accessLevelOf(x) {
 function hatLabel(x) {
   return ACCESS_LABEL[accessLevelOf(x)] || tx('Editor');
 }
+/* ⭐ W1 (ASSIGN-1, cb-people): who may hold work is the SERVER's answer (`assignable` on every row of GET /api/actors, lib/assign-chit mayHold), never computed here. Pass the mapped person; a bare hat or level
+   string (an old call, or a list from a server that does not send the flag yet) falls back to the editor test, which is the same rule for a task. */
 function hatAssignable(x) {
-  return accessLevelOf(x) === 'editor';
+  if (x && typeof x === 'object' && typeof x.assignable === 'boolean') return x.assignable;
+  return accessLevelOf(x && typeof x === 'object' ? x.hat : x) === 'editor';
+}
+/** may this person hold a JOB chit (a client of the firm)? the server's answer; a read-only seat may */
+function jobAssignable(x) {
+  return !!(x && typeof x === 'object' && x.jobAssignable === true);
 }
 
 /** What an owner picks. The two flags are separate controls — they are not levels. */
@@ -24288,6 +24295,8 @@ function mapApiActor(list) {
     max: list.max_tasks || 0,
     phone: list.phone || '',
     hat: list.hat || 'act',
+    assignable: typeof list.assignable === 'boolean' ? list.assignable : undefined /* W1: the server's answer (may hold a task) */,
+    jobAssignable: list.job_assignable === true /* W1: the server's answer (may hold a job chit; a read-only seat may) */,
     del: list.delegate_actor_id || null,
     lastAssigned: list.last_assigned_at || null,
     pinSet: list.pin_state ? list.pin_state === 'set' : !!list.pin_set_at,
@@ -28336,7 +28345,7 @@ async function pickAssign(id) {
       const off = item.shift === 'off';
       const max = item.max || 0;
       const full = max > 0 && item.load >= max;
-      const assignable = hatAssignable(item.hat);
+      const assignable = hatAssignable(item);
       const dis = off || full || !assignable;
       const chip =
         item.shift === 'on_shift'
@@ -28409,7 +28418,7 @@ async function pickAssignBulk(ids) {
       const off = item.shift === 'off';
       const max = item.max || 0;
       const full = max > 0 && item.load >= max;
-      const assignable = hatAssignable(item.hat);
+      const assignable = hatAssignable(item);
       const dis = off || full || !assignable;
       const chip =
         item.shift === 'on_shift'
