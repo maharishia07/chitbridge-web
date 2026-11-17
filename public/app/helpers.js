@@ -106,14 +106,14 @@ function shopReg(cc) {
    row by the country code the caller passes — each pack's id is its country's code. */
 var PACK_WORDS = {
   IN: { taxId: 'GSTIN', postcode: 'PIN', region: 'State' },
-  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', returnName: 'BAS', cash: 'Bank' },
-  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', returnName: 'VAT return' },
+  AU: { taxId: 'ABN', postcode: 'Postcode', region: 'State', cash: 'Bank' },
+  AE: { taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate' },
   US: { stock: 'Inventory' }
 };
-var PACK_WORDS_NONE = { taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
+var PACK_WORDS_NONE = { taxName: 'Tax', taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
 function packWord(kind, cc) {
   var p = shopReg(cc),
-    own = p && p.words && p.words[kind];
+    own = p && ((p.words && p.words[kind]) || (kind === 'returnName' && p.returns && p.returns.short));  /* the return's name is the pack's own returns.short (BAS, VAT return), never typed here */
   if (own) return own;
   var w = PACK_WORDS[packRowKey(p, cc)] || PACK_WORDS_NONE;
   return w[kind] || PACK_WORDS_NONE[kind] || '';

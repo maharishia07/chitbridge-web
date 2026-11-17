@@ -400,7 +400,7 @@ function fcReturnChip(g, cur) {
 /** ONE-FIGURE: what the ledgers owe from BEFORE the return's period (an opening balance or earlier periods) — its own line, the server's figure, no due date made up for it */
 function fcEarlierChip(g, cur) {
   var e = g.earlier;
-  return (g.short === 'BAS' ? 'GST' : g.short) + ' ' + tx('owing from before') + ' ' + (e.before ? shopDay(e.before) : tx('this period')) + ' · ' + bkMoney(e.payable_minor, cur) + ' · ' + tx('due date not recorded');
+  return (packWord('taxName') || g.short) + ' ' + tx('owing from before') + ' ' + (e.before ? shopDay(e.before) : tx('this period')) + ' · ' + bkMoney(e.payable_minor, cur) + ' · ' + tx('due date not recorded');
 }
 /** mount the Cash tab into the screen */
 function fcMount(frame) {

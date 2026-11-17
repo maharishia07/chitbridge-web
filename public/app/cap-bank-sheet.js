@@ -320,7 +320,7 @@ function bkshReady() {
 /** the sheet's first words under the title: the engine's refusal, or that registration could not be read */
 function bkshFirstWords(said, unread) {
   if (!said.ok) return said.why;
-  return unread ? tx('Could not check whether the shop is registered for GST, so each charge asks what GST it carries.') : '';
+  return unread ? txf('Could not check whether the shop is registered for {tax}, so each charge asks what {tax} it carries.', { tax: packWord('taxName') }) : '';
 }
 /** the controller's key of one bank row (its client_ref, one to one by occurrence), '' when the row is not on this statement */
 function bkshKeyOfRow(row) {

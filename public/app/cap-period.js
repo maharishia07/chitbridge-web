@@ -494,7 +494,9 @@ async function peDepRun(btn) {
    Repeating entries: CRUD /recurring, post or skip a due one. Accruals: POST /accruals (comes back on the first day of the next month), POST /accruals/:ref/reverse.
    There is no list of accruals on the API yet: the page shows the ones that are DUE to turn back (the To-do feed's own list) and the ones made in this visit. */
 /** the sentence a reader who is not the owner sees where the Close card would be (ACC-229): one wording, two places */
-const PE_OWNER_ONLY_CLOSES = 'Only the owner closes and pays GST';
+/** the pack's own tax word (GST · VAT · Tax) from the one reader packWord; no tax name is typed in this file */
+const peTaxWord = () => (typeof packWord === 'function' && packWord('taxName')) || 'Tax';
+const peOwnerOnlyCloses = () => txf('Only the owner closes and pays {name}', { name: peTaxWord() });
 const PE_FREQ = [
   ['monthly', 'Every month'],
   ['quarterly', 'Every 3 months'],
@@ -942,7 +944,7 @@ async function peGstView(body) {
     return;
   }
   if (!peOwner()) {
-    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(PE_OWNER_ONLY_CLOSES);
+    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(peOwnerOnlyCloses());
     return;
   }
   let L;
@@ -1327,8 +1329,8 @@ function peReturnPaint(r) {
           peSel(
             'pr_s',
             [
-              ['1', 'Simpler BAS'],
-              ['0', 'Full BAS']
+              ['1', txf('Simpler {name}', { name: peReturnName() })],
+              ['0', txf('Full {name}', { name: peReturnName() })]
             ],
             asked.simpler === false ? '0' : '1',
             ' onchange="peReturnPick(\'simpler\', this.value)"'
@@ -1433,7 +1435,7 @@ const peRetReadOnly = (r) => {
 /** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
 function peReturnCloseSection(r) {
   if (peRetReadOnly(r)) return '<div class="pe-card" data-testid="pr-readonly"><div class="pe-note">' + esc(tx(peRetReadOnly(r))) + '</div></div>';
-  return peOwner() ? peReturnCloseCard(r) : peNoOwner(PE_OWNER_ONLY_CLOSES);
+  return peOwner() ? peReturnCloseCard(r) : peNoOwner(peOwnerOnlyCloses());
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
@@ -1497,7 +1499,7 @@ function peReturnList(r) {
   if (two)
     cols.push({
       key: 'tax',
-      label: tx('VAT'),
+      label: peTaxWord(),
       prio: 1,
       num: true,
       w: 150,
@@ -1531,7 +1533,7 @@ function peReturnLedgers(r, b, two) {
     widths = two ? [130, 130] : [130],
     money = (v) => (v == null ? peRetDash() : esc(peMoney(v, c)));
   const head = CBList.nextRow(
-    ['<span style="' + grey + '">' + esc(tx('Ledger')) + '</span>'].concat(two ? ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>', '<span style="' + grey + '">' + esc(tx('VAT')) + '</span>'] : ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>']),
+    ['<span style="' + grey + '">' + esc(tx('Ledger')) + '</span>'].concat(two ? ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>', '<span style="' + grey + '">' + esc(peTaxWord()) + '</span>'] : ['<span style="' + grey + '">' + esc(tx('Amount')) + '</span>']),
     widths
   );
   const lines = (b.accounts || []).map((item) =>

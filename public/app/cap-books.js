@@ -2954,7 +2954,7 @@ function bkEvidenceIngest(list) {
   if (!BK.ev)
     BK.ev = CBEvidence.use({
       raw: function (path) {
-        return fetch(CFG.API_BASE + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + SESSION.token }, typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}) });
+        return fetch(CFG.API_BASE + path, { cache: 'no-store', headers: CBBooksActing.authHeaders() });
       }
     });
   BK.ev.ingest(list);
@@ -2964,7 +2964,7 @@ function bkEvidenceIngest(list) {
  * Only on the business's OWN books (not while acting for a client: the firm's seats are the grant view's); the subject is this business's own id.
  */
 function bkFlagCall(method, path, body) {
-  return fetch(CFG.API_BASE + path, { method: method, cache: 'no-store', headers: { Authorization: 'Bearer ' + SESSION.token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
+  return fetch(CFG.API_BASE + path, { method: method, cache: 'no-store', headers: Object.assign(CBBooksActing.tokenHeader(), { 'Content-Type': 'application/json' }), body: body ? JSON.stringify(body) : undefined }).then(function (r) {
     return r.json().catch(function () { return {}; }).then(function (j) {
       if (!r.ok) { var e = new Error(j.detail || j.message || j.error || 'API ' + r.status); e.status = r.status; e.code = j.code; throw e; }
       return j;
@@ -6432,7 +6432,7 @@ async function bkPackGet(id) {
       var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
       var res = await fetch(base + EP.booksPackFile.p.replace(':id', encodeURIComponent(id)), {
         cache: 'no-store',
-        headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}
+        headers: CBBooksActing.tokenHeader()
       });
       if (res.status === 409 || res.status === 404) {
         bkPackNoFile(id);
