@@ -14,6 +14,9 @@
 const path = require('path'),
   assert = require('assert');
 const pub = (rel) => path.join(__dirname, '..', 'public', rel);
+/* the page loads helpers.js first (monthNames, the one list of month words); so does this unit */
+globalThis.window = globalThis;
+require('vm').runInThisContext(require('fs').readFileSync(pub('app/helpers.js'), 'utf8'), { filename: 'helpers.js' });
 const L = require(pub('app/bank-lock.js'));
 globalThis.CBBankLock = L;
 const P = require(pub('app/bank-preview.js')),

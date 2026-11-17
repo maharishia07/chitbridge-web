@@ -9,6 +9,7 @@ const root = { esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
 const ctx = { window: root, globalThis: root, setInterval() {}, setTimeout() {}, Intl, Date };
 vm.runInNewContext(pub('engine/chart-draw.js'), ctx, {});
 root.CBDraw = root.CBDraw || ctx.CBDraw;
+vm.runInNewContext(pub('app/helpers.js'), ctx, {}); /* the page loads helpers.js first: the one esc · fmtMoney · monthNames */
 vm.runInNewContext(pub('app/books-practice.js'), ctx, {});
 const T = root.CBPractice.parts;
 let bad = 0;

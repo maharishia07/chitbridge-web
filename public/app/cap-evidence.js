@@ -21,11 +21,6 @@
   function T(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
-  }
   var W = {
     flag: 'No tax invoice',
     none: 'No file',
