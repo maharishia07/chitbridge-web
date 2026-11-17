@@ -4651,7 +4651,7 @@ function bkTbBankOptions(reply, asOf) {
   return {
     money: function (minor, c) { return bkMoney(minor, c || cur); }, day: function (iso) { return typeof shopDay === 'function' ? shopDay(iso) : iso; }, tx: tx, txf: typeof txf === 'function' ? txf : tx,
     codes: { note: 'ACC002-P01', open: 'ACC002-B61', at: 'ACC002-B62' }, ids: 'bk_tb_bank_',
-    onDay: function (day) { var box = document.getElementById('tb_asof'); if (box) box.value = day; bkTab('tb'); },
+    onDay: function (day) { BK.tbDay = day; bkTab('tb'); } /* the tab repaints from scratch, so the day rides in BK until bkTB reads it */,
     onOpen: function () {
       var from = (reply && reply.fy_from) || '', query = new URLSearchParams(location.search || '');
       if (from && asOf) { query.set('fy', from.slice(0, 4)); query.set('from', from); query.set('to', asOf); history.replaceState(null, '', location.pathname + '?' + query.toString() + location.hash); } /* the Bank page reads the period from the address */
@@ -4662,7 +4662,8 @@ function bkTbBankOptions(reply, asOf) {
 }
 /* the Trial balance tab: every account's debit and credit as of one date */
 async function bkTB(body) {
-  var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
+  var asOf = BK.tbDay || (document.getElementById('tb_asof') || {}).value || bkToday();
+  BK.tbDay = '';
   try {
     var reply = await api('booksTB', { query: { asOf: asOf } });
     var c = reply && reply.currency;

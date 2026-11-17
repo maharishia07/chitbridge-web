@@ -2504,9 +2504,27 @@
     ],
     "total_dr_minor": 297000,
     "total_cr_minor": 297000,
-    "balanced": true
+    "balanced": true,
+    "bank": [
+     {
+      "account_id": "11111111-1111-4111-8111-111111111111",
+      "code": "1100",
+      "name": "Bank",
+      "currency": "INR",
+      "state": "reconciled",
+      "period_to": "2027-03-31",
+      "statement_minor": 297000,
+      "books_signed_minor": 297000,
+      "unexplained_minor": 0,
+      "books_now_minor": 297000,
+      "moved_minor": 0,
+      "signed_at": "2027-04-02 09:00:00+00"
+     }
+    ]
    },
-   "optional": [],
+   "optional": [
+    "bank"
+   ],
    "note": "RAIL-146o: a cost-blind reader gets the same shape with every *_minor null and cost_hidden:true (a daybook keeps its sales entries); a client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
    "cost_blind_example": {
     "currency": "INR",

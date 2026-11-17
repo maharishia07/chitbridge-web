@@ -307,9 +307,9 @@
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
       (viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
-      (viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at */ +
       (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
-      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
+      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' +
+      (viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wireBand();
     if (viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: viewState.failure && viewState.failure.status, detail: viewState.failure && viewState.failure.detail, retry: function () { reload(); } });
     fillPeriodSlot(report);
