@@ -7,21 +7,21 @@
  * ⭐ A TABLE UNDER EVERY CHART: each adapter returns { points|rows, table: { head, rows } } so the page can toggle the same figures as text.
  * Pictures (one component per kind, all in engine/chart-draw.js): sales week / month / year against last year (CBDraw.bars) · what is owed by age (CBDraw.hbars) ·
  *   income and expense lines against last year (CBDraw.compare, money) · cash for 30 days (CBDraw.cashLine).
- * NOT built, and why: profit PER ITEM and top items — no cost price per item (REP-29) and no items-sold read exist on main; the REQ forbids a profit per item before then.
- *   Sales BY WEEKDAY (this ISO week against the same week last year) needs a day series route (soldByDay is read inside till/summary only); the week bars (52 weeks) are the available one.
+ * NOT built, and why: profit PER ITEM and top items — no cost price per item (REP-29) and no items-sold read exist on main; the REQ forbids a profit per item before then (the overview says so).
+ *   Sales BY WEEKDAY: /overview weekdays[7] (one soldByDay read, widened) → weekdayPoints.
  * deps = { tx (words), money (minor, currency) → text, date (Date → text for a month name), cur (currency) }.
- * OWNS      MC (keyWords · salesPoints · salesTable · duesRows · plRows · cashPoints)
- * CALLED BY app/cap-mis-pictures.js (the Pictures view) · app/cap-mis-trend.js (trKeyWords · trPoints) · e2e/mis-charts.test.cjs
+ * OWNS      MC (keyWords · salesPoints · salesTable · duesRows · plRows · cashPoints · monthPoints · monthTable · profitPoints · weekdayPoints · weekdayTable)
+ * CALLED BY app/cap-books-overview.js (How we are doing: monthPoints · profitPoints · weekdayPoints · duesRows · cashPoints) · app/cap-mis-pictures.js (the Pictures view) · app/cap-mis-trend.js (trKeyWords · trPoints) · e2e/mis-charts.test.cjs
  * FLOW      R2R · reports — server answer in → points/rows + table out → CBDraw → svg
  */
 (function (root) {
   'use strict';
   var DUE_KEYS = [
     ['not_due', 'Not due', false],
-    ['d0_30', '1-30 days late', true],
-    ['d31_60', '31-60 days late', true],
-    ['d61_90', '61-90 days late', true],
-    ['d90_plus', 'Over 90 days late', true]
+    ['d0_30', '1-30 days', true],
+    ['d31_60', '31-60 days', true],
+    ['d61_90', '61-90 days', true],
+    ['d90_plus', 'Over 90 days', true]
   ];
 
   function monthWords(key, form, deps) {
@@ -147,7 +147,67 @@
     };
   }
 
-  var MC = { keyWords: keyWords, salesPoints: salesPoints, salesTable: salesTable, duesRows: duesRows, plRows: plRows, cashPoints: cashPoints };
+  /** /overview bars[12] → bars points: this month solid (the running one hatched), the same month last year the dashed line; a month the server did not read is an empty tick */
+  function monthPoints(list, deps) {
+    return (list || []).map(function (item) {
+      var name = monthWords(String(item.from).slice(0, 7), 'long', deps) + (item.running ? ' · ' + deps.tx('so far') : '');
+      return {
+        key: item.from,
+        label: monthWords(String(item.from).slice(0, 7), 'short', deps),
+        value: item.sold_minor === undefined ? null : item.sold_minor,
+        line: item.last_year_minor === undefined ? null : item.last_year_minor,
+        hatch: !!item.running,
+        title: name + ' · ' + moneyOrDash(item.sold_minor, deps),
+        lineTitle: deps.tx('Last year') + ' · ' + moneyOrDash(item.last_year_minor, deps)
+      };
+    });
+  }
+  function monthTable(list, key, deps, withLast) {
+    return {
+      head: withLast ? [deps.tx('Month'), deps.tx('Sales'), deps.tx('Last year')] : [deps.tx('Month'), deps.tx('Profit')],
+      rows: (list || []).map(function (item) {
+        var name = monthWords(String(item.from).slice(0, 7), 'long', deps) + (item.running ? ' ' + deps.tx('(so far)') : '');
+        return withLast ? [name, moneyOrDash(item[key], deps), moneyOrDash(item.last_year_minor, deps)] : [name, moneyOrDash(item[key], deps)];
+      })
+    };
+  }
+  /** /overview profit_by_month[12] → bars points (no last-year line: the server sends none) */
+  function profitPoints(list, deps) {
+    return (list || []).map(function (item) {
+      var p = monthPoints([{ from: item.from, running: item.running, sold_minor: item.profit_minor }], deps)[0];
+      p.line = null;
+      return p;
+    });
+  }
+  /** /overview weekdays[7] → bars points: this ISO week by weekday, the same week last year the dashed line; a day not yet come (or with no sale) is an empty tick */
+  function weekdayWords(day, form, deps) {
+    var at = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return at ? deps.date(Date.UTC(+at[1], +at[2] - 1, +at[3]), { weekday: form }) : day;
+  }
+  function weekdayPoints(days, deps) {
+    return (days || []).map(function (item) {
+      var name = weekdayWords(item.day, 'long', deps);
+      return {
+        key: item.day,
+        label: weekdayWords(item.day, 'short', deps),
+        value: item.sold_minor,
+        line: item.last_year_minor,
+        hatch: false,
+        title: name + ' · ' + moneyOrDash(item.sold_minor, deps),
+        lineTitle: deps.tx('Last year') + ' · ' + moneyOrDash(item.last_year_minor, deps)
+      };
+    });
+  }
+  function weekdayTable(days, deps) {
+    return {
+      head: [deps.tx('Day'), deps.tx('Sales'), deps.tx('Last year')],
+      rows: (days || []).map(function (item) {
+        return [weekdayWords(item.day, 'long', deps), moneyOrDash(item.sold_minor, deps), moneyOrDash(item.last_year_minor, deps)];
+      })
+    };
+  }
+
+  var MC = { keyWords: keyWords, salesPoints: salesPoints, salesTable: salesTable, duesRows: duesRows, plRows: plRows, cashPoints: cashPoints, monthPoints: monthPoints, monthTable: monthTable, profitPoints: profitPoints, weekdayPoints: weekdayPoints, weekdayTable: weekdayTable };
   if (typeof module !== 'undefined' && module.exports) module.exports = MC;
   if (root) root.MC = MC;
 })(typeof window !== 'undefined' ? window : globalThis);
