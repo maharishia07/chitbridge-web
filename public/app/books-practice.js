@@ -18,9 +18,6 @@
   function tx(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
-  }
   function base() {
     try {
       var f = root.localStorage.getItem('cb_api_base');
@@ -114,10 +111,9 @@
   function hidesShopCards(id) {
     return isFirm() && !FIRM_KEEPS[id];
   }
-  function money(minor, currency) {
-    if (minor == null) return '—';
-    var major = Number(minor) / 100;
-    return root.CBLocale && root.CBLocale.money ? root.CBLocale.money(major, currency || 'AUD') : (currency || '') + ' ' + major.toFixed(2);
+  /* minor units in, the one formatter (helpers.js fmtMoney) out; a missing figure is a dash */
+  function minorText(minor, currency) {
+    return minor == null ? '—' : fmtMoney({ amount_minor: minor, currency: currency }, currency);
   }
   function day(value) {
     return value ? (typeof root.shopDay === 'function' ? root.shopDay(value) : String(value).slice(0, 10)) : '—';
@@ -183,7 +179,7 @@
   }
   /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
      (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints
-     money through money(). A client whose books stop early, whose last year is short or absent, or who holds two currencies is never ranked; the opened row says why in words. */
+     money through minorText(). A client whose books stop early, whose last year is short or absent, or who holds two currencies is never ranked; the opened row says why in words. */
   var YOY_WORDS = { stale: 'Books in to', short_last_year: 'No full last year yet', no_last_year: 'No last year to compare yet', mixed: 'Two currencies: not compared' };
   function yoyDates(h) {
     return h && h.sales_yoy_from ? day(h.sales_yoy_from) + ' – ' + day(h.sales_yoy_to) + ' / ' + day(h.sales_prev_from) + ' – ' + day(h.sales_prev_to) : '';
@@ -195,7 +191,7 @@
   function yoyRow(r) {
     var h = r.health, cur = r.currency;
     return { label: r.name || String(r.entity_id).slice(0, 8), now: h.sales_ytd_minor, before: h.sales_prev_ytd_minor, changePct: h.sales_yoy_pct, state: h.sales_yoy_state,
-      title: (r.name || '') + ' · ' + money(h.sales_ytd_minor, cur) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, cur) + ' ' + tx('last year') + ' · ' + yoyDates(h) };
+      title: (r.name || '') + ' · ' + minorText(h.sales_ytd_minor, cur) + ' ' + tx('this year') + ' · ' + minorText(h.sales_prev_ytd_minor, cur) + ' ' + tx('last year') + ' · ' + yoyDates(h) };
   }
   /** chart 1: the listed clients whose sales fell most and rose most (only state ok; the bar is the carried change), the caption says how many of the list it shows */
   function yoyRanked(clients) {
@@ -223,7 +219,7 @@
     var row = yoyRow(r), reason = yoyWords(h);
     row.label = tx('Sales');
     var svg = root.CBDraw.compare([row], { palette: paletteHere(), codes: PIC_CODES.pair, mode: 'money', width: 340, labelW: 60, id: 'bp-pair-' + String(r.entity_id).slice(0, 8), tid: 'practice-pair-' + r.entity_id, title: tx('Sales this year and last year'), desc: row.title });
-    return '<div class="bp-pair" data-testid="practice-pair-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P14" data-testid="practice-pair-words-' + esc(r.entity_id) + '">' + esc(money(h.sales_ytd_minor, r.currency) + ' ' + tx('this year') + ' · ' + money(h.sales_prev_ytd_minor, r.currency) + ' ' + tx('last year') + (reason ? ' · ' + reason : '')) + '</span></div>';
+    return '<div class="bp-pair" data-testid="practice-pair-box-' + esc(r.entity_id) + '">' + svg + '<span class="sub" data-cbsid="HOM001-P14" data-testid="practice-pair-words-' + esc(r.entity_id) + '">' + esc(minorText(h.sales_ytd_minor, r.currency) + ' ' + tx('this year') + ' · ' + minorText(h.sales_prev_ytd_minor, r.currency) + ' ' + tx('last year') + (reason ? ' · ' + reason : '')) + '</span></div>';
   }
   /* REP-66: the opened row's months. The server's year_end carries how many months of the year are locked (the Month lock page's one rule, locked oldest first), so the first `locked` squares are locked and the rest open: no second read, no count made here. */
   function monthWords(y) {
@@ -394,12 +390,12 @@
       '<div class="bp-detail" data-testid="practice-detail-' + esc(r.entity_id) + '">' + stripHTML(r) + pairHTML(r) +
       line('Sales vs 3-month average', esc(trend(r))) +
       line('Margin this quarter', figureOrWhy(r, h.gross_margin_pct, esc(h.gross_margin_pct) + '%')) +
-      line('Cash and bank', figureOrWhy(r, h.cash_minor, esc(money(h.cash_minor, r.currency)), true)) +
-      line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
+      line('Cash and bank', figureOrWhy(r, h.cash_minor, esc(minorText(h.cash_minor, r.currency)), true)) +
+      line('Bills due in 30 days', h.bills_due_30_minor == null ? esc(held) : esc(minorText(h.bills_due_30_minor, r.currency))) +
       line('Cash for those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
-      line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
+      line('Customers owe, over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(minorText(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
       line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(bankLeft(r)) + ' ' + esc(tx('unexplained'))) +
-      line('Profit this quarter', figureOrWhy(r, h.profit_quarter_minor, esc(money(h.profit_quarter_minor, r.currency)))) +
+      line('Profit this quarter', figureOrWhy(r, h.profit_quarter_minor, esc(minorText(h.profit_quarter_minor, r.currency)))) +
       line('Months not locked', esc(r.months_unlocked)) +
       line('Access ends', esc(day(r.grant.expires_at))) +
       whyLine(r) +
@@ -409,7 +405,7 @@
   /** what is left unexplained, as the api carries it: one figure per currency (CUR-1), never two currencies added; an older answer's one figure in the client's currency */
   function bankLeft(r) {
     var b = r.bank, lines = b.by_currency || [];
-    return lines.length ? lines.map(function (l) { return money(l.unexplained_minor, l.currency); }).join(' · ') : money(b.unexplained_minor, b.currency || r.currency);
+    return lines.length ? lines.map(function (l) { return minorText(l.unexplained_minor, l.currency); }).join(' · ') : minorText(b.unexplained_minor, b.currency || r.currency);
   }
   /** the bank as the client's signed statements carry it: reconciled to a date, or the amount left unexplained, or no statement signed */
   function bankCell(r) {
@@ -460,8 +456,8 @@
       num('unlocked', 'Months not locked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
       num('margin', 'Margin', 80, function (r) { return figureOrWhy(r, r.health.gross_margin_pct, esc(r.health.gross_margin_pct) + '%'); }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
-      num('cash', 'Cash', 110, function (r) { return figureOrWhy(r, r.health.cash_minor, esc(money(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
-      num('profit', 'Profit (qtr)', 110, function (r) { return figureOrWhy(r, r.health.profit_quarter_minor, esc(money(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
+      num('cash', 'Cash', 110, function (r) { return figureOrWhy(r, r.health.cash_minor, esc(minorText(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
+      num('profit', 'Profit (qtr)', 110, function (r) { return figureOrWhy(r, r.health.profit_quarter_minor, esc(minorText(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
       num('look', 'My last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
       num('saved', 'Saved', 80, function (r) { return flagsOn() ? P.fl.chip(r.entity_id, r.name) : ''; }, function (r) { return flagsOn() && P.fl.any(r.entity_id) ? 1 : 0; }, { prio: 1, keep: true }) /* CMP066: my own bookmark of this client */

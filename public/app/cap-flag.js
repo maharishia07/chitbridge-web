@@ -84,11 +84,6 @@
   function T(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
   var CSS =
     '.fl{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:var(--grey,#5E594D);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 9px;min-height:28px;cursor:pointer}' +
     '.fl-on{border-color:var(--ok,#2E8B57);color:var(--ok-3,#0F5132)}.fl-note{border-color:var(--warn,#B7791F);color:var(--warn-3,#7A4B00)}' +

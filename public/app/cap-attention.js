@@ -38,9 +38,6 @@
   var tx = function (k) {
     return typeof root.tx === 'function' ? root.tx(W[k] || k) : W[k] || k;
   };
-  var esc = function (v) {
-    return typeof root.esc === 'function' ? root.esc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
-  };
   function key(id) {
     return STATE[id] || (STATE[id] = { counts: null, kind: '', page: 1, list: null, failed: false });
   }

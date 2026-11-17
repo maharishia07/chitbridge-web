@@ -8,9 +8,6 @@
  * CARD      14-accounting/README (auditor rank 9) */
 (function (root) {
   'use strict';
-  function esc(value) {
-    return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
   /** the words of one account's line (plain text, escaped by the caller) */
   function wordsOf(line, o) {
     var say = o.tx, fill = o.txf;
