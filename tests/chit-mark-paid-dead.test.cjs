@@ -20,7 +20,7 @@ function fnSource(name) {
   const rest = src.slice(at + 1);
   return rest.slice(0, rest.search(/\n(?:\/\*\*|async function |function )/));
 }
-eval(fnSource('chitNoPayWhy') + '\n' + fnSource('chitMarkPaidButton') + '\nglobalThis.chitMarkPaidButton = chitMarkPaidButton;');
+eval(fnSource('chitStatusWord') + '\n' + fnSource('chitNoPayWhy') +'\n' + fnSource('chitMarkPaidButton') + '\nglobalThis.chitMarkPaidButton = chitMarkPaidButton;');
 const WHY = 'A cancelled or rejected bill takes no payment';
 const bill = (status, where) => (where === 'header' ? { id: 'c1', header: { current_status: status } } : where === 'top' ? { id: 'c1', current_status: status } : { id: 'c1', _status: status });
 for (const where of ['row', 'header', 'top']) {
