@@ -533,7 +533,7 @@
           if (typeof root.toast === 'function') root.toast(T(W.clientGone));
           return;
         }
-        root.location.assign('/network.html?open=' + encodeURIComponent(cid) + '&view=daybook' + (id ? '&mark=' + encodeURIComponent(id) + '&mday=' + encodeURIComponent(String(row.getAttribute('data-mark-day') || '').slice(0, 10)) : ''));
+        root.location.assign('/network.html?open=' + encodeURIComponent(cid) + '&view=daybook' + (id ? '&mark=' + encodeURIComponent(id) + '&mday=' + encodeURIComponent(String(row.getAttribute('data-mark-day') || '').slice(0, 10)) + '&nl=' + encodeURIComponent(String(row.getAttribute('data-mark-title') || '').slice(0, 80)) : '')); /* nl: the entry's own label (number · day · amount), so the thread is titled by it, never "This entry" */
       }, fail);
     }
     function onClick(ev) {

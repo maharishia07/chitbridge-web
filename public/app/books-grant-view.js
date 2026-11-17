@@ -116,10 +116,14 @@
     var F = root.CBBooksGrantFilters;
     return F ? F.riskOf(e, viewState.period, viewState.answer && viewState.answer.currency, viewState.answer && viewState.answer.country) : [];
   }
+  /** "1 risk" / "3 risks": the shell's txn (Intl.PluralRules of the reader's locale, the catalogue's one/other forms); English one/other when the page has no txn */
+  function riskCount(n) {
+    return typeof root.txn === 'function' ? root.txn('{count} risk', '{count} risks', n) : n + (n === 1 ? ' risk' : ' risks');
+  }
   /** the Risk cell: the count, with the rules it counts as its title and as words for a reader; none = a dash */
   function riskCell(row) {
     var list = row.risk_list || [];
-    return list.length ? '<span class="bv-risk" data-cbsid="NET005-P04" data-testid="bv-risk" role="img" aria-label="' + esc(list.length + ' ' + words('risks') + ': ' + list.join(', ')) + '" title="' + esc(list.join(', ')) + '">' + list.length + '</span>' : '—';
+    return list.length ? '<span class="bv-risk" data-cbsid="NET005-P04" data-testid="bv-risk" role="img" aria-label="' + esc(riskCount(list.length) + ': ' + list.join(', ')) + '" title="' + esc(list.join(', ')) + '">' + list.length + '</span>' : '—';
   }
   function figure(row, column) {
     var v = row[column[0]];
@@ -839,7 +843,7 @@
     var member = viewState.o.member || {};
     if (asked.mark && viewState.mk) {
       viewState.markDay = asked.day; /* the open list answers for the CURRENT window: an older entry's thread is found by its own day */
-      viewState.mk.load([asked.mark]).then(function () { viewState.markDay = ''; viewState.mk.sheet(asked.mark, {}); });
+      viewState.mk.load([asked.mark]).then(function () { viewState.markDay = ''; viewState.mk.sheet(asked.mark, { title: asked.label || undefined }); }); /* the entry's own label from the bell (nl), when the page has not shown the entry */
     }
     if (!asked.note) return;
     if (member.id && asked.note === String(member.id) && root.CBFlag && viewState.o.call) {
