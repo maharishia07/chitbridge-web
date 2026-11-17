@@ -441,7 +441,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     ok(prev.party_id === 's1' && prev.direction === 'out' && prev.amount_minor === 500000, 'the ₹5,000 ledger test: the preview is for Agro Mills (s1), to pay, 5,000 (' + JSON.stringify(prev) + ')');
     ok(/₹1,279\.88 stays with .* as an advance/.test(await text(p, 'pay_left')), 'the ₹5,000 ledger test: ₹1,279.88 stays as an advance (' + (await text(p, 'pay_left')) + ')');
     await p.waitForSelector('[data-testid="pay_band"]:not([hidden])', { timeout: 8000 }); await p.click('[data-testid="pay_ack"]'); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
-    ok(S.pay.posts.length === 1 && S.pay.posts[0].party_id === 's1' && /^Paid ₹5,000 cash to Agro Mills\. /.test(await text(p, 'pay_outcome')), 'the ₹5,000 ledger test: ONE payment is recorded for s1 and the outcome names it (' + (await text(p, 'pay_outcome')) + ')');
+    ok(S.pay.posts.length === 1 && S.pay.posts[0].party_id === 's1' && /^Paid ₹5,000 by bank to Agro Mills\. /.test(await text(p, 'pay_outcome')), 'the ₹5,000 ledger test: ONE payment is recorded for s1 and the outcome names it - by bank, the opened-filled default (2664a890) (' + (await text(p, 'pay_outcome')) + ')');
     await ctx.close();
   }
   /* ── E4 · M29 reverse from the row: the statement's payment row → Reverse → reason → ONE POST /entries/:id/reverse; the row repaints "reversed by"; the Day book was never read ── */
