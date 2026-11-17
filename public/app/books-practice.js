@@ -317,7 +317,7 @@
     section.innerHTML = '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + '</h2></div>' +
       emptyState('📒', translate('No clients yet'), escapeHtml(translate('Add a client below. They accept, then give you access.'))) +
       '<div id="bp_door" data-testid="practice-door"></div>';
-    mountDoor({ home: true });
+    withList(function () { mountDoor({ home: true }); }); /* the card's list is the library's: loaded first on a Home with no client list */
     practiceKit.practiceState.drawn = true;
     return true;
   }
