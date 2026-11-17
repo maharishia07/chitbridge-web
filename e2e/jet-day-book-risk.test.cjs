@@ -64,7 +64,7 @@ check(JSON.stringify(filters.map((f) => f.key)) === JSON.stringify(keys), 'the D
 const all = { mark: 'notchecked', ev: 'flag', kind: 'Other', rec: 'afterend', time: 'weekend', round: '100', by: 'Ann', narr: 'none', ye: 'dated' };
 const addr = F.toAddress(all);
 check(addr === 'dbf_mark=notchecked&dbf_ev=flag&dbf_kind=Other&dbf_rec=afterend&dbf_time=weekend&dbf_round=100&dbf_by=Ann&dbf_narr=none&dbf_ye=dated' && JSON.stringify(F.fromAddress('?' + addr)) === JSON.stringify(all), 'each filter has its own address word, and the address gives the same choices back');
-check(F.paramNames().length === 9 && F.paramNames().indexOf('dbf_ye') >= 0, 'paramNames names all nine address words (the page wipes them from one list)');
+check(F.paramNames().length === 10 && F.paramNames().indexOf('dbf_ye') >= 0 && F.paramNames().indexOf('dbf_flag') >= 0, 'paramNames names all ten address words, dbf_flag (the Saved filter, W3) included (the page wipes them from one list)');
 check(F.carry('?open=c1&view=daybook&dbf_rec=afterend', 'c1') === '&dbf_rec=afterend' && F.carry('?open=c1&dbf_rec=afterend', 'c2') === '', 'a new filter rides to the same client only');
 const src = pub('app', 'books-grant-filters.js');
 check(!/fetch\(|XMLHttpRequest|\.range\s*=/.test(src), 'the filters file reads and compares only: no call out, no write to the period');
