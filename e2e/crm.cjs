@@ -196,7 +196,7 @@ async function route(S, r) {
 
   /* ── 1 · THE PAGE'S OWN SOURCE ───────────────────────────────────────────────────────────────────────────── */
   {
-    const html = fs.readFileSync(path.join(PUB, 'crm.html'), 'utf8'), js = ['cap-crm.js', 'cap-crm-record.js', 'cap-crm-timeline.js'].map((f) => fs.readFileSync(path.join(PUB, 'app', f), 'utf8')).join('\n');
+    const html = fs.readFileSync(path.join(PUB, 'crm.html'), 'utf8'), js = ['cap-crm.js', 'cap-crm-assign.js', 'cap-crm-record.js', 'cap-crm-timeline.js'].map((f) => fs.readFileSync(path.join(PUB, 'app', f), 'utf8')).join('\n');
     const all = html + '\n' + js;
     ok(/<title>CRM<\/title>/.test(html), 'the page is named CRM');
     ok(!/\balert\s*\(/.test(all), 'no alert() anywhere');
@@ -468,9 +468,7 @@ async function route(S, r) {
     ok(S.fuQueries[0] === 'all/0', 'the owner\'s default is Everyone, open ones (?scope=all&done=0)');
     ok(/Late/.test(await text(p, '[data-testid="crm-fu-fu-01"]')) && await p.evaluate(() => !!document.querySelector('[data-testid="crm-fu-fu-01"] .late')), 'a late follow-up is red and says Late');
     await p.click('[data-testid="crm-fu-fu-04"] [data-caret]'); await p.waitForSelector('[data-testid="crm-fu-mini-when-fu-04"]');
-    ok(/Unassigned/.test(await text(p, '[data-testid="crm-fu-mini-when-fu-04"]')) && await p.locator('[data-testid="crm-fu-assign-fu-04"]').count() === 1, 'assignee left → "Unassigned" (in its mini-card) with Assign (on the row)');
-    S.fuPatch = null; await p.click('[data-testid="crm-fu-assign-fu-04"]'); for (let i = 0; i < 20 && !S.fuPatch; i++) await p.waitForTimeout(100);
-    ok(S.fuPatch && S.fuPatch.assignee_user_id === 'ent-M', 'the Assign button sends the signed-in ID (ent-M), never their name: ' + JSON.stringify(S.fuPatch));
+    ok(/Unassigned/.test(await text(p, '[data-testid="crm-fu-mini-when-fu-04"]')) && await p.locator('[data-testid="crm-fu-assign-fu-04"]').count() === 1, 'assignee left → "Unassigned" (in its mini-card) with Assign (on the row)'); S.fuPatch = null; await p.click('[data-testid="crm-fu-assign-fu-04"]'); for (let i = 0; i < 20 && !S.fuPatch; i++) await p.waitForTimeout(100); ok(S.fuPatch && S.fuPatch.assignee_user_id === 'ent-M', 'the Assign button sends the signed-in ID (ent-M), never their name: ' + JSON.stringify(S.fuPatch));
     await p.click('[data-testid="crm-fu-fu-04"] [data-caret]');
     ok(/No longer your party/.test(await text(p, '[data-testid="crm-fu-fu-09"]')) && await p.locator('[data-testid="crm-fu-del-fu-09"]').count() === 1 && await p.locator('[data-testid="crm-fu-done-fu-09"]').count() === 0, 'party removed → greyed "No longer your party" with Delete');
     const heads = await p.$$eval('#crm_fu .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));

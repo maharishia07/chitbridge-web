@@ -53,6 +53,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-crm-groups-sheet.js` | — | cap-crm-groups-sheet.js — PART of cap-crm-groups.js (MNT-59): the New group / Members sheet, ticking the customers of a named group, saving it and del |
 | `cap-crm-groups-window.js` | — | cap-crm-groups-window.js — PART of cap-crm-groups.js (MNT-59): the Shop window screen (#/showcase), the template chooser, the preview of the shop's ow |
 | `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
+| `cap-crm-assign.js` | — | cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file) |
 | `cap-crm-privacy-register.js` | — | cap-crm-privacy-register.js — CB CRM: the shop's PRIVACY REQUESTS register (#/privacy): the list, Log a request, Answer a request |
 | `cap-crm-privacy.js` | — | cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy) |

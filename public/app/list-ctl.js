@@ -114,15 +114,13 @@
     var m = /(\d+(?:\.\d+)?)\s*px/.exec(String(w || ''));
     return m ? parseFloat(m[1]) : dflt || 140;
   }
-  function val(x) {
-    return typeof x === 'function' ? safe(x, undefined) : x;
-  }
+  function val(x) { return typeof x === 'function' ? safe(x, undefined) : x; }
   function safe(fn, dflt) {
     try {
       var v = fn();
       return v === undefined ? dflt : v;
-    } catch (_) {
-      if (root.__CB_SAFE_LOG && root.__CB_SAFE_LOG.push) root.__CB_SAFE_LOG.push({ w: 'list-ctl.safe', e: _ }); /* test-only flag (e2e/walk-probe-faults.cjs): a swallowed throw is written down; nothing changes for a user */
+    } catch (err) {
+      if (root.__CB_SAFE_LOG && root.__CB_SAFE_LOG.push) root.__CB_SAFE_LOG.push({ w: 'list-ctl.safe', e: err }); /* test-only flag (e2e/walk-probe-faults.cjs): a swallowed throw is written down; nothing changes for a user */
       return dflt;
     }
   }

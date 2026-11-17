@@ -111,29 +111,8 @@ function crmMayRemove() {
 function crmHat() {
   /* the b173 ladder word (access_level: viewer · commenter · editor) is what the server enforces — read FIRST; the old hat only when no level rides (FX-L2C) */
   /* the level rides in the signed token's own payload (lib/identity-auth issueToken: access_level; pre-b173 tokens: hat / actor_hat) */
-  try {
-    var b = String(SESSION.token || '')
-      .split('.')[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-    var parsed = JSON.parse(atob(b));
-    return String(parsed.access_level || parsed.level || parsed.hat || parsed.actor_hat || '');
-  } catch (_) {
-    return '';
-  }
-}
-/** the owner, or a co-assist whose signed hat is manager: the two who see the Unassigned bucket (the follow-ups nobody holds) */
-function crmSeesUnassigned() {
-  if (crmOwner()) return true;
-  try {
-    var b = String(SESSION.token || '')
-      .split('.')[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-    return /^manager$/i.test(String(JSON.parse(atob(b)).hat || ''));
-  } catch (_) {
-    return false;
-  }
+  var claims = crmTokenClaims();
+  return String(claims.access_level || claims.level || claims.hat || claims.actor_hat || '');
 }
 function crmRole() {
   if (crmOwner()) return 'owner';
@@ -1965,9 +1944,7 @@ function crmFollowups(frame) {
         key: 'scope',
         label: tx('Show'),
         all: tx(def === 'all' ? 'Everyone' : 'Mine'),
-        options: [{ v: def === 'all' ? 'mine' : 'all', label: tx(def === 'all' ? 'Mine' : 'Everyone') }].concat(
-          crmSeesUnassigned() ? [{ v: 'unassigned', label: tx('Unassigned') }] : []
-        ),
+        options: crmScopeOptions(def),
         match: function () {
           return true;
         }
@@ -2421,7 +2398,7 @@ var CRM_CLICK = {
   },
   fuassign: function (control, id, value, event) {
     event.stopPropagation();
-    return crmFuAct(id, { assignee_user_id: cbMeId() }); /* the api takes a person's id, never a name (BAD_ASSIGNEE) */
+    return crmFuAct(id, crmAssignPatch());
   },
   fudel: function (control, id, value, event) {
     event.stopPropagation();
