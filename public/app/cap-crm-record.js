@@ -741,7 +741,7 @@ function crmPayButton(party) {
         '" data-crm="rpay" data-testid="crm-act-pay"' +
         (wpay ? ' disabled title="' + esc(wpay) + '"' : '') +
         '>' +
-        icon('pay') +
+        crmIcon('pay') +
         esc(tx(label)) +
         (wpay ? '<span class="why wide-only" style="font-weight:400;font-size:12px"> \u00b7 ' + esc(wpay) + '</span>' : '') +
         '</button>'
