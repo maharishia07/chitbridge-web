@@ -378,6 +378,7 @@ function obBalance(i) {
 function obSave() {
   if (OB.mode !== 'replace') return obSaveGo();
   OB.reason = '';
+  /* where-used: out-of-scope the mount is bkDialogMount(5): the host screen's own code plus -U25, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(5),
     pop: 'POP092',

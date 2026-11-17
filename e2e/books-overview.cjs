@@ -61,7 +61,10 @@ async function readPage(page) {
     document.querySelectorAll('.ov-tile').forEach((n) => { const id = n.getAttribute('data-testid').replace(/^ov-/, ''); tiles[id] = { v: (n.querySelector('.ov-v') || {}).innerText || null, note: (n.querySelector('.ov-n') || {}).innerText || '', code: n.getAttribute('data-cbsid'), href: n.getAttribute('href') }; });
     const pic = (k) => { const s = document.querySelector('[data-testid="ov-pic-' + k + '"]'); if (!s) return null; return { code: s.getAttribute('data-cbsid'), svg: !!s.querySelector('svg'), rows: Array.from(s.querySelectorAll('tbody tr')).map((r) => r.children[1].textContent.trim()), sum: (s.querySelector('summary') || {}).getAttribute ? s.querySelector('summary').getAttribute('data-cbsid') : null }; };
     const sel = document.querySelector('[data-testid="ov-pick"]');
-    return { headline: t('[data-testid="ov-headline"]'), headCode: (document.querySelector('[data-testid="ov-headline"]') || { getAttribute: () => null }).getAttribute('data-cbsid'), tiles, sales: pic('sales'), profit: pic('profit'), pick: sel ? { value: sel.value, code: sel.getAttribute('data-cbsid'), options: Array.from(sel.options).map((o) => o.value) } : null, body: document.body.innerText.replace(/\s+/g, ' '), through: t('[data-testid="ov-through"]') };
+    /* the rest of the pictures, by the testid each wears: weekday, owed, owe, cash line, and the one-line item note */
+    const card = (k) => { const s = document.querySelector('[data-testid="ov-pic-' + k + '"]'); return s ? { code: s.getAttribute('data-cbsid'), sum: (s.querySelector('summary') || { getAttribute: () => null }).getAttribute('data-cbsid') } : null; };
+    const note = document.querySelector('[data-testid="ov-item-note"]');
+    return { weekday: card('weekday'), owed: card('owed'), owe: card('owe'), cashline: card('cashline'), itemNote: note ? note.getAttribute('data-cbsid') : null, headline: t('[data-testid="ov-headline"]'), headCode: (document.querySelector('[data-testid="ov-headline"]') || { getAttribute: () => null }).getAttribute('data-cbsid'), tiles, sales: pic('sales'), profit: pic('profit'), pick: sel ? { value: sel.value, code: sel.getAttribute('data-cbsid'), options: Array.from(sel.options).map((o) => o.value) } : null, body: document.body.innerText.replace(/\s+/g, ' '), through: t('[data-testid="ov-through"]') };
   });
 }
 
@@ -94,6 +97,14 @@ function compare(tag, a, got, period) {
     ok(!!pic && pic.svg && pic.code === code && pic.sum === sumCode, tag + ' ' + k + ' picture drawn, wears ' + code + ' + ' + sumCode);
     if (pic) ok(pic.rows.length === list.length && pic.rows.every((r, i) => (list[i][key] == null ? /^—$/.test(r) : minorOf(r) === list[i][key])), tag + ' ' + k + ' table: ' + list.length + ' rows, each = the api\'s ' + key);
   }
+  /* the other cards each wear their BKS026 code and their table's summary code when the api sent figures for them; the item note (P08) is always there */
+  const more = [['weekday', 'BKS026-P04', 'BKS026-B10', (a.weekdays || []).some((x) => x.sold_minor != null)], ['owed', 'BKS026-P05', 'BKS026-B11', null], ['owe', 'BKS026-P06', 'BKS026-B12', null], ['cashline', 'BKS026-P07', 'BKS026-B13', !!(a.cash && a.cash.series && a.cash.series.length)]];
+  for (const [k, code, sumCode, expected] of more) {
+    const pic = got[k];
+    if (pic) ok(pic.code === code && pic.sum === sumCode, tag + ' ' + k + ' card wears ' + code + ' + ' + sumCode + ' (' + pic.code + ' + ' + pic.sum + ')');
+    else if (expected) ok(false, tag + ' ' + k + ' card expected from the api answer but not drawn (' + code + ')');
+  }
+  ok(got.itemNote === 'BKS026-P08', tag + ' the profit-per-item note wears BKS026-P08 (' + got.itemNote + ')');
   ok(!!got.pick && got.pick.value === period && got.pick.code === CODES.pick && got.pick.options.join() === 'week,mtd,quarter,ytd', tag + ' period select on ' + period + ', wears ' + CODES.pick);
 }
 
@@ -175,6 +186,17 @@ function compare(tag, a, got, period) {
     ok(!got.tiles.income && !got.tiles.profit && !!got.tiles.sales && minorOf(got.tiles.sales.v) === truth.ytd.sales.minor && !got.profit, '[mocked: seat without costs] only the figures the api sent are drawn (sales yes; income, profit and the profit picture no)');
     ok(got.headline && got.headline.startsWith('Sales') && !/\$\s?0\.00/.test(got.body.replace(/Cash ahead.*/, '')), '[mocked: seat without costs] the headline leads with Sales and no 0.00 is invented anywhere');
     await page.screenshot({ path: OUT + '/overview-1366-nocosts.png' });
+    await ctx.close();
+  }
+  /* MOCKED (c): this seeded shop has no sales in the current week, so the api sends no weekday figures; give the weekday card seven (the api's own seven days, figures added) to prove the card and its table wear BKS026-P04 and BKS026-B10 */
+  {
+    const { ctx, page } = await open({ width: 1366, height: 768 }, 'light', true);
+    const withDays = JSON.parse(JSON.stringify(truth.ytd));
+    withDays.weekdays = (withDays.weekdays || []).map((d, i) => Object.assign({}, d, { sold_minor: 10000 * (i + 1), last_year_minor: 8000 * (i + 1) }));
+    await page.route('**/api/books/overview**', (r) => C.wrap(r, 'mocked weekday figures: ').fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': base }, body: JSON.stringify(withDays) }));
+    await page.goto(base + '/accounts.html#overview');
+    const got = await settle(page, 'ytd');
+    ok(withDays.weekdays.length === 7 && !!got.weekday && got.weekday.code === 'BKS026-P04' && got.weekday.sum === 'BKS026-B10', '[mocked: weekday figures] the weekday card wears BKS026-P04 and its table BKS026-B10 (' + JSON.stringify(got.weekday) + ')');
     await ctx.close();
   }
   /* MOCKED (b): one forced 500 on the overview read: the sentence and Try again (BKS026-B01), then the real answer on the second try */

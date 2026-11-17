@@ -804,13 +804,34 @@
     head.setAttribute('tabindex', '-1');
     head.focus();
   }
+  /** a firm's bell row for a colleague's reply on my note arrives as &note=<entry id>: read and forgotten from the address when this script loads (the network page rewrites its address before it mounts the Day book), the Day book then opens that entry's note sheet once (cap-flag.js, kind 'posting') */
+  function askedNote() {
+    var id = '';
+    try {
+      var query = new root.URLSearchParams(root.location.search);
+      id = query.get('note') || '';
+      if (id && root.history && root.history.replaceState) {
+        query.delete('note');
+        root.history.replaceState(root.history.state, '', root.location.pathname + (query.toString() ? '?' + query.toString() : '') + (root.location.hash || ''));
+      }
+    } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('books-grant:note-address', failure);
+    }
+    return id;
+  }
+  var pendingNote = askedNote();
+  function openAskedNote(id) {
+    if (id && viewState.report === 'daybook' && viewState.fl && !viewState.fl.off()) viewState.fl.sheet(id, {});
+  }
   function mount(host, options) {
+    var asked = pendingNote;
+    pendingNote = '';
     viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null, period: options.period || null, range: null, choices: undefined, since: sinceAsked(), seen: null };
     newMarks();
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    Promise.resolve(reload()).then(focusHeading, focusHeading);
+    Promise.resolve(reload()).then(focusHeading, focusHeading).then(function () { openAskedNote(asked); });
     return {
       /** Back or Forward to another screen of this client's books */
       setView: function (report, period) {

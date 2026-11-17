@@ -221,7 +221,7 @@
       escape(options.aria || '') +
       '" data-testid="' +
       escape(testId + '-chart') +
-      '" style="display:block;width:100%;height:' +
+      '"' + codeAttr(options.codes, 'chart') + ' style="display:block;width:100%;height:' +
       height +
       'px;overflow:visible;stroke:none;fill:none">' +
       hatch +
