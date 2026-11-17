@@ -82,7 +82,19 @@
     return words(side === 'owner' ? (hasAccess ? 'Connected. Has access' : 'Connected. No access yet') : 'Connected');
   }
 
+  /** the card's own look on a page that has none (Home): the same tokens as the page, nothing else; network.html already styles its own */
+  function doorCss() {
+    if (!root.document || root.document.getElementById('fd_css')) return;
+    var node = root.document.createElement('style');
+    node.id = 'fd_css';
+    node.textContent = '.fd-card{margin:0 0 16px}.fd-h{margin:0 0 4px;font-size:16px;color:var(--ink)}.fd-card .sub{color:var(--muted);font-size:13px}' +
+      '.fd-ask{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0}.fd-ask .inp{flex:1 1 220px;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font:inherit}' +
+      '.fd-card .act{min-height:44px;padding:0 16px;border:1px solid var(--green);border-radius:9px;background:var(--green);color:var(--card);font:inherit;font-weight:600;cursor:pointer}.fd-card .act[disabled]{opacity:.55;cursor:not-allowed}' +
+      '.fd-card .nw-out{min-height:20px;margin:4px 0;font-weight:600;color:var(--green-d)}.fd-card .nw-list{min-height:0}';
+    root.document.head.appendChild(node);
+  }
   function mount(host, o) {
+    doorCss();
     var side = o.side === 'firm' ? 'firm' : 'owner';
     var copy = COPY[side];
     var call = callOf(o);
