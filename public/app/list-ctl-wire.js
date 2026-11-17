@@ -39,42 +39,42 @@
   }
   var DRAG = null;
   /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
-  function wire(I) {
-    var el = I.el;
+  function wire(inst) {
+    var el = inst.el;
     /* every listener is remembered so teardown can remove it: a list mounted again on the same element must not leave the old one answering too */
-    I.off = [];
+    inst.off = [];
     var on = function (type, fn) {
       var h = function (ev) {
-        if (!I.dead) fn(ev);
+        if (!inst.dead) fn(ev);
       };
       el.addEventListener(type, h);
-      I.off.push([type, h]);
+      inst.off.push([type, h]);
     };
     on('click', function (ev) {
-      onClick(I, ev);
+      onClick(inst, ev);
     });
     on('input', function (ev) {
       var t = ev.target;
       if (t.hasAttribute && t.hasAttribute('data-cbl-q')) {
-        setQ(I, t.value);
+        setQ(inst, t.value);
       }
     });
     on('change', function (ev) {
-      onChange(I, ev);
+      onChange(inst, ev);
     });
     on('keydown', function (ev) {
-      onKey(I, ev);
+      onKey(inst, ev);
     });
     on('pointerdown', function (ev) {
-      onPointerDown(I, ev);
+      onPointerDown(inst, ev);
     });
     on('dblclick', function (ev) {
       var node = ev.target.closest && ev.target.closest('[data-rz]');
       if (!node) return;
-      delete I.s.widths[node.getAttribute('data-rz')];
-      saveChoices(I);
-      paintList(I);
-      refocusRz(I, node.getAttribute('data-rz'));
+      delete inst.s.widths[node.getAttribute('data-rz')];
+      saveChoices(inst);
+      paintList(inst);
+      refocusRz(inst, node.getAttribute('data-rz'));
     });
   }
   /** onChange, step 1 of 4 (the data-col part, lines 3240-3255 of the one function): true when it handled the call and nothing else should run */
@@ -107,21 +107,21 @@ ctx.s = list.s;
         paintTools(list);
         paintList(list);
       } else paintTools(list);
-      var gs = list.el.querySelector('#cbl-gsel-' + cssId(list.key));
-      if (gs) gs.focus();
+      var groupSelect = list.el.querySelector('#cbl-gsel-' + cssId(list.key));
+      if (groupSelect) groupSelect.focus();
       return true;
     }
     if (ctx.node.hasAttribute('data-filt')) {
-      var fk = ctx.node.getAttribute('data-filt');
-      if (ctx.node.value) ctx.R.filt[fk] = ctx.node.value;
-      else delete ctx.R.filt[fk];
+      var filterKey = ctx.node.getAttribute('data-filt');
+      if (ctx.node.value) ctx.R.filt[filterKey] = ctx.node.value;
+      else delete ctx.R.filt[filterKey];
       resetLimit(list);
       if (!query(list)) {
         paintTools(list);
         paintList(list);
       } else paintTools(list);
-      var f = list.el.querySelector('#cbl-f-' + cssId(list.key) + '-' + cssId(fk));
-      if (f) f.focus();
+      var filterField = list.el.querySelector('#cbl-f-' + cssId(list.key) + '-' + cssId(filterKey));
+      if (filterField) filterField.focus();
       return true;
     }
     return false;
@@ -129,7 +129,7 @@ ctx.s = list.s;
   /** onChange, step 3 of 4 (the data-cbl-sort part, lines 3281-3300 of the one function): true when it handled the call and nothing else should run */
   function onChangeCblSort(list, event, ctx) {
     if (ctx.node.hasAttribute('data-cbl-sort')) {
-      var cur = ctx.s.sort ? ctx.s.sort.dir : 1;
+      var currentDir = ctx.s.sort ? ctx.s.sort.dir : 1;
       ctx.s.sort = { key: ctx.node.value, dir: 1 };
       resetLimit(list);
       saveChoices(list);
@@ -137,8 +137,8 @@ ctx.s = list.s;
         paintTools(list);
         paintList(list);
       }
-      var ss = list.el.querySelector('#cbl-sort-' + cssId(list.key));
-      if (ss) ss.focus();
+      var sortSelect = list.el.querySelector('#cbl-sort-' + cssId(list.key));
+      if (sortSelect) sortSelect.focus();
       return true;
     }
     if (ctx.node.hasAttribute('data-selrow')) {
@@ -153,15 +153,15 @@ ctx.s = list.s;
   /** onChange, step 4 of 4 (the data-cbl-from part, lines 3301-3313 of the one function): runs on, nothing here ends the call */
   function onChangeCblFrom(list, event, ctx) {
     if (ctx.node.hasAttribute('data-cbl-from') || ctx.node.hasAttribute('data-cbl-to')) {
-      var p = head(list).period,
-        fr = list.el.querySelector('[data-cbl-from]'),
+      var periodSpec = head(list).period,
+        fromField = list.el.querySelector('[data-cbl-from]'),
         to = list.el.querySelector('[data-cbl-to]');
-      if (p && fr && to && fr.value && to.value) {
-        p.custom = { from: fr.value, to: to.value };
+      if (periodSpec && fromField && to && fromField.value && to.value) {
+        periodSpec.custom = { from: fromField.value, to: to.value };
         list.pv = null;
         list.pop = null;
         safe(function () {
-          p.onPick('custom', p.custom);
+          periodSpec.onPick('custom', periodSpec.custom);
         });
       }
     }
@@ -189,9 +189,9 @@ ctx.k = event.key;
     }
     if (ctx.node.hasAttribute && ctx.node.hasAttribute('data-rz') && (ctx.k === 'ArrowLeft' || ctx.k === 'ArrowRight')) {
       event.preventDefault();
-      var rtl = root.getComputedStyle(list.el).direction === 'rtl',
-        dlt = (ctx.k === 'ArrowRight' ? 8 : -8) * (rtl ? -1 : 1);
-      resize(list, ctx.node.getAttribute('data-rz'), dlt, true);
+      var rightToLeft = root.getComputedStyle(list.el).direction === 'rtl',
+        delta = (ctx.k === 'ArrowRight' ? 8 : -8) * (rightToLeft ? -1 : 1);
+      resize(list, ctx.node.getAttribute('data-rz'), delta, true);
       return true;
     }
     return false;
@@ -206,40 +206,47 @@ ctx.k = event.key;
     ctx.rowEl = ctx.node.closest && ctx.node.closest('[data-row]');
     return false;
   }
+  /** a key on a focused row: Enter or space opens it, → opens its next level and ← closes it (true when it did one of those) */
+  function keyRowOpen(list, event, ctx) {
+    var rowKey = ctx.rowEl.getAttribute('data-row');
+    if (ctx.k === 'Enter' || ctx.k === ' ') {
+      event.preventDefault();
+      openRow(list, rowKey, event);
+      return true;
+    }
+    if (ctx.k === 'ArrowRight' && hasNext(list) && !isOpen(list, rowKey)) {
+      event.preventDefault();
+      toggleRow(list, rowKey, true);
+      return true;
+    }
+    if (ctx.k === 'ArrowLeft' && hasNext(list) && isOpen(list, rowKey)) {
+      event.preventDefault();
+      toggleRow(list, rowKey, true);
+      return true;
+    }
+    return false;
+  }
+  /** ↓ and ↑ on a focused row: the next or previous row takes focus and the highlight (nothing else runs after it) */
+  function keyRowMove(list, event, ctx) {
+    if (ctx.k !== 'ArrowDown' && ctx.k !== 'ArrowUp') return;
+    event.preventDefault();
+    var all = [].slice.call(list.el.querySelectorAll('[data-row]')),
+      at = all.indexOf(ctx.rowEl),
+      neighbour = all[at + (ctx.k === 'ArrowDown' ? 1 : -1)];
+    if (!neighbour) return;
+    neighbour.focus();
+    if (list.o.hl === false) return;
+    list.r.hl = neighbour.getAttribute('data-row');
+    [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (element) {
+      element.classList.remove('sel');
+    });
+    neighbour.classList.add('sel');
+  }
   /** onKey, step 3 of 3 (the data-row part, lines 3364-3395 of the one function): true when it handled the call and nothing else should run */
   function onKeyRow(list, event, ctx) {
-    if (ctx.rowEl && ctx.node === ctx.rowEl) {
-      if (ctx.k === 'Enter' || ctx.k === ' ') {
-        event.preventDefault();
-        openRow(list, ctx.rowEl.getAttribute('data-row'), event);
-        return true;
-      }
-      if (ctx.k === 'ArrowRight' && hasNext(list) && !isOpen(list, ctx.rowEl.getAttribute('data-row'))) {
-        event.preventDefault();
-        toggleRow(list, ctx.rowEl.getAttribute('data-row'), true);
-        return true;
-      }
-      if (ctx.k === 'ArrowLeft' && hasNext(list) && isOpen(list, ctx.rowEl.getAttribute('data-row'))) {
-        event.preventDefault();
-        toggleRow(list, ctx.rowEl.getAttribute('data-row'), true);
-        return true;
-      }
-      if (ctx.k === 'ArrowDown' || ctx.k === 'ArrowUp') {
-        event.preventDefault();
-        var all = [].slice.call(list.el.querySelectorAll('[data-row]')),
-          i = all.indexOf(ctx.rowEl),
-          nx = all[i + (ctx.k === 'ArrowDown' ? 1 : -1)];
-        if (nx) {
-          nx.focus();
-          if (list.o.hl === false) return true;
-          list.r.hl = nx.getAttribute('data-row');
-          [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (element) {
-            element.classList.remove('sel');
-          });
-          nx.classList.add('sel');
-        }
-      }
-    }
+    if (!(ctx.rowEl && ctx.node === ctx.rowEl)) return false;
+    if (keyRowOpen(list, event, ctx)) return true;
+    keyRowMove(list, event, ctx);
     return false;
   }
   function onKey(list, event) {
@@ -256,17 +263,20 @@ ctx.k = event.key;
       node.style.gridTemplateColumns = tpl;
     });
   }
-  function onPointerDown(I, event) {
+  function onPointerDown(inst, event) {
     var node = event.target.closest && event.target.closest('[data-rz]');
     if (!node) return;
-    var c = colByKey(I, node.getAttribute('data-rz'));
-    if (!c) return;
+    var column = colByKey(inst, node.getAttribute('data-rz'));
+    if (!column) return;
     event.preventDefault();
-    DRAG = { I: I, key: c.key, x: event.clientX, w: widthOf(I, c), c: c, btn: node };
+    DRAG = { I: inst, key: column.key, x: event.clientX, w: widthOf(inst, column), c: column, btn: node };
     node.classList.add('drag');
     try {
       node.setPointerCapture(event.pointerId);
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+    } catch (failure) {
+      /* best effort: a pointer that cannot be captured changes nothing the user sees; the drag still follows the document's pointer events */
+      if (root.console && root.console.debug) root.console.debug('cbl pointer capture', failure && failure.name);
+    }
     root.document.addEventListener('pointermove', onPointerMove);
     root.document.addEventListener('pointerup', onPointerUp);
     root.document.addEventListener('pointercancel', onPointerUp);

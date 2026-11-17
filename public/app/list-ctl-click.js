@@ -94,8 +94,8 @@ ctx.o = list.o;
       }
       ctx.R.gcol[ctx.gh.getAttribute('data-g')] = !ctx.R.gcol[ctx.gh.getAttribute('data-g')];
       paintList(list);
-      var g2 = list.el.querySelector('[data-g="' + cssId(ctx.gh.getAttribute('data-g')) + '"]');
-      if (g2) g2.focus();
+      var groupAgain = list.el.querySelector('[data-g="' + cssId(ctx.gh.getAttribute('data-g')) + '"]');
+      if (groupAgain) groupAgain.focus();
       return true;
     }
     return false;
@@ -112,9 +112,9 @@ ctx.o = list.o;
       return true;
     }
     if (ctx.b.hasAttribute('data-hf')) {
-      var er = list.el.getBoundingClientRect(),
-        br = ctx.b.getBoundingClientRect();
-      list.hfAt = { l: Math.max(4, Math.min(br.left - er.left, er.width - 190)), t: br.bottom - er.top + 4 };
+      var listBox = list.el.getBoundingClientRect(),
+        buttonBox = ctx.b.getBoundingClientRect();
+      list.hfAt = { l: Math.max(4, Math.min(buttonBox.left - listBox.left, listBox.width - 190)), t: buttonBox.bottom - listBox.top + 4 };
       togglePop(list, 'hf:' + ctx.b.getAttribute('data-hf'));
       paintList(list);
       return true;
@@ -124,10 +124,10 @@ ctx.o = list.o;
   /** onClick, step 4 of 15 (the data-hfv part, lines 2892-2904 of the one function): true when it handled the call and nothing else should run */
   function onClickHfv(list, event, ctx) {
     if (ctx.b.hasAttribute('data-hfv')) {
-      var hk = ctx.b.getAttribute('data-hfk'),
-        hv = ctx.b.getAttribute('data-hfv');
-      if (hv) ctx.R.filt[hk] = hv;
-      else delete ctx.R.filt[hk];
+      var filterKey = ctx.b.getAttribute('data-hfk'),
+        filterValue = ctx.b.getAttribute('data-hfv');
+      if (filterValue) ctx.R.filt[filterKey] = filterValue;
+      else delete ctx.R.filt[filterKey];
       list.pop = null;
       resetLimit(list);
       if (query(list)) {
@@ -138,33 +138,35 @@ ctx.o = list.o;
     }
     return false;
   }
+  /** a view tab was pressed: its own filters go on (views.merge: only the tab's own keys change, the lit tab pressed again is "all"; otherwise the tab replaces every filter), the popover closes and the list repaints */
+  function applyViewTab(list, viewTab, ctx) {
+      if (ctx.o.views.merge) {
+        /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
+        var wasLit = viewOn(list, viewTab);
+        viewKeys(list).forEach(function (item) {
+          delete ctx.R.filt[item];
+        });
+        if (!wasLit)
+          Object.keys(viewTab.filt || {}).forEach(function (item) {
+            ctx.R.filt[item] = viewTab.filt[item];
+          });
+      } else {
+        ctx.R.filt = {};
+        Object.keys(viewTab.filt || {}).forEach(function (item) {
+          ctx.R.filt[item] = viewTab.filt[item];
+        });
+      }
+      list.pop = null;
+      resetLimit(list);
+      paintAll(list);
+  }
   /** onClick, step 5 of 15 (the data-view-tab part, lines 2905-2931 of the one function): true when it handled the call and nothing else should run */
   function onClickViewTab(list, event, ctx) {
     if (ctx.b.hasAttribute('data-view-tab')) {
       var vw = ((ctx.o.views && ctx.o.views.items) || []).filter(function (x) {
         return x.key === ctx.b.getAttribute('data-view-tab');
       })[0];
-      if (vw) {
-        if (ctx.o.views.merge) {
-          /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
-          var wasLit = viewOn(list, vw);
-          viewKeys(list).forEach(function (item) {
-            delete ctx.R.filt[item];
-          });
-          if (!wasLit)
-            Object.keys(vw.filt || {}).forEach(function (item) {
-              ctx.R.filt[item] = vw.filt[item];
-            });
-        } else {
-          ctx.R.filt = {};
-          Object.keys(vw.filt || {}).forEach(function (item) {
-            ctx.R.filt[item] = vw.filt[item];
-          });
-        }
-        list.pop = null;
-        resetLimit(list);
-        paintAll(list);
-      }
+      if (vw) applyViewTab(list, vw, ctx);
       return true;
     }
     return false;
@@ -178,15 +180,15 @@ ctx.o = list.o;
     }
     ctx.d = ctx.b.dataset || {};
     if (ctx.b.hasAttribute('data-period')) {
-      var pp = head(list).period;
-      if (pp) {
+      var periodSpec = head(list).period;
+      if (periodSpec) {
         list.pv = ctx.d.period;
         if (ctx.d.period !== 'custom') {
           list.pop = null;
           list.pv = null;
         }
         safe(function () {
-          pp.onPick(ctx.d.period, null);
+          periodSpec.onPick(ctx.d.period, null);
         });
         paintTitle(list);
         paintTools(list);
@@ -198,14 +200,14 @@ ctx.o = list.o;
   /** onClick, step 7 of 15 (part 7, lines 2954-2982 of the one function): true when it handled the call and nothing else should run */
   function onClickStep7(list, event, ctx) {
     if (ctx.d.notice != null) {
-      var n = (head(list).notices || [])[+ctx.d.notice];
+      var notice = (head(list).notices || [])[+ctx.d.notice];
       if (list.pop === 'notes') {
         list.pop = null;
         paintTitle(list);
       }
-      if (n && n.onOpen)
+      if (notice && notice.onOpen)
         safe(function () {
-          n.onOpen();
+          notice.onOpen();
         });
       return true;
     }
@@ -321,12 +323,12 @@ ctx.o = list.o;
   /** onClick, step 11 of 15 (part 11, lines 3061-3082 of the one function): true when it handled the call and nothing else should run */
   function onClickStep11(list, event, ctx) {
     if (ctx.d.bulk) {
-      var bk = (ctx.o.bulk || []).filter(function (x) {
+      var bulkAction = (ctx.o.bulk || []).filter(function (x) {
         return x.id === ctx.d.bulk;
       })[0];
-      if (bk)
+      if (bulkAction)
         safe(function () {
-          bk.run(selectedRows(list));
+          bulkAction.run(selectedRows(list));
         });
       return true;
     }
@@ -365,12 +367,12 @@ ctx.o = list.o;
         query(list, 'sort', { key: ctx.d.sort }, true);
         return true;
       }
-      var cur = curSort(list),
+      var current = curSort(list),
         col = columns(list).filter(function (item) {
           return sortId(item) === ctx.d.sort;
         })[0],
-        d0 = col && col.dir0 === -1 ? -1 : 1;
-      ctx.s.sort = cur && cur.key === ctx.d.sort ? { key: ctx.d.sort, dir: -cur.dir } : { key: ctx.d.sort, dir: d0 };
+        firstDir = col && col.dir0 === -1 ? -1 : 1;
+      ctx.s.sort = current && current.key === ctx.d.sort ? { key: ctx.d.sort, dir: -current.dir } : { key: ctx.d.sort, dir: firstDir };
       resetLimit(list);
       saveChoices(list);
       paintList(list);
@@ -381,13 +383,13 @@ ctx.o = list.o;
   /** onClick, step 14 of 15 (the data-selrow part, lines 3108-3127 of the one function): true when it handled the call and nothing else should run */
   function onClickSelrow(list, event, ctx) {
     if (ctx.d.act) {
-      var act = (ctx.o.actions || []).filter(function (x) {
+      var action = (ctx.o.actions || []).filter(function (x) {
           return x.id === ctx.d.act;
         })[0],
         row = rowById(list, ctx.d.actrow);
-      if (act && row)
+      if (action && row)
         safe(function () {
-          act.run(row);
+          action.run(row);
         });
       return true;
     }
@@ -395,8 +397,8 @@ ctx.o = list.o;
       return true;
     }
     if (ctx.b.hasAttribute('data-caret') || ctx.node.closest('[data-caret]')) {
-      var rr = ctx.node.closest('[data-row]');
-      if (rr) toggleRow(list, rr.getAttribute('data-row'), false);
+      var rowNode = ctx.node.closest('[data-row]');
+      if (rowNode) toggleRow(list, rowNode.getAttribute('data-row'), false);
       return true;
     }
     ctx.rowEl = ctx.node.closest('[data-row]');
