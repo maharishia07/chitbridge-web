@@ -122,6 +122,19 @@ function crmHat() {
     return '';
   }
 }
+/** the owner, or a co-assist whose signed hat is manager: the two who see the Unassigned bucket (the follow-ups nobody holds) */
+function crmSeesUnassigned() {
+  if (crmOwner()) return true;
+  try {
+    var b = String(SESSION.token || '')
+      .split('.')[1]
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    return /^manager$/i.test(String(JSON.parse(atob(b)).hat || ''));
+  } catch (_) {
+    return false;
+  }
+}
 function crmRole() {
   if (crmOwner()) return 'owner';
   if (CRM.may && CRM.may.write) return CRM.may.write.may ? 'editor' : 'viewer'; /* the server's word, once it has spoken */
@@ -1952,7 +1965,9 @@ function crmFollowups(frame) {
         key: 'scope',
         label: tx('Show'),
         all: tx(def === 'all' ? 'Everyone' : 'Mine'),
-        options: [{ v: def === 'all' ? 'mine' : 'all', label: tx(def === 'all' ? 'Mine' : 'Everyone') }],
+        options: [{ v: def === 'all' ? 'mine' : 'all', label: tx(def === 'all' ? 'Mine' : 'Everyone') }].concat(
+          crmSeesUnassigned() ? [{ v: 'unassigned', label: tx('Unassigned') }] : []
+        ),
         match: function () {
           return true;
         }
@@ -2406,7 +2421,7 @@ var CRM_CLICK = {
   },
   fuassign: function (control, id, value, event) {
     event.stopPropagation();
-    return crmFuAct(id, { assignee_user_id: SESSION.name || '' });
+    return crmFuAct(id, { assignee_user_id: cbMeId() }); /* the api takes a person's id, never a name (BAD_ASSIGNEE) */
   },
   fudel: function (control, id, value, event) {
     event.stopPropagation();
