@@ -196,6 +196,16 @@ W.run('books-grant', async (w) => {
     const a = await noScroll(), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), note = await has(T('bv-cmp-note')), noteIn = await page.evaluate(() => { const n = document.querySelector('[data-testid="bv-cmp-note"]'); return !!n && n.getBoundingClientRect().bottom <= window.innerHeight; });
     return { ok: a.y && a.x && dots === 2 && note && noteIn, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · dots ' + dots + ' · note ' + note + ' in the screen ' + noteIn };
   });
+  await w.step('A8d', 'the auditor · 390×844: the trial balance and the balance sheet keep their Amount and Change, the note shows, one highlighted row is marked each, no page scroll, no sideways scroll', async () => {
+    const seen = [];
+    for (const tab of ['tb', 'bs']) {
+      await page.selectOption(T('bv-tab-select'), tab); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(500);
+      const a = await noScroll(), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), noteIn = await page.evaluate(() => { const n = document.querySelector('[data-testid="bv-cmp-note"]'); return !!n && n.getBoundingClientRect().bottom <= window.innerHeight; });
+      seen.push(tab + ': no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · dots ' + dots + ' · note in the screen ' + noteIn);
+      if (!(a.y && a.x && dots === 1 && noteIn)) return { ok: false, saw: seen.join(' | ') };
+    }
+    return { ok: true, saw: seen.join(' | ') };
+  });
   await w.step('A9', 'the auditor · Months: one lock line (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)); no month before Jul 2025 is listed', async () => {
     await page.selectOption(T('bv-tab-select'), 'periods'); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const lines = await page.getAttribute(T('bv-lock-lines'), 'data-full'), list = await txt(T('bv-list'));
