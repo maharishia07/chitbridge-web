@@ -5,6 +5,7 @@
  *           period, an empty tick for a period with no record (opts.actual / opts.previous = the measured colours of the bars and of the previous line) · spark(values, opts) — a sparkline with its last
  *           point dotted (REP-36: opts.title + opts.desc add a <title>/<desc>) · statusBar(parts, opts) — stacked good/watch/help with figures · monthStrip(months, opts) —
  *           12 small squares locked/open/running · palette(vars, contrast) — actual/previous/accent/good/watch/bad measured per theme.
+ *           hbars(rows, opts) — ranked or bucketed horizontal bars, the figure at the end (MISCH) · cashLine(points, opts) — the days-ahead balance as one line, its ends and the server's lowest day labelled (MISCH).
  * CALLED BY app/cap-mis-trend.js (CB Finance › Reports › Trend) · app/shell.js (the Till card's teaser on Home) · e2e/chart-draw.test.cjs · public/chart-sample.html (REP-36 theme sample).
  * FLOW      R2R · reports — the server's figures in → an SVG string out. It computes NO figure: heights are geometry, the words are the caller's.
  *
@@ -658,7 +659,116 @@
     return accessibleSvg(width, list.length * rowH, { id: options.id || 'cd-cmp', tid: options.tid || 'cd-cmp', title: options.title, desc: options.desc, palette: options.palette, codes: options.codes }, inner);
   }
 
+  /* MISCH: hbars(rows, opts) — a ranked or bucketed horizontal bar per row (top lines, dues by age), the figure printed at the end; and cashLine(points, opts) — the next days' balance as one line.
+   * Both draw only: every figure and every word arrives carried (money already in the shop's currency, the lowest day the server's). */
+  var HB = { row: 20, labelW: 96, textW: 92, gap: 6 };
+  /** the longest bar sets the scale; a row with no figure draws a dashed empty line and its words, never a zero bar */
+  function hbarRow(row, index, layout) {
+    var y = index * layout.row,
+      h = layout.row - 5,
+      value = figure(row.value),
+      x0 = layout.labelW + HB.gap,
+      width = value === null || layout.high <= 0 ? 0 : Math.max(value > 0 ? 2 : 0, (Math.max(0, value) / layout.high) * layout.area);
+    var full = String(row.label || ''),
+      label = full.length > 14 ? full.slice(0, 13) + '…' : full;
+    var shape =
+      value === null
+        ? '<line x1="' + x0 + '" x2="' + (x0 + layout.area) + '" y1="' + (y + h / 2).toFixed(1) + '" y2="' + (y + h / 2).toFixed(1) + '" style="stroke:var(--rp-previous);stroke-width:1;stroke-dasharray:2 3"/>'
+        : '<rect x="' + x0 + '" y="' + (y + 1) + '" width="' + width.toFixed(1) + '" height="' + (h - 2) + '" rx="2" data-testid="' + layout.tid + '-bar-' + index + '" data-hatch="' + (row.hatch ? 1 : 0) + '" style="fill:' + (row.hatch ? 'url(#' + layout.id + '-hatch)' : 'var(--rp-actual)') + ';stroke:var(--rp-actual);stroke-width:' + (row.hatch ? 1 : 0) + '"/>';
+    return (
+      '<g data-testid="' + layout.tid + '-row-' + index + '"' + codeAttr(layout.codes, 'part') + '><title>' + escape(row.title || full) + '</title>' +
+      '<text x="0" y="' + (y + h - 3) + '"' + codeAttr(layout.codes, 'legend') + ' style="font:11px var(--sans,system-ui,sans-serif);fill:var(--ink,#2a2418)">' + escape(label) + '</text>' +
+      shape +
+      '<text x="' + layout.width + '" y="' + (y + h - 3) + '" text-anchor="end" data-testid="' + layout.tid + '-fig-' + index + '" style="font:11px var(--mono,monospace);fill:var(--ink,#2a2418)">' + escape(row.words || '') + '</text></g>'
+    );
+  }
+  /** hbars(rows, opts) → '<svg …>' — rows [{ label, value (a carried figure or null), words (printed), title, hatch (the late part: shape, not colour) }]; opts { width 320, id, tid, title, desc, palette, codes, row, labelW }. No rows → ''. */
+  function hbars(rows, opts) {
+    var options = opts || {},
+      list = rows || [];
+    if (!list.length) return '';
+    var width = options.width || 320,
+      id = escape(options.id || 'cd-hb'),
+      rowH = options.row || HB.row,
+      labelW = options.labelW || HB.labelW,
+      high = 0;
+    list.forEach(function (row) {
+      high = Math.max(high, figure(row.value) || 0);
+    });
+    var layout = { row: rowH, width: width, labelW: labelW, area: Math.max(20, width - labelW - HB.textW - HB.gap * 2), high: high, id: id, tid: escape(options.tid || 'cd-hb'), codes: options.codes };
+    var inner = hatchDefs(id, 'var(--rp-actual)') + list.map(function (row, index) { return hbarRow(row, index, layout); }).join('');
+    return accessibleSvg(width, list.length * rowH, { id: options.id || 'cd-hb', tid: options.tid || 'cd-hb', title: options.title, desc: options.desc, palette: options.palette, codes: options.codes }, inner);
+  }
+
+  var CL = { padTop: 18, padBottom: 20, padX: 6 };
+  /** the line's x/y per point on one scale (zero is always inside the range, so a fall below it shows) */
+  function cashGeometry(points, width, height) {
+    var vals = points.map(function (p) { return figure(p.value); }),
+      known = vals.filter(function (v) { return v !== null; }),
+      high = Math.max.apply(null, known.concat(0)),
+      low = Math.min.apply(null, known.concat(0)),
+      span = high - low || 1,
+      inner = height - CL.padTop - CL.padBottom;
+    var yOf = function (v) { return CL.padTop + ((high - v) / span) * inner; };
+    var xOf = function (i) { return CL.padX + (points.length < 2 ? 0 : (i * (width - 2 * CL.padX)) / (points.length - 1)); };
+    return { vals: vals, xOf: xOf, yOf: yOf, zero: yOf(0), crosses: low < 0 };
+  }
+  /** one dot, a 2px card-coloured ring so it reads over the line */
+  function cashDot(x, y, hollow, tid) {
+    return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4" data-testid="' + tid + '" style="fill:' + (hollow ? 'var(--card,#fffdf8)' : 'var(--rp-actual)') + ';stroke:var(--rp-actual);stroke-width:2"/>';
+  }
+  /** a label that stays inside the viewBox: turned to end/start near the edges */
+  function cashLabel(x, y, text, width, tid) {
+    var anchor = x > width - 70 ? 'end' : x < 70 ? 'start' : 'middle';
+    return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor + '" data-testid="' + tid + '" style="font:11px var(--mono,monospace);fill:var(--ink,#2a2418)">' + escape(text) + '</text>';
+  }
+  /** the polyline as an SVG path, broken at a null */
+  function cashPath(g) {
+    var path = '',
+      pen = false;
+    g.vals.forEach(function (v, i) {
+      if (v === null) {
+        pen = false;
+        return;
+      }
+      path += (pen ? 'L' : 'M') + g.xOf(i).toFixed(1) + ' ' + g.yOf(v).toFixed(1);
+      pen = true;
+    });
+    return path;
+  }
+  /** the two ends and (when the server named one) the lowest day: a dot and its words each */
+  function cashMarks(g, options, width, tid) {
+    var last = g.vals.length - 1,
+      at = options.lowestAt,
+      out = '';
+    if (g.vals[0] !== null) out += cashDot(g.xOf(0), g.yOf(g.vals[0]), false, tid + '-start') + (options.startWords ? cashLabel(g.xOf(0), g.yOf(g.vals[0]) - 8, options.startWords, width, tid + '-start-words') : '');
+    if (g.vals[last] !== null) out += cashDot(g.xOf(last), g.yOf(g.vals[last]), false, tid + '-end') + (options.endWords ? cashLabel(g.xOf(last), g.yOf(g.vals[last]) - 8, options.endWords, width, tid + '-end-words') : '');
+    if (at > 0 && at < last && g.vals[at] !== null) out += cashDot(g.xOf(at), g.yOf(g.vals[at]), true, tid + '-lowest') + (options.lowestWords ? cashLabel(g.xOf(at), g.yOf(g.vals[at]) + 17, options.lowestWords, width, tid + '-lowest-words') : '');
+    return out;
+  }
+  /**
+   * cashLine(points, opts) → '<svg …>' — points [{ label, value|null }] oldest first (the days ahead); opts { width 640, height 150, id, tid, title, desc, palette, codes,
+   * startWords, endWords (printed at the two ends), lowestAt (the index the SERVER named lowest) + lowestWords }. Fewer than 2 points → ''. The line breaks at a null.
+   */
+  function cashLine(points, opts) {
+    var options = opts || {},
+      list = points || [];
+    if (list.length < 2) return '';
+    var width = options.width || 640,
+      height = options.height || 150,
+      g = cashGeometry(list, width, height),
+      tid = escape(options.tid || 'cd-cash'),
+      last = list.length - 1;
+    var axis = '<line x1="0" x2="' + width + '" y1="' + g.zero.toFixed(1) + '" y2="' + g.zero.toFixed(1) + '" style="stroke:var(--line-3,#d8ccb0);stroke-width:1' + (g.crosses ? ';stroke-dasharray:4 3' : '') + '"/>';
+    var ends =
+      '<text x="0" y="' + (height - 4) + '" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' + escape(list[0].label || '') + '</text><text x="' + width + '" y="' + (height - 4) + '" text-anchor="end" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' + escape(list[last].label || '') + '</text>';
+    var inner = axis + '<path d="' + cashPath(g) + '" data-testid="' + tid + '-line" style="fill:none;stroke:var(--rp-actual);stroke-width:2;stroke-linejoin:round"/>' + cashMarks(g, options, width, tid) + ends;
+    return accessibleSvg(width, height, { id: options.id || 'cd-cash', tid: options.tid || 'cd-cash', title: options.title, desc: options.desc, palette: options.palette, codes: options.codes }, inner);
+  }
+
   var CBDraw = {
+    hbars: hbars,
+    cashLine: cashLine,
     bars: bars,
     spark: spark,
     statusBar: statusBar,
