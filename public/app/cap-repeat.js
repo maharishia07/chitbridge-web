@@ -73,9 +73,6 @@ function rpMoney(agreement) {
 function rpDate(date) {
   return typeof bkDate === 'function' ? bkDate(date) : date || '—';
 }
-function rpSession() {
-  return (typeof SESS !== 'undefined' && SESS) || (typeof SESSION !== 'undefined' && SESSION) || {};
-}
 /** a verb button: enabled when the server says ok; otherwise greyed, its sentence on the control and said on a tap */
 function rpBtn(agreement, verb, testId, className, sayInline) {
   var verbState = (agreement.actions || {})[verb];
