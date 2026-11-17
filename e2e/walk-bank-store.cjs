@@ -208,7 +208,9 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
     const tag = theme + '-' + vp.width;
     ({ ctx, p } = await open(S, { theme, vp }));
     await load(p);
-    await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]');
+    /* the store read repaints the page after the line first shows and closes an open More menu: open it again until it stays (slower CI runner) */
+    for (let k = 0; k < 4 && !(await p.locator('[data-testid="bank-tab-brs"]').isVisible()); k++) { await p.click('[data-testid="bank-more"]'); await p.waitForTimeout(400); }
+    await p.click('[data-testid="bank-tab-brs"]');
     await p.waitForTimeout(300);
     const m = (await p.evaluate(measure)).filter((x) => !x.grad && x.ratio < x.need);
     ok('F7', m.length === 0, tag + ': AA contrast for every text' + (m.length ? ' — ' + m.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + ' < ' + x.need).join(' · ') : ''));
