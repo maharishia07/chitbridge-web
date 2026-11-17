@@ -184,7 +184,8 @@ W.run('books-adviser', async (w) => {
     return { ok: /Priya Nair/.test(d) && /REF-11|Journal/.test(await txt(T('ba-list'))) && /lines/.test(d), saw: d.slice(0, 100) };
   });
   await w.step('F8', 'the firm · a stale tab: the server says STORE_MISMATCH and the page says it in a plain sentence, nothing saved', async () => {
-    await queue('review'); S.by[S1].push(make(S1, 3)); await page.reload(); await openStore(S1); await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-review'), { timeout: 10000 }); await page.waitForTimeout(400);
+    await queue('review'); S.by[S1].push(make(S1, 3)); await page.reload(); await page.waitForTimeout(1200); if (await has(T('nw-books-' + S1))) await openStore(S1); else await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 });   /* a reload keeps the acting store (the address carries it): the books view is already there, no Open books to press */
+    await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-review'), { timeout: 10000 }); await page.waitForTimeout(400);
     S.fail.mismatch = true; await pickRow(idOf(S1, 3)); await page.click(T('ba-review')); await confirmYes();
     const out = await txt(T('ba-out'));
     return { ok: out === 'This page is open on another store than the one you are working in. Nothing was saved. Open the store again.', saw: out };
