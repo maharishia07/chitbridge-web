@@ -10,7 +10,7 @@
  */
 (function (root) {
   'use strict';
-  var bellKit = (root.CBBellKit = root.CBBellKit || {});
+  var bellKit = root.CBBellKit; /* created by rail-bell-html.js, which loads first */
   /** W15-54: the owner's bell row for a Query opens the Query thread sheet through the Day book's own opener (CBMark's sheet: one thread, one composer) */
   /** the page's endpoint table is a lexical const (not window.EP), so cap-mark cannot fill it: the two mark reads are added here, from cap-mark's own list */
   function markEndpoints() {

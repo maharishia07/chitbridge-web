@@ -20,7 +20,7 @@
  */
 (function (root) {
   'use strict';
-  var markKit = (root.CBMarkKit = root.CBMarkKit || {});
+  var markKit = root.CBMarkKit; /* created by cap-mark-sheet.js, which loads first */
   markKit.markText = markText;
   markKit.fill = fill;
   markKit.when = when;

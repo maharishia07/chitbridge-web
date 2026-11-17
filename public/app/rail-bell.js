@@ -37,7 +37,7 @@
  */
 (function (root) {
   'use strict';
-  var bellKit = (root.CBBellKit = root.CBBellKit || {});
+  var bellKit = root.CBBellKit; /* created by rail-bell-html.js, which loads first */
   bellKit.call = call;
   bellKit.doc = root.document;
 
