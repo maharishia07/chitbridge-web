@@ -151,13 +151,21 @@ function ovDuesCard(a, side) {
   var svg = CBDraw.hbars(out.rows, { width: ovWidth(), id: 'ov' + key, tid: 'ov-' + key + '-hb', title: tx(title), desc: out.rows.map(function (r) { return r.title; }).join(', ') });
   return ovCard(key, side === 'customer' ? 'BKS026-P05' : 'BKS026-P06', title, svg, tx('Hatched = late'), out.table, side === 'customer' ? 'BKS026-B11' : 'BKS026-B12');
 }
+/** the server's sentence states an amount as CODE + figure ("AUD 994,008.80": lib/money prints the code, never a symbol); the page's own money maker (bkMoney, CBLocale) owns the look, so each such amount in the shop's currency is re-drawn by it. The figure is the server's, read back to minor units by its own decimals; nothing is added or rounded. */
+function ovMoneyWords(words, cur) {
+  if (!words || !cur) return words || '';
+  return String(words).replace(new RegExp('\\b' + cur + ' (-?[\\d,]+)(?:\\.(\\d+))?', 'g'), function (whole, int, frac) {
+    var digits = String(frac || ''), minor = Number(String(int).replace(/,/g, '') + digits);
+    return isFinite(minor) ? bkMoney(minor, cur) : whole;
+  });
+}
 /** cash for the next 30 days (the cash view's own series, lowest day and words) */
 function ovCashCard(a) {
   if (!a.cash || !a.cash.series || !a.cash.series.length) return '';
   var deps = ovDeps(),
     out = MC.cashPoints(a.cash, deps);
-  var svg = CBDraw.cashLine(out.points, { width: ovWidth(), height: 140, id: 'ovcash', tid: 'ov-cashline-svg', title: tx('Cash for the next 30 days'), desc: a.cash.words || '', startWords: out.startWords, endWords: out.endWords, lowestAt: out.lowestAt, lowestWords: out.lowestWords });
-  return ovCard('cashline', 'BKS026-P07', 'Cash, next 30 days', svg, a.cash.words || '', out.table, 'BKS026-B13');
+  var svg = CBDraw.cashLine(out.points, { width: ovWidth(), height: 140, id: 'ovcash', tid: 'ov-cashline-svg', title: tx('Cash for the next 30 days'), desc: ovMoneyWords(a.cash.words, deps.cur), startWords: out.startWords, endWords: out.endWords, lowestAt: out.lowestAt, lowestWords: out.lowestWords });
+  return ovCard('cashline', 'BKS026-P07', 'Cash, next 30 days', svg, ovMoneyWords(a.cash.words, deps.cur), out.table, 'BKS026-B13');
 }
 /** profit PER ITEM is not drawn: it needs what each item cost (REP-29); the screen says so, never an empty chart */
 function ovItemNote() {

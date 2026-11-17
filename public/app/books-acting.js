@@ -168,9 +168,20 @@
     host.innerHTML = '<div class="en-why" data-testid="' + (unread ? 'acting-unread' : 'acting-refused') + '"></div>';
     root.CBShell.readFailed(host.firstChild, { what: words('Your client list'), status: unread ? 0 : 403, retry: unread ? function () { root.location.reload(); } : null, back: { href: '/network.html', label: words('Back to My network') } });
   }
+  /** the first second of a client's books, before the grant read answers: the screen's own word as the title and the page's skeleton rows, never the bare "Accounts" frame (first-impression W8; the grant read is untouched) */
+  function paintOpening(menu) {
+    var doc = root.document, title = doc && doc.getElementById('title'), host = doc && doc.getElementById('content');
+    if (!title || !host) return;
+    var asked = String(root.location.hash || '').replace(/^#\/?/, '').split(/[/?]/)[0], hit = null;
+    for (var i = 0; i < menu.length; i++) if (menu[i][0] === asked) hit = menu[i];
+    if (!hit && context && context.role === 'auditor') hit = ['bank', 'Bank'];
+    if (hit) title.textContent = words(hit[1]);
+    host.innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-opening"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
+  }
   /** the page's way in: only on a live adviser grant, then the menu is cut to the books tabs; false = not entered */
   function openPage(base, token, menu, groups) {
     if (!context) return Promise.resolve(true);
+    paintOpening(menu);
     var unread = false;
     return confirmGrant(base, token).catch(function (e) {
       unread = !!(e && e.unread);
