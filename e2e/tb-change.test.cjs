@@ -1,3 +1,4 @@
+// @type: unit
 /**
  * tb-change.test.cjs — F3 (Fable RC walk 17 Nov): the trial balance's Change and % read on the account's OWN side, so the TB and the P&L agree for the same account.
  * OWNS      the proof of public/app/tb-change.js (CBTbChange.read) on the rows the api sends (net = debit − credit, change = now − last year, % of |last year|)
