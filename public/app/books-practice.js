@@ -224,10 +224,15 @@
   /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
   function withList(then) {
     if (root.CBList) return then();
-    var tag = root.document.createElement('script');
-    tag.src = '/app/list-ctl.js';
-    tag.onload = then;
-    root.document.head.appendChild(tag);
+    var queue = ['list-ctl-css', 'list-ctl-click', 'list-ctl-wire', 'list-ctl'];
+    (function next() {
+      if (!queue.length) return then();
+      var tag = root.document.createElement('script');
+      tag.src = '/app/' + queue.shift() + '.js';
+      tag.async = false;
+      tag.onload = next;
+      root.document.head.appendChild(tag);
+    })();
   }
   /** the columns a band opens with, and the Saved column once the firm's flags have answered and are on */
   function colsOf(bandKey) {

@@ -96,7 +96,7 @@
   if (typeof win.lsSet !== 'function') win.lsSet = function (k, v) { try { win.localStorage.setItem(k, v); } catch (e) { win.console.warn('lsSet ' + k + ': ' + e.message); } };
   if (typeof win.ensureCap !== 'function') win.ensureCap = function (name) { return loadScript('/app/cap-' + name + '.js'); };
 
-  (win.CBList ? Promise.resolve() : loadScript('/app/list-ctl.js'))
+  (win.CBList ? Promise.resolve() : ['list-ctl-css', 'list-ctl-click', 'list-ctl-wire', 'list-ctl'].reduce(function (chain, part) { return chain.then(function () { return loadScript('/app/' + part + '.js'); }); }, Promise.resolve()))
     .then(function () { return win.ensureCap(capability); })
     .then(function () { if (openers[capability]) openers[capability](); })
     .catch(function () {

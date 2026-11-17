@@ -211,6 +211,7 @@ jobs:
           node e2e/jet-day-book-risk.test.cjs
           node e2e/mis-charts.test.cjs
           node e2e/chart-draw.test.cjs
+          node e2e/chart-sample.test.cjs
           node e2e/practice-rep66-pictures.cjs
           node e2e/practice-rep73-fable.cjs
           node e2e/practice-checked-cell.cjs

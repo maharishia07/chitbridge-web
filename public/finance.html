@@ -340,7 +340,7 @@ function go() {
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>
 <script src="/app/helpers.js"></script><script src="/app/day-book-kind.js"></script>
-<script src="/app/list-ctl.js"></script>   <!-- CBList: the one list -->
+<script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: the one list -->
 <script src="/engine/tax.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
@@ -369,7 +369,7 @@ function go() {
 <script src="/app/cap-repeat.js"></script>   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
 <script src="/app/cap-finance-cheques.js"></script>   <!-- Cheques tab (T3-P1-MONEY): the cheques held (cap-books.js's list and steps), the post-dated reminders, the owner's switch -->
 <script src="/app/cap-finance-returns.js"></script>   <!-- Returns tab (T3-P1-MONEY): country-first — India downloads the GSTR files the server builds; AU/AE are told where their return is prepared -->
-<script src="/engine/chart-draw.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
+<script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
 <script src="/app/mis-charts.js"></script><script src="/app/cap-mis-pictures.js"></script>   <!-- MC (MISCH): the MIS pictures' adapters — the server's answers to CBDraw shapes, no calculation; Trend reads its period words -->   <!-- Reports › Pictures (MISCH): sales · dues by age · income and expense · cash 30 days, each with its table -->
 <script src="/app/cap-mis-trend.js"></script>   <!-- Reports › Trend (RPT2): sales by week · month · quarter · year beside last year — rollup.series on the server, drawn here -->
 <script src="/app/cap-mis.js"></script>   <!-- Reports tab (T3-P4-ACCOUNT): the server's one measurement (lib/measure through GET /api/folders/mis) as one CBList; every number opens the list that holds it -->   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
