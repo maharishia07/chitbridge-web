@@ -12,6 +12,7 @@
  */
 'use strict';
 const W = require('./lib/walk.cjs');
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) */
 const C = require('./lib/contract.cjs');   /* every /api/books answer the stand-in serves is held to the api's own examples */
 const T = (id) => '[data-testid="' + id + '"]';
 const WIDE = { width: 1366, height: 768 }, NARROW = { width: 390, height: 844 };
@@ -101,7 +102,7 @@ W.run('period', async (w) => {
   await w.step('P6', 'Who owes whom reads as at the year end (capped at the shop day, E1); Months lists the months of the chosen year only', async () => {
     await tab('dues'); const d = lastCall('/api/books/dues');
     await tab('periods', T('bv-row-0')); const rows = await txt(T('bv-list'));
-    const asOf = ['2026-06-30', new Date().toISOString().slice(0, 10)].sort()[0]; /* E1: the as-at is the earlier of the year end and the shop day, so a year still in progress is read as at today, never a future day */
+    const asOf = ['2026-06-30', TD.TODAY].sort()[0]; /* E1: the as-at is the earlier of the year end and the shop day, so a year still in progress is read as at today, never a future day */
     return { ok: d.get('asOf') === asOf && /September 2025/.test(rows) && /October 2025/.test(rows) && !/March 2025/.test(rows), saw: 'dues asOf ' + d.get('asOf') + ' · ' + rows.slice(0, 120) };
   });
   await w.step('P7', 'the address carries the period (?fy=2025-26); switching the year moves EVERY view (fy=2024-25 in the address, the Day book, P&L, trial balance and dues read the other year)', async () => {

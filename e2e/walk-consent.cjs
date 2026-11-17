@@ -20,6 +20,7 @@
  */
 'use strict';
 const W = require('./lib/walk.cjs');
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) */
 const C = require('./lib/contract.cjs');
 const { rule13, audit } = require('./lib/rule13.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
@@ -132,7 +133,7 @@ W.run(REAL ? 'consent-real' : 'consent', async (w) => {
       return { ok: /at least 3/.test(short) && (REAL || none === 0) && seen && seen.source === 'staff' && seen.note === 'Asked on the phone' && seen.allowed === true && /source: staff/.test(words) && open && closed, saw: 'short "' + short + '" · POSTs ' + none + ' · body ' + JSON.stringify(seen) + ' · api words "' + words.slice(0, 60) + '" · field kept ' + open + ' · cancel closes ' + closed };
     });
     if (S) await w.step('C5b', 'the customer’s own no stands: the line says so beside the toggle; a staff Yes with a reason is noted but does not lift it', async () => {
-      S.priv.prefs.unshift({ pref_id: 'cust-no-1', party_id: S.priv.prefs[0].party_id, channel: 'email', purpose: 'marketing', allowed: false, basis: 'consent', notice_version: null, noted_at: new Date(Date.now() - 86400e3).toISOString(), noted_by: S.priv.prefs[0].party_id, source: 'self', withdrawn_at: null });
+      S.priv.prefs.unshift({ pref_id: 'cust-no-1', party_id: S.priv.prefs[0].party_id, channel: 'email', purpose: 'marketing', allowed: false, basis: 'consent', notice_version: null, noted_at: new Date(TD.nowMs() - 86400e3).toISOString(), noted_by: S.priv.prefs[0].party_id, source: 'self', withdrawn_at: null });
       await page.reload(); await openRecord(key); await openConsent();
       const line = await tc(T('crm-consent-standing-email')), other = await tc(T('crm-consent-standing-whatsapp'));
       await page.click(T('crm-consent-yes-email')); await page.fill(T('crm-consent-note'), 'Rang to ask, said yes'); await page.click(T('crm-consent-note-save'));

@@ -19,13 +19,14 @@ process.env.DATABASE_URL = DB; process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'firm-reply-walk-secret-at-least-32-chars-padding';
 const need = (m) => require(path.join(API_DIR, 'node_modules', m));
 const { chromium } = require('playwright');
+const TD = require('./lib/today.cjs');   /* QW1-TODAY: the one injected today (CB_TODAY) */
 const S = require('./lib/serve.cjs'), R = require('./lib/real-stack.cjs');
 const jsonWebToken = need('jsonwebtoken');
 const net = require(path.join(API_DIR, 'src', 'services', 'network')), { query, withEntity } = require(path.join(API_DIR, 'db'));
 
 let failures = 0;
 const check = (ok, words, info) => { console.log((ok ? '  ok   ' : '  FAIL ') + words + (!ok && info ? '\n         ' + String(info).slice(0, 400) : '')); if (!ok) failures++; };
-const RUN = 'fr' + (Date.now() % 1e10).toString(36);
+const RUN = 'fr' + (Date.now() % 1e10).toString(36);   // clock-ok: a unique run tag, not a business day
 const sign = (claims) => jsonWebToken.sign(claims, process.env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '1h' });
 
 async function business(tag, name) {
@@ -54,7 +55,7 @@ async function person(biz, tag, name, level) {
   check(on.status === 200 && gA.status === 201 && gV.status === 201, 'setup: the client\'s books are on and the firm holds an auditor and an adviser grant', JSON.stringify([on.status, gA.status, gV.status]));
   const acc = (await call(cOwner.token, 'GET', '/api/books/accounts')).b, list = acc.accounts || acc.rows || acc || [];
   const cash = (list.find((a) => /cash/i.test(a.name || '')) || {}).code || '1000', sales = (list.find((a) => /^sales/i.test(a.name || '')) || {}).code || '4000';
-  const day = new Date().toISOString().slice(0, 10);
+  const day = TD.TODAY;
   const E1 = (await call(cOwner.token, 'POST', '/api/books/entries', { narration: 'walk ' + RUN, date: day, client_ref: RUN + 'e1', lines: [{ code: cash, dr_minor: 10000 }, { code: sales, cr_minor: 10000 }] })).b;
   const w = await call(aud1.token, 'POST', '/api/flags', { kind: 'note', visibility: 'org', subject_kind: 'posting', subject_entity: C.id, items: [{ id: E1.entry_id, label: E1.entry_no + ' · walk' }], note: 'Check the cash slip before sign-off' });
   const flagId = w.b && w.b.flags && w.b.flags[0] && w.b.flags[0].flag_id;

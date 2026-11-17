@@ -78,8 +78,8 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
   /* ── p95 at 7 years ── */
   const times = [], trips = [];
   for (let i = 0; i < REPEAT; i++) {
-    const t0 = Date.now(); const r = await fetch(api + '/api/books/overview?period=ytd', { headers: { authorization: 'Bearer ' + token } }); await r.arrayBuffer();
-    times.push(Date.now() - t0); trips.push(r.headers.get('x-db-trips'));
+    const t0 = Date.now(); /* clock-ok: elapsed ms, not a day */ const r = await fetch(api + '/api/books/overview?period=ytd', { headers: { authorization: 'Bearer ' + token } }); await r.arrayBuffer();
+    times.push(Date.now() - t0);   // clock-ok: elapsed ms trips.push(r.headers.get('x-db-trips'));
   }
   times.sort((a, b) => a - b);
   const p95 = times[Math.ceil(times.length * 0.95) - 1];
@@ -93,11 +93,11 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
   for (const theme of ['cream', 'dark']) {
     for (const width of [1366, 390]) {
       await page.setViewportSize({ width, height: width > 500 ? 768 : 844 });
-      const t0 = Date.now();
+      const t0 = Date.now();   // clock-ok: elapsed ms
       await page.goto(web.url('/accounts.html#overview'));
       await page.evaluate((t) => { try { localStorage.setItem('cb_theme', t); } catch (_) {} }, theme);
       await page.waitForSelector('[data-testid="ov-headline"]', { timeout: 20000 });
-      const first = Date.now() - t0;
+      const first = Date.now() - t0;   // clock-ok: elapsed ms
       await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(250);
       const tag = theme + '·' + width;
       if (theme === 'cream' && width === 1366) check(first <= FIRST_DATA_MS, 'first data (headline) in ' + first + ' ms, ceiling ' + FIRST_DATA_MS);
