@@ -93,6 +93,7 @@ jobs:
           npm run check:a11y
           npm run check:eps
           npm run check:undeclared
+          npm run check:tagged
           npm run check:barereturn
       # QA-153 (13 Nov): 41 offline guards that passed on main and that no CI job ran (packs only, or nothing). No browser, no sibling repo.
       - name: Offline guards no CI job ran (QA-153)
