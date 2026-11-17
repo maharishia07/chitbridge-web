@@ -27,7 +27,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolkata, or CB_TODAY), never the UTC day: UTC is a day behind from 18:30Z (tzsweep) */
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 /* the menu's views in the menu's order (A1), plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [

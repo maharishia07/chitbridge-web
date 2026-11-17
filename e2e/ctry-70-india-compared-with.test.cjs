@@ -24,7 +24,7 @@ const IN = json.rows.filter((r) => r.country === 'IN');
 const bad = (fn) => IN.filter((r) => !fn(r)).map((r) => r.id);
 ok('India has 16 rows: 2 packages (Tally Prime, Zoho Books) x 8 capabilities', IN.length === 16 && new Set(IN.map((r) => r.package)).size === 2 && ['Tally Prime', 'Zoho Books'].every((p) => IN.filter((r) => r.package === p).length === 8), IN.length + ' rows');
 ok('every row is verified = "source" (in the cited vendor page), none "memory"', bad((r) => r.verified === 'source').length === 0, bad((r) => r.verified === 'source').join(','));
-const today = new Date().toISOString().slice(0, 10);
+const today = new Date().toISOString().slice(0, 10); // utc-ok: a data-row 'not in the future' bound, not a shop day
 const realDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s)) && !isNaN(Date.parse(s)) && new Date(Date.parse(s)).toISOString().slice(0, 10) === s;
 ok('every row has its own `checked` date: a real ISO date, not before 2026-10-24 (the India verification) and not in the future', bad((r) => realDate(r.checked) && r.checked >= '2026-10-24' && r.checked <= today).length === 0, bad((r) => realDate(r.checked) && r.checked >= '2026-10-24' && r.checked <= today).join(','));
 const urls = (r) => String(r.source || '').split(';').map((s) => s.trim()).filter((s) => /^https:\/\//.test(s));

@@ -202,7 +202,7 @@ async function setUp(label, shop, freePort) {
    * till-summary.cjs on the day it was written. A day still being billed is never summarised, so using TODAY
    * keeps this test about the thing it is actually testing.
    */
-  const dayNow = new Date().toISOString().slice(0, 10);
+  const dayNow = new Date().toISOString().slice(0, 10); // utc-ok: the connector rollup cuts days in UTC (node); the file name must match it
   fs.writeFileSync(path.join(flat, 'bills-' + dayNow + '.jsonl'), JSON.stringify({ no: 'D-6', total: 300 }) + '\n');
 
   const D = await counter(homeD, 7314);
