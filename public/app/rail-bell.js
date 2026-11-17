@@ -85,9 +85,16 @@
     dispute_raised: ['⚑', 'raised a dispute on'],
     dispute_resolved: ['✅', 'resolved a dispute on'],
     voided: ['🚫', 'voided'],
-    mark_query: ['?', 'asked a question about'],
-    mark_reply: ['💬', 'replied about']
+    mark_query: ['?', 'raised a Query on'],
+    mark_reply: ['💬', 'replied to the Query on']
   };
+  /** the ONE wording of a mark's subject (the bell and the Messages inbox both call it): a Query is on an ENTRY, never on a chit */
+  function markSubject(entryNo) {
+    return entryNo ? String(entryNo) : 'an entry';
+  }
+  function markTitle(entryNo) {
+    return 'Query on ' + markSubject(entryNo);
+  }
   /** a mark notice names its entry the way the books do: number · day (the shop's way) · amount in its own currency */
   function entryName(entry) {
     if (!entry) return '';
@@ -112,7 +119,7 @@
   /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
   function line(item) {
     var kind = KIND[item.action],
-      subj = item.mark_entry ? entryName(item.mark_entry) : item.manual_subject || item.auto_subject || T(W.chit),
+      subj = item.mark_entry ? entryName(item.mark_entry) || markSubject() : item.action === 'mark_query' || item.action === 'mark_reply' ? markSubject() : item.manual_subject || item.auto_subject || T(W.chit),
       moment = '';
     /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
     if (item.created_at) moment = localMoment(item.created_at);
@@ -552,5 +559,5 @@
     return apiObj;
   }
 
-  root.CBBell = { mount: mount, line: line, EP: BELL_EP };
+  root.CBBell = { mount: mount, line: line, EP: BELL_EP, markTitle: markTitle };
 })(typeof window !== 'undefined' ? window : this);

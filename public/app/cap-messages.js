@@ -99,6 +99,7 @@ function msgUnread() {
  * rice conversation and folding them in would put an answer under the wrong question.
  */
 function msgKey(m) {
+  if (m.subject_type === 'mark') return 'mark' + '␟' + m.subject_id;
   return m.chit_id + '␟' + (m.line_id || '');
 }
 function msgThreads() {
@@ -230,8 +231,9 @@ function messagesScreen() {
             open = !!RPL.open[item.key],
             isNew = item.unread > 0;
           var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
-          var what = m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
-          var sub = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
+          var isMark = m.subject_type === 'mark';
+          var what = isMark ? esc(CBBell.markTitle(m.mark_entry_no)) : m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
+          var sub = isMark ? 'Query' : m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
           return (
             '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' +
             (isNew ? 'background:var(--blue-tint-bg);' : '') +
@@ -292,7 +294,9 @@ function messagesScreen() {
             (item.kept ? '1' : '.35') +
             '">📌</span>' +
             '</div>' +
-            (open
+            (open && isMark
+              ? '<div style="padding:0 14px 13px 32px;font-size:var(--fs-2);color:var(--grey)">Answer it from the entry in the Day book.</div>'
+              : open
               ? '<div style="padding:0 14px 13px 32px">' +
                 /**
                  * ⭐ THE JUMPS GO AT THE TOP — Athi, 2026-08-15: *"open order / task in the top."*

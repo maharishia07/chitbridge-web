@@ -20,11 +20,12 @@ const cx = vm.createContext({
   bkErr: (e) => 'ERR ' + e,
   bkToday: () => '2026-11-16',
   bkMountAttribute: () => '',
+  window: {},
   document: { getElementById: () => null },
   api: async () => reply
 });
-vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkBsSide', 'bkBS']) +
-  '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
+vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkBsSide', 'bkBS', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB']) +
+  '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.bkTB=bkTB;this.BK={tbDay:""};this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
 
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
@@ -99,5 +100,36 @@ const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) <
   reply = Object.assign({}, reply, { total_liab_equity_minor: 14061000 });
   b = body(); await cx.bkBS(b);
   ok(/⚠ does not balance/.test(b.innerHTML), 'two carried totals that differ: does not balance');
+  /* ── leader-compare #2: the Balance sheet's Change and % (the server read last year), hand figures, AUD minor units ──
+        Bank 14061005 vs 9000000 → +5061005, +5623 bp, over · Suppliers 2125730 vs 1500000 → +625730, +4171 bp, not over (the server decides; the page paints) */
+  const withChange = (row, change, bp, over) => Object.assign({}, row, { change_minor: change, change_bp: bp, change_over: over });
+  reply = Object.assign({}, reply, { total_liab_equity_minor: 14061005, over_rule: { pct_bp: 1000, min_major: 1000, min_minor: 100000 },
+    assets: [withChange(reply.assets[0], 5061005, 5623, true)], liabilities: [withChange(reply.liabilities[0], 625730, 4171, false), withChange(reply.liabilities[1], 400972, 5011, false)], equity: reply.equity.map((x) => withChange(x, 0, null, false)) });
+  b = body(); await cx.bkBS(b); h = b.innerHTML;
+  ok((h.match(/<th[ >]/g) || []).length === 6 && h.includes('<th class="num">Change</th><th class="num">%</th>'), 'the balance sheet gains Change and % after A year ago when the server read last year (6 headings)');
+  ok(h.includes('+M5061005') && h.includes('+25.0%') === false && h.includes('+56.2%') && h.includes('+41.7%'), 'Bank +M5061005 and +56.2%, Suppliers +41.7%: the servers amount and basis points, nothing computed here');
+  ok((h.match(/data-cbsid="BKS006-P01"/g) || []).length === 1 && (h.match(/class="bk-over"/g) || []).length === 1, 'exactly one line is highlighted (the dot BKS006-P01 and the tint): the one the server flagged');
+  ok(at(h, '</table>', 'data-testid="bs-over-note"') && /Highlighted: change of 10% and M100000 or more|Highlighted: change of 10% and M1000/.test(h) && h.includes('data-cbsid="BKS006-P02"'), 'the note states the rule UNDER the table (BKS006-P02), so the first data row does not move');
+  reply = Object.assign({}, reply, { assets: reply.assets.map((x) => { const y = Object.assign({}, x); delete y.change_minor; delete y.change_bp; delete y.change_over; return y; }), liabilities: reply.liabilities.map((x) => { const y = Object.assign({}, x); delete y.change_minor; delete y.change_bp; delete y.change_over; return y; }), equity: reply.equity.map((x) => { const y = Object.assign({}, x); delete y.change_minor; delete y.change_bp; delete y.change_over; return y; }) });
+  b = body(); await cx.bkBS(b); h = b.innerHTML;
+  ok((h.match(/<th[ >]/g) || []).length === 4 && !h.includes('bs-over-note') && !h.includes('BKS006-P01'), 'a year before the books began (no change on any line): no Change column, no note, nothing empty');
+
+  /* ── the Trial balance: Last year (Dr / Cr), Change, % and the flag, hand figures ──
+        Cash   Dr 500000 · net +500000 vs +400000 → +100000, +2500 bp, over   (prior reads "M400000 Dr")
+        Sales  Cr  90000 · net  -90000 vs  -80000 →  -10000, -1250 bp, not over (prior reads "M80000 Cr") */
+  reply = { currency: 'AUD', asOf: '2026-11-16', fy_from: '2026-07-01', total_dr_minor: 500000, total_cr_minor: 500000, balanced: true,
+    over_rule: { pct_bp: 1000, min_major: 1000, min_minor: 100000 }, compare: { how: 'year', as_at: '2025-11-16' },
+    rows: [{ code: '1000', name: 'Cash', dr_minor: 500000, cr_minor: 0, net_minor: 500000, prior_net_minor: 400000, change_minor: 100000, change_bp: 2500, change_over: true },
+      { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 90000, net_minor: -90000, prior_net_minor: -80000, change_minor: -10000, change_bp: -1250, change_over: false }] };
+  b = body(); await cx.bkTB(b); h = b.innerHTML;
+  ok((h.match(/<th[ >]/g) || []).length === 7 && h.includes('>Last year</th>') && h.includes('>Change</th>'), 'the trial balance gains Last year, Change and % (7 headings)');
+  ok(h.includes('M400000 Dr') && h.includes('M80000 Cr'), 'last year is the NET in words: Dr for a debit, Cr for a credit, never a minus');
+  ok(h.includes('+M100000') && h.includes('+25.0%') && h.includes('M-10000') && h.includes('-12.5%'), 'the change and its percent are the servers (+100000 +2500 bp; -10000 -1250 bp)');
+  ok((h.match(/data-cbsid="BKS004-P02"/g) || []).length === 1 && (h.match(/<tr class="bk-over">/g) || []).length === 1, 'only the flagged account is marked: one dot (BKS004-P02) and one tinted row');
+  ok(at(h, '</table>', 'data-testid="tb-over-note"') && h.includes('data-cbsid="BKS004-P03"'), 'the rule note sits UNDER the table (BKS004-P03)');
+  ok(h.includes('data-testid="tb-dr"') && h.includes('data-testid="tb-cr"'), 'the Total row keeps its Debit and Credit (the engines own, equal)');
+  reply = Object.assign({}, reply, { compare: null, rows: reply.rows.map((x) => ({ code: x.code, name: x.name, dr_minor: x.dr_minor, cr_minor: x.cr_minor, net_minor: x.net_minor })) });
+  b = body(); await cx.bkTB(b); h = b.innerHTML;
+  ok((h.match(/<th[ >]/g) || []).length === 4 && !h.includes('tb-over-note') && !h.includes('BKS004-P02'), 'the first year (compare null): the four columns it had, no note, no dots');
   process.exitCode = bad ? 1 : 0;
 })();
