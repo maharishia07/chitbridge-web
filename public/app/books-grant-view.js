@@ -123,10 +123,12 @@
   }
   function figure(row, column) {
     var v = row[column[0]];
+    var onTb = (column[0] === 'change_minor' || column[0] === 'change_bp') && current().k === 'tb' && root.CBTbChange ? root.CBTbChange.read(row) : null; /* F3: the trial balance's change on the account's own side (tb-change.js, shared with the owner's tab) */
+    if (onTb) v = onTb[column[0]];
     if (column[2] === 'risk') return riskCell(row);
     if (column[2] === 'explain') return explainCell(row);
     if (column[2] === PCT) return v == null ? '—' : (Number(v) > 0 ? '+' : '') + (Number(v) / 100).toFixed(1) + '%';
-    if (column[0] === 'change_minor') return changeCell(row, v);
+    if (column[0] === 'change_minor') return changeCell(row, v, onTb && onTb.side);
     if (column[2] === DRCR) return v == null || v === '' ? '—' : esc(drCrWords(v));
     if (column[2] === MONEY) return narrowLabel(row, column, moneyCell(row, column[0], v));
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
@@ -150,10 +152,10 @@
     return narrow && painted && aged ? words(column[1]) + ' ' + painted : painted;
   }
   /** the P&L's Change: a signed amount, with a quiet dot (and a word for a reader) when it is over the server's threshold; html, escaped here */
-  function changeCell(row, v) {
+  function changeCell(row, v, side) {
     if (v == null || v === '') return '—';
     var dot = row.change_over ? '<span class="bv-over-dot" data-cbsid="NET005-P02" role="img" aria-label="' + esc(words('Highlighted')) + '" title="' + esc(words('Highlighted')) + '">●</span> ' : '';
-    return dot + esc((Number(v) > 0 ? '+' : '') + minorWords(v));
+    return dot + esc((Number(v) > 0 ? '+' : '') + minorWords(v) + (side ? '\u00a0' + words(side) : ''));
   }
   /** a net balance in words: the amount, then Dr (debit) or Cr (credit); nil is 0 with neither */
   function drCrWords(minor) {
@@ -204,9 +206,11 @@
     viewState.range = period && period.from ? { from: period.from, to: period.to } : null;
   }
   /** the choices of this client, read ONCE (GET /periods?marks=1: the year under review, each year, each month with its state and checked n of m); the period opens on the year under review unless the address named one */
-  /** fix1117 F3: the first screen is never an empty period. A client whose first financial year has not ended has no year under review (the api says null), and a year under review may hold no entries: either way the books open on the latest year that holds entries (the api's years, newest first), so "Checked 0 of 0 · Nothing to show" never greets a client with entries */
+  /** fix1117 F3: the first screen is never an empty period. A client whose first financial year has not ended has no year under review (the api says null), and a year under review may hold no entries: either way the books open on the latest year that holds entries (the api's years, newest first), so "Checked 0 of 0 · Nothing to show" never greets a client with entries. RC walk 17 Nov: the current year with entries comes first (below) */
   function periodWithEntries(choices, review) {
     var years = (choices && choices.years) || [], busy = years.filter(function (y) { return Number(y.entries) > 0; })[0];
+    var today = new Date().toISOString().slice(0, 10), now = years.filter(function (y) { return Number(y.entries) > 0 && String(y.from).slice(0, 10) <= today && today <= String(y.to).slice(0, 10); })[0];
+    if (now) return { fy: now.fy, from: now.from, to: now.to }; /* F3 step 6 (Fable RC walk 17 Nov): the CURRENT financial year, when it holds entries, as Xero and MYOB open the current period; the year under review (a closed year) is one pick away */
     var held = review && years.filter(function (y) { return y.fy === review.fy; })[0];
     if (review && (!held || Number(held.entries) > 0 || !busy)) return review;
     return busy ? { fy: busy.fy, from: busy.from, to: busy.to } : review;
