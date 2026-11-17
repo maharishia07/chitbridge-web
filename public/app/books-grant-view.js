@@ -65,8 +65,8 @@
   /** the P&L's rows: each ledger with last year, the change and its flag, all the server's (by_line); the flat lists only when by_line is absent */
   function plRows(a) {
     var heads = function (list) { return [].concat.apply([], (list || []).map(function (head) { return head.accounts || []; })); };
-    var by = a.by_line || {};
-    return side(by.income ? heads(by.income) : a.income, 'Income').concat(side(by.expense ? heads(by.expense) : a.expense, 'Expense'));
+    var by = a.by_line || {}, inc = heads(by.income), exp = heads(by.expense);
+    return side(inc.length ? inc : a.income, 'Income').concat(side(exp.length ? exp : a.expense, 'Expense'));
   }
   /** ASA 520: the one line that says what is highlighted, from the server's rule (nothing when last year was not read or the figures are hidden) */
   function cmpNote(report) {

@@ -42,7 +42,14 @@ W.run('books-grant', async (w) => {
       if (h['x-books-for'] !== MEMBER) return J(r, 403, { error: 'No access has been given for these books.', message: 'No access has been given for these books.' });
       if (S.refuse && p === S.refuse.path) return J(r, 403, { error: S.refuse.words, message: S.refuse.words, code: 'GRANT_ROUTE_NOT_LISTED' });
       if (p === '/api/books/trial-balance') { const ex = example('GET /api/books/trial-balance'); return J(r, 200, Object.assign(ex, { currency: 'INR', rows: [line(ex.rows[0], { code: '1000', name: 'Cash', group: 'Assets', dr_minor: 123400, cr_minor: 0 }), line(ex.rows[0], { code: '4000', name: 'Sales', group: 'Income', dr_minor: 0, cr_minor: 123400 })], total_dr_minor: 123400, total_cr_minor: 123400, balanced: true, bank: [{ account_id: 'acc-1000', code: '1000', name: 'Cash', currency: 'INR', state: 'reconciled', period_to: ex.asOf || '2026-06-30', statement_minor: 125400, books_signed_minor: 123400, unexplained_minor: 0, books_now_minor: 123400, moved_minor: 0, signed_at: null }] })); }
-      if (p === '/api/books/pl') { const ex = example('GET /api/books/pl'); return J(r, 200, Object.assign(ex, { currency: 'INR', income: [line(ex.income[0], { code: '4000', name: 'Sales', amount_minor: 500000 })], expense: [line(ex.expense[0], { code: '5000', name: 'Rent', amount_minor: 100000 })], total_income_minor: 500000, total_expense_minor: 100000, profit_minor: 400000 })); }
+      if (p === '/api/books/pl') { /* rank 3 (ASA 520): last year beside this year; the figures are HAND-COMPUTED (INR minor, threshold 10% AND 1,000.00 = 100000): Sales 5000000 vs 4000000 +1000000 +25% OVER · Other 120000 vs 100000 +20000 +20% under the amount · Rent 1500000 vs 1000000 +500000 +50% OVER · Wages 2100000 vs 2000000 +100000 +5% under the percent. Served direct (the api contract copy here does not carry the new keys yet). */
+        const ex = example('GET /api/books/pl'), acc = (code, name, now, was, bp, over) => ({ code, name, role: 'x', amount_minor: now, prior_minor: was, change_bp: bp, share_bp: 1000, prior_share_bp: 1000, change_minor: now - was, change_over: over });
+        const head = (label, now, was, bp, over, accounts) => ({ line: label.toLowerCase(), label, amount_minor: now, prior_minor: was, change_bp: bp, share_bp: 1000, change_minor: now - was, change_over: over, accounts });
+        const body = Object.assign(ex, { currency: 'INR', income: [line(ex.income[0], { code: '4000', name: 'Sales', amount_minor: 5000000 }), line(ex.income[0], { code: '4100', name: 'Other income', amount_minor: 120000 })], expense: [line(ex.expense[0], { code: '5000', name: 'Rent', amount_minor: 1500000 }), line(ex.expense[0], { code: '5100', name: 'Wages', amount_minor: 2100000 })], total_income_minor: 5120000, total_expense_minor: 3600000, profit_minor: 1520000,
+          by_line: { income: [head('Revenue', 5120000, 4100000, 2488, true, [acc('4000', 'Sales', 5000000, 4000000, 2500, true), acc('4100', 'Other income', 120000, 100000, 2000, false)])], expense: [head('Costs', 3600000, 3000000, 2000, true, [acc('5000', 'Rent', 1500000, 1000000, 5000, true), acc('5100', 'Wages', 2100000, 2000000, 500, false)])] },
+          compare: { how: 'year', from: '2025-04-01', to: '2026-03-31', total_income_minor: 4100000, total_expense_minor: 3000000, profit_minor: 1100000, income_change_bp: 2488, expense_change_bp: 2000, profit_change_bp: 3818, income_change_minor: 1020000, expense_change_minor: 600000, profit_change_minor: 420000, income_change_over: true, expense_change_over: true, profit_change_over: true },
+          over_rule: { pct_bp: 1000, min_major: 1000, min_minor: 100000 } });
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }); }
       if (p === '/api/books/periods') { /* W22: the books start Jul 2025, Jul-Jan locked, Feb open under later locked months; two empty months in 2024 sit before the start */
         const ex = example('GET ' + p), row = (fy, n, ym, status, entries) => Object.assign({}, ex.periods[0], { fiscal_year: fy, period: n, start_date: ym + '-01', end_date: ym + '-28', status, entries, sales_minor: 0, before_books: fy === '2024-25' ? true : undefined });
         const months = ['2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
@@ -128,6 +135,13 @@ W.run('books-grant', async (w) => {
     const facts = await txt(T('bv-facts')), rows = await txt(T('bv-list'));
     return { ok: /Profit/.test(facts) && /Rent/.test(rows) && /Sales/.test(rows), saw: facts + ' · ' + rows.slice(0, 70) };
   });
+  await w.step('A4c', 'the auditor · P&L comparatives: Last year, Change (amount) and % beside each ledger; exactly Sales and Rent highlighted (the dot and the tint), Other income (under 1,000.00) and Wages (5%) not; the note states the rule; no sideways scroll', async () => {
+    const head = await txt(T('bv-list')), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), tint = await page.locator('.bv-over').count(), note = await txt(T('bv-cmp-note')), a = await noScroll();
+    const rowOf = (n) => page.locator(T('bv-list') + ' [data-testid^="bv-row-"]').filter({ hasText: n }).first();
+    const flat = (n) => rowOf(n).innerText().then((s) => s.replace(/\s+/g, ' '));
+    const sales = await flat('Sales'), wages = await flat('Wages'), other = await flat('Other income');
+    return { ok: /Last year/.test(head) && /Change/.test(head) && dots === 2 && tint === 2 && /10,000/.test(sales) && /[+]25[.]0%/.test(sales) && /[+]5[.]0%/.test(wages) && /[+].*1,000/.test(wages) && !/●/.test(wages) && !/●/.test(other) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Sales: ' + sales + ' · Wages: ' + wages + ' · no sideways ' + a.x };
+  });
   await w.step('A5', 'the auditor · a part the server refuses is said in the server\'s words, not shown as an empty table', async () => {
     S.refuse = { path: '/api/books/bs', words: 'This part of the books is not open to an auditor.' };
     await page.click(T('bv-tab-bs')); await page.waitForSelector(T('bv-why'), { timeout: 10000 });
@@ -159,6 +173,11 @@ W.run('books-grant', async (w) => {
     return { ok: a.y && a.x && sheet, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · sheet inside the screen ' + sheet };
   });
 
+  await w.step('A8c', 'the auditor · 390×844: the P&L keeps Amount and Change, the note shows, a highlighted row is marked, no page scroll, no sideways scroll', async () => {
+    await page.selectOption(T('bv-tab-select'), 'pl'); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(300);
+    const a = await noScroll(), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), note = await has(T('bv-cmp-note')), noteIn = await page.evaluate(() => { const n = document.querySelector('[data-testid="bv-cmp-note"]'); return !!n && n.getBoundingClientRect().bottom <= window.innerHeight; });
+    return { ok: a.y && a.x && dots === 2 && note && noteIn, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · dots ' + dots + ' · note ' + note + ' in the screen ' + noteIn };
+  });
   await w.step('A9', 'the auditor · Months: one lock line (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)); no month before Jul 2025 is listed', async () => {
     await page.selectOption(T('bv-tab-select'), 'periods'); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const lines = await page.getAttribute(T('bv-lock-lines'), 'data-full'), list = await txt(T('bv-list'));
