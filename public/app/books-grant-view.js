@@ -26,6 +26,8 @@
   function homeOf(options) {
     return options && options.member && options.member.role === 'adviser' ? 'tb' : 'daybook';
   }
+  var PCT = 'pct'; /* a column kind: basis points, painted as a signed percent */
+  var CMP_COLS = ['prior_minor', 'change_minor', 'change_bp']; /* the P&L's last-year columns: drawn only when the server read last year */
   var MONEY = 'money'; /* a column kind: the server's minor units, painted in the answer's currency */
   var ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
@@ -33,7 +35,7 @@
   var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170 };
   var REPORTS = [
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
-    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
+    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: plRows, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY], ['prior_minor', 'Last year', MONEY], ['change_minor', 'Change', MONEY], ['change_bp', '%', PCT]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', MONEY], ['age_d0_30', '1–30', MONEY], ['age_d31_60', '31–60', MONEY], ['age_d61_90', '61–90', MONEY], ['age_d90_plus', '90+', MONEY], ['balance_minor', 'Total', MONEY]], facts: [], panels: true },
@@ -60,6 +62,19 @@
   function $(id) {
     return root.document.getElementById(id);
   }
+  /** the P&L's rows: each ledger with last year, the change and its flag, all the server's (by_line); the flat lists only when by_line is absent */
+  function plRows(a) {
+    var heads = function (list) { return [].concat.apply([], (list || []).map(function (head) { return head.accounts || []; })); };
+    var by = a.by_line || {};
+    return side(by.income ? heads(by.income) : a.income, 'Income').concat(side(by.expense ? heads(by.expense) : a.expense, 'Expense'));
+  }
+  /** ASA 520: the one line that says what is highlighted, from the server's rule (nothing when last year was not read or the figures are hidden) */
+  function cmpNote(report) {
+    var a = viewState.answer, rule = a && a.over_rule;
+    if (report.k !== 'pl' || !a || !a.compare || !rule || rule.pct_bp == null || rule.min_minor == null) return '';
+    var amount = minorWords(rule.min_minor).replace(/[.,]0+$/, '');
+    return '<style>.bv-over,.bv-over>*{background:var(--ask-t)}.bv-over-dot{color:var(--ask-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P01" data-testid="bv-cmp-note">' + esc(words('Highlighted') + ': ' + words('change of') + ' ' + rule.pct_bp / 100 + '% ' + words('and') + ' ' + amount + ' ' + words('or more')) + '</div>';
+  }
   function side(list, name) {
     return (list || []).map(function (row) {
       return Object.assign({ side: words(name) }, row);
@@ -81,6 +96,8 @@
   }
   function figure(row, column) {
     var v = row[column[0]];
+    if (column[2] === PCT) return v == null ? '—' : (Number(v) > 0 ? '+' : '') + (Number(v) / 100).toFixed(1) + '%';
+    if (column[0] === 'change_minor') return changeCell(row, v);
     if (column[2] === MONEY) return narrowLabel(row, column, moneyCell(row, column[0], v));
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
     if (column[0] === 'lock_note') return v || '—'; /* html built from the server's trail, each line escaped */
@@ -100,6 +117,12 @@
     var narrow = typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 600px)').matches;
     var aged = /^age_/.test(column[0]) || (column[0] === 'balance_minor' && viewState.report === 'dues');
     return narrow && painted && aged ? words(column[1]) + ' ' + painted : painted;
+  }
+  /** the P&L's Change: a signed amount, with a quiet dot (and a word for a reader) when it is over the server's threshold; html, escaped here */
+  function changeCell(row, v) {
+    if (v == null || v === '') return '—';
+    var dot = row.change_over ? '<span class="bv-over-dot" data-cbsid="NET005-P02" role="img" aria-label="' + esc(words('Highlighted')) + '" title="' + esc(words('Highlighted')) + '">●</span> ' : '';
+    return dot + esc((Number(v) > 0 ? '+' : '') + minorWords(v));
   }
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
   function moneyCell(row, key, v) {
@@ -365,6 +388,7 @@
       (!viewState.why && report.k === 'daybook' ? sinceBar() : '') +
       (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' +
+      (viewState.why ? '' : cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
       (viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wireBand();
     if (viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: viewState.failure && viewState.failure.status, detail: viewState.failure && viewState.failure.detail, retry: function () { reload(); } });
@@ -609,7 +633,8 @@
   }
   /** the Mark column is drawn only when the server says marking is on */
   function shownCols(report) {
-    var cols = report.cols.filter(function (column) { return column[2] !== 'mark' || markable(report); });
+    var last = report.k === 'pl' && viewState.answer && !viewState.answer.compare ? CMP_COLS : [];
+    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || markable(report)) && last.indexOf(column[0]) < 0; });
     return report.k === 'daybook' && viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
@@ -631,11 +656,11 @@
       },
       columns: shownCols(report).map(function (column, i) {
         return {
-          html: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref' || column[0] === 'lock_note',
+          html: column[0] === 'change_minor' || column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref' || column[0] === 'lock_note',
           key: column[0],
           label: words(column[1]),
-          prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === MONEY ? 1 : 2,
-          num: column[2] === MONEY,
+          prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || (column[2] === MONEY && column[0] !== 'prior_minor') ? 1 : 2, /* Last year and % go first on a narrow screen: the amount and its change stay */
+          num: column[2] === MONEY || column[2] === PCT,
           keep: column[2] === 'mark' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
           w: DAYBOOK_W[column[0]] || (column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180),
           cell: function (row) {
@@ -653,6 +678,7 @@
           })
           .join(' ');
       },
+      rowClass: function (row) { return row.change_over ? 'bv-over' : ''; },
       onOpen: report.drill ? function (row) { drill(report, row); } : report.k === 'periods' ? function (row) { if (row.start_date && row.end_date) openMonth(String(row.start_date).slice(0, 10), String(row.end_date).slice(0, 10)); } : undefined, /* a Months row opens that month's Day book */
       empty: report.k === 'daybook' && viewState.since ? { title: words('Nothing has changed since your last check'), body: words('No entries were posted since then.') } : { title: words('Nothing to show here'), body: words(viewState.day || !viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
     };

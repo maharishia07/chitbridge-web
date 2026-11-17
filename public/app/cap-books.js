@@ -4821,11 +4821,21 @@ function bkPeriodBar(o) {
 }
 /** the statements' own look: money columns right-aligned and equal, the narrow screen drops the percent columns, never a sideways scroll */
 function bkStmtCss() {
-  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none!important;border:0!important;padding:6px 0!important;min-height:0!important;line-height:1.2!important;font:inherit!important;color:var(--link,#1a5f8a)!important;text-align:left;cursor:pointer;box-shadow:none!important;border-radius:0!important}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide,.bk-st .bk-code{display:none}.bk-st{font-size:12px}.bk-st td,.bk-st th{padding:3px 3px}.bk-st .bk-ind{padding-left:4px;display:inline-block;max-width:100%}.bk-st .bk-note{display:block;margin:0;white-space:normal}.bk-st .bk-dl{max-width:8.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}}</style>';
+  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-over td{background:var(--ask-t)}.bk-over-dot{color:var(--ask-i)}.bk-over-note{margin:6px 0;color:var(--muted);font-size:var(--fs-1)}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none!important;border:0!important;padding:6px 0!important;min-height:0!important;line-height:1.2!important;font:inherit!important;color:var(--link,#1a5f8a)!important;text-align:left;cursor:pointer;box-shadow:none!important;border-radius:0!important}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide,.bk-st .bk-code{display:none}.bk-st{font-size:12px}.bk-st td,.bk-st th{padding:3px 3px}.bk-st .bk-ind{padding-left:4px;display:inline-block;max-width:100%}.bk-st .bk-note{display:block;margin:0;white-space:normal}.bk-st .bk-dl{max-width:8.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}}</style>';
 }
 /** one statement row: label cell, then the figures the server carried (a figure list of { v, pct?, wide? }) */
 function bkStRow(cls, label, cells) {
   return '<tr class="' + cls + '"><td>' + label + '</td>' + cells.map(function (x) { return '<td class="num' + (x.wide ? ' bk-wide' : '') + '"' + (x.tid ? ' data-testid="' + x.tid + '"' : '') + '>' + x.v + '</td>'; }).join('') + '</tr>';
+}
+/** ASA 520: the Change cell: the server's signed amount, with a quiet dot when the server says it is over its threshold (row class bk-over carries the tint on a narrow screen) */
+function bkChange(minor, over, c) {
+  if (minor == null) return bkFig(null, c);
+  return (over ? '<span class="bk-over-dot" data-cbsid="BKS016-P02" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c));
+}
+/** the one line under the P&L that says what is highlighted, from the server's rule */
+function bkOverNote(rule, c) {
+  if (!rule || rule.pct_bp == null || rule.min_minor == null) return '';
+  return '<div class="bk-over-note" data-cbsid="BKS016-P01" data-testid="pl-over-note">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
 }
 /** the P&L: a head's ledgers, then its subtotal (every head gets one), each line with last year · change · % of income */
 function bkPlGroups(lines, c, cmp, from, to) {
@@ -4834,14 +4844,14 @@ function bkPlGroups(lines, c, cmp, from, to) {
       var accts = g.accounts || [];
       var figs = function (x) {
         var cells = [{ v: bkFig(x.amount_minor, c) }];
-        if (cmp) cells.push({ v: bkFig(x.prior_minor, c), wide: true }, { v: bkPct(x.change_bp, true), wide: true });
+        if (cmp) cells.push({ v: bkFig(x.prior_minor, c), wide: true }, { v: bkChange(x.change_minor, x.change_over, c), wide: true }, { v: bkPct(x.change_bp, true), wide: true });
         cells.push({ v: bkPct(x.share_bp), wide: true });
         return cells;
       };
       return (
-        bkStRow('bk-grp', esc(g.label), []).replace('</tr>', '<td colspan="' + (cmp ? 4 : 2) + '"></td></tr>') +
-        accts.map(function (x) { return bkStRow('', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + '</span>', figs(x)); }).join('') +
-        bkStRow('bk-sub', esc(tx('Total') + ' ' + g.label), figs(g))
+        bkStRow('bk-grp', esc(g.label), []).replace('</tr>', '<td colspan="' + (cmp ? 5 : 2) + '"></td></tr>') +
+        accts.map(function (x) { return bkStRow(cmp && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + '</span>', figs(x)); }).join('') +
+        bkStRow('bk-sub' + (cmp && g.change_over ? ' bk-over' : ''), esc(tx('Total') + ' ' + g.label), figs(g))
       );
     })
     .join('');
@@ -4900,26 +4910,26 @@ async function bkPL(body) {
       (cmp ? ' <span style="color:var(--grey);font-size:var(--fs-1)" data-testid="pl-profit-was">· ' + esc(tx('was')) + ' ' + esc(bkMoney(cmp.profit_minor, c)) + (cmp.profit_change_bp != null ? ' (' + bkPct(cmp.profit_change_bp, true) + ')' : '') + '</span>' : '') + '</div>';
     var head =
       '<thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This period')) + '</th>' +
-      (cmp ? '<th class="num bk-wide">' + esc(tx(cmp.how === 'year' ? 'Last year' : 'Before')) + '</th><th class="num bk-wide">' + esc(tx('Change')) + '</th>' : '') +
+      (cmp ? '<th class="num bk-wide">' + esc(tx(cmp.how === 'year' ? 'Last year' : 'Before')) + '</th><th class="num bk-wide">' + esc(tx('Change')) + '</th><th class="num bk-wide">%</th>' : '') +
       '<th class="num bk-wide">' + esc(tx('% of income')) + '</th></tr></thead>';
-    var tot = function (label, minor, was, ch, share, tid) {
+    var tot = function (label, minor, was, ch, share, tid, chMinor, over) {
       var cells = [{ v: bkFig(minor, c), tid: tid }];
-      if (cmp) cells.push({ v: bkFig(was, c), wide: true }, { v: bkPct(ch, true), wide: true });
+      if (cmp) cells.push({ v: bkFig(was, c), wide: true }, { v: bkChange(chMinor, over, c), wide: true }, { v: bkPct(ch, true), wide: true });
       cells.push({ v: bkPct(share), wide: true });
-      return bkStRow('bk-tot', esc(label), cells);
+      return bkStRow('bk-tot' + (cmp && over ? ' bk-over' : ''), esc(label), cells);
     };
     body.innerHTML =
       bkStmtCss() +
       bkPeriodBar({ tid: 'pl', aria: 'Period', opts: opts, cur: BK_PL.preset, pick: 'bkPlPick', step: 'bkPlStep', custom: custom, canNext: P.can_next, dates: dates, extra: cmpSel, range: range }) +
       lead +
       '<table class="bk-st" data-testid="pl-table">' + head + '<tbody>' +
-      bkStRow('bk-sec', esc(tx('Income')), []).replace('</tr>', '<td colspan="' + (cmp ? 4 : 2) + '"></td></tr>') +
+      bkStRow('bk-sec', esc(tx('Income')), []).replace('</tr>', '<td colspan="' + (cmp ? 5 : 2) + '"></td></tr>') +
       bkPlGroups(by.income, c, cmp, reply.from, reply.to) +
-      tot(tx('Total income'), reply.total_income_minor, cmp && cmp.total_income_minor, cmp && cmp.income_change_bp, reply.total_income_share_bp, 'pl-total-income') +
-      bkStRow('bk-sec', esc(tx('Expenses')), []).replace('</tr>', '<td colspan="' + (cmp ? 4 : 2) + '"></td></tr>') +
+      tot(tx('Total income'), reply.total_income_minor, cmp && cmp.total_income_minor, cmp && cmp.income_change_bp, reply.total_income_share_bp, 'pl-total-income', cmp && cmp.income_change_minor, cmp && cmp.income_change_over) +
+      bkStRow('bk-sec', esc(tx('Expenses')), []).replace('</tr>', '<td colspan="' + (cmp ? 5 : 2) + '"></td></tr>') +
       bkPlGroups(by.expense, c, cmp, reply.from, reply.to) +
-      tot(tx('Total expenses'), reply.total_expense_minor, cmp && cmp.total_expense_minor, cmp && cmp.expense_change_bp, reply.total_expense_share_bp, 'pl-total-expense') +
-      '</tbody></table>';
+      tot(tx('Total expenses'), reply.total_expense_minor, cmp && cmp.total_expense_minor, cmp && cmp.expense_change_bp, reply.total_expense_share_bp, 'pl-total-expense', cmp && cmp.expense_change_minor, cmp && cmp.expense_change_over) +
+      '</tbody></table>' + (cmp ? bkOverNote(reply.over_rule, c) : '');
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
