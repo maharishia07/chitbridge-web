@@ -31,7 +31,7 @@ const run = async (w) => {
   const J = (r, status, body) => C.json(r, status, body);
   const example = (key) => { const hit = C.load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };
   const line = (ex, over) => Object.assign({}, ex, over);
-  const entryOf = (s, n) => Object.assign({}, BASE, { entry_id: 'e0000000-0000-4000-8000-' + String(n + 1).padStart(12, '0'), entry_no: 'JV-' + s[0], posting_date: s[1], doc_date: s[1], event_type: 'journal', narration: s[5] ? 'Written' : 'Journal', no_narration: !s[5], recorded_at: s[2], made_by: s[4], source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: null, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: null, dr_minor: s[3], cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: s[3], counter: null, rate: null }] });
+  const entryOf = (s, n) => Object.assign({}, BASE, { entry_id: 'e0000000-0000-4000-8000-' + String(n + 1).padStart(12, '0'), entry_no: 'JV-' + s[0].replace(/^(.)(d)$/, '$10$2'), posting_date: s[1], doc_date: s[1], event_type: 'journal', narration: s[5] ? 'Written' : 'Journal', no_narration: !s[5], recorded_at: s[2], made_by: s[4], source_chit_id: null, reverses_entry_id: null, reversed_by: null, source: null, lines: [{ code: '1000', name: 'Cash', party_id: null, party_name: null, dr_minor: s[3], cr_minor: 0, counter: null, rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: s[3], counter: null, rate: null }] });
   let BASE = {};
   const flagOf = (b, item, n) => ({ flag_id: String(100 + n), kind: b.kind, visibility: b.visibility || 'org', subject_kind: b.subject_kind, subject_entity: b.subject_entity, subject_id: String(item.id).toLowerCase(), label: item.label, note: b.note || null, state: 'open', seat: 'auditor', mine: true, by_name: 'Ann Auditor', created_at: DAY(0) });
   const handler = async (r) => {
@@ -82,13 +82,13 @@ const run = async (w) => {
   const noScroll = () => page.evaluate(() => ({ y: document.documentElement.scrollHeight <= window.innerHeight + 1, x: document.documentElement.scrollWidth <= window.innerWidth + 1 }));
   const openBooks = async (pg) => { await pg.goto(base + '/network.html'); await pg.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 }); await pg.click(T('nw-books-' + MEMBER)); await pg.waitForSelector(T('bv-band'), { timeout: 10000 }); await pg.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await pg.waitForTimeout(500); };
   const riskCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => { const n = r.querySelector('[data-testid="bv-risk"]'); return n ? Number(n.textContent) : 0; }));
-  const entryCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d+/) || [''])[0]));
+  const entryCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d\d/) || [''])[0]));
 
   await page.setViewportSize(WIDE);
   await openBooks(page);
   await w.step('R1', 'Day book, region Australia (Sat+Sun): the Risk column counts E1..E8 = 3,1,3,2,3,1,3,0 then five clean rows 0, as hand-computed', async () => {
     const got = await riskCol(page), names = await entryCol(page);
-    return { ok: got.join(',') === '3,1,3,2,3,1,3,0,0,0,0,0,0' && names.length === 13, saw: names.join(',') + ' -> ' + got.join(',') };
+    return { ok: got.join(',') === '3,1,3,2,3,1,3,0,0,0,0,0,0' && names.length === 13, saw: names.join(',') + ' -> ' + got.join(',') + ' | ' + (await page.evaluate(() => 'locale ' + window.CBLocale.locale() + ' weekend ' + JSON.stringify((window.CBLocale.weekInfo() || {}).weekend) + ' ls ' + localStorage.getItem('cb_locale') + ' tz ' + Intl.DateTimeFormat().resolvedOptions().timeZone)) };
   });
   await w.step('R2', 'the rule sentence is on the page and names the fixed constants (7 days, 8 pm to 7 am, multiple of 100)', async () => {
     const note = await txt(T('bv-risk-note'));
@@ -97,7 +97,7 @@ const run = async (w) => {
   await w.step('R3', 'Any risk keeps 7 rows (E1..E7), not the six clean ones', async () => {
     await page.click(T('cbl-filters-books-grant-daybook')); await page.selectOption(T('listctl-filter-risk'), 'any'); await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     const names = await entryCol(page);
-    return { ok: names.join(',') === 'JV-E1,JV-E2,JV-E3,JV-E4,JV-E5,JV-E6,JV-E7', saw: names.join(',') };
+    return { ok: names.join(',') === 'JV-E01,JV-E02,JV-E03,JV-E04,JV-E05,JV-E06,JV-E07', saw: names.join(',') };
   });
   await w.step('R4', 'Risk sorts: a press, then a second press = most risks first (3,3,3,3,2,1,1)', async () => {
     const head = page.locator('.cbl-hc .sort', { hasText: 'Risk' }).first();
@@ -139,7 +139,7 @@ const run = async (w) => {
     await openBooks(p2);
     const got = await riskCol(p2);
     const wk = await p2.evaluate(() => (window.CBLocale && window.CBLocale.weekInfo() || {}).weekend);
-    return { ok: got.join(',') === '1,1,0,2' && String(wk) === '5,6', saw: 'weekend ' + wk + ' -> ' + got.join(',') };
+    return { ok: got.join(',') === '1,1,0,2' && String(wk) === '5,6', saw: 'weekend ' + wk + ' -> ' + got.join(',') + ' | ' + (await p2.evaluate(() => 'locale ' + window.CBLocale.locale() + ' ls ' + localStorage.getItem('cb_locale'))) };
   });
   await w.step('X1', 'every /api/books answer the stand-in served matched the api contract', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 };
