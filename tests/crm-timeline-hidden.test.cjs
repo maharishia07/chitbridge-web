@@ -8,7 +8,7 @@
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const NL = String.fromCharCode(10);
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8').replace(/\r\n/g, NL);
-const crm = read('cap-crm.js'), rec = read('cap-crm-record.js');
+const crm = read('cap-crm.js'), rec = read('cap-crm-record.js') + NL + read('cap-crm-timeline.js'); /* the record's timeline part moved to cap-crm-timeline.js (17 Nov split) */
 /* just the named functions, cut out of the page's own files - no second copy of the logic lives in this test */
 const fn = (src, name) => {
   const i = src.indexOf('function ' + name + '('); assert(i >= 0, name + ' not found');
@@ -24,7 +24,7 @@ globalThis.crmRolesList = (r) => r; globalThis.crmRealEmail = (v) => v; globalTh
 globalThis.crmDocWord = () => 'Bill'; globalThis.crmWhen = (s) => s; globalThis.crmDocDay = (s) => s; globalThis.crmLocalISO = (d) => d.toISOString().slice(0, 10);
 globalThis.crmNoDate = (s) => s; globalThis.crmEntryWhat = globalThis.crmEntryState = () => '';
 eval(
-  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmWhenCell'), fn(rec, 'crmTlCols')].join(NL) +
+  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmLedgerLine'), fn(rec, 'crmWhenCell'), fn(rec, 'crmTlCols')].join(NL) +
     NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.unbilledMoney = crmUnbilledMoney; globalThis.chip = crmDueChip; globalThis.listCell = crmDueListCell; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
 );
 const amountCell = (e) => cols().filter((c) => c.key === 'amount')[0].cell(e);

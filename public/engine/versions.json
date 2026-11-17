@@ -7,6 +7,8 @@
     "bank-project": "1.98.0",
     "bank-recon": "1.98.0",
     "bank-statement-check": "1.98.0",
+    "chart-draw-rows": "unversioned",
+    "chart-draw-status": "unversioned",
     "chart-draw": "unversioned",
     "chart": "1.65.0",
     "convert": "1.96.0",

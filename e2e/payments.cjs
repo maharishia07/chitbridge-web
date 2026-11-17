@@ -222,7 +222,6 @@ async function route(S, r) {
   const text = (p, id) => p.evaluate((i) => { const e = document.querySelector('[data-testid="' + i + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, id);
   const posts = (S) => S.pay.posts.length;
   async function openPay(url, S, o) {
-    CUR = S;
     const { ctx, p } = await open(url || '/crm.html', S);
     await p.waitForSelector('[data-testid="crm-row-P-0001"]', { timeout: 15000 });
     await p.click('[data-testid="crm-row-P-0001"]');

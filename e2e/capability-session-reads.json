@@ -1,7 +1,8 @@
 {
  "cap-admin.js": 39,
  "cap-bank.js": 10,
- "cap-books.js": 16,
+ "cap-books.js": 14,
+ "cap-books-tree.js": 2,
  "cap-catalogue.js": 6,
  "cap-catsetup.js": 3,
  "cap-chit2.js": 6,

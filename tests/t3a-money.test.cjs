@@ -37,11 +37,11 @@ ok(cb.bkDuesSide(paidAhead) === 'pay', 'M137: the ledger tree still files the su
 /* ── M136/M139/M132/M138: the words and the doors are in the source the page runs ── */
 ok(/Nobody owes you money/.test(books) && /You owe nobody/.test(books), 'M136: the empty sides say "Nobody owes you money" / "You owe nobody"');
 /* l16 needsyou (90b30d51): the Needs filter is on every list; only the Side chip is left off a page's own side */
-ok(/filters: bkNeedFilters\(\)\.concat\(onlySide\s*\?\s*\[\]/.test(books), 'M136: a page\'s own side is not a filter chip');
+ok(/filters: bkNeedFilters\(\)\.concat\(bkDuesSideFilter\(onlySide\)\)/.test(books) && /function bkDuesSideFilter\(onlySide\) \{\s*return \(onlySide\s*\?\s*\[\]/.test(books), 'M136: a page\'s own side is not a filter chip');
 ok(/These filters match nothing here/.test(src('list-ctl.js')) && !/These filters'\) \+ ' '\) \+ esc\(T\(I, 'matches/.test(src('list-ctl.js')), 'M136: "These filters match nothing here" (grammar)');
 const acc = fs.readFileSync(__dirname + '/../public/accounts.html', 'utf8');
 ok(/\['bills', 'Unpaid bills'/.test(acc), 'M139: the menu says "Unpaid bills"');
 ok(/addEventListener\('hashchange'/.test(acc), 'M138: the # decides the page — hashchange is listened to');
 ok(/bkDayBillsLink\(s, tid\)/.test(books) && /function bkDayBillsOpen/.test(books), 'M132: a walk-in day\'s "N bills" opens the bills it covers');
-const bank2 = bank; ok(/tx\(r\.in \? 'In' : 'Out'\)/.test(bank2) && !/'Dr' : 'Cr'\)\) \}/.test(bank2), 'M142: bank lines say In / Out');
+const bank2 = bank + src('cap-bank-rows.js'); /* the statement rows moved to cap-bank-rows.js (17 Nov split) */ ok(/tx\((?:r|line)\.in \? 'In' : 'Out'\)/.test(bank2) && !/'Dr' : 'Cr'\)\) \}/.test(bank2), 'M142: bank lines say In / Out');
 console.log('\n  ' + n + ' checks');

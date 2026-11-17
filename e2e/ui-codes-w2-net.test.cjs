@@ -41,7 +41,7 @@ const WANT = [
   ["SCR050-B04","app/chit-sheet.js","button","type=\"button\" class=\"cs-act\" data-testid=\"cs-act-' + item + '\" o"],
   ["SCR050-B05","app/chit-sheet.js","button","type=\"button\" class=\"cs-back\" data-testid=\"cs-close\" aria-label="],
   ["SCR051-B01","app/rail-thread.js","button","type=\"button\" class=\"' + (item === 'external' ? 'ext' : 'int') +"],
-  ["SCR051-B02","app/rail-thread.js","button","type=\"button\" class=\"rt-k' + (m.kind === item ? ' on' : '') + "],
+  ["SCR051-B02","app/rail-thread.js","button","type=\"button\" class=\"rt-k' + (thread.kind === item ? ' on' : '') + "],
   ["SCR051-S01","app/rail-thread.js","select","class=\"rt-sel\" data-rt-act=\"line\" data-testid=\"rt-line\"><option "],
   ["SCR051-T01","app/rail-thread.js","textarea","data-rt-act=\"text\" data-testid=\"' + esc(ids.text || 'msg-body') "],
   ["SCR051-B03","app/rail-thread.js","button","type=\"button\" class=\"rt-send ' + tone + '\" data-rt-act=\"send\" da"],

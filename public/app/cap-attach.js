@@ -3,7 +3,7 @@
  * FLOW  tag → define what the host lacks (api tx esc ensureCap) → load the capability → open it
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  * CAP-5 · SEC-29 · SEC-30: the token is the only session input; the path addresses; a write carries client_ref.
- * The doors copy app.html's EP rows for this capability (e2e/capability-bare-page.cjs fails on drift); weight is gzip-measured there.
+ * The doors copy app.html's EP rows (e2e/capability-bare-page.cjs checks drift and weight).
  */
 (function () {
   var win = window;
@@ -96,7 +96,7 @@
   if (typeof win.lsSet !== 'function') win.lsSet = function (k, v) { try { win.localStorage.setItem(k, v); } catch (e) { win.console.warn('lsSet ' + k + ': ' + e.message); } };
   if (typeof win.ensureCap !== 'function') win.ensureCap = function (name) { return loadScript('/app/cap-' + name + '.js'); };
 
-  (win.CBList ? Promise.resolve() : ['list-ctl-css', 'list-ctl-click', 'list-ctl-wire', 'list-ctl'].reduce(function (chain, part) { return chain.then(function () { return loadScript('/app/' + part + '.js'); }); }, Promise.resolve()))
+  (win.CBList ? Promise.resolve() : Promise.all(['css', 'click', 'wire'].map(function (part) { return loadScript('/app/list-ctl-' + part + '.js'); })).then(function () { return loadScript('/app/list-ctl.js'); }))
     .then(function () { return win.ensureCap(capability); })
     .then(function () { if (openers[capability]) openers[capability](); })
     .catch(function () {

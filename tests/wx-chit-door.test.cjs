@@ -7,8 +7,8 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); 
 const html = fs.readFileSync(__dirname + '/../public/app.html', 'utf8');
 /* iter1: the pass wraps lines and renames locals, so the pinned snippets are matched without whitespace */
 const flatHtml = html.replace(/\s+/g, '');
-const door = /if\(_bill&&SESSION\.token\)\{.*?return;\}/.exec(flatHtml);
-ok(door && /UI\._byId=decodeURIComponent\(_bill\[1\]\)/.test(door[0]) && /openChit\(UI\._byId\)/.test(door[0]), 'the door pins the id it opens');
+const door = /if\((?:_bill|billHash)&&SESSION\.token\)\{.*?return(?:true)?;\}/.exec(flatHtml);
+ok(door && /UI\._byId=decodeURIComponent\((?:_bill|billHash)\[1\]\)/.test(door[0]) && /openChit\(UI\._byId\)/.test(door[0]), 'the door pins the id it opens');
 const line = /const here = (UI\.sel && \([^;]+\));/.exec(html);
 ok(line, 'the list load asks "is the selection here, or pinned"');
 const here = (UI) => Function('UI', 'return ' + line[1])(UI);
