@@ -1093,41 +1093,62 @@
     if (isPhone() || foldPeriod) return foldPeriod || foldsToOneChip(chips, notes) ? foldedChipHTML(list, h, foldPeriod) : inline;
     return foldsToOneChip([], notes) ? chips.map(chipHTML).join('') + foldedChipHTML(list, { chips: [], notices: notes, period: h.period }, false) : inline;
   }
-  function paintTitle(list) {
-    var h = head(list),
-      box = $(list, ':scope > .cbl-title');
-    if (!h || !(h.title || h.period || h.slot || (h.notices && h.notices.length) || (h.chips && h.chips.length))) {
-      if (box) box.remove();
-      return;
+  /** paintTitle, step 1 of 5 (part 1, lines 1097-1098 of the one function): runs on, nothing here ends the call */
+  function paintTitleStep1(list, ctx) {
+ctx.h = head(list);
+ctx.box = $(list, ':scope > .cbl-title');
+  }
+  /** paintTitle, step 2 of 5 (part 2, lines 1099-1102 of the one function): true when it handled the call and nothing else should run */
+  function paintTitleStep2(list, ctx) {
+    if (!ctx.h || !(ctx.h.title || ctx.h.period || ctx.h.slot || (ctx.h.notices && ctx.h.notices.length) || (ctx.h.chips && ctx.h.chips.length))) {
+      if (ctx.box) ctx.box.remove();
+      return true;
     }
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-title';
-      box.setAttribute('data-cbl-part', 'title');
-      list.el.insertBefore(box, list.el.firstChild);
+    return false;
+  }
+  /** paintTitle, step 3 of 5 (the data-cbl-part part, lines 1103-1113 of the one function): runs on, nothing here ends the call */
+  function paintTitleCblPart(list, ctx) {
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-title';
+      ctx.box.setAttribute('data-cbl-part', 'title');
+      list.el.insertBefore(ctx.box, list.el.firstChild);
     }
-    var out = '';
-    if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
-    var chips = h.chips || [],
-      notes = h.notices || [],
-      foldPeriod = !!h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
-    if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
-    out += titleChipsHTML(list, h, foldPeriod);
+    ctx.out = '';
+    if (ctx.h.title) ctx.out += '<h1>' + esc(ctx.h.title) + '</h1>';
+    var chips = ctx.h.chips || [];
+var notes = ctx.h.notices || [];
+ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
+  }
+  /** paintTitle, step 4 of 5 (part 4, lines 1114-1123 of the one function): runs on, nothing here ends the call */
+  function paintTitleStep4(list, ctx) {
+    if (ctx.h.period && !ctx.foldPeriod) ctx.out += periodChipHTML(list, ctx.h.period);
+    ctx.out += titleChipsHTML(list, ctx.h, ctx.foldPeriod);
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
     if (list.o.views && list.o.views.inTitle)
-      out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
-    if (typeof h.slot === 'function')
-      out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
-    box.classList.toggle('reserve', !!h.reserve);
-    box.innerHTML = out;
+      ctx.out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
+    if (typeof ctx.h.slot === 'function')
+      ctx.out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
+    ctx.box.classList.toggle('reserve', !!ctx.h.reserve);
+    ctx.box.innerHTML = ctx.out;
     if (list.o.views && list.o.views.inTitle) paintViews(list);
-    if (typeof h.slot === 'function') {
-      var node = box.querySelector(':scope > .cbl-slot');
+  }
+  /** paintTitle, step 5 of 5 (part 5, lines 1124-1130 of the one function): runs on, nothing here ends the call */
+  function paintTitleStep5(list, ctx) {
+    if (typeof ctx.h.slot === 'function') {
+      var node = ctx.box.querySelector(':scope > .cbl-slot');
       if (node)
         safe(function () {
-          h.slot(node);
+          ctx.h.slot(node);
         });
     }
+  }
+  function paintTitle(list) {
+  var ctx = {},
+    steps = [paintTitleStep1, paintTitleStep2, paintTitleCblPart, paintTitleStep4, paintTitleStep5];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, ctx)) return;
+  }
   }
   /** the period's own popover; its words and controls (periodInner) also sit in the folded chip's popover on a tiny phone */
   function periodPop(I, p) {
@@ -1378,14 +1399,15 @@
       '</span>'
     );
   }
-  function viewToolsHTML(list, keyText, testIds, toolOptions, groupHtml) {
-    var listOptions = list.o,
-      runState = list.r,
-      viewState = list.s,
-      toolsHtml = '';
+  /** viewToolsHTML, step 1 of 2 (part 1, lines 1403-1434 of the one function): runs on, nothing here ends the call */
+  function viewToolsHTMLStep1(list, keyText, testIds, toolOptions, groupHtml, ctx) {
+ctx.listOptions = list.o;
+ctx.runState = list.r;
+var viewState = list.s;
+ctx.toolsHtml = '';
     var expand = hasNext(list) ? expandAllHTML(list, keyText, testIds) : '';
-    toolsHtml = viewChoiceHTML(list, keyText);
-    toolsHtml +=
+    ctx.toolsHtml = viewChoiceHTML(list, keyText);
+    ctx.toolsHtml +=
       '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' +
       keyText +
       '" data-testid="cols-btn-' +
@@ -1400,8 +1422,8 @@
       '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span>' + leftOutCue(list, keyText) + '</button>' +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>';
-    if (listOptions.csv !== false && toolOptions.csv !== false)
-      toolsHtml +=
+    if (ctx.listOptions.csv !== false && toolOptions.csv !== false)
+      ctx.toolsHtml +=
         '<button type="button" data-cbsid="CMP037-B01"' + mountAttribute('CMP037') + ' class="cbl-tbtn cbl-ico" data-cbl-csv data-testid="' +
         esc(testIds.csv || 'cbl-csv-' + keyText) +
         '" title="' +
@@ -1410,19 +1432,29 @@
         esc(T(list, 'Download CSV')) +
         '">⬇' +
         '<span class="cbl-w"> ' + esc(T(list, 'CSV')) + '</span></button>';
-    toolsHtml = groupHtml == null ? expand + toolsHtml : viewMenuHTML(list, keyText, groupHtml + expand + toolsHtml);
-    if (listOptions.bulk && listOptions.bulk.length)
-      toolsHtml +=
+    ctx.toolsHtml = groupHtml == null ? expand + ctx.toolsHtml : viewMenuHTML(list, keyText, groupHtml + expand + ctx.toolsHtml);
+  }
+  /** viewToolsHTML, step 2 of 2 (part 2, lines 1435-1445 of the one function): runs on, nothing here ends the call */
+  function viewToolsHTMLStep2(list, keyText, testIds, toolOptions, groupHtml, ctx) {
+    if (ctx.listOptions.bulk && ctx.listOptions.bulk.length)
+      ctx.toolsHtml +=
         '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
-        (runState.selMode ? ' on' : '') +
+        (ctx.runState.selMode ? ' on' : '') +
         '" data-cbl-selmode data-testid="cbl-select-' +
         keyText +
         '" aria-pressed="' +
-        !!runState.selMode +
+        !!ctx.runState.selMode +
         '">☑ ' +
         esc(T(list, 'Select')) +
         '</button>';
-    return toolsHtml;
+  }
+  function viewToolsHTML(list, keyText, testIds, toolOptions, groupHtml) {
+  var ctx = {},
+    steps = [viewToolsHTMLStep1, viewToolsHTMLStep2];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, keyText, testIds, toolOptions, groupHtml, ctx)) return;
+  }
+  return ctx.toolsHtml;
   }
   /** the Group by choice (a select or a row of pressed toggles, CMP035 / CMP034); on a phone it goes into the View popover */
   function groupToolsHTML(list, keyText) {
@@ -1497,85 +1529,98 @@
     var bar = $(list, ':scope > .cbl-tools');
     if (bar) bar.hidden = !!(list.o.tools && list.o.tools.bar === false);
   }
-  function paintToolsBar(list) {
-    paintViews(list);
-    var box = $(list, ':scope > .cbl-tools');
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-tools';
-      box.setAttribute('data-cbl-part', 'tools');
-      box.setAttribute('role', 'toolbar');
-      box.setAttribute('aria-label', T(list, 'View'));
+  /** paintToolsBar, step 1 of 7 (the data-cbl-part part, lines 1501-1518 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarCblPart(list, ctx) {
+paintViews(list);
+    ctx.box = $(list, ':scope > .cbl-tools');
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-tools';
+      ctx.box.setAttribute('data-cbl-part', 'tools');
+      ctx.box.setAttribute('role', 'toolbar');
+      ctx.box.setAttribute('aria-label', T(list, 'View'));
       var node = $(list, ':scope > .cbl-list');
-      list.el.insertBefore(box, node);
+      list.el.insertBefore(ctx.box, node);
     }
-    var o = list.o,
-      R = list.r,
-      s = list.s,
-      m = matched(list),
-      fn = activeFilters(list).length,
-      k = esc(list.key),
-      sorts = sortChoices(list);
-    var tids = o.tids || {},
-      tl = o.tools || {},
-      h =
-        needsHTML(list) +
-        (tl.search === false
+    ctx.o = list.o;
+ctx.R = list.r;
+var s = list.s;
+ctx.m = matched(list);
+ctx.fn = activeFilters(list).length;
+ctx.k = esc(list.key);
+ctx.sorts = sortChoices(list);
+  }
+  /** paintToolsBar, step 2 of 7 (part 2, lines 1519-1535 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep2(list, ctx) {
+    ctx.tids = ctx.o.tids || {};
+ctx.tl = ctx.o.tools || {};
+ctx.h = needsHTML(list) +
+        (ctx.tl.search === false
           ? ''
           : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP045-I01"' + mountAttribute('CMP045') + ' data-cbl-q id="cbl-q-' +
-            k +
+            ctx.k +
             '" data-testid="listctl-search-' +
-            k +
+            ctx.k +
             '" placeholder="' +
-            esc(o.searchHint || T(list, 'Search')) +
+            esc(ctx.o.searchHint || T(list, 'Search')) +
             '" value="' +
-            esc(R.q) +
+            esc(ctx.R.q) +
             '" aria-label="' +
             esc(T(list, 'Search')) +
             '"></div>');
+  }
+  /** paintToolsBar, step 3 of 7 (part 3, lines 1539-1558 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep3(list, ctx) {
     /* T3-DISPUTES-ASSIST: a server-paged list that ALSO filters on the server says so (remote.filters: true) — the same Filters control, and every choice
        goes to its onQuery (q.filt · q.sort) instead of narrowing the page in hand. T3-CATALOGUE (widened, additively): a server-paged list that DECLARES
        filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
-    if ((o.filters && o.filters.length) || ((!remote(list) || o.remote.filters === true) && sorts.length > 1)) {
-      h +=
+    if ((ctx.o.filters && ctx.o.filters.length) || ((!remote(list) || ctx.o.remote.filters === true) && ctx.sorts.length > 1)) {
+      ctx.h +=
         '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn' +
-        (fn ? ' on' : '') +
+        (ctx.fn ? ' on' : '') +
         '" data-cbl-pop="filt" id="cbl-filt-' +
-        k +
+        ctx.k +
         '" data-testid="cbl-filters-' +
-        k +
+        ctx.k +
         '" aria-haspopup="dialog" aria-expanded="' +
         (list.pop === 'filt') +
         '">' +
         esc(T(list, 'Filters')) +
         ' ▾' +
-        (fn ? ' <span class="badge">' + fn + '</span>' : '') +
+        (ctx.fn ? ' <span class="badge">' + ctx.fn + '</span>' : '') +
         '</button>' +
-        (list.pop === 'filt' ? filtPop(list, sorts) : '') +
+        (list.pop === 'filt' ? filtPop(list, ctx.sorts) : '') +
         '</span>';
     }
-    var narrow = isNarrowList(list),
-      groupHtml = groupToolsHTML(list, k);
-    if (!narrow) h += groupHtml;
-    h += viewToolsHTML(list, k, tids, tl, narrow ? groupHtml : null);
-    if (tl.count !== false)
-      h +=
+    ctx.narrow = isNarrowList(list);
+ctx.groupHtml = groupToolsHTML(list, ctx.k);
+  }
+  /** paintToolsBar, step 4 of 7 (part 4, lines 1559-1569 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep4(list, ctx) {
+    if (!ctx.narrow) ctx.h += ctx.groupHtml;
+    ctx.h += viewToolsHTML(list, ctx.k, ctx.tids, ctx.tl, ctx.narrow ? ctx.groupHtml : null);
+    if (ctx.tl.count !== false)
+      ctx.h +=
         '<span class="cbl-count" id="cbl-count-' +
-        k +
+        ctx.k +
         '" data-testid="' +
-        esc(tids.count || list.key + '-count') +
+        esc(ctx.tids.count || list.key + '-count') +
         '" aria-live="polite">' +
-        esc(countText(list, m)) +
-        '</span>'; /* tools.count:false — a host that already says the count (one count on a screen) */
-    if (o.bulk && o.bulk.length && R.selMode) {
+        esc(countText(list, ctx.m)) +
+        '</span>';
+  }
+  /** paintToolsBar, step 5 of 7 (part 5, lines 1570-1594 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep5(list, ctx) {
+    /* tools.count:false — a host that already says the count (one count on a screen) */
+    if (ctx.o.bulk && ctx.o.bulk.length && ctx.R.selMode) {
       var n = selectedRows(list).length;
-      h +=
+      ctx.h +=
         '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' +
-        k +
+        ctx.k +
         '"><button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selall>' +
         esc(T(list, 'Select all shown')) +
         '</button>' +
-        o.bulk
+        ctx.o.bulk
           .map(function (item) {
             return (
               '<button type="button" data-cbsid="CMP037-B04"' + mountAttribute('CMP037') + ' class="cbl-btn" data-bulk="' +
@@ -1592,18 +1637,21 @@
           .join('') +
         '</span>';
     }
-    h +=
+  }
+  /** paintToolsBar, step 6 of 7 (part 6, lines 1595-1626 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep6(list, ctx) {
+    ctx.h +=
       '<div class="cbl-fchips">' +
       activeFilters(list)
         .map(function (item) {
           var ov = fopts(item).filter(function (x) {
-            return x.v === R.filt[item.key];
+            return x.v === ctx.R.filt[item.key];
           })[0];
           return (
             '<span class="cbl-fchip">' +
             esc(item.label || item.key) +
             ': ' +
-            esc(ov ? ov.label : R.filt[item.key]) +
+            esc(ov ? ov.label : ctx.R.filt[item.key]) +
             '<button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' data-unfilt="' +
             esc(item.key) +
             '" aria-label="' +
@@ -1613,29 +1661,39 @@
         })
         .join('') +
       '</div>';
-    if (list.pop && String(list.pop).indexOf('hf:') === 0) h += hfPop(list);
-    var ae = root.document.activeElement,
-      keepId = ae && box.contains(ae) ? ae.id : '',
-      ss = null,
-      se = null;
-    if (keepId && ae.setSelectionRange) {
+    if (list.pop && String(list.pop).indexOf('hf:') === 0) ctx.h += hfPop(list);
+    var ae = root.document.activeElement;
+ctx.keepId = ae && ctx.box.contains(ae) ? ae.id : '';
+ctx.ss = null;
+ctx.se = null;
+    if (ctx.keepId && ae.setSelectionRange) {
       try {
-        ss = ae.selectionStart;
-        se = ae.selectionEnd;
+        ctx.ss = ae.selectionStart;
+        ctx.se = ae.selectionEnd;
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
-    box.innerHTML = h;
-    if (keepId) {
-      var back = box.querySelector('#' + cssId(keepId));
+  }
+  /** paintToolsBar, step 7 of 7 (part 7, lines 1627-1638 of the one function): runs on, nothing here ends the call */
+  function paintToolsBarStep7(list, ctx) {
+    ctx.box.innerHTML = ctx.h;
+    if (ctx.keepId) {
+      var back = ctx.box.querySelector('#' + cssId(ctx.keepId));
       if (back) {
         back.focus();
-        if (ss != null) {
+        if (ctx.ss != null) {
           try {
-            back.setSelectionRange(ss, se);
+            back.setSelectionRange(ctx.ss, ctx.se);
           } catch (_) { /* best effort: failing here changes nothing the user sees */ }
         }
       }
     }
+  }
+  function paintToolsBar(list) {
+  var ctx = {},
+    steps = [paintToolsBarCblPart, paintToolsBarStep2, paintToolsBarStep3, paintToolsBarStep4, paintToolsBarStep5, paintToolsBarStep6, paintToolsBarStep7];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, ctx)) return;
+  }
   }
   /* the saved views: tabs that set the list's own filters. A tab is lit when the filters in force are exactly its own. */
   function viewMatches(I, v, row) {
@@ -1695,59 +1753,75 @@
     });
     return out;
   }
-  function paintViews(I) {
-    var list = I.o.views && I.o.views.items,
-      inT = !!(I.o.views && I.o.views.inTitle),
-      box = $(I, inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
-    if (!list || !list.length || remote(I)) {
-      if (box) box.remove();
-      return;
+  /** paintViews, step 1 of 3 (part 1, lines 1746-1752 of the one function): true when it handled the call and nothing else should run */
+  function paintViewsStep1(inst, ctx) {
+ctx.list = inst.o.views && inst.o.views.items;
+ctx.inT = !!(inst.o.views && inst.o.views.inTitle);
+ctx.box = $(inst, ctx.inT ? ':scope > .cbl-title > .cbl-views' : ':scope > .cbl-views');
+    if (!ctx.list || !ctx.list.length || remote(inst)) {
+      if (ctx.box) ctx.box.remove();
+      return true;
     }
-    if (!box && inT) return; /* no title row painted (yet): paintTitle paints the tabs with it */
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-views';
-      box.setAttribute('data-cbl-part', 'views');
-      box.setAttribute('role', 'tablist');
-      box.setAttribute('aria-label', T(I, 'Views'));
-      var node = $(I, ':scope > .cbl-tools'),
-        l = $(I, ':scope > .cbl-list');
-      I.el.insertBefore(box, node || l);
+    return false;
+  }
+  /** paintViews, step 2 of 3 (the data-cbl-part part, lines 1753-1765 of the one function): true when it handled the call and nothing else should run */
+  function paintViewsCblPart(inst, ctx) {
+    if (!ctx.box && ctx.inT) return true; /* no title row painted (yet): paintTitle paints the tabs with it */
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-views';
+      ctx.box.setAttribute('data-cbl-part', 'views');
+      ctx.box.setAttribute('role', 'tablist');
+      ctx.box.setAttribute('aria-label', T(inst, 'Views'));
+      var node = $(inst, ':scope > .cbl-tools'),
+        l = $(inst, ':scope > .cbl-list');
+      inst.el.insertBefore(ctx.box, node || l);
     }
-    var rows = baseRows(I),
-      vt = I.o.views.tid || 'views';
-    box.innerHTML = list
+    ctx.rows = baseRows(inst);
+ctx.vt = inst.o.views.tid || 'views';
+    return false;
+  }
+  /** paintViews, step 3 of 3 (part 3, lines 1766-1797 of the one function): runs on, nothing here ends the call */
+  function paintViewsStep3(inst, ctx) {
+    ctx.box.innerHTML = ctx.list
       .map(function (item) {
         var n = (
             typeof item.rows === 'function'
               ? safe(function () {
                   return item.rows();
                 }, [])
-              : rows.filter(function (row) {
-                  return viewMatches(I, item, row);
+              : ctx.rows.filter(function (row) {
+                  return viewMatches(inst, item, row);
                 })
           ).length,
-          on = viewOn(I, item);
+          on = viewOn(inst, item);
         return (
           '<button type="button" data-cbsid="CMP036-K01"' + mountAttribute('CMP036') + ' role="tab" class="cbl-vtab" data-view-tab="' +
           esc(item.key) +
           '" aria-selected="' +
           on +
           '" data-testid="' +
-          esc(vt) +
+          esc(ctx.vt) +
           '-' +
           esc(item.key) +
           '"' +
-          (item.tip ? ' title="' + esc(T(I, item.tip)) + '"' : '') +
+          (item.tip ? ' title="' + esc(T(inst, item.tip)) + '"' : '') +
           '>' +
           (item.iconHtml || '') +
-          (item.labelHtml || esc(T(I, item.label))) +
+          (item.labelHtml || esc(T(inst, item.label))) +
           ' <span class="n">' +
           n +
           '</span></button>'
         );
       })
       .join('');
+  }
+  function paintViews(I) {
+  var ctx = {},
+    steps = [paintViewsStep1, paintViewsCblPart, paintViewsStep3];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, ctx)) return;
+  }
   }
   /* the filter behind a column heading: a small menu of that filter's own choices (the same state as Filters ▾) */
   function hfPop(list) {
@@ -2001,155 +2075,175 @@
     );
   }
 
-  /* the rows area: header (sticky) + rows, or one of the four states */
-  function paintList(I) {
-    var box = $(I, ':scope > .cbl-list');
-    if (!box) {
-      box = root.document.createElement('div');
-      box.className = 'cbl-list';
-      box.setAttribute('tabindex', '0');
-      box.setAttribute('data-cbl-part', 'list');
-      I.el.appendChild(box);
+  /** paintList, step 1 of 10 (the data-cbl-part part, lines 2006-2028 of the one function): runs on, nothing here ends the call */
+  function paintListCblPart(inst, ctx) {
+ctx.box = $(inst, ':scope > .cbl-list');
+    if (!ctx.box) {
+      ctx.box = root.document.createElement('div');
+      ctx.box.className = 'cbl-list';
+      ctx.box.setAttribute('tabindex', '0');
+      ctx.box.setAttribute('data-cbl-part', 'list');
+      inst.el.appendChild(ctx.box);
     }
-    box.setAttribute('aria-label', T(I, 'Rows'));
-    if (!box.__cblScroll) {
-      box.__cblScroll = true;
-      box.addEventListener(
+    ctx.box.setAttribute('aria-label', T(inst, 'Rows'));
+    if (!ctx.box.__cblScroll) {
+      ctx.box.__cblScroll = true;
+      ctx.box.addEventListener(
         'scroll',
         function () {
-          if (I.o.onScroll)
+          if (inst.o.onScroll)
             safe(function () {
-              I.o.onScroll(box);
+              inst.o.onScroll(ctx.box);
             });
         },
         { passive: true }
       );
     }
-    I.card = box.clientWidth > 0 && box.clientWidth <= 620;
-    if (!box.__cblRO && root.ResizeObserver) {
-      box.__cblRO = new root.ResizeObserver(function () {
-        if (I.dead) return;
-        var c = box.clientWidth > 0 && box.clientWidth <= 620;
-        if (c !== I.card || (I.auto && Math.abs(box.clientWidth - (I.fitW || 0)) > 8)) {
-          paintTools(I);
-          paintList(I);
+    inst.card = ctx.box.clientWidth > 0 && ctx.box.clientWidth <= 620;
+  }
+  /** paintList, step 2 of 10 (part 2, lines 2029-2056 of the one function): runs on, nothing here ends the call */
+  function paintListStep2(inst, ctx) {
+    if (!ctx.box.__cblRO && root.ResizeObserver) {
+      ctx.box.__cblRO = new root.ResizeObserver(function () {
+        if (inst.dead) return;
+        var c = ctx.box.clientWidth > 0 && ctx.box.clientWidth <= 620;
+        if (c !== inst.card || (inst.auto && Math.abs(ctx.box.clientWidth - (inst.fitW || 0)) > 8)) {
+          paintTools(inst);
+          paintList(inst);
         }
       });
       try {
-        box.__cblRO.observe(box);
+        ctx.box.__cblRO.observe(ctx.box);
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
-    var keepTop = box.scrollTop,
-      o = I.o,
-      R = I.r,
-      s = I.s,
-      cols = shownCols(I),
-      tpl = template(I, cols);
-    if (I.io) {
+    ctx.keepTop = ctx.box.scrollTop;
+ctx.o = inst.o;
+ctx.R = inst.r;
+ctx.s = inst.s;
+ctx.cols = shownCols(inst);
+ctx.tpl = template(inst, ctx.cols);
+    if (inst.io) {
       try {
-        I.io.disconnect();
+        inst.io.disconnect();
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-      I.io = null;
+      inst.io = null;
     }
-    I.el.classList.toggle('tbllines', s.view === 'lines');
-    var state = typeof o.state === 'function' ? o.state() : o.state;
-    var hdr = headerHTML(I, cols, tpl, state === 'loading');
-    if (state === 'loading') {
-      box.innerHTML =
-        '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
-      setHdrH(I, box);
-      return;
+    inst.el.classList.toggle('tbllines', ctx.s.view === 'lines');
+    ctx.state = typeof ctx.o.state === 'function' ? ctx.o.state() : ctx.o.state;
+    ctx.hdr = headerHTML(inst, ctx.cols, ctx.tpl, ctx.state === 'loading');
+  }
+  /** paintList, step 3 of 10 (part 3, lines 2057-2081 of the one function): true when it handled the call and nothing else should run */
+  function paintListStep3(inst, ctx) {
+    if (ctx.state === 'loading') {
+      ctx.box.innerHTML =
+        '<div class="cbl-grid" role="grid" aria-busy="true">' + (ctx.s.view === 'grid' ? ctx.hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
+      setHdrH(inst, ctx.box);
+      return true;
     }
-    if (state === 'error') {
+    if (ctx.state === 'error') {
       /* ⚠️ a caller may hand a plain SENTENCE (cap-finance did). A string has a native .sub() method (String.prototype.sub),
          so er.sub printed "function sub() { [native code] }" on screen. A string is the title; only an object has parts. */
-      var er = val(o.error);
+      var er = val(ctx.o.error);
       er = typeof er === 'string' ? { title: er } : er || {};
-      box.innerHTML =
+      ctx.box.innerHTML =
         '<div class="cbl-state" role="alert" data-testid="cbl-error-' +
-        esc(I.key) +
+        esc(inst.key) +
         '"><div class="big">' +
-        esc(er.title || T(I, 'The list could not load.')) +
+        esc(er.title || T(inst, 'The list could not load.')) +
         '</div>' +
-        esc(er.sub || T(I, 'Nothing was lost. Try again in a moment.')) +
+        esc(er.sub || T(inst, 'Nothing was lost. Try again in a moment.')) +
         '<br><button type="button" data-cbsid="CMP009-B01"' + mountAttribute('CMP009') + ' class="cbl-btn" data-cbl-retry>' +
-        esc(T(I, 'Try again')) +
+        esc(T(inst, 'Try again')) +
         '</button></div>';
-      return;
+      return true;
     }
-    var m = matched(I),
-      items = itemsOf(I, m.rows);
-    if (m.rows.length && s.view === 'grid') {
-      cols = fitCols(I, cols, m.rows, box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
-      I.fitW = box.clientWidth;
-      tpl = template(I, cols);
-      hdr = headerHTML(I, cols, tpl, false);
+    ctx.m = matched(inst);
+ctx.items = itemsOf(inst, ctx.m.rows);
+    return false;
+  }
+  /** paintList, step 4 of 10 (part 4, lines 2082-2087 of the one function): runs on, nothing here ends the call */
+  function paintListStep4(inst, ctx) {
+    if (ctx.m.rows.length && ctx.s.view === 'grid') {
+      ctx.cols = fitCols(inst, ctx.cols, ctx.m.rows, ctx.box); /* R47: too narrow for every column: the lowest-priority ones are left out of THIS paint */
+      inst.fitW = ctx.box.clientWidth;
+      ctx.tpl = template(inst, ctx.cols);
+      ctx.hdr = headerHTML(inst, ctx.cols, ctx.tpl, false);
     }
-    if (!m.rows.length) {
-      var narrowed = isNarrowed(I);
-      if (m.all.length && narrowed && !remote(I)) {
-        box.innerHTML =
+  }
+  /** paintList, step 5 of 10 (part 5, lines 2088-2127 of the one function): true when it handled the call and nothing else should run */
+  function paintListStep5(inst, ctx) {
+    if (!ctx.m.rows.length) {
+      var narrowed = isNarrowed(inst);
+      if (ctx.m.all.length && narrowed && !remote(inst)) {
+        ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +
-          esc(I.key) +
+          esc(inst.key) +
           '"><div class="big">' +
-          esc(T(I, 'Nothing matches.')) +
+          esc(T(inst, 'Nothing matches.')) +
           '</div>' +
-          esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) +
+          esc(ctx.R.q ? '“' + ctx.R.q + '” ' + T(inst, 'matches nothing here.') : T(inst, 'These filters match nothing here.')) +
           '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clear>' +
-          esc(T(I, 'Clear search and filters')) +
+          esc(T(inst, 'Clear search and filters')) +
           '</button></div>';
-      } else if (remote(I) && narrowed) {
-        box.innerHTML =
+      } else if (remote(inst) && narrowed) {
+        ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +
-          esc(I.key) +
+          esc(inst.key) +
           '"><div class="big">' +
-          esc(T(I, 'Nothing matches.')) +
+          esc(T(inst, 'Nothing matches.')) +
           '</div>' +
-          esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) +
+          esc(ctx.R.q ? '“' + ctx.R.q + '” ' + T(inst, 'matches nothing here.') : T(inst, 'These filters match nothing here.')) +
           '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clear>' +
-          esc(T(I, 'Clear search and filters')) +
+          esc(T(inst, 'Clear search and filters')) +
           '</button></div>' +
-          footHTML(I);
+          footHTML(inst);
       } else {
-        var em = val(o.empty);
+        var em = val(ctx.o.empty);
         em = typeof em === 'string' ? { title: em } : em || {}; /* same trap as er above */
-        box.innerHTML =
+        ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-empty-' +
-          esc(I.key) +
+          esc(inst.key) +
           '"><div class="big">' +
-          esc(em.title || T(I, 'Nothing recorded yet.')) +
+          esc(em.title || T(inst, 'Nothing recorded yet.')) +
           '</div>' +
           esc(em.sub || '') +
           '</div>' +
-          footHTML(I);
+          footHTML(inst);
       }
-      return;
+      return true;
     }
+    return false;
+  }
+  /** paintList, step 6 of 10 (part 6, lines 2129-2139 of the one function): runs on, nothing here ends the call */
+  function paintListStep6(inst, ctx) {
     /* the rows that can be drawn: a collapsed group's rows are not among them (so a collapsed group never leaves a "show more" behind) */
-    items = items.filter(function (x) {
-      return x.group != null || !(x.g != null && R.gcol[x.g]);
+    ctx.items = ctx.items.filter(function (x) {
+      return x.group != null || !(x.g != null && ctx.R.gcol[x.g]);
     });
-    var drawn = 0,
-      count = 0,
-      total = items.filter(function (x) {
+    ctx.drawn = 0;
+ctx.count = 0;
+ctx.total = ctx.items.filter(function (x) {
         return x.group == null;
-      }).length,
-      limit = I.limit;
-    if (limit > total) limit = I.limit = Math.max(50, Math.min(limit, total));
-    var body = '';
-    for (var index = 0; index < items.length; index++) {
-      var it = items[index];
+      }).length;
+ctx.limit = inst.limit;
+    if (ctx.limit > ctx.total) ctx.limit = inst.limit = Math.max(50, Math.min(ctx.limit, ctx.total));
+    ctx.body = '';
+  }
+  /** paintList, step 7 of 10 (part 7, lines 2140-2168 of the one function): runs on, nothing here ends the call */
+  function paintListStep7(inst, ctx) {
+    for (var index = 0; index < ctx.items.length; index++) {
+      var it = ctx.items[index];
       if (it.group != null) {
-        count = 0; /* the stripe starts again under each group head */
-        var shut = !!R.gcol[it.gkey],
-          gt = o.group && o.group.tid;
-        body +=
+        ctx.count = 0; /* the stripe starts again under each group head */
+        var shut = !!ctx.R.gcol[it.gkey],
+          gt = ctx.o.group && ctx.o.group.tid;
+        ctx.body +=
           '<div class="cbl-group" role="row" tabindex="0" aria-expanded="' +
           !shut +
           '" data-g="' +
           esc(it.gkey) +
           '"' +
-          (gt || o.group.headTid ? ' data-testid="' + esc(o.group.headTid ? o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') +
+          (gt || ctx.o.group.headTid ? ' data-testid="' + esc(ctx.o.group.headTid ? ctx.o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') +
           ' style="cursor:pointer"><span class="cbl-tw" aria-hidden="true">' +
           (shut ? '▸' : '▾') +
           '</span><b role="gridcell">' +
@@ -2161,71 +2255,89 @@
           '</span></div>';
         continue;
       }
-      if (!remote(I) && drawn >= limit) break;
-      drawn++;
-      var zb = count++ % 2 === 1; /* ZEBRA: the 2nd, 4th … data row of the list (or of its group) */
-      body += s.view === 'grid' ? rowHTML(I, it, cols, tpl, zb) : lineHTML(I, it, cols, zb);
+      if (!remote(inst) && ctx.drawn >= ctx.limit) break;
+      ctx.drawn++;
+      var zb = ctx.count++ % 2 === 1; /* ZEBRA: the 2nd, 4th … data row of the list (or of its group) */
+      ctx.body += ctx.s.view === 'grid' ? rowHTML(inst, it, ctx.cols, ctx.tpl, zb) : lineHTML(inst, it, ctx.cols, zb);
     }
-    var end;
-    if (!remote(I) && drawn < total)
-      end =
+  }
+  /** paintList, step 8 of 10 (part 8, lines 2169-2190 of the one function): runs on, nothing here ends the call */
+  function paintListStep8(inst, ctx) {
+    /* ctx.end starts undefined */
+    if (!remote(inst) && ctx.drawn < ctx.total)
+      ctx.end =
         '<div class="cbl-end" data-cbl-sentinel data-testid="cbl-more-' +
-        esc(I.key) +
+        esc(inst.key) +
         '"><button type="button" data-cbsid="CMP037-B05"' + mountAttribute('CMP037') + ' data-cbl-more>' +
-        esc(T(I, '↓ Show {n} more', { n: Math.min(50, total - drawn) })) +
+        esc(T(inst, '↓ Show {n} more', { n: Math.min(50, ctx.total - ctx.drawn) })) +
         '</button> <span>' +
-        drawn +
+        ctx.drawn +
         ' ' +
-        esc(T(I, 'of')) +
+        esc(T(inst, 'of')) +
         ' ' +
-        total +
+        ctx.total +
         '</span></div>';
     else
-      end = remote(I)
+      ctx.end = remote(inst)
         ? ''
         : '<div class="cbl-end" data-testid="cbl-end-' +
-          esc(I.key) +
+          esc(inst.key) +
           '">' +
-          esc(T(I, 'end of list')) +
-          '</div>'; /* the count is said once, in the tools — not again here (ai-eye E-3/E-13) */
-    box.innerHTML =
+          esc(T(inst, 'end of list')) +
+          '</div>';
+  }
+  /** paintList, step 9 of 10 (part 9, lines 2191-2204 of the one function): runs on, nothing here ends the call */
+  function paintListStep9(inst, ctx) {
+    /* the count is said once, in the tools — not again here (ai-eye E-3/E-13) */
+    ctx.box.innerHTML =
       '<div class="cbl-grid' +
-      (s.view === 'lines' ? ' cbl-lines' : '') +
-      (I.auto ? ' cbl-fit' : '') +
-      '" role="' + gridRole(I, items) + '" aria-rowcount="' +
-      total +
+      (ctx.s.view === 'lines' ? ' cbl-lines' : '') +
+      (inst.auto ? ' cbl-fit' : '') +
+      '" role="' + gridRole(inst, ctx.items) + '" aria-rowcount="' +
+      ctx.total +
       '">' +
-      (s.view === 'grid' ? hdr : '') +
-      body +
+      (ctx.s.view === 'grid' ? ctx.hdr : '') +
+      ctx.body +
       '</div>' +
-      end +
-      footHTML(I);
-    setHdrH(I, box);
-    box.scrollTop = keepTop;
-    if (!remote(I) && drawn < total) {
-      var sent = box.querySelector('[data-cbl-sentinel]');
+      ctx.end +
+      footHTML(inst);
+    setHdrH(inst, ctx.box);
+    ctx.box.scrollTop = ctx.keepTop;
+  }
+  /** paintList, step 10 of 10 (the data-cbl-sentinel part, lines 2205-2228 of the one function): runs on, nothing here ends the call */
+  function paintListCblSentinel(inst, ctx) {
+    if (!remote(inst) && ctx.drawn < ctx.total) {
+      var sent = ctx.box.querySelector('[data-cbl-sentinel]');
       if (sent && root.IntersectionObserver) {
         try {
-          I.io = new root.IntersectionObserver(
+          inst.io = new root.IntersectionObserver(
             function (list) {
               if (
                 list.some(function (e) {
                   return e.isIntersecting;
                 })
               ) {
-                I.limit += 50;
-                paintList(I);
+                inst.limit += 50;
+                paintList(inst);
               }
             },
-            { root: box, rootMargin: '0px' }
+            { root: ctx.box, rootMargin: '0px' }
           );
-          I.io.observe(sent);
+          inst.io.observe(sent);
         } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
-    var node = $(I, '.cbl-count');
-    if (node) node.textContent = countText(I, m);
-    resolveNext(I);
+    var node = $(inst, '.cbl-count');
+    if (node) node.textContent = countText(inst, ctx.m);
+    resolveNext(inst);
+  }
+  /* the rows area: header (sticky) + rows, or one of the four states */
+  function paintList(I) {
+  var ctx = {},
+    steps = [paintListCblPart, paintListStep2, paintListStep3, paintListStep4, paintListStep5, paintListStep6, paintListStep7, paintListStep8, paintListStep9, paintListCblSentinel];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, ctx)) return;
+  }
   }
   function footHTML(I) {
     var f = I.o.remote && I.o.remote.foot;
@@ -2348,23 +2460,26 @@
       : '';
     return (tid ? ' data-testid="' + esc(tid) + '"' : '') + a;
   }
-  function rowHTML(I, it, cols, tpl, zb) {
-    var row = it.row,
-      id = it.id,
-      R = I.r,
-      nx = hasNext(I),
-      open = nx && isOpen(I, id),
-      o = I.o;
-    var cls =
-      (o.rowClass
+  /** rowHTML, step 1 of 3 (part 1, lines 2416-2430 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep1(inst, it, cols, tpl, zb, ctx) {
+ctx.row = it.row;
+ctx.id = it.id;
+var R = inst.r;
+ctx.nx = hasNext(inst);
+ctx.open = ctx.nx && isOpen(inst, ctx.id);
+var o = inst.o;
+    ctx.cls = (o.rowClass
         ? safe(function () {
-            return o.rowClass(row);
+            return o.rowClass(ctx.row);
           }, '')
         : '') +
-      (R.hl === id && o.hl !== false ? ' sel' : '') +
+      (R.hl === ctx.id && o.hl !== false ? ' sel' : '') +
       (zb ? ' z' : '') +
       (it.g != null ? ' ing' : '');
-    var cells = cols
+  }
+  /** rowHTML, step 2 of 3 (part 2, lines 2431-2465 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep2(inst, it, cols, tpl, zb, ctx) {
+    ctx.cells = cols
       .map(function (item, index) {
         var amt = item.pin === 'end';
         return (
@@ -2381,43 +2496,52 @@
             ? ' data-testid="' +
               esc(
                 safe(function () {
-                  return item.tid(row);
+                  return item.tid(ctx.row);
                 }, '')
               ) +
               '"'
             : '') +
           '>' +
-          (index === 0 && nx
+          (index === 0 && ctx.nx
             ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' +
-              esc(T(I, open ? 'Collapse' : 'Expand')) +
+              esc(T(inst, ctx.open ? 'Collapse' : 'Expand')) +
               '" aria-expanded="' +
-              !!open +
+              !!ctx.open +
               '">▸</span>'
             : '') +
-          cellOf(I, item, row) +
+          cellOf(inst, item, ctx.row) +
           '</div>'
         );
       })
       .join('');
-    var lead = leadOn(I) ? '<div class="cbl-lead" role="gridcell">' + leadCell(I, row, id) + '</div>' : '';
-    var out =
-      '<div class="cbl-row lrow grow' +
-      (open ? ' cbl-open open' : '') +
-      (cls ? ' ' + esc(cls) : '') +
+  }
+  /** rowHTML, step 3 of 3 (part 3, lines 2466-2483 of the one function): runs on, nothing here ends the call */
+  function rowHTMLStep3(inst, it, cols, tpl, zb, ctx) {
+    var lead = leadOn(inst) ? '<div class="cbl-lead" role="gridcell">' + leadCell(inst, ctx.row, ctx.id) + '</div>' : '';
+    ctx.out = '<div class="cbl-row lrow grow' +
+      (ctx.open ? ' cbl-open open' : '') +
+      (ctx.cls ? ' ' + esc(ctx.cls) : '') +
       '" role="row" data-row="' +
-      esc(id) +
+      esc(ctx.id) +
       '" tabindex="0"' +
-      (nx ? ' aria-expanded="' + !!open + '"' : '') +
+      (ctx.nx ? ' aria-expanded="' + !!ctx.open + '"' : '') +
       ' style="grid-template-columns:' +
       tpl +
       '"' +
-      rowAttrs(I, row, id) +
+      rowAttrs(inst, ctx.row, ctx.id) +
       '>' +
       lead +
-      cells +
+      ctx.cells +
       '</div>';
-    if (open) out += nextHTML(I, row, id);
-    return out;
+    if (ctx.open) ctx.out += nextHTML(inst, ctx.row, ctx.id);
+  }
+  function rowHTML(I, it, cols, tpl, zb) {
+  var ctx = {},
+    steps = [rowHTMLStep1, rowHTMLStep2, rowHTMLStep3];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, it, cols, tpl, zb, ctx)) return;
+  }
+  return ctx.out;
   }
   function leadCell(I, row, id) {
     if (
@@ -2431,30 +2555,33 @@
       }, '');
     return '<input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
   }
-  function lineHTML(I, it, cols, zb) {
-    var row = it.row,
-      id = it.id,
-      nx = hasNext(I),
-      open = nx && isOpen(I, id),
-      o = I.o,
-      pin = cols.filter(function (item) {
+  /** lineHTML, step 1 of 5 (part 1, lines 2499-2515 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep1(inst, it, cols, zb, ctx) {
+ctx.row = it.row;
+ctx.id = it.id;
+ctx.nx = hasNext(inst);
+ctx.open = ctx.nx && isOpen(inst, ctx.id);
+ctx.o = inst.o;
+ctx.pin = cols.filter(function (item) {
         return item.pin === 'end';
       })[0];
-    var cls =
-      (o.rowClass
+    ctx.cls = (ctx.o.rowClass
         ? safe(function () {
-            return o.rowClass(row);
+            return ctx.o.rowClass(ctx.row);
           }, '')
         : '') +
-      (I.r.hl === id && o.hl !== false ? ' sel' : '') +
+      (inst.r.hl === ctx.id && ctx.o.hl !== false ? ' sel' : '') +
       (zb ? ' z' : '') +
       (it.g != null ? ' ing' : '');
-    var flow = cols
+  }
+  /** lineHTML, step 2 of 5 (part 2, lines 2516-2544 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep2(inst, it, cols, zb, ctx) {
+    ctx.flow = cols
       .filter(function (item) {
         return item.pin !== 'end';
       })
       .map(function (item) {
-        var v = cellOf(I, item, row),
+        var v = cellOf(inst, item, ctx.row),
           t = plain(v);
         if (!t || t === '—') return '';
         return (
@@ -2467,7 +2594,7 @@
             ? ' data-testid="' +
               esc(
                 safe(function () {
-                  return item.tid(row);
+                  return item.tid(ctx.row);
                 }, '')
               ) +
               '"'
@@ -2478,35 +2605,50 @@
         );
       })
       .join('');
-    var gist = o.gist
+  }
+  /** lineHTML, step 3 of 5 (part 3, lines 2545-2550 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep3(inst, it, cols, zb, ctx) {
+    ctx.gist = ctx.o.gist
       ? safe(function () {
-          return o.gist(row);
+          return ctx.o.gist(ctx.row);
         }, '')
       : '';
-    var lead = leadOn(I) ? '<span class="cbl-lead" style="padding:0 8px 0 0">' + leadCell(I, row, id) + '</span>' : '';
-    var out =
-      '<div class="cbl-lrec lrow' +
-      (open ? ' cbl-open open' : '') +
-      (cls ? ' ' + esc(cls) : '') +
+    ctx.lead = leadOn(inst) ? '<span class="cbl-lead" style="padding:0 8px 0 0">' + leadCell(inst, ctx.row, ctx.id) + '</span>' : '';
+  }
+  /** lineHTML, step 4 of 5 (part 4, lines 2551-2571 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep4(inst, it, cols, zb, ctx) {
+    ctx.out = '<div class="cbl-lrec lrow' +
+      (ctx.open ? ' cbl-open open' : '') +
+      (ctx.cls ? ' ' + esc(ctx.cls) : '') +
       '" role="row" data-row="' +
-      esc(id) +
+      esc(ctx.id) +
       '" tabindex="0"' +
-      (nx ? ' aria-expanded="' + !!open + '"' : '') +
-      rowAttrs(I, row, id) +
+      (ctx.nx ? ' aria-expanded="' + !!ctx.open + '"' : '') +
+      rowAttrs(inst, ctx.row, ctx.id) +
       '><div class="cbl-lline" role="gridcell">' +
-      lead +
-      (nx
-        ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>'
+      ctx.lead +
+      (ctx.nx
+        ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' + esc(T(inst, ctx.open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!ctx.open + '">▸</span>'
         : '') +
       '<span class="cbl-lflow">' +
-      flow +
+      ctx.flow +
       '</span>' +
-      (pin ? '<span class="cbl-lamt">' + cellOf(I, pin, row) + '</span>' : '') +
+      (ctx.pin ? '<span class="cbl-lamt">' + cellOf(inst, ctx.pin, ctx.row) + '</span>' : '') +
       '</div>' +
-      (gist ? '<div class="cbl-lgist" role="gridcell"' + (o.gistTid ? ' data-testid="' + esc(o.gistTid(row)) + '"' : '') + '>' + esc(gist) + '</div>' : '') +
+      (ctx.gist ? '<div class="cbl-lgist" role="gridcell"' + (ctx.o.gistTid ? ' data-testid="' + esc(ctx.o.gistTid(ctx.row)) + '"' : '') + '>' + esc(ctx.gist) + '</div>' : '') +
       '</div>';
-    if (open) out += nextHTML(I, row, id);
-    return out;
+  }
+  /** lineHTML, step 5 of 5 (part 5, lines 2572-2572 of the one function): runs on, nothing here ends the call */
+  function lineHTMLStep5(inst, it, cols, zb, ctx) {
+    if (ctx.open) ctx.out += nextHTML(inst, ctx.row, ctx.id);
+  }
+  function lineHTML(I, it, cols, zb) {
+  var ctx = {},
+    steps = [lineHTMLStep1, lineHTMLStep2, lineHTMLStep3, lineHTMLStep4, lineHTMLStep5];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](I, it, cols, zb, ctx)) return;
+  }
+  return ctx.out;
   }
   /* what a row opens to: the page's markup (trusted by contract), then the row actions the unit draws itself */
   function nextHTML(I, row, id) {
@@ -2843,116 +2985,141 @@
     var node = I.el.querySelector('[data-rz="' + k + '"]');
     if (node) node.focus();
   }
-  function onClick(list, ev) {
-    var node = ev.target;
-    if (!node.closest) return;
-    var b = node.closest('button,[data-row],input[type=checkbox],select'),
-      R = list.r,
-      s = list.s,
-      o = list.o;
-    var pop = node.closest('.cbl-pop');
-    var hcell = node.closest('.cbl-hc');
-    if (hcell && !node.closest('.cbl-rz') && !node.closest('[data-sort]') && !node.closest('[data-hf]') && list.el.contains(hcell)) {
+  /** onClick, step 1 of 15 (the data-row part, lines 2847-2862 of the one function): true when it handled the call and nothing else should run */
+  function onClickRow(list, event, ctx) {
+ctx.node = event.target;
+    if (!ctx.node.closest) return true;
+    ctx.b = ctx.node.closest('button,[data-row],input[type=checkbox],select');
+ctx.R = list.r;
+ctx.s = list.s;
+ctx.o = list.o;
+    ctx.pop = ctx.node.closest('.cbl-pop');
+    var hcell = ctx.node.closest('.cbl-hc');
+    if (hcell && !ctx.node.closest('.cbl-rz') && !ctx.node.closest('[data-sort]') && !ctx.node.closest('[data-hf]') && list.el.contains(hcell)) {
       var sbtn = hcell.querySelector('[data-sort]');
       if (sbtn) {
         sbtn.click();
-        return;
+        return true;
       }
     }
-    var gh = node.closest('[data-g]');
-    if (gh && list.el.contains(gh) && !(b && b.hasAttribute('data-row'))) {
+    ctx.gh = ctx.node.closest('[data-g]');
+    return false;
+  }
+  /** onClick, step 2 of 15 (the data-row part, lines 2863-2874 of the one function): true when it handled the call and nothing else should run */
+  function onClickRow2(list, event, ctx) {
+    if (ctx.gh && list.el.contains(ctx.gh) && !(ctx.b && ctx.b.hasAttribute('data-row'))) {
       if (list.pop) {
         list.pop = null;
         paintTitle(list);
         paintTools(list);
       }
-      R.gcol[gh.getAttribute('data-g')] = !R.gcol[gh.getAttribute('data-g')];
+      ctx.R.gcol[ctx.gh.getAttribute('data-g')] = !ctx.R.gcol[ctx.gh.getAttribute('data-g')];
       paintList(list);
-      var g2 = list.el.querySelector('[data-g="' + cssId(gh.getAttribute('data-g')) + '"]');
+      var g2 = list.el.querySelector('[data-g="' + cssId(ctx.gh.getAttribute('data-g')) + '"]');
       if (g2) g2.focus();
-      return;
+      return true;
     }
-    if (!b) {
-      if (list.pop && !pop) closePop(list);
-      return;
+    return false;
+  }
+  /** onClick, step 3 of 15 (the data-rz part, lines 2875-2891 of the one function): true when it handled the call and nothing else should run */
+  function onClickRz(list, event, ctx) {
+    if (!ctx.b) {
+      if (list.pop && !ctx.pop) closePop(list);
+      return true;
     }
-    if (b.hasAttribute('data-rz')) return;
-    if (b.hasAttribute('data-cbl-pop')) {
-      togglePop(list, b.getAttribute('data-cbl-pop'));
-      return;
+    if (ctx.b.hasAttribute('data-rz')) return true;
+    if (ctx.b.hasAttribute('data-cbl-pop')) {
+      togglePop(list, ctx.b.getAttribute('data-cbl-pop'));
+      return true;
     }
-    if (b.hasAttribute('data-hf')) {
+    if (ctx.b.hasAttribute('data-hf')) {
       var er = list.el.getBoundingClientRect(),
-        br = b.getBoundingClientRect();
+        br = ctx.b.getBoundingClientRect();
       list.hfAt = { l: Math.max(4, Math.min(br.left - er.left, er.width - 190)), t: br.bottom - er.top + 4 };
-      togglePop(list, 'hf:' + b.getAttribute('data-hf'));
+      togglePop(list, 'hf:' + ctx.b.getAttribute('data-hf'));
       paintList(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-hfv')) {
-      var hk = b.getAttribute('data-hfk'),
-        hv = b.getAttribute('data-hfv');
-      if (hv) R.filt[hk] = hv;
-      else delete R.filt[hk];
+    return false;
+  }
+  /** onClick, step 4 of 15 (the data-hfv part, lines 2892-2904 of the one function): true when it handled the call and nothing else should run */
+  function onClickHfv(list, event, ctx) {
+    if (ctx.b.hasAttribute('data-hfv')) {
+      var hk = ctx.b.getAttribute('data-hfk'),
+        hv = ctx.b.getAttribute('data-hfv');
+      if (hv) ctx.R.filt[hk] = hv;
+      else delete ctx.R.filt[hk];
       list.pop = null;
       resetLimit(list);
       if (query(list)) {
         paintTools(list);
         paintList(list);
       } else paintAll(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-view-tab')) {
-      var vw = ((o.views && o.views.items) || []).filter(function (x) {
-        return x.key === b.getAttribute('data-view-tab');
+    return false;
+  }
+  /** onClick, step 5 of 15 (the data-view-tab part, lines 2905-2931 of the one function): true when it handled the call and nothing else should run */
+  function onClickViewTab(list, event, ctx) {
+    if (ctx.b.hasAttribute('data-view-tab')) {
+      var vw = ((ctx.o.views && ctx.o.views.items) || []).filter(function (x) {
+        return x.key === ctx.b.getAttribute('data-view-tab');
       })[0];
       if (vw) {
-        if (o.views.merge) {
+        if (ctx.o.views.merge) {
           /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
           var wasLit = viewOn(list, vw);
           viewKeys(list).forEach(function (item) {
-            delete R.filt[item];
+            delete ctx.R.filt[item];
           });
           if (!wasLit)
             Object.keys(vw.filt || {}).forEach(function (item) {
-              R.filt[item] = vw.filt[item];
+              ctx.R.filt[item] = vw.filt[item];
             });
         } else {
-          R.filt = {};
+          ctx.R.filt = {};
           Object.keys(vw.filt || {}).forEach(function (item) {
-            R.filt[item] = vw.filt[item];
+            ctx.R.filt[item] = vw.filt[item];
           });
         }
         list.pop = null;
         resetLimit(list);
         paintAll(list);
       }
-      return;
+      return true;
     }
-    if (list.pop && !pop) {
+    return false;
+  }
+  /** onClick, step 6 of 15 (the data-period part, lines 2932-2953 of the one function): true when it handled the call and nothing else should run */
+  function onClickPeriod(list, event, ctx) {
+    if (list.pop && !ctx.pop) {
       /* any other click outside the popover closes it, then does its own job */ list.pop = null;
       paintTitle(list);
       paintTools(list);
     }
-    var d = b.dataset || {};
-    if (b.hasAttribute('data-period')) {
+    ctx.d = ctx.b.dataset || {};
+    if (ctx.b.hasAttribute('data-period')) {
       var pp = head(list).period;
       if (pp) {
-        list.pv = d.period;
-        if (d.period !== 'custom') {
+        list.pv = ctx.d.period;
+        if (ctx.d.period !== 'custom') {
           list.pop = null;
           list.pv = null;
         }
         safe(function () {
-          pp.onPick(d.period, null);
+          pp.onPick(ctx.d.period, null);
         });
         paintTitle(list);
         paintTools(list);
       }
-      return;
+      return true;
     }
-    if (d.notice != null) {
-      var n = (head(list).notices || [])[+d.notice];
+    return false;
+  }
+  /** onClick, step 7 of 15 (part 7, lines 2954-2982 of the one function): true when it handled the call and nothing else should run */
+  function onClickStep7(list, event, ctx) {
+    if (ctx.d.notice != null) {
+      var n = (head(list).notices || [])[+ctx.d.notice];
       if (list.pop === 'notes') {
         list.pop = null;
         paintTitle(list);
@@ -2961,196 +3128,242 @@
         safe(function () {
           n.onOpen();
         });
-      return;
+      return true;
     }
-    if (d.group) {
-      s.group = d.group;
+    if (ctx.d.group) {
+      ctx.s.group = ctx.d.group;
       resetLimit(list);
       saveChoices(list);
       if (!query(list)) {
         paintTools(list);
         paintList(list);
       } else paintTools(list);
-      return;
+      return true;
     }
-    if (d.view) {
-      s.view = d.view;
+    if (ctx.d.view) {
+      ctx.s.view = ctx.d.view;
       saveChoices(list);
       paintTools(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-needs')) {
+    return false;
+  }
+  /** onClick, step 8 of 15 (the data-cbl-needs part, lines 2983-3008 of the one function): true when it handled the call and nothing else should run */
+  function onClickCblNeeds(list, event, ctx) {
+    if (ctx.b.hasAttribute('data-cbl-needs')) {
       needsToggle(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-needs-next')) {
+    if (ctx.b.hasAttribute('data-cbl-needs-next')) {
       needsNext(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-exp')) {
-      R.allOpen = !R.allOpen;
-      R.open = {};
+    if (ctx.b.hasAttribute('data-cbl-exp')) {
+      ctx.R.allOpen = !ctx.R.allOpen;
+      ctx.R.open = {};
       paintTools(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-csv')) {
+    if (ctx.b.hasAttribute('data-cbl-csv')) {
       download(list);
-      return;
+      return true;
     }
-    if (d.unfilt) {
-      delete R.filt[d.unfilt];
+    if (ctx.d.unfilt) {
+      delete ctx.R.filt[ctx.d.unfilt];
       resetLimit(list);
       if (query(list)) paintTools(list);
       else paintAll(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-clearf')) {
-      R.filt = {};
+    return false;
+  }
+  /** onClick, step 9 of 15 (the data-cbl-clearf part, lines 3009-3037 of the one function): true when it handled the call and nothing else should run */
+  function onClickCblClearf(list, event, ctx) {
+    if (ctx.b.hasAttribute('data-cbl-clearf')) {
+      ctx.R.filt = {};
       resetLimit(list);
       list.pop = null;
       if (query(list)) paintTools(list);
       else paintAll(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-clear')) {
-      R.filt = {};
-      R.q = '';
+    if (ctx.b.hasAttribute('data-cbl-clear')) {
+      ctx.R.filt = {};
+      ctx.R.q = '';
       list.pop = null;
       resetLimit(list);
       if (query(list)) paintTools(list);
       paintAll(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-retry')) {
-      if (o.onRetry)
+    if (ctx.b.hasAttribute('data-cbl-retry')) {
+      if (ctx.o.onRetry)
         safe(function () {
-          o.onRetry();
+          ctx.o.onRetry();
         });
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-more')) {
+    if (ctx.b.hasAttribute('data-cbl-more')) {
       list.limit += 50;
       paintList(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-resetcols')) {
-      s.cols = null;
-      s.widths = {};
+    return false;
+  }
+  /** onClick, step 10 of 15 (the data-cbl-resetcols part, lines 3038-3060 of the one function): true when it handled the call and nothing else should run */
+  function onClickCblResetcols(list, event, ctx) {
+    if (ctx.b.hasAttribute('data-cbl-resetcols')) {
+      ctx.s.cols = null;
+      ctx.s.widths = {};
       saveChoices(list);
       paintTools(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-selmode')) {
-      R.selMode = !R.selMode;
-      if (!R.selMode) R.sel = {};
+    if (ctx.b.hasAttribute('data-cbl-selmode')) {
+      ctx.R.selMode = !ctx.R.selMode;
+      if (!ctx.R.selMode) ctx.R.sel = {};
       paintTools(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-cbl-selall')) {
+    if (ctx.b.hasAttribute('data-cbl-selall')) {
       matched(list).rows.forEach(function (item, index) {
-        R.sel[rid(list, item, index)] = true;
+        ctx.R.sel[rid(list, item, index)] = true;
       });
       paintTools(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (d.bulk) {
-      var bk = (o.bulk || []).filter(function (x) {
-        return x.id === d.bulk;
+    return false;
+  }
+  /** onClick, step 11 of 15 (part 11, lines 3061-3082 of the one function): true when it handled the call and nothing else should run */
+  function onClickStep11(list, event, ctx) {
+    if (ctx.d.bulk) {
+      var bk = (ctx.o.bulk || []).filter(function (x) {
+        return x.id === ctx.d.bulk;
       })[0];
       if (bk)
         safe(function () {
           bk.run(selectedRows(list));
         });
-      return;
+      return true;
     }
-    if (d.mv) {
+    if (ctx.d.mv) {
       var set = shownKeys(list).slice(),
-        i = set.indexOf(d.mv),
-        j = i + +d.d;
-      if (i < 0 || j < 0 || j >= set.length) return;
+        i = set.indexOf(ctx.d.mv),
+        j = i + +ctx.d.d;
+      if (i < 0 || j < 0 || j >= set.length) return true;
       set.splice(j, 0, set.splice(i, 1)[0]);
-      s.cols = set;
+      ctx.s.cols = set;
       saveChoices(list);
       paintTools(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (d.wd) {
-      resize(list, d.wd, +d.d * 16, false);
+    return false;
+  }
+  /** onClick, step 12 of 15 (the data-wd part, lines 3083-3090 of the one function): true when it handled the call and nothing else should run */
+  function onClickWd(list, event, ctx) {
+    if (ctx.d.wd) {
+      resize(list, ctx.d.wd, +ctx.d.d * 16, false);
       paintTools(list);
-      var again = list.el.querySelector('[data-wd="' + d.wd + '"][data-d="' + d.d + '"]');
+      var again = list.el.querySelector('[data-wd="' + ctx.d.wd + '"][data-d="' + ctx.d.d + '"]');
       if (again) again.focus();
-      return;
+      return true;
     }
-    if (d.col) return; /* the checkbox acts on 'change' */
-    if (d.sort) {
+    if (ctx.d.col) return true;
+    return false;
+  }
+  /** onClick, step 13 of 15 (part 13, lines 3091-3107 of the one function): true when it handled the call and nothing else should run */
+  function onClickStep13(list, event, ctx) {
+    /* the checkbox acts on 'change' */
+    if (ctx.d.sort) {
       /* a server-sorted page decides its own direction: it is told which heading was clicked */
       if (remote(list)) {
-        query(list, 'sort', { key: d.sort }, true);
-        return;
+        query(list, 'sort', { key: ctx.d.sort }, true);
+        return true;
       }
       var cur = curSort(list),
         col = columns(list).filter(function (item) {
-          return sortId(item) === d.sort;
+          return sortId(item) === ctx.d.sort;
         })[0],
         d0 = col && col.dir0 === -1 ? -1 : 1;
-      s.sort = cur && cur.key === d.sort ? { key: d.sort, dir: -cur.dir } : { key: d.sort, dir: d0 };
+      ctx.s.sort = cur && cur.key === ctx.d.sort ? { key: ctx.d.sort, dir: -cur.dir } : { key: ctx.d.sort, dir: d0 };
       resetLimit(list);
       saveChoices(list);
       paintList(list);
-      return;
+      return true;
     }
-    if (d.act) {
-      var act = (o.actions || []).filter(function (x) {
-          return x.id === d.act;
+    return false;
+  }
+  /** onClick, step 14 of 15 (the data-selrow part, lines 3108-3127 of the one function): true when it handled the call and nothing else should run */
+  function onClickSelrow(list, event, ctx) {
+    if (ctx.d.act) {
+      var act = (ctx.o.actions || []).filter(function (x) {
+          return x.id === ctx.d.act;
         })[0],
-        row = rowById(list, d.actrow);
+        row = rowById(list, ctx.d.actrow);
       if (act && row)
         safe(function () {
           act.run(row);
         });
-      return;
+      return true;
     }
-    if (b.hasAttribute('data-selrow')) {
-      return;
+    if (ctx.b.hasAttribute('data-selrow')) {
+      return true;
     }
-    if (b.hasAttribute('data-caret') || node.closest('[data-caret]')) {
-      var rr = node.closest('[data-row]');
+    if (ctx.b.hasAttribute('data-caret') || ctx.node.closest('[data-caret]')) {
+      var rr = ctx.node.closest('[data-row]');
       if (rr) toggleRow(list, rr.getAttribute('data-row'), false);
-      return;
+      return true;
     }
-    var rowEl = node.closest('[data-row]');
-    if (rowEl && b === rowEl) {
-      /* a control the page drew inside a cell (a link, a chip, a button with its own onclick) keeps its own job */
-      var inner = node.closest('a,button,input,select,textarea,label,[onclick],[data-nolist]');
-      if (inner && inner !== rowEl && rowEl.contains(inner)) return;
-      openRow(list, rowEl.getAttribute('data-row'), ev);
-    }
+    ctx.rowEl = ctx.node.closest('[data-row]');
+    return false;
   }
-  function onChange(list, ev) {
-    var node = ev.target,
-      R = list.r,
-      s = list.s;
-    if (node.hasAttribute('data-col')) {
-      var k = node.getAttribute('data-col'),
+  /** onClick, step 15 of 15 (the data-nolist part, lines 3128-3133 of the one function): true when it handled the call and nothing else should run */
+  function onClickNolist(list, event, ctx) {
+    if (ctx.rowEl && ctx.b === ctx.rowEl) {
+      /* a control the page drew inside a cell (a link, a chip, a button with its own onclick) keeps its own job */
+      var inner = ctx.node.closest('a,button,input,select,textarea,label,[onclick],[data-nolist]');
+      if (inner && inner !== ctx.rowEl && ctx.rowEl.contains(inner)) return true;
+      openRow(list, ctx.rowEl.getAttribute('data-row'), event);
+    }
+    return false;
+  }
+  function onClick(list, ev) {
+  var ctx = {},
+    steps = [onClickRow, onClickRow2, onClickRz, onClickHfv, onClickViewTab, onClickPeriod, onClickStep7, onClickCblNeeds, onClickCblClearf, onClickCblResetcols, onClickStep11, onClickWd, onClickStep13, onClickSelrow, onClickNolist];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, ev, ctx)) return;
+  }
+  }
+  /** onChange, step 1 of 4 (the data-col part, lines 3240-3255 of the one function): true when it handled the call and nothing else should run */
+  function onChangeCol(list, event, ctx) {
+ctx.node = event.target;
+ctx.R = list.r;
+ctx.s = list.s;
+    if (ctx.node.hasAttribute('data-col')) {
+      var k = ctx.node.getAttribute('data-col'),
         set = shownKeys(list).slice(),
         i = set.indexOf(k);
-      if (node.checked && i < 0) set.push(k);
-      else if (!node.checked && i >= 0 && k !== topKey(list)) set.splice(i, 1);
-      s.cols = set;
+      if (ctx.node.checked && i < 0) set.push(k);
+      else if (!ctx.node.checked && i >= 0 && k !== topKey(list)) set.splice(i, 1);
+      ctx.s.cols = set;
       saveChoices(list);
       paintTools(list);
       paintList(list);
       refocusCol(list, k);
-      return;
+      return true;
     }
-    if (node.hasAttribute('data-gsel')) {
-      s.group = node.value;
+    return false;
+  }
+  /** onChange, step 2 of 4 (the data-gsel part, lines 3256-3280 of the one function): true when it handled the call and nothing else should run */
+  function onChangeGsel(list, event, ctx) {
+    if (ctx.node.hasAttribute('data-gsel')) {
+      ctx.s.group = ctx.node.value;
       resetLimit(list);
       saveChoices(list);
       if (!query(list)) {
@@ -3159,12 +3372,12 @@
       } else paintTools(list);
       var gs = list.el.querySelector('#cbl-gsel-' + cssId(list.key));
       if (gs) gs.focus();
-      return;
+      return true;
     }
-    if (node.hasAttribute('data-filt')) {
-      var fk = node.getAttribute('data-filt');
-      if (node.value) R.filt[fk] = node.value;
-      else delete R.filt[fk];
+    if (ctx.node.hasAttribute('data-filt')) {
+      var fk = ctx.node.getAttribute('data-filt');
+      if (ctx.node.value) ctx.R.filt[fk] = ctx.node.value;
+      else delete ctx.R.filt[fk];
       resetLimit(list);
       if (!query(list)) {
         paintTools(list);
@@ -3172,11 +3385,15 @@
       } else paintTools(list);
       var f = list.el.querySelector('#cbl-f-' + cssId(list.key) + '-' + cssId(fk));
       if (f) f.focus();
-      return;
+      return true;
     }
-    if (node.hasAttribute('data-cbl-sort')) {
-      var cur = s.sort ? s.sort.dir : 1;
-      s.sort = { key: node.value, dir: 1 };
+    return false;
+  }
+  /** onChange, step 3 of 4 (the data-cbl-sort part, lines 3281-3300 of the one function): true when it handled the call and nothing else should run */
+  function onChangeCblSort(list, event, ctx) {
+    if (ctx.node.hasAttribute('data-cbl-sort')) {
+      var cur = ctx.s.sort ? ctx.s.sort.dir : 1;
+      ctx.s.sort = { key: ctx.node.value, dir: 1 };
       resetLimit(list);
       saveChoices(list);
       if (!query(list)) {
@@ -3185,16 +3402,20 @@
       }
       var ss = list.el.querySelector('#cbl-sort-' + cssId(list.key));
       if (ss) ss.focus();
-      return;
+      return true;
     }
-    if (node.hasAttribute('data-selrow')) {
-      var id = node.getAttribute('data-selrow');
-      if (node.checked) R.sel[id] = true;
-      else delete R.sel[id];
+    if (ctx.node.hasAttribute('data-selrow')) {
+      var id = ctx.node.getAttribute('data-selrow');
+      if (ctx.node.checked) ctx.R.sel[id] = true;
+      else delete ctx.R.sel[id];
       paintTools(list);
-      return;
+      return true;
     }
-    if (node.hasAttribute('data-cbl-from') || node.hasAttribute('data-cbl-to')) {
+    return false;
+  }
+  /** onChange, step 4 of 4 (the data-cbl-from part, lines 3301-3313 of the one function): runs on, nothing here ends the call */
+  function onChangeCblFrom(list, event, ctx) {
+    if (ctx.node.hasAttribute('data-cbl-from') || ctx.node.hasAttribute('data-cbl-to')) {
       var p = head(list).period,
         fr = list.el.querySelector('[data-cbl-from]'),
         to = list.el.querySelector('[data-cbl-to]');
@@ -3208,6 +3429,13 @@
       }
     }
   }
+  function onChange(list, ev) {
+  var ctx = {},
+    steps = [onChangeCol, onChangeGsel, onChangeCblSort, onChangeCblFrom];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, ev, ctx)) return;
+  }
+  }
   function cssId(s) {
     return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
   }
@@ -3216,51 +3444,60 @@
     if (node) node.focus();
   }
 
-  function onKey(list, event) {
-    var node = event.target,
-      k = event.key;
-    if (k === 'Escape' && list.pop) {
+  /** onKey, step 1 of 3 (the data-rz part, lines 3344-3357 of the one function): true when it handled the call and nothing else should run */
+  function onKeyRz(list, event, ctx) {
+ctx.node = event.target;
+ctx.k = event.key;
+    if (ctx.k === 'Escape' && list.pop) {
       event.preventDefault();
       closePop(list, true);
-      return;
+      return true;
     }
-    if (node.hasAttribute && node.hasAttribute('data-rz') && (k === 'ArrowLeft' || k === 'ArrowRight')) {
+    if (ctx.node.hasAttribute && ctx.node.hasAttribute('data-rz') && (ctx.k === 'ArrowLeft' || ctx.k === 'ArrowRight')) {
       event.preventDefault();
       var rtl = root.getComputedStyle(list.el).direction === 'rtl',
-        dlt = (k === 'ArrowRight' ? 8 : -8) * (rtl ? -1 : 1);
-      resize(list, node.getAttribute('data-rz'), dlt, true);
-      return;
+        dlt = (ctx.k === 'ArrowRight' ? 8 : -8) * (rtl ? -1 : 1);
+      resize(list, ctx.node.getAttribute('data-rz'), dlt, true);
+      return true;
     }
-    if (node.hasAttribute && node.hasAttribute('data-g') && (k === 'Enter' || k === ' ')) {
+    return false;
+  }
+  /** onKey, step 2 of 3 (the data-g part, lines 3358-3363 of the one function): true when it handled the call and nothing else should run */
+  function onKeyG(list, event, ctx) {
+    if (ctx.node.hasAttribute && ctx.node.hasAttribute('data-g') && (ctx.k === 'Enter' || ctx.k === ' ')) {
       event.preventDefault();
-      node.click();
-      return;
+      ctx.node.click();
+      return true;
     }
-    var rowEl = node.closest && node.closest('[data-row]');
-    if (rowEl && node === rowEl) {
-      if (k === 'Enter' || k === ' ') {
+    ctx.rowEl = ctx.node.closest && ctx.node.closest('[data-row]');
+    return false;
+  }
+  /** onKey, step 3 of 3 (the data-row part, lines 3364-3395 of the one function): true when it handled the call and nothing else should run */
+  function onKeyRow(list, event, ctx) {
+    if (ctx.rowEl && ctx.node === ctx.rowEl) {
+      if (ctx.k === 'Enter' || ctx.k === ' ') {
         event.preventDefault();
-        openRow(list, rowEl.getAttribute('data-row'), event);
-        return;
+        openRow(list, ctx.rowEl.getAttribute('data-row'), event);
+        return true;
       }
-      if (k === 'ArrowRight' && hasNext(list) && !isOpen(list, rowEl.getAttribute('data-row'))) {
+      if (ctx.k === 'ArrowRight' && hasNext(list) && !isOpen(list, ctx.rowEl.getAttribute('data-row'))) {
         event.preventDefault();
-        toggleRow(list, rowEl.getAttribute('data-row'), true);
-        return;
+        toggleRow(list, ctx.rowEl.getAttribute('data-row'), true);
+        return true;
       }
-      if (k === 'ArrowLeft' && hasNext(list) && isOpen(list, rowEl.getAttribute('data-row'))) {
+      if (ctx.k === 'ArrowLeft' && hasNext(list) && isOpen(list, ctx.rowEl.getAttribute('data-row'))) {
         event.preventDefault();
-        toggleRow(list, rowEl.getAttribute('data-row'), true);
-        return;
+        toggleRow(list, ctx.rowEl.getAttribute('data-row'), true);
+        return true;
       }
-      if (k === 'ArrowDown' || k === 'ArrowUp') {
+      if (ctx.k === 'ArrowDown' || ctx.k === 'ArrowUp') {
         event.preventDefault();
         var all = [].slice.call(list.el.querySelectorAll('[data-row]')),
-          i = all.indexOf(rowEl),
-          nx = all[i + (k === 'ArrowDown' ? 1 : -1)];
+          i = all.indexOf(ctx.rowEl),
+          nx = all[i + (ctx.k === 'ArrowDown' ? 1 : -1)];
         if (nx) {
           nx.focus();
-          if (list.o.hl === false) return;
+          if (list.o.hl === false) return true;
           list.r.hl = nx.getAttribute('data-row');
           [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (element) {
             element.classList.remove('sel');
@@ -3269,6 +3506,14 @@
         }
       }
     }
+    return false;
+  }
+  function onKey(list, event) {
+  var ctx = {},
+    steps = [onKeyRz, onKeyG, onKeyRow];
+  for (var at = 0; at < steps.length; at++) {
+    if (steps[at](list, event, ctx)) return;
+  }
   }
 
   /* adjustable columns: pointer (mouse and touch), ← → in 8 px, double-click resets; never narrower than the label; remembered */
