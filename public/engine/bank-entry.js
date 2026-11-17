@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-entry · sha256 2be543dacee8719f2d706e9e3581b819a9566c8448caa8088a6e8b74367d880e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0 · bank-entry · sha256 2be543dacee8719f2d706e9e3581b819a9566c8448caa8088a6e8b74367d880e — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-entry.js: WHAT A BANK-LINE PROPOSAL'S ENTRY CARRIES: the shape of the entry posting.post composed, and the tax inside a tax-inclusive expense.
  * OWNS whatIsThis (the CLOSED list a person answers for a line with no payee: each answer is an EXISTING posting event) · withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here) · notAParty (a narration that is an own-account transfer, a tax-office payment or a card settlement: no party, a whatIsThis answer instead).
