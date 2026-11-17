@@ -26,6 +26,8 @@ const PARTS = [
 ];
 /** changed on the branch before the split (not by it): the one place a part differs from main */
 const CHANGED_BEFORE_SPLIT = ['bkLtPaneHTML'];
+/* empty catches each part carried when its split was proven (PR #756, CI green before the 18 Nov landing): the one in cap-period-accruals.js is a commented catch moved unchanged from cap-period.js */
+const EMPTY_CATCH_AT_SPLIT = { 'cap-period-accruals.js': 1 };
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').split('\r\n').join('\n');
 const mainText = (rel) => cp.execSync('git show origin/main:' + rel, { cwd: ROOT, maxBuffer: 1e8 }).toString().split('\r\n').join('\n');
 let failures = 0;
@@ -67,7 +69,9 @@ for (const part of PARTS) {
   const spoken = catches.filter((body) => body.trim());
   check(spoken.every((body) => /bkErr|bkWhy|peBad|toast|bkQuiet|cbQuiet|textContent|innerHTML|throw|return/.test(body)), 'every catch says what the person sees or logs it (' + spoken.length + ' catches)');
   const mainCode = names.map((name) => mainFns[name] || '').join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
-  check(catches.length - spoken.length <= (mainCode.match(/catch\s*\(?[\w\s]*\)?\s*\{\s*\}/g) || []).length, 'no empty catch beyond the ones main already had (a moved catch stays; none is added)');
+  /* once the split has landed, main's parent no longer holds the moved functions and main's count reads 0; the proof was this check run before the merge (as for 'moved, not rewritten' above), so after landing the count is the one frozen at the split: a NEW empty catch still fails */
+  const mainEmpty = landed ? (EMPTY_CATCH_AT_SPLIT[path.basename(part.file)] || 0) : (mainCode.match(/catch\s*\(?[\w\s]*\)?\s*\{\s*\}/g) || []).length;
+  check(catches.length - spoken.length <= mainEmpty, 'no empty catch beyond the ones main already had (a moved catch stays; none is added)' + (landed ? ' (counted at the split)' : ''));
   /* the string layer: words go through tx / txf / txn (the locale layer), none is typed raw into a node */
   check(!/(?:textContent|innerText)\s*=\s*'[A-Z][a-z]+ [a-z]+/.test(code), 'no raw English assigned to a node outside the string layer (tx · txf · txn)');
   check(/\btx[fn]?\(/.test(code) || names.length < 1, 'its words go through tx · txf · txn');
