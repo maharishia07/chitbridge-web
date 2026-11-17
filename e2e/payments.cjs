@@ -169,6 +169,7 @@ async function route(S, r) {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch(), threw = [], offHost = [];
+  let CUR = null, OPENED = null;   /* the stand-in of the popup now open: type() waits on ITS preview */
   async function open(url, S) {
     CUR = S;   /* type() waits on the stand-in of the page now open */
     const ctx = await b.newContext({ viewport: { width: 1366, height: 800 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
@@ -224,8 +225,7 @@ async function route(S, r) {
   /* ── the one Pay popup, opened from the CRM record of Agro Mills (P-0001) — the third door ── */
   const text = (p, id) => p.evaluate((i) => { const e = document.querySelector('[data-testid="' + i + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, id);
   const posts = (S) => S.pay.posts.length;
-  let CUR = null, OPENED = null;   /* the stand-in of the popup now open: type() waits on ITS preview */
-async function openPay(url, S, o) {
+  async function openPay(url, S, o) {
     CUR = S;
     const { ctx, p } = await open(url || '/crm.html', S);
     await p.waitForSelector('[data-testid="crm-row-P-0001"]', { timeout: 15000 });

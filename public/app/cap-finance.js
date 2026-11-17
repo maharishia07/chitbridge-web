@@ -235,6 +235,7 @@ function finCols() {
       key: 'due',
       label: tx('To collect'),
       prio: 2,
+      keep: true,
       sort: 'due',
       num: true,
       w: 140,

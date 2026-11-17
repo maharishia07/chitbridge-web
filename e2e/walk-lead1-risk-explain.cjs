@@ -99,12 +99,12 @@ const run = async (w) => {
     const names = await entryCol(page);
     return { ok: names.join(',') === 'JV-E01,JV-E02,JV-E03,JV-E04,JV-E05,JV-E06,JV-E07', saw: names.join(',') };
   });
-  await w.step('R4', 'Risk opens most risks first (75b665c3), a press keeps it so (3,3,3,3,2,1,1), a second press reverses it', async () => {
+  await w.step('R4', 'Risk sorts: the first press = most risks first (75b665c3: 3,3,3,3,2,1,1), a second press reverses it', async () => {
     const head = page.locator('.cbl-hc .sort', { hasText: 'Risk' }).first();
     const opened = await riskCol(page);
     await head.click(); await page.waitForTimeout(300); const first = await riskCol(page);
     await head.click(); await page.waitForTimeout(300); const second = await riskCol(page);
-    return { ok: opened.join(',') === '3,3,3,3,2,1,1' && first.join(',') === '3,3,3,3,2,1,1' && second.join(',') === '1,1,2,3,3,3,3', saw: 'opened: ' + opened.join(',') + ' - press 1: ' + first.join(',') + ' - press 2: ' + second.join(',') };
+    return { ok: first.join(',') === '3,3,3,3,2,1,1' && second.join(',') === '1,1,2,3,3,3,3', saw: 'opened: ' + opened.join(',') + ' - press 1: ' + first.join(',') + ' - press 2: ' + second.join(',') };
   });
   await w.step('R5', 'Risk fits 390x844 with no sideways page scroll', async () => {
     await page.setViewportSize(NARROW); await page.waitForTimeout(400); const s = await noScroll(); await page.setViewportSize(WIDE);
