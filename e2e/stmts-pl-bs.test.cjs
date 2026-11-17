@@ -59,7 +59,7 @@ const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) <
   ok(at(h, 'Other expenses', '6010') && at(h, '6010', '6190') && at(h, '6190', 'Total Other expenses'), 'a head lists its ledgers, then its subtotal');
   ok(h.includes('Total Finance costs') && h.includes('Total Employee benefits expense') && h.includes('Total Revenue'), 'EVERY head has a subtotal, a one-ledger head too (W15-118)');
   ok(h.includes('M7217582') && h.includes('M5000000'), 'the head subtotal and its last-year figure are the servers (72,175.82 and 50,000.00), not a page sum');
-  ok((h.match(/<th[ >]/g) || []).length === 5 && (h.match(/<thead>/g) || []).length === 1, 'the Ledger / This period / Last year / Change / % of income heading shows ONCE');
+  ok((h.match(/<th[ >]/g) || []).length === 6 && (h.match(/<thead>/g) || []).length === 1, 'the Ledger / This period / Last year / Change / % / % of income heading shows ONCE (change amount + change %, 68fa5c8e ASA 520)');
   ok(h.includes('+25.0%') && h.includes('+44.4%') && h.includes('>—<') && !h.includes('>NaN'), 'the change is carried (+25.0%), and a ledger new since last year says a dash, not a made-up percent');
   ok(h.includes('data-testid="pl-total-income"') && h.includes('M19500000') && h.includes('data-testid="pl-total-expense"') && h.includes('M11571502'), 'Total income 195,000.00 and Total expenses 115,715.02 are the carried ones');
   ok(h.includes('data-testid="pl-open-6010"') && h.includes('aria-expanded="false"') && h.includes("'2026-07-01','2026-11-16'"), 'a ledger line is a button that opens its entries below, for THIS period');
