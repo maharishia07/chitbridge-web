@@ -565,8 +565,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     await p.waitForFunction(() => /shared/.test((document.querySelector('[data-testid="adv-state"]') || {}).textContent || ''), null, { timeout: 8000 });
     ok(S.adv.patches.length === 1 && S.adv.patches[0].body.advice_shared_at === true && S.adv.sends.length === 0, 'E7 Copy → ONE PATCH { advice_shared_at: true }, no chit (' + JSON.stringify(S.adv.patches) + ')');
     ok(/^↗ advice shared · \S/.test(await text(p, 'adv-state')) && await text(p, 'adv-out') === 'Copied — paste it to Agro Mills', 'E7 the row reads "↗ advice shared · <when>"; the outcome says what to do next (' + (await text(p, 'adv-state')) + ' | ' + (await text(p, 'adv-out')) + ')');
-    await p.click('[data-testid="pay_done"]');
-    await ctx.close();
+    await p.click('[data-testid="pay_done"]'); await ctx.close();
   }
   ok(threw.length === 0, 'no page error' + (threw.length ? ' · ' + threw[0] : ''));
   ok(offHost.length === 0, 'nothing tried to leave for another host' + (offHost.length ? ' · ' + offHost[0] : ''));
