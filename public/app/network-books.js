@@ -80,29 +80,40 @@
   /** record the client now open (or the list, id null) in history: push a new entry (replace: the one the address already names, on a deep link or a restore) */
   function record(replace, view, period) {
     if (!root.history || !root.history.pushState) return;
-    var url = page.opened ? addressOfClient(page.opened.id, view != null ? view : page.view, period !== undefined ? period : page.period) : '/network.html';
+    var url = historyUrl(view, period);
     if (root.location.pathname + root.location.search === url) return;
     try {
       root.history[replace ? 'replaceState' : 'pushState']({ cbClient: page.opened ? page.opened.id : null }, '', url);
       if (!replace) page.pushed = (page.pushed || 0) + 1;
     } catch (failure) { if (root.cbQuiet) root.cbQuiet('network:history', failure); }
   }
+  /** the address of the client now open on the screen asked (the page's own when none is named), or the list's */
+  function historyUrl(view, period) {
+    if (!page.opened) return '/network.html';
+    return addressOfClient(page.opened.id, view != null ? view : page.view, period !== undefined ? period : page.period);
+  }
+  /** the list again (Back past the first client): the open client is dropped */
+  function closeOpened() {
+    if (!page.opened) return;
+    page.opened = null;
+    page.view = '';
+    page.period = null;
+    paint();
+  }
+  /** the client asked for is the one already open on screen: only its screen changes */
+  function isOpenClient(id) {
+    return !!(page.opened && page.opened.id === id && page.handle);
+  }
   /** Back or Forward: the address names the client and the screen; restore them (the seat chosen for that client is remembered), re-reading nothing the page already holds */
   function onPop() {
-    var query = new root.URLSearchParams(root.location.search), id = query.get('open'), view = query.get('view') || '';
+    var query = new root.URLSearchParams(root.location.search),
+      id = query.get('open'),
+      view = query.get('view') || '';
     page.period = root.CBPeriodPick.fromAddress(root.location.search);
     if (!page.el || !page.held) return;
-    if (!id || !page.held[id]) {
-      if (page.opened) { page.opened = null; page.view = ''; page.period = null; paint(); }
-      return;
-    }
-    if (page.opened && page.opened.id === id && page.handle) {
-      page.view = view;
-      if (view) page.handle.setView(view, page.period);
-      else page.handle.setView(page.homeView || '', page.period);
-      return;
-    }
+    if (!id || !page.held[id]) return closeOpened();
     page.view = view;
+    if (isOpenClient(id)) return page.handle.setView(view || page.homeView || '', page.period);
     openSeat(id, page.held[id].grantor_name || words('this store'), { view: view, period: page.period });
   }
   function paintOpened(host) {

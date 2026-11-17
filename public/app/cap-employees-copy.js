@@ -31,6 +31,7 @@
   function wireCopy() {
     var copyButton = $('emp_copy');
     if (!copyButton) return;
+    /* a press: the whole name to the clipboard, said on the button itself */
     copyButton.onclick = function () {
       var text = copyButton.getAttribute('data-copy') || '',
         showResult = function (ok) {

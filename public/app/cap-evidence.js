@@ -159,15 +159,20 @@
     );
   }
 
+  /** the sheet's file list (or the no-files line when the entry has a source but no file; nothing when it has no source) */
+  function filesHTML(evidence) {
+    var files = (evidence.files || []).length
+    ? '<ul class="ev-list" data-testid="ev-files">' + evidence.files.map(function (f, n) {
+        return '<li><button type="button" class="ev-file" data-cbsid="CMP063-B02" data-ev-file="' + n + '" data-testid="ev-file-' + n + '"><b>' + esc(f.name) + '</b><span>' + esc(sizeWords(f.size)) + ' · ' + esc(evidenceText(EVIDENCE_WORDS.open)) + '</span></button></li>';
+      }).join('') + '</ul>'
+    : evidence.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + esc(evidenceText(EVIDENCE_WORDS.noFiles)) + '</div>' : '';
+    return files;
+  }
   /** the sheet's body: the flag's reason, where the entry's source is, and its files */
   function sheetHTML(evidence, no) {
     var flag = evidence.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(evidence.flag_why || evidenceText(EVIDENCE_WORDS.flagWhy).replace('{tax}', (typeof packWord === 'function' && packWord('taxName')) || 'Tax')) + (evidence.cite ? '<small>' + esc(evidenceText(EVIDENCE_WORDS.rule)) + ': ' + esc(evidence.cite) + '</small>' : '') + '</div>' : '';
     var srcLine = evidence.doc ? '<div data-testid="ev-source"><b>' + esc(evidenceText(EVIDENCE_WORDS.source)) + '</b>: ' + esc(evidence.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + esc(evidenceText(EVIDENCE_WORDS.noSource)) + '</div>';
-    var files = (evidence.files || []).length
-      ? '<ul class="ev-list" data-testid="ev-files">' + evidence.files.map(function (f, n) {
-          return '<li><button type="button" class="ev-file" data-cbsid="CMP063-B02" data-ev-file="' + n + '" data-testid="ev-file-' + n + '"><b>' + esc(f.name) + '</b><span>' + esc(sizeWords(f.size)) + ' · ' + esc(evidenceText(EVIDENCE_WORDS.open)) + '</span></button></li>';
-        }).join('') + '</ul>'
-      : evidence.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + esc(evidenceText(EVIDENCE_WORDS.noFiles)) + '</div>' : '';
+    var files = filesHTML(evidence);
     return (
       '<div class="ev-in"><div class="ev-hd"><h2 data-testid="ev-title">' + esc(evidenceText(EVIDENCE_WORDS.head).replace('{no}', no)) + '</h2>' +
       '<button type="button" class="ev-x" data-cbsid="CMP063-B01" data-ev-close="1" aria-label="' + esc(evidenceText(EVIDENCE_WORDS.close)) + '">✕</button></div>' +
