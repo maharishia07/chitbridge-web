@@ -65,7 +65,7 @@ const SHARED = (function () {
 })();
 
 /* QA-71 · measured 19 Oct 2026 on main. May only go down. */
-const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 81);
+const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 77);
 let bad = [];
 /**
  * A SPLIT MODULE IS ONE UNIT (shrink W2, 2026-11-17). A size split moved declarations into sibling part files
