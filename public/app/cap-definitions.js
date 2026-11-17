@@ -2517,16 +2517,6 @@ function cbDefHTML() {
   );
 }
 
-/**
- * definitionsScreen — the entry point the router calls. RETURNS HTML; it does not paint. Every other
- * capability in this app works that way (traceabilityScreen, readinessScreen, disputesScreen) and a screen that
- * painted itself would be the one that behaves differently for no reason.
- */
-function definitionsScreen() {
-  cbDefCss();
-  return cbDefHTML();
-}
-
 function cbDefCss() {
   if (document.getElementById('cbdef_css')) return;
   var node = document.createElement('style');
