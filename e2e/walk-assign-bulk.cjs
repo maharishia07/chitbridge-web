@@ -7,6 +7,11 @@
  *   1 150 clients, Held by "Unassigned" on every row · 2 open jobs for 22 · 3 assign 10 to Anna (the picker lists only job_assignable people) · 4 assign 12 to Ben · 5 hand one over to Ben with a note
  *   6 one back to the pool (target_actor_id null) · 7 a partial: 1 assigned, 1 skipped with the SERVER's sentence · 8 a refused call shows the server's sentence, nothing else · 9 an assistant: own clients, no bulk bar
  *   every size: no sideways scroll; contrast of the new parts at AA (4.5:1)
+ * CARD 01-rail-core-the-chit/assign
+ * MIN walk
+ * MIN cream-and-dark-1366-390
+ * MIN aa-contrast
+ * MIN could-not-read-words (a refused call shows the server's sentence)
  * env: OUT (shots folder, default C:/dev/shots/assign1-web) · run: NODE_PATH=C:/dev/chitbridge-web/e2e/node_modules node e2e/walk-assign-bulk.cjs
  */
 const { chromium } = require('playwright');

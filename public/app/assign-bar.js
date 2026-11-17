@@ -12,7 +12,7 @@
  */
 (function (root) {
   'use strict';
-  var kit = (root.CBAssign = root.CBAssign || {});
+  var assignApi = (root.CBAssign = root.CBAssign || {});
   var ASSIGN_PATH = '/api/chits/assign-bulk', OPEN_PATH = '/api/chits/jobs/open', ACTORS_PATH = '/api/actors';
   function tr(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   function base() {
@@ -33,24 +33,24 @@
     } catch (failure) { if (root.cbQuiet) root.cbQuiet('assign:hat', failure); return ''; }
   }
   /** SHOW only: the owner's own login, or a person whose hat is manager. `said` (a server verdict, when the answer carries one) wins. Never a permission: the api refuses a call that is not allowed. */
-  kit.showsBar = function (said) {
+  assignApi.showsBar = function (said) {
     if (typeof said === 'boolean') return said;
     var s = session();
     return s.role === 'entity' || (s.role === 'actor' && hatOfToken(s.token).toLowerCase() === 'manager');
   };
   /** the holder column: the names the server sent, or "Unassigned" (an empty list); a row with no `holders` key at all (the firm's switch is off) shows nothing */
-  kit.heldBy = function (row) {
+  assignApi.heldBy = function (row) {
     if (!row || !Array.isArray(row.holders)) return '';
     return row.holders.length ? root.esc(row.holders.map(function (h) { return h.name || ''; }).join(', ')) : '<span class="as-none">' + root.esc(tr('Unassigned')) + '</span>';
   };
-  kit.heldByText = function (row) {
+  assignApi.heldByText = function (row) {
     return !row || !Array.isArray(row.holders) ? '' : row.holders.length ? row.holders.map(function (h) { return h.name || ''; }).join(', ') : tr('Unassigned');
   };
-  kit.hasHolders = function (rows) { return (rows || []).some(function (r) { return Array.isArray(r.holders); }); };
+  assignApi.hasHolders = function (rows) { return (rows || []).some(function (r) { return Array.isArray(r.holders); }); };
 
   function call(method, path, body) {
     return root.fetch(base() + path, { method: method, headers: { Authorization: 'Bearer ' + session().token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j || {} }; });
+      return r.json().catch(function (failure) { if (root.cbQuiet) root.cbQuiet('assign:json', failure); return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j || {} }; });
     });
   }
   /** the server's own sentence for a refusal: the Problem's detail, or the older may/why/message keys (never the page's words) */
@@ -66,11 +66,11 @@
     return last ? '<b>' + root.esc(last.headline) + '</b>' + last.lines.map(function (l) { return '<div class="as-line">' + root.esc(l) + '</div>'; }).join('') : '';
   }
   /** the always-present slot above the list: role=status so the outcome is read out; empty until something was done */
-  kit.slotHTML = function () {
-    css();
+  assignApi.slotHTML = function () {
+    injectStyles();
     return '<div id="as_result" class="as-result' + (last ? ' as-' + last.tone : '') + '" role="status" aria-live="polite" data-testid="assign-result" data-cbsid="HOM001-D05"' + (last ? '' : ' hidden') + '>' + slotInner() + '</div>';
   };
-  function say(opts, tone, headline, lines) {
+  function showOutcome(opts, tone, headline, lines) {
     last = { tone: tone, headline: headline, lines: lines || [] };
     var host = root.document.getElementById('as_result');
     if (host) { host.className = 'as-result as-' + tone; host.hidden = false; host.innerHTML = slotInner(); }
@@ -84,7 +84,7 @@
 
   /* ── the person picker ────────────────────────────────────────────────────────────────────── */
   var CSS_ID = 'as_css';
-  function css() {
+  function injectStyles() {
     if (root.document.getElementById(CSS_ID)) return;
     var node = root.document.createElement('style');
     node.id = CSS_ID;
@@ -108,33 +108,33 @@
   }
   /** pick → opens the dialog; resolves { id, note } or null (cancelled). opts: { title, confirmLabel, withNote, exclude } */
   function pick(opts) {
-    css();
-    return people().then(function (got) {
+    injectStyles();
+    return people().then(function (roster) {
       return new root.Promise(function (done) {
-        var doc = root.document, opener = doc.activeElement, dlg = doc.createElement('dialog'), answered = false;
-        dlg.className = 'as-sheet';
-        dlg.setAttribute('data-testid', 'assign-picker');
-        dlg.setAttribute('data-cbmount', 'HOM001-U02');
-        dlg.setAttribute('aria-label', tr(opts.title));
-        var options = got.list.map(function (p) { return '<option value="' + root.esc(p.id) + '">' + root.esc(p.name) + '</option>'; }).join('');
-        dlg.innerHTML =
+        var doc = root.document, opener = doc.activeElement, dialog = doc.createElement('dialog'), answered = false;
+        dialog.className = 'as-sheet';
+        dialog.setAttribute('data-testid', 'assign-picker');
+        dialog.setAttribute('data-cbmount', 'HOM001-U02');
+        dialog.setAttribute('aria-label', tr(opts.title));
+        var options = roster.list.map(function (p) { return '<option value="' + root.esc(p.id) + '">' + root.esc(p.name) + '</option>'; }).join('');
+        dialog.innerHTML =
           '<div class="as-hd">' + root.esc(tr(opts.title)) + '</div><div class="as-body">' +
-          (got.error ? '<div class="as-err" data-testid="assign-picker-err">' + root.esc(got.error) + '</div>' : '') +
+          (roster.error ? '<div class="as-err" data-testid="assign-picker-err">' + root.esc(roster.error) + '</div>' : '') +
           '<label>' + root.esc(tr('Person')) + '<select data-cbsid="CMP056-S01" data-cbname="select" data-cbmount="HOM001-U02" data-testid="assign-person" aria-label="' + root.esc(tr('Person')) + '">' + options + '</select></label>' +
           (opts.withNote ? '<label>' + root.esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="HOM001-U02" data-testid="assign-note" maxlength="200" type="text"></label>' : '') +
           '</div><div class="as-ft"><button type="button" data-cbsid="CMP003-B01" data-cbname="cancel" data-cbmount="HOM001-U02" data-testid="assign-cancel">' + root.esc(tr('Cancel')) + '</button>' +
-          '<button type="button" class="pri" data-cbsid="CMP057-B01" data-cbname="command" data-cbmount="HOM001-U02" data-testid="assign-go"' + (got.list.length ? '' : ' disabled') + '>' + root.esc(tr(opts.confirmLabel)) + '</button></div>';
-        function finish(value) { if (answered) return; answered = true; done(value); if (dlg.open) dlg.close(); }
-        dlg.addEventListener('click', function (ev) {
+          '<button type="button" class="pri" data-cbsid="CMP057-B01" data-cbname="command" data-cbmount="HOM001-U02" data-testid="assign-go"' + (roster.list.length ? '' : ' disabled') + '>' + root.esc(tr(opts.confirmLabel)) + '</button></div>';
+        function finish(value) { if (answered) return; answered = true; done(value); if (dialog.open) dialog.close(); }
+        dialog.addEventListener('click', function (ev) {
           var b = ev.target.closest && ev.target.closest('button');
           if (!b) return;
           if (b.getAttribute('data-testid') === 'assign-cancel') return finish(null);
-          if (b.getAttribute('data-testid') === 'assign-go') { var note = dlg.querySelector('[data-testid="assign-note"]'); finish({ id: dlg.querySelector('select').value, note: note ? note.value.trim() : '' }); }
+          if (b.getAttribute('data-testid') === 'assign-go') { var note = dialog.querySelector('[data-testid="assign-note"]'); finish({ id: dialog.querySelector('select').value, note: note ? note.value.trim() : '' }); }
         });
-        dlg.addEventListener('close', function () { if (opener && opener.focus) opener.focus(); dlg.remove(); finish(null); });
-        doc.body.appendChild(dlg);
-        dlg.showModal();
-        var first = dlg.querySelector('select');
+        dialog.addEventListener('close', function () { if (opener && opener.focus) opener.focus(); dialog.remove(); finish(null); });
+        doc.body.appendChild(dialog);
+        dialog.showModal();
+        var first = dialog.querySelector('select');
         if (first && first.focus) first.focus();
       });
     });
@@ -149,10 +149,10 @@
   /** one call per role (the api takes one role per call); the counts and skip sentences are added; the first refusal stops the run and its sentence is shown */
   function runCalls(opts, rows, make, wordsFor) {
     var groups = byRole(rows, opts.roleOf), sum = { done: 0, skipped: [], refused: null };
-    return groups.reduce(function (chain, g) {
+    return groups.reduce(function (chain, group) {
       return chain.then(function () {
         if (sum.refused) return null;
-        var spec = make(g);
+        var spec = make(group);
         return call('POST', spec.path, spec.body).then(function (r) {
           if (!r.ok) { sum.refused = sentenceOf(r.body) || tr('Not done.'); return null; }
           sum.done += Number(spec.count(r.body)) || 0;
@@ -160,14 +160,14 @@
         });
       });
     }, root.Promise.resolve()).then(function () {
-      if (sum.refused) say(opts, 'bad', sum.refused, []);
-      else say(opts, sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped));
+      if (sum.refused) showOutcome(opts, 'bad', sum.refused, []);
+      else showOutcome(opts, sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped));
       return opts.reload ? opts.reload() : null;
     });
   }
   function subjects(rows, opts) { return rows.map(function (r) { return opts.subjectOf(r); }); }
-  function assignBody(opts, g, target, note) {
-    var body = { plug: opts.plug, role: g.role, subject_ids: subjects(g.rows, opts), target_actor_id: target };
+  function assignBody(opts, group, target, note) {
+    var body = { plug: opts.plug, role: group.role, subject_ids: subjects(group.rows, opts), target_actor_id: target };
     if (note) body.note = note;
     return { path: ASSIGN_PATH, body: body, count: function (a) { return a.assigned; } };
   }
@@ -176,29 +176,29 @@
    * CBAssign.bulk(opts) → the list's `bulk` array (the CMP037-B04 buttons), or [] when the bar is not shown to this person.
    * opts: { plug, subjectOf(row), roleOf(row), reload(), said? (a server verdict), heldOf? (row → bool: has a holder) }
    */
-  kit.bulk = function (opts) {
-    if (!kit.showsBar(opts.said)) return [];
+  assignApi.bulk = function (opts) {
+    if (!assignApi.showsBar(opts.said)) return [];
     var heldOf = opts.heldOf || function (r) { return Array.isArray(r.holders) && r.holders.length > 0; };
     return [
       { id: 'assign', label: tr('Assign to…'), run: function (rows) {
         pick({ title: 'Assign to', confirmLabel: 'Assign' }).then(function (who) {
-          if (who) runCalls(opts, rows, function (g) { return assignBody(opts, g, who.id); }, function (n) { return plural(n, 'client assigned.', 'clients assigned.'); });
+          if (who) runCalls(opts, rows, function (group) { return assignBody(opts, group, who.id); }, function (n) { return plural(n, 'client assigned.', 'clients assigned.'); });
         });
       } },
       { id: 'handover', label: tr('Hand over'), run: function (rows) {
         var held = rows.filter(heldOf);
-        if (!held.length) return say(opts, 'bad', tr('No ticked client has a holder.'), []);
+        if (!held.length) return showOutcome(opts, 'bad', tr('No ticked client has a holder.'), []);
         pick({ title: 'Hand over to', confirmLabel: 'Hand over', withNote: true }).then(function (who) {
-          if (who) runCalls(opts, held, function (g) { return assignBody(opts, g, who.id, who.note); }, function (n) { return plural(n, 'client handed over.', 'clients handed over.'); });
+          if (who) runCalls(opts, held, function (group) { return assignBody(opts, group, who.id, who.note); }, function (n) { return plural(n, 'client handed over.', 'clients handed over.'); });
         });
       } },
       { id: 'pool', label: tr('Back to pool'), run: function (rows) {
-        runCalls(opts, rows.filter(heldOf), function (g) { return assignBody(opts, g, null); }, function (n) { return plural(n, 'client back in pool.', 'clients back in pool.'); });
+        runCalls(opts, rows.filter(heldOf), function (group) { return assignBody(opts, group, null); }, function (n) { return plural(n, 'client back in pool.', 'clients back in pool.'); });
       } },
       { id: 'open', label: tr('Open jobs'), run: function (rows) {
         var none = rows.filter(function (r) { return !heldOf(r); });
-        runCalls(opts, none, function (g) {
-          return { path: OPEN_PATH, body: { plug: opts.plug, role: g.role, period: 'standing', subject_ids: subjects(g.rows, opts) }, count: function (a) { return Number(a.opened || 0) + Number(a.existing || 0); } };
+        runCalls(opts, none, function (group) {
+          return { path: OPEN_PATH, body: { plug: opts.plug, role: group.role, period: 'standing', subject_ids: subjects(group.rows, opts) }, count: function (a) { return Number(a.opened || 0) + Number(a.existing || 0); } };
         }, function (n) { return plural(n, 'job open.', 'jobs open.'); });
       } }
     ];
