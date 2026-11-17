@@ -16,6 +16,9 @@
 'use strict';
 
 var PC = { gen: 0, period: 'month', sales: {}, dues: null, pl: null, cash: null, state: { sales: 'loading', dues: 'loading', pl: 'loading', cash: 'loading' }, table: {}, resizeTimer: null };
+/* the one accent: ink for this period, the same ink thinned for last year (the other pictures read --rp-actual / --rp-previous from the same tokens) */
+var PC_INK = 'var(--ink,#2a2418)',
+  PC_GREY = 'color-mix(in srgb,var(--ink,#2a2418) 55%,var(--page,#FCFAF5))';
 var PC_PERIODS = [
   ['week', 'Weeks'],
   ['month', 'Months'],
@@ -30,8 +33,8 @@ function pcDeps(currency) {
   return { tx: tx, money: bkMoney, date: CBLocale.date, cur: currency };
 }
 /** a card's body width, so the chart is drawn at the size it shows (no scaling surprise at 390) */
-function pcWidth(box) {
-  return Math.max(240, Math.min(720, (box.clientWidth || 640) - 2));
+function pcWidth(box, most) {
+  return Math.max(220, Math.min(most || 720, (box.clientWidth || 640) - 2));
 }
 
 /** the table under a chart: head + rows from the adapter, as a plain table */
@@ -52,8 +55,8 @@ function pcCard(key, title, code, extra, wide) {
   return (
     '<section class="pc-card" data-testid="pc-' + key + '" data-cbsid="' + code + '" style="' + (wide ? 'grid-column:1/-1;' : '') + 'background:var(--card,#fffdf8);border:1px solid var(--line-3,#d8ccb0);border-radius:10px;padding:10px 12px;min-width:0">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 style="margin:0;font:600 var(--fs-2,14px) var(--sans,sans-serif);color:var(--ink,#2a2418)">' + esc(tx(title)) + '</h3>' +
-    '<span style="display:inline-flex;gap:6px">' + (extra || '') +
-    '<button type="button" class="tab" data-testid="pc-' + key + '-table-btn" data-cbsid="FIN008-B04" aria-pressed="false" onclick="pcToggleTable(\'' + key + '\')">' + esc(tx('Table')) + '</button></span></div>' +
+    '<span style="display:inline-flex;gap:6px"><button type="button" class="tab" data-testid="pc-' + key + '-table-btn" data-cbsid="FIN008-B04" aria-pressed="false" onclick="pcToggleTable(\'' + key + '\')">' + esc(tx('Table')) + '</button></span></div>' +
+    (extra ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + extra + '</div>' : '') +
     '<div id="pc_' + key + '" data-testid="pc-' + key + '-box" style="margin-top:8px;min-height:60px"><p class="hint">' + esc(tx('Loading…')) + '</p></div>' +
     '<div id="pc_' + key + '_tbl" data-testid="pc-' + key + '-table" hidden style="margin-top:6px;max-height:200px;overflow:auto"></div></section>'
   );
@@ -89,7 +92,7 @@ function pcSales(answer) {
     points = MC.salesPoints(slots, PC.period, deps),
     has = points.some(function (point) { return point.value !== null; });
   var svg = has
-    ? CBDraw.bars(points, { width: pcWidth(box), height: 160, id: 'pcs', tid: 'pcs', aria: tx('Sales by period'), codes: { chart: 'FIN008-P06' } }) + pcSalesLegend()
+    ? CBDraw.bars(points, { width: pcWidth(box, 1100), height: 150, actual: PC_INK, previous: PC_GREY, id: 'pcs', tid: 'pcs', aria: tx('Sales by period'), codes: { chart: 'FIN008-P06' } }) + pcSalesLegend()
     : '';
   pcFill('sales', svg, MC.salesTable(slots, PC.period, deps), tx('No sales summaries on CB yet.'));
 }
@@ -116,7 +119,7 @@ function pcPl(answer) {
   var deps = pcDeps(answer && answer.currency),
     out = MC.plRows(answer, deps);
   var svg = out.rows.length
-    ? CBDraw.compare(out.rows, { width: pcWidth(box), mode: 'money', id: 'pcpl', tid: 'pcpl', title: tx('Income and expense, this year against last'), desc: out.rows.map(function (r) { return r.title; }).join('. '), codes: { chart: 'FIN008-P09' } }) +
+    ? CBDraw.compare(out.rows, { width: pcWidth(box), row: 22, mode: 'money', id: 'pcpl', tid: 'pcpl', title: tx('Income and expense, this year against last'), desc: out.rows.map(function (r) { return r.title; }).join('. '), codes: { chart: 'FIN008-P09' } }) +
       '<div class="sub" style="margin-top:4px">' + esc(tx('Solid = this year · outline = last year')) + '</div>'
     : '';
   pcFill('pl', svg, out.table, tx('No income or expense yet this year.'));
@@ -193,7 +196,7 @@ function pcMount() {
   var tabs = '<span id="pc_sales_tabs" role="group" aria-label="' + esc(tx('Which periods')) + '" style="display:inline-flex;gap:6px">' + PC_PERIODS.map(pcTab).join('') + '</span>';
   screen.innerHTML =
     '<div id="pc_top" data-testid="pc-top">' + fmViews('pictures') + '</div>' +
-    '<div data-testid="pc-grid" style="flex:1 1 auto;min-height:0;overflow:auto;padding:10px 20px 20px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));align-content:start">' +
+    '<div data-testid="pc-grid" style="flex:1 1 auto;min-height:0;overflow:auto;padding:10px 20px 20px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,255px),1fr));align-content:start">' +
     pcCard('sales', 'Sales against last year', 'FIN008-P01', tabs, true) +
     pcCard('owed', 'Owed to you, by age', 'FIN008-P02') +
     pcCard('owe', 'You owe, by age', 'FIN008-P03') +

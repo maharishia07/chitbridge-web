@@ -700,18 +700,18 @@
     return accessibleSvg(width, list.length * rowH, { id: options.id || 'cd-hb', tid: options.tid || 'cd-hb', title: options.title, desc: options.desc, palette: options.palette, codes: options.codes }, inner);
   }
 
-  var CL = { padTop: 18, padBottom: 20, padX: 6 };
-  /** the line's x/y per point on one scale (zero is always inside the range, so a fall below it shows) */
+  var CL = { padTop: 18, padBottom: 32, padX: 6 };
+  /** the line's x/y per point on one scale: the range of the figures (a line need not start at zero, unlike a bar), widened to include zero when a balance goes below it, so a shortfall shows against the zero line */
   function cashGeometry(points, width, height) {
     var vals = points.map(function (p) { return figure(p.value); }),
       known = vals.filter(function (v) { return v !== null; }),
-      high = Math.max.apply(null, known.concat(0)),
-      low = Math.min.apply(null, known.concat(0)),
-      span = high - low || 1,
+      high = Math.max.apply(null, known),
+      low = Math.min.apply(null, known),
+      span = high - low || Math.abs(high) || 1,
       inner = height - CL.padTop - CL.padBottom;
     var yOf = function (v) { return CL.padTop + ((high - v) / span) * inner; };
     var xOf = function (i) { return CL.padX + (points.length < 2 ? 0 : (i * (width - 2 * CL.padX)) / (points.length - 1)); };
-    return { vals: vals, xOf: xOf, yOf: yOf, zero: yOf(0), crosses: low < 0 };
+    return { vals: vals, xOf: xOf, yOf: yOf, zero: yOf(0), crosses: low < 0, showZero: low <= 0 && high >= 0 };
   }
   /** one dot, a 2px card-coloured ring so it reads over the line */
   function cashDot(x, y, hollow, tid) {
@@ -741,7 +741,7 @@
     var last = g.vals.length - 1,
       at = options.lowestAt,
       out = '';
-    if (g.vals[0] !== null) out += cashDot(g.xOf(0), g.yOf(g.vals[0]), false, tid + '-start') + (options.startWords ? cashLabel(g.xOf(0), g.yOf(g.vals[0]) - 8, options.startWords, width, tid + '-start-words') : '');
+    if (g.vals[0] !== null) out += cashDot(g.xOf(0), g.yOf(g.vals[0]), false, tid + '-start') + (options.startWords ? cashLabel(g.xOf(0), g.yOf(g.vals[0]) + 17, options.startWords, width, tid + '-start-words') : '');
     if (g.vals[last] !== null) out += cashDot(g.xOf(last), g.yOf(g.vals[last]), false, tid + '-end') + (options.endWords ? cashLabel(g.xOf(last), g.yOf(g.vals[last]) - 8, options.endWords, width, tid + '-end-words') : '');
     if (at > 0 && at < last && g.vals[at] !== null) out += cashDot(g.xOf(at), g.yOf(g.vals[at]), true, tid + '-lowest') + (options.lowestWords ? cashLabel(g.xOf(at), g.yOf(g.vals[at]) + 17, options.lowestWords, width, tid + '-lowest-words') : '');
     return out;
@@ -759,7 +759,7 @@
       g = cashGeometry(list, width, height),
       tid = escape(options.tid || 'cd-cash'),
       last = list.length - 1;
-    var axis = '<line x1="0" x2="' + width + '" y1="' + g.zero.toFixed(1) + '" y2="' + g.zero.toFixed(1) + '" style="stroke:var(--line-3,#d8ccb0);stroke-width:1' + (g.crosses ? ';stroke-dasharray:4 3' : '') + '"/>';
+    var axis = !g.showZero ? '' : '<line x1="0" x2="' + width + '" y1="' + g.zero.toFixed(1) + '" y2="' + g.zero.toFixed(1) + '" style="stroke:var(--line-3,#d8ccb0);stroke-width:1' + (g.crosses ? ';stroke-dasharray:4 3' : '') + '"/>';
     var ends =
       '<text x="0" y="' + (height - 4) + '" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' + escape(list[0].label || '') + '</text><text x="' + width + '" y="' + (height - 4) + '" text-anchor="end" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' + escape(list[last].label || '') + '</text>';
     var inner = axis + '<path d="' + cashPath(g) + '" data-testid="' + tid + '-line" style="fill:none;stroke:var(--rp-actual);stroke-width:2;stroke-linejoin:round"/>' + cashMarks(g, options, width, tid) + ends;
