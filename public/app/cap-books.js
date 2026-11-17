@@ -5231,7 +5231,7 @@ function bkPbStripHTML(pbState, answer, currency) {
             );
           })
           .join('');
-  var onAccount = Number(answer.on_account_minor) > 0 ? '<span data-b="on-account">' + esc(txf('{moneyOf} on account, counted against the oldest bills', { amt: bkMoney(answer.on_account_minor, currency) })) + '</span>' : '';
+  var onAccount = Number(answer.on_account_minor) > 0 ? '<span data-b="on-account">' + esc(txf('{amt} on account, counted against the oldest bills', { amt: bkMoney(answer.on_account_minor, currency) })) + '</span>' : '';
   var strip = '<div class="cbl-nstrip" data-b="tab-strip">' + tabs + '</div>' + (bands || onAccount ? '<div class="cbl-nstrip bk-bands" data-b="band-strip">' + bands + onAccount + '</div>' : '');
   return strip;
 }
