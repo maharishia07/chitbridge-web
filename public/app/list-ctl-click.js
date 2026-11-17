@@ -9,7 +9,7 @@
  */
 (function (root) {
   'use strict';
-  root.CBListParts = root.CBListParts || {};
+  /* root.CBListParts is created by list-ctl-css.js, which loads first */
   var closePop, columns, curSort, download, head, matched, minW, needsNext, needsToggle, openRow, paintAll, paintList, paintTitle, paintTools, query, remote, resetLimit, rowById, rowIdOf, safe, saveChoices, selectedRows, shownKeys, sortId, togglePop, toggleRow, viewKeys, viewOn, widthOf; /* what list-ctl.js hands over through bind: its functions and constants this file works with */
   /** bind: list-ctl.js hands over, once, the names this file works with (the list unit's own functions and constants) */
   function bind(needs) {

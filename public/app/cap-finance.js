@@ -233,8 +233,7 @@ function finCols() {
     {
       key: 'due',
       label: tx('To collect'),
-      prio: 2,
-      keep: true,
+      prio: 2, keep: true,
       sort: 'due',
       num: true,
       w: 140,
@@ -246,8 +245,7 @@ function finCols() {
     {
       key: 'age',
       label: tx('Age'),
-      prio: 3,
-      keep: true,
+      prio: 3, keep: true,
       sort: 'oldest',
       w: 150,
       html: true,
@@ -262,8 +260,7 @@ function finCols() {
     {
       key: 'limit',
       label: tx('Limit'),
-      prio: 4,
-      keep: true /* 17 Nov: a money column is never left out for width (the list squeezes the others); the Limit and the Interest are why the page exists */,
+      prio: 4, keep: true /* 17 Nov: a money column is never left out for width (the list squeezes the others); the Limit and the Interest are why the page exists */,
       sort: 'limit',
       num: true,
       w: 140,
@@ -282,8 +279,7 @@ function finCols() {
     {
       key: 'interest',
       label: tx('Interest due'),
-      prio: 5,
-      keep: true,
+      prio: 5, keep: true,
       sort: 'interest',
       num: true,
       w: 140,

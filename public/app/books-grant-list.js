@@ -10,7 +10,7 @@
  */
 (function (root) {
   'use strict';
-  var grantKit = (root.CBBooksGrantKit = root.CBBooksGrantKit || {});
+  var grantKit = root.CBBooksGrantKit; /* created by books-grant-reports.js, which loads first */
   grantKit.paintRows = paintRows;
   grantKit.duesVoice = duesVoice;
   function paintRows(host, report) {
