@@ -143,7 +143,9 @@ async function apiSince(token, clientId) {
   ok(!!h && h.text === wordsOf(apiA1) && h.code === 'HOM001-B05', 'A Home link "' + (h && h.text) + '" = the api\'s own count "' + wordsOf(apiA1) + '", wearing HOM001-B05');
   await sa.page.screenshot({ path: OUT + '/since-1-home-A.png' });
 
-  /* 2 the link opens the Day book on the changed entries; the toggle */
+  /* 2 the link opens the Day book on the changed entries; the toggle. DOORS: the auditor (a commenter seat) first keeps a private bookmark on E1 through the real api, so the page's POST /api/flags/query has something to draw */
+  const kept = await j('/api/flags', A.token, { body: { kind: 'bookmark', visibility: 'me', subject_kind: 'posting', subject_entity: owner.id, items: [{ id: E1.id, label: 'Entry ' + E1.no }] } });
+  ok(kept.status === 201, 'the auditor (commenter seat) keeps a private bookmark on E1: POST /api/flags 201 (was 403 at the hat gate) ' + kept.status);
   await h.loc.click();
   await sa.page.waitForSelector('[data-testid="bv-since"]', { timeout: 25000 });
   await sleep(1200);
@@ -153,6 +155,8 @@ async function apiSince(token, clientId) {
   ok(truthA.total === apiA1.n && s.line && s.line.startsWith(truthA.total + ' ' + (truthA.total === 1 ? 'entry' : 'entries') + ' posted since'), 'the since line says what the api counts: "' + s.line + '" (api total ' + truthA.total + ')');
   ok(s.list.includes(E1.no) && truthA.entries.every((e) => s.list.includes(e.entry_no)), 'the list holds E1 (' + E1.no + ') and every entry the api listed (' + truthA.entries.length + ')');
   ok(!!s.mark && s.mark.code === 'NET005-B09', 'Mark as checked is offered, wearing NET005-B09');
+  const chip = await sa.page.waitForSelector('button.fl.fl-on[data-fl="' + E1.id + '"]', { timeout: 15000 }).then(() => true, () => false);
+  ok(chip, 'the auditor own bookmark chip DRAWS on E1 in the Day book (POST /api/flags/query answered 200 for the commenter seat)');
   await sa.page.screenshot({ path: OUT + '/since-2-daybook-A-since.png' });
   await sa.page.click('[data-testid="bv-since"]'); await sleep(1000);
   s = await sinceState(sa.page);
@@ -217,10 +221,7 @@ async function apiSince(token, clientId) {
   await sb.page.screenshot({ path: OUT + '/since-8-daybook-B-both.png' });
   await sb.ctx.close();
   await browser.close(); srv.close();
-  /* KNOWN, reported to the owner of flags (not this screen): the Day book's bookmark read POST /api/flags/query is a read with ids in a body, but the hat gate (middleware/hat-gate.js) lists /marks/query as such a door and NOT /flags/query, so an auditor (commenter) seat gets 403 and the page quietly draws no bookmark chips. */
-  const known = bad.filter((x) => x === '403 /api/flags/query');
-  if (known.length) say('KNOWN (not this feature): ' + known.length + 'x 403 /api/flags/query for the commenter seat: bookmark chips silently absent; hat-gate has no exact door for it');
-  bad.splice(0, bad.length, ...bad.filter((x) => x !== '403 /api/flags/query'));
+  /* DOORS: /api/flags/query is a hat-gate door now; a 403 there is a failure like any other */
   ok(bad.length === 0, 'no page error and no api status >= 400' + (bad.length ? ' ' + bad.slice(0, 4).join(' | ') : ''));
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
