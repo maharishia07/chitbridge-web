@@ -30,7 +30,7 @@ of file each thing is; this says what already does the job.
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 73 | `read` | `books-grant-drill.js` |  |
 | 73 | `entry` | `books-store.js` |  |
-| 71 | `rows` | `cap-settings.js` |  |
+| 72 | `rows` | `cap-settings.js` |  |
 | 71 | `register` | `regulation.js` | register(pack) → the pack — |
 | 70 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 69 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
