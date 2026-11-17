@@ -593,7 +593,7 @@
       cols
         .map(function (item) {
           var free = I.auto && I.auto.stretch === item.key && typeof I.s.widths[item.key] !== 'number';
-          return free ? 'minmax(' + widthOf(I, item) + 'px,1fr)' : widthOf(I, item) + 'px';
+          return free ? 'minmax(' + Math.min(widthOf(I, item), STRETCH_FLOOR_PX) + 'px,1fr)' : widthOf(I, item) + 'px';
         })
         .join(' ')
     );
