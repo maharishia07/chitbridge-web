@@ -27,7 +27,7 @@ const CODE_ATTR = /data-cbsid="([A-Z]{3}[0-9]{3}(?:-[A-Z][0-9]{2})*)"/;
 
 /** each control of the bar and what it is: opener CMP033-B01, menu item CMP033-M01, option CMP025-B01, row action CMP038-B01 ... */
 const WANT = {
-  'rail-bell.js': { 'bell-btn': 'CMP030-B01', 'bell-row': 'CMP038-B01', 'bell-clear': 'CMP014-B01' },
+  'rail-bell-html.js': { 'bell-btn': 'CMP030-B01', 'bell-row': 'CMP038-B01', 'bell-clear': 'CMP014-B01' },
   'shell.js': {
     'shell-shop': 'CMP033-B01', 'shell-switcher': 'CMP033-B01', 'shell-switch-': 'CMP033-M01', 'shell-licence-chip': 'CMP033-B01',
     'shell-edition-chip': 'CMP033-B01', 'shell-edition-off': 'CMP014-B01', 'shell-renew': 'CMP010-B01', 'shell-finish': 'CMP010-B01'
@@ -105,7 +105,7 @@ check(doors === 2 && coded === 2, 'avatar.js both Sign in doors wear CMP052-B01 
 known('CMP052-B01');
 
 console.log('the four popovers each name themselves with their literal POP code (the app.html popup-code chip)');
-const POPUPS = [['rail-bell.js', "bellChip('POP113'", 'POP113 bell panel'], ['avatar.js', "avatarChip('POP114'", 'POP114 avatar menu'], ['shell.js', "shellChip('POP115'", 'POP115 shop sheet'], ['shell.js', "shellChip('POP116'", 'POP116 area menu']];
+const POPUPS = [['rail-bell-html.js', "bellChip('POP113'", 'POP113 bell panel'], ['avatar.js', "avatarChip('POP114'", 'POP114 avatar menu'], ['shell.js', "shellChip('POP115'", 'POP115 shop sheet'], ['shell.js', "shellChip('POP116'", 'POP116 area menu']];
 POPUPS.forEach((row) => {
   const text = read(row[0]);
   check(text.indexOf(row[1]) > 0, row[0] + ' stamps the ' + row[2] + ' (' + row[1] + ')');
@@ -121,7 +121,7 @@ check(chip.indexOf("data-testid=\"popup-code\"") > 0 && chip.indexOf(">POP114</s
 sandbox.CBScreenId = chipSandbox.CBScreenId;
 check(sandbox.CBAvatar.menuHtml({ person: { name: 'A' }, items: ['signout'] }).indexOf('>POP114</span>') > 0, 'the avatar menu, drawn, shows POP114');
 console.log('the bell and its panel');
-sourceCarriesCodes('rail-bell.js');
+sourceCarriesCodes('rail-bell-html.js');
 console.log('the bar, the area menu, the chips and the sheet');
 sourceCarriesCodes('shell.js');
 const shellText = read('shell.js');
