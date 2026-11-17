@@ -144,14 +144,14 @@
       return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: translate('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
+      { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
       num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, practiceKit.queriesCell, function (r) { return r.queries.open; }),
       num('changed', 'Changed', 130, practiceKit.changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
       num('bas', 'Due', 120, practiceKit.basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1, cl: 2 }),
       num('checked', 'Checked ' + practiceKit.yearLabel(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
       num('tocheck', 'To check (qtr)', 100, function (r) { return escapeHtml(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
       num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),

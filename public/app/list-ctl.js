@@ -2312,7 +2312,7 @@ var o = inst.o;
       (amt ? ' r mono strong amt' : '') +
       ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
       (item.mono ? ' mono' : '') +
-      (item.cardAct ? ' cbl-actline' : '')
+      (item.cardAct ? ' cbl-actline' : '') + (item.cl ? ' cl' + item.cl : '') /* cl: a phone card line, 1 = head (name, amount), 2 = under it, the rest follow as chips; nl: no label on the card */
     );
   }
   /** one body cell of a row: its classes (money and numbers right-aligned in mono, the pinned action column strong), its phone label, its test id and the expand caret on the first cell */
@@ -2321,7 +2321,7 @@ var o = inst.o;
           '<div class="cbl-cell lcell' +
           cellClasses(item, index) +
           '" data-l="' +
-          esc(index === 0 || item.cardAct ? '' : item.label || '') +
+          esc(index === 0 || item.cardAct || item.nl ? '' : item.label || '') +
           '" role="gridcell"' +
           (item.tid
             ? ' data-testid="' +
