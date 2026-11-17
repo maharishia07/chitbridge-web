@@ -85,38 +85,53 @@ function bkstBalanceHtml() {
       .filter(Boolean);
   return lines.length ? '<div class="pe-note" data-testid="bank-stmts-balance">' + lines.join('') + '</div>' : '';
 }
+/** the first load: the year the address names, else this year (bank17 D2: the page opens on the year the address names, never a step back to find files) */
+function bkstStartYear() {
+  BKST.cur = bkhFyOf(bkhThisMonth());
+  BKST.addr = bkstAddressPeriod();
+  BKST.fy = BKST.addr ? BKST.addr.fy : BKST.cur;
+  BKST.auto = !BKST.addr;
+}
+/** read the shown year; on the first load with no address, step back from this year until a year holds files */
+async function bkstReadYear() {
+  BKST.q = '';
+  BKST.cursors = [null];
+  BKST.ix = 0;
+  if (window.CBList) CBList.reset('bank-stmts-files');
+  let answer = await bkstFetch(BKST.fy);
+  while (BKST.auto && answer.total === 0 && answer.older > 0 && BKST.cur - BKST.fy < (bkhRetention() || 40)) {
+    BKST.fy -= 1;
+    answer = await bkstFetch(BKST.fy);
+  }
+  BKST.auto = false;
+  BKST.data = answer;
+  BKST.fileTotal = answer.total;
+  BKST.last = answer.files[0] ? String(answer.files[0].period_to || '').slice(0, 7) : '';
+  BKST.mode = 'server';
+}
+/** how the box stands when its read failed: 'device' (the server's record is not set up yet), 'blind' (cost-blind sign-in) or 'error' */
+function bkstFailureMode(failure) {
+  if (failure && failure.status === 503) return 'device';
+  return bksCostBlind(failure) ? 'blind' : 'error';
+}
+/** after a load: the sign-offs are read, then the All-years list or the home is painted, and a deep address opens its statement once */
+async function bkstAfterLoad() {
+  if (BKST.data && typeof bankHomeSigned === 'function') await bankHomeSigned().catch((failure) => bkQuiet('bank-stmts-signed', failure));
+  if (BKST.data && BKST.all) await bankStmtAllLoad();
+  else bankStmtPaint();
+  if (typeof bankHomeDeepOnce === 'function') bankHomeDeepOnce(); /* a reload on #bank/<account>/<month> reopens that statement once the list is in */
+}
 /** read the box for the shown year (the first time: the year holding the newest statement, found by stepping back from this year); the files start again at page 1 with no search */
 async function bankStmtLoad() {
   if (!bkstEl('bk_stmts')) return;
   try {
-    if (BKST.fy === null) {
-      BKST.cur = bkhFyOf(bkhThisMonth());
-      BKST.addr = bkstAddressPeriod();
-      BKST.fy = BKST.addr ? BKST.addr.fy : BKST.cur; /* bank17 D2: the page opens on the year the address names, never a step back to find files */
-      BKST.auto = !BKST.addr;
-    }
-    BKST.q = '';
-    BKST.cursors = [null];
-    BKST.ix = 0;
-    if (window.CBList) CBList.reset('bank-stmts-files');
-    let answer = await bkstFetch(BKST.fy);
-    while (BKST.auto && answer.total === 0 && answer.older > 0 && BKST.cur - BKST.fy < (bkhRetention() || 40)) {
-      BKST.fy -= 1;
-      answer = await bkstFetch(BKST.fy);
-    }
-    BKST.auto = false;
-    BKST.data = answer;
-    BKST.fileTotal = answer.total;
-    BKST.last = answer.files[0] ? String(answer.files[0].period_to || '').slice(0, 7) : '';
-    BKST.mode = 'server';
+    if (BKST.fy === null) bkstStartYear();
+    await bkstReadYear();
   } catch (failure) {
     BKST.data = null;
-    BKST.mode = failure && failure.status === 503 ? 'device' : bksCostBlind(failure) ? 'blind' : 'error';
+    BKST.mode = bkstFailureMode(failure);
   }
-  if (BKST.data && typeof bankHomeSigned === 'function') await bankHomeSigned().catch(() => {});
-  if (BKST.data && BKST.all) await bankStmtAllLoad();
-  else bankStmtPaint();
-  if (typeof bankHomeDeepOnce === 'function') bankHomeDeepOnce(); /* a reload on #bank/<account>/<month> reopens that statement once the list is in */
+  await bkstAfterLoad();
 }
 /** All years: the counts of each year the pack says to keep (a one-file read per year: cells only), newest first */
 async function bankStmtAllLoad() {
@@ -128,7 +143,8 @@ async function bankStmtAllLoad() {
     for (let at = 0; at < years; at++) list.push(BKST.cur - at);
     const answers = await Promise.all(list.map((fy) => (fy === BKST.fy && BKST.data ? Promise.resolve(BKST.data) : bkstFetch(fy, { limit: 1 }))));
     BKST.allRows = list.map((fy, at) => ({ fy, tally: bkhTally(answers[at], answers[at].accounts) }));
-  } catch (_) {
+  } catch (failure) {
+    bkQuiet('bank-stmts-all', failure);
     BKST.allRows = [];
     BKST.all = false;
   }
@@ -170,13 +186,18 @@ function bkstSignedLine() {
   return ' · ' + txf('Signed off to {d}', { d: day }) + (lines.length ? ' · ' + txf('{a} unexplained', { a: lines.join(' · ') }) : '');
 }
 const bkstMissing = (data) => (data ? bkhTally(data, data.accounts).missing : 0);
+/** the one line of a box with no file in the shown year: the older statements kept, or that nothing (or no file) is kept, then the sign-off */
+function bkstEmptyWords(data) {
+  const said = data && data.older ? txf('{n} older statements kept', { n: data.older }) : bkstSignedLine() ? tx('No statement file kept') : tx('Nothing kept yet');
+  return said + bkstSignedLine();
+}
 /** one line: what the box holds, said as the gap the person should fix */
 function bkstSummary() {
   if (BKST.mode === 'device') return tx('Starts after an update. Your statement is still read on this device.');
   if (BKST.mode === 'blind' || (typeof BKH !== 'undefined' && BKH.blind)) return bksCostBlindSay();
   if (BKST.mode === 'error') return tx('Could not read the statements kept.');
   const data = BKST.data;
-  if (!data || !BKST.fileTotal) return (data && data.older ? txf('{n} older statements kept', { n: data.older }) : (bkstSignedLine() ? tx('No statement file kept') : tx('Nothing kept yet'))) + bkstSignedLine();
+  if (!data || !BKST.fileTotal) return bkstEmptyWords(data);
   const gaps = bkstMissing(data),
     kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
   return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept')) + bkstSignedLine();
@@ -187,6 +208,34 @@ function bkstBarInner(open, ready) {
     '<b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
     (ready && bankHomeMayAdd() ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" title="' + bkstE(bkstSummary()) + '" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '')
   );
+}
+/** the body of a ready box: the cards and the grid (or All years), the Add form when open, the kept files, the quiet "just read a file" and the note on where statements are kept */
+function bkstBodyHtml(open) {
+  return '<div class="bkh-body">' + (BKST.all ? bankHomeAllHtml() : bankHomeCardsHtml() + bankHomeGridHtml()) + (bankHomeMayAdd() ? (open ? bkstAddHtml() : '') : '') + '<div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>' + (BKST.all ? '' : bkstFilesHtml()) + (bankHomeMayAdd() ? bkstJustReadHtml() : '') + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div></div>';
+}
+/** the home's page: the bar, the year steps, the balance line and (when the box is ready) the cards, the grid, the kept files and the quiet "just read a file" */
+function bkstHomeHtml(open, ready) {
+  const year = ready && BKST.data ? bankHomeFyHtml() : '';
+  return (
+    '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' + year + (ready && BKST.data && BKH.known ? bkstBalanceHtml() : '') +
+    (ready ? bkstBodyHtml(open) : '')
+  );
+}
+/** on a phone the newest month that has begun shows first, not the months to come */
+function bkstScrollGrids(host) {
+  host.querySelectorAll('.bks-wrap').forEach((node) => {
+    const days = Array.from(node.querySelectorAll('tbody tr:first-child td:not(.bkh-future):not(.bkh-tally)')),
+      last = days[days.length - 1]; /* on a phone the newest month that has begun shows first, not the months to come */
+    node.scrollLeft = last ? Math.max(0, last.offsetLeft + last.offsetWidth - node.clientWidth + 40) : node.scrollWidth;
+  });
+}
+/** the press the last action asked to keep the keyboard on */
+function bkstRefocus(host) {
+  if (BKST.focus) {
+    const node = host.querySelector('[data-testid="' + BKST.focus + '"]');
+    BKST.focus = '';
+    if (node && !node.disabled) node.focus({ preventScroll: true });
+  }
 }
 /** the home: the cards of unfinished months, the grid, the kept files, then Add statement; over a statement's lines only the trail and its Back (bank-home) */
 function bankStmtPaint() {
@@ -203,21 +252,10 @@ function bankStmtPaint() {
   const hasFiles = !!(BKST.data && (BKST.fileTotal || BKST.data.older)),
     open = BKST.open === null ? !hasFiles : BKST.open; /* open on a bare page; folded once there is a grid to read */
   host.style.display = '';
-  const year = ready && BKST.data ? bankHomeFyHtml() : '';
-  host.innerHTML =
-    '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' + year + (ready && BKST.data && BKH.known ? bkstBalanceHtml() : '') +
-    (ready ? '<div class="bkh-body">' + (BKST.all ? bankHomeAllHtml() : bankHomeCardsHtml() + bankHomeGridHtml()) + (bankHomeMayAdd() ? (open ? bkstAddHtml() : '') : '') + '<div id="bks_out" class="pe-slot" data-testid="bank-stmts-out"></div>' + (BKST.all ? '' : bkstFilesHtml()) + (bankHomeMayAdd() ? bkstJustReadHtml() : '') + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the accountant or auditor you give access.')) + '</div></div>' : '');
-  host.querySelectorAll('.bks-wrap').forEach((node) => {
-    const days = Array.from(node.querySelectorAll('tbody tr:first-child td:not(.bkh-future):not(.bkh-tally)')),
-      last = days[days.length - 1]; /* on a phone the newest month that has begun shows first, not the months to come */
-    node.scrollLeft = last ? Math.max(0, last.offsetLeft + last.offsetWidth - node.clientWidth + 40) : node.scrollWidth;
-  });
+  host.innerHTML = bkstHomeHtml(open, ready);
+  bkstScrollGrids(host);
   if (ready && !BKST.all) bkstFilesMount();
-  if (BKST.focus) {
-    const node = host.querySelector('[data-testid="' + BKST.focus + '"]');
-    BKST.focus = '';
-    if (node && !node.disabled) node.focus({ preventScroll: true });
-  }
+  bkstRefocus(host);
 }
 /** W15-62: while the box is the door, the plain picker's file field and its sentence step aside (one "Add statement" door); the file input stays for "Just read a file", the quiet choice inside the box. Box not ready (503, error): the picker is the only door and stays. */
 function bkstOneDoor(ready) {
@@ -275,28 +313,36 @@ function bkstCurrency(parsed, code) {
   const ledger = (BKB.accts || []).filter((item) => String(item.code) === String(code))[0] || {};
   return String(parsed.currency || ledger.currency || bkCur() || '').toUpperCase();
 }
-async function bankStmtAdd() {
-  if (BKST.busy) return;
-  const out = 'bks_out',
-    code = String((bkstEl('bks_acct') || {}).value || ''),
-    file = (bkstEl('bks_file') || {}).files && bkstEl('bks_file').files[0];
-  if (!code) return peBad(out, tx('Pick which bank account this statement is for.'));
-  if (!file) return peBad(out, tx('Pick the statement file first.'));
-  if (bkbNoCountryWords()) return peBad(out, bkbNoCountryWords());
-  let text;
+/** the file's text, or null when the browser could not read it */
+async function bkstFileText(file) {
   try {
-    text = await file.text();
-  } catch (_) {
-    return peBad(out, tx('That file could not be read.'));
+    return await file.text();
+  } catch (failure) {
+    bkQuiet('bank-stmts-text', failure);
+    return null;
   }
+}
+/** the checks before a statement is kept: the reader's parse, the period and currency it names, the file's fingerprint → { ok: true, period, currency, hash } or { ok: false, why } */
+async function bkstChecked(text, code) {
   const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, country: bkbCountry() }); /* the ONE reader: its period and currency, nothing parsed here */
-  if (!parsed || !parsed.ok) return peBad(out, (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
+  if (!parsed || !parsed.ok) return { ok: false, why: (parsed && parsed.why) || tx('That file could not be read as a bank statement.') };
   const period = bkstPeriod(parsed);
-  if (!period) return peBad(out, tx('We could not tell which dates this statement covers, so it cannot be kept. Check it is a bank statement.'));
+  if (!period) return { ok: false, why: tx('We could not tell which dates this statement covers, so it cannot be kept. Check it is a bank statement.') };
   const currency = bkstCurrency(parsed, code);
-  if (!currency) return peBad(out, tx('Which currency is this statement in? Nothing is assumed.'));
+  if (!currency) return { ok: false, why: tx('Which currency is this statement in? Nothing is assumed.') };
   const hash = await bkbHash(text);
-  if (!/^[0-9a-f]{64}$/.test(hash)) return peBad(out, tx('This page cannot fingerprint the file here. Open ChitBridge over its secure address to keep statements.'));
+  if (!/^[0-9a-f]{64}$/.test(hash)) return { ok: false, why: tx('This page cannot fingerprint the file here. Open ChitBridge over its secure address to keep statements.') };
+  return { ok: true, period, currency, hash };
+}
+/** what the server said about the statement it kept: the words it sent (or "Kept."), amber when it overlaps another kept statement */
+function bkstKeptSay(kept) {
+  return '<div class="pe-' + (kept && kept.overlaps && kept.overlaps.length ? 'warn' : 'ok') + '" data-testid="bank-stmts-kept-say" role="status">' + bkstE((kept && kept.words) || tx('Kept.')) + '</div>';
+}
+/** keep the checked statement on our server, read the box again and say what the server said */
+async function bkstKeep(out, code, file, text, checked) {
+  const period = checked.period,
+    currency = checked.currency,
+    hash = checked.hash;
   BKST.busy = true;
   BKST.open = true; /* the person is adding: the form stays open for the next file */
   try {
@@ -304,12 +350,32 @@ async function bankStmtAdd() {
     BKST.pickAcct = code;
     await bankStmtLoad();
     const slot = bkstEl(out);
-    if (slot) slot.innerHTML = '<div class="pe-' + (kept && kept.overlaps && kept.overlaps.length ? 'warn' : 'ok') + '" data-testid="bank-stmts-kept-say" role="status">' + bkstE((kept && kept.words) || tx('Kept.')) + '</div>';
+    if (slot) slot.innerHTML = bkstKeptSay(kept);
   } catch (failure) {
     peBad(out, failure, tx('The statement could not be kept'));
   } finally {
     BKST.busy = false;
   }
+}
+/** why Add statement cannot start yet: no account picked, no file picked, or no country words; '' when it can */
+function bkstAddRefusal(code, file) {
+  if (!code) return tx('Pick which bank account this statement is for.');
+  if (!file) return tx('Pick the statement file first.');
+  return bkbNoCountryWords() || '';
+}
+/** Add statement: the account, the file and the checks, then the server keeps it (the statement is parsed here by the ONE reader; only its period, currency and fingerprint are asked of it) */
+async function bankStmtAdd() {
+  if (BKST.busy) return;
+  const out = 'bks_out',
+    code = String((bkstEl('bks_acct') || {}).value || ''),
+    file = (bkstEl('bks_file') || {}).files && bkstEl('bks_file').files[0];
+  const refusal = bkstAddRefusal(code, file);
+  if (refusal) return peBad(out, refusal);
+  const text = await bkstFileText(file);
+  if (text === null) return peBad(out, tx('That file could not be read.'));
+  const checked = await bkstChecked(text, code);
+  if (!checked.ok) return peBad(out, checked.why);
+  return bkstKeep(out, code, file, text, checked);
 }
 
 /* ── the grid: account × month → bank-home (bankHomeGridHtml) ── */
@@ -358,6 +424,7 @@ function bkstFileCard(file) {
     '<span class="bkf-l2" title="' + bkstE(file.name) + '">' + bkstE(file.name) + (file.overlaps ? ' · ⚠' : '') + ' · ' + bkstE(bkstFileBy(file)) + '</span>'
   );
 }
+/** the options of the kept-files list (one CBList mount): its columns (a card on a phone), the Read and Download presses, paging and search through the box's own reads */
 function bkstFilesOptions() {
   const phone = bkstPhone();
   return {
@@ -411,20 +478,21 @@ const bkstBlind = (res) => res.clone().json().then((j) => bksCostBlind({ status:
 async function bankStmtRead(button) {
   return bankStmtReadFile(button.getAttribute('data-file'));
 }
-async function bankStmtReadFile(id, hint) {
-  const file = ((BKST.data && BKST.data.files) || []).filter((item) => item.id === id)[0],
-    code = hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
-    name = hint ? hint.name : file && file.name,
-    to = hint ? hint.to : file && file.period_to; /* a month of the grid names its newest file; a row of the list is the file itself */
-  if (!code || !(file || hint)) return peBad('bks_out', tx('That statement is no longer here.'));
-  let res;
-  try {
-    res = await bkstFetchFile(id, 'read');
-  } catch (_) {
-    return peBad('bks_out', tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
-  }
-  if (!res.ok) return peBad('bks_out', await bkstWhyNot(res));
-  const text = await res.text();
+/** which statement a Read means: the file named by id, the account's code, the file's name and its end date — a month of the grid names its newest file (hint), a row of the list is the file itself */
+function bkstReadTarget(id, hint) {
+  const file = ((BKST.data && BKST.data.files) || []).filter((item) => item.id === id)[0];
+  return {
+    file,
+    code: hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
+    name: hint ? hint.name : file && file.name,
+    to: hint ? hint.to : file && file.period_to
+  };
+}
+/** the kept text goes to the page's ONE reader for the account it was kept against; a refusal stays on the home, said where the person is looking */
+async function bkstOpenInReader(target, text) {
+  const code = target.code,
+    name = target.name,
+    to = target.to;
   const select = bkbEl('bk_acct');
   if (select) select.value = String(code);
   bankAcctPick(String(code), true); /* the account the file was kept against; the screen is cleared, the device copy is not loaded over it */
@@ -433,6 +501,20 @@ async function bankStmtReadFile(id, hint) {
   BKB.to = String(to || '').slice(0, 10); /* the trail's month is the file's, before the reader answers */
   await bankTake(text, name || 'statement.csv', false);
   if (BKB.view !== 'lines' && out && out.innerHTML) peBad('bks_out', out.textContent || tx('That statement could not be read.')); /* a refusal stays on the home, said where the person is looking */
+}
+/** Read one kept statement by its id (the grid names a month's newest file with a hint): the file is fetched, then read by the one reader */
+async function bankStmtReadFile(id, hint) {
+  const target = bkstReadTarget(id, hint);
+  if (!target.code || !(target.file || hint)) return peBad('bks_out', tx('That statement is no longer here.'));
+  let res;
+  try {
+    res = await bkstFetchFile(id, 'read');
+  } catch (failure) {
+    bkQuiet('bank-stmts-read', failure);
+    return peBad('bks_out', tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
+  }
+  if (!res.ok) return peBad('bks_out', await bkstWhyNot(res));
+  return bkstOpenInReader(target, await res.text());
 }
 /** Download: the file as kept, to the device */
 async function bankStmtDownload(button) {
