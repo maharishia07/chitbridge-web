@@ -174,7 +174,7 @@ of file each thing is; this says what already does the job.
 | 21 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
 | 21 | `connectors` | `home-facts.js` | declare (said in words — |
 | 21 | `move` | `rail.js` | Order = the order the server refused in: |
-| 20 | `figures` | `bank-demo.js` |  |
+| 21 | `figures` | `bank-demo.js` |  |
 | 20 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 20 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 20 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
