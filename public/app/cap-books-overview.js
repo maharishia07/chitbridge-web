@@ -92,7 +92,7 @@ function ovTiles(a) {
     a.to_collect ? ovTile('collect', 'To collect', a.to_collect.minor, '', '#dues') : '',
     a.to_pay ? ovTile('pay', 'To pay', a.to_pay.minor, '', '#dues') : ''
   ];
-  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(cash.words) + '</span></a>');
+  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(ovMoneyWords(cash.words, OV.answer && OV.answer.currency)) + '</span></a>');
   return '<div class="ov-tiles">' + tiles.join('') + '</div>';
 }
 /** the words deps the adapters (app/mis-charts.js) take: the one text, money and date makers of this page */

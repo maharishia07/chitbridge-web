@@ -40,9 +40,17 @@ const lastDay = (month) => { const [y, m] = month.split('-').map(Number); return
   const web = await S.serve(), stack = await R.up({ webBase: web.url('') }), api = stack.api;
   const owner = await R.signIn(api, EMAIL), token = owner.token;
   const db = new Client({ connectionString: DB }); await db.connect();
-  const entity = (await db.query('SELECT entity_id FROM books_setting LIMIT 1')).rows[0].entity_id;
-  const one = async (sql, args) => Number((await db.query(sql, [entity].concat(args))).rows[0].v);
+  /* the api's own door: every table is row-level-secured on app.current_entity, so a read names the shop the way the api does (BEGIN · set_config · the query) — a bare read as the api's role sees no row */
+  const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+  const entity = claims.entity_id || claims.identity_id;   /* an entity's identity id is its entity id */
+  const one = async (sql, args) => {
+    await db.query('BEGIN');
+    try { await db.query("SELECT set_config('app.current_entity', $1, true)", [String(entity)]); return Number((await db.query(sql, [entity].concat(args))).rows[0].v); } finally { await db.query('ROLLBACK'); }
+  };
   const browser = await chromium.launch(), ctx = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  /* the browser keeps the api's clock: a token is signed with the api's moment (iat), so a page on the real clock reads it as expired (the history ends 31 Oct, the api may run inside it). Read the moment from the token, install it, let it tick. */
+  const apiMs = Number(claims.iat) * 1000;
+  if (isFinite(apiMs) && Math.abs(apiMs - Date.now()) > 60000) await ctx.clock.install({ time: apiMs });   // clock-ok: compared with the api's moment
   await ctx.addInitScript((a) => { try { localStorage.setItem('cb_api_base', a.api); localStorage.setItem('cb_sess', a.s); } catch (_) {} }, { api, s: owner.session });
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
