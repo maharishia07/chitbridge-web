@@ -52,6 +52,10 @@ const SKIP = {
   'till-two-sided-breaks.cjs': 'edits the api master and re-vendors — read-only api checkout on a runner (dev PC only)',
   /* SEC-85 (web #374): two real tabs signed in to two shops against the real api and its database; the file itself refuses anything but a
      localhost stack. The runner has no api on :3100 and no database (ECONNREFUSED). Run it on a dev PC after local-stack.sh up. */
+  'walk-firm-landing.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
+  'walk-firm-practice.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
+  'walk-firm-slow-practice.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
+  'walk-client-nav.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
 const KNOWN = {
