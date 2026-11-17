@@ -44,6 +44,10 @@ function bkshOwnAccounts() {
   const own = String(bkshStatementAccount().code || bkshBook().acct);
   return bkbBanks(bkshBook().accts || []).filter((item) => String(item.code) !== own).map((item) => ({ code: String(item.code), name: item.name }));
 }
+/** the ledger account that already has this name — the same name twice would be refused: the one that is there is the one meant; undefined when none */
+function bkshAccountNamed(known, name) {
+  return ((known && known.accounts) || []).filter((item) => !item.is_group && String(item.name).toLowerCase() === name.toLowerCase())[0];
+}
 /**
  * the owner's own savings (or other bank) account, added where the transfer asks for it: the one door the chart uses (POST /accounts under the shop's bank group), then the accounts are read again,
  * so the "moved between my own accounts" answer can name it. Answers { ok, code } or { ok: false, why }.
@@ -51,7 +55,7 @@ function bkshOwnAccounts() {
 async function bkshAddOwnAccount(name) {
   const main = (bkshBook().accts || []).filter((item) => item.role === 'bank')[0];
   try {
-    const known = await api('booksAccounts', { fresh: true }), same = ((known && known.accounts) || []).filter((item) => !item.is_group && String(item.name).toLowerCase() === name.toLowerCase())[0]; /* the same name twice would be refused: the one that is there is the one meant */
+    const known = await api('booksAccounts', { fresh: true }), same = bkshAccountNamed(known, name);
     const made = same ? { account: same } : await api('booksAccountAdd', { body: { name, parent_code: main ? main.parent_code : undefined } });
     const again = await api('booksAccounts', { fresh: true });
     bkshBook().accts = (again && again.accounts) || bkshBook().accts;
@@ -204,6 +208,7 @@ function bkshPageFollows() {
     bankPaint();
   }
 }
+/** paint the sheet: the strip, the lines, and the Add button with the count it will add */
 function bkshPaint() {
   const model = BKSH.ctl.view(),
     addButton = bkshEl('bks_add'),
@@ -237,8 +242,8 @@ async function bkshAdd(btn) {
     /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
     const said = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
-    const fig = typeof bankFigures === 'function' ? bankFigures() : null;
-    if (!done.failed && fig && fig.nil) {
+    const figures = typeof bankFigures === 'function' ? bankFigures() : null;
+    if (!done.failed && figures && figures.nil) {
       /* nothing is left: the books agree with the statement, so the sheet closes itself and the Bank view offers the sign-off */
       BKSH.posting = false;
       closeModal();
@@ -253,17 +258,19 @@ async function bkshAdd(btn) {
   BKSH.posting = false;
   bkshPaint();
 }
+/** the entry the ＋ Entry opens for a line: the page's bankEntryPreset when it has one, else the statement's own words and figure on the statement's own side */
+function bkshEntryPreset(item, key) {
+  if (typeof bankEntryPreset === 'function') return bankEntryPreset(item, bkshBook());
+  const line = item.line || {},
+    minor = line.debit_minor || line.credit_minor || 0;
+  return { v: Object.assign({ date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, bkshBankEnd(line)), ref: item.ref || 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
+}
 /** the one step on a line the sheet cannot finish (a tax payment, a loan, a transfer): the ＋ Entry opens for that line, the sheet stays kept behind it. The entry is pre-filled by bankEntryPreset when the bank-match build provides it; else the date, amount and words of the line */
 function bkshEntry(key) {
   const item = ((BKSH.ctl && BKSH.ctl.view().items) || []).filter((one) => one.key === key)[0];
   if (!item) return { ok: false, why: tx('That line is gone') };
   if (typeof enOpen !== 'function') return { ok: false, why: tx('This starts after an update') };
-  const line = item.line || {},
-    minor = line.debit_minor || line.credit_minor || 0,
-    preset =
-      typeof bankEntryPreset === 'function'
-        ? bankEntryPreset(item, bkshBook())
-        : { v: Object.assign({ date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, bkshBankEnd(line)), ref: item.ref || 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
+  const preset = bkshEntryPreset(item, key);
   closeModal();
   enOpen(preset);
   return { ok: true };
@@ -422,9 +429,9 @@ async function bkshReadMonths() {
 const bkshLockGroups = () => CBBankLock.groupsOf(BKSH.ctl && BKSH.ctl.view().items, BKSH.ctl && BKSH.ctl.movedMonths && BKSH.ctl.movedMonths());
 /** the notice under the band for each locked month. Reopen is the owner's act. Posting in the next open month is the owner's, and the accountant's where the grant lets her post (the accountant does the books for the owner; the entry carries the firm's name) */
 function bkshLockNotice() {
-  const who = bkshSignedIn(),
-    owner = who.role === 'owner',
-    mayPost = owner || (who.role === 'adviser' && !!who.posts);
+  const signedIn = bkshSignedIn(),
+    owner = signedIn.role === 'owner',
+    mayPost = owner || (signedIn.role === 'adviser' && !!signedIn.posts);
   return bkshLockGroups()
     .map((group, at) => {
       const reopen = owner && group.may ? '<button data-cbsid="BKS014-B60" type="button" class="act" data-testid="bank-lock-reopen-' + at + '" onclick="bkshReopen(\'' + group.key + '\')">' + bkbE(txf('Reopen {month}', { month: group.name })) + '</button>' : '',
@@ -459,6 +466,7 @@ function bkshReopen(key) {
     footerHtml: '<button data-cbsid="BKS014-B63" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B64" type="button" class="pri" data-testid="bank-lock-reopen-go" onclick="bkshReopenGo(\'' + key + '\')">' + bkbE(tx('Reopen')) + '</button>'
   });
 }
+/** the Reopen press: the reason typed, the month opened again through the api, the sheet read again */
 async function bkshReopenGo(key) {
   const group = bkshLockGroups().filter((one) => one.key === key)[0],
     reason = String(peVal('bk_lkwhy') || '').trim(),

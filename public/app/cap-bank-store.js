@@ -186,11 +186,17 @@ function bankStoreIsMine(by) {
   if (me) return String(me) === by;
   return !(typeof CBBooksActing !== 'undefined' && CBBooksActing.current());
 }
+/** the name of the client an adviser is acting for, '' when it has none; null when the person is not an adviser acting for a client */
+function bankStoreAdviserClient() {
+  if (typeof CBBooksActing === 'undefined' || !CBBooksActing.isAdviser()) return null;
+  return (CBBooksActing.current().store || {}).name || '';
+}
 /** who made a line, for the posted feed: an adviser's own page reads "Pat Lee for <client>", the owner reads "Pat Lee, <firm>"; a row with no by_name keeps the plain name the api sent (made_by) */
 function bankStoreMadeBy(row) {
   const name = (row && (row.by_name || row.made_by)) || '';
   if (!row || !row.by_name) return name;
-  if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return txf('{name} for {client}', { name, client: (CBBooksActing.current().store || {}).name || '' });
+  const client = bankStoreAdviserClient();
+  if (client !== null) return txf('{name} for {client}', { name, client });
   return row.by_firm ? name + ', ' + row.by_firm : name;
 }
 /** the signer with the firm when an adviser made it: "Pat Lee, Bayside Bookkeeping - demo" */
@@ -245,15 +251,19 @@ function bankStoreExceptions() {
     bksMore(bankStoreState.exceptions.length)
   );
 }
+/** the "✓ signed off …" line, drawn on every tab but the reconciliation's own; '' when nothing is signed */
+function bankStoreSignedLine(signed) {
+  return signed && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(signed) + '</span>' : '';
+}
 /** the Sign off button, drawn only when the difference is nil (the band asks for it then); greyed with the reason while the record is not set up. Its slot is repainted after a sign-off */
 function bankStoreSignButton() {
   const worked = bankStoreState.view.brs;
-  if (typeof bkbReadOnly === 'function' && bkbReadOnly()) return (bankStoreSignedWords() && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(bankStoreSignedWords()) + '</span>' : ''); /* W15-71: the sign-off is said, never offered */
+  if (typeof bkbReadOnly === 'function' && bkbReadOnly()) return bankStoreSignedLine(bankStoreSignedWords()); /* W15-71: the sign-off is said, never offered */
   if (!worked || !worked.ok) return '';
   const notReady = bankStoreState.mode !== 'server',
     signed = bankStoreSignedWords();
   return (
-    (signed && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(signed) + '</span>' : '') +
+    bankStoreSignedLine(signed) +
     '<button data-cbsid="BKS014-B08" type="button" class="' + (signed ? 'act' : 'pri bk-primary') + '" data-testid="bank-signoff"' +
     (notReady ? ' disabled title="' + bksE(tx('Signing off starts after the next update')) + '"' : '') +
     ' onclick="bankStoreSignOff(this)">' +
