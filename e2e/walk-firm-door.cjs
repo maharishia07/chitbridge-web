@@ -65,8 +65,12 @@ W.run('firm-door', async (w) => {
     return { ok, saw: t.slice(0, 160) };
   });
   await w.step('D2', 'Each row carries its own actions: Accept and choose access + Decline, Cancel invitation, Give access + Remove my accountant', async () => {
-    const a = await has(T('fd-owner-accept')), d = await has(T('fd-owner-decline')), c = await has(T('fd-owner-cancel')), g = await has(T('fd-owner-give')), rm = await has(T('fd-owner-remove'));
-    return { ok: a && d && c && g && rm, saw: [a, d, c, g, rm].join() };
+    const seen = {};
+    for (const [row, names] of [['e1', ['accept', 'decline']], ['e2', ['cancel']], ['e3', ['give', 'remove']]]) {
+      await page.click(T('fd-row-' + row)); await page.waitForTimeout(250);
+      for (const name of names) seen[name] = await has(T('fd-owner-' + name));
+    }
+    return { ok: Object.keys(seen).length === 5 && Object.values(seen).every(Boolean), saw: JSON.stringify(seen) };
   });
   await w.step('D3', 'Invite by handle sends the one agency ask (a parentHandle, type agency)', async () => {
     await page.fill(T('fd-owner-handle'), 'smith-co'); await page.click(T('fd-owner-add')); await page.waitForTimeout(700);
@@ -74,12 +78,9 @@ W.run('firm-door', async (w) => {
     return { ok: sent.parentHandle === 'smith-co' && sent.type === 'agency', saw: JSON.stringify(sent) };
   });
   await w.step('D4', 'Accept and choose access: ONE step - a confirm, the approve, then the Give access sheet with Smith & Co picked', async () => {
-    await page.locator(T('fd-owner-accept')).first().click(); await page.waitForTimeout(400);
-    const confirmed = await page.evaluate(() => {
-      const found = Array.from(document.querySelectorAll('button')).filter((b) => /Accept and choose access/.test(b.textContent) && b.getAttribute('data-testid') !== 'fd-owner-accept' && b.offsetParent !== null)[0];
-      if (found) { found.click(); return true; }
-      return false;
-    });
+    await page.click(T('fd-row-e1')); await page.waitForSelector(T('fd-owner-accept'), { timeout: 5000 });
+    await page.click(T('fd-owner-accept')); await page.waitForSelector(T('confirm'), { timeout: 5000 });
+    await page.click(T('confirm-ok')); const confirmed = true;
     await page.waitForSelector(T('bg-who'), { timeout: 8000 });
     const who = await page.evaluate(() => { const s = document.querySelector('[data-testid="bg-who"]'); return s.options[s.selectedIndex].text; });
     return { ok: confirmed && S.approves.length === 1 && who === 'Smith & Co', saw: 'confirm ' + confirmed + ' approves ' + S.approves.length + ' who ' + who };
@@ -111,7 +112,10 @@ W.run('firm-door', async (w) => {
   await page.waitForSelector(T('fd-row-e4'), { timeout: 8000 });
   await w.step('F1', 'The firm: Add a client box and the waiting asks (its own, and a client ask to accept)', async () => {
     const t = await txt(T('fd-firm-card'));
-    const ok = /Add a client/.test(t) && /Client Bakery/.test(t) && /Asked\. Waiting for them/.test(t) && /Client Cafe/.test(t) && /Asks you to act for them/.test(t) && await has(T('fd-firm-accept')) && await has(T('fd-firm-cancel'));
+    await page.click(T('fd-row-e5')); await page.waitForTimeout(250);
+    const accept = await has(T('fd-firm-accept'));
+    await page.click(T('fd-row-e4')); await page.waitForTimeout(250);
+    const ok = /Add a client/.test(t) && /Client Bakery/.test(t) && /Asked\. Waiting for them/.test(t) && /Client Cafe/.test(t) && /Asks you to act for them/.test(t) && accept && await has(T('fd-firm-cancel'));
     return { ok, saw: t.slice(0, 160) };
   });
   await w.step('F2', 'Add a client sends a childHandle with type agency', async () => {

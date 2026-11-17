@@ -174,10 +174,13 @@
     function grey(why, failure) {
       say(why);
       if (failure && failure.status === 403) {
-        var button = $('fd_add');
-        button.setAttribute('disabled', '');
-        button.setAttribute('aria-disabled', 'true');
-        button.title = why;
+        root.setTimeout(function () { /* CBAction frees the button as its last act; the grey goes on after it */
+          var button = $('fd_add');
+          if (!button) return;
+          button.setAttribute('disabled', '');
+          button.setAttribute('aria-disabled', 'true');
+          button.title = why;
+        }, 60);
       }
     }
     function paint() {
