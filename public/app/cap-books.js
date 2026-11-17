@@ -4685,7 +4685,7 @@ function bkTbBankOptions(reply, asOf) {
   var cur = reply && reply.currency;
   return {
     money: function (minor, c) { return bkMoney(minor, c || cur); }, day: function (iso) { return typeof shopDay === 'function' ? shopDay(iso) : iso; }, tx: tx, txf: typeof txf === 'function' ? txf : tx,
-    codes: { note: 'ACC002-P01', open: 'ACC002-B63', at: 'ACC002-B62' }, ids: 'bk_tb_bank_',
+    codes: { note: 'BKS004-P01', open: 'BKS004-B02', at: 'BKS004-B01' }, ids: 'bk_tb_bank_',
     onDay: function (day) { BK.tbDay = day; bkTab('tb'); } /* the tab repaints from scratch, so the day rides in BK until bkTB reads it */,
     onOpen: function () {
       var from = (reply && reply.fy_from) || '', query = new URLSearchParams(location.search || '');
@@ -4865,12 +4865,12 @@ function bkStRow(cls, label, cells) {
 /** ASA 520: the Change cell: the server's signed amount, with a quiet dot when the server says it is over its threshold (row class bk-over carries the tint on a narrow screen) */
 function bkChange(minor, over, c) {
   if (minor == null) return bkFig(null, c);
-  return (over ? '<span class="bk-over-dot" data-cbsid="BKS016-P02" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c));
+  return (over ? '<span class="bk-over-dot" data-cbsid="BKS005-P02" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c));
 }
 /** the one line under the P&L that says what is highlighted, from the server's rule */
 function bkOverNote(rule, c) {
   if (!rule || rule.pct_bp == null || rule.min_minor == null) return '';
-  return '<div class="bk-over-note" data-cbsid="BKS016-P01" data-testid="pl-over-note">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
+  return '<div class="bk-over-note" data-cbsid="BKS005-P01" data-testid="pl-over-note">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
 }
 /** the P&L: a head's ledgers, then its subtotal (every head gets one), each line with last year · change · % of income */
 function bkPlGroups(lines, c, cmp, from, to) {
