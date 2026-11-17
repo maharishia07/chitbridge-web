@@ -52,7 +52,7 @@
   ]
  },
  "empty-states": {
-  "count": 13,
+  "count": 12,
   "owner": "ux-locale",
   "keys": [
    "app/cap-assist.js  '<div class=\"empty\" data-testid=\"ca-fail\"><div class=\"t\">' +",
@@ -65,7 +65,6 @@
    "app/cap-print.js  '<div class=\"empty\" data-testid=\"pr-readerr\"><div class=\"t\">' +",
    "app/cap-tasks.js  '</h2><div class=\"empty\" data-testid=\"tk-sheet-fail\"><div class=\"t\">' +",
    "app/cap-tasks.js  '<div class=\"empty\" data-testid=\"tk-fail\"><div class=\"t\">' +",
-   "app/network-app.js  '<div class=\"empty\" data-testid=\"nw-fail\"><div class=\"t\">' +",
    "app/network-app.js  '<div class=\"empty\" data-testid=\"nw-none\"><div class=\"t\">' +",
    "app/network-app.js  '<div class=\"empty\"><div class=\"t\">' +"
   ]
@@ -146,14 +145,13 @@
   "keys": []
  },
  "token-check": {
-  "count": 11,
+  "count": 10,
   "owner": "ux-locale",
   "keys": [
    "--bad  app/ui.js",
    "--bad  app/ui.js",
    "--bad  app/ui.js",
    "--focus-ring  app/cap-standards.js",
-   "--mono  app/cap-books.js",
    "--scrim  app/cap-print.js",
    "--scrim  app/ui.js",
    "--shadow-menu  app/cap-print.js",

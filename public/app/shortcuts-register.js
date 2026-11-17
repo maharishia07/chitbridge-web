@@ -65,6 +65,7 @@
       'HOM001-B01#compatibility': 'Alt+Shift+Q',
       'HOM001-B01#connectors': 'Alt+Shift+K',
       'HOM001-B01#governance': 'Alt+Shift+G',
+      'HOM001-B01#bank': 'Alt+Shift+B',
       /* a popup's main action (Alt+Shift+D; Chrome owns Alt+Shift+A) (the popups that open through ui.dialog with their code) */
       POP065: 'Alt+Shift+D',
       POP091: 'Alt+Shift+D',

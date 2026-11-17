@@ -81,12 +81,12 @@
     var a = viewState.answer, rule = a && a.over_rule;
     if (!a || !compareDrawn(report) || !rule || rule.pct_bp == null || rule.min_minor == null) return '';
     var amount = minorWords(rule.min_minor).replace(/[.,]0+$/, '');
-    return '<style>.bv-over,.bv-over>*{background:var(--ask-t)}.bv-over-dot{color:var(--ask-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(words('Highlighted') + ': ' + words('change of') + ' ' + rule.pct_bp / 100 + '% ' + words('and') + ' ' + amount + ' ' + words('or more')) + '</div>';
+    return '<style>.bv-over,.bv-over>*{background:var(--amber-t)}.bv-over-dot{color:var(--amber-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(words('Highlighted') + ': ' + words('change of') + ' ' + rule.pct_bp / 100 + '% ' + words('and') + ' ' + amount + ' ' + words('or more')) + '</div>';
   }
   /** NET005-P05: under the Day book, the fixed hours and day counts the Risk column and its filters use (one sentence; not a setting) */
   function riskNote(report) {
     if (report.k !== 'daybook' || viewState.since) return '';
-    return '<style>.bv-risk{display:inline-block;min-width:1.6em;text-align:center;border-radius:10px;padding:0 6px;background:var(--ask-t);color:var(--ask-i);font-weight:600}.bv-risknote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-risknote" data-cbsid="NET005-P05" data-testid="bv-risk-note">' + esc(words('Risk counts one point for each of: recorded after the period end · over 7 days late · at a weekend · after hours (8 pm to 7 am) · a round sum (multiple of 100) · no narration.')) + '</div>';
+    return '<style>.bv-risk{display:inline-block;min-width:1.6em;text-align:center;border-radius:10px;padding:0 6px;background:var(--amber-t);color:var(--amber-i);font-weight:600}.bv-risknote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-risknote" data-cbsid="NET005-P05" data-testid="bv-risk-note">' + esc(words('Risk counts one point for each of: recorded after the period end · over 7 days late · at a weekend · after hours (8 pm to 7 am) · a round sum (multiple of 100) · no narration.')) + '</div>';
   }
   function side(list, name) {
     return (list || []).map(function (row) {
@@ -395,7 +395,7 @@
   }
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
   function bankButton() {
-    return !isAdviser() && !viewState.why ? '<button data-cbsid="NET005-B02" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
+    return !isAdviser() && !viewState.why ? '<button data-cbsid="NET005-B10" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
   }
   function openBank() {
     var report = viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (viewState.period ? root.CBPeriodPick.toAddress(viewState.period) : ''); /* E10: the screen and the period ride to Bank and back */

@@ -788,6 +788,8 @@
     'Figure card': 'Carte de chiffre',
     'CMP061.label': 'Pastille d\'initiales',
     'Initials badge': 'Pastille d\'initiales',
+    'CMP064.label': 'Icône d’état',
+    'CMP065.label': 'Bandeau du relevé bancaire',
     'CMP055.required': 'Obligatoire',
     'Required': 'Obligatoire',
     'CMP055.badnumber': 'Ce n\'est pas un nombre. Tapez des chiffres seulement, comme 1234.5',

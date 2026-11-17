@@ -4723,7 +4723,7 @@ async function bkTB(body) {
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
-      bkStmtCss() + '<style>.bktab .bk-over td{background:var(--ask-t)}</style>' +
+      bkStmtCss() + '<style>.bktab .bk-over td{background:var(--amber-t)}</style>' +
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
@@ -4844,7 +4844,7 @@ function bkOpenLedgerIn(code, from, to, tab, label) {
 function bkPeriodBar(o) {
   var sel = function (id, opts, cur, on) {
     return (
-      '<select data-cbsid="BKS016-S01" class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(tx(o.aria)) + '" onchange="' + on + '">' +
+      '<select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(tx(o.aria)) + '" onchange="' + on + '">' +
       opts.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (String(x[0]) === String(cur) ? ' selected' : '') + '>' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
     );
   };
@@ -4863,7 +4863,7 @@ function bkPeriodBar(o) {
 }
 /** the statements' own look: money columns right-aligned and equal, the narrow screen drops the percent columns, never a sideways scroll */
 function bkStmtCss() {
-  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-over td{background:var(--ask-t)}.bk-over-dot{color:var(--ask-i)}.bk-over-note{margin:6px 0;color:var(--muted);font-size:var(--fs-1)}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none!important;border:0!important;padding:6px 0!important;min-height:0!important;line-height:1.2!important;font:inherit!important;color:var(--link,#1a5f8a)!important;text-align:left;cursor:pointer;box-shadow:none!important;border-radius:0!important}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide,.bk-st .bk-code{display:none}.bk-st{font-size:12px}.bk-st td,.bk-st th{padding:3px 3px}.bk-st .bk-ind{padding-left:4px;display:inline-block;max-width:100%}.bk-st .bk-note{display:block;margin:0;white-space:normal}.bk-st .bk-dl{max-width:8.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}}</style>';
+  return '<style>.bk-st{width:100%;border-collapse:collapse;font-size:var(--fs-1)}.bk-st td,.bk-st th{padding:3px 6px;vertical-align:baseline}.bk-st th{text-align:left;color:var(--grey);font-weight:600}.bk-st .num{text-align:right;white-space:nowrap}.bk-st .bk-over td{background:var(--amber-t)}.bk-over-dot{color:var(--amber-i)}.bk-over-note{margin:6px 0;color:var(--muted);font-size:var(--fs-1)}.bk-st .bk-sec td{padding-top:12px;font-weight:700}.bk-st .bk-grp td{padding-top:8px;font-weight:600}.bk-st .bk-sub td{border-top:1px solid var(--line);font-weight:600}.bk-st .bk-tot td{border-top:2px solid var(--line);font-weight:700}.bk-st .bk-ind{padding-left:18px}.bk-dl{background:none!important;border:0!important;padding:6px 0!important;min-height:0!important;line-height:1.2!important;font:inherit!important;color:var(--link,#1a5f8a)!important;text-align:left;cursor:pointer;box-shadow:none!important;border-radius:0!important}.bk-dl:hover{text-decoration:underline}.bk-st .bk-note{color:var(--grey);font-size:calc(var(--fs-1) - 1px);margin-inline-start:6px;white-space:nowrap}@media(max-width:620px){.bk-st .bk-wide,.bk-st .bk-code{display:none}.bk-st{font-size:12px}.bk-st td,.bk-st th{padding:3px 3px}.bk-st .bk-ind{padding-left:4px;display:inline-block;max-width:100%}.bk-st .bk-note{display:block;margin:0;white-space:normal}.bk-st .bk-dl{max-width:8.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}}</style>';
 }
 /** one statement row: label cell, then the figures the server carried (a figure list of { v, pct?, wide? }) */
 function bkStRow(cls, label, cells) {
@@ -4942,7 +4942,7 @@ async function bkPL(body) {
       ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="pl_from" aria-label="' + esc(tx('From')) + '" value="' + esc(reply.from) + '" onchange="bkPlDates()"><span>→</span><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="pl_to" aria-label="' + esc(tx('To')) + '" value="' + esc(reply.to) + '" onchange="bkPlDates()">'
       : '';
     var cmpSel =
-      '<select data-cbsid="BKS016-S01" class="inp" id="pl_cmp" data-testid="pl_cmp" aria-label="' + esc(tx('Compare with')) + '" onchange="bkPlCompare(this.value)">' +
+      '<select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="pl_cmp" data-testid="pl_cmp" aria-label="' + esc(tx('Compare with')) + '" onchange="bkPlCompare(this.value)">' +
       [['year', 'Same days last year'], ['period', 'Period before'], ['none', 'No comparison']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === BK_PL.compare ? ' selected' : '') + '>' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>';
     var range = bkSpan(reply.from, reply.to) + (cmp ? ' · ' + tx('against') + ' ' + bkSpan(cmp.from, cmp.to) : '');
     var profit = Number(reply.profit_minor);
