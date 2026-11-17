@@ -188,6 +188,17 @@ function compare(tag, a, got, period) {
     await page.screenshot({ path: OUT + '/overview-1366-nocosts.png' });
     await ctx.close();
   }
+  /* MOCKED (c): this seeded shop has no sales in the current week, so the api sends no weekday figures; give the weekday card seven (the api's own seven days, figures added) to prove the card and its table wear BKS026-P04 and BKS026-B10 */
+  {
+    const { ctx, page } = await open({ width: 1366, height: 768 }, 'light', true);
+    const withDays = JSON.parse(JSON.stringify(truth.ytd));
+    withDays.weekdays = (withDays.weekdays || []).map((d, i) => Object.assign({}, d, { sold_minor: 10000 * (i + 1), last_year_minor: 8000 * (i + 1) }));
+    await page.route('**/api/books/overview**', (r) => C.wrap(r, 'mocked weekday figures: ').fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': base }, body: JSON.stringify(withDays) }));
+    await page.goto(base + '/accounts.html#overview');
+    const got = await settle(page, 'ytd');
+    ok(withDays.weekdays.length === 7 && !!got.weekday && got.weekday.code === 'BKS026-P04' && got.weekday.sum === 'BKS026-B10', '[mocked: weekday figures] the weekday card wears BKS026-P04 and its table BKS026-B10 (' + JSON.stringify(got.weekday) + ')');
+    await ctx.close();
+  }
   /* MOCKED (b): one forced 500 on the overview read: the sentence and Try again (BKS026-B01), then the real answer on the second try */
   {
     const { ctx, page } = await open({ width: 390, height: 844 }, 'light', true);

@@ -109,7 +109,12 @@ async function person(biz, tag, name, level) {
     check((await row.getAttribute('data-note-id')) === String(E1.entry_id) && /Acct One/.test(await row.innerText()) && /replied on your firm note/.test(await row.innerText()), 'the bell shows the colleague\'s reply as a row that carries its entry (CMP038-B01, note_reply)');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'bell-note-reply-1366.png') });
     await row.click();
-    await page.waitForSelector('dialog[data-testid="fl-sheet"][open]', { timeout: 30000 });
+    const sheetOpen = await page.waitForSelector('dialog[data-testid="fl-sheet"][open]', { timeout: 20000 }).then(() => true, () => false);
+    if (!sheetOpen) {
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'bell-no-sheet.png') });
+      console.log('  DEBUG url ' + page.url().replace(/(open=)[^&]+/, '$1…') + ' · text ' + (await page.evaluate(() => document.body.innerText.replace(/s+/g, ' ').slice(0, 300))));
+    }
+    check(sheetOpen, 'the note sheet opens after the press');
     check(/view=daybook/.test(page.url()) && !/note=/.test(page.url()), 'pressing the row opens the client\'s Day book and the address forgets the note: ' + page.url().replace(/(open=)[^&]+/, '$1…'));
     await page.waitForFunction(() => /ring the client on Monday/.test(document.querySelector('dialog[data-testid="fl-sheet"]').innerText), null, { timeout: 15000 });
     check(true, 'the note\'s sheet is open with the colleague\'s reply in its thread');

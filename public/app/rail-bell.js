@@ -279,7 +279,7 @@
   function recordHtml(x) {
     return (
       '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
-      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '"' : ' disabled') +
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '"' : x.note ? '' : ' disabled') + /* a colleague's reply on my firm note carries its entry below (data-note-id): pressable */
       (x.order ? ' data-order="1"' : '') +
       (x.note ? ' data-note-id="' + esc(x.note) + '"' : '') +
       '><span aria-hidden="true">' +
