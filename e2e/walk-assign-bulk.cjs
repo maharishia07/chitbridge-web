@@ -74,21 +74,22 @@ async function serve() {
 }
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 async function open(browser, base, api, vp, theme, who) {
-  const token = who === 'assistant' ? b64({ alg: 'none' }) + '.' + b64({ hat: 'act' }) + '.assistanttoken' : 'ownertoken123456';
+  const token = who === 'assistant' ? b64({ alg: 'none' }) + '.' + b64({ hat: 'act', identity_id: 'ac000000-0000-4000-8000-000000000001', parent_entity_id: 'e0000000-0000-4000-8000-000000000001', display_name: 'Dev Assistant' }) + '.assistanttoken' : b64({ alg: 'none' }) + '.' + b64({ identity_id: 'e0000000-0000-4000-8000-000000000001', display_name: 'Coastal Accounting Advisers' }) + '.ownertoken1234';
   const sess = { token, role: who === 'assistant' ? 'actor' : 'entity', name: who === 'assistant' ? 'Dev Assistant' : 'Coastal Accounting Advisers' };
   const ctx = await browser.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block', colorScheme: theme, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
   await ctx.addInitScript((a) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(a.s)); localStorage.setItem('cb_practice_hint', '1:' + a.s.token.slice(-12)); } } catch (_) {} }, { s: sess });
-  await ctx.route('http://localhost:3000/**', async (r) => {
+  await ctx.route(/^http:\/\/(localhost:3000|127\.0\.0\.1:\d+)\/api\//, async (r) => {
     const req = r.request(), u = new URL(req.url());
     const cors = { 'access-control-allow-origin': base, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
     if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
     if (u.pathname.includes('/events/stream')) return r.abort();
     const send = (status, body) => r.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
+    if (u.pathname === '/api/entities/me') return send(200, { entity: { display_name: 'Coastal Accounting Advisers', currency_code: 'AUD' } });
     if (u.pathname === '/api/books-grants/practice') return send(200, api.practice());
     if (u.pathname === '/api/actors' && req.method() === 'GET') return send(200, { actors: [ANNA, BEN, CARA], total: 3, page: 1, limit: 100, summary: {} });
     if (u.pathname === '/api/chits/assign-bulk') { const body = JSON.parse(req.postData() || '{}'); api.calls.push({ path: u.pathname, body }); const a = api.assignBulk(body); return send(a.status, a.body); }
     if (u.pathname === '/api/chits/jobs/open') { const body = JSON.parse(req.postData() || '{}'); api.calls.push({ path: u.pathname, body }); const a = api.openJobs(body); return send(a.status, a.body); }
-    return send(200, {});
+    return send(404, { error: 'not found' });
   });
   const page = await ctx.newPage();
   page.__threw = [];
