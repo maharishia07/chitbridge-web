@@ -4705,6 +4705,7 @@ async function bkTB(body) {
     var cmp = reply && reply.compare; /* leader-compare #2: the same day last year, the server's read (null in the first year of the books) */
     var rows = ((reply && reply.rows) || [])
       .map(function (x) {
+        var ch = cmp && window.CBTbChange ? window.CBTbChange.read(x) : x; /* F3: Change and % on the account's own side, the one helper the auditor's books view uses (tb-change.js) */
         return (
           '<tr' + (cmp && x.change_over ? ' class="bk-over"' : '') + '><td class="mono">' +
           esc(x.code) +
@@ -4715,7 +4716,7 @@ async function bkTB(body) {
           '</td><td class="num">' +
           (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') +
           '</td>' +
-          (cmp ? '<td class="num" data-testid="tb-prior">' + (x.prior_net_minor == null ? bkFig(null, c) : esc(bkDrCr(x.prior_net_minor, c))) + '</td><td class="num">' + bkChange(x.change_minor, x.change_over, c, 'BKS004-P02') + '</td><td class="num">' + bkPct(x.change_bp, true) + '</td>' : '') +
+          (cmp ? '<td class="num" data-testid="tb-prior">' + (x.prior_net_minor == null ? bkFig(null, c) : esc(bkDrCr(x.prior_net_minor, c))) + '</td><td class="num">' + bkChange(ch.change_minor, x.change_over, c, 'BKS004-P02', ch.side) + '</td><td class="num">' + bkPct(ch.change_bp, true) + '</td>' : '') +
           '</tr>'
         );
       })
@@ -4869,9 +4870,9 @@ function bkStRow(cls, label, cells) {
   return '<tr class="' + cls + '"><td>' + label + '</td>' + cells.map(function (x) { return '<td class="num' + (x.wide ? ' bk-wide' : '') + '"' + (x.tid ? ' data-testid="' + x.tid + '"' : '') + '>' + x.v + '</td>'; }).join('') + '</tr>';
 }
 /** ASA 520: the Change cell: the server's signed amount, with a quiet dot when the server says it is over its threshold (row class bk-over carries the tint on a narrow screen) */
-function bkChange(minor, over, c, code) {
+function bkChange(minor, over, c, code, side) {
   if (minor == null) return bkFig(null, c);
-  return (over ? '<span class="bk-over-dot" data-cbsid="' + (code || 'BKS005-P02') + '" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c));
+  return (over ? '<span class="bk-over-dot" data-cbsid="' + (code || 'BKS005-P02') + '" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c) + (side ? '\u00a0' + tx(side) : ''));
 }
 /** the one line under the P&L that says what is highlighted, from the server's rule */
 function bkOverNote(rule, c, code, tid) {
