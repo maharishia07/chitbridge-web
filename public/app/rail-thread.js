@@ -385,7 +385,7 @@
     if (!m.rows.length) return lead + (o.lead ? '' : '<div class="rt-empty" data-testid="rt-empty">' + esc(threadKit.threadText(o.line_id ? threadKit.THREAD_WORDS.noneLine : threadKit.THREAD_WORDS.none)) + '</div>');
     return (
       '<div class="rt-n" data-testid="rt-count">' +
-      esc(threadKit.fill(threadKit.threadText(m.rows.length === 1 ? threadKit.THREAD_WORDS.count1 : threadKit.THREAD_WORDS.countN), { n: m.rows.length })) +
+      esc(threadKit.countText(m.rows.length + (o.lead ? 1 : 0))) + /* the lead (a mark's own note) is a message the person sees: count messages, not rows */
       '</div>' +
       lead +
       m.rows

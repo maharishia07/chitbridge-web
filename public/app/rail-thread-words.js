@@ -14,6 +14,7 @@
   threadKit.quietly = quietly;
   threadKit.threadText = threadText;
   threadKit.fill = fill;
+  threadKit.countText = countText;
   threadKit.unconfirmedMark = unconfirmedMark;
   threadKit.sentWords = sentWords;
   threadKit.when = when;
@@ -33,8 +34,8 @@
     audDispute: '⚑ Dispute — only its members see this',
     send: 'Send',
     write: 'Write a reply',
-    count1: '1 message',
-    countN: '{n} messages',
+    count1: '{count} message',
+    countN: '{count} messages',
     sending: 'Sending…',
     sentInt: '🔒 Note added — team only',
     sentExt: '↔ Sent — {party} notified',
@@ -55,6 +56,11 @@
   };
   function threadText(s) {
     return typeof tx === 'function' ? tx(s) : s;
+  }
+  /** "2 messages": the locale's plural rule (txn), the count written in the reader's digits; English forms when txn is not on the page */
+  function countText(n) {
+    var one = threadKit.THREAD_WORDS.count1, other = threadKit.THREAD_WORDS.countN;
+    return typeof tx === 'function' && typeof txn === 'function' ? txn(one, other, n) : fill(n === 1 ? one : other, { count: n });
   }
   function fill(s, v) {
     return String(s).replace(/\{(\w+)\}/g, function (_, k) {
