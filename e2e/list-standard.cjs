@@ -177,12 +177,13 @@ say('\n  ' + nDebt + ' hand-drawn header(s) still to move (the ratchet — it on
 for (const k of Object.keys(DEBT)) say('    · ' + k.padEnd(40) + DEBT[k]);
 
 /* 2 · the unit itself is the only writer, and it writes the header the standard asks for */
-const unitSrc = fs.readFileSync(path.join(ROOT, 'app/list-ctl.js'), 'utf8');
+/* the unit is list-ctl.js plus its parts (shrink W2, 2026-11-17: the stylesheet moved to list-ctl-css.js): the checks below read the whole unit */
+const unitSrc = ['list-ctl.js', 'list-ctl-css.js', 'list-ctl-click.js', 'list-ctl-wire.js'].map((p) => fs.readFileSync(path.join(ROOT, 'app/' + p), 'utf8')).join('\n');
 const unitHeader = /role=\\?"columnheader|role="columnheader/.test(unitSrc) && /cbl-rz/.test(unitSrc) && /aria-sort/.test(unitSrc) && /position:sticky;top:0/.test(unitSrc);
 if (!unitHeader) { fails++; say('  ✗ app/list-ctl.js no longer draws a sticky columnheader with a resize handle and aria-sort.'); }
 
 /* 2b · ZEBRA: the unit stripes its rows from a token; the statement tables carry the same stripe; no page paints a stripe of its own */
-const zUnit = /\.cbl-row\.z,\.cbl \.cbl-lrec\.z\{background:var\(--cl-zebra\)\}/.test(unitSrc) && /--cl-zebra:var\(--zebra,color-mix\(in srgb,var\(--cl-ink\) \d+%,var\(--cl-card\)\)\)/.test(unitSrc) && /\(zb \? ' z' : ''\)/.test(unitSrc);
+const zUnit = /\.cbl-row\.z,\.cbl \.cbl-lrec\.z\{background:var\(--cl-zebra\)\}/.test(unitSrc) && /--cl-zebra:var\(--zebra,color-mix\(in srgb,var\(--cl-ink\) \d+%,var\(--cl-card\)\)\)/.test(unitSrc) && /\((?:zb|zebra) \? ' z' : ''\)/.test(unitSrc);
 if (!zUnit) { fails++; say('  ✗ app/list-ctl.js no longer stripes its rows from a theme token (.cbl-row.z · --cl-zebra, with a z class on every other data row, grid and lines).'); }
 else say('  ✓ the unit stripes every other row from --cl-zebra (the theme\'s --zebra, else ink mixed into the card): no raw colour');
 const booksSrc = fs.readFileSync(path.join(ROOT, 'app/cap-books.js'), 'utf8');

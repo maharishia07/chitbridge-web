@@ -9,8 +9,7 @@
   'use strict';
   root.CBListParts = root.CBListParts || {};
   /** the list unit's stylesheet, part 1 of 8 (the list's custom properties, the head and the toolbar): one string per rule group, tokens only with a fallback for each */
-  function cssPart1(phoneMax) {
-    return [
+  const CSS_P1 = [
       '.cbl{--cl-page:var(--page,var(--paper,#FCFAF5));--cl-card:var(--card,#FFFFFF);--cl-panel:var(--panel,#F3EFE6);--cl-line:var(--line,#DDD6C6);--cl-soft:var(--line-soft,#E6E0D2);--cl-hair:var(--hair,#F0ECE2);',
       '--cl-ink:var(--ink,#1D1B16);--cl-muted:var(--muted,#5E594D);--cl-faint:var(--faint,#8A8374);--cl-ghost:var(--ghost,#A8A295);',
       '--cl-gband:color-mix(in srgb,var(--cl-blue) 13%,var(--cl-page));--cl-zebra:var(--zebra,color-mix(in srgb,var(--cl-ink) 9%,var(--cl-card)));--cl-hov:color-mix(in srgb,var(--cl-blue) 8%,var(--cl-card));',
@@ -40,11 +39,9 @@
       '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
       '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
       '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}'
-    ];
-  }
+  ];
   /** the list unit's stylesheet, part 2 of 8 (the column header, the rows and the cells): one string per rule group, tokens only with a fallback for each */
-  function cssPart2(phoneMax) {
-    return [
+  const CSS_P2 = [
       /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
     '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
       '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
@@ -75,11 +72,9 @@
       '.cbl .cbl-pop.hf button{display:block;width:100%;text-align:start;border:0;background:none;border-radius:7px;padding:6px 10px;font-size:calc(13.5px * var(--k,1));color:var(--cl-ink)}',
       '.cbl .cbl-pop.hf button:hover{background:var(--cl-hov)}',
       '.cbl .cbl-pop.hf button[aria-checked="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:700}'
-    ];
-  }
+  ];
   /** the list unit's stylesheet, part 3 of 8 (the group heads, the next level and the states): one string per rule group, tokens only with a fallback for each */
-  function cssPart3(phoneMax) {
-    return [
+  const CSS_P3 = [
       /* an action that this login may not do stays on screen, greyed, with its sentence */
     '.cbl .cbl-act{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px}',
       '.cbl .cbl-btn:disabled{opacity:.55;cursor:not-allowed}',
@@ -110,11 +105,9 @@
       '.cbl .cbl-colrow{display:flex;align-items:center;gap:6px;padding:2px 0}',
       '.cbl .cbl-colrow label{flex:1 1 auto!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:7px!important;padding:3px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;margin:0;font-weight:400}',
       '.cbl .cbl-colrow label:has(input:checked){background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}'
-    ];
-  }
+  ];
   /** the list unit's stylesheet, part 4 of 8 (the popovers, the chooser and the filters): one string per rule group, tokens only with a fallback for each */
-  function cssPart4(phoneMax) {
-    return [
+  const CSS_P4 = [
       '.cbl .cbl-colrow input{accent-color:var(--cl-blue);width:14px;height:14px}',
       '.cbl .cbl-mv{width:24px;height:24px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:6px;padding:0;font-size:calc(12px * var(--k,1));flex:0 0 auto}',
       '.cbl .cbl-mv:disabled{opacity:.3;cursor:default}.cbl .cbl-mvsp{width:24px;flex:0 0 auto}',
@@ -145,8 +138,7 @@
       /* ZEBRA (Athi, 2026-10-09): every other data row, one shade from a theme token (--zebra, else the ink mixed 4% into the card, so every theme keeps its contrast); a group head, the hover row and the selected row stay distinct; a multi-line row is ONE stripe */
     '.cbl .cbl-row.z,.cbl .cbl-lrec.z{background:var(--cl-zebra)}',
       '.cbl .cbl-row:hover{background:var(--cl-hov)}'
-    ];
-  }
+  ];
   /** the list unit's stylesheet, part 5 of 8 (the phone cards and the container query): one string per rule group, tokens only with a fallback for each */
   function cssPart5(phoneMax) {
     return [
@@ -183,8 +175,7 @@
     ];
   }
   /** the list unit's stylesheet, part 6 of 8 (tick boxes, forced colors and the small controls): one string per rule group, tokens only with a fallback for each */
-  function cssPart6(phoneMax) {
-    return [
+  const CSS_P6 = [
       '.cbl .cbl-ntab.cards{min-width:0}.cbl .bk-tabwrap{overflow-x:auto}.cbl .cbl-ntab.cards .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntc{overflow:visible}',
       '@media (max-width:700px){.cbl .bk-tabwrap{overflow:visible}.cbl .cbl-ntab.cards .cbl-nthead{display:none}.cbl .cbl-ntab.cards .cbl-ntrow{flex-wrap:wrap;align-items:center;gap:2px 10px;padding:6px 8px}.cbl .cbl-ntab.cards .cbl-ntrow::after{content:"";flex:0 0 100%;order:2;height:0}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc{width:auto!important;padding:0;flex:0 0 auto;order:1}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="0"]{display:none}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc[data-ln="2"]{order:3}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.end{margin-inline-start:auto}.cbl .cbl-ntab.cards .cbl-ntrow .cbl-ntc.first{flex:0 0 auto}.cbl .bk-bands{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cbl .bk-bands .bk-bw{display:none}.cbl .bk-bands>span{grid-column:1/-1}}',
       '.cbl .bk-needs .cbl-nchip{padding:0 8px;min-height:22px;font-size:calc(12px * var(--k,1))}.cbl .bk-needs .bk-need-more{color:var(--cl-muted)}',
@@ -215,8 +206,7 @@
       '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
       '.cbl .cbl-row .cbl-cell{padding:2px 0}',
       '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}'
-    ];
-  }
+  ];
   /** the list unit's stylesheet, part 7 of 8 (the remaining small rules): one string per rule group, tokens only with a fallback for each */
   function cssPart7(phoneMax) {
     return [
@@ -262,7 +252,7 @@
   }
   /** the whole stylesheet text for a phone breakpoint (the standard's 700 px): the parts in order, one rule group a line */
   function cssText(phoneMax) {
-    return [].concat(cssPart1(phoneMax), cssPart2(phoneMax), cssPart3(phoneMax), cssPart4(phoneMax), cssPart5(phoneMax), cssPart6(phoneMax), cssPart7(phoneMax), cssPart8(phoneMax)).join('\n');
+    return [].concat(CSS_P1, CSS_P2, CSS_P3, CSS_P4, cssPart5(phoneMax), CSS_P6, cssPart7(phoneMax), cssPart8(phoneMax)).join('\n');
   }
   root.CBListParts.css = cssText;
 })(typeof window !== 'undefined' ? window : this);

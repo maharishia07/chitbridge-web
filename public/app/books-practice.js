@@ -23,9 +23,6 @@
   function translate(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
-  }
   function base() {
     try {
       var f = root.localStorage.getItem('cb_api_base');

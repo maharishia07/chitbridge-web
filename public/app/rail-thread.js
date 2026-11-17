@@ -55,7 +55,7 @@
  */
 (function (root) {
   'use strict';
-  var threadKit = (root.CBThreadKit = root.CBThreadKit || {});
+  var threadKit = root.CBThreadKit; /* created by rail-thread-words.js, which loads first */
   threadKit.doc = root.document;
 
   /* ── the two routes, ONE name each (e2e/ep-aliases.cjs). app.html adds this to its EP beside CB_BOOKS_EP; a page without that
