@@ -58,7 +58,7 @@ function bkstAddressPeriod() {
     from = query.get('from'),
     to = query.get('to'),
     year = Number(String(query.get('fy') || '').slice(0, 4)),
-    day = /^d{4}-d{2}-d{2}$/;
+    day = /^\d{4}-\d{2}-\d{2}$/;
   if (from && to && day.test(from) && day.test(to) && from <= to) return { fy: bkhFyOf(to.slice(0, 7)), to };
   return year >= 1990 && year <= 2200 ? { fy: year, to: null } : null;
 }

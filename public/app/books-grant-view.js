@@ -308,7 +308,8 @@
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
       (viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
       (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
-      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
+      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' +
+      (viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wireBand();
     if (viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: viewState.failure && viewState.failure.status, detail: viewState.failure && viewState.failure.detail, retry: function () { reload(); } });
     fillPeriodSlot(report);
@@ -324,6 +325,7 @@
       };
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
+    wireBankTbLine();
     if (onActions()) mountQueues();
     else if (!viewState.why) { paintList(report); paintMarkBar(report); }
   }
@@ -376,6 +378,28 @@
   /** the firm's queues, inside the list area, under the same banner */
   function mountQueues() {
     root.CBBooksActionsView.mount($('bv_list'), { call: viewState.o.call, mode: 'firm', mountList: viewState.o.mountList, sheet: viewState.o.sheet, closeSheet: viewState.o.closeSheet });
+  }
+  /** RANK 9: the bank agreement under the trial balance: the api's `bank` block drawn by the ONE function (CBBankTbLine, shared with the owner's tab); the sign-off is the client's own, read, never redone */
+  function bankTbOptions() {
+    var a = viewState.answer || {};
+    return {
+      money: function (minor, cur) { return root.CBBooksActing.figure(minor, cur || a.currency); }, day: function (iso) { return root.shopDay(iso); }, tx: words,
+      txf: function (english, vars) { return words(english).replace(/\{(\w+)\}/g, function (whole, key) { return Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : whole; }); },
+      codes: { note: 'NET005-P01', open: 'NET005-B06', at: 'NET005-B07' }, ids: 'bv_tb_bank_',
+      onDay: function (day) { viewState.day = day; reload(); },
+      onOpen: function () {
+        var from = a.fy_from || '', to = a.asOf || '', carry = '&view=tb' + (from && to ? '&fy=' + encodeURIComponent(from.slice(0, 4)) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to) : '');
+        root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
+      }
+    };
+  }
+  function bankTbLine() {
+    var a = viewState.answer;
+    return a && a.bank && root.CBBankTbLine ? root.CBBankTbLine.html(a.bank, bankTbOptions()) : '';
+  }
+  function wireBankTbLine() {
+    var host = $('bv_bank_tb'), a = viewState.answer;
+    if (host && a && a.bank && root.CBBankTbLine) root.CBBankTbLine.wire(host, a.bank, bankTbOptions());
   }
   function pickDay() {
     viewState.day = $('bv_day').value;
