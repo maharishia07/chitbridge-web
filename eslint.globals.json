@@ -80,6 +80,8 @@
  "public/app/books-grant-reports.js":["public/network.html"],
  "public/app/books-grant-view.js":["public/network.html"],
  "public/app/books-grant-words.js":["public/network.html"],
+ "public/app/actor-hat.js":["public/app.html"],
+ "public/app/assign-bar.js":"*",
  "public/app/books-practice-band.js":"*",
  "public/app/books-practice-cells.js":"*",
  "public/app/books-practice.js":"*",

@@ -4986,7 +4986,7 @@ async function loadSettings() {
         .then((reply) => (reply || []).map(mapApiActor))
         .catch(() => [])
     ]);
-    const _assign = _acts.filter((item) => hatAssignable(item.hat));
+    const _assign = _acts.filter((item) => hatAssignable(item));
     const _daOpts =
       '<option value="">— none (leave in pool) —</option>' +
       _assign.map((item) => `<option value="${item.id}"${s.default_assignee_actor_id === item.id ? ' selected' : ''}>${esc(item.name)}</option>`).join('');
