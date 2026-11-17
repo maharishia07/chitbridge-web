@@ -4702,10 +4702,11 @@ async function bkTB(body) {
   try {
     var reply = await api('booksTB', { query: { asOf: asOf } });
     var c = reply && reply.currency;
+    var cmp = reply && reply.compare; /* leader-compare #2: the same day last year, the server's read (null in the first year of the books) */
     var rows = ((reply && reply.rows) || [])
       .map(function (x) {
         return (
-          '<tr><td class="mono">' +
+          '<tr' + (cmp && x.change_over ? ' class="bk-over"' : '') + '><td class="mono">' +
           esc(x.code) +
           '</td><td>' +
           bkDrillLink(x.code, x.name, 'tb', reply.fy_from || bkFyFrom(), asOf, 'tb', tx('Trial balance')) +
@@ -4713,13 +4714,15 @@ async function bkTB(body) {
           (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') +
           '</td><td class="num">' +
           (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') +
-          '</td></tr>'
+          '</td>' +
+          (cmp ? '<td class="num" data-testid="tb-prior">' + (x.prior_net_minor == null ? bkFig(null, c) : esc(bkDrCr(x.prior_net_minor, c))) + '</td><td class="num">' + bkChange(x.change_minor, x.change_over, c, 'BKS004-P02') + '</td><td class="num">' + bkPct(x.change_bp, true) + '</td>' : '') +
+          '</tr>'
         );
       })
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
-      bkStmtCss() +
+      bkStmtCss() + '<style>.bktab .bk-over td{background:var(--ask-t)}</style>' +
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
@@ -4732,7 +4735,7 @@ async function bkTB(body) {
       '</span></div>' +
       (window.CBBankTbLine && reply.bank ? CBBankTbLine.html(reply.bank, bkTbBankOptions(reply, asOf)) : '') +
       bkTable(
-        [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }],
+        [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }].concat(cmp ? [{ t: tx('Last year'), num: 1 }, { t: tx('Change'), num: 1 }, { t: '%', num: 1 }] : []),
         rows,
         '<tr><td></td><td><b>' +
           tx('Total') +
@@ -4740,8 +4743,9 @@ async function bkTB(body) {
           esc(bkMoney(reply.total_dr_minor, c)) +
           '</b></td><td class="num" data-testid="tb-cr"><b>' +
           esc(bkMoney(reply.total_cr_minor, c)) +
-          '</b></td></tr>'
-      );
+          '</b></td>' + (cmp ? '<td></td><td></td><td></td>' : '') + '</tr>'
+      ) +
+      (cmp ? bkOverNote(reply.over_rule, c, 'BKS004-P03', 'tb-over-note') : ''); /* the note sits UNDER the list: the first data row stays where it was */
     if (window.CBBankTbLine && reply.bank) CBBankTbLine.wire(body, reply.bank, bkTbBankOptions(reply, asOf));
   } catch (e) {
     body.innerHTML = bkErr(e);
@@ -4865,14 +4869,14 @@ function bkStRow(cls, label, cells) {
   return '<tr class="' + cls + '"><td>' + label + '</td>' + cells.map(function (x) { return '<td class="num' + (x.wide ? ' bk-wide' : '') + '"' + (x.tid ? ' data-testid="' + x.tid + '"' : '') + '>' + x.v + '</td>'; }).join('') + '</tr>';
 }
 /** ASA 520: the Change cell: the server's signed amount, with a quiet dot when the server says it is over its threshold (row class bk-over carries the tint on a narrow screen) */
-function bkChange(minor, over, c) {
+function bkChange(minor, over, c, code) {
   if (minor == null) return bkFig(null, c);
-  return (over ? '<span class="bk-over-dot" data-cbsid="BKS005-P02" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c));
+  return (over ? '<span class="bk-over-dot" data-cbsid="' + (code || 'BKS005-P02') + '" role="img" aria-label="' + esc(tx('Highlighted')) + '" title="' + esc(tx('Highlighted')) + '">●</span> ' : '') + esc((Number(minor) > 0 ? '+' : '') + bkMoney(minor, c));
 }
 /** the one line under the P&L that says what is highlighted, from the server's rule */
-function bkOverNote(rule, c) {
+function bkOverNote(rule, c, code, tid) {
   if (!rule || rule.pct_bp == null || rule.min_minor == null) return '';
-  return '<div class="bk-over-note" data-cbsid="BKS005-P01" data-testid="pl-over-note">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
+  return '<div class="bk-over-note" data-cbsid="' + (code || 'BKS005-P01') + '" data-testid="' + (tid || 'pl-over-note') + '">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
 }
 /** the P&L: a head's ledgers, then its subtotal (every head gets one), each line with last year · change · % of income */
 function bkPlGroups(lines, c, cmp, from, to) {
@@ -4986,23 +4990,26 @@ function bkBsDate() {
   bkTab('bs');
 }
 /** a side of the balance sheet: the pack's own chart heads, each with its ledgers and a subtotal, then the side's carried total */
-function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom) {
+function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, change) {
+  /* leader-compare #2: `change` (the server read last year) adds Change and % after the year-ago column; a head or total, which carries none, stays blank */
   var cells = function (x) {
-    return [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
+    var row = [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
+    if (!change) return row;
+    return row.concat('change_minor' in x ? [{ v: bkChange(x.change_minor, x.change_over, c, 'BKS006-P01') }, { v: bkPct(x.change_bp, true) }] : [{ v: '' }, { v: '' }]);
   };
-  var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="3"></td></tr>');
+  var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="' + (change ? 5 : 3) + '"></td></tr>');
   (heads || []).forEach(function (g) {
     var mine = (items || []).filter(function (x) { return (x.group ? x.group.code : null) === g.code; });
     var same = !g.name || String(g.name).toLowerCase() === String(title).toLowerCase(); /* a group named like its section (Equity under Equity) is said once */
-    if (!same) out += bkStRow('bk-grp', esc(g.name), []).replace('</tr>', '<td colspan="3"></td></tr>');
+    if (!same) out += bkStRow('bk-grp', esc(g.name), []).replace('</tr>', '<td colspan="' + (change ? 5 : 3) + '"></td></tr>');
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
       var note = pair ? '<span class="bk-note" data-testid="st-netof" title="' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '">' + esc(tx('net of') + ' ' + pair[0].name + ' ' + tx('less') + ' ' + pair[1].name) + '</span>' : '';
-      out += bkStRow('', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
+      out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
     });
     if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + g.name), cells(g));
   });
-  return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }]);
+  return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }].concat(change ? [{ v: '' }, { v: '' }] : []));
 }
 /* the Balance sheet tab: net assets first, "as at" a day with ‹ ›, this date beside a month ago and a year ago, by the pack's own chart heads */
 async function bkBS(body) {
@@ -5015,7 +5022,8 @@ async function bkBS(body) {
       custom = BK_BS.kind === 'custom',
       ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor),
       g = reply.groups || {},
-      fyFrom = reply.fy_from || bkFyFrom();
+      fyFrom = reply.fy_from || bkFyFrom(),
+      change = [].concat(reply.assets || [], reply.liabilities || [], reply.equity || []).some(function (x) { return x.change_minor != null; }); /* the server read last year (a year before the books began carries no change) */
     var opts = [['today', 'Today'], ['month', 'Last month end'], ['year', 'Last year end'], ['custom', 'Pick a date']];
     var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(reply.asOf) + '" onchange="bkBsDate()">' : '';
     var was = function (side) {
@@ -5030,12 +5038,12 @@ async function bkBS(body) {
       bkPeriodBar({ tid: 'bs', aria: 'As at', opts: opts, cur: BK_BS.kind, pick: 'bkBsPick', step: 'bkBsStep', custom: custom, canNext: A.can_next, dates: dates, range: tx('as at') + ' ' + bkDate(reply.asOf) + (cmp.month ? ' · ' + bkDate(cmp.month.as_at) + ' · ' + bkDate(cmp.year && cmp.year.as_at) : ''),
         extra: '<span class="optchip" data-testid="bs-balanced" style="' + (ok && reply.net_assets_ok !== false ? 'color:var(--ok-2)' : 'color:var(--warn-2)') + '">' + (ok ? tx('✓ balances') : tx('⚠ does not balance')) + '</span>' }) +
       lead +
-      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th></tr></thead><tbody>' +
-      bkBsSide(tx('Assets'), reply.assets, g.assets, c, reply.total_assets_minor, was('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom) +
-      bkBsSide(tx('Liabilities'), reply.liabilities, g.liabilities, c, reply.total_liabilities_minor, was('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom) +
-      bkBsSide(tx('Equity'), reply.equity, g.equity, c, reply.total_equity_minor, was('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom) +
-      bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }]) +
-      '</tbody></table>';
+      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
+      bkBsSide(tx('Assets'), reply.assets, g.assets, c, reply.total_assets_minor, was('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change) +
+      bkBsSide(tx('Liabilities'), reply.liabilities, g.liabilities, c, reply.total_liabilities_minor, was('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change) +
+      bkBsSide(tx('Equity'), reply.equity, g.equity, c, reply.total_equity_minor, was('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change) +
+      bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, c), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
+      '</tbody></table>' + (change ? bkOverNote(reply.over_rule, c, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
