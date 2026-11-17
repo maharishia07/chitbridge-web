@@ -32,12 +32,12 @@
   var ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
   /* the Day book's seven columns fit one 1366 screen beside the menu (Entry · Date · Kind · Party · ref · Amount · Evidence · Mark) */
-  var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170, flag: 70 };
+  var DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170, flag: 70, risk: 80, explain: 120 };
   var REPORTS = [
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
-    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: plRows, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY], ['prior_minor', 'Last year', MONEY], ['change_minor', 'Change', MONEY], ['change_bp', '%', PCT]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
+    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: plRows, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY], ['prior_minor', 'Last year', MONEY], ['change_minor', 'Change', MONEY], ['change_bp', '%', PCT], ['explain', 'Explain', 'explain']], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark'], ['flag', 'Saved', 'flag']], facts: [], drill: 'entry' },
+    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e), risk_list: riskWords(Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e)) /* the same row the filters judge (the amount is the debits) */ /* JET: the rules this entry trips (books-grant-filters.js riskOf), one definition each */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark'], ['risk', 'Risk', 'risk'], ['flag', 'Saved', 'flag']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', MONEY], ['age_d0_30', '1–30', MONEY], ['age_d31_60', '31–60', MONEY], ['age_d61_90', '61–90', MONEY], ['age_d90_plus', '90+', MONEY], ['balance_minor', 'Total', MONEY]], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
@@ -75,6 +75,11 @@
     var amount = minorWords(rule.min_minor).replace(/[.,]0+$/, '');
     return '<style>.bv-over,.bv-over>*{background:var(--ask-t)}.bv-over-dot{color:var(--ask-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(words('Highlighted') + ': ' + words('change of') + ' ' + rule.pct_bp / 100 + '% ' + words('and') + ' ' + amount + ' ' + words('or more')) + '</div>';
   }
+  /** NET005-P05: under the Day book, the fixed hours and day counts the Risk column and its filters use (one sentence; not a setting) */
+  function riskNote(report) {
+    if (report.k !== 'daybook' || viewState.since) return '';
+    return '<style>.bv-risk{display:inline-block;min-width:1.6em;text-align:center;border-radius:10px;padding:0 6px;background:var(--ask-t);color:var(--ask-i);font-weight:600}.bv-risknote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-risknote" data-cbsid="NET005-P05" data-testid="bv-risk-note">' + esc(words('Risk counts one point for each of: recorded after the period end · over 7 days late · at a weekend · after hours (8 pm to 7 am) · a round sum (multiple of 100) · no narration.')) + '</div>';
+  }
   function side(list, name) {
     return (list || []).map(function (row) {
       return Object.assign({ side: words(name) }, row);
@@ -94,8 +99,20 @@
     var text = String(key).split('_').join(' ');
     return words(text.charAt(0).toUpperCase() + text.slice(1)).split('Gst').join('GST');
   }
+  /** the JET rules an entry trips (the filters file's riskOf, read with the period and currency on screen) */
+  function riskWords(e) {
+    var F = root.CBBooksGrantFilters;
+    return F ? F.riskOf(e, viewState.period, viewState.answer && viewState.answer.currency) : [];
+  }
+  /** the Risk cell: the count, with the rules it counts as its title and as words for a reader; none = a dash */
+  function riskCell(row) {
+    var list = row.risk_list || [];
+    return list.length ? '<span class="bv-risk" data-cbsid="NET005-P04" data-testid="bv-risk" role="img" aria-label="' + esc(list.length + ' ' + words('risks') + ': ' + list.join(', ')) + '" title="' + esc(list.join(', ')) + '">' + list.length + '</span>' : '—';
+  }
   function figure(row, column) {
     var v = row[column[0]];
+    if (column[2] === 'risk') return riskCell(row);
+    if (column[2] === 'explain') return explainCell(row);
     if (column[2] === PCT) return v == null ? '—' : (Number(v) > 0 ? '+' : '') + (Number(v) / 100).toFixed(1) + '%';
     if (column[0] === 'change_minor') return changeCell(row, v);
     if (column[2] === MONEY) return narrowLabel(row, column, moneyCell(row, column[0], v));
@@ -302,6 +319,7 @@
         if (report.k === 'daybook' && viewState.mk) viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
         if (report.k === 'daybook' && viewState.ev) viewState.ev.ingest(answer && answer.entries); /* CMP062: and its evidence */
         if (report.k === 'daybook' && viewState.fl) flagsRead = viewState.fl.load(((answer && answer.entries) || []).map(function (e) { return e.entry_id; }).filter(Boolean)); /* CMP066: my bookmarks of these entries, ONE read per 200; a failed read draws no chip rather than saying none */
+        if (report.k === 'pl' && viewState.fa && answer && answer.compare) flagsRead = viewState.fa.load(plRows(answer).filter(function (r) { return r.change_over; }).map(explainId).filter(Boolean)); /* my explanations of the flagged lines, ONE read; a failed read draws no button rather than saying none */
         root.CBBooksActing.setCurrency(answer && answer.currency);
       },
       function (failure) {
@@ -406,7 +424,7 @@
       (!viewState.why && report.k === 'daybook' ? sinceBar() : '') +
       (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' +
-      (viewState.why ? '' : cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
+      (viewState.why ? '' : riskNote(report) + cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
       (viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wireBand();
     if (viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: viewState.failure && viewState.failure.status, detail: viewState.failure && viewState.failure.detail, retry: function () { reload(); } });
@@ -463,6 +481,20 @@
     if (viewState.fl) viewState.fl.destroy();
     viewState.fl = root.CBFlag && viewState.o.call && viewState.o.member ? root.CBFlag.use({ call: viewState.o.call, kind: 'posting', entity: function () { return viewState.o.member.id; } }) : null;
     if (viewState.fl) viewState.fl.onChange(onFlagChange);
+    if (viewState.fa) viewState.fa.destroy();
+    viewState.fa = root.CBFlag && viewState.o.call && viewState.o.member ? root.CBFlag.use({ call: viewState.o.call, kind: 'account', entity: function () { return viewState.o.member.id; } }) : null;
+  }
+  /** NET005-P06: Explain on a flagged P&L change: my own note on the account line, for this period (cap-flag.js kind 'account'; the id is '<code>@<period end day>'). Never the client's, never a mark */
+  function explainId(row) {
+    var to = String((viewState.answer && viewState.answer.to) || '').slice(0, 10);
+    return row.code && to ? String(row.code).toLowerCase() + '@' + to : '';
+  }
+  function explainOn() {
+    return !!viewState.fa && !viewState.fa.off() && !!(viewState.answer && viewState.answer.compare);
+  }
+  function explainCell(row) {
+    var id = explainId(row);
+    return row.change_over && id && viewState.fa ? '<span data-cbsid="NET005-P06">' + viewState.fa.chip(id, String(row.name || row.code).replace(/[<>]/g, '').slice(0, 56) + ' · ' + root.shopDay(viewState.answer.to)) + '</span>' : '';
   }
   function flagsOn() {
     return !!viewState.fl && !viewState.fl.off();
@@ -671,7 +703,7 @@
   /** the Mark column is drawn only when the server says marking is on */
   function shownCols(report) {
     var last = report.k === 'pl' && viewState.answer && !viewState.answer.compare ? CMP_COLS : [];
-    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || markable(report)) && (column[2] !== 'flag' || flagsOn()) && last.indexOf(column[0]) < 0; });
+    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || markable(report)) && (column[2] !== 'flag' || flagsOn()) && (column[2] !== 'explain' || explainOn()) && last.indexOf(column[0]) < 0; });
     return report.k === 'daybook' && viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
@@ -693,17 +725,19 @@
       },
       columns: shownCols(report).map(function (column, i) {
         return {
-          html: column[0] === 'change_minor' || column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref' || column[0] === 'lock_note',
+          html: column[0] === 'change_minor' || column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[2] === 'risk' || column[2] === 'explain' || column[0] === 'party_ref' || column[0] === 'lock_note',
           key: column[0],
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || (column[2] === MONEY && column[0] !== 'prior_minor') ? 1 : 2, /* Last year and % go first on a narrow screen: the amount and its change stay */
-          num: column[2] === MONEY || column[2] === PCT,
+          num: column[2] === MONEY || column[2] === PCT || column[2] === 'risk',
+          sort: column[2] === 'risk' ? true : undefined, /* Risk is the one Day book column the reader sorts: most risks first, on a second press */
           keep: column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
           w: DAYBOOK_W[column[0]] || (column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180),
           cell: function (row) {
             return figure(row, column);
           },
           value: function (row) {
+            if (column[2] === 'risk') return (row.risk_list || []).length;
             return row[column[0]] == null ? '' : String(row[column[0]]);
           }
         };
