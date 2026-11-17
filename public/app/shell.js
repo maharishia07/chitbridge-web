@@ -139,6 +139,7 @@
   function T(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
+  /* the Home cards' read (queue · retry · one ask per URL · lead by the data · firm lazy read) and painters: shell-facts.js */
   var factsLib = root.CBShellFacts || NO_FACTS,
     cards = factsLib.painters(W, T); /* a Home card's state · facts line · trend teaser (shell-facts.js) */
   /* ⭐ the frame's words are said AGAIN when a language pack lands: every pack calls renderApp() on its way out (strings-*.js), and a page
@@ -860,11 +861,7 @@
     var $ = function (s) {
       return el.querySelector(s);
     };
-    /* the Home cards' read (queue · retry · one ask per URL · lead by the data · firm lazy read): shell-facts.js */
-    var facts = factsLib.create({
-      el: el, person: person, S: S, $: $, get: get, shown: shown, routeOf: routeOf, W: W,
-      noteNeeds: noteNeeds, cardState: cards.cardState, paintBadges: paintBadges, factsHTML: cards.factsHTML, lineHTML: cards.lineHTML, trendHTML: cards.trendHTML
-    });
+    var facts = factsLib.create({ el: el, person: person, S: S, $: $, get: get, shown: shown, routeOf: routeOf, W: W, noteNeeds: noteNeeds, cardState: cards.cardState, paintBadges: paintBadges, factsHTML: cards.factsHTML, lineHTML: cards.lineHTML, trendHTML: cards.trendHTML });
     var node = $('.cbsh-hdr'),
       sheet = $('.cbsh-sheet'),
       who = $('.cbsh-who'),

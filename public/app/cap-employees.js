@@ -691,8 +691,7 @@
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
         '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
-        '<div class="sub" data-testid="emp-add-keyhint">' + esc(T('4 to 12 letters or numbers')) + '</div>' +
-        '<div class="sub" id="emp_kn" data-testid="emp-add-keynote"></div>' +
+        '<div class="sub" data-testid="emp-add-keyhint">' + esc(T('4 to 12 letters or numbers')) + '</div>' + '<div class="sub" id="emp_kn" data-testid="emp-add-keynote"></div>' +
         '<label for="emp_l">' +
         esc(T('What they can do')) +
         '</label><select data-cbsid="EMP001-S02" class="inp" id="emp_l" data-testid="emp-add-level">' +

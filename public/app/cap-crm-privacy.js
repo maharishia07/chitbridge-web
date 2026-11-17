@@ -198,6 +198,16 @@ async function crmConsentHolders() {
   }
 }
 /** on open: the history (what · when · how given · withdrawn) and the law's words — one GET, a CBList mount; could-not-read in words */
+/** the history could not be read: say why in words (503: the consent records start after an update) and offer Try again */
+function crmConsentHistFailed(hist, e) {
+  hist.removeAttribute('data-loaded');
+  hist.innerHTML =
+    '<div class="hint" data-testid="crm-consent-hist-err">' +
+    esc(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : tx("Couldn't read the consent history.")) +
+    ' <button data-cbsid="CMP009" type="button" class="crm-mini" data-crm="consentretry">' +
+    esc(tx('Try again')) +
+    '</button></div>';
+}
 async function crmConsentOpen(p) {
   var hist = document.getElementById('crm_consent_hist'),
     node = document.getElementById('crm_consent_law');
@@ -207,13 +217,7 @@ async function crmConsentOpen(p) {
   try {
     r = await api('crmPrefs', { params: { id: p.party_id } });
   } catch (e) {
-    hist.removeAttribute('data-loaded');
-    hist.innerHTML =
-      '<div class="hint" data-testid="crm-consent-hist-err">' +
-      esc(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : tx("Couldn't read the consent history.")) +
-      ' <button data-cbsid="CMP009" type="button" class="crm-mini" data-crm="consentretry">' +
-      esc(tx('Try again')) +
-      '</button></div>';
+    crmConsentHistFailed(hist, e);
     return;
   }
   hist = document.getElementById('crm_consent_hist');

@@ -129,7 +129,7 @@
 
 
   /* the words and translator shell.js hands over once (painters): the cards' painters below read them */
-  var wording, say;
+  var wording, translate;
   /* ── a Home card's STATE (walk 17 Oct, Athi: "represent the status, active / not active") ── the server's facts `state` when it says;
      until every card does, a line marked tone 'dn' is needs_you and any other line in_use; no lines, no state */
   function cardState(answer, lines) {
@@ -149,7 +149,7 @@
       state +
       '">' +
       (state === 'not_started' ? '○ ' : '● ') +
-      esc(say(wording.state[state])) +
+      esc(translate(wording.state[state])) +
       '</span>'
     );
   }
@@ -157,7 +157,7 @@
      two or more → a +n badge with every line in the drop-down (.more) */
   function factsHTML(card, lines, state, nestedLineHTML) {
     var badge = state ? stateHTML(state) : '';
-    if (state === 'not_started') return badge + '<span class="f">' + esc(say(wording.setUp)) + ' ›</span>';
+    if (state === 'not_started') return badge + '<span class="f">' + esc(translate(wording.setUp)) + ' ›</span>';
     if (lines.length < 2) return badge + lines.map(nestedLineHTML).join('');
     return (
       badge +
@@ -167,7 +167,7 @@
       '">+' +
       (lines.length - 1) +
       ' ' +
-      esc(say(wording.moreWord)) +
+      esc(translate(wording.moreWord)) +
       '</span><span class="more" data-testid="shell-more-' +
       esc(card.id) +
       '">' +
@@ -179,17 +179,21 @@
    * RPT2: the Till card's teaser — the server's figures.trend (8 weeks' sales, the engine's change vs last year) as a sparkline + words, a door
    * into Reports › Trend. Nothing from the server → nothing drawn (omit, never 0); CBDraw absent (a page without it) → nothing.
    */
+  /** the change against last year in words: an arrow, the percent in the reader's locale, "vs last year" ('' when the engine sent none) */
+  function trendChangeWords(change) {
+    if (change == null) return '';
+    var locale = root.CBLocale,
+      amount = locale && locale.number ? locale.number(Math.abs(change), { maximumFractionDigits: 1 }) : String(Math.abs(change));
+    return (change > 0 ? '↑ +' : change < 0 ? '↓ −' : '= ') + amount + '% ' + translate(wording.vsLastYear);
+  }
   function trendHTML(trend) {
     if (!trend || !root.CBDraw) return '';
-    var change = trend.vs_last_year_pct,
-      locale = root.CBLocale;
-    var amount = change == null ? '' : locale && locale.number ? locale.number(Math.abs(change), { maximumFractionDigits: 1 }) : String(Math.abs(change));
-    var words = change == null ? '' : (change > 0 ? '↑ +' : change < 0 ? '↓ −' : '= ') + amount + '% ' + say(wording.vsLastYear);
+    var words = trendChangeWords(trend.vs_last_year_pct);
     var spark = root.CBDraw.spark(trend.spark, {
       width: 64,
       height: 16,
       stroke: 'var(--sh-green-d,#2d6a4f)',
-      aria: say(wording.salesWeeks) + (words ? ', ' + words : ''),
+      aria: translate(wording.salesWeeks) + (words ? ', ' + words : ''),
       tid: 'shell-fact-spark'
     });
     if (!spark) return '';
@@ -202,36 +206,40 @@
   }
   /* a fact line's words: the server names an amount or a moment ({money} {time} {date} {when}) and sends it as data (money:{amount,currency}, at: ISO);
      the reader's locale words it — "₹420", "09:33", "today 09:40" — never "INR 420.00" or an ISO date */
-  function lineWords(t) {
-    var L = root.CBLocale,
-      at = t.at,
-      m = t.money,
-      text = String(t.text == null ? '' : t.text);
-    var time = function () {
-      try {
-        return (L && L.time && L.time(at)) || '';
-      } catch (_) {
-        return '';
-      }
-    };
-    var date = function () {
-      try {
-        return (L && L.date && L.date(at)) || String(at || '').slice(0, 10);
-      } catch (_) {
-        return String(at || '').slice(0, 10);
-      }
-    };
-    var sameDay = function () {
-      var day = new Date(at),
-        n = new Date();
-      return !isNaN(day) && day.getFullYear() === n.getFullYear() && day.getMonth() === n.getMonth() && day.getDate() === n.getDate();
-    };
-    return text
-      .replace(/{(money|time|date|when)}/g, function (_, k) {
-        if (k === 'money') return m ? (L && L.money && L.money(m.amount, m.currency)) || m.currency + ' ' + m.amount : '';
-        if (k === 'time') return time();
-        if (k === 'date') return date();
-        return (sameDay() ? wording.today : date()) + ' ' + time();
+  /** a moment's time in the reader's locale ('' when it cannot be said) */
+  function momentTime(locale, at) {
+    try {
+      return (locale && locale.time && locale.time(at)) || '';
+    } catch (failure) {
+      return '';
+    }
+  }
+  /** a moment's date in the reader's locale (the ISO day when the locale cannot say it) */
+  function momentDate(locale, at) {
+    try {
+      return (locale && locale.date && locale.date(at)) || String(at || '').slice(0, 10);
+    } catch (failure) {
+      return String(at || '').slice(0, 10);
+    }
+  }
+  function isToday(at) {
+    var day = new Date(at),
+      now = new Date();
+    return !isNaN(day) && day.getFullYear() === now.getFullYear() && day.getMonth() === now.getMonth() && day.getDate() === now.getDate();
+  }
+  /** one {token} of a fact line said for the reader: money, time, date, or "today 09:40" */
+  function momentWord(fact, token) {
+    var locale = root.CBLocale,
+      money = fact.money;
+    if (token === 'money') return money ? (locale && locale.money && locale.money(money.amount, money.currency)) || money.currency + ' ' + money.amount : '';
+    if (token === 'time') return momentTime(locale, fact.at);
+    if (token === 'date') return momentDate(locale, fact.at);
+    return (isToday(fact.at) ? wording.today : momentDate(locale, fact.at)) + ' ' + momentTime(locale, fact.at);
+  }
+  function lineWords(fact) {
+    return String(fact.text == null ? '' : fact.text)
+      .replace(/{(money|time|date|when)}/g, function (whole, token) {
+        return momentWord(fact, token);
       })
       .trim();
   }
@@ -245,9 +253,9 @@
     return '<span class="f' + (t.tone === 'dn' ? ' dn' : '') + '">' + esc(lineWords(t)) + act + '</span>';
   }
   /** shell.js hands over its word table and translator once and gets back the card painters */
-  function painters(words, translate) {
+  function painters(words, translator) {
     wording = words;
-    say = translate;
+    translate = translator;
     return { cardState: cardState, factsHTML: factsHTML, trendHTML: trendHTML, lineHTML: lineHTML };
   }
 

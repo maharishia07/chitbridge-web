@@ -144,6 +144,13 @@ function crmWhenCell(e) {
     (entered && entered !== e.doc_date ? '<br><span class="sub" data-testid="crm-entered-' + esc(e.id) + '">' + esc(tx('entered')) + ' ' + esc(crmDocDay(entered)) + '</span>' : '')
   );
 }
+/** the document in its own words: kind (an Invoice to a customer, a Bill from a supplier) + its print number; the date is the document's, in the When column */
+function crmLedgerLine(e, kind) {
+  var word = tx(e.ledger_kind === 'bill' ? crmDocWord() : 'Payment'),
+    number = cbIsRawId(e.ref) || !e.ref ? '' : e.ref;
+  if (kind !== 'payment') return word + (number ? ' ' + number : '');
+  return word + (number ? ' · ' + number : e.amount_minor != null ? ' ' + bkMoney(e.amount_minor, e.currency) : '');
+}
 function crmEntryFrom(e, i) {
   if (e && e.line != null && e.id != null) return e; // already the page's grammar (the design stand-in's) — accepted as is
   var at = e.at || '',
@@ -185,10 +192,7 @@ function crmEntryFrom(e, i) {
     o.amount_minor = e.amount_minor;
     o.currency = e.currency;
     if (/^\d{4}-\d{2}-\d{2}$/.test(String(e.doc_date || ''))) o.doc_date = e.doc_date; /* a day the wire cut short ("Thu Oct 08") is not kept: the When cell then shows the entry's own moment */
-    var wd = tx(e.ledger_kind === 'bill' ? crmDocWord() : 'Payment'),
-      number = cbIsRawId(e.ref) || !e.ref ? '' : e.ref;
-    /* the document in its own words: kind (an Invoice to a customer, a Bill from a supplier) + its print number; the date is the document's, in the When column */
-    o.line = o.kind === 'payment' ? wd + (number ? ' · ' + number : e.amount_minor != null ? ' ' + bkMoney(e.amount_minor, e.currency) : '') : wd + (number ? ' ' + number : '');
+    o.line = crmLedgerLine(e, o.kind);
   } else if (k === 'interaction') {
     var ik = e.interaction_kind;
     o.kind = ik === 'message' ? 'whatsapp' : CRM_KIND[ik] ? ik : 'note';
@@ -344,6 +348,22 @@ function crmDayGroup(e) {
 }
 
 /* ═══ THE RECORD ═════════════════════════════════════════════════════════════════════════════════════════════════ */
+/** the record read or paint failed: a plain line and Try again in the loading spot (or under the header, or alone), never "Reading…" for good */
+function crmRecordOpenFailed(node) {
+  var w = node.querySelector('.loadwrap'),
+    html =
+      '<div class="empty" data-testid="crm-rec-error"><div class="t">' +
+      esc(tx("Couldn't open this party.")) +
+      '</div><button data-cbsid="CMP009" type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
+      esc(tx('Try again')) +
+      '</button></div>';
+  if (w) w.outerHTML = html;
+  else {
+    var rr = node.querySelector('.rec');
+    if (rr) rr.insertAdjacentHTML('beforeend', html);
+    else node.innerHTML = '<div class="content">' + html + '</div>';
+  }
+}
 async function crmRecordOpen(route) {
   var tok = ++CRMR.tok,
     node = document.getElementById('screen');
@@ -411,19 +431,7 @@ async function crmRecordOpen(route) {
   } catch (e) {
     /* ANY failure — the read or the paint — ends the spinner: a plain line and Try again, never "Reading…" for good */
     if (tok !== CRMR.tok || CRM.route !== route) return;
-    var w = node.querySelector('.loadwrap'),
-      html =
-        '<div class="empty" data-testid="crm-rec-error"><div class="t">' +
-        esc(tx("Couldn't open this party.")) +
-        '</div><button data-cbsid="CMP009" type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
-        esc(tx('Try again')) +
-        '</button></div>';
-    if (w) w.outerHTML = html;
-    else {
-      var rr = node.querySelector('.rec');
-      if (rr) rr.insertAdjacentHTML('beforeend', html);
-      else node.innerHTML = '<div class="content">' + html + '</div>';
-    }
+    crmRecordOpenFailed(node);
     return;
   }
   if (route.sub === 'log') crmLogOpen(p);
@@ -749,6 +757,23 @@ function crmRemoveItemHTML(party, icon) {
 function crmDuesBand(p) {
   return !!(CRM.ledger && p.dues_overdue);
 }
+/** Pay / Receive on the record's action row, greyed WITH the server's sentence when the login may not */
+function crmPayButton(p) {
+  var wpay = crmWhyNot(p, 'pay'),
+    owed = Number(p.balance_minor || 0),
+    label = owed > 0 ? 'Receive' : owed < 0 ? 'Pay' : 'Pay / Receive';
+  return (
+      '<button data-cbsid="CRM006-B08" type="button" class="act' +
+        (wpay ? ' ghost' : '') +
+        '" data-crm="rpay" data-testid="crm-act-pay"' +
+        (wpay ? ' disabled title="' + esc(wpay) + '"' : '') +
+        '>' +
+        icon('pay') +
+        esc(tx(label)) +
+        (wpay ? '<span class="why wide-only" style="font-weight:400;font-size:12px"> \u00b7 ' + esc(wpay) + '</span>' : '') +
+        '</button>'
+  );
+}
 function crmActionsHTML(p, rec) {
   if (!crmEdit()) return crmViewerActionsHTML(p, rec);
   var c = rec.contacts || {},
@@ -796,21 +821,7 @@ function crmActionsHTML(p, rec) {
   else primary = ''; /* no phone, no e-mail: the Next band's "Add" is the one place (one place per action) */
   /* the list card's actions, at the top: Pay / Receive (greyed WITH its sentence) and Message when they are not on ChitBridge */
   if (p.kind !== 'walk-in') {
-    var wpay = crmWhyNot(p, 'pay'),
-      b0 = Number(p.balance_minor || 0),
-      plab = b0 > 0 ? 'Receive' : b0 < 0 ? 'Pay' : 'Pay / Receive';
-    if (!crmDuesBand(p))
-      inline.push(
-      '<button data-cbsid="CRM006-B08" type="button" class="act' +
-        (wpay ? ' ghost' : '') +
-        '" data-crm="rpay" data-testid="crm-act-pay"' +
-        (wpay ? ' disabled title="' + esc(wpay) + '"' : '') +
-        '>' +
-        icon('pay') +
-        esc(tx(plab)) +
-        (wpay ? '<span class="why wide-only" style="font-weight:400;font-size:12px"> \u00b7 ' + esc(wpay) + '</span>' : '') +
-        '</button>'
-    );
+    if (!crmDuesBand(p)) inline.push(crmPayButton(p));
     if (!p.on_chitbridge)
       inline.push(
         '<button data-cbsid="CRM006-B09" type="button" class="act ghost wide-only" disabled data-testid="crm-act-message-off" title="' +
@@ -927,6 +938,20 @@ function crmSec(id, title, fact, body, open) {
 }
 function crmKV(l, v) {
   return v == null || v === '' ? '' : '<div class="kv"><b>' + esc(tx(l)) + '</b><span>' + v + '</span></div>';
+}
+/** R70: a history that could not be read is NOT an empty history: the list says so (the record's other sections still show) and offers Try again */
+function crmTimelineFailure(rec) {
+  return {
+    state: function () {
+      return rec.timeline_failed ? 'error' : null;
+    },
+    error: function () {
+      return { title: tx("Couldn't load the history."), sub: tx('The record’s other sections still show.') };
+    },
+    onRetry: function () {
+      crmRecordOpen(CRM.route);
+    }
+  };
 }
 function crmRecordPaint(p, rec) {
   var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) });
@@ -1135,7 +1160,7 @@ function crmRecordPaint(p, rec) {
         CRMR.headApi.destroy();
       } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
-    CRMR.headApi = CBList.mount(head, {
+    CRMR.headApi = CBList.mount(head, Object.assign({
       key: 'crm-tl-head',
       t: tx,
       fill: false,
@@ -1154,17 +1179,8 @@ function crmRecordPaint(p, rec) {
       },
       onOpen: crmEntryOpen,
       next: crmEntryNext,
-      state: function () {
-        return rec.timeline_failed ? 'error' : null;
-      },
-      error: function () {
-        return { title: tx("Couldn't load the history."), sub: tx('The record’s other sections still show.') };
-      },
-      onRetry: function () {
-        crmRecordOpen(CRM.route);
-      },
       empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') }
-    });
+    }, crmTimelineFailure(rec)));
   }
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
@@ -1427,6 +1443,11 @@ async function crmLogSave() {
 }
 
 /* ═══ ONE click door for the record's controls (cap-crm.js hands every data-crm it does not own to this) ═══════════ */
+/** the side Receive / Pay opens on: the side the record has; a party on both sides: by who owes whom */
+function crmPaySide(p, rec) {
+  if (rec.customer && rec.supplier) return p.balance_minor > 0 ? 'customer' : 'supplier';
+  return rec.customer ? 'customer' : 'supplier';
+}
 function crmRecordClick(a, node, ev) {
   var p = CRMR.p,
     rec = CRMR.rec || {},
@@ -1500,7 +1521,7 @@ function crmRecordClick(a, node, ev) {
       { what: tx('Remind about the overdue dues'), source: 'dues' }
     );
   if (a === 'rpay') {
-    var side = rec.customer && rec.supplier ? (p.balance_minor > 0 ? 'customer' : 'supplier') : rec.customer ? 'customer' : 'supplier';
+    var side = crmPaySide(p, rec);
     return payOpen(side, p.party_id, payOpenTotal(side, p) || undefined); /* the figure the record already shows, carried */
   } /* the side the record has; a party on both sides: by who owes whom */
   if (a === 'rgtheirs') return crmGstinTheirs(p, rec);

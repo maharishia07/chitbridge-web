@@ -558,29 +558,38 @@ async function enOwnAdd(k) {
   }
   enPaint();
 }
+/** what the sheet holds for a field now ('' when nothing yet) */
+function enValueOf(key) {
+  return EN.v[key] == null ? '' : EN.v[key];
+}
+/** the label a field is asked with: its own, the shared one, or the plain word for its kind (the key when none) */
+function enFieldLabel(f) {
+  var k = f.key;
+  return tx(
+        f.label ||
+          EN_LABEL[k] ||
+          {
+            party: 'Who',
+            ledger: 'Which ledger',
+            bank: 'Which bank',
+            asset_class: 'What kind',
+            loan: 'Which loan',
+            amount: 'How much',
+            date: 'Date',
+            paid_by: 'Paid by',
+            doc_no: 'Bill / receipt no.',
+            photo: 'Photo of the paper',
+            narration: 'Note',
+            text: k
+          }[f.kind] ||
+          k
+      );
+}
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
   var k = f.key,
-    v = EN.v[k] == null ? '' : EN.v[k],
-    lab = tx(
-      f.label ||
-        EN_LABEL[k] ||
-        {
-          party: 'Who',
-          ledger: 'Which ledger',
-          bank: 'Which bank',
-          asset_class: 'What kind',
-          loan: 'Which loan',
-          amount: 'How much',
-          date: 'Date',
-          paid_by: 'Paid by',
-          doc_no: 'Bill / receipt no.',
-          photo: 'Photo of the paper',
-          narration: 'Note',
-          text: k
-        }[f.kind] ||
-        k
-    ),
+    v = enValueOf(k),
+    lab = enFieldLabel(f),
     tid = 'en-f-' + k;
   var wrap = function (inner) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
