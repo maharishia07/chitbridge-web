@@ -140,7 +140,7 @@ W.run('books-grant', async (w) => {
     const rowOf = (n) => page.locator(T('bv-list') + ' [data-testid^="bv-row-"]').filter({ hasText: n }).first();
     const flat = (n) => rowOf(n).innerText().then((s) => s.replace(/\s+/g, ' '));
     const sales = await flat('Sales'), wages = await flat('Wages'), other = await flat('Other income');
-    return { ok: /Last year/.test(head) && /Change/.test(head) && dots === 2 && tint === 2 && /10,000/.test(sales) && /[+]25[.]0%/.test(sales) && /[+]5[.]0%/.test(wages) && /[+].*1,000/.test(wages) && !/●/.test(wages) && !/●/.test(other) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Sales: ' + sales + ' · Wages: ' + wages + ' · no sideways ' + a.x };
+    return { ok: /last year/i.test(head) && /change/i.test(head) && dots === 2 && tint === 2 && /10,000/.test(sales) && /[+]25[.]0%/.test(sales) && /[+]5[.]0%/.test(wages) && /[+].*1,000/.test(wages) && !/●/.test(wages) && !/●/.test(other) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Sales: ' + sales + ' · Wages: ' + wages + ' · no sideways ' + a.x };
   });
   await w.step('A5', 'the auditor · a part the server refuses is said in the server\'s words, not shown as an empty table', async () => {
     S.refuse = { path: '/api/books/bs', words: 'This part of the books is not open to an auditor.' };
