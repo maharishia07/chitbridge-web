@@ -793,8 +793,8 @@ async function peBusyDay() {
       .sort()
       .pop();
     return last || '';
-  } catch (_) {
-    return '';
+  } catch (failure) {
+    return bkQuiet('busy-day', failure, '');
   }
 }
 /** what the shop calls its return — BAS, VAT return — before the server has answered (the pack's word), else the neutral "Tax close" */
@@ -972,13 +972,13 @@ function peReturnClaim(r) {
 }
 /** the claim band under the return total: what the shop may claim back, in the server's words, with its risk mark when the server raised one */
 function peReturnClaimBand(answer) {
-  const w = peReturnClaim(answer);
-  if (!w) return '';
+  const claimed = peReturnClaim(answer);
+  if (!claimed) return '';
   return (
     '<div class="ev-warnbox" role="status" data-testid="pr-claim">' +
-    esc(w.text) +
+    esc(claimed.text) +
     ' <button data-cbsid="BKS016-B10" type="button" class="optchip" data-testid="pr-claim-see" onclick="peReturnSeeClaim()">' +
-    esc(w.see) +
+    esc(claimed.see) +
     '</button></div>'
   );
 }
@@ -1115,8 +1115,8 @@ function peTaxColumnWord() {
   return (typeof packWord === 'function' && packWord('taxName')) || tx('Tax');
 }
 /** the panel under a box: its own header row, one line per ledger (largest first, the server's figures), "and n more" when the server cut the list; each ledger opens its entries for the period */
-function peReturnLedgers(r, b, taxColumns) {
-  const c = r.currency,
+function peReturnLedgers(answer, b, taxColumns) {
+  const c = answer.currency,
     grey = 'color:var(--grey);font-size:var(--fs-1)',
     widths = taxColumns ? [130, 130] : [130],
     money = (v) => (v == null ? peRetDash() : esc(peMoney(v, c)));
