@@ -333,7 +333,7 @@ const make = (over) => {
   const codes = html.match(/data-cbsid="[^"]+"/g) || [];
   assert.strictEqual(new Set(codes).size, codes.length);
   assert.ok(codes.every((x) => /BKS017-[A-Z]\d\d/.test(x)));
-  ['app/bank-demo.js', 'app/bank-preview.js', 'app/bank-preview-ui.js', 'app/bank-demo.css'].forEach((rel) => {
+  ['app/bank-demo.js', 'app/bank-preview-line.js', 'app/bank-preview.js', 'app/bank-preview-ui.js', 'app/bank-demo.css'].forEach((rel) => {
     const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '');
     assert.ok(!/\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|localStorage|sessionStorage|indexedDB|document\.cookie|@import|url\(/.test(src), rel + ' is inert');
   });

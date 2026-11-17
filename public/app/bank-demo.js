@@ -34,7 +34,7 @@
     askPanel = null,
     lines = null /* the one list of statement lines: CBBankLines on CBList (W15-12) */,
     addBtn = null /* the Add button: it sits in the band while a statement shows, in the bar when none does */,
-    ui = null /* the answers under a line: CBBankPreviewUI, the same painter the owner's Bank page uses */,
+    answers = null /* the answers under a line: CBBankPreviewUI, the same painter the owner's Bank page uses */,
     matchedNames = {} /* which entry of the books each line matched, in the entry's words */,
     files = null,
     report = null,
@@ -161,11 +161,11 @@
       inBooks = counts.in + counts.posted,
       parsed = model.parsed;
     if (!recon) return void (placeAdd(false), (el('bd_figs').hidden = true));
-    var fmt = function (minor) { return amountText({ amount_minor: minor, currency: CURRENCY }); };
+    var moneyOf = function (minor) { return amountText({ amount_minor: minor, currency: CURRENCY }); };
     el('bd_figs').hidden = false;
     el('bd_figs').innerHTML = root.CBBankBand.html({
       account: ACCOUNT, from: parsed.from, to: parsed.to, count: total, currency: CURRENCY,
-      right: root.CBBankBand.rightAccount({ parsed: parsed, check: model.check, fmt: fmt, currency: CURRENCY, statementCurrency: CURRENCY, accountNumber: '', previous: null }),
+      right: root.CBBankBand.rightAccount({ parsed: parsed, check: model.check, fmt: moneyOf, currency: CURRENCY, statementCurrency: CURRENCY, accountNumber: '', previous: null }),
       statement: amountText(recon.closing_statement), books: amountText(recon.closing_books_before), difference: amountText(recon.difference_before).replace(/^-/, ''),
       actions: '<span id="bd_addslot"></span>',
       toGo: total - inBooks, inBooks: inBooks, total: total, nil: preview.minorOf(recon.difference_before) === 0 && total === inBooks, tid: 'bd-band'
@@ -226,7 +226,7 @@
   /** the open row of a line: what the engine says it is, the entry it would make and the answers it asks (bank-preview-ui.js), or, for a line already in the books, the entry it matched */
   function panelOf(row) {
     if (row.standing === 'in') return '<div class="bd-openrow" data-testid="bd-panel"><p class="bd-looks-line"><b>Already in your books</b></p><div class="bd-sub"><span class="bd-why">' + esc(matchedNames[row.item.i] || '') + '</span></div></div>';
-    return ui.panel(row.item, row.result);
+    return answers.panel(row.item, row.result);
   }
   function paintLines(model, names) {
     matchedNames = names;
@@ -462,7 +462,7 @@
     askPanel = root.CBBankDemoAsk.create(hostFor());
     files = root.CBBankDemoFiles.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
-    ui = root.CBBankPreviewUI.mount({
+    answers = root.CBBankPreviewUI.mount({
       host: el('bd_lines'), controller: function () { return controller; }, currency: CURRENCY, country: COUNTRY, amountText: amountText, accountName: nameOf,
       only: function () { return ''; }, say: function (words) { setMessage(words || ''); }, changed: onAnswered
     });

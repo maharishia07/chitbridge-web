@@ -19,7 +19,7 @@
     expense: 'Expense', other_income: 'Other income', payment_received: 'Customer receipt', payment_made: 'Supplier payment', contra: 'Transfer', cheque_dishonoured: 'Returned cheque'
   };
   var CLASS_WORDS = { bank_charges: 'Bank fee', interest_received: 'Interest', interest_paid: 'Interest' };
-  function T(text) {
+  function sayText(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
   /** the controller's one standing for a line → the status the row shows */
@@ -126,39 +126,39 @@
     return list;
   }
   /** one filter, shown only when the lines give a choice (two or more values, or one that is not every line) */
-  function filterOf(cfg, def) {
+  function filterOf(cfg, spec) {
     var rows = function () { return cfg.rows(); };
     var options = function () {
-      return def.options(rows());
+      return spec.options(rows());
     };
     return {
-      key: def.key,
-      label: T(def.label),
-      all: T(def.all || 'Any'),
+      key: spec.key,
+      label: sayText(spec.label),
+      all: sayText(spec.all || 'Any'),
       options: options,
       hide: function () {
         var list = options(),
           all = rows().length;
-        return !list.length || (list.length === 1 && rows().filter(function (row) { return def.match(row, list[0].v); }).length === all);
+        return !list.length || (list.length === 1 && rows().filter(function (row) { return spec.match(row, list[0].v); }).length === all);
       },
-      match: def.match
+      match: spec.match
     };
   }
   function filtersOf(cfg) {
     var weeks = function (rows) {
       return distinct(rows.slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); }), function (row) { return weekOf(row.date); }, function (monday) {
-        return T('Week of') + ' ' + root.CBBankBand.dayText(monday).replace(/ \d{4}$/, '');
+        return sayText('Week of') + ' ' + root.CBBankBand.dayText(monday).replace(/ \d{4}$/, '');
       });
     };
     return [
-      { key: 'status', label: 'Status', all: 'All', options: function (rows) { return ['need', 'ready', 'in', 'books'].filter(function (key) { return key !== 'books' || rows.some(function (row) { return row.status === 'books'; }); }).map(function (key) { return { v: key, label: T(STATUS[key]) }; }); }, match: function (row, value) { return row.status === value || (value === 'in' && row.status === 'done') || (value === 'need' && row.status === 'lock'); } },
-      { key: 'dir', label: 'Money', all: 'In and out', options: function (rows) { return distinct(rows, function (row) { return row.out ? 'out' : 'in'; }, function (value) { return T(value === 'out' ? 'Money out' : 'Money in'); }); }, match: function (row, value) { return (row.out ? 'out' : 'in') === value; } },
+      { key: 'status', label: 'Status', all: 'All', options: function (rows) { return ['need', 'ready', 'in', 'books'].filter(function (key) { return key !== 'books' || rows.some(function (row) { return row.status === 'books'; }); }).map(function (key) { return { v: key, label: sayText(STATUS[key]) }; }); }, match: function (row, value) { return row.status === value || (value === 'in' && row.status === 'done') || (value === 'need' && row.status === 'lock'); } },
+      { key: 'dir', label: 'Money', all: 'In and out', options: function (rows) { return distinct(rows, function (row) { return row.out ? 'out' : 'in'; }, function (value) { return sayText(value === 'out' ? 'Money out' : 'Money in'); }); }, match: function (row, value) { return (row.out ? 'out' : 'in') === value; } },
       { key: 'week', label: 'Date', all: 'Any date', options: weeks, match: function (row, value) { return weekOf(row.date) === value; } },
-      { key: 'band', label: 'Amount', all: 'Any amount', options: function (rows) { return BANDS.filter(function (band) { return rows.some(function (row) { return band[2](row.amount_minor); }); }).map(function (band) { return { v: band[0], label: T(band[1]) }; }); }, match: function (row, value) { return bandOf(row.amount_minor) === value; } },
+      { key: 'band', label: 'Amount', all: 'Any amount', options: function (rows) { return BANDS.filter(function (band) { return rows.some(function (row) { return band[2](row.amount_minor); }); }).map(function (band) { return { v: band[0], label: sayText(band[1]) }; }); }, match: function (row, value) { return bandOf(row.amount_minor) === value; } },
       { key: 'kind', label: 'What it looks like', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.kind; }, T); }, match: function (row, value) { return row.kind === value; } },
       { key: 'gst', label: 'Tax', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.gst; }, T); }, match: function (row, value) { return row.gst === value; } },
       { key: 'sure', label: 'How sure', all: 'Any', options: function (rows) { return distinct(rows, function (row) { return row.sure; }, T); }, match: function (row, value) { return row.sure === value; } },
-      { key: 'look', label: 'Look-alikes', all: 'Any', options: function (rows) { return rows.some(function (row) { return row.look; }) ? [{ v: 'yes', label: T('Same day, same amount') }] : []; }, match: function (row, value) { return value === 'yes' && row.look; } }
+      { key: 'look', label: 'Look-alikes', all: 'Any', options: function (rows) { return rows.some(function (row) { return row.look; }) ? [{ v: 'yes', label: sayText('Same day, same amount') }] : []; }, match: function (row, value) { return value === 'yes' && row.look; } }
     ].map(function (def) { return filterOf(cfg, def); });
   }
   /** the status chips: the list's own saved views, merged with the filters, each with its icon and its count (CMP036) */
@@ -166,7 +166,7 @@
     var kit = root.CBLabKit,
       onlyBooks = cfg.rows().some(function (row) { return row.status === 'books'; }); /* "Not on the statement": a chip only where the page has such lines (the owner's page) */
     var chip = function (key, label, status) {
-      return { key: key, label: T(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', labelHtml: '<span class="bl-chip-l"><span class="bl-lg">' + root.esc(T(label)) + '</span><span class="bl-sh">' + root.esc(T(SHORT[key] || label)) + '</span></span>', filt: status ? { status: status } : {}, tip: '' };
+      return { key: key, label: sayText(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', labelHtml: '<span class="bl-chip-l"><span class="bl-lg">' + root.esc(sayText(label)) + '</span><span class="bl-sh">' + root.esc(sayText(SHORT[key] || label)) + '</span></span>', filt: status ? { status: status } : {}, tip: '' };
     };
     return { merge: true, tid: 'bank-status', items: [chip('all', 'All', ''), chip('in', STATUS.in, 'in'), chip('ready', STATUS.ready, 'ready'), chip('need', STATUS.need, 'need')].concat(onlyBooks ? [chip('books', STATUS.books, 'books')] : []) };
   }
@@ -176,7 +176,7 @@
    *   cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: the row actions of the rail, and the rail's own state on the icon's cell)
    */
   function options(cfg) {
-    var kit = root.CBLabKit,
+    var labKit = root.CBLabKit,
       extra = cfg.extra || {};
     var amountCell = function (outSide) {
       return function (row) {
@@ -195,21 +195,21 @@
         defaultCols: ['status', 'date', 'payee', 'out', 'in'],
         views: viewsOf(cfg),
         columns: [
-          { key: 'status', label: T('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { var icon = kit.statusIcon({ status: row.status, name: T(STATUS[row.status]) }); return extra.wrapStatus ? extra.wrapStatus(row, icon) : icon; } },
-          { key: 'date', label: T('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },
-          { key: 'payee', label: T('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + root.esc(row.narration) + '</span>'; } },
-          { key: 'out', label: T('Out'), prio: 4, keep: true, num: true, w: 140, sort: 'amount', html: true, cell: amountCell(true) },
-          { key: 'in', label: T('In'), prio: 4, keep: true, num: true, w: 140, html: true, cell: amountCell(false) }
+          { key: 'status', label: sayText('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { var icon = labKit.statusIcon({ status: row.status, name: sayText(STATUS[row.status]) }); return extra.wrapStatus ? extra.wrapStatus(row, icon) : icon; } },
+          { key: 'date', label: sayText('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },
+          { key: 'payee', label: sayText('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + root.esc(row.narration) + '</span>'; } },
+          { key: 'out', label: sayText('Out'), prio: 4, keep: true, num: true, w: 140, sort: 'amount', html: true, cell: amountCell(true) },
+          { key: 'in', label: sayText('In'), prio: 4, keep: true, num: true, w: 140, html: true, cell: amountCell(false) }
         ].concat(extra.columns || []),
         filters: filtersOf(cfg),
-        search: function (row) { return [row.narration, root.CBBankPreview.dateText(row.date), cfg.fmt(row.amount_minor), row.kind, T(STATUS[row.status])].join(' '); },
+        search: function (row) { return [row.narration, root.CBBankPreview.dateText(row.date), cfg.fmt(row.amount_minor), row.kind, sayText(STATUS[row.status])].join(' '); },
         sorts: [
-          { key: 'status', label: T('Pending first'), cmp: function (a, b) { return ORDER[a.status] - ORDER[b.status]; } },
-          { key: 'date', label: T('Date'), cmp: function (a, b) { return String(a.date).localeCompare(String(b.date)); } },
-          { key: 'amount', label: T('Amount'), cmp: function (a, b) { return a.amount_minor - b.amount_minor; } }
+          { key: 'status', label: sayText('Pending first'), cmp: function (a, b) { return ORDER[a.status] - ORDER[b.status]; } },
+          { key: 'date', label: sayText('Date'), cmp: function (a, b) { return String(a.date).localeCompare(String(b.date)); } },
+          { key: 'amount', label: sayText('Amount'), cmp: function (a, b) { return a.amount_minor - b.amount_minor; } }
         ],
         next: cfg.panel,
-        empty: { title: T('Nothing in that file') }
+        empty: { title: sayText('Nothing in that file') }
       },
       extra.actions ? { actions: extra.actions } : {},
       extra.head ? { head: extra.head } : {}
