@@ -275,8 +275,10 @@
         (n > 0 && !whole ? '<span class="sub" data-testid="bv-since-more">' + esc(words('Showing the newest') + ' ' + shown + '. ' + words('Mark as checked waits until every entry is listed.')) + '</span>' : '') +
         (n > 0 && whole ? '<button type="button" class="act" id="bv_mark_checked" data-cbsid="' + MARK_CODE + '" data-testid="bv-mark-checked">' + esc(words('Mark as checked')) + '</button>' : '');
     }
-    return '<div class="bv-since" data-testid="bv-since-bar" role="group" aria-label="' + esc(words('Changed since my last check')) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:4px 0">' + toggle + line + '</div>';
+    return '<div class="bv-since" data-testid="bv-since-bar" role="group" aria-label="' + esc(words('Changed since my last check')) + '" style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0">' + toggle + line + '</div>';
   }
+  /** the tab row carries the since toggle: one line at a laptop, never a row of its own */
+  var TABROW_CSS = '<style>.bv-tabrow .act{white-space:nowrap}@media (max-width:700px){.bv-tabrow{row-gap:2px}}</style>';
   function setSince(on) {
     viewState.since = on;
     viewState.seen = null;
@@ -419,11 +421,11 @@
     viewState.host.innerHTML =
       band(report) +
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
+      (!viewState.why && report.k === 'daybook' ? TABROW_CSS + sinceBar() : '') /* fd1117: the since toggle (and, in that view, its count and Mark as checked) sits IN the tab row, not on a row of its own: the first entry stays under the ceiling */ +
       (viewState.why ? '' : '<span class="bv-totals">' + facts(report) + '</span>') + '</div>' +
       (viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
-      (!viewState.why && report.k === 'daybook' ? sinceBar() : '') +
-      (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes, so the list never jumps */ +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' +
+      (markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
       (viewState.why ? '' : riskNote(report) + cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
       (viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wireBand();
