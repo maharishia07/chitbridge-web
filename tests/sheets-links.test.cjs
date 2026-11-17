@@ -49,7 +49,7 @@ const flat = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, '')
 assert(flat(acc).includes(flat("accept: () => { ACC.billTab = 'B-2100'; show('bills'); }")), 'accept opens the Received bills');
 assert(flat(acc).includes(flat('supplier: () => { location.href = CB_HOMES.suppliers; }')) && shell.indexOf("suppliers: '/crm.html#/parties?role=supplier'") >= 0, 'suppliers to add opens the CRM supplier list');
 assert(acc.indexOf("waiting: 'waiting'") >= 0 && acc.indexOf('waiting: (body)') < 0, 'the failed-posting list stays reachable from its To do row only');
-assert(books.split("bkNoticeGo('accept')").length === 2 && books.indexOf("bkNoticeGo('supplier')") >= 0 && flat(books).includes(flat("text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting')")), 'accept and supplier go through bkNoticeGo; waiting keeps its list');
+assert(books.split("bkNoticeGo('accept')").length === 2 && books.indexOf("bkNoticeGo('supplier')") >= 0 && flat(books).includes(flat("text: todoCounts.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting')")), 'accept and supplier go through bkNoticeGo; waiting keeps its list');
 const navIds = [...acc.slice(acc.indexOf('const NAV = ['), acc.indexOf('const KURAL_OF')).matchAll(/^\s*\['(\w+)', '/gm)].map((m) => m[1]);
 navIds.forEach((id) => assert(new RegExp("'" + id + "'").test(groups), 'NAV view ' + id + ' has a menu button'));
 
