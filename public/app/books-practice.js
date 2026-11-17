@@ -452,7 +452,7 @@
       num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }),
-      num('changed', 'Changed', 130, changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed' }),
+      num('changed', 'Changed', 130, changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
       num('bas', 'Due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
       num('yend', 'Year end', 230, yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
       num('checked', 'Checked ' + yearLabel(), 110, checkedCell, checkedLeft, { prio: 1, dir0: -1 }),
