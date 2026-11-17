@@ -34,7 +34,7 @@
         var key = ctx.escapeHtml(item.key),
           said = preview.looksLike(item) || (item.state === 'proposed' || item.state === 'needs_you' ? ctx.sentenceOf(item) : ''),
           kind = result ? '' : ctx.kindBox(item),
-          boxes = result ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
+          boxes = result || item.needs === 'which_liability' ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
         var note = ctx.lineNote(item, result);
         ctx.inPanel = false;
         return '<div class="bd-openrow" data-line="' + key + '" data-testid="bd-panel">' + (said ? '<p class="bd-looks-line"><b>' + ctx.escapeHtml(said) + '</b></p>' : '') + '<div class="bd-sub">' + boxes + note + '</div></div>';

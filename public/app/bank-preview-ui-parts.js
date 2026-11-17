@@ -264,7 +264,8 @@
       var pick = choice.ask === 'account' && choice.accounts.length > 1,
         account = choice.ask === 'account' && !pick ? ' data-acct="' + escapeHtml(choice.accounts[0].role || choice.accounts[0].code) + '"' : '',
         button = '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(choice.id) + '"' + (pick ? ' data-pick="1"' : '') + account + '>' + escapeHtml(choice.words) + '</button>';
-      if (!pick) return '<span class="bd-choice">' + button + '</span>';
+      var note = choice.note ? '<span class="bd-why" data-testid="bd-choice-note">' + escapeHtml(choice.note) + '</span>' : ''; /* the engine's own caution for this answer (drawings: a company may need a director loan or a dividend instead) */
+      if (!pick) return '<span class="bd-choice">' + button + note + '</span>';
       var chosen = optionsOf(choice.accounts, function (entry) { return entry.role || entry.code; }, function (entry) { return entry.name; }).replace('>Choose<', '>Choose the account<'),
         list = '<select data-cbsid="BKS017-S10" class="bd-inp" aria-label="' + escapeHtml('Account for: ' + choice.words) + '" data-act="kindacct-' + escapeHtml(choice.id) + '" data-key="' + key + '">' + chosen + '</select>';
       return '<span class="bd-choice">' + button + list + (choice.id === 'transfer' && cfg.addOwn ? addOwnBox(key) : '') + '</span>';

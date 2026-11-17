@@ -20,8 +20,10 @@ const OVERRIDE = (process.env.CB_ENGINE_FILES || 'bank-recon.js,bank-project.js,
 let failed = 0;
 const check = (ok, words) => { console.log((ok ? 'ok   ' : 'FAIL ') + words); if (!ok) failed++; };
 /* the over-payment mock: the real suggest, then ONE line named COOGEE says it paid A$500.00 more than the open invoice */
-const MOCK = ';(function(){var s=CBBankRecon.suggest;CBBankRecon.suggest=function(l,o){var r=s.apply(this,arguments);if(/COOGEE/.test(l.narration||"")&&r&&r.event){r.against=[{against_ref:"inv-2",bill_no:"INV 2",amount_minor:225000}];r.on_account_minor=50000;r.basis="open_item";}return r;};})();';
-const BREAK_CSV = 'Date,Description,Debit Amount,Credit Amount,Balance\n02/10/2026,DIRECT DEBIT ORIGIN ENERGY 7721,242.00,,18258.00\n09/10/2026,MONTHLY ACCOUNT FEE,12.00,,17000.00\n';
+/* the web's vendored AU pack (inside tax.js) predates bank.tax_liabilities, so the ATO lines are handed the engines checkout's own list (read from its reg-au.js, never typed here) */
+const LIABILITIES = (() => { try { const m = /tax_liabilities:\s*(\[[^\]]*\])/.exec(fs.readFileSync(path.join(ENG, 'reg-au.js'), 'utf8')); return m ? JSON.stringify(eval(m[1])) : '[]'; } catch (e) { return '[]'; } })();
+const MOCK = ';(function(){var s=CBBankRecon.suggest,L=' + LIABILITIES + ';CBBankRecon.suggest=function(l,o){if(/ATO/.test(l.narration||"")&&window.CBRegulation){var pk=window.CBRegulation.resolve({country:"AU"});o=Object.assign({},o,{pack:Object.assign({},pk,{bank:Object.assign({},pk.bank,{tax_liabilities:L})})});}var r=s.call(this,l,o);if(/COOGEE/.test(l.narration||"")&&r&&r.event){r.against=[{against_ref:"inv-2",bill_no:"INV 2",amount_minor:225000}];r.on_account_minor=50000;r.basis="open_item";}return r;};})();';
+const BREAK_CSV = 'Date,Description,Debit Amount,Credit Amount,Balance\n02/10/2026,DIRECT DEBIT ORIGIN ENERGY 7721,242.00,,18258.00\n09/10/2026,MONTHLY ACCOUNT FEE,12.00,,17000.00\n10/10/2026,TRANSFER TO J SMITH,2000.00,,15000.00\n';
 
 function serve() {
   return new Promise((done) => {
@@ -53,11 +55,8 @@ const CONTRAST = () => {
 async function open(page, word) {
   const row = page.locator('#bd_list [data-row]', { hasText: word }).first();
   await row.waitFor();
-  const key = await row.getAttribute('data-row');
-  const toggle = page.locator('#bd_list [data-act=open][data-key="' + key + '"]').first();
-  if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
-  else if (!(await toggle.count())) await row.click();
-  return key;
+  if (!(await row.evaluate((node) => node.classList.contains('cbl-open')))) await row.click();
+  await page.waitForSelector('#bd_list .bd-openrow');
 }
 const text = (page) => page.textContent('#bd_list');
 async function shape(page, tag, shot, name) {
@@ -119,6 +118,11 @@ async function walkOne(browser, base, scheme, width, height) {
   const sentence = await p2.evaluate(() => CBBankProject.BLOCKER_WORDS.balance_break);
   check((await text(p2)).includes(sentence), tag + ': a line whose balance breaks shows the engine\'s sentence');
   await shape(p2, tag, shotOf(p2), '4-balance-break');
+  await open(p2, 'J SMITH');
+  const drawNote = await p2.evaluate(() => CBBankEntry.whatIsThis({ country: 'AU' }).items.filter((i) => i.id === 'owner_drawings').map((i) => i.note)[0]);
+  check(!!drawNote && (await p2.locator('#bd_list [data-testid=bd-choice-note]').allTextContents()).some((t) => t === drawNote), tag + ': the drawings answer carries the engine\'s company note');
+  await shape(p2, tag, shotOf(p2), '5-drawings-note');
+  await open(p2, 'ACCOUNT FEE');
   const tick = p2.locator('#bd_list [data-act=tick]').first();
   check((await tick.count()) === 1, tag + ': the existing confirm tick is offered');
   await tick.click();

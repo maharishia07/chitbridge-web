@@ -52,6 +52,7 @@ const ok = (n) => console.log('ok  ' + n) || ran++;
   const ui = fs.readFileSync(pub('app/bank-preview-ui-parts.js'), 'utf8') + fs.readFileSync(pub('app/bank-preview-ui.js'), 'utf8');
   assert.ok(/stays on the/.test(ui) && /item\.what\.options/.test(ui) && /act="liability"/.test(ui));
   assert.ok(!/gst_collected|payg/i.test(ui), 'no liability name or role is written in web: the options are the engine\'s');
+  assert.ok(/choice.note/.test(ui) && /bd-choice-note/.test(ui), 'the engine note is rendered with its choice');
   ok('the stays-on-account sentence and the liability options are on the line, none named in web');
   /* v1.100.0: drawings is one POST /events kind; a loan repayment posts the owner's typed interest to POST /loans/:ref/emi, never computed */
   const evs = [];
