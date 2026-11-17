@@ -247,6 +247,7 @@ function finCols() {
       key: 'age',
       label: tx('Age'),
       prio: 3,
+      keep: true,
       sort: 'oldest',
       w: 150,
       html: true,

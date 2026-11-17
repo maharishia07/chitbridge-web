@@ -112,7 +112,8 @@ W.run('books-prepare', async (w) => {
     return { ok: S.prepared.length === 1 && S.posted.length === 0 && sent.store_id === S1 && sent.kind === 'journal' && sent.body && String(sent.body.date || '').length === 10 && sent.body.lines.length === 2 && !!sent.client_ref && /^\d{4}-\d{2}$/.test(sent.working_month || '') && /Prepared, waiting for review/.test(said) && /not posted until then/.test(why), saw: said + ' · prepared ' + S.prepared.length + ' posted ' + S.posted.length + ' lines ' + (sent.body && sent.body.lines && sent.body.lines.length) + ' · why: ' + why.slice(0, 80) + ' · ' + JSON.stringify({ kind: sent.kind, date: sent.body && sent.body.date, ref: sent.client_ref, month: sent.working_month }) };
   });
   await w.step('P5', 'the firm · back in the workspace, "Prepared by my team" lists the journal, waiting for review', async () => {
-    await page.click(T('en-done')); await page.click(T('ba-back')); await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
+    await page.click(T('en-done')); await page.click(T('ba-back')); await page.waitForTimeout(800); if (!(await page.locator(T('nw-books-' + S1)).count())) await page.goto(base + '/network.html');   /* Back goes to the firm's Clients, which a firm login now lands on as its practice (W4): the workspace list is network.html */
+    await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
     await page.click(T('nw-books-' + S1)); await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 }); await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-team'), { timeout: 10000 });
     await page.click(T('ba-q-team')); await page.waitForTimeout(600);
     const list = await txt(T('ba-list'));

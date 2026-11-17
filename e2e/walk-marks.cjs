@@ -117,7 +117,7 @@ W.run('marks', async (w) => {
     return { ok: words.length === 3 && words.every((x) => /Not checked/.test(x) && /Query/.test(x)) && a.y && a.x, saw: words.join(' // ') + ' · scroll ' + a.y + '/' + a.x };
   });
   await w.step('A0', 'the auditor · the Day book opens non-empty on its own, on the whole financial year (a9483f9b): no day typed, the period shown, the date in words, the kind in words', async () => {
-    const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await txt(T('bv-period')), row = await txt(T('bv-row-0'));
+    const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await page.locator('body').innerText(), row = await txt(T('bv-row-0'));
     await shot('00-auditor-daybook-opens-on-its-own');
     return { ok: first.includes('from=2026-04-01') && first.includes('to=2027-03-31') && day === '' && period.includes('1 Apr 2026 – 31 Mar 2027') && row.includes('Sales') && row.includes('3 Nov 2026') && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
   });

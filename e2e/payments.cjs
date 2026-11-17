@@ -170,6 +170,7 @@ async function route(S, r) {
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch(), threw = [], offHost = [];
   async function open(url, S) {
+    CUR = S;   /* type() waits on the stand-in of the page now open */
     const ctx = await b.newContext({ viewport: { width: 1366, height: 800 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => { offHost.push(r.request().url()); return r.abort(); });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -397,7 +398,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     const sum = (side) => DUES.filter((d) => (side === 'rcv' ? d.balance_minor > 0 : d.balance_minor < 0)).reduce((t, d) => t + d.balance_minor, 0);
     ok(/they owe you ₹3,000\.00/.test(hr) && /you owe ₹2,500\.00/.test(hp) && sum('rcv') === 300000 && sum('pay') === -250000, 'E10 each heading carries its total in words, equal to the /dues balances (' + hr + ' | ' + hp + ')');
     ok(await p.locator('[data-testid="dues-pay-c1"]').innerText() === 'Receive' && await p.locator('[data-testid="dues-pay-s1"]').innerText() === 'Pay' && await p.locator('[data-testid="dues-remind-c1"]').count() === 1 && await p.locator('[data-testid="dues-remind-s1"]').count() === 0, 'E10 To collect rows say Receive and Remind; To pay rows say Pay and have no Remind');
-    ok((await text(p, 'dues-c1')).indexOf('61–90 days') >= 0 && /01 Aug 2026/.test(await text(p, 'dues-c1')), 'E10 a row shows its age bucket and its due date (' + (await text(p, 'dues-c1')) + ')');
+    ok(/Ravi Stores/.test(await text(p, 'dues-c1')) && /₹3,000.00/.test(await text(p, 'dues-c1')), 'E10 a row names the party and what is owed; the ageing is said once, in the ageing chips and the bill lines, no longer on the row (l16 one ageing, 7da93b84) (' + (await text(p, 'dues-c1')) + ')');
     const url0 = p.url();
     await p.click('[data-testid="dues-pay-s1"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 });
     ok(p.url() === url0 && /^Pay ·/.test(await text(p, 'pay_title')) && await p.locator('[data-testid="pay_remind"]').count() === 0, 'E10 a Dues row\'s Pay opens the same pay_amt popup without leaving the page (no "remind me" on what you owe)');
