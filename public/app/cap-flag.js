@@ -81,7 +81,7 @@
     '.fl{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:var(--grey,#5E594D);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 9px;min-height:28px;cursor:pointer}' +
     '.fl-on{border-color:var(--ok,#2E8B57);color:var(--ok-3,#0F5132)}.fl-note{border-color:var(--warn,#B7791F);color:var(--warn-3,#7A4B00)}' +
     '.fl:focus-visible{outline:2px solid var(--blue,#1f5fa8);outline-offset:2px}' +
-    'dialog.fl-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16)}dialog.fl-sheet::backdrop{background:rgba(0,0,0,.4)}' +
+    'dialog.fl-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16)}dialog.fl-sheet::backdrop{background:color-mix(in srgb,var(--ink,#1D1B16) 40%,transparent)}' +
     '.fl-in{padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 48px);overflow:auto;box-sizing:border-box}' +
     '.fl-hd{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.fl-hd h2{margin:0;font-size:var(--fs-3,17px)}' +
     '.fl-x{border:0;background:transparent;font:inherit;font-size:20px;line-height:1;min-width:44px;min-height:44px;cursor:pointer;color:var(--grey,#5E594D)}' +
