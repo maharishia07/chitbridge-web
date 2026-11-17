@@ -168,6 +168,25 @@ t('the grants list: a login that may not list gets nothing extra, an unreadable 
   }));
   return Promise.all(results);
 });
+// B1 (Fable 1117b): a party the server marks both is on EACH aged table with that list's own figures; the totals are the server's, so list = control ledger
+t('Who owes whom: a both-sides party (client 013 Harbour) shows on each side with its own amount, nothing worked out here', () => {
+  const mounted = {};
+  const half = (balance, d90) => ({ balance_minor: balance, buckets: {}, follow_up: { not_due: 0, d0_30: 0, d31_60: 0, d61_90: 0, d90_plus: d90 } });
+  const answer = { currency: 'AUD', parties: [
+    { party_id: 'h', name: 'Harbour Wholesale', side: 'both', balance_minor: 358, sides: { customer: half(5000, 5000), supplier: half(-4642, 0) } },
+    { party_id: 'o', name: 'Other', side: 'customer', balance_minor: 440, follow_up: { not_due: 440, d0_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0 } }],
+    aged_totals: { customer: { balance_minor: 5440 }, supplier: { balance_minor: -4642 } } };
+  const host = { classList: { add() {} }, innerHTML: '' };
+  state({ host, answer, o: { member: { id: 'c1', name: 'Client 013', role: 'auditor' }, mountList: (el, cfg) => { mounted[cfg.key] = cfg.rows(); } } });
+  kit.$ = (id) => ({ id });
+  kit.paintRows(host, report('dues'));
+  const cust = mounted['books-grant-dues-customer'], supp = mounted['books-grant-dues-supplier'];
+  assert.strictEqual(JSON.stringify(cust.filter((r) => !r._total).map((r) => [r.name, r.balance_minor])), JSON.stringify([['Harbour Wholesale', 5000], ['Other', 440]]));
+  assert.strictEqual(cust.find((r) => r.name === 'Harbour Wholesale').age_d90_plus, 5000, 'the late debtor ages 90+');
+  assert.strictEqual(JSON.stringify(supp.filter((r) => !r._total).map((r) => [r.name, r.balance_minor])), JSON.stringify([['Harbour Wholesale', -4642]]));
+  assert.strictEqual(cust.find((r) => r._total).balance_minor, 5440, 'the customer total is the server total (= TB debtors)');
+  assert.strictEqual(supp.find((r) => r._total).balance_minor, -4642, 'the supplier total is the server total (= TB creditors)');
+});
 const doorSource = fs.readFileSync(path.join(__dirname, '..', DOOR), 'utf8');
 t('the clients door reads the grants list once per sign-in and draws nothing without a token', () => {
   assert.ok(/CBBooksGrantApi/.test(doorSource) && /tokenNow/.test(doorSource) && /seen\.token !== tokenNow/.test(doorSource));

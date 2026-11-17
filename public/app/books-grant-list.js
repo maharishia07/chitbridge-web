@@ -111,6 +111,14 @@
     var fu = row.follow_up || {};
     return Object.assign({}, row, { age_not_due: fu.not_due, age_d0_30: fu.d0_30, age_d31_60: fu.d31_60, age_d61_90: fu.d61_90, age_d90_plus: fu.d90_plus });
   }
+  /** the parties of one side's table: a party the server marks `both` is on each table with that list's own figures (row.sides.<side>, sent by the server; nothing is worked out here) */
+  function partiesOf(all, who) {
+    return all.reduce(function (list, row) {
+      if (row.side === who) list.push(row);
+      else if (row.side === 'both' && row.sides && row.sides[who]) list.push(Object.assign({}, row, row.sides[who], { side: who }));
+      return list;
+    }, []);
+  }
   /** the total row of one side: the server's own aged_totals (nothing is added up here) */
   function agedTotalRow(who, total) {
     if (!total) return [];
@@ -123,12 +131,12 @@
     /* fd17: ONE heading line per side; a side with nobody owing is that line plus its sentence (no list, no head), the sentence is still the side's own (bv-dues-customers / bv-dues-suppliers) */
     host.classList.add('bv-dues');
     host.innerHTML = ['customer', 'supplier'].map(function (who) {
-      var empty = !all.some(function (row) { return row.side === who; }), tid = who === 'customer' ? 'customers' : 'suppliers', id = who === 'customer' ? 'bv_dues_c' : 'bv_dues_s';
+      var empty = !partiesOf(all, who).length, tid = who === 'customer' ? 'customers' : 'suppliers', id = who === 'customer' ? 'bv_dues_c' : 'bv_dues_s';
       return '<div class="bv-dues-side' + (empty ? ' bv-dues-nil' : '') + '"><h3 class="sub" data-testid="bv-dues-' + tid + '-head">' + esc(heads[who]) + '</h3>' +
         (empty ? '<span class="tag" id="' + id + '" data-testid="bv-dues-' + tid + '">' + esc(duesNobody(member, who)) + '</span>' : '<div id="' + id + '" data-testid="bv-dues-' + tid + '"></div>') + '</div>';
     }).join('');
     ['customer', 'supplier'].forEach(function (who) {
-      var parties = all.filter(function (row) { return row.side === who; }).map(agedRow);
+      var parties = partiesOf(all, who).map(agedRow);
       if (!parties.length) return; /* said in the heading line above */ /* E15: the server drops a party with nothing open; a side with no party is an empty sentence, never a lone Total row */
       var rows = (parties.length ? parties.concat(agedTotalRow(who, totals[who])) : []).map(function (row, n) { return Object.assign({ _n: n }, row); });
       var config = listConfig(report, rows);
