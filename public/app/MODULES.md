@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (95)
+## Capabilities (96)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -47,13 +47,13 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-compare.js` | — | cap-compare.js — PARALLEL RUN (PR1, 2026-10-13): CB Accounts › Books › Parallel run. An auditor keeps the shop's books in Tally (IN) or Xero / QuickBo |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
+| `cap-crm-assign.js` | — | cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
 | `cap-crm-groups-send.js` | — | cap-crm-groups-send.js — PART of cap-crm-groups.js (MNT-59): the Send-to-group sheet, who may be sent first (the server's dry answer, by code), then t |
 | `cap-crm-groups-sheet.js` | — | cap-crm-groups-sheet.js — PART of cap-crm-groups.js (MNT-59): the New group / Members sheet, ticking the customers of a named group, saving it and del |
 | `cap-crm-groups-window.js` | — | cap-crm-groups-window.js — PART of cap-crm-groups.js (MNT-59): the Shop window screen (#/showcase), the template chooser, the preview of the shop's ow |
 | `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
-| `cap-crm-assign.js` | — | cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file) |
 | `cap-crm-privacy-register.js` | — | cap-crm-privacy-register.js — CB CRM: the shop's PRIVACY REQUESTS register (#/privacy): the list, Log a request, Answer a request |
 | `cap-crm-privacy.js` | — | cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy) |
@@ -263,7 +263,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `combo-lab.html` | 0 | the old Combo Lab address: it only forwards to offer-lab-next.html?mode=combo (T2-LABS), the page that wears the Finance frame. |
 | `conversion-lab.html` | 10 | the Conversion lab: a quantity valued, or a priced basket converted, by the real engine (engine/convert.js · CBConvert, with CBMoney and CBUnits) on a bare page, so a con |
 | `country-lab.html` | 15 | the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines. |
-| `crm.html` | 57 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
+| `crm.html` | 58 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
 | `design-mock.html` | 1 | a paper prototype of the network store page: no API, no build |
 | `embed.html` | 9 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
 | `employees.html` | 24 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
@@ -299,4 +299,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*209 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*210 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
