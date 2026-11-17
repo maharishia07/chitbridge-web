@@ -243,8 +243,10 @@
   /** the year-end cells: the same figures the Complete and Checked tiles count (the server's year_end), never the quarter */
   function yendCell(r) {
     var y = r.year_end;
-    if (!y) return '—';
-    if (y.first_year) return esc(tx('First year'));
+    /* fix1117 F4: an older seed or a client with no year-end answer still reads: the stage when there is one, else the bank's own words (F2), never a bare dash */
+    if (!y && !r.stage) return r.bank && r.bank.state === 'unexplained' ? esc(bankWords(r)) : '—';
+    if (y && y.first_year) return esc(tx('First year'));
+    if (!y) return '<span class="bp-yend" data-cbsid="HOM001-P16"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>';
     var figures = esc(y.locked) + '/' + esc(y.of) + ' ' + esc(tx('locked')) + ' · ' + (y.bank_to_end ? esc(tx('bank to')) + ' ' + esc(shortDay(y.end)) : esc(bankWords(r)));
     /* F4 (17 Nov): ONE line per client, the stage and the one blocker; the figures sit in the title and one press away on the sheet (no second statement of the blocker, so the row is not two lines) */
     return r.stage ? '<span class="bp-yend" data-cbsid="HOM001-P16" title="' + esc(figures.replace(/<[^>]*>/g, '')) + '"><b data-testid="practice-stage-' + esc(r.entity_id) + '">' + esc(tx(stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>' : figures;
@@ -252,8 +254,8 @@
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {
     var y = r.year_end, b = r.stage_blocker, n;
-    if (!b) return '';
-    if (b === 'months') { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
+    if (!b) return r.bank && r.bank.state === 'unexplained' ? ' · ' + esc(bankWords(r)) : ''; /* fix1117 F2: no blocker named, the bank's unexplained amount (the row's own field) still shows */
+    if (b === 'months' && y) { n = y.of - y.locked; return ' · ' + esc(n) + ' ' + esc(tx(n === 1 ? 'month not locked' : 'months not locked')); }
     if (b === 'bank') return ' · ' + esc(bankWords(r));
     if (b === 'checked') return ' · ' + esc(tx('not checked'));
     if (b === 'queries') return ' · ' + esc(r.queries.open) + ' ' + esc(tx(r.queries.open === 1 ? 'query open' : 'queries open'));
@@ -283,6 +285,7 @@
   }
   function checkedCell(r) {
     var e = r.year_end && r.year_end.entries;
+    if (!e && r.checked && r.checked.of > 0) e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
     return e ? esc(checkedWords(e)) + (e.capped ? ' <span class="sub">' + esc(tx('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
