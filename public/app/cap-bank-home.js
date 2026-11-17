@@ -115,15 +115,15 @@ function bkhTallyWords(tally) {
 const bankHomeMayAdd = () => typeof bkbMayAct === 'function' && bkbMayAct();
 /** ‹ FY 2024-25 · FY 2025-26 · FY 2026-27 › and All years: the year on screen, one step either way */
 function bankHomeFyHtml() {
-  const financialYear = BKST.financialYear,
+  const financialYear = BKST.fy,
     canStep = (step) => bkhCanStep(step),
     btn = (cbsid, tid, step, text, label) => '<button ' + cbsid + ' type="button" class="bks-btn bkh-step" data-testid="' + tid + '" onclick="bankHomeFyStep(' + step + ')" aria-label="' + bkhE(label) + '"' + (canStep(step) ? '' : ' disabled') + '>' + bkhE(text) + '</button>';
   return (
-    '<div class="bkh-financialYear" data-testid="bank-home-financialYear" role="group" aria-label="' + bkhE(tx('Financial year')) + '">' +
-    btn('data-cbsid="BKS014-B49"', 'bank-home-financialYear-prev', -1, '‹ ' + (canStep(-1) ? bkhFyLabel(financialYear - 1) : ''), tx('Earlier year')) +
-    '<b class="bkh-fynow" data-testid="bank-home-financialYear-now" aria-live="polite">' + bkhE(bkhFyLabel(financialYear)) + '</b>' +
-    btn('data-cbsid="BKS014-B50"', 'bank-home-financialYear-next', 1, (canStep(1) ? bkhFyLabel(financialYear + 1) : '') + ' ›', tx('Later year')) +
-    (bkhRetention() ? '<button data-cbsid="BKS014-B51" type="button" class="bks-btn bkh-step" data-testid="bank-home-financialYear-all" aria-pressed="' + !!BKST.all + '" onclick="bankHomeAllYears()">' + bkhE(tx('All years')) + '</button>' : '') +
+    '<div class="bkh-fy" data-testid="bank-home-fy" role="group" aria-label="' + bkhE(tx('Financial year')) + '">' +
+    btn('data-cbsid="BKS014-B49"', 'bank-home-fy-prev', -1, '‹ ' + (canStep(-1) ? bkhFyLabel(financialYear - 1) : ''), tx('Earlier year')) +
+    '<b class="bkh-fynow" data-testid="bank-home-fy-now" aria-live="polite">' + bkhE(bkhFyLabel(financialYear)) + '</b>' +
+    btn('data-cbsid="BKS014-B50"', 'bank-home-fy-next', 1, (canStep(1) ? bkhFyLabel(financialYear + 1) : '') + ' ›', tx('Later year')) +
+    (bkhRetention() ? '<button data-cbsid="BKS014-B51" type="button" class="bks-btn bkh-step" data-testid="bank-home-fy-all" aria-pressed="' + !!BKST.all + '" onclick="bankHomeAllYears()">' + bkhE(tx('All years')) + '</button>' : '') +
     '</div>'
   );
 }

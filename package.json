@@ -54,7 +54,7 @@
     "check:envelope": "node e2e/api-envelope.cjs",
     "check:eps": "node e2e/ep-aliases.cjs",
     "check:undeclared": "node e2e/undeclared.cjs",
-    "check:tagged": "node tests/script-tag-globals.test.cjs && node e2e/script-tag-globals.cjs",
+    "check:tagged": "node tests/script-tag-globals.test.cjs && node e2e/script-tag-globals.cjs && node tests/bank-home-fy-html.test.cjs",
     "check:barereturn": "node e2e/bare-return-lint.cjs --selftest && node e2e/bare-return-lint.cjs",
     "check:cmdb": "node e2e/cmdb-records.cjs",
     "check:tokens": "node e2e/token-guard.cjs",
