@@ -3,7 +3,7 @@
 /**
  * ui-codes-accounts.test.cjs - the Accounts page wears ITS identity codes (UX-137 stamp 7, screens BKS001, BKS007, BKS014, BKS016, BKS024, BKS025).
  *
- * OWNS      the proof that accounts.html and the scripts only it loads (cap-period, cap-bank, cap-bank-rows, cap-move-in, cap-compare, cap-fx)
+ * OWNS      the proof that accounts.html and the scripts only it loads (cap-period, cap-period-accruals, cap-bank, cap-bank-rows, cap-move-in, cap-compare, cap-fx)
  *           carry the 67 data-cbsid codes of their own screens, that a named control wears ITS code (a swap of two codes fails), that no code is
  *           written on two element definitions, and that each code is a live row in the register. A builder tag drawn for many callers
  *           (peInput, peSel, peBtn, the menu items, the tabs) is ONE element definition and ONE code.
@@ -17,7 +17,8 @@ const mutate = process.env.ACC_ID_MUTATE || '';
 const PUB = path.join(__dirname, '..', 'public');
 const SET = {
   'accounts.html': 'BKS001-B01 BKS001-B02 BKS001-B03 BKS001-B04 BKS001-B05 BKS001-B06 BKS001-B07',
-  'app/cap-period.js': 'BKS016-B01 BKS016-I01 BKS016-S01 BKS016-B02 BKS016-B03 BKS016-B04 BKS016-B10 BKS016-B05 BKS016-B06 BKS016-B07 BKS016-B08 BKS016-B09 BKS016-I02',
+  'app/cap-period.js': 'BKS016-B01 BKS016-I01 BKS016-S01 BKS016-B02 BKS016-B03 BKS016-B10 BKS016-B05 BKS016-B06 BKS016-B07 BKS016-B08 BKS016-B09 BKS016-I02',
+  'app/cap-period-accruals.js': 'BKS016-B04',
   'app/cap-bank.js': 'BKS014-I01 BKS014-S01 BKS014-B09 BKS014-B26 BKS014-B02 BKS014-B19 BKS014-B01 BKS014-B22 BKS014-B25 BKS014-B24 BKS014-B18 BKS014-B23 BKS014-B21 BKS014-B27 BKS014-B29 BKS014-B28',
   'app/cap-bank-rows.js': 'BKS014-T01 BKS014-B03 BKS014-B04 BKS014-B05 BKS014-B06 BKS014-B07',
   'app/cap-bank-store.js': 'BKS014-B08',
