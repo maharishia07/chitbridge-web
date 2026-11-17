@@ -483,7 +483,7 @@
       widths: saved.widths && typeof saved.widths === 'object' ? saved.widths : {},
       view: saved.view === 'lines' || saved.view === 'grid' ? saved.view : o.view === 'lines' ? 'lines' : 'grid',
       group: saved.group || (o.group && o.group.default) || null,
-      sort: saved.sort && saved.sort.key ? saved.sort : null
+      sort: saved.sort && saved.sort.key ? saved.sort : o.sortDefault && o.sortDefault.key ? { key: o.sortDefault.key, dir: o.sortDefault.dir === -1 ? -1 : 1 } : null /* sortDefault: the page's own first order, until the reader picks one */
     };
     return s;
   }

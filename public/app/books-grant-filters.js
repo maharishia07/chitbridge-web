@@ -7,7 +7,7 @@
  *           the evidence chip's key (cap-evidence.js stateOf) · the Day book's kind (helpers.js dayBookKind). Nothing is counted or decided here: the list counts what matches.
  * CARD      04-network/ACC-176-AUDITOR-GRANT
  *
- * JET RULES (one definition each, read-only; nothing is calculated: a day compared to a day, a clock hour, a remainder): recordedDay = the day of `recorded_at` in the SHOP's zone (window.CB_SHOP_TZ, else the viewer's) · afterEnd = recordedDay later than the period's end · daysLate = days from `posting_date` to recordedDay · weekend = the region's rest days (CBLocale.weekInfo, the one reader; Sat and Sun only as its fallback) · afterHours = before 07:00 or from 20:00 · round = a whole multiple of 100 or 1,000 major units (the currency's own decimals, CBMoney.decimals) · noNarration = the server's `no_narration`. RISK = how many of those six an entry trips (riskOf: after period end · over 7 days late · weekend · after hours · round multiple of 100 · no narration), one point each, nothing weighted; the Risk column shows the count and the Any risk filter keeps the rows with one or more. `rec=afterend` and `ye=recorded` (dated inside the period, recorded after its end) are the SAME afterEnd.
+ * JET RULES (one definition each, read-only; nothing is calculated: a day compared to a day, a clock hour, a remainder): recordedDay = the day of `recorded_at` in the SHOP's zone (window.CB_SHOP_TZ, else the viewer's) · afterEnd = recordedDay later than the period's end · daysLate = days from `posting_date` to recordedDay · weekend = the rest days of the AUDITED SHOP's country (the answer's `country`, read by CBLocale.weekInfo(region), the one reader; the viewer's own locale only when the shop's country is unknown; Sat and Sun as the last fallback) · afterHours = before 07:00 or from 20:00 · round = a whole multiple of 100 or 1,000 major units (the currency's own decimals, CBMoney.decimals) · noNarration = the server's `no_narration`. RISK = how many of those six an entry trips (riskOf: after period end · over 7 days late · weekend · after hours · round multiple of 100 · no narration), one point each, nothing weighted; the Risk column shows the count and the Any risk filter keeps the rows with one or more. `rec=afterend` and `ye=recorded` (dated inside the period, recorded after its end) are the SAME afterEnd.
  *
  * "Not checked" is everything the bar's "Checked n of m" does not count: no mark, a check that changed after review, a query, a hold, a refusal. So Not checked = m − n and Checked + Not checked = every row (tests/a3c-day-book-exception).
  *   CBBooksGrantFilters.carry(search, clientId) · .filtersFor(mk) · .markState(mk, row) · .evidenceKey(row) · .kindOf(row) · .toAddress(filt) · .fromAddress(search)
@@ -67,13 +67,13 @@
   }
   var ISO_DOW = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
   /** the ONE weekend answer: the region's rest days as ISO numbers (1 Mon .. 7 Sun) from CBLocale.weekInfo (CLDR; the reader Admin shows as "x + y is the weekend here"); Sat + Sun only where the reader gives none */
-  function weekendDays() {
-    var wi = root.CBLocale && root.CBLocale.weekInfo ? root.CBLocale.weekInfo() : null;
+  function weekendDays(region) {
+    var wi = root.CBLocale && root.CBLocale.weekInfo ? root.CBLocale.weekInfo(region || undefined) : null;
     return wi && wi.weekend && wi.weekend.length ? wi.weekend : [6, 7];
   }
-  function weekend(row) {
+  function weekend(row, region) {
     var z = zoned(row && row.recorded_at);
-    return !!z && weekendDays().indexOf(ISO_DOW[z.dow]) >= 0;
+    return !!z && weekendDays(region).indexOf(ISO_DOW[z.dow]) >= 0;
   }
   function afterHours(row) {
     var z = zoned(row && row.recorded_at);
@@ -89,14 +89,14 @@
   var RULES = [
     ['afterend', 'After period end', function (row, period) { return afterEnd(row, period); }],
     ['late', 'Over 7 days late', function (row) { return daysLate(row) > LATE_DAYS; }],
-    ['weekend', 'At a weekend', function (row) { return weekend(row); }],
+    ['weekend', 'At a weekend', function (row, period, currency, region) { return weekend(row, region); }],
     ['night', 'After hours', function (row) { return afterHours(row); }],
     ['round', 'Round sum', function (row, period, currency) { return round(row, 100, currency); }],
     ['narr', 'No narration', function (row) { return noNarration(row); }]
   ];
   /** the rules this row trips, as their words (a list; its length is the Risk count) */
-  function riskOf(row, period, currency) {
-    return RULES.filter(function (rule) { return rule[2](row, period, currency); }).map(function (rule) { return words(rule[1]); });
+  function riskOf(row, period, currency, region) {
+    return RULES.filter(function (rule) { return rule[2](row, period, currency, region); }).map(function (rule) { return words(rule[1]); });
   }
   function noNarration(row) {
     return !!(row && row.no_narration);
@@ -117,18 +117,18 @@
   function flagFilter(fl) {
     return { key: 'flag', label: words('Saved'), all: words('All'), options: opts([['bookmarked', 'Bookmarked'], ['noted', 'With a note']]), match: function (row, v) { return v === 'noted' ? fl.noted(row.entry_id) > 0 : fl.bookmarked(row.entry_id); } };
   }
-  /** ctx (optional, widens the three): { period: () => {from,to}, currency: () => code, rows: () => entries } — read when a row is judged, so a new period or page is followed */
+  /** ctx (optional, widens the three): { period: () => {from,to}, currency: () => code, region: () => the AUDITED SHOP's country code (its weekend is the test's calendar, never the viewer's), rows: () => entries } — read when a row is judged, so a new period or page is followed */
   function filtersFor(mk, ctx) {
     ctx = ctx || {};
     var fl = ctx.fl || null;
-    var period = function () { return ctx.period ? ctx.period() : null; }, cur = function () { return ctx.currency ? ctx.currency() : ''; };
+    var period = function () { return ctx.period ? ctx.period() : null; }, cur = function () { return ctx.currency ? ctx.currency() : ''; }, reg = function () { return ctx.region ? ctx.region() : ''; };
     var EV = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No source', held: 'File attached' }; /* the chip's own words: one wording per state */
     return [
       { key: 'mark', label: words('Mark'), all: words('All'), options: opts([['notchecked', 'Not checked'], ['checked', 'Checked'], ['hold', 'On hold'], ['query', 'Queried']]), match: function (row, v) { var st = markState(mk, row).state; return v === 'checked' ? isChecked(mk, row) : v === 'notchecked' ? !isChecked(mk, row) : v === 'hold' ? st === 'hold' : st === 'open'; } },
       { key: 'ev', label: words('Evidence'), all: words('All'), options: opts([['flag', EV.flag], ['none', EV.none], ['nodoc', EV.nodoc], ['held', EV.held]]), match: function (row, v) { return evidenceKey(row) === v; } },
-      { key: 'risk', label: words('Risk'), all: words('All'), options: opts([['any', 'Any risk']]), match: function (row) { return riskOf(row, period(), cur()).length > 0; } },
+      { key: 'risk', label: words('Risk'), all: words('All'), options: opts([['any', 'Any risk']]), match: function (row) { return riskOf(row, period(), cur(), reg()).length > 0; } },
       { key: 'rec', label: words('Recorded'), all: words('All'), options: opts([['afterend', 'After period end'], ['late7', 'Over 7 days late'], ['late30', 'Over 30 days late'], ['late90', 'Over 90 days late']]), match: function (row, v) { return v === 'afterend' ? afterEnd(row, period()) : daysLate(row) > Number(String(v).replace('late', '')); } },
-      { key: 'time', label: words('Made'), all: words('All'), options: opts([['weekend', 'At a weekend'], ['night', 'After hours']]), match: function (row, v) { return v === 'weekend' ? weekend(row) : afterHours(row); } },
+      { key: 'time', label: words('Made'), all: words('All'), options: opts([['weekend', 'At a weekend'], ['night', 'After hours']]), match: function (row, v) { return v === 'weekend' ? weekend(row, reg()) : afterHours(row); } },
       { key: 'round', label: words('Round sum'), all: words('All'), options: opts([['100', 'Multiple of 100'], ['1000', 'Multiple of 1,000']]), match: function (row, v) { return round(row, Number(v), cur()); } },
       { key: 'by', label: words('Made by'), all: words('All'), options: function () { return makers(ctx.rows ? ctx.rows() : []).map(function (n) { return { v: n, label: n }; }); }, match: function (row, v) { return madeBy(row) === v; } },
       { key: 'narr', label: words('Narration'), all: words('All'), options: opts([['none', 'None written']]), match: function (row) { return noNarration(row); } },

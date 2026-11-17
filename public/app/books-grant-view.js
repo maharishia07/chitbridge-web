@@ -102,7 +102,7 @@
   /** the JET rules an entry trips (the filters file's riskOf, read with the period and currency on screen) */
   function riskWords(e) {
     var F = root.CBBooksGrantFilters;
-    return F ? F.riskOf(e, viewState.period, viewState.answer && viewState.answer.currency) : [];
+    return F ? F.riskOf(e, viewState.period, viewState.answer && viewState.answer.currency, viewState.answer && viewState.answer.country) : [];
   }
   /** the Risk cell: the count, with the rules it counts as its title and as words for a reader; none = a dash */
   function riskCell(row) {
@@ -612,7 +612,7 @@
   function narrowDaybook(host, config) {
     var F = root.CBBooksGrantFilters;
     if (!F) return;
-    var all = F.filtersFor(viewState.mk, { fl: flagsOn() ? viewState.fl : null, period: function () { return viewState.period; }, currency: function () { return viewState.answer && viewState.answer.currency; }, rows: function () { return (viewState.answer && viewState.answer.entries) || []; } });
+    var all = F.filtersFor(viewState.mk, { fl: flagsOn() ? viewState.fl : null, period: function () { return viewState.period; }, currency: function () { return viewState.answer && viewState.answer.currency; }, region: function () { return viewState.answer && viewState.answer.country; }, rows: function () { return (viewState.answer && viewState.answer.entries) || []; } });
     config.filters = all.filter(function (f) { return f.key !== 'mark' || markable({ k: 'daybook' }); });
     if (viewState.dbf === undefined) viewState.dbf = F.fromAddress(root.location.search); /* the first Day book of this client reads the address; later ones, what the person chose */
     var kept = {};
@@ -711,6 +711,7 @@
   function listConfig(report, rows) {
     return {
       key: 'books-grant-' + report.k,
+      sortDefault: report.k === 'daybook' ? { key: 'risk', dir: -1 } : undefined /* auditor practice: the highest risk on top; a sort the reader chose is kept over it */,
       csv: false /* read only: no copy of the books leaves this screen */,
       tools: { search: rows.length >= SEARCH_FROM, bar: rows.length > BAR_FROM } /* W19: a short list is read at a glance; no search box under ten rows, no tools bar up to twelve (T6: first data by 20% / 30%) */,
       defaultCols: shownCols(report).map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
@@ -730,7 +731,7 @@
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || (column[2] === MONEY && column[0] !== 'prior_minor') ? 1 : 2, /* Last year and % go first on a narrow screen: the amount and its change stay */
           num: column[2] === MONEY || column[2] === PCT || column[2] === 'risk',
-          sort: column[2] === 'risk' ? true : undefined, /* Risk is the one Day book column the reader sorts: most risks first, on a second press */
+          sort: column[2] === 'risk' ? true : undefined, dir0: column[2] === 'risk' ? -1 : undefined, /* Risk is the one Day book column the reader sorts: most risks first (the page opens that way; a press turns it) */
           keep: column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
           w: DAYBOOK_W[column[0]] || (column[2] === 'mark' ? 190 : column[2] === MONEY ? 140 : 180),
           cell: function (row) {
