@@ -1576,7 +1576,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/cap-rewards.js"></script>   <!-- CBRewardsPane: the points pane, ONE copy (T3-P2-CRM) — the Customers pane here and CB CRM's record paint it -->
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/engine/govcontext.js"></script>
-<script src="/app/helpers.js"></script><script src="/app/books-grant-api.js"></script><script src="/app/books-clients-door.js"></script>
+<script src="/app/helpers.js"></script><script src="/app/books-grant-api.js"></script><script src="/app/books-clients-door.js"></script><script src="/app/offer-add-confirm.js"></script><script src="/app/chit-unpay.js"></script>
 <script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set (UX-137); cap-settings.js and cap-print.js (lazy, Settings) draw their buttons with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the lazy caps (cap-readiness.js, cap-definitions.js) draw their inputs with ui.field (UX-137 R2); AFTER ui.js, which it reads -->
 <script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
@@ -3973,10 +3973,29 @@ document.addEventListener('keydown', function (e) {
 function ledgerDoorClosed(view) {
   try {
     if (localStorage.getItem(uk('cb_nav')) === 'ledger') localStorage.setItem(uk('cb_nav'), 'task');
-  } catch (_) {}
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('ledger door: the remembered screen was not reset', failure);
+  }
   if (UI.nav === 'ledger') UI.nav = 'task';
   var v = view || (typeof BK !== 'undefined' && BK && BK.tab) || '';
   location.replace('/accounts.html' + (v ? '#' + v : ''));
+}
+/** /me says whether the Ledger is on for this shop: the door and the party blocks follow it; the books capability loads when it turns on */
+function noteLedgerOn(profile) {
+  /* is the Ledger switched on for this shop? /me says (ledger_on), so the first screen asks GET /books/health for nothing: that route answers 404 LEDGER_OFF by design for a shop with none, a red failed request in the console.
+     The door and the party blocks stay out of sight when it is off. */
+  if (typeof profile.ledger_on === 'boolean') {
+    var booksWas = SESSION.booksOn;
+    SESSION.booksOn = profile.ledger_on;
+    if (SESSION.booksOn && !booksWas)
+      ensureCap('books')
+        .then(function () {
+          bgRenderApp();
+        })
+        .catch(function (failure) {
+          if (typeof cbQuiet === 'function') cbQuiet('ledger on: the books capability did not load', failure);
+        });
+  }
 }
 /** l16 W4: where an ACTOR lands: 'home' (a firm's practice) · 'rail' · or a promise of either (one practice read, 4 s at most, its answer kept as the one hint books-practice.js reads) */
 function firmLanding() {
@@ -3984,29 +4003,118 @@ function firmLanding() {
     kept = '';
   try {
     kept = localStorage.getItem('cb_practice_hint') || '';
-  } catch (_) {}
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('firm landing: the hint was not read', failure);
+  }
   if (kept.slice(1, 2) === ':' && kept.slice(2) === tail) return kept.slice(0, 1) === '1' ? 'home' : 'rail';
-  var ctl = typeof AbortController === 'function' ? new AbortController() : null,
-    t = setTimeout(function () {
-      if (ctl) ctl.abort();
+  var abortRead = typeof AbortController === 'function' ? new AbortController() : null,
+    timer = setTimeout(function () {
+      if (abortRead) abortRead.abort();
     }, 4000);
-  return fetch(CFG.API_BASE + '/api/books-grants/practice', { headers: { Authorization: 'Bearer ' + SESSION.token }, signal: ctl ? ctl.signal : undefined })
+  return fetch(CFG.API_BASE + '/api/books-grants/practice', { headers: { Authorization: 'Bearer ' + SESSION.token }, signal: abortRead ? abortRead.signal : undefined })
     .then(function (r) {
       return r.ok ? r.json() : null;
     })
-    .then(function (a) {
-      clearTimeout(t);
-      if (!a) return 'rail'; /* no answer (403, 429, a hang): not decided, not kept */
-      var firm = !!(a.clients && a.clients.length && a.own_trade === false);
+    .then(function (practice) {
+      clearTimeout(timer);
+      if (!practice) return 'rail'; /* no answer (403, 429, a hang): not decided, not kept */
+      var firm = !!(practice.clients && practice.clients.length && practice.own_trade === false);
       try {
         localStorage.setItem('cb_practice_hint', (firm ? '1' : '0') + ':' + tail);
-      } catch (_) {}
+      } catch (failure) {
+        if (typeof cbQuiet === 'function') cbQuiet('firm landing: the hint was not kept', failure);
+      }
       return firm ? 'home' : 'rail';
     })
     .catch(function () {
-      clearTimeout(t);
+      clearTimeout(timer);
       return 'rail';
     });
+}
+/** l16 W4: an actor of a firm lands on Home (a practice read decides); true = the route was handled here */
+function routeFirmLanding(text) {
+  /* l16 W4 (walk 16 Nov): STAFF OF A FIRM LAND ON THE PRACTICE. An actor whose firm practice answers (clients held by live grants, no trade of its own: the same rule as books-practice.js isFirm)
+     opens Home, the same as the firm's owner; a shop's counter staff keep the rail. The per-login hint (cb_practice_hint, the one books-practice.js keeps) answers at once; with none, ONE practice read decides and is kept.
+     ONLY the app's own front (#/app, empty), as the paired-counter rule above. A read that fails or is slow lets the rail draw (the practice frame on Home carries its own retry). */
+  if (SESSION.token && SESSION.role === 'actor' && (text === '#/' || text === '' || text === '#/app') && !window._firmLandingDone) {
+    var landing = firmLanding();
+    if (landing === 'home') {
+      location.replace('/');
+      return true;
+    }
+    if (landing && landing.then) {
+      landing.then(function (to) {
+        window._firmLandingDone = true;
+        if (to === 'home') location.replace('/');
+        else route();
+      });
+      return true;
+    }
+  }
+  return false;
+}
+/** the app opening on a popup or the composer for another page's door (#/app/support · #/app/compose); true = handled */
+function routeAppPopups(text) {
+  /* ⭐ SUPPORT, from another page's avatar (CB Accounts, the index page, a Lab): the app opens on its Support popup */
+  if (SESSION.token && text === '#/app/support') {
+    renderApp();
+    try {
+      supportOpen();
+    } catch (_) {}
+    return true;
+  }
+  /* ⭐ TO1b: ＋ New from Tasks & Orders (tasks.html) — the app opens on its ONE composer, as the support door above opens its popup */
+  if (SESSION.token && text === '#/app/compose') {
+    UI.nav = 'task';
+    UI.folder = 'task';
+    renderApp();
+    try {
+      compose();
+    } catch (_) {}
+    return true;
+  }
+  return false;
+}
+/** the app's own doors (ledger · support · compose · #/app/<nav> · a bill by id); true = the route was handled here */
+function routeAppDoors(text) {
+  /* ⭐ THE SMALLEST DEEP LINK (index page, 2026-09-30): #/app/<nav> sets UI.nav on arrival, and nothing else —
+     the app still routes by UI.nav, never by hash. Exact #/app keeps the counter jump above: a deep link is a
+     deliberate ask for one screen, and answering a specific request with the till is its own bug. */
+  /* ⭐ THE OLD LEDGER DOOR IS CLOSED (Athi, 2026-10-02): the Ledger lives on /accounts.html. A nav to 'ledger' — typed #/app/ledger,
+     bookmarked, or remembered in cb_nav@<id> — goes there, to the same view. cap-books.js stays: accounts.html runs it. */
+  var ledgerHash = /^#\/app\/ledger(?:\/([a-z]+))?$/.exec(text);
+  if (SESSION.token && ledgerHash) {
+    ledgerDoorClosed(ledgerHash[1]);
+    return true;
+  }
+  if (routeAppPopups(text)) return true;
+  var deepNav = /^#\/app\/([a-z][a-z0-9-]*)$/.exec(text);
+  if (deepNav && SESSION.token) {
+    UI.nav = deepNav[1];
+    if (deepNav[1] === 'order') UI.folder = 'order';
+    else if (['drafts', 'trash', 'archive'].indexOf(deepNav[1]) >= 0) UI.folder = deepNav[1];
+    else if (deepNav[1] === 'task') UI.folder = 'task';
+    try {
+      localStorage.setItem(uk('cb_nav'), deepNav[1]);
+    } catch (_) {}
+  }
+  /* ⭐ A BILL OPENED FROM CB ACCOUNTS (#/app/chit/<id>): the app arrives on Task and opens that chit with its own openChit — nothing else
+     is decided here. "For now": the chit sheet may replace the way a bill opens. */
+  var billHash = /^#\/app\/chit\/([A-Za-z0-9_-]+)$/.exec(text);
+  /* ⚠️ WX-P2P-09 (2026-10-13, the real stack): a bill is NOT in the Task list (bills are not tasks), so the list's load used to drop the chit this
+     door had just opened — a fresh shop saw "Your bogie is empty" in the tab CB Accounts' "Open page" opened. UI._byId pins it: loadList keeps a
+     chit opened by its id whether or not the page lists it; picking another chit un-pins. */
+  if (billHash && SESSION.token) {
+    UI.nav = 'task';
+    UI.folder = 'task';
+    UI._byId = decodeURIComponent(billHash[1]);
+    renderApp();
+    try {
+      openChit(UI._byId);
+    } catch (_) {}
+    return true;
+  }
+  return false;
 }
 window.addEventListener('hashchange', route);
 function route() {
@@ -4028,70 +4136,8 @@ function route() {
    * the back office on it.
    */
   if (SESSION.token && counterHere() && !counterStay() && (text === '#/' || text === '' || text === '#/app')) return toCounter();
-  /* l16 W4 (walk 16 Nov): STAFF OF A FIRM LAND ON THE PRACTICE. An actor whose firm practice answers (clients held by live grants, no trade of its own: the same rule as books-practice.js isFirm)
-     opens Home, the same as the firm's owner; a shop's counter staff keep the rail. The per-login hint (cb_practice_hint, the one books-practice.js keeps) answers at once; with none, ONE practice read decides and is kept.
-     ONLY the app's own front (#/app, empty), as the paired-counter rule above. A read that fails or is slow lets the rail draw (the practice frame on Home carries its own retry). */
-  if (SESSION.token && SESSION.role === 'actor' && (text === '#/' || text === '' || text === '#/app') && !window._firmLandingDone) {
-    var _fl = firmLanding();
-    if (_fl === 'home') return location.replace('/');
-    if (_fl && _fl.then)
-      return _fl.then(function (to) {
-        window._firmLandingDone = true;
-        if (to === 'home') location.replace('/');
-        else route();
-      });
-  }
-  /* ⭐ THE SMALLEST DEEP LINK (index page, 2026-09-30): #/app/<nav> sets UI.nav on arrival, and nothing else —
-     the app still routes by UI.nav, never by hash. Exact #/app keeps the counter jump above: a deep link is a
-     deliberate ask for one screen, and answering a specific request with the till is its own bug. */
-  /* ⭐ THE OLD LEDGER DOOR IS CLOSED (Athi, 2026-10-02): the Ledger lives on /accounts.html. A nav to 'ledger' — typed #/app/ledger,
-     bookmarked, or remembered in cb_nav@<id> — goes there, to the same view. cap-books.js stays: accounts.html runs it. */
-  var _lg = /^#\/app\/ledger(?:\/([a-z]+))?$/.exec(text);
-  if (SESSION.token && _lg) return ledgerDoorClosed(_lg[1]);
-  /* ⭐ SUPPORT, from another page's avatar (CB Accounts, the index page, a Lab): the app opens on its Support popup */
-  if (SESSION.token && text === '#/app/support') {
-    renderApp();
-    try {
-      supportOpen();
-    } catch (_) {}
-    return;
-  }
-  /* ⭐ TO1b: ＋ New from Tasks & Orders (tasks.html) — the app opens on its ONE composer, as the support door above opens its popup */
-  if (SESSION.token && text === '#/app/compose') {
-    UI.nav = 'task';
-    UI.folder = 'task';
-    renderApp();
-    try {
-      compose();
-    } catch (_) {}
-    return;
-  }
-  var _deep = /^#\/app\/([a-z][a-z0-9-]*)$/.exec(text);
-  if (_deep && SESSION.token) {
-    UI.nav = _deep[1];
-    if (_deep[1] === 'order') UI.folder = 'order';
-    else if (['drafts', 'trash', 'archive'].indexOf(_deep[1]) >= 0) UI.folder = _deep[1];
-    else if (_deep[1] === 'task') UI.folder = 'task';
-    try {
-      localStorage.setItem(uk('cb_nav'), _deep[1]);
-    } catch (_) {}
-  }
-  /* ⭐ A BILL OPENED FROM CB ACCOUNTS (#/app/chit/<id>): the app arrives on Task and opens that chit with its own openChit — nothing else
-     is decided here. "For now": the chit sheet may replace the way a bill opens. */
-  var _bill = /^#\/app\/chit\/([A-Za-z0-9_-]+)$/.exec(text);
-  /* ⚠️ WX-P2P-09 (2026-10-13, the real stack): a bill is NOT in the Task list (bills are not tasks), so the list's load used to drop the chit this
-     door had just opened — a fresh shop saw "Your bogie is empty" in the tab CB Accounts' "Open page" opened. UI._byId pins it: loadList keeps a
-     chit opened by its id whether or not the page lists it; picking another chit un-pins. */
-  if (_bill && SESSION.token) {
-    UI.nav = 'task';
-    UI.folder = 'task';
-    UI._byId = decodeURIComponent(_bill[1]);
-    renderApp();
-    try {
-      openChit(UI._byId);
-    } catch (_) {}
-    return;
-  }
+  if (routeFirmLanding(text)) return;
+  if (routeAppDoors(text)) return;
   /* …or remembered: cb_nav@<id> held 'ledger' from before the door closed (boot puts it in UI.nav) */
   if (SESSION.token && UI.nav === 'ledger' && /^#\/app$|^#\/?$/.test(text)) return ledgerDoorClosed();
   if (text.startsWith('#/welcome')) return renderWelcome();
@@ -6408,18 +6454,7 @@ function _renderApp() {
         // `unwrap()` returns j.entity for /me, so read both shapes.
         var _e = (reply && reply.entity) || reply || {};
         sessionFromMe(_e);
-        /* is the Ledger switched on for this shop? /me says (ledger_on), so the first screen asks GET /books/health for nothing: that route answers 404 LEDGER_OFF by design for a shop with none, a red failed request in the console.
-           The door and the party blocks stay out of sight when it is off. */
-        if (typeof _e.ledger_on === 'boolean') {
-          var _booksWas = SESSION.booksOn;
-          SESSION.booksOn = _e.ledger_on;
-          if (SESSION.booksOn && !_booksWas)
-            ensureCap('books')
-              .then(function () {
-                bgRenderApp();
-              })
-              .catch(function () {});
-        }
+        noteLedgerOn(_e);
         /* ⭐ The entity's policy flags ride /me — the detail-page preference has to be known before any chit is
          opened, and a second fetch at boot would cost a round trip on the hottest path. */
         if (_e.policy_flags) SESSION.policy_flags = _e.policy_flags;
@@ -16593,160 +16628,6 @@ function prodOfferTerms(rules) {
   }
 }
 
-/** what the add-to-offer confirm shows: the offer (terms and window) and which products it will price */
-function prodOfferAskWords(offerDef, rules, ids) {
-  const names = ids.map((id) => ((UI.prods || []).find((x) => x.id === id) || {}).name || id);
-  const shown = names.slice(0, 3).map(esc).join(', ') + (names.length > 3 ? ' ' + esc(txn('and {count} more', 'and {count} more', names.length - 3)) : '');
-  return (
-    '<div data-testid="po-ask-reach"><b>' + esc(txn('{count} product', '{count} products', ids.length)) + '</b> ' + esc(tx('will be priced by this offer')) + ': ' + shown + '</div>' +
-    '<div style="margin-top:8px"><b>' + esc((offerDef && offerDef.name) || tx('This offer')) + '</b> · ' + esc(prodOfferTerms(rules)) + ' · ' + esc(prodOfferWindow(rules)) + '</div>'
-  );
-}
-/** the item ids after the change: the picked ones unioned in (add) or differenced out */
-function prodOfferNextIds(current, ids, add) {
-  const list = Array.isArray(current) ? current.slice() : [];
-  if (!add) return list.filter((item) => ids.indexOf(item) < 0);
-  ids.forEach((item) => {
-    if (list.indexOf(item) < 0) list.push(item);
-  });
-  return list;
-}
-/** removing the LAST product leaves an empty list, and an empty list means EVERY product */
-function prodOfferToAll(change) {
-  return !change.add && !change.next.length && Array.isArray(change.was) && change.was.length > 0;
-}
-/** the offer moved while the question was up: the answer was to the old terms, so nothing is saved */
-async function prodOfferMoved(change) {
-  const again = await api('defGet', { params: { id: change.id } });
-  if (((again && again.definition) || {}).current_version === (change.def || {}).current_version) return false;
-  toast(tx('This offer changed while you were confirming; check and try again'), true);
-  return true;
-}
-/** ask before a change that WIDENS what the offer prices: adding products, or removing the LAST one (an empty list means EVERY product). The busy cover is lifted while the question is up; false = Cancel, nothing is written; narrowing, or an unreadable offer, asks nothing */
-async function prodOfferConfirm(change) {
-  const toAll = prodOfferToAll(change);
-  if (!(change.add || toAll) || !change.rules.kind) return true;
-  hideBusy();
-  const body = toAll ? prodOfferAllWords(change.def, change.rules) : prodOfferAskWords(change.def, change.rules, change.ids);
-  const title = toAll ? tx('This offer will apply to ALL products') : tx('Add to this offer?');
-  if (!(await CBAction.ask({ title: title, body: body, yes: toAll ? tx('Apply to all') : tx('Add') }))) return false;
-  showBusy(change.add ? txn('Adding {count} product…', 'Adding {count} products…', change.ids.length) : txn('Removing {count} product…', 'Removing {count} products…', change.ids.length));
-  return !(await prodOfferMoved(change));
-}
-
-/** the words for the last-product removal: nothing narrows the offer any more, so it reaches the whole catalogue */
-function prodOfferAllWords(offerDef, rules) {
-  return (
-    '<div data-testid="po-ask-all"><b>' + esc(tx('Removing the last product leaves nothing to narrow this offer, so it will apply to ALL products.')) + '</b></div>' +
-    '<div style="margin-top:8px"><b>' + esc((offerDef && offerDef.name) || tx('This offer')) + '</b> · ' + esc(prodOfferTerms(rules)) + ' · ' + esc(prodOfferWindow(rules)) + '</div>'
-  );
-}
-/**
- * ⚠️ ONE WRITE, AND IT MERGES. The offer's reach is read, unioned (or differenced) with the selection, and saved
- * back as a new definition_version — so the change is versioned like any other change to a term of trade, and a
- * concurrent edit elsewhere cannot be silently flattened by a stale list held on this screen.
- */
-async function prodOfferApply(offerId, add) {
-  const ids = Array.from(UI.prodPicked || []);
-  if (!ids.length) return;
-  showBusy(
-    add ? txn('Adding {count} product…', 'Adding {count} products…', ids.length) : txn('Removing {count} product…', 'Removing {count} products…', ids.length)
-  );
-  try {
-    /**
-     * ⚠️⚠️ THE RULES ARE ON THE VERSION, NOT ON THE DEFINITION — and reading the wrong one DESTROYS THE OFFER.
-     *
-     * `defList` JOINs definition_version and returns `rules`; `defGet` returns `{definition, versions}` and
-     * leaves `definition.rules` NULL. My first version read `d.rules || {}` from defGet, merged the product ids
-     * into an empty object, and saved that — so applying products to an offer silently erased its TERMS. The
-     * kind, the tiers, the percentage: gone. The offer still existed, still looked live on every screen, and did
-     * nothing at all. It happened to the test offer before this comment was written.
-     *
-     * ⭐ So the current version's rules are what we merge into, and the guard below makes the loss impossible
-     * rather than merely unlikely.
-     */
-    const reply = await api('defGet', { params: { id: offerId } });
-    const d = (reply && reply.definition) || {};
-    const vers = (reply && reply.versions) || [];
-    const curV =
-      vers.filter(function (item) {
-        return item.version === d.current_version;
-      })[0] ||
-      vers[0] ||
-      {};
-    /* The kind is on the DEFINITION; joining it here is what lets the guard below pass for a form-authored offer. */
-    const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
-    /* ⭐ ADDING products widens what the offer prices: ask first, showing the reach. Reads above change nothing; the first write is the defSave below. */
-
-    /**
-     * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
-     * join, anything — saving would replace a working offer with an empty one, and nothing downstream would
-     * complain: CBOffers skips a kind it does not know, so the discount would simply stop applying, silently, on
-     * every surface at once. Refusing costs one toast; the alternative costs a live commercial term.
-     */
-    if (!rules.kind) {
-      hideBusy();
-      toast(tx("Could not read that offer's terms, so nothing was changed. Open it in Catalogue setup first."), true);
-      return;
-    }
-    const at = Object.assign({}, rules.applies_to || {});
-    const next = prodOfferNextIds(at.item_ids, ids, add);
-    if (!(await prodOfferConfirm({ id: offerId, add: add, def: d, rules: rules, ids: ids, was: at.item_ids, next: next }))) return;
-
-    /**
-     * ⚠️⚠️ AN EMPTY item_ids LIST MEANS "EVERY PRODUCT", NOT "NONE" — see CBOffers.eligibleFor, where a missing
-     * selector matches every line. So removing the last product must DELETE the key, not leave it empty: an empty
-     * array would silently turn a targeted discount into a shop-wide one, which is the most expensive possible
-     * direction for that mistake.
-     */
-    if (next.length) at.item_ids = next;
-    else delete at.item_ids;
-    if (Object.keys(at).length) rules.applies_to = at;
-    else delete rules.applies_to;
-
-    /* what the brand's stores had BEFORE this save — a released offer is now "changed", an unreleased one still is not out */
-    const netWas =
-      (
-        ((typeof _DEFS !== 'undefined' && _DEFS.offer) || []).filter(function (x) {
-          return x.definition_id === offerId;
-        })[0] || {}
-      ).network || null;
-    await api('defSave', { params: { id: offerId }, body: { rules: rules } });
-    /* ⚠️ AND core.js's live shelf, which ctOffersEnsure re-reads from. It was dropped only when the bell's "shop changed"
-       arrived — a race the re-read usually won, so the tick showed the pre-attach offer ([OFF-01] / [OFF-02], 2026-09-17). */
-    if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
-    /* The Definitions/Setup edit form saves whole rules from ITS copy — it must not keep the pre-attach one. */
-    if (typeof CBDEF !== 'undefined' && CBDEF) CBDEF.mine = null;
-    closeModal();
-    UI.prodPicked.clear();
-    UI.prodPick = false;
-    await loadCatalogue('fresh');
-    toast(
-      (add
-        ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
-        : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length)) +
-        /* ⭐ said at the moment it matters — the stores do not have this yet (see netRelChip) */
-        (netWas && netWas.stores > 0
-          ? ' · ' +
-            txn(
-              'your {count} store gets it when you release it (Settings › Integrations › Network offers)',
-              'your {count} stores get it when you release it (Settings › Integrations › Network offers)',
-              netWas.stores
-            )
-          : '')
-    );
-  } catch (e) {
-    toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e));
-  } finally {
-    /**
-     * ⚠️ hideBusy IN A finally, NOT ONLY IN THE CATCH. My first version hid the overlay when the save FAILED and
-     * left it up when it SUCCEEDED — the exact inversion, and the kind that reads as "the app froze after it
-     * worked". Every other bulk action here (prodAvailApply) already pairs them in a finally; this one now does
-     * too, which is also why it is a finally rather than a third call at the end of the try.
-     */
-    hideBusy();
-  }
-}
 
 /**
  * ⭐⭐ BULK ATTACH — ADD, NEVER REPLACE.
@@ -22632,51 +22513,6 @@ function chitPayAsk(id, form, e) {
     () => chitPaySubmit(id, form, warnings.map((warning) => (warning.over_minor != null ? { code: String(warning.code), over_minor: warning.over_minor } : String(warning.code))))
   );
   return true;
-}
-/** what the Clear-payment confirm shows: the amount with its currency, the method and the reference (nothing is invented when the row does not carry them) */
-function chitUnpayPay(row) {
-  const bj = (row && (row.business_json || (row.header && row.header.business_json))) || {};
-  return bj.payment || {};
-}
-/** the chit's own currency code, '' when the row states none (never the shop's: money is a value type) */
-function chitUnpayCode(row) {
-  return (row && (row.currency || (row.summary_json && row.summary_json.currency_code) || (row.header && row.header.currency_code))) || '';
-}
-/** why a payment is NOT cleared, in words, or '' when the confirm can show amount AND currency */
-function chitUnpayRefusal(row) {
-  if (!row) return tx('This chit is not on screen any more, so its payment was not cleared. Reopen it and try again.');
-  const amount = chitUnpayPay(row).amount;
-  if (!chitUnpayCode(row) || amount == null || amount === '' || !isFinite(Number(amount))) return tx('This chit does not carry the amount and currency of its payment, so it was not cleared. Reopen it and try again.');
-  return '';
-}
-function chitUnpayWords(row) {
-  const pay = chitUnpayPay(row);
-  const code = chitUnpayCode(row);
-  return (
-    '<div>' + esc(tx('This clears the recorded payment. The log keeps both entries.')) + '</div>' +
-    '<div style="margin-top:8px"><b data-testid="unpay-amount">' + esc(fmtMoney(pay.amount, code)) + '</b> · <span data-testid="unpay-method">' +
-    esc(String(pay.method || '—').toUpperCase()) + '</span>' + (pay.ref ? ' · <span data-testid="unpay-ref">' + esc(pay.ref) + '</span>' : '') + '</div>'
-  );
-}
-/** the on-screen row forgets its payment, so the cell repaints unpaid before the reload lands */
-function chitUnpayForget(row) {
-  if (!row) return;
-  if (row.business_json) delete row.business_json.payment;
-  if (row.header && row.header.business_json) delete row.header.business_json.payment;
-}
-async function chitUnpay(id) {
-  const row = UI.rows && UI.rows.find((x) => x.id === id);
-  const refusal = chitUnpayRefusal(row);
-  if (refusal) return toast(refusal, true);
-  if (!(await CBAction.ask({ title: tx('Clear this payment?'), body: chitUnpayWords(row), yes: tx('Clear payment') }))) return;
-  try {
-    await api('chitUnpay', { params: { id } });
-    toast(tx('Payment cleared'));
-    chitUnpayForget(row);
-    if (typeof openChit === 'function') openChit(id, true);
-  } catch (e) {
-    toast((e && e.message) || tx('Could not clear'), true);
-  }
 }
 /** the QR for a walk-in customer: the seller's own UPI id (the profile map / Business identity row upi_id) */
 async function chitShowQr(id, amount) {
