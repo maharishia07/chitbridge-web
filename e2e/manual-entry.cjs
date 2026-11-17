@@ -29,7 +29,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolkata, or CB_TODAY), never the UTC day: UTC is a day behind from 18:30Z (tzsweep) */
 const SEC = { dr: 'Dr', cr: 'Cr' };
 
 /* ── the stand-in speaks the REAL shapes (chitbridge-api routes/books.js + lib/books-manual.js; tests/books-preview.test.cjs) ── */

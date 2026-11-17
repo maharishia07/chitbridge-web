@@ -56,7 +56,7 @@ const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 /* ── the stand-in: one shop's day, one figure per source — extends index-page.cjs's own shape with what the
    three Labs ask for that the index page never does (product lists, combo templates, definitions, modifiers) */
 function standIn() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10); // utc-ok: a catalogue item date (SAFE: UTC is never ahead of the shop day)
   const items = [];
   for (let i = 0; i < 112; i++) {
     const d = { price: { amount: 10 + i, currency: 'INR' }, cost: { amount: 6 + i, currency: 'INR' },

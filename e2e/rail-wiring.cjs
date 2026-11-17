@@ -21,7 +21,7 @@ const FIX = path.join(__dirname, 'fixtures', 'golden-parties.json');
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 const claims = (c) => b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x';
 const OWNER = { token: claims({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Athi', entity: 'Mayur Bhavan' };
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolkata, or CB_TODAY), never the UTC day: UTC is a day behind from 18:30Z (tzsweep) */
 
 const ALLOW = { message_external: { ok: true }, message_internal: { ok: true } };
 const VIEW = { message_external: { ok: false, why: 'read_only' }, message_internal: { ok: false, why: 'read_only' } };
