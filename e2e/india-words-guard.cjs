@@ -36,7 +36,7 @@ const ALLOW = {
   'app/cap-catsetup.js': 3,       /* the catalogue set-up's worked example of a condition row */
   'app/cap-crm-record.js': 3,     /* the CRM record's GSTIN rows under India's pack */
   'app/cap-iddocs.js': 3,         /* the id-document schemes the server may list (PAN is drawn only when the server lists it — cx4 P3) */
-  'app/cap-bank.js': 2,           /* the bank screen's record actions (₹ as the action glyph) */
+  'app/cap-bank-rows.js': 2,      /* the bank screen's record actions (₹ as the action glyph) */
   'app/cap-books.js': 2,          /* the books' tax-scheme list (GSTIN · PAN first under India's pack; the word is helpers.taxIdWord) */
   'app/cap-shop.js': 2,           /* the India-shaped vault fields (GSTIN · PAN · IEC · LUT), attached to the IN pack */
   'app/cap-traceability.js': 2,   /* _traceSym's last-resort symbol */

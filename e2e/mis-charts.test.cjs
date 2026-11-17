@@ -17,6 +17,8 @@ const ctx = { console, esc: (s) => String(s == null ? '' : s).replace(/[&<>"]/g,
 ctx.window = ctx;
 vm.createContext(ctx);
 vm.runInContext(read('engine/chart-draw.js'), ctx);
+vm.runInContext(read('engine/chart-draw-status.js'), ctx);
+vm.runInContext(read('engine/chart-draw-rows.js'), ctx);
 vm.runInContext(read('app/mis-charts.js'), ctx);
 const D = ctx.CBDraw,
   MC = ctx.MC;

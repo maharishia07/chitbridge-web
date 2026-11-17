@@ -9,7 +9,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8');
-const shell = read('accounts-shell.js'), books = read('cap-books.js'), crm = read('cap-crm-record.js'), bank = read('cap-bank.js');
+const shell = read('accounts-shell.js'), books = read('cap-books.js'), crm = read('cap-crm-record.js'), bank = read('cap-bank.js') + read('cap-bank-rows.js');
 let bad = 0;
 const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(84) + '· ' + (detail || '') + '  ' + (ok ? 'OK' : (bad++, 'FAILED'))); };
 

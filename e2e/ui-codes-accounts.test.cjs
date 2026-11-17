@@ -3,7 +3,7 @@
 /**
  * ui-codes-accounts.test.cjs - the Accounts page wears ITS identity codes (UX-137 stamp 7, screens BKS001, BKS007, BKS014, BKS016, BKS024, BKS025).
  *
- * OWNS      the proof that accounts.html and the five scripts only it loads (cap-period, cap-bank, cap-move-in, cap-compare, cap-fx)
+ * OWNS      the proof that accounts.html and the scripts only it loads (cap-period, cap-bank, cap-bank-rows, cap-move-in, cap-compare, cap-fx)
  *           carry the 67 data-cbsid codes of their own screens, that a named control wears ITS code (a swap of two codes fails), that no code is
  *           written on two element definitions, and that each code is a live row in the register. A builder tag drawn for many callers
  *           (peInput, peSel, peBtn, the menu items, the tabs) is ONE element definition and ONE code.
@@ -18,7 +18,8 @@ const PUB = path.join(__dirname, '..', 'public');
 const SET = {
   'accounts.html': 'BKS001-B01 BKS001-B02 BKS001-B03 BKS001-B04 BKS001-B05 BKS001-B06 BKS001-B07',
   'app/cap-period.js': 'BKS016-B01 BKS016-I01 BKS016-S01 BKS016-B02 BKS016-B03 BKS016-B04 BKS016-B10 BKS016-B05 BKS016-B06 BKS016-B07 BKS016-B08 BKS016-B09 BKS016-I02',
-  'app/cap-bank.js': 'BKS014-I01 BKS014-S01 BKS014-B09 BKS014-B26 BKS014-B02 BKS014-B19 BKS014-B01 BKS014-B22 BKS014-B25 BKS014-B24 BKS014-B18 BKS014-B23 BKS014-B21 BKS014-B27 BKS014-B29 BKS014-B28 BKS014-T01 BKS014-B03 BKS014-B04 BKS014-B05 BKS014-B06 BKS014-B07',
+  'app/cap-bank.js': 'BKS014-I01 BKS014-S01 BKS014-B09 BKS014-B26 BKS014-B02 BKS014-B19 BKS014-B01 BKS014-B22 BKS014-B25 BKS014-B24 BKS014-B18 BKS014-B23 BKS014-B21 BKS014-B27 BKS014-B29 BKS014-B28',
+  'app/cap-bank-rows.js': 'BKS014-T01 BKS014-B03 BKS014-B04 BKS014-B05 BKS014-B06 BKS014-B07',
   'app/cap-bank-store.js': 'BKS014-B08',
   'app/cap-bank-home.js': 'BKS014-B49 BKS014-B50 BKS014-B51 BKS014-B53 BKS014-B48 BKS014-B52 BKS014-B44 BKS014-B47 BKS014-B46',
   'app/cap-bank-sheet.js': 'BKS014-B17 BKS014-B16 BKS014-B60 BKS014-B61 BKS014-B62 BKS014-B63 BKS014-B64',
@@ -31,7 +32,7 @@ const SET = {
 const NEAR = [
   ['accounts.html', 'id="toggleNav"', 'BKS001-B01'], ['accounts.html', 'acc-switch-on', 'BKS001-B07'], ['accounts.html', 'close-first-go', 'BKS001-B06'],
   ['app/cap-period.js', 'data-testid="py-close"', 'BKS016-B09'], ['app/cap-period.js', 'data-testid="py-lodged"', 'BKS016-I02'], ['app/cap-period.js', 'id="pdp_run"', 'BKS016-B03'],
-  ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-file"', 'BKS014-I13'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B42'],
+  ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank-rows.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-file"', 'BKS014-I13'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B42'],
   ['app/cap-move-in.js', 'id="mi-asat"', 'BKS024-I01'], ['app/cap-move-in.js', 'data-testid="mi-again"', 'BKS024-B02'],
   ['app/cap-compare.js', 'data-testid="cmp-pick"', 'BKS007-S01'], ['app/cap-compare.js', 'data-testid="cmp-new"', 'BKS007-B08'], ['app/cap-compare.js', 'id="cmp-label"', 'BKS007-I02'],
   ['app/cap-fx.js', 'data-testid="fx-add"', 'BKS025-B01'], ['app/cap-fx.js', 'id="fx_cur"', 'BKS025-I02'], ['app/cap-fx.js', 'data-testid="lk-fx-revalue"', 'BKS025-B04']
