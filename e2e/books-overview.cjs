@@ -20,6 +20,7 @@ const fs = require('fs'), http = require('http'), path = require('path');
 const { chromium } = require('playwright');
 const { signinCode } = require('./lib/signin-code.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
+const C = require('./lib/contract.cjs'); /* every overview answer (the api's own four, and the two mocked here) is held to docs/contracts/web-api.json: e2e/fixtures/web-api.contract.json */
 
 const API = process.env.API || 'http://localhost:3000', SHOP = process.env.SHOP || 'q17shopau', OUT = process.env.OUT || '/out', PORT = Number(process.env.PORT || 3997);
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public');
@@ -109,7 +110,7 @@ function compare(tag, a, got, period) {
   const base = 'http://localhost:' + PORT;
   const { token, sess } = await signIn();
   const truth = {}; /* the api's own answers, read by this script with the same token */
-  for (const p of Object.keys(WORDS)) { const r = await j('/api/books/overview?period=' + p, token); if (r.status !== 200) throw new Error('overview ' + p + ' ' + r.status); truth[p] = r.b; }
+  for (const p of Object.keys(WORDS)) { const r = await j('/api/books/overview?period=' + p, token); if (r.status !== 200) throw new Error('overview ' + p + ' ' + r.status); truth[p] = r.b; C.check('GET', '/api/books/overview', r.status, r.b, 'api answer, period ' + p + ': '); }
   ok(Object.values(truth).every((a) => a.currency === 'AUD'), 'api read: four periods, shop currency AUD');
   ok(truth.week.sales.minor == null && truth.ytd.sales.minor != null, 'the seeded shop: no sales posted this week (absent), sales this year ' + truth.ytd.sales.minor + ' minor');
 
@@ -168,7 +169,7 @@ function compare(tag, a, got, period) {
     const { ctx, page } = await open({ width: 1366, height: 768 }, 'light', true);
     const hidden = JSON.parse(JSON.stringify(truth.ytd));
     delete hidden.income; delete hidden.expenses; delete hidden.profit; delete hidden.gross; delete hidden.profit_by_month; hidden.cost_hidden = true;
-    await page.route('**/api/books/overview**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': base }, body: JSON.stringify(hidden) }));
+    await page.route('**/api/books/overview**', (r) => C.wrap(r, 'mocked seat without costs: ').fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': base }, body: JSON.stringify(hidden) }));
     await page.goto(base + '/accounts.html#overview');
     const got = await settle(page, 'ytd');
     ok(!got.tiles.income && !got.tiles.profit && !!got.tiles.sales && minorOf(got.tiles.sales.v) === truth.ytd.sales.minor && !got.profit, '[mocked: seat without costs] only the figures the api sent are drawn (sales yes; income, profit and the profit picture no)');
@@ -192,6 +193,7 @@ function compare(tag, a, got, period) {
   }
   await browser.close();
   srv.close();
+  ok(...C.finish());
   ok(bad.length === 0, 'no page error and no api status >= 400 outside the forced one' + (bad.length ? ' ' + bad.slice(0, 4).join(' | ') : ''));
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
