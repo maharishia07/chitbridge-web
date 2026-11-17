@@ -234,7 +234,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}/* wraps, never cut: the Statements line reads in full at 390 (Fable r2) */
 #bk_body .bks-tog,#bk_body .bks-btn,#bk_body .bks-miss,#bk_body .bks-add button{min-height:32px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font-size:13px;font-weight:600;cursor:pointer}
 #bk_body .bks-add .supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-#bk_body .bks-miss{border-color:var(--line);background:var(--surface);color:var(--muted);font-weight:400;width:100%;height:26px;min-height:26px;padding:0 6px}
+#bk_body .bks-miss{border-color:var(--line);background:var(--surface);color:var(--muted);font-weight:400;width:100%;height:auto;min-height:26px;padding:2px 1px;font-size:12px;line-height:1.15;white-space:normal}/* wraps to two lines like "Signed off": a year of 12 months fits its box at 1366 (Fable 1117b r2 N2), the card at 390 never 3 px over */
 .bks-add{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
 .bks-add .pe-f .inp{min-height:32px;height:32px;padding:0 8px}
 .bks-add .pe-f{flex:1 1 180px}
