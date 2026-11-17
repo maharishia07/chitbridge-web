@@ -211,6 +211,7 @@
     try {
       return (locale && locale.time && locale.time(at)) || '';
     } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('shell: a moment was not worded', failure);
       return '';
     }
   }
@@ -219,6 +220,7 @@
     try {
       return (locale && locale.date && locale.date(at)) || String(at || '').slice(0, 10);
     } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('shell: a date was not worded', failure);
       return String(at || '').slice(0, 10);
     }
   }

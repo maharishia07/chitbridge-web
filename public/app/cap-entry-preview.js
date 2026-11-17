@@ -1,10 +1,37 @@
 /* cap-entry-preview.js — ＋ ENTRY: the preview round trip (ask the server to preview the journal, read its answer, check the date).
- * OWNS      the question before a debit note (enAskWords, enAsk) · the preview body (enBody) · the server's refusals and warnings as the sheet shows them (enWords, enSeen) · enPreview, enPaint2, enCheckDate, enFixGo; moved out of cap-entry.js (2026-11-17, size ratchet; behaviour unchanged)
+ * OWNS      the field's label and value (enFieldLabel, enValueOf) · the question before a debit note (enAskWords, enAsk) · the preview body (enBody) · the server's refusals and warnings as the sheet shows them (enWords, enSeen) · enPreview, enPaint2, enCheckDate, enFixGo; moved out of cap-entry.js (2026-11-17, size ratchet; behaviour unchanged)
  * CALLED BY accounts.html and finance.html (<script src>, after cap-entry.js: it reads EN and the en* painters declared there) · cap-entry.js (enNext, enPick, enSave call enPreview)
  * FLOW      a field changes → enPreview → enBody → enAsk (POST /api/books/preview) → enSeen → enPaint2 draws step 4; Save (cap-entry.js) is enabled only when the server said balanced and refused nothing
  * CARD      16-finance/manual-entry
  * THE PAGE HOLDS NO RULES AND COMPUTES NO MONEY: every figure, refusal and warning is the server's.
  */
+/** what the sheet holds for a field now ('' when nothing yet) */
+function enValueOf(key) {
+  return EN.v[key] == null ? '' : EN.v[key];
+}
+/** the label a field is asked with: its own, the shared one, or the plain word for its kind (the key when none) */
+function enFieldLabel(field) {
+  var k = field.key;
+  return tx(
+        field.label ||
+          EN_LABEL[k] ||
+          {
+            party: 'Who',
+            ledger: 'Which ledger',
+            bank: 'Which bank',
+            asset_class: 'What kind',
+            loan: 'Which loan',
+            amount: 'How much',
+            date: 'Date',
+            paid_by: 'Paid by',
+            doc_no: 'Bill / receipt no.',
+            photo: 'Photo of the paper',
+            narration: 'Note',
+            text: k
+          }[field.kind] ||
+          k
+      );
+}
 /**
  * R106: the question before a debit note is saved — the party line of the SERVER's preview (its dr_minor is the note's ₹; never summed here), the bill
  * and the supplier as the row names them. null when this event does not ask.

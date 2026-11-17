@@ -1,11 +1,54 @@
 /* cap-crm-timeline.js — CB CRM: a party's whole history, answered 50 at a time by the server (the record's Timeline tab).
- * OWNS      the timeline's kind filter (CRM_TAB_KINDS, crmTlWant) · the paged read (crmTlLoad) · its Filters (crmTlFilters) · the CBList mount (crmTimelineView); moved out of cap-crm-record.js (2026-11-17, size ratchet; behaviour unchanged)
+ * OWNS      the When cell (crmWhenCell, crmDocDay, crmDocWord) · the ledger entry's line (crmLedgerLine) · the failed-read state (crmTimelineFailure) · the timeline's kind filter (CRM_TAB_KINDS, crmTlWant) · the paged read (crmTlLoad) · its Filters (crmTlFilters) · the CBList mount (crmTimelineView); moved out of cap-crm-record.js (2026-11-17, size ratchet; behaviour unchanged)
  * CALLED BY crm.html (<script src>, after cap-crm-record.js) · cap-crm-record.js (crmRecordPaint → crmTimelineView; the click door → crmTlLoad)
  * FLOW      crmTimelineView(p, tok) → CBList mount → crmTlLoad(more) reads the next page (crmTimeline) → rows are drawn by crmEntryFrom / crmTlCols (cap-crm-record.js)
  * CARD      11-crm-and-marketing/crm-record
  * The server decides what a tab holds; nothing is added up here.
  */
 'use strict';
+/* the timeline's cells and lines (moved here with the list: the When cell, a document's day and name, the ledger line, the failed-read state) */
+/** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
+/** a sale to a customer is an Invoice, a supplier's is a Bill (the pack's words); a party that is both reads as a Bill */
+function crmDocWord() {
+  var roles = (CRMR.p && CRMR.p.roles) || [];
+  return roles.indexOf('customer') >= 0 && roles.indexOf('supplier') < 0 ? 'Invoice' : 'Bill';
+}
+/** a document's own day (YYYY-MM-DD) as a label: Today / Yesterday by the SHOP's day (the server's shop_day), else the date */
+function crmDocDay(day) {
+  var shop = crmShopDay();
+  return day === shop ? tx('Today') : day === crmDayPlus(shop, -1) ? tx('Yesterday') : bkDate(day);
+}
+/** the When cell: a document shows ITS date, with the day it was entered smaller beneath when that differs */
+function crmWhenCell(e) {
+  if (!e.doc_date) return esc(crmWhen(e.at));
+  var entered = e.at ? crmLocalISO(new Date(e.at)) : '';
+  return (
+    '<span data-testid="crm-docdate-' + esc(e.id) + '">' + esc(crmDocDay(e.doc_date)) + '</span>' +
+    (entered && entered !== e.doc_date ? '<br><span class="sub" data-testid="crm-entered-' + esc(e.id) + '">' + esc(tx('entered')) + ' ' + esc(crmDocDay(entered)) + '</span>' : '')
+  );
+}
+/** the document in its own words: kind (an Invoice to a customer, a Bill from a supplier) + its print number; the date is the document's, in the When column */
+function crmLedgerLine(e, kind) {
+  var word = tx(e.ledger_kind === 'bill' ? crmDocWord() : 'Payment'),
+    number = cbIsRawId(e.ref) || !e.ref ? '' : e.ref;
+  if (kind !== 'payment') return word + (number ? ' ' + number : '');
+  return word + (number ? ' · ' + number : e.amount_minor != null ? ' ' + bkMoney(e.amount_minor, e.currency) : '');
+}
+/** R70: a history that could not be read is NOT an empty history: the list says so (the record's other sections still show) and offers Try again */
+function crmTimelineFailure(rec) {
+  return {
+    state: function () {
+      return rec.timeline_failed ? 'error' : null;
+    },
+    error: function () {
+      return { title: tx("Couldn't load the history."), sub: tx('The record’s other sections still show.') };
+    },
+    onRetry: function () {
+      crmRecordOpen(CRM.route);
+    }
+  };
+}
+
 /* ═══ THE TIMELINE — the whole history, answered 50 at a time by the server (never read all at once) ════════════════════
    A CBList mount like every list: the kind filter and the search sit in the unit's own Filters and search box (the head stays three rows);
    the page asks the server again when either changes (crmWatch), and asks for the next 50 when the rows are scrolled to the end. */

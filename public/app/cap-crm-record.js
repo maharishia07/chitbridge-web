@@ -124,33 +124,6 @@ function crmMarkHidden(entry, wire) {
   if ((entry.src === 'chit' || entry.src === 'ledger') && figure == null && wire.cost_hidden) entry.amount_hidden = true;
   return entry;
 }
-/** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
-/** a sale to a customer is an Invoice, a supplier's is a Bill (the pack's words); a party that is both reads as a Bill */
-function crmDocWord() {
-  var roles = (CRMR.p && CRMR.p.roles) || [];
-  return roles.indexOf('customer') >= 0 && roles.indexOf('supplier') < 0 ? 'Invoice' : 'Bill';
-}
-/** a document's own day (YYYY-MM-DD) as a label: Today / Yesterday by the SHOP's day (the server's shop_day), else the date */
-function crmDocDay(day) {
-  var shop = crmShopDay();
-  return day === shop ? tx('Today') : day === crmDayPlus(shop, -1) ? tx('Yesterday') : bkDate(day);
-}
-/** the When cell: a document shows ITS date, with the day it was entered smaller beneath when that differs */
-function crmWhenCell(e) {
-  if (!e.doc_date) return esc(crmWhen(e.at));
-  var entered = e.at ? crmLocalISO(new Date(e.at)) : '';
-  return (
-    '<span data-testid="crm-docdate-' + esc(e.id) + '">' + esc(crmDocDay(e.doc_date)) + '</span>' +
-    (entered && entered !== e.doc_date ? '<br><span class="sub" data-testid="crm-entered-' + esc(e.id) + '">' + esc(tx('entered')) + ' ' + esc(crmDocDay(entered)) + '</span>' : '')
-  );
-}
-/** the document in its own words: kind (an Invoice to a customer, a Bill from a supplier) + its print number; the date is the document's, in the When column */
-function crmLedgerLine(e, kind) {
-  var word = tx(e.ledger_kind === 'bill' ? crmDocWord() : 'Payment'),
-    number = cbIsRawId(e.ref) || !e.ref ? '' : e.ref;
-  if (kind !== 'payment') return word + (number ? ' ' + number : '');
-  return word + (number ? ' · ' + number : e.amount_minor != null ? ' ' + bkMoney(e.amount_minor, e.currency) : '');
-}
 function crmEntryFrom(e, i) {
   if (e && e.line != null && e.id != null) return e; // already the page's grammar (the design stand-in's) — accepted as is
   var at = e.at || '',
@@ -758,9 +731,9 @@ function crmDuesBand(p) {
   return !!(CRM.ledger && p.dues_overdue);
 }
 /** Pay / Receive on the record's action row, greyed WITH the server's sentence when the login may not */
-function crmPayButton(p) {
-  var wpay = crmWhyNot(p, 'pay'),
-    owed = Number(p.balance_minor || 0),
+function crmPayButton(party) {
+  var wpay = crmWhyNot(party, 'pay'),
+    owed = Number(party.balance_minor || 0),
     label = owed > 0 ? 'Receive' : owed < 0 ? 'Pay' : 'Pay / Receive';
   return (
       '<button data-cbsid="CRM006-B08" type="button" class="act' +
@@ -938,20 +911,6 @@ function crmSec(id, title, fact, body, open) {
 }
 function crmKV(l, v) {
   return v == null || v === '' ? '' : '<div class="kv"><b>' + esc(tx(l)) + '</b><span>' + v + '</span></div>';
-}
-/** R70: a history that could not be read is NOT an empty history: the list says so (the record's other sections still show) and offers Try again */
-function crmTimelineFailure(rec) {
-  return {
-    state: function () {
-      return rec.timeline_failed ? 'error' : null;
-    },
-    error: function () {
-      return { title: tx("Couldn't load the history."), sub: tx('The record’s other sections still show.') };
-    },
-    onRetry: function () {
-      crmRecordOpen(CRM.route);
-    }
-  };
 }
 function crmRecordPaint(p, rec) {
   var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) });

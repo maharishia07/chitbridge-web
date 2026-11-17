@@ -23,7 +23,7 @@ function load(tx) {
   const sandbox = vm.createContext({ module: { exports: {} }, window: root, globalThis: root, setInterval() {}, setTimeout() {} }); /* the page loads helpers.js first: the one esc · fmtMoney · monthNames */
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'money.js'), 'utf8'), sandbox, { filename: 'money.js' });
   sandbox.CBMoney = sandbox.module.exports;
-  ['helpers.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js'].forEach((part) => vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), sandbox, { filename: part }));
+  ['public/app/helpers.js', 'public/app/books-practice-band.js', 'public/app/books-practice-cells.js', 'public/app/books-practice.js'].forEach((part) => vm.runInContext(fs.readFileSync(path.join(__dirname, '..', part), 'utf8'), sandbox, { filename: part }));
   return root;
 }
 const world = load((s) => s);
