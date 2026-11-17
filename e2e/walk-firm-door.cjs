@@ -19,7 +19,7 @@ const BAKERY = 'a0000000-0000-4000-8000-0000000000ee', CAFE = 'a0000000-0000-400
 
 W.run('firm-door', async (w) => {
   const { page, ctx, base } = w;
-  const S = { asks: [], approves: [], declines: [], approved: false, refuse: false, parents: [] };
+  const S = { asks: [], approves: [], declines: [], approved: false, refuse: false, parents: [], practice: null, practiceHits: 0 };
   const edges = () => [
     { id: 'e1', parent_id: SMITH_NODE, child_id: NODE, type: 'agency', state: S.approved ? 'active' : 'requested', requested_by: SMITH_NODE, parent_name: 'Smith & Co', child_name: 'Fixture Shop' },
     { id: 'e2', parent_id: JONES_NODE, child_id: NODE, type: 'agency', state: 'requested', requested_by: NODE, parent_name: 'Jones Audit', child_name: 'Fixture Shop' },
@@ -31,6 +31,7 @@ W.run('firm-door', async (w) => {
   const J = (r, status, body) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), p = new URL(q.url()).pathname, m = q.method();
+    if (p === '/api/books-grants/practice') { S.practiceHits++; return J(r, 200, S.practice || { clients: [], own_trade: true }); }
     if (p === '/api/network-offers') return J(r, 200, { store: { networks: [], offers: [] } });
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [] });
     if (p === '/api/network/entities/lookup') return J(r, 200, { found: true, id: NODE, entity: { id: NODE } });
@@ -124,4 +125,27 @@ W.run('firm-door', async (w) => {
     return { ok: sent.childHandle === 'CBBAKERY01' && sent.type === 'agency', saw: JSON.stringify(sent) };
   });
   await require('./lib/rule13.cjs').rule13(w, 'R13b', 'Practice · Add a client', 'fd_firm_host');
+
+  /* the ZERO-CLIENT firm: its Home is the practice with an empty state, "Add a client" and one line on what happens next (books-practice.js drawEmpty) */
+  S.practice = { clients: [], own_trade: false, firm: true, band: null, today: '2026-11-18' };
+  S.asks = [];
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto(base + '/');
+  await page.waitForSelector(T('fd-firm-card'), { timeout: 20000 });
+  await w.step('Z1', 'A firm with no client: Home shows the practice, No clients yet, the one line, and Add a client (not the shop Home)', async () => {
+    const t = await txt(T('practice'));
+    const shopCards = await has('[data-testid="shell-areas"] .cbsh-card:visible');
+    const ok = /Your practice/.test(t) && /No clients yet/.test(t) && /Add a client below. They accept/.test(t) && /Add a client/.test(t) && !(await has(T('fd-firm-note')));
+    return { ok, saw: t.replace(/s+/g, ' ').slice(0, 200) + ' · shop cards ' + shopCards };
+  });
+  await w.step('Z2', 'No scroll on the desktop app: 1366 x 768, the page fits the window', async () => {
+    const m = await page.evaluate(() => ({ h: document.documentElement.scrollHeight, w: document.documentElement.scrollWidth, ih: innerHeight, iw: innerWidth }));
+    return { ok: m.h <= m.ih + 1 && m.w <= m.iw + 1, saw: JSON.stringify(m) };
+  });
+  await w.step('Z3', 'Add a client from the empty Home sends the one agency ask (a childHandle)', async () => {
+    await page.fill(T('fd-firm-handle'), 'CBBAKERY01'); await page.click(T('fd-firm-add')); await page.waitForTimeout(700);
+    const sent = S.asks[0] || {};
+    return { ok: sent.childHandle === 'CBBAKERY01' && sent.type === 'agency', saw: JSON.stringify(sent) };
+  });
+  await require('./lib/rule13.cjs').rule13(w, 'R13c', 'Home · a firm with no client', 'bp_practice');
 });
