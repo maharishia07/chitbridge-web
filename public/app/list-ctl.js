@@ -121,7 +121,7 @@
     '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
     /* row 2 · tools */
     '.cbl .cbl-tools[hidden]{display:none}',
-    '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px;background:var(--cl-page)}',
+    '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 6px;background:var(--cl-page)}',
     '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
     '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
     '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}', /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
@@ -204,6 +204,7 @@
     '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
     /* a 24 px filter button would make the header row 4 px taller: its cell gives the height back in padding */
     '.cbl .cbl-hc:has(.cbl-hf){padding-block:5px}',
+    '.cbl .cbl-hc:has(.sort){padding-block:0}',/* a sortable heading: its 32 px tap target IS the row (7 px above and below it made the header 46 px and pushed the first Day book row to 232 px = 30.2%); the target stays 32 px */
     '.cbl .cbl-hc:last-child > .cbl-rz::after{inset-inline-start:auto;inset-inline-end:4px}',
     '.cbl .cbl-hc:last-child > .cbl-rz:hover::after,.cbl .cbl-hc:last-child > .cbl-rz:focus-visible::after,.cbl .cbl-hc:last-child > .cbl-rz.drag::after{inset-inline-start:auto;inset-inline-end:3px}',
     '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:11px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
@@ -270,6 +271,7 @@
     '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
     '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
     '.cbl .cbl-row .cbl-cell{padding:2px 0}',
+    '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}',
     '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
     '.cbl .cbl-row .cbl-cell.first{width:100%;font-weight:600}.cbl .cbl-row .cbl-cell.amt{margin-inline-start:auto}',
     '.cbl .cbl-row .cbl-lead{position:absolute;inset-inline-end:8px;top:6px;padding:0}',
@@ -605,12 +607,18 @@
     columns(I).forEach(function (item) {
       by[item.key] = item;
     });
+    var act = keys.filter(function (item) {
+      return (by[item] || {}).cardAct;
+    }); /* a column that is the card's action line (a link to what changed) is not counted against cardMax: drawn under the fields, hidden when empty */
     var keep = keys
-      .slice()
+      .filter(function (item) {
+        return act.indexOf(item) < 0;
+      })
       .sort(function (first, second) {
         return ((by[first] || {}).prio || 99) - ((by[second] || {}).prio || 99);
       })
-      .slice(0, max);
+      .slice(0, max)
+      .concat(act);
     return keys.filter(function (item) {
       return keep.indexOf(item) < 0;
     });
@@ -2365,8 +2373,9 @@
           (amt ? ' r mono strong amt' : '') +
           ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
           (item.mono ? ' mono' : '') +
+          (item.cardAct ? ' cbl-actline' : '') +
           '" data-l="' +
-          esc(index === 0 ? '' : item.label || '') +
+          esc(index === 0 || item.cardAct ? '' : item.label || '') +
           '" role="gridcell"' +
           (item.tid
             ? ' data-testid="' +
