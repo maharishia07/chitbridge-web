@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0 · bank-recon · sha256 a58c48f3d1f71a23c0b69ddc3b0f2ab734f0aa37f6a0d29e3dc483225b6145c1 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0 · bank-recon · sha256 68bba956b8022251c87ca1b87f8dd49fd50b1ada89bcab65b287dd8f0230b70b — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -58,6 +58,8 @@
     REG_ = null,
     MONEY_ = null,
     ENTRY_ = null,
+    JSON_ = null,
+    BRS_ = null,
     LOAD_FAILURES_ = {}; /* a sibling engine that would not load: file → why, one entry per file (a later call tries again, as before); the callers still get null and say so in plain words */
   function dep_(file, globalName) {
     var globalScope = typeof globalThis !== 'undefined' ? globalThis : root;
@@ -77,6 +79,13 @@
   }
   function bankEntry_() {
     return ENTRY_ || (ENTRY_ = dep_('./bank-entry', 'CBBankEntry'));
+  }
+  /** the JSON statement reader (bank-json.js) and the BRS builder (bank-brs.js): siblings, loaded like bank-entry */
+  function bankJson_() {
+    return JSON_ || (JSON_ = dep_('./bank-json', 'CBBankJson'));
+  }
+  function bankBrs_() {
+    return BRS_ || (BRS_ = dep_('./bank-brs', 'CBBankBrs'));
   }
   function money_() {
     return MONEY_ || (MONEY_ = dep_('./money', 'CBMoney'));
@@ -498,185 +507,6 @@
     return Object.assign({ ok: true, account: account, lines: lines, warnings: warnings }, balances);
   }
 
-  /* ═══ JSON ════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-  function minorOf_(obj, minorKey, majorKey, ctx) {
-    if (obj[minorKey] != null) {
-      var number = Number(obj[minorKey]);
-      return isFinite(number) && Math.floor(number) === number ? number : null;
-    }
-    if (obj[majorKey] == null || obj[majorKey] === '') return 0;
-    var amount = amountOf_(ctx, obj[majorKey]);
-    return amount ? amount.minor : null;
-  }
-  /** the first array in the document that looks like a transaction list */
-  function findTxns_(node, depth) {
-    if (!node || typeof node !== 'object' || depth > 6) return null;
-    if (Array.isArray(node)) {
-      if (looksLikeTxns_(node)) return node;
-      for (var index = 0; index < node.length; index++) {
-        var found = findTxns_(node[index], depth + 1);
-        if (found) return found;
-      }
-      return null;
-    }
-    return findTxnsInValues_(node, depth);
-  }
-  /** is this array a list of transaction objects (every member an object, at least one naming a narration or an amount)? */
-  function looksLikeTxns_(node) {
-    return (
-      node.length &&
-      node.every(function (x) {
-        return x && typeof x === 'object';
-      }) &&
-      node.some(function (x) {
-        return 'narration' in x || 'debit_minor' in x || 'credit_minor' in x || 'amount' in x;
-      })
-    );
-  }
-  /** the first transaction list found under any value of an object, in key order */
-  function findTxnsInValues_(node, depth) {
-    var keys = Object.keys(node);
-    for (var keyIndex = 0; keyIndex < keys.length; keyIndex++) {
-      var foundInKey = findTxns_(node[keys[keyIndex]], depth + 1);
-      if (foundInKey) return foundInKey;
-    }
-    return null;
-  }
-  function findKey_(node, key, depth) {
-    if (!node || typeof node !== 'object' || depth > 6) return undefined;
-    if (!Array.isArray(node) && node[key] != null && typeof node[key] !== 'object') return node[key];
-    var keys = Object.keys(node);
-    for (var index = 0; index < keys.length; index++) {
-      var value = findKey_(node[keys[index]], key, depth + 1);
-      if (value !== undefined) return value;
-    }
-    return undefined;
-  }
-  /** every item of the list read into a statement line; an item that cannot be read is skipped and warned in `warnings` */
-  function jsonLines_(list, ctx, warnings) {
-    var lines = [];
-    for (var position = 0; position < list.length; position++) {
-      var line = jsonLine_(list[position] || {}, position, ctx, warnings);
-      if (line) lines.push(line);
-    }
-    return lines;
-  }
-  /** one JSON item → its statement line, or null when its date or amount cannot be read (warned) */
-  function jsonLine_(x, position, ctx, warnings) {
-    var date = dateOf_(x.date || x.transactionTimestamp || x.txnDate || x.valueDate);
-    if (!date) {
-      warnings.push('item ' + (position + 1) + ': unreadable date — skipped');
-      return null;
-    }
-    var amounts = jsonAmounts_(x, position, ctx, warnings);
-    if (!amounts) return null;
-    if (amounts.debit === null || amounts.credit === null) {
-      warnings.push('item ' + (position + 1) + ': unreadable amount — skipped');
-      return null;
-    }
-    return jsonLineOf_(x, date, amounts, position, ctx);
-  }
-  /** does the item carry neither a debit nor a credit field (major or minor units)? */
-  function hasNoSplitAmounts_(x) {
-    return x.debit == null && x.credit == null && x.debit_minor == null && x.credit_minor == null;
-  }
-  /** an item's money out and in → { debit, credit } (a side may be null when unreadable), or null once warned: AA type + amount, one signed amount, or debit / credit fields */
-  function jsonAmounts_(x, position, ctx, warnings) {
-    if (x.type != null && x.amount != null && hasNoSplitAmounts_(x)) return jsonTypedAmount_(x, position, ctx, warnings);
-    if (x.amount != null && hasNoSplitAmounts_(x)) return jsonSignedAmount_(x, position, ctx, warnings);
-    return { debit: minorOf_(x, 'debit_minor', 'debit', ctx), credit: minorOf_(x, 'credit_minor', 'credit', ctx) };
-  }
-  /** AA: type CREDIT or DEBIT + amount */
-  function jsonTypedAmount_(x, position, ctx, warnings) {
-    var amount = amountOf_(ctx, x.amount),
-      typeName = String(x.type).toUpperCase();
-    if (!amount || !/^(CREDIT|DEBIT)$/.test(typeName)) {
-      warnings.push('item ' + (position + 1) + ': unreadable AA amount or type — skipped');
-      return null;
-    }
-    return { debit: typeName === 'DEBIT' ? amount.minor : 0, credit: typeName === 'CREDIT' ? amount.minor : 0 };
-  }
-  /** one amount: the side from its drcr field, else its own Dr / Cr mark, else its sign */
-  function jsonSignedAmount_(x, position, ctx, warnings) {
-    var amountRead = amountOf_(ctx, x.amount),
-      drcrText = String(x.drcr || x.dr_cr || '').toLowerCase();
-    if (!amountRead) {
-      warnings.push('item ' + (position + 1) + ': unreadable amount — skipped');
-      return null;
-    }
-    var isDebit = drcrText ? drcrText[0] === 'd' : amountRead.side ? amountRead.side === 'dr' : amountRead.neg;
-    return { debit: isDebit ? amountRead.minor : 0, credit: isDebit ? 0 : amountRead.minor };
-  }
-  /** the statement line of a readable item: its date, narration and amounts, then the value date, references and balance it carries, and its item number as `row` */
-  function jsonLineOf_(x, date, amounts, position, ctx) {
-    var line = {
-      date: date,
-      narration: String(x.narration == null ? x.description || x.mode || '' : x.narration),
-      debit_minor: amounts.debit,
-      credit_minor: amounts.credit
-    };
-    var valueDate = dateOf_(x.value_date || x.valueDate);
-    if (valueDate) line.value_date = valueDate;
-    jsonReferences_(x, line);
-    var balance = jsonBalance_(x, ctx);
-    if (balance != null && isFinite(balance)) line.balance_minor = balance;
-    line.row = position + 1;
-    return line;
-  }
-  /** the reference and cheque number an item carries → line.ref, line.cheque_no */
-  function jsonReferences_(x, line) {
-    var ref = x.ref || x.reference || x.txnId;
-    if (ref) line.ref = String(ref);
-    if (x.cheque_no) line.cheque_no = String(x.cheque_no);
-  }
-  /** the running balance an item carries, in minor units (balance_minor as given; currentBalance or balance read from text, negative when the AA balance is) — null when it has none */
-  function jsonBalance_(x, ctx) {
-    var balance =
-      x.balance_minor != null
-        ? Number(x.balance_minor)
-        : x.currentBalance != null
-          ? (amountOf_(ctx, x.currentBalance) || {}).minor
-          : x.balance != null
-            ? (amountOf_(ctx, x.balance) || {}).minor
-            : null;
-    if (x.balance_minor == null && balance != null && x.currentBalance != null && amountOf_(ctx, x.currentBalance).neg) balance = -balance;
-    return balance;
-  }
-  /** what a JSON document wraps around its lines → out.account, opening_minor, closing_minor */
-  function addJsonSummary_(out, data, lines, ctx) {
-    var account =
-      data.account != null && typeof data.account !== 'object' ? data.account : findKey_(data, 'maskedAccNumber', 0) || findKey_(data, 'linkedAccRef', 0);
-    if (account != null) out.account = String(account);
-    if (data.opening_minor != null) out.opening_minor = Number(data.opening_minor);
-    if (data.closing_minor != null) out.closing_minor = Number(data.closing_minor);
-    else addAaClosing_(out, data, lines, ctx);
-  }
-  /** no closing figure given: the AA summary's currentBalance, unless the lines carry balances of their own */
-  function addAaClosing_(out, data, lines, ctx) {
-    var currentBalance = findKey_(data, 'currentBalance', 0);
-    if (
-      currentBalance !== undefined &&
-      !lines.some(function (item) {
-        return item.balance_minor != null;
-      })
-    ) {
-      var closing = amountOf_(ctx, currentBalance);
-      if (closing) out.closing_minor = closing.neg ? -closing.minor : closing.minor;
-    }
-  }
-  function parseJson_(data, ctx) {
-    var warnings = [],
-      list = Array.isArray(data) ? data : findTxns_(data, 0);
-    if (!list)
-      return fail_(
-        'No transaction list found in the JSON (an array of lines, { lines | transactions }, or Account Aggregator Account.Transactions.Transaction).'
-      );
-    var lines = jsonLines_(list, ctx, warnings);
-    var out = { ok: true, account: null, lines: lines, warnings: warnings };
-    if (!Array.isArray(data) && data) addJsonSummary_(out, data, lines, ctx);
-    return out;
-  }
-
   /* ═══ parse ═══════════════════════════════════════════════════════════════════════════════════════════════════════ */
   /**
    * ⭐ parse(text, { format?: 'csv' | 'json' | 'auto', preset?: <a bank the pack knows>, mapping?, header?, account?, pack? })
@@ -688,7 +518,7 @@
     var options = opts || {},
       bankRules = bankOf_(options);
     if (!bankRules) return fail_('The regulation pack has no bank-statement rules (pack.bank), so a statement cannot be read.');
-    var ctx = { re: prefixRe_(bankRules.bank.amountPrefixes), dp: decimalsOf_(options.currency || bankRules.pack.currency), presets: bankRules.bank.presets, minorUnit: bankRules.bank.minorUnit };
+    var ctx = { re: prefixRe_(bankRules.bank.amountPrefixes), dp: decimalsOf_(options.currency || bankRules.pack.currency), presets: bankRules.bank.presets, minorUnit: bankRules.bank.minorUnit, amountOf: amountOf_, dateOf: dateOf_, fail: fail_ };
     var res = readStatement_(text, options, ctx);
     if (!res.ok) return res;
     var lines = res.lines,
@@ -714,7 +544,7 @@
   /** the statement read as `format` (json from a document already parsed, or from its text; csv); a reader that throws becomes a refusal */
   function readAs_(format, data, text, options, ctx) {
     try {
-      if (format === 'json') return data === null ? parseJsonText_(text, ctx) : parseJson_(data, ctx);
+      if (format === 'json') return data === null ? parseJsonText_(text, ctx) : bankJson_().parse(data, ctx);
       if (format === 'csv') return parseCsv_(text, options, ctx);
       return fail_('Unknown format "' + format + '" — csv or json.');
     } catch (e) {
@@ -729,7 +559,7 @@
     } catch (e) {
       return fail_('The JSON could not be read: ' + e.message);
     }
-    return parseJson_(data, ctx);
+    return bankJson_().parse(data, ctx);
   }
   /** the running-balance check: each line's stated balance must follow the one before (prev + credit − debit); a break is a warning naming the line. Returns the opening balance — as given, else worked back from the first line's balance */
   function checkRunningBalance_(lines, openingGiven, list, ctx) {
@@ -1425,134 +1255,6 @@
     return res;
   }
 
-  /* ═══ brs ═════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-  /**
-   * ⭐ brs({ asOf, bookBalance_minor, bankBalance_minor, unmatched_ledger, unmatched_stmt }) → the Bank Reconciliation Statement
-   *   Balance as per books (Dr positive)
-   *   + cheques issued but not presented      (a ledger Cr the bank has not paid)
-   *   − cheques deposited but not credited    (a ledger Dr the bank has not credited)
-   *   + bank credits not in the books         (interest, direct credits)
-   *   − bank debits not in the books          (charges, ATM, direct debits)
-   *   = balance as per bank, and the difference to the bank's own figure — 0 when everything is accounted, otherwise NAMED.
-   * Items dated after asOf are left out (they belong to the next statement). All figures are minor units.
-   */
-  function reconciliationStatement(x) {
-    x = x || {};
-    var refusal = brsInputRefusal_(x);
-    if (refusal) return refusal;
-    var bankRules = bankOf_(x);
-    if (!bankRules) return { ok: false, why: 'The regulation pack has no bank-statement rules (pack.bank), so the statement cannot be read.' };
-    var decimals = decimalsOf_(x.currency || bankRules.pack.currency);
-    var rules = rulesFor_({}, bankRules.bank.keywords);
-    return brsStatement_(x, brsItems_(x, rules), decimals);
-  }
-  /** the refusal when the BRS has no asOf date or its two balances are not whole minor units; null when the input is usable */
-  function brsInputRefusal_(x) {
-    if (!dateOf_(x.asOf)) return { ok: false, why: 'The BRS needs asOf as YYYY-MM-DD.' };
-    if (!Number.isInteger(x.bookBalance_minor) || !Number.isInteger(x.bankBalance_minor))
-      return {
-        ok: false,
-        why: 'The BRS needs bookBalance_minor and bankBalance_minor in whole ' + ((bankOf_(x) || { bank: {} }).bank.minorUnit || 'minor units') + '.'
-      };
-    return null;
-  }
-  /** the four lists of the BRS from the unmatched lines dated on or before asOf: cheques issued, cheques deposited, bank credits and bank debits not in the books */
-  function brsItems_(x, rules) {
-    var asOf = x.asOf,
-      within = function (ledgerLine) {
-        return !ledgerLine.date || ledgerLine.date <= asOf;
-      },
-      kindOf = function (text, interestWords) {
-        var upper = String(text || '').toUpperCase();
-        return hasWord_(upper, rules.charges) ? 'charges' : interestWords && hasWord_(upper, rules.interest) ? 'interest' : 'other';
-      };
-    var list = (x.unmatched_ledger || []).filter(within),
-      unmatchedStmt = (x.unmatched_stmt || []).filter(within);
-    var item = function (row, minor, name, extra) {
-      return Object.assign({ date: row.date || null, ref: row.ref || row.cheque_no || null, name: name, amount_minor: minor }, extra || {});
-    };
-    var issued = [],
-      deposited = [],
-      bankCr = [],
-      bankDr = [];
-    list.forEach(function (ledgerLine) {
-      var debit = +ledgerLine.dr_minor || 0,
-        credit = +ledgerLine.cr_minor || 0,
-        netMinor = debit - credit;
-      if (netMinor < 0) issued.push(item(ledgerLine, -netMinor, ledgerLine.narration || ledgerLine.entry_no || 'ledger line', { id: ledgerLine.id, entry_no: ledgerLine.entry_no }));
-      else if (netMinor > 0) deposited.push(item(ledgerLine, netMinor, ledgerLine.narration || ledgerLine.entry_no || 'ledger line', { id: ledgerLine.id, entry_no: ledgerLine.entry_no }));
-    });
-    unmatchedStmt.forEach(function (statementLine) {
-      var debit = +statementLine.debit_minor || 0,
-        credit = +statementLine.credit_minor || 0;
-      if (credit > debit) bankCr.push(item(statementLine, credit - debit, statementLine.narration || 'bank credit', { kind: kindOf(statementLine.narration, true) }));
-      else if (debit > credit) bankDr.push(item(statementLine, debit - credit, statementLine.narration || 'bank debit', { kind: kindOf(statementLine.narration, false) }));
-    });
-    return { issued: issued, deposited: deposited, bankCr: bankCr, bankDr: bankDr };
-  }
-  /** the Bank Reconciliation Statement: the lists, their totals, the bank balance they work out to and its difference from the bank's own figure, as table rows and a plain-words note */
-  function brsStatement_(x, items, decimals) {
-    var issued = items.issued,
-      deposited = items.deposited,
-      bankCr = items.bankCr,
-      bankDr = items.bankDr;
-    var sum = function (rows) {
-      return rows.reduce(function (total, y) {
-        return total + y.amount_minor;
-      }, 0);
-    };
-    var computed = x.bookBalance_minor + sum(issued) - sum(deposited) + sum(bankCr) - sum(bankDr);
-    var diff = x.bankBalance_minor - computed;
-    var res = {
-      ok: true,
-      asOf: x.asOf,
-      book_balance_minor: x.bookBalance_minor,
-      issued_not_presented: issued,
-      deposited_not_credited: deposited,
-      bank_credits_not_in_books: bankCr,
-      bank_debits_not_in_books: bankDr,
-      totals: {
-        issued_not_presented_minor: sum(issued),
-        deposited_not_credited_minor: sum(deposited),
-        bank_credits_not_in_books_minor: sum(bankCr),
-        bank_debits_not_in_books_minor: sum(bankDr)
-      },
-      computed_bank_minor: computed,
-      bank_balance_minor: x.bankBalance_minor,
-      difference_minor: diff,
-      tied: diff === 0
-    };
-    res.rows = brsRows_(res);
-    res.note = brsNote_(res, decimals);
-    return res;
-  }
-  /** the BRS as a table: the book balance, the four adjustments with their signs, the worked bank balance, the bank's own and the difference */
-  function brsRows_(res) {
-    return [
-      { label: 'Balance as per books', minor: res.book_balance_minor, sign: '' },
-      { label: 'Add: cheques issued but not presented', minor: res.totals.issued_not_presented_minor, sign: '+' },
-      { label: 'Less: cheques deposited but not credited', minor: -res.totals.deposited_not_credited_minor, sign: '-' },
-      { label: 'Add: credits by the bank not yet in the books', minor: res.totals.bank_credits_not_in_books_minor, sign: '+' },
-      { label: 'Less: debits by the bank not yet in the books', minor: -res.totals.bank_debits_not_in_books_minor, sign: '-' },
-      { label: 'Balance as per bank (worked)', minor: res.computed_bank_minor, sign: '=' },
-      { label: 'Balance as per bank statement', minor: res.bank_balance_minor, sign: '' },
-      { label: 'Difference', minor: res.difference_minor, sign: '' }
-    ];
-  }
-  /** the BRS in one sentence: reconciled, or the unexplained difference and which way it points */
-  function brsNote_(res, decimals) {
-    var diff = res.difference_minor;
-    return diff === 0
-      ? 'The books reconcile to the bank: every difference is a named item.'
-      : 'Unexplained difference of ' +
-          (Math.abs(diff) / Math.pow(10, decimals)).toFixed(decimals) +
-          ' (' +
-          (diff > 0 ? 'the bank shows more than the books and the listed items explain' : 'the bank shows less than the books and the listed items explain') +
-          ') — a line is missing from one side, or a balance is not as at ' +
-          res.asOf +
-          '.';
-  }
-
   /* ═══ THE RAIL ALREADY TOLD US (v1.44.0, BR1) ══════════════════════════════════════════════════════════════════════
    * Athi's brief, 2026-10-13: an incumbent GUESSES a bank line from amount and narration; on the rail most money movements are
    * ALREADY KNOWN — the other party's payment advice (api lib/books.js adviceBody, M30: "paid ₹X for bills A, B by ref R") is a sealed
@@ -2209,7 +1911,9 @@
     match: match,
     nearMatches: nearMatches,
     suggest: suggest,
-    brs: reconciliationStatement,
+    brs: function (x) {
+      return bankBrs_().statement(x, { bankOf: bankOf_, decimalsOf: decimalsOf_, rulesFor: rulesFor_, hasWord: hasWord_, dateOf: dateOf_ });
+    },
     PRESETS: PRESETS,
     RULES: RULES,
     railPayments: railPayments,

@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0 · locale · sha256 3533bd038c26579ed988a6250c4dc7aabee9f046b3e3743ffc55299f9f2fde5f — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0 · locale · sha256 939c2b85de6f3fbb5daf1b5e068ba86396cef13ce7a8acbef521d697cda113b5 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · locale. Edited ONLY in chitbridge-engines/src/locale.js; every platform adopts a released version of it.
  * CALLED BY src/offers.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
@@ -166,6 +166,17 @@
     try {
       localStorage.setItem(k, v);
     } catch (_) {}
+  }
+
+  /** a timestamp through one of Date's locale formatters (the reader's tag and zone, direction-safe): '' when it is absent or unreadable, or the formatter throws */
+  function viewDate_(ts, method, options) {
+    var date = node._d(ts);
+    if (!date) return '';
+    try {
+      return node.ltr(date[method](node.tag(), node.zoned(options)));
+    } catch (_) {
+      return '';
+    }
   }
 
   var node = {
@@ -1065,34 +1076,16 @@
     },
 
     time: function (ts) {
-      var d = node._d(ts);
-      if (!d) return '';
-      try {
-        return node.ltr(d.toLocaleTimeString(node.tag(), node.zoned({ hour: '2-digit', minute: '2-digit' })));
-      } catch (_) {
-        return '';
-      }
+      return viewDate_(ts, 'toLocaleTimeString', { hour: '2-digit', minute: '2-digit' });
     },
 
     date: function (ts, opts) {
-      var date = node._d(ts);
-      if (!date) return '';
-      try {
-        return node.ltr(date.toLocaleDateString(node.tag(), node.zoned(opts || { day: '2-digit', month: 'short', year: 'numeric' })));
-      } catch (_) {
-        return '';
-      }
+      return viewDate_(ts, 'toLocaleDateString', opts || { day: '2-digit', month: 'short', year: 'numeric' });
     },
 
     /** Date AND time together — the shape `toLocaleString` gives, so call sites convert one-for-one. */
     datetime: function (ts, opts) {
-      var d = node._d(ts);
-      if (!d) return '';
-      try {
-        return node.ltr(d.toLocaleString(node.tag(), node.zoned(opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })));
-      } catch (_) {
-        return '';
-      }
+      return viewDate_(ts, 'toLocaleString', opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     },
 
     /**
