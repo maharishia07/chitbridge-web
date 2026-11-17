@@ -687,7 +687,7 @@
     });
     var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
     var live = free.slice(), hide = [];
-    var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
+    var need = function () { return Math.round(live.reduce(function (t, c) { return t + auto[c.key]; }, fixed)); }; /* whole pixels: 1324.0000000000002 against 1324 left a column out for float noise (Day book Risk) */
     var squeeze = function (shrink) {
       live.forEach(function (c) { auto[c.key] = natural[c.key]; });
       var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });

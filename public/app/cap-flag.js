@@ -242,9 +242,9 @@
         (noteKind ? '<div class="fl-text">' + esc(f.note) + '</div>' : '') +
         (noteKind && shared ? '<div class="fl-thread" data-thread="' + esc(f.flag_id) + '" data-testid="fl-thread"></div>' : '') +
         '<div class="fl-row">' +
-        (noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(f.flag_id) + '">' + esc(T(done ? W.reopen : W.resolve)) + '</button>' : '') +
-        (!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(f.flag_id) + '">' + esc(T(W.shareFirm)) + '</button>' : '') +
-        '<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(f.flag_id) + '">' + esc(T(armed === f.flag_id ? W.sure : W.remove)) + '</button></div></li>';
+        (noteKind ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B03" data-act="' + (done ? 'reopen' : 'resolve') + '" data-id="' + esc(f.flag_id) + '">' + esc(done ? T('Reopen') : T('Resolve')) + '</button>' : '') +
+        (!shared && mine ? '<button type="button" class="fl-btn" data-cbsid="CMP067-B04" data-act="share" data-id="' + esc(f.flag_id) + '">' + esc(T('Share with my firm')) + '</button>' : '') +
+        '<button type="button" class="fl-btn" data-cbsid="CMP067-B05" data-act="remove" data-id="' + esc(f.flag_id) + '">' + esc(armed === f.flag_id ? T('Remove? Press again') : T('Remove')) + '</button></div></li>';
     }
     /** the replies of one shared note (the firm's own thread, never the client's): what the server says, its reply right with its sentence, and a reply box when it may */
     var threads = {};
@@ -255,7 +255,7 @@
       }).join('');
       var may = (a.may && a.may.reply) || { ok: false, why: '' };
       return (msgs ? '<div class="fl-sub">' + esc(T(W.replies)) + '</div>' + msgs : '') +
-        (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(T(W.replyLabel)) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(T(W.reply)) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
+        (may.ok ? '<textarea class="fl-reply" maxlength="' + NOTE_MAX + '" data-reply="' + esc(flagId) + '" aria-label="' + esc(T('Your reply')) + '" data-cbsid="CMP067-T02" data-testid="fl-reply"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B09" data-act="reply" data-id="' + esc(flagId) + '" data-testid="fl-send-reply">' + esc(T('Reply')) + '</button></div>' : may.why && msgs ? '<div class="fl-sub">' + esc(may.why) + '</div>' : '');
     }
     function fillThread(flagId) {
       var node = dlg.querySelector('.fl-thread[data-thread="' + String(flagId).replace(/"/g, '') + '"]');
@@ -270,12 +270,12 @@
     }
     function paint(keepNote) {
       var note = keepNote ? (dlg.querySelector('.fl-box') || {}).value || '' : '', flags = ctl.flags(id), mineBookmark = flags.filter(function (f) { return f.kind === 'bookmark' && open(f); })[0];
-      dlg.innerHTML = '<div class="fl-in"><div class="fl-hd"><h2>' + esc(title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(T(W.close)) + '">✕</button></div>' +
+      dlg.innerHTML = '<div class="fl-in"><div class="fl-hd"><h2>' + esc(title) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B01" data-act="close" aria-label="' + esc(T('Close')) + '">✕</button></div>' +
         '<div class="fl-sub">' + esc(T(kind === 'account' ? W.explainHelp : W.privateNote)) + '</div>' +
         '<fieldset class="fl-who"><legend class="fl-sub">' + esc(T(W.who)) + '</legend>' +
-        '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(T(W.firm)) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(T(W.me)) + '</label></fieldset>' +
-        (mineBookmark || kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(T(W.bookmark)) + '</button></div>') +
-        '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(T(W.noteLabel)) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(T(kind === 'account' ? W.saveExplain : W.addNote)) + '</button></div>' +
+        '<label><input type="radio" name="fl_who" value="org" checked data-cbsid="CMP067-R01"> ' + esc(T('My firm')) + '</label><label><input type="radio" name="fl_who" value="me" data-cbsid="CMP067-R02"> ' + esc(T('Only me')) + '</label></fieldset>' +
+        (mineBookmark || kind === 'account' ? '' : '<div class="fl-row"><button type="button" class="fl-btn pri" data-cbsid="CMP067-B02" data-act="bookmark" data-testid="fl-bookmark">☆ ' + esc(T('Bookmark')) + '</button></div>') +
+        '<textarea class="fl-box" maxlength="' + NOTE_MAX + '" aria-label="' + esc(T('Your note')) + '" data-cbsid="CMP067-T01" data-testid="fl-note"></textarea><div class="fl-row"><button type="button" class="fl-btn" data-cbsid="CMP067-B06" data-act="note" data-testid="fl-add-note">' + esc(kind === 'account' ? T('Save explanation') : T('Add note')) + '</button></div>' +
         '<div class="fl-out" role="status" aria-live="polite"></div>' +
         (c.failed ? '<div class="fl-out" data-tone="error">' + esc(T(W.readFail)) + '</div>' : flags.length ? '<ul class="fl-list" data-testid="fl-list">' + flags.map(flagLine).join('') + '</ul>' : '<div class="fl-sub">' + esc(T(W.none)) + '</div>') +
         '</div>';
@@ -369,7 +369,7 @@
     dlg.setAttribute('data-cbsid', 'CMP067-D02');
     dlg.setAttribute('data-testid', 'fl-worklist');
     dlg.setAttribute('aria-label', T(W.workHead));
-    dlg.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(T(W.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(T(W.close)) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
+    dlg.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(T(W.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(T('Close')) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
     dlg.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('[data-close]')) dlg.close(); });
     dlg.addEventListener('close', function () { if (dlg.parentNode) dlg.parentNode.removeChild(dlg); if (o.opener && o.opener.isConnected && o.opener.focus) o.opener.focus(); });
     doc.body.appendChild(dlg);

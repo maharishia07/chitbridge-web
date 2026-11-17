@@ -7,7 +7,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const books = require('./lib/books-api.cjs');
-const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer the stand-in serves for a route in the api contract is checked (e2e/contract.cjs holds this) */
+const json = (r, status, o) => C.json(r, status, o);
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const FIRM = { token: tok({ identity_id: 'ent-FIRM', identity_type: 'entity' }), role: 'entity', name: 'Pat Accountant', entity: 'Blue Gum Books', country: 'AU', currency: 'AUD' };
 const CLIENT = 'ent-CL';
@@ -81,6 +82,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     ok(/2026-27/.test(now), 'no period in the address: the year under review as before: ' + now);
     await ctx.close();
   }
+  console.log('  --  api contract (advisory, owed: the stand-in lacks keys the api sends) ' + C.finish()[1].slice(0, 400));
   await b.close(); srv.close();
   console.log(pass + ' ok / ' + fail + ' fail'); process.exit(fail ? 1 : 0);
 })();

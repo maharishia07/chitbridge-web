@@ -757,7 +757,7 @@
           html: column[0] === 'change_minor' || column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[2] === 'risk' || column[2] === 'explain' || column[0] === 'party_ref' || column[0] === 'lock_note',
           key: column[0],
           label: words(column[1]),
-          prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || (column[2] === MONEY && CMP_COLS.indexOf(column[0]) < 0) ? 1 : 2, /* Last year and % go first on a narrow screen: the amount and its change stay */
+          prio: i === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === 'risk' || (column[2] === MONEY && CMP_COLS.indexOf(column[0]) < 0) ? 1 : 2, /* Last year and % go first on a narrow screen: the amount and its change stay; the Day book Risk (the one column the auditor sorts) goes after Kind and Date, never before them */
           num: column[2] === MONEY || column[2] === PCT || column[2] === DRCR || column[2] === 'risk',
           sort: column[2] === 'risk' ? true : undefined, dir0: column[2] === 'risk' ? -1 : undefined, /* Risk is the one Day book column the reader sorts: most risks first (a press on the header; the page opens in book order) */
           keep: column[2] === 'mark' || column[2] === 'flag' || column[2] === 'evidence' || column[0] === 'party_ref', /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */

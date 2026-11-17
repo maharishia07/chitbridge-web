@@ -11,7 +11,8 @@ const books = require('./lib/books-api.cjs');
 const SAY = 'Your access does not include costs, so the bank statements are hidden.';
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const json = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer the stand-in serves for a route in the api contract is checked (e2e/contract.cjs holds this) */
+const json = (r, status, o) => C.json(r, status, o);
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 86400 }, c)); };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur Bhavan', entity: 'Mayur Bhavan' };
 const BLIND = { code: 'COST_BLIND', error: 'Forbidden', message: 'Forbidden' };
@@ -66,6 +67,7 @@ const ACCOUNTS = [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role:
     await ctx.close();
   }
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
+  console.log('  --  api contract (advisory, owed: the stand-in lacks keys the api sends) ' + C.finish()[1].slice(0, 400));
   await b.close(); srv.close();
   console.log(pass + ' ok, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })();
