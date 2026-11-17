@@ -61,7 +61,7 @@ check(typeof F.weekend(rows[2]) === 'boolean', 'an unknown shop zone falls back 
 box.CB_SHOP_TZ = 'Australia/Sydney';
 const keys = ['mark', 'ev', 'rec', 'time', 'round', 'by', 'narr', 'ye', 'kind'];
 check(JSON.stringify(filters.map((f) => f.key)) === JSON.stringify(keys), 'the Day book filters, in order: ' + keys.join(' '));
-const all = { mark: 'notchecked', ev: 'flag', rec: 'afterend', time: 'weekend', round: '100', by: 'Ann', narr: 'none', ye: 'dated', kind: 'Other' };
+const all = { mark: 'notchecked', ev: 'flag', kind: 'Other', rec: 'afterend', time: 'weekend', round: '100', by: 'Ann', narr: 'none', ye: 'dated' };
 const addr = F.toAddress(all);
 check(addr === 'dbf_mark=notchecked&dbf_ev=flag&dbf_kind=Other&dbf_rec=afterend&dbf_time=weekend&dbf_round=100&dbf_by=Ann&dbf_narr=none&dbf_ye=dated' && JSON.stringify(F.fromAddress('?' + addr)) === JSON.stringify(all), 'each filter has its own address word, and the address gives the same choices back');
 check(F.paramNames().length === 9 && F.paramNames().indexOf('dbf_ye') >= 0, 'paramNames names all nine address words (the page wipes them from one list)');
