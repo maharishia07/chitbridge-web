@@ -15,7 +15,6 @@
   var kit = (root.CBAssign = root.CBAssign || {});
   var ASSIGN_PATH = '/api/chits/assign-bulk', OPEN_PATH = '/api/chits/jobs/open', ACTORS_PATH = '/api/actors';
   function tr(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
-  function esc(s) { return typeof root.esc === 'function' ? root.esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function base() {
     try {
       var f = root.localStorage.getItem('cb_api_base');
@@ -42,7 +41,7 @@
   /** the holder column: the names the server sent, or "Unassigned" (an empty list); a row with no `holders` key at all (the firm's switch is off) shows nothing */
   kit.heldBy = function (row) {
     if (!row || !Array.isArray(row.holders)) return '';
-    return row.holders.length ? esc(row.holders.map(function (h) { return h.name || ''; }).join(', ')) : '<span class="as-none">' + esc(tr('Unassigned')) + '</span>';
+    return row.holders.length ? root.esc(row.holders.map(function (h) { return h.name || ''; }).join(', ')) : '<span class="as-none">' + root.esc(tr('Unassigned')) + '</span>';
   };
   kit.heldByText = function (row) {
     return !row || !Array.isArray(row.holders) ? '' : row.holders.length ? row.holders.map(function (h) { return h.name || ''; }).join(', ') : tr('Unassigned');
@@ -64,7 +63,7 @@
   /* the last outcome is kept, because a reload redraws the list's section: the slot is drawn by the page's section (CBAssign.slotHTML) and filled from this */
   var last = null;
   function slotInner() {
-    return last ? '<b>' + esc(last.headline) + '</b>' + last.lines.map(function (l) { return '<div class="as-line">' + esc(l) + '</div>'; }).join('') : '';
+    return last ? '<b>' + root.esc(last.headline) + '</b>' + last.lines.map(function (l) { return '<div class="as-line">' + root.esc(l) + '</div>'; }).join('') : '';
   }
   /** the always-present slot above the list: role=status so the outcome is read out; empty until something was done */
   kit.slotHTML = function () {
@@ -93,10 +92,10 @@
       '.as-result{margin:6px 0;padding:8px 12px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:var(--ink,#1B1B1B);font-size:14px}' +
       '.as-result.as-bad{border-color:var(--rp-bad,#B42318)}.as-result.as-good{border-color:var(--rp-good,#067647)}.as-line{margin-top:2px}.as-none{color:var(--grey,#5B5B5B)}' +
       'dialog.as-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1B1B1B)}' +
-      'dialog.as-sheet::backdrop{background:rgba(0,0,0,.4)}.as-hd{padding:12px 16px;font-weight:700;border-bottom:1px solid var(--line,#DDD6C6)}.as-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}' +
+      'dialog.as-sheet::backdrop{background:var(--scrim,rgba(0,0,0,.4))}.as-hd{padding:12px 16px;font-weight:700;border-bottom:1px solid var(--line,#DDD6C6)}.as-body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}' +
       '.as-body label{display:flex;flex-direction:column;gap:4px;font-size:13px}.as-body select,.as-body input{min-height:44px;font:inherit;padding:6px 8px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit}' +
       '.as-ft{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--line,#DDD6C6)}.as-ft button{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer}' +
-      '.as-ft button.pri{background:var(--accent,#1F4E8C);color:#fff;border-color:transparent}.as-err{color:var(--rp-bad,#B42318);font-size:13px}';
+      '.as-ft button.pri{background:var(--accent,#1F4E8C);color:var(--on-accent,#fff);border-color:transparent}.as-err{color:var(--rp-bad,#B42318);font-size:13px}';
     root.document.head.appendChild(node);
   }
   /** the people who may hold this kind of work, as the server flags them (job_assignable); the page filters on the flag and never on a hat */
@@ -117,14 +116,14 @@
         dlg.setAttribute('data-testid', 'assign-picker');
         dlg.setAttribute('data-cbmount', 'HOM001-U02');
         dlg.setAttribute('aria-label', tr(opts.title));
-        var options = got.list.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>'; }).join('');
+        var options = got.list.map(function (p) { return '<option value="' + root.esc(p.id) + '">' + root.esc(p.name) + '</option>'; }).join('');
         dlg.innerHTML =
-          '<div class="as-hd">' + esc(tr(opts.title)) + '</div><div class="as-body">' +
-          (got.error ? '<div class="as-err" data-testid="assign-picker-err">' + esc(got.error) + '</div>' : '') +
-          '<label>' + esc(tr('Person')) + '<select data-cbsid="CMP056-S01" data-cbname="select" data-cbmount="HOM001-U02" data-testid="assign-person" aria-label="' + esc(tr('Person')) + '">' + options + '</select></label>' +
-          (opts.withNote ? '<label>' + esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="HOM001-U02" data-testid="assign-note" maxlength="200" type="text"></label>' : '') +
-          '</div><div class="as-ft"><button type="button" data-cbsid="CMP003-B01" data-cbname="cancel" data-cbmount="HOM001-U02" data-testid="assign-cancel">' + esc(tr('Cancel')) + '</button>' +
-          '<button type="button" class="pri" data-cbsid="CMP057-B01" data-cbname="command" data-cbmount="HOM001-U02" data-testid="assign-go"' + (got.list.length ? '' : ' disabled') + '>' + esc(tr(opts.confirmLabel)) + '</button></div>';
+          '<div class="as-hd">' + root.esc(tr(opts.title)) + '</div><div class="as-body">' +
+          (got.error ? '<div class="as-err" data-testid="assign-picker-err">' + root.esc(got.error) + '</div>' : '') +
+          '<label>' + root.esc(tr('Person')) + '<select data-cbsid="CMP056-S01" data-cbname="select" data-cbmount="HOM001-U02" data-testid="assign-person" aria-label="' + root.esc(tr('Person')) + '">' + options + '</select></label>' +
+          (opts.withNote ? '<label>' + root.esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="HOM001-U02" data-testid="assign-note" maxlength="200" type="text"></label>' : '') +
+          '</div><div class="as-ft"><button type="button" data-cbsid="CMP003-B01" data-cbname="cancel" data-cbmount="HOM001-U02" data-testid="assign-cancel">' + root.esc(tr('Cancel')) + '</button>' +
+          '<button type="button" class="pri" data-cbsid="CMP057-B01" data-cbname="command" data-cbmount="HOM001-U02" data-testid="assign-go"' + (got.list.length ? '' : ' disabled') + '>' + root.esc(tr(opts.confirmLabel)) + '</button></div>';
         function finish(value) { if (answered) return; answered = true; done(value); if (dlg.open) dlg.close(); }
         dlg.addEventListener('click', function (ev) {
           var b = ev.target.closest && ev.target.closest('button');

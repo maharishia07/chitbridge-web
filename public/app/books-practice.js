@@ -239,9 +239,7 @@
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
   /** ASSIGN-1: did the server send who holds each client (an answer with a `holders` list on any row) */
-  function holdersOn() {
-    return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []);
-  }
+  function holdersOn() { return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []); }
   /** ASSIGN-1: read the practice again after an assign, so the Held by column shows what the server now holds */
   function reloadAfterAssign() {
     return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; draw(); } });
