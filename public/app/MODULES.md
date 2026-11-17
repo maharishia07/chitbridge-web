@@ -33,6 +33,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-catsetup.js` | lazy · catsetup |  |
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
 | `cap-cmdb.js` | lazy · on demand |  |
+| `cap-books-overview.js` | — | cap-books-overview.js — CB ACCOUNTS › HOW WE ARE DOING: the owner's overview, one read (GET /api/books/overview), headline, tiles and two chart slots |
 | `cap-compare.js` | — | cap-compare.js — PARALLEL RUN (PR1, 2026-10-13): CB Accounts › Books › Parallel run. An auditor keeps the shop's books in Tally (IN) or Xero / QuickBo |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |

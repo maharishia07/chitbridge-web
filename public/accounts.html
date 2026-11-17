@@ -515,6 +515,7 @@ function go() {
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
 <script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
+<script src="/engine/chart-draw.js"></script><script src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
 <script src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
 <script src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
 <script src="/app/one-person.js"></script>
@@ -530,6 +531,7 @@ function go() {
 /* the sidebar: the designer's NAV_ITEMS (data.js), with Bills after Dues. [id = the app's tab id, label, icon path] */
 const NAV = [
   ['todo', 'To do', 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9'],
+  ['overview', 'How we are doing', 'M4 20V10M10 20V4M16 20v-7M22 20H2'] /* REP-26: the owner's overview, one read (app/cap-books-overview.js) */,
   ['daybook', 'Day book', 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5'],
   ['ledgers', 'Ledgers', 'M5 3h14v18H5zM9 7h6M9 11h6M9 15h4'],
   ['tb', 'Trial balance', 'M12 3v18M5 21h14M4 8h16M7 8l-3 7h6zM17 8l-3 7h6z'],
@@ -565,6 +567,7 @@ const NAV = [
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
 const KURAL_OF = {
+  overview: 'reports',
   todo: 'accounts',
   daybook: 'daybook',
   ledgers: 'accounts',
@@ -617,7 +620,7 @@ const isOwner = () => SESSION.role === 'entity'; /* the shop's own session is it
 const NAV_GROUPS = [
   ['', ['todo']],
   /* Waiting is retired from the menu (DECISIONS 2026-10, line 397): no button, no badge. The failed-posting list (Try again) stays reachable ONLY from To do's "waiting to be recorded" row. */
-  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'compare', 'bank']],
+  ['Books', ['overview', 'daybook', 'ledgers', 'tb', 'pl', 'bs', 'compare', 'bank']],
   /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Dues is the two sides together and has its button, lit while open (ACC-175) */
   ['Outstandings', ['dues', 'receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
@@ -798,6 +801,7 @@ BK.noticeTarget = {
   }
 }; /* suppliers to add: the CRM supplier list, where Add party lives */
 BK.views = {
+  overview: (body) => ovView(body),
   bills: (body) => accBills(body),
   todo: (body) => accTodo(body),
   receivables: (b) => bkDues(b, 'rcv'),

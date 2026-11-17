@@ -1503,6 +1503,20 @@
     "payables": {
      "total_minor": 59000
     },
+    "aged_totals": {
+     "customer": {
+     "not_due": 0,
+     "d0_30": 0,
+     "d31_60": 0,
+     "d61_90": 0,
+     "d90_plus": 118000,
+     "worst": "d90_plus",
+     "no_terms_minor": 0,
+     "terms": "ok",
+     "balance_minor": 118000
+    },
+     "supplier": null
+    },
     "follow_up_total": {
      "not_due": 0,
      "d0_30": 0,
@@ -2066,6 +2080,109 @@
     "years[].of"
    ]
   },
+ "GET /api/books/overview": {
+  "status": 200,
+  "example": {
+   "currency": "INR",
+   "period": {
+    "word": "ytd",
+    "from": "2027-04-01",
+    "to": "2027-04-10"
+   },
+   "compare": {
+    "how": "year",
+    "from": "2026-04-01",
+    "to": "2026-04-10"
+   },
+   "cost_hidden": false,
+   "sales": {
+    "minor": 118000,
+    "currency": "INR",
+    "through": "2027-04-09",
+    "bills": 1,
+    "partial": false,
+    "prior": {
+     "minor": null,
+     "why": "no sales posted in this period"
+    },
+    "change_bp": null
+   },
+   "bars": [
+    {
+     "from": "2026-05-01",
+     "to": "2026-05-31",
+     "running": false,
+     "sold_minor": 118000
+    }
+   ],
+   "to_collect": {
+    "minor": 118000,
+    "parties": 1
+   },
+   "to_pay": {
+    "minor": 59000,
+    "parties": 1
+   },
+   "income": {
+    "minor": 0,
+    "prior_minor": 0,
+    "change_bp": null
+   },
+   "expenses": {
+    "minor": 0,
+    "prior_minor": 0,
+    "change_bp": null
+   },
+   "profit": {
+    "minor": 0,
+    "prior_minor": 0,
+    "change_bp": null
+   },
+   "gross": null,
+   "profit_share_bp": null,
+   "profit_by_month": [
+    {
+     "from": "2026-05-01",
+     "to": "2026-05-31",
+     "running": false,
+     "income_minor": 0,
+     "profit_minor": 0
+    }
+   ],
+   "cash": {
+    "days": 30,
+    "opening_minor": 0,
+    "closing_minor": -3559000,
+    "lowest": {
+     "date": "2027-05-01",
+     "balance_minor": -3559000
+    },
+    "shortfall": {
+     "date": "2027-04-10",
+     "short_minor": 3059000,
+     "balance_minor": -3059000,
+     "driver": {
+      "kind": "recurring_out",
+      "ref": "rec:66666666-6666-4666-8666-000000000001",
+      "name": "Early rent",
+      "amount_minor": 500000
+     },
+     "words": "Today you are ₹30,590 short — Early rent’s ₹5,000 is due that day."
+    },
+    "words": "Today you are ₹30,590 short — Early rent’s ₹5,000 is due that day."
+   }
+  },
+  "optional": [
+   "income",
+   "expenses",
+   "profit",
+   "gross",
+   "profit_share_bp",
+   "profit_by_month",
+   "cash"
+  ],
+  "note": "MIS A4: a reader without can_see_costs gets sales, to_collect and the bars with to_pay absent (minor null) and none of income, expenses, profit, gross, profit_by_month, cash, and cost_hidden true; a figure with nothing behind it is {minor:null, why} (never 0)"
+ },
   "GET /api/books/pl": {
    "status": 200,
    "example": {
@@ -2498,6 +2615,7 @@
    "example": {
     "currency": "INR",
     "asOf": "2027-03-31",
+    "shown_as_at": "2027-03-31",
     "fy_from": "2026-04-01",
     "rows": [
      {
@@ -2510,27 +2628,9 @@
     ],
     "total_dr_minor": 297000,
     "total_cr_minor": 297000,
-    "balanced": true,
-    "bank": [
-     {
-      "account_id": "11111111-1111-4111-8111-111111111111",
-      "code": "1100",
-      "name": "Bank",
-      "currency": "INR",
-      "state": "reconciled",
-      "period_to": "2027-03-31",
-      "statement_minor": 297000,
-      "books_signed_minor": 297000,
-      "unexplained_minor": 0,
-      "books_now_minor": 297000,
-      "moved_minor": 0,
-      "signed_at": "2027-04-02 09:00:00+00"
-     }
-    ]
+    "balanced": true
    },
-   "optional": [
-    "bank"
-   ],
+   "optional": [],
    "note": "RAIL-146o: a cost-blind reader gets the same shape with every *_minor null and cost_hidden:true (a daybook keeps its sales entries); a client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
    "cost_blind_example": {
     "currency": "INR",
@@ -2555,6 +2655,7 @@
    "example": {
     "fiscal_year": "2026-27",
     "closed": false,
+    "returns_lodged": false,
     "can_close": false,
     "can_close_if_lodged": false,
     "refusals": [
@@ -5835,10 +5936,14 @@
      "profit_minor": 2200000,
      "balanced": true
     },
-    "duplicate": true
+    "duplicate": true,
+    "declared": false,
+    "returns_lodged": false
    },
    "optional": [
     "duplicate",
+    "declared",
+    "returns_lodged",
     "locked",
     "opening"
    ]
