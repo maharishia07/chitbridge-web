@@ -17,6 +17,9 @@
  *   E7  2026-07-05  2026-07-05 01:00      Sun  5 Jul 11:00        200.00      Ann   written     0   (dated after the period)
  *   Recorded after period end: E1 E5 E7 = 3 · over 7 days: E1 E5 = 2 · over 30: E5 = 1 · over 90: 0 · weekend: E3 E7 = 2 · after hours (before 07:00 / from 20:00): E3 E4 E6 = 3
  *   Multiple of 100 (A$): E1 E3 E5 E7 = 4 · of 1,000: E3 E5 = 2 · makers: Ann Bob Cara · no narration: E2 E4 = 2
+ *   E8  2026-06-17  2026-06-17 00:00      Wed 17 Jun 10:00          5.50        -     written     0   (the clean row: trips nothing)
+ *   RISK (six rules, one point each: after end · over 7 days late · weekend · after hours · round x100 · no narration): E1 3 (end, late, round) · E2 1 (narration) · E3 3 (weekend, night, round) · E4 2 (night, narration) · E5 3 (end, late, round) · E6 1 (night) · E7 3 (end, weekend, round) · E8 0 -> Any risk = 7 rows, sorted E1 E3 E5 E7 | E4 | E2 E6 | E8
+ *   WEEKEND, a Fri+Sat region (zone Asia/Riyadh, +3): F1 Fri 3 Jul 12:00 (flag) · F2 Sat 4 Jul 12:00 (flag) · F3 Sun 5 Jul 12:00 (NOT flagged) · F4 recorded Thu 2 Jul 21:30 UTC = Fri 00:30 shop time (flag: the zone moves the day). With no region answer (the fallback) and in AU: F2 F3 flag, F1 F4 do not.
  *   Year end, recorded after it and dated inside the period: E1 E5 = 2 · dated after it: E7 = 1 · the range read for "dated after" = 1 Jul 2026 .. 1 Jul 2027
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -36,13 +39,20 @@ const rows = [
   { id: 'E4', posting_date: '2026-06-10', recorded_at: '2026-06-10T19:30:00.000Z', amount_minor: 100, made_by: 'Bob', no_narration: true },
   { id: 'E5', posting_date: '2026-05-01', recorded_at: '2026-07-20T00:00:00.000Z', amount_minor: 5000000, made_by: 'Cara', no_narration: false },
   { id: 'E6', posting_date: '2026-06-30', recorded_at: '2026-06-30T13:30:00.000Z', amount_minor: 777700, made_by: 'Cara', no_narration: false },
-  { id: 'E7', posting_date: '2026-07-05', recorded_at: '2026-07-05T01:00:00.000Z', amount_minor: 20000, made_by: 'Ann', no_narration: false }
+  { id: 'E7', posting_date: '2026-07-05', recorded_at: '2026-07-05T01:00:00.000Z', amount_minor: 20000, made_by: 'Ann', no_narration: false },
+  { id: 'E8', posting_date: '2026-06-17', recorded_at: '2026-06-17T00:00:00.000Z', amount_minor: 550, made_by: '', no_narration: false }
 ];
 const period = { from: '2025-07-01', to: '2026-06-30' };
 const filters = F.filtersFor(null, { period: () => period, currency: () => 'AUD', rows: () => rows });
 const by = (key) => filters.find((f) => f.key === key);
 const ids = (key, v) => rows.filter((r) => by(key).match(r, v)).map((r) => r.id).join(' ');
 
+// the Risk column and the Any risk filter
+const riskOf = (r) => F.riskOf(r, period, 'AUD').length;
+check(rows.map(riskOf).join(',') === '3,1,3,2,3,1,3,0', 'Risk counts E1..E8 = 3,1,3,2,3,1,3,0 (hand-computed above)');
+check(ids('risk', 'any') === 'E1 E2 E3 E4 E5 E6 E7', 'Any risk keeps E1..E7 and not the clean E8');
+check(rows.slice().sort((a, b) => riskOf(b) - riskOf(a)).map((r) => r.id).join(' ').replace(/ E1 E3 E5 E7/, '') !== '' && rows.slice().sort((a, b) => riskOf(b) - riskOf(a) || a.id.localeCompare(b.id)).map((r) => r.id).join(' ') === 'E1 E3 E5 E7 E4 E2 E6 E8', 'sorted by count: E1 E3 E5 E7 | E4 | E2 E6 | E8');
+check(F.riskOf(rows[2], period, 'AUD').join('|') === 'At a weekend|After hours|Round sum', 'E3 trips weekend, after hours, round sum, said in words');
 check(ids('rec', 'afterend') === 'E1 E5 E7', 'Recorded after period end: E1 E5 E7 (E6 recorded 23:30 Sydney on 30 Jun is inside, though UTC says 1 Jul)');
 check(ids('rec', 'late7') === 'E1 E5' && ids('rec', 'late30') === 'E5' && ids('rec', 'late90') === '', 'Over 7 / 30 / 90 days late: E1 E5 · E5 · none');
 check(ids('time', 'weekend') === 'E3 E7', 'Weekend (shop time): E3 (Sat 23:00) and E7 (Sun)');
@@ -59,14 +69,30 @@ check(F.daysLate({ posting_date: '2026-06-30' }) === 0 && F.weekend({}) === fals
 box.CB_SHOP_TZ = 'Not/AZone';
 check(typeof F.weekend(rows[2]) === 'boolean', 'an unknown shop zone falls back to the viewer zone and never throws');
 box.CB_SHOP_TZ = 'Australia/Sydney';
-const keys = ['mark', 'ev', 'rec', 'time', 'round', 'by', 'narr', 'ye', 'kind'];
+const keys = ['mark', 'ev', 'risk', 'rec', 'time', 'round', 'by', 'narr', 'ye', 'kind'];
 check(JSON.stringify(filters.map((f) => f.key)) === JSON.stringify(keys), 'the Day book filters, in order: ' + keys.join(' '));
 const all = { mark: 'notchecked', ev: 'flag', kind: 'Other', rec: 'afterend', time: 'weekend', round: '100', by: 'Ann', narr: 'none', ye: 'dated' };
 const addr = F.toAddress(all);
 check(addr === 'dbf_mark=notchecked&dbf_ev=flag&dbf_kind=Other&dbf_rec=afterend&dbf_time=weekend&dbf_round=100&dbf_by=Ann&dbf_narr=none&dbf_ye=dated' && JSON.stringify(F.fromAddress('?' + addr)) === JSON.stringify(all), 'each filter has its own address word, and the address gives the same choices back');
-check(F.paramNames().length === 9 && F.paramNames().indexOf('dbf_ye') >= 0, 'paramNames names all nine address words (the page wipes them from one list)');
+check(F.paramNames().length === 11 && F.paramNames().indexOf('dbf_risk') >= 0 && F.paramNames().indexOf('dbf_ye') >= 0, 'paramNames names all nine address words (the page wipes them from one list)');
 check(F.carry('?open=c1&view=daybook&dbf_rec=afterend', 'c1') === '&dbf_rec=afterend' && F.carry('?open=c1&dbf_rec=afterend', 'c2') === '', 'a new filter rides to the same client only');
+// the ONE weekend answer: the region's rest days, Sat+Sun only as the fallback
+const fri = [
+  { id: 'F1', recorded_at: '2026-07-03T09:00:00.000Z' }, { id: 'F2', recorded_at: '2026-07-04T09:00:00.000Z' },
+  { id: 'F3', recorded_at: '2026-07-05T09:00:00.000Z' }, { id: 'F4', recorded_at: '2026-07-02T21:30:00.000Z' }
+];
+const weekendIds = () => fri.filter((r) => F.weekend(r)).map((r) => r.id).join(' ');
+box.CB_SHOP_TZ = 'Asia/Riyadh';
+check(box.CBLocale === undefined && weekendIds() === 'F2 F3', 'no region answer: the fallback is Sat + Sun (F2 F3)');
+box.CBLocale = { weekInfo: () => ({ firstDay: 6, weekend: [5, 6], minimalDays: 1 }) };
+check(weekendIds() === 'F1 F2 F4', 'a Fri+Sat region flags Friday (F1, and F4 = Fri 00:30 shop time) and Saturday, NOT Sunday (F3)');
+box.CBLocale = { weekInfo: () => ({ weekend: [6, 7] }) };
+check(weekendIds() === 'F2 F3', 'an AU region (Sat+Sun) flags F2 F3 only');
+box.CBLocale = { weekInfo: () => null };
+check(weekendIds() === 'F2 F3', 'a reader that answers nothing falls back to Sat + Sun');
+delete box.CBLocale; box.CB_SHOP_TZ = 'Australia/Sydney';
 const src = pub('app', 'books-grant-filters.js');
+check(!/'Sat'|"Sat"/.test(src), 'no second weekend definition: Sat and Sun appear only in the ISO_DOW name table and the [6, 7] fallback (no quoted day names)');
 check(!/fetch\(|XMLHttpRequest|\.range\s*=/.test(src), 'the filters file reads and compares only: no call out, no write to the period');
 console.log(failures ? '\nFAILED ' + failures : '\nall passed');
 process.exit(failures ? 1 : 0);
