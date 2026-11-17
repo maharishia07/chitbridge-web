@@ -127,7 +127,7 @@ W.run('books-grant', async (w) => {
   await w.step('D5', 'the auditor drill · Day book: each entry shows its amount and opens to its journal lines', async () => {
     await page.click(T('bv-tab-daybook')); await page.waitForFunction((sel) => { const n = document.querySelector(sel); return n && /JV-/.test(n.textContent); }, T('bv-row-0'), { timeout: 10000 }); /* the Day book's own row, not the tab's previous list still on show */
     const row = await txt(T('bv-row-0'));
-    await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
+    await page.click(T('bv-row-0'), { position: { x: 24, y: 16 } }); /* the Entry cell: the middle of the row is the Evidence chip, which opens its own dialog */ await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
     const title = await txt(T('bd-title'));
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
