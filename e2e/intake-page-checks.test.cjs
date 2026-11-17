@@ -8,6 +8,7 @@
  *           (2) a sign-in or an inbox load that cannot reach the network shows a sentence on the page, not a blank screen and not the raw
  *           fetch error. Run against the page's own script in a vm context with a stubbed document and fetch: no browser.
  * CALLED BY by hand and the QA gate: node e2e/intake-page-checks.test.cjs
+ * UNIT      22/Intake screen
  * FLOW      UX-137 step 3 (utility page intake.html); with e2e/ui-codes-intake.test.cjs it is the readability minimums of that page.
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
