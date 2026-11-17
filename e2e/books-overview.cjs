@@ -118,7 +118,7 @@ function compare(tag, a, got, period) {
   async function open(vp, theme, mock) {
     const ctx = await browser.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block', colorScheme: theme === 'dark' ? 'dark' : 'light', isMobile: vp.width < 500, hasTouch: vp.width < 500 });
     await ctx.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort());
-    await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s.sess)); if (s.theme === 'dark') localStorage.setItem('cb_theme', 'dark'); } } catch (_) {} }, { sess, theme });
+    await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s.sess)); } } catch (_) {} }, { sess, theme });
     const page = await ctx.newPage();
     page.on('pageerror', (e) => bad.push('THROW ' + e.message.slice(0, 160)));
     page.on('response', (r) => { if (/\/api\//.test(r.url()) && r.status() >= 400 && !(mock && /overview/.test(r.url()))) bad.push(r.status() + ' ' + new URL(r.url()).pathname); });
@@ -136,6 +136,11 @@ function compare(tag, a, got, period) {
       const tag = vp.width + ' ' + theme, { ctx, page } = await open(vp, theme);
       await page.goto(base + '/accounts.html#overview');
       let got = await settle(page, 'ytd');
+      /* the look is the server's truth (CBAvatar.hydrate), so a stored cb_theme is overwritten: choose it the way a person does, through the avatar's own set() */
+      await page.evaluate((th) => CBAvatar.set('theme', th === 'dark' ? 'dark' : 'cream'), theme);
+      await sleep(500);
+      ok(((await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === 'dark') === (theme === 'dark'), tag + ' the page is really in the ' + theme + ' theme');
+      got = await readPage(page);
       compare(tag + ' ytd', truth.ytd, got, 'ytd');
       const dup = await page.evaluate(() => { const c = {}; document.querySelectorAll('[data-testid^="ov-"]').forEach((n) => { const k = n.getAttribute('data-testid'); c[k] = (c[k] || 0) + 1; }); return Object.keys(c).filter((k) => c[k] > 1); });
       ok(dup.length === 0, tag + ' every ov-* data-testid is on one element only' + (dup.length ? ' (twice: ' + dup.join(', ') + ')' : ''));
