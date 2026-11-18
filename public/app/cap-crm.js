@@ -790,8 +790,8 @@ function crmRoutePrelude(segments, params, frame) {
   if (window.CBKural) CBKural.set((typeof crmFaceKural === 'function' && crmFaceKural()) || shown);
   return typeof crmFaceRoute === 'function' && crmFaceRoute(segments, params, frame);
 }
-/** keepModal: the page's own boot repaint (frame drawn, ledger switch read) must not close a sheet the person opened from the already-clickable frame meanwhile; only a real route change closes it */
-function crmRoute(frame, keepModal) {
+/** the route in the address: its path segments (decoded) and its query parameters */
+function crmHashParts() {
   var text = (location.hash || '').replace(/^#\/?/, ''),
     q = '',
     qi = text.indexOf('?');
@@ -799,7 +799,7 @@ function crmRoute(frame, keepModal) {
     q = text.slice(qi + 1);
     text = text.slice(0, qi);
   }
-  var seg = text.split('/').filter(Boolean).map(decodeURIComponent),
+  var pathParts = text.split('/').filter(Boolean).map(decodeURIComponent),
     params = {};
   q.split('&').forEach(function (item) {
     if (item) {
@@ -807,6 +807,13 @@ function crmRoute(frame, keepModal) {
       params[a[0]] = decodeURIComponent(a[1] || '');
     }
   });
+  return { seg: pathParts, params: params };
+}
+/** keepModal: the page's own boot repaint (frame drawn, ledger switch read) must not close a sheet the person opened from the already-clickable frame meanwhile; only a real route change closes it */
+function crmRoute(frame, keepModal) {
+  var parts = crmHashParts(),
+    seg = parts.seg,
+    params = parts.params;
   if (!keepModal) closeModal();
   /* one kural per page (kurals.json group `crm`); the footer is the page's, never a part of a message */
   if (crmRoutePrelude(seg, params, frame)) return; /* the kural band, then the Marketing face's own routes (#/sent · #/results · its home) */
@@ -1802,6 +1809,37 @@ function crmWatch(el, onChange) {
     }
   });
 }
+/** the follow-ups list's sort choices: Due · Party · Created, each a natural-order compare of the one field */
+function crmFuSorts() {
+  var by = function (f) {
+    return function (a, b) {
+      return String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
+    };
+  };
+  return [
+    {
+      key: 'due',
+      label: tx('Due'),
+      cmp: by(function (f) {
+        return f.due_at || '';
+      })
+    },
+    {
+      key: 'party',
+      label: tx('Party'),
+      cmp: by(function (f) {
+        return f.party_name || '';
+      })
+    },
+    {
+      key: 'created',
+      label: tx('Created'),
+      cmp: by(function (f) {
+        return f.created_at || '';
+      })
+    }
+  ];
+}
 function crmFollowups(frame) {
   crmBar('<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>', crmAddFuBtn(), true);
   var node = document.getElementById('screen');
@@ -1813,11 +1851,6 @@ function crmFollowups(frame) {
       CRM.fuApi.destroy();
     } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
-  var by = function (f) {
-    return function (a, b) {
-      return String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
-    };
-  };
   var el = document.getElementById('crm_fu');
   CRM.fuApi = CBList.mount(el, {
     key: 'crm-followups',
@@ -1975,29 +2008,7 @@ function crmFollowups(frame) {
         }
       }
     ],
-    sorts: [
-      {
-        key: 'due',
-        label: tx('Due'),
-        cmp: by(function (f) {
-          return f.due_at || '';
-        })
-      },
-      {
-        key: 'party',
-        label: tx('Party'),
-        cmp: by(function (f) {
-          return f.party_name || '';
-        })
-      },
-      {
-        key: 'created',
-        label: tx('Created'),
-        cmp: by(function (f) {
-          return f.created_at || '';
-        })
-      }
-    ],
+    sorts: crmFuSorts(),
     group: {
       default: 'on',
       tid: 'crm-fu',
