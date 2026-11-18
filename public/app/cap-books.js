@@ -217,6 +217,12 @@ function bkCss() {
     '.bkdv-segs{display:inline-flex;gap:0}',
     '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
+  ].concat(bkCssLedgersPage()).join('\n');
+  document.head.appendChild(node);
+}
+/** the Ledgers page rules of bkCss (the two panes, the tree, the ledger page and its phone layout), in the order they apply */
+function bkCssLedgersPage() {
+  return [
     /* ⭐ THE LEDGERS PAGE (docs/design/ledgers-page, 2026-10-03): two panes — the ledger tree and the list (CBList) — inside one container, so the PANE decides phone or laptop, not the window.
        Tokens only; the tree is its own pane (more panes, not denser), the list is the Task table. */
     '#bk_lt{container:lt/inline-size;display:flex;height:100%;min-height:min(50vh,480px)}',
@@ -271,8 +277,7 @@ function bkCss() {
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
     '#bk_back{display:none}',
     '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}'
-  ].join('\n');
-  document.head.appendChild(node);
+  ];
 }
 bkCss();
 
@@ -3427,15 +3432,15 @@ function bkLgPeriodChanged() {
 }
 /** ‹ Earlier · Later › for the Ledgers' period: the Day book's own step (bkDbStep: a day, a month, a financial year, or the same span), never past today */
 function bkLgStepHTML() {
-  var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')),
-    now = { preset: p.preset, from: bkRange('lg').from, to: bkRange('lg').to },
-    one = function (dir, word, mark) {
+  var period = BK.lgp || (BK.lgp = bkDbPeriod('fy')),
+    now = { preset: period.preset, from: bkRange('lg').from, to: bkRange('lg').to },
+    stepButton = function (dir, word, mark) {
       var to = bkDbStep(now, dir);
       return (
         '<button data-cbsid="TSK006-B1' + (dir < 0 ? '4' : '5') + '"' + bkMountAttribute('TSK006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="step' + (dir < 0 ? 'back' : 'next') + '" data-testid="lg-step-' + (dir < 0 ? 'back' : 'next') + '" aria-label="' + esc(tx(word)) + '" title="' + esc(tx(word)) + '"' + (to ? '' : ' disabled') + '>' + mark + '</button>'
       );
     };
-  return one(-1, 'Earlier', '‹') + one(1, 'Later', '›');
+  return stepButton(-1, 'Earlier', '‹') + stepButton(1, 'Later', '›');
 }
 function bkLgStep(dir) {
   var q = bkRange('lg'),
@@ -3922,16 +3927,31 @@ function bkLtFoldSet(fold) {
   var target = fold ? document.querySelector('[data-lt="unfold"]') : document.getElementById('lt_q');
   if (target) target.focus();
 }
+/** the tree's find box emptied and refocused, then the tree repainted in full */
+function bkLtClearFind() {
+  BK.lt.tq = '';
+  var innerNode = document.getElementById('lt_q');
+  if (innerNode) {
+    innerNode.value = '';
+    innerNode.focus();
+  }
+  bkLtTreePaint();
+}
+/** back to the tab the person came from (a return opened from another tab), once */
+function bkLtBackToTab() {
+  var back = BK.backTo;
+  BK.backTo = null;
+  if (back && typeof show === 'function') show(back.tab);
+}
+/** the Pay button on an open party ledger: opens the payment for that party */
+function bkLtPayOpenParty() {
+  var sp = BK.lt.sel && BK.lt.sel.party;
+  if (sp) payOpen(bkPartyKind(sp, BK.lt.sel.code), sp);
+}
 /** a click on one of the pane's own buttons (data-lt): clear the find box · fold / unfold the tree · back to the tree · back to where the person came from · Statement · Pay */
 function bkLtClickAction(action) {
   if (action === 'clear') {
-    BK.lt.tq = '';
-    var innerNode = document.getElementById('lt_q');
-    if (innerNode) {
-      innerNode.value = '';
-      innerNode.focus();
-    }
-    bkLtTreePaint();
+    bkLtClearFind();
     return;
   }
   if (action === 'act-on' || action === 'act-all') {
@@ -3952,19 +3972,14 @@ function bkLtClickAction(action) {
     return;
   }
   if (action === 'backto') {
-    var back = BK.backTo;
-    BK.backTo = null;
-    if (back && typeof show === 'function') show(back.tab);
+    bkLtBackToTab();
     return;
   }
   if (action === 'statement') {
     bkLgStatement();
     return;
   }
-  if (action === 'pay') {
-    var sp = BK.lt.sel && BK.lt.sel.party;
-    if (sp) payOpen(bkPartyKind(sp, BK.lt.sel.code), sp);
-  }
+  if (action === 'pay') bkLtPayOpenParty();
 }
 /** keys in the tree's find box: Escape clears it, ArrowDown steps into the tree; true when the key was handled */
 function bkLtKeySearch(event, element) {

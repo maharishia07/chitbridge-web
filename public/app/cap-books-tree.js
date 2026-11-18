@@ -11,39 +11,45 @@ function bkDayBefore(day) {
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }
+/** one trial-balance row's two carried totals as one comparable word ("dr/cr", minor units) */
+function bkTotalsWord(row) {
+  return String(row.dr_minor || 0) + '/' + String(row.cr_minor || 0);
+}
+/** the opening read's totals by ledger code, or null when that read did not come back */
+function bkOpeningTotals(opened) {
+  if (!opened || !opened.rows) return null;
+  var totals = {};
+  opened.rows.forEach(function (row) {
+    totals[String(row.code)] = bkTotalsWord(row);
+  });
+  return totals;
+}
 /**
  * ⭐ THE TREE'S FIGURES (ACC-367, W15-105/106): the trial balance AS AT the period's end gives every ledger's balance ("Balance at <date>"), and the same read AS AT the day before the period starts
  * says which ledgers MOVED in it: a ledger has activity when its Dr or Cr total is not the one it had at the opening — two carried totals compared, nothing added up here.
  * Two reads in all, never one per row. A failed opening read leaves `act` null: the tree then shows every ledger rather than hiding any.
  */
 async function bkBalances(range) {
-  var q = range || bkRange('lg'),
-    asOf = q.to || bkToday();
+  var period = range || bkRange('lg'),
+    asOf = period.to || bkToday();
   var reads = await Promise.all([
     api('booksTB', { query: { asOf: asOf } }),
-    api('booksTB', { query: { asOf: bkDayBefore(q.from || asOf) } }).catch(function (failure) {
+    api('booksTB', { query: { asOf: bkDayBefore(period.from || asOf) } }).catch(function (failure) {
       return bkQuiet('balances-opening', failure, null);
     })
   ]);
   var reply = reads[0],
-    opened = reads[1],
+    before = bkOpeningTotals(reads[1]),
     map = {},
-    before = null,
-    act = null;
-  if (opened && opened.rows) {
-    before = {};
-    opened.rows.forEach(function (x) {
-      before[String(x.code)] = String(x.dr_minor || 0) + '/' + String(x.cr_minor || 0);
-    });
-  }
+    moved = null;
   ((reply && reply.rows) || []).forEach(function (x) {
     map[String(x.code)] = Number(x.dr_minor || 0) - Number(x.cr_minor || 0);
     if (before) {
-      act = act || {};
-      if (before[String(x.code)] !== String(x.dr_minor || 0) + '/' + String(x.cr_minor || 0)) act[String(x.code)] = true;
+      moved = moved || {};
+      if (before[String(x.code)] !== bkTotalsWord(x)) moved[String(x.code)] = true;
     }
   });
-  return { map: map, cur: reply && reply.currency, asOf: asOf, act: before ? act || {} : null };
+  return { map: map, cur: reply && reply.currency, asOf: asOf, act: before ? moved || {} : null };
 }
 /** the tree's figures again for the period now chosen (a step, a preset, a Back from a return): the same two reads, then the tree repaints */
 async function bkLtBalReload() {
@@ -247,22 +253,22 @@ function bkLtCounts() {
 }
 /** the head of the tree: what its figures are ("Balance at 18 Nov 2026") and the switch "With activity · n | All ledgers · n" */
 function bkLtHeadHTML() {
-  var b = BK.lt.bal;
-  if (!b) return '';
-  var n = bkLtCounts(),
-    on = !BK.lt.all && !!b.act,
-    seg = function (id, word, count, pressed, cbsid) {
+  var figures = BK.lt.bal;
+  if (!figures) return '';
+  var counts = bkLtCounts(),
+    on = !BK.lt.all && !!figures.act,
+    segment = function (id, word, count, pressed, cbsid) {
       return (
         '<button data-cbsid="' + cbsid + '"' + bkMountAttribute('CMP042') + ' type="button" class="lt-seg' + (pressed ? ' on' : '') + '" data-lt="' + id + '" data-testid="lt-' + id + '" aria-pressed="' + pressed + '">' +
         esc(tx(word)) + ' · ' + count + '</button>'
       );
     };
   return (
-    '<div class="lt-asof" data-testid="lt-asof">' + esc(txf('Balance at {date}', { date: bkDate(b.asOf) })) + '</div>' +
-    (b.act
+    '<div class="lt-asof" data-testid="lt-asof">' + esc(txf('Balance at {date}', { date: bkDate(figures.asOf) })) + '</div>' +
+    (figures.act
       ? '<div class="lt-segs" role="group" aria-label="' + esc(tx('Which ledgers')) + '" data-testid="lt-segs">' +
-        seg('act-on', 'With activity', n.active, on, 'CMP042-B26') +
-        seg('act-all', 'All ledgers', n.total, !on, 'CMP042-B27') +
+        segment('act-on', 'With activity', counts.active, on, 'CMP042-B26') +
+        segment('act-all', 'All ledgers', counts.total, !on, 'CMP042-B27') +
         '</div>'
       : '')
   );
