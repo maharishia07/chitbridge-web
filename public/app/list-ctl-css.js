@@ -219,6 +219,8 @@
       '.cbl .cbl-row .cbl-cell.first{width:100%;font-weight:600}.cbl .cbl-row .cbl-cell.amt{margin-inline-start:auto}',
       '.cbl .cbl-row .cbl-lead{position:absolute;inset-inline-end:8px;top:6px;padding:0}',
       '.cbl .cbl-next{margin:-6px 10px 8px;border-radius:0 0 12px 12px;padding-inline-start:14px}',
+      /* A11: a ticked list's card keeps a corner slot for the tick (44 px, top end), so it never lies on the status words */
+      '.cbl .cbl-row:has(>.cbl-lead){padding-inline-end:56px}.cbl .cbl-row:has(>.cbl-lead)>.cbl-lead{inset-inline-end:6px;top:4px}',
       '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
       '}',
       '@container screen (max-width: 640px){',

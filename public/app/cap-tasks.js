@@ -511,8 +511,15 @@
       onOpen: function (row) {
         tkOpen(row.chit_id);
       },
-      empty: { title: T(board.view === 'done' ? 'Nothing closed yet' : board.view === 'tasks' ? 'No tasks waiting' : 'No orders here') }
+      empty: emptyBoard(board.view)
     });
+  }
+
+  /** a board with nothing on it says what to do next (Fable A12: "No orders here" led nowhere) */
+  function emptyBoard(view) {
+    if (view === 'done') return { title: T('Nothing closed yet'), sub: T('Work you finish shows here.') };
+    if (view === 'tasks') return { title: T('No tasks waiting'), sub: T('Add one with New task above.') };
+    return { title: T('No orders here'), sub: T('New orders show here as they come in. Add work with New task above.') };
   }
 
   function viewLabel(value) {

@@ -1317,6 +1317,7 @@
       var skipLink = doc && doc.querySelector('[data-testid="skip-link"]'); /* added before any pack can land: said again with the rest of the frame */
       if (skipLink) skipLink.textContent = T(W.skip);
       if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
+      if (root.CBFrame && root.CBFrame.resay) root.CBFrame.resay(doc); /* UX-197: the skeleton's side menu, group heads, phone tabs, Collapse */
       paintSwitcher();
       AREAS.concat(['more']).forEach(function (area) {
         var label = $('.cbsh-nv[data-go="' + area + '"] .t');
