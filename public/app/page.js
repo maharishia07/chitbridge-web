@@ -18,7 +18,7 @@
  *
  * A classic script with no imports: app.html and crm.html (the chit page, CRM2) load it eagerly; e2e/detail-page.cjs drives it in the real page.
  
- * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-chit2.js, public/app/cap-crm.js, public/app/cap-testing.js (+2 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/crm.html · 1 test
  */
 /*
  * OWNS      CBPage: which detail page opens a chit (business_json.page, the registry /app/pages.json)

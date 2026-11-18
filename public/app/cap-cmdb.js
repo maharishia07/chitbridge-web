@@ -27,7 +27,7 @@
  * derives or guesses — a second place that worked the codes out would disagree with the register within a week,
  * and the whole value of a code is that it means exactly one thing. [[feedback-no-duplicate-functions]]
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/app/cap-standards.js · 2 tests
  */
 /*
  * OWNS      the CMDB panel: the configuration register of screens, drawn from /app/screens.js (nothing counted or derived here)

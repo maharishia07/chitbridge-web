@@ -15,7 +15,7 @@
  
  * OWNS      foreign-currency rates: the Rates screen (typed or imported day rates, the revaluation button) and Month lock's foreign-balances line
  * CARD      16-finance/cb-finance
- * CALLED BY public/accounts.html, public/app/cap-books.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/accounts.html · 2 tests
  */
 'use strict';
 if (typeof EP !== 'undefined') {

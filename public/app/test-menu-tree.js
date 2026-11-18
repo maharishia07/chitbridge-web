@@ -22,7 +22,7 @@
  * ⚠️ A classic script, no imports, no framework: app.html loads capabilities into one shared scope and
  * testing.html is a single standalone page. A plain <script> is the only thing both can agree on.
  
- * CALLED BY public/app/cap-testing.js, public/testing.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app/cap-testing.js, public/testing.html · 1 test
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  */
 

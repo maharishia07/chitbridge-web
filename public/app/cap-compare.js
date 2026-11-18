@@ -17,7 +17,7 @@
  
  * OWNS      the Parallel run screen: loading an outside snapshot and laying it beside our books
  * CARD      16-finance/cb-finance
- * CALLED BY public/accounts.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/accounts.html · 1 test
  */
 'use strict';
 if (typeof EP !== 'undefined') {
