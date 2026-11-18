@@ -1039,9 +1039,15 @@ async function wlLine(line_id) {
  * So the row is a function now. The field gets the space, the button gets its label, and neither can drift from
  * the other two.
  */
-function wlBtn(label, testid, call, primary) {
+/* the identity attributes of a built control: its register code, plus its mount when the code is a library component (UX-137 w2) */
+function wlStamp(code) {
+  return code ? ' data-cbsid="' + code + '"' + (/^CMP/.test(code) ? ' data-cbmount="RAL002-U1' + code.slice(-2) + '"' : '') : '';
+}
+function wlBtn(label, testid, call, primary, stampCode) {
   return (
-    '<button class="btn' +
+    '<button' +
+    wlStamp(stampCode) +
+    ' class="btn' +
     (primary ? ' pri' : '') +
     '" data-testid="' +
     testid +
@@ -1077,7 +1083,9 @@ function wlInput(id, opts) {
    */
   if (opts.lines) {
     return (
-      '<textarea id="' +
+      '<textarea' +
+      wlStamp(opts.stamp) +
+      ' id="' +
       id +
       '"' +
       (opts.testid ? ' data-testid="' + opts.testid + '"' : '') +
@@ -1092,7 +1100,9 @@ function wlInput(id, opts) {
     );
   }
   return (
-    '<input id="' +
+    '<input' +
+    wlStamp(opts.stamp) +
+    ' id="' +
     id +
     '"' +
     (opts.testid ? ' data-testid="' + opts.testid + '"' : '') +
@@ -1668,14 +1678,14 @@ function wlLineHTML(loading) {
       /* The unit is a label BESIDE the field, not padding inside it. Reserving 46px of the box for a suffix is
          what left no room to see the number on a narrow card. */
       wlFieldRow(
-        wlInput('wl_qty', { testid: 'wl-qty', type: 'number', big: true, grow: 2, value: over ? -over : left == null ? '' : left }) +
+        wlInput('wl_qty', { stamp: 'RAL002-I07', testid: 'wl-qty', type: 'number', big: true, grow: 2, value: over ? -over : left == null ? '' : left }) +
           '<span style="flex:0 0 auto;align-self:center;font-size:var(--fs-2);color:var(--grey);font-weight:700">' +
           esc(r.unit || '') +
           '</span>',
-        wlBtn('Record', 'wl-record', 'wlActSave(&quot;done&quot;)', true)
+        wlBtn('Record', 'wl-record', 'wlActSave(&quot;done&quot;)', true, 'RAL002-B07')
       ) +
       '<div style="margin-top:8px">' +
-      wlInput('wl_ref', { placeholder: 'docket number, or a note' }) +
+      wlInput('wl_ref', { stamp: 'RAL002-I08', placeholder: 'docket number, or a note' }) +
       '</div>' +
       '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">' +
       (over
@@ -1704,17 +1714,17 @@ function wlLineHTML(loading) {
        * exists and that link is what grants it.
        */
       wlMatPickHTML() +
-      wlInput('wl_what', { testid: 'wl-what', placeholder: 'What was it for — brake shoe, labour, call-out' }) +
+      wlInput('wl_what', { stamp: 'RAL002-I09', testid: 'wl-what', placeholder: 'What was it for — brake shoe, labour, call-out' }) +
       /* ⚠️ FOUR FIELDS AND A BUTTON DO NOT FIT ONE ROW ON A PHONE. The quantity pair goes on its own line so each
          box stays wide enough to read, rather than four slivers and a button that ate them. */
       '<div style="display:flex;gap:8px;margin-top:8px">' +
-      wlInput('wl_cqty', { type: 'number', placeholder: 'how many' }) +
-      wlInput('wl_cunit', { placeholder: 'unit' }) +
+      wlInput('wl_cqty', { stamp: 'RAL002-I10', type: 'number', placeholder: 'how many' }) +
+      wlInput('wl_cunit', { stamp: 'RAL002-I11', placeholder: 'unit' }) +
       '</div>' +
       '<div style="margin-top:8px">' +
       wlFieldRow(
-        wlInput('wl_amt', { testid: 'wl-amt', type: 'number', grow: 2, placeholder: 'cost in ' + moneyCode() }),
-        wlBtn('Add', 'wl-addcost', 'wlActSave(&quot;cost&quot;)')
+        wlInput('wl_amt', { stamp: 'RAL002-I12', testid: 'wl-amt', type: 'number', grow: 2, placeholder: 'cost in ' + moneyCode() }),
+        wlBtn('Add', 'wl-addcost', 'wlActSave(&quot;cost&quot;)', false, 'CMP007')
       ) +
       '</div>' +
       /* ⚠️ Its own quantity field, never the delivery one: 2 hours of labour typed into the goods box is exactly
@@ -1812,7 +1822,7 @@ function wlLineHTML(loading) {
       '<input data-cbsid="RAL002-I06" id="wl_due" data-testid="wl-due-inp" type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
       esc(String(r.due_date || '').slice(0, 10)) +
       '" style="flex:1 1 145px;min-width:145px;font-size:var(--fs-3);padding:9px 8px;border:1px solid var(--line);border-radius:9px">' +
-      wlBtn('Save', 'wl-line-save', 'wlLineSave()', true) +
+      wlBtn('Save', 'wl-line-save', 'wlLineSave()', true, 'RAL002-B08') +
       '</div>' +
       /* ⚠️ THIS ONE IS DELIBERATELY FULL WIDTH — it is the section's own verb, not a field's companion, so .btn's
          width:100% is right here. Kept explicit so it reads as a choice rather than the bug the others had. */
