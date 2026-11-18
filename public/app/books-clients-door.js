@@ -6,7 +6,7 @@
  * FLOW      every second: a token not yet read → CBBooksGrantApi.held(call) → count; the Home shell present without the card → insert it before the areas (a login after page load, or a Home repaint, still gets it)
  * CARD      04-network/ACC-176B-ADVISER-REQUIREMENT
  *
- * Decides nothing: the count is the server's list of live grants (CBBooksGrantApi.held).
+ * Decides nothing: the count is the server's live grants this seat may open (CBBooksGrantApi.doorsFor, the same may_use the practice list is gated by).
  */
 (function (root) {
   'use strict';
@@ -56,6 +56,11 @@
     areas.parentNode.insertBefore(card, areas);
     return true;
   }
+  /** P1-4: the clients THIS seat may open, by the one seat rule (doorsFor: the server's may_use and seats), never the raw grants list: a seat that holds neither firm seat counts 0, as the practice list says */
+  function usable(split) {
+    var api = root.CBBooksGrantApi;
+    return Object.keys((split && split.live) || {}).filter(function (id) { return api.doorsFor(split, id).doors.length > 0; }).length;
+  }
   var seen = { token: null, count: 0 };
   /** one beat: a new sign-in reads the grants once; while the Home shell exists without the card (Home repaints, a sign-in after load) the card is drawn again */
   function tick() {
@@ -68,7 +73,7 @@
       var practice = new root.Promise(function (go) { root.setTimeout(go, 0); }).then(function () { return root.CBPractice && root.CBPractice.settled ? root.CBPractice.settled() : true; });
       practice.then(function () {
         if (root.CBPractice && root.CBPractice.hasData()) return;
-        return root.CBBooksGrantApi.held(call).then(function (held) { seen.count = Object.keys(held).length; tick(); });
+        return root.CBBooksGrantApi.heldSplit(call).then(function (split) { seen.count = usable(split); tick(); });
       }).catch(function (failure) { root.console.warn('books-clients-door', failure); });
     } else if (seen.count && !(root.CBPractice && root.CBPractice.hasData())) draw(seen.count); /* the practice section is the firm's front door once it has answered */
   }
