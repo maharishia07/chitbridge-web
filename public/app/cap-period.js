@@ -1128,7 +1128,7 @@ function peReturnLedgers(answer, b, taxColumns) {
     )
   );
   const more = b.accounts_more_n
-    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
+    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button data-cbsid="BKS016-B11" type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
     : '';
   return '<div data-testid="pr-ledgers-' + esc(b.code) + '">' + head + lines.join('') + more + '</div>';
 }
