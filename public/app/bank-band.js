@@ -126,7 +126,7 @@
     var bad = items.some(function (one) { return one.state === 'bad'; }),
       agree = items.filter(function (one) { return one.state === 'ok'; }).length,
       open = items.length - agree;
-    return '<button type="button" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + root.esc(tid) + '-toggle">' + root.esc(sayText('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
+    return '<button type="button" data-cbsid="CMP065-B01" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + root.esc(tid) + '-toggle">' + root.esc(sayText('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
   }
   function rightHtml(items, testId, extraHtml) {
     var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
