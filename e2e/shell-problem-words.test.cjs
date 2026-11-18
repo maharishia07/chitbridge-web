@@ -12,8 +12,19 @@ let failures = 0;
 const check = (condition, message) => { console.log((condition ? '  ok ' : '  FAIL ') + message); if (!condition) failures++; };
 const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'core.js'), 'utf8');
 const pick = (name) => { const at = source.indexOf('function ' + name + '('); return source.slice(at, source.indexOf('\n}\n', at) + 3); };
+const shellSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shell.js'), 'utf8');
+const pickShell = (name) => { const at = shellSrc.indexOf('function ' + name + '('); return shellSrc.slice(at, shellSrc.indexOf('
+  }
+', at) + 5); };
 const sandbox = {};
+sandbox.window = sandbox; /* shell.js (every shelled page) holds rateWords as root.cbRateWords; core.js answerWords reads it at call time */
 vm.createContext(sandbox);
+/* a page WITHOUT core.js (network.html): shell.js alone says the wait */
+const alone = { root: {} }; vm.createContext(alone);
+vm.runInContext(pickShell('rateWords') + 'this.out = rateWords;', alone);
+check(alone.out({ params: { retry_after_seconds: 524 } }, 429) === 'Too many tries; wait 524 seconds', 'shell.js alone (no core.js) says the wait on a 429');
+check(alone.out({ params: { retry_after_seconds: 524 } }, 403) === '' && alone.out({}, 429) === '', 'no wait or another status is empty');
+vm.runInContext(pickShell('rateWords') + 'this.cbRateWords = rateWords;', sandbox);
 vm.runInContext(pick('errWords') + pick('answerWords') + 'this.answerWords = answerWords;', sandbox);
 const words = sandbox.answerWords;
 check(typeof words === 'function', 'core.js answerWords is the one reader');

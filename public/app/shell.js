@@ -49,6 +49,15 @@
   if (root.CBShell) return;
   var doc = root.document;
 
+  /* rateWords(body, status) → the ONE rate-limit sentence: 'Too many tries; wait N seconds' for a 429 that names its wait (params.retry_after_seconds, RFC 9457); '' for any other answer.
+     It lives here because every shelled page loads this file; core.js answerWords calls it through root.cbRateWords at call time (Fable review R2/R3, 18 Nov). */
+  function rateWords(body, status) {
+    var wait = Math.ceil(Number(body && body.params && body.params.retry_after_seconds));
+    if (status !== 429 || !(wait >= 1)) return '';
+    return typeof root.txn === 'function' ? root.txn('Too many tries; wait {count} second', 'Too many tries; wait {count} seconds', wait) : 'Too many tries; wait ' + wait + ' second' + (wait === 1 ? '' : 's');
+  }
+  root.cbRateWords = rateWords;
+
   /* a page that did not load shell-facts.js (promo.html is a till copy, bar mode): no cards to read, nothing to lead */
   var NO_FACTS = {
     create: function (ctx) { return { isFirm: function () { return false; }, read: function () {}, once: ctx.get }; },
@@ -1349,7 +1358,7 @@
           var e = new Error('HTTP ' + reply.status);
           e.status = reply.status;
           e.retryAfter = Math.min(10, Number(reply.headers && reply.headers.get && reply.headers.get('Retry-After')) || 0);
-          return reply.json().then(function (body) { e.words = (typeof root.answerWords === 'function' ? root.answerWords : wordsOf)(body, reply.status); throw e; }, function () { throw e; });
+          return reply.json().then(function (body) { e.words = rateWords(body, reply.status) || (typeof root.answerWords === 'function' ? root.answerWords : wordsOf)(body, reply.status); throw e; }, function () { throw e; });
         }
         return reply.json();
       });

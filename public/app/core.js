@@ -1357,13 +1357,11 @@ function errWords(value) {
   return errWords(value.detail) || errWords(value.message) || errWords(value.title) || errWords(value.error) || '';
 }
 /* answerWords(body, status) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence).
-   A 429 that names its wait (params.retry_after_seconds, RFC 9457) says it plainly: "Too many tries; wait N seconds" — the ONE rate-limit sentence, for every screen and the header (Fable review R2/R3, 18 Nov). */
+   A 429 that names its wait says the ONE rate-limit sentence, read by shell.js rateWords (window.cbRateWords) (Fable review R2/R3, 18 Nov). */
 function answerWords(body, status) {
   var answer = body || {};
-  var wait = Math.ceil(Number(answer.params && answer.params.retry_after_seconds));
-  if (status === 429 && wait >= 1) {
-    return typeof txn === 'function' ? txn('Too many tries; wait {count} second', 'Too many tries; wait {count} seconds', wait) : 'Too many tries; wait ' + wait + ' second' + (wait === 1 ? '' : 's');
-  }
+  var rate = typeof window !== 'undefined' && typeof window.cbRateWords === 'function' ? window.cbRateWords(answer, status) : ''; /* the sentence is read by shell.js, loaded on every shelled page (call time) */
+  if (rate) return rate;
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
