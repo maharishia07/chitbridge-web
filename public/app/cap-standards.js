@@ -356,7 +356,7 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Text can grow and nothing breaks',
-    m: '200% is walked on the UI standard page and the list control only; the signed-in app screens are not yet walked at 200%',
+    m: '200% is walked on the UI standard page and the list control only; the signed-in app screens are not yet walked at 200% (the text-size test is 132%)',
     g: 'Accessibility',
     n: 'WCAG 2.2 — 1.4.4',
     w: 'Resize text to 200% without loss of function',
