@@ -115,6 +115,7 @@
       /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
     '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
       '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
+      '.cbl .cbl-grid[aria-busy="true"] .cbl-hdr{overflow:hidden}/* the loading header is the width of the box (the declared columns are not fitted yet), so it does not jump narrower when the rows arrive (walk-home UI9-crm: 1366 then 1134) */',
       '.cbl .cbl-row.cbl-total:last-child{position:sticky;bottom:0;z-index:4;background:var(--cl-panel);border-top:1.5px solid var(--cl-line);font-weight:600}',
       '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
       '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
@@ -147,6 +148,7 @@
       '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
       /* ONE LINE (leader practice: HubSpot/Salesforce list views): a cell in the table layout never wraps; it is cut with an ellipsis and its full text shows on hover (the title is set by list-ctl.js). A card (narrow container, below) wraps as before. */
       '@container list (min-width: 621px){.cbl .cbl-row .cbl-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}',
+      '.cbl .cbl-row .cbl-cell.cbl-wrap{white-space:normal;overflow:visible;text-overflow:clip}/* set by list-ctl.js wrapCut: the words did not fit the column, so they wrap, never cut */',
       '.cbl .cbl-cell.r{text-align:end}',
       '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
       '.cbl .cbl-cell.strong{font-weight:700}',

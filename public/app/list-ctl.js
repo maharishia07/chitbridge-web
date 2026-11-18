@@ -451,7 +451,7 @@
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
-  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 32 /* the first cell also holds the expand caret: 32 px box, -9 and +6 margin = 29 px, plus a pixel of slack (24 cut the first letters of a name, walk 18 Nov) */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
@@ -474,8 +474,8 @@
         .sort(function (first, second) { return plainText(second).length - plainText(first).length; })
         .slice(0, 3);
       out[c.key] = longest.reduce(function (widest, html) {
-        probe.innerHTML = '<div class="cbl-cell" style="display:inline-block;width:auto">' + html + '</div>';
-        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 2);
+        probe.innerHTML = '<div class="cbl-cell' + cellClasses(c, 1) + '" style="display:inline-block;width:auto">' + html + '</div>'; /* the cell's own classes: a figure is set in the mono face and bold of its real cell, not the row's (walk 18 Nov: 480.00 and 12,000.00 cut at 1366) */
+        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 4);
       }, 0);
     });
     host.removeChild(probe);
@@ -1964,7 +1964,7 @@ ctx.tpl = template(inst, ctx.cols);
   function paintListStep3(inst, ctx) {
     if (ctx.state === 'loading') {
       ctx.box.innerHTML =
-        '<div class="cbl-grid" role="grid" aria-busy="true">' + (ctx.s.view === 'grid' ? ctx.hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
+        '<div class="cbl-grid cbl-fit" role="grid" aria-busy="true">' + (ctx.s.view === 'grid' ? ctx.hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
       setHdrH(inst, ctx.box);
       return true;
     }
@@ -2130,7 +2130,14 @@ ctx.limit = inst.limit;
       ctx.end +
       footHTML(inst);
     setHdrH(inst, ctx.box);
+    wrapCut(ctx.box);
     ctx.box.scrollTop = ctx.keepTop;
+  }
+  /** ONE LINE keeps a cell on one line while its words fit; a cell whose words do NOT fit its column wraps instead of being cut (standard: no clipped text; a person who cannot read well must never meet half a word). Read all, then write, so the paint costs one layout. */
+  function wrapCut(box) {
+    var cells = box.querySelectorAll('.cbl-row .cbl-cell'), cut = [], i;
+    for (i = 0; i < cells.length; i++) if (cells[i].scrollWidth > cells[i].clientWidth + 1) cut.push(cells[i]);
+    for (i = 0; i < cut.length; i++) cut[i].classList.add('cbl-wrap');
   }
   /** paintList, step 10 of 10 (the data-cbl-sentinel part, lines 2205-2228 of the one function): runs on, nothing here ends the call */
   function paintListCblSentinel(inst, ctx) {
