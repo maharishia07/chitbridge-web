@@ -12,7 +12,7 @@
  *     triggers:[{watch,op,value,action,target}], // the loop
  *     feedback:[{system,format,onRail}] }         // outbound adapter
  
- * CALLED BY public/app/cap-catsetup.js, public/app/cap-definitions.js, public/app/cap-network.js, public/app/cart.js, public/app/price-resolve.js (+4 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/app/cap-definitions.js, public/app/cap-standards.js, scripts/standards-doc.js · 8 tests
  */
 /*
  * OWNS      the one catalogue model (CBCatalogue): draft shape, migration and derivations, DOM-free

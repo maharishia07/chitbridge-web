@@ -8,7 +8,7 @@
  * addActorModal/submitActor/actorInviteModal/actorCleanupModal/confirmAsk, scr, esc, val, opt, toast,
  * modal/closeModal, announce, coId/acIdPrev, startDrag, openHelp, UI/SESSION/STORE.
  * Spec: chitbridge-api/docs/COASSIST-USECASES.md . Tests: COASSIST-REGRESSION.md.
- * CALLED BY public/app.html, public/app/cap-connector.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/iot-howitworks.html · 8 tests
  */
 /* ═══ ACTOR TYPE REGISTRY — build-one-add-more. The SINGLE list the core reads (filter · picker · detail · dispatch).
  *     Seeded built-in; DESIGNED to be fed by the GOVERNANCE layer later (merge via acMergeTypes) with zero core change.

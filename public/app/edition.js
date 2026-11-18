@@ -21,7 +21,7 @@
  *   CBEdition.hidesHref(href, m)    is this link a door into an off-edition entry (its page belongs ONLY to hidden entries)
  *   CBEdition.prune(el, m)          hide every such link under `el` (a page's nav, Home's alert rows); returns how many
  
- * CALLED BY public/app/avatar.js, public/app/rail-bell.js, public/app/shell.js, public/standards.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) index.html, public/accounts.html, public/authority-forms.html, public/crm.html, public/employees.html, public/finance.html, public/know-your-business.html, public/network.html (+3 more)
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/editions
  */
 (function (root) {

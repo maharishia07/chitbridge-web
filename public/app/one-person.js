@@ -32,7 +32,7 @@
  *    removed by clearOut() — the screen says they will be before the button is pressed.
  * e2e/one-person.cjs proves every branch; e2e/one-person-breaks.cjs breaks each guard once.
  
- * CALLED BY public/accounts.html, public/app.html, public/app/cap-admin.js, public/app/page-frame.js, public/app/signin-ui.js (+6 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) index.html, public/accounts.html, public/app.html, public/authority-forms.html, public/bank-demo.html, public/catalogue.html, public/chart-sample.html, public/conversion-lab.html (+21 more) · 5 tests
  */
 /*
  * OWNS      CBOnePerson: the one-browser-one-shop check (traces() and the clear-out), logic only, no painting

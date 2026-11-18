@@ -21,7 +21,7 @@
  * ⚠️ SMALL ON PURPOSE. Full-scale seeding is blocked by UNIQUE (entity_id, kind, name) on `definition` — real
  * taxonomies repeat leaf names across branches, and lifting that needs a migration. See BACKLOG item 22.
  
- * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-categories.js, public/app/cap-catsetup.js, public/app/cap-definitions.js (+11 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html
  */
 /*
  * OWNS      CB_STARTER_CATEGORIES: the small standard category set per trade (Google Product Taxonomy ids), as DATA only

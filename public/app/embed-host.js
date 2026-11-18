@@ -16,7 +16,7 @@
  * shop-scoped store, not cb_sess) passes  session: function () { return token }  and the embed — which asks with { cb, event: 'need-session' } —
  * is answered over postMessage { cb: 'host', event: 'session', token } to THIS iframe only. The token is never put in the address or in storage.
  
- * CALLED BY public/app/attach-ui.js, public/app/cap-crm-groups.js, public/app/cap-readiness.js, public/app/cap-settings.js, public/till.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/employees.html, public/tasks.html, public/till.html · 1 test
  */
 (function (root) {
   'use strict';

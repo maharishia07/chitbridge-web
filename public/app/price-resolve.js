@@ -25,7 +25,7 @@
  * ── ⚠️ NOT WIRED. Nothing calls this yet. Where it plugs in (and whether a `by:'ref'` price may resolve at seal
  * without a human) is a decision, not a detail. See SPEC-offers-tax.md.
  
- * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-crm.js, public/app/cap-testing.js, public/app/pick.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html · 1 test
  */
 /*
  * OWNS      which price applies and why: tiered, regional, time-boxed pricing resolved to one answer

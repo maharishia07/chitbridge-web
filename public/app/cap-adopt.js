@@ -15,7 +15,7 @@
  *
  * Injected by ensureCap('adopt'). Uses api, esc, modal/closeModal, toast, money, tx/txf.
  
- * CALLED BY public/app/cap-chit2.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app/cap-chit2.js · 3 tests
  */
 /*
  * OWNS      the adopt-a-delivery step: a supplier's delivery taken into YOUR catalogue, with the confirmation and the own-vertical check

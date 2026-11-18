@@ -4,7 +4,7 @@
  * shows each capability's LOAD kind (eager / lazy / planned) with LIVE state from Core's CAP_LOADED, and every
  * feature's status (done / partial / backlog). Core keeps only the gated stub (openLegend/closeLegend/_legendOpen).
  * Update this whenever a capability or feature lands. Mirrors the catalogue in project-capability-modularisation.
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/cmdb/record.html, public/testing.html · 8 tests
  * OWNS      CAP_CATALOGUE (capability -> features) and the legend panel: _openLegendImpl and its tab painters; Core keeps only the gated stub
  * FLOW      openLegend (app.html) -> ensureCap(legend) -> _openLegendImpl paints the tabs from CAP_CATALOGUE + live CAP_LOADED
  * CARD      20-settings-governance-and-plan/capability-legend

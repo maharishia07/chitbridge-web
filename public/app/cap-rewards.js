@@ -9,7 +9,7 @@
  *   CBRewardsPane.load(host, o)     → reads and paints into host (an element or an id); o = { id, api(name, opts) | fetch(), money, t }
  
  * CARD 08-rewards-and-loyalty/customer-s-rewards-view
- * CALLED BY public/app.html, public/app/cap-crm-record.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/crm.html · 1 test
  * OWNS      CBRewardsPane.html(r, o) and .load(host, o): the customer rewards pane, painted from the server answer; adds nothing up
  * FLOW      load(host, o) -> GET customers/:id/rewards -> html(r, o) -> host.innerHTML
  */
