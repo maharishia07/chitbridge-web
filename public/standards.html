@@ -922,7 +922,7 @@ function mountList() {
     fill: false,
     columns: cols,
     defaultCols: () => (comparedOn() ? CMP_DEFAULT_COLS : buildOn() ? CBStdBuild.defaultCols : DEFAULT_COLS),
-    cardMax: 3, get wrapCut() { return !comparedOn(); } /* one line per row, a long cell ends in … (full words on hover); the Compared-with tab wraps */,
+    cardMax: 3, get wrapCut() { return comparedOn(); } /* one line per row, a long cell ends in … (full words on hover); the Compared-with tab wraps */,
     store: choices,
     head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
     search: (x) => {
