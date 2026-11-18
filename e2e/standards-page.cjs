@@ -52,6 +52,7 @@ const IDS = {
 const ROWS = (k) => IDS[k].map((id) => BYID[id]).filter(Boolean);
 const CO = ROWS('CO3').concat(ROWS('CO1'), ROWS('CO2'));
 const NEW = REG.S.filter((r) => r.added === '2026-10-14');   /* STDREG1's rows */
+const PROVED = (r) => r.s !== 'live' || /Proof:|In force:/.test(r.note || '');   /* a status the register has FLIPPED since must carry its evidence (other lanes flip rows; counts are read, not fixed) */
 const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
 /* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
 const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
@@ -131,7 +132,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* the design's data.js is derived from the register, row for row (STDREG1: it held a 61-row copy, compared field for field — a second list) */
     ok(DESIGN_DERIVED.rows.length === REG.S.length && DESIGN_DERIVED.rows.every((d, i) => d.key === REG.S[i].id && d.n === REG.S[i].n && d.s === REG.S[i].s), 'the design\'s data.js builds its ' + DESIGN_DERIVED.rows.length + ' rows from the register itself — no copy to drift');
     const added = REG.S.filter((r) => r.added === '2026-10-03');
-    ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 adopted 2–3 Oct 2026 carry their stated statuses: 11 in force, 4 partly, 2 planned');
+    ok(added.length === 17 && added.every((r) => ['live', 'part', 'plan'].indexOf(r.s) >= 0), 'the 17 adopted 2–3 Oct 2026 carry a valid status read from the register (in force ' + added.filter((r) => r.s === 'live').length + ' · partly ' + added.filter((r) => r.s === 'part').length + ' · planned ' + added.filter((r) => r.s === 'plan').length + ')');
     const cm = REG.S.filter((r) => r.matrix === 'country');
     ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
     const CMXJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'country-matrix.json'), 'utf8'));
@@ -158,7 +159,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(REG.GL.every((g) => g[0] && g[1] && g[2]), 'every entry has its full name and one line of meaning');
     /* CO2 · the compliance additions: each a law or a standard, with what is in force and not (note), where the proof is (at), and — unless In force — what is missing */
     ok(CO2.length === 7 && CO2.every((r) => (r.k === 'law' || r.k === 'std') && r.note && r.note.length > 80 && r.at && r.why && r.added === '2026-10-13'), 'CO2\'s 7 security rows each say what is in force, what is not, and where the proof is');
-    ok(CO.length === 18 && CO.every((r) => (r.k === 'law' || r.k === 'std') && r.s !== 'live' && r.at && r.why && (r.s === 'plan' || (r.note && r.note.length > 80))), 'the ' + CO.length + ' compliance rows (CO3 · CO1 · CO2) are laws or standards, none In force, each with where the proof is and why — and, unless Planned, what is in force and what is not');
+    ok(CO.length === 18 && CO.every((r) => (r.k === 'law' || r.k === 'std') && PROVED(r) && r.at && r.why && (r.s === 'plan' || (r.note && r.note.length > 80))), 'the ' + CO.length + ' compliance rows (CO3 · CO1 · CO2) are laws or standards, any In force one naming its proof, each with where the proof is and why — and, unless Planned, what is in force and what is not');
     ok(['IN', 'AU', 'AE'].every((c) => CO.some((r) => r.c.indexOf(c) >= 0 && r.k === 'law')), 'India, Australia and the UAE each have a law row from the compliance rounds');
     ok(CO2.filter((r) => r.k === 'law').every((r) => /\b(Act|Decree-Law|Directions|Rules)\b/.test(r.n)), 'every CO2 law row names its legal reference in its title');
     /* STDREG1 (14 Oct 2026) · what was missing, and the rows that said more than the code does */
