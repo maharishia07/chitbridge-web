@@ -1349,7 +1349,7 @@
           var e = new Error('HTTP ' + reply.status);
           e.status = reply.status;
           e.retryAfter = Math.min(10, Number(reply.headers && reply.headers.get && reply.headers.get('Retry-After')) || 0);
-          return reply.json().then(function (body) { e.words = (factsLib.problemWords || wordsOf)(body, reply.status); throw e; }, function () { throw e; });
+          return reply.json().then(function (body) { e.words = (typeof root.answerWords === 'function' ? root.answerWords : wordsOf)(body, reply.status); throw e; }, function () { throw e; });
         }
         return reply.json();
       });

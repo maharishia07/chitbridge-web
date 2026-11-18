@@ -1356,9 +1356,14 @@ function errWords(value) {
   if (typeof value !== 'object') return String(value);
   return errWords(value.detail) || errWords(value.message) || errWords(value.title) || errWords(value.error) || '';
 }
-/* answerWords(body) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence) */
-function answerWords(body) {
+/* answerWords(body, status) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence).
+   A 429 that names its wait (params.retry_after_seconds, RFC 9457) says it plainly: "Too many tries; wait N seconds" — the ONE rate-limit sentence, for every screen and the header (Fable review R2/R3, 18 Nov). */
+function answerWords(body, status) {
   var answer = body || {};
+  var wait = Math.ceil(Number(answer.params && answer.params.retry_after_seconds));
+  if (status === 429 && wait >= 1) {
+    return typeof txn === 'function' ? txn('Too many tries; wait {count} second', 'Too many tries; wait {count} seconds', wait) : 'Too many tries; wait ' + wait + ' second' + (wait === 1 ? '' : 's');
+  }
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
@@ -1495,7 +1500,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
             .filter(Boolean)
             .join('  ·  ');
         }
-        if (!msg) msg = answerWords(j);
+        if (!msg) msg = answerWords(j, res.status);
       } catch (_) {}
       if (j && j.offline) {
         throw new Error(
