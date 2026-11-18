@@ -1730,6 +1730,13 @@ function crmFuActions() {
     }
   ];
 }
+/** the follow-ups' bulk actions for the verdict as it stands now; rebuilt only when the verdict changes (CBAssign.bulk mounts the picker) */
+var crmFuBulkMemo = { said: null, list: [] };
+function crmFuBulk() {
+  var said = crmSeesUnassigned();
+  if (crmFuBulkMemo.said !== said) crmFuBulkMemo = { said: said, list: window.CBAssign ? CBAssign.bulk(crmAssignOpts()) : [] };
+  return crmFuBulkMemo.list;
+}
 async function crmFuLoad() {
   var g = ++CRM.loadGen;
   CRM.fuState = 'loading';
@@ -2006,8 +2013,13 @@ function crmFollowups(frame) {
     next: crmFuMini,
     nextPending: crmFuMini,
     actions: crmFuActions(),
-    bulk: window.CBAssign ? CBAssign.bulk(crmAssignOpts()) : [], /* ASSIGN-W3 L6: Assign to… · Hand over · Back to pool, on the server's verdict (CRM.may.assign) */
-    bulkAlways: crmSeesUnassigned()
+    /* ASSIGN-W3 L6: Assign to… · Hand over · Back to pool, on the server's verdict (CRM.may.assign). Getters, not values: the verdict (CRM.may) lands with the first read, AFTER this mount, so the list asks at every draw (ASSIGN-W3-CRM-TICKS) */
+    get bulk() {
+      return crmFuBulk();
+    },
+    get bulkAlways() {
+      return crmSeesUnassigned();
+    }
   });
   crmWatch(el, function (c) {
     CRM.fuScope = c.filt.scope || def;
