@@ -22,6 +22,8 @@
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/cb-fonts.css">
+<link rel="preload" href="/app/manifest.json" as="fetch" crossorigin="anonymous">   <!-- home30: the cards' manifest downloads with the page, not after the scripts below -->
+<!-- home30 · overlap for the batch merge: next/assignw2-web adds a modal-host.js script tag to this file; keep it with the other app scripts above the inline script. Nothing here needs it. -->
 <style>
 /* tokens — docs/design/SYSTEM.md §2, copied, never restyled */
 :root{
@@ -71,6 +73,21 @@ body{margin:0;background:var(--page);color:var(--ink);font-size:calc(16px * var(
   .track::before{display:none}
   .node{padding:0}
 }
+
+/* ── home30: the first 30 seconds. While the practice read is out (html.bp-hold, set by books-practice.js) or the cards are not drawn yet, Home shows the SHAPE of the page (HOM001-P15), never a bare word.
+   Shapes only: it says neither "firm" nor "shop" (the server's answer decides that); the practice's own "Loading" line is hidden under it. ── */
+.hk{display:none;margin:0 0 16px;overflow:hidden;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px)}
+html.bp-hold .hk,.hk:has(+ [data-testid="shell-areas"]:empty){display:block}
+html.bp-hold:has(#bp_failed) .hk,html.bp-hold:has(#bp_practice) .hk{display:none}
+html.bp-hold [data-testid="practice-loading"]{display:none}
+.hk i{display:block;border-radius:9px;background:var(--sh-panel,#F3EFE6);border:1px solid var(--sh-soft,#E6E0D2);animation:hkp 1.4s ease-in-out infinite}
+.hk .t{width:240px;max-width:60%;height:26px;margin-bottom:14px}
+.hk .p{display:flex;gap:8px;margin-bottom:12px}.hk .p i{width:88px;height:32px;border-radius:16px}
+.hk .s{display:flex;gap:12px;margin-bottom:14px}.hk .s i{width:160px;height:58px;border-radius:11px}
+.hk .r i{height:44px;margin-bottom:6px;border-radius:7px}
+@keyframes hkp{0%,100%{opacity:.55}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.hk i{animation:none}}
+@media(max-width:700px){.hk .s i{flex:1;width:auto}.hk .p i{width:72px}.hk .r i:nth-child(n+5){display:none}}
 </style>
 </head>
 <body>
@@ -133,6 +150,16 @@ function mountShell(){
     home.innerHTML = '<div id="railbox"></div>';
     SHELL.ready.then(function(){ if (ALERTS.length) alertsPaint(); });   /* the edition is known once the manifest is in (rows written straight into the slot — close-first, signed-out — are left alone) */
     /* walk 2026-10-17 (Athi): the roadmap is our own self-declaration — it is no longer drawn on Home; roadmap.js is retired (RETIRED.md); the comparison lives in Standards › Compared with */
+  }
+  /* home30: the shape of the page while the answers are out (see .hk above); register rows HOM001-P15 (frame) and HOM001-P16 (each block). CSS shows and hides it, so it needs no timer. */
+  var areas = SESS && document.querySelector('[data-testid="shell-areas"]');
+  if (areas && !document.querySelector('[data-testid="home-skeleton"]')) {
+    var hk = document.createElement('div');
+    hk.className = 'hk'; hk.setAttribute('data-testid', 'home-skeleton'); hk.setAttribute('data-cbsid', 'HOM001-P15');
+    hk.setAttribute('role', 'status'); hk.setAttribute('aria-busy', 'true'); hk.setAttribute('aria-label', typeof tx === 'function' ? tx('Loading') : 'Loading');
+    var blk = function (c) { return '<i class="' + c + '" data-cbsid="HOM001-P16"></i>'; };
+    hk.innerHTML = blk('t') + '<div class="p">' + blk('') + blk('') + blk('') + '</div><div class="s">' + blk('') + blk('') + '</div><div class="r">' + blk('') + blk('') + blk('') + blk('') + blk('') + blk('') + '</div>';
+    areas.parentNode.insertBefore(hk, areas);
   }
   return SHELL;
 }
