@@ -5877,7 +5877,7 @@ function bkLockRowHTML(item, index, isOwner) {
     '" class="num lk-ent">' +
     esc(String((info && info.entries) || 0)) +
     '</td><td class="num lk-sales">' +
-    (info && info.sales_minor === undefined ? '—' : info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No sales'))) + /* STAFF-BOOKS: a seat that may not read figures gets none: a dash, never "No sales" */
+    (info && info.sales_minor === undefined ? '—' : info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No income'))) + /* STAFF-BOOKS: a seat that may not read figures gets none: a dash, never "No sales" */
     '</td><td class="lk-act">' +
     buttons +
     (buttons ? bkLockWhyHTML(month, state, info, rule.blocked, rule.blockWhy) : '') +
@@ -5957,7 +5957,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Sales') +
+    tx('Income before tax') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';
