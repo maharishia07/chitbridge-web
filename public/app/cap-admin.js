@@ -9180,27 +9180,14 @@ async function workRoutingSet(kind, field, value) {
 
 /** the firm switch "which clients staff can open": all of the firm's clients, or only the ones they hold (A1) */
 function clientAccessFieldHTML(s) {
-  const onlyHeld = s.client_access === 'assigned';
-  return `<label class="fl">${tx('Which clients staff can open')}</label><select data-cbsid="ACC002-S19" class="inp" id="st_ca"><option value="all"${onlyHeld ? '' : ' selected'}>${tx('All the firm’s clients')}</option><option value="assigned"${onlyHeld ? ' selected' : ''}>${tx('Only the clients they hold')}</option></select>`;
-}
-/** the "Where work goes" block of the Work section: its routing pane is filled in when the read lands */
-function workWhereHTML() {
-  return `<div style="border-top:1px solid var(--line);margin:13px 0 11px;padding-top:11px">
-        <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
-        <div id="wr_pane">${workRoutingHTML()}</div>
-      </div>`;
+  return `<label class="fl">${tx('Which clients staff can open')}</label><select data-cbsid="ACC002-S19" class="inp" id="st_ca"><option value="all"${s.client_access === 'assigned' ? '' : ' selected'}>${tx('All the firm’s clients')}</option><option value="assigned"${s.client_access === 'assigned' ? ' selected' : ''}>${tx('Only the clients they hold')}</option></select>`;
 }
 function paintSettings(s, _daOpts) {
   const node = document.getElementById('setbody');
   if (!node) return;
   /* fetched when the Work section is actually opened, and the pane repainted in place when it arrives -
      not the whole screen, which would throw away anything half-typed in the fields below it. */
-  if (setSec() === 'work' && !_WROUTE) {
-    workRoutingLoad().then(function () {
-      var element = document.getElementById('wr_pane');
-      if (element) element.innerHTML = workRoutingHTML();
-    });
-  }
+  if (setSec() === 'work' && !_WROUTE) workRoutingLoad().then(function () { var element = document.getElementById('wr_pane'); if (element) element.innerHTML = workRoutingHTML(); });
   {
     const k = setSec();
     /* ⚠️ scoped: everything from 'Task assignment' down is stored and not yet read by anything. 'Where work
@@ -9259,7 +9246,10 @@ function paintSettings(s, _daOpts) {
          * visit pay for a screen most of them are not opening. [[feedback-on-demand-loading]]
          */ ''
       }
-      ${workWhereHTML()}
+      <div style="border-top:1px solid var(--line);margin:13px 0 11px;padding-top:11px">
+        <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
+        <div id="wr_pane">${workRoutingHTML()}</div>
+      </div>
       ${notYetWork}
       <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select data-cbsid="ACC002-S16" class="inp" id="st_am">${opt(['pull', 'push', 'both'], s.assignment_model || 'both')}</select>
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input data-cbsid="ACC002-I25" class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks || 10)}">

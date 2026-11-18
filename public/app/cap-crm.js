@@ -1811,33 +1811,11 @@ function crmWatch(el, onChange) {
 }
 /** the follow-ups list's sort choices: Due · Party · Created, each a natural-order compare of the one field */
 function crmFuSorts() {
-  var by = function (f) {
-    return function (a, b) {
-      return String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
-    };
-  };
+  var by = function (f) { return function (a, b) { return String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' }); }; };
   return [
-    {
-      key: 'due',
-      label: tx('Due'),
-      cmp: by(function (f) {
-        return f.due_at || '';
-      })
-    },
-    {
-      key: 'party',
-      label: tx('Party'),
-      cmp: by(function (f) {
-        return f.party_name || '';
-      })
-    },
-    {
-      key: 'created',
-      label: tx('Created'),
-      cmp: by(function (f) {
-        return f.created_at || '';
-      })
-    }
+    { key: 'due', label: tx('Due'), cmp: by(function (f) { return f.due_at || ''; }) },
+    { key: 'party', label: tx('Party'), cmp: by(function (f) { return f.party_name || ''; }) },
+    { key: 'created', label: tx('Created'), cmp: by(function (f) { return f.created_at || ''; }) }
   ];
 }
 function crmFollowups(frame) {

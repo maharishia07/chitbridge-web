@@ -841,8 +841,7 @@
   }
   /** the shop's name for the header: the business the header read named, else the person's entity, else the session's, else "Your shop" */
   function shopNameOf(header, person, sess) {
-    var business = header && header.business;
-    return wordsOf(business && business.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
+    return wordsOf(header && header.business && header.business.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
   }
   function mount(el, o) {
     if (!el) return null;
@@ -868,7 +867,6 @@
     if (mode !== 'bar') el.classList.add(o.fit === 'pane' ? 'pane' : 'full');
     el.setAttribute('data-testid', 'cbshell');
     el.setAttribute('data-mode', mode);
-
     var shopName = function () { return shopNameOf(S.header, person, sess); };
 
     /* CB Sides: only on Home, only signed in, only if the page loaded sides.js (the same rule as the avatar, bell and kural) */

@@ -354,35 +354,23 @@
   function answerTaxMethods(opts, preview) {
     return {
       /** the person's tick: "yes, this is right" for a line only the bank's words proposed (B5-01) */
-      tick: function (key) {
-        return answerLine(opts, preview, key, function () {
-          preview.ticks[key] = true;
-        });
-      },
+      tick: function (key) { return answerLine(opts, preview, key, function () { preview.ticks[key] = true; }); },
       /** the person's word on the tax invoice for a line claiming a GST credit above the pack's threshold (B5-03): 'held' keeps the credit, 'none' books the whole amount to the expense */
-      invoice: function (key, answer) {
-        return answerLine(opts, preview, key, function () {
-          preview.invoice[key] = answer === 'held' ? 'held' : 'none';
-        });
-      },
+      invoice: function (key, answer) { return answerLine(opts, preview, key, function () { preview.invoice[key] = answer === 'held' ? 'held' : 'none'; }); },
       /** BB-04: the person's word on the tax on a card settlement's fee (RQ1, never defaulted): 'tax' claims it, anything else books the whole fee as a cost with no tax */
-      feeTax: function (key, answer) {
-        return answerLine(opts, preview, key, function () {
-          preview.feeTax[key] = answer === 'tax' ? 'tax' : 'none';
-        });
-      },
+      feeTax: function (key, answer) { return answerLine(opts, preview, key, function () { preview.feeTax[key] = answer === 'tax' ? 'tax' : 'none'; }); }
+    };
+  }
+  /** the loan answers (M-06): the interest typed from the lender's statement, the loans the host lists, and the loan picked for an instalment line */
+  function answerLoanMethods(opts, preview) {
+    return {
       /** M-06: the interest part of a loan repayment, typed by the owner from the lender's statement, in minor units; never computed or remembered; blank or not a whole number clears it (the line asks again) */
       interest: function (key, minor) {
         return answerLine(opts, preview, key, function () {
           if (minor === '' || minor == null || !(+minor >= 0) || Math.floor(+minor) !== +minor) delete preview.interest[key];
           else preview.interest[key] = +minor;
         });
-      }
-    };
-  }
-  /** the loan answers: which loan a repayment pays and the interest typed from the lender's statement (M-06) */
-  function answerLoanMethods(opts, preview) {
-    return {
+      },
       /** the loans the host reads (GET /books/loans): [{ ref, lender, opening_minor, outstanding_minor, currency }]; none when the host has no read (the demo) */
       loans: function () { return (opts.loans && opts.loans()) || []; },
       loanOf: function (key) { return preview.loan[key] || ''; },
@@ -399,16 +387,8 @@
   function answerMethods(opts, preview) {
     return Object.assign({}, answerTaxMethods(opts, preview), answerLoanMethods(opts, preview), {
       /** B5-02: pair this statement line with the books entry (by its id) it already is, or say it is new */
-      pair: function (key, entryId) {
-        return answerLine(opts, preview, key, function () {
-          preview.pairs[key] = entryId;
-        });
-      },
-      notMatch: function (key) {
-        return answerLine(opts, preview, key, function () {
-          preview.notMatch[key] = true;
-        });
-      }
+      pair: function (key, entryId) { return answerLine(opts, preview, key, function () { preview.pairs[key] = entryId; }); },
+      notMatch: function (key) { return answerLine(opts, preview, key, function () { preview.notMatch[key] = true; }); }
     });
   }
   /** what the person made of the months and the pairs this session: the pairs the host's band counts, and the locked months posted in the next open month (W15-85) */

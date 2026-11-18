@@ -154,21 +154,10 @@
   /** the Holds column of the people list: how many open things each person holds (the server's total, never counted here) */
   function holdsColumn() {
     return {
-      key: 'holds',
-      label: T('Holds'),
-      prio: 6,
-      w: 90,
-      num: true,
-      sort: 'holds',
-      cell: function (p) {
-        var item = holdsOf(p);
-        return item ? String(item.total) : '—';
-      },
-      value: function (p) {
-        var item = holdsOf(p);
-        return item ? item.total : 0;
-      }
-  };
+      key: 'holds', label: T('Holds'), prio: 6, w: 90, num: true, sort: 'holds',
+      cell: function (p) { var item = holdsOf(p); return item ? String(item.total) : '—'; },
+      value: function (p) { var item = holdsOf(p); return item ? item.total : 0; }
+    };
   }
   function holdsOf(p) {
     return (E.holds && E.holds[p.id]) || null;
@@ -491,10 +480,7 @@
   }
   /** the press on the Hand over all… row, when it may be used */
   function wireHandAll(node, q) {
-    if (handAllMay(node).ok !== false)
-      q('emp_handall').onclick = function () {
-        handAll(node);
-      };
+    if (handAllMay(node).ok !== false) q('emp_handall').onclick = function () { handAll(node); };
   }
   /** shown always; greyed with the server's own sentence when this seat may not read what people hold (the hand-over itself is refused by the server too) */
   function handAllMay(p) {

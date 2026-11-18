@@ -3950,35 +3950,13 @@ function bkLtPayOpenParty() {
 }
 /** a click on one of the pane's own buttons (data-lt): clear the find box · fold / unfold the tree · back to the tree · back to where the person came from · Statement · Pay */
 function bkLtClickAction(action) {
-  if (action === 'clear') {
-    bkLtClearFind();
-    return;
-  }
-  if (action === 'act-on' || action === 'act-all') {
-    BK.lt.all = action === 'act-all';
-    bkLtTreePaint();
-    return;
-  }
-  if (action === 'stepback' || action === 'stepnext') {
-    bkLgStep(action === 'stepback' ? -1 : 1);
-    return;
-  }
-  if (action === 'fold' || action === 'unfold') {
-    bkLtFoldSet(action === 'fold');
-    return;
-  }
-  if (action === 'back') {
-    bkLtBack();
-    return;
-  }
-  if (action === 'backto') {
-    bkLtBackToTab();
-    return;
-  }
-  if (action === 'statement') {
-    bkLgStatement();
-    return;
-  }
+  if (action === 'clear') { bkLtClearFind(); return; }
+  if (action === 'act-on' || action === 'act-all') { BK.lt.all = action === 'act-all'; bkLtTreePaint(); return; }
+  if (action === 'stepback' || action === 'stepnext') { bkLgStep(action === 'stepback' ? -1 : 1); return; }
+  if (action === 'fold' || action === 'unfold') { bkLtFoldSet(action === 'fold'); return; }
+  if (action === 'back') { bkLtBack(); return; }
+  if (action === 'backto') { bkLtBackToTab(); return; }
+  if (action === 'statement') { bkLgStatement(); return; }
   if (action === 'pay') bkLtPayOpenParty();
 }
 /** keys in the tree's find box: Escape clears it, ArrowDown steps into the tree; true when the key was handled */

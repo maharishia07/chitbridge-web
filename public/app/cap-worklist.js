@@ -1040,9 +1040,7 @@ async function wlLine(line_id) {
  * the other two.
  */
 /* the identity attributes of a built control: its register code, plus its mount when the code is a library component (UX-137 w2) */
-function wlStamp(code) {
-  return code ? ' data-cbsid="' + code + '"' + (/^CMP/.test(code) ? ' data-cbmount="RAL002-U1' + code.slice(-2) + '"' : '') : '';
-}
+function wlStamp(code) { return code ? ' data-cbsid="' + code + '"' + (/^CMP/.test(code) ? ' data-cbmount="RAL002-U1' + code.slice(-2) + '"' : '') : ''; }
 /** one Worklist button: label, test id, the inline call it runs, whether it is the primary action, and its register code (stampCode) */
 function wlBtn(label, testid, call, primary, stampCode) {
   return (
