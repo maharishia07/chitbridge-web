@@ -1,0 +1,29 @@
+{
+ "_": "base faults of the fault probe (e2e/walk-probe-faults.cjs): a fault not listed here fails the walk. May only shrink. All four are the fixture api answering an object/nothing where the page expects a list or its lab data: they vanish with PROBE_FALLBACK=array (three of four) and are identical on main b47ce394 (probe 17 Nov).",
+ "faults": [
+  {
+   "key": "console|product-lab.html|Cannot read properties of undefined (reading '#')",
+   "kind": "console",
+   "file": "product-lab.html",
+   "msg": "Cannot read properties of undefined (reading '#')"
+  },
+  {
+   "key": "swallowed|app.html|list.map is not a function",
+   "kind": "swallowed",
+   "file": "app.html",
+   "msg": "list.map is not a function"
+  },
+  {
+   "key": "swallowed|cap-admin.js|(inb || []).concat is not a function",
+   "kind": "swallowed",
+   "file": "cap-admin.js",
+   "msg": "(inb || []).concat is not a function"
+  },
+  {
+   "key": "swallowed|cap-categories.js|(UI.prods || []).forEach is not a function",
+   "kind": "swallowed",
+   "file": "cap-categories.js",
+   "msg": "(UI.prods || []).forEach is not a function"
+  }
+ ]
+}
