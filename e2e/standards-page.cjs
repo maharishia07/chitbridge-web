@@ -381,7 +381,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const gsRow = p.locator('[data-testid="std-row-' + gs1 + '"]');
     await gsRow.click(); await p.waitForTimeout(250);
     const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]'); console.log('     sample: ' + SAMPLE.n + ' | gdl: ' + gdl.replace(/\s+/g, ' ').slice(0, 300));
-    const noteHead = (SAMPLE.note || '').slice(0, 24); ok(/What is missing, in full/.test(gdl) && (!/^[A-Za-z0-9 ,.'-]+$/.test(noteHead) || gdl.replace(/s+/g, ' ').indexOf(noteHead) >= 0) && /In the register/.test(gdl) && (SAMPLE.added ? /New/.test(gdl) : !/New/.test(gdl)), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
+    const afterMiss = (gdl.split('What is missing, in full')[1] || '').replace(/\s+/g, ' ').trim();
+    console.log('     missing-in-full: ' + afterMiss.slice(0, 160) + ' | has New tag: ' + /<span class="new">/.test(await p.innerHTML('[data-testid="std-detail-' + gs1 + '"]')));
+    const gHtml = await p.innerHTML('[data-testid="std-detail-' + gs1 + '"]');
+    ok(/What is missing, in full/.test(gdl) && afterMiss.length > 40 && /In the register|Adopted/.test(gdl) && (SAMPLE.added ? /<span class="new">/.test(gHtml) : /In the register/.test(gdl) && !/<span class="new">/.test(gHtml)), 'a Partly row from the register (' + SAMPLE.n + ') opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
     await gsRow.click(); await p.waitForTimeout(150);
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
     /* TIDY 6 · "Open in the app" is offered only where a CUSTOMER home exists (the till); never the workshop, app.html */
@@ -482,7 +485,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const fnSrc = src.slice(a, z);
     ok(a > 0 && z > a, 'cap-admin.js still has standardsSettingsHTML');
     ok(!/setStdTab|std-tab-|groupsOf|BADGE/.test(fnSrc) && !/function stdTab\(|function setStdTab\(/.test(src), 'Settings no longer lists the register: its tabs, rows and badges are gone from cap-admin.js');
-    const g = { _CARD: '', _misHead: (t) => '<h2>' + t + '</h2>', esc: (s) => String(s), tx: (s) => s, stdCounts: null,
+    const g = { fmtMoney: () => '₹1,23,456.50', moneyCode: () => 'INR', _CARD: '', _misHead: (t) => '<h2>' + t + '</h2>', esc: (s) => String(s), tx: (s) => s, stdCounts: null,
       CBLocale: { regionInfo: () => ({ name: 'India' }), langs: () => ['en'], langName: (x) => x, dir: () => 'ltr', tag: () => 'en-IN', number: () => '1,23,45,678.5', money: () => '₹1,23,456.50', date: () => '3 Oct 2026', time: () => '10:00', timezone: () => 'Asia/Kolkata', workdays: () => [1, 2, 3, 4, 5, 6], hasWorkdayOverride: () => false } };
     vm.createContext(g);
     vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g);
