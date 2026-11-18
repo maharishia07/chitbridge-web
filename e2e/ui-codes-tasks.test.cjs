@@ -62,9 +62,9 @@ check(src['cap-dispute.js'].indexOf('root.CBTasks.actRow(id, label, verdict, ext
 /** actRow itself: drawn with stubs, the code is on the button and the rest of the button is what it was */
 const body = src['cap-tasks.js'].slice(src['cap-tasks.js'].indexOf('function actRow('), src['cap-tasks.js'].indexOf('/* ── the list (O2C step 3'));
 const actRow = new Function('esc', 'sayOf', body + '; return actRow;')((s) => String(s), (v) => (v && v.say) || '');
-const okRow = actRow('tk_x1', 'Assign', { ok: true }, '', '', 'TSK003-B06');
-check(okRow.indexOf('<button data-cbsid="TSK003-B06" type="button" class="act quiet" id="tk_x1" data-testid="tk_x1"') > 0, 'an allowed action: code, class, id and testid as drawn before');
-const noRow = actRow('tk_x2', 'Assign', { ok: false, say: 'Not yours' }, '', '', 'TSK003-B06');
+const okRow = actRow('tk_x1', 'Assign', { ok: true }, '', '', 'TSK003-B07');
+check(okRow.indexOf('<button data-cbsid="TSK003-B07" type="button" class="act quiet" id="tk_x1" data-testid="tk_x1"') > 0, 'an allowed action: code, class, id and testid as drawn before');
+const noRow = actRow('tk_x2', 'Assign', { ok: false, say: 'Not yours' }, '', '', 'TSK003-B07');
 check(/aria-disabled="true" disabled title="Not yours"/.test(noRow) && noRow.indexOf('data-testid="tk_x2-why"') > 0, 'a refused action: still greyed, the why still shown');
 
 /** the register */
