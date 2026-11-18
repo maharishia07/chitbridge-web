@@ -96,11 +96,13 @@
     var pick = needs[0] || cards.filter(function (c) { return rank(c) === 1 && factOf(c); })[0];
     if (!pick) {
       var first = cards[0];
-      return { n: '', w: first ? X('Set up') + ' ' + nameOf(first) : '', tone: 'q', amber: 0 };
+      return { n: '', w: first ? X('Set up') + ' ›' : '', full: first ? X('Set up') + ' ' + nameOf(first) : '', tone: 'q', amber: 0 };
     }
     var t = factOf(pick), m = /^(\S*\d\S*)\s*(.*)$/.exec(t);
     var num = m && !/^0\b/.test(m[1]) ? m : null;
-    return { n: num ? num[1] : '', w: num ? num[2] : t || nameOf(pick), tone: needs.length ? 'dn' : '', amber: needs.length };
+    /* closed row = ONE figure + ONE word (Fable review §3): the figure, then the first two words of what it counts; the whole fact rides the title */
+    var rest = num ? num[2].split(' · ')[0].split(/ +/).slice(0, 2).join(' ') : t || nameOf(pick);
+    return { n: num ? num[1] : '', w: rest, full: t, tone: needs.length ? 'dn' : '', amber: needs.length };
   }
 
   function mount(shell, host) {
@@ -215,6 +217,7 @@
       if (!count) return;
       var h = headline(p), v = item.querySelector('.ix-v'), a = item.querySelector('.ix-a');
       v.className = 'ix-v ' + h.tone;
+      if (h.full) v.title = h.full; else v.removeAttribute('title');
       v.innerHTML = (h.n ? '<b>' + esc(h.n) + '</b> ' : '') + '<span>' + esc(h.w) + '</span>';
       a.hidden = !h.amber;
       if (h.amber) {
@@ -251,10 +254,10 @@
       } else if (!itemsList.length) {
         html = '<span class="df-t q">' + esc(X('Nothing needs you')) + '</span>';
       } else {
-        var shownItems = itemsList.slice(0, 3);
+        var cap = phone.matches ? 1 : 3, shownItems = itemsList.slice(0, cap);
         html = '<b class="df-n" data-testid="ix2-do-count">' + itemsList.length + '</b><span class="df-t">' + esc(X('Do first')) + '</span><span class="df-i">' +
           shownItems.map(function (i) { return '<a href="' + esc(i.h || '#') + '">' + esc(i.t) + ' ›</a>'; }).join('') + '</span>' +
-          (itemsList.length > 3 ? '<button type="button" class="ix-more" data-more="1" data-cbsid="HOM001-B23">+' + (itemsList.length - 3) + '</button>' : '');
+          (itemsList.length > cap ? '<button type="button" class="ix-more" data-more="1" data-cbsid="HOM001-B23">+' + (itemsList.length - cap) + '</button>' : '');
       }
       if (df.getAttribute('data-sig') !== html) {
         df.setAttribute('data-sig', html);

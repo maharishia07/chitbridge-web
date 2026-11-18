@@ -64,7 +64,7 @@ html.bp-hold [data-testid="practice-loading"]{display:none}
 .ix-item{display:flex;flex-direction:column;min-height:0;background:var(--card);border:1px solid var(--line);border-radius:12px}
 .ix-item[hidden]{display:none}
 .ix-item.open{flex:1 1 auto;border-color:var(--green)}
-.cbsh .ix-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;min-height:46px;padding:0 14px;cursor:pointer;flex:none;width:100%;border-radius:12px}
+.cbsh .ix-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;cursor:pointer;flex:none;width:100%;border-radius:12px}
 .cbsh .ix-row:hover{background:var(--panel)}.cbsh .ix-row:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
 .ix-g{width:30px;height:30px;border-radius:9px;background:var(--panel);display:grid;place-items:center;font-size:15px;color:var(--muted);flex:none}
 .ix-n{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.015em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -118,10 +118,16 @@ html.bp-hold [data-testid="practice-loading"]{display:none}
   .ix-on .cbsh-inner{padding:6px 10px 4px}
   .ix-foot{flex-wrap:wrap}.ix-sw{flex:1 1 100%;text-align:center}.cbsh .ix-fw{white-space:nowrap}
   .df{min-height:52px;padding:6px 10px}.df-n{font-size:24px}
-  .ix{gap:4px}.ix-row{min-height:44px;gap:10px;padding:0 10px}.ix-n{font-size:16px}.ix-v{max-width:50%}
-  .ix-panel{padding:2px 8px 6px}.ix-fw{padding:0 6px}.ix-fs .cbsh-tools button{font-size:11px}
+  .ix{gap:4px}.ix-row{min-height:52px;gap:10px;padding:0 10px}.ix-n{font-size:16px}.ix-v{max-width:50%}
+  .ix-panel{padding:2px 8px 6px}.ix-fw{padding:0 6px}
+  .df-i{flex-wrap:nowrap}.df-i a{flex:0 1 auto;min-width:0}
+  .ix-panel .cbsh-box .facts>.f:has(+.more-n),.ix-panel .cbsh-box .facts>.f:first-child:not(:only-child){display:block!important}   /* the phone shell hides the first fact for its own .more list, which a row never draws: show the first fact */.ix-fs .cbsh-tools button{font-size:11px}
   .al{flex-wrap:wrap} .al .fix{margin-left:33px}
 }
+/* a firm's Home is its client list (Fable review §3, "Firm vs shop"): no Do first, no pillar rows - the list fills the page and scrolls inside itself; the foot stays (its Setup) */
+html.bp-firm .df,html.bp-firm .ix-list,html.bp-firm .ix-fw[data-pillar="labs"]{display:none}
+html.bp-firm.ix-on .cbsh-areas,html.bp-firm .ix{flex:none}
+html.ix-on #bp_practice{flex:1 1 auto;min-height:0;overflow:auto;margin:0 0 6px}
 </style>
 
 </head>
