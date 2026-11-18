@@ -486,7 +486,7 @@ async function route(S, r) {
     ok(S.fuPatch && S.fuPatch.assignee_user_id === 'ent-M', 'the picker (Me) sends the signed-in ID (ent-M), never their name: ' + JSON.stringify(S.fuPatch));
     await p.click('[data-testid="crm-fu-fu-04"] [data-caret]');
     ok(/No longer your party/.test(await text(p, '[data-testid="crm-fu-fu-09"]')) && await p.locator('[data-testid="crm-fu-del-fu-09"]').count() === 1 && await p.locator('[data-testid="crm-fu-done-fu-09"]').count() === 0, 'party removed → greyed "No longer your party" with Delete');
-    const heads = await p.$$eval('#crm_fu .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
+    const heads = await p.$$eval('#crm_fu .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()).filter(Boolean)); /* the ticks column has no name */
     ok(JSON.stringify(heads) === JSON.stringify(['DUE', 'WHAT', 'PARTY', 'HELD BY']), 'four columns (ASSIGN-NET adds Held by): ' + heads.join(' · '));
     const hd = await p.evaluate(() => { const l = document.querySelector('#crm_fu .cbl-list').getBoundingClientRect().top - document.querySelector('#crm_fu').getBoundingClientRect().top; return { l, h: innerHeight }; });
     ok(hd.l <= 0.2 * hd.h, 'the follow-ups head is ' + Math.round(hd.l) + ' px (' + Math.round(100 * hd.l / hd.h) + '%) — within 20%');
