@@ -1,7 +1,7 @@
 /**
  * actor-hat.js — the actor's hat and the server's two "may hold work" answers, read once when the list from GET /api/actors is mapped.
  *
- * OWNS      hatAssignable (may this person hold a task) · jobAssignable (may this person hold a job chit) · actorHatFields (the hat and both flags of one mapped actor)
+ * OWNS      hatAssignable (may this person hold a task) · jobAssignable (may this person hold a job chit) · actorHatFields (the hat and both flags of one mapped actor) · assignSlotHTML (the result-line slot of the assign bar, or '')
  * CALLED BY public/app.html (script tag in the first script line; mapApiActor, the assign pickers) · public/app/cap-admin.js · cap-workforce.js · cap-connector.js (hatAssignable)
  * FLOW      GET /api/actors row → actorHatFields(row) → { hat, assignable, jobAssignable } on the mapped actor → hatAssignable(actor) / jobAssignable(actor) answer from it
  * CARD      01-rail-core-the-chit/assign
@@ -19,6 +19,10 @@ function hatAssignable(person) {
 /** may this person hold a JOB chit (a client of the firm)? the server's answer; a read-only seat may */
 function jobAssignable(person) {
   return !!(person && typeof person === 'object' && person.jobAssignable === true);
+}
+/** the slot CBAssign draws its one result line into ('' while assign-bar.js is not loaded) */
+function assignSlotHTML() {
+  return window.CBAssign ? window.CBAssign.slotHTML() : '';
 }
 /** the hat and the server's two flags of one api row, in the shape mapApiActor gives every actor */
 function actorHatFields(row) {

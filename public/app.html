@@ -6535,7 +6535,7 @@ function _renderApp() {
     <div class="main">
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
-  </div></div><div id="lbhost"></div><div id="modalhost"></div><div style="position:fixed;inset-inline:16px;inset-block-end:16px;z-index:40;pointer-events:none"><div style="pointer-events:auto;max-width:520px;margin-inline:auto">${window.CBAssign ? CBAssign.slotHTML() : ''}</div></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
+  </div></div><div id="lbhost"></div><div id="modalhost"></div><div style="position:fixed;inset-inline:16px;inset-block-end:16px;z-index:40;pointer-events:none"><div style="pointer-events:auto;max-width:520px;margin-inline:auto">${assignSlotHTML()}</div></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
   avatarMount(role, isEntityUser); UI._modalOpener = null; /* the rebuilt #modalhost is empty, so a remembered opener is stale (rememberModalOpener). The avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
   /**
