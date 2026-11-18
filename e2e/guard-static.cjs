@@ -573,8 +573,12 @@ console.log('\n14 · direction is logical, not physical (RTL-ready)');
       if (n) bad[name] = n;
     });
   const total = Object.values(bad).reduce((a, b) => a + b, 0);
-  if (total) warn(total + ' physical direction properties — these do not mirror in RTL: '
+  /* RATCHET (STD 18 Nov 2026, css-logical): the count may only fall. 59 measured on 18 Nov (this check's scope: app.html + app/cap-*.js etc.). Lower PHYS_MAX when you convert some. */
+  const PHYS_MAX = 59;
+  if (total > PHYS_MAX) fail(total + ' physical direction properties, ' + PHYS_MAX + ' allowed (the count may only fall) — use margin-inline-start/end, padding-inline-*, text-align:start/end: '
     + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
+  else if (total) { warn(total + ' physical direction properties (ratchet ' + PHYS_MAX + (total < PHYS_MAX ? ' — lower PHYS_MAX to ' + total : '') + ') — these do not mirror in RTL: '
+    + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', ')); pass('physical direction properties held at or under the ratchet (' + total + '/' + PHYS_MAX + ')'); }
   else pass('no margin/padding/border-left|right or text-align:left|right outside comments');
 }
 /**
