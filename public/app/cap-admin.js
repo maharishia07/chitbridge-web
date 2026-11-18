@@ -9256,6 +9256,7 @@ function paintSettings(s, _daOpts) {
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input data-cbsid="ACC002-I25" class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks || 10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input data-cbsid="ACC002-I26" type="checkbox" id="st_av" ${s.all_task_visible ? 'checked' : ''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input data-cbsid="ACC002-I27" type="checkbox" id="st_ar" ${s.auto_return_on_short_break ? 'checked' : ''}> ${tx('Auto-return tasks on short break')}</label>
+      <label class="fl">${tx('Which clients staff can open')}</label><select data-cbsid="ACC002-S19" class="inp" id="st_ca"><option value="all"${s.client_access === 'assigned' ? '' : ' selected'}>${tx('All the firm’s clients')}</option><option value="assigned"${s.client_access === 'assigned' ? ' selected' : ''}>${tx('Only the clients they hold')}</option></select>
       <div class="err" id="st_err"></div><button data-cbsid="ACC002-B58" class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>` +
         /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
          set UI._namingOpen to expand them, and pointed at NAMING — a table deleted earlier today with its only
@@ -9318,7 +9319,8 @@ async function saveSettings() {
         assignment_model: val('st_am'),
         default_max_tasks: +val('st_mt') || 10,
         all_task_visible: document.getElementById('st_av').checked,
-        auto_return_on_short_break: document.getElementById('st_ar').checked
+        auto_return_on_short_break: document.getElementById('st_ar').checked,
+        client_access: val('st_ca') /* A1: the firm switch "staff see only the clients they hold" (api PUT /actors/settings) */
       }
     });
     toast(MSG.settingsSaved());

@@ -25,18 +25,9 @@
   function session() {
     try { return JSON.parse(root.localStorage.getItem('cb_sess') || 'null') || {}; } catch (failure) { if (root.cbQuiet) root.cbQuiet('assign:sess', failure); return {}; }
   }
-  /** the signed token's own payload (a co-assist's hat rides in it); '' when unreadable */
-  function hatOfToken(token) {
-    try {
-      var payload = JSON.parse(root.atob(String(token || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return String(payload.hat || payload.actor_hat || '');
-    } catch (failure) { if (root.cbQuiet) root.cbQuiet('assign:hat', failure); return ''; }
-  }
-  /** SHOW only: the owner's own login, or a person whose hat is manager. `said` (a server verdict, when the answer carries one) wins. Never a permission: the api refuses a call that is not allowed. */
+  /** SHOW only, on the SERVER's verdict (`may_assign` on the practice answer and on GET /api/actors; A2, 18 Nov): no token is read. Not a permission: the api refuses a call that is not allowed. Nothing said yet = not shown. */
   assignApi.showsBar = function (said) {
-    if (typeof said === 'boolean') return said;
-    var s = session();
-    return s.role === 'entity' || (s.role === 'actor' && hatOfToken(s.token).toLowerCase() === 'manager');
+    return said === true;
   };
   /** the holder column: the names the server sent, or "Unassigned" (an empty list); a row with no `holders` key at all (the firm's switch is off) shows nothing */
   assignApi.heldBy = function (row) {
@@ -116,14 +107,14 @@
         dialog.setAttribute('data-testid', 'assign-picker');
         dialog.setAttribute('data-cbmount', 'HOM001-U02');
         dialog.setAttribute('aria-label', tr(opts.title));
-        var options = roster.list.map(function (p) { return '<option value="' + root.esc(p.id) + '">' + root.esc(p.name) + '</option>'; }).join('');
+        var options = '<option value="" selected disabled>' + root.esc(tr('Choose a person')) + '</option>' + roster.list.map(function (p) { return '<option value="' + root.esc(p.id) + '">' + root.esc(p.name) + '</option>'; }).join('');
         dialog.innerHTML =
           '<div class="as-hd">' + root.esc(tr(opts.title)) + '</div><div class="as-body">' +
           (roster.error ? '<div class="as-err" data-testid="assign-picker-err">' + root.esc(roster.error) + '</div>' : '') +
           '<label>' + root.esc(tr('Person')) + '<select data-cbsid="CMP056-S01" data-cbname="select" data-cbmount="HOM001-U02" data-testid="assign-person" aria-label="' + root.esc(tr('Person')) + '">' + options + '</select></label>' +
           (opts.withNote ? '<label>' + root.esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="HOM001-U02" data-testid="assign-note" maxlength="200" type="text"></label>' : '') +
           '</div><div class="as-ft"><button type="button" data-cbsid="CMP003-B01" data-cbname="cancel" data-cbmount="HOM001-U02" data-testid="assign-cancel">' + root.esc(tr('Cancel')) + '</button>' +
-          '<button type="button" class="pri" data-cbsid="CMP057-B01" data-cbname="command" data-cbmount="HOM001-U02" data-testid="assign-go"' + (roster.list.length ? '' : ' disabled') + '>' + root.esc(tr(opts.confirmLabel)) + '</button></div>';
+          '<button type="button" class="pri" data-cbsid="CMP057-B01" data-cbname="command" data-cbmount="HOM001-U02" data-testid="assign-go"' + ' disabled>' + root.esc(tr(opts.confirmLabel)) + '</button></div>';
         function finish(value) { if (answered) return; answered = true; done(value); if (dialog.open) dialog.close(); }
         dialog.addEventListener('click', function (ev) {
           var b = ev.target.closest && ev.target.closest('button');
@@ -131,6 +122,7 @@
           if (b.getAttribute('data-testid') === 'assign-cancel') return finish(null);
           if (b.getAttribute('data-testid') === 'assign-go') { var note = dialog.querySelector('[data-testid="assign-note"]'); finish({ id: dialog.querySelector('select').value, note: note ? note.value.trim() : '' }); }
         });
+        dialog.querySelector('select').addEventListener('change', function (ev) { dialog.querySelector('[data-testid="assign-go"]').disabled = !ev.target.value; });
         dialog.addEventListener('close', function () { if (opener && opener.focus) opener.focus(); dialog.remove(); finish(null); });
         doc.body.appendChild(dialog);
         dialog.showModal();

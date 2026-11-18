@@ -62,13 +62,11 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   const owner = ownerWindow();
   const manager = fakeWindow({ role: 'actor', token: tokenWith({ hat: 'Manager' }) }, []);
   const assistant = fakeWindow({ role: 'actor', token: tokenWith({ hat: 'act' }) }, []);
-  const unreadable = fakeWindow({ role: 'actor', token: 'not-a-token' }, []);
-  check(owner.win.CBAssign.showsBar() === true, 'the owner sees the bar');
-  check(manager.win.CBAssign.showsBar() === true, 'a person whose hat is manager sees the bar');
-  check(assistant.win.CBAssign.showsBar() === false, 'an assistant does not see the bar');
-  check(unreadable.win.CBAssign.showsBar() === false && unreadable.quiet.length === 1, 'a token that could not be read hides the bar and says so to cbQuiet, not silently');
-  check(assistant.win.CBAssign.showsBar(true) === true && owner.win.CBAssign.showsBar(false) === false, "the server's verdict, when the answer carries one, wins over the hint");
-  check(assistant.win.CBAssign.bulk({}).length === 0 && owner.win.CBAssign.bulk({ plug: 'p' }).length === 4, 'bulk gives four buttons to the owner and none to an assistant');
+  /* A2 (18 Nov): the bar is shown on the SERVER's verdict only; a token (hat Manager included) and a role are never read */
+  check(owner.win.CBAssign.showsBar() === false && manager.win.CBAssign.showsBar() === false && assistant.win.CBAssign.showsBar() === false, 'with no server verdict nobody is shown the bar: the token and the role say nothing');
+  check(manager.win.CBAssign.showsBar(true) === true && owner.win.CBAssign.showsBar(false) === false && assistant.win.CBAssign.showsBar(true) === true, "the server's verdict alone decides (a manager the server approves sees it, an owner it refuses does not)");
+  check(manager.quiet.length === 0, 'no token is read, so nothing is logged');
+  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).length === 4, 'bulk gives four buttons when the server said yes and none when it said nothing');
 
   check(owner.win.CBAssign.heldBy({ holders: [{ name: 'Anna <Lee>' }, { name: 'Ben' }] }) === 'Anna &lt;Lee&gt;, Ben', 'Held by lists the names the server sent, escaped');
   check(owner.win.CBAssign.heldBy({ holders: [] }) === '<span class="as-none">T(Unassigned)</span>', 'an empty holders list reads Unassigned through the string layer (tx)');
@@ -77,7 +75,7 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   check(owner.win.CBAssign.hasHolders([{}, { holders: [] }]) === true && owner.win.CBAssign.hasHolders([{}]) === false, 'hasHolders is true only when a row carries the key');
 
   const reloads = [];
-  const opts = { plug: 'p', subjectOf: (row) => row.id, roleOf: (row) => row.role, reload: () => reloads.push(1) };
+  const opts = { said: true, plug: 'p', subjectOf: (row) => row.id, roleOf: (row) => row.role, reload: () => reloads.push(1) };
   const refused = ownerWindow([reply(false, { detail: SERVER_SENTENCE })]);
   poolOf(opts, refused).run([heldRow]);
   await settle();
@@ -123,4 +121,10 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
 
   console.log(failures ? '\nFAIL ' + failures : '\nall ok');
   process.exit(failures ? 1 : 0);
+})();
+/* A2 + A5 (18 Nov), on the source itself: no token read, and the person picker starts on a prompt with Assign off */
+(function sourceChecks() {
+  const src = text(BAR);
+  check(!/atob|payload\.hat|hatOfToken/.test(src), 'assign-bar.js reads no token and no hat');
+  check(/Choose a person/.test(src) && /assign-go[^]{0,260}' disabled>'/.test(src), 'the picker pre-chooses nobody: a prompt option, and the Assign button off until a person is picked');
 })();

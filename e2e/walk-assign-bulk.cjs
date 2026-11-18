@@ -44,7 +44,7 @@ function standIn() {
   });
   s.practice = () => {
     const rows = s.assistant ? [1, 2, 3, 4, 5].map((n) => { s.holder.set(id(n), { actor_id: 'self', name: 'Dev Assistant' }); return rowOf(n); }) : Array.from({ length: 150 }, (_, i) => rowOf(i + 1));
-    return { rule: 'r', words: WORDS, today: '2026-11-17', band: { bands: [{ key: 'pipeline', first: true, tiles: [] }], pipeline: [] }, clients: rows, total: rows.length, page: 1, limit: 200, has_more: false, truncated: false, own_trade: false };
+    return { rule: 'r', words: WORDS, today: '2026-11-17', band: { bands: [{ key: 'pipeline', first: true, tiles: [] }], pipeline: [] }, clients: rows, may_assign: !s.assistant, total: rows.length, page: 1, limit: 200, has_more: false, truncated: false, own_trade: false };
   };
   s.assignBulk = (body) => {
     if (s.refuse) return { status: 403, body: { type: 'about:blank', title: 'Not permitted', status: 403, code: 'CHIT_NOT_PERMITTED', detail: REFUSAL, may: false, why: REFUSAL, message: REFUSAL } };
