@@ -1306,10 +1306,22 @@
   }
 
   /** the ⚑ Dispute button: in the sheet's own section where the page has one, else the page's form, else Tasks › Disputes on this chit (RAIL-86) */
-  function raiseDispute(id) {
+  function raiseDispute(id, retried) {
     /* T3: where the dispute capability is on the page (CBDispute), Raise opens IN the sheet's own dispute section — greyed there with the server's why */
     if (root.CBDispute && root.CBDispute.sheet && CS.disp && CS.disp.id === id) {
       root.CBDispute.raise();
+      return;
+    }
+    /* RAIL-next: the workshop loads its dispute capability lazily — load it on demand through the page's own ensureCap, then raise once (a failed load falls to the Tasks link below) */
+    if (typeof quickDispute !== 'function' && typeof ensureCap === 'function' && !retried) {
+      ensureCap('dispute').then(
+        function () {
+          raiseDispute(id, true);
+        },
+        function () {
+          raiseDispute(id, true);
+        }
+      );
       return;
     }
     /* the full page's own dispute form; it opens over the app (not over the sheet), and puts the sheet back when it is raised */
