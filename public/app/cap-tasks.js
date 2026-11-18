@@ -919,21 +919,6 @@
     );
   }
 
-  function loadPeople() {
-    if (board.people) return Promise.resolve(board.people);
-    return call('people').then(
-      function (reply) {
-        board.people = ((reply && reply.people) || []).filter(function (item) {
-          return item.state !== 'off';
-        });
-        return board.people;
-      },
-      function () {
-        board.people = [];
-        return board.people;
-      }
-    );
-  }
   /**
    * ASSIGN-W3 · L7: who holds the whole task (line null) or one line is the ONE CBAssign chip (HOM001-B20): press it, pick a person; the server's verdict (assign_task / assign_line) decides whether it is a control.
    * The sheet is a modal dialog, so it closes first (opts.beforePick) and the list repaints with what the server now holds; a refused action is drawn greyed with the server's sentence, never hidden.
