@@ -445,7 +445,7 @@
       .concat(pinned(I));
   }
   function minW(I, c) {
-    return Math.max(64, c.minw || 0 /* a column that declares its floor keeps it (REP-73: the Status heading wrapped) */, String(c.label || c.key).length * 9 + 40 + (c.hfilter ? 50 : 0) /* the sort arrow and the header filter caret sit beside the label: a short heading (Due) wrapped one letter per line */);
+    return Math.max(64, c.minw || 0 /* a column that declares its floor keeps it (REP-73: the Status heading wrapped) */, String(c.label || c.key).length * 9 + 40, c.hfilter ? 100 : 0 /* the filter caret and sort arrow need ~100 px in all: counted INTO the natural width (9 px a letter already leaves slack), not added on top, so a long heading (On the network) keeps its 166 and a short one (Due) still never wraps */);
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
