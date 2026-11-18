@@ -743,14 +743,21 @@
       );
     });
   }
-  /* More's rows: one open at a time; force = open it (a tap on an open row closes it) */
-  function openRow(shellEl, area, force) {
-    [].forEach.call(shellEl.querySelectorAll('.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup'), function (section) {
-      var isOpen = section.getAttribute('data-area') === area && (force || !section.classList.contains('open'));
-      section.classList.toggle('open', isOpen);
-      var rowButton = section.querySelector('.cbsh-row');
+  /* THE one way to open a row (one open at a time; force = open it, a tap on an open row closes it). The More page's three rows are the default shape;
+     index2's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
+  var MORE_ROWS = { items: '.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup', key: 'data-area', row: '.cbsh-row', panel: '' };
+  function openRow(scope, key, force, shape) {
+    var s = shape || MORE_ROWS, now = '';
+    [].forEach.call(scope.querySelectorAll(s.items), function (item) {
+      var isOpen = !!key && item.getAttribute(s.key) === key && (force || !item.classList.contains('open'));
+      item.classList.toggle('open', isOpen);
+      if (isOpen) now = key;
+      var rowButton = item.querySelector(s.row);
       if (rowButton) rowButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      var panel = s.panel && item.querySelector(s.panel);
+      if (panel) panel.hidden = !isOpen;
     });
+    return now;
   }
   /* a section's phone heading: Selling and Money are a title; Trade, Labs and Setup are the three ROWS of the More page (a tap opens the row's tiles) */
   function sectionHeadingHTML(area) {
@@ -1652,6 +1659,7 @@
     AREAS: AREAS.slice(),
     PHONE_TABS: PHONE_TABS.slice(),
     PHONE_MORE: PHONE_MORE.slice(),
-    sectionOf: sectionOf
+    sectionOf: sectionOf,
+    openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);

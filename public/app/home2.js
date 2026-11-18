@@ -101,6 +101,8 @@
     return { n: num ? num[1] : '', w: rest, full: t, tone: needs.length ? 'dn' : '', amber: needs.length };
   }
 
+  var ROW_SHAPE = { items: '.ix-item', key: 'data-pillar', row: '.ix-row', panel: '.ix-panel' };
+
   function mount(shell, host) {
     var m = shell.manifest && shell.manifest();
     var cfg = m && m.home2;
@@ -290,12 +292,7 @@
     }
     /* one open at a time (a second press closes it); the open row is remembered for this viewer */
     function open(id, keep) {
-      cfg.pillars.forEach(function (g) {
-        var item = items[g.id], on = g.id === id;
-        item.classList.toggle('open', on);
-        item.querySelector('.ix-row').setAttribute('aria-expanded', on ? 'true' : 'false');
-        item.querySelector('.ix-panel').hidden = !on;
-      });
+      root.CBShell.openRow(list, id, true, ROW_SHAPE); /* the shell's one way to open a row (shell.js openRow) */
       host.classList.toggle('has-open', !!id);
       if (!keep) lsSet(OPEN_KEY, id || '');
       if (id) fit(id);
