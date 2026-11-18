@@ -622,7 +622,7 @@ function apiFront(name, tillId) {
 
     /* ═══ THE NUMBERS ═══ */
     console.log('\n── ⭐⭐⭐ THE POSTINGS, TO THE PAISA ' + '─'.repeat(0));
-    const unbalanced = LEDGER.entries.filter((e) => !POSTING.balanced(e.lines, 'INR'));
+    const unbalanced = LEDGER.entries.filter((e) => !POSTING.balanced(e.lines, 'INR', { country: 'IN' }));
     let dr = 0, cr = 0; LEDGER.entries.forEach((e) => e.lines.forEach((l) => { dr += P(l.dr); cr += P(l.cr); }));
     say('every entry balances, debit = credit to the paisa', unbalanced.length === 0 && LEDGER.entries.length > 0, LEDGER.entries.length + ' entries · unbalanced ' + unbalanced.length);
     say('the whole day balances', dr === cr, 'Dr ₹' + R(dr) + ' = Cr ₹' + R(cr));
