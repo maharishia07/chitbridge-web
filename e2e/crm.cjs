@@ -129,6 +129,7 @@ async function route(S, r) {
     S.fuQueries = (S.fuQueries || []).concat([scope + '/' + (done ? 1 : 0)]);
     return J(r, 200, Object.assign(crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))), { may: crmApi.mayOf(r) }));
   }
+  if (p === '/api/actors' && m === 'GET') return J(r, 200, { actors: [{ actor_id: 'ent-M', display_name: 'Athi', assignable: true, open_load: 1 }, { actor_id: 'act-1', display_name: 'Divya', assignable: true, open_load: 2 }], total: 2, page: 1, limit: 100 });
   if (p === '/api/crm/followups' && m === 'POST') {
     if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CRM needs migration b276 — not run yet.' });
     S.fuAdded = body;
@@ -219,8 +220,6 @@ async function route(S, r) {
     ok(nm('P-0002') === 1, '… the screen draws ONE row for the party who is both customer and supplier');
     ok((await text(p, '[data-testid="crm-role-P-0002"]')).trim() === 'Both', 'that one row says Both in its Role column (customer and supplier)');
     ok(nm('P-0008') === 0 && !/Folded/.test(await text(p, '#crm_list')), 'the merged party (P-0008, merged_into P-0001) is never listed');
-    ok(await p.locator('[data-testid="crm-row-P-0003"] [data-testid="crm-conn-off"]').count() === 1 && await p.locator('[data-testid="crm-row-P-0001"] [data-testid="crm-conn-on"]').count() === 1 && await p.locator('[data-testid="crm-row-walkin-919876500021"] [data-testid="crm-conn-off"]').count() === 1,
-      'On the network column: P-0001 ✓ · P-0003 – · the walk-in –');
     ok((await text(p, '[data-testid="crm-role-P-0003"]')).trim() === 'Supplier' && (await text(p, '[data-testid="crm-role-P-0006"]')).trim() === 'Customer', 'Role column: P-0003 Supplier · P-0006 Customer');
     /* ONE LINE: a row is as tall as one line of cells, and no chip, tag or second line is stacked under the name */
     const oneLine = await p.evaluate(() => Array.from(document.querySelectorAll('#crm_list .cbl-row')).map((r) => ({ h: Math.round(r.getBoundingClientRect().height), l2: !!r.querySelector('.l2,.tag'), name: (r.querySelector('.nm') || {}).textContent })));
@@ -235,9 +234,10 @@ async function route(S, r) {
     ok(lateFu && /Late · \d/.test(lateFu.t) && lateFu.c !== cols2.get, 'an overdue follow-up shows red, says Late and carries its date (' + (lateFu && lateFu.t) + ')');
     const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     const headsClean = heads.map((h) => h.replace(/[▾●]/g, '').trim());
-    ok(JSON.stringify(headsClean) === JSON.stringify(['PARTY', 'ROLE', 'ON THE NETWORK', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns: ' + headsClean.join(' · ') + ' (last activity and next follow-up are always on the row)');
-    ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (adjustable columns)');
-    ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On the network carry their own filter in the column heading');
+    /* 1366: the list always fits its box, so the lowest-priority column (On the network) is left out for width (list-ctl fitWidths R47; walk-home C10 says the same); the wide block below checks the column itself */
+    ok(JSON.stringify(headsClean) === JSON.stringify(['PARTY', 'ROLE', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns at 1366: ' + headsClean.join(' · ') + ' (On the network is left out for width; last activity and next follow-up are always on the row)');
+    ok(await p.locator('#crm_list .cbl-rz').count() === 5, 'every column has its drag handle (adjustable columns)');
+    ok(await p.locator('#crm_list [data-hf="role"]').count() === 1, 'Role carries its own filter in the column heading');
     /* the frozen head: title row (shop · Home · avatar slot ride in it) + tools + column header ≤ 20% of 1366×768 */
     const hd = await p.evaluate(() => { const q = (s) => document.querySelector(s), r = (e) => e ? e.getBoundingClientRect() : { top: 0, bottom: 0 }; const list = q('#crm_list .cbl-list'); return { top: r(q('#crm_list')).top, rows: r(list).top, h: innerHeight, frame: r(q('[data-testid="shell-header"]')).bottom }; });
     ok((hd.rows - hd.top) <= 0.2 * hd.h, 'everything above the rows is ' + Math.round((hd.rows - hd.top)) + ' px of ' + hd.h + ' (' + Math.round(100 * (hd.rows - hd.top) / hd.h) + '%) — within 20% (the page\'s one action rides in the title row; the shop · Home · avatar are the frame\'s)');
@@ -329,6 +329,18 @@ async function route(S, r) {
     ok(/#\/party\/P-0003/.test(p.url()), 'a row opens its record at #/party/P-0003');
     /* INTEGRATION: the slot is no longer empty at run time - CBAvatar mounts there (the source still draws none; line above). The frozen check: it holds ONE CBAvatar control and nothing else. */
     ok(await p.evaluate(() => { const s = document.querySelector('[data-testid="shell-avatar"]'); return !!s && document.querySelectorAll('.cbav').length === 1 && s.querySelectorAll('[data-testid="avatar"],[data-testid="signin-door"]').length === 1; }), 'the frame\'s avatar slot holds ONE CBAvatar on the record');
+    await ctx.close();
+  }
+  /* ── 2b · HOME, wide: the On the network column has room ───────────────────────────────────────────────── */
+  {
+    const { ctx, p } = await open(standIn({ careless: true }), { viewport: { width: 1800, height: 900 } });
+    await homeReady(p);
+    ok(await p.locator('[data-testid="crm-row-P-0003"] [data-testid="crm-conn-off"]').count() === 1 && await p.locator('[data-testid="crm-row-P-0001"] [data-testid="crm-conn-on"]').count() === 1 && await p.locator('[data-testid="crm-row-walkin-919876500021"] [data-testid="crm-conn-off"]').count() === 1,
+      'On the network column (1800 wide): P-0001 ✓ · P-0003 – · the walk-in –');
+    const wide = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅▾●]/g, '').trim()));
+    ok(JSON.stringify(wide) === JSON.stringify(['PARTY', 'ROLE', 'ON THE NETWORK', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns when the width has room: ' + wide.join(' · '));
+    ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (6 at 1800)');
+    ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On the network carry their own filter in the column heading');
     await ctx.close();
   }
   /* ── 3 · THE RECORD ───────────────────────────────────────────────────────────────────────────────────────── */
@@ -468,11 +480,14 @@ async function route(S, r) {
     ok(S.fuQueries[0] === 'all/0', 'the owner\'s default is Everyone, open ones (?scope=all&done=0)');
     ok(/Late/.test(await text(p, '[data-testid="crm-fu-fu-01"]')) && await p.evaluate(() => !!document.querySelector('[data-testid="crm-fu-fu-01"] .late')), 'a late follow-up is red and says Late');
     await p.click('[data-testid="crm-fu-fu-04"] [data-caret]'); await p.waitForSelector('[data-testid="crm-fu-mini-when-fu-04"]');
-    ok(/Unassigned/.test(await text(p, '[data-testid="crm-fu-mini-when-fu-04"]')) && await p.locator('[data-testid="crm-fu-assign-fu-04"]').count() === 1, 'assignee left → "Unassigned" (in its mini-card) with Assign (on the row)'); S.fuPatch = null; await p.click('[data-testid="crm-fu-assign-fu-04"]'); for (let i = 0; i < 20 && !S.fuPatch; i++) await p.waitForTimeout(100); ok(S.fuPatch && S.fuPatch.assignee_user_id === 'ent-M', 'the Assign button sends the signed-in ID (ent-M), never their name: ' + JSON.stringify(S.fuPatch));
+    const chip4 = p.locator('[data-testid="crm-fu-fu-04"] [data-testid="assign-chip"]');
+    ok(/Unassigned/.test(await text(p, '[data-testid="crm-fu-mini-when-fu-04"]')) && await chip4.count() === 1 && /Assign to/.test(await chip4.innerText()), 'assignee left → "Unassigned" (in its mini-card) and the Held-by chip on the row says + Assign to… (ASSIGN-NET: the chip is the control, no Assign button)');
+    S.fuPatch = null; await chip4.click(); await p.waitForSelector('[data-as-pick="ent-M"]'); await p.click('[data-as-pick="ent-M"]'); for (let i = 0; i < 20 && !S.fuPatch; i++) await p.waitForTimeout(100);
+    ok(S.fuPatch && S.fuPatch.assignee_user_id === 'ent-M', 'the picker (Me) sends the signed-in ID (ent-M), never their name: ' + JSON.stringify(S.fuPatch));
     await p.click('[data-testid="crm-fu-fu-04"] [data-caret]');
     ok(/No longer your party/.test(await text(p, '[data-testid="crm-fu-fu-09"]')) && await p.locator('[data-testid="crm-fu-del-fu-09"]').count() === 1 && await p.locator('[data-testid="crm-fu-done-fu-09"]').count() === 0, 'party removed → greyed "No longer your party" with Delete');
     const heads = await p.$$eval('#crm_fu .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
-    ok(JSON.stringify(heads) === JSON.stringify(['DUE', 'WHAT', 'PARTY']), 'three columns: ' + heads.join(' · '));
+    ok(JSON.stringify(heads) === JSON.stringify(['DUE', 'WHAT', 'PARTY', 'HELD BY']), 'four columns (ASSIGN-NET adds Held by): ' + heads.join(' · '));
     const hd = await p.evaluate(() => { const l = document.querySelector('#crm_fu .cbl-list').getBoundingClientRect().top - document.querySelector('#crm_fu').getBoundingClientRect().top; return { l, h: innerHeight }; });
     ok(hd.l <= 0.2 * hd.h, 'the follow-ups head is ' + Math.round(hd.l) + ' px (' + Math.round(100 * hd.l / hd.h) + '%) — within 20%');
     await p.screenshot({ path: path.join(SHOTS, 'crm-followups-laptop.png') });
