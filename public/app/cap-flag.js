@@ -369,6 +369,7 @@
     sheet.armed = null; sheet.busy = false;
     sheet.dialog.className = 'fl-sheet';
     sheet.dialog.setAttribute('data-cbsid', 'CMP067-D01');
+    sheet.dialog.setAttribute('data-pop', 'POP214');
     sheet.dialog.setAttribute('data-testid', 'fl-sheet');
     sheet.dialog.setAttribute('aria-label', flagText(FLAG_WORDS.saved) + ': ' + sheet.title);
     /** the replies of one shared note (the firm's own thread, never the client's): what the server says, its reply right with its sentence, and a reply box when it may */
@@ -409,6 +410,7 @@
     var dialog = doc.createElement('dialog');
     dialog.className = 'fl-sheet';
     dialog.setAttribute('data-cbsid', 'CMP067-D02');
+    dialog.setAttribute('data-pop', 'POP215');
     dialog.setAttribute('data-testid', 'fl-worklist');
     dialog.setAttribute('aria-label', flagText(FLAG_WORDS.workHead));
     dialog.innerHTML = '<div class="fl-in" style="min-height:240px"><div class="fl-hd"><h2>' + esc(flagText(FLAG_WORDS.workHead)) + '</h2><button type="button" class="fl-x" data-cbsid="CMP067-B07" data-close="1" aria-label="' + esc(flagText('Close')) + '">✕</button></div><div class="fl-out" role="status"></div><div class="fl-wl" data-testid="fl-wl" style="height:min(60vh,420px)"></div></div>';
