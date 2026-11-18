@@ -17,11 +17,7 @@
   function X(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  /* esc is the one in helpers.js (esc · fmtMoney · monthNames), loaded before this file by both pages */
   function pref() {
     try {
       return root.localStorage.getItem(KEY) || '';
