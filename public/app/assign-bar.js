@@ -119,17 +119,23 @@
   }
 
   /* ── the people ───────────────────────────────────────────────────────────────────────────── */
+  /** the id of one api actor row */
+  function actorIdOf(a) { return a.actor_id || a.identity_id || a.id; }
+  /** whether the signed-in person is this api actor row */
+  function isMeActor(a, id, mine) { return a.is_me === true || a.self === true || (!!mine && String(id) === mine); }
+  /** one api actor row as the popover lists it ({ id, name, holds, suggested, me }); the name is remembered for the result lines */
+  function personOf(a, body, mine) {
+    var person = { id: actorIdOf(a), name: a.display_name || a.name || '', holds: typeof a.open_load === 'number' ? a.open_load : null, suggested: a.suggested === true || (!!body.suggested && body.suggested === actorIdOf(a)) };
+    person.me = isMeActor(a, person.id, mine);
+    nameById[person.id] = person.name;
+    return person;
+  }
   /** the people who may hold this kind of work, as the server flags them (job_assignable), with `open_load` and the ONE `suggested` person (GET /api/actors?for=plug:subject, one client only: a mixed bulk asks for no suggestion and pre-picks nobody, A5); the page filters on the flag and never on a hat */
   function people(forWord, flag) {
     return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (reply) {
       if (!reply.ok) return { error: sentenceOf(reply.body) || tr('People did not load.'), list: [] };
       var mine = assignApi.meId();
-      var list = (reply.body.actors || reply.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) {
-        var person = { id: a.actor_id || a.identity_id || a.id, name: a.display_name || a.name || '', holds: typeof a.open_load === 'number' ? a.open_load : null, suggested: a.suggested === true || (!!reply.body.suggested && reply.body.suggested === (a.actor_id || a.identity_id || a.id)) };
-        person.me = a.is_me === true || a.self === true || (!!mine && String(person.id) === mine);
-        nameById[person.id] = person.name;
-        return person;
-      });
+      var list = (reply.body.actors || reply.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
       return { list: list };
     });
   }
@@ -293,18 +299,24 @@
    * CBAssign.handOverAll({ fromId, reload }) → the person popover, then POST /api/chits/hand-over-all { from_actor_id, to_actor_id|null, note }; the one result line says what moved,
    * names every skip with the server's sentence, and offers Undo only when every previous entry is a chit. Nothing is decided here: the server answers who may.
    */
+  /** one line per skipped entry: its name and the server's reason */
+  function handOverLines(skipped) { return skipped.map(function (s) { return (s.name ? s.name + ' · ' : '') + String(s.reason || s.code || ''); }); }
+  /** the headline of a hand-over: how many moved, to whom or back to the pool */
+  function handOverHead(holder, moved) {
+    return holder.id ? sayText('{n} moved to {who}.', { n: moved, who: nameById[holder.id] || '' }) : sayText('{n} back in the pool.', { n: moved });
+  }
+  /** the result line of a hand-over: what moved, every skip in the server's words, Undo when it can; then the page reloads */
+  function handOverResult(r, holder, opts) {
+    if (!r.ok) return showOutcome('bad', sentenceOf(r.body) || tr('Not done.'), []);
+    var moved = Number(r.body.moved) || 0, skipped = r.body.skipped || [];
+    showOutcome(skipped.length && !moved ? 'bad' : 'good', handOverHead(holder, moved), handOverLines(skipped), handOverUndo(r.body.previous));
+    if (last) last.reload = opts.reload;
+    return opts.reload ? opts.reload() : null;
+  }
   assignApi.handOverAll = function (opts) {
     if (!opts || !opts.fromId) return null;
     pick({ title: 'Hand over all to', held: true }, function (holder) {
-      call('POST', HANDOVER_PATH, { from_actor_id: opts.fromId, to_actor_id: holder.id || null, note: holder.note || undefined }).then(function (r) {
-        if (!r.ok) return showOutcome('bad', sentenceOf(r.body) || tr('Not done.'), []);
-        var moved = Number(r.body.moved) || 0, skipped = r.body.skipped || [];
-        var lines = skipped.map(function (s) { return (s.name ? s.name + ' · ' : '') + String(s.reason || s.code || ''); });
-        var head = holder.id ? sayText('{n} moved to {who}.', { n: moved, who: nameById[holder.id] || '' }) : sayText('{n} back in the pool.', { n: moved });
-        showOutcome(skipped.length && !moved ? 'bad' : 'good', head, lines, handOverUndo(r.body.previous));
-        if (last) last.reload = opts.reload;
-        return opts.reload ? opts.reload() : null;
-      });
+      call('POST', HANDOVER_PATH, { from_actor_id: opts.fromId, to_actor_id: holder.id || null, note: holder.note || undefined }).then(function (r) { return handOverResult(r, holder, opts); });
     });
     return true;
   };
@@ -366,9 +378,11 @@
     });
   }
   function typingIn(node) { return !!(node && node.closest && node.closest('input,select,textarea,[contenteditable],#modalhost,dialog')); }
+  /** whether a key press is not the assign shortcut (a modifier is held, another key, or the person is typing) */
+  function notShortcut(ev, key) { return ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.altKey || (key !== 'a' && key !== 'i') || typingIn(ev.target); }
   function onKey(ev) {
     var key = String(ev.key || '').toLowerCase();
-    if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || ev.altKey || (key !== 'a' && key !== 'i') || typingIn(ev.target)) return;
+    if (notShortcut(ev, key)) return;
     var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip]');
     if (!chip) return;
     ev.preventDefault();
