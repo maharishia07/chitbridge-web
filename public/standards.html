@@ -95,7 +95,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
   #std_list[data-works] .cbl-row .st{white-space:normal}
 }
 /* the list header is frozen: a row scrolled into view clears it, and the "Show more" bar clears the bottom edge */
-#std_list .cbl-list{scroll-padding-top:56px;scroll-padding-bottom:56px} #std_list.cbl:not(#_) .cbl-title{padding-block:4px 2px} #std_list.cbl:not(#_) .cbl-tools{padding-block:4px} #std_list.cbl:not(#_) .cbl-hc{padding-block:5px}   /* a compact head (the unit's own rules carry an id's weight, so these do too): 20% of 1366×768, 25% with a cell chosen */
+#std_list .cbl-list{scroll-padding-top:56px;scroll-padding-bottom:56px} #std_list.cbl:not(#_) .cbl-search{flex-basis:90px}   /* a compact head: the count joins the tools row instead of wrapping to a line of its own (20% of 1366×768; the unit's rules carry an id's weight, so this does too) */
 .c-live,.c-live b{color:var(--green)} .c-part,.c-part b{color:var(--amber-i)} .c-plan,.c-plan b{color:var(--muted)}
 /* in a row the WORD is ink (AA on every theme and on the zebra stripe); the symbol carries the colour */
 .st{color:var(--ink)} .st-live>span{color:var(--green-d,var(--green))} .st-part>span{color:var(--amber-i)} .st-plan>span{color:var(--muted)}
