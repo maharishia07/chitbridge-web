@@ -1,18 +1,58 @@
 /* app/cap-books-tree.js — CB ACCOUNTS: the Ledgers tab tree: bands, groups, ledgers and the parties under a control account. Split out of cap-books.js, code moved verbatim; nothing is added up here — every figure is the server's.
- * OWNS      the ledger tree: bkBalances · bkShort · bkLtBal · bkLtParties · bkLtPrefs* · bkLtNodes · bkLtTreeHTML · bkLtTreePaint · bkLtFocus · bkLtPaneHTML
+ * OWNS      the ledger tree: bkBalances · bkShort · bkLtBal · bkLtParties · bkLtPrefs* · bkLtNodes · bkLtTreeHTML · bkLtHeadHTML · bkLtShown · bkBalances · bkLtBalReload · bkLtTreePaint · bkLtFocus · bkLtPaneHTML
  * CALLED BY public/accounts.html (script tag, after cap-books.js) · app.html CAP_WITH books; its functions are global and are called by cap-books.js at run time
  * FLOW      Ledgers tab → bkLedgers (cap-books.js) → bkBalances (the ONE trial-balance read) → bkLtNodes → bkLtTreeHTML → bkLtTreePaint
  * CARD      16-finance/cb-finance
  */
 'use strict';
-/** ⭐ ONE read of the trial balance gives every ledger's balance — never one read per row */
-async function bkBalances() {
-  var reply = await api('booksTB', { query: { asOf: bkToday() } }),
-    map = {};
+/** the day before a date (UTC calendar arithmetic on YYYY-MM-DD, no clock) */
+function bkDayBefore(day) {
+  var d = new Date(day + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+/**
+ * ⭐ THE TREE'S FIGURES (ACC-367, W15-105/106): the trial balance AS AT the period's end gives every ledger's balance ("Balance at <date>"), and the same read AS AT the day before the period starts
+ * says which ledgers MOVED in it: a ledger has activity when its Dr or Cr total is not the one it had at the opening — two carried totals compared, nothing added up here.
+ * Two reads in all, never one per row. A failed opening read leaves `act` null: the tree then shows every ledger rather than hiding any.
+ */
+async function bkBalances(range) {
+  var q = range || bkRange('lg'),
+    asOf = q.to || bkToday();
+  var reads = await Promise.all([
+    api('booksTB', { query: { asOf: asOf } }),
+    api('booksTB', { query: { asOf: bkDayBefore(q.from || asOf) } }).catch(function (failure) {
+      return bkQuiet('balances-opening', failure, null);
+    })
+  ]);
+  var reply = reads[0],
+    opened = reads[1],
+    map = {},
+    before = null,
+    act = null;
+  if (opened && opened.rows) {
+    before = {};
+    opened.rows.forEach(function (x) {
+      before[String(x.code)] = String(x.dr_minor || 0) + '/' + String(x.cr_minor || 0);
+    });
+  }
   ((reply && reply.rows) || []).forEach(function (x) {
     map[String(x.code)] = Number(x.dr_minor || 0) - Number(x.cr_minor || 0);
+    if (before) {
+      act = act || {};
+      if (before[String(x.code)] !== String(x.dr_minor || 0) + '/' + String(x.cr_minor || 0)) act[String(x.code)] = true;
+    }
   });
-  return { map: map, cur: reply && reply.currency };
+  return { map: map, cur: reply && reply.currency, asOf: asOf, act: before ? act || {} : null };
+}
+/** the tree's figures again for the period now chosen (a step, a preset, a Back from a return): the same two reads, then the tree repaints */
+async function bkLtBalReload() {
+  try {
+    BK.lt.bal = await bkBalances(bkRange('lg'));
+  } catch (failure) {
+    bkQuiet('balances-reload', failure);
+  }
+  bkLtTreePaint();
 }
 /**
  * ⭐ THE SHORT NAME (docs/design/ledgers-page README, "Anything else I'd change" #2): what a name is called where a long one would wrap.
@@ -38,7 +78,8 @@ function bkLtBal(code) {
   if (!list) return '';
   var v = list.map[code];
   if (v === undefined) return '<span class="am nil" data-testid="bal-' + esc(code) + '" title="' + esc(tx('Not on the trial balance')) + '">—</span>';
-  return '<span class="am' + (v ? '' : ' nil') + '" data-testid="bal-' + esc(code) + '">' + (v ? esc(bkDrCr(v, list.cur)) : '—') + '</span>';
+  var over = v < 0 && BK_CASHBANK.test(String(code)); /* a bank or cash ledger on the credit side is overdrawn: said in words, never left as "Cr" (W15-104) */
+  return '<span class="am' + (v ? '' : ' nil') + (over ? ' over' : '') + '" data-testid="bal-' + esc(code) + '"' + (over ? ' title="' + esc(tx('Overdrawn: more has gone out than came in')) + '"' : '') + '>' + (v ? esc(bkDrCr(v, list.cur)) + (over ? ' ' + esc(tx('overdrawn')) : '') : '—') + '</span>';
 }
 /** the parties of a control account, from the one /dues read, ordered by party no (the ledger's key on screen) */
 function bkLtParties(ctrl) {
@@ -164,7 +205,8 @@ function bkLtNodes() {
     });
     item.groups.forEach(function (g, gi) {
       var list = g.accts.filter(function (entry) {
-        return !q || String(entry.code).indexOf(q) === 0 || hit(entry.name, bkShort(entry, entry.name));
+        if (q) return String(entry.code).indexOf(q) === 0 || hit(entry.name, bkShort(entry, entry.name)); /* a search finds a hidden ledger too (W15-106) */
+        return bkLtShown(entry.code);
       });
       if (!list.length) return;
       index += list.length;
@@ -173,15 +215,57 @@ function bkLtNodes() {
         id: 'G:' + item.id + '/' + gi,
         name: tx(g.title),
         tid: 'lt-group-' + g.title,
-        count: list.length,
         kids: list.map(function (entry) {
           return bkLtLedgerNode(entry);
         })
       });
     });
-    if (kids.length) out.push({ t: 'band', id: 'B:' + item.id, name: tx(item.title), tid: 'lt-band-' + item.id, count: index, kids: kids });
+    if (kids.length) out.push({ t: 'band', id: 'B:' + item.id, name: tx(item.title), tid: 'lt-band-' + item.id, kids: kids });
   });
   return out;
+}
+/** the "With activity" switch: a ledger that moved in the period shows, one that did not hides until "All ledgers"; the open one always shows; without the opening read nothing hides */
+function bkLtShown(code) {
+  var b = BK.lt.bal,
+    sel = BK.lt.sel;
+  if (BK.lt.all || !b || !b.act) return true;
+  return !!b.act[String(code)] || !!(sel && !sel.party && sel.code === String(code));
+}
+/** the two counts of the switch, from the model's own ledgers (a control account and its parties are always listed, so not counted) */
+function bkLtCounts() {
+  var total = 0,
+    active = 0;
+  (BK.lt.model || []).forEach(function (band) {
+    band.groups.forEach(function (g) {
+      g.accts.forEach(function (a) {
+        total++;
+        if (!BK.lt.bal || !BK.lt.bal.act || BK.lt.bal.act[String(a.code)]) active++;
+      });
+    });
+  });
+  return { total: total, active: active };
+}
+/** the head of the tree: what its figures are ("Balance at 18 Nov 2026") and the switch "With activity · n | All ledgers · n" */
+function bkLtHeadHTML() {
+  var b = BK.lt.bal;
+  if (!b) return '';
+  var n = bkLtCounts(),
+    on = !BK.lt.all && !!b.act,
+    seg = function (id, word, count, pressed, cbsid) {
+      return (
+        '<button data-cbsid="' + cbsid + '"' + bkMountAttribute('CMP042') + ' type="button" class="lt-seg' + (pressed ? ' on' : '') + '" data-lt="' + id + '" data-testid="lt-' + id + '" aria-pressed="' + pressed + '">' +
+        esc(tx(word)) + ' · ' + count + '</button>'
+      );
+    };
+  return (
+    '<div class="lt-asof" data-testid="lt-asof">' + esc(txf('Balance at {date}', { date: bkDate(b.asOf) })) + '</div>' +
+    (b.act
+      ? '<div class="lt-segs" role="group" aria-label="' + esc(tx('Which ledgers')) + '" data-testid="lt-segs">' +
+        seg('act-on', 'With activity', n.active, on, 'CMP042-B26') +
+        seg('act-all', 'All ledgers', n.total, !on, 'CMP042-B27') +
+        '</div>'
+      : '')
+  );
 }
 function bkLtMark(s) {
   var text = String(BK.lt.tq || '').trim();
@@ -200,7 +284,7 @@ function bkLtTreeHTML() {
   var selId = sel ? (sel.party ? 'P:' + sel.party : 'L:' + sel.code) : '';
   /* the balance text on the right of one tree row */
   function amt(n) {
-    if (n.t === 'band' || n.t === 'grp') return '<span class="am">' + n.count + '</span>';
+    if (n.t === 'band' || n.t === 'grp') return ''; /* no counts on a folder: it said three things at once (W15-105) */
     /* the open ledger shows no figure here: the title row beside it already does (on a phone's first page there is no title row, so it does) */
     if (n.id === selId && !narrow) return '<span class="am"></span>';
     if (n.t === 'party') {
@@ -241,7 +325,7 @@ function bkLtTreeHTML() {
       ' tabindex="-1" data-testid="' +
       esc(tid) +
       '"' +
-      (n.full && n.full !== n.name ? ' title="' + esc(n.full) + '"' : '') +
+      ' title="' + esc(n.full || n.name) + '"' +
       ' style="--lvl:' +
       lvl +
       '"><span class="tw" aria-hidden="true">' +
@@ -261,13 +345,13 @@ function bkLtTreeHTML() {
   });
   BK.lt.amW = widest + 1;
   return (
-    h ||
+    (h ||
     '<div class="lt-empty">' +
       esc(String(BK.lt.tq || '').trim() ? txf('No ledger or party called “{q}”.', { q: String(BK.lt.tq).trim() }) : tx('No ledgers yet')) +
       (String(BK.lt.tq || '').trim()
         ? '<br><button data-cbsid="CMP014-B01"' + bkMountAttribute('CMP014') + ' type="button" class="lt-btn" data-lt="clear" data-testid="lt-clear">' + esc(tx('Clear')) + '</button>'
         : '') +
-      '</div>'
+      '</div>')
   );
 }
 /* repaint the ledger tree and put the keyboard focus back where it was */
@@ -277,6 +361,8 @@ function bkLtTreePaint(focusId) {
   var ae = document.activeElement,
     keep = focusId || (ae && node.contains(ae) && ae.getAttribute && ae.getAttribute('data-tn'));
   node.innerHTML = bkLtTreeHTML();
+  var head = document.getElementById('lt_head');
+  if (head) head.innerHTML = bkLtHeadHTML(); /* outside the role=tree list: only tree items sit in it */
   node.style.setProperty('--am-w', (BK.lt.amW || 12) + 'ch');
   var all = node.querySelectorAll('.tn'),
     f = (keep && node.querySelector('[data-tn="' + keep.replace(/"/g, '') + '"]')) || node.querySelector('.tn[aria-selected="true"]') || all[0];
