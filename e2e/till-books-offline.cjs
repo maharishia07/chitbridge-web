@@ -356,7 +356,7 @@ function apiFront(name, tillId) {
     await p.fill('[data-testid="till-rp-amount"]', String(o.amount));
     await p.selectOption('[data-testid="till-rp-mode"]', o.mode);
     if (o.cheque) {
-      if (o.cheque.no) await p.fill('[data-testid="till-rp-chq-no"]', o.cheque.no);
+      if (o.cheque.no) { await p.fill('[data-testid="till-rp-chq-no"]', o.cheque.no); o.dbg0 = await p.evaluate(() => 'afterfill no=' + (document.getElementById('rp_chq_no') || {}).value); await sleep(300); o.dbg1 = await p.evaluate(() => 'later no=' + (document.getElementById('rp_chq_no') || {}).value); }
       await p.fill('[data-testid="till-rp-chq-bank"]', o.cheque.bank || '');
     }
     o.dbg = await p.evaluate(() => ['no=' + (document.getElementById('rp_chq_no') || {}).value, 'bank=' + (document.getElementById('rp_chq_bank') || {}).value, 'mode=' + (document.getElementById('rp_mode') || {}).value, 'hidden=' + (document.getElementById('rp_chq') || {}).hidden, 'open=' + document.getElementById('rcvpaydlg').open].join(' '));
@@ -465,7 +465,7 @@ function apiFront(name, tillId) {
     say('⚠️ a cheque with no number is refused, nothing recorded', pNone === '' && /number/.test(chq0.said), chq0.said.slice(0, 60));
     const chq1 = { phone: '9876500001', amount: 50, mode: 'cheque', cheque: { no: '004512', bank: 'SBI' } };
     const p22 = await receivePay(br, chq1);
-    say('a cheque WITH its number is recorded, "received, not cleared"', /^R\/C2\//.test(p22) && /applied when it clears/.test(chq1.proposal) && /not cleared/.test(chq1.note), p22 || (chq1.said + ' | ' + chq1.note + ' | ' + chq1.dbg));
+    say('a cheque WITH its number is recorded, "received, not cleared"', /^R\/C2\//.test(p22) && /applied when it clears/.test(chq1.proposal) && /not cleared/.test(chq1.note), p22 || (chq1.said + ' | ' + chq1.note + ' | ' + chq1.dbg0 + ' | ' + chq1.dbg1 + ' | ' + chq1.dbg));
 
     /* ⚠️⚠️ review F4: the line returns, the SNAPSHOT is read again, and the queue has not gone yet (no chit gets through) */
     const owedOf = (p, id) => p.evaluate(async (id) => { var c = (S.customers || []).filter(function(x){ return x.identity_id === id; })[0];
