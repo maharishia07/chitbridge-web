@@ -298,8 +298,8 @@
   }
 /** the owner's choice of who posts, drawn from the server's words, NOTHING pre-selected: the owner must pick one (the form is held until he does) */
   function postingHtml(choices, name, current) {
-    return '<b>' + esc(words('Who posts?')) + '</b>' + choices.map(function (c, i) {
-      return '<label class="bg-tick"><input data-cbsid="NET004-R0' + (i + 1) + '" type="radio" name="' + name + '" value="' + esc(c.value) + '" data-testid="bg-post-' + esc(c.value) + '"' + (current === c.value ? ' checked' : '') + '> ' + esc(c.words) + '</label>';
+    return '<b>' + esc(words('Who posts?')) + '</b>' + choices.map(function (c) {
+      return '<label class="bg-tick"><input data-cbsid="NET004-I06" type="radio" name="' + name + '" value="' + esc(c.value) + '" data-testid="bg-post-' + esc(c.value) + '"' + (current === c.value ? ' checked' : '') + '> ' + esc(c.words) + '</label>';
     }).join('');
   }
   /** show the choice for the adviser role only; picking one releases Give access */

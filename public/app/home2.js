@@ -137,7 +137,7 @@
         })
         .join('') +
       '<span class="ix-fs"></span>' + switchHTML('new') + '</div>' +
-      '<dialog class="ix-sheet" data-cbsid="HOM001-P19" data-testid="ix2-sheet"><div class="ix-sh-h"><b></b><button type="button" class="ix-x" data-cbsid="HOM001-B08" aria-label="' + esc(X('Close')) + '">✕</button></div><div class="ix-sh-b"></div></dialog>';
+      '<dialog class="ix-sheet" data-pop="POP216" data-cbsid="HOM001-P19" data-testid="ix2-sheet"><div class="ix-sh-h"><b></b><button type="button" class="ix-x" data-cbsid="HOM001-B08" aria-label="' + esc(X('Close')) + '">✕</button></div><div class="ix-sh-b"></div></dialog>';
     wireSwitch(host);
     var list = host.querySelector('.ix-list'), df = host.querySelector('.df'), dlg = host.querySelector('dialog');
     var items = {}, panels = {};
@@ -254,7 +254,7 @@
         var shownItems = itemsList.slice(0, 3);
         html = '<b class="df-n" data-testid="ix2-do-count">' + itemsList.length + '</b><span class="df-t">' + esc(X('Do first')) + '</span><span class="df-i">' +
           shownItems.map(function (i) { return '<a href="' + esc(i.h || '#') + '">' + esc(i.t) + ' ›</a>'; }).join('') + '</span>' +
-          (itemsList.length > 3 ? '<button type="button" class="ix-more" data-more="1">+' + (itemsList.length - 3) + '</button>' : '');
+          (itemsList.length > 3 ? '<button type="button" class="ix-more" data-more="1" data-cbsid="HOM001-B23">+' + (itemsList.length - 3) + '</button>' : '');
       }
       if (df.getAttribute('data-sig') !== html) {
         df.setAttribute('data-sig', html);

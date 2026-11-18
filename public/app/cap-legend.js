@@ -275,6 +275,8 @@ const CAP_CATALOGUE = [
       { n: 'Duty / Break shift', s: 'done' },
       { n: 'Deactivate / reactivate / remove — full binding cleanup', s: 'done' },
       { n: 'Roster tabs + covers badges', s: 'done' },
+      { n: 'CBAssign v2 — who holds each piece of work: Held-by chip, always-on ticks, persistent bulk bar, Undo, one vocabulary; shown on the server verdict (may_assign), the server decides (public/app/assign-bar.js, POST /api/chits/assign-bulk)', s: 'done' },
+      { n: 'Assign plug-ins — a list whose rows have a holder adopts the ONE assign pattern with a plug name, subject id and noun: books practice (chits), CRM follow-ups (own write route, cap-crm-assign.js), Tasks sheet, the Holds column Hand over all', s: 'done' },
       { n: 'Leave calendar · shift rotation · wage / salary', s: 'backlog' },
       { n: 'Non-human co-assist types (connector / IoT / AI) auth', s: 'backlog' }
     ]
@@ -634,7 +636,24 @@ const CAP_CATALOGUE = [
       { n: 'Entity sign-in — OTP, fixed to 123456 in dev via lib/dev-otp.js, a real code once sealed', s: 'done' },
       { n: 'Coassist sign-in — OTP the first time, their own PIN every time after, through the SAME counter box', s: 'done' },
       { n: 'The counter prompts for a PIN, not a code, once the server says use_pin — usignPaint()/usignAsk()', s: 'done' },
+      { n: 'Social sign-in method slots (Google · Apple · Microsoft · SSO · passkey) in CBSignin: config, hidden until the method ships AND the host switches the slot on (public/app/signin-ui.js METHODS)', s: 'partial' },
       { n: 'A guard that fails if a route re-implements OTP/PIN instead of calling this file', s: 'backlog' }
+    ]
+  },
+  {
+    id: 'home',
+    name: 'Home (index2)',
+    icon: '🏠',
+    load: 'eager',
+    maturity: 1,
+    target: 2,
+    gov: null,
+    governedUnder: '— reads the same card facts as the classic Home (nothing to govern); the switch is the viewer own preference, no setting key yet (listed for cb-settings)',
+    blurb: 'The crisp one-page Home beside the classic one: a Do-first row, six pillar rows as an accordion, Labs · Standards · Setup in the foot (home2.js, index2.html, manifest.json home2).',
+    features: [
+      { n: 'index2 — Do first + six pillar rows, one open at a time, pillar sheet (CBHome2)', s: 'done' },
+      { n: 'Per-viewer switch between index2 and the classic Home', s: 'done' },
+      { n: 'A setting key for the switch (GOV layer)', s: 'backlog' }
     ]
   },
   {

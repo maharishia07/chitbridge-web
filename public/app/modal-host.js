@@ -32,7 +32,7 @@
   root.modal = function (html, wide) {
     var node = host();
     if (!node.innerHTML) opener = root.document.activeElement && root.document.activeElement !== root.document.body ? root.document.activeElement : null;
-    node.innerHTML = '<div class="mover"><div class="modal' + (wide ? ' wide' : '') + '" role="dialog" aria-modal="true"><button type="button" class="mx" data-cbsid="CMP005-B01" aria-label="' + (root.tx ? root.tx('Close') : 'Close') + '" title="' + (root.tx ? root.tx('Close') : 'Close') + '">✕</button>' + html + '</div></div>';
+    node.innerHTML = '<div class="mover"><div class="modal' + (wide ? ' wide' : '') + '" data-pop="host" role="dialog" aria-modal="true"><button type="button" class="mx" data-cbsid="CMP005-B01" aria-label="' + (root.tx ? root.tx('Close') : 'Close') + '" title="' + (root.tx ? root.tx('Close') : 'Close') + '">✕</button>' + html + '</div></div>';
     node.querySelector('.mover').addEventListener('click', function (ev) {
       if (ev.target.classList.contains('mover') || (ev.target.closest && ev.target.closest('.mx'))) root.closeModal();
     });
