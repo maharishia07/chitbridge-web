@@ -76,7 +76,7 @@ W.run('tasks', async (w) => {
     const a = verdicts(r), held = r.lines.filter((l) => l.assignment && l.assignment.assignee_actor_id).length;
     return { chit_id: r.chit_id, kind: r.kind, tab: tab(r), stage: stage(r), word: word(r), status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id,
       channel: r.channel, fulfilment: r.fulfilment, address: r.address, requested_for: r.requested_for, remark: r.remark, total_minor: r.total_minor, currency: r.currency,
-      lines_n: r.lines.length, lines_open_n: open(r), billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: held || null, may_assign: S.level !== 'viewer', may_take: S.level !== 'viewer' && !r.assignee /* the server's verdicts, shown on the row (CBAssign v2) */, created_at: r.created_at, age_days: r.age_days, actions: a };
+      lines_n: r.lines.length, lines_open_n: open(r), billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: held || null, created_at: r.created_at, age_days: r.age_days, actions: a };
   };
   const counts = () => { const c = { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }; S.rows.forEach((r) => c[tab(r)]++); return c; };
   const find = (id) => S.rows.find((r) => r.chit_id === id);
@@ -103,7 +103,7 @@ W.run('tasks', async (w) => {
     if (p === '/api/work/list' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { error: 'Forbidden', message: 'Sign in as staff to see Tasks and Orders.' });
       const view = ['orders_in', 'orders_out', 'tasks', 'done'].includes(u.searchParams.get('view')) ? u.searchParams.get('view') : 'orders_in';
-      const rows = S.rows.filter((x) => tab(x) === view).map(rowOut);
+      const rows = S.rows.filter((x) => tab(x) === view).map((x) => Object.assign(rowOut(x), { may_assign: S.level !== 'viewer', may_take: S.level !== 'viewer' && !x.assignee }) /* the list rows carry the server's verdicts (CBAssign v2); the one-chit answer does not */);
       return J(r, 200, { view, page: 1, limit: Number(u.searchParams.get('limit')) || 50, truncated: false, counts: counts(), total: rows.length, rows });
     }
     let mm = /^\/api\/work\/([^/]+)$/.exec(p);
