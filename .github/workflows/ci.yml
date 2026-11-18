@@ -79,6 +79,43 @@ jobs:
           node tests/chunk0-proofs.test.cjs
           node tests/chunk0-web-proofs2.test.cjs
           node tests/pm-53-edition-chip.test.cjs
+      # RECON-QA-1 (18 Nov): 34 offline guards that no runner reached (library level none). Each ran green once on sit-grund in the api image (node 22, no browser, no sibling repo), 18 Nov; fin-d7-terms-bank was stale and fixed first.
+      - name: Offline guards no runner reached before 18 Nov (RECON-QA-1)
+        run: |
+          node tests/bas-claim-warning.test.cjs
+          node tests/bill-print-sample.test.cjs
+          node tests/bills-read-books.test.cjs
+          node tests/bk-dv-no-source-dash.test.cjs
+          node tests/books-paging.test.cjs
+          node tests/cat-258-unpriced-bands-web.test.cjs
+          node tests/chit-mark-paid-dead.test.cjs
+          node tests/chit-sheet-dispute-opener.test.cjs
+          node tests/country-compare.test.cjs
+          node tests/crm-consent-holders.test.cjs
+          node tests/fin-d7-terms-bank.test.cjs
+          node tests/fin116-registration-notice.test.cjs
+          node tests/graph-apifeed.test.cjs
+          node tests/index2-draws-manifest.test.cjs
+          node tests/ledger-columns.test.cjs
+          node tests/list-count-total.test.cjs
+          node tests/lock-words-shop-day.test.cjs
+          node tests/product-lab-rows.test.cjs
+          node tests/shop-attempt-key.test.cjs
+          node tests/trace-entries.test.cjs
+          node tests/trace-layer.test.cjs
+          node e2e/bank-cost-blind.test.cjs
+          node e2e/bank-engine199.test.cjs
+          node e2e/bank-lock.test.cjs
+          node e2e/ctr-212-recheck-setup.cjs
+          node e2e/dues-ageing-one-answer.test.cjs
+          node e2e/dues-one-sign.test.cjs
+          node e2e/list-total-pinned.test.cjs
+          node e2e/polish-r-locale.test.cjs
+          node e2e/read-failed.cjs
+          node e2e/seat-rule.cjs
+          node e2e/shell-problem-words.test.cjs
+          node e2e/ui-codes-w2-lazy.test.cjs
+          node e2e/ui-money.test.cjs
       - name: Screen reads, lazy screens, modals, tax, markup, controls, order, calls, a11y, endpoints
         run: |
           node e2e/screen-reads.cjs
