@@ -1,7 +1,7 @@
 /* cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body).
  * OWNS      the token's claims (crmTokenClaims) · who sees the Unassigned bucket (crmSeesUnassigned) · the Show filter's choices (crmScopeOptions) · the Assign button's patch (crmAssignPatch); moved out of cap-crm.js (2026-11-18, size ratchet; behaviour unchanged)
  * CALLED BY crm.html (<script src>, after cap-crm.js) · cap-crm.js (crmHat · crmFollowups filters · CRM_CLICK.fuassign)
- * FLOW      crmFollowups → crmScopeOptions(def) → crmSeesUnassigned() → crmTokenClaims() ← SESSION.token's own payload; the server still decides who may assign
+ * FLOW      crmFollowups → crmScopeOptions(def) → crmSeesUnassigned() ← CRM.may.assign (the server's verdict on every CRM read); crmTokenClaims reads the token's access LEVEL only (cap-crm.js crmHat), never the hat
  * CARD      11-crm-and-marketing/crm-followups
  */
 'use strict';
@@ -16,9 +16,9 @@ function crmTokenClaims() {
     return {};
   }
 }
-/** the owner, or a co-assist whose signed hat is manager: the two who see the Unassigned bucket (the follow-ups nobody holds) */
+/** the two who see the Unassigned bucket (the follow-ups nobody holds): the partner and a manager, as the SERVER says in `may.assign` (A2, 18 Nov: no token claim is read; nothing said yet = not shown) */
 function crmSeesUnassigned() {
-  return crmOwner() || /^manager$/i.test(String(crmTokenClaims().hat || ''));
+  return !!(CRM.may && CRM.may.assign && CRM.may.assign.ok);
 }
 /** the Show filter's other choices: Mine or Everyone (whichever is not the default), and Unassigned for the two who see it */
 function crmScopeOptions(def) {

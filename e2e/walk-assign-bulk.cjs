@@ -44,7 +44,7 @@ function standIn() {
   });
   s.practice = () => {
     const rows = s.assistant ? [1, 2, 3, 4, 5].map((n) => { s.holder.set(id(n), { actor_id: 'self', name: 'Dev Assistant' }); return rowOf(n); }) : Array.from({ length: 150 }, (_, i) => rowOf(i + 1));
-    return { rule: 'r', words: WORDS, today: '2026-11-17', band: { bands: [{ key: 'pipeline', first: true, tiles: [] }], pipeline: [] }, clients: rows, total: rows.length, page: 1, limit: 200, has_more: false, truncated: false, own_trade: false };
+    return { rule: 'r', words: WORDS, today: '2026-11-17', band: { bands: [{ key: 'pipeline', first: true, tiles: [] }], pipeline: [] }, clients: rows, may_assign: !s.assistant, total: rows.length, page: 1, limit: 200, has_more: false, truncated: false, own_trade: false };
   };
   s.assignBulk = (body) => {
     if (s.refuse) return { status: 403, body: { type: 'about:blank', title: 'Not permitted', status: 403, code: 'CHIT_NOT_PERMITTED', detail: REFUSAL, may: false, why: REFUSAL, message: REFUSAL } };
@@ -148,7 +148,7 @@ const sleep = pause;
       await tick(page, first22.slice(0, 10));
       await bulk(page, 'assign');
       await pickAndGo(page, ANNA.display_name);
-      const names = await page.locator('[data-testid="assign-person"] option').allInnerTexts();
+      const names = (await page.locator('[data-testid="assign-person"] option').allInnerTexts()).filter((name) => name !== 'Choose a person'); /* A5: the picker opens on a prompt, nobody pre-chosen */
       ok(tag + ' · 3 the picker lists only job_assignable people (Anna, Ben; not Cara)', JSON.stringify(names) === JSON.stringify([ANNA.display_name, BEN.display_name]), names);
       await page.screenshot({ path: file('3-picker') });
       const dark = await page.evaluate(measure);

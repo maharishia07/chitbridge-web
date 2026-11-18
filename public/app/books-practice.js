@@ -235,7 +235,7 @@
   /** the columns a band opens with, and the Saved column once the firm's flags have answered and are on */
   function colsOf(bandKey) {
     var cols = (BAND_COLS[bandKey] || BAND_COLS.pipeline).slice();
-    if (holdersOn()) cols.splice(1, 0, 'held'); /* ASSIGN-1: the holder column appears when the server sent holders (the firm's assign switch is on) */
+    if (holdersOn()) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
   /** ASSIGN-1: did the server send who holds each client (an answer with a `holders` list on any row) */
@@ -246,7 +246,7 @@
   }
   /** ASSIGN-1: the list's bulk actions (assign · hand over · back to pool · open jobs): generic CBAssign with this list's plug and row facts; [] when the bar is not for this person */
   function bulkActions() {
-    return !holdersOn() || !root.CBAssign ? [] : root.CBAssign.bulk({ plug: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign });
+    return !holdersOn() || !root.CBAssign ? [] : root.CBAssign.bulk({ said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign });
   }
   function mountList() {
     var host = root.document.getElementById('bp_list');
