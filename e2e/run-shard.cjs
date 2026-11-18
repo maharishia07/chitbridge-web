@@ -58,8 +58,8 @@ const SKIP = {
   'walk-client-nav.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
-/* a file that needs more than the 240 s slot, with its reason (ms): the fault probe looks at ~1,200 screens (400 s on a SIT box, 18 Nov) */
-const SLOT_MS = { 'walk-probe-faults.cjs': 600000 };
+/* a file that needs more than the 240 s slot, with its reason (ms): the fault probe looks at ~1,200 screens (470 s on a SIT box, 18 Nov) */
+const SLOT_MS = { 'walk-probe-faults.cjs': 900000 };
 const KNOWN = {
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
