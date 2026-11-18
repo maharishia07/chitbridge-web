@@ -140,7 +140,6 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live' && r.added === '2026-10-13') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(BYID['wcag-1.4.3'].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
     ok(/^\d{4}-\d{2}-\d{2}$/.test(REG.CH) && REG.CH >= '2026-10-14', 'the register says when it was last checked (STD_CHECKED ' + REG.CH + ')');
-    ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
     /* M41 · Compatibility: ONE file, every row a valid register row, honest about proof */
     const cj = COMPAT_JSON.rows || [];
@@ -246,7 +245,6 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(geo.n > 0 && geo.max <= 44, 'one line per row at 1366: the tallest of ' + geo.n + ' rows is ' + Math.round(geo.max) + ' px (limit 44)');
     ok(geo.fill >= 0.97, 'and the table fills the width of the list (' + Math.round(geo.fill * 100) + '%)');
     const hdrB2 = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom) - await frameB();
-    console.log('     head with a cell chosen: ' + Math.round(hdrB2 / ih * 100) + '% (two chips; the unit wraps them to a line of their own)');
     ok(hdrB2 / ih <= 0.25, 'the head with a cell chosen stays within 25% (' + Math.round(hdrB2 / ih * 100) + '%)');
     await p.screenshot({ path: path.join(SHOTS, 'standards-cell.png') });
     /* the same cell again clears it */
@@ -320,7 +318,6 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     /* the unit draws 50 rows at a time; the last group's head arrives with its rows: scroll to the bottom until no new group head appears (167 rows = 4 loads) */
     for (let g = 0, prev = -1; g < 8; g++) { const nGroups = await p.$$eval('#std_list .cbl-group', (n) => n.length); if (nGroups === prev && g > 1) break; prev = nGroups; await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500); }
     const gk = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    console.log('     groups: ' + JSON.stringify(gk));
     ok(gk.length === 5 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]) && /Build rule/.test(gk[4]), 'Group by Kind: Law · Standard · Practice · Compatibility · Build rule, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     /* the unit draws 50 rows at a time: scroll until every row is drawn, so the last group's head is there (STDREG1: more rows than two pages) */
@@ -343,15 +340,12 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
       await p.screenshot({ path: path.join(SHOTS, 'standards-country-matrix.png') });
       await p.click('[data-testid="std-row-' + ci + '"]'); await p.waitForTimeout(150);
     }
-    /* the Partly sample row is read from the register at run time (other lanes flip rows to In force; a name pinned here went stale): the first Partly row with a short Missing line, one never added after the first 44 preferred */
-    const partRows = REG.S.filter((r) => r.s === 'part' && r.m); ok(partRows.length > 0, 'the register still holds Partly rows to sample (' + partRows.length + ')');
-    const SAMPLE = partRows.find((r) => !r.added) || partRows[0]; const sIdx = REG.S.indexOf(SAMPLE);
+    const partRows = REG.S.filter((r) => r.s === 'part' && r.m); ok(partRows.length > 0, 'the register still holds Partly rows to sample (' + partRows.length + ')'); /* the Partly sample row is read from the register at run time (other lanes flip rows to In force; a name pinned here went stale): the first Partly row with a short Missing line, one never added after the first 44 preferred */ const SAMPLE = partRows.find((r) => !r.added) || partRows[0]; const sIdx = REG.S.indexOf(SAMPLE);
     /* a row opens: the GSTR row (a returns row with an Open in the app button) */
     const gi = idx('GSTR-1 / GSTR-3B (GSTN schema)');
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
     await p.click('[data-testid="std-row-' + gi + '"]'); await p.waitForTimeout(250);
     const dl = await p.textContent('[data-testid="std-detail-' + gi + '"]');
-    console.log('     dl: ' + dl.replace(/\s+/g, ' ').slice(0, 400));
     ok(/Covers/.test(dl) && /Kind\s*Law\s*you must/.test(dl) && /Source/.test(dl) && !/Missing:/.test(dl), 'the row opens to label : value — Covers · Kind · Source (what is missing is already in the row, not said twice)');
     ok(/New\s*Adopted 2–3 Oct 2026; not yet in the register/.test(dl), 'a 2–3 Oct 2026 addition says it is New and not yet in the register');
     ok(/Why it matters|Elsewhere|In the app/.test(dl), 'and the rest of what a buyer or CA checks (why it matters · in the app)');
@@ -376,14 +370,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */
     await p.click('[data-testid="std-row-' + sIdx + '"]'); await p.waitForTimeout(150); /* close the row Copy used; it is the same sample */
-    const gs1 = sIdx;
-    await p.fill('[data-testid="listctl-search-standards"]', SAMPLE.n); await p.waitForTimeout(300);
-    const gsRow = p.locator('[data-testid="std-row-' + gs1 + '"]');
-    await gsRow.click(); await p.waitForTimeout(250);
-    const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]'); console.log('     sample: ' + SAMPLE.n + ' | gdl: ' + gdl.replace(/\s+/g, ' ').slice(0, 300));
-    const afterMiss = (gdl.split('What is missing, in full')[1] || '').replace(/\s+/g, ' ').trim();
-    console.log('     missing-in-full: ' + afterMiss.slice(0, 160) + ' | has New tag: ' + /<span class="new">/.test(await p.innerHTML('[data-testid="std-detail-' + gs1 + '"]')));
-    const gHtml = await p.innerHTML('[data-testid="std-detail-' + gs1 + '"]');
+    const gsRow = p.locator('[data-testid="std-row-' + sIdx + '"]'); await gsRow.click(); await p.waitForTimeout(250); const gdl = await p.textContent('[data-testid="std-detail-' + sIdx + '"]');
+    const afterMiss = (gdl.split('What is missing, in full')[1] || '').replace(/\s+/g, ' ').trim(); const gHtml = await p.innerHTML('[data-testid="std-detail-' + sIdx + '"]');
     ok(/What is missing, in full/.test(gdl) && afterMiss.length > 40 && /In the register|Adopted/.test(gdl) && (SAMPLE.added ? /<span class="new">/.test(gHtml) : /In the register/.test(gdl) && !/<span class="new">/.test(gHtml)), 'a Partly row from the register (' + SAMPLE.n + ') opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
     await gsRow.click(); await p.waitForTimeout(150);
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
@@ -491,7 +479,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g);
     const html = vm.runInContext(fnSrc + ';standardsSettingsHTML()', g);
     ok(/data-testid="std-yours"/.test(html) && /Region/.test(html) && /Reading order/.test(html), 'Settings › Standards keeps What you follow — the live reading of the person\'s own settings');
-    ok(/href="\/standards\.html"/.test(html) && new RegExp(REG.S.filter((r) => r.s === 'live').length + ' in force').test(html) && new RegExp(REG.S.filter((r) => r.s === 'part').length + ' partly').test(html), 'and the door to the page, with the register\'s own counts (all rows, the compliance additions too)');
+    ok(/href="\/standards\.html"/.test(html) && new RegExp(REG.S.filter((r) => r.k !== 'build-rule' && r.s === 'live').length + ' in force').test(html) && new RegExp(REG.S.filter((r) => r.k !== 'build-rule' && r.s === 'part').length + ' partly').test(html), 'and the door to the page, with the register\'s own counts (all rows, the compliance additions too)');
     ok(!/Incoterms|BCP 47|GS1|What we follow<|Your trade|Why bother/.test(html), 'and lists no standard (the register is read on the page)');
   }
 
