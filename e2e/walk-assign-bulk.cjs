@@ -7,6 +7,7 @@
  *   1 150 clients, an empty chip (+ Assign to…) on every row · 2 always-on ticks, bar of 3 buttons, no Open jobs · 3 assign 10 to Anna (the popover lists only job_assignable people, nobody pre-picked) · 3b one chip press then a person · 3c Undo puts the previous holders back · 3d key A · 4 assign 12 to Ben · 5 hand one over to Ben with a note
  *   6 one back to the pool (target_actor_id null) · 7 a partial: 1 assigned, 1 skipped with the SERVER's sentence · 8 a refused call shows the server's sentence, nothing else · 9 an assistant: own clients, no bulk bar
  *   every size: no sideways scroll; contrast of the new parts at AA (4.5:1)
+ *   W3 (1366 light, after the loop): CRM follow-ups (Held-by chip, one write per follow-up, Undo, bulk bar of 3) · Employees (Holds column, Hand over all… -> hand-over-all, Undo only when every moved item is a chit)
  * CARD 01-rail-core-the-chit/assign
  * MIN walk
  * MIN cream-and-dark-1366-390
@@ -118,6 +119,109 @@ async function pickAndGo(page, name, note) {
 }
 const heldText = (page, n) => page.locator('[data-testid="practice-row-' + id(n) + '"]').innerText();
 const sleep = pause;
+
+/* ── ASSIGN-W3: CRM follow-ups and Employees on the same CBAssign (1366, light) ─────────────────────────────────────────────────────────────────────────── */
+const FU = (n, who) => ({ followup_id: 'fu-' + n, party_id: 'p-' + n, party_no: null, party_name: 'Party ' + n, party_listed: true, what: 'Call back ' + n, due_at: '2026-11-19T09:00:00.000Z', due_day: '2026-11-19',
+  assignee_user_id: who ? who.actor_id : null, assignee_name: who ? who.display_name : null, assignee_left: false, source: 'manual', done_at: null, created_at: '2026-11-17T09:00:00.000Z', late: false, today: false, bucket: 'week' });
+const EMP = (id, name, state) => ({ id, name, user_id: id + '@walk.br', role: 'Staff', phone: '', state, jobs: 0, last_at: null, access: { key: 'manager', label: 'Manager', why: 'Sees the whole shop.', level: 'editor', whole_entity: true, can_see_costs: false },
+  may: { access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: state === 'on' ? 'off' : 'on' }, cover: { ok: true } }, cover: null, cover_options: [] });
+async function w3Page(browser, base, handler, url, readySel) {
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-AU', serviceWorkers: 'block' });
+  const sess = { token: b64({ alg: 'none' }) + '.' + b64({ identity_id: 'e0000000-0000-4000-8000-000000000001', display_name: 'Fixture Shop' }) + '.ownertoken1234', role: 'entity', name: 'Fixture Shop' };
+  await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, sess);
+  await ctx.route(/^http:\/\/(localhost:3000|127\.0\.0\.1:\d+)\/api\//, async (r) => {
+    const req = r.request(), u = new URL(req.url());
+    const cors = { 'access-control-allow-origin': base, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
+    if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
+    if (u.pathname.includes('/events/stream')) return r.abort();
+    const send = (status, body) => r.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
+    let body = null; try { body = req.postData() ? JSON.parse(req.postData()) : null; } catch (_) {}
+    if (u.pathname === '/api/entities/me') return send(200, { entity: { display_name: 'Fixture Shop', currency_code: 'AUD' } });
+    if (u.pathname === '/api/actors' && req.method() === 'GET') return send(200, { actors: [ANNA, BEN, CARA].map((a) => ({ ...a, open_load: 1 })), total: 3, page: 1, limit: 100 });
+    const out = handler(u.pathname, req.method(), body, send);
+    return out === undefined ? send(404, { error: 'not found' }) : out;
+  });
+  const page = await ctx.newPage();
+  page.__threw = [];
+  page.on('pageerror', (e) => page.__threw.push(e.message));
+  await page.goto(base + url);
+  await page.waitForSelector(readySel, { timeout: 30000 }).catch(() => {});
+  await pause(600);
+  return { ctx, page };
+}
+async function w3Crm(browser, base) {
+  const calls = [], fus = [FU(1, null), FU(2, null), FU(3, ANNA)];
+  const crmMay = { write: { may: true, code: null, why: null }, remove: { ok: true }, assign: { ok: true, code: null, why: null } };
+  const { ctx, page } = await w3Page(browser, base, (p, m, body, send) => {
+    if (p === '/api/crm/followups' && m === 'GET') return send(200, { followups: fus, total: fus.length, page: 1, limit: fus.length, may: crmMay, late: 0, today: 0, shop_day: '2026-11-18' });
+    if (p === '/api/crm/parties' && m === 'GET') return send(200, { parties: [], walk_ins: [], count: 0, total: 0, page: 1, limit: 5000, truncated: false, may: crmMay, alerts: {} });
+    const mm = /^\/api\/crm\/followups\/([^/]+)$/.exec(p);
+    if (mm && (m === 'PATCH' || m === 'PUT')) { calls.push({ path: p, method: m, body }); const f = fus.find((x) => x.followup_id === mm[1]); const t = [ANNA, BEN].find((x) => x.actor_id === body.assignee_user_id); if (f) { f.assignee_user_id = t ? t.actor_id : null; f.assignee_name = t ? t.display_name : null; } return send(200, { followup: f }); }
+  }, '/crm.html#/followups', '[data-testid="crm-fu-list"]');
+  const tag = 'w3 crm follow-ups';
+  await page.waitForSelector('[data-testid="crm-fu-list"] [data-testid="assign-chip"]', { timeout: 15000 }).catch(() => {});
+  const chips = await page.locator('[data-testid="crm-fu-list"] [data-testid="assign-chip"]').count();
+  ok(tag + ' · 1 the Held-by column draws a chip on every follow-up (3)', chips === 3, chips);
+  ok(tag + ' · 1 the empty ones say "+ Assign to…", the held one says Anna Lee', /Assign to/.test(await page.locator('[data-testid="crm-fu-fu-1"]').innerText()) && /Anna Lee/.test(await page.locator('[data-testid="crm-fu-fu-3"]').innerText()));
+  ok(tag + ' · 1 the old Assign button (CRM001-B07) is gone', (await page.locator('[data-cbsid="CRM001-B07"]').count()) === 0);
+  await page.locator('[data-testid="crm-fu-fu-1"] [data-testid="assign-chip"]').click();
+  await page.waitForSelector('[data-as-pick]');
+  const names = await page.locator('[data-as-pick]').allInnerTexts();
+  ok(tag + ' · 2 the popover lists the people the server flags (Anna, Ben; not Cara)', names.some((n) => /Anna Lee/.test(n)) && names.some((n) => /Ben Ortiz/.test(n)) && !names.some((n) => /Cara/.test(n)), names);
+  await pickAndGo(page, 'Ben Ortiz');
+  await pause(900);
+  const c1 = calls[0];
+  ok(tag + ' · 2 one chip press then a person: ONE write to /api/crm/followups/fu-1 { assignee_user_id: Ben }', calls.length === 1 && !!c1 && /fu-1$/.test(c1.path) && c1.body.assignee_user_id === BEN.actor_id, JSON.stringify(calls));
+  ok(tag + ' · 2 the result line says it and the chip now reads Ben Ortiz', /1 follow-up/.test(await page.locator('[data-testid="assign-result"]').innerText()) && /Ben Ortiz/.test(await page.locator('[data-testid="crm-fu-fu-1"]').innerText()));
+  ok(tag + ' · 2 Undo is offered and puts the previous holder (nobody) back', (await page.locator('[data-testid="assign-undo"]').count()) === 1);
+  await page.locator('[data-testid="assign-undo"]').click(); await pause(900);
+  ok(tag + ' · 2 Undo wrote one more call with assignee_user_id null', calls.length === 2 && calls[1].body.assignee_user_id === null, JSON.stringify(calls.slice(1)));
+  /* the bar: tick two, the 3 buttons, assign both to Anna */
+  await tick(page, ['fu-1', 'fu-2']);
+  const bar = await page.locator('[data-bulk]').evaluateAll((els) => els.map((e) => e.getAttribute('data-bulk')));
+  ok(tag + ' · 3 the bulk bar shows Assign to… · Hand over · Back to pool', ['assign', 'handover', 'pool'].every((b) => bar.includes(b)), bar);
+  await bulk(page, 'assign'); await pickAndGo(page, 'Anna Lee'); await pause(1200);
+  const patched = calls.slice(2);
+  ok(tag + ' · 3 two ticked follow-ups = two writes, both to Anna, one result line', patched.length === 2 && patched.every((c) => c.body.assignee_user_id === ANNA.actor_id) && /2 follow-ups/.test(await page.locator('[data-testid="assign-result"]').innerText()), JSON.stringify(patched));
+  ok(tag + ' · no script error from the assign parts', !page.__threw.some((x) => /assign|CBAssign|crmFu/i.test(x)), page.__threw.join(' | '));
+  await ctx.close();
+}
+async function w3Employees(browser, base) {
+  const calls = [];
+  const people = [EMP('p1', 'Anna Lee', 'on'), EMP('p2', 'Ben Ortiz', 'on'), EMP('p3', 'Cara Viewer', 'on')];
+  const HOLDS = { p1: { actor_id: 'p1', name: 'Anna Lee', total: 3, followups: 1, plugs: [{ plug: 'task', count: 2 }, { plug: 'followup', count: 1 }] }, p2: { actor_id: 'p2', name: 'Ben Ortiz', total: 2, followups: 0, plugs: [{ plug: 'task', count: 2 }] }, p3: { actor_id: 'p3', name: 'Cara Viewer', total: 0, followups: 0, plugs: [] } };
+  let moved = 'chits';
+  const { ctx, page } = await w3Page(browser, base, (p, m, body, send) => {
+    if (p === '/api/people' && m === 'GET') return send(200, { people: people, may: { add: { ok: true } }, access_choices: [], counts: { on: 3, off: 0 }, payroll: { here: false, said: 'Pay is not done here yet.' } });
+    if (p === '/api/chits/holds' && m === 'GET') return send(200, { people: Object.values(HOLDS) });
+    if (p === '/api/chits/hand-over-all' && m === 'POST') {
+      calls.push({ path: p, body });
+      const previous = moved === 'chits'
+        ? [{ chit_id: 'h1', subject_id: 'c1', plug: 'task', role: '', actor_id: body.from_actor_id }, { chit_id: 'h2', subject_id: 'c2', plug: 'task', role: '', actor_id: body.from_actor_id }]
+        : [{ chit_id: 'h1', subject_id: 'c1', plug: 'task', role: '', actor_id: body.from_actor_id }, { subject_id: 'fu-9', plug: 'followup', actor_id: body.from_actor_id }];
+      return send(200, { moved: previous.length, skipped: [], previous });
+    }
+    if (p === '/api/chits/assign-bulk' && m === 'POST') { calls.push({ path: p, body }); return send(200, { assigned: (body.subject_ids || []).length, skipped: [], previous: [] }); }
+  }, '/employees.html', '[data-testid="emp-list"]');
+  const tag = 'w3 employees';
+  await page.waitForSelector('[data-testid="emp-row-p1"]', { timeout: 15000 }).catch(() => {});
+  const head = await page.locator('[data-testid="emp-list"]').innerText();
+  ok(tag + ' · 1 the list has a Holds column; Anna 3, Ben 2', /Holds/.test(head) && /3/.test(await page.locator('[data-testid="emp-row-p1"]').innerText()) && /2/.test(await page.locator('[data-testid="emp-row-p2"]').innerText()), head.slice(0, 200));
+  await page.locator('[data-testid="emp-row-p1"]').click(); await page.waitForSelector('#emp_handall', { timeout: 6000 });
+  ok(tag + ' · 2 the sheet says what Anna holds in words (2 tasks · 1 follow-up) and Hand over all… is open', /2 tasks/.test(await page.locator('[data-testid="emp-holds-now"]').innerText()) && (await page.$eval('#emp_handall', (b) => b.disabled)) === false);
+  await page.click('#emp_handall'); await pause(500);
+  ok(tag + ' · 2 the sheet closes first and the one person popover opens', !(await page.$eval('[data-testid="emp-sheet"]', (d) => d.open).catch(() => false)) && (await page.locator('[data-as-pick]').count()) > 0);
+  await pickAndGo(page, 'Ben Ortiz'); await pause(900);
+  ok(tag + ' · 2 ONE POST /api/chits/hand-over-all { from p1, to Ben }', calls.length === 1 && calls[0].body.from_actor_id === 'p1' && !!calls[0].body.to_actor_id, JSON.stringify(calls));
+  ok(tag + ' · 2 every moved item is a chit: the result line carries Undo', (await page.locator('[data-testid="assign-undo"]').count()) === 1);
+  /* a follow-up among the moved items: no undo route yet, so no Undo */
+  moved = 'mixed';
+  await page.locator('[data-testid="emp-row-p1"]').click(); await page.waitForSelector('#emp_handall', { timeout: 6000 });
+  await page.click('#emp_handall'); await pickAndGo(page, 'Ben Ortiz'); await pause(900);
+  ok(tag + ' · 3 a follow-up among the moved items: the result says what moved and shows NO Undo', calls.length === 2 && /2/.test(await page.locator('[data-testid="assign-result"]').innerText()) && (await page.locator('[data-testid="assign-undo"]').count()) === 0);
+  ok(tag + ' · no script error from the assign parts', !page.__threw.some((x) => /assign|CBAssign|emp/i.test(x)), page.__threw.join(' | '));
+  await ctx.close();
+}
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -246,6 +350,9 @@ const sleep = pause;
       await asst.ctx.close();
     }
   }
+  console.log('--- ASSIGN-W3 mounts');
+  await w3Crm(browser, base);
+  await w3Employees(browser, base);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed · shots: ' + OUT);
   process.exit(fail ? 1 : 0);
