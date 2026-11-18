@@ -766,4 +766,4 @@ function fileFacts(file) {
   return factsFromText(file.rel, fs.readFileSync(file.abs, 'utf8'));
 }
 
-module.exports = { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic };
+module.exports = { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, collect, inScope, chunks, parse, factsFromText, fileFacts };

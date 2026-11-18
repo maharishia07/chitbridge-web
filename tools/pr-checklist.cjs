@@ -130,4 +130,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { problems, checklistBlock, skipReason, LINES, DEPENDENCY_BOTS, DOCS_ONLY };
+module.exports = { problems, checklistBlock, skipReason, LINES };

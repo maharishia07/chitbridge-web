@@ -92,4 +92,4 @@ function risen(before, after) {
   return COUNTERS.filter((key) => after[key] > (before ? before[key] : 0)).map((key) => key + ' ' + (before ? before[key] : 0) + ' → ' + after[key]);
 }
 
-module.exports = { RATCHET_FILE, LIMITS, COUNTERS, breakdown, score, read, write, tighten, risen, headerComplete, ratchetPath };
+module.exports = { RATCHET_FILE, LIMITS, COUNTERS, breakdown, score, read, write, tighten, risen, headerComplete };
