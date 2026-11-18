@@ -34,6 +34,8 @@
  * ESCAPING IS ITS OWN JOB: every value painted here goes through this file's `esc`. A column renders trusted markup only if it
  * says so (`html: true`), and `next(row)` is trusted markup by contract: the page that builds it escapes its own data.
  *
+ * ALWAYS-ON TICKS (ASSIGN-W2): `bulkAlways: true` with `bulk` draws the tick column with no Select mode; the bar appears on the first tick ("3 selected" once · the bulk buttons · Select all shown · Clear) and stays after an action. Quick views (Mine · Unassigned · Everyone) are `views` with `merge: true` (CBAssign.quickViews).
+ *
  * SAVED VIEWS (T3-COMPAT): `views:{ items:[{ key, label, filt, tip, rows? }], tid, inTitle }` — a tab sets the list's own filters. STD-COMPARE
  * (2026-10-15): a view may carry its OWN rows (`rows: () => [...]`, a second data file mapped onto its own columns): while that tab is lit — its
  * `filt` in force, other filters may be added — the unit draws those rows instead of the mount's, and the tab counts them. A view without `rows`
@@ -583,7 +585,7 @@
           return I.o.lead.on();
         }, false)
       ) ||
-      (I.o.bulk && I.o.bulk.length && I.r.selMode)
+      (I.o.bulk && I.o.bulk.length && (I.r.selMode || I.o.bulkAlways))
     );
   }
   function template(I, cols) {
@@ -1241,7 +1243,7 @@ ctx.toolsHtml = '';
   }
   /** viewToolsHTML, step 2 of 2 (part 2, lines 1435-1445 of the one function): runs on, nothing here ends the call */
   function viewToolsHTMLStep2(list, keyText, testIds, toolOptions, groupHtml, ctx) {
-    if (ctx.listOptions.bulk && ctx.listOptions.bulk.length)
+    if (ctx.listOptions.bulk && ctx.listOptions.bulk.length && !ctx.listOptions.bulkAlways)
       ctx.toolsHtml +=
         '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
         (ctx.runState.selMode ? ' on' : '') +
@@ -1414,10 +1416,22 @@ ctx.groupHtml = groupToolsHTML(list, ctx.k);
         esc(countText(list, ctx.m)) +
         '</span>';
   }
+  /** bulkAlways (ASSIGN-W2, I2): the tick column is always there; the bar appears on the first tick, says the count ONCE, carries the actions without a count each, and stays after an action so the next group can be ticked */
+  function alwaysBarHtml(list, ctx) {
+    var n = selectedRows(list).length;
+    if (!n) return '';
+    var buttons = ctx.o.bulk.map(function (item) {
+      return '<button type="button" data-cbsid="CMP037-B04"' + mountAttribute('CMP037') + ' class="cbl-btn" data-bulk="' + esc(item.id) + '">' + esc(T(list, item.label)) + '</button>';
+    }).join('');
+    return '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' + ctx.k + '" role="group" aria-label="' + esc(T(list, 'Selected')) + '"><b data-testid="cbl-selcount-' + ctx.k + '">' + esc(T(list, '{n} selected').replace('{n}', n)) + '</b>' + buttons +
+      '<button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selall>' + esc(T(list, 'Select all shown')) + '</button>' +
+      '<button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selclear>' + esc(T(list, 'Clear')) + '</button></span>';
+  }
   /** paintToolsBar, step 5 of 7 (part 5, lines 1570-1594 of the one function): runs on, nothing here ends the call */
   function paintToolsBarStep5(list, ctx) {
     /* tools.count:false — a host that already says the count (one count on a screen) */
-    if (ctx.o.bulk && ctx.o.bulk.length && ctx.R.selMode) {
+    if (ctx.o.bulk && ctx.o.bulk.length && ctx.o.bulkAlways) ctx.h += alwaysBarHtml(list, ctx);
+    else if (ctx.o.bulk && ctx.o.bulk.length && ctx.R.selMode) {
       var n = selectedRows(list).length;
       ctx.h +=
         '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' +

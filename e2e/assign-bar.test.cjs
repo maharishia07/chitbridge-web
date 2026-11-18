@@ -30,7 +30,7 @@ const SERVER_SENTENCE = 'Only the partner or a manager can assign clients.';
 function fakeWindow(session, answers) {
   const calls = [];
   const store = { cb_sess: JSON.stringify(session) };
-  const slot = { className: '', hidden: true, innerHTML: '' };
+  const slot = { className: '', hidden: true, innerHTML: '', style: '', setAttribute(name, value) { if (name === 'style') this.style = value; } };
   const quiet = [];
   const win = {
     localStorage: { getItem: (key) => (key in store ? store[key] : null) },
@@ -40,6 +40,8 @@ function fakeWindow(session, answers) {
     tx: (value) => 'T(' + value + ')',
     cbQuiet: (where, failure) => quiet.push(where + ':' + (failure && failure.message)),
     Promise,
+    setTimeout: () => 0,
+    clearTimeout() {},
     atob: (value) => Buffer.from(value, 'base64').toString('binary'),
     fetch: (url, init) => {
       calls.push({ url, body: init.body ? JSON.parse(init.body) : null });
@@ -66,10 +68,11 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   check(owner.win.CBAssign.showsBar() === false && manager.win.CBAssign.showsBar() === false && assistant.win.CBAssign.showsBar() === false, 'with no server verdict nobody is shown the bar: the token and the role say nothing');
   check(manager.win.CBAssign.showsBar(true) === true && owner.win.CBAssign.showsBar(false) === false && assistant.win.CBAssign.showsBar(true) === true, "the server's verdict alone decides (a manager the server approves sees it, an owner it refuses does not)");
   check(manager.quiet.length === 0, 'no token is read, so nothing is logged');
-  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).length === 4, 'bulk gives four buttons when the server said yes and none when it said nothing');
+  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).length === 3, 'bulk gives three buttons (Assign to… · Hand over · Back to pool) when the server said yes and none when it said nothing');
+  check(!manager.win.CBAssign.bulk({ plug: 'p', said: true }).some((button) => button.id === 'open'), 'there is no Open jobs button: the server opens the job (I8)');
 
   check(owner.win.CBAssign.heldBy({ holders: [{ name: 'Anna <Lee>' }, { name: 'Ben' }] }) === 'Anna &lt;Lee&gt;, Ben', 'Held by lists the names the server sent, escaped');
-  check(owner.win.CBAssign.heldBy({ holders: [] }) === '<span class="as-none">T(Unassigned)</span>', 'an empty holders list reads Unassigned through the string layer (tx)');
+  check(owner.win.CBAssign.heldBy({ holders: [] }) === '<span style="color:var(--grey,#5B5B5B)">T(Unassigned)</span>', 'an empty holders list reads Unassigned through the string layer (tx)');
   check(owner.win.CBAssign.heldBy({}) === '' && owner.win.CBAssign.heldByText(null) === '', 'a row with no holders key (the switch is off) shows nothing');
   check(owner.win.CBAssign.heldByText({ holders: [] }) === 'T(Unassigned)', 'the plain-text column says Unassigned through the string layer');
   check(owner.win.CBAssign.hasHolders([{}, { holders: [] }]) === true && owner.win.CBAssign.hasHolders([{}]) === false, 'hasHolders is true only when a row carries the key');
@@ -79,7 +82,7 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   const refused = ownerWindow([reply(false, { detail: SERVER_SENTENCE })]);
   poolOf(opts, refused).run([heldRow]);
   await settle();
-  check(refused.slot.innerHTML.includes(SERVER_SENTENCE) && refused.slot.className.includes('as-bad'), "a refused call shows the server's own sentence, in the bad tone");
+  check(refused.slot.innerHTML.includes(SERVER_SENTENCE) && refused.slot.style.includes('--bad'), "a refused call shows the server's own sentence, in the bad tone");
   check(reloads.length === 1, 'the list reloads after a refusal');
 
   const unreadableAnswer = ownerWindow([{ ok: false, status: 500, json: () => Promise.reject(new Error('not json')) }]);
@@ -94,19 +97,47 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   const partial = ownerWindow([reply(true, { assigned: 1, skipped: [{ reason: skipSentence }, { reason: skipSentence }] })]);
   poolOf(opts, partial).run([heldRow]);
   await settle();
-  check(partial.slot.innerHTML.includes('2 · ' + skipSentence) && partial.slot.innerHTML.includes('1 T(client back in pool.)'), 'skips are grouped by the server sentence with a count, and the done count goes through tx');
+  check(partial.slot.innerHTML.includes('2 · ' + skipSentence) && partial.slot.innerHTML.includes('T(1 T(client) back in the pool.)'), 'skips are grouped by the server sentence with a count, and the done count goes through tx');
   check(partial.calls[0].body.target_actor_id === null && partial.calls[0].body.subject_ids[0] === 'a', 'back to pool sends target null and the row subject ids');
 
   const noHolder = ownerWindow();
   await noHolder.win.CBAssign.bulk(opts).find((button) => button.id === 'handover').run([{ id: 'a', role: 'adviser', holders: [] }]);
-  check(noHolder.slot.innerHTML.includes('T(No ticked client has a holder.)') && noHolder.calls.length === 0, 'hand over with no holder among the ticked rows says so in words and calls nothing');
+  check(noHolder.slot.innerHTML.includes('T(Nothing ticked has a holder to hand over from.)') && noHolder.calls.length === 0, 'hand over with no holder among the ticked rows says so in words and calls nothing');
 
   const source = text(BAR);
-  const sheet = source.slice(source.indexOf('function injectStyles'), source.indexOf('/** the people who may hold'));
-  const bareColours = [...sheet.matchAll(/(?:color|background|border-color):\s*(?!var\()[^;}]*/g)].filter((hit) => !/inherit|transparent/.test(hit[0]));
-  check(/var\(--/.test(sheet) && bareColours.length === 0, 'every colour in the sheet is a design token (var(--x, fallback)): cream and dark follow the theme, no colour of its own');
-  check(/min\(420px,calc\(100vw - 24px\)\)/.test(sheet) && /min-height:44px/.test(sheet), 'the picker fits 390 wide (100vw - 24px) and 1366, with 44px touch targets');
-  check(/var\(--on-accent,#fff\)/.test(sheet) && /var\(--accent,#1F4E8C\)/.test(sheet), 'the primary button text is the on-accent token over the accent token (AA contrast is measured on both themes in the browser walk)');
+  /* ASSIGN-W2 (A10): no style sheet and no <dialog> of its own; colours are theme tokens inline; the popover is the library popup (ui.dialog) */
+  check(!/createElement\(['"](style|dialog)|showModal/.test(source), 'assign-bar.js injects no style sheet and builds no <dialog> of its own');
+  const bareColours = [...source.matchAll(/(?:color|background|border-color):\s*(?!var\()[^;}'"]*/g)].filter((hit) => /#[0-9A-Fa-f]{3,6}/.test(hit[0]));
+  check(bareColours.length === 0 && /var\(--card,#fff\)/.test(source), 'every colour is a design token (var(--x, fallback)): cream and dark follow the theme');
+  check(/ui\.dialog\(/.test(source) && /POP212/.test(source), 'the person popover is ui.dialog (CMP002) with its register code');
+  check(/min-height:44px/.test(source), 'the touch targets are 44px');
+
+  /* the chip: the cell is the control, shown on the server's verdict only */
+  const chipWin = ownerWindow();
+  const chipOpts = { said: true, plug: 'client', noun: 'client', subjectOf: (row) => row.id, roleOf: (row) => row.role };
+  const chipHtml = chipWin.win.CBAssign.chip({ id: 'a', role: 'adviser', holders: [{ name: 'Anna' }] }, chipOpts);
+  check(/data-as-chip/.test(chipHtml) && /Anna ▾/.test(chipHtml) && /data-as-sub="a"/.test(chipHtml), 'a held row draws a chip with the name');
+  check(/\+ T\(Assign to…\)/.test(chipWin.win.CBAssign.chip({ id: 'b', role: 'adviser', holders: [] }, chipOpts)), 'an empty row draws the action itself: + Assign to…');
+  check(!/data-as-chip/.test(chipWin.win.CBAssign.chip({ id: 'a', role: 'adviser', holders: [] }, { ...chipOpts, said: false })), 'with no server verdict the cell is plain words, not a button');
+  check(chipWin.win.CBAssign.chip({}, chipOpts) === '', 'a row with no holders key shows nothing');
+
+  /* Undo reads the holders the server returned */
+  const undoWin = ownerWindow([reply(true, { assigned: 2, skipped: [], previous: [{ chit_id: 'c1', subject_id: 'a', actor_id: 'ben' }, { chit_id: 'c2', subject_id: 'b', actor_id: null }] }), reply(true, { assigned: 2 })]);
+  await poolOf(opts, undoWin).run([heldRow, { id: 'b', role: 'adviser', holders: [{ name: 'Y' }] }]);
+  await settle();
+  check(/data-as-undo/.test(undoWin.slot.innerHTML), 'the result line carries Undo when the answer returned the previous holders');
+  const noPrev = ownerWindow([reply(true, { assigned: 1, skipped: [] })]);
+  await poolOf(opts, noPrev).run([heldRow]);
+  await settle();
+  check(!/data-as-undo/.test(noPrev.slot.innerHTML), 'no previous holders in the answer, no Undo');
+
+  /* L12: the one vocabulary, the quick views and the filter by person */
+  const views = owner.win.CBAssign.quickViews();
+  check(views.items.map((v) => v.label).join('|') === 'T(Mine)|T(Unassigned)|T(Everyone)' && views.merge === true, 'quick views: Mine · Unassigned · Everyone');
+  const rowsHeld = [{ holders: [{ actor_id: 'ben', name: 'Ben' }] }, { holders: [] }, { holders: [{ actor_id: 'anna', name: 'Anna' }] }];
+  const filter = owner.win.CBAssign.heldFilter(rowsHeld);
+  check(filter.options.map((o) => o[0]).join(',') === 'none,mine,anna,ben', 'the Held by filter lists Unassigned, Mine and each person who holds a client');
+  check(rowsHeld.filter((r) => filter.match(r, 'none')).length === 1 && rowsHeld.filter((r) => filter.match(r, 'ben')).length === 1 && rowsHeld.filter((r) => filter.match(r, 'mine')).length === 0, 'the filter matches Unassigned and a person by the server holder id');
 
   const context = { accessLevelOf: (value) => (value === 'view' ? 'commenter' : 'editor') };
   vm.runInNewContext(text(HAT) + '\nthis.out = { hatAssignable, jobAssignable, actorHatFields };', context);
@@ -126,5 +157,5 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
 (function sourceChecks() {
   const src = text(BAR);
   check(!/atob|payload\.hat|hatOfToken/.test(src), 'assign-bar.js reads no token and no hat');
-  check(/Choose a person/.test(src) && /assign-go[^]{0,260}' disabled>'/.test(src), 'the picker pre-chooses nobody: a prompt option, and the Assign button off until a person is picked');
+  check(!/selected disabled/.test(src), 'the popover pre-chooses nobody: every person is one press');
 })();

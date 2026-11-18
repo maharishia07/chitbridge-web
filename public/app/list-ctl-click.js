@@ -310,6 +310,12 @@ ctx.o = list.o;
       paintList(list);
       return true;
     }
+    if (ctx.b.hasAttribute('data-cbl-selclear')) {
+      ctx.R.sel = {};
+      paintTools(list);
+      paintList(list);
+      return true;
+    }
     if (ctx.b.hasAttribute('data-cbl-selall')) {
       matched(list).rows.forEach(function (item, index) {
         ctx.R.sel[rowIdOf(list, item, index)] = true;
