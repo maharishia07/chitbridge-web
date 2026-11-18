@@ -73,7 +73,7 @@
   /** the proposal for one line the books lack: what suggest() says, or, once the owner has answered the line, what CBBankEntry.resolve() composes from the answer (the same path, one taught rule) */
   function proposalFor(opts, preview, line, ref) {
     /* the person's tick (B5-01) and word on the tax invoice (B5-03) for THIS line ride into the same engine call */
-    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref], fee_tax: preview.feeTax[ref] }),
+    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref], fee_tax: preview.feeTax[ref], interest_minor: preview.interest[ref] }),
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
@@ -238,7 +238,7 @@
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
     try {
-      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key] }));
+      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] }));
       preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
@@ -290,7 +290,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -371,6 +371,23 @@
           preview.feeTax[key] = answer === 'tax' ? 'tax' : 'none';
         });
       },
+      /** M-06: the interest part of a loan repayment, typed by the owner from the lender's statement, in minor units; never computed or remembered; blank or not a whole number clears it (the line asks again) */
+      interest: function (key, minor) {
+        return answerLine(opts, preview, key, function () {
+          if (minor === '' || minor == null || !(+minor >= 0) || Math.floor(+minor) !== +minor) delete preview.interest[key];
+          else preview.interest[key] = +minor;
+        });
+      },
+      /** the loans the host reads (GET /books/loans): [{ ref, lender, opening_minor, outstanding_minor, currency }]; none when the host has no read (the demo) */
+      loans: function () { return (opts.loans && opts.loans()) || []; },
+      loanOf: function (key) { return preview.loan[key] || ''; },
+      /** the loan the owner picked for a loan instalment line, by its ref; a ref the host did not list, or blank, clears it (the line asks again) */
+      loan: function (key, ref) {
+        return answerLine(opts, preview, key, function () {
+          var known = ((opts.loans && opts.loans()) || []).some(function (one) { return one.ref === ref; });
+          if (ref && known) preview.loan[key] = ref; else delete preview.loan[key];
+        });
+      },
       /** B5-02: pair this statement line with the books entry (by its id) it already is, or say it is new */
       pair: function (key, entryId) {
         return answerLine(opts, preview, key, function () {
@@ -412,7 +429,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, pairs: {}, notMatch: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -484,6 +501,6 @@
     var kept = words.split(/\s+/).filter(function (word) { return name.toLowerCase().split(/\s+/).indexOf(word.toLowerCase()) >= 0; }).join(' ');
     return kept.toLowerCase() === name.toLowerCase() ? kept : name;
   }
-  root.CBBankPreview = { create: create, looksLike: looksLike, standing: standing, asWritten: asWritten, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
+  root.CBBankPreview = { create: create, looksLike: looksLike, standing: standing, asWritten: asWritten, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS, sentenceOf: Line.sentenceOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankPreview;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

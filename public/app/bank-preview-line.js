@@ -21,10 +21,19 @@
     bank_leg_mismatch: "Entry does not match the bank line's amount",
     tax_kind: 'Tax needed',
     not_here: 'Not added from a bank line yet: record it in Books, then load the statement again',
+    balance_break: 'Balance does not follow',
+    which_liability: 'Which tax is this?',
+    interest: 'Interest needed',
+    interest_too_big: 'Interest is more than the payment',
     no_entry: 'Needs you'
   };
   /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
-  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'fee_tax', 'tax_invoice', 'needs_tick'];
+  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'fee_tax', 'tax_invoice', 'which_liability', 'interest', 'needs_tick', 'balance_break'];
+  /** the plain sentence the ENGINE gives a blocker (bank-project BLOCKER_WORDS, the one register); '' when this engine copy has none, so the short label shows alone and no sentence is written here */
+  function sentenceOf(code) {
+    var words = root.CBBankProject && root.CBBankProject.BLOCKER_WORDS;
+    return (words && words[code]) || '';
+  }
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
   var MATCH_WINDOW_DAYS = 3;
 
@@ -95,6 +104,7 @@
       split: proposalField_(proposal, 'split'),
       openBills: proposalField_(proposal, 'open_bills'),
       allocateRefusal: proposalField_(proposal, 'allocate_refusal'),
+      onAccount: +proposalField_(proposal, 'on_account_minor') || 0,
       event: proposalField_(proposal, 'event')
     };
   }
@@ -123,6 +133,7 @@
     STATE_WORDS: STATE_WORDS,
     NEEDS_WORDS: NEEDS_WORDS,
     ASKED: ASKED_,
+    sentenceOf: sentenceOf,
     minorOf: minorOf,
     moneyText: moneyText,
     dateText: dateText,

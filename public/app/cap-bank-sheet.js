@@ -159,7 +159,8 @@ function bkshController() {
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     pairing: bkshPairing,
-    suggestOpts: Object.defineProperty({ country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
+    loans: () => bkshBook().loans || [] /* GET /books/loans: the picker of a loan instalment line */,
+    suggestOpts: Object.defineProperty({ country, lodged_bas: bkshBook().lodged || [] /* GET /books/gst/lodged: a tax payment that equals a lodged net is proposed as GST (engine reads net_minor) */, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }

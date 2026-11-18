@@ -28,6 +28,8 @@
     ['2026-10-12', 170500, 0, 'Invoice INV-1: Kensington Strata']
   ];
   var OPENING_MINOR = 1850000;
+  /* the loans the sample shop owes (the shape of GET /books/loans) */
+  var LOANS = [{ ref: 'LOAN-1', lender: 'Westpac', opening_minor: 2000000, outstanding_minor: 1200000, currency: 'AUD', taken_on: '2026-07-01' }, { ref: 'LOAN-2', lender: 'Uncle Raj', opening_minor: 500000, outstanding_minor: 500000, currency: 'AUD', taken_on: '2026-08-15' }];
   /* the suppliers and customers the books know: a line that names one is paid to or from them */
   var PARTIES = [
     { id: 'p-jones', name: 'Jones Plumbing Supplies', kind: 'supplier' },
@@ -35,5 +37,5 @@
     { id: 'p-coogee', name: 'Coogee Bay Cafe', kind: 'customer' },
     { id: 'p-nguyen', name: 'R and J Nguyen', kind: 'customer' }
   ];
-  root.CBBankDemoSample = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS, OPENING_MINOR: OPENING_MINOR, PARTIES: PARTIES };
+  root.CBBankDemoSample = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS, OPENING_MINOR: OPENING_MINOR, PARTIES: PARTIES, LOANS: LOANS };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
