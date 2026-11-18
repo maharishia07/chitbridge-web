@@ -172,7 +172,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
     ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'live' && BYID['oauth2-oidc'].limit && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed (Partly); Zoho reached with OAuth 2 — In force, the OIDC decision a stated Limit (STD-COMPARE)');
     /* STD-COMPARE (15 Oct 2026): the five audit fixes, each proved against the code (docs/critique/STD-COMPARE.md a) */
-    ok(BYID['wcag-1.4.6'].s === 'part' && /High Contrast/.test(BYID['wcag-1.4.6'].m) && BYID['css-logical'].s === 'part' && /physical/.test(BYID['css-logical'].m), 'WCAG 1.4.6 is Partly (one theme measured at 7:1) and CSS logical properties Partly (the small apps still carry physical ones)');
+    ok(BYID['wcag-1.4.6'].s === 'live' && /High Contrast/.test(BYID['wcag-1.4.6'].limit) && /AAA/.test(BYID['wcag-1.4.6'].limit) && /Proof: /.test(BYID['wcag-1.4.6'].note) && BYID['css-logical'].s === 'part' && /physical/.test(BYID['css-logical'].m), 'WCAG 1.4.6 is In force with the stated Limit (AAA on the High Contrast themes only) and a Proof line; CSS logical properties Partly (the small apps still carry physical ones)');
     ok(['gherkin', 'oauth2-oidc', 'medusa-model'].every((id) => BYID[id].s === 'live' && BYID[id].limit && !BYID[id].m && /Proof: /.test(BYID[id].note)), 'Gherkin, OAuth 2 and the Medusa model are In force with nothing missing: the decision not to adopt more is a Limit, the proof is named');
     ok(cjHas('Xero'), 'compat.json names Xero (the Australian launch depends on it)');
   }
@@ -343,7 +343,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
       await p.screenshot({ path: path.join(SHOTS, 'standards-country-matrix.png') });
       await p.click('[data-testid="std-row-' + ci + '"]'); await p.waitForTimeout(150);
     }
-    /* a row opens: the GSTR row (Partly, Money & GST) */
+    /* the Partly sample row is read from the register at run time (other lanes flip rows to In force; a name pinned here went stale): the first Partly row with a short Missing line, one never added after the first 44 preferred */
+    const partRows = REG.S.filter((r) => r.s === 'part' && r.m); ok(partRows.length > 0, 'the register still holds Partly rows to sample (' + partRows.length + ')');
+    const SAMPLE = partRows.find((r) => !r.added) || partRows[0]; const sIdx = REG.S.indexOf(SAMPLE);
+    /* a row opens: the GSTR row (a returns row with an Open in the app button) */
     const gi = idx('GSTR-1 / GSTR-3B (GSTN schema)');
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
     await p.click('[data-testid="std-row-' + gi + '"]'); await p.waitForTimeout(250);
@@ -363,18 +366,22 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(!(await p.locator('[data-testid="std-gloss-pop"]').isVisible()), 'Escape hides it');
     ok(await p.locator('[data-testid="std-row-' + gi + '"] abbr.gl[title]').count() > 0 && await p.locator('[data-testid="std-row-' + gi + '"] abbr.gl[tabindex]').count() === 0, 'the row\'s own terms carry their full name as a title, without a tab stop each');
     await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
+    await p.click('[data-testid="std-row-' + gi + '"]'); await p.waitForTimeout(150);
+    await p.fill('[data-testid="listctl-search-standards"]', SAMPLE.n); await p.waitForTimeout(300);
+    await p.click('[data-testid="std-row-' + sIdx + '"]'); await p.waitForTimeout(250);
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
-    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && new RegExp('Checked ' + CHECKED).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(clip.indexOf(SAMPLE.n) >= 0 && /Status: Partly/.test(clip) && /Missing: /.test(clip) && clip.indexOf('Kind: ' + ({ law: 'Law', std: 'Standard', prac: 'Practice', compat: '' }[SAMPLE.k] || '')) >= 0 && new RegExp('Checked ' + CHECKED).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
     ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */
-    const gs1 = idx('GS1');
-    await p.fill('[data-testid="listctl-search-standards"]', 'GS1'); await p.waitForTimeout(300);
+    await p.click('[data-testid="std-row-' + sIdx + '"]'); await p.waitForTimeout(150); /* close the row Copy used; it is the same sample */
+    const gs1 = sIdx;
+    await p.fill('[data-testid="listctl-search-standards"]', SAMPLE.n); await p.waitForTimeout(300);
     const gsRow = p.locator('[data-testid="std-row-' + gs1 + '"]');
     await gsRow.click(); await p.waitForTimeout(250);
     const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]');
-    ok(/What is missing, in full/.test(gdl) && /check-digit validation is not enforced/.test(gdl) && /In the register/.test(gdl) && !/New/.test(gdl), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
+    const noteHead = (SAMPLE.note || '').slice(0, 24); ok(/What is missing, in full/.test(gdl) && (!/^[A-Za-z0-9 ,.'-]+$/.test(noteHead) || gdl.replace(/s+/g, ' ').indexOf(noteHead) >= 0) && /In the register/.test(gdl) && (SAMPLE.added ? /New/.test(gdl) : !/New/.test(gdl)), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
     await gsRow.click(); await p.waitForTimeout(150);
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
     /* TIDY 6 · "Open in the app" is offered only where a CUSTOMER home exists (the till); never the workshop, app.html */
