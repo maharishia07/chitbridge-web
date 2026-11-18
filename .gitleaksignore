@@ -1,3 +1,5 @@
 # A stand-in key in an e2e walk (T3-SETTINGS, 14 Oct) — fake by construction, rewritten in INT6d-GREEN; this fingerprint is the
 # earlier commit still inside the PR's history range. Never add a real secret here — rotate it instead.
 82d212a363cd39f9ca02aea6cc476d892b626af8:e2e/walk-settings-ops.cjs:generic-api-key:58
+# A standards-register name list ("API-REGISTER" in the CAP-STD-1 build rows) the generic-api-key rule reads as a key; a name, not a secret.
+3ff36658cbe7a7b38e48278a31507da7f6c2bf0b:public/app/cap-standards.js:generic-api-key:3447
