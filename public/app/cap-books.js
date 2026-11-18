@@ -238,7 +238,12 @@ function bkCss() {
     '#bk_lt .tn{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:start;gap:0 6px;width:100%;border:0;background:none;text-align:start;border-radius:8px;padding:6px 8px 6px calc(6px + var(--lvl,0) * 14px);position:relative;color:var(--ink);min-height:34px;font:inherit;font-size:var(--fs-2);cursor:pointer}',
     '#bk_lt .tn:hover{background:var(--panel)}',
     '#bk_lt .tn .tw{width:16px;text-align:center;line-height:1.45}',
-    '#bk_lt .tn .nm{min-width:0;overflow-wrap:normal;word-break:normal;hyphens:manual;line-height:1.35;padding-top:1px}',
+    '#bk_lt .tn .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;padding-top:1px}' /* W15-104: a tree name is ONE line; the full name is the tooltip */,
+    '#bk_lt .lt-asof{padding:6px 10px 2px;font-size:var(--fs-1);color:var(--grey)}',
+    '#bk_lt .lt-segs{display:flex;gap:4px;padding:2px 8px 6px}',
+    '#bk_lt .lt-seg{flex:1 1 0;min-height:32px;border:1px solid var(--line,#d8dee6);background:none;border-radius:8px;font:inherit;font-size:var(--fs-1);color:var(--grey);cursor:pointer;white-space:nowrap}',
+    '#bk_lt .lt-seg.on{background:var(--blue-tint-bg,var(--blue-t,#E4EEFA));color:var(--blue-2,var(--blue-i,#174A87));font-weight:600;border-color:var(--blue-2,var(--blue-i,#174A87))}',
+    '#bk_lt .tn .am.over{color:var(--red,#b3261e)}',
     '#bk_lt .tn .am{font-family:var(--f-num,"IBM Plex Mono",ui-monospace,monospace);font-variant-numeric:tabular-nums;font-size:calc(var(--fs-2) * .95);color:var(--grey);white-space:nowrap;text-align:end;min-width:var(--am-w,12ch);padding-top:2px}',
     '#bk_lt .tn .am.nil{color:var(--faint,var(--grey));opacity:.8}',
     '#bk_lt .tn .ck{color:var(--green);font-weight:700;margin-inline-end:4px}',
@@ -3409,6 +3414,33 @@ function bkLgCols(c, kind) {
   );
   return cols;
 }
+/** the period moved (a preset, a custom range, a step): the open ledger reads its page again and the tree's figures follow the same dates */
+function bkLgPeriodChanged() {
+  BK.lt.r = null;
+  BK.lt.noParty = false;
+  if (BK.lt.api) BK.lt.api.refresh();
+  bkLtLoad();
+  bkLtBalReload();
+}
+/** ‹ Earlier · Later › for the Ledgers' period: the Day book's own step (bkDbStep: a day, a month, a financial year, or the same span), never past today */
+function bkLgStepHTML() {
+  var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')),
+    now = { preset: p.preset, from: bkRange('lg').from, to: bkRange('lg').to },
+    one = function (dir, word, mark) {
+      var to = bkDbStep(now, dir);
+      return (
+        '<button data-cbsid="TSK006-B1' + (dir < 0 ? '4' : '5') + '"' + bkMountAttribute('TSK006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="step' + (dir < 0 ? 'back' : 'next') + '" data-testid="lg-step-' + (dir < 0 ? 'back' : 'next') + '" aria-label="' + esc(tx(word)) + '" title="' + esc(tx(word)) + '"' + (to ? '' : ' disabled') + '>' + mark + '</button>'
+      );
+    };
+  return one(-1, 'Earlier', '‹') + one(1, 'Later', '›');
+}
+function bkLgStep(dir) {
+  var q = bkRange('lg'),
+    to = bkDbStep({ preset: (BK.lgp || {}).preset || 'fy', from: q.from, to: q.to }, dir);
+  if (!to) return;
+  BK.lgp = to;
+  bkLgPeriodChanged();
+}
 /** a ledger's head is the CBList title row: the ledger's name, the period chip (the Day book's presets), ONE figures line, the notice when something needs a hand */
 function bkLgPeriodHead() {
   var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')),
@@ -3429,10 +3461,7 @@ function bkLgPeriodHead() {
     onPick: function (v, range) {
       if (v === 'custom' && !range) return;
       BK.lgp = bkDbPeriod(v, range);
-      BK.lt.r = null;
-      BK.lt.noParty = false;
-      if (BK.lt.api) BK.lt.api.refresh();
-      bkLtLoad();
+      bkLgPeriodChanged();
     }
   };
 }
@@ -3618,6 +3647,7 @@ function bkLgHead() {
       x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn" data-lt="backto" data-testid="lt-backto">‹ ' + esc(txf('Back to {form}', { form: BK.backTo.label })) + '</button>';
     if (bkLtNarrow())
       x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
+    if (!ownsParty) x += bkLgStepHTML(); /* ACC-367: the year stepper */
     if (bkLtFolded() && !bkLtNarrow())
       x +=
         '<button data-cbsid="CMP042-B06"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' +
@@ -3899,6 +3929,15 @@ function bkLtClickAction(action) {
       innerNode.focus();
     }
     bkLtTreePaint();
+    return;
+  }
+  if (action === 'act-on' || action === 'act-all') {
+    BK.lt.all = action === 'act-all';
+    bkLtTreePaint();
+    return;
+  }
+  if (action === 'stepback' || action === 'stepnext') {
+    bkLgStep(action === 'stepback' ? -1 : 1);
     return;
   }
   if (action === 'fold' || action === 'unfold') {
@@ -4205,6 +4244,7 @@ function bkLtShellHTML() {
         esc(tx('Hide the ledger list')) +
         '">⟨</button></div>' +
         '<div id="bk_attn_lg" class="lt-attn" data-testid="lt-attn"></div>' + /* the Needs attention strip lives in the ledger list column: a row of its own over the pane cost the head 5% of the window (Ledgers head budget 20% / 30%); a list it opens scrolls in the column */
+        '<div id="lt_head" class="lt-head" data-testid="lt-head"></div>' +
         '<div id="lt_tree" class="lt-list" data-testid="lt-tree" role="tree" aria-label="' +
         esc(tx('Ledgers by band')) +
         '"></div></nav>' +
@@ -4225,7 +4265,7 @@ async function bkLedgers(body) {
   try {
     var rr = await Promise.all([
       api('booksAccounts'),
-      bkBalances().catch(function (failure) {
+      bkBalances(bkRange('lg')).catch(function (failure) {
         return bkQuiet('balances', failure, null);
       }),
       booksDuesLoad(true)
