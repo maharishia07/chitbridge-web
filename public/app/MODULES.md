@@ -116,7 +116,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (115)
+## Shared (116)
 
 | file | loading | what it is |
 |---|---|---|
@@ -174,6 +174,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `edition.js` | — | · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions |
 | `embed-host.js` | — | .html); CBEmbed.open is called in till.html only (Add a person: grep -n 'CBEmbed\.open' public) |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
+| `home2.js` | — | home2.js — CBHome2: the crisp one-page Home (index2.html, UX-127, Athi 18 Nov 2026) and the switch between it and the classic Home |
 | `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
 | `kural.js` | — |  |
 | `lab-kit.js` | — |  |
@@ -300,4 +301,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*211 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*212 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
