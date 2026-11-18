@@ -144,6 +144,8 @@
     return [
       '.cbl .cbl-row.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
       '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
+      /* ONE LINE (leader practice: HubSpot/Salesforce list views): a cell in the table layout never wraps; it is cut with an ellipsis and its full text shows on hover (the title is set by list-ctl.js). A card (narrow container, below) wraps as before. */
+      '@container list (min-width: 621px){.cbl .cbl-row .cbl-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}',
       '.cbl .cbl-cell.r{text-align:end}',
       '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
       '.cbl .cbl-cell.strong{font-weight:700}',
