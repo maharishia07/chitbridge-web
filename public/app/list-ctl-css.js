@@ -233,6 +233,9 @@
       '}',
       /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
     '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px 6px;margin-block:-8px;vertical-align:middle}/* REP-73 B5: a gap on the end side, so the box never sits over the first letter of the name (it was -9px on both sides) */.cbl .cbl-search input{align-self:stretch}',
+      /* ASSIGN-W3-CRM-TICKS: a grouped list with ticks: the caret's hang (-9px/-15px) sat over the tick in the 34px lead column, so a press on the tick hit the caret; with a lead column the caret starts at the cell */
+      '.cbl .cbl-row[aria-expanded]>.cbl-lead{padding:0;justify-content:center}.cbl .cbl-row[aria-expanded]>.cbl-lead input[data-selrow]{margin:0}',
+      '.cbl .cbl-row:has(>.cbl-lead)>.cbl-cell>.cbl-tw{margin-inline-start:0}',
       '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
       '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
       '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
