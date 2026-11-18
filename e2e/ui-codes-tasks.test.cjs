@@ -28,7 +28,7 @@ const src = {}; FILES.forEach((f) => (src[f] = read(f)));
 /** marker (testid or id) -> the code the tag that carries it must wear */
 const WANT = {
   'cap-tasks.js': { 'tk-retry': 'TSK003-B01', 'tk-view': 'TSK003-S01', 'tk-new"': 'TSK003-B02', 'id="tk_x"': 'TSK003-B03', 'id="tk_sheet_retry"': 'TSK003-B04',
-    'tk-reason"': 'TSK003-I01', 'tk-reason-go': 'TSK003-B11', 'id="tk_who_sel"': 'TSK003-S02', 'id="tk_who_go"': 'TSK003-B12', 'tk-deliver-qty': 'TSK003-I02',
+    'tk-reason"': 'TSK003-I01', 'tk-reason-go': 'TSK003-B11', 'tk-deliver-qty': 'TSK003-I02',
     'tk-deliver-go': 'TSK003-B13', 'tk-new-what': 'TSK003-I03', 'tk-new-go': 'TSK003-B14' },
   'cap-dispute.js': { 'id="adv_disp"': 'TSK006-I01', 'dispute-category': 'TSK006-S03', 'dispute-reason"': 'TSK006-T01', 'dispute-raise': 'TSK006-B10',
     'dispute-resolve-note': 'TSK006-T02', 'dispute-resolve-submit': 'TSK006-B12', 'dp-retry': 'TSK006-B13', 'dp-prev': 'TSK006-B14', 'dp-next': 'TSK006-B15',
@@ -37,7 +37,7 @@ const WANT = {
   'cap-assist.js': { 'ca-retry': 'TSK007-B01', 'id="ca_q"': 'TSK007-I01', 'ca-draft': 'TSK007-B02', 'id="ca_a"': 'TSK007-T01', 'id="ca_c"': 'TSK007-I02', 'ca-reject': 'TSK007-B04' }
 };
 /** the helper call sites pass their code as the last argument of actRow */
-const CALLS = { 'cap-tasks.js': ['TSK003-B05', 'TSK003-B06', 'TSK003-B07', 'TSK003-B08', 'TSK003-B09', 'TSK003-B10'], 'cap-dispute.js': ['TSK006-B16', 'TSK006-B20'], 'cap-assist.js': ['TSK007-B03'] };
+const CALLS = { 'cap-tasks.js': ['TSK003-B05', 'TSK003-B07', 'TSK003-B08', 'TSK003-B09'], 'cap-dispute.js': ['TSK006-B16', 'TSK006-B20'], 'cap-assist.js': ['TSK007-B03'] };
 
 for (const f of FILES) {
   for (const [marker, code] of Object.entries(WANT[f])) {
@@ -55,7 +55,7 @@ for (const f of FILES) {
 }
 const dup = Object.keys(all).filter((c) => all[c].length > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 60, 'the page has 60 tagged elements, counted by code: ' + Object.keys(all).length);
+check(Object.keys(all).length === 56, 'the page has 56 tagged elements, counted by code: ' + Object.keys(all).length);
 check(src['cap-tasks.js'].indexOf('function actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'actRow takes the stamp code as its 6th parameter');
 check(src['cap-dispute.js'].indexOf('root.CBTasks.actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'the dispute wrapper hands the code on');
 

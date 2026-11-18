@@ -26,6 +26,7 @@
   'use strict';
   var E = { people: [], may: { add: { ok: false, why: null } }, choices: [], counts: { on: 0, off: 0 }, el: null, o: {}, list: null, loaded: false };
   var HAT_OF = { editor: 'act', commenter: 'audit', viewer: 'view_only' }; /* sent beside access_level until b173 is run, as the workshop does */
+  var PLUG_WORD = { task: 'tasks', line: 'lines', client: 'clients', followup: 'follow-ups', follow_up: 'follow-ups', call: 'calls' }; /* the plug keys the server sends, in the words the sheet reads */
   var STATE_WORD = { on: 'On', away: 'Away', off: 'Off' };
   var Copy = root.CBEmployeesCopy; /* the sign-in name and its Copy control (cap-employees-copy.js) */
 
@@ -126,8 +127,36 @@
       E.counts = reply.counts || E.counts;
       E.payroll = reply.payroll || null;
       E.loaded = true;
-      return reply;
+      return loadHolds().then(function () {
+        return reply;
+      });
     });
+  }
+  /** ASSIGN-W3 · L11: what each person holds open (GET /api/chits/holds, one read for the whole list); a seat that may not read it gets the server's sentence and no column */
+  function loadHolds() {
+    E.holds = null;
+    E.holdsWhy = '';
+    if (!root.CBAssign || (E.o.embed && E.o.view === 'add')) return Promise.resolve();
+    return root.CBAssign.holds().then(
+      function (answer) {
+        E.holdsWhy = answer.why;
+        if (!answer.people) return;
+        E.holds = {};
+        answer.people.forEach(function (item) {
+          E.holds[item.actor_id] = item;
+        });
+      },
+      function () {
+        E.holds = null; /* the column is a convenience: a read that failed leaves the list as it was */
+      }
+    );
+  }
+  function holdsOf(p) {
+    return (E.holds && E.holds[p.id]) || null;
+  }
+  /** "3 tasks · 2 clients · 1 follow-up": the plug counts the server sent, never a number worked out here */
+  function holdsWords(item) {
+    return !item || !item.total ? '' : (item.plugs || []).map(function (x) { return x.count + ' ' + T(PLUG_WORD[x.plug] || x.plug); }).join(' · ');
   }
   function reload() {
     return load().then(
@@ -239,6 +268,22 @@
         }
       },
       {
+        key: 'holds',
+        label: T('Holds'),
+        prio: 6,
+        w: 90,
+        num: true,
+        sort: 'holds',
+        cell: function (p) {
+          var item = holdsOf(p);
+          return item ? String(item.total) : '—';
+        },
+        value: function (p) {
+          var item = holdsOf(p);
+          return item ? item.total : 0;
+        }
+      },
+      {
         key: 'last',
         label: T('Last at a counter'),
         prio: 5,
@@ -273,7 +318,7 @@
         return 'emp-row-' + p.id;
       },
       columns: cols(),
-      defaultCols: ['name', 'user_id', 'access', 'state'] /* On or off shows by default; Last at a counter is in the ⚙ chooser */,
+      defaultCols: ['name', 'user_id', 'access', 'state', 'holds'] /* On or off shows by default; Last at a counter is in the ⚙ chooser */,
       filters: [
         {
           key: 'state',
@@ -408,6 +453,7 @@
           'EMP001-B07'
         ) +
         actRow('emp_cover', '🤝', T('Who stands in'), m.cover, coverNote, 'EMP001-B08') +
+        actRow('emp_handall', '📤', T('Hand over all…'), handAllMay(node), '<span class="sub" data-testid="emp-holds-now">' + esc(holdsWords(holdsOf(node)) || T('Holds nothing')) + '</span>', 'EMP001-B09') +
         '</div><div id="emp_more"></div>'
     );
     var q = function (k) {
@@ -433,6 +479,20 @@
       q('emp_cover').onclick = function () {
         coverPanel(node);
       };
+    if (handAllMay(node).ok !== false)
+      q('emp_handall').onclick = function () {
+        handAll(node);
+      };
+  }
+  /** shown always; greyed with the server's own sentence when this seat may not read what people hold (the hand-over itself is refused by the server too) */
+  function handAllMay(p) {
+    if (!E.holds) return { ok: false, why: E.holdsWhy || T('Not available to this sign-in.') };
+    return holdsOf(p) && holdsOf(p).total ? { ok: true } : { ok: false, why: T('Holds nothing') };
+  }
+  /** Hand over all…: the sheet closes first (a popup cannot open over an open sheet), the one CBAssign popover picks the person, the result line and Undo are CBAssign's */
+  function handAll(p) {
+    closeSheet();
+    root.CBAssign.handOverAll({ fromId: p.id, reload: reload });
   }
 
   /** after a write: re-read the one list, repaint the sheet on the fresh row, tell the host */
@@ -852,7 +912,7 @@
           return openAdd();
         }
         E.el.innerHTML =
-          '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div><div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-pop="POP129" data-testid="emp-sheet"></dialog>';
+          '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div>' + (root.CBAssign ? root.CBAssign.slotHTML() : '') + '<div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-pop="POP129" data-testid="emp-sheet"></dialog>';
         var node = $('emp_sheet');
         node.addEventListener('cancel', function (e) {
           e.preventDefault();

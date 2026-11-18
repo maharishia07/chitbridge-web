@@ -15,7 +15,7 @@
 (function (root) {
   'use strict';
   var assignApi = (root.CBAssign = root.CBAssign || {});
-  var ASSIGN_PATH = '/api/chits/assign-bulk', ACTORS_PATH = '/api/actors', UNDO_MS = 30000, MOUNT = 'HOM001-U02';
+  var ASSIGN_PATH = '/api/chits/assign-bulk', ACTORS_PATH = '/api/actors', HANDOVER_PATH = '/api/chits/hand-over-all', HOLDS_PATH = '/api/chits/holds', MYWORK_PATH = '/api/chits/my-work', UNDO_MS = 30000, MOUNT = 'HOM001-U02';
   var mounts = {}, bound = false, last = null, undoTimer = null, nameById = {};
   function tr(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   /** a whole sentence with {placeholders}: never built by joining words */
@@ -120,11 +120,11 @@
 
   /* ── the people ───────────────────────────────────────────────────────────────────────────── */
   /** the people who may hold this kind of work, as the server flags them (job_assignable), with `open_load` and the ONE `suggested` person (GET /api/actors?for=plug:subject, one client only: a mixed bulk asks for no suggestion and pre-picks nobody, A5); the page filters on the flag and never on a hat */
-  function people(forWord) {
+  function people(forWord, flag) {
     return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (r) {
       if (!r.ok) return { error: sentenceOf(r.body) || tr('People did not load.'), list: [] };
       var mine = assignApi.meId();
-      var list = (r.body.actors || r.body.items || []).filter(function (a) { return a.job_assignable === true; }).map(function (a) {
+      var list = (r.body.actors || r.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) {
         var person = { id: a.actor_id || a.identity_id || a.id, name: a.display_name || a.name || '', holds: typeof a.open_load === 'number' ? a.open_load : null, suggested: a.suggested === true || (!!r.body.suggested && r.body.suggested === (a.actor_id || a.identity_id || a.id)) };
         person.me = a.is_me === true || a.self === true || (!!mine && String(person.id) === mine);
         nameById[person.id] = person.name;
@@ -167,7 +167,8 @@
   /** open the person popover (ui.dialog, the library popup) → done({ id|null, note }) on a press; nothing when it is cancelled. spec: { title, held (some row has a holder) } */
   function pick(spec, done) {
     if (!root.ui || typeof root.ui.dialog !== 'function' || typeof root.modal !== 'function') return showOutcome('bad', tr('The list of people cannot open on this page.'), []);
-    people(spec.forWord).then(function (roster) {
+    if (typeof spec.before === 'function') spec.before(); /* opts.beforePick: a page whose record sits in a modal <dialog> closes it first (a popup cannot open over it) */
+    people(spec.forWord, spec.flag).then(function (roster) {
       root.ui.dialog({
         mount: MOUNT, pop: 'POP212', titleText: tr(spec.title), testid: 'assign-picker',
         body: popoverBody(roster, spec),
@@ -184,12 +185,12 @@
     return order.map(function (k) { return { role: k, rows: out[k] }; });
   }
   /** what an Undo puts back: the holders the server says were there before, grouped by (role, previous holder) */
-  function undoOf(plug, role, previous) {
+  function undoOf(plug, role, previous, write) {
     var by = {}, order = [];
     (previous || []).forEach(function (p) {
       if (!p.subject_id) return;
       var k = String(p.actor_id || '');
-      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [] }; order.push(k); }
+      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], write: write }; order.push(k); }
       by[k].subject_ids.push(p.subject_id);
     });
     return order.map(function (k) { return by[k]; });
@@ -207,11 +208,13 @@
         if (sum.refused) return null;
         var body = { plug: opts.plug, role: group.role, subject_ids: group.rows.map(function (r) { return opts.subjectOf(r); }), target_actor_id: target };
         if (note) body.note = note;
-        return call('POST', ASSIGN_PATH, body).then(function (r) {
+        /* opts.write: a plug whose rows are not chits (CRM follow-ups) is written by its own route; it answers like assign-bulk: { ok, sentence?, assigned, skipped, previous[{subject_id, actor_id}] } */
+        return (opts.write ? opts.write(body.subject_ids, target, note) : call('POST', ASSIGN_PATH, body)).then(function (r) {
+          if (opts.write) r = { ok: r.ok !== false, body: { assigned: r.assigned, skipped: r.skipped, previous: r.previous, detail: r.sentence } };
           if (!r.ok) { sum.refused = sentenceOf(r.body) || tr('Not done.'); return null; }
           sum.done += Number(r.body.assigned) || 0;
           sum.skipped = sum.skipped.concat(r.body.skipped || []);
-          sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous));
+          sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous, opts.write));
           (r.body.previous || []).forEach(function (p) { if (p.actor_id && p.actor_id !== target) sum.before.push(nameById[p.actor_id] || ''); });
         });
       });
@@ -230,7 +233,8 @@
     return groups.reduce(function (chain, g) {
       return chain.then(function () {
         if (refused) return null;
-        return call('POST', ASSIGN_PATH, { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id }).then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
+        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
+        return put.then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
       });
     }, root.Promise.resolve()).then(function () {
       showOutcome(refused ? 'bad' : 'good', refused || tr('Undone.'), []);
@@ -257,12 +261,12 @@
     var held = heldOf(opts);
     return [
       { id: 'assign', label: tr('Assign to…'), run: function (rows) {
-        pick({ title: 'Assign to…', held: rows.some(held) }, function (who) { apply(opts, rows, who); });
+        pick({ title: 'Assign to…', held: rows.some(held), flag: opts.flag }, function (who) { apply(opts, rows, who); });
       } },
       { id: 'handover', label: tr('Hand over'), run: function (rows) {
         var holding = rows.filter(held);
         if (!holding.length) return showOutcome('bad', tr('Nothing ticked has a holder to hand over from.'), []);
-        pick({ title: 'Hand over to', held: true }, function (who) { apply(opts, holding, who); });
+        pick({ title: 'Hand over to', held: true, flag: opts.flag }, function (who) { apply(opts, holding, who); });
       } },
       { id: 'pool', label: tr('Back to pool'), run: function (rows) {
         var holding = rows.filter(held);
@@ -270,6 +274,61 @@
         return apply(opts, holding, { id: null, note: '' });
       } }
     ];
+  };
+
+  /* ── Hand over all (L11): everything one person holds, to another person or back to the pool ───────────── */
+  /** the Undo groups of a hand-over-all answer: only chit entries can be put back through assign-bulk; ONE follow-up entry (no undo route yet) means no Undo at all */
+  function handOverUndo(previous) {
+    var list = previous || [];
+    if (!list.length || list.some(function (p) { return !p.chit_id; })) return [];
+    var by = {}, order = [];
+    list.forEach(function (p) {
+      var k = (p.plug || '') + '|' + (p.role || '') + '|' + (p.actor_id || '');
+      if (!(k in by)) { by[k] = { plug: p.plug, role: p.role || '', actor_id: p.actor_id || null, subject_ids: [] }; order.push(k); }
+      by[k].subject_ids.push(p.subject_id || p.chit_id);
+    });
+    return order.map(function (k) { return by[k]; });
+  }
+  /**
+   * CBAssign.handOverAll({ fromId, reload }) → the person popover, then POST /api/chits/hand-over-all { from_actor_id, to_actor_id|null, note }; the one result line says what moved,
+   * names every skip with the server's sentence, and offers Undo only when every previous entry is a chit. Nothing is decided here: the server answers who may.
+   */
+  assignApi.handOverAll = function (opts) {
+    if (!opts || !opts.fromId) return null;
+    pick({ title: 'Hand over all to', held: true }, function (who) {
+      call('POST', HANDOVER_PATH, { from_actor_id: opts.fromId, to_actor_id: who.id || null, note: who.note || undefined }).then(function (r) {
+        if (!r.ok) return showOutcome('bad', sentenceOf(r.body) || tr('Not done.'), []);
+        var moved = Number(r.body.moved) || 0, skipped = r.body.skipped || [];
+        var lines = skipped.map(function (s) { return (s.name ? s.name + ' · ' : '') + String(s.reason || s.code || ''); });
+        var head = who.id ? say('{n} moved to {who}.', { n: moved, who: nameById[who.id] || '' }) : say('{n} back in the pool.', { n: moved });
+        showOutcome(skipped.length && !moved ? 'bad' : 'good', head, lines, handOverUndo(r.body.previous));
+        if (last) last.reload = opts.reload;
+        return opts.reload ? opts.reload() : null;
+      });
+    });
+    return true;
+  };
+  /** the people who may hold this kind of work, as the popover lists them: [{ id, name, holds, suggested, me }] (flag: the server's flag to filter on, default job_assignable) */
+  assignApi.roster = function (flag) { return people(undefined, flag).then(function (r) { return r.list; }); };
+  /** GET /api/chits/my-work → { total, plugs[{plug,count}], rows[] }, or null when it cannot be read (the caller says so in words) */
+  assignApi.myWork = function (limit) {
+    return call('GET', MYWORK_PATH + (limit ? '?limit=' + encodeURIComponent(limit) : '')).then(function (r) { return r.ok ? r.body : null; });
+  };
+  /** GET /api/chits/holds → { people: [{actor_id,name,total,followups,plugs[]}] } for the Holds column, or { people: null, why } with the server's sentence when this person may not read it */
+  assignApi.holds = function () {
+    return call('GET', HOLDS_PATH).then(function (r) { return r.ok && Array.isArray(r.body.people) ? { people: r.body.people, why: '' } : { people: null, why: sentenceOf(r.body) }; });
+  };
+
+  /**
+   * CBAssign.assign(opts, rows) → the person popover for these rows, from a page that has its own row buttons (the workshop's 👤): opts as for bulk (plug, noun, subjectOf, roleOf, reload),
+   * the server answers who may (no `said` is read here: the press is the person's own). One row = that subject's suggestion and load; several = no suggestion.
+   */
+  assignApi.assign = function (opts, rows) {
+    if (!opts || !opts.plug || !rows || !rows.length) return null;
+    assignApi.mount(opts);
+    var held = heldOf(opts);
+    pick({ title: 'Assign to…', held: rows.some(held), forWord: rows.length === 1 ? opts.plug + ':' + opts.subjectOf(rows[0]) : undefined, before: opts.beforePick, flag: opts.flag }, function (who) { apply(opts, rows, who); });
+    return true;
   };
 
   /* ── the Held-by chip: the cell is the control ────────────────────────────────────────────── */
@@ -294,13 +353,13 @@
   function openChip(chip) {
     var opts = mounts[chip.getAttribute('data-as-plug')], row = chipRow(chip);
     if (!opts) return;
-    pick({ title: 'Assign to…', held: row.held, forWord: opts.plug + ':' + row.sid }, function (who) { apply(oneRowOpts(opts), [row], who); });
+    pick({ title: 'Assign to…', held: row.held, forWord: opts.write ? undefined : opts.plug + ':' + row.sid, before: opts.beforePick, flag: opts.flag }, function (who) { apply(oneRowOpts(opts), [row], who); });
   }
   /** the I key: take it, when the person is among the people the server lets hold this work */
   function takeChip(chip) {
     var opts = mounts[chip.getAttribute('data-as-plug')], row = chipRow(chip);
     if (!opts) return;
-    people().then(function (roster) {
+    people(undefined, opts.flag).then(function (roster) {
       var me = roster.list.filter(function (p) { return p.me; })[0];
       if (!me) return showOutcome('bad', tr('You cannot take this one.'), []);
       return apply(oneRowOpts(opts), [row], { id: me.id, note: '' });

@@ -167,7 +167,7 @@
   }
   function whoWord(row) {
     if (row.lines_assigned_n) return row.lines_assigned_n + ' ' + T(row.lines_assigned_n === 1 ? 'line held' : 'lines held');
-    return row.assignee && row.assignee.name ? row.assignee.name : T('No one');
+    return row.assignee && row.assignee.name ? row.assignee.name : T('Unassigned');
   }
   function linesWord(row) {
     if (row.lines_n == null) return '';
@@ -330,7 +330,7 @@
           return Number(row.total_minor) || 0;
         }
       },
-      { key: 'who', label: T('Who has it'), prio: 4, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
+      { key: 'who', label: T('Held by'), prio: 4, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
       {
         key: 'for',
         label: T('Asked for'),
@@ -492,9 +492,9 @@
         },
         {
           key: 'assignee',
-          label: T('Who has it'),
+          label: T('Held by'),
           all: T('Anyone'),
-          options: [{ v: 'none', label: T('No one') }].concat(
+          options: [{ v: 'none', label: T('Unassigned') }].concat(
             names.map(function (item) {
               return { v: item, label: item };
             })
@@ -677,7 +677,7 @@
     var assignment = line.assignment || {},
       lineState = (line.settings && line.settings.state) || 'open',
       done = lineState === 'done';
-    var assigneeName = assignment.assignee_name || T('No one');
+    var assigneeName = assignment.assignee_name || T('Unassigned');
     var lineId = esc(line.line_id), price = moneyWord(line.price_minor, chit.currency, chit.cost_hidden);
     return (
       '<div class="tk-line' +
@@ -718,7 +718,7 @@
       (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
       '</div>' +
       '<div class="tk-line-acts">' +
-      actRow('tk_la_' + lineId, T('Assign'), line.actions && line.actions.assign_line, '', '', 'TSK003-B06') +
+      holderChip(chit, line.actions && line.actions.assign_line, line) +
       actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line, '', '', 'TSK003-B07') +
       actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08') +
       '</div><div id="tk_lmore_' +
@@ -739,10 +739,6 @@
     });
     steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
     steps = steps.join('');
-    /* the whole task's holder (the list column prefers the lines' summary, b143's rule; the sheet shows both: the task's, then the lines held) */
-    var assigneeName =
-      ((chit.assignee && chit.assignee.name) || T('No one')) +
-      (chit.lines_assigned_n ? ' · ' + chit.lines_assigned_n + ' ' + T(chit.lines_assigned_n === 1 ? 'line held' : 'lines held') : '');
     sheet(
       '<h2 data-testid="tk-subject">' +
         esc(chit.subject || T('Order')) +
@@ -762,10 +758,11 @@
         steps +
         '</div><div id="tk_more"></div></div>' +
         '<div class="tk-block"><div class="tk-h">' +
-        esc(T('Who has it')) +
+        esc(T('Held by')) +
         '</div>' +
-        actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(assigneeName) + '</span>', '', 'TSK003-B10') +
-        '<div id="tk_amore"></div></div>' +
+        holderChip(chit, acts.assign_task, null) +
+        (chit.lines_assigned_n ? ' <span class="sub" data-testid="tk-who">' + esc(chit.lines_assigned_n + ' ' + T(chit.lines_assigned_n === 1 ? 'line held' : 'lines held')) + '</span>' : '') +
+        '</div>' +
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Lines')) +
         '</div><div class="tk-lines" data-testid="tk-lines">' +
@@ -793,19 +790,10 @@
       bill.onclick = function () {
         tkBill(chit);
       };
-    if (acts.assign_task && acts.assign_task.ok !== false)
-      $('tk_assign').onclick = function () {
-        assignPanel(chit, null);
-      };
     (chit.lines || []).forEach(function (item) {
       var lineId = item.line_id,
-        element = $('tk_la_' + lineId),
         target = $('tk_ld_' + lineId),
         nestedNode = $('tk_lv_' + lineId);
-      if (element && !element.disabled)
-        element.onclick = function () {
-          assignPanel(chit, item);
-        };
       if (target && !target.disabled)
         target.onclick = function () {
           tkAssignLine(chit, item, { state: (item.settings && item.settings.state) === 'done' ? 'open' : 'done' }, target);
@@ -946,65 +934,19 @@
       }
     );
   }
-  /** the picker, for the whole task (line null) or one line: the shop's people, "No one" to take it off someone */
-  function assignPanel(chit, line) {
-    var host = line ? $('tk_lmore_' + line.line_id) : $('tk_amore');
-    if (!host) return;
-    host.innerHTML = '<div class="tk-panel"><span class="sub">' + esc(T('Loading')) + '</span></div>';
-    loadPeople().then(function (people) {
-      var current = line ? line.assignment && line.assignment.assignee_actor_id : chit.assignee && chit.assignee.id;
-      var opts =
-        '<option value="">' +
-        esc(T('No one')) +
-        '</option>' +
-        people
-          .map(function (item) {
-            return '<option value="' + esc(item.id) + '"' + (item.id === current ? ' selected' : '') + '>' + esc(item.name) + '</option>';
-          })
-          .join('');
-      var testId = line ? 'tk-line-pick' : 'tk-pick';
-      host.innerHTML =
-        '<div class="tk-panel"><label class="sub" for="tk_who_sel">' +
-        esc(T('Who does this?')) +
-        '</label>' +
-        '<select data-cbsid="TSK003-S02" id="tk_who_sel" class="inp" data-testid="' +
-        testId +
-        '">' +
-        opts +
-        '</select>' +
-        '<button data-cbsid="TSK003-B12" type="button" class="act" id="tk_who_go" data-testid="' +
-        testId +
-        '-go">' +
-        esc(T('Save')) +
-        '</button></div>';
-      $('tk_who_go').onclick = function () {
-        var node = $('tk_who_sel').value || null,
-          panel =
-            people.filter(function (x) {
-              return x.id === node;
-            })[0] || null;
-        if (line) return tkAssignLine(chit, line, { who: node, name: panel ? panel.name : null }, $('tk_who_go'));
-        return tkAssignTask(chit, node, panel ? panel.name : null, $('tk_who_go'));
-      };
-    });
+  /**
+   * ASSIGN-W3 · L7: who holds the whole task (line null) or one line is the ONE CBAssign chip (HOM001-B20): press it, pick a person; the server's verdict (assign_task / assign_line) decides whether it is a control.
+   * The sheet is a modal dialog, so it closes first (opts.beforePick) and the list repaints with what the server now holds; a refused action is drawn greyed with the server's sentence, never hidden.
+   */
+  function holderChip(chit, verdict, line) {
+    var who = line ? (line.assignment && line.assignment.assignee_actor_id ? { actor_id: line.assignment.assignee_actor_id, name: line.assignment.assignee_name || '' } : null) : chit.assignee && chit.assignee.id ? { actor_id: chit.assignee.id, name: chit.assignee.name || '' } : null;
+    var row = { id: line ? line.line_id : chit.chit_id, holders: who ? [who] : [] };
+    var ok = !verdict || verdict.ok !== false;
+    var html = root.CBAssign ? root.CBAssign.chip(row, assignOpts(ok, line ? 'line' : 'task')) : esc(who ? who.name : T('Unassigned'));
+    return ok ? html : html + ' <span class="why" data-testid="tk-assign-why">' + esc(sayOf(verdict)) + '</span>';
   }
-  /** who holds the whole task: PUT /actors/assign/:id push · return (the route app.html's Assign uses) */
-  function tkAssignTask(chit, assigneeId, name, btn) {
-    return root.CBAction.run(
-      btn,
-      function () {
-        return call('assign', { params: { id: chit.chit_id }, body: assigneeId ? { action: 'push', target_actor_id: assigneeId } : { action: 'return' } });
-      },
-      {
-        key: 'tk-assign-' + chit.chit_id,
-        failed: T("Couldn't assign it"),
-        out: 'tk_out',
-        outcome: function () {
-          $('tk_out').textContent = assigneeId ? T('Assigned to') + ' ' + (name || '') + '.' : T('Taken off.');
-          changed(chit.chit_id, 'assigned', { line_id: null, assignee: assigneeId ? { id: assigneeId, name: name } : null });
-        }
-      }
-    );
+  function assignOpts(ok, plug) {
+    return { said: ok, plug: plug, noun: plug === 'line' ? 'line' : 'task', subjectOf: function (r) { return r.id; }, roleOf: function () { return ''; }, reload: reload, beforePick: closeSheet };
   }
   /** a LINE's holder or state: ONE append on chit_line_assignment (lib/assign — reassign, re-date and mark done ride the same row) */
   function tkAssignLine(chit, line, x, btn) {
@@ -1149,7 +1091,7 @@
     return load().then(
       function () {
         board.el.innerHTML =
-          '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-pop="POP130" data-testid="tk-sheet"></dialog>';
+          '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div>' + (root.CBAssign ? root.CBAssign.slotHTML() : '') + '<div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-pop="POP130" data-testid="tk-sheet"></dialog>';
         var node = $('tk_sheet');
         node.addEventListener('cancel', function (e) {
           e.preventDefault();

@@ -1622,16 +1622,7 @@ function crmFuWhat(f) {
           size: 'compact',
           testid: 'crm-fu-done-' + f.followup_id,
           data: { crm: 'fudone', id: f.followup_id }
-        }) +
-        (f.assignee_left
-          ? ' <button data-cbsid="CRM001-B07" type="button" class="crm-mini" data-crm="fuassign" data-id="' +
-            esc(f.followup_id) +
-            '" data-testid="crm-fu-assign-' +
-            esc(f.followup_id) +
-            '">' +
-            esc(tx('Assign')) +
-            '</button>'
-          : '')
+        })
       : '';
   return (
     '<span class="fu1"><span class="fut' +
@@ -1809,7 +1800,7 @@ function crmFollowups(frame) {
   var node = document.getElementById('screen');
   node.className = 'screen flush';
   var def = crmOwner() ? 'all' : 'mine';
-  node.innerHTML = '<div id="crm_fu" data-testid="crm-fu-list"></div>';
+  node.innerHTML = (window.CBAssign ? CBAssign.slotHTML() : '') + '<div id="crm_fu" data-testid="crm-fu-list"></div>';
   if (CRM.fuApi && CRM.fuApi.destroy) {
     try {
       CRM.fuApi.destroy();
@@ -1879,11 +1870,15 @@ function crmFollowups(frame) {
       },
       {
         key: 'who',
-        label: 'Who',
+        label: 'Held by',
         prio: 4,
-        w: 150,
+        w: 170,
+        html: true,
         cell: function (f) {
-          return f.assignee_left ? tx('Unassigned') : f.assignee_name || '—';
+          return window.CBAssign ? CBAssign.chip(Object.assign({}, f, { holders: crmFuHolders(f) }), crmAssignOpts()) : esc(f.assignee_name || '—');
+        },
+        value: function (f) {
+          return crmFuHolders(f).length ? crmFuHolders(f)[0].name : tx('Unassigned');
         }
       },
       {
@@ -1909,7 +1904,7 @@ function crmFollowups(frame) {
         }
       }
     ],
-    defaultCols: ['due', 'what', 'party'],
+    defaultCols: ['due', 'what', 'party', 'who'],
     cardMax: 3,
     fill: false,
     head: function () {
@@ -2010,7 +2005,9 @@ function crmFollowups(frame) {
     },
     next: crmFuMini,
     nextPending: crmFuMini,
-    actions: crmFuActions()
+    actions: crmFuActions(),
+    bulk: window.CBAssign ? CBAssign.bulk(crmAssignOpts()) : [], /* ASSIGN-W3 L6: Assign to… · Hand over · Back to pool, on the server's verdict (CRM.may.assign) */
+    bulkAlways: crmSeesUnassigned()
   });
   crmWatch(el, function (c) {
     CRM.fuScope = c.filt.scope || def;
@@ -2282,6 +2279,7 @@ function crmFuAddOpen(partyKey, then, prefill) {
       { name: 'save', options: { mount: 'CRM001-U202', key: 'save', effect: 'preference', testid: 'crm-fu-save', data: { crm: 'fusave' } } }
     ]
   });
+  crmFuWhoFill();
   var node = document.getElementById('crm_fu_pq');
   if (node) {
     node.addEventListener('input', function () {
@@ -2396,10 +2394,6 @@ var CRM_CLICK = {
   fusnooze: function (control, id, value, event) {
     event.stopPropagation();
     return crmFuAct(id, { after: control.getAttribute('data-when') === 'week' ? 'week' : 'tomorrow' });
-  },
-  fuassign: function (control, id, value, event) {
-    event.stopPropagation();
-    return crmFuAct(id, crmAssignPatch());
   },
   fudel: function (control, id, value, event) {
     event.stopPropagation();

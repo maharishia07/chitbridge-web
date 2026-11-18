@@ -150,6 +150,21 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   const empty = hatApi.actorHatFields({});
   check(empty.hat === 'act' && empty.assignable === undefined && empty.jobAssignable === false, 'a row with none of them gets hat act, no assignable answer, and jobAssignable false');
 
+  /* ASSIGN-W3 (18 Nov): Holds, My work, and a plug written by its own route (opts.write) */
+  const holdsWin = ownerWindow([reply(true, { people: [{ actor_id: 'p1', name: 'Anna', total: 3, followups: 1, plugs: [{ plug: 'task', count: 2 }, { plug: 'followup', count: 1 }] }] }), reply(false, { detail: 'Only the partner or a manager can see this.' }), reply(true, { total: 2, plugs: [], rows: [] })]);
+  const holdsOk = await holdsWin.win.CBAssign.holds();
+  check(holdsOk.people.length === 1 && holdsOk.people[0].total === 3 && holdsWin.calls[0].url.endsWith('/api/chits/holds'), 'holds() reads GET /api/chits/holds and hands back the server counts');
+  const holdsNo = await holdsWin.win.CBAssign.holds();
+  check(holdsNo.people === null && holdsNo.why === 'Only the partner or a manager can see this.', "a seat that may not read holds gets the server's sentence and no people");
+  const mine = await holdsWin.win.CBAssign.myWork(5);
+  check(mine.total === 2 && holdsWin.calls[2].url.endsWith('/api/chits/my-work?limit=5'), 'myWork() reads GET /api/chits/my-work');
+  const written = [];
+  const writeWin = ownerWindow();
+  const wopts = { plug: 'followup', noun: 'follow-up', said: true, subjectOf: (r) => r.id, roleOf: () => '', heldOf: (r) => !!r.held, reload: () => null, write: (ids, target) => { written.push([ids, target]); return Promise.resolve({ ok: true, assigned: ids.length, skipped: [], previous: ids.map((id) => ({ subject_id: id, actor_id: 'old' })) }); } };
+  await writeWin.win.CBAssign.bulk(wopts).find((button) => button.id === 'pool').run([{ id: 'f1', held: true }, { id: 'f2', held: true }]);
+  await settle();
+  check(written.length === 1 && written[0][0].join() === 'f1,f2' && written[0][1] === null && writeWin.calls.length === 0, 'a plug with its own writer is written through opts.write, never through assign-bulk');
+
   console.log(failures ? '\nFAIL ' + failures : '\nall ok');
   process.exit(failures ? 1 : 0);
 })();

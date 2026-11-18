@@ -1577,6 +1577,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/engine/govcontext.js"></script>
 <script src="/app/helpers.js"></script><script src="/app/actor-hat.js"></script><script src="/app/day-book-kind.js"></script><script src="/app/books-grant-api.js"></script><script src="/app/books-clients-door.js"></script><script src="/app/offer-add-confirm.js"></script><script src="/app/chit-unpay.js"></script>
+<script src="/app/assign-bar.js"></script>   <!-- ASSIGN-W3 L7: CBAssign, the ONE assign popover (the workshop's 👤 and the Assign button call it); AFTER ui.js below is loaded at call time, not at load -->
 <script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set (UX-137); cap-settings.js and cap-print.js (lazy, Settings) draw their buttons with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the lazy caps (cap-readiness.js, cap-definitions.js) draw their inputs with ui.field (UX-137 R2); AFTER ui.js, which it reads -->
 <script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
@@ -6534,7 +6535,7 @@ function _renderApp() {
     <div class="main">
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
-  </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
+  </div></div><div id="lbhost"></div><div id="modalhost"></div><div style="position:fixed;inset-inline:16px;inset-block-end:16px;z-index:40;pointer-events:none"><div style="pointer-events:auto;max-width:520px;margin-inline:auto">${window.CBAssign ? CBAssign.slotHTML() : ''}</div></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
   avatarMount(role, isEntityUser); UI._modalOpener = null; /* the rebuilt #modalhost is empty, so a remembered opener is stale (rememberModalOpener). The avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
   /**
@@ -28285,153 +28286,33 @@ async function refreshRollup(force) {
     if (node) node.innerHTML = advBtnHtml();
   } catch (_) {}
 }
-async function assignChit(id, actorId, pri, reason) {
-  try {
-    const body = { action: 'push', target_actor_id: actorId };
-    if (pri) body.priority = pri;
-    if (reason) body.reason = reason;
-    await api('assign', { params: { id }, body });
-    const i = UI.rows.findIndex((x) => x.id === id);
-    if (i >= 0) {
-      UI.rows[i].assignTo = actorId;
-      if (pri) UI.rows[i].pri = pri;
+/* ASSIGN-W3 · L7: assigning from the workshop is the ONE CBAssign popover (public/app/assign-bar.js, plug 'task'); the old pickers (pickAssign, pickAssignBulk, confirmAssign, assignBulkChits, assignChit) are gone.
+   Priority and its reason are no longer asked inside the assign popup: they stay on their own button (repriority). The server answers who may; its sentence is the result line (the fixed #as_result). */
+function assignOpts() {
+  return {
+    plug: 'task',
+    noun: 'chit',
+    nounMany: 'chits',
+    subjectOf: (r) => r.id,
+    roleOf: () => '',
+    heldOf: (r) => !!r.assignTo,
+    reload: async () => {
+      const open = UI.detail && UI.detail.id;
+      UI.selected.clear();
+      await loadList();
+      if (open) await openChit(open, true);
+      updateSelBar();
+      renderApp();
     }
-    if (UI.detail && UI.detail.id === id) await openChit(id, true);
-    renderApp();
-    const a = (UI.actors || STORE.actors || []).find((x) => x.id === actorId);
-    const c = UI.rows.find((x) => x.id === id) || UI.detail;
-    toast(MSG.assigned(c && c.code, a && a.name), () => unassignChit(id));
-    announce(((c && c.code) || 'Chit') + ' assigned to ' + ((a && a.name) || 'the co-assist'));
-  } catch (e) {
-    toast(MSG.fail('assign', e));
-  }
+  };
 }
-async function unassignChit(id) {
-  try {
-    await api('unassign', { params: { id }, body: { action: 'return' } });
-    const i = UI.rows.findIndex((x) => x.id === id);
-    if (i >= 0) UI.rows[i].assignTo = null;
-    renderApp();
-    toast(MSG.pushedBack((UI.rows.find((x) => x.id === id) || {}).code));
-  } catch (e) {
-    toast(MSG.fail('push back', e));
-  }
+function pickAssign(id) {
+  const row = UI.rows.find((x) => x.id === id) || UI.detail || { id };
+  return window.CBAssign ? CBAssign.assign(assignOpts(), [row]) : toast("Couldn't open the list of people");
 }
-async function pickAssign(id) {
-  let actors = [];
-  try {
-    const reply = await api('actors');
-    actors = (reply || []).map(mapApiActor);
-  } catch (e) {
-    toast(MSG.fail('load co-assists', e));
-    return;
-  }
-  UI.actors = actors;
-  const c = UI.rows.find((x) => x.id === id) || UI.detail || {};
-  MODALS.pick = { id, actorId: null, pri: c.custPri ? 'urgent' : 'normal', reason: '' };
-  const rows = actors
-    .map((item) => {
-      const off = item.shift === 'off';
-      const max = item.max || 0;
-      const full = max > 0 && item.load >= max;
-      const assignable = hatAssignable(item);
-      const dis = off || full || !assignable;
-      const chip =
-        item.shift === 'on_shift'
-          ? '<span class="optchip on">on shift</span>'
-          : item.shift === 'on_break'
-            ? '<span class="optchip brk">on break</span>'
-            : '<span class="optchip off">off</span>';
-      return `<div class="optrow ${dis ? 'dis' : ''}" data-a="${item.id}" ${dis ? '' : `onclick="pickActor('${item.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(item.name)} <span class="optchip" style="font-size:var(--fs-1);background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(item.hat)}</span></div><div class="om">load ${item.load}${max ? '/' + max : ''}${!assignable ? ' · not assignable (hat)' : off ? ' · off duty' : full ? ' · at capacity' : ''}</div></div>${chip}</div>`;
-    })
-    .join('');
-  const prisel = `<div class="msec">${tx('Priority')}</div><div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button data-cbsid="DTL001-B41" class="pri-${item} ${MODALS.pick.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickPri('${item}')">${PRI[item].label}</button>`).join('')}</div>`;
-  const reasonbox = `<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea data-cbsid="DTL001-T02" id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
-  const custnote = c.custPri ? `<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>` : '';
-  modal(
-    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + chitMoney(c.amt, c) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button data-cbsid="DTL001-B42" class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="DTL001-B43" class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
-  );
-}
-function pickActor(aid) {
-  MODALS.pick.actorId = aid;
-  document.querySelectorAll('.optrow').forEach((item) => item.classList.toggle('sel', item.dataset.a === aid));
-  syncAssignOk();
-}
-function pickPri(p) {
-  MODALS.pick.pri = p;
-  document.querySelectorAll('.prisel button').forEach((item) => item.classList.toggle('on', item.dataset.p === p));
-  const node = document.getElementById('reasonhint');
-  if (node) node.textContent = p === 'urgent' ? '— Urgent needs one' : '(optional)';
-  syncAssignOk();
-}
-function syncAssignOk() {
-  const p = MODALS.pick;
-  const node = document.getElementById('mok');
-  if (!node) return;
-  if (p.bulk) {
-    node.disabled = !p.actorId;
-    const nestedA = (UI.actors || []).find((x) => x.id === p.actorId);
-    node.textContent = p.actorId ? 'Assign ' + p.ids.length + ' → ' + (nestedA ? nestedA.name : 'co-assist') : 'Assign all';
-    return;
-  }
-  const ok = p.actorId && (p.pri !== 'urgent' || (p.reason && p.reason.trim()));
-  node.disabled = !ok;
-  const a = (UI.actors || []).find((x) => x.id === p.actorId);
-  node.textContent = p.actorId ? 'Assign · ' + PRI[p.pri].label + ' → ' + (a ? a.name : 'co-assist') : 'Assign';
-}
-function confirmAssign() {
-  const p = MODALS.pick;
-  if (!p || !p.actorId) return;
-  closeModal();
-  if (p.bulk) {
-    assignBulkChits(p.ids, p.actorId);
-    return;
-  }
-  assignChit(p.id, p.actorId, p.pri, p.reason);
-}
-// Bulk-assign many chits to ONE co-assist. Reuses the actor picker (pickActor/syncAssignOk).
-// Backend /api/chits/assign-bulk takes {chit_ids, target_actor_id} only (no priority/reason).
-async function pickAssignBulk(ids) {
-  let actors = [];
-  try {
-    const reply = await api('actors');
-    actors = (reply || []).map(mapApiActor);
-  } catch (e) {
-    toast("Couldn't load co-assists: " + e.message);
-    return;
-  }
-  UI.actors = actors;
-  MODALS.pick = { ids, actorId: null, bulk: true };
-  const rows = actors
-    .map((item) => {
-      const off = item.shift === 'off';
-      const max = item.max || 0;
-      const full = max > 0 && item.load >= max;
-      const assignable = hatAssignable(item);
-      const dis = off || full || !assignable;
-      const chip =
-        item.shift === 'on_shift'
-          ? '<span class="optchip on">on shift</span>'
-          : item.shift === 'on_break'
-            ? '<span class="optchip brk">on break</span>'
-            : '<span class="optchip off">off</span>';
-      return `<div class="optrow ${dis ? 'dis' : ''}" data-a="${item.id}" ${dis ? '' : `onclick="pickActor('${item.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(item.name)} <span class="optchip" style="font-size:var(--fs-1);background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(item.hat)}</span></div><div class="om">load ${item.load}${max ? '/' + max : ''}${!assignable ? ' · not assignable (hat)' : off ? ' · off duty' : full ? ' · at capacity' : ''}</div></div>${chip}</div>`;
-    })
-    .join('');
-  modal(
-    `<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length > 1 ? 's' : ''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button data-cbsid="DTL001-B44" class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="DTL001-B45" class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign all')}</button></div>`
-  );
-}
-async function assignBulkChits(ids, actorId) {
-  const a = (UI.actors || STORE.actors || []).find((x) => x.id === actorId);
-  const who = a ? a.name : 'the co-assist';
-  announce(txn('Moving {count} record to {who}', 'Moving {count} records to {who}', ids.length, { who: who }));
-  /* ⭐ the same endpoint and body, one call per step of the speed class (the server commits each call whole, and its capacity gate reads the co-assist's load again for each) */
-  const result = await groupJob(ids, { ep: 'assignBulk', mount: 'WRK001-U58', speed: 'slow', verb: 'assign those', label: 'Assigning records', unit: 'assigned', payload: { actorId } });
-  UI.selectMode = result.failed.length > 0 || result.left > 0; /* the failed and not-done ticks stay visible */
-  await afterGroup(result);
-  renderApp();
-  toast(MSG.bulkAssigned(result.done.length, a && a.name, result.failed.length) + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
+function pickAssignBulk(ids) {
+  const rows = ids.map((id) => UI.rows.find((x) => x.id === id) || { id });
+  return window.CBAssign ? CBAssign.assign(assignOpts(), rows) : toast("Couldn't open the list of people");
 }
 function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};
