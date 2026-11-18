@@ -324,9 +324,11 @@ function bkshReady() {
   const scripts = [typeof CBBankPreview, typeof CBBankPreviewUI, typeof CBBankPost];
   return !!bkshBook().text && !!bkshEngine() && scripts.every((kind) => kind !== 'undefined');
 }
-/** the sheet's first words under the title: the engine's refusal, or that registration could not be read */
-function bkshFirstWords(said, unread) {
+/** the sheet's first words under the title: the engine's refusal, or that registration could not be read, or (FIN-116) that the shop never said whether it is registered: each charge is then added whole, no tax credit, until Country setup answers it */
+function bkshFirstWords(said, registration) {
   if (!said.ok) return said.why;
+  if (registration === null) return txf('The shop has not said whether it is registered for {tax}, so each charge is added whole with no {tax} credit. Answer it in Country setup to claim the {tax} on a charge.', { tax: packWord('taxName') });
+  const unread = registration === 'unread';
   return unread ? txf('Could not check whether the shop is registered for {tax}, so each charge asks what {tax} it carries.', { tax: packWord('taxName') }) : '';
 }
 /** the controller's key of one bank row (its client_ref, one to one by occurrence), '' when the row is not on this statement */
@@ -382,8 +384,7 @@ async function bankSheetOpen(row) {
   BKSH.taxRegistered = await bkshRegistered();
   await bkshReadMonths();
   BKSH.refs = null;
-  const unread = BKSH.taxRegistered === 'unread',
-    kept = !!BKSH.ctl && BKSH.key === bkshKey();
+  const kept = !!BKSH.ctl && BKSH.key === bkshKey();
   if (!kept) {
     BKSH.ctl = bkshController();
     BKSH.key = bkshKey();
@@ -404,7 +405,7 @@ async function bankSheetOpen(row) {
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
   else BKSH.said = BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name);
-  bkshSay(bkshFirstWords(BKSH.said || { ok: true }, unread), false);
+  bkshSay(bkshFirstWords(BKSH.said || { ok: true }, BKSH.taxRegistered), false);
   bkshPaint();
 }
 
