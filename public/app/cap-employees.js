@@ -154,7 +154,7 @@
   /** the Holds column of the people list: how many open things each person holds (the server's total, never counted here) */
   function holdsColumn() {
     return {
-      key: 'holds', label: T('Holds'), prio: 6, w: 90, num: true, sort: 'holds',
+      key: 'holds', label: T('Holds'), prio: 5, w: 90, num: true, sort: 'holds',
       cell: function (p) { var item = holdsOf(p); return item ? String(item.total) : '—'; },
       value: function (p) { var item = holdsOf(p); return item ? item.total : 0; }
     };
@@ -279,7 +279,7 @@
       {
         key: 'last',
         label: T('Last at a counter'),
-        prio: 5,
+        prio: 6,
         w: 170,
         sort: 'last',
         cell: function (p) {
