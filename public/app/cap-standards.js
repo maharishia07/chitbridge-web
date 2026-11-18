@@ -3376,7 +3376,25 @@ var STD_GLOSSARY_REF = [
   ['RFC 5646', 'RFC 5646', 'The internet standard for naming languages (the text of BCP 47)'],
   ['RFC 7386', 'RFC 7386', 'The internet standard for changing part of a JSON record (merge patch)'],
   ['RFC 7519', 'RFC 7519', 'The internet standard for JSON Web Tokens (JWT)'],
-  ['RFC 7644', 'RFC 7644', 'The internet standard for SCIM, creating and removing staff accounts']
+  ['RFC 7644', 'RFC 7644', 'The internet standard for SCIM, creating and removing staff accounts'],
+  ['PM', 'Project management folder', 'Where ChitBridge keeps its plan, test runs and coverage files'],
+  ['SIT', 'System integration test', 'The shared test servers a change is proved on before it goes live'],
+  ['P1', 'Priority 1', 'The most urgent class of work in the backlog'],
+  ['PKCE', 'Proof Key for Code Exchange', 'A check that stops a stolen sign-in code being used by someone else (RFC 7636)'],
+  ['CRC-16', '16-bit cyclic redundancy check', 'A short checksum that catches a mistyped or damaged code, as at the end of a payment QR'],
+  ['CAP-12', 'Capability 12', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-14', 'Capability 14', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-16', 'Capability 16', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-17', 'Capability 17', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-18', 'Capability 18', 'A numbered capability in the ChitBridge architecture register'],
+  ['OWASP', 'Open Worldwide Application Security Project', 'The community whose web-security testing guide and verification standard are used here'],
+  ['ASVS', 'Application Security Verification Standard', 'The OWASP list of security checks an application is held to'],
+  ['SSRF', 'Server-side request forgery', 'An attack that makes our server fetch an address the attacker chose'],
+  ['CSP', 'Content Security Policy', 'A page header that limits which scripts and sources the browser will run'],
+  ['SEC-86', 'Security item 86', 'A numbered security work item in the backlog'],
+  ['SQL', 'Structured Query Language', 'The language the database is asked questions in'],
+  ['G0', 'Gate 0', 'The first of the eight release gates, G0 to G7'],
+  ['G7', 'Gate 7', 'The last of the eight release gates: verified live']
 ];
 STD_GLOSSARY = STD_GLOSSARY.concat(STD_GLOSSARY_REF);
 var STD_REF_RE = new RegExp(
@@ -3414,7 +3432,22 @@ var STD_NOT_ABBR = [
   'THIS',
   'WAS',
   'ZONE',
-  'UBL-MAPPING-2026-09-05'
+  'UBL-MAPPING-2026-09-05',
+  'TEST-PLAN-1119-1121',
+  'FAILS',
+  'PASS',
+  'SELECT',
+  'INSERT',
+  'DELETE',
+  'UPDATE',
+  'QUALITY',
+  'QUALITY-STANDARD',
+  'COVERAGE-NIGHTLY',
+  'COVERAGE-TREND',
+  'API-REGISTER',
+  'GORILLA-RESULTS-2026-10-31',
+  'GATE-LOG',
+  'SIT-BREAKPOINT-RUN-2026-11-07'
 ];
 /* an abbreviation: two or more capitals or digits from a word start, joined by hyphens (GSTR-2B · ECMA-402 · WAI-ARIA); mixed case (JUnit, OAuth) is a name */
 var STD_ABBR_RE = /\b[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\b/g;
