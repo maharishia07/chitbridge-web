@@ -152,4 +152,4 @@ function sameCode(file, headText, baseText) {
   return head !== null && base !== null && head === base;
 }
 
-module.exports = { sameCode, streamOf };
+module.exports = { sameCode };

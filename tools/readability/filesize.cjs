@@ -300,4 +300,4 @@ function main(args) {
 }
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
-module.exports = { measure, judge, countLines, isExcluded, customerFiles, scriptsOf, NEW_FILE_MAX, CEILING };
+module.exports = { measure, judge, isExcluded, scriptsOf, CEILING };

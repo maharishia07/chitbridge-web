@@ -326,4 +326,4 @@ function main(argv) {
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { main, parseArguments, scan, rowText, tableRows, staleOwnRows, missingFromTable, matchesWords, purposeAbove };
+module.exports = { main, scan, rowText, tableRows, staleOwnRows, missingFromTable, matchesWords };

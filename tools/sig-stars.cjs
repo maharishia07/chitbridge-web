@@ -461,4 +461,4 @@ function main(argv) {
 }
 
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { measureRepo, bandOf, rateShares, rateLow, rateHigh, countParams, UNIT_BANDS, SHARE_EDGES };
+module.exports = { bandOf, rateShares, rateLow, rateHigh, countParams, UNIT_BANDS, SHARE_EDGES };
