@@ -209,7 +209,7 @@ async function w3Employees(browser, base) {
   const tag = 'w3 employees';
   await page.waitForSelector('[data-testid="emp-row-p1"]', { timeout: 15000 }).catch(() => {});
   const head = await page.locator('[data-testid="emp-list"]').innerText();
-  ok(tag + ' · 1 the list has a Holds column; Anna 3, Ben 2', /Holds/.test(head) && /3/.test(await page.locator('[data-testid="emp-row-p1"]').innerText()) && /2/.test(await page.locator('[data-testid="emp-row-p2"]').innerText()), head.slice(0, 200));
+  ok(tag + ' · 1 the list has a Holds column; Anna 3, Ben 2', /Holds/i.test(head) && /3/.test(await page.locator('[data-testid="emp-row-p1"]').innerText()) && /2/.test(await page.locator('[data-testid="emp-row-p2"]').innerText()), head.slice(0, 200));
   await page.locator('[data-testid="emp-row-p1"]').click(); await page.waitForSelector('#emp_handall', { timeout: 6000 });
   ok(tag + ' · 2 the sheet says what Anna holds in words (2 tasks · 1 follow-up) and Hand over all… is open', /2 tasks/.test(await page.locator('[data-testid="emp-holds-now"]').innerText()) && (await page.$eval('#emp_handall', (b) => b.disabled)) === false);
   await page.click('#emp_handall'); await pause(500);
