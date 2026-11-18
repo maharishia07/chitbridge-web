@@ -13,11 +13,9 @@ const check = (condition, message) => { console.log((condition ? '  ok ' : '  FA
 const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'core.js'), 'utf8');
 const pick = (name) => { const at = source.indexOf('function ' + name + '('); return source.slice(at, source.indexOf('\n}\n', at) + 3); };
 const shellSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shell.js'), 'utf8');
-const pickShell = (name) => { const at = shellSrc.indexOf('function ' + name + '('); return shellSrc.slice(at, shellSrc.indexOf('
-  }
-', at) + 5); };
+const pickShell = (name) => { const at = shellSrc.indexOf('function ' + name + '('); return shellSrc.slice(at, shellSrc.indexOf('\n  }\n', at) + 5); };
 const sandbox = {};
-sandbox.window = sandbox; /* shell.js (every shelled page) holds rateWords as root.cbRateWords; core.js answerWords reads it at call time */
+sandbox.window = sandbox; sandbox.root = sandbox; /* shell.js (every shelled page) holds rateWords as root.cbRateWords; core.js answerWords reads it at call time */
 vm.createContext(sandbox);
 /* a page WITHOUT core.js (network.html): shell.js alone says the wait */
 const alone = { root: {} }; vm.createContext(alone);
