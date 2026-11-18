@@ -22,6 +22,7 @@ const OUT = process.env.OUT || 'C:/dev/shots/assign1-web';
 const PUB = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+const C = require('./lib/contract.cjs');
 let pass = 0, fail = 0;
 const ok = (what, cond, info) => { if (cond) { pass++; console.log('  ok   ' + what); } else { fail++; console.log('  FAIL ' + what + (info ? ' :: ' + String(info).slice(0, 300) : '')); } };
 
@@ -85,7 +86,8 @@ async function open(browser, base, api, vp, theme, who) {
   const sess = { token, role: who === 'assistant' ? 'actor' : 'entity', name: who === 'assistant' ? 'Dev Assistant' : 'Coastal Accounting Advisers' };
   const ctx = await browser.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block', colorScheme: theme, isMobile: vp.width < 500, hasTouch: vp.width < 500 });
   await ctx.addInitScript((a) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(a.s)); localStorage.setItem('cb_practice_hint', '1:' + a.s.token.slice(-12)); } } catch (_) {} }, { s: sess });
-  await ctx.route(/^http:\/\/(localhost:3000|127\.0\.0\.1:\d+)\/api\//, async (r) => {
+  await ctx.route(/^http:\/\/(localhost:3000|127\.0\.0\.1:\d+)\/api\//, async (route) => {
+    const r = C.wrap(route);   /* M43: each answer for a route in the API contract is held to it */
     const req = r.request(), u = new URL(req.url());
     const cors = { 'access-control-allow-origin': base, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
     if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
@@ -122,14 +124,15 @@ const sleep = pause;
 
 /* ── ASSIGN-W3: CRM follow-ups and Employees on the same CBAssign (1366, light) ─────────────────────────────────────────────────────────────────────────── */
 const FU = (n, who) => ({ followup_id: 'fu-' + n, party_id: 'p-' + n, party_no: null, party_name: 'Party ' + n, party_listed: true, what: 'Call back ' + n, due_at: '2026-11-19T09:00:00.000Z', due_day: '2026-11-19',
-  assignee_user_id: who ? who.actor_id : null, assignee_name: who ? who.display_name : null, assignee_left: false, source: 'manual', done_at: null, created_at: '2026-11-17T09:00:00.000Z', late: false, today: false, bucket: 'week' });
+  assignee_user_id: who ? who.actor_id : null, assignee_name: who ? who.display_name : null, source: 'manual', done_at: null, created_at: '2026-11-17T09:00:00.000Z', late: false, today: false, bucket: 'week' });
 const EMP = (id, name, state) => ({ id, name, user_id: id + '@walk.br', role: 'Staff', phone: '', state, jobs: 0, last_at: null, access: { key: 'manager', label: 'Manager', why: 'Sees the whole shop.', level: 'editor', whole_entity: true, can_see_costs: false },
   may: { access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: state === 'on' ? 'off' : 'on' }, cover: { ok: true } }, cover: null, cover_options: [] });
 async function w3Page(browser, base, handler, url, readySel) {
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-AU', serviceWorkers: 'block' });
   const sess = { token: b64({ alg: 'none' }) + '.' + b64({ identity_id: 'e0000000-0000-4000-8000-000000000001', display_name: 'Fixture Shop' }) + '.ownertoken1234', role: 'entity', name: 'Fixture Shop' };
   await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, sess);
-  await ctx.route(/^http:\/\/(localhost:3000|127\.0\.0\.1:\d+)\/api\//, async (r) => {
+  await ctx.route(/^http:\/\/(localhost:3000|127\.0\.0\.1:\d+)\/api\//, async (route) => {
+    const r = C.wrap(route);   /* M43: each answer for a route in the API contract is held to it */
     const req = r.request(), u = new URL(req.url());
     const cors = { 'access-control-allow-origin': base, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*', 'access-control-expose-headers': '*' };
     if (req.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors });
@@ -151,10 +154,10 @@ async function w3Page(browser, base, handler, url, readySel) {
 }
 async function w3Crm(browser, base) {
   const calls = [], fus = [FU(1, null), FU(2, null), FU(3, ANNA)];
-  const crmMay = { write: { may: true, code: null, why: null }, remove: { ok: true }, assign: { ok: true, code: null, why: null } };
+  const crmMay = { write: { may: true, code: null, why: null }, remove: { ok: true, code: null, why: null }, assign: { ok: true, code: null, why: null } };
   const { ctx, page } = await w3Page(browser, base, (p, m, body, send) => {
     if (p === '/api/crm/followups' && m === 'GET') return send(200, { followups: fus, total: fus.length, page: 1, limit: fus.length, may: crmMay, late: 0, today: 0, shop_day: '2026-11-18' });
-    if (p === '/api/crm/parties' && m === 'GET') return send(200, { parties: [], walk_ins: [], count: 0, total: 0, page: 1, limit: 5000, truncated: false, may: crmMay, alerts: {} });
+    if (p === '/api/crm/parties' && m === 'GET') return send(200, { parties: [], walk_ins: [], count: 0, total: 0, page: 1, limit: 5000, truncated: false, may: crmMay, alerts: { dues_overdue: 0 } });
     const mm = /^\/api\/crm\/followups\/([^/]+)$/.exec(p);
     if (mm && (m === 'PATCH' || m === 'PUT')) { calls.push({ path: p, method: m, body }); const f = fus.find((x) => x.followup_id === mm[1]); const t = [ANNA, BEN].find((x) => x.actor_id === body.assignee_user_id); if (f) { f.assignee_user_id = t ? t.actor_id : null; f.assignee_name = t ? t.display_name : null; } return send(200, { followup: f }); }
   }, '/crm.html#/followups', '[data-testid="crm-fu-list"]');
@@ -354,6 +357,8 @@ async function w3Employees(browser, base) {
   console.log('--- ASSIGN-W3 mounts');
   await w3Crm(browser, base);
   await w3Employees(browser, base);
+  const verdict = C.finish();
+  ok('every answer the stand-in served for a route in the API contract matches it (keys, nesting, types)', verdict[0], verdict[1]);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed · shots: ' + OUT);
   process.exit(fail ? 1 : 0);
