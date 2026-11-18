@@ -116,7 +116,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (114)
+## Shared (115)
 
 | file | loading | what it is |
 |---|---|---|
@@ -184,6 +184,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `list-legacy.js` | eager | public/app/list-legacy.js — the legacy list names (listCtl search, filter, sort, count; lazyWrap) kept until the lists move onto CBList |
 | `lock-words.js` | — |  |
 | `mis-charts.js` | — | the owner's MIS pictures: the data ADAPTERS from the server's answers to CBDraw's shapes (MISCH, 2026-11-17) |
+| `modal-host.js` | — |  |
 | `network-app.js` | — |  |
 | `network-books.js` | — |  |
 | `offer-add-confirm.js` | eager |  |
@@ -299,4 +300,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*210 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*211 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

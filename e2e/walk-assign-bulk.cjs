@@ -1,10 +1,10 @@
 'use strict';
 /**
- * e2e/walk-assign-bulk.cjs — ASSIGN-1 slice 1, the web side: the firm's client list on Home shows "Held by", and the owner or a manager assigns, hands over, returns to the pool and opens jobs in bulk.
+ * e2e/walk-assign-bulk.cjs — ASSIGN-W2 (CBAssign v2), the web side: the firm's client list on Home shows the Held-by chip; the owner or a manager assigns with two presses (chip, person), ticks rows with no mode, uses the 3-button bar (Assign to… · Hand over · Back to pool) and undoes from the previous holders the server returns.
  * The api is a STAND-IN (no real api, no network): its answers are the shapes of PM/firm-staff/DECISIONS-SLICE1.md "api contract" (assign-bulk widened, jobs/open, practice holders, actors job_assignable).
  * Pattern: e2e/walk-firm-landing.cjs (static server for the repo, the page's default api base routed to the stand-in).
  * Steps, at 1366x768 and 390x844, light and dark:
- *   1 150 clients, Held by "Unassigned" on every row · 2 open jobs for 22 · 3 assign 10 to Anna (the picker lists only job_assignable people) · 4 assign 12 to Ben · 5 hand one over to Ben with a note
+ *   1 150 clients, an empty chip (+ Assign to…) on every row · 2 always-on ticks, bar of 3 buttons, no Open jobs · 3 assign 10 to Anna (the popover lists only job_assignable people, nobody pre-picked) · 3b one chip press then a person · 3c Undo puts the previous holders back · 3d key A · 4 assign 12 to Ben · 5 hand one over to Ben with a note
  *   6 one back to the pool (target_actor_id null) · 7 a partial: 1 assigned, 1 skipped with the SERVER's sentence · 8 a refused call shows the server's sentence, nothing else · 9 an assistant: own clients, no bulk bar
  *   every size: no sideways scroll; contrast of the new parts at AA (4.5:1)
  * CARD 01-rail-core-the-chit/assign
@@ -34,7 +34,7 @@ const WORDS = { ready: 'Ready to lodge', done: "Lodged (owner's word)" };
 
 /** the api stand-in: the state a firm would hold (open jobs, holders), and every call it received */
 function standIn() {
-  const s = { jobs: new Set(), holder: new Map(), calls: [], refuse: false, assistant: false };
+  const s = { jobs: new Set(Array.from({ length: 29 }, (_, i) => id(i + 1))), holder: new Map(), calls: [], refuse: false, assistant: false };
   const rowOf = (n, mine) => ({
     entity_id: id(n), currency: 'AUD', name: 'Client ' + String(n).padStart(3, '0') + ' demo', role: n === 150 ? 'auditor' : 'adviser', stage: 'books_in', stage_blocker: null,
     year_end: { fy: '2025-26', of: 12, locked: 6, bank_to_end: false, end: '2026-06-30' }, queries: { open: 0, on_us: 0 }, bank: { state: 'reconciled', unexplained_minor: 0 },
@@ -48,14 +48,15 @@ function standIn() {
   };
   s.assignBulk = (body) => {
     if (s.refuse) return { status: 403, body: { type: 'about:blank', title: 'Not permitted', status: 403, code: 'CHIT_NOT_PERMITTED', detail: REFUSAL, may: false, why: REFUSAL, message: REFUSAL } };
-    const skipped = []; let assigned = 0;
+    const skipped = [], previous = []; let assigned = 0;
     body.subject_ids.forEach((sub) => {
       if (!s.jobs.has(sub)) return skipped.push({ subject_id: sub, code: 'JOB_NOT_OPEN', reason: NO_JOB });
+      previous.push({ chit_id: 'h-' + sub, subject_id: sub, actor_id: s.holder.has(sub) ? s.holder.get(sub).actor_id : null });
       if (body.target_actor_id === null) s.holder.delete(sub);
       else s.holder.set(sub, { actor_id: body.target_actor_id, name: body.target_actor_id === ANNA.actor_id ? ANNA.display_name : BEN.display_name });
       assigned++;
     });
-    return { status: 200, body: { message: assigned + ' assigned', assigned_to: body.target_actor_id, assigned, skipped } };
+    return { status: 200, body: { message: assigned + ' assigned', assigned_to: body.target_actor_id, assigned, skipped, previous } };
   };
   s.openJobs = (body) => {
     const jobs = body.subject_ids.map((sub) => { const had = s.jobs.has(sub); s.jobs.add(sub); return { subject_id: sub, chit_id: 'h-' + sub, outcome: had ? 'existing' : 'opened' }; });
@@ -91,7 +92,7 @@ async function open(browser, base, api, vp, theme, who) {
     const send = (status, body) => r.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
     if (u.pathname === '/api/entities/me') return send(200, { entity: { display_name: 'Coastal Accounting Advisers', currency_code: 'AUD' } });
     if (u.pathname === '/api/books-grants/practice') return send(200, api.practice());
-    if (u.pathname === '/api/actors' && req.method() === 'GET') return send(200, { actors: [ANNA, BEN, CARA], total: 3, page: 1, limit: 100, summary: {} });
+    if (u.pathname === '/api/actors' && req.method() === 'GET') return send(200, { suggested: BEN.actor_id, actors: [{ ...ANNA, open_load: 4 }, { ...BEN, open_load: 2, suggested: true }, CARA], total: 3, page: 1, limit: 100, summary: {} });
     if (u.pathname === '/api/chits/assign-bulk') { const body = JSON.parse(req.postData() || '{}'); api.calls.push({ path: u.pathname, body }); const a = api.assignBulk(body); return send(a.status, a.body); }
     if (u.pathname === '/api/chits/jobs/open') { const body = JSON.parse(req.postData() || '{}'); api.calls.push({ path: u.pathname, body }); const a = api.openJobs(body); return send(a.status, a.body); }
     return send(404, { error: 'not found' });
@@ -106,13 +107,14 @@ async function open(browser, base, api, vp, theme, who) {
 }
 const rows = (page) => page.locator('[data-testid^="practice-row-"]').count();
 async function tick(page, ids) {
-  if (!(await page.locator('[data-selrow]').count())) await page.locator('[data-cbl-selmode]').first().click();
-  for (const x of ids) await page.locator('[data-selrow="' + x + '"]').check();
+  for (const x of ids) await page.locator('[data-selrow="' + x + '"]').check(); /* always-on ticks: no Select mode */
 }
 async function bulk(page, which) { await page.locator('[data-bulk="' + which + '"]').click(); }
-async function pickAndGo(page, name) {
-  await page.waitForSelector('[data-testid="assign-picker"]');
-  await page.locator('[data-testid="assign-person"]').selectOption({ label: name });
+/** the popover (ui.dialog): press a person by name; nothing is pre-picked, so one press is the whole answer */
+async function pickAndGo(page, name, note) {
+  await page.waitForSelector('[data-as-pick]');
+  if (note) await page.locator('[data-testid="assign-note"]').fill(note);
+  await page.locator('[data-as-pick]', { hasText: name }).first().click();
 }
 const heldText = (page, n) => page.locator('[data-testid="practice-row-' + id(n) + '"]').innerText();
 const sleep = pause;
@@ -128,44 +130,42 @@ const sleep = pause;
       const api = standIn();
       const { ctx, page } = await open(browser, base, api, vp, theme, 'owner');
       ok(tag + ' · 1 the list is drawn from the 150 clients', (await rows(page)) > 0, await rows(page));
-      ok(tag + ' · 1 "Held by" says Unassigned on a row', /Unassigned/.test(await heldText(page, 1)), await heldText(page, 1));
+      ok(tag + ' · 1 an empty row is the action itself: + Assign to…', /Assign to…/.test(await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip]').first().innerText()), await heldText(page, 1));
+      ok(tag + ' · 1 the quick views Mine · Unassigned · Everyone are on the first paint', /Mine[^]*Unassigned[^]*Everyone/.test(await page.locator('.cbl-views').first().innerText()));
       ok(tag + ' · no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
       await page.screenshot({ path: file('1-list') });
 
-      /* 2 open jobs for 22 */
+      /* 2 always-on ticks: the bar appears on the first tick, three buttons, no Open jobs */
       const first22 = Array.from({ length: 22 }, (_, i) => id(i + 1));
+      ok(tag + ' · 2 no Select mode button and no bar before a tick', (await page.locator('[data-cbl-selmode]').count()) === 0 && (await page.locator('[data-bulk]').count()) === 0);
       await tick(page, first22);
-      ok(tag + ' · bulk bar offers Assign to…, Hand over, Back to pool, Open jobs', (await page.locator('[data-bulk]').count()) === 4, await page.locator('[data-bulk]').allInnerTexts());
+      ok(tag + ' · 2 the bar offers Assign to…, Hand over, Back to pool (3 buttons, no Open jobs)', (await page.locator('[data-bulk]').count()) === 3, await page.locator('[data-bulk]').allInnerTexts());
+      ok(tag + ' · 2 the count is said once: 22 selected', /22 selected/.test(await page.locator('[data-testid^="cbl-selcount-"]').first().innerText()));
       await page.screenshot({ path: file('2-bulk-bar') });
-      await bulk(page, 'open');
-      await page.waitForSelector('[data-testid="assign-result"]');
-      await pause(500);
-      const open1 = api.calls.filter((c) => c.path === '/api/chits/jobs/open');
-      ok(tag + ' · 2 Open jobs sends the 22 ticked clients, plug client, role adviser, period standing', open1.length === 1 && open1[0].body.subject_ids.length === 22 && open1[0].body.plug === 'client' && open1[0].body.role === 'adviser' && open1[0].body.period === 'standing', JSON.stringify(open1));
-      ok(tag + ' · 2 the line says what the server did (22 jobs open)', /22 jobs open/.test(await page.locator('[data-testid="assign-result"]').innerText()), await page.locator('[data-testid="assign-result"]').innerText());
 
       /* 3 ten to Anna */
+      await page.locator('[data-cbl-selclear]').click();
       await tick(page, first22.slice(0, 10));
       await bulk(page, 'assign');
-      await pickAndGo(page, ANNA.display_name);
-      const names = (await page.locator('[data-testid="assign-person"] option').allInnerTexts()).filter((name) => name !== 'Choose a person'); /* A5: the picker opens on a prompt, nobody pre-chosen */
-      ok(tag + ' · 3 the picker lists only job_assignable people (Anna, Ben; not Cara)', JSON.stringify(names) === JSON.stringify([ANNA.display_name, BEN.display_name]), names);
+      await page.waitForSelector('[data-as-pick]');
+      const names = await page.locator('[data-as-pick]').evaluateAll((els) => els.map((e) => e.getAttribute('data-as-name')));
+      ok(tag + ' · 3 the popover lists only job_assignable people (Anna, Ben; not Cara), nobody pre-picked', names.includes(ANNA.display_name) && names.includes(BEN.display_name) && !names.includes(CARA.display_name) && (await page.locator('[data-as-pick][aria-pressed="true"]').count()) === 0, names);
       await page.screenshot({ path: file('3-picker') });
       const dark = await page.evaluate(measure);
-      const mine = dark.filter((e) => /as-|assign-|data-bulk/.test(e.html) && !e.grad);
-      ok(tag + ' · AA contrast on the picker and the bar (' + mine.length + ' text elements measured)', mine.length > 0 && mine.every((e) => e.ratio >= e.need), JSON.stringify(mine.filter((e) => e.ratio < e.need).map((e) => e.text + ' ' + e.ratio)));
-      await page.locator('[data-testid="assign-go"]').click();
+      const mine = dark.filter((e) => /assign-|data-as-|data-bulk|mhd|mbody/.test(e.html) && !e.grad);
+      ok(tag + ' · AA contrast on the popover, the chip and the bar (' + mine.length + ' text elements measured)', mine.length > 0 && mine.every((e) => e.ratio >= e.need), JSON.stringify(mine.filter((e) => e.ratio < e.need).map((e) => e.text + ' ' + e.ratio)));
+      await pickAndGo(page, ANNA.display_name);
       await pause(900);
       const a1 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[0];
       ok(tag + ' · 3 assign-bulk got plug client, role, 10 subject ids and Anna', !!a1 && a1.body.plug === 'client' && a1.body.role === 'adviser' && a1.body.subject_ids.length === 10 && a1.body.target_actor_id === ANNA.actor_id && !('chit_ids' in a1.body), JSON.stringify(a1));
-      ok(tag + ' · 3 the line says 10 clients assigned', /10 clients assigned/.test(await page.locator('[data-testid="assign-result"]').innerText()));
+      ok(tag + ' · 3 the line says 10 clients assigned', /10 clients assigned to Anna Lee/.test(await page.locator('[data-testid="assign-result"]').innerText()));
+      ok(tag + ' · 3 the ticks stay after the action and the bar stays for the next group', (await page.locator('[data-bulk]').count()) === 3);
       ok(tag + ' · 3 Held by now shows Anna on a ticked row', /Anna Lee/.test(await heldText(page, 1)), await heldText(page, 1));
 
       /* 4 twelve to Ben */
       await tick(page, first22.slice(10));
       await bulk(page, 'assign');
       await pickAndGo(page, BEN.display_name);
-      await page.locator('[data-testid="assign-go"]').click();
       await pause(900);
       const a2 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[1];
       ok(tag + ' · 4 12 clients to Ben', !!a2 && a2.body.subject_ids.length === 12 && a2.body.target_actor_id === BEN.actor_id, JSON.stringify(a2));
@@ -175,15 +175,14 @@ const sleep = pause;
       /* 5 hand one over, with a note */
       await tick(page, [id(1)]);
       await bulk(page, 'handover');
-      await pickAndGo(page, BEN.display_name);
-      await page.locator('[data-testid="assign-note"]').fill('Anna is on leave');
-      await page.locator('[data-testid="assign-go"]').click();
+      await pickAndGo(page, BEN.display_name, 'Anna is on leave');
       await pause(900);
       const a3 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[2];
       ok(tag + ' · 5 hand over: one client, Ben, with the note', !!a3 && a3.body.subject_ids.length === 1 && a3.body.target_actor_id === BEN.actor_id && a3.body.note === 'Anna is on leave', JSON.stringify(a3));
       ok(tag + ' · 5 Held by now shows Ben on that row', /Ben Ortiz/.test(await heldText(page, 1)));
 
       /* 6 one back to the pool */
+      await page.locator('[data-cbl-selclear]').click();
       await tick(page, [id(2)]);
       await bulk(page, 'pool');
       await pause(900);
@@ -191,14 +190,34 @@ const sleep = pause;
       ok(tag + ' · 6 back to pool sends target_actor_id null for that client', !!a4 && a4.body.target_actor_id === null && a4.body.subject_ids.length === 1 && a4.body.subject_ids[0] === id(2), JSON.stringify(a4));
       ok(tag + ' · 6 Held by says Unassigned again', /Unassigned/.test(await heldText(page, 2)), await heldText(page, 2));
 
+      /* 3b one press on a chip, one on a person; 3c Undo from the previous holders; 3d the A key */
+      await page.locator('[data-cbl-selclear]').click();
+      const callsBefore = api.calls.filter((c) => c.path === '/api/chits/assign-bulk').length;
+      await page.locator('[data-testid="practice-row-' + id(3) + '"] [data-as-chip]').first().click();
+      await page.waitForSelector('[data-as-pick]');
+      ok(tag + ' · 3b the popover for ONE client shows the suggested person first', /Suggested/.test(await page.locator('[data-as-pick]').first().innerText()), await page.locator('[data-as-pick]').first().innerText());
+      await pickAndGo(page, ANNA.display_name);
+      await pause(900);
+      ok(tag + ' · 3b two presses assigned one client', api.calls.filter((c) => c.path === '/api/chits/assign-bulk').length === callsBefore + 1);
+      await page.locator('[data-testid="assign-undo"]').click();
+      await pause(900);
+      const undoCall = api.calls.filter((c) => c.path === '/api/chits/assign-bulk').slice(-1)[0];
+      ok(tag + ' · 3c Undo sends the previous holder (the pool, null) for that client', !!undoCall && undoCall.body.target_actor_id === null && undoCall.body.subject_ids[0] === id(3), JSON.stringify(undoCall));
+      await page.locator('[data-testid="practice-row-' + id(4) + '"]').first().focus();
+      await page.keyboard.press('a');
+      await page.waitForSelector('[data-as-pick]');
+      ok(tag + ' · 3d the A key opens the popover on a focused row', (await page.locator('[data-as-pick]').count()) > 0);
+      await page.keyboard.press('Escape');
+      await pause(300);
+
       /* 7 a partial: client 30 has no job, client 2 has one (still open, unassigned) */
+      await page.locator('[data-cbl-selclear]').click();
       await tick(page, [id(2), id(30)]);
       await bulk(page, 'assign');
       await pickAndGo(page, ANNA.display_name);
-      await page.locator('[data-testid="assign-go"]').click();
       await pause(900);
       const shown = await page.locator('[data-testid="assign-result"]').innerText();
-      ok(tag + ' · 7 a partial run says 1 assigned and the SERVER sentence for the skipped one', /1 client assigned/.test(shown) && shown.includes(NO_JOB), shown);
+      ok(tag + ' · 7 a partial run says 1 assigned and the SERVER sentence for the skipped one', /1 client assigned to Anna Lee/.test(shown) && shown.includes(NO_JOB), shown);
       await page.screenshot({ path: file('7-partial') });
 
       /* 8 a refused call: the server's own sentence, nothing assigned */
@@ -207,7 +226,6 @@ const sleep = pause;
       await tick(page, [id(5)]);
       await bulk(page, 'assign');
       await pickAndGo(page, ANNA.display_name);
-      await page.locator('[data-testid="assign-go"]').click();
       await pause(900);
       const refused = await page.locator('[data-testid="assign-result"]').innerText();
       ok(tag + ' · 8 a refusal shows exactly the server sentence', refused.trim() === REFUSAL, refused);
@@ -222,7 +240,7 @@ const sleep = pause;
       const asst = await open(browser, base, mine2, vp, theme, 'assistant');
       const n = await rows(asst.page);
       ok(tag + ' · 9 the assistant sees only their own 5 clients', n === 5, n);
-      ok(tag + ' · 9 the assistant has no bulk bar and no select mode', (await asst.page.locator('[data-bulk]').count()) === 0 && (await asst.page.locator('[data-cbl-selmode]').count()) === 0);
+      ok(tag + ' · 9 the assistant has no bulk bar and no select mode', (await asst.page.locator('[data-bulk]').count()) === 0 && (await asst.page.locator('[data-selrow]').count()) === 0 && (await asst.page.locator('[data-as-chip]').count()) === 0);
       ok(tag + ' · 9 Held by shows their own name', /Dev Assistant/.test(await asst.page.locator('[data-testid^="practice-row-"]').first().innerText()));
       await asst.page.screenshot({ path: file('9-assistant') });
       await asst.ctx.close();

@@ -252,6 +252,11 @@
   function assignOpts() {
     return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', noun: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
   }
+  /** I3: a seat that may not assign (staff) opens on Mine; owner and manager open on Everyone. The server's verdict (may_assign) decides, and only when the page knows who the person is */
+  function defaultHeld() {
+    var d = practiceKit.practiceState.data;
+    return holdersOn() && d && d.may_assign === false && root.CBAssign.meId() ? { held: 'mine' } : {};
+  }
   /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
   function heldFilterOf(filterOf) {
     var held = root.CBAssign.heldFilter((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []);
@@ -289,7 +294,7 @@
   function listOptions(rows, bandKey) {
     return {
       key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : { filt: {} },
+      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : { filt: defaultHeld() },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: translate('No clients match') },
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,

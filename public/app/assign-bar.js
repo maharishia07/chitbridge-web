@@ -119,13 +119,13 @@
   }
 
   /* ── the people ───────────────────────────────────────────────────────────────────────────── */
-  /** the people who may hold this kind of work, as the server flags them (job_assignable) with their open load when it sends one; the page filters on the flag and never on a hat */
-  function people() {
-    return call('GET', ACTORS_PATH).then(function (r) {
+  /** the people who may hold this kind of work, as the server flags them (job_assignable), with `open_load` and the ONE `suggested` person (GET /api/actors?for=plug:subject, one client only: a mixed bulk asks for no suggestion and pre-picks nobody, A5); the page filters on the flag and never on a hat */
+  function people(forWord) {
+    return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (r) {
       if (!r.ok) return { error: sentenceOf(r.body) || tr('People did not load.'), list: [] };
       var mine = assignApi.meId();
       var list = (r.body.actors || r.body.items || []).filter(function (a) { return a.job_assignable === true; }).map(function (a) {
-        var person = { id: a.actor_id || a.identity_id || a.id, name: a.display_name || a.name || '', holds: typeof a.holds === 'number' ? a.holds : null };
+        var person = { id: a.actor_id || a.identity_id || a.id, name: a.display_name || a.name || '', holds: typeof a.open_load === 'number' ? a.open_load : null, suggested: a.suggested === true || (!!r.body.suggested && r.body.suggested === (a.actor_id || a.identity_id || a.id)) };
         person.me = a.is_me === true || a.self === true || (!!mine && String(person.id) === mine);
         nameById[person.id] = person.name;
         return person;
@@ -135,14 +135,14 @@
   }
   function personRow(p, label) {
     return '<button type="button" data-as-pick="' + root.esc(p.id) + '" data-as-name="' + root.esc(p.name) + '" data-cbsid="HOM001-B22" data-cbmount="' + MOUNT + '" data-testid="assign-person-' + root.esc(p.id) + '" style="display:flex;justify-content:space-between;gap:8px;width:100%;min-height:44px;align-items:center;text-align:start;padding:6px 10px;margin:0 0 4px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer"><span>' +
-      root.esc(label || p.name) + '</span>' + (p.holds == null ? '' : '<span style="color:var(--grey,#5B5B5B)">' + root.esc(say('holds {n}', { n: p.holds })) + '</span>') + '</button>';
+      root.esc(label || p.name) + '</span>' + (p.holds != null ? '<span style="color:var(--grey,#5B5B5B)">' + root.esc((p.suggested ? tr('Suggested') + ' · ' : '') + say('holds {n}', { n: p.holds })) + '</span>' : (p.suggested ? '<span style="color:var(--grey,#5B5B5B)">' + root.esc(tr('Suggested')) + '</span>' : '')) + '</button>';
   }
   /** the popover body: search · Me · the people (with their load) · Back to pool · the optional note */
   function popoverBody(roster, spec) {
     var me = roster.list.filter(function (p) { return p.me; })[0];
     var head = (roster.error ? '<div style="color:var(--bad,#B42318);font-size:13px" data-testid="assign-picker-err">' + root.esc(roster.error) + '</div>' : '') +
       '<input type="search" data-cbsid="CMP055-I01" data-cbmount="' + MOUNT + '" data-testid="assign-search" aria-label="' + root.esc(tr('Search people')) + '" placeholder="' + root.esc(tr('Search people')) + '" style="width:100%;min-height:44px;font:inherit;padding:6px 8px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit">';
-    var list = '<div data-as-people style="display:flex;flex-direction:column;margin-top:8px">' + (me ? personRow(me, tr('Me') + ' · ' + me.name) : '') + roster.list.filter(function (p) { return !p.me; }).map(function (p) { return personRow(p); }).join('') + '</div>';
+    var list = '<div data-as-people style="display:flex;flex-direction:column;margin-top:8px">' + (me && !me.suggested ? personRow(me, tr('Me') + ' · ' + me.name) : '') + roster.list.filter(function (p) { return !p.me || p.suggested; }).sort(function (a, b) { return (b.suggested ? 1 : 0) - (a.suggested ? 1 : 0); }).map(function (p) { return personRow(p); }).join('') + '</div>';
     var pool = spec.held ? '<button type="button" data-as-pool data-cbsid="HOM001-B22" data-cbmount="' + MOUNT + '" data-testid="assign-pool" style="width:100%;min-height:44px;padding:6px 10px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer">' + root.esc(tr('Back to pool')) + '</button>' : '';
     var note = '<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;margin-top:8px">' + root.esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="' + MOUNT + '" data-testid="assign-note" maxlength="200" type="text" style="min-height:44px;font:inherit;padding:6px 8px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit"></label>';
     return head + list + pool + note;
@@ -167,7 +167,7 @@
   /** open the person popover (ui.dialog, the library popup) → done({ id|null, note }) on a press; nothing when it is cancelled. spec: { title, held (some row has a holder) } */
   function pick(spec, done) {
     if (!root.ui || typeof root.ui.dialog !== 'function' || typeof root.modal !== 'function') return showOutcome('bad', tr('The list of people cannot open on this page.'), []);
-    people().then(function (roster) {
+    people(spec.forWord).then(function (roster) {
       root.ui.dialog({
         mount: MOUNT, pop: 'POP212', titleText: tr(spec.title), testid: 'assign-picker',
         body: popoverBody(roster, spec),
@@ -294,7 +294,7 @@
   function openChip(chip) {
     var opts = mounts[chip.getAttribute('data-as-plug')], row = chipRow(chip);
     if (!opts) return;
-    pick({ title: 'Assign to…', held: row.held }, function (who) { apply(oneRowOpts(opts), [row], who); });
+    pick({ title: 'Assign to…', held: row.held, forWord: opts.plug + ':' + row.sid }, function (who) { apply(oneRowOpts(opts), [row], who); });
   }
   /** the I key: take it, when the person is among the people the server lets hold this work */
   function takeChip(chip) {
