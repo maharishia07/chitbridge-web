@@ -32,11 +32,11 @@
  */
 (function (root) {
   'use strict';
-  /** UX-197: every label the frame draws goes through the catalogue ONCE here (root.tx, English until a pack lands); data-en keeps the English so resay() can say it again when a pack lands */
-  function say(label) {
+  /** UX-197: every label the frame draws goes through the catalogue ONCE here (root.tx, English until a pack lands); data-en keeps the English so resay() can sayLabel it again when a pack lands */
+  function sayLabel(label) {
     return typeof root.tx === 'function' ? root.tx(label) : label;
   }
-  function en(label) {
+  function englishAttr(label) {
     return ' data-en="' + esc(label) + '"';
   }
   /** the frame's words again (a language pack landed after the first paint; shell.js frameResay calls this): the text of every [data-en] and the aria-label of every [data-en-aria] */
@@ -44,10 +44,10 @@
     var area = scope || root.document;
     if (!area || !area.querySelectorAll) return;
     Array.prototype.forEach.call(area.querySelectorAll('[data-en]'), function (element) {
-      element.textContent = say(element.getAttribute('data-en'));
+      element.textContent = sayLabel(element.getAttribute('data-en'));
     });
     Array.prototype.forEach.call(area.querySelectorAll('[data-en-aria]'), function (element) {
-      element.setAttribute('aria-label', say(element.getAttribute('data-en-aria')));
+      element.setAttribute('aria-label', sayLabel(element.getAttribute('data-en-aria')));
     });
   }
   function session(anonymous) {
@@ -86,10 +86,10 @@
   /** a group heading: plain text, or (fold: true) a button that folds the entries under it; its count is drawn by CSS from data-count, so the heading's text stays the label */
   function groupHead(item) {
     var slug = slugOf(item.group);
-    if (!item.fold) return '<div class="nav-group label" data-testid="skel-group-' + esc(slug) + '"' + en(item.group) + '>' + esc(say(item.group)) + '</div>';
+    if (!item.fold) return '<div class="nav-group label" data-testid="skel-group-' + esc(slug) + '"' + englishAttr(item.group) + '>' + esc(sayLabel(item.group)) + '</div>';
     return (
       '<button type="button" class="nav-group nav-fold label" data-cbsid="CMP054-B02"' + frameMount() + ' data-testid="skel-group-' + esc(slug) + '" aria-expanded="' + (item.open === false ? 'false' : 'true') +
-      '" aria-controls="navg-' + esc(slug) + '"' + (item.count != null ? ' data-count="' + esc(String(item.count)) + '"' : '') + en(item.group) + '>' + esc(say(item.group)) + '</button>'
+      '" aria-controls="navg-' + esc(slug) + '"' + (item.count != null ? ' data-count="' + esc(String(item.count)) + '"' : '') + englishAttr(item.group) + '>' + esc(sayLabel(item.group)) + '</button>'
     );
   }
   /** one left-menu entry: a button (an svg path `icon`, or a text `glyph` such as % or ₹), or a group heading when the entry is `{ group: 'label' }` */
@@ -98,7 +98,7 @@
     var mark = item.glyph ? '<span class="lab-ico" aria-hidden="true">' + esc(item.glyph) + '</span>' : drawIcon(item.icon);
     return (
       '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-cbsid="CMP054-B01"' + frameMount() + ' data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
-      (item.k === active ? ' aria-current="page"' : '') + ' aria-label="' + esc(say(item.label)) + '" data-en-aria="' + esc(item.label) + '">' + mark + '<span class="label"' + en(item.label) + '>' + esc(say(item.label)) + '</span></button>'
+      (item.k === active ? ' aria-current="page"' : '') + ' aria-label="' + esc(sayLabel(item.label)) + '" data-en-aria="' + esc(item.label) + '">' + mark + '<span class="label"' + englishAttr(item.label) + '>' + esc(sayLabel(item.label)) + '</span></button>'
     );
   }
   /** the menu's html: entries in order; the entries under a folding heading sit in one panel that heading opens and closes */
@@ -137,7 +137,7 @@
         .map(function (item) {
           return (
             '<button type="button" role="tab" class="lab-switch-btn" data-cbsid="CMP054-K01"' + frameMount() + ' data-tab="' + esc(item.k) + '" data-testid="lab-switch-' + esc(item.k) + '" aria-selected="' + String(item.k === phone.active) + '"' +
-            en(item.label) + '>' + esc(say(item.label)) + '</button>'
+            englishAttr(item.label) + '>' + esc(sayLabel(item.label)) + '</button>'
           );
         })
         .join('') +
@@ -172,7 +172,7 @@
       var button = app.querySelector('.lab-switch-btn[data-tab="' + tabName + '"]');
       if (button) {
         button.setAttribute('data-en', label);
-        button.textContent = say(label);
+        button.textContent = sayLabel(label);
       }
     }
     Array.prototype.forEach.call(app.querySelectorAll('.lab-switch-btn'), function (button) {
@@ -195,8 +195,8 @@
     app.innerHTML =
       '<aside class="side" id="side" data-testid="skel-side"><div class="brand"><div class="logo">' +
       svg(sk.icon) +
-      '</div><div class="brand-name label"' + en(sk.name) + '>' +
-      esc(say(sk.name)) +
+      '</div><div class="brand-name label"' + englishAttr(sk.name) + '>' +
+      esc(sayLabel(sk.name)) +
       '</div></div>' +
       (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned" tabindex="0" role="region" aria-label="' + esc(sk.name) + '"></div>' : '') +
       '<nav class="nav" id="nav" aria-label="' +
@@ -204,9 +204,9 @@
       '">' +
       navHTML(sk.sections || [], sk.active, svg) +
       '</nav>' +
-      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" data-cbsid="CMP054-B03"' + frameMount() + ' aria-label="' + esc(say('Collapse sidebar')) + '" aria-expanded="true">' +
+      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" data-cbsid="CMP054-B03"' + frameMount() + ' aria-label="' + esc(sayLabel('Collapse sidebar')) + '" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
-      '<span class="label"' + en('Collapse') + '>' + esc(say('Collapse')) + '</span></button></div></aside>' +
+      '<span class="label"' + englishAttr('Collapse') + '>' + esc(sayLabel('Collapse')) + '</span></button></div></aside>' +
       '<main class="main" data-testid="skel-main"><div id="shell"></div>' + (sk.phone ? switchHTML(sk.phone) : '') + '<div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
     doc.documentElement.classList.add('cbsk');
     if (sk.pinned || sk.phone) doc.documentElement.classList.add('lab-v2');
@@ -216,7 +216,7 @@
     function fit(collapsed) {
       side.classList.toggle('collapsed', collapsed);
       node.setAttribute('aria-expanded', String(!collapsed));
-      node.setAttribute('aria-label', say(collapsed ? 'Expand sidebar' : 'Collapse sidebar'));
+      node.setAttribute('aria-label', sayLabel(collapsed ? 'Expand sidebar' : 'Collapse sidebar'));
     }
     node.onclick = function () {
       fit(!side.classList.contains('collapsed'));

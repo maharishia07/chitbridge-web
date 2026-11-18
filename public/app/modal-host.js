@@ -10,7 +10,7 @@
   'use strict';
   if (typeof root.modal === 'function') return;
   var CSS_ID = 'mh_css', opener = null;
-  var CSS = '#modalhost .mover{position:fixed;inset:0;z-index:5000;background:var(--scrim,rgba(8,24,32,.45));display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}' +
+  var MODAL_CSS = '#modalhost .mover{position:fixed;inset:0;z-index:5000;background:var(--scrim,rgba(8,24,32,.45));display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}' +
     '#modalhost .modal{position:relative;width:360px;max-width:94vw;background:var(--card,#fff);color:var(--ink,#1B1B1B);border-radius:14px;overflow:hidden;box-shadow:var(--shadow,0 8px 30px rgba(0,0,0,.25))}#modalhost .modal.wide{width:820px}' +
     '#modalhost .mhd{padding:13px 16px;border-bottom:1px solid var(--line,#DDD6C6);display:flex;align-items:center;gap:8px;padding-inline-end:56px}#modalhost .mhd .t{font-weight:700}#modalhost .mhd .sub{color:var(--grey,#5B5B5B);font-size:13px}' +
     '#modalhost .mbody{padding:12px 16px;max-height:60vh;overflow-y:auto}#modalhost .mfoot{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--line,#DDD6C6)}' +
@@ -19,7 +19,7 @@
   function host() {
     var node = root.document.getElementById('modalhost');
     if (!node) { node = root.document.createElement('div'); node.id = 'modalhost'; root.document.body.appendChild(node); }
-    if (!root.document.getElementById(CSS_ID)) { var style = root.document.createElement('style'); style.id = CSS_ID; style.textContent = CSS; root.document.head.appendChild(style); }
+    if (!root.document.getElementById(CSS_ID)) { var style = root.document.createElement('style'); style.id = CSS_ID; style.textContent = MODAL_CSS; root.document.head.appendChild(style); }
     return node;
   }
   root.closeModal = function () {

@@ -19,7 +19,7 @@
   var mounts = {}, bound = false, last = null, undoTimer = null, nameById = {};
   function tr(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   /** a whole sentence with {placeholders}: never built by joining words */
-  function say(sentence, vars) {
+  function sayText(sentence, vars) {
     var text = tr(sentence);
     Object.keys(vars || {}).forEach(function (name) { text = text.split('{' + name + '}').join(vars[name]); });
     return text;
@@ -121,11 +121,11 @@
   /* ── the people ───────────────────────────────────────────────────────────────────────────── */
   /** the people who may hold this kind of work, as the server flags them (job_assignable), with `open_load` and the ONE `suggested` person (GET /api/actors?for=plug:subject, one client only: a mixed bulk asks for no suggestion and pre-picks nobody, A5); the page filters on the flag and never on a hat */
   function people(forWord, flag) {
-    return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (r) {
-      if (!r.ok) return { error: sentenceOf(r.body) || tr('People did not load.'), list: [] };
+    return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (reply) {
+      if (!reply.ok) return { error: sentenceOf(reply.body) || tr('People did not load.'), list: [] };
       var mine = assignApi.meId();
-      var list = (r.body.actors || r.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) {
-        var person = { id: a.actor_id || a.identity_id || a.id, name: a.display_name || a.name || '', holds: typeof a.open_load === 'number' ? a.open_load : null, suggested: a.suggested === true || (!!r.body.suggested && r.body.suggested === (a.actor_id || a.identity_id || a.id)) };
+      var list = (reply.body.actors || reply.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) {
+        var person = { id: a.actor_id || a.identity_id || a.id, name: a.display_name || a.name || '', holds: typeof a.open_load === 'number' ? a.open_load : null, suggested: a.suggested === true || (!!reply.body.suggested && reply.body.suggested === (a.actor_id || a.identity_id || a.id)) };
         person.me = a.is_me === true || a.self === true || (!!mine && String(person.id) === mine);
         nameById[person.id] = person.name;
         return person;
@@ -135,7 +135,7 @@
   }
   function personRow(p, label) {
     return '<button type="button" data-as-pick="' + root.esc(p.id) + '" data-as-name="' + root.esc(p.name) + '" data-cbsid="HOM001-B22" data-cbmount="' + MOUNT + '" data-testid="assign-person-' + root.esc(p.id) + '" style="display:flex;justify-content:space-between;gap:8px;width:100%;min-height:44px;align-items:center;text-align:start;padding:6px 10px;margin:0 0 4px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer"><span>' +
-      root.esc(label || p.name) + '</span>' + (p.holds != null ? '<span style="color:var(--grey,#5B5B5B)">' + root.esc((p.suggested ? tr('Suggested') + ' · ' : '') + say('holds {n}', { n: p.holds })) + '</span>' : (p.suggested ? '<span style="color:var(--grey,#5B5B5B)">' + root.esc(tr('Suggested')) + '</span>' : '')) + '</button>';
+      root.esc(label || p.name) + '</span>' + (p.holds != null ? '<span style="color:var(--grey,#5B5B5B)">' + root.esc((p.suggested ? tr('Suggested') + ' · ' : '') + sayText('holds {n}', { n: p.holds })) + '</span>' : (p.suggested ? '<span style="color:var(--grey,#5B5B5B)">' + root.esc(tr('Suggested')) + '</span>' : '')) + '</button>';
   }
   /** the popover body: search · Me · the people (with their load) · Back to pool · the optional note */
   function popoverBody(roster, spec) {
@@ -198,7 +198,7 @@
   /** "Was held by Ben Ortiz.": a replace says so */
   function replacedLine(names) {
     var named = names.filter(function (n, i) { return n && names.indexOf(n) === i; });
-    return named.length ? [say('Was held by {names}.', { names: named.join(', ') })] : [];
+    return named.length ? [sayText('Was held by {names}.', { names: named.join(', ') })] : [];
   }
   /** one call per role (the api takes one role per call); counts, skip sentences and previous holders are added; the first refusal stops the run and its sentence is shown */
   function runCalls(opts, rows, target, note, wordsFor) {
@@ -242,12 +242,12 @@
     });
   }
   /** assign these rows to `who` ({ id|null, note }), through the one verb: a person, or the pool when id is null */
-  function apply(opts, rows, who) {
-    var name = who.id ? nameById[who.id] || '' : '';
-    var words = who.id
-      ? function (n) { return say('{n} {noun} assigned to {who}.', { n: n, noun: nounOf(opts, n), who: name }); }
-      : function (n) { return say('{n} {noun} back in the pool.', { n: n, noun: nounOf(opts, n) }); };
-    return runCalls(opts, rows, who.id, who.note, words);
+  function apply(opts, rows, holder) {
+    var name = holder.id ? nameById[holder.id] || '' : '';
+    var words = holder.id
+      ? function (n) { return sayText('{n} {noun} assigned to {who}.', { n: n, noun: nounOf(opts, n), who: name }); }
+      : function (n) { return sayText('{n} {noun} back in the pool.', { n: n, noun: nounOf(opts, n) }); };
+    return runCalls(opts, rows, holder.id, holder.note, words);
   }
   function heldOf(opts) { return opts.heldOf || function (r) { return Array.isArray(r.holders) && r.holders.length > 0; }; }
 
@@ -261,12 +261,12 @@
     var held = heldOf(opts);
     return [
       { id: 'assign', label: tr('Assign to…'), run: function (rows) {
-        pick({ title: 'Assign to…', held: rows.some(held), flag: opts.flag }, function (who) { apply(opts, rows, who); });
+        pick({ title: 'Assign to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
       } },
       { id: 'handover', label: tr('Hand over'), run: function (rows) {
         var holding = rows.filter(held);
         if (!holding.length) return showOutcome('bad', tr('Nothing ticked has a holder to hand over from.'), []);
-        pick({ title: 'Hand over to', held: true, flag: opts.flag }, function (who) { apply(opts, holding, who); });
+        pick({ title: 'Hand over to', held: true, flag: opts.flag }, function (holder) { apply(opts, holding, holder); });
       } },
       { id: 'pool', label: tr('Back to pool'), run: function (rows) {
         var holding = rows.filter(held);
@@ -295,12 +295,12 @@
    */
   assignApi.handOverAll = function (opts) {
     if (!opts || !opts.fromId) return null;
-    pick({ title: 'Hand over all to', held: true }, function (who) {
-      call('POST', HANDOVER_PATH, { from_actor_id: opts.fromId, to_actor_id: who.id || null, note: who.note || undefined }).then(function (r) {
+    pick({ title: 'Hand over all to', held: true }, function (holder) {
+      call('POST', HANDOVER_PATH, { from_actor_id: opts.fromId, to_actor_id: holder.id || null, note: holder.note || undefined }).then(function (r) {
         if (!r.ok) return showOutcome('bad', sentenceOf(r.body) || tr('Not done.'), []);
         var moved = Number(r.body.moved) || 0, skipped = r.body.skipped || [];
         var lines = skipped.map(function (s) { return (s.name ? s.name + ' · ' : '') + String(s.reason || s.code || ''); });
-        var head = who.id ? say('{n} moved to {who}.', { n: moved, who: nameById[who.id] || '' }) : say('{n} back in the pool.', { n: moved });
+        var head = holder.id ? sayText('{n} moved to {who}.', { n: moved, who: nameById[holder.id] || '' }) : sayText('{n} back in the pool.', { n: moved });
         showOutcome(skipped.length && !moved ? 'bad' : 'good', head, lines, handOverUndo(r.body.previous));
         if (last) last.reload = opts.reload;
         return opts.reload ? opts.reload() : null;
@@ -327,7 +327,7 @@
     if (!opts || !opts.plug || !rows || !rows.length) return null;
     assignApi.mount(opts);
     var held = heldOf(opts);
-    pick({ title: 'Assign to…', held: rows.some(held), forWord: rows.length === 1 ? opts.plug + ':' + opts.subjectOf(rows[0]) : undefined, before: opts.beforePick, flag: opts.flag }, function (who) { apply(opts, rows, who); });
+    pick({ title: 'Assign to…', held: rows.some(held), forWord: rows.length === 1 ? opts.plug + ':' + opts.subjectOf(rows[0]) : undefined, before: opts.beforePick, flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
     return true;
   };
 
@@ -337,12 +337,12 @@
     if (!row || !Array.isArray(row.holders)) return '';
     if (!assignApi.showsBar(opts && opts.said)) return assignApi.heldBy(row);
     assignApi.mount(opts);
-    var empty = !row.holders.length, who = row.holders.map(function (h) { return h.name || ''; }).join(', ');
-    var label = empty ? tr('Unassigned') + '. ' + tr('Assign to…') : tr('Held by') + ' ' + who + '. ' + tr('Assign to…');
+    var empty = !row.holders.length, holderNames = row.holders.map(function (h) { return h.name || ''; }).join(', ');
+    var label = empty ? tr('Unassigned') + '. ' + tr('Assign to…') : tr('Held by') + ' ' + holderNames + '. ' + tr('Assign to…');
     return '<button type="button" data-as-chip data-nolist data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (empty ? '0' : '1') + '"' +
       ' data-cbsid="HOM001-B20" data-cbmount="HOM001-D05" data-testid="assign-chip" aria-haspopup="dialog" aria-label="' + root.esc(label) + '"' +
       ' style="max-width:100%;min-height:32px;padding:2px 10px;border:1px ' + (empty ? 'dashed' : 'solid') + ' var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:' + (empty ? 'var(--grey,#5B5B5B)' : 'inherit') + ';font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">' +
-      root.esc(empty ? '+ ' + tr('Assign to…') : who + ' ▾') + '</button>';
+      root.esc(empty ? '+ ' + tr('Assign to…') : holderNames + ' ▾') + '</button>';
   };
   /** the row a chip stands for, in the shape the calls read (subject, role, whether it has a holder) */
   function chipRow(chip) {
@@ -353,7 +353,7 @@
   function openChip(chip) {
     var opts = mounts[chip.getAttribute('data-as-plug')], row = chipRow(chip);
     if (!opts) return;
-    pick({ title: 'Assign to…', held: row.held, forWord: opts.write ? undefined : opts.plug + ':' + row.sid, before: opts.beforePick, flag: opts.flag }, function (who) { apply(oneRowOpts(opts), [row], who); });
+    pick({ title: 'Assign to…', held: row.held, forWord: opts.write ? undefined : opts.plug + ':' + row.sid, before: opts.beforePick, flag: opts.flag }, function (holder) { apply(oneRowOpts(opts), [row], holder); });
   }
   /** the I key: take it, when the person is among the people the server lets hold this work */
   function takeChip(chip) {

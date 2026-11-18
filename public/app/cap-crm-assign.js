@@ -56,6 +56,7 @@ function crmFuWrite(ids, targetId) {
     return out;
   });
 }
+/** the one options object CBAssign takes for a follow-up: its plug word, noun, holders and the writer above */
 function crmAssignOpts() {
   return {
     plug: 'followup',
