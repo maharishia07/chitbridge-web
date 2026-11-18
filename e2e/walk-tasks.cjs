@@ -251,13 +251,13 @@ W.run('tasks', async (w) => {
   await w.step('T12', 'A view-only login -> every step, Assign and each line\'s buttons are greyed WITH the rail\'s sentence; pressing them sends nothing', async () => {
     S.level = 'viewer'; S.calls = [];
     await openPage(); await openRow('c2');
-    const dis = await page.$$eval('#tk_do_accept, #tk_do_reject, #tk_do_complete, #tk_do_cancel, #tk_do_reopen, #tk_assign, #tk_la_l3, #tk_ld_l3, #tk_lv_l3', (bs) => bs.map((b) => b.id + (b.disabled ? ':greyed' : ':open')));
-    const why = await txt('[data-testid="tk_do_accept-why"]'), lwhy = await txt('[data-testid="tk_la_l3-why"]');
-    await page.click('#tk_do_accept', { force: true, timeout: 2000 }).catch(() => {}); await page.click('#tk_la_l3', { force: true, timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
+    const dis = await page.$$eval('#tk_do_accept, #tk_do_reject, #tk_do_complete, #tk_do_cancel, #tk_do_reopen, #tk_ld_l3, #tk_lv_l3', (bs) => bs.map((b) => b.id + (b.disabled ? ':greyed' : ':open')));
+    const why = await txt('[data-testid="tk_do_accept-why"]'), lwhy = await txt('[data-testid="tk-assign-why"]'), chips = await page.locator('#tk_sheet [data-testid="assign-chip"]').count();
+    await page.click('#tk_do_accept', { force: true, timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
     S.level = 'editor';
     await closeSheet();
-    const writes = S.calls.filter((c) => /\/status|assign-lines|deliver-lines|actors\/assign/.test(c));
-    return { ok: dis.length === 9 && dis.every((d) => /:greyed/.test(d)) && /view-only/.test(why) && /view-only/.test(lwhy) && writes.length === 0, saw: dis.join(' ') + ' · "' + why.slice(0, 40) + '" · writes: ' + (writes.join(' | ') || 'none') + (S.calls.length !== writes.length ? ' · other calls: ' + S.calls.filter((c) => writes.indexOf(c) < 0).join(' | ') : '') };
+    const writes = S.calls.filter((c) => /\/status|assign-lines|assign-bulk|deliver-lines|actors\/assign/.test(c));
+    return { ok: dis.length === 7 && chips === 0 && dis.every((d) => /:greyed/.test(d)) && /view-only/.test(why) && /view-only/.test(lwhy) && writes.length === 0, saw: dis.join(' ') + ' · "' + why.slice(0, 40) + '" · writes: ' + (writes.join(' | ') || 'none') + (S.calls.length !== writes.length ? ' · other calls: ' + S.calls.filter((c) => writes.indexOf(c) < 0).join(' | ') : '') };
   });
   await w.step('T12b', 'TOUR-FIX1 · ＋ New -> the sheet asks "What needs doing?"; Add task with nothing typed says so and sends nothing; typed -> one POST /api/chits/send to the shop itself, the sheet closes, Tasks opens with the new task in it', async () => {
     await openPage(); S.calls = [];
@@ -305,7 +305,7 @@ W.run('tasks', async (w) => {
     await fr.selectOption('[data-testid="tk-view"]', 'orders_in'); await fr.waitForTimeout(700);
     const fresh = await fr.locator('[data-testid="tk-new"]').count();
     await fr.click('[data-testid="tk-row-c4"]'); await fr.waitForSelector('[data-testid="tk-steps"]', { timeout: 6000 }); await fr.waitForTimeout(300);
-    const writes = () => S.calls.filter((c) => /\/status|assign-lines|deliver-lines|actors\/assign/.test(c)).length;
+    const writes = () => S.calls.filter((c) => /\/status|assign-lines|assign-bulk|deliver-lines|actors\/assign/.test(c)).length;
     const before = writes();
     const billDis = await fr.$eval('#tk_do_bill', (b) => b.disabled).catch(() => null);
     await fr.click('#tk_do_bill'); await fr.waitForTimeout(400);
