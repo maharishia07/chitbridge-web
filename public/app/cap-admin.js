@@ -9178,6 +9178,18 @@ async function workRoutingSet(kind, field, value) {
   }
 }
 
+/** the firm switch "which clients staff can open": all of the firm's clients, or only the ones they hold (A1) */
+function clientAccessFieldHTML(s) {
+  const onlyHeld = s.client_access === 'assigned';
+  return `<label class="fl">${tx('Which clients staff can open')}</label><select data-cbsid="ACC002-S19" class="inp" id="st_ca"><option value="all"${onlyHeld ? '' : ' selected'}>${tx('All the firm’s clients')}</option><option value="assigned"${onlyHeld ? ' selected' : ''}>${tx('Only the clients they hold')}</option></select>`;
+}
+/** the "Where work goes" block of the Work section: its routing pane is filled in when the read lands */
+function workWhereHTML() {
+  return `<div style="border-top:1px solid var(--line);margin:13px 0 11px;padding-top:11px">
+        <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
+        <div id="wr_pane">${workRoutingHTML()}</div>
+      </div>`;
+}
 function paintSettings(s, _daOpts) {
   const node = document.getElementById('setbody');
   if (!node) return;
@@ -9247,16 +9259,13 @@ function paintSettings(s, _daOpts) {
          * visit pay for a screen most of them are not opening. [[feedback-on-demand-loading]]
          */ ''
       }
-      <div style="border-top:1px solid var(--line);margin:13px 0 11px;padding-top:11px">
-        <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
-        <div id="wr_pane">${workRoutingHTML()}</div>
-      </div>
+      ${workWhereHTML()}
       ${notYetWork}
       <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select data-cbsid="ACC002-S16" class="inp" id="st_am">${opt(['pull', 'push', 'both'], s.assignment_model || 'both')}</select>
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input data-cbsid="ACC002-I25" class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks || 10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input data-cbsid="ACC002-I26" type="checkbox" id="st_av" ${s.all_task_visible ? 'checked' : ''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input data-cbsid="ACC002-I27" type="checkbox" id="st_ar" ${s.auto_return_on_short_break ? 'checked' : ''}> ${tx('Auto-return tasks on short break')}</label>
-      <label class="fl">${tx('Which clients staff can open')}</label><select data-cbsid="ACC002-S19" class="inp" id="st_ca"><option value="all"${s.client_access === 'assigned' ? '' : ' selected'}>${tx('All the firm’s clients')}</option><option value="assigned"${s.client_access === 'assigned' ? ' selected' : ''}>${tx('Only the clients they hold')}</option></select>
+      ${clientAccessFieldHTML(s)}
       <div class="err" id="st_err"></div><button data-cbsid="ACC002-B58" class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>` +
         /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
          set UI._namingOpen to expand them, and pointed at NAMING — a table deleted earlier today with its only
