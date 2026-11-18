@@ -20,7 +20,7 @@
  * FLOW       employees.html → CBEmployees.mount(el, o) → start → load (GET /api/people → may/why) → mountList (CBList) → a row → openPerson(id) → a panel → CBAction write
  *            → changed → reload; view=add → openAdd → createPerson → added; embed=1 tells the host page by postMessage.
  * IDS        every control carries its register code (data-cbsid, UX-137): EMP001, the People screen; the row action builder actRow takes its code from each call.
- * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in
  */
 (function (root) {
   'use strict';

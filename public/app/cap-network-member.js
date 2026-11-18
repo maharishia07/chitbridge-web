@@ -6,7 +6,6 @@
  * cap-network.js (lines deleted there in the same change — one definition of each function); loaded with it by ensureCap('network')
  * (app.html CAP_WITH) in the shared global scope, so the call sites in networkScreen() are unchanged.
  
- * CALLED BY public/app/cap-network.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 /*
  * OWNS      the member half of the Network panel: the read-only live network, where-is-it, a sibling's catalogue and the request

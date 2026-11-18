@@ -17,7 +17,6 @@
  * right for a list and wrong for a conversation — you would read a reply with the question it answers missing.
  * The per-chit route already returns the full line thread; opening asks it.
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 /*
  * OWNS      the Replies inbox: every external conversation that still wants you, threaded by line across all chits
