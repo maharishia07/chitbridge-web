@@ -5,7 +5,7 @@
  *
  * Cases (a stand-in api, the real ui.js and the real app.html functions cut out by name): the three speed classes (step quick 10 / slow 5 / tray 5; the tray class starts in the tray, the others in the panel and move to it after 2 s);
  * 25 ids on quick → 3 calls of at most 10 and the corner tray, with the done / left / failed counts; one failing step counted failed while the rest still go;
- * Cancel stops after the step and says how many were done; 8 ids → one call and the centre panel (prodAvailApply); 12 ids slow (assignBulkChits) → 3 calls of at most 5 and the tray;
+ * Cancel stops after the step and says how many were done; 8 ids → one call and the centre panel (prodAvailApply); (assignBulkChits is gone since ASSIGN-W3: the one CBAssign popover assigns, e2e/assign-*.test.cjs);
  * bulkRestore (one call per record) counts a failed record and keeps it ticked; no screen lock (showBusy is never called).
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * Run: node e2e/group-actions.test.cjs
@@ -59,7 +59,7 @@ function sourceOf(name) {
   if (start < 0) throw new Error('no function ' + name);
   return html.slice(start, html.indexOf('\n}\n', start) + 3);
 }
-['chitNameOf', 'groupRun', 'tickUndone', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'statusStepBody', 'bulkJobIdOf', 'markStatusMoved', 'confirmStatus', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
+['chitNameOf', 'groupRun', 'tickUndone', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'statusStepBody', 'bulkJobIdOf', 'markStatusMoved', 'confirmStatus', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
 /* the saved-job block (BULK_ACTIONS … bulkResume) is one run of consts and functions: cut from its marker to the end of bulkResume */
 const jobStart = html.indexOf('/* ⭐ SAVE AND RESUME');
 const jobEnd = html.indexOf('\n}\n', html.indexOf('async function bulkResume(')) + 3;
@@ -129,13 +129,6 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   check(JSON.stringify(sizes('prodStatusBulk')) === '[10,10,5]', '25 ids → 3 calls of at most 10');
   check(/24 set to unavailable · 1 could not be saved/.test(toasts[toasts.length - 1]) && state.prodPicked.has('c13') && state.prodPicked.size === 1, '24 done, 1 failed and left ticked, said in the toast');
 
-  console.log('app.html: assignBulkChits, 12 ids (slow)');
-  reset();
-  failOn = async (name, options) => ({ assigned: options.body.chit_ids.length - (options.body.chit_ids.includes('c7') ? 1 : 0), skipped: options.body.chit_ids.includes('c7') ? [{ chit_id: 'c7', reason: 'at capacity (10)' }] : [] });
-  await sandbox.assignBulkChits(ids(12), 'a1');
-  check(JSON.stringify(sizes('assignBulk')) === '[5,5,2]' && calls.every((c) => c.body.target_actor_id === 'a1'), '12 ids → 3 calls of at most 5, same body shape');
-  check(/11 assigned · 1 skipped/.test(toasts[toasts.length - 1]) && state.selected.has('c7'), '11 assigned, the skipped one counted and left ticked');
-
   console.log('app.html: bulkRestore, one call per record');
   reset();
   state.targets = ids(25);
@@ -146,14 +139,6 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   check(calls.length === 25 && calls.every((c) => c.name === 'restore') && tray !== null, '25 ids → 25 restore calls (the same endpoint per record), and the panel moved to the tray after 2 s');
   check(/24 restored · 1 failed/.test(toasts[toasts.length - 1]) && state.selected.has('c4') && state.selected.size === 1, '24 restored, c4 counted failed and still ticked');
   check(barText === '1 selected · A$5.00', 'the selection bar is repainted after the run: 1 selected and its amount, not the 25 tried (' + barText + ')');
-
-  console.log('app.html: assignBulkChits, a step that throws stops the run');
-  reset(); state.selectMode = false;
-  let assignCalls = 0;
-  failOn = async (name, options) => { assignCalls += 1; if (assignCalls === 2) throw new Error('Target co-assist not found'); return { assigned: options.body.chit_ids.length, skipped: [] }; };
-  await sandbox.assignBulkChits(ids(12), 'a1');
-  check(sizes('assignBulk').length === 2 && /5 assigned · 5 skipped/.test(toasts[toasts.length - 1]) && /2 not done/.test(toasts[toasts.length - 1]), 'step 2 throws: the run stops (2 calls, not 3), 5 assigned, 5 failed, 2 not done');
-  check(state.selectMode === true && state.selected.size === 7 && state.selected.has('c6') && state.selected.has('c12'), 'the select mode stays on; the five failed and the two not done stay ticked');
 
   console.log('app.html: confirmStatus stops on the first failure');
   reset();
