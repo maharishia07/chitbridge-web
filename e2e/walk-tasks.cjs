@@ -103,7 +103,7 @@ W.run('tasks', async (w) => {
     if (p === '/api/work/list' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { error: 'Forbidden', message: 'Sign in as staff to see Tasks and Orders.' });
       const view = ['orders_in', 'orders_out', 'tasks', 'done'].includes(u.searchParams.get('view')) ? u.searchParams.get('view') : 'orders_in';
-      const rows = S.rows.filter((x) => tab(x) === view).map(rowOut);
+      const rows = S.rows.filter((x) => tab(x) === view).map((x) => Object.assign(rowOut(x), { may_assign: S.level !== 'viewer', may_take: S.level !== 'viewer' && !x.assignee }) /* the list rows carry the server's verdicts (CBAssign v2); the one-chit answer does not */);
       return J(r, 200, { view, page: 1, limit: Number(u.searchParams.get('limit')) || 50, truncated: false, counts: counts(), total: rows.length, rows });
     }
     let mm = /^\/api\/work\/([^/]+)$/.exec(p);
@@ -196,6 +196,8 @@ W.run('tasks', async (w) => {
     const out = await txt('[data-testid="tk-out"]'), tag = await txt('#tk_sheet [data-testid="tk-word-c1"]');
     return { ok: /Accepted\./.test(out) && /Accepted/.test(tag) && wrote(/PUT \/api\/chits\/c1\/status \{"status":"accepted"\}/) === 1, saw: '"' + out + '" · tag ' + tag + ' · status calls: ' + wrote(/\/status/) };
   });
+  /* the assign-bulk body: exactly these keys, the role one empty (the Held-by chip sends "role":"" when no role is picked); nothing else is accepted */
+  const bulkOk = (call, plug, id, who) => { let b = {}; try { b = JSON.parse(call.slice(call.indexOf('{'))); } catch (e) { return false; } return Object.keys(b).sort().join(',') === 'plug,role,subject_ids,target_actor_id' && b.plug === plug && b.role === '' && JSON.stringify(b.subject_ids) === JSON.stringify([id]) && b.target_actor_id === who; };
   await w.step('T6', 'Line Tomato -> its Held-by chip (+ Assign to…) -> the popover lists the people -> Ravi -> POST assign-bulk { plug line, subject l1, Ravi }; the sheet closes first; reopened, the line says Ravi Nair and its chip too', async () => {
     await page.waitForSelector('[data-testid="tk-line-l1"] [data-testid="assign-chip"]', { timeout: 5000 });
     await page.click('[data-testid="tk-line-l1"] [data-testid="assign-chip"]'); await page.waitForSelector('[data-testid="assign-person-p2"]', { timeout: 5000 });
@@ -205,7 +207,7 @@ W.run('tasks', async (w) => {
     const call = S.calls.find((c) => /assign-bulk/.test(c) && /"plug":"line"/.test(c)) || '';
     await openRow('c1');
     const who = await txt('[data-testid="tk-line-who-l1"]'), chip = await txt('[data-testid="tk-line-l1"] [data-testid="assign-chip"]');
-    return { ok: listed >= 2 && /Ravi Nair/.test(who) && /Ravi Nair/.test(chip) && /"subject_ids":["l1"]/.test(call) && /"target_actor_id":"p2"/.test(call) && /Ravi/.test(out), saw: 'people ' + listed + ' · holder ' + who + ' · chip ' + chip + ' · "' + out + '" · ' + call.slice(0, 140) };
+    return { ok: listed >= 2 && /Ravi Nair/.test(who) && /Ravi Nair/.test(chip) && bulkOk(call, 'line', 'l1', 'p2') && /Ravi/.test(out), saw: 'people ' + listed + ' · holder ' + who + ' · chip ' + chip + ' · "' + out + '" · ' + call.slice(0, 140) };
   });
   await w.step('T7', 'Line Tomato -> Done -> the SAME route carries state done and keeps Ravi; the line reads Done and its button now says Reopen', async () => {
     await page.click('#tk_ld_l1'); await page.waitForTimeout(800);
@@ -226,7 +228,7 @@ W.run('tasks', async (w) => {
     const call = S.calls.find((c) => /assign-bulk/.test(c) && /"plug":"task"/.test(c)) || '';
     await openRow('c1');
     const chip = await txt('#tk_sheet [data-testid="assign-chip"]');
-    return { ok: /Asha Kumar/.test(chip) && /"subject_ids":["c1"]/.test(call) && /"target_actor_id":"p1"/.test(call), saw: 'chip ' + chip + ' · ' + call };
+    return { ok: /Asha Kumar/.test(chip) && bulkOk(call, 'task', 'c1', 'p1'), saw: 'chip ' + chip + ' · ' + call };
   });
   await w.step('T10', 'SO-1 -> Reject -> it asks why; nothing typed sends nothing; a reason -> PUT /status { rejected, note } -> the row leaves Orders in (1 row left)', async () => {
     await page.click('#tk_do_reject'); await page.waitForSelector('[data-testid="tk-reason"]', { timeout: 5000 });
