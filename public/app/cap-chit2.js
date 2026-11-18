@@ -970,7 +970,7 @@ function c2PaneDel(d) {
         '</button>' +
         c2MatRowHTML(e.line_id) +
         (p.delivered
-          ? '<button class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' +
+          ? '<button data-cbsid="DTL006-B11" class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' +
             e.line_id +
             "','" +
             esc(l.unit || '') +

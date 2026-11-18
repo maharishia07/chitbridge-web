@@ -1655,7 +1655,7 @@ function _openLegendImpl() {
     real: 'reality &amp; how we earn it',
     work: 'work patterns — the governed journeys'
   };
-  host.innerHTML = `<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
+  host.innerHTML = `<div data-cbsid="SCR006-C01" class="notifover" onclick="closeLegend()"><div data-cbsid="SCR006-C02" class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:var(--fs-5)">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab] || titles.cap}</div></div>

@@ -530,8 +530,8 @@ function enOwnOptions() {
 function enOwnField(k, lab, tid, v, on) {
   var opened = EN.addOwn === k,
     box = opened
-      ? '<span class="en-addown" data-testid="en-addown"><input data-testid="en-addown-name" id="en_addown_name" maxlength="60" placeholder="' + esc(tx('Name, e.g. Savings account')) + '" value="' + esc(EN.addOwnName || '') + '" oninput="EN.addOwnName=this.value"> <button type="button" class="en-btn pri" data-testid="en-addown-go" onclick="enOwnAdd(this.dataset.k)" data-k="' + esc(k) + '">' + esc(tx('Add account')) + '</button> <button type="button" class="en-btn" onclick="EN.addOwn=null;enPaint()">' + esc(tx('Cancel')) + '</button></span>' + (EN.addOwnErr ? '<span class="en-bad" role="alert">' + esc(EN.addOwnErr) + '</span>' : '')
-      : '<button type="button" class="en-btn" data-testid="en-addown-open" data-k="' + esc(k) + '" onclick="EN.addOwn=this.dataset.k;EN.addOwnErr=&quot;&quot;;enPaint()">+ ' + esc(tx('Add a savings account')) + '</button>';
+      ? '<span class="en-addown" data-testid="en-addown"><input data-cbsid="SCR022-I09" data-testid="en-addown-name" id="en_addown_name" maxlength="60" placeholder="' + esc(tx('Name, e.g. Savings account')) + '" value="' + esc(EN.addOwnName || '') + '" oninput="EN.addOwnName=this.value"> <button data-cbsid="CMP007" type="button" class="en-btn pri" data-testid="en-addown-go" onclick="enOwnAdd(this.dataset.k)" data-k="' + esc(k) + '">' + esc(tx('Add account')) + '</button> <button data-cbsid="CMP003" type="button" class="en-btn" onclick="EN.addOwn=null;enPaint()">' + esc(tx('Cancel')) + '</button></span>' + (EN.addOwnErr ? '<span class="en-bad" role="alert">' + esc(EN.addOwnErr) + '</span>' : '')
+      : '<button data-cbsid="CMP007" type="button" class="en-btn" data-testid="en-addown-open" data-k="' + esc(k) + '" onclick="EN.addOwn=this.dataset.k;EN.addOwnErr=&quot;&quot;;enPaint()">+ ' + esc(tx('Add a savings account')) + '</button>';
   return '<label class="en-f"><span>' + esc(lab) + '</span>' + enSelect(tid, enOwnOptions(), v, on) + '</label>' + box;
 }
 /** add the account under the shop's bank group, read the accounts again, and put it in the field that asked */

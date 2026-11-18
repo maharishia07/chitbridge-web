@@ -4466,7 +4466,7 @@ async function bkDrillToggle(btn, code, from, to, fromTab, label) {
             })
             .join('')
         : '<span style="color:var(--grey)">' + esc(tx('No entries in this period')) + '</span>') +
-      (total > 0 ? '<div style="margin-top:4px"><button type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(fromTab) + '\',\'' + esc(label) + '\')">' +
+      (total > 0 ? '<div style="margin-top:4px"><button data-cbsid="SCR013-B01" type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(fromTab) + '\',\'' + esc(label) + '\')">' +
         esc(txn('Open the {count} entry ▸', 'Open all {count} entries ▸', total, { count: total })) + '</button></div>' : '') +
       '</div>';
   } catch (failure) {
@@ -5927,7 +5927,7 @@ function bkLockWhoHTML(p, who) {
 /** the line under a refused button: why it is blocked, shortened, with the return still to close when that is the reason */
 function bkLockWhyHTML(p, st, x, blocked, blockWhy) {
   return (
-    (!blocked ? '' : '<button type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(blockWhy)) + '" data-full="' + esc(tx(blockWhy) + (st === 'open' && x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(blockWhy)) + '" onclick="bkLockWhy(this)">' + esc(tx(blockWhy)) + '</button>')
+    (!blocked ? '' : '<button data-cbsid="SCR013-B02" type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(blockWhy)) + '" data-full="' + esc(tx(blockWhy) + (st === 'open' && x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(blockWhy)) + '" onclick="bkLockWhy(this)">' + esc(tx(blockWhy)) + '</button>')
   );
 }
 /**
