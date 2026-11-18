@@ -145,7 +145,7 @@ var CBPick = (function () {
       '<div class="mfoot"><button data-cbsid="CMP003" data-testid="pick-cancel" onclick="CBPick.cancel()">' +
       esc(tx_('Cancel')) +
       '</button>' +
-      '<button class="pri" data-testid="pick-confirm" onclick="CBPick.confirm()">' +
+      '<button class="pri" data-cbsid="CMP057-B02" data-cbname="command" data-testid="pick-confirm" onclick="CBPick.confirm()">' +
       esc(o.confirm || tx_('Use these')) +
       '</button></div>'
     );

@@ -139,7 +139,7 @@ function obEdit() {
 function obField(id, minor, on, label) {
   return typeof bkMoneyInput === 'function'
     ? bkMoneyInput({ id: id, tid: id, minor: minor, on: on, extra: 'aria-label="' + esc(label) + '" data-cbsid="CMP040-I01"' + obMount('CMP040') })
-    : '<input class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(label) + '" inputmode="decimal">';
+    : '<input class="inp" id="' + id + '" data-testid="' + id + '" aria-label="' + esc(label) + '" data-cbsid="CMP040-I01"' + obMount('CMP040') + ' inputmode="decimal">';
 }
 /** one ledger's row in the grid: name, Debit and Credit fields, and its Bills button for Customers and Suppliers */
 function obRowHtml(row, i) {
