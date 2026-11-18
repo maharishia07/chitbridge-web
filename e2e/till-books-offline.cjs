@@ -152,7 +152,7 @@ function dayClose(counter, day) {
   const w = walkinsWaiting(counter, day);
   LEDGER.closed[k] = true;
   if (!w.length) return null;
-  const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k, date: day, counter });
+  const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k, date: day, counter }, { country: 'IN' });
   const e = postOne(ev, { source_ref: 'walkin:' + counter + ':' + day, counter, day, bills: w.map((c) => c.client_ref) });
   if (e) w.forEach((c) => LEDGER.walkinPosted.add(c._key || c.client_ref));
   return e;
@@ -165,7 +165,7 @@ function settleLate() {
     const w = walkinsWaiting(counter, day);
     if (!w.length) return;
     const n = LEDGER.entries.filter((e) => e.supplementary && e.counter === counter && e.day === day).length + 1;
-    const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k + ':supp-' + n, date: day, counter });
+    const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k + ':supp-' + n, date: day, counter }, { country: 'IN' });
     const e = postOne(ev, { source_ref: 'walkin:' + counter + ':' + day + ':supp-' + n, counter, day, supplementary: true, bills: w.map((c) => c.client_ref) });
     if (e) { w.forEach((c) => LEDGER.walkinPosted.add(c._key || c.client_ref)); made.push(e); }
   });

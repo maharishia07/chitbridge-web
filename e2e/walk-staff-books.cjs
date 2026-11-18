@@ -68,7 +68,7 @@ const VIEWS = [['tb', 'Trial balance'], ['pl', 'P&L'], ['bs', 'Balance sheet'], 
           if (seat === 'staff') return r.fulfill({ status: 403, contentType: 'application/problem+json', body: JSON.stringify(refusal) });
           return r.fallback();
         });
-        await ctx.addInitScript((s, th) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); localStorage.setItem('cb_theme', th); } catch (_) {} }, SEATS[seat], theme);
+        await ctx.addInitScript(({ s, th }) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); localStorage.setItem('cb_theme', th); } catch (_) {} }, { s: SEATS[seat], th: theme });
         const page = await ctx.newPage(), threw = [];
         page.on('pageerror', (e) => threw.push(e.message));
         await page.goto(base + '/accounts.html#daybook').catch(() => {});

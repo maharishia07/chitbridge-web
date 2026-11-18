@@ -4,15 +4,16 @@
  * copy the master, edit it, vendor (chitbridge-api scripts/vendor-till.cjs), run the harness, then restore the master FROM
  * THE COPY (never git) and vendor again. One browser at a time.
  * The server's guards: chitbridge-api scripts/two-sided-breaks.cjs.
- * Run: node e2e/till-two-sided-breaks.cjs
+ * Run: node e2e/till-two-sided-breaks.cjs   (CB_API_DIR names the api checkout when it is not the sibling chitbridge-api)
  */
 'use strict';
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
-const API = path.join(__dirname, '..', '..', 'chitbridge-api');
+const API = process.env.CB_API_DIR || path.join(__dirname, '..', '..', 'chitbridge-api');
+const WEB = path.join(__dirname, '..');   /* the web checkout this harness serves: vendor-till writes the counter copy THERE (CB_WEB_DIR), not into a sibling chitbridge-web, or the harness never sees a break */
 const MASTER = path.join(API, 'tools', 'tally-connector', 'till.html');
-const vendor = () => spawnSync(process.execPath, [path.join(API, 'scripts', 'vendor-till.cjs')], { encoding: 'utf8' });
+const vendor = () => spawnSync(process.execPath, [path.join(API, 'scripts', 'vendor-till.cjs')], { encoding: 'utf8', env: Object.assign({}, process.env, { CB_WEB_DIR: WEB }) });
 const BREAKS = [
-  ["                            cust && cust.entity_id ? { entity_id: cust.entity_id } : {}),", "                            {}),", 'finish() no longer stamps the rail customer on the bill'],
+  ["  cust && cust.entity_id ? { entity_id: cust.entity_id } : {},", "  {},", 'billCustomerOf (called by finish()) no longer stamps the rail customer on the bill'],
   ["  if (to) r.push({ name: to.name || 'Customer', entity_id: String(to.entity_id), role:'to', self:false });", "", 'chitOf sends every bill to self only again'],
   ["  return (c && c.entity_id && /^[0-9a-f-]{36}$/i.test(String(c.entity_id))) ? c : null;", "  return (c && c.identity_id) ? Object.assign({}, c, { entity_id: c.identity_id }) : null;", 'any KNOWN customer is sent the bill, on the rail or not'],
   ["  var to = billSendTo(bill), r = [{ self:true, name:'self' }];", "  var to = billSendTo(bill), r = [];", 'the shop\'s own copy is dropped'],
