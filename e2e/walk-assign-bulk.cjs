@@ -148,7 +148,7 @@ const sleep = pause;
       await tick(page, first22.slice(0, 10));
       await bulk(page, 'assign');
       await pickAndGo(page, ANNA.display_name);
-      const names = await page.locator('[data-testid="assign-person"] option').allInnerTexts();
+      const names = (await page.locator('[data-testid="assign-person"] option').allInnerTexts()).filter((name) => name !== 'Choose a person'); /* A5: the picker opens on a prompt, nobody pre-chosen */
       ok(tag + ' · 3 the picker lists only job_assignable people (Anna, Ben; not Cara)', JSON.stringify(names) === JSON.stringify([ANNA.display_name, BEN.display_name]), names);
       await page.screenshot({ path: file('3-picker') });
       const dark = await page.evaluate(measure);
