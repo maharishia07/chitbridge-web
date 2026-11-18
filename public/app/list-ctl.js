@@ -2781,6 +2781,11 @@ ctx.pin = cols.filter(function (item) {
 
   /* one document-level listener each: a click anywhere outside a mounted list closes its popover; a resize refits every list to its window */
   if (root.document && root.document.addEventListener) {
+    /* ONE LINE: a cell cut with an ellipsis carries its full text as the title, set the first time the pointer reaches it */
+    root.document.addEventListener('mouseover', function (ev) {
+      var cell = ev.target && ev.target.closest ? ev.target.closest('.cbl .cbl-row .cbl-cell') : null;
+      if (cell && !cell.hasAttribute('title') && cell.scrollWidth > cell.clientWidth) cell.setAttribute('title', (cell.textContent || '').replace(/s+/g, ' ').trim());
+    });
     root.document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.isConnected === false) return; /* the click repainted its own button away: that was a click INSIDE the list */
       INST.forEach(function (item) {
