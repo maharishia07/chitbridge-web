@@ -879,8 +879,7 @@
       if (who) {
         var levelWord = person && wordsOf(person.level) ? ' · ' + wordsOf(person.level) : '';
         who.querySelector('b').textContent = shopName() + levelWord;
-        who.setAttribute('aria-label', shopName() + levelWord);
-        if (S.headerWhy) who.setAttribute('title', S.headerWhy); /* the refused read's words */
+        who.setAttribute('aria-label', shopName() + levelWord); who.title = S.headerWhy || ''; /* the refused read's words */
       }
       if (sheet) sheet.setAttribute('aria-label', shopName());
       var element = $('.cbsh-lic'),
@@ -1512,8 +1511,7 @@
             },
             function (err) {
               S.header = null;
-              S.headerState = 'none';
-              S.headerWhy = (err && err.words) || '';
+              S.headerState = 'none'; S.headerWhy = (err && err.words) || '';
             }
           )
           .then(function () {

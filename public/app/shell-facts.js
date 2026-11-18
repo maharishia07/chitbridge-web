@@ -51,13 +51,13 @@
     if (typeof value !== 'object') return String(value);
     return wordsOf(value.detail) || wordsOf(value.message) || wordsOf(value.title) || wordsOf(value.name) || wordsOf(value.error) || '';
   }
-  function say(text) { return typeof root.tx === 'function' ? root.tx(text) : text; }
+  function translated(text) { return typeof root.tx === 'function' ? root.tx(text) : text; }
   /** problemWords(body, status) → 'Too many requests: try again in N minutes' for a 429 with its wait (seconds, rounded up to whole minutes, or the seconds under a minute); else the problem's own words; '' when it has none */
   function problemWords(body, status) {
     var seconds = Number(body && body.params && body.params.retry_after_seconds);
     if (status === 429 && seconds >= 1) {
       var minutes = Math.ceil(seconds / 60);
-      return seconds < 60 ? say('Too many requests: try again in a minute') : say('Too many requests: try again in') + ' ' + minutes + ' ' + say(minutes === 1 ? 'minute' : 'minutes');
+      return seconds < 60 ? translated('Too many requests: try again in a minute') : translated('Too many requests: try again in') + ' ' + minutes + ' ' + translated(minutes === 1 ? 'minute' : 'minutes');
     }
     return wordsOf(body);
   }
