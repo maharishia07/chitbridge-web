@@ -151,6 +151,25 @@
       }
     );
   }
+  /** the Holds column of the people list: how many open things each person holds (the server's total, never counted here) */
+  function holdsColumn() {
+    return {
+      key: 'holds',
+      label: T('Holds'),
+      prio: 6,
+      w: 90,
+      num: true,
+      sort: 'holds',
+      cell: function (p) {
+        var item = holdsOf(p);
+        return item ? String(item.total) : '—';
+      },
+      value: function (p) {
+        var item = holdsOf(p);
+        return item ? item.total : 0;
+      }
+  };
+  }
   function holdsOf(p) {
     return (E.holds && E.holds[p.id]) || null;
   }
@@ -267,22 +286,7 @@
           return STATE_WORD[p.state];
         }
       },
-      {
-        key: 'holds',
-        label: T('Holds'),
-        prio: 6,
-        w: 90,
-        num: true,
-        sort: 'holds',
-        cell: function (p) {
-          var item = holdsOf(p);
-          return item ? String(item.total) : '—';
-        },
-        value: function (p) {
-          var item = holdsOf(p);
-          return item ? item.total : 0;
-        }
-      },
+      holdsColumn(),
       {
         key: 'last',
         label: T('Last at a counter'),
@@ -453,7 +457,7 @@
           'EMP001-B07'
         ) +
         actRow('emp_cover', '🤝', T('Who stands in'), m.cover, coverNote, 'EMP001-B08') +
-        actRow('emp_handall', '📤', T('Hand over all…'), handAllMay(node), '<span class="sub" data-testid="emp-holds-now">' + esc(holdsWords(holdsOf(node)) || T('Holds nothing')) + '</span>', 'EMP001-B09') +
+        handAllRow(node) +
         '</div><div id="emp_more"></div>'
     );
     var q = function (k) {
@@ -479,6 +483,14 @@
       q('emp_cover').onclick = function () {
         coverPanel(node);
       };
+    wireHandAll(node, q);
+  }
+  /** the Hand over all… row of a person's sheet: greyed with the server's sentence when it may not be used, and what the person holds now */
+  function handAllRow(node) {
+    return actRow('emp_handall', '📤', T('Hand over all…'), handAllMay(node), '<span class="sub" data-testid="emp-holds-now">' + esc(holdsWords(holdsOf(node)) || T('Holds nothing')) + '</span>', 'EMP001-B09');
+  }
+  /** the press on the Hand over all… row, when it may be used */
+  function wireHandAll(node, q) {
     if (handAllMay(node).ok !== false)
       q('emp_handall').onclick = function () {
         handAll(node);
