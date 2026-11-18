@@ -115,6 +115,7 @@
       /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
     '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
       '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
+      '.cbl .cbl-row.cbl-total:last-child{position:sticky;bottom:0;z-index:4;background:var(--cl-panel);border-top:1.5px solid var(--cl-line);font-weight:600}',
       '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
       '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
       '.cbl .cbl-hc.r{justify-content:flex-end}',

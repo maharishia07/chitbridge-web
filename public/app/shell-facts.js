@@ -44,6 +44,23 @@
     if (ordered.some(function (item, index) { return item.sec !== secs[index]; })) ordered.forEach(function (item) { holder.appendChild(item.sec); });
   }
 
+  /* P1-5 (18 Nov): the ONE text of a refused answer the header uses. A problem body (RFC 9457: detail · title, and params.retry_after_seconds on a 429) says its own words; a name that arrives as an object says its name — never String(object) ("[object Object]"). core.js's errWords is the page's reader of the same slots; the shell may mount without core.js, so it reads them here. */
+  function wordsOf(value) {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value !== 'object') return String(value);
+    return wordsOf(value.detail) || wordsOf(value.message) || wordsOf(value.title) || wordsOf(value.name) || wordsOf(value.error) || '';
+  }
+  function say(text) { return typeof root.tx === 'function' ? root.tx(text) : text; }
+  /** problemWords(body, status) → 'Too many requests: try again in N minutes' for a 429 with its wait (seconds, rounded up to whole minutes, or the seconds under a minute); else the problem's own words; '' when it has none */
+  function problemWords(body, status) {
+    var seconds = Number(body && body.params && body.params.retry_after_seconds);
+    if (status === 429 && seconds >= 1) {
+      var minutes = Math.ceil(seconds / 60);
+      return seconds < 60 ? say('Too many requests: try again in a minute') : say('Too many requests: try again in') + ' ' + minutes + ' ' + say(minutes === 1 ? 'minute' : 'minutes');
+    }
+    return wordsOf(body);
+  }
   /** one card read; a SERVER_BUSY is asked again after the server's own Retry-After (at most FACTS_RETRIES times) */
   function factsGet(ctx, url, left) {
     return ctx.get(url).catch(function (err) {
@@ -277,5 +294,5 @@
       }
     };
   }
-  root.CBShellFacts = { create: create, painters: painters };
+  root.CBShellFacts = { create: create, painters: painters, wordsOf: wordsOf, problemWords: problemWords };
 })(typeof window !== 'undefined' ? window : this);
