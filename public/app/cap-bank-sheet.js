@@ -159,7 +159,8 @@ function bkshController() {
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     pairing: bkshPairing,
-    suggestOpts: Object.defineProperty({ country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
+    loans: () => bkshBook().loans || [] /* GET /books/loans: the picker of a loan instalment line */,
+    suggestOpts: Object.defineProperty({ country, lodged_bas: bkshBook().lodged || [] /* GET /books/gst/lodged: a tax payment that equals a lodged net is proposed as GST (engine reads net_minor) */, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
@@ -324,9 +325,11 @@ function bkshReady() {
   const scripts = [typeof CBBankPreview, typeof CBBankPreviewUI, typeof CBBankPost];
   return !!bkshBook().text && !!bkshEngine() && scripts.every((kind) => kind !== 'undefined');
 }
-/** the sheet's first words under the title: the engine's refusal, or that registration could not be read */
-function bkshFirstWords(said, unread) {
+/** the sheet's first words under the title: the engine's refusal, or that registration could not be read, or (FIN-116) that the shop never said whether it is registered: each charge is then added whole, no tax credit, until Country setup answers it */
+function bkshFirstWords(said, registration) {
   if (!said.ok) return said.why;
+  if (registration === null) return txf('The shop has not said whether it is registered for {tax}, so each charge is added whole with no {tax} credit. Answer it in Country setup to claim the {tax} on a charge.', { tax: packWord('taxName') });
+  const unread = registration === 'unread';
   return unread ? txf('Could not check whether the shop is registered for {tax}, so each charge asks what {tax} it carries.', { tax: packWord('taxName') }) : '';
 }
 /** the controller's key of one bank row (its client_ref, one to one by occurrence), '' when the row is not on this statement */
@@ -364,11 +367,6 @@ function bkshItemOf(row) {
   const ref = BKSH.refs[row.i];
   return (BKSH.ctl.view().items || []).filter((one) => one.key === ref)[0] || null;
 }
-/** the party the books matched to a line, by name, or '' (the statement's own words stay under it) */
-function bkshPartyOf(row) {
-  const item = bkshItemOf(row);
-  return item && item.party && item.party.status === 'existing' && item.party.name ? item.party.name : '';
-}
 /**
  * the answers under a line on the Bank page's own list (W15-14): the SAME painter the sheet uses, on the same controller, mounted on the list's host (a press on a button of an open row is heard there).
  * `changed(key, 'answered'|'asked')` repaints what reads the lines. Null until the controller has read this statement.
@@ -387,8 +385,7 @@ async function bankSheetOpen(row) {
   BKSH.taxRegistered = await bkshRegistered();
   await bkshReadMonths();
   BKSH.refs = null;
-  const unread = BKSH.taxRegistered === 'unread',
-    kept = !!BKSH.ctl && BKSH.key === bkshKey();
+  const kept = !!BKSH.ctl && BKSH.key === bkshKey();
   if (!kept) {
     BKSH.ctl = bkshController();
     BKSH.key = bkshKey();
@@ -409,7 +406,7 @@ async function bankSheetOpen(row) {
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
   else BKSH.said = BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name);
-  bkshSay(bkshFirstWords(BKSH.said || { ok: true }, unread), false);
+  bkshSay(bkshFirstWords(BKSH.said || { ok: true }, BKSH.taxRegistered), false);
   bkshPaint();
 }
 

@@ -1689,4 +1689,4 @@ if (require.main === module) {
     process.exit(CMD ? 1 : 0);
   }
 }
-module.exports = { build, loadGraph, seedsFor, impactOf, ROOTS, OUT };
+module.exports = { build, loadGraph, ROOTS, OUT };

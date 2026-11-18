@@ -43,13 +43,13 @@
     }
   }
   /** the keys of each entry kind POST /events reads beside the common ones (books-contract EVENT_BODY is CLOSED: a key it does not list is refused, so nothing else is sent) */
-  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to', 'fee'], tax_payment: [] };
+  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to', 'fee'], tax_payment: [], drawings: ['paid_from'] };
   /** money in from / out to a named party goes through the ONE payments door (POST /payments, what Dues records through), never POST /events: direction in | out */
   var PAYMENT_DIRECTION = { payment_received: 'in', payment_made: 'out' };
   /** the engine proposes these for a line with no payee (whatIsThis), but no api door takes them yet (BKS-ACC-4): refused in words here, never posted wrong */
-  var NOT_YET = { loan_taken: 'A loan received', loan_repaid: 'A loan repayment' };
+  var NOT_YET = { loan_taken: 'A loan received' };
   /** the event types this adapter posts: through POST /events, and through POST /payments for a party */
-  var POSTABLE = Object.keys(KIND_KEYS).concat(Object.keys(PAYMENT_DIRECTION));
+  var POSTABLE = Object.keys(KIND_KEYS).concat(Object.keys(PAYMENT_DIRECTION), ['loan_repaid']); /* loan_repaid: POST /loans/:ref/emi (postLoanEmi) */
   /** the tax the proposal carries, as the keys POST /events takes (the engine's own figures, nothing is worked out here): the input tax of an expense (with the person's word on the tax invoice), the output tax inside an other-income figure, the tax inside a card settlement's fee; {} when the line carries none */
   function taxKeysOf(event, item) {
     var taxRecord = item.tax;
@@ -90,6 +90,13 @@
   function statementMode(modeOf, event) {
     return (modeOf && modeOf({ paid_from: 'bank' }).paid_from) || event.mode || 'bank';
   }
+  /** the server's acknowledgements this line answers: "same_again" for a ticked or twin line; "excess" when the owner ticked a proposal that says A$X stays on the customer's account, answered and never without the tick */
+  function acknowledgementsOf(item) {
+    var said = [];
+    if (item.ticked || item.twin) said.push('same_again');
+    if (item.ticked && item.onAccount > 0) said.push('excess');
+    return said;
+  }
   function paymentBodyOf(item, partyId, modeOf) {
     var line = item.line || {}, event = item.event || {};
     var body = { party_id: partyId, direction: PAYMENT_DIRECTION[event.type], amount_minor: lineFigure(line), mode: statementMode(modeOf, event), received_at: event.date || line.date, reference: item.ref, allocate: 'none', client_ref: item.ref };
@@ -97,7 +104,8 @@
       body.allocations = item.against.map(function (one) { return { against_ref: one.against_ref, amount_minor: one.amount_minor }; }); /* the engine found the open document this line IS: the receipt settles it, nothing is worked out here */
       delete body.allocate;
     }
-    if (item.ticked || item.twin) body.acknowledge = ['same_again'];
+    var said = acknowledgementsOf(item);
+    if (said.length) body.acknowledge = said;
     if (item.moveTo) body.if_locked = 'next_open';
     return body;
   }
@@ -140,6 +148,7 @@
   async function postLine(deps, made, item) {
     var party = await partyOf(deps, made, item.party);
     if (!party.ok) return party;
+    if (item.event.type === 'loan_repaid') return postLoanEmi(deps, item);
     if (!PAYMENT_DIRECTION[item.event.type]) return postEntry(deps, item, party.id);
     var partyId = party.id || namedPartyId(item.event);
     if (partyId) return postPayment(deps, item, partyId);
@@ -150,6 +159,25 @@
   function refusalOf(type) {
     if (NOT_YET[type]) return NOT_YET[type] + ' cannot be added from a bank line yet. Record it from Books, then load the statement again.';
     return POSTABLE.indexOf(type) < 0 ? 'This kind of line cannot be added from here yet.' : null;
+  }
+  /** why a loan instalment line cannot be posted yet (no loan picked · no interest typed · interest above the payment), or null */
+  function loanEmiRefusal(item) {
+    if (!item.loanRef) return 'Choose which loan this pays first.';
+    if (!(item.interestMinor >= 0)) return "Type the interest from the lender's statement first.";
+    if (lineFigure(item.line || {}) - item.interestMinor < 0) return 'The interest is more than the payment.';
+    return null;
+  }
+  /** the body of POST /loans/:ref/emi: the bank's split as given, paid from the mode the till chose */
+  function loanEmiBody(item, modeOf) {
+    var body = { principal_minor: lineFigure(item.line || {}) - item.interestMinor, interest_minor: item.interestMinor, from: 'bank', date: (item.event && item.event.date) || (item.line || {}).date, client_ref: item.ref };
+    return modeOf ? Object.assign(body, { from: modeOf({ paid_from: 'bank' }).paid_from }) : body;
+  }
+  /** M-06: a loan instalment through POST /loans/:ref/emi, the bank's split AS GIVEN: the interest the owner typed (never computed here) and the rest of the line as principal; the loan is the one the owner picked */
+  async function postLoanEmi(deps, item) {
+    var why = loanEmiRefusal(item);
+    if (why) return { ok: false, why: why };
+    var reply = await deps.api('booksLoanEmi', { params: { ref: item.loanRef }, body: loanEmiBody(item, deps.modeOf) });
+    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
   /** one entry through POST /events */
   async function postEntry(deps, item, partyId) {

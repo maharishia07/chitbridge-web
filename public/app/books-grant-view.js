@@ -374,11 +374,16 @@
     openAskedMark(asked);
     if (asked.note) openAskedFlag(asked, grantKit.viewState.o.member || {});
   }
+  /** the Query thread's title from the bell: the entry's label and the client's name (at 390 the sheet shows nothing else to say whose books), never a bare "This entry" */
+  function askedTitle(asked) {
+    var member = grantKit.viewState.o.member || {};
+    return [asked.label, member.name].filter(Boolean).join(' · ') || undefined;
+  }
   /** &mark=<entry id>: a Query on this client's books: its thread opens */
   function openAskedMark(asked) {
     if (!asked.mark || !grantKit.viewState.mk) return;
       grantKit.viewState.markDay = asked.day; /* the open list answers for the CURRENT window: an older entry's thread is found by its own day */
-      grantKit.viewState.mk.load([asked.mark]).then(function () { grantKit.viewState.markDay = ''; grantKit.viewState.mk.sheet(asked.mark, { title: asked.label || undefined }); }); /* the entry's own label from the bell (nl), when the page has not shown the entry */
+      grantKit.viewState.mk.load([asked.mark]).then(function () { grantKit.viewState.markDay = ''; grantKit.viewState.mk.sheet(asked.mark, { title: askedTitle(asked) }); }); /* the entry's own label from the bell (nl), when the page has not shown the entry */
   }
   /** &note=<id>: my note on an entry, or on the client itself (its id is the client's): the sheet opens once */
   function openAskedFlag(asked, member) {

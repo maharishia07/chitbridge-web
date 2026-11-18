@@ -18,7 +18,7 @@ async function shopCheckout(page, o) {
     if (await modeBtn.isVisible().catch(() => false) && !(await page.getByTestId('shop-area').isVisible().catch(() => false))) await modeBtn.click();
     if (await page.getByTestId('shop-area').isVisible().catch(() => false)) {
       await page.getByTestId('shop-area').fill(o.area || 'Perumbakkam, Chennai 600126');
-      const d = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+      const d = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // utc-ok: a +2 day offer date (SAFE)
       const dt = page.getByTestId('shop-date'); if (await dt.isVisible().catch(() => false)) { await dt.fill(d).catch(async () => { await dt.type(d); }); }
       const tm = page.getByTestId('shop-time'); if (await tm.isVisible().catch(() => false)) {
         const tag = await tm.evaluate((el) => el.tagName + ':' + (el.type || ''));

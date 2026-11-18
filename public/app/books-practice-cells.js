@@ -27,10 +27,16 @@
   practiceKit.detailHTML = detailHTML;
   practiceKit.bankCell = bankCell;
   practiceKit.changedCell = changedCell;
+  practiceKit.readOnlyChip = readOnlyChip;
   function statusCell(r) {
     /* A3P rank 1: on Year end the Status is a chip only (the reasons move to the opened row), so Due fits at 1366 */
     var why = practiceKit.bandNow() !== 'pipeline' && r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + practiceKit.escapeHtml(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
     return '<span class="tag ' + (practiceKit.STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(r.health.words)) + '</span>' + why;
+  }
+  /** the server's grant.read_only: an auditor's seat can look, never write. The one library chip (.bp-chip), a code per place it stands; nothing is drawn when the grant is not read-only. */
+  function readOnlyChip(r, code, testid) {
+    if (!r.grant || r.grant.read_only !== true) return '';
+    return ' <span class="bp-chip" data-cbsid="' + code + '" data-testid="' + testid + '-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate('Read only · auditor access')) + '</span>';
   }
   function trend(r) {
     var v = r.health.sales_trend_pct;
@@ -145,12 +151,22 @@
     var h = r.health;
     return h.reasons && h.reasons.length ? '<p class="sub">' + practiceKit.escapeHtml(practiceKit.translate('Why')) + ': ' + practiceKit.escapeHtml(h.reasons.join(' · ')) + '</p>' : '';
   }
+  /** A13: who holds this client, since when and the last hand-over note, from the practice answer's `holders` (name, and when it carries them since / note); nothing when the answer has no holders key (the firm's switch is off) */
+  function holderLine(client) {
+    if (!Array.isArray(client.holders)) return '';
+    var say = practiceKit.escapeHtml, tell = practiceKit.translate;
+    var text = client.holders.length ? client.holders.map(function (h) {
+      var since = h.since || h.assigned_at, note = h.note || h.last_note;
+      return say(h.name || '') + (since ? ' · ' + say(tell('since')) + ' ' + say(practiceKit.dayWords(since)) : '') + (note ? ' · “' + say(note) + '”' : '');
+    }).join('<br>') : say(tell('Unassigned'));
+    return '<div class="bp-fig" data-testid="practice-holder-' + say(client.entity_id) + '"><span class="sub">' + say(tell('Held by')) + '</span><b>' + text + '</b></div>';
+  }
   function detailHTML(client, band) {
-    if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + sheetHTML(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) + whyLine(client) + '</div>';
+    if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + holderLine(client) + sheetHTML(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) + whyLine(client) + '</div>';
     var health = client.health, held = withheldWord(client) || practiceKit.translate('Not shown');
     var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + practiceKit.escapeHtml(practiceKit.translate(label)) + '</span><b>' + value + '</b></div>'; };
     return (
-      '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) +
+      '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + holderLine(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) +
       line('Sales vs 3-month average', practiceKit.escapeHtml(trend(client))) +
       line('Margin this quarter', figureOrWhy(client, health.gross_margin_pct, practiceKit.escapeHtml(health.gross_margin_pct) + '%')) +
       line('Cash and bank', figureOrWhy(client, health.cash_minor, practiceKit.escapeHtml(practiceKit.money(health.cash_minor, client.currency)), true)) +
@@ -160,7 +176,7 @@
       line('Bank', client.bank.state === 'none' ? practiceKit.escapeHtml(practiceKit.translate('No statement')) : client.bank.state === 'reconciled' ? practiceKit.escapeHtml(practiceKit.translate('Reconciled')) + ' ' + practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(client.bank.reconciled_to)) : practiceKit.escapeHtml(bankLeft(client)) + ' ' + practiceKit.escapeHtml(practiceKit.translate('unexplained'))) +
       line('Profit this quarter', figureOrWhy(client, health.profit_quarter_minor, practiceKit.escapeHtml(practiceKit.money(health.profit_quarter_minor, client.currency)))) +
       line('Months not locked', practiceKit.escapeHtml(client.months_unlocked)) +
-      line('Access ends', practiceKit.escapeHtml(practiceKit.dayWords(client.grant.expires_at))) +
+      line('Access ends', practiceKit.escapeHtml(practiceKit.dayWords(client.grant.expires_at)) + readOnlyChip(client, 'NET001-B10', 'practice-readonly-card')) +
       whyLine(client) +
       '</div>'
     );

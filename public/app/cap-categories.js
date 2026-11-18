@@ -18,7 +18,7 @@
  * ⚠️ RETIRE, NEVER DELETE. The API has no delete for a definition and should not: a chit that cited a category
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
  * OWNS the Categories panel (the tree list, create/edit sheet, sort, retire) and the two start-from-a-standard-set popups (pick a trade, untick and add your own)
- * CALLED BY public/app.html, public/app/cap-catalogue.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/catalogue.html · 4 tests
  * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction; the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
  * CARD 06-catalogue-pim/categories-and-fields
  */

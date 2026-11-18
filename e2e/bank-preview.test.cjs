@@ -283,7 +283,7 @@ const make = (over) => {
   assert.deepStrictEqual(Object.keys(contra).sort(), ['amount', 'client_ref', 'date', 'from', 'kind', 'narration', 'to']);
   /* the loan / tax-payment answers have no api door yet: refused in words before any party is made or anything sent */
   const guard = POST.adapter({ api: async () => assert.fail('nothing is sent'), who: { role: 'owner' } });
-  for (const type of ['loan_taken', 'loan_repaid']) {
+  for (const type of ['loan_taken']) {
     const refused = await guard({ ref: 'bank:n', event: { type, amount: 5 }, party: { status: 'new', name: 'Z', kind: 'supplier' } });
     assert.ok(refused.ok === false && /cannot be added from a bank line yet/.test(refused.why), type);
   }

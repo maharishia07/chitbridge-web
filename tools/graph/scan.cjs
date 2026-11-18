@@ -623,4 +623,4 @@ function scanHtml(src) {
   return { scripts, inline, handlers };
 }
 
-module.exports = { lex, scanJs, scanHtml, sqlTables, refsTo, matchBracket, lineAt, lineIndex, KEYWORDS };
+module.exports = { lex, scanJs, scanHtml, sqlTables, refsTo, matchBracket, lineIndex, KEYWORDS };

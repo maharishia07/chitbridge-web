@@ -37,7 +37,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const C = require('./lib/contract.cjs'), J = C.json;
 const crmApi = require('./lib/crm-api.cjs'), books = require('./lib/books-api.cjs');
 const FX = path.join(__dirname, 'fixtures', 'golden-parties.json');
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolkata, or CB_TODAY), never the UTC day: UTC is a day behind from 18:30Z (tzsweep) */
 const claims = (c) => { const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)); };
 const OWNER = { token: claims({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Athi', entity: 'Mayur Bhavan' };
 /* the words a balance may be written in, and what a minus in front of a figure looks like */

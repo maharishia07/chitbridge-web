@@ -16,7 +16,7 @@
  * numeric SKU), checksum per the spec, quiet zones included. Pure — e2e/barcode-check.cjs verifies the pattern table
  * by the symbology's own invariants (11 modules, even bar parity) so a transcription slip cannot ship silently.
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html · 2 tests
  * CARD      09-counter/scale-weigh-scan
  */
 (function (root) {

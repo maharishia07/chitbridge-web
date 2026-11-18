@@ -32,7 +32,7 @@ ok(f({ code: 'X', message: 'Could not read it' }) === 'Could not read it', '{cod
 ok(f({ error: { message: 'deep' } }) === 'deep', 'nested error reads through');
 ok(f({ code: 'X' }) === '' && f(null) === '', 'nothing readable gives empty, so the caller falls back to its own sentence');
 ok(f({ message: { detail: 'x' } }).indexOf('[object') < 0, 'never "[object Object]"');
-ok(core.indexOf("msg = answerWords(j)") > 0, "apiOnce routes the body through answerWords");
+ok(core.indexOf("msg = answerWords(j, res.status)") > 0, "apiOnce routes the body through answerWords");
 
 /* 2 · the five detail chips */
 const s = { window: {} }; vm.createContext(s);

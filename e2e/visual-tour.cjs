@@ -557,7 +557,7 @@ function report() {
   const counts = { broken: 0, inconsistent: 0, cosmetic: 0 }; list.forEach((f) => counts[f.rank]++);
   const screens = states.filter((s) => s.kind === 'screen' || s.kind === 'form'), clicks = states.filter((s) => s.kind === 'click'), ops = states.filter((s) => s.kind === 'op');
   const md = [];
-  md.push('# TOUR-FINDINGS — the visual tour (round VTOUR, ' + new Date().toISOString().slice(0, 10) + ')', '');
+  md.push('# TOUR-FINDINGS — the visual tour (round VTOUR, ' + new Date().toISOString().slice(0, 10) + ')', ''); // utc-ok: a report title date
   md.push('Harness: `e2e/visual-tour.cjs` on the LOCAL stack (`e2e/lib/stack-local.cjs` + api `tools/sim-load.cjs` shop `simstores` + `scripts/seed-local.cjs`). Runs: ' + runs.map((r) => '`' + r.run + '`').join(' · ') + '.');
   md.push('States: ' + screens.length + ' screen states · ' + clicks.length + ' boxes (' + clicks.filter((c) => c.result !== 'skipped').length + ' clicked) · ' + ops.length + ' random operations. Findings: **' + counts.broken + ' broken · ' + counts.inconsistent + ' inconsistent · ' + counts.cosmetic + ' cosmetic** (grouped; n = states it was seen in). Screenshots: the `visual-tour` artifact (`e2e/out/tour/`), never committed.', '');
   runs.filter((r) => r.stopped || (r.refused && r.refused.length)).forEach((r) => md.push('⚠️ run `' + r.run + '`' + (r.stopped ? ' was cut short (' + r.stopped + ') — its states up to then are kept' : '') + (r.refused && r.refused.length ? ' · ' + r.refused.length + ' request(s) to the PRODUCTION host refused' : '') + '.', ''));

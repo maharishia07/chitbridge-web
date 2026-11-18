@@ -233,4 +233,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { controlLines, numbersOf, numbersDrift, newTestFiles, checkEnrolled, checkControlChars, generatedChecks, parseArgs, reasonOf };
+module.exports = { controlLines, numbersOf, numbersDrift, checkEnrolled, checkControlChars, generatedChecks, parseArgs };

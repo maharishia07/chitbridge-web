@@ -82,7 +82,7 @@ function count() {
   return { declared: declared.length, of: wanted.length, nav: { declared: declared.filter((code) => code.startsWith('HOM001')).length, of: wanted.filter((code) => code.startsWith('HOM001')).length }, popups: { declared: declared.filter((code) => code.startsWith('POP')).length, of: wanted.filter((code) => code.startsWith('POP')).length, na: popupList.na || [], source: popupList.source }, missing: wanted.filter((code) => !declared.includes(code)) };
 }
 
-module.exports = { closeOnly, register, areas, cards, popups, customerPaths, count, KEY_FORM };
+module.exports = { closeOnly, register, areas, cards, popups, count, KEY_FORM };
 if (require.main === module) {
   const result = count();
   if (process.argv.includes('--json')) console.log(JSON.stringify(result, null, 1));

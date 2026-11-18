@@ -19,7 +19,7 @@ const E2E = __dirname;
  * page) went red unseen — no CI job ran them (payments, period-end, shell were stale for weeks). ONE explicit list, here: a file joins by being named,
  * with its evidence (the PR body of QA-153: ran green on main, a customer or support screen, not a duplicate of a walk- file). Not listed on purpose:
  * the report scripts, the probes of the deployed site and the *-breaks self-tests (see the QA-153 PR). */
-const EXTRA = ['app-register-gov.cjs', 'bills-folder.cjs', 'board-ran.cjs', 'cb-sides.cjs', 'cmdb-fields.cjs', 'combo-lab.cjs', 'counter-follows-shop.cjs', 'detail-page.cjs', 'folders-offline.cjs', 'folders-tabs.cjs', 'folders-typeof.cjs', 'lab-frame.cjs', 'lab-kit-promise.cjs', 'labs-flow.cjs', 'layout-honest.cjs', 'list-unit.cjs', 'offer-lab-next-cart.cjs', 'offer-lab-next-cheapest.cjs', 'offer-lab-next-engine.cjs', 'offer-lab-next-import.cjs', 'offer-lab-next-offcolumn.cjs', 'offer-lab-next-offline.cjs', 'offer-lab-next-pricelist.cjs', 'offer-lab-next-saved.cjs', 'offer-lab-next-search.cjs', 'offer-lab-next-typing.cjs', 'one-avatar.cjs', 'page-frame.cjs', 'phone-signin.cjs', 'prod-modifiers-tab.cjs', 'prod-pricing-cost.cjs', 'promo-pick-next.cjs', 'promo-screen-key.cjs', 'rail-thread.cjs', 'shop-tidy.cjs', 'payments.cjs', 'period-end.cjs', 'shell.cjs', 'manual-entry.cjs', 'reports-trend.cjs', 'todo-home.cjs'];
+const EXTRA = ['app-register-gov.cjs', 'bills-folder.cjs', 'board-ran.cjs', 'cb-sides.cjs', 'cmdb-fields.cjs', 'combo-lab.cjs', 'counter-follows-shop.cjs', 'detail-page.cjs', 'folders-offline.cjs', 'folders-tabs.cjs', 'folders-typeof.cjs', 'lab-frame.cjs', 'lab-kit-promise.cjs', 'labs-flow.cjs', 'layout-honest.cjs', 'list-unit.cjs', 'offer-lab-next-cart.cjs', 'offer-lab-next-cheapest.cjs', 'offer-lab-next-engine.cjs', 'offer-lab-next-import.cjs', 'offer-lab-next-offcolumn.cjs', 'offer-lab-next-offline.cjs', 'offer-lab-next-pricelist.cjs', 'offer-lab-next-saved.cjs', 'offer-lab-next-search.cjs', 'offer-lab-next-typing.cjs', 'one-avatar.cjs', 'page-frame.cjs', 'phone-signin.cjs', 'prod-modifiers-tab.cjs', 'prod-pricing-cost.cjs', 'promo-pick-next.cjs', 'promo-screen-key.cjs', 'rail-thread.cjs', 'shop-tidy.cjs', 'payments.cjs', 'period-end.cjs', 'shell.cjs', 'manual-entry.cjs', 'reports-trend.cjs', 'todo-home.cjs', /* RECON-QA-1 18 Nov: 12 more fixture walks, each ran green on sit-grund (playwright 1.65.1 image, own static server, stand-in api) */ 'acting-deeplink.cjs', 'bank-cost-blind-wrap.cjs', 'bank-monday-ui.cjs', 'boot-ledger-on.cjs', 'dues-aged.cjs', 'dues-tieout.cjs', 'list-fit-noise.cjs', 'phone-card.cjs', 'print-s1b-same-total.cjs', 'rank9.cjs', 'shell-monday.cjs', 'uismall.cjs'];
 const MISSING = EXTRA.filter((f) => !fs.existsSync(path.join(E2E, f)));
 if (MISSING.length) { console.error('run-shard EXTRA names a file that is not there: ' + MISSING.join(', ')); process.exit(2); }
 const files = fs.readdirSync(E2E).filter((f) => /^(walk|till)-[a-z0-9-]+\.cjs$/.test(f) || f === 'kural-footer.cjs').concat(EXTRA).sort();   /* UX-132: the kural footer guard is a browser harness too and runs with the walks. SHELL-ONE: walk-shell-frame.cjs (every page wears the frame) runs with the walks; visual-tour.cjs is VTOUR's local-stack tour (its own workflow) */
@@ -58,6 +58,8 @@ const SKIP = {
   'walk-client-nav.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
+/* a file that needs more than the 240 s slot, with its reason (ms): the fault probe looks at ~1,200 screens (470 s on a SIT box, 18 Nov) */
+const SLOT_MS = { 'walk-probe-faults.cjs': 900000 };
 const KNOWN = {
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
@@ -82,7 +84,7 @@ for (const [f, k, n] of runs) {
   if (k === 1 && n > 1) console.log('  ×' + n + '  ' + f + '   ' + (REPEAT[f] ? REPEAT[f][1] : 'repeat'));
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(E2E, f)], {
-    encoding: 'utf8', timeout: 240000,
+    encoding: 'utf8', timeout: SLOT_MS[f] || 240000,
     env: Object.assign({}, process.env, { NODE_PATH: path.join(E2E, 'node_modules') }),
   });
   const s = ((Date.now() - t0) / 1000).toFixed(0) + 's';

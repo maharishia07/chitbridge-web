@@ -34,9 +34,6 @@ function misReadAt(readAtMs) {
 
 var FM = { gen: 0, period: '30', r: null, state: 'loading', err: null, api: null, asOf: null };
 
-function fmPeriod() {
-  return FM.period;
-}
 function fmSetPeriod(p) {
   FM.period = p;
   fmPaintTop();

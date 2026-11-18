@@ -139,4 +139,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { CITE_RE, keyOf, rowKeys, readRegister, readAllowList, scanRoots, judge, DEFAULT_ROOTS };
+module.exports = { keyOf, rowKeys, readRegister, readAllowList, scanRoots, judge, DEFAULT_ROOTS };

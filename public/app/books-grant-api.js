@@ -94,9 +94,13 @@
       }
     );
   }
+  /** the firms this shop's books are open to now (the grants it GAVE, live): names where the server sends one, else a count of firms */
+  function openFirms(answer) {
+    return ((answer && answer.given) || []).filter(function (grant) { return grant.state === 'live' && !grant.revoked_at && !grant.ended_at; }).map(function (grant) { return String(grant.grantee_name || ''); });
+  }
   /** the grants list as the books door wants it: live, ended, the seats each client gives and the seats this login holds */
   function splitOfGrants(answer) {
-    var out = { live: {}, ended: {}, seats: {}, mine: Array.isArray(answer && answer.seats) ? answer.seats : null }; /* mine: the seats THIS login holds, as the server says (null from an older api) */
+    var out = { live: {}, ended: {}, seats: {}, firms: openFirms(answer), mine: Array.isArray(answer && answer.seats) ? answer.seats : null }; /* mine: the seats THIS login holds, as the server says (null from an older api) */
     ((answer && answer.received) || []).forEach(function (grant) { sortGrant(out, grant); });
     Object.keys(out.live).forEach(function (id) { delete out.ended[id]; });
     return out;

@@ -378,18 +378,26 @@ async function bankRail() {
     return { chits: [], parties: [], may: {}, failed: true };
   }
 }
+/** the loans the shop owes and the BAS nets a lodged year carried, read once with the rail; a failure is a quiet empty list (the line then asks as before, nothing is guessed) */
+async function bankLoansAndLodged() {
+  if (bkbReadOnly()) return { loans: [], lodged: [] };
+  const [loans, lodged] = await Promise.all([api('booksLoans').catch((failure) => bkQuiet('bank-loans', failure)), api('booksGstLodged').catch((failure) => bkQuiet('bank-lodged', failure))]);
+  return { loans: (loans && loans.loans) || [], lodged: ((lodged && lodged.periods) || []).map((one) => ({ period: one.period, net_minor: one.net_minor })) };
+}
 async function bankRun() {
   if (!bkbBound()) return;
   const res = bkbEl('bk_res');
   if (res) res.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + bkbE(tx('Reading…')) + '</div>';
-  let rail;
+  let rail, reads;
   try {
-    [BKB.ledger, rail] = await Promise.all([bankLedger(), bankRail()]);
+    [BKB.ledger, rail, reads] = await Promise.all([bankLedger(), bankRail(), bankLoansAndLodged()]);
   } catch (e) {
     if (res) res.innerHTML = '';
     return peBad('bk_out', e, tx('Could not read the bank ledger'));
   }
   BKB.rail = rail;
+  BKB.loans = reads.loans;
+  BKB.lodged = reads.lodged;
   BKB.rec = await bankStoreLoad(BKB);
   BKB.rules = null;
   bankExplain();

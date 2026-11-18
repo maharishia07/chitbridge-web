@@ -58,7 +58,7 @@ async function counter(home, port) {
 const stop = (c) => new Promise((r) => { if (!c || c.p.exitCode !== null) return r(); c.p.once('exit', r); c.p.kill(); });
 const get = (port, p) => fetch('http://127.0.0.1:' + port + p).then((r) => r.json());
 
-const ago = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+const ago = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10); // utc-ok: an age in whole days far from the 90-day edge (SAFE)
 const sale = (no, total, d) => ({ no, total, at: d + 'T10:00:00Z', payments: [{ how: 'Cash', amount: total }] });
 
 (async () => {

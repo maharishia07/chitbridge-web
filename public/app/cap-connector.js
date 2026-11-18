@@ -472,7 +472,7 @@ function _addDeviceForm(x, iot) {
     '<option value="">— entity default —</option>' +
     (UI.acts || [])
       .filter(function (item) {
-        return (typeof acTypeOf !== 'function' || acTypeOf(item) === 'human') && (typeof hatAssignable !== 'function' || hatAssignable(item.hat));
+        return (typeof acTypeOf !== 'function' || acTypeOf(item) === 'human') && (typeof hatAssignable !== 'function' || hatAssignable(item));
       })
       .map(function (item) {
         return '<option value="' + esc(item.id) + '">' + esc(item.name) + '</option>';

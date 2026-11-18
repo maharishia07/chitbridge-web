@@ -49,6 +49,15 @@
   if (root.CBShell) return;
   var doc = root.document;
 
+  /* rateWords(body, status) → the ONE rate-limit sentence: 'Too many tries; wait N seconds' for a 429 that names its wait (params.retry_after_seconds, RFC 9457); '' for any other answer.
+     It lives here because every shelled page loads this file; core.js answerWords calls it through root.cbRateWords at call time (Fable review R2/R3, 18 Nov). */
+  function rateWords(body, status) {
+    var wait = Math.ceil(Number(body && body.params && body.params.retry_after_seconds));
+    if (status !== 429 || !(wait >= 1)) return '';
+    return typeof root.txn === 'function' ? root.txn('Too many tries; wait {count} second', 'Too many tries; wait {count} seconds', wait) : 'Too many tries; wait ' + wait + ' second' + (wait === 1 ? '' : 's');
+  }
+  root.cbRateWords = rateWords;
+
   /* a page that did not load shell-facts.js (promo.html is a till copy, bar mode): no cards to read, nothing to lead */
   var NO_FACTS = {
     create: function (ctx) { return { isFirm: function () { return false; }, read: function () {}, once: ctx.get }; },
@@ -141,6 +150,7 @@
   }
   /* the Home cards' read (queue · retry · one ask per URL · lead by the data · firm lazy read) and painters: shell-facts.js */
   var factsLib = root.CBShellFacts || NO_FACTS,
+    wordsOf = factsLib.wordsOf || function (value) { return typeof value === 'string' ? value : ''; }, /* P1-5: the one text of an answer or a name (shell-facts.js) */
     cards = factsLib.painters(W, T); /* a Home card's state · facts line · trend teaser (shell-facts.js) */
   /* ⭐ the frame's words are said AGAIN when a language pack lands: every pack calls renderApp() on its way out (strings-*.js), and a page
      defines its own renderApp AFTER the frame is drawn — so the global is held behind a setter: the page's function runs, then the frame's
@@ -325,7 +335,7 @@
     '.cbsh-pils{display:grid;gap:12px;align-items:start}.cbsh-pils.n4{grid-template-columns:repeat(4,minmax(0,1fr))}.cbsh-pils.n3{grid-template-columns:repeat(3,minmax(0,1fr))}.cbsh-pils.n2{grid-template-columns:repeat(2,minmax(0,1fr))}',
     '.cbsh-pil{background:var(--sh-panel);border:1px solid var(--sh-soft);border-radius:14px;padding:10px 10px 12px;min-width:0}',
     '.cbsh-pil h3{margin:0 2px 8px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--sh-muted);font-weight:700}',
-    '.cbsh-pil .cbsh-grid{grid-template-columns:1fr;gap:8px}.cbsh-pil .cbsh-chips{margin-top:8px}.cbsh-pil .cbsh-grid:empty{display:none}',
+    '.cbsh-pil .cbsh-grid{grid-template-columns:minmax(0,1fr);gap:8px}.cbsh-pil .cbsh-chips{margin-top:8px}.cbsh-pil .cbsh-grid:empty{display:none}',
     '.cbsh-pil .cbsh-box{padding:12px 14px}',
     '@media(max-width:1000px){.cbsh-pils.n4{grid-template-columns:repeat(2,minmax(0,1fr))}.cbsh-pils.n3{grid-template-columns:repeat(2,minmax(0,1fr))}}',
     /* dashed chips: coming · workshop (no link — I12) */
@@ -733,14 +743,21 @@
       );
     });
   }
-  /* More's rows: one open at a time; force = open it (a tap on an open row closes it) */
-  function openRow(shellEl, area, force) {
-    [].forEach.call(shellEl.querySelectorAll('.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup'), function (section) {
-      var isOpen = section.getAttribute('data-area') === area && (force || !section.classList.contains('open'));
-      section.classList.toggle('open', isOpen);
-      var rowButton = section.querySelector('.cbsh-row');
+  /* THE one way to open a row (one open at a time; force = open it, a tap on an open row closes it). The More page's three rows are the default shape;
+     index2's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
+  var MORE_ROWS = { items: '.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup', key: 'data-area', row: '.cbsh-row', panel: '' };
+  function openRow(scope, key, force, shape) {
+    var rows = shape || MORE_ROWS, now = '';
+    [].forEach.call(scope.querySelectorAll(rows.items), function (item) {
+      var isOpen = !!key && item.getAttribute(rows.key) === key && (force || !item.classList.contains('open'));
+      item.classList.toggle('open', isOpen);
+      if (isOpen) now = key;
+      var rowButton = item.querySelector(rows.row);
       if (rowButton) rowButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      var panel = rows.panel && item.querySelector(rows.panel);
+      if (panel) panel.hidden = !isOpen;
     });
+    return now;
   }
   /* a section's phone heading: Selling and Money are a title; Trade, Labs and Setup are the three ROWS of the More page (a tap opens the row's tiles) */
   function sectionHeadingHTML(area) {
@@ -822,6 +839,10 @@
     });
     doc.body.insertBefore(link, doc.body.firstChild);
   }
+  /** the shop's name for the header: the business the header read named, else the person's entity, else the session's, else "Your shop" */
+  function shopNameOf(header, person, sess) {
+    return wordsOf(header && header.business && header.business.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
@@ -846,11 +867,7 @@
     if (mode !== 'bar') el.classList.add(o.fit === 'pane' ? 'pane' : 'full');
     el.setAttribute('data-testid', 'cbshell');
     el.setAttribute('data-mode', mode);
-
-    var shopName = function () {
-      var b = S.header && S.header.business;
-      return (b && b.name) || (person && person.entity) || (sess && sess.entity) || W.yourShop;
-    };
+    var shopName = function () { return shopNameOf(S.header, person, sess); };
 
     /* CB Sides: only on Home, only signed in, only if the page loaded sides.js (the same rule as the avatar, bell and kural) */
     var sides = mode === 'home' && !!person && !!(root.CBSides && root.CBSides.mount);
@@ -876,9 +893,9 @@
     /* ── the bar ── */
     function paintBar() {
       if (who) {
-        var levelWord = person && person.level ? ' · ' + person.level : '';
+        var levelWord = person && wordsOf(person.level) ? ' · ' + wordsOf(person.level) : '';
         who.querySelector('b').textContent = shopName() + levelWord;
-        who.setAttribute('aria-label', shopName() + levelWord);
+        who.setAttribute('aria-label', shopName() + levelWord); who.title = S.headerWhy || ''; /* the refused read's words */
       }
       if (sheet) sheet.setAttribute('aria-label', shopName());
       var element = $('.cbsh-lic'),
@@ -1317,6 +1334,7 @@
       var skipLink = doc && doc.querySelector('[data-testid="skip-link"]'); /* added before any pack can land: said again with the rest of the frame */
       if (skipLink) skipLink.textContent = T(W.skip);
       if (titleWord && o.title) titleWord.textContent = T(o.title.name || '');
+      if (root.CBFrame && root.CBFrame.resay) root.CBFrame.resay(doc); /* UX-197: the skeleton's side menu, group heads, phone tabs, Collapse */
       paintSwitcher();
       AREAS.concat(['more']).forEach(function (area) {
         var label = $('.cbsh-nv[data-go="' + area + '"] .t');
@@ -1347,7 +1365,7 @@
           var e = new Error('HTTP ' + reply.status);
           e.status = reply.status;
           e.retryAfter = Math.min(10, Number(reply.headers && reply.headers.get && reply.headers.get('Retry-After')) || 0);
-          throw e;
+          return reply.json().then(function (body) { e.words = rateWords(body, reply.status) || (typeof root.answerWords === 'function' ? root.answerWords : wordsOf)(body, reply.status); throw e; }, function () { throw e; });
         }
         return reply.json();
       });
@@ -1508,9 +1526,9 @@
               S.header = reply || null;
               S.headerState = reply ? 'ok' : 'none';
             },
-            function () {
+            function (err) {
               S.header = null;
-              S.headerState = 'none';
+              S.headerState = 'none'; S.headerWhy = (err && err.words) || '';
             }
           )
           .then(function () {
@@ -1641,6 +1659,7 @@
     AREAS: AREAS.slice(),
     PHONE_TABS: PHONE_TABS.slice(),
     PHONE_MORE: PHONE_MORE.slice(),
-    sectionOf: sectionOf
+    sectionOf: sectionOf,
+    openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);

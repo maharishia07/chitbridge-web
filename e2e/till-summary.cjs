@@ -102,7 +102,7 @@ const back = (no, amount, at) => ({ no, kind: 'credit_note', total: -amount, at,
     fs.writeFileSync(path.join(dir, 'bills-' + d + '.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
   });
   /* and TODAY, which must NOT be summarised */
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10); // utc-ok: the connector rollup cuts days in UTC (node); the file name must match it
   fs.writeFileSync(path.join(dir, 'bills-' + today + '.jsonl'), JSON.stringify(sale('B-TODAY', 999, today + 'T09:00:00Z')) + '\n');
 
   console.log('\n── the folder ' + '─'.repeat(52));
@@ -205,7 +205,7 @@ const back = (no, amount, at) => ({ no, kind: 'credit_note', total: -amount, at,
   const dow = (new Date().getUTCDay() + 6) % 7;           /* 0 = Monday, ISO — on the same clock as the dates */
   const days = [];
   for (let back = Math.min(dow, 1); back >= 1; back--) {
-    days.push(new Date(Date.now() - back * 864e5).toISOString().slice(0, 10));
+    days.push(new Date(Date.now() - back * 864e5).toISOString().slice(0, 10)); // utc-ok: an age in whole days (SAFE)
   }
   const yest = days[0] || null;                            /* null on a Monday: there is no earlier day this week */
   days.push(today);

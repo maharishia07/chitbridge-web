@@ -4,7 +4,7 @@
  * shows each capability's LOAD kind (eager / lazy / planned) with LIVE state from Core's CAP_LOADED, and every
  * feature's status (done / partial / backlog). Core keeps only the gated stub (openLegend/closeLegend/_legendOpen).
  * Update this whenever a capability or feature lands. Mirrors the catalogue in project-capability-modularisation.
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/cmdb/record.html, public/testing.html · 8 tests
  * OWNS      CAP_CATALOGUE (capability -> features) and the legend panel: _openLegendImpl and its tab painters; Core keeps only the gated stub
  * FLOW      openLegend (app.html) -> ensureCap(legend) -> _openLegendImpl paints the tabs from CAP_CATALOGUE + live CAP_LOADED
  * CARD      20-settings-governance-and-plan/capability-legend
@@ -111,7 +111,7 @@ const CAP_CATALOGUE = [
         n: '⚠️ strict vs loose: amountOf() THROWS on a legacy bare number (right for the server), amountOfLoose() returns NaN — every browser reader uses loose, because a counter must never fail to show a price',
         s: 'done'
       },
-      { n: 'A spec that drives a non-INR shop through counter, screen and slip', s: 'next' }
+      { n: 'A spec that drives a non-INR shop through counter, screen and slip', s: 'backlog' }
     ]
   },
 
@@ -156,8 +156,8 @@ const CAP_CATALOGUE = [
       },
       { n: "JUnit XML ingest — an automated run lands on the same board as a person's tap, and the board shows the WORSE of the two", s: 'done' },
       { n: '+ writes a new case without leaving the screen you found the fault on', s: 'done' },
-      { n: "An API-key scope so a CI server can post results without a person's login", s: 'next' },
-      { n: 'A release gate: which areas must be green before a build ships', s: 'next' }
+      { n: "An API-key scope so a CI server can post results without a person's login", s: 'backlog' },
+      { n: 'A release gate: which areas must be green before a build ships', s: 'backlog' }
     ]
   },
 
@@ -275,6 +275,8 @@ const CAP_CATALOGUE = [
       { n: 'Duty / Break shift', s: 'done' },
       { n: 'Deactivate / reactivate / remove — full binding cleanup', s: 'done' },
       { n: 'Roster tabs + covers badges', s: 'done' },
+      { n: 'CBAssign v2 — who holds each piece of work: Held-by chip, always-on ticks, persistent bulk bar, Undo, one vocabulary; shown on the server verdict (may_assign), the server decides (public/app/assign-bar.js, POST /api/chits/assign-bulk)', s: 'done' },
+      { n: 'Assign plug-ins — a list whose rows have a holder adopts the ONE assign pattern with a plug name, subject id and noun: books practice (chits), CRM follow-ups (own write route, cap-crm-assign.js), Tasks sheet, the Holds column Hand over all', s: 'done' },
       { n: 'Leave calendar · shift rotation · wage / salary', s: 'backlog' },
       { n: 'Non-human co-assist types (connector / IoT / AI) auth', s: 'backlog' }
     ]
@@ -634,7 +636,24 @@ const CAP_CATALOGUE = [
       { n: 'Entity sign-in — OTP, fixed to 123456 in dev via lib/dev-otp.js, a real code once sealed', s: 'done' },
       { n: 'Coassist sign-in — OTP the first time, their own PIN every time after, through the SAME counter box', s: 'done' },
       { n: 'The counter prompts for a PIN, not a code, once the server says use_pin — usignPaint()/usignAsk()', s: 'done' },
+      { n: 'Social sign-in method slots (Google · Apple · Microsoft · SSO · passkey) in CBSignin: config, hidden until the method ships AND the host switches the slot on (public/app/signin-ui.js METHODS)', s: 'partial' },
       { n: 'A guard that fails if a route re-implements OTP/PIN instead of calling this file', s: 'backlog' }
+    ]
+  },
+  {
+    id: 'home',
+    name: 'Home (index2)',
+    icon: '🏠',
+    load: 'eager',
+    maturity: 1,
+    target: 2,
+    gov: null,
+    governedUnder: '— reads the same card facts as the classic Home (nothing to govern); the switch is the viewer own preference, no setting key yet (listed for cb-settings)',
+    blurb: 'The crisp one-page Home beside the classic one: a Do-first row, six pillar rows as an accordion, Labs · Standards · Setup in the foot (home2.js, index2.html, manifest.json home2).',
+    features: [
+      { n: 'index2 — Do first + six pillar rows, one open at a time, pillar sheet (CBHome2)', s: 'done' },
+      { n: 'Per-viewer switch between index2 and the classic Home', s: 'done' },
+      { n: 'A setting key for the switch (GOV layer)', s: 'backlog' }
     ]
   },
   {
@@ -1655,7 +1674,7 @@ function _openLegendImpl() {
     real: 'reality &amp; how we earn it',
     work: 'work patterns — the governed journeys'
   };
-  host.innerHTML = `<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
+  host.innerHTML = `<div data-cbsid="SCR006-C01" class="notifover" onclick="closeLegend()"><div data-cbsid="SCR006-C02" class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:var(--fs-5)">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab] || titles.cap}</div></div>

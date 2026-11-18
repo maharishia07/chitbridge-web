@@ -3,7 +3,7 @@
 /**
  * ui-codes-g1.test.cjs - wave 2 group G1: the main app (app.html) wears identity codes on 371 controls (UX-137 stamp, 15 Nov).
  *
- * OWNS      the proof that app.html carries the data-cbsid of 367 controls plus 4 library words (data-cbsid CMPxxx and data-cbmount), each INSIDE the tag of the
+ * OWNS      the proof that app.html carries the data-cbsid of 361 controls plus 4 library words (data-cbsid CMPxxx and data-cbmount), each INSIDE the tag of the
  *           control it names (a removed code, a code moved to another kind of tag, or a swap of two codes whose handlers differ fails it), that no screen-element
  *           code is written on two element definitions, that the file carries exactly its own count, and that every code is a live row in the register UIID_REG names.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-g1.test.cjs   (G1_MUTATE=remove or swap must fail it)
@@ -338,12 +338,6 @@ const CODES = [
   ["WRK001-B04","button","onclick=\"setMsgTypeSet"],
   ["DTL001-B39","button","onclick=\"cancelAgree"],
   ["DTL001-B40","button","onclick=\"ensureCap"],
-  ["DTL001-B41","button","onclick=\"pickPri"],
-  ["DTL001-T02","textarea","oninput=\"MODALS"],
-  ["DTL001-B42","button","onclick=\"addActorModal"],
-  ["DTL001-B43","button","onclick=\"confirmAssign"],
-  ["DTL001-B44","button","onclick=\"addActorModal"],
-  ["DTL001-B45","button","onclick=\"confirmAssign"],
   ["DTL001-B46","button","onclick=\"pickRepri"],
   ["DTL001-T03","textarea","oninput=\"MODALS"],
   ["DTL001-B47","button","onclick=\"confirmRepri"],
@@ -393,7 +387,7 @@ const LIBRARY = [
   ["CMP009","BUS009-U109","span","onclick=\"selectSupplier"],
   ["CMP006","DTL001-U106","button","onclick=\"amdView"]
 ];
-const COUNT = 367;
+const COUNT = 361;
 
 const read = () => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */

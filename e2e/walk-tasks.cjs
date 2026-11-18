@@ -103,7 +103,7 @@ W.run('tasks', async (w) => {
     if (p === '/api/work/list' && m === 'GET') {
       if (S.listDenied) return J(r, 403, { error: 'Forbidden', message: 'Sign in as staff to see Tasks and Orders.' });
       const view = ['orders_in', 'orders_out', 'tasks', 'done'].includes(u.searchParams.get('view')) ? u.searchParams.get('view') : 'orders_in';
-      const rows = S.rows.filter((x) => tab(x) === view).map(rowOut);
+      const rows = S.rows.filter((x) => tab(x) === view).map((x) => Object.assign(rowOut(x), { may_assign: S.level !== 'viewer', may_take: S.level !== 'viewer' && !x.assignee }) /* the list rows carry the server's verdicts (CBAssign v2); the one-chit answer does not */);
       return J(r, 200, { view, page: 1, limit: Number(u.searchParams.get('limit')) || 50, truncated: false, counts: counts(), total: rows.length, rows });
     }
     let mm = /^\/api\/work\/([^/]+)$/.exec(p);
@@ -113,6 +113,16 @@ W.run('tasks', async (w) => {
     if (mm && m === 'PUT') { const x = find(mm[1]); if (!x) return J(r, 404, { error: 'Not found' }); if (S.level === 'viewer') return J(r, 403, { error: 'Forbidden', message: SAY.read_only, why: 'read_only' }); x.status = body.status; x.note = body.note || ''; return J(r, 200, { chit_id: x.chit_id, status: x.status, message: 'Status updated' }); }
     /* TOUR-FIX1: ＋ New task — the chit send to the shop itself (POST /api/chits/send); the stand-in files it as an open task */
     if (p === '/api/chits/send' && m === 'POST') { const id = 'n' + (S.rows.length + 1); S.rows.push(row(id, { kind: 'task', side: null, subject: body.manual_subject || body.subject, party: 'Fixture Shop' })); return J(r, 200, { chit_id: id, message: 'sent' }); }
+    /* ASSIGN-W3: the Held-by chip (CBAssign v2) reads the roster from GET /api/actors and writes through POST /api/chits/assign-bulk { plug task|line, subject_ids, target_actor_id } */
+    if (p === '/api/actors' && m === 'GET') return J(r, 200, { actors: PEOPLE.map((x) => ({ actor_id: x.id, display_name: x.name, job_assignable: x.state === 'on', assignable: x.state === 'on', open_load: 0 })) });
+    if (p === '/api/chits/assign-bulk' && m === 'POST') {
+      const t = PEOPLE.find((y) => y.id === body.target_actor_id) || null, prev = [];
+      for (const id of body.subject_ids || []) {
+        if (body.plug === 'line') { const l = findLine(id); if (l) { prev.push({ subject_id: id, actor_id: l.assignment ? l.assignment.assignee_actor_id : null }); l.assignment = t ? { assignee_actor_id: t.id, assignee_name: t.name, assignee_type: 'human', history: [] } : null; } }
+        else { const x = find(id); if (x) { prev.push({ subject_id: id, actor_id: x.assignee ? x.assignee.id : null }); x.assignee = t ? { id: t.id, name: t.name } : null; } }
+      }
+      return J(r, 200, { ok: true, assigned: prev.length, skipped: [], previous: prev });
+    }
     mm = /^\/api\/chits\/([^/]+)\/assign-lines$/.exec(p);
     if (mm && m === 'POST') {
       const out = (body.edits || []).map((e, i) => { const l = findLine(e.line_id); if (l) { l.assignment = { assignee_actor_id: e.assignee_actor_id, assignee_name: e.assignee_name || null, assignee_type: e.assignee_actor_id ? 'human' : null, history: [] }; l.settings.state = e.state || 'open'; } return { line_id: e.line_id, seq: i + 2, state: e.state || 'open' }; });
@@ -186,18 +196,24 @@ W.run('tasks', async (w) => {
     const out = await txt('[data-testid="tk-out"]'), tag = await txt('#tk_sheet [data-testid="tk-word-c1"]');
     return { ok: /Accepted\./.test(out) && /Accepted/.test(tag) && wrote(/PUT \/api\/chits\/c1\/status \{"status":"accepted"\}/) === 1, saw: '"' + out + '" · tag ' + tag + ' · status calls: ' + wrote(/\/status/) };
   });
-  await w.step('T6', 'Line Tomato -> Assign -> Ravi -> Save -> POST assign-lines with Ravi, state open; the line says Ravi Nair', async () => {
-    await page.click('#tk_la_l1'); await page.waitForSelector('[data-testid="tk-line-pick"]', { timeout: 5000 });
-    await page.selectOption('[data-testid="tk-line-pick"]', 'p2'); await page.click('[data-testid="tk-line-pick-go"]'); await page.waitForTimeout(800);
-    const who = await txt('[data-testid="tk-line-who-l1"]'), out = await txt('[data-testid="tk-out"]');
-    const call = S.calls.find((c) => /assign-lines/.test(c)) || '';
-    return { ok: /Ravi Nair/.test(who) && /"line_id":"l1"/.test(call) && /"assignee_actor_id":"p2"/.test(call) && /"state":"open"/.test(call) && /Ravi/.test(out), saw: 'holder ' + who + ' · "' + out + '" · ' + call.slice(0, 120) };
+  /* the assign-bulk body: exactly these keys, the role one empty (the Held-by chip sends "role":"" when no role is picked); nothing else is accepted */
+  const bulkOk = (call, plug, id, who) => { let b = {}; try { b = JSON.parse(call.slice(call.indexOf('{'))); } catch (e) { return false; } return Object.keys(b).sort().join(',') === 'plug,role,subject_ids,target_actor_id' && b.plug === plug && b.role === '' && JSON.stringify(b.subject_ids) === JSON.stringify([id]) && b.target_actor_id === who; };
+  await w.step('T6', 'Line Tomato -> its Held-by chip (+ Assign to…) -> the popover lists the people -> Ravi -> POST assign-bulk { plug line, subject l1, Ravi }; the sheet closes first; reopened, the line says Ravi Nair and its chip too', async () => {
+    await page.waitForSelector('[data-testid="tk-line-l1"] [data-testid="assign-chip"]', { timeout: 5000 });
+    await page.click('[data-testid="tk-line-l1"] [data-testid="assign-chip"]'); await page.waitForSelector('[data-testid="assign-person-p2"]', { timeout: 5000 });
+    const listed = await page.locator('[data-testid^="assign-person-"]').count();
+    await page.click('[data-testid="assign-person-p2"]'); await page.waitForTimeout(900);
+    const out = await txt('[data-testid="assign-result"]');
+    const call = S.calls.find((c) => /assign-bulk/.test(c) && /"plug":"line"/.test(c)) || '';
+    await openRow('c1');
+    const who = await txt('[data-testid="tk-line-who-l1"]'), chip = await txt('[data-testid="tk-line-l1"] [data-testid="assign-chip"]');
+    return { ok: listed >= 2 && /Ravi Nair/.test(who) && /Ravi Nair/.test(chip) && bulkOk(call, 'line', 'l1', 'p2') && /Ravi/.test(out), saw: 'people ' + listed + ' · holder ' + who + ' · chip ' + chip + ' · "' + out + '" · ' + call.slice(0, 140) };
   });
   await w.step('T7', 'Line Tomato -> Done -> the SAME route carries state done and keeps Ravi; the line reads Done and its button now says Reopen', async () => {
     await page.click('#tk_ld_l1'); await page.waitForTimeout(800);
     const st = await txt('[data-testid="tk-line-state-l1"]'), btn = await txt('#tk_ld_l1');
     const call = S.calls.filter((c) => /assign-lines/.test(c)).pop() || '';
-    return { ok: /Done/.test(st) && /Reopen/.test(btn) && /"state":"done"/.test(call) && /"assignee_actor_id":"p2"/.test(call) && wrote(/assign-lines/) === 2, saw: 'state ' + st + ' · button ' + btn + ' · ' + call.slice(0, 120) };
+    return { ok: /Done/.test(st) && /Reopen/.test(btn) && /"state":"done"/.test(call) && /"assignee_actor_id":"p2"/.test(call) && wrote(/assign-lines/) === 1, saw: 'state ' + st + ' · button ' + btn + ' · ' + call.slice(0, 120) };
   });
   await w.step('T8', 'Line Onion -> Deliver -> the box offers what is left (2) -> Record -> POST deliver-lines { quantity 2 }; the line says left 0 and Delivered', async () => {
     await page.click('#tk_lv_l2'); await page.waitForSelector('[data-testid="tk-deliver-qty"]', { timeout: 5000 });
@@ -206,11 +222,13 @@ W.run('tasks', async (w) => {
     const st = await txt('[data-testid="tk-line-state-l2"]'), line = await txt('[data-testid="tk-line-l2"]'), call = S.calls.find((c) => /deliver-lines/.test(c)) || '';
     return { ok: offered === '2' && /"quantity":2/.test(call) && /"line_id":"l2"/.test(call) && /Delivered/.test(st) && /left 0/.test(line), saw: 'offered ' + offered + ' · ' + st + ' · ' + line.slice(0, 80) + ' · ' + call.slice(0, 90) };
   });
-  await w.step('T9', 'SO-1 -> Assign (whole order) -> Asha -> Save -> PUT /actors/assign/c1 { push }; "Who has it" says Asha Kumar', async () => {
-    await page.click('#tk_assign'); await page.waitForSelector('[data-testid="tk-pick"]', { timeout: 5000 });
-    await page.selectOption('[data-testid="tk-pick"]', 'p1'); await page.click('[data-testid="tk-pick-go"]'); await page.waitForTimeout(800);
-    const who = await txt('[data-testid="tk-who"]'), call = S.calls.find((c) => /actors\/assign/.test(c)) || '';
-    return { ok: /Asha Kumar/.test(who) && /PUT \/api\/actors\/assign\/c1 \{"action":"push","target_actor_id":"p1"\}/.test(call), saw: 'who ' + who + ' · ' + call };
+  await w.step('T9', 'SO-1 -> the order Held-by chip -> Asha -> POST assign-bulk { plug task, subject c1, Asha }; the sheet closes first; reopened, the order chip says Asha Kumar', async () => {
+    await page.click('#tk_sheet [data-testid="assign-chip"]'); await page.waitForSelector('[data-testid="assign-person-p1"]', { timeout: 5000 });
+    await page.click('[data-testid="assign-person-p1"]'); await page.waitForTimeout(900);
+    const call = S.calls.find((c) => /assign-bulk/.test(c) && /"plug":"task"/.test(c)) || '';
+    await openRow('c1');
+    const chip = await txt('#tk_sheet [data-testid="assign-chip"]');
+    return { ok: /Asha Kumar/.test(chip) && bulkOk(call, 'task', 'c1', 'p1'), saw: 'chip ' + chip + ' · ' + call };
   });
   await w.step('T10', 'SO-1 -> Reject -> it asks why; nothing typed sends nothing; a reason -> PUT /status { rejected, note } -> the row leaves Orders in (1 row left)', async () => {
     await page.click('#tk_do_reject'); await page.waitForSelector('[data-testid="tk-reason"]', { timeout: 5000 });
@@ -235,13 +253,13 @@ W.run('tasks', async (w) => {
   await w.step('T12', 'A view-only login -> every step, Assign and each line\'s buttons are greyed WITH the rail\'s sentence; pressing them sends nothing', async () => {
     S.level = 'viewer'; S.calls = [];
     await openPage(); await openRow('c2');
-    const dis = await page.$$eval('#tk_do_accept, #tk_do_reject, #tk_do_complete, #tk_do_cancel, #tk_do_reopen, #tk_assign, #tk_la_l3, #tk_ld_l3, #tk_lv_l3', (bs) => bs.map((b) => b.id + (b.disabled ? ':greyed' : ':open')));
-    const why = await txt('[data-testid="tk_do_accept-why"]'), lwhy = await txt('[data-testid="tk_la_l3-why"]');
-    await page.click('#tk_do_accept', { force: true, timeout: 2000 }).catch(() => {}); await page.click('#tk_la_l3', { force: true, timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
+    const dis = await page.$$eval('#tk_do_accept, #tk_do_reject, #tk_do_complete, #tk_do_cancel, #tk_do_reopen, #tk_ld_l3, #tk_lv_l3', (bs) => bs.map((b) => b.id + (b.disabled ? ':greyed' : ':open')));
+    const why = await txt('[data-testid="tk_do_accept-why"]'), lwhy = await txt('[data-testid="tk-assign-why"]'), chips = await page.locator('#tk_sheet [data-testid="assign-chip"]').count();
+    await page.click('#tk_do_accept', { force: true, timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
     S.level = 'editor';
     await closeSheet();
-    const writes = S.calls.filter((c) => /\/status|assign-lines|deliver-lines|actors\/assign/.test(c));
-    return { ok: dis.length === 9 && dis.every((d) => /:greyed/.test(d)) && /view-only/.test(why) && /view-only/.test(lwhy) && writes.length === 0, saw: dis.join(' ') + ' · "' + why.slice(0, 40) + '" · writes: ' + (writes.join(' | ') || 'none') + (S.calls.length !== writes.length ? ' · other calls: ' + S.calls.filter((c) => writes.indexOf(c) < 0).join(' | ') : '') };
+    const writes = S.calls.filter((c) => /\/status|assign-lines|assign-bulk|deliver-lines|actors\/assign/.test(c));
+    return { ok: dis.length === 7 && chips === 0 && dis.every((d) => /:greyed/.test(d)) && /view-only/.test(why) && /view-only/.test(lwhy) && writes.length === 0, saw: dis.join(' ') + ' · "' + why.slice(0, 40) + '" · writes: ' + (writes.join(' | ') || 'none') + (S.calls.length !== writes.length ? ' · other calls: ' + S.calls.filter((c) => writes.indexOf(c) < 0).join(' | ') : '') };
   });
   await w.step('T12b', 'TOUR-FIX1 · ＋ New -> the sheet asks "What needs doing?"; Add task with nothing typed says so and sends nothing; typed -> one POST /api/chits/send to the shop itself, the sheet closes, Tasks opens with the new task in it', async () => {
     await openPage(); S.calls = [];
@@ -289,7 +307,7 @@ W.run('tasks', async (w) => {
     await fr.selectOption('[data-testid="tk-view"]', 'orders_in'); await fr.waitForTimeout(700);
     const fresh = await fr.locator('[data-testid="tk-new"]').count();
     await fr.click('[data-testid="tk-row-c4"]'); await fr.waitForSelector('[data-testid="tk-steps"]', { timeout: 6000 }); await fr.waitForTimeout(300);
-    const writes = () => S.calls.filter((c) => /\/status|assign-lines|deliver-lines|actors\/assign/.test(c)).length;
+    const writes = () => S.calls.filter((c) => /\/status|assign-lines|assign-bulk|deliver-lines|actors\/assign/.test(c)).length;
     const before = writes();
     const billDis = await fr.$eval('#tk_do_bill', (b) => b.disabled).catch(() => null);
     await fr.click('#tk_do_bill'); await fr.waitForTimeout(400);

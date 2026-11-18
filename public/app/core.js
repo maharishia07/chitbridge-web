@@ -1356,9 +1356,12 @@ function errWords(value) {
   if (typeof value !== 'object') return String(value);
   return errWords(value.detail) || errWords(value.message) || errWords(value.title) || errWords(value.error) || '';
 }
-/* answerWords(body) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence) */
-function answerWords(body) {
+/* answerWords(body, status) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence).
+   A 429 that names its wait says the ONE rate-limit sentence, read by shell.js rateWords (window.cbRateWords) (Fable review R2/R3, 18 Nov). */
+function answerWords(body, status) {
   var answer = body || {};
+  var rate = typeof window !== 'undefined' && typeof window.cbRateWords === 'function' ? window.cbRateWords(answer, status) : ''; /* the sentence is read by shell.js, loaded on every shelled page (call time) */
+  if (rate) return rate;
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
@@ -1495,7 +1498,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
             .filter(Boolean)
             .join('  ·  ');
         }
-        if (!msg) msg = answerWords(j);
+        if (!msg) msg = answerWords(j, res.status);
       } catch (_) {}
       if (j && j.offline) {
         throw new Error(

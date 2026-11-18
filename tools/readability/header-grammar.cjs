@@ -38,4 +38,4 @@ function parseFields(text, relPath) {
   return found;
 }
 
-module.exports = { FIELDS, FIELD_LINE, TITLE_LINE, ID_VALUE, LINE_BREAK, parseFields };
+module.exports = { FIELDS, LINE_BREAK, parseFields };

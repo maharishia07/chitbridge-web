@@ -77,7 +77,7 @@ t('figure: money is the server\'s minor units in the answer\'s currency; a nil d
   const col = ['dr_minor', 'Debit', kit.MONEY];
   assert.strictEqual(kit.figure({ dr_minor: '12500' }, col), 'AUD 12500');
   assert.strictEqual(kit.figure({ dr_minor: '0' }, col), '');
-  assert.strictEqual(kit.figure({}, ['sales_minor', 'Sales', kit.MONEY]), '«No sales»');
+  assert.strictEqual(kit.figure({}, ['sales_minor', 'Sales', kit.MONEY]), '«No income»');
 });
 t('figure: a net balance is Dr or Cr, never a minus; nothing is a dash', () => {
   state({});
@@ -186,6 +186,22 @@ t('Who owes whom: a both-sides party (client 013 Harbour) shows on each side wit
   assert.strictEqual(JSON.stringify(supp.filter((r) => !r._total).map((r) => [r.name, r.balance_minor])), JSON.stringify([['Harbour Wholesale', -4642]]));
   assert.strictEqual(cust.find((r) => r._total).balance_minor, 5440, 'the customer total is the server total (= TB debtors)');
   assert.strictEqual(supp.find((r) => r._total).balance_minor, -4642, 'the supplier total is the server total (= TB creditors)');
+});
+t('FC-M10: Who owes whom ties out to the trial balance from the server tb_control (agrees, or differs and says by how much; a hidden side is left out)', () => {
+  const paint = (control) => {
+    const host = { classList: { add() {} }, innerHTML: '' };
+    state({ host, answer: { currency: 'AUD', parties: [], tb_control: control }, o: { member: { id: 'c1', name: 'Client 013', role: 'auditor' }, mountList() {} } });
+    kit.$ = (id) => ({ id });
+    kit.paintRows(host, report('dues'));
+    return (/data-testid="bv-dues-tb">([^<]*)</.exec(host.innerHTML) || [])[1] || '';
+  };
+  const same = paint({ customer: { list_minor: 544000, tb_minor: 544000, differs_minor: 0 }, supplier: { list_minor: -120000, tb_minor: -120000, differs_minor: 0 } });
+  assert.ok(/^«Agrees with trial balance» · «Debtors» AUD 544000 · «Creditors» AUD 120000$/.test(same), same);
+  const off = paint({ customer: { list_minor: 544000, tb_minor: 551000, differs_minor: -7000 }, supplier: { list_minor: -120000, tb_minor: -120000, differs_minor: 0 } });
+  assert.ok(/^«Differs from trial balance» · «Debtors» «by» AUD 7000 · «see Trial balance»$/.test(off) && !/Creditors/.test(off), off);
+  assert.strictEqual(paint({ customer: { list_minor: 100, tb_minor: 100, differs_minor: 0 }, supplier: { list_minor: null, tb_minor: null, differs_minor: null } }).indexOf('Creditors'), -1, 'a side the reader may not see is not said');
+  assert.strictEqual(paint(undefined), '', 'no control from the server, no line');
+  assert.strictEqual(kit.queryOf(report('dues')).control, '1', 'the dues read asks for the control');
 });
 const doorSource = fs.readFileSync(path.join(__dirname, '..', DOOR), 'utf8');
 t('the clients door reads the grants list once per sign-in and draws nothing without a token', () => {

@@ -111,7 +111,8 @@ function mayOf(req) {
   const WHY = { read_only: 'Your access is view-only. You can read this chit but not change it.', comment_only: 'Your access is comment-only. You can reply internally, but not act or answer the other party.' };
   const code = level === 'commenter' ? 'comment_only' : 'read_only';
   return { write: writes ? { may: true, code: null, why: null } : { may: false, code, why: WHY[code] },
-    remove: level === 'owner' ? { ok: true, code: null, why: null } : { ok: false, code: 'OWNER_ONLY', why: 'Only the owner can remove a party.' } };
+    remove: level === 'owner' ? { ok: true, code: null, why: null } : { ok: false, code: 'OWNER_ONLY', why: 'Only the owner can remove a party.' },
+    assign: level === 'owner' ? { ok: true, code: null, why: null } : { ok: false, code: 'CHIT_NOT_PERMITTED', why: 'Only the partner or a manager can assign clients.' } }; /* A2: routes/crm.js crmMay.assign = lib/owner mayAt(req, manager) */
 }
 
 /** contact_prefs as the API answers before b306 (MKT-SRV1 G5 — lib/privacy.contactPrefsOf with no rows): service on legitimate use, offers need consent */

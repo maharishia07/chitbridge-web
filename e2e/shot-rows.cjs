@@ -25,7 +25,7 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
         const body = { name: p[0], unit: p[1], price: p[2], code: p[3], status: 'available', avail: { qty: 91, as_of: new Date().toISOString(), source: 'tally' } }; if (p[4]) { body.gst_rate = p[4]; body.hsn = '0806'; }
         try { out.push([p[0], JSON.stringify(await api('prodAdd', { body: { item_data: body } })).slice(0, 100)]); } catch (e) { out.push([p[0], 'ERR ' + String(e && e.message)]); }
       }
-      const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10); // utc-ok: offer validity window from yesterday-or-today to +7 (SAFE: UTC is never ahead of the shop day)
       await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', confirmed: true, rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
     }
     return out;

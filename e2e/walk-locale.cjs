@@ -82,7 +82,7 @@ const OK = { ok: true };
 /* a list row, in the shape the API's contract holds (walk-tasks.cjs rowOut): counts of lines, never the lines themselves */
 const workOut = (r) => ({ chit_id: r.chit_id, kind: r.kind, tab: r.kind === 'order_in' ? 'orders_in' : r.kind === 'order_out' ? 'orders_out' : 'tasks', stage: r.status === 'accepted' ? 'accepted' : 'new', word: r.status === 'accepted' ? 'Accepted' : 'New',
   status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id, channel: r.channel, fulfilment: r.fulfilment, address: r.address, requested_for: r.requested_for, remark: r.remark, total_minor: r.total_minor, currency: r.currency,
-  lines_n: r.lines.length, lines_open_n: r.lines.filter((l) => l.qty - l.delivered > 0).length, billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: r.lines.filter((l) => l.assignment).length || null, created_at: r.created_at, age_days: r.age_days,
+  lines_n: r.lines.length, lines_open_n: r.lines.filter((l) => l.qty - l.delivered > 0).length, billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: r.lines.filter((l) => l.assignment).length || null, may_assign: true, may_take: !r.assignee, created_at: r.created_at, age_days: r.age_days,
   actions: { accept: r.status === 'accepted' ? { ok: false, why: 'already_done', say: 'This chit is already at that step.' } : OK, reject: OK, complete: OK, cancel: OK, reopen: OK, assign_task: OK, assign_line: OK, deliver_line: OK, amend: OK } });
 const CHOICES = [
   { key: 'counter', label: 'Counter only', why: 'Bills and sells. Cannot see costs.', level: 'editor', whole_entity: false, can_see_costs: false },

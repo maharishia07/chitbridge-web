@@ -31,7 +31,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 const B = require('./chit-sheet-blocks.cjs');   /* walk blocks kept in their own file (size ceiling) */
-const SHOP = 'Books Shop', TODAY = new Date().toISOString().slice(0, 10);
+const SHOP = 'Books Shop', TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolkata, or CB_TODAY), never the UTC day: UTC is a day behind from 18:30Z (tzsweep) */
 
 /* the REAL engine, the real invoice: the adopted tax.js run in a sandbox, CBTax.determine() once, CBTax.moneyOf() to read it */
 const vm = require('vm');

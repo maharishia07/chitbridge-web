@@ -10,7 +10,7 @@
  * ⚠️ NOTHING HERE DECIDES ANYTHING. It does not auto-resolve, auto-accept a pause, or declare a winner. The same
  * discipline as the matcher and for the same reason: a confident wrong number is worse than a gap.
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html · 3 tests
  */
 /*
  * OWNS      a chit as a service request: the screen that shows both elapsed numbers when a pause is disputed

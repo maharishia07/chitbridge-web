@@ -27,6 +27,9 @@ if (typeof EP !== 'undefined') {
     booksTB: { m: 'GET', p: '/api/books/trial-balance' },
     booksPL: { m: 'GET', p: '/api/books/pl' },
     booksBS: { m: 'GET', p: '/api/books/bs' },
+    booksLoans: { m: 'GET', p: '/api/books/loans' } /* the bank line's loan picker: ref, lender, opening, what is still owed (the api owns the figures) */,
+    booksGstLodged: { m: 'GET', p: '/api/books/gst/lodged' } /* the net each tax close of a year declared lodged carried, per period (closed_at is the close day, never a lodgement date) */,
+    booksLoanEmi: { m: 'POST', p: '/api/books/loans/:ref/emi', idem: 'attempt' } /* M-06: a loan instalment, the bank's split as given (the api owns the route) */,
     booksPayRecord: { m: 'POST', p: '/api/books/payments', idem: 'attempt' /* FIN-63: one key per attempt */ },
     booksPayPreview: { m: 'POST', p: '/api/books/payments/preview' } /* M26: the bills table + the duplicate warnings; writes nothing */,
     booksLock: { m: 'POST', p: '/api/books/periods/:fy/:p/lock' },
@@ -214,6 +217,12 @@ function bkCss() {
     '.bkdv-segs{display:inline-flex;gap:0}',
     '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
+  ].concat(bkCssLedgersPage()).join('\n');
+  document.head.appendChild(node);
+}
+/** the Ledgers page rules of bkCss (the two panes, the tree, the ledger page and its phone layout), in the order they apply */
+function bkCssLedgersPage() {
+  return [
     /* ⭐ THE LEDGERS PAGE (docs/design/ledgers-page, 2026-10-03): two panes — the ledger tree and the list (CBList) — inside one container, so the PANE decides phone or laptop, not the window.
        Tokens only; the tree is its own pane (more panes, not denser), the list is the Task table. */
     '#bk_lt{container:lt/inline-size;display:flex;height:100%;min-height:min(50vh,480px)}',
@@ -238,7 +247,12 @@ function bkCss() {
     '#bk_lt .tn{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:start;gap:0 6px;width:100%;border:0;background:none;text-align:start;border-radius:8px;padding:6px 8px 6px calc(6px + var(--lvl,0) * 14px);position:relative;color:var(--ink);min-height:34px;font:inherit;font-size:var(--fs-2);cursor:pointer}',
     '#bk_lt .tn:hover{background:var(--panel)}',
     '#bk_lt .tn .tw{width:16px;text-align:center;line-height:1.45}',
-    '#bk_lt .tn .nm{min-width:0;overflow-wrap:normal;word-break:normal;hyphens:manual;line-height:1.35;padding-top:1px}',
+    '#bk_lt .tn .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;padding-top:1px}' /* W15-104: a tree name is ONE line; the full name is the tooltip */,
+    '#bk_lt .lt-asof{padding:6px 10px 2px;font-size:var(--fs-1);color:var(--grey)}',
+    '#bk_lt .lt-segs{display:flex;gap:4px;padding:2px 8px 6px}',
+    '#bk_lt .lt-seg{flex:1 1 0;min-height:32px;border:1px solid var(--line,#d8dee6);background:none;border-radius:8px;font:inherit;font-size:var(--fs-1);color:var(--grey);cursor:pointer;white-space:nowrap}',
+    '#bk_lt .lt-seg.on{background:var(--blue-tint-bg,var(--blue-t,#E4EEFA));color:var(--blue-2,var(--blue-i,#174A87));font-weight:600;border-color:var(--blue-2,var(--blue-i,#174A87))}',
+    '#bk_lt .tn .am.over{color:var(--red,#b3261e)}',
     '#bk_lt .tn .am{font-family:var(--f-num,"IBM Plex Mono",ui-monospace,monospace);font-variant-numeric:tabular-nums;font-size:calc(var(--fs-2) * .95);color:var(--grey);white-space:nowrap;text-align:end;min-width:var(--am-w,12ch);padding-top:2px}',
     '#bk_lt .tn .am.nil{color:var(--faint,var(--grey));opacity:.8}',
     '#bk_lt .tn .ck{color:var(--green);font-weight:700;margin-inline-end:4px}',
@@ -263,8 +277,7 @@ function bkCss() {
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
     '#bk_back{display:none}',
     '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}'
-  ].join('\n');
-  document.head.appendChild(node);
+  ];
 }
 bkCss();
 
@@ -403,6 +416,12 @@ function bkWhy(e, fallback) {
 }
 function bkErr(e) {
   return esc(bkWhy(e, tx('Could not be read')));
+}
+/** STAFF-BOOKS: a view the server refuses this seat (403: the money reads are the owner's and the auditor's) says so in the server's own sentence, in the ONE empty/refused state (emptyState), never a raw error and never a blank pane.
+ *  Any other failure keeps bkErr's words. `what` names the view. */
+function bkRefused(e, what) {
+  if (!e || e.status !== 403) return bkErr(e);
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || "Only the owner or the shop's auditor may read these figures.")));
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
@@ -3403,6 +3422,33 @@ function bkLgCols(c, kind) {
   );
   return cols;
 }
+/** the period moved (a preset, a custom range, a step): the open ledger reads its page again and the tree's figures follow the same dates */
+function bkLgPeriodChanged() {
+  BK.lt.r = null;
+  BK.lt.noParty = false;
+  if (BK.lt.api) BK.lt.api.refresh();
+  bkLtLoad();
+  bkLtBalReload();
+}
+/** ‹ Earlier · Later › for the Ledgers' period: the Day book's own step (bkDbStep: a day, a month, a financial year, or the same span), never past today */
+function bkLgStepHTML() {
+  var period = BK.lgp || (BK.lgp = bkDbPeriod('fy')),
+    now = { preset: period.preset, from: bkRange('lg').from, to: bkRange('lg').to },
+    stepButton = function (dir, word, mark) {
+      var to = bkDbStep(now, dir);
+      return (
+        '<button data-cbsid="TSK006-B1' + (dir < 0 ? '4' : '5') + '"' + bkMountAttribute('TSK006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="step' + (dir < 0 ? 'back' : 'next') + '" data-testid="lg-step-' + (dir < 0 ? 'back' : 'next') + '" aria-label="' + esc(tx(word)) + '" title="' + esc(tx(word)) + '"' + (to ? '' : ' disabled') + '>' + mark + '</button>'
+      );
+    };
+  return stepButton(-1, 'Earlier', '‹') + stepButton(1, 'Later', '›');
+}
+function bkLgStep(dir) {
+  var q = bkRange('lg'),
+    to = bkDbStep({ preset: (BK.lgp || {}).preset || 'fy', from: q.from, to: q.to }, dir);
+  if (!to) return;
+  BK.lgp = to;
+  bkLgPeriodChanged();
+}
 /** a ledger's head is the CBList title row: the ledger's name, the period chip (the Day book's presets), ONE figures line, the notice when something needs a hand */
 function bkLgPeriodHead() {
   var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')),
@@ -3423,10 +3469,7 @@ function bkLgPeriodHead() {
     onPick: function (v, range) {
       if (v === 'custom' && !range) return;
       BK.lgp = bkDbPeriod(v, range);
-      BK.lt.r = null;
-      BK.lt.noParty = false;
-      if (BK.lt.api) BK.lt.api.refresh();
-      bkLtLoad();
+      bkLgPeriodChanged();
     }
   };
 }
@@ -3612,6 +3655,7 @@ function bkLgHead() {
       x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn" data-lt="backto" data-testid="lt-backto">‹ ' + esc(txf('Back to {form}', { form: BK.backTo.label })) + '</button>';
     if (bkLtNarrow())
       x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
+    if (!ownsParty) x += bkLgStepHTML(); /* ACC-367: the year stepper */
     if (bkLtFolded() && !bkLtNarrow())
       x +=
         '<button data-cbsid="CMP042-B06"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' +
@@ -3883,40 +3927,37 @@ function bkLtFoldSet(fold) {
   var target = fold ? document.querySelector('[data-lt="unfold"]') : document.getElementById('lt_q');
   if (target) target.focus();
 }
+/** the tree's find box emptied and refocused, then the tree repainted in full */
+function bkLtClearFind() {
+  BK.lt.tq = '';
+  var innerNode = document.getElementById('lt_q');
+  if (innerNode) {
+    innerNode.value = '';
+    innerNode.focus();
+  }
+  bkLtTreePaint();
+}
+/** back to the tab the person came from (a return opened from another tab), once */
+function bkLtBackToTab() {
+  var back = BK.backTo;
+  BK.backTo = null;
+  if (back && typeof show === 'function') show(back.tab);
+}
+/** the Pay button on an open party ledger: opens the payment for that party */
+function bkLtPayOpenParty() {
+  var sp = BK.lt.sel && BK.lt.sel.party;
+  if (sp) payOpen(bkPartyKind(sp, BK.lt.sel.code), sp);
+}
 /** a click on one of the pane's own buttons (data-lt): clear the find box · fold / unfold the tree · back to the tree · back to where the person came from · Statement · Pay */
 function bkLtClickAction(action) {
-  if (action === 'clear') {
-    BK.lt.tq = '';
-    var innerNode = document.getElementById('lt_q');
-    if (innerNode) {
-      innerNode.value = '';
-      innerNode.focus();
-    }
-    bkLtTreePaint();
-    return;
-  }
-  if (action === 'fold' || action === 'unfold') {
-    bkLtFoldSet(action === 'fold');
-    return;
-  }
-  if (action === 'back') {
-    bkLtBack();
-    return;
-  }
-  if (action === 'backto') {
-    var back = BK.backTo;
-    BK.backTo = null;
-    if (back && typeof show === 'function') show(back.tab);
-    return;
-  }
-  if (action === 'statement') {
-    bkLgStatement();
-    return;
-  }
-  if (action === 'pay') {
-    var sp = BK.lt.sel && BK.lt.sel.party;
-    if (sp) payOpen(bkPartyKind(sp, BK.lt.sel.code), sp);
-  }
+  if (action === 'clear') { bkLtClearFind(); return; }
+  if (action === 'act-on' || action === 'act-all') { BK.lt.all = action === 'act-all'; bkLtTreePaint(); return; }
+  if (action === 'stepback' || action === 'stepnext') { bkLgStep(action === 'stepback' ? -1 : 1); return; }
+  if (action === 'fold' || action === 'unfold') { bkLtFoldSet(action === 'fold'); return; }
+  if (action === 'back') { bkLtBack(); return; }
+  if (action === 'backto') { bkLtBackToTab(); return; }
+  if (action === 'statement') { bkLgStatement(); return; }
+  if (action === 'pay') bkLtPayOpenParty();
 }
 /** keys in the tree's find box: Escape clears it, ArrowDown steps into the tree; true when the key was handled */
 function bkLtKeySearch(event, element) {
@@ -4199,6 +4240,7 @@ function bkLtShellHTML() {
         esc(tx('Hide the ledger list')) +
         '">⟨</button></div>' +
         '<div id="bk_attn_lg" class="lt-attn" data-testid="lt-attn"></div>' + /* the Needs attention strip lives in the ledger list column: a row of its own over the pane cost the head 5% of the window (Ledgers head budget 20% / 30%); a list it opens scrolls in the column */
+        '<div id="lt_head" class="lt-head" data-testid="lt-head"></div>' +
         '<div id="lt_tree" class="lt-list" data-testid="lt-tree" role="tree" aria-label="' +
         esc(tx('Ledgers by band')) +
         '"></div></nav>' +
@@ -4219,7 +4261,7 @@ async function bkLedgers(body) {
   try {
     var rr = await Promise.all([
       api('booksAccounts'),
-      bkBalances().catch(function (failure) {
+      bkBalances(bkRange('lg')).catch(function (failure) {
         return bkQuiet('balances', failure, null);
       }),
       booksDuesLoad(true)
@@ -4342,7 +4384,7 @@ async function bkTB(body) {
       (comparison ? bkOverNote(reply.over_rule, currency, 'BKS004-P03', 'tb-over-note') : ''); /* the note sits UNDER the list: the first data row stays where it was */
     if (window.CBBankTbLine && reply.bank) CBBankTbLine.wire(body, reply.bank, bkTbBankOptions(reply, asOf));
   } catch (e) {
-    body.innerHTML = bkErr(e);
+    body.innerHTML = bkRefused(e, 'Trial balance');
   }
 }
 /**
@@ -4420,7 +4462,7 @@ async function bkDrillToggle(btn, code, from, to, fromTab, label) {
             })
             .join('')
         : '<span style="color:var(--grey)">' + esc(tx('No entries in this period')) + '</span>') +
-      (total > 0 ? '<div style="margin-top:4px"><button type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(fromTab) + '\',\'' + esc(label) + '\')">' +
+      (total > 0 ? '<div style="margin-top:4px"><button data-cbsid="SCR013-B01" type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(fromTab) + '\',\'' + esc(label) + '\')">' +
         esc(txn('Open the {count} entry ▸', 'Open all {count} entries ▸', total, { count: total })) + '</button></div>' : '') +
       '</div>';
   } catch (failure) {
@@ -4595,7 +4637,7 @@ async function bkPL(body) {
       bkPlSectionTotal(reply, comparison, currency, 'expense', tx('Total expenses')) +
       '</tbody></table>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
   } catch (e) {
-    body.innerHTML = bkErr(e);
+    body.innerHTML = bkRefused(e, 'Profit and loss');
   }
 }
 function bkBsPick(v) {
@@ -4689,7 +4731,7 @@ async function bkBS(body) {
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, currency), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
       '</tbody></table>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {
-    body.innerHTML = bkErr(e);
+    body.innerHTML = bkRefused(e, 'Balance sheet');
   }
 }
 /**
@@ -5684,13 +5726,6 @@ function bkFyPrev(fy) {
   var y = Number(String(fy).slice(0, 4)) - 1;
   return String(fy).length === 4 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0');
 }
-/** the words beside a month's Lock button: the server's why when it may not lock, and (ACC-204) the tax period the month ends in while its close has not run — GET /periods row `return`, a pack whose return the ledgers close: "BAS FY27 Q1 (Jul–Sep 2026) not closed yet" */
-function bkLockNote(row, periodNo, mayLock, whyNot) {
-  var taxPeriod = row && row.return,
-    note = !mayLock && whyNot ? '<span data-testid="lk-why-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(whyNot)) + '</span>' : '';
-  if (!taxPeriod || taxPeriod.closed) return note;
-  return note + ' <span data-testid="lk-return-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{form} {label} not closed yet', { form: taxPeriod.form, label: taxPeriod.label })) + '</span>';
-}
 /** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
 function bkPeriodOfDay(dayKey, lockState) {
   var text = Object.keys((lockState && lockState.info) || {}).filter(function (item) {
@@ -5838,7 +5873,7 @@ function bkLockRowHTML(item, index, isOwner) {
     '" class="num lk-ent">' +
     esc(String((info && info.entries) || 0)) +
     '</td><td class="num lk-sales">' +
-    (info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No sales'))) +
+    (info && info.sales_minor === undefined ? '—' : info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No income'))) + /* STAFF-BOOKS: a seat that may not read figures gets none: a dash, never "No sales" */
     '</td><td class="lk-act">' +
     buttons +
     (buttons ? bkLockWhyHTML(month, state, info, rule.blocked, rule.blockWhy) : '') +
@@ -5888,7 +5923,7 @@ function bkLockWhoHTML(p, who) {
 /** the line under a refused button: why it is blocked, shortened, with the return still to close when that is the reason */
 function bkLockWhyHTML(p, st, x, blocked, blockWhy) {
   return (
-    (!blocked ? '' : '<button type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(blockWhy)) + '" data-full="' + esc(tx(blockWhy) + (st === 'open' && x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(blockWhy)) + '" onclick="bkLockWhy(this)">' + esc(tx(blockWhy)) + '</button>')
+    (!blocked ? '' : '<button data-cbsid="SCR013-B02" type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(blockWhy)) + '" data-full="' + esc(tx(blockWhy) + (st === 'open' && x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(blockWhy)) + '" onclick="bkLockWhy(this)">' + esc(tx(blockWhy)) + '</button>')
   );
 }
 /**
@@ -5918,7 +5953,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Sales') +
+    tx('Income before tax') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';

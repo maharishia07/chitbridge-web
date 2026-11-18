@@ -144,14 +144,15 @@
       return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: translate('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency' }),
+      { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly') + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
+      num('held', 'Held by', 130, function (r) { return root.CBAssign ? root.CBAssign.chip(r, assignOpts()) : ''; }, function (r) { return root.CBAssign ? root.CBAssign.heldByText(r) : ''; }, { prio: 1, keep: true, minw: 100, hfilter: 'held' }),
       num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, practiceKit.queriesCell, function (r) { return r.queries.open; }),
       num('changed', 'Changed', 130, practiceKit.changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
       num('bas', 'Due', 120, practiceKit.basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1 }),
+      num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1, cl: 2 }),
       num('checked', 'Checked ' + practiceKit.yearLabel(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
       num('tocheck', 'To check (qtr)', 100, function (r) { return escapeHtml(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
       num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
@@ -198,6 +199,7 @@
       filterOf('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
       filterOf('stage', 'Year end', ['books_in', 'complete', 'checked', 'ready', 'lodged'].map(function (k) { return [k, practiceKit.stageWord(k)]; }), function (r, v) { return r.stage === v; }),
       filterOf('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
+      heldFilterOf(filterOf),
       filterOf('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
       filterOf('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
       filterOf('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
@@ -232,7 +234,33 @@
   }
   /** the columns a band opens with, and the Saved column once the firm's flags have answered and are on */
   function colsOf(bandKey) {
-    return (BAND_COLS[bandKey] || BAND_COLS.pipeline).concat(flagsOn() ? ['saved'] : []);
+    var cols = (BAND_COLS[bandKey] || BAND_COLS.pipeline).slice();
+    if (holdersOn()) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
+    return cols.concat(flagsOn() ? ['saved'] : []);
+  }
+  /** ASSIGN-1: did the server send who holds each client (an answer with a `holders` list on any row) */
+  function holdersOn() { return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []); }
+  /** ASSIGN-1: read the practice again after an assign, so the Held by column shows what the server now holds */
+  function reloadAfterAssign() {
+    return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
+  }
+  /** ASSIGN-1: the list's bulk actions (assign · hand over · back to pool · open jobs): generic CBAssign with this list's plug and row facts; [] when the bar is not for this person */
+  function bulkActions() {
+    return !holdersOn() || !root.CBAssign ? [] : root.CBAssign.bulk(assignOpts());
+  }
+  /** ASSIGN-W2: the plug, the noun and the row facts of THIS list, read by the chip, the bar, the keys and Undo; "said" is the server's verdict (may_assign) and nothing else */
+  function assignOpts() {
+    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', noun: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
+  }
+  /** I3: a seat that may not assign (staff) opens on Mine; owner and manager open on Everyone. The server's verdict (may_assign) decides, and only when the page knows who the person is */
+  function defaultHeld() {
+    var d = practiceKit.practiceState.data;
+    return holdersOn() && d && d.may_assign === false && root.CBAssign.meId() ? { held: 'mine' } : {};
+  }
+  /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
+  function heldFilterOf(filterOf) {
+    var held = root.CBAssign.heldFilter((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []);
+    return filterOf('held', 'Held by', held.options, held.match);
   }
   function mountList() {
     var host = root.document.getElementById('bp_list');
@@ -240,7 +268,9 @@
     if (!root.CBList) return withList(mountList);
     dropOldList();
     var bandKey = (practiceKit.bandShown(practiceKit.practiceState.data) || {}).key || 'pipeline';
-    if (root.CBList.reset) root.CBList.reset('practice-clients-' + bandKey);
+    /* ASSIGN-W2 I2: after an assign the same list is drawn again with its ticks, search and filters kept, so the bar stays for the next group; any other paint starts clean */
+    if (root.CBList.reset && !practiceKit.practiceState.keepList) root.CBList.reset('practice-clients-' + bandKey);
+    practiceKit.practiceState.keepList = false;
     var rows = practiceKit.practiceState.data.clients.map(function (r, n) { r._n = n; return r; });
     practiceKit.practiceState.list = root.CBList.mount(host, listOptions(rows, bandKey));
     markLastClient();
@@ -266,11 +296,13 @@
   function listOptions(rows, bandKey) {
     return {
       key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : { filt: {} },
+      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : { filt: defaultHeld() },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: translate('No clients match') },
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
-      rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; }
+      rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; },
+      bulk: bulkActions(), bulkAlways: holdersOn() && !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), /* ASSIGN-W2: ticks always on, the bar on the first tick */
+      views: holdersOn() ? root.CBAssign.quickViews() : undefined /* Mine · Unassigned · Everyone */
     };
   }
   function practiceCss() {
@@ -320,6 +352,7 @@
    '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
+   (root.CBAssign ? root.CBAssign.slotHTML() : '') +
    '<div id="bp_list" data-testid="practice-list"></div>'
     );
   }

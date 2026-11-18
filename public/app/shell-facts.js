@@ -44,6 +44,13 @@
     if (ordered.some(function (item, index) { return item.sec !== secs[index]; })) ordered.forEach(function (item) { holder.appendChild(item.sec); });
   }
 
+  /* P1-5 (18 Nov): the ONE text of a refused answer the header uses. A problem body (RFC 9457: detail · title, and params.retry_after_seconds on a 429) says its own words; a name that arrives as an object says its name — never String(object) ("[object Object]"). core.js's errWords is the page's reader of the same slots; the shell may mount without core.js, so it reads them here. */
+  function wordsOf(value) {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value !== 'object') return String(value);
+    return wordsOf(value.detail) || wordsOf(value.message) || wordsOf(value.title) || wordsOf(value.name) || wordsOf(value.error) || '';
+  }
   /** one card read; a SERVER_BUSY is asked again after the server's own Retry-After (at most FACTS_RETRIES times) */
   function factsGet(ctx, url, left) {
     return ctx.get(url).catch(function (err) {
@@ -277,5 +284,5 @@
       }
     };
   }
-  root.CBShellFacts = { create: create, painters: painters };
+  root.CBShellFacts = { create: create, painters: painters, wordsOf: wordsOf };
 })(typeof window !== 'undefined' ? window : this);

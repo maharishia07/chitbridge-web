@@ -515,7 +515,7 @@ function testGuide(force) {
       tx('Marking again writes a new line; nothing is overwritten.') +
       '</div>' +
       '</div>' +
-      '<div class="mfoot"><button class="pri" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="SCR010-B01" class="pri" onclick="closeModal()">' +
       tx('Start testing') +
       '</button></div>'
   );
@@ -988,7 +988,7 @@ function testReadAt() {
 }
 function testRefreshBtn(ico) {
   return (
-    '<button data-testid="test-refresh" title="Read everything again from the server" ' +
+    '<button data-cbsid="SCR010-B02" data-testid="test-refresh" title="Read everything again from the server" ' +
     'onclick="testRefreshAll()" style="' +
     ico +
     '"' +
@@ -1129,15 +1129,15 @@ function testPaint() {
     ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14em">' +
     esc([CBTEST.kind, CBTEST.area].filter(Boolean).join(' \u00b7 ') || 'All areas') +
     '</span>' +
-    '<button data-testid="test-setup" title="Setup \u2014 who is testing, which run, focus, size" ' +
+    '<button data-cbsid="SCR010-B03" data-testid="test-setup" title="Setup \u2014 who is testing, which run, focus, size" ' +
     'onclick="testSetupToggle()" style="' +
     ico +
     (CBTEST.setup ? ';background:var(--ink,#0F2E3D);color:var(--card,#fff);' + 'border-color:var(--ink,#0F2E3D)' : '') +
     '">\u2699</button>' +
-    '<button title="Read the cases again" onclick="testLoad(true)" style="' +
+    '<button data-cbsid="SCR010-B04" title="Read the cases again" onclick="testLoad(true)" style="' +
     ico +
     '">\u21bb</button>' +
-    '<button title="Minimise" onclick="testMinimise()" style="' +
+    '<button data-cbsid="SCR010-B05" title="Minimise" onclick="testMinimise()" style="' +
     ico +
     '">\u2013</button>' +
     /* ⚠️ CLOSES THE PANEL, NOT THE MODE. Closing the lab used to turn test mode off, so the Test chips
@@ -1149,7 +1149,7 @@ function testPaint() {
     /* ── BAND 2 · the one question: which view, and clear ── */
     '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">' +
     testViewToggleHTML() +
-    '<button onclick="testClearFilters()" ' +
+    '<button data-cbsid="SCR010-B06" onclick="testClearFilters()" ' +
     (CBTEST.kind || CBTEST.area ? '' : 'disabled ') +
     'title="Clear the kind and area filters \u2014 show every case" ' +
     'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:7px;cursor:pointer;' +
@@ -1208,7 +1208,7 @@ function testPaint() {
       var bits = [];
       if (forMe) {
         bits.push(
-          '<button data-testid="hdr-forme" onclick="testSetView(\'work\');testWorkFilter(\'mine\')" ' +
+          '<button data-cbsid="SCR010-B07" data-testid="hdr-forme" onclick="testSetView(\'work\');testWorkFilter(\'mine\')" ' +
             'title="Marked fixed by someone. Look, then confirm — until then it is a claim" ' +
             'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 10px;border-radius:11px;' +
             'cursor:pointer;border:1px solid var(--warn-2,#8a6100);background:var(--warn-tint,#fdf6e6);' +
@@ -1219,7 +1219,7 @@ function testPaint() {
       }
       if (all.fail) {
         bits.push(
-          '<button data-testid="hdr-failed" onclick="testSetView(\'work\');testWorkFilter(\'failed\')" ' +
+          '<button data-cbsid="SCR010-B08" data-testid="hdr-failed" onclick="testSetView(\'work\');testWorkFilter(\'failed\')" ' +
             'title="Cases whose last run did not do what the case says" ' +
             'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 10px;border-radius:11px;' +
             'cursor:pointer;border:1px solid var(--disp,#B3261E);background:var(--danger-tint,#fbeceb);' +
@@ -1380,7 +1380,7 @@ function testPaint() {
     h +=
       '<div style="padding:14px 12px;font-size:var(--fs-2);line-height:1.6;color:var(--grey-2,var(--grey-2));text-align:center">' +
       '<div style="margin-bottom:9px">No test cases on this board yet.</div>' +
-      '<button class="btn pri" onclick="testSeed()" style="font-size:var(--fs-2);padding:6px 14px">' +
+      '<button data-cbsid="SCR010-B09" class="btn pri" onclick="testSeed()" style="font-size:var(--fs-2);padding:6px 14px">' +
       (CBTEST.seeding ? 'Loading…' : 'Load the test cases') +
       '</button>' +
       '</div>';
@@ -1473,10 +1473,10 @@ function testPaint() {
         'border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);color:var(--ink-2,#3a4048)';
       h +=
         '<div style="display:flex;gap:6px;align-items:center;padding:4px 2px 6px;flex-wrap:wrap">' +
-        '<button style="' +
+        '<button data-cbsid="SCR010-B10" style="' +
         qbtn +
         '" onclick="testFoldAll(true)">Expand all</button>' +
-        '<button style="' +
+        '<button data-cbsid="SCR010-B11" style="' +
         qbtn +
         '" onclick="testFoldAll(false)">Collapse all</button>' +
         '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap">' +
@@ -1587,7 +1587,7 @@ function testPaint() {
         var seq = seqOf < 99 ? ('0' + seqOf).slice(-2) : '';
 
         h +=
-          '<div data-arearow="1" onclick="testFold(\'' +
+          '<div data-cbsid="SCR010-C01" data-arearow="1" onclick="testFold(\'' +
           testJs(item) +
           '\')" style="display:grid;' +
           'grid-template-columns:' +
@@ -1626,7 +1626,7 @@ function testPaint() {
            * without it pressing + would also collapse the area you were adding to — the exact double-fire
            * already fixed once on the Report's drill-down numbers.
            */
-          '<button title="Add a case to ' +
+          '<button data-cbsid="SCR010-B12" title="Add a case to ' +
           esc(item) +
           '" ' +
           'onclick="event.stopPropagation();testAddOpen(\'' +
@@ -1703,7 +1703,7 @@ function testPaint() {
            * full page. Same information, and the ones that earn the space here are the KIND (a green unit test
            * and a green acceptance test are not the same evidence) and WHAT WOULD MAKE IT GREEN.
            */
-          '<div onclick="testOpen(\'' +
+          '<div data-cbsid="SCR010-C02" onclick="testOpen(\'' +
           testJs(entry.case_key) +
           '\')" style="display:grid;' +
           'grid-template-columns:' +
@@ -2090,25 +2090,25 @@ function testReqFormHTML() {
   var open = CBTEST.reqForm;
   var base = TUI.chip() + 'background:var(--card,#fff);color:var(--grey-2,#545A61);';
   if (!open) {
-    return '<button onclick="testReqForm(1)" style="' + base + 'font-weight:700">+ Raise a requirement</button>';
+    return '<button data-cbsid="SCR010-B13" onclick="testReqForm(1)" style="' + base + 'font-weight:700">+ Raise a requirement</button>';
   }
   var inp =
     'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid var(--grey-4,#646A72);' +
     'border-radius:7px;background:var(--card,#fff);color:var(--ink,#1a1a1a);margin-bottom:5px;box-sizing:border-box';
   return (
     '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:8px;margin-bottom:9px">' +
-    '<input id="reqWhat" style="' +
+    '<input data-cbsid="SCR010-I01" id="reqWhat" style="' +
     inp +
     '" placeholder="What must be true — e.g. a unit sold by weight must accept a fraction">' +
-    '<input id="reqSeen" style="' +
+    '<input data-cbsid="SCR010-I02" id="reqSeen" style="' +
     inp +
     '" placeholder="What you saw — e.g. typed 0.5 kg and the line disappeared">' +
     '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">' +
-    '<select id="reqPri" style="' +
+    '<select data-cbsid="SCR010-S01" id="reqPri" style="' +
     inp +
     ';width:auto;margin:0">' +
     '<option>High</option><option selected>Medium</option><option>Low</option></select>' +
-    '<input id="reqCase" style="' +
+    '<input data-cbsid="SCR010-I03" id="reqCase" style="' +
     inp +
     ';width:auto;flex:1;margin:0" placeholder="from case (optional)" value="' +
     esc(CBTEST.focusCase || '') +
@@ -2122,7 +2122,7 @@ function testReqFormHTML() {
     (document.querySelector('[data-testid="popup-code"]')
       ? ' and <b>' + esc(String(document.querySelector('[data-testid="popup-code"]').textContent).trim()) + '</b>'
       : '') +
-    '<button onclick="testReqSend()" style="' +
+    '<button data-cbsid="SCR010-B14" onclick="testReqSend()" style="' +
     base +
     'font-weight:700">Raise</button>' +
     '<button data-cbsid="CMP003" onclick="testReqForm(0)" style="' +
@@ -2208,7 +2208,7 @@ function testReqHTML() {
         var on = f === x[0];
         var n = d && d.counts ? (x[0] === 'open' ? d.open : x[0] === 'all' ? testCountAll(d) : d.counts[x[0]]) : null;
         return (
-          '<button data-testid="reqf-' +
+          '<button data-cbsid="SCR010-B15" data-testid="reqf-' +
           x[0] +
           '" onclick="testReqFilter(\'' +
           x[0] +
@@ -2390,11 +2390,11 @@ function testAsk(question, hint, okLabel) {
         '</b></div>' +
         '<div class="mbody">' +
         (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:6px">' + esc(hint) + '</div>' : '') +
-        '<textarea id="cbaskbox" rows="3" style="' +
+        '<textarea data-cbsid="SCR010-T01" id="cbaskbox" rows="3" style="' +
         inp +
         '"></textarea></div>' +
         '<div class="mfoot">' +
-        '<button class="pri" data-testid="ask-ok" onclick="testAskOk()">' +
+        '<button data-cbsid="SCR010-B16" class="pri" data-testid="ask-ok" onclick="testAskOk()">' +
         (okLabel || 'Save') +
         '</button> ' +
         '<button data-cbsid="CMP003" class="btn" data-testid="ask-cancel" onclick="testAskCancel()">Cancel</button>' +
@@ -2555,7 +2555,7 @@ function testIncFormHTML() {
     'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--grey-4,#646A72);' +
     'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
   if (!CBTEST.incForm) {
-    return '<div style="margin:2px 0 8px"><button onclick="testIncForm(true)" style="' + btn + '">' + '\u2295 Record an incident</button></div>';
+    return '<div style="margin:2px 0 8px"><button data-cbsid="SCR010-B17" onclick="testIncForm(true)" style="' + btn + '">' + '\u2295 Record an incident</button></div>';
   }
   var sc = testHereScreen();
   var sevs = TEST_INC_SEV.map(function (x) {
@@ -2563,22 +2563,22 @@ function testIncFormHTML() {
   }).join('');
   return (
     '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">' +
-    '<textarea id="incWhat" rows="2" placeholder="What happened? \u2014 the counter stopped taking bills at 4pm" ' +
+    '<textarea data-cbsid="SCR010-T02" id="incWhat" rows="2" placeholder="What happened? \u2014 the counter stopped taking bills at 4pm" ' +
     'style="' +
     inp +
     '"></textarea>' +
-    '<input id="incWho" placeholder="Who is affected? \u2014 the shop, one till, just me" style="' +
+    '<input data-cbsid="SCR010-I04" id="incWho" placeholder="Who is affected? \u2014 the shop, one till, just me" style="' +
     inp +
     '">' +
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
     /* ⚠️ BOTH DOORS ASK. An incident raised from the Manager and one raised from Capture must carry the same
        fields, or the report has two shapes of incident in it and the clock works for half of them. */
     testWhenHTML() +
-    '<select id="incSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
+    '<select data-cbsid="SCR010-S02" id="incSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' +
     sevs +
     '</select>' +
-    '<button onclick="testIncSend()" style="' +
+    '<button data-cbsid="SCR010-B18" onclick="testIncSend()" style="' +
     btn +
     '">Record</button>' +
     '<button data-cbsid="CMP003" onclick="testIncForm(false)" style="' +
@@ -2659,7 +2659,7 @@ function testIncHTML() {
         var on = f === x[0];
         var n = d && d.counts ? (x[0] === 'open' ? d.open : x[0] === 'all' ? testCountAll(d) : d.counts[x[0]]) : null;
         return (
-          '<button data-testid="incf-' +
+          '<button data-cbsid="SCR010-B19" data-testid="incf-' +
           x[0] +
           '" onclick="testIncFilter(\'' +
           x[0] +
@@ -2715,7 +2715,7 @@ function testIncHTML() {
        */
       var act = function (state, label, title) {
         return (
-          '<button data-testid="inc-act-' +
+          '<button data-cbsid="SCR010-B20" data-testid="inc-act-' +
           state +
           '" title="' +
           title +
@@ -2751,7 +2751,7 @@ function testIncHTML() {
        */
       if (item.state === 'raised' || item.state === 'investigating') {
         acts +=
-          '<select onchange="testIncSev(\'' +
+          '<select data-cbsid="SCR010-S03" onchange="testIncSev(\'' +
           item.definition_id +
           '\', this.value)" ' +
           'title="Re-grade it" style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid ' +
@@ -3223,7 +3223,7 @@ function testControlsHTML(code) {
         '<div style="flex:none;text-align:right">' +
         mark +
         '<br>' +
-        '<button data-testid="ctlpick-' +
+        '<button data-cbsid="SCR010-B21" data-testid="ctlpick-' +
         esc(x.code) +
         '" onclick="testCtlPick(\'' +
         testJs(x.code) +
@@ -4071,7 +4071,7 @@ function testTechHTML() {
       .map(function (x) {
         /* ⭐ the definition rides on the chip that offers it — see the cut list, rule 3 */
         return (
-          '<button onclick="testTech(\'' +
+          '<button data-cbsid="SCR010-B22" onclick="testTech(\'' +
           x[0] +
           '\')" ' +
           'title="' +
@@ -4100,7 +4100,7 @@ function testTechHTML() {
    */
   h +=
     '<div style="margin-top:8px">' +
-    '<button data-testid="tech-try" onclick="testTechTry(\'' +
+    '<button data-cbsid="SCR010-B23" data-testid="tech-try" onclick="testTechTry(\'' +
     t.kind +
     '\')" ' +
     'title="Fill every box on this tab with a worked example from this product" ' +
@@ -4125,7 +4125,7 @@ function testTechHTML() {
     });
     var fchip = function (f, strong) {
       return (
-        '<button onclick="testTechPick(\'' +
+        '<button data-cbsid="SCR010-B24" onclick="testTechPick(\'' +
         testJs(f.key) +
         '\')" ' +
         'title="' +
@@ -4161,7 +4161,7 @@ function testTechHTML() {
   } else {
     h += '<label style="' + lbl + '">Which field?</label>';
   }
-  h += '<input id="tqField" placeholder="the field you are testing" style="' + big + '">';
+  h += '<input data-cbsid="SCR010-I05" id="tqField" placeholder="the field you are testing" style="' + big + '">';
 
   if (t.kind === 'bounds') {
     var _isDate = testTechKind() === 'date';
@@ -4174,7 +4174,7 @@ function testTechHTML() {
       '">' +
       (_isDate ? 'Earliest allowed' : 'Lowest allowed') +
       '</label>' +
-      '<input id="tqLo" type="' +
+      '<input data-cbsid="SCR010-I06" id="tqLo" type="' +
       (_isDate ? 'date' : 'text') +
       '" ' +
       'placeholder="' +
@@ -4187,7 +4187,7 @@ function testTechHTML() {
       '">' +
       (_isDate ? 'Latest allowed' : 'Highest allowed') +
       '</label>' +
-      '<input id="tqHi" type="' +
+      '<input data-cbsid="SCR010-I07" id="tqHi" type="' +
       (_isDate ? 'date' : 'text') +
       '" ' +
       'placeholder="' +
@@ -4202,14 +4202,14 @@ function testTechHTML() {
       '<label style="' +
       lbl +
       '">The kinds, comma separated</label>' +
-      '<input id="tqClasses" placeholder="e.g. GST-registered, unregistered, overseas" style="' +
+      '<input data-cbsid="SCR010-I08" id="tqClasses" placeholder="e.g. GST-registered, unregistered, overseas" style="' +
       big +
       '">';
     var sv = (CBTEST.tech || {}).seenVals;
     if (sv && sv.length) {
       h +=
         '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">' +
-        '<button onclick="testTechUseSeen()" title="Values this screen has sent, not all it accepts — unsent kinds are untried" ' +
+        '<button data-cbsid="SCR010-B25" onclick="testTechUseSeen()" title="Values this screen has sent, not all it accepts — unsent kinds are untried" ' +
         'style="font:inherit;font-size:var(--fs-1);padding:2px 9px;' +
         'border-radius:11px;cursor:pointer;border:0;background:var(--neutral-tint,#f2efe6);' +
         'color:var(--grey-2,#545A61);margin-inline-end:6px">⚠ Use what it has sent</button>' +
@@ -4222,7 +4222,7 @@ function testTechHTML() {
       '<label style="' +
       lbl +
       '">The states, in order</label>' +
-      '<input id="tqStates" placeholder="e.g. draft, sent, accepted, delivered, paid" style="' +
+      '<input data-cbsid="SCR010-I09" id="tqStates" placeholder="e.g. draft, sent, accepted, delivered, paid" style="' +
       big +
       '">';
   }
@@ -4231,12 +4231,12 @@ function testTechHTML() {
       '<label style="' +
       lbl +
       '">Up to three conditions, comma separated</label>' +
-      '<input id="tqConds" placeholder="e.g. over 500, customer is a member" style="' +
+      '<input data-cbsid="SCR010-I10" id="tqConds" placeholder="e.g. over 500, customer is a member" style="' +
       big +
       '">';
   }
   /* ⭐ THE one filled button on this tab — see TEST_BTN_PRIMARY */
-  h += '<div style="margin-top:9px"><button onclick="testTechGo()" ' + 'style="' + TEST_BTN_PRIMARY + '">Write the cases</button></div>';
+  h += '<div style="margin-top:9px"><button data-cbsid="SCR010-B26" onclick="testTechGo()" ' + 'style="' + TEST_BTN_PRIMARY + '">Write the cases</button></div>';
 
   var rows = testTechRows();
   if (!rows.length) {
@@ -4441,7 +4441,7 @@ var TEST_WHEN = [
 function testWhenHTML() {
   return (
     '<span>When did it happen?</span>' +
-    '<select id="wcWhen" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
+    '<select data-cbsid="SCR010-S04" id="wcWhen" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' +
     TEST_WHEN.map(function (x) {
       return '<option value="' + x[0] + '">' + x[1] + '</option>';
@@ -4473,7 +4473,7 @@ function testWriteKindNow() {
 /** one box, two rows deep, growing with what is typed into it and draggable beyond that */
 function testBox(id, ph, inp) {
   return (
-    '<textarea id="' +
+    '<textarea data-cbsid="SCR010-T03" id="' +
     id +
     '" rows="2" oninput="testGrow(this)" placeholder="' +
     ph +
@@ -4507,7 +4507,7 @@ function testCaseFormHTML() {
     var here = CBTEST.popupFor;
     if (!here) return '';
     return (
-      '<div style="margin:2px 0 9px"><button onclick="testCaseFor(\'' +
+      '<div style="margin:2px 0 9px"><button data-cbsid="SCR010-B27" onclick="testCaseFor(\'' +
       here +
       "', '" +
       testJs(codeName ? codeName(here) : '') +
@@ -4534,7 +4534,7 @@ function testCaseFormHTML() {
   var chips = ['case', 'inc', 'req']
     .map(function (item) {
       return (
-        '<button data-testid="wkind-' +
+        '<button data-cbsid="SCR010-B28" data-testid="wkind-' +
         item +
         '" onclick="testWriteKind(\'' +
         item +
@@ -4558,14 +4558,14 @@ function testCaseFormHTML() {
       ? /* ⭐ beside the severity, because they are the same question asked twice: how bad, and how long */
         testWhenHTML() +
         '<span style="display:inline-block;width:10px"></span><span>How bad is it?</span>' +
-        '<select id="wcSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
+        '<select data-cbsid="SCR010-S05" id="wcSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
         'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' +
         WSEV.map(function (x) {
           return '<option value="' + x[0] + '"' + (x[0] === 'Sev-3' ? ' selected' : '') + '>' + x[0] + ' · ' + x[1] + '</option>';
         }).join('') +
         '</select>'
       : '<span>How soon?</span>' +
-        '<select id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
+        '<select data-cbsid="SCR010-S06" id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid ' +
         'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' +
         '<option>High</option><option selected>Medium</option><option>Low</option></select>';
 
@@ -4639,7 +4639,7 @@ function testCaseFormHTML() {
      *
      * ⚠️ Optional, and it says so: plenty of findings are about the screen as a whole.
      */
-    '<select id="wcCtl" style="' +
+    '<select data-cbsid="SCR010-S07" id="wcCtl" style="' +
     inp +
     ';padding:5px">' +
     '<option value="">Which control? (optional)</option>' +
@@ -4653,7 +4653,7 @@ function testCaseFormHTML() {
        tester wondering whether it actually saved */
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;' +
     'font-size:var(--fs-1);color:var(--grey-2)">' +
-    '<button onclick="testShotGrab()" style="' +
+    '<button data-cbsid="SCR010-B29" onclick="testShotGrab()" style="' +
     btn +
     '" ' +
     'title="Capture this window and attach it — or paste one here with Ctrl+V">' +
@@ -4667,7 +4667,7 @@ function testCaseFormHTML() {
             '" alt="" style="height:26px;width:auto;' +
             'border:1px solid var(--line,#e7e3d8);border-radius:4px;vertical-align:middle">'
           : '') +
-        '<button onclick="testShotView(\'' +
+        '<button data-cbsid="SCR010-B30" onclick="testShotView(\'' +
         testJs(CBTEST.shot.id) +
         '\')" style="' +
         btn +
@@ -4688,7 +4688,7 @@ function testCaseFormHTML() {
      */
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:9px;padding-top:8px;' +
     'border-top:1px solid var(--line,#efece4)">' +
-    '<button data-testid="wsave" onclick="testCaseSend()" style="' +
+    '<button data-cbsid="SCR010-B31" data-testid="wsave" onclick="testCaseSend()" style="' +
     btn +
     ';font-weight:700;' +
     'font-size:var(--fs-2);padding:5px 15px;color:#fff;background:' +
@@ -4699,7 +4699,7 @@ function testCaseFormHTML() {
     K.verb +
     '</button>' +
     (kind === 'case'
-      ? '<button onclick="testCaseSend(\'pass\')" style="' +
+      ? '<button data-cbsid="SCR010-B32" onclick="testCaseSend(\'pass\')" style="' +
         btn +
         ';color:var(--ok-2,#1B7F4B);background:var(--ok-tint,#eaf5ee)" ' +
         'title="Write it down and record that you have just run it, and it passed">' +
@@ -5042,11 +5042,11 @@ function testScrHTML() {
   var mode = testScrSortGet();
   h +=
     '<div style="margin:2px 0 8px">' +
-    '<button onclick="testScrSort(\'menu\')" title="The order the rail is in \u2014 walk the product" style="' +
+    '<button data-cbsid="SCR010-B33" onclick="testScrSort(\'menu\')" title="The order the rail is in \u2014 walk the product" style="' +
     sb +
     (mode !== 'attention' ? son : soff) +
     '">In menu order</button>' +
-    '<button onclick="testScrSort(\'attention\')" title="Failures first, then screens with no case" style="' +
+    '<button data-cbsid="SCR010-B34" onclick="testScrSort(\'attention\')" title="Failures first, then screens with no case" style="' +
     sb +
     (mode === 'attention' ? son : soff) +
     '">What needs attention</button>' +
@@ -5102,7 +5102,7 @@ function testScrHTML() {
         num(x.inc, 'var(--disp,#B3261E)') +
         num(x.req, 'var(--grey-2,#545A61)') +
         /* ⭐ the door is ON THE ROW: the screen is named right there, so nothing has to be chosen twice */
-        '<td style="padding:4px 6px;text-align:end"><button onclick="testCaseFor(\'' +
+        '<td style="padding:4px 6px;text-align:end"><button data-cbsid="SCR010-B35" onclick="testCaseFor(\'' +
         x.code +
         "', " +
         JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;') +
@@ -5437,7 +5437,7 @@ function testCaseDetailHTML(c) {
      header and a plain link carries none, which is the "404, then unauthorised" this already cost once */
   if (c.evidence_id) {
     h +=
-      '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;' +
+      '<button data-cbsid="SCR010-B36" class="btn" style="display:inline-block;width:auto;margin-top:5px;' +
       'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' +
       "'" +
       testJs(c.evidence_id) +
@@ -5488,7 +5488,7 @@ function testCaseDetailHTML(c) {
       (x.observed ? '<div style="' + pad + '">' + esc(x.observed) + '</div>' : '') +
       (x.requirement ? '<div style="' + pad + '">' + esc(x.requirement) + '</div>' : '') +
       (x.evidence_id
-        ? '<button class="btn" style="display:inline-block;width:auto;margin-top:4px;' +
+        ? '<button data-cbsid="SCR010-B37" class="btn" style="display:inline-block;width:auto;margin-top:4px;' +
           'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' +
           "'" +
           esc(x.evidence_id) +
@@ -5556,11 +5556,11 @@ function testCaseListHTML(code) {
       ['all', 'All', all.length]
     ]
       .map(function (x) {
-        return '<button onclick="testCaseFilter(\'' + x[0] + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+        return '<button data-cbsid="SCR010-B38" onclick="testCaseFilter(\'' + x[0] + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       })
       .join('') +
     (shutAll.length
-      ? '<button onclick="testScrShutToggle(\'case\')" style="' + chip + off + '">' + (showShut ? 'hide ' : 'show ') + shutAll.length + ' closed</button>'
+      ? '<button data-cbsid="SCR010-B39" onclick="testScrShutToggle(\'case\')" style="' + chip + off + '">' + (showShut ? 'hide ' : 'show ') + shutAll.length + ' closed</button>'
       : '') +
     '</div>';
 
@@ -5586,7 +5586,7 @@ function testCaseListHTML(code) {
                   (item.closed_by ? ' · ' + esc(item.closed_by) : '') +
                   '</div>'
                 : '') +
-              ' <button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
+              ' <button data-cbsid="SCR010-B40" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
               'padding:1px 8px" onclick="testHandClose(\'' +
               testJs(item.case_key) +
               '\',true)">Open again' +
@@ -5635,7 +5635,7 @@ function testCaseListHTML(code) {
             '<button data-cbsid="CMP010" class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\'' +
             esc(item.case_key) +
             '\')">Open</button>' +
-            '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\'' +
+            '<button data-cbsid="SCR010-B41" class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\'' +
             esc(item.case_key) +
             '\')">Re-test</button>' +
             (CBTEST.openCase === item.case_key ? '<div style="flex:1 1 100%">' + testCaseDetailHTML(item) + '</div>' : '') +
@@ -5648,7 +5648,7 @@ function testCaseListHTML(code) {
         return (
           '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;' +
           'border-top:1px solid var(--line,#efece4)">' +
-          '<button onclick="testCaseOpen(\'' +
+          '<button data-cbsid="SCR010-B42" onclick="testCaseOpen(\'' +
           testJs(item.case_key) +
           '\')" title="Open it" ' +
           'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;' +
@@ -5663,7 +5663,7 @@ function testCaseListHTML(code) {
            * clicks away behind a caret, which for the most valuable thing on a finding is the same as absent.
            */
           (item.evidence_id
-            ? '<button title="See the screenshot" onclick="testShotView(\'' +
+            ? '<button data-cbsid="SCR010-B43" title="See the screenshot" onclick="testShotView(\'' +
               testJs(item.evidence_id) +
               '\')" style="font-size:var(--fs-1);background:none;border:0;cursor:pointer;padding:0">' +
               '\ud83d\uddbc\ufe0f</button>'
@@ -5673,7 +5673,7 @@ function testCaseListHTML(code) {
           esc(item.title || '') +
           '</div>' +
           (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: ' + esc(exp) + '</div>' : '') +
-          '<input id="cbt_n_' +
+          '<input data-cbsid="SCR010-I11" id="cbt_n_' +
           esc(item.case_key) +
           '" placeholder="what you are seeing instead \u2014 leave ' +
           'empty if it matched" style="width:100%;font:inherit;font-size:var(--fs-1);margin-top:3px;' +
@@ -5688,11 +5688,11 @@ function testCaseListHTML(code) {
           '</span>' +
           '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">' +
           testMarkBtn(item.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)') +
-          '<button class="btn" onclick="testFromCase(\'' +
+          '<button data-cbsid="SCR010-B44" class="btn" onclick="testFromCase(\'' +
           testJs(item.case_key) +
           "','inc')\" " +
           'style="color:var(--disp);background:var(--danger-tint,#fbeceb)">Incident</button>' +
-          '<button class="btn" onclick="testFromCase(\'' +
+          '<button data-cbsid="SCR010-B45" class="btn" onclick="testFromCase(\'' +
           testJs(item.case_key) +
           "','req')\" " +
           'style="color:var(--grey-2);background:var(--neutral-tint)">Requirement</button>' +
@@ -5709,7 +5709,7 @@ function testCaseListHTML(code) {
            * ⚠️ SMALL AND LAST. Pass, Incident and Requirement are what a tester does most; Close is what they do
            * once. Giving it the same weight would put a destructive action beside the three constructive ones.
            */
-          '<button class="btn" onclick="testHandClose(\'' +
+          '<button data-cbsid="CMP005" data-cbmount="SCR010-U105" class="btn" onclick="testHandClose(\'' +
           testJs(item.case_key) +
           '\',false)" ' +
           'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" ' +
@@ -6467,7 +6467,7 @@ function testBehindHTML(code) {
             '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' +
             esc(x.label) +
             '</span>' +
-            '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
+            '<button data-cbsid="SCR010-B46" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
             'onclick="testCoverCase(\'' +
             testJs(code) +
             "','" +
@@ -6486,7 +6486,7 @@ function testBehindHTML(code) {
     if (done.length) {
       var openDone = !!CBTEST.coverDone;
       h +=
-        '<button onclick="testCoverDone()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;' +
+        '<button data-cbsid="SCR010-B47" onclick="testCoverDone()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;' +
         'margin-top:9px;background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">' +
         (openDone ? '▾ ' : '▸ ') +
         '<b>' +
@@ -6532,7 +6532,7 @@ function testBehindHTML(code) {
    */
   var _tech = !!CBTEST.behindTech;
   h +=
-    '<button onclick="testBehindTech()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;' +
+    '<button data-cbsid="SCR010-B48" onclick="testBehindTech()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;' +
     'margin-top:13px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8);display:block;width:100%;' +
     'background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">' +
     (_tech ? '▾ ' : '▸ ') +
@@ -6549,7 +6549,7 @@ function testBehindHTML(code) {
     h += testNotes([_g[2]], _nRed || !_nT ? 'bad' : _nRun && _nRun * 2 >= _nT ? 'ok' : 'warn');
     h +=
       '<div style="margin-top:7px">' +
-      '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" ' +
+      '<button data-cbsid="SCR010-B49" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" ' +
       'onclick="testCoverRaise(\'' +
       testJs(code) +
       '\')">✎ Raise this as a coverage gap</button>' +
@@ -6633,7 +6633,7 @@ function testBehindHTML(code) {
             var on = tab === item[0];
             /* ⭐ THE NUMBER IS THE TAB, big, above the word — a count you can press, which is what was asked */
             return (
-              '<button onclick="testCovSetTab(\'' +
+              '<button data-cbsid="SCR010-B50" onclick="testCovSetTab(\'' +
               item[0] +
               '\')" style="font:inherit;cursor:pointer;' +
               'border:1px solid ' +
@@ -7207,7 +7207,7 @@ function testDiagHTML() {
       return (
         '<tr style="border-top:1px solid var(--line,#efece4)">' +
         '<td style="padding:4px 6px 4px 0">' +
-        '<button onclick="testCallOpen(' +
+        '<button data-cbsid="SCR010-B51" onclick="testCallOpen(' +
         "'" +
         testJs(item.rid || '') +
         "'" +
@@ -7659,12 +7659,12 @@ function testDiagBarHTML() {
   return (
     '<div style="margin:0 0 8px;padding-bottom:7px;border-bottom:1px solid var(--line,#efece4)">' +
     '<div>' +
-    '<button data-testid="diag-raise" onclick="testDiagRaise()" style="' +
+    '<button data-cbsid="SCR010-B52" data-testid="diag-raise" onclick="testDiagRaise()" style="' +
     chip +
     doer +
     '" ' +
     'title="Fill the Create form with these numbers">✎ Write this up</button>' +
-    '<button data-testid="diag-snapshot" onclick="testDumpSave()" style="' +
+    '<button data-cbsid="SCR010-B53" data-testid="diag-snapshot" onclick="testDumpSave()" style="' +
     chip +
     doer +
     '" ' +
@@ -7672,12 +7672,12 @@ function testDiagBarHTML() {
     /* ⚠️ THE ONE FACT THAT WAS NOT ALREADY ON A CHIP rides on the two destructive ones, because it is the
        question a person asks before pressing them: whose readings am I throwing away? They are this
        browser's, under this login. It was the fourth bullet; it is not lost, it moved to where it is asked. */
-    '<button data-testid="diag-clear-screen" onclick="testDiagClear()" style="' +
+    '<button data-cbsid="SCR010-B54" data-testid="diag-clear-screen" onclick="testDiagClear()" style="' +
     chip +
     undo +
     '" ' +
     'title="Clear this screen’s readings — only yours, in this browser">⟲ Clear this screen</button>' +
-    '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' +
+    '<button data-cbsid="SCR010-B55" data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' +
     chip +
     undo +
     '" ' +
@@ -7828,7 +7828,7 @@ function testTraceChip() {
       'title="Server time and database trips per call \u2014 your calls only">\u23f1 Timings ON \u00b7 ' +
       left +
       ' min left</span>' +
-      '<button data-testid="trace-off" onclick="testTraceSet(0)" style="' +
+      '<button data-cbsid="SCR010-B56" data-testid="trace-off" onclick="testTraceSet(0)" style="' +
       chip +
       'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)" ' +
       'title="Stop timing now">Stop</button>'
@@ -7843,7 +7843,7 @@ function testTraceChip() {
     [10, 15, 30]
       .map(function (item) {
         return (
-          '<button data-testid="trace-' +
+          '<button data-cbsid="SCR010-B57" data-testid="trace-' +
           item +
           '" onclick="testTraceSet(' +
           item +
@@ -7887,7 +7887,7 @@ function testTraceHTML() {
       '<b title="It stops by itself">\u23f1 tracing \u00b7 ~' +
       mins +
       ' min</b>' +
-      ' <button onclick="testTraceSet(0)" style="' +
+      ' <button data-cbsid="SCR010-B58" onclick="testTraceSet(0)" style="' +
       btn +
       ';margin-inline-start:6px">Stop</button>' +
       '</div>'
@@ -7898,7 +7898,7 @@ function testTraceHTML() {
     '<b title="Show server time and database trips per call; yours only, stops by itself">\u23f1 Timings off</b> ' +
     [10, 15, 30]
       .map(function (item) {
-        return '<button onclick="testTraceSet(' + item + ')" style="' + btn + ';margin-top:5px">' + item + ' min</button>';
+        return '<button data-cbsid="SCR010-B59" onclick="testTraceSet(' + item + ')" style="' + btn + ';margin-top:5px">' + item + ' min</button>';
       })
       .join('') +
     '</div>'
@@ -8299,7 +8299,7 @@ function testScrRaisedHTML(code, kind) {
     /* ⚠️ the closed ones are not fetched again — they are already here; what changes is whether they are DRAWN.
        "On demand" is about the reader's attention, not about the network. */
     (shut
-      ? ' · <button onclick="testScrShutToggle(\'' +
+      ? ' · <button data-cbsid="SCR010-B60" onclick="testScrShutToggle(\'' +
         kind +
         '\')" style="font:inherit;' +
         'font-size:var(--fs-1);border:0;background:none;padding:0;cursor:pointer;color:var(--grey-2);' +
@@ -8504,7 +8504,7 @@ function screenCasesPaint() {
     off = TUI.off;
   var seg = function (id, label, n) {
     return (
-      '<button onclick="testArea(\'' +
+      '<button data-cbsid="SCR010-B61" onclick="testArea(\'' +
       id +
       '\')" style="' +
       tab +
@@ -8540,7 +8540,7 @@ function screenCasesPaint() {
     '</span>' +
     /* ⭐ a stable hook, as the Manager's own More select has — a spec keyed to the VERB on a segment breaks
        every time the copy is edited, and this copy is still being edited */
-    '<select data-testid="area-more" onchange="testArea(this.value)" ' +
+    '<select data-cbsid="SCR010-S08" data-testid="area-more" onchange="testArea(this.value)" ' +
     'title="Everything else about this screen" ' +
     'style="font:inherit;font-size:var(--fs-1);padding:4px 8px;cursor:pointer;' +
     'border:1px solid var(--grey-4,#646A72);border-radius:8px;' +
@@ -9286,7 +9286,7 @@ function testWorkHTML() {
      second, and one id for both is a control nothing outside the page can name unambiguously. */
   var seg = function (id, label, count, row) {
     return (
-      '<button data-testid="' +
+      '<button data-cbsid="SCR010-B62" data-testid="' +
       (row || 'workf') +
       '-' +
       id +
@@ -9315,7 +9315,7 @@ function testWorkHTML() {
       '<b title="Marked fixed by someone. Look again, then confirm — until then it is a claim">' +
       mine.length +
       ' waiting for you to retest</b>' +
-      ' <button onclick="testWorkFilter(\'mine\')" style="' +
+      ' <button data-cbsid="SCR010-B63" onclick="testWorkFilter(\'mine\')" style="' +
       chip +
       'background:var(--warn-2,#8a6100);color:#fff">Show them</button></div>';
   }
@@ -9367,7 +9367,7 @@ function testWorkRowHTML(x) {
   var act = 'display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px';
   var b = function (label, onclick, colour, title) {
     return (
-      '<button class="btn" style="' +
+      '<button data-cbsid="SCR010-B64" class="btn" style="' +
       act +
       (colour ? ';border-color:' + colour + ';color:' + colour : '') +
       '" title="' +
@@ -9424,7 +9424,7 @@ function testWorkRowHTML(x) {
    */
   if (x.inc && (x.status === 'failed' || x.status === 'todo')) {
     acts +=
-      '<select onchange="testIncSev(\'' +
+      '<select data-cbsid="SCR010-S09" onchange="testIncSev(\'' +
       id +
       '\', this.value)" title="Re-grade it" ' +
       'style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid var(--grey-4,#646A72);' +
@@ -9563,7 +9563,7 @@ function testHandHTML() {
       '<b title="Answered by someone. Look, then confirm — until then it is a claim">' +
       waiting.length +
       ' fixed \u00b7 waiting for your retest</b>' +
-      ' <button onclick="testHandFilter(\'verify\')" style="font:inherit;font-size:var(--fs-1);' +
+      ' <button data-cbsid="SCR010-B65" onclick="testHandFilter(\'verify\')" style="font:inherit;font-size:var(--fs-1);' +
       'margin-inline-start:6px;padding:1px 8px;border-radius:7px;cursor:pointer;border:1px solid ' +
       'var(--ok-2,#1B7F4B);background:var(--ok-2,#1B7F4B);color:#fff">Show them</button></div>';
   }
@@ -9577,7 +9577,7 @@ function testHandHTML() {
       ['all', 'All', pool.length]
     ]
       .map(function (x) {
-        return '<button onclick="testHandFilter(\'' + x[0] + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+        return '<button data-cbsid="SCR010-B66" onclick="testHandFilter(\'' + x[0] + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       })
       .join('') +
     '<span style="display:inline-block;width:14px"></span>' +
@@ -9586,7 +9586,7 @@ function testHandHTML() {
       ['mine', 'Mine', all.filter(mine).length]
     ]
       .map(function (x) {
-        return '<button onclick="testFindSetWho(\'' + x[0] + '\')" style="' + chip + (who === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+        return '<button data-cbsid="SCR010-B67" onclick="testFindSetWho(\'' + x[0] + '\')" style="' + chip + (who === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       })
       .join('') +
     '</div>';
@@ -9685,7 +9685,7 @@ function testHandHTML() {
         /* ── the actions ── */
         '<div style="margin-top:5px">' +
         (x.screen
-          ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
+          ? '<button data-cbsid="SCR010-B68" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px" onclick="testHandOpen(' +
             "'" +
             testJs(x.screen) +
@@ -9695,7 +9695,7 @@ function testHandHTML() {
             '</button> '
           : '') +
         (x.shot
-          ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
+          ? '<button data-cbsid="SCR010-B69" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px" onclick="testShotView(' +
             "'" +
             testJs(x.shot) +
@@ -9709,12 +9709,12 @@ function testHandHTML() {
          * name. The cheap button is the one that gets pressed, so make BOTH cheap.
          */
         (ver
-          ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
+          ? '<button data-cbsid="SCR010-B70" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px;border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" ' +
             'onclick="testVerify(\'' +
             testJs(String(x.id || '')) +
             '\',true)">\u2713 Retested \u2014 it holds</button> ' +
-            '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
+            '<button data-cbsid="SCR010-B71" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px;border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" ' +
             'onclick="testVerify(\'' +
             testJs(String(x.id || '')) +
@@ -9724,7 +9724,7 @@ function testHandHTML() {
              * closed, and the two decisions are different facts — so it gets both and neither is called "Close".
              */
             shut
-            ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
+            ? '<button data-cbsid="SCR010-B72" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
               'padding:2px 9px" onclick="testFindClose(\'' +
               x.kind +
               "','" +
@@ -9733,32 +9733,32 @@ function testHandHTML() {
               testJs(String(x.key || '')) +
               '\',true)">Open again</button>'
             : x.kind === 'req'
-              ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
+              ? '<button data-cbsid="SCR010-B73" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
                 'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" ' +
                 'onclick="testReqSet(\'' +
                 testJs(String(x.id || '')) +
                 "','accepted')\">" +
                 '\u2713 Accept it</button> ' +
-                '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
+                '<button data-cbsid="SCR010-B74" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
                 'border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" ' +
                 'onclick="testReqSet(\'' +
                 testJs(String(x.id || '')) +
                 "','rejected')\">" +
                 '\u2717 Reject it</button>'
               : x.kind === 'inc'
-                ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
+                ? '<button data-cbsid="SCR010-B75" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
                   'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" ' +
                   'title="You have looked and it is done. This ends it and takes it off the board." ' +
                   "onclick=\"testFindClose('inc','" +
                   testJs(String(x.id || '')) +
                   "','',false)\">" +
                   '\u2713 Close it</button> ' +
-                  '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
+                  '<button data-cbsid="SCR010-B76" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
                   'title="You believe it is fixed \u2014 the person who raised it is asked to retest" ' +
                   'onclick="testFindFixed(\'' +
                   testJs(String(x.id || '')) +
                   '\')">Mark it fixed</button>'
-                : '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
+                : '<button data-cbsid="CMP005" data-cbmount="SCR010-U105" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
                   'onclick="testFindClose(\'' +
                   x.kind +
                   "','" +
@@ -9858,12 +9858,12 @@ function testViewToggleHTML() {
     '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:7px;' +
     'overflow:hidden">' +
     /* ⭐ FIRST, because it is the one that answers "what is waiting for me" */
-    '<button data-testid="view-work" onclick="testSetView(\'work\')" title="Everything you have written, ' +
+    '<button data-cbsid="SCR010-B77" data-testid="view-work" onclick="testSetView(\'work\')" title="Everything you have written, ' +
     'with its status and what happens next" style="' +
     seg +
     (v === 'work' ? TUI.on : TUI.off) +
     '">Worklist</button>' +
-    '<button data-testid="view-list" onclick="testSetView(\'list\')" title="Every case, grouped by area" ' +
+    '<button data-cbsid="SCR010-B78" data-testid="view-list" onclick="testSetView(\'list\')" title="Every case, grouped by area" ' +
     'style="' +
     seg +
     'border-inline-start:1px solid var(--grey-4,#646A72);' +
@@ -9872,7 +9872,7 @@ function testViewToggleHTML() {
     '</span>' +
     /* ⚠️ every option paints its own ground: when the select is inked the options inherit white text and the
        dropdown opens white-on-white in Chrome — invisible, and only once something is chosen */
-    '<select data-testid="view-more" onchange="testSetView(this.value)" ' +
+    '<select data-cbsid="SCR010-S10" data-testid="view-more" onchange="testSetView(this.value)" ' +
     'title="Everything else the board can show" ' +
     'style="font:inherit;font-size:var(--fs-1);padding:3px 8px;cursor:pointer;' +
     'border:1px solid var(--grey-4,#646A72);border-radius:7px;' +
@@ -9930,7 +9930,7 @@ function testSetupHTML() {
   h += testSec('This sitting');
   h += row(
     'Who is testing',
-    '<input type="text" placeholder="' +
+    '<input data-cbsid="SCR010-I12" type="text" placeholder="' +
       esc(testDefaultWho()) +
       '" value="' +
       esc(testWho()) +
@@ -9941,7 +9941,7 @@ function testSetupHTML() {
   );
   h += row(
     'How it is being run',
-    '<select onchange="testSetKind(this.value)" style="' +
+    '<select data-cbsid="SCR010-S11" onchange="testSetKind(this.value)" style="' +
       sel +
       '">' +
       [
@@ -9963,7 +9963,7 @@ function testSetupHTML() {
      closes — and then nothing is tested at all. It makes the gap impossible to miss and counts it down. */
   h += row(
     'Focus \u2014 the area this sitting should cover',
-    '<select onchange="testSetFocus(this.value)" style="' +
+    '<select data-cbsid="SCR010-S12" onchange="testSetFocus(this.value)" style="' +
       sel +
       '">' +
       '<option value="">Anywhere</option>' +
@@ -9990,7 +9990,7 @@ function testSetupHTML() {
   h += testSec('What the board shows');
   h += row(
     'Kind of test',
-    '<select onchange="testSetKindFilter(this.value)" style="' +
+    '<select data-cbsid="SCR010-S13" onchange="testSetKindFilter(this.value)" style="' +
       sel +
       '">' +
       (function () {
@@ -10026,7 +10026,7 @@ function testSetupHTML() {
   );
   h += row(
     'Area',
-    '<select onchange="testSetArea(this.value)" style="' +
+    '<select data-cbsid="SCR010-S14" onchange="testSetArea(this.value)" style="' +
       sel +
       '">' +
       '<option value=""' +
@@ -10058,7 +10058,7 @@ function testSetupHTML() {
      aim at a 16-pixel triangle to get it */
   h += row(
     'Size',
-    '<select onchange="testSize(this.value)" style="' +
+    '<select data-cbsid="SCR010-S15" onchange="testSize(this.value)" style="' +
       sel +
       '">' +
       [
@@ -10082,7 +10082,7 @@ function testSetupHTML() {
      * and filed; squeezing ten clauses into a 420px panel makes it unreadable in the one place it has to be
      * legible — on paper, to somebody who was not here.
      */
-    '<button onclick="testReport()" title="Test Completion Report (ISO/IEC/IEEE 29119-3)" ' +
+    '<button data-cbsid="SCR010-B79" onclick="testReport()" title="Test Completion Report (ISO/IEC/IEEE 29119-3)" ' +
     'style="' +
     TEST_BTN_SMALL +
     '">\u2637 Report</button>' +
@@ -10091,14 +10091,14 @@ function testSetupHTML() {
      * front of. This is the app booted with the lab open and its own shell hidden — a named target, so
      * pressing twice raises the window already open instead of stacking a second one.
      */
-    '<button onclick="testPopOut()" title="Board in its own window \u2014 app on one screen, scripts on the other" style="' +
+    '<button data-cbsid="SCR010-B80" onclick="testPopOut()" title="Board in its own window \u2014 app on one screen, scripts on the other" style="' +
     TEST_BTN_SMALL +
     '">\u2197 Own window</button>' +
-    '<button onclick="testAddOpen()" title="Add a case for something you just found" ' +
+    '<button data-cbsid="SCR010-B81" onclick="testAddOpen()" title="Add a case for something you just found" ' +
     'style="' +
     TEST_BTN_SMALL +
     '">+ Case</button>' +
-    '<button onclick="testGuide(true)" title="How to use this" ' +
+    '<button data-cbsid="SCR010-B82" onclick="testGuide(true)" title="How to use this" ' +
     'style="' +
     TEST_BTN_SMALL +
     '">\u24d8 Guide</button>' +
@@ -10177,7 +10177,7 @@ function testMenuHTML(shown) {
         '<b>No door on this board yet.</b>' +
         /* ⚠️ the reassurance stays on the button face, not only in the tip: nobody presses an unfamiliar
            button on a board holding real results without knowing it cannot lose them */
-        '<div><button class="btn pri" onclick="testSeed()" ' +
+        '<div><button data-cbsid="SCR010-B83" class="btn pri" onclick="testSeed()" ' +
         'title="It is an upsert \u2014 every result already recorded stays exactly where it is" ' +
         'style="margin-top:9px;font-size:var(--fs-2);padding:6px 14px">Load cases \u00b7 safe</button></div>' +
         '</div>'
@@ -10187,7 +10187,7 @@ function testMenuHTML(shown) {
       '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">' +
       '<b title="Journey steps and automated files belong to no door, so never show here">' +
       'No door matches this filter.</b><br>' +
-      '<button onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>'
+      '<button data-cbsid="SCR010-B84" onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>'
     );
   }
 
@@ -10215,7 +10215,7 @@ function testMenuHTML(shown) {
      * collapsing a door here silently collapsed it on a board somebody else is reading.
      */
     h +=
-      '<div onclick="testFold(\'' +
+      '<div data-cbsid="SCR010-C03" onclick="testFold(\'' +
       testJs(gkey) +
       '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">' +
       '<span style="' +
@@ -10247,7 +10247,7 @@ function testMenuHTML(shown) {
       var dkey = 'menu:' + item.name + ':' + d.name;
       var dopen = testSectionOpen(dkey, d.cases.length);
       h +=
-        '<div onclick="testFold(\'' +
+        '<div data-cbsid="SCR010-C04" onclick="testFold(\'' +
         testJs(dkey) +
         '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">' +
         '<span style="' +
@@ -10294,7 +10294,7 @@ function testMenuHTML(shown) {
           '<div style="border-inline-start:2px solid ' +
           (l ? (l.status === 'fail' || l.status === 'blocked' ? 'var(--disp)' : 'var(--ok-2)') : 'var(--line,#e7e3d8)') +
           ';margin-inline-start:26px">' +
-          '<div onclick="testOpen(\'' +
+          '<div data-cbsid="SCR010-C05" onclick="testOpen(\'' +
           testJs(entry.case_key) +
           '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">' +
           '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
@@ -10368,11 +10368,11 @@ function testCaseBodyHTML(c) {
   /* ⭐ EVIDENCE IS A FIELD OF ITS OWN, because Athi asked for it and because "what you saw" and "where to look at
      it" are different sentences. A note is prose; evidence is a bill number, a spec name, a screenshot filename. */
   h +=
-    '<input type="text" id="cbt_n_' +
+    '<input data-cbsid="SCR010-I13" type="text" id="cbt_n_' +
     esc(c.case_key) +
     '" placeholder="What did you see?" ' +
     'style="width:100%;margin-top:8px;font-size:var(--fs-2);padding:5px 7px">' +
-    '<input type="text" id="cbt_e_' +
+    '<input data-cbsid="SCR010-I14" type="text" id="cbt_e_' +
     esc(c.case_key) +
     '" placeholder="Evidence — bill number, screenshot" ' +
     'style="width:100%;margin-top:5px;font-size:var(--fs-2);padding:5px 7px">' +
@@ -10396,7 +10396,7 @@ function testCaseBodyHTML(c) {
 }
 function testMarkBtn(key, status, label, fg, bg) {
   return (
-    '<button class="btn" onclick="testMark(\'' +
+    '<button data-cbsid="SCR010-B85" class="btn" onclick="testMark(\'' +
     testJs(key) +
     "','" +
     status +
@@ -10724,7 +10724,7 @@ function testMarkLost(key, status, err) {
     tone: 'bad',
     text:
       esc(tx('Not recorded') + ' — ' + key + ' (' + status + '). ' + ((err && err.message) || '')) +
-      ' <a href="#" onclick="testRetryUnsent();return false" style="color:inherit;font-weight:700">Send again</a>'
+      ' <a data-cbsid="SCR010-C06" href="#" onclick="testRetryUnsent();return false" style="color:inherit;font-weight:700">Send again</a>'
   };
   testPaint();
   if (typeof toast === 'function') toast(tx('Not recorded') + ' — ' + ((err && err.message) || ''), true);
@@ -10938,26 +10938,26 @@ function testAddHTML() {
       : '<span title="Press + on an area row to be sure, or edit it below.">\u26a0 suggested</span>') +
     '</div>' +
     '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Area</label>' +
-    '<input type="text" id="cbt_a_mod" value="' +
+    '<input data-cbsid="SCR010-I15" type="text" id="cbt_a_mod" value="' +
     esc(suggested) +
     '" ' +
     'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">' +
     '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">What should happen</label>' +
-    '<input type="text" id="cbt_a_title" placeholder="e.g. A local supplier cannot be sent a chit" ' +
+    '<input data-cbsid="SCR010-I16" type="text" id="cbt_a_title" placeholder="e.g. A local supplier cannot be sent a chit" ' +
     'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">' +
     '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Do this</label>' +
-    '<input type="text" id="cbt_a_do" placeholder="The one action that shows it" ' +
+    '<input data-cbsid="SCR010-I17" type="text" id="cbt_a_do" placeholder="The one action that shows it" ' +
     'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">' +
     '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">You should see</label>' +
-    '<input type="text" id="cbt_a_see" placeholder="What a correct answer looks like" ' +
+    '<input data-cbsid="SCR010-I18" type="text" id="cbt_a_see" placeholder="What a correct answer looks like" ' +
     'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">' +
     '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Why this case exists</label>' +
-    '<input type="text" id="cbt_a_note" placeholder="What went wrong, in your words" ' +
+    '<input data-cbsid="SCR010-I19" type="text" id="cbt_a_note" placeholder="What went wrong, in your words" ' +
     'style="width:100%;margin-bottom:9px;padding:5px 7px;font-size:var(--fs-2)">' +
     '<div style="display:flex;gap:6px">' +
     /* ⚠️ said on the button, before they press it: a case written here is real but is not yet in the
        document in the repository, so it is not in the printed script either */
-    '<button class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)" ' +
+    '<button data-cbsid="SCR010-B86" class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)" ' +
     'title="Goes on the board now. For the printed script, also add it to TEST-CASES-V2.js">Add the case</button>' +
     '<button data-cbsid="CMP003" class="btn" onclick="testAddClose()" style="font-size:var(--fs-2)">Cancel</button>' +
     '</div></div>'

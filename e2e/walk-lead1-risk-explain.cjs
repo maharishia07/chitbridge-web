@@ -82,13 +82,17 @@ const run = async (w) => {
   const noScroll = () => page.evaluate(() => ({ y: document.documentElement.scrollHeight <= window.innerHeight + 1, x: document.documentElement.scrollWidth <= window.innerWidth + 1 }));
   const openBooks = async (pg, loc) => { await pg.goto(base + '/network.html'); await pg.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 }); await pg.evaluate((l) => window.CBLocale.setLocale(l), loc); /* the region the person chose: CBLocale's own setter, after the page's boot */ await pg.click(T('nw-books-' + MEMBER)); await pg.waitForSelector(T('bv-band'), { timeout: 10000 }); await pg.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await pg.waitForTimeout(500); };
   const riskCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => { const n = r.querySelector('[data-testid="bv-risk"]'); return n ? Number(n.textContent) : 0; }));
+  const keyed = (o, keys) => keys.map((n) => n + '=' + o[n]).join(',');
   const entryCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d\d/) || [''])[0]));
+  const byKey = async (pg) => { const k = await entryCol(pg), c = await riskCol(pg), o = {}; k.forEach((n, i) => { o[n] = c[i]; }); return o; }; /* the rows are sorted by risk now: compare by entry number, never by position */
 
   await page.setViewportSize(WIDE);
   await openBooks(page, 'en-AU');
   await w.step('R1', 'Day book, region Australia (Sat+Sun): the Risk column counts E1..E8 = 3,1,3,2,3,1,3,0 then five clean rows 0, as hand-computed', async () => {
-    const got = await riskCol(page), names = await entryCol(page);
-    return { ok: got.join(',') === '3,1,3,2,3,1,3,0,0,0,0,0,0' && names.length === 13, saw: names.join(',') + ' -> ' + got.join(',') + ' | ' + (await page.evaluate(() => 'locale ' + window.CBLocale.locale() + ' weekend ' + JSON.stringify((window.CBLocale.weekInfo() || {}).weekend) + ' ls ' + localStorage.getItem('cb_locale') + ' tz ' + Intl.DateTimeFormat().resolvedOptions().timeZone)) };
+    const got = await riskCol(page), names = await entryCol(page), o = await byKey(page);
+    const want = { 'JV-E01': 3, 'JV-E02': 1, 'JV-E03': 3, 'JV-E04': 2, 'JV-E05': 3, 'JV-E06': 1, 'JV-E07': 3, 'JV-E08': 0, 'JV-E09': 0, 'JV-E10': 0, 'JV-E11': 0, 'JV-E12': 0, 'JV-E13': 0 };
+    const ks = Object.keys(want);
+    return { ok: names.length === 13 && keyed(o, ks) === keyed(want, ks), saw: names.join(',') + ' -> ' + got.join(',') + ' | ' + (await page.evaluate(() => 'locale ' + window.CBLocale.locale() + ' weekend ' + JSON.stringify((window.CBLocale.weekInfo() || {}).weekend) + ' ls ' + localStorage.getItem('cb_locale') + ' tz ' + Intl.DateTimeFormat().resolvedOptions().timeZone)) };
   });
   await w.step('R2', 'the rule sentence is on the page and names the fixed constants (7 days, 8 pm to 7 am, multiple of 100)', async () => {
     const note = await txt(T('bv-risk-note'));
@@ -97,7 +101,7 @@ const run = async (w) => {
   await w.step('R3', 'Any risk keeps 7 rows (E1..E7), not the six clean ones', async () => {
     await page.click(T('cbl-filters-books-grant-daybook')); await page.selectOption(T('listctl-filter-risk'), 'any'); await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     const names = await entryCol(page);
-    return { ok: names.join(',') === 'JV-E01,JV-E02,JV-E03,JV-E04,JV-E05,JV-E06,JV-E07', saw: names.join(',') };
+    return { ok: names.slice().sort().join(',') === 'JV-E01,JV-E02,JV-E03,JV-E04,JV-E05,JV-E06,JV-E07', saw: names.join(',') };
   });
   await w.step('R4', 'Risk sorts: the first press = most risks first (75b665c3: 3,3,3,3,2,1,1), a second press reverses it', async () => {
     const head = page.locator('.cbl-hc .sort', { hasText: 'Risk' }).first();
@@ -138,9 +142,9 @@ const run = async (w) => {
   S.set = FRI;
   await w.step('W1', 'Day book, region Saudi Arabia (Fri+Sat weekend): Friday and Saturday flag, Sunday does not; Thursday 21:30 UTC (Friday 00:30 shop time) flags twice (F1..F4 = 1,1,0,2)', async () => {
     await openBooks(p2, 'ar-SA');
-    const got = await riskCol(p2);
+    const got = await riskCol(p2), o = await byKey(p2), fk = ['JV-F01', 'JV-F02', 'JV-F03', 'JV-F04'];
     const wk = await p2.evaluate(() => (window.CBLocale && window.CBLocale.weekInfo() || {}).weekend);
-    return { ok: got.join(',') === '1,1,0,2' && String(wk) === '5,6', saw: 'weekend ' + wk + ' -> ' + got.join(',') + ' | ' + (await p2.evaluate(() => 'locale ' + window.CBLocale.locale() + ' ls ' + localStorage.getItem('cb_locale'))) };
+    return { ok: keyed(o, fk) === 'JV-F01=1,JV-F02=1,JV-F03=0,JV-F04=2' && Object.keys(o).length === 4 && String(wk) === '5,6', saw: 'weekend ' + wk + ' -> ' + got.join(',') + ' | ' + (await p2.evaluate(() => 'locale ' + window.CBLocale.locale() + ' ls ' + localStorage.getItem('cb_locale'))) };
   });
   await w.step('X1', 'every /api/books answer the stand-in served matched the api contract', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
 };

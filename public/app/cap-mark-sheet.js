@@ -86,9 +86,9 @@
     if (altered) return markKit.markText(markKit.MARK_WORDS.altered);
     return record.label || markKit.markText(markKit.CLASS[markClass].word);
   }
-  /** the sheet's title: the record in words as the page last showed it, else the host's title, else a plain fallback */
+  /** the sheet's title: the host's own (a bell row names entry and client), else the record in words as the page last showed it, else a plain fallback */
   function sheetTitle(state, id, options) {
-    return state.names[id] || options.title || (state.cfg.title && state.cfg.title(id)) || markKit.markText(markKit.MARK_WORDS.entryFallback);
+    return options.title || state.names[id] || (state.cfg.title && state.cfg.title(id)) || markKit.markText(markKit.MARK_WORDS.entryFallback);
   }
   /** the thread's reply box is the composer when there is a thread, the seat may reply and the Query is still open */
   function replyAllowed(thread, actions, markClass) {
@@ -117,7 +117,7 @@
     var dialog = markKit.doc.createElement('dialog');
     dialog.className = 'mk-sheet';
     dialog.setAttribute('data-cbsid', 'CMP059-D01');
-    dialog.setAttribute('data-pop', 'CMP059');
+    dialog.setAttribute('data-pop', 'POP213');
     dialog.setAttribute('data-testid', 'mk-sheet');
     dialog.setAttribute('aria-label', markKit.markText(markKit.MARK_WORDS.questionHead));
     return dialog;

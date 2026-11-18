@@ -115,6 +115,8 @@
       /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
     '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
       '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
+      '.cbl .cbl-grid[aria-busy="true"] .cbl-hdr{overflow:hidden}/* the loading header is the width of the box (the declared columns are not fitted yet), so it does not jump narrower when the rows arrive (walk-home UI9-crm: 1366 then 1134) */',
+      '.cbl .cbl-row.cbl-total:last-child{position:sticky;bottom:0;z-index:4;background:var(--cl-panel);border-top:1.5px solid var(--cl-line);font-weight:600}',
       '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
       '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
       '.cbl .cbl-hc.r{justify-content:flex-end}',
@@ -144,6 +146,9 @@
     return [
       '.cbl .cbl-row.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
       '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
+      /* ONE LINE (leader practice: HubSpot/Salesforce list views): a cell in the table layout never wraps; it is cut with an ellipsis and its full text shows on hover (the title is set by list-ctl.js). A card (narrow container, below) wraps as before. */
+      '@container list (min-width: 621px){.cbl .cbl-row .cbl-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}',
+      '.cbl .cbl-row .cbl-cell.cbl-wrap{white-space:normal;overflow:visible;text-overflow:clip}/* set by list-ctl.js wrapCut: the words did not fit the column, so they wrap, never cut */',
       '.cbl .cbl-cell.r{text-align:end}',
       '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
       '.cbl .cbl-cell.strong{font-weight:700}',
@@ -205,7 +210,10 @@
       '.cbl .cbl-grid{min-width:0;grid-template-columns:minmax(0,1fr)}/* R47: a card never grows its one track past the box (Parties scrolled sideways at 390) */.cbl .cbl-hdr{display:none}',
       '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
       '.cbl .cbl-row .cbl-cell{padding:2px 0}',
-      '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}'
+      '.cbl .cbl-row .cbl-cell.cbl-actline{flex:1 1 auto;order:9;text-align:start;align-self:center}.cbl .cbl-row .cbl-cell.cbl-actline:empty{display:none}',
+      /* a card of lines (a column says cl 1 or 2; the rest are chips on the last line): head = name left, amount right; under it the facts; then the chips. One spacer after each line, so 5 cards fit a phone */
+      '.cbl .cbl-row:has(.cl1) .cbl-cell{order:4}.cbl .cbl-row:has(.cl1) .cbl-cell.cl1{order:0}.cbl .cbl-row:has(.cl1) .cbl-cell.cl2{order:2}.cbl .cbl-row:has(.cl1)::before{content:"";flex:0 0 100%;order:1}.cbl .cbl-row:has(.cl1)::after{content:"";flex:0 0 100%;order:3}',
+      '.cbl .cbl-row .cbl-cell.first.cl1{width:auto;flex:1 1 0;min-width:0}.cbl .cbl-row .cbl-cell.cl2{color:var(--cl-mute,inherit)}.cbl .cbl-row:has(.cl1) .cbl-cell{padding-block:1px}'
   ];
   /** the list unit's stylesheet, part 7 of 8 (the remaining small rules): one string per rule group, tokens only with a fallback for each */
   function cssPart7(phoneMax) {
@@ -214,6 +222,8 @@
       '.cbl .cbl-row .cbl-cell.first{width:100%;font-weight:600}.cbl .cbl-row .cbl-cell.amt{margin-inline-start:auto}',
       '.cbl .cbl-row .cbl-lead{position:absolute;inset-inline-end:8px;top:6px;padding:0}',
       '.cbl .cbl-next{margin:-6px 10px 8px;border-radius:0 0 12px 12px;padding-inline-start:14px}',
+      /* A11: a ticked list's card keeps a corner slot for the tick (44 px, top end), so it never lies on the status words */
+      '.cbl .cbl-row:has(>.cbl-lead){padding-inline-end:56px}.cbl .cbl-row:has(>.cbl-lead)>.cbl-lead{inset-inline-end:6px;top:4px}',
       '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
       '}',
       '@container screen (max-width: 640px){',
@@ -223,6 +233,9 @@
       '}',
       /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
     '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px 6px;margin-block:-8px;vertical-align:middle}/* REP-73 B5: a gap on the end side, so the box never sits over the first letter of the name (it was -9px on both sides) */.cbl .cbl-search input{align-self:stretch}',
+      /* ASSIGN-W3-CRM-TICKS: a grouped list with ticks: the caret's hang (-9px/-15px) sat over the tick in the 34px lead column, so a press on the tick hit the caret; with a lead column the caret starts at the cell */
+      '.cbl .cbl-row[aria-expanded]>.cbl-lead{padding:0;justify-content:center}.cbl .cbl-row[aria-expanded]>.cbl-lead input[data-selrow]{margin:0}',
+      '.cbl .cbl-row:has(>.cbl-lead)>.cbl-cell>.cbl-tw{margin-inline-start:0}',
       '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
       '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
       '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',

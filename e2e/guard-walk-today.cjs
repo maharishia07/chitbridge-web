@@ -18,3 +18,19 @@ for (const f of files) {
 }
 if (bad.length) { console.log('guard-walk-today: ' + bad.length + ' raw clock read(s) in a walk — use e2e/lib/today.cjs (or add `clock-ok: why`):\n' + bad.join('\n')); process.exit(1); }
 console.log('guard-walk-today: ' + files.length + ' walk files, no raw clock read for a business date');
+
+/* tzsweep (18 Nov 2026): the walks above are covered by the raw-clock rule; the OTHER e2e scripts (e2e/*.cjs, e2e/lib, e2e/flows) must not cut the runner's UTC day
+ * out of a clock read either: `new Date().toISOString().slice(0, 10)` is the UTC day, a day BEHIND the shop's from 18:30 to 24:00 UTC (Asia/Kolkata). Use
+ * TD.TODAY / TD.todayIn(zone) / TD.dayPlus (e2e/lib/today.cjs). A line that is UTC on purpose says `utc-ok: <why>`. */
+const UTC_DAY = /(new Date\(\s*\)|new Date\(\s*Date\.now\(\)[^)]*\)|Date\.now\(\))[^;]*\.toISOString\(\)\s*\.(slice|substr|substring|split)\(\s*(0\s*,\s*(10|7)|'T')/;
+const others = fs.readdirSync(__dirname).filter((f) => /\.cjs$/.test(f) && !/^walk-/.test(f)).map((f) => path.join(__dirname, f))
+  .concat(fs.readdirSync(path.join(__dirname, 'lib')).filter((f) => /\.cjs$/.test(f) && f !== 'today.cjs').map((f) => path.join(__dirname, 'lib', f)))
+  .concat(fs.existsSync(path.join(__dirname, 'flows')) ? fs.readdirSync(path.join(__dirname, 'flows')).filter((f) => /\.(c?js)$/.test(f)).map((f) => path.join(__dirname, 'flows', f)) : []);
+const utcBad = [];
+for (const f of others) {
+  fs.readFileSync(f, 'utf8').split('\n').forEach((l, i) => {
+    if (UTC_DAY.test(l) && !/utc-ok|clock-ok/.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l)) utcBad.push(path.relative(path.join(__dirname, '..'), f) + ':' + (i + 1) + '  ' + l.trim().slice(0, 110));
+  });
+}
+if (utcBad.length) { console.log('guard-walk-today: ' + utcBad.length + ' UTC day(s) cut from a clock read in an e2e script — use e2e/lib/today.cjs (or add `utc-ok: why`):\n' + utcBad.join('\n')); process.exit(1); }
+console.log('guard-walk-today: ' + others.length + ' other e2e files, no UTC day cut from a clock read');

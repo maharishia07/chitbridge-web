@@ -34,6 +34,8 @@
  * ESCAPING IS ITS OWN JOB: every value painted here goes through this file's `esc`. A column renders trusted markup only if it
  * says so (`html: true`), and `next(row)` is trusted markup by contract: the page that builds it escapes its own data.
  *
+ * ALWAYS-ON TICKS (ASSIGN-W2): `bulkAlways: true` with `bulk` draws the tick column with no Select mode; the bar appears on the first tick ("3 selected" once · the bulk buttons · Select all shown · Clear) and stays after an action. Quick views (Mine · Unassigned · Everyone) are `views` with `merge: true` (CBAssign.quickViews).
+ *
  * SAVED VIEWS (T3-COMPAT): `views:{ items:[{ key, label, filt, tip, rows? }], tid, inTitle }` — a tab sets the list's own filters. STD-COMPARE
  * (2026-10-15): a view may carry its OWN rows (`rows: () => [...]`, a second data file mapped onto its own columns): while that tab is lit — its
  * `filt` in force, other filters may be added — the unit draws those rows instead of the mount's, and the tab counts them. A view without `rows`
@@ -114,14 +116,13 @@
     var m = /(\d+(?:\.\d+)?)\s*px/.exec(String(w || ''));
     return m ? parseFloat(m[1]) : dflt || 140;
   }
-  function val(x) {
-    return typeof x === 'function' ? safe(x, undefined) : x;
-  }
+  function val(x) { return typeof x === 'function' ? safe(x, undefined) : x; }
   function safe(fn, dflt) {
     try {
       var v = fn();
       return v === undefined ? dflt : v;
-    } catch (_) {
+    } catch (err) {
+      if (root.__CB_SAFE_LOG && root.__CB_SAFE_LOG.push) root.__CB_SAFE_LOG.push({ w: 'list-ctl.safe', e: err }); /* test-only flag (e2e/walk-probe-faults.cjs): a swallowed throw is written down; nothing changes for a user */
       return dflt;
     }
   }
@@ -446,11 +447,11 @@
       .concat(pinned(I));
   }
   function minW(I, c) {
-    return Math.max(64, c.minw || 0 /* a column that declares its floor keeps it (REP-73: the Status heading wrapped) */, String(c.label || c.key).length * 9 + 40);
+    return Math.max(64, c.minw || 0 /* a column that declares its floor keeps it (REP-73: the Status heading wrapped) */, String(c.label || c.key).length * 9 + 40, c.hfilter ? 136 : 0 /* the label (uppercase, spaced), the sort arrow and the filter caret need ~136 px in all (HELD BY wrapped at 100): counted INTO the natural width (9 px a letter already leaves slack), not added on top, so a long heading (On the network) keeps its 166 and a short one (Due) still never wraps */);
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
-  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 32 /* the first cell also holds the expand caret: 32 px box, -9 and +6 margin = 29 px, plus a pixel of slack (24 cut the first letters of a name, walk 18 Nov) */, AUTO_MAX = 260, STRETCH_MAX = 420, STRETCH_FLOOR = 28, STRETCH_FLOOR_PX = 240 /* a longer name wraps to a second line rather than hide a column */, AUTO_SAMPLE = 200;
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
@@ -473,8 +474,8 @@
         .sort(function (first, second) { return plainText(second).length - plainText(first).length; })
         .slice(0, 3);
       out[c.key] = longest.reduce(function (widest, html) {
-        probe.innerHTML = '<div class="cbl-cell" style="display:inline-block;width:auto">' + html + '</div>';
-        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 2);
+        probe.innerHTML = '<div class="cbl-cell' + cellClasses(c, 1) + '" style="display:inline-block;width:auto">' + html + '</div>'; /* the cell's own classes: a figure is set in the mono face and bold of its real cell, not the row's (walk 18 Nov: 480.00 and 12,000.00 cut at 1366) */
+        return Math.max(widest, Math.ceil(probe.firstChild.getBoundingClientRect().width) + 4);
       }, 0);
     });
     host.removeChild(probe);
@@ -584,7 +585,7 @@
           return I.o.lead.on();
         }, false)
       ) ||
-      (I.o.bulk && I.o.bulk.length && I.r.selMode)
+      (I.o.bulk && I.o.bulk.length && (I.r.selMode || I.o.bulkAlways))
     );
   }
   function template(I, cols) {
@@ -1242,7 +1243,7 @@ ctx.toolsHtml = '';
   }
   /** viewToolsHTML, step 2 of 2 (part 2, lines 1435-1445 of the one function): runs on, nothing here ends the call */
   function viewToolsHTMLStep2(list, keyText, testIds, toolOptions, groupHtml, ctx) {
-    if (ctx.listOptions.bulk && ctx.listOptions.bulk.length)
+    if (ctx.listOptions.bulk && ctx.listOptions.bulk.length && !ctx.listOptions.bulkAlways)
       ctx.toolsHtml +=
         '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
         (ctx.runState.selMode ? ' on' : '') +
@@ -1415,10 +1416,22 @@ ctx.groupHtml = groupToolsHTML(list, ctx.k);
         esc(countText(list, ctx.m)) +
         '</span>';
   }
+  /** bulkAlways (ASSIGN-W2, I2): the tick column is always there; the bar appears on the first tick, says the count ONCE, carries the actions without a count each, and stays after an action so the next group can be ticked */
+  function alwaysBarHtml(list, ctx) {
+    var n = selectedRows(list).length;
+    if (!n) return '';
+    var buttons = ctx.o.bulk.map(function (item) {
+      return '<button type="button" data-cbsid="CMP037-B04"' + mountAttribute('CMP037') + ' class="cbl-btn" data-bulk="' + esc(item.id) + '">' + esc(T(list, item.label)) + '</button>';
+    }).join('');
+    return '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' + ctx.k + '" role="group" aria-label="' + esc(T(list, 'Selected')) + '"><b data-testid="cbl-selcount-' + ctx.k + '">' + esc(T(list, '{n} selected').replace('{n}', n)) + '</b>' + buttons +
+      '<button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selall>' + esc(T(list, 'Select all shown')) + '</button>' +
+      '<button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selclear>' + esc(T(list, 'Clear')) + '</button></span>';
+  }
   /** paintToolsBar, step 5 of 7 (part 5, lines 1570-1594 of the one function): runs on, nothing here ends the call */
   function paintToolsBarStep5(list, ctx) {
     /* tools.count:false — a host that already says the count (one count on a screen) */
-    if (ctx.o.bulk && ctx.o.bulk.length && ctx.R.selMode) {
+    if (ctx.o.bulk && ctx.o.bulk.length && ctx.o.bulkAlways) ctx.h += alwaysBarHtml(list, ctx);
+    else if (ctx.o.bulk && ctx.o.bulk.length && ctx.R.selMode) {
       var n = selectedRows(list).length;
       ctx.h +=
         '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' +
@@ -1951,7 +1964,7 @@ ctx.tpl = template(inst, ctx.cols);
   function paintListStep3(inst, ctx) {
     if (ctx.state === 'loading') {
       ctx.box.innerHTML =
-        '<div class="cbl-grid" role="grid" aria-busy="true">' + (ctx.s.view === 'grid' ? ctx.hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
+        '<div class="cbl-grid cbl-fit" role="grid" aria-busy="true">' + (ctx.s.view === 'grid' ? ctx.hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
       setHdrH(inst, ctx.box);
       return true;
     }
@@ -2117,7 +2130,14 @@ ctx.limit = inst.limit;
       ctx.end +
       footHTML(inst);
     setHdrH(inst, ctx.box);
+    wrapCut(ctx.box);
     ctx.box.scrollTop = ctx.keepTop;
+  }
+  /** ONE LINE keeps a cell on one line while its words fit; a cell whose words do NOT fit its column wraps instead of being cut (standard: no clipped text; a person who cannot read well must never meet half a word). Read all, then write, so the paint costs one layout. */
+  function wrapCut(box) {
+    var cells = box.querySelectorAll('.cbl-row .cbl-cell'), cut = [], i;
+    for (i = 0; i < cells.length; i++) if (cells[i].scrollWidth > cells[i].clientWidth + 1) cut.push(cells[i]);
+    for (i = 0; i < cut.length; i++) cut[i].classList.add('cbl-wrap');
   }
   /** paintList, step 10 of 10 (the data-cbl-sentinel part, lines 2205-2228 of the one function): runs on, nothing here ends the call */
   function paintListCblSentinel(inst, ctx) {
@@ -2302,6 +2322,7 @@ var o = inst.o;
         : '') +
       (R.hl === ctx.id && o.hl !== false ? ' sel' : '') +
       (zebra ? ' z' : '') +
+      (ctx.row && ctx.row._total ? ' cbl-total' : '') /* P1-2: a total line the page appends stays in view at the foot of the window */ +
       (entry.g != null ? ' ing' : '');
   }
   /** the extra classes of a body cell: the first one, the pinned action column strong and right, numbers and money right in mono, mono, the line a card gives an action */
@@ -2312,7 +2333,7 @@ var o = inst.o;
       (amt ? ' r mono strong amt' : '') +
       ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
       (item.mono ? ' mono' : '') +
-      (item.cardAct ? ' cbl-actline' : '')
+      (item.cardAct ? ' cbl-actline' : '') + (item.cl ? ' cl' + item.cl : '') /* cl: a phone card line, 1 = head (name, amount), 2 = under it, the rest follow as chips; nl: no label on the card */
     );
   }
   /** one body cell of a row: its classes (money and numbers right-aligned in mono, the pinned action column strong), its phone label, its test id and the expand caret on the first cell */
@@ -2321,7 +2342,7 @@ var o = inst.o;
           '<div class="cbl-cell lcell' +
           cellClasses(item, index) +
           '" data-l="' +
-          esc(index === 0 || item.cardAct ? '' : item.label || '') +
+          esc(index === 0 || item.cardAct || item.nl ? '' : item.label || '') +
           '" role="gridcell"' +
           (item.tid
             ? ' data-testid="' +
@@ -2409,6 +2430,7 @@ ctx.pin = cols.filter(function (item) {
         : '') +
       (inst.r.hl === ctx.id && ctx.o.hl !== false ? ' sel' : '') +
       (zebra ? ' z' : '') +
+      (ctx.row && ctx.row._total ? ' cbl-total' : '') /* P1-2: a total line the page appends stays in view at the foot of the window */ +
       (entry.g != null ? ' ing' : '');
   }
   /** lineHTML, step 2 of 5 (part 2, lines 2516-2544 of the one function): runs on, nothing here ends the call */
@@ -2782,6 +2804,11 @@ ctx.pin = cols.filter(function (item) {
 
   /* one document-level listener each: a click anywhere outside a mounted list closes its popover; a resize refits every list to its window */
   if (root.document && root.document.addEventListener) {
+    /* ONE LINE: a cell cut with an ellipsis carries its full text as the title, set the first time the pointer reaches it */
+    root.document.addEventListener('mouseover', function (ev) {
+      var cell = ev.target && ev.target.closest ? ev.target.closest('.cbl .cbl-row .cbl-cell') : null;
+      if (cell && !cell.hasAttribute('title') && cell.scrollWidth > cell.clientWidth) cell.setAttribute('title', (cell.textContent || '').replace(/s+/g, ' ').trim());
+    });
     root.document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.isConnected === false) return; /* the click repainted its own button away: that was a click INSIDE the list */
       INST.forEach(function (item) {

@@ -26,12 +26,8 @@
   var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, ended: {}, seats: {}, opened: null };
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
-  function T(s) {
-    return typeof root.tx === 'function' ? root.tx(s) : s;
-  }
-  function $(id) {
-    return root.document.getElementById(id);
-  }
+  function T(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
+  function $(id) { return root.document.getElementById(id); }
 
   /* ⭐ the endpoint registry — the ONE declaration shape (accounts-shell.js) the round-trip scanner reads
      (api tools/endpoint-usage.cjs): a call made any other way is invisible to the budget guard. */
@@ -86,6 +82,7 @@
     N.ended = grants.ended || {};
     N.seats = grants.seats || {};
     N.mine = grants.mine || null;
+    N.firms = grants.firms || [];
     N.unread = !!grants.unread; /* the grant list could not be read: said as that, never as "Not in a network yet" */
     var storeBlock = answer.store || {};
     N.networks = storeBlock.networks || [];
@@ -206,13 +203,19 @@
         esc(T('Not in a network yet')) +
         '</div><div>' +
         esc(T('When a brand adds this shop to its network, it shows here.')) +
-        '</div></div>' + booksDoor();
+        '</div>' + firmsLine() + '</div>' + booksDoor();
       if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
       return;
     }
     host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + root.CBBooksGrantApi.endedToggle(N.ended, N.showEnded, T) + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
     mountStores(); root.CBBooksGrantApi.wireEnded(host, N, paint);
     if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
+  }
+  /** a shop with no network may still sit with an adviser firm: the empty page says so (Fable A12), instead of ignoring it */
+  function firmsLine() {
+    var names = (N.firms || []).filter(Boolean); if (!(N.firms || []).length) return '';
+    var tell = names.length === 1 && typeof root.txf === 'function' ? root.txf('Your books are open to {firm}.', { firm: names[0] }) : T('Your books are open to an adviser firm.');
+    return '<div class="sub" data-testid="nw-firms">' + esc(tell) + '</div>';
   }
   function openBooksDoor() {
     N.tab = 'books';
@@ -264,12 +267,8 @@
         prio: 2,
         w: 150,
         sort: 'city',
-        cell: function (s) {
-          return s.city || '—';
-        },
-        value: function (s) {
-          return s.city || '';
-        }
+        cell: function (s) { return s.city || '—'; },
+        value: function (s) { return s.city || ''; }
       },
       {
         key: 'km',
@@ -278,9 +277,7 @@
         w: 110,
         sort: 'km',
         cell: function (s) { return s.km == null ? '—' : Math.round(s.km) + ' km'; },
-        value: function (s) {
-          return s.km == null ? '' : String(s.km);
-        }
+        value: function (s) { return s.km == null ? '' : String(s.km); }
       },
       {
         key: 'purpose',

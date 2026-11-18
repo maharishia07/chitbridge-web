@@ -8,7 +8,7 @@ const root = { Promise, tx: (s) => s, document: { readyState: 'loading', addEven
 const sandbox = vm.createContext({ module: { exports: {} }, window: root, globalThis: root, setInterval() {}, setTimeout() {} });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'money.js'), 'utf8'), sandbox, { filename: 'money.js' });
 sandbox.CBMoney = sandbox.module.exports;
-for (const part of ['helpers.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), sandbox, { filename: part });
+for (const part of ['helpers.js', 'assign-bar.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), sandbox, { filename: part });
 const P = root.CBPractice, T = P.parts || {};
 let bad = 0;
 const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };

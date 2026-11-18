@@ -413,14 +413,6 @@ function csuUiTag() {
     return 'en';
   }
 }
-function csuMonthWord(monthIndex, form) {
-  try {
-    return new Intl.DateTimeFormat(csuUiTag(), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, monthIndex, 15, 12));
-  } catch (failure) {
-    csuLogExample('month word', failure);
-    return '';
-  }
-}
 function csuMonthNames(form) {
   return monthNames(form);
 } /* the one helper (helpers.js) — kept as a name so callers here read the same */

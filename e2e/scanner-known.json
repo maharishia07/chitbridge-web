@@ -1,6 +1,6 @@
 {
  "api-envelope": {
-  "count": 16,
+  "count": 15,
   "owner": "api",
   "keys": [
    "actors.js|summary",
@@ -10,7 +10,6 @@
    "entities.js|answers",
    "folders.js|cost_params_ignored",
    "folders.js|cost_params_ignored",
-   "products.js|added,by,categories,currency,e,entity_id,have,language_names,languages,languages,list,lists,message,mine,money_why,ok,pick,pin,req,req,req,res,res,skipNames,skipped,status,status,status,vertical",
    "products.js|added,declared,message,warnings",
    "products.js|done,message,refused,unchanged",
    "relationships.js|fields,finishes,schema",

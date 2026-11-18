@@ -5,6 +5,7 @@
 //            component balance · test code ratio), their risk bands, and the star roll-up (ISO 25010 sub-characteristics).
 // called by: a person / CI report — `node tools/sig-stars.cjs web=. api=../chitbridge-api engines=../chitbridge-engines [--json]`
 // reuses:    tools/graph/scan.cjs (KG1 lexer + function scanner) — not a second parser. No dependency. Read-only.
+// CARD      qa/readability-guard
 // FLOW       list files (git) → drop vendored/generated → scanJs per file → units → eight measures → stars → table
 //
 // ⚠ THIS IS A MODEL, NOT THE SIG CERTIFICATE. The band edges below are the published SIG/TÜViT shape as recalled WITHOUT web
@@ -461,4 +462,4 @@ function main(argv) {
 }
 
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { measureRepo, bandOf, rateShares, rateLow, rateHigh, countParams, UNIT_BANDS, SHARE_EDGES };
+module.exports = { bandOf, rateShares, rateLow, rateHigh, countParams, UNIT_BANDS, SHARE_EDGES };

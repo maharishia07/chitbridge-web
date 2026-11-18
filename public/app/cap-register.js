@@ -15,7 +15,7 @@
  * ⚠️ THE OLD REPORT WAS A FLAT LIST AND STAYS REACHABLE — Live IS that list, plus the registers down the side.
  * Nothing that worked before needs a new gesture to reach.
  
- * CALLED BY public/app.html, public/app/cap-worklist.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY (loaded by) public/app.html, public/app/cap-worklist.js · 7 tests
  */
 /* OWNS the register screens: live, closure, impact; recording against a chit or a line
  * CALLED BY app.html (ensureCap('register')), cap-worklist.js (rgQuickAdd)

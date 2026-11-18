@@ -132,7 +132,7 @@
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
   function moneyCell(row, key, value) {
     var nothing = isBlank(value);
-    if (key === 'sales_minor' && nothing) return grantKit.words('No sales');
+    if (key === 'sales_minor' && nothing) return grantKit.words('No income');
     if ((key === 'dr_minor' || key === 'cr_minor') && (nothing || String(value) === '0')) return '';
     if (/^age_/.test(key)) return agedMoney(key, value);
     return minorWords(row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(value))) : value);

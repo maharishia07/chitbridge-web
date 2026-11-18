@@ -133,7 +133,7 @@
   function paint() {
     panel.host.innerHTML =
       backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
-      '<button data-cbsid="NET004-B03" type="button" class="act" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
+      '<button data-cbsid="NET004-B03" type="button" class="act quiet" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
       '<div class="sub" data-testid="bg-note">' + esc(words('You choose who, in which role, and until when. Every look and every step is recorded.')) + '</div>' +
       noticeHtml() +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
@@ -298,8 +298,8 @@
   }
 /** the owner's choice of who posts, drawn from the server's words, NOTHING pre-selected: the owner must pick one (the form is held until he does) */
   function postingHtml(choices, name, current) {
-    return '<b>' + esc(words('Who posts?')) + '</b>' + choices.map(function (c, i) {
-      return '<label class="bg-tick"><input data-cbsid="NET004-R0' + (i + 1) + '" type="radio" name="' + name + '" value="' + esc(c.value) + '" data-testid="bg-post-' + esc(c.value) + '"' + (current === c.value ? ' checked' : '') + '> ' + esc(c.words) + '</label>';
+    return '<b>' + esc(words('Who posts?')) + '</b>' + choices.map(function (c) {
+      return '<label class="bg-tick"><input id="' + esc(name) + '_' + esc(c.value) + '" data-cbsid="NET004-I06" type="radio" name="' + name + '" value="' + esc(c.value) + '" data-testid="bg-post-' + esc(c.value) + '"' + (current === c.value ? ' checked' : '') + '> ' + esc(c.words) + '</label>';
     }).join('');
   }
   /** show the choice for the adviser role only; picking one releases Give access */

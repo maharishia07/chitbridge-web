@@ -47,7 +47,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(72) + '· ' + d 
 const freePort = () => new Promise((res) => { const t = net.createServer(); t.listen(0, '127.0.0.1', () => { const n = t.address().port; t.close(() => res(n)); }); });
 const P = (v) => Math.round(Number(v || 0) * 100);           /* paisa — every comparison below is in whole paisa */
 const R = (p) => (p / 100).toFixed(2);
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = new Date().toISOString().slice(0, 10); // utc-ok: UNSURE: the till buckets payments by its shop day; not run in tzsweep (needs the sibling engines); settle with the counter owner
 
 /* ── the shop both counters sell for ─────────────────────────────────────────────────────────────────────────── */
 const ITEMS = [
@@ -152,7 +152,7 @@ function dayClose(counter, day) {
   const w = walkinsWaiting(counter, day);
   LEDGER.closed[k] = true;
   if (!w.length) return null;
-  const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k, date: day, counter });
+  const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k, date: day, counter }, { country: 'IN' });
   const e = postOne(ev, { source_ref: 'walkin:' + counter + ':' + day, counter, day, bills: w.map((c) => c.client_ref) });
   if (e) w.forEach((c) => LEDGER.walkinPosted.add(c._key || c.client_ref));
   return e;
@@ -165,7 +165,7 @@ function settleLate() {
     const w = walkinsWaiting(counter, day);
     if (!w.length) return;
     const n = LEDGER.entries.filter((e) => e.supplementary && e.counter === counter && e.day === day).length + 1;
-    const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k + ':supp-' + n, date: day, counter });
+    const ev = POSTING.daySummary(w.map(walkinBill), { ref: 'walkin:' + k + ':supp-' + n, date: day, counter }, { country: 'IN' });
     const e = postOne(ev, { source_ref: 'walkin:' + counter + ':' + day + ':supp-' + n, counter, day, supplementary: true, bills: w.map((c) => c.client_ref) });
     if (e) { w.forEach((c) => LEDGER.walkinPosted.add(c._key || c.client_ref)); made.push(e); }
   });
@@ -356,9 +356,12 @@ function apiFront(name, tillId) {
     await p.fill('[data-testid="till-rp-amount"]', String(o.amount));
     await p.selectOption('[data-testid="till-rp-mode"]', o.mode);
     if (o.cheque) {
-      if (o.cheque.no) await p.fill('[data-testid="till-rp-chq-no"]', o.cheque.no);
+      /* the dialog is still settling on a loaded box (the number typed straight after the mode change was lost on sit-grund): let it settle, type, and check the field kept it */
+      await sleep(300);
+      for (let t = 0; o.cheque.no && t < 3; t++) { await p.fill('[data-testid="till-rp-chq-no"]', o.cheque.no); await sleep(300); if ((await p.inputValue('[data-testid="till-rp-chq-no"]')) === o.cheque.no) break; }
       await p.fill('[data-testid="till-rp-chq-bank"]', o.cheque.bank || '');
     }
+    o.dbg = await p.evaluate(() => ['no=' + (document.getElementById('rp_chq_no') || {}).value, 'bank=' + (document.getElementById('rp_chq_bank') || {}).value, 'mode=' + (document.getElementById('rp_mode') || {}).value, 'hidden=' + (document.getElementById('rp_chq') || {}).hidden, 'open=' + document.getElementById('rcvpaydlg').open].join(' '));
     o.proposal = await p.evaluate(() => document.getElementById('rp_prop').innerText.replace(/\s+/g, ' '));
     await p.click('[data-testid="till-rp-save"]');
     await sleep(400);
@@ -464,7 +467,7 @@ function apiFront(name, tillId) {
     say('⚠️ a cheque with no number is refused, nothing recorded', pNone === '' && /number/.test(chq0.said), chq0.said.slice(0, 60));
     const chq1 = { phone: '9876500001', amount: 50, mode: 'cheque', cheque: { no: '004512', bank: 'SBI' } };
     const p22 = await receivePay(br, chq1);
-    say('a cheque WITH its number is recorded, "received, not cleared"', /^R\/C2\//.test(p22) && /applied when it clears/.test(chq1.proposal) && /not cleared/.test(chq1.note), p22 || (chq1.said + ' | ' + chq1.note));
+    say('a cheque WITH its number is recorded, "received, not cleared"', /^R\/C2\//.test(p22) && /applied when it clears/.test(chq1.proposal) && /not cleared/.test(chq1.note), p22 || (chq1.said + ' | ' + chq1.note + ' | ' + chq1.dbg));
 
     /* ⚠️⚠️ review F4: the line returns, the SNAPSHOT is read again, and the queue has not gone yet (no chit gets through) */
     const owedOf = (p, id) => p.evaluate(async (id) => { var c = (S.customers || []).filter(function(x){ return x.identity_id === id; })[0];
@@ -552,7 +555,7 @@ function apiFront(name, tillId) {
     const c1Dir = (function find(d) { for (const n of fs.readdirSync(d)) { const f = path.join(d, n); if (fs.statSync(f).isDirectory()) { const r = find(f); if (r) return r; } else if (/^queue\.jsonl$/.test(n)) return d; } return null; })(path.join(home, 'till-data'));
     const c1Docs = fs.existsSync(path.join(c1Dir, 'docs-' + TODAY + '.jsonl')) ? fs.readFileSync(path.join(c1Dir, 'docs-' + TODAY + '.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
     say('the shop PC filed the payment with the day\'s documents, NOT its bills', c1Docs.some((d) => d.no === p11) && !c1Bills.some((x) => x.no === p11), 'docs: ' + c1Docs.map((d) => d.no).join(' '));
-    const c2Local = await br.evaluate(async () => ({ bills: await DB.all('bills'), pays: (await DB.get('payments-' + new Date().toISOString().slice(0, 10))) || [] }));
+    const c2Local = await br.evaluate(async () => ({ bills: await DB.all('bills'), pays: (await DB.get('payments-' + new Date().toISOString().slice(0, 10))) || [] })); // utc-ok: UNSURE: same as line 50
     say('the browser kept the payments in their own list, NOT its bills', c2Local.pays.length === 2 && !c2Local.bills.some((x) => /^R\//.test(x.no)), c2Local.pays.map((x) => x.no).join(' '));
     doc.C1 = c1Bills.map((x) => x.no).concat(c1Docs.map((d) => d.no));
     doc.C2 = c2Local.bills.map((x) => x.no).concat(c2Local.pays.map((x) => x.no));
@@ -609,7 +612,7 @@ function apiFront(name, tillId) {
     console.log('\n── ⭐⭐ REPLAY: every chit sent again, from both sides ' + '─'.repeat(0));
     const before = { kept: LEDGER.kept.size, entries: JSON.stringify(LEDGER.entries), dup: LEDGER.duplicates };
     await br.evaluate(async () => { var bs = await DB.all('bills'); for (var i = 0; i < bs.length; i++) await DB.put('queue', bs[i]);
-      var pays = (await DB.get('payments-' + new Date().toISOString().slice(0, 10))) || [];
+      var pays = (await DB.get('payments-' + new Date().toISOString().slice(0, 10))) || []; // utc-ok: UNSURE: same as line 50
       for (var j = 0; j < pays.length; j++) await DB.put('queue', { no: pays[j].no, at: pays[j].at, kind: 'payment', chitBody: pays[j].chitBody }); });
     await drainAll();
     for (const c of [...LEDGER.kept.values()].filter((x) => counterOf(x) === 'C1')) {
@@ -622,7 +625,7 @@ function apiFront(name, tillId) {
 
     /* ═══ THE NUMBERS ═══ */
     console.log('\n── ⭐⭐⭐ THE POSTINGS, TO THE PAISA ' + '─'.repeat(0));
-    const unbalanced = LEDGER.entries.filter((e) => !POSTING.balanced(e.lines, 'INR'));
+    const unbalanced = LEDGER.entries.filter((e) => !POSTING.balanced(e.lines, 'INR', { country: 'IN' }));
     let dr = 0, cr = 0; LEDGER.entries.forEach((e) => e.lines.forEach((l) => { dr += P(l.dr); cr += P(l.cr); }));
     say('every entry balances, debit = credit to the paisa', unbalanced.length === 0 && LEDGER.entries.length > 0, LEDGER.entries.length + ' entries · unbalanced ' + unbalanced.length);
     say('the whole day balances', dr === cr, 'Dr ₹' + R(dr) + ' = Cr ₹' + R(cr));

@@ -306,8 +306,7 @@ async function peAssetsList() {
     r = await api('perAssets');
   } catch (e) {
     const w = peWhy(e, tx('Could not be read'));
-    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
-    return;
+    host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>'; return;
   }
   PE.assets = (r && r.assets) || [];
   const list = (r && r.net_block) || [];
@@ -1129,7 +1128,7 @@ function peReturnLedgers(answer, b, taxColumns) {
     )
   );
   const more = b.accounts_more_n
-    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
+    ? '<div style="' + grey + ';padding:4px 0" data-testid="pr-more-' + esc(b.code) + '"><button data-cbsid="BKS016-B11" type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" onclick="peReturnOpen(null)">' + esc(txf('and {n} more', { n: b.accounts_more_n })) + ' ▸</button></div>'
     : '';
   return '<div data-testid="pr-ledgers-' + esc(b.code) + '">' + head + lines.join('') + more + '</div>';
 }
@@ -1292,6 +1291,7 @@ async function peYearStatus() {
     st = (await api('perYearStatus', { params: { fy } })) || {};
   } catch (e) {
     const w = peWhy(e, tx('Could not be read'));
+    if (e && e.status === 403) { host.innerHTML = bkRefused(e, 'Year close'); return; } /* STAFF-BOOKS: the server's sentence in the one refused state */
     host.innerHTML = '<div class="' + (w.calm ? 'pe-calm' : 'pe-bad') + '" data-testid="pe-refused">' + (w.calm ? '⏳ ' : '') + esc(w.text) + '</div>';
     return;
   }

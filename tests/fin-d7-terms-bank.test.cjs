@@ -40,7 +40,7 @@ it('FIN-46 · the preview says due, discount, late-after, interest and limit fro
 });
 it('FIN-46 · nothing set says so: no due date, no interest, no limit (never a guessed number)', () => {
   assert.deepStrictEqual(J(T.ftSentences(X({}), 'INR')), [
-    'No credit days are set, so a bill has no due date.',
+    'No credit days are set, so a bill is due on its own date.',
     'No interest is shown on late bills.',
     'No credit limit.'
   ]);
@@ -91,13 +91,14 @@ const bank = read('cap-bank.js');
 const cut = (a, b) => bank.slice(bank.indexOf(a), bank.indexOf(b));
 const sb2 = {};
 vm.createContext(sb2);
-vm.runInContext(cut('const BKB_GROUPS', 'const BKB_ORDER') + '\n' + cut('const BKB_ORDER', '/* ── ON THIS DEVICE') + '\nthis.__b = { BKB_GROUPS, bkbGroupOf, BKB_ORDER };', sb2);
-const statusKeys = [...bank.slice(bank.indexOf('const bkbStatus'), bank.indexOf('const BKB_GROUPS')).matchAll(/^\s+'?([a-z-]+)'?: \['/gm)].map((m) => m[1]);
+/* 18 Nov: the file lost BKB_ORDER and the bkbStatus map (the bank page moved to the shared band and list); the groups and bkbGroupOf stay, so the cut ends at the device-marks block */
+vm.runInContext(cut('const BKB_GROUPS', '/* ── ON THIS DEVICE') + '\nthis.__b = { BKB_GROUPS, bkbGroupOf };', sb2);
+const statusKeys = [...bank.slice(bank.indexOf('const BKB_GROUPS'), bank.indexOf('/* ── ON THIS DEVICE')).matchAll(/states: \[([^\]]*)\]/g)].reduce((all, m) => all.concat([...m[1].matchAll(/'([a-z-]+)'/g)].map((s) => s[1])), []);
 it('FIN-27 · every engine state is in exactly one of the three groups (' + statusKeys.join(' ') + ')', () => {
   assert.ok(statusKeys.length >= 10, 'found the states');
   statusKeys.forEach((st) => assert.strictEqual(sb2.__b.BKB_GROUPS.filter((g) => g.states.indexOf(st) >= 0).length, 1, st));
   assert.strictEqual(sb2.__b.BKB_GROUPS.length, 3);
-  assert.deepStrictEqual(J(sb2.__b.BKB_GROUPS).map((g) => g.label), ['Missing in your books', 'Matched', 'Missing in the bank']);
+  assert.deepStrictEqual(J(sb2.__b.BKB_GROUPS).map((g) => g.label), ['Not in your books', 'In your books', 'Not on the statement']);
 });
 it('FIN-27 · the groups\' counts add up to the rows (a state nobody listed counts as missing in your books)', () => {
   const rows = [].concat(statusKeys, ['mystery']).map((s) => ({ status: s }));

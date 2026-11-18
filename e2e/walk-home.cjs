@@ -128,7 +128,9 @@ W.run('home', async (w) => {
   });
   await w.step('P3', 'Home -> the pillar boxes add no read: every /api call is one the manifest or Home already makes', async () => {
     const own = new Set(man.entries.filter((e) => e.state === 'built' && e.facts).map((e) => e.facts));
-    const known = new Set(['/api/facts/rail', '/api/books/health', '/api/entities/me', '/api/entities/header', '/api/crm/parties', '/api/crm/followups', '/api/entities/sides']);
+    const known = new Set(['/api/facts/rail', '/api/books/health', '/api/entities/me', '/api/entities/header', '/api/crm/parties', '/api/crm/followups', '/api/entities/sides',
+      /* books-practice.js (home30: the ONE practice read that says firm or shop before the first card is drawn) and books-grant-api.js grantsList (the Acting-as door's given/received list): the two grant reads Home makes on load, named here on 18 Nov (they were the NEW pair, not pillar-box reads) */
+      '/api/books-grants/practice', '/api/books-grants']);
     const strange = [...new Set(reqs)].filter((p) => !own.has(p) && !known.has(p) && !/^\/api\/(notifications|events|sides|me|session|counters|catalogue|offers|network|messages|reference)/.test(p));
     return { ok: !strange.length && !reqs.some((p) => !own.has(p) && /finance|marketing|people|operations/.test(p)),   /* a pillar's own built card (its manifest facts URL, e.g. /api/facts/operations since T3-OPS) is not a box reading; CB Employees: /api/facts/people, PEOPLE-SRV1 */ saw: reqs.length + ' calls (' + [...new Set(reqs)].join(', ') + ')' + (strange.length ? ' - NEW: ' + strange.join() : '') };
   });
@@ -209,9 +211,9 @@ W.run('home', async (w) => {
   FX.list.forEach((q) => { if (q.party_no === 'P-0004') q.email = '9894055621@fixture-shop.cr'; if (q.party_no === 'P-0005') q.email = 'meena.s=outlook.com@fixture-shop.cr'; });
   await page.setViewportSize({ width: 1366, height: 800 });
   await goPage('/crm.html'); await page.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await page.waitForTimeout(300);
-  await w.step('C10', 'CRM -> Parties -> ONE line per party, in columns (Role · On the network · Dues · Last activity · Next follow-up), nothing stacked under the name', async () => {
+  await w.step('C10', 'CRM -> Parties -> ONE line per party, in columns (Role · Dues · Last activity · Next follow-up; On the network when the width has room), nothing stacked under the name', async () => {
     const g = await page.evaluate(() => ({ heads: Array.from(document.querySelectorAll('#crm_list .cbl-hc')).map((h) => h.textContent.replace(/[▲▼⇅▾●]/g, '').trim()), rows: Array.from(document.querySelectorAll('#crm_list .cbl-row')).map((r) => Math.round(r.getBoundingClientRect().height)), stacked: document.querySelectorAll('#crm_list .cbl-row .l2, #crm_list .cbl-row .tag').length }));
-    return { ok: /Party/i.test(g.heads[0]) && g.heads.some((h) => /^role$/i.test(h)) && g.heads.some((h) => /on the network/i.test(h)) && g.rows.length >= 5 && g.rows.every((h) => h <= 56) && g.stacked === 0, saw: 'columns ' + g.heads.join(' · ') + '; row heights ' + g.rows.join('/') + ' px; ' + g.stacked + ' chips under a name' };
+    return { ok: /Party/i.test(g.heads[0]) && g.heads.some((h) => /^role$/i.test(h)) && g.heads.some((h) => /^dues$/i.test(h)) && g.heads.some((h) => /last activity/i.test(h)) && g.heads.some((h) => /next follow-up/i.test(h)) && g.rows.length >= 5 && g.rows.every((h) => h <= 56) && g.stacked === 0, saw: 'columns ' + g.heads.join(' · ') + '; row heights ' + g.rows.join('/') + ' px; ' + g.stacked + ' chips under a name' };
   });
   await w.step('C11', 'CRM -> the title, views and toolbar stay put while the rows scroll', async () => {
     const t0 = await page.evaluate(() => document.querySelector('.cbl-tools').getBoundingClientRect().top);
@@ -250,7 +252,7 @@ W.run('home', async (w) => {
     const z = await box(); await ctx.unroute('**/api/**', slow);
     const same = (p, q) => !!p && !!q && p.every((v, i) => Math.abs(v - q[i]) <= 1);
     /* the menu has grown (Leads, Calls): the first paint must hold ALL of it — the same count before and after the rows arrive */
-    return { ok: a.nav >= 3 && a.nav === z.nav && !!a.title && !!a.tools && !!a.hdr && a.skel >= 5 && a.rows === 0 && !!a.band && same(a.n0, z.n0) && same(a.title, z.title) && same(a.tools, z.tools) && same(a.hdr, z.hdr), saw: 'first paint: ' + a.nav + ' menu items, title, toolbar, header, ' + a.skel + ' skeleton rows, kural room ' + (a.band && a.band[3]) + ' px; toolbar ' + JSON.stringify(a.tools) + ' → ' + JSON.stringify(z.tools) };
+    return { ok: a.nav >= 3 && a.nav === z.nav && !!a.title && !!a.tools && !!a.hdr && a.skel >= 5 && a.rows === 0 && !!a.band && same(a.n0, z.n0) && same(a.title, z.title) && same(a.tools, z.tools) && same(a.hdr, z.hdr), saw: 'first paint: ' + a.nav + '/' + z.nav + ' menu items, title ' + JSON.stringify(a.title) + '/' + JSON.stringify(z.title) + ', header ' + JSON.stringify(a.hdr) + '/' + JSON.stringify(z.hdr) + ', n0 ' + JSON.stringify(a.n0) + '/' + JSON.stringify(z.n0) + ', ' + a.skel + ' skeleton rows, rows ' + a.rows + ', kural room ' + (a.band && a.band[3]) + ' px; toolbar ' + JSON.stringify(a.tools) + ' → ' + JSON.stringify(z.tools) };
   });
   await page.setViewportSize({ width: 1366, height: 800 });
   await w.step('UI9-home', 'Home -> the sidebar and header are in the first paint and do not move when the cards arrive', async () => {
