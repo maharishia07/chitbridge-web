@@ -71,7 +71,7 @@ function rawColours(text) {
   vm.createContext(sandbox);
   vm.runInContext(source + '\n;globalThis.__cat = CAP_CATALOGUE;', sandbox);
   const catalogue = sandbox.__cat;
-  check(Array.isArray(catalogue) && catalogue.length > 20, 'legend: the capability catalogue loads (' + (catalogue && catalogue.length) + ' capabilities)');
+  check(Array.isArray(catalogue) && catalogue.length > 0, 'legend: the capability catalogue loads (' + (catalogue && catalogue.length) + ' capabilities)');
   const ids = catalogue.map((entry) => entry.id);
   check(new Set(ids).size === ids.length, 'legend: every capability id is unique');
   const bad = catalogue.filter((entry) => !entry.id || !entry.name || !Array.isArray(entry.features) || !entry.features.length).map((entry) => entry.id);

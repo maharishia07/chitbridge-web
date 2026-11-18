@@ -111,7 +111,7 @@ const CAP_CATALOGUE = [
         n: '⚠️ strict vs loose: amountOf() THROWS on a legacy bare number (right for the server), amountOfLoose() returns NaN — every browser reader uses loose, because a counter must never fail to show a price',
         s: 'done'
       },
-      { n: 'A spec that drives a non-INR shop through counter, screen and slip', s: 'next' }
+      { n: 'A spec that drives a non-INR shop through counter, screen and slip', s: 'backlog' }
     ]
   },
 
@@ -156,8 +156,8 @@ const CAP_CATALOGUE = [
       },
       { n: "JUnit XML ingest — an automated run lands on the same board as a person's tap, and the board shows the WORSE of the two", s: 'done' },
       { n: '+ writes a new case without leaving the screen you found the fault on', s: 'done' },
-      { n: "An API-key scope so a CI server can post results without a person's login", s: 'next' },
-      { n: 'A release gate: which areas must be green before a build ships', s: 'next' }
+      { n: "An API-key scope so a CI server can post results without a person's login", s: 'backlog' },
+      { n: 'A release gate: which areas must be green before a build ships', s: 'backlog' }
     ]
   },
 
