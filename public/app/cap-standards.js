@@ -850,12 +850,12 @@ var STANDARDS = [
     why: 'Would let people sign in with an existing account — at the cost of who vouches for the signature on a chit.'
   },
   {
-    id: 'rfc6749', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'part', at: 'Sign-in', go: '', added: '2026-11-18',
-    n: 'RFC 6749 (OAuth 2.0)', w: 'Authorization framework: the code a sign-in provider hands back, exchanged for a token', p: 'A sign-in provider vouches for you with a code we exchange, never your password', m: 'Named by the sign-in providers; not yet checked end to end', note: 'The OAuth 2.0 authorization code flow the sign-in providers use. Link: https://www.rfc-editor.org/rfc/rfc6749.html', why: 'Every provider speaks the same flow, so a reviewer audits one thing.'
+    id: 'rfc6749', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'live', at: 'Sign-in', go: '', added: '2026-11-18',
+    n: 'RFC 6749 (OAuth 2.0)', w: 'Authorization framework: the code a sign-in provider hands back, exchanged for a token', p: 'A sign-in provider vouches for you with a code we exchange, never your password', m: 'Proven against a stand-in provider (in process) and a real Postgres; the run against a real Keycloak is SIT-only and is not in this proof', note: 'The OAuth 2.0 authorization code flow the sign-in providers use, with PKCE and state: a replayed state or code, a wrong nonce, audience or issuer, alg none and a forged signature are all refused (tests/signin-provider.test.cjs, sections A and D). Proof: tests/signin-provider.test.cjs and tests/api-problem-signin-provider.test.cjs green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-224854.xml); tests/signin-provider.realstack.cjs (link, pending-ticket and event tables as cb_app on real Postgres) green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-realstack-20261118-225204.xml). Link: https://www.rfc-editor.org/rfc/rfc6749.html', why: 'Every provider speaks the same flow, so a reviewer audits one thing.'
   },
   {
-    id: 'rfc9207', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'part', at: 'Sign-in', go: '', added: '2026-11-18',
-    n: 'RFC 9207 (OAuth issuer identification)', w: 'The sign-in answer says which provider sent it, so a code from the wrong one is refused', p: 'A sign-in answer is checked for who sent it', m: 'Named by the sign-in providers; not yet checked end to end', note: 'The iss parameter on the authorization response that the sign-in providers check. Link: https://www.rfc-editor.org/rfc/rfc9207.html', why: 'Stops a code meant for one provider being replayed at another.'
+    id: 'rfc9207', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'live', at: 'Sign-in', go: '', added: '2026-11-18',
+    n: 'RFC 9207 (OAuth issuer identification)', w: 'The sign-in answer says which provider sent it, so a code from the wrong one is refused', p: 'A sign-in answer is checked for who sent it', m: 'Proven against a stand-in provider; the run against a real Keycloak is SIT-only and is not in this proof', note: 'The issuer the provider reports is checked against the provider we started the sign-in with: a wrong iss and another provider\'s iss (mix-up) are refused (tests/signin-provider.test.cjs, section D). Proof: tests/signin-provider.test.cjs green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-224854.xml). Link: https://www.rfc-editor.org/rfc/rfc9207.html', why: 'Stops a code meant for one provider being replayed at another.'
   },
   {
     id: 'jwt',
@@ -2265,15 +2265,15 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'The whole product held to the normal security bar for business apps',
-    m: 'Not yet assessed; known gaps: 59 tables without row security, browser policy in report-only',
+    m: 'Assessed against the committed tests, not item by item against all ASVS Level 2 requirements. Known gaps: 10 tables readable without row security that are not reference lists (35 open in db/rls-baseline.json, 25 of them reference lists; ratchet ceiling 19), browser policy still report-only with script-src allowing inline scripts (vercel.json), no ASVS item-by-item checklist',
     g: 'Security',
     n: 'OWASP ASVS 4 — Level 2',
     w: 'Application Security Verification Standard: sign-in, sessions, access, input, secrets, errors and logging, data, communication, configuration',
-    s: 'plan',
-    note: 'Decided 27 Oct 2026 (CAP-17) as the package-level score beside the per-endpoint Top 10: flooding and DDoS limits, sign-in and sessions, secrets and encryption, security headers (CSP still report-only, SEC-86), row security on every table (SEC-75), outdated packages, attack logging. No assessment has been run, so Planned.',
+    s: 'part',
+    note: 'Decided 27 Oct 2026 (CAP-17) as the package-level score beside the per-endpoint Top 10. First assessment 18 Nov 2026, by area, each held by a committed test: environment and secrets posture (tests/env-posture.test.cjs), API headers and CSP (tests/api-csp.test.cjs, tests/cors-headers.test.cjs), row security census with a falling ceiling (tests/rls-open-ratchet.test.cjs, tests/rls-predicate.test.cjs), sign-in secret handling (tests/identity-secret.test.cjs), OAuth sign-in (RFC 6749 and 9207 rows). Proof: those six tests green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-225524.xml). Open: the 10 non-reference tables without row security, CSP enforcement (SEC-86), the 36 routes whose SQL is assembled from server-side fragments (API register), rate limit on 173 of 688 routes. Stays Partly until the item-by-item pass is done.',
     at: 'Whole product',
     go: '',
-    why: 'Level 2 is what a careful buyer expects of software that holds their money and customers; saying Planned until assessed is the honest claim.',
+    why: 'Level 2 is what a careful buyer expects of software that holds their money and customers; the gaps are named so the claim stays honest.',
     added: '2026-10-28'
   },
   {
