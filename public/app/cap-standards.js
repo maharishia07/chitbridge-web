@@ -432,7 +432,7 @@ var STANDARDS = [
     w: 'Right-to-left layout without a second stylesheet',
     ex: 'margin-inline-start: 12px',
     exWhy: 'Mirrors automatically in Arabic. <code>margin-left</code> would have needed a second stylesheet nobody maintains.',
-    m: '59 physical direction properties remain in app.html and the apps scope of the guard (314 in 39 files across all public pages); the count can no longer rise',
+    m: '59 physical direction properties remain in the app shell page and the apps scope of the guard (314 in 39 files across all public pages); the count can no longer rise',
     s: 'part',
     /* STD-COMPARE (15 Oct 2026): In force → Partly. Proved against the code: grep -E "(margin|padding|border)-(left|right)|\b(left|right)\s*:" over public/*.html + public/app/*.js
        finds ~200 hits in 15 files (margin-left 50 · right: 49 · left: 39 · border-right 22 · border-left 16 · padding-right 12 · margin-right 10 · padding-left 8). */
