@@ -168,7 +168,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(NEW.filter((r) => r.s === 'live').every((r) => /Proof: |tests?\//.test(r.note || '')), 'every In force row STDREG1 added names the test that proves it (' + NEW.filter((r) => r.s === 'live').map((r) => r.id).join(' · ') + ')');
     ok(BYID['ondc-registry'].s === 'plan' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
     ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
-    ok(BYID['wcag-1.4.6'].s !== 'live' && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row and not In force: the contrast test measures AA only');
+    ok(BYID['wcag-1.4.6'].s === 'live' && /High Contrast/.test(BYID['wcag-1.4.6'].limit) && /Proof: /.test(BYID['wcag-1.4.6'].note) && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row, In force only with its stated Limit (AAA on the High Contrast themes) and a Proof line; the AA row does not claim it');
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
     ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'live' && BYID['oauth2-oidc'].limit && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed (Partly); Zoho reached with OAuth 2 — In force, the OIDC decision a stated Limit (STD-COMPARE)');
     /* STD-COMPARE (15 Oct 2026): the five audit fixes, each proved against the code (docs/critique/STD-COMPARE.md a) */
@@ -206,7 +206,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const mxAll = await p.$$eval('[data-testid^="std-cell-*-"]', (n) => n.map((x) => x.textContent.trim()));
     ok(mxAll.join(' ') === CA.live + ' ' + CA.part + ' ' + CA.plan, 'the matrix\'s All row is the counts of every row listed: ' + mxAll.join(' · '));
     const areaRows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
-    ok(areaRows.join('|') === 'Selling|Buying|Money & GST|Books|People & privacy|Look & access|How we build|All', 'Count by Area: seven areas and All');
+    ok(areaRows.join('|') === REG.A.map((a) => a[1]).concat('All').join('|') && REG.A.length >= 8, 'Count by Area: the register'+String.fromCharCode(39)+'s ' + REG.A.length + ' areas in its own order, and All');
     /* every matrix cell is the register's own count */
     let cellsOk = true;
     for (const a of REG.A) for (const st of ['live', 'part', 'plan']) {
@@ -317,8 +317,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.click('[data-testid="cbl-nomatch-standards"] button'); await p.waitForTimeout(250);
     ok(shownAll().test(await count(p)), 'Clear brings all ' + N + ' back');
     await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(200);
-    await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500);   /* the unit draws 50 rows at a time; the last group's head arrives with its rows */
-    await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300);
+    /* the unit draws 50 rows at a time; the last group's head arrives with its rows: scroll to the bottom until no new group head appears (167 rows = 4 loads) */
+    for (let g = 0, prev = -1; g < 8; g++) { const nGroups = await p.$$eval('#std_list .cbl-group', (n) => n.length); if (nGroups === prev && g > 1) break; prev = nGroups; await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500); }
     const gk = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     console.log('     groups: ' + JSON.stringify(gk));
     ok(gk.length === 5 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]) && /Build rule/.test(gk[4]), 'Group by Kind: Law · Standard · Practice · Compatibility · Build rule, in that order, each with its count: ' + gk[0]);
@@ -380,7 +380,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.fill('[data-testid="listctl-search-standards"]', SAMPLE.n); await p.waitForTimeout(300);
     const gsRow = p.locator('[data-testid="std-row-' + gs1 + '"]');
     await gsRow.click(); await p.waitForTimeout(250);
-    const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]');
+    const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]'); console.log('     sample: ' + SAMPLE.n + ' | gdl: ' + gdl.replace(/\s+/g, ' ').slice(0, 300));
     const noteHead = (SAMPLE.note || '').slice(0, 24); ok(/What is missing, in full/.test(gdl) && (!/^[A-Za-z0-9 ,.'-]+$/.test(noteHead) || gdl.replace(/s+/g, ' ').indexOf(noteHead) >= 0) && /In the register/.test(gdl) && (SAMPLE.added ? /New/.test(gdl) : !/New/.test(gdl)), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
     await gsRow.click(); await p.waitForTimeout(150);
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
@@ -471,13 +471,14 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.waitForSelector('[data-testid="shell-card-standards"]', { timeout: 15000 });
     ok(await p.getAttribute('[data-testid="shell-card-standards"]', 'href') === '/standards.html', 'the index page (the shell\'s Home) links Standards');
     ok(await p.getAttribute('[data-testid="shell-card-crm"]', 'href') === '/crm.html', 'and CRM as a Running card');
-    ok(await p.locator('[data-testid="shell-pillar-accounting"] [data-testid="shell-card-standards"]').count() === 1, 'Standards sits in the Accounts pillar (Home pillars, 2026-10-09)');
+    ok(await p.locator('section.cbsh-sec.setup [data-testid="shell-card-standards"]').count() === 1, 'Standards sits in the Set up section of Home (manifest area setup; it moved there from the Accounts pillar)');
     await ctx.close();
   }
   {
     /* Settings › Standards: run the function as the app does, with the helpers it needs */
     const src = fs.readFileSync(path.join(PUB, 'app', 'cap-admin.js'), 'utf8');
-    const a = src.indexOf('function standardsSettingsHTML(){'), z = src.indexOf('function appearanceSettingsHTML(){');
+    const fnAt = (name) => { const m = new RegExp('function ' + name + '\\(\\)\\s*{').exec(src); return m ? m.index : -1; };   /* the file is formatted: a space may sit before the brace */
+    const a = fnAt('standardsSettingsHTML'), z = fnAt('appearanceSettingsHTML');
     const fnSrc = src.slice(a, z);
     ok(a > 0 && z > a, 'cap-admin.js still has standardsSettingsHTML');
     ok(!/setStdTab|std-tab-|groupsOf|BADGE/.test(fnSrc) && !/function stdTab\(|function setStdTab\(/.test(src), 'Settings no longer lists the register: its tabs, rows and badges are gone from cap-admin.js');
