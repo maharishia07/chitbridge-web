@@ -58,6 +58,8 @@ const SKIP = {
   'walk-client-nav.cjs': 'needs a SIT box: a live api (:3991), seeded firm users and tokens in /out — the runner has none; run on sit-grund seede (Athi 17 Nov)',
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
+/* a file that needs more than the 240 s slot, with its reason (ms): the fault probe looks at ~1,200 screens (470 s on a SIT box, 18 Nov) */
+const SLOT_MS = { 'walk-probe-faults.cjs': 900000 };
 const KNOWN = {
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
@@ -82,7 +84,7 @@ for (const [f, k, n] of runs) {
   if (k === 1 && n > 1) console.log('  ×' + n + '  ' + f + '   ' + (REPEAT[f] ? REPEAT[f][1] : 'repeat'));
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(E2E, f)], {
-    encoding: 'utf8', timeout: 240000,
+    encoding: 'utf8', timeout: SLOT_MS[f] || 240000,
     env: Object.assign({}, process.env, { NODE_PATH: path.join(E2E, 'node_modules') }),
   });
   const s = ((Date.now() - t0) / 1000).toFixed(0) + 's';

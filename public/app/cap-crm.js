@@ -111,7 +111,7 @@ function crmMayRemove() {
 function crmHat() {
   /* the b173 ladder word (access_level: viewer · commenter · editor) is what the server enforces — read FIRST; the old hat only when no level rides (FX-L2C) */
   /* the level rides in the signed token's own payload (lib/identity-auth issueToken: access_level; pre-b173 tokens: hat / actor_hat) */
-  var claims = crmTokenClaims();
+  var claims = crmTokenClaims(SESSION.token);
   return String(claims.access_level || claims.level || claims.hat || claims.actor_hat || '');
 }
 function crmRole() {

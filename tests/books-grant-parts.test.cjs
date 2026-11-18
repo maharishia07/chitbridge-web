@@ -77,7 +77,7 @@ t('figure: money is the server\'s minor units in the answer\'s currency; a nil d
   const col = ['dr_minor', 'Debit', kit.MONEY];
   assert.strictEqual(kit.figure({ dr_minor: '12500' }, col), 'AUD 12500');
   assert.strictEqual(kit.figure({ dr_minor: '0' }, col), '');
-  assert.strictEqual(kit.figure({}, ['sales_minor', 'Sales', kit.MONEY]), '«No sales»');
+  assert.strictEqual(kit.figure({}, ['sales_minor', 'Sales', kit.MONEY]), '«No income»');
 });
 t('figure: a net balance is Dr or Cr, never a minus; nothing is a dash', () => {
   state({});

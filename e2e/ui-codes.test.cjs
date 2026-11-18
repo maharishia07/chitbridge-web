@@ -45,8 +45,12 @@ const BOOKS_TABLE = [
   ['data-testid="lg-statement"', 'CMP042-B05'], ['data-testid="lg-pay"', 'CMP042-B01'], ['data-testid="lt-find"', 'CMP040-I01'], ['data-testid="lt-fold"', 'CMP042-B06'],
   ['id="lt_rz"', 'CMP042-B23'], ['id="pay_mode"', 'CMP041-S01'], ['data-testid="pay_adv"', 'CMP040-I03'], ['data-testid="pk_p"', 'CMP041-S01'], ['data-testid="pk_build"', 'CMP042-B12'],
   ['data-testid="wait-retry"', 'CMP009-B01'], ['data-testid="ac_add"', 'CMP007-B01'],
-  ['data-testid="ac_name"', 'CMP040-I01'], ['data-testid="ac_parent"', 'CMP041-S01'], ['data-testid="lk_why"', 'CMP040-I01'], ['data-testid="pay_ref"', 'CMP040-I01']
+  ['data-testid="ac_name"', 'CMP040-I01'], ['data-testid="ac_parent"', 'CMP041-S01'], ['data-testid="lk_why"', 'CMP040-I01'], ['data-testid="drill-all-', 'SCR013-B01'], ['data-testid="lk-why-', 'SCR013-B02'], ['data-testid="pay_ref"', 'CMP040-I01']
 ];
+
+/** a control a screen owns itself is stamped SCR###-<kind><nn> (UX-137 w3; SCR037 in ui-codes-cart.test.cjs): allowed when the screen is a row of the register (public/app/screens.js) */
+const SCREEN_CODES = new Set([...read('public/app/screens.js').matchAll(/"code":"(SCR\d{3})"/g)].map((m) => m[1]));
+const screenOwn = (code) => /^SCR\d{3}-[A-Z]\d{2}$/.test(code) && SCREEN_CODES.has(code.slice(0, 6));
 
 /** every failure of one source against the closed set and its table, as sentences */
 function failuresOf(source, known, table) {
@@ -55,7 +59,7 @@ function failuresOf(source, known, table) {
   const re = /<(\w+)\b([^>]*?)data-cbsid="([A-Z0-9-]+)"([^>]*)>/g;
   let m;
   while ((m = re.exec(source))) tags.push({ code: m[3], text: m[2] + m[4] });
-  tags.forEach((t) => { if (!known.has(t.code)) out.push(t.code + ' is not in the ACTION_SET closed set'); });
+  tags.forEach((t) => { if (!known.has(t.code) && !screenOwn(t.code)) out.push(t.code + ' is not in the ACTION_SET closed set'); });
   table.forEach(([marker, code]) => {
     const hits = tags.filter((t) => t.text.indexOf(marker) >= 0);
     if (!hits.length) out.push('no stamped tag carries ' + marker);

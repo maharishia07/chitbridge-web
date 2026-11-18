@@ -6,8 +6,8 @@
  */
 'use strict';
 /** the claims in the signed token's own payload (the session record does not keep them); an unreadable token has none, and says so in the log */
-function crmTokenClaims() {
-  var part = String(SESSION.token || '').split('.')[1];
+function crmTokenClaims(token) {
+  var part = String(token || '').split('.')[1];
   if (!part) return {}; /* signed out: nothing to read, nothing to log */
   try {
     return JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
