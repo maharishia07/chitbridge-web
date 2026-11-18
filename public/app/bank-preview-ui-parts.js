@@ -135,6 +135,25 @@
     }
     Object.assign(ctx, { feeTaxQuestion, basisQuestion });
   }
+  /** the two questions of a loan repayment line: which loan it pays and the interest the owner types; lands on the one shared `ctx` */
+  function addLoanAsks(ctx) {
+    var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, dataKey = ctx.dataKey;
+    /** which loan a repayment line pays: the shop's own loans (GET /books/loans, through the controller) in the ONE select, each with what it still owes (the api's figure, never worked out here); nothing when the host lists none */
+    function loanBox(item) {
+      var loans = cfg.controller().loans();
+      if (!loans.length) return '';
+      var picked = cfg.controller().loanOf ? cfg.controller().loanOf(item.key) : '';
+      return '<span class="bd-ask">Which loan does this pay?</span> <select data-cbsid="BKS017-S11" class="bd-inp" data-testid="bd-loan-pick" aria-label="Which loan" data-act="loanfield" data-key="' + escapeHtml(item.key) + '"><option value="">Choose a loan</option>' +
+        loans.map(function (one) { return '<option value="' + escapeHtml(one.ref) + '"' + (picked === one.ref ? ' selected' : '') + '>' + escapeHtml((one.lender || one.ref) + ' · ' + one.ref + ' · owes ' + ctx.amountText({ amount_minor: one.outstanding_minor, currency: one.currency })) + '</option>'; }).join('') + '</select> ';
+    }
+    /** M-06: a loan repayment waits for the interest the OWNER types from the lender's statement (minor units are typed as the page shows money); never worked out, never remembered */
+    function interestBox(item) {
+      return loanBox(item) + '<span class="bd-ask">' + escapeHtml(preview.sentenceOf(item.needs) || "Type the interest from the lender's statement.") + '</span> ' +
+        '<input data-cbsid="BKS017-I02" class="bd-inp" type="text" inputmode="decimal" aria-label="Interest in this payment" data-act="interestfield" data-key="' + escapeHtml(item.key) + '"> ' +
+        '<button data-cbsid="BKS017-B15" type="button" class="bd-btn" data-act="interest"' + dataKey(item) + '>Use this interest</button>';
+    }
+    Object.assign(ctx, { interestBox });
+  }
   /** the tax kind question and the ONE question a held-back line asks next; each function lands on the one shared `ctx` */
   function addAsks(ctx) {
     var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, tag = ctx.tag, dataKey = ctx.dataKey, taxWordOf = ctx.taxWordOf, chartOf = ctx.chartOf, optionsOf = ctx.optionsOf, entryNote = ctx.entryNote, nearBox = ctx.nearBox, invoiceQuestion = ctx.invoiceQuestion, tickBox = ctx.tickBox, basisQuestion = ctx.basisQuestion;
@@ -158,19 +177,9 @@
         }).join(' ')
       );
     }
-    /** which loan a repayment line pays: the shop's own loans (GET /books/loans, through the controller) in the ONE select, each with what it still owes (the api's figure, never worked out here); nothing when the host lists none */
-    function loanBox(item) {
-      var loans = cfg.controller().loans();
-      if (!loans.length) return '';
-      var picked = cfg.controller().loanOf ? cfg.controller().loanOf(item.key) : '';
-      return '<span class="bd-ask">Which loan does this pay?</span> <select data-cbsid="BKS017-S11" class="bd-inp" data-testid="bd-loan-pick" aria-label="Which loan" data-act="loanfield" data-key="' + escapeHtml(item.key) + '"><option value="">Choose a loan</option>' +
-        loans.map(function (one) { return '<option value="' + escapeHtml(one.ref) + '"' + (picked === one.ref ? ' selected' : '') + '>' + escapeHtml((one.lender || one.ref) + ' · ' + one.ref + ' · owes ' + ctx.amountText({ amount_minor: one.outstanding_minor, currency: one.currency })) + '</option>'; }).join('') + '</select> ';
-    }
-    /** M-06: a loan repayment waits for the interest the OWNER types from the lender's statement (minor units are typed as the page shows money); never worked out, never remembered */
-    function interestBox(item) {
-      return loanBox(item) + '<span class="bd-ask">' + escapeHtml(preview.sentenceOf(item.needs) || "Type the interest from the lender's statement.") + '</span> ' +
-        '<input data-cbsid="BKS017-I02" class="bd-inp" type="text" inputmode="decimal" aria-label="Interest in this payment" data-act="interestfield" data-key="' + escapeHtml(item.key) + '"> ' +
-        '<button data-cbsid="BKS017-B15" type="button" class="bd-btn" data-act="interest"' + dataKey(item) + '>Use this interest</button>';
+    /** whether the question a held-back line asks is one of these needs */
+    function needsAny(item, needs) {
+      return needs.indexOf(item.needs) >= 0;
     }
     /** the one question a held-back line asks next */
     function askedBox(item) {
@@ -179,12 +188,12 @@
       if (item.needs === 'tax_invoice') return invoiceQuestion(item);
       if (item.needs === 'fee_tax') return ctx.feeTaxQuestion(item);
       if (item.needs === 'which_liability') return liabilityBox(item);
-      if (item.needs === 'interest' || item.needs === 'interest_too_big') return interestBox(item);
-      if (item.needs === 'needs_tick' || item.needs === 'balance_break') return tickBox(item);
+      if (needsAny(item, ['interest', 'interest_too_big'])) return ctx.interestBox(item);
+      if (needsAny(item, ['needs_tick', 'balance_break'])) return tickBox(item);
       if (item.needs === 'tax_kind') return taxKindBox(item);
       return '';
     }
-    Object.assign(ctx, { taxKindBox, liabilityBox, interestBox, askedBox });
+    Object.assign(ctx, { taxKindBox, liabilityBox, askedBox });
   }
   /** the note under a line: the message of a line the sheet cannot finish, the line's note and the engine's own sentence; each function lands on the one shared `ctx` */
   function addLineNote(ctx) {
@@ -450,6 +459,7 @@
     addEntryWords(ctx);
     addQuestions(ctx);
     addFeeAndBasis(ctx);
+    addLoanAsks(ctx);
     addAsks(ctx);
     addLineNote(ctx);
     addParties(ctx);

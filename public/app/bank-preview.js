@@ -350,8 +350,8 @@
     projectAgain(opts, preview);
     return { ok: true };
   }
-  /** the person's answers on one line, as controller methods: the tick (B5-01) · the word on the tax invoice (B5-03) · a pair with a books entry, or "it is new" (B5-02); each asks the engine again through answerLine */
-  function answerMethods(opts, preview) {
+  /** the person's tick, the word on the tax invoice and the tax on a card fee: answers that keep or settle a tax question (B5-01 · B5-03 · BB-04) */
+  function answerTaxMethods(opts, preview) {
     return {
       /** the person's tick: "yes, this is right" for a line only the bank's words proposed (B5-01) */
       tick: function (key) {
@@ -377,7 +377,12 @@
           if (minor === '' || minor == null || !(+minor >= 0) || Math.floor(+minor) !== +minor) delete preview.interest[key];
           else preview.interest[key] = +minor;
         });
-      },
+      }
+    };
+  }
+  /** the loan answers: which loan a repayment pays and the interest typed from the lender's statement (M-06) */
+  function answerLoanMethods(opts, preview) {
+    return {
       /** the loans the host reads (GET /books/loans): [{ ref, lender, opening_minor, outstanding_minor, currency }]; none when the host has no read (the demo) */
       loans: function () { return (opts.loans && opts.loans()) || []; },
       loanOf: function (key) { return preview.loan[key] || ''; },
@@ -387,7 +392,12 @@
           var known = ((opts.loans && opts.loans()) || []).some(function (one) { return one.ref === ref; });
           if (ref && known) preview.loan[key] = ref; else delete preview.loan[key];
         });
-      },
+      }
+    };
+  }
+  /** the person's answers on one line, as controller methods: the tick (B5-01) · the word on the tax invoice (B5-03) · a pair with a books entry, or "it is new" (B5-02); each asks the engine again through answerLine */
+  function answerMethods(opts, preview) {
+    return Object.assign({}, answerTaxMethods(opts, preview), answerLoanMethods(opts, preview), {
       /** B5-02: pair this statement line with the books entry (by its id) it already is, or say it is new */
       pair: function (key, entryId) {
         return answerLine(opts, preview, key, function () {
@@ -399,7 +409,7 @@
           preview.notMatch[key] = true;
         });
       }
-    };
+    });
   }
   /** what the person made of the months and the pairs this session: the pairs the host's band counts, and the locked months posted in the next open month (W15-85) */
   function monthMethods(opts, preview) {

@@ -33,8 +33,7 @@
         ctx.inPanel = true; /* the sentence is the panel's headline: the boxes under it do not say it again */
         var key = ctx.escapeHtml(item.key),
           said = preview.looksLike(item) || (item.state === 'proposed' || item.state === 'needs_you' ? ctx.sentenceOf(item) : ''),
-          kind = result ? '' : ctx.kindBox(item),
-          boxes = result || item.needs === 'which_liability' ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
+          boxes = panelBoxesHtml(ctx, item, result);
         var note = ctx.lineNote(item, result);
         ctx.inPanel = false;
         return '<div class="bd-openrow" data-line="' + key + '" data-testid="bd-panel">' + (said ? '<p class="bd-looks-line"><b>' + ctx.escapeHtml(said) + '</b></p>' : '') + '<div class="bd-sub">' + boxes + note + '</div></div>';
@@ -78,6 +77,28 @@
   function sameHeldLines(cfg, key) {
     return similarLines(cfg, key, function (item) { return item.needs === 'tax_invoice'; });
   }
+  /** BANK-new-15: the owner says which tax the payment settles. The one the engine books on its single tax head (whatIsThis tax_payment.head) is the engine's existing answer; any other is said plainly to be added as an entry, never posted on the wrong head */
+  function useLiability(cfg, key, target) {
+    var engine = root.CBBankEntry,
+      listed = engine && engine.whatIsThis ? engine.whatIsThis({ country: cfg.country }).items || [] : [],
+      head = (listed.filter(function (one) { return one.id === 'tax_payment'; })[0] || {}).head;
+    if (head && target.getAttribute('data-id') === head) return cfg.controller().resolveLine(key, { kind: 'tax_payment' });
+    return { ok: false, line: true, why: target.getAttribute('data-words') + ' is not added from a bank line yet: add it as an entry in Books.' };
+  }
+  /** M-06: the interest the owner typed, as written on the lender's statement ("250.00"), taken to minor units by the money unit (toMinor, the shop's currency); a blank or non-number clears it */
+  function useInterest(cfg, chosenFor, key) {
+    var loan = chosenFor('loanfield', key);
+    if (cfg.controller().loans().length) { if (!loan) return { ok: false, line: true, why: 'Choose which loan this pays.' }; cfg.controller().loan(key, loan); }
+    var typed = String(chosenFor('interestfield', key) || '').replace(/[,s]/g, ''),
+      unit = root.CBMoney;
+    if (typed && !(+typed >= 0)) return { ok: false, line: true, why: 'Type the interest as a number, like 250.00.' };
+    return cfg.controller().interest(key, typed && unit && unit.toMinor ? unit.toMinor(+typed, cfg.currency) : '');
+  }
+  /** the answer boxes under an open row's sentence: the kind box, then the party and account boxes once a kind is opened, and why the line could not be resolved */
+  function panelBoxesHtml(ctx, item, result) {
+    var kind = result ? '' : ctx.kindBox(item);
+    return result || item.needs === 'which_liability' ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
+  }
   /** what the buttons that answer the controller do, by data-act (they give the controller's answer, or { ok, why } when it refuses) */
   function answerActions(cfg, chosenFor, taxWordOf) {
     /** the owner picked an account and a tax kind for a line nothing explained; "not income or expense" is no account here (B5-04) */
@@ -97,31 +118,14 @@
       if (!item || !item.event || !item.event.class) return { ok: false, why: 'This line has no account to carry the tax on.' };
       return cfg.controller().resolveLine(key, { account: item.event.class, tax_kind: kind });
     }
-    /** BANK-new-15: the owner says which tax the payment settles. The one the engine books on its single tax head (whatIsThis tax_payment.head) is the engine's existing answer; any other is said plainly to be added as an entry, never posted on the wrong head */
-    function useLiability(key, target) {
-      var engine = root.CBBankEntry,
-        listed = engine && engine.whatIsThis ? engine.whatIsThis({ country: cfg.country }).items || [] : [],
-        head = (listed.filter(function (one) { return one.id === 'tax_payment'; })[0] || {}).head;
-      if (head && target.getAttribute('data-id') === head) return cfg.controller().resolveLine(key, { kind: 'tax_payment' });
-      return { ok: false, line: true, why: target.getAttribute('data-words') + ' is not added from a bank line yet: add it as an entry in Books.' };
-    }
-    /** M-06: the interest the owner typed, as written on the lender's statement ("250.00"), taken to minor units by the money unit (toMinor, the shop's currency); a blank or non-number clears it */
-    function useInterest(key) {
-      var loan = chosenFor('loanfield', key);
-      if (cfg.controller().loans().length) { if (!loan) return { ok: false, line: true, why: 'Choose which loan this pays.' }; cfg.controller().loan(key, loan); }
-      var typed = String(chosenFor('interestfield', key) || '').replace(/[,s]/g, ''),
-        unit = root.CBMoney;
-      if (typed && !(+typed >= 0)) return { ok: false, line: true, why: 'Type the interest as a number, like 250.00.' };
-      return cfg.controller().interest(key, typed && unit && unit.toMinor ? unit.toMinor(+typed, cfg.currency) : '');
-    }
     return {
       gst: function (key, target) { return cfg.controller().answer('gst_basis', target.getAttribute('data-v')); },
       meant: function (key, target) { return cfg.controller().editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') }); },
       resolve: function (key) { return cfg.controller().resolveLine(key); },
       useacct: useAccount,
       taxuse: useTax,
-      interest: function (key) { return useInterest(key); },
-      liability: useLiability,
+      interest: function (key) { return useInterest(cfg, chosenFor, key); },
+      liability: function (key, target) { return useLiability(cfg, key, target); },
       tick: function (key) { return cfg.controller().tick(key); },
       feetax: function (key, target) { return cfg.controller().feeTax(key, target.getAttribute('data-v')); },
       inv: function (key, target) { var said = cfg.controller().invoice(key, target.getAttribute('data-v')); sameAccountLines(cfg, key).concat(sameHeldLines(cfg, key)).forEach(function (other) { cfg.controller().invoice(other.key, target.getAttribute('data-v')); }); return said; },
