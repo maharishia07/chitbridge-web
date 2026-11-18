@@ -3380,7 +3380,7 @@ var STD_GLOSSARY_REF = [
   ['PM', 'Project management folder', 'Where ChitBridge keeps its plan, test runs and coverage files'],
   ['SIT', 'System integration test', 'The shared test servers a change is proved on before it goes live'],
   ['P1', 'Priority 1', 'The most urgent class of work in the backlog'],
-  ['PKCE', 'Proof Key for Code Exchange', 'A check that stops a stolen sign-in code being used by someone else (RFC 7636)'],
+  ['PKCE', 'Proof Key for Code Exchange', 'A check that stops a stolen sign-in code being used by someone else'],
   ['CRC-16', '16-bit cyclic redundancy check', 'A short checksum that catches a mistyped or damaged code, as at the end of a payment QR'],
   ['CAP-12', 'Capability 12', 'A numbered capability in the ChitBridge architecture register'],
   ['CAP-14', 'Capability 14', 'A numbered capability in the ChitBridge architecture register'],
