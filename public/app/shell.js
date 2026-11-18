@@ -141,6 +141,7 @@
   }
   /* the Home cards' read (queue · retry · one ask per URL · lead by the data · firm lazy read) and painters: shell-facts.js */
   var factsLib = root.CBShellFacts || NO_FACTS,
+    wordsOf = factsLib.wordsOf || function (value) { return typeof value === 'string' ? value : ''; }, /* P1-5: the one text of an answer or a name (shell-facts.js) */
     cards = factsLib.painters(W, T); /* a Home card's state · facts line · trend teaser (shell-facts.js) */
   /* ⭐ the frame's words are said AGAIN when a language pack lands: every pack calls renderApp() on its way out (strings-*.js), and a page
      defines its own renderApp AFTER the frame is drawn — so the global is held behind a setter: the page's function runs, then the frame's
@@ -849,7 +850,7 @@
 
     var shopName = function () {
       var b = S.header && S.header.business;
-      return (b && b.name) || (person && person.entity) || (sess && sess.entity) || W.yourShop;
+      return wordsOf(b && b.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
     };
 
     /* CB Sides: only on Home, only signed in, only if the page loaded sides.js (the same rule as the avatar, bell and kural) */
@@ -876,9 +877,9 @@
     /* ── the bar ── */
     function paintBar() {
       if (who) {
-        var levelWord = person && person.level ? ' · ' + person.level : '';
+        var levelWord = person && wordsOf(person.level) ? ' · ' + wordsOf(person.level) : '';
         who.querySelector('b').textContent = shopName() + levelWord;
-        who.setAttribute('aria-label', shopName() + levelWord);
+        who.setAttribute('aria-label', shopName() + levelWord); who.title = S.headerWhy || ''; /* the refused read's words */
       }
       if (sheet) sheet.setAttribute('aria-label', shopName());
       var element = $('.cbsh-lic'),
@@ -1348,7 +1349,7 @@
           var e = new Error('HTTP ' + reply.status);
           e.status = reply.status;
           e.retryAfter = Math.min(10, Number(reply.headers && reply.headers.get && reply.headers.get('Retry-After')) || 0);
-          throw e;
+          return reply.json().then(function (body) { e.words = (factsLib.problemWords || wordsOf)(body, reply.status); throw e; }, function () { throw e; });
         }
         return reply.json();
       });
@@ -1509,9 +1510,9 @@
               S.header = reply || null;
               S.headerState = reply ? 'ok' : 'none';
             },
-            function () {
+            function (err) {
               S.header = null;
-              S.headerState = 'none';
+              S.headerState = 'none'; S.headerWhy = (err && err.words) || '';
             }
           )
           .then(function () {

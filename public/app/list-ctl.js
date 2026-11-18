@@ -2315,6 +2315,7 @@ var o = inst.o;
         : '') +
       (R.hl === ctx.id && o.hl !== false ? ' sel' : '') +
       (zebra ? ' z' : '') +
+      (ctx.row && ctx.row._total ? ' cbl-total' : '') /* P1-2: a total line the page appends stays in view at the foot of the window */ +
       (entry.g != null ? ' ing' : '');
   }
   /** the extra classes of a body cell: the first one, the pinned action column strong and right, numbers and money right in mono, mono, the line a card gives an action */
@@ -2422,6 +2423,7 @@ ctx.pin = cols.filter(function (item) {
         : '') +
       (inst.r.hl === ctx.id && ctx.o.hl !== false ? ' sel' : '') +
       (zebra ? ' z' : '') +
+      (ctx.row && ctx.row._total ? ' cbl-total' : '') /* P1-2: a total line the page appends stays in view at the foot of the window */ +
       (entry.g != null ? ' ing' : '');
   }
   /** lineHTML, step 2 of 5 (part 2, lines 2516-2544 of the one function): runs on, nothing here ends the call */
