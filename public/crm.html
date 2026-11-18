@@ -333,7 +333,7 @@ async function start() {
   } catch (_) {}
   if (g !== CRM.gen) return;
   whoPaint();
-  crmRoute();
+  crmRoute(false, true); /* the boot repaint keeps a sheet opened from the frame while the ledger switch was read */
 }
 window.addEventListener('hashchange', () => {
   if (MINE) crmRoute();

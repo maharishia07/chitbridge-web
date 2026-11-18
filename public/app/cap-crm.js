@@ -790,7 +790,8 @@ function crmRoutePrelude(segments, params, frame) {
   if (window.CBKural) CBKural.set((typeof crmFaceKural === 'function' && crmFaceKural()) || shown);
   return typeof crmFaceRoute === 'function' && crmFaceRoute(segments, params, frame);
 }
-function crmRoute(frame) {
+/** keepModal: the page's own boot repaint (frame drawn, ledger switch read) must not close a sheet the person opened from the already-clickable frame meanwhile; only a real route change closes it */
+function crmRoute(frame, keepModal) {
   var text = (location.hash || '').replace(/^#\/?/, ''),
     q = '',
     qi = text.indexOf('?');
@@ -806,7 +807,7 @@ function crmRoute(frame) {
       params[a[0]] = decodeURIComponent(a[1] || '');
     }
   });
-  closeModal();
+  if (!keepModal) closeModal();
   /* one kural per page (kurals.json group `crm`); the footer is the page's, never a part of a message */
   if (crmRoutePrelude(seg, params, frame)) return; /* the kural band, then the Marketing face's own routes (#/sent · #/results · its home) */
   if (seg[0] === 'party' && seg[1]) {
