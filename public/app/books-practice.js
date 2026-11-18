@@ -242,7 +242,7 @@
   function holdersOn() { return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []); }
   /** ASSIGN-1: read the practice again after an assign, so the Held by column shows what the server now holds */
   function reloadAfterAssign() {
-    return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; draw(); } });
+    return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
   }
   /** ASSIGN-1: the list's bulk actions (assign · hand over · back to pool · open jobs): generic CBAssign with this list's plug and row facts; [] when the bar is not for this person */
   function bulkActions() {
@@ -268,7 +268,9 @@
     if (!root.CBList) return withList(mountList);
     dropOldList();
     var bandKey = (practiceKit.bandShown(practiceKit.practiceState.data) || {}).key || 'pipeline';
-    if (root.CBList.reset) root.CBList.reset('practice-clients-' + bandKey);
+    /* ASSIGN-W2 I2: after an assign the same list is drawn again with its ticks, search and filters kept, so the bar stays for the next group; any other paint starts clean */
+    if (root.CBList.reset && !practiceKit.practiceState.keepList) root.CBList.reset('practice-clients-' + bandKey);
+    practiceKit.practiceState.keepList = false;
     var rows = practiceKit.practiceState.data.clients.map(function (r, n) { r._n = n; return r; });
     practiceKit.practiceState.list = root.CBList.mount(host, listOptions(rows, bandKey));
     markLastClient();
