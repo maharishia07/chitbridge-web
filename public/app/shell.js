@@ -747,14 +747,14 @@
      index2's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
   var MORE_ROWS = { items: '.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup', key: 'data-area', row: '.cbsh-row', panel: '' };
   function openRow(scope, key, force, shape) {
-    var s = shape || MORE_ROWS, now = '';
-    [].forEach.call(scope.querySelectorAll(s.items), function (item) {
-      var isOpen = !!key && item.getAttribute(s.key) === key && (force || !item.classList.contains('open'));
+    var rows = shape || MORE_ROWS, now = '';
+    [].forEach.call(scope.querySelectorAll(rows.items), function (item) {
+      var isOpen = !!key && item.getAttribute(rows.key) === key && (force || !item.classList.contains('open'));
       item.classList.toggle('open', isOpen);
       if (isOpen) now = key;
-      var rowButton = item.querySelector(s.row);
+      var rowButton = item.querySelector(rows.row);
       if (rowButton) rowButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      var panel = s.panel && item.querySelector(s.panel);
+      var panel = rows.panel && item.querySelector(rows.panel);
       if (panel) panel.hidden = !isOpen;
     });
     return now;
@@ -839,6 +839,11 @@
     });
     doc.body.insertBefore(link, doc.body.firstChild);
   }
+  /** the shop's name for the header: the business the header read named, else the person's entity, else the session's, else "Your shop" */
+  function shopNameOf(header, person, sess) {
+    var business = header && header.business;
+    return wordsOf(business && business.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
@@ -864,10 +869,7 @@
     el.setAttribute('data-testid', 'cbshell');
     el.setAttribute('data-mode', mode);
 
-    var shopName = function () {
-      var b = S.header && S.header.business;
-      return wordsOf(b && b.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
-    };
+    var shopName = function () { return shopNameOf(S.header, person, sess); };
 
     /* CB Sides: only on Home, only signed in, only if the page loaded sides.js (the same rule as the avatar, bell and kural) */
     var sides = mode === 'home' && !!person && !!(root.CBSides && root.CBSides.mount);
