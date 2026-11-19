@@ -193,6 +193,13 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   const popBody = popup.seen.dialog ? popup.seen.dialog.body : '';
   check(/data-testid="assign-person-p1"/.test(popBody) && !/assign-person-v1/.test(popBody), 'W7 the person who may hold is listed; the view-only person is not a choice');
   check(/data-testid="assign-viewonly"/.test(popBody) && /Vera View is view-only — change what they can do to assign/.test(popBody), 'W7 the view-only person is NAMED with what to change, not silently missing');
+  /* walk 19 Nov: the api's own reason (assign_blocked: 'view_only', api #1378) names the person, with no access_level sent; a person blocked for another reason is not called view-only */
+  const REASONED = { actors: [{ actor_id: 'p1', display_name: 'Priya Shah', job_assignable: true, open_load: 0 }, { actor_id: 'v2', display_name: 'Wes Watcher', job_assignable: false, assign_blocked: 'view_only' }, { actor_id: 'o1', display_name: 'Olly Off', job_assignable: false, assign_blocked: 'switched_off', access_level: 'viewer' }] };
+  const reasoned = popupWindow([reply(true, REASONED), reply(true, { assigned: 1, skipped: [], previous: [] })]);
+  reasoned.win.CBAssign.bulk(popOpts).find((button) => button.id === 'assign').run([{ id: 'c1' }]);
+  await settle();
+  const reasonedBody = reasoned.seen.dialog ? reasoned.seen.dialog.body : '';
+  check(/Wes Watcher is view-only — change what they can do to assign/.test(reasonedBody) && !/Olly Off is view-only/.test(reasonedBody), 'W7 the server reason names the view-only person; another reason is not called view-only');
   check(popup.seen.handler !== null && popup.seen.decoyHits === 0, 'W8 the click handler stands on the body that holds the list, not on another sheet that happens to come first');
   popup.seen.handler({ target: { closest: () => ({ hasAttribute: () => false, getAttribute: (name) => (name === 'data-as-pick' ? 'p1' : null) }) } });
   await settle();

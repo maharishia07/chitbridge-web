@@ -52,7 +52,8 @@
     about: 'About',
     attach: '📎 Attach',
     line: 'Line',
-    viewOnly: 'View only — you can read, not reply'
+    viewOnly: 'View only — you can read, not reply',
+    left: '{name} left'
   };
   function threadText(s) {
     return typeof tx === 'function' ? tx(s) : s;

@@ -137,8 +137,8 @@
       var mine = assignApi.meId();
       var rows = reply.body.actors || reply.body.items || [], key = flag || 'job_assignable';
       var list = rows.filter(function (a) { return a[key] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
-      /* W7: a view-only person holds nothing (rule A5, the server's flag stays false); they are NAMED, never silently missing. Words only: the level the server sent picks the sentence, it decides nothing. */
-      var viewOnly = rows.filter(function (a) { return a[key] !== true && a.access_level === 'viewer'; }).map(function (a) { return a.display_name || a.name || ''; }).filter(Boolean);
+      /* W7: a view-only person holds nothing (rule A5, the server's flag stays false); they are NAMED, never silently missing. Words only: the server's reason (assign_blocked: 'view_only', api #1378) picks the sentence, it decides nothing; until the api lands the level stands in. */
+      var viewOnly = rows.filter(function (a) { return a[key] !== true && (a.assign_blocked ? a.assign_blocked === 'view_only' : a.access_level === 'viewer'); }).map(function (a) { return a.display_name || a.name || ''; }).filter(Boolean);
       return { list: list, viewOnly: viewOnly };
     });
   }
@@ -162,7 +162,7 @@
     var out = '';
     if (!roster.list.length) {
       var where = root.CBPractice && typeof root.CBPractice.isFirm === 'function' && root.CBPractice.isFirm() ? 'No one in your practice yet' : 'No one in your team yet';
-      out += '<div data-testid="assign-empty" style="margin-top:8px;font-size:14px">' + root.esc(tr(where)) + ' — <a href="/employees.html" data-cbsid="HOM001-B22" data-cbmount="' + MOUNT + '" data-testid="assign-add-person" style="color:var(--accent,#1F5F5B);font-weight:600">' + root.esc(tr('Add a person')) + '</a></div>';
+      out += '<div data-testid="assign-empty" style="margin-top:8px;font-size:14px">' + root.esc(tr(where)) + ' — <a href="/employees.html" data-cbsid="HOM001-C01" data-cbmount="' + MOUNT + '" data-testid="assign-add-person" style="color:var(--accent,#1F5F5B);font-weight:600">' + root.esc(tr('Add a person')) + '</a></div>';
     }
     (roster.viewOnly || []).forEach(function (name) {
       out += '<div data-testid="assign-viewonly" style="margin-top:6px;font-size:13px;color:var(--grey,#5B5B5B)">' + root.esc(sayText('{name} is view-only — change what they can do to assign', { name: name })) + '</div>';

@@ -327,9 +327,26 @@
     return { token: sess ? sess.token : null, session: sess, shell: shell, skeleton: skel };
   }
   /** a 401 from the API: the session is no longer good - drop it and show the sign-in window (it is the same window the apps show) */
-  function ended() {
+  /** walk 19 Nov: a refusal that says WHY access went (books removed by whom and when, a switched-off account) is the sentence the server chose; only the bare "Sign in to continue." stays generic. Words only, decides nothing. */
+  function endedWords(status, body) {
+    var said = String((body && (body.message || body.error)) || '').trim();
+    return (status === 401 || status === 403) && /switched off|removed|ended|no longer/i.test(said) && !/^sign in to continue.?$/i.test(said) ? said : '';
+  }
+  /** the reason a page's session ended, kept for the one sign-in window that follows the reload (read once) */
+  function endedNote() {
+    try {
+      var kept = root.sessionStorage.getItem('cb_ended_why') || '';
+      root.sessionStorage.removeItem('cb_ended_why');
+      return kept;
+    } catch (_) {
+      return '';
+    }
+  }
+  function ended(reply) {
     try {
       root.localStorage.removeItem('cb_sess');
+      var said = endedWords(401, reply);
+      if (said) root.sessionStorage.setItem('cb_ended_why', said);
     } catch (_) {}
     root.location.reload();
   }
@@ -383,5 +400,5 @@
     }
     return framed;
   }
-  root.CBFrame = { mount: mount, lab: labFrame, session: session, ended: ended, resay: resay };
+  root.CBFrame = { mount: mount, lab: labFrame, session: session, ended: ended, endedWords: endedWords, endedNote: endedNote, resay: resay };
 })(typeof window !== 'undefined' ? window : globalThis);

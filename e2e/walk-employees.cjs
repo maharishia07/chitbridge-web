@@ -98,7 +98,7 @@ W.run('employees', async (w) => {
 
   await w.step('E1', 'Employees -> the list has one line per person, the count says 2 on · 1 off, and the sign-in name is the short one', async () => {
     const n = await rows(), cnt = await txt('[data-testid="emp-count"]'), list = await txt('[data-testid="emp-list"]');
-    return { ok: n === 3 && /2\s*on/.test(cnt) && /1\s*off/.test(cnt) && /asha01@walk-shop.br/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the whole sign-in name is showing' : 'the sign-in name is cut') };
+    return { ok: n === 3 && /2\s*people/.test(cnt) && /1\s*off/.test(cnt) && /asha01@walk-shop.br/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the whole sign-in name is showing' : 'the sign-in name is cut') };
   });
   await w.step('E2', 'Employees -> type "ravi" in the search box -> only Ravi Nair is left', async () => {
     await page.fill('[data-testid="listctl-search-employees"]', 'ravi'); await page.waitForTimeout(400);
@@ -137,7 +137,7 @@ W.run('employees', async (w) => {
     await page.click('#emp_switch'); await page.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
     const asked = await txt('[data-testid="confirm"]'); await page.click('[data-testid="confirm-ok"]'); await page.waitForTimeout(700);
     const tag = await txt('[data-testid="emp-state-p1"]'), cnt = await txt('[data-testid="emp-count"]');
-    return { ok: /can no longer sign in/.test(asked) && /Off/.test(tag) && /1\s*on/.test(cnt) && /2\s*off/.test(cnt), saw: 'asked "' + asked.slice(0, 70) + '"; tag ' + tag + '; "' + cnt + '"' };
+    return { ok: /can no longer sign in/.test(asked) && /Off/.test(tag) && /1\s*person/.test(cnt) && /2\s*off/.test(cnt), saw: 'asked "' + asked.slice(0, 70) + '"; tag ' + tag + '; "' + cnt + '"' };
   });
   await closeSheet();
   await w.step('E9', 'Meena (off) -> Switch on -> no question asked (it is reversible) -> she is On and told where her code went', async () => {

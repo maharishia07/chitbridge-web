@@ -252,10 +252,10 @@
   function assignOpts() {
     return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', noun: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
   }
-  /** I3: a seat that may not assign (staff) opens on Mine; owner and manager open on Everyone. The server's verdict (may_assign) decides, and only when the page knows who the person is */
+  /** I3 + walk 19 Nov: a person who HOLDS work opens on Mine (0 clicks); a seat that may not assign (staff) opens on Mine too; the rest on Everyone. The server's verdict (may_assign) and holders decide, only when the page knows who the person is */
   function defaultHeld() {
-    var d = practiceKit.practiceState.data;
-    return holdersOn() && d && d.may_assign === false && root.CBAssign.meId() ? { held: 'mine' } : {};
+    var d = practiceKit.practiceState.data, me = holdersOn() && root.CBAssign.meId(), holds = !!me && ((d && d.clients) || []).some(function (r) { return root.CBAssign.heldFilter([r]).match(r, 'mine'); });
+    return me && d && (holds || d.may_assign === false) ? { held: 'mine' } : {};
   }
   /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
   function heldFilterOf(filterOf) {
@@ -429,7 +429,7 @@
     root.document.documentElement.classList.toggle('bp-firm', hidesShopCards('sides'));
   }
   var fs = root.document.createElement('style');
-  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox{display:none!important}html.bp-firm:not(.bp-setup) .cbsh-main[data-tab=home] .cbsh-sec.setup{display:none!important}'; /* W9: a firm's Home is its practice only: the folded "What it all stands on" holds only the cards FIRM_KEEPS names (its own Setup), so it is not drawn on Home; the Setup button reveals it (shell go) */
+  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox,html.bp-firm .ix-sw,html.bp-firm [data-testid="till-paired"]{display:none!important}html.bp-firm:not(.bp-setup) .cbsh-main[data-tab=home] .cbsh-sec.setup{display:none!important}'; /* W9: a firm's Home is its practice only: the folded "What it all stands on" holds only the cards FIRM_KEEPS names (its own Setup), so it is not drawn on Home; the Setup button reveals it (shell go) */
   (root.document.head || root.document.documentElement).appendChild(fs);
   function dropWaiting() {
     var w = root.document.getElementById('bp_wait');

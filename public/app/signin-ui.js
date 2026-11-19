@@ -263,7 +263,7 @@
       resolved: '',
       sent: null,
       choices: [],
-      why: '',
+      why: c.why ? String(c.why) : root.CBFrame && root.CBFrame.endedNote ? root.CBFrame.endedNote() : '',
       said: '',
       busy: false,
       token: null,
@@ -322,7 +322,7 @@
       if (code === 'NO_ACCOUNT') return W.noAccount;
       if (r.status === 429) return W.tooMany;
       /* a NAMED refusal (DEVICE_REVOKED, AMBIGUOUS_NAME, …) already carries the sentence the server chose — say that, not "wrong code" */
-      if (code && b.message) return String(b.message);
+      if ((code && b.message) || (root.CBFrame && root.CBFrame.endedWords && root.CBFrame.endedWords(r.status, b))) return String(b.message || b.error); /* walk 19 Nov: removed access / switched off, said plainly */
       return E.refusal({ status: r.status, message: b.message || b.error });
     }
     /* the secret typed before a choice of account, kept in this closure only until the person picks (never in S, never painted) */
