@@ -40,10 +40,11 @@
     return inPlace.load().then(
       function () { paint(''); },
       function (e) {
-        state.el.innerHTML = '<div class="empty" data-testid="emp-fail"><div class="t">' + root.esc(words(e && e.status === 403 ? 'This sign-in cannot open this' : "Couldn't read your people")) + '</div></div>';
+        state.el.innerHTML = root.scrErr(e, words("your people"), "CBEmployees.giveRetry()"); /* the one failure card, with its Try again */
       }
     );
   }
+  root.CBEmployees.giveRetry = function () { return open(); };
   root.CBEmployees.mountAccess = function (host, o) {
     state.el = host;
     state.o = o || {};
