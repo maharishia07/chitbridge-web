@@ -122,7 +122,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--page);font-weight:600}
 .mx{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(52px,max-content));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
 .mx-r{display:contents}
-.mx-r > *{border-bottom:1px solid var(--hair);min-height:44px}
+.mx-r > *{border-bottom:1px solid var(--hair);min-height:36px}
 .mx-h > *{background:var(--panel);border-bottom:1.5px solid var(--line);min-height:38px}
 .mx-ch{border:0;font-weight:700;font-size:calc(10.5px * var(--k,1));letter-spacing:.02em;min-width:0;text-transform:uppercase;padding:5px 4px;white-space:nowrap;text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:1px}
 .mx-ch .sym{font-size:calc(14px * var(--k,1))}
@@ -137,7 +137,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .mx-all .mx-rh{font-weight:700}
 .mx-hint{font-size:calc(12px * var(--k,1));color:var(--muted)}
 .mx-note{font-size:calc(12.5px * var(--k,1));color:var(--muted);margin:8px 2px 0}
-.mx-more{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.mx-more{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap}
 
 /* ── the two sheets: a side sheet on a laptop, the whole screen on a phone ── */
@@ -181,8 +181,8 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   /* STD-COMPARE: three tabs — on a phone the title row is TWO lines: "Standards" with ‹ ⌂ 🔔 avatar, then the tabs on a line of their own; the
      "checked" chip moves to the matrix page (mx-checked) so the head stays within its budget (standards-page.cjs: ≤ 35% with a cell chosen) */
   #std_list .cbl-title .cbl-views.in-title{order:3;flex-basis:100%}
-  #std_list .cbl-title > .cbl-chip[data-testid="std-checked"]{display:none}   /* the unit's own phone rule carries an id's weight (.cbl:not(#_)); this one carries more */
-  .mx-checked{display:block}
+  #std_list .cbl-title > .cbl-chip[data-testid="std-tab-updated"]{display:none}   /* the unit's own phone rule carries an id's weight (.cbl:not(#_)); this one carries more */
+  .tab-upd{display:block}
   .mx-body{padding:12px 16px 20px}
   .sd{grid-template-columns:minmax(0,1fr);gap:2px}
   .sd dd{margin-bottom:6px}
@@ -190,7 +190,24 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 }
 /* STD-COMPARE: with three tabs the title row holds the shop's name only on a wide screen (it is in the avatar's menu too); below 1400 px the row stays one line */
 @container stdpage (max-width: 1400px) and (min-width: 641px){ .who .shop{display:none} }
-.mx-checked{display:none;font-size:calc(12.5px * var(--k,1));color:var(--muted);margin:8px 2px 0}
+.tab-upd{display:none;margin:0;padding:4px 16px 0;font-size:calc(12.5px * var(--k,1));color:var(--muted)}
+/* ── REVAMP (19 Nov 2026): the first thing a visitor reads is WHERE WE STAND — one headline, one bar, the date, what was added lately ── */
+.hero{margin:0 0 10px}
+.hero-h{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-weight:800;font-size:calc(17px * var(--k,1));line-height:1.25;color:var(--ink)}
+.hero-h b{font-size:calc(26px * var(--k,1));color:var(--green-d,var(--green));font-variant-numeric:tabular-nums}
+.hbar{display:flex;height:10px;margin:6px 0 4px;border-radius:6px;overflow:hidden;background:var(--panel);border:1px solid var(--line)}
+.hbar i{display:block;min-width:0}
+.b-live{background:var(--green-d,var(--green))} .b-part{background:var(--amber-i)} .b-plan{background:transparent}
+.hero-upd{margin:0;font-size:calc(12.5px * var(--k,1));color:var(--muted)}
+.recent{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.recent-h{font-size:calc(11px * var(--k,1));font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:8px 0 2px}
+.rc{display:flex;gap:8px;align-items:baseline;width:100%;min-height:32px;padding:3px 8px;border:1px solid var(--line-soft);border-radius:8px;background:var(--card);color:var(--ink);text-align:start;font-size:calc(13px * var(--k,1));cursor:pointer}
+.rc .d{flex:0 0 auto;color:var(--muted);font-size:calc(12px * var(--k,1));white-space:nowrap}
+.rc .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.rc:hover{background:var(--page)}
+.mx-rh{position:relative}
+.mx-prog{position:absolute;inset-inline:10px;bottom:3px;height:3px;display:flex;border-radius:2px;overflow:hidden;background:var(--line-soft)}
+.mx-prog i{display:block}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
@@ -200,7 +217,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   <div class="body">
     <!-- the matrix pane: count by Area · Country · Kind × In force · Partly · Planned. A cell is the list's own filter. -->
     <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="brand"><div class="logo" aria-hidden="true">&#9776;</div><div class="brand-name">Standards</div></div><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
-    <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
+    <main class="main" id="main"><p class="tab-upd" id="std_tabupd" data-testid="std-tab-updated-line"></p><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
 <dialog class="sheet" id="sheet" data-pop="host" data-testid="std-sheet" aria-label="Detail"></dialog>
@@ -292,19 +309,32 @@ function rich(s) {
       .replace(/⚠️\s*/g, '')
   ).replace(/&lt;(\/?)(b|code)&gt;/g, '<$1$2>');
 }
-function checkedLabel() {
-  try {
-    return new Date(STD_CHECKED + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-  } catch (_) {
-    return STD_CHECKED;
-  }
+/* LAST UPDATED (19 Nov 2026): every date below is DERIVED from the data (stdNewest in cap-standards.js), never typed; a tab says its own */
+/** the How we build tab's date: the CMDB file's own, or its newest rule row */
+function buildAt() {
+  return stdNewest([CBStdBuild.generated()].concat(STANDARDS.filter((r) => r.k === 'build-rule').map((r) => r.added)));
+}
+/** the register's date: its newest row's added date */
+function registerAt() {
+  return stdNewest(STANDARDS, 'added');
+}
+/** the newest date anywhere on the page: the headline's Last updated */
+function allAt() {
+  return stdNewest([registerAt(), COMPAT_AT, CMP_AT, buildAt()]);
+}
+/** the date of the tab that is lit */
+function tabAt() {
+  return comparedOn() ? CMP_AT : worksOn() ? COMPAT_AT : buildOn() ? buildAt() : allAt();
 }
 
 /* a row of the register, as the list holds it: the register's row itself (never a copy of its words) and its place */
 const ROWS = STANDARDS.map((item, index) => ({ ix: index, r: item }));
 /* ⭐ the 4th Kind, Compatibility (M41): ONE file, public/data/compat.json, shared with the Compatibility lab (N04); stdCompatRows maps it onto the register's shape */
 let COMPAT_ERR = '';
+let COMPAT_AT = '',
+  CMP_AT = '';
 function addCompat(json) {
+  COMPAT_AT = stdNewest([json && json.checked].concat(((json && json.rows) || []).map((x) => x.proof_at)));
   stdCompatRows(json).forEach((item) => ROWS.push({ ix: ROWS.length, r: item }));
 }
 /* ⭐ STD-COMPARE: the "Compared with" tab's rows — ONE file, public/data/compare.json, mapped by stdCompareRows (cap-standards.js). Not standards, so never in ROWS,
@@ -312,6 +342,7 @@ function addCompat(json) {
 let CMP_ROWS = [],
   CMP_ERR = '';
 function addCompare(json) {
+  CMP_AT = stdNewest([json && json.checked].concat(((json && json.rows) || []).map((x) => x.checked)));
   CMP_ROWS = stdCompareRows(json).map((row, index) => ({ ix: 'c' + index, r: row }));
 }
 const CMP_STATUS_ORDER = { ahead: 0, level: 1, behind: 2, 'n/a': 3 };
@@ -619,6 +650,7 @@ function compareNext(x) {
     '</span>' +
     (row.cs === 'n/a' ? ' <span class="exw">The sources say nothing we can hold either side to.</span>' : '') +
     '</dd>';
+  if (row.checked) html += '<dt>Last updated</dt><dd data-testid="std-row-updated-' + x.ix + '">' + esc(stdDateWords(row.checked)) + '</dd>';
   html += '<dt>Verified</dt><dd data-testid="std-cmp-verified-' + x.ix + '">' + esc(STD_COMPARE_VERIFIED[row.verified]) + '</dd>';
   html += '<dt>Source</dt><dd data-testid="std-cmp-sources-' + x.ix + '">' + sourceHTML(row.src, x.ix) + '</dd></dl>';
   return stdGloss(html);
@@ -661,6 +693,11 @@ function openNext(x) {
   if (x.r.k === 'build-rule') return CBStdBuild.next(x); /* CAP-STD-1 */
   return x.r.cmp ? compareNext(x) : nextOf(x);
 }
+/** the opened row's own date: when it joined the register (a compat row's date is in its Proof line) */
+function rowUpdatedHTML(r, ix) {
+  if (r.k === 'compat') return '';
+  return '<dt>Last updated</dt><dd data-testid="std-row-updated-' + ix + '">' + (r.added ? esc(stdDateWords(r.added)) : 'In the register from its first release') + '</dd>';
+}
 /* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
 function nextOf(x) {
   var r = x.r,
@@ -698,7 +735,7 @@ function nextOf(x) {
   /* CPS1: the Country Standard's row opens to the GENERATED matrix — every member × every registered pack, read from the engines' file, never typed here */
   if (r.matrix === 'country') h += '<dt>Matrix</dt><dd data-testid="std-country-matrix">' + countryMatrixHTML() + '</dd>';
   h +=
-    '<dt>Source</dt><dd>' +
+    rowUpdatedHTML(r, x.ix) + '<dt>Source</dt><dd>' +
     (r.k === 'compat'
       ? 'The compatibility register (data/compat.json), shared with the Compatibility lab'
       : r.matrix === 'country'
@@ -833,7 +870,7 @@ function statementOf(r) {
   if (r.proof) list.push('Proof: ' + r.proof);
   if (r.k === 'compat' && isTester())
     list.push('Code: ' + (r.code ? 'chitbridge-api ' + r.code : 'not built yet') + ' · Test: ' + (r.test ? 'chitbridge-api ' + r.test : 'none yet'));
-  list.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
+  list.push('Last updated ' + stdDateWords(registerAt()) + ' (ChitBridge standards register)');
   return list.join('\n');
 }
 /* STD-COMPARE: the comparison a buyer or CA pastes — both sides, the status word, how it was verified, every source */
@@ -843,7 +880,7 @@ function compareStatement(row) {
   if (row.better) lines.push('Better because: ' + row.better);
   lines.push('Compared: ' + status[1] + ' · Verified: ' + STD_COMPARE_VERIFIED[row.verified]);
   lines.push('Source: ' + row.src.map((x) => x.url || x.doc + (x.where ? ' ' + x.where : '')).join(' ; '));
-  lines.push('Checked ' + checkedLabel() + ' (ChitBridge country comparison, data/compare.json)');
+  lines.push('Last updated ' + stdDateWords(CMP_AT) + ' (ChitBridge country comparison, data/compare.json)');
   return lines.join('\n');
 }
 var tt;
@@ -924,7 +961,7 @@ function mountList() {
     defaultCols: () => (comparedOn() ? CMP_DEFAULT_COLS : buildOn() ? CBStdBuild.defaultCols : DEFAULT_COLS),
     cardMax: 3, get wrapCut() { return comparedOn(); } /* one line per row, a long cell ends in … (full words on hover); the Compared-with tab wraps */,
     store: choices,
-    head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
+    head: () => ({ title: 'Standards', chips: [{ text: 'Last updated ' + stdDateWords(tabAt()), tid: 'std-tab-updated' }], slot: slot }),
     search: (x) => {
       var r = x.r;
       if (r.cmp) return [r.pkg, r.capability, r.theirs, r.ours, r.better, r.countryName, (STD_COMPARE_STATUS[r.cs] || [])[1]].join(' ');
@@ -1042,6 +1079,43 @@ function nowFilt() {
   var s = LIST && LIST.state();
   return (s && s.filt) || {};
 }
+/* REVAMP: where we stand — the headline, the bar, the date, what was added lately. The counts are the matrix's own All row (one countOf), so the two can never differ. */
+/** the three counts as one stacked bar; its words are the aria-label (the colours are never the only carrier) */
+function barHTML(counts, total) {
+  var words = counts.live + ' of ' + total + ' in force, ' + counts.part + ' partly, ' + counts.plan + ' planned';
+  return (
+    '<div class="hbar" role="img" aria-label="' + words + '" data-testid="std-bar">' +
+    ['live', 'part', 'plan'].map((k) => (counts[k] ? '<i class="b-' + k + '" style="flex:' + counts[k] + '"></i>' : '')).join('') +
+    '</div>'
+  );
+}
+/** the head of the matrix pane: the headline, the bar, the date, and the two newest rows */
+function heroHTML(rowsAll, rowsIx) {
+  var counts = countOf(rowsAll),
+    recent = stdRecent(rowsAll.filter((r) => r.k !== 'build-rule' && r.k !== 'compat'), 2);
+  var html =
+    '<section class="hero" data-testid="std-hero" aria-label="Where we stand"><h2 class="hero-h" data-testid="std-headline"><b>' + counts.live + '</b> of ' + rowsAll.length +
+    ' in force · ' + counts.part + ' partly · ' + counts.plan + ' planned</h2>' + barHTML(counts, rowsAll.length) +
+    '<p class="hero-upd" data-testid="std-updated">Last updated ' + esc(stdDateWords(allAt())) + '</p>';
+  if (recent.length) {
+    html += '<div class="recent-h">Added lately</div><ul class="recent" data-testid="std-recent">';
+    recent.forEach((r) => {
+      var ix = rowsIx.indexOf(r);
+      html +=
+        '<li><button data-cbsid="STD001-B07" type="button" class="rc" data-recent="' + ix + '" data-testid="std-recent-' + ix + '"><span class="d">' +
+        esc(stdDateWords(r.added).replace(/ 20dd$/, '')) + '</span><span class="t">' + esc(r.n) + '</span></button></li>';
+    });
+    html += '</ul>';
+  }
+  return html + '</section>';
+}
+/** a thin in-force / partly strip under an area's name in the matrix: how far along that area is */
+function areaBar(item, rowsAll) {
+  var counts = countOf(rowsAll.filter((x) => item.has(x))),
+    total = counts.live + counts.part + counts.plan;
+  return total ? '<span class="mx-prog" aria-hidden="true"><i class="b-live" style="width:' + (100 * counts.live) / total + '%"></i><i class="b-part" style="width:' + (100 * counts.part) / total + '%"></i></span>' : '';
+}
+/** paints the matrix pane: the hero, then the counts by Area, Country or Kind; a cell is the list's own filter */
 function paintMatrix() {
   DIM = curDim();
   GLAST = DIM;
@@ -1049,7 +1123,7 @@ function paintMatrix() {
     fk = DIM,
     rowsAll = ROWS.map((x) => x.r);
   var other = Object.keys(f).filter((item) => f[item] && item !== 'status' && item !== fk).length || (LIST && LIST.state().q.trim());
-  var h =
+  var h = heroHTML(rowsAll, ROWS.map((x) => x.r)) +
     '<div class="mx-tools"><span class="mx-lab" id="mxLab" data-testid="std-mx-by">' +
     (DIM === 'none' ? 'Counted: all together' : 'Counted by ' + esc(lab(DIMS, DIM))) +
     '</span><span class="mx-hint">follows Group by</span></div>';
@@ -1096,6 +1170,7 @@ function paintMatrix() {
         '">' +
         esc(item.label) +
         (item.sub ? '<span class="mx-sub">' + esc(item.sub) + '</span>' : '') +
+        (all ? '' : areaBar(item, rowsAll)) +
         '</button>' +
         STD_STATUS.map((t) => {
           var c = n[t[0]],
@@ -1130,10 +1205,6 @@ function paintMatrix() {
   if (COMPAT_ERR) h += '<p class="mx-note" data-testid="std-compat-err">' + esc(COMPAT_ERR) + '</p>';
   if (CMP_ERR) h += '<p class="mx-note" data-testid="std-compare-err">' + esc(CMP_ERR) + '</p>';
   if (other) h += '<p class="mx-note" data-testid="std-mx-note">The matrix counts the whole register; the list also has your search or other filters.</p>';
-  h +=
-    '<p class="mx-checked" data-testid="std-checked-phone">Register checked ' +
-    esc(checkedLabel()) +
-    '</p>'; /* the phone's copy of the title chip (hidden there) */
   h +=
     '<div class="mx-more"><button data-cbsid="STD001-B04" type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button data-cbsid="STD001-B05" type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
   $('mxBody').innerHTML = h;
@@ -1235,6 +1306,15 @@ function mxPick(rowId, status) {
   if (node) node.scrollTop = 0;
 }
 
+/* REVAMP: a row of "Added lately" — the list with every filter cleared, that row found, lit and opened */
+function showRecent(ix) {
+  clearSearch();
+  setFilters({});
+  $('app').setAttribute('data-view', 'list');
+  paintMatrix();
+  var id = 's' + ix;
+  if (LIST.mark(id)) LIST.open(id, true);
+}
 /* the matrix follows the list: a filter changed in the Filters popover moves the lit cell too */
 function watch() {
   var host = $('std_list');
@@ -1265,8 +1345,14 @@ function paintNoCountry() {
   if (show && !host.firstChild)
     host.innerHTML = 'Set your country first, and this tab opens on your country’s packages. <a href="/settings.html#/country" data-testid="std-nocountry-link">Country setup</a>';
 }
+/* each tab says its own date; on a phone the title chip is folded away, so the line above the list carries it */
+function paintTabUpdated() {
+  var line = $('std_tabupd');
+  if (line) line.textContent = tabAt() ? 'Last updated ' + stdDateWords(tabAt()) : '';
+}
 function tabHash() {
   paintNoCountry();
+  paintTabUpdated();
   var want = worksOn() ? '#works-with' : comparedOn() ? '#compared-with' : '';
   if (location.hash === want || (!want && !location.hash)) return;
   try {
@@ -1368,8 +1454,12 @@ $('sheet').addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (ev) => {
-  var node = ev.target.closest && ev.target.closest('[data-mxr],[data-mxs],[data-sheet],[data-act]');
+  var node = ev.target.closest && ev.target.closest('[data-mxr],[data-mxs],[data-sheet],[data-act],[data-recent]');
   if (!node) return;
+  if (node.hasAttribute('data-recent')) {
+    showRecent(+node.getAttribute('data-recent'));
+    return;
+  }
   if (node.hasAttribute('data-mxr') || node.hasAttribute('data-mxs')) {
     mxPick(node.getAttribute('data-mxr'), node.getAttribute('data-mxs'));
     return;
@@ -1448,6 +1538,7 @@ function start() {
   mountList();
   fit();
   paintMatrix();
+  paintTabUpdated();
   watch();
   var q = new URLSearchParams(location.search);
   if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));

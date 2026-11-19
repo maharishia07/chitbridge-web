@@ -2668,7 +2668,42 @@ var STD_PRODUCT_AREAS = [
   ['testing', 'Testing'],
   ['api', 'Platform & API']
 ];
-var STD_CHECKED = '2026-10-14';
+/**
+ * ⭐ LAST UPDATED (Athi, 19 Nov 2026): every "last updated" the Standards page says is DERIVED from the data, never typed. stdNewest picks the newest ISO date
+ * (YYYY-MM-DD) in a list of rows (by one field) or of plain dates; stdDateWords says it as "19 Nov 2026". The register's date = its newest row's `added`;
+ * Works with = the newest proof_at in data/compat.json (or its `checked`); Compared with = data/compare.json `checked`; How we build = the CMDB file's `generated`.
+ */
+function stdNewest(list, key) {
+  var best = '';
+  (list || []).forEach(function (item) {
+    var d = key ? item && item[key] : item;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) && String(d) > best) best = String(d);
+  });
+  return best;
+}
+function stdDateWords(iso) {
+  var d = new Date(iso + 'T12:00:00Z');
+  if (!iso || isNaN(d.getTime())) return iso || '';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+/** the rows added most recently, newest first (ties keep register order): the matrix pane's "Added lately" */
+function stdRecent(rows, count) {
+  return rows
+    .map(function (row, at) {
+      return { row: row, at: at };
+    })
+    .filter(function (x) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(x.row.added || ''));
+    })
+    .sort(function (a, b) {
+      return a.row.added < b.row.added ? 1 : a.row.added > b.row.added ? -1 : a.at - b.at;
+    })
+    .slice(0, count)
+    .map(function (x) {
+      return x.row;
+    });
+}
+var STD_CHECKED = stdNewest(STANDARDS, 'added');
 
 /**
  * ⭐⭐ WHY FOLLOW STANDARDS AT ALL — the argument, with its costs.
@@ -3149,6 +3184,7 @@ function stdCompareRows(json) {
         better: x.better || '',
         cs: x.status,
         verified: x.verified,
+        checked: x.checked || (json && json.checked) || '',
         src: stdCompareSources(x.source)
       };
     });

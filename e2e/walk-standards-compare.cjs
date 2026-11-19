@@ -72,6 +72,17 @@ W.run('standards-compare', async (w) => {
       saw: ids.length + ' rows · ' + Array.from(new Set(sts)).join(', ') + ' · tabs ' + tabs.join() + ' · head ' + hdr };
   });
 
+  /* REVAMP (19 Nov 2026): each tab says its own "Last updated", derived from its own file — here compared against the newest date in compare.json read by a plain route */
+  const maxIso = (l) => l.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''))).sort().pop() || '';
+  const words = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  await w.step('S1b', 'the Compared with tab says "Last updated" with the newest date in compare.json, and a row opened says its own', async () => {
+    const want = words(maxIso([CJ.checked].concat((CJ.rows || []).map((x) => x.checked))));
+    await std('#compared-with'); await page.waitForTimeout(800);
+    const chip = (await page.textContent('[data-testid="std-tab-updated"]')).trim(), ix = await open(CROWS[0].cmp ? (byCountry('AU')[0] || CROWS[0]).cmp : '');
+    const row = (await page.textContent('[data-testid="std-row-updated-' + ix + '"]')).trim();
+    return { ok: !!want && chip === 'Last updated ' + want && !!row, saw: chip + ' · row ' + row + ' · want ' + want };
+  });
+
   await w.step('S2', 'no shop country -> no country picked (never India) and a line says to set it; Package narrows to one package; the tab stays lit, the address keeps #compared-with', async () => {
     shopCountry = ''; await std('#compared-with'); await page.waitForTimeout(500);
     const n = (await shown()).length, h0 = await hash();

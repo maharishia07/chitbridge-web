@@ -6,7 +6,7 @@
  *  1  the register (cap-standards.js), COUNTED FROM THE SOURCE (STDREG1: never a fixed number — e2e/standards-one-list.cjs guards it): every row has an id,
  *     area · product area · kind · applies-in · plain words; every Partly and Planned row says what is missing; each round's rows are named by id (CO3 · CO1 ·
  *     CO2 · STDREG1) and carry their stated statuses; an In force row added since STDREG1 names its proof; no second WCAG contrast row
- *  2  laptop 1366×768: title · "checked <STD_CHECKED>" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
+ *  2  laptop 1366×768: title · "Last updated <newest date in the data>" (REVAMP 19 Nov: derived, each tab its own) · the headline "N of M in force" + bar (= the matrix All row) · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
  *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → its rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
  *     status; a "—" cell does nothing; clearing a chip clears the cell; changing the unit's Filters popover moves the lit cell; Count by Country and Kind
@@ -63,7 +63,18 @@ const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { CA[r.s]++; });
 const shownAll = () => new RegExp('^' + N + ' shown');
 /* the design's data.js is DERIVED from the register (STDREG1): load it the way its index.html does — data.js, then the register — and read what it built */
 const DESIGN_DERIVED = (() => { const g = {}; g.window = g; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8') + fs.readFileSync(path.join(PUB, 'app', 'cap-standards-build.js'), 'utf8'), g); return vm.runInContext('window.STD_PAGE', g); })();
-const CHECKED = new Date(REG.CH + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });   /* "14 Oct 2026" — as the page says it */
+const words = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });   /* "14 Oct 2026" — as the page says it */
+const maxIso = (list) => list.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''))).sort().pop() || '';
+/* REVAMP: the newest date in each file, found here by a second, plain route (the page uses stdNewest); "Last updated" must equal these, never a typed date */
+const REG_AT = maxIso(REG.S.map((r) => r.added));
+const CMPJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compare.json'), 'utf8'));
+const BLDJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'build-standards.json'), 'utf8'));
+const CMPTJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
+const COMPAT_AT = maxIso([CMPTJ.checked].concat((CMPTJ.rows || []).map((x) => x.proof_at)));
+const CMP_AT = maxIso([CMPJ.checked].concat((CMPJ.rows || []).map((x) => x.checked)));
+const BUILD_AT = maxIso([BLDJ.generated].concat(REG.S.filter((r) => r.k === 'build-rule').map((r) => r.added)));
+const ALL_AT = maxIso([REG_AT, COMPAT_AT, CMP_AT, BUILD_AT]);
+const CHECKED = words(ALL_AT), CHECKED_REG = words(REG_AT);
 
 /* the stand-in: every /api call is recorded and answered with nothing — the page is expected to ask for none */
 async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.calls.push(q.method() + ' ' + u.pathname); return J(r, 200, {}); }
@@ -139,7 +150,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(Array.isArray(CMXJ.rows) && CMXJ.rows.length > 80 && CMXJ.packs.map((x) => x.id).join() === 'IN,AU,AE' && CMXJ.packs.every((x) => CMXJ.missing[x.id] && CMXJ.counts[x.id]), 'data/country-matrix.json is the engines\' generated matrix: ' + CMXJ.rows.length + ' members × IN · AU · AE, with counts and the ❌ list per pack (engines v' + CMXJ.engines + ')');
     ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live' && r.added === '2026-10-13') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(BYID['wcag-1.4.3'].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
-    ok(/^\d{4}-\d{2}-\d{2}$/.test(REG.CH) && REG.CH >= '2026-10-14', 'the register says when it was last checked (STD_CHECKED ' + REG.CH + ')');
+    ok(REG.CH === REG_AT && REG.CH >= '2026-11-18' && !/var STD_CHECKED\s*=\s*'/.test(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8')), 'the register says when it was last updated: STD_CHECKED ' + REG.CH + ' is its newest row date, computed, not typed');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
     /* M41 · Compatibility: ONE file, every row a valid register row, honest about proof */
     const cj = COMPAT_JSON.rows || [];
@@ -194,7 +205,12 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   {
     const { ctx, p } = await open(S);
     ok(/^Standards$/.test((await p.textContent('.cbl-title h1')).trim()), 'the title row says Standards');
-    ok(new RegExp('checked ' + CHECKED).test(await p.textContent('[data-testid="std-checked"]')), 'and "checked ' + CHECKED + '" — once; the counts are in the matrix, not repeated up here');
+    ok(new RegExp('^Last updated ' + CHECKED + '$').test((await p.textContent('[data-testid="std-tab-updated"]')).trim()), 'and "Last updated ' + CHECKED + '" (the newest date in the register, Works with, Compared with and How we build) — once; the counts are in the matrix, not repeated up here');
+    ok(new RegExp('^Last updated ' + CHECKED + '$').test((await p.textContent('[data-testid="std-updated"]')).trim()), 'the matrix pane says the same date, from the same data');
+    const hl = (await p.textContent('[data-testid="std-headline"]')).replace(/\s+/g, ' ').trim();
+    ok(hl === CA.live + ' of ' + (CA.live + CA.part + CA.plan) + ' in force · ' + CA.part + ' partly · ' + CA.plan + ' planned', 'the headline says where we stand, with the counts of every row listed: ' + hl);
+    ok(/in force/.test(await p.getAttribute('[data-testid="std-bar"]', 'aria-label')) && await p.locator('[data-testid="std-bar"] i').count() >= 2, 'and its bar carries the same three counts in words');
+    ok(await p.locator('[data-testid="std-recent"] [data-cbsid="STD001-B07"]').count() >= 1, '"Added lately" lists the newest rows, each a button with its register code');
     ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
@@ -365,7 +381,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.click('[data-testid="std-row-' + sIdx + '"]'); await p.waitForTimeout(250);
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
-    ok(clip.indexOf(SAMPLE.n) >= 0 && /Status: Partly/.test(clip) && /Missing: /.test(clip) && clip.indexOf('Kind: ' + ({ law: 'Law', std: 'Standard', prac: 'Practice', compat: '' }[SAMPLE.k] || '')) >= 0 && new RegExp('Checked ' + CHECKED).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(clip.indexOf(SAMPLE.n) >= 0 && /Status: Partly/.test(clip) && /Missing: /.test(clip) && clip.indexOf('Kind: ' + ({ law: 'Law', std: 'Standard', prac: 'Practice', compat: '' }[SAMPLE.k] || '')) >= 0 && new RegExp('Last updated ' + CHECKED_REG).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
     ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */
