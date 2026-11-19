@@ -732,14 +732,10 @@
   }
 
   /* ── add a person ── */
-  /** W6: the picker's first choice: a practice's leads with Bookkeeper (the work), a shop's with Counter staff */
-  function firstChoiceKey() {
-    return E.choices.some(function (item) { return item.key === 'bookkeeper'; }) ? 'bookkeeper' : 'counter';
-  }
   function openAdd() {
     var cs = E.choices
       .map(function (item, index) {
-        return '<option value="' + index + '"' + (item.key === firstChoiceKey() ? ' selected' : '') + '>' + esc(item.label) + '</option>';
+        return '<option value="' + index + '"' + (item.key === (E.choices[0] && E.choices[0].key === 'bookkeeper' ? 'bookkeeper' : 'counter') ? ' selected' : '') + '>' + esc(item.label) + '</option>';
       })
       .join('');
     sheet(

@@ -18,8 +18,7 @@
   practiceKit.practiceState = { token: null, data: null, drawn: false, filter: null, list: null, band: null, fl: null, flOff: false, flReady: false, flTotal: 0 };
   /* l16 n12: what a firm with no trade of its own KEEPS of the shop's Home, by id: its own Setup (the business, account, plan, policy, privacy, standards, connectors). Everything else is shop: every other card, so
      every area that would hold only those cards (the left rail), and the two shop panels named by id here: 'sides' (We lean on / Leans on us) and 'rail' (Your work). ONE list, ONE test (hidesShopCards). */
-  var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1, employees: 1 }; /* employees (walk 19 Nov W5): a practice reaches People - add a person, what they can do - from its own Setup */
-  var FIRM_SETUP = { employees: 1 }; /* kept cards that a firm shows under Setup, though the manifest files them under Running it (that area is hidden for a firm) */
+  var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1, employees: 1 }, FIRM_SETUP = { employees: 1 }; /* employees (W5, walk 19 Nov): a practice reaches People from its own Setup; FIRM_SETUP: kept cards a firm files under Setup (Running it is hidden for a firm) */
   var PRACTICE_ENDPOINT = { practice: { m: 'GET', p: '/api/books-grants/practice' } };
   function translate(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -113,9 +112,6 @@
   /** a firm: it holds clients by live grants and has no trade of its own: the DATA says so (the server's own_trade), never a trade switch */
   function isFirm() {
     return !!(practiceKit.practiceState.data && practiceKit.practiceState.data.clients && practiceKit.practiceState.data.clients.length && practiceKit.practiceState.data.own_trade === false);
-  }
-  function movesToSetup(id) {
-    return isFirm() && !!FIRM_SETUP[id];
   }
   function hidesShopCards(id) {
     return isFirm() && !FIRM_KEEPS[id];
@@ -514,7 +510,7 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: movesToSetup, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
+  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
     parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);
