@@ -63,7 +63,7 @@
           ['BKS022', 'opening', 'Opening balances'],
           ['BKS023', 'accounts', 'Shop ledgers'],
           ['BKS024', 'movein', 'Move in'],
-          ['BKS025', 'rates', 'Rates'], ['BKS026', 'overview', 'How we are doing'], ['BKS027', 'access', 'Who can see my books']
+          ['BKS025', 'rates', 'Rates'], ['BKS026', 'overview', 'How we are doing'], ['BKS027', 'access', 'Who can see my books'], ['BKS028', 'delegate', 'Delegate work']
         ]
       },
       {

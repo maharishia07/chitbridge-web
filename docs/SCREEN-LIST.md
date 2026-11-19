@@ -35,6 +35,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | BKS025 | Rates | Accounts | /accounts.html | /accounts.html#rates · Accounts › Rates |
 | BKS026 | How we are doing | Accounts | /accounts.html | /accounts.html#overview · Accounts › How we are doing |
 | BKS027 | Who can see my books | Accounts | /accounts.html | /accounts.html#access · Accounts › Who can see my books |
+| BKS028 | Delegate work | Accounts | /accounts.html | /accounts.html#delegate · Accounts › Delegate work |
 | FIN001 | Collections | Finance | /finance.html | /finance.html#/collections · Finance › Collections |
 | FIN002 | Payables | Finance | /finance.html | /finance.html#/payables · Finance › Payables |
 | FIN003 | Cash | Finance | /finance.html | /finance.html#/cash · Finance › Cash |
