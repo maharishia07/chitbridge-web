@@ -6,7 +6,7 @@
  *  1  the register (cap-standards.js), COUNTED FROM THE SOURCE (STDREG1: never a fixed number — e2e/standards-one-list.cjs guards it): every row has an id,
  *     area · product area · kind · applies-in · plain words; every Partly and Planned row says what is missing; each round's rows are named by id (CO3 · CO1 ·
  *     CO2 · STDREG1) and carry their stated statuses; an In force row added since STDREG1 names its proof; no second WCAG contrast row
- *  2  laptop 1366×768: title · "checked <STD_CHECKED>" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
+ *  2  laptop 1366×768: title · "Last updated <newest date in the data>" (REVAMP 19 Nov: derived, each tab its own) · the headline "N of M in force" + bar (= the matrix All row) · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
  *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
  *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → its rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
  *     status; a "—" cell does nothing; clearing a chip clears the cell; changing the unit's Filters popover moves the lit cell; Count by Country and Kind
@@ -52,17 +52,30 @@ const IDS = {
 const ROWS = (k) => IDS[k].map((id) => BYID[id]).filter(Boolean);
 const CO = ROWS('CO3').concat(ROWS('CO1'), ROWS('CO2'));
 const NEW = REG.S.filter((r) => r.added === '2026-10-14');   /* STDREG1's rows */
-const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
+const PROVED = (r) => r.s !== 'live' || /Proof:|In force:/.test(r.note || '');   /* a status the register has FLIPPED since must carry its evidence (other lanes flip rows; counts are read, not fixed) */
+const NPIDS = ['iso24760', 'scim', 'rfc6902', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ucp600'];
+const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { if (r.s in COUNT) COUNT[r.s]++; });
 /* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
 const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
 const CROWS = REG.compat(COMPAT_JSON);
 const cjHas = (sys) => (COMPAT_JSON.rows || []).some((x) => x.system === sys);
 const ALL = REG.S.concat(CROWS), N = ALL.length;
-const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { CA[r.s]++; });
+const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { if (r.s in CA) CA[r.s]++; });   /* Not pursued is listed, never counted */
 const shownAll = () => new RegExp('^' + N + ' shown');
 /* the design's data.js is DERIVED from the register (STDREG1): load it the way its index.html does — data.js, then the register — and read what it built */
 const DESIGN_DERIVED = (() => { const g = {}; g.window = g; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8') + fs.readFileSync(path.join(PUB, 'app', 'cap-standards-build.js'), 'utf8'), g); return vm.runInContext('window.STD_PAGE', g); })();
-const CHECKED = new Date(REG.CH + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });   /* "14 Oct 2026" — as the page says it */
+const words = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });   /* "14 Oct 2026" — as the page says it */
+const maxIso = (list) => list.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''))).sort().pop() || '';
+/* REVAMP: the newest date in each file, found here by a second, plain route (the page uses stdNewest); "Last updated" must equal these, never a typed date */
+const REG_AT = maxIso(REG.S.map((r) => r.added));
+const CMPJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compare.json'), 'utf8'));
+const BLDJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'build-standards.json'), 'utf8'));
+const CMPTJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
+const COMPAT_AT = maxIso([CMPTJ.checked].concat((CMPTJ.rows || []).map((x) => x.proof_at)));
+const CMP_AT = maxIso([CMPJ.checked].concat((CMPJ.rows || []).map((x) => x.checked)));
+const BUILD_AT = maxIso([BLDJ.generated].concat(REG.S.filter((r) => r.k === 'build-rule').map((r) => r.added)));
+const ALL_AT = maxIso([REG_AT, COMPAT_AT, CMP_AT, BUILD_AT]);
+const CHECKED = words(ALL_AT), CHECKED_REG = words(REG_AT);
 
 /* the stand-in: every /api call is recorded and answered with nothing — the page is expected to ask for none */
 async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.calls.push(q.method() + ' ' + u.pathname); return J(r, 200, {}); }
@@ -118,28 +131,27 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const CO1 = ROWS('CO1'), CO2 = ROWS('CO2');
     ok(ROWS('CO3').length === 4 && ROWS('CO3').map((r) => r.n).join('|') === CO3.join('|') && ROWS('CO3').every((r) => r.s === 'part' && r.added === '2026-10-13'),
       'CO3\'s 4 record-keeping rows are on the register by id, each Partly');
-    ok(COUNT.live + COUNT.part + COUNT.plan === REG.S.length && REG.S.length >= 109, 'the register holds ' + REG.S.length + ' standards, counted from the source: in force ' + COUNT.live + ' · partly ' + COUNT.part + ' · planned ' + COUNT.plan);
+    ok(COUNT.live + COUNT.part + COUNT.plan + REG.S.filter((r) => r.s === 'np').length === REG.S.length && REG.S.length >= 109, 'the register holds ' + REG.S.length + ' standards, counted from the source: in force ' + COUNT.live + ' · partly ' + COUNT.part + ' · planned ' + COUNT.plan + ' (+ not pursued, listed and never counted)');
     const fields = REG.S.filter((r) => !r.id || !r.a || !r.pa || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an id, an area, a product area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
     const pas = REG.PA.map((a) => a[0]);
     ok(REG.S.every((r) => areas.indexOf(r.a) >= 0 && pas.indexOf(r.pa) >= 0 && kinds.indexOf(r.k) >= 0 && r.c.every((c) => ctry.indexOf(c) >= 0)), 'every area, product area, kind and country code is one the vocabularies define');
-    const noMiss = REG.S.filter((r) => r.s !== 'live' && !(r.m && r.m.length > 3));
+    const noMiss = REG.S.filter((r) => r.s !== 'live' && r.s !== 'np' && !(r.m && r.m.length > 3));
     ok(noMiss.length === 0, 'every Partly and Planned row says what is missing' + (noMiss.length ? ' — ' + noMiss.map((r) => r.n).join('; ') : ''));
     ok(REG.S.every((r) => r.s !== 'live' || !r.m), 'an In force row carries no "missing" line (a stated limit is `limit`, shown as Limit:)');
     ok(REG.S.filter((r) => r.limit).every((r) => r.s === 'live') && ['schedule-iii', 'as2-inventories', 'gst-rcm', 'iso8601', 'country-standard'].every((id) => BYID[id] && BYID[id].limit), 'a stated limit sits only on an In force row; Schedule III, AS 2, reverse charge, ISO 8601 (N11) and the Country Standard (CPS1) still carry theirs');
     /* the design's data.js is derived from the register, row for row (STDREG1: it held a 61-row copy, compared field for field — a second list) */
     ok(DESIGN_DERIVED.rows.length === REG.S.length && DESIGN_DERIVED.rows.every((d, i) => d.key === REG.S[i].id && d.n === REG.S[i].n && d.s === REG.S[i].s), 'the design\'s data.js builds its ' + DESIGN_DERIVED.rows.length + ' rows from the register itself — no copy to drift');
     const added = REG.S.filter((r) => r.added === '2026-10-03');
-    ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 adopted 2–3 Oct 2026 carry their stated statuses: 11 in force, 4 partly, 2 planned');
+    ok(added.length === 17 && added.every((r) => ['live', 'part', 'plan'].indexOf(r.s) >= 0), 'the 17 adopted 2–3 Oct 2026 carry a valid status read from the register (in force ' + added.filter((r) => r.s === 'live').length + ' · partly ' + added.filter((r) => r.s === 'part').length + ' · planned ' + added.filter((r) => r.s === 'plan').length + ')');
     const cm = REG.S.filter((r) => r.matrix === 'country');
     ok(cm.length === 1 && cm[0].c.join() === 'IN,AU,AE' && cm[0].s === 'live' && cm[0].limit, 'ONE Country Standard row (CPS1): applies in IN · AU · AE, In force with a stated limit, its opened row paints the matrix');
     const CMXJ = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'country-matrix.json'), 'utf8'));
     ok(Array.isArray(CMXJ.rows) && CMXJ.rows.length > 80 && CMXJ.packs.map((x) => x.id).join() === 'IN,AU,AE' && CMXJ.packs.every((x) => CMXJ.missing[x.id] && CMXJ.counts[x.id]), 'data/country-matrix.json is the engines\' generated matrix: ' + CMXJ.rows.length + ' members × IN · AU · AE, with counts and the ❌ list per pack (engines v' + CMXJ.engines + ')');
     ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live' && r.added === '2026-10-13') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
     ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(BYID['wcag-1.4.3'].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
-    ok(/^\d{4}-\d{2}-\d{2}$/.test(REG.CH) && REG.CH >= '2026-10-14', 'the register says when it was last checked (STD_CHECKED ' + REG.CH + ')');
-    ok(CO1.length === 7 && CO1.every((r) => r.a === 'people' && r.k === 'law' && r.s !== 'live') && ['IN', 'AU', 'AE'].every((c) => CO1.some((r) => r.c.indexOf(c) >= 0)), 'CO1: 7 privacy rows for India, Australia and the UAE — none claims In force (the owner acts and the ◐ citations come first)');
+    ok(REG.CH === REG_AT && REG.CH >= '2026-11-18' && !/var STD_CHECKED\s*=\s*'/.test(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8')), 'the register says when it was last updated: STD_CHECKED ' + REG.CH + ' is its newest row date, computed, not typed');
     ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
     /* M41 · Compatibility: ONE file, every row a valid register row, honest about proof */
     const cj = COMPAT_JSON.rows || [];
@@ -158,20 +170,21 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(REG.GL.every((g) => g[0] && g[1] && g[2]), 'every entry has its full name and one line of meaning');
     /* CO2 · the compliance additions: each a law or a standard, with what is in force and not (note), where the proof is (at), and — unless In force — what is missing */
     ok(CO2.length === 7 && CO2.every((r) => (r.k === 'law' || r.k === 'std') && r.note && r.note.length > 80 && r.at && r.why && r.added === '2026-10-13'), 'CO2\'s 7 security rows each say what is in force, what is not, and where the proof is');
-    ok(CO.length === 18 && CO.every((r) => (r.k === 'law' || r.k === 'std') && r.s !== 'live' && r.at && r.why && (r.s === 'plan' || (r.note && r.note.length > 80))), 'the ' + CO.length + ' compliance rows (CO3 · CO1 · CO2) are laws or standards, none In force, each with where the proof is and why — and, unless Planned, what is in force and what is not');
+    ok(CO.length === 18 && CO.every((r) => (r.k === 'law' || r.k === 'std') && PROVED(r) && r.at && r.why && (r.s === 'plan' || (r.note && r.note.length > 80))), 'the ' + CO.length + ' compliance rows (CO3 · CO1 · CO2) are laws or standards, any In force one naming its proof, each with where the proof is and why — and, unless Planned, what is in force and what is not');
     ok(['IN', 'AU', 'AE'].every((c) => CO.some((r) => r.c.indexOf(c) >= 0 && r.k === 'law')), 'India, Australia and the UAE each have a law row from the compliance rounds');
     ok(CO2.filter((r) => r.k === 'law').every((r) => /\b(Act|Decree-Law|Directions|Rules)\b/.test(r.n)), 'every CO2 law row names its legal reference in its title');
     /* STDREG1 (14 Oct 2026) · what was missing, and the rows that said more than the code does */
     const want = ['beckn-core', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ondc-taxonomy', 'au-gst-bas', 'aasb-101', 'aasb-102', 'au-div40', 'au-abn', 'ae-vat-201', 'pint-ae', 'ae-trn', 'hsn-sac', 'gstin-check', 'fx-ias21', 'openapi', 'gs1-ai', 'wcag-1.4.6'];
     ok(want.every((id) => BYID[id] && BYID[id].added === '2026-10-14'), 'STDREG1\'s rows are on the register (' + NEW.length + ' added 14 Oct 2026): Beckn · ONDC registry, IGM, RSF, taxonomy · BAS · AASB 101/102 · Division 40 · ABN · VAT 201 · PINT-AE · TRN · HSN/SAC · GSTIN · IAS 21 · OpenAPI · GS1 batch/expiry/serial · WCAG 1.4.6');
     ok(NEW.filter((r) => r.s === 'live').every((r) => /Proof: |tests?\//.test(r.note || '')), 'every In force row STDREG1 added names the test that proves it (' + NEW.filter((r) => r.s === 'live').map((r) => r.id).join(' · ') + ')');
-    ok(BYID['ondc-registry'].s === 'plan' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
+    ok(BYID['ondc-registry'].s === 'np' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
+    ok(NPIDS.every((id) => BYID[id] && BYID[id].s === 'np' && BYID[id].np && BYID[id].np.length > 15) && REG.S.filter((r) => r.s === 'np').length === NPIDS.length, 'NOT PURSUED (Athi 19 Nov): the ' + NPIDS.length + ' rows carry s:np and a one-line why, and no other row does');
     ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
-    ok(BYID['wcag-1.4.6'].s !== 'live' && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row and not In force: the contrast test measures AA only');
+    ok(BYID['wcag-1.4.6'].s === 'live' && /High Contrast/.test(BYID['wcag-1.4.6'].limit) && /Proof: /.test(BYID['wcag-1.4.6'].note) && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row, In force only with its stated Limit (AAA on the High Contrast themes) and a Proof line; the AA row does not claim it');
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
     ok(BYID['wco-hs'].s === 'part' && BYID['oauth2-oidc'].s === 'live' && BYID['oauth2-oidc'].limit && /Zoho/.test(BYID['oauth2-oidc'].note), 'HS codes and OAuth 2 are up to what exists: HSN filed (Partly); Zoho reached with OAuth 2 — In force, the OIDC decision a stated Limit (STD-COMPARE)');
     /* STD-COMPARE (15 Oct 2026): the five audit fixes, each proved against the code (docs/critique/STD-COMPARE.md a) */
-    ok(BYID['wcag-1.4.6'].s === 'part' && /High Contrast/.test(BYID['wcag-1.4.6'].m) && BYID['css-logical'].s === 'part' && /physical/.test(BYID['css-logical'].m), 'WCAG 1.4.6 is Partly (one theme measured at 7:1) and CSS logical properties Partly (the small apps still carry physical ones)');
+    ok(BYID['wcag-1.4.6'].s === 'live' && /High Contrast/.test(BYID['wcag-1.4.6'].limit) && /AAA/.test(BYID['wcag-1.4.6'].limit) && /Proof: /.test(BYID['wcag-1.4.6'].note) && BYID['css-logical'].s === 'part' && /physical/.test(BYID['css-logical'].m), 'WCAG 1.4.6 is In force with the stated Limit (AAA on the High Contrast themes only) and a Proof line; CSS logical properties Partly (the small apps still carry physical ones)');
     ok(['gherkin', 'oauth2-oidc', 'medusa-model'].every((id) => BYID[id].s === 'live' && BYID[id].limit && !BYID[id].m && /Proof: /.test(BYID[id].note)), 'Gherkin, OAuth 2 and the Medusa model are In force with nothing missing: the decision not to adopt more is a Limit, the proof is named');
     ok(cjHas('Xero'), 'compat.json names Xero (the Australian launch depends on it)');
   }
@@ -194,7 +207,16 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   {
     const { ctx, p } = await open(S);
     ok(/^Standards$/.test((await p.textContent('.cbl-title h1')).trim()), 'the title row says Standards');
-    ok(new RegExp('checked ' + CHECKED).test(await p.textContent('[data-testid="std-checked"]')), 'and "checked ' + CHECKED + '" — once; the counts are in the matrix, not repeated up here');
+    ok(new RegExp('^Last updated ' + CHECKED + '$').test((await p.textContent('[data-testid="std-tab-updated"]')).trim()), 'and "Last updated ' + CHECKED + '" (the newest date in the register, Works with, Compared with and How we build) — once; the counts are in the matrix, not repeated up here');
+    ok(new RegExp('^Last updated ' + CHECKED + '$').test((await p.textContent('[data-testid="std-updated"]')).trim()), 'the matrix pane says the same date, from the same data');
+    const hl = (await p.textContent('[data-testid="std-headline"]')).replace(/\s+/g, ' ').trim();
+    ok(hl === CA.live + ' of ' + (CA.live + CA.part + CA.plan) + ' in force · ' + CA.part + ' partly · ' + CA.plan + ' planned', 'the headline says where we stand, with the counts of every row listed: ' + hl);
+    ok(/in force/.test(await p.getAttribute('[data-testid="std-bar"]', 'aria-label')) && await p.locator('[data-testid="std-bar"] i').count() >= 2, 'and its bar carries the same three counts in words');
+    ok(await p.locator('[data-testid="std-recent"] [data-cbsid="STD001-B07"]').count() >= 1, '"Added lately" lists the newest rows, each a button with its register code');
+    await p.click('[data-testid="std-np-open"]'); await p.waitForTimeout(300);
+    ok((await rowIds(p)).length === NPIDS.length && await p.locator('[data-testid="std-row-' + REG.S.findIndex((r) => r.id === NPIDS[0]) + '"]').count() === 1, 'the "not pursued" button lists exactly those ' + NPIDS.length + ' rows (they are listed, never counted)');
+    ok((await p.locator('[data-testid="std-status-more"]').first().textContent()).length > 15, 'and each says why in its status cell');
+    await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(250);
     ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
@@ -205,7 +227,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const mxAll = await p.$$eval('[data-testid^="std-cell-*-"]', (n) => n.map((x) => x.textContent.trim()));
     ok(mxAll.join(' ') === CA.live + ' ' + CA.part + ' ' + CA.plan, 'the matrix\'s All row is the counts of every row listed: ' + mxAll.join(' · '));
     const areaRows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
-    ok(areaRows.join('|') === 'Selling|Buying|Money & GST|Books|People & privacy|Look & access|How we build|All', 'Count by Area: seven areas and All');
+    ok(areaRows.join('|') === REG.A.map((a) => a[1]).concat('All').join('|') && REG.A.length >= 8, 'Count by Area: the register'+String.fromCharCode(39)+'s ' + REG.A.length + ' areas in its own order, and All');
     /* every matrix cell is the register's own count */
     let cellsOk = true;
     for (const a of REG.A) for (const st of ['live', 'part', 'plan']) {
@@ -245,7 +267,6 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(geo.n > 0 && geo.max <= 44, 'one line per row at 1366: the tallest of ' + geo.n + ' rows is ' + Math.round(geo.max) + ' px (limit 44)');
     ok(geo.fill >= 0.97, 'and the table fills the width of the list (' + Math.round(geo.fill * 100) + '%)');
     const hdrB2 = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom) - await frameB();
-    console.log('     head with a cell chosen: ' + Math.round(hdrB2 / ih * 100) + '% (two chips; the unit wraps them to a line of their own)');
     ok(hdrB2 / ih <= 0.25, 'the head with a cell chosen stays within 25% (' + Math.round(hdrB2 / ih * 100) + '%)');
     await p.screenshot({ path: path.join(SHOTS, 'standards-cell.png') });
     /* the same cell again clears it */
@@ -316,10 +337,9 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.click('[data-testid="cbl-nomatch-standards"] button'); await p.waitForTimeout(250);
     ok(shownAll().test(await count(p)), 'Clear brings all ' + N + ' back');
     await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(200);
-    await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500);   /* the unit draws 50 rows at a time; the last group's head arrives with its rows */
-    await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300);
+    /* the unit draws 50 rows at a time; the last group's head arrives with its rows: scroll to the bottom until no new group head appears (167 rows = 4 loads) */
+    for (let g = 0, prev = -1; g < 8; g++) { const nGroups = await p.$$eval('#std_list .cbl-group', (n) => n.length); if (nGroups === prev && g > 1) break; prev = nGroups; await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500); }
     const gk = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    console.log('     groups: ' + JSON.stringify(gk));
     ok(gk.length === 5 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]) && /Build rule/.test(gk[4]), 'Group by Kind: Law · Standard · Practice · Compatibility · Build rule, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     /* the unit draws 50 rows at a time: scroll until every row is drawn, so the last group's head is there (STDREG1: more rows than two pages) */
@@ -342,12 +362,12 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
       await p.screenshot({ path: path.join(SHOTS, 'standards-country-matrix.png') });
       await p.click('[data-testid="std-row-' + ci + '"]'); await p.waitForTimeout(150);
     }
-    /* a row opens: the GSTR row (Partly, Money & GST) */
+    const partRows = REG.S.filter((r) => r.s === 'part' && r.m); ok(partRows.length > 0, 'the register still holds Partly rows to sample (' + partRows.length + ')'); /* the Partly sample row is read from the register at run time (other lanes flip rows to In force; a name pinned here went stale): the first Partly row with a short Missing line, one never added after the first 44 preferred */ const SAMPLE = partRows.find((r) => !r.added) || partRows[0]; const sIdx = REG.S.indexOf(SAMPLE);
+    /* a row opens: the GSTR row (a returns row with an Open in the app button) */
     const gi = idx('GSTR-1 / GSTR-3B (GSTN schema)');
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
     await p.click('[data-testid="std-row-' + gi + '"]'); await p.waitForTimeout(250);
     const dl = await p.textContent('[data-testid="std-detail-' + gi + '"]');
-    console.log('     dl: ' + dl.replace(/\s+/g, ' ').slice(0, 400));
     ok(/Covers/.test(dl) && /Kind\s*Law\s*you must/.test(dl) && /Source/.test(dl) && !/Missing:/.test(dl), 'the row opens to label : value — Covers · Kind · Source (what is missing is already in the row, not said twice)');
     ok(/New\s*Adopted 2–3 Oct 2026; not yet in the register/.test(dl), 'a 2–3 Oct 2026 addition says it is New and not yet in the register');
     ok(/Why it matters|Elsewhere|In the app/.test(dl), 'and the rest of what a buyer or CA checks (why it matters · in the app)');
@@ -362,18 +382,19 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(!(await p.locator('[data-testid="std-gloss-pop"]').isVisible()), 'Escape hides it');
     ok(await p.locator('[data-testid="std-row-' + gi + '"] abbr.gl[title]').count() > 0 && await p.locator('[data-testid="std-row-' + gi + '"] abbr.gl[tabindex]').count() === 0, 'the row\'s own terms carry their full name as a title, without a tab stop each');
     await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
+    await p.click('[data-testid="std-row-' + gi + '"]'); await p.waitForTimeout(150);
+    await p.fill('[data-testid="listctl-search-standards"]', SAMPLE.n); await p.waitForTimeout(300);
+    await p.click('[data-testid="std-row-' + sIdx + '"]'); await p.waitForTimeout(250);
     await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
     const clip = await p.evaluate(() => navigator.clipboard.readText());
-    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && new RegExp('Checked ' + CHECKED).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(clip.indexOf(SAMPLE.n) >= 0 && /Status: Partly/.test(clip) && /Missing: /.test(clip) && clip.indexOf('Kind: ' + ({ law: 'Law', std: 'Standard', prac: 'Practice', compat: '' }[SAMPLE.k] || '')) >= 0 && new RegExp('Last updated ' + CHECKED_REG).test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
     ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
     ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
     /* a row with a long note says what is missing IN FULL when opened */
-    const gs1 = idx('GS1');
-    await p.fill('[data-testid="listctl-search-standards"]', 'GS1'); await p.waitForTimeout(300);
-    const gsRow = p.locator('[data-testid="std-row-' + gs1 + '"]');
-    await gsRow.click(); await p.waitForTimeout(250);
-    const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]');
-    ok(/What is missing, in full/.test(gdl) && /check-digit validation is not enforced/.test(gdl) && /In the register/.test(gdl) && !/New/.test(gdl), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
+    await p.click('[data-testid="std-row-' + sIdx + '"]'); await p.waitForTimeout(150); /* close the row Copy used; it is the same sample */
+    const gsRow = p.locator('[data-testid="std-row-' + sIdx + '"]'); await gsRow.click(); await p.waitForTimeout(250); const gdl = await p.textContent('[data-testid="std-detail-' + sIdx + '"]');
+    const afterMiss = (gdl.split('What is missing, in full')[1] || '').replace(/\s+/g, ' ').trim(); const gHtml = await p.innerHTML('[data-testid="std-detail-' + sIdx + '"]');
+    ok(/What is missing, in full/.test(gdl) && afterMiss.length > 40 && /In the register|Adopted/.test(gdl) && (SAMPLE.added ? /<span class="new">/.test(gHtml) : /In the register/.test(gdl) && !/<span class="new">/.test(gHtml)), 'a Partly row from the register (' + SAMPLE.n + ') opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
     await gsRow.click(); await p.waitForTimeout(150);
     await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
     /* TIDY 6 · "Open in the app" is offered only where a CUSTOMER home exists (the till); never the workshop, app.html */
@@ -463,23 +484,24 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.waitForSelector('[data-testid="shell-card-standards"]', { timeout: 15000 });
     ok(await p.getAttribute('[data-testid="shell-card-standards"]', 'href') === '/standards.html', 'the index page (the shell\'s Home) links Standards');
     ok(await p.getAttribute('[data-testid="shell-card-crm"]', 'href') === '/crm.html', 'and CRM as a Running card');
-    ok(await p.locator('[data-testid="shell-pillar-accounting"] [data-testid="shell-card-standards"]').count() === 1, 'Standards sits in the Accounts pillar (Home pillars, 2026-10-09)');
+    ok(await p.locator('section.cbsh-sec.setup [data-testid="shell-card-standards"]').count() === 1, 'Standards sits in the Set up section of Home (manifest area setup; it moved there from the Accounts pillar)');
     await ctx.close();
   }
   {
     /* Settings › Standards: run the function as the app does, with the helpers it needs */
     const src = fs.readFileSync(path.join(PUB, 'app', 'cap-admin.js'), 'utf8');
-    const a = src.indexOf('function standardsSettingsHTML(){'), z = src.indexOf('function appearanceSettingsHTML(){');
+    const fnAt = (name) => { const m = new RegExp('function ' + name + '\\(\\)\\s*{').exec(src); return m ? m.index : -1; };   /* the file is formatted: a space may sit before the brace */
+    const a = fnAt('standardsSettingsHTML'), z = fnAt('appearanceSettingsHTML');
     const fnSrc = src.slice(a, z);
     ok(a > 0 && z > a, 'cap-admin.js still has standardsSettingsHTML');
     ok(!/setStdTab|std-tab-|groupsOf|BADGE/.test(fnSrc) && !/function stdTab\(|function setStdTab\(/.test(src), 'Settings no longer lists the register: its tabs, rows and badges are gone from cap-admin.js');
-    const g = { _CARD: '', _misHead: (t) => '<h2>' + t + '</h2>', esc: (s) => String(s), tx: (s) => s, stdCounts: null,
+    const g = { fmtMoney: () => '₹1,23,456.50', moneyCode: () => 'INR', _CARD: '', _misHead: (t) => '<h2>' + t + '</h2>', esc: (s) => String(s), tx: (s) => s, stdCounts: null,
       CBLocale: { regionInfo: () => ({ name: 'India' }), langs: () => ['en'], langName: (x) => x, dir: () => 'ltr', tag: () => 'en-IN', number: () => '1,23,45,678.5', money: () => '₹1,23,456.50', date: () => '3 Oct 2026', time: () => '10:00', timezone: () => 'Asia/Kolkata', workdays: () => [1, 2, 3, 4, 5, 6], hasWorkdayOverride: () => false } };
     vm.createContext(g);
     vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g);
     const html = vm.runInContext(fnSrc + ';standardsSettingsHTML()', g);
     ok(/data-testid="std-yours"/.test(html) && /Region/.test(html) && /Reading order/.test(html), 'Settings › Standards keeps What you follow — the live reading of the person\'s own settings');
-    ok(/href="\/standards\.html"/.test(html) && new RegExp(REG.S.filter((r) => r.s === 'live').length + ' in force').test(html) && new RegExp(REG.S.filter((r) => r.s === 'part').length + ' partly').test(html), 'and the door to the page, with the register\'s own counts (all rows, the compliance additions too)');
+    ok(/href="\/standards\.html"/.test(html) && new RegExp(REG.S.filter((r) => r.k !== 'build-rule' && r.s === 'live').length + ' in force').test(html) && new RegExp(REG.S.filter((r) => r.k !== 'build-rule' && r.s === 'part').length + ' partly').test(html), 'and the door to the page, with the register\'s own counts (all rows, the compliance additions too)');
     ok(!/Incoterms|BCP 47|GS1|What we follow<|Your trade|Why bother/.test(html), 'and lists no standard (the register is read on the page)');
   }
 

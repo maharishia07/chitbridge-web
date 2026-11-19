@@ -109,6 +109,7 @@ var CBStdBuild = (function () {
   });
   var viewTab = { key: 'how-we-build', label: 'How we build', filt: { kind: 'build-rule' }, tip: 'Every standard we build to: its source, the check that proves it, and how many CMDB items pass, fail or are not yet checked' };
   return {
+    generated: function () { return (BUILD && BUILD.generated) || ''; }, /* the CMDB file's own date: the tab's "Last updated" */
     load: load, cols: cols, next: next, sorts: sorts, tab: viewTab, openList: openList, defaultCols: ['what', 'std', 'sb0', 'sb1', 'sb2'],
     error: function () { return ERROR; },
     on: function (filt) { return filt && filt.kind === 'build-rule'; }

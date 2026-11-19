@@ -37,8 +37,9 @@ function crmFuHolders(f) {
 /** the writer CBAssign calls: one PATCH per follow-up, answered like assign-bulk ({ assigned, skipped[], previous[], sentence }); the first refusal stops the run and carries the server's sentence */
 function crmFuWrite(ids, targetId) {
   var out = { ok: true, assigned: 0, skipped: [], previous: [], sentence: '' };
-  return ids.reduce(function (chain, id) {
-    return chain.then(function () {
+  var chain = Promise.resolve();
+  ids.forEach(function (id) {
+    chain = chain.then(function () {
       if (!out.ok) return null;
       var row = CRM.fu.filter(function (f) { return f.followup_id === id; })[0];
       return api('crmFollowSet', { params: { id: id }, body: { assignee_user_id: targetId || null } }).then(
@@ -52,7 +53,8 @@ function crmFuWrite(ids, targetId) {
         }
       );
     });
-  }, Promise.resolve()).then(function () {
+  });
+  return chain.then(function () {
     return out;
   });
 }

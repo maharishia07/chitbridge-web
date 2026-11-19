@@ -29,11 +29,9 @@ const NEUTRAL = /'INR'|"INR"|cu=INR|Asia\/Kolkata|en-IN/g;
 const SKIP = [/^engine\//, /^vendor\//, /^data\//, /^lab\//, /^pics\//, /^docs\//, /^till\.html$/, /^promo\.html$/, /-lab(-next)?\.html$/, /-design\.html$/, /^screen-gallery\.html$/, /^design-mock\.html$/, /^testing\.html$/];
 const ALLOW = {
   'app/cap-admin.js': { max: 4, why: 'locale demo rows (lakh grouping shown beside USD), the en-IN entry of the format list, and the zone pickers fallback list' },
-  'app/cap-standards.js': { max: 6, why: 'the Standards glossary: tag, zone and UPI-link EXAMPLES (en-IN, Asia/Kolkata, cu=INR) and what INR is - documentation, not a default' },
+  'app/cap-standards.js': { max: 7, why: 'the Standards glossary and its "checked on" stamp (moved here from standards.html, a fixed UTC date, not a shop record): tag, zone and UPI-link EXAMPLES (en-IN, Asia/Kolkata, cu=INR) and what INR is - documentation, not a default' },
   'app/cap-country.js': { max: 3, why: 'the lakh-words choice, the lakh-pack test and the lakh-words branch (SET-93: lakh · crore words no longer ride the browser ICU): an India-pack path (rupee grouping), chosen by the money own tag' },
   'app.html': { max: 1, why: 'CURRENCIES: the currency picker names every ISO code, INR among them' },
-  'bill-print.html': { max: 1, why: 'the sample shop of the print preview (a demo bill, not a real shop record)' },
-  'standards.html': { max: 1, why: 'the "checked on" stamp of the Standards page: a fixed UTC date, not a shop record' },
 };
 
 /** the file with its comments blanked: JS block + line comments, HTML comments (a URL's // is not a comment) */

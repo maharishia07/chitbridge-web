@@ -27,6 +27,7 @@
  *   k      kind: law (you must) · std (agreed worldwide) · prac (the common way), one of STD_KINDS (here; the page)
  *   c      applies in: ISO 3166 codes and GLOBAL, one of STD_COUNTRIES — a new country is a new code here and a new matrix row, nothing else
  *   p      the plain-words line a shopkeeper reads first (here; the page's first column)
+ *   np     ONLY on a row with s:'np' (Not pursued, Athi 19 Nov 2026): one line, WHY we do not pursue it. Such a row is listed and filterable but is never counted in the in-force/partly/planned figures (STD_STATUS holds the three counted statuses; STD_NP the fourth)
  *   m      what is missing, short — REQUIRED on every Partly and Planned row (e2e/standards-page.cjs asserts it); the long `note` stays for the opened row
  *   limit  a stated limit on an In force row, e.g. "company format only" (optional; the page shows it as Limit:)
  *   eq     the equivalent abroad, so a buyer outside India reads an Indian law in their own terms (optional; the opened row)
@@ -47,7 +48,7 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Every test run is written up on a template an auditor already knows',
-    m: 'Judgement sections need a person; no test plan yet',
+    m: 'Judgement sections need a person; a test plan is declared but the report does not read it yet',
     g: 'Verification',
     n: 'ISO/IEC/IEEE 29119-3',
     w: 'Test completion report — the template a run is written up on',
@@ -55,7 +56,7 @@ var STANDARDS = [
     exWhy:
       'The clause that asks whether the exit criteria were MET. We render the numbers under it and say plainly that the judgement is not ours to generate — a report that fills this heading with plausible prose looks signed off and is not.',
     s: 'part',
-    note: 'The measured sections are generated from the ledger; the judgement sections (deviations, completion evaluation, residual risks, lessons, approval) are marked “needs a person” and carry the question instead of an answer. No test PLAN is declared anywhere yet, so section 5 has nothing to compare against.',
+    note: 'The measured sections are generated from the ledger; the judgement sections (deviations, completion evaluation, residual risks, lessons, approval) are marked “needs a person” and carry the question instead of an answer. A test PLAN is now declared for the coming days; the report does not yet read it, so section 5 still has nothing to compare against automatically. Proof: PM/TEST-PLAN-1119-1121.md (levels, entry and exit per level, 18 Nov 2026); report code public/app/cap-testing.js (testReport).',
     at: 'Testing › Report',
     go: 'testing',
     why: '⭐ It SUPERSEDED IEEE 829 in 2013 — which is the name most people still reach for, and using the withdrawn one would have looked more familiar to more readers and been wrong. A completion report on a known template is one an auditor, a customer or a new engineer can read without being taught our format.'
@@ -277,8 +278,8 @@ var STANDARDS = [
     ex: 'quiet button edge = its label colour',
     exWhy: 'The quiet button draws its edge in the same colour as its words, so the edge is as clear as the label. The pale divider colour is kept for dividers only.',
     s: 'part',
-    limit: 'the shared button style (page-skeleton.css) and the UI standard page, 16 of 16 themes · checked 8 Nov 2026; the 10 pages that style their own buttons follow (handover to cb-ux-locale)',
-    note: 'Read at w3.org (Understanding 1.4.11): a boundary is required only when nothing else identifies the control; we draw one anyway. Measured on the real buttons in every theme on the Across themes and Meets the standard tabs.',
+    m: 'the shared button style (page-skeleton.css) and the UI standard page, 16 of 16 themes · checked 8 Nov 2026; the 10 pages that style their own buttons follow (handover to cb-ux-locale)',
+    note: 'Read at w3.org (Understanding 1.4.11): a boundary is required only when nothing else identifies the control; we draw one anyway. Measured on the real buttons in every theme on the Across themes and Meets the standard tabs. Proof: walk-ui-standard.cjs green on sit-grund 2026-11-18 (PM/junit/std-1118/ux/box-run/summary.txt).',
     at: 'Every button',
     go: 'ui-standard',
     why: 'A button you cannot see is a button you do not press. The check runs on the real buttons, in every theme.',
@@ -298,8 +299,8 @@ var STANDARDS = [
     ex: 'outline: 3px solid var(--focus-ring); outline-offset: 2px',
     exWhy: 'The ring is the theme\'s own text colour with a gap in the page colour, so it is judged against the page only and works on every theme.',
     s: 'part',
-    limit: 'the shared button style (page-skeleton.css) and the UI standard page, 16 of 16 themes · checked 8 Nov 2026; the 10 pages that style their own buttons follow (handover to cb-ux-locale)',
-    note: 'One rule for every theme, built from colours each theme already has. The ring width and gap are read from the browser on the UI standard page. Applied to the shared button style (page-skeleton.css) and the UI standard page; pages that style their own buttons follow.',
+    m: 'the shared button style (page-skeleton.css) and the UI standard page, 16 of 16 themes · checked 8 Nov 2026; the 10 pages that style their own buttons follow (handover to cb-ux-locale)',
+    note: 'One rule for every theme, built from colours each theme already has. The ring width and gap are read from the browser on the UI standard page. Applied to the shared button style (page-skeleton.css) and the UI standard page; pages that style their own buttons follow. Proof: walk-ui-standard.cjs green on sit-grund 2026-11-18 (PM/junit/std-1118/ux/box-run/summary.txt).',
     at: 'Every button',
     go: 'ui-standard',
     why: 'Someone using only the keyboard needs to see where they are. One rule means no theme can lose it.',
@@ -312,14 +313,13 @@ var STANDARDS = [
     k: 'prac',
     c: ['GLOBAL'],
     p: 'One Save, one Cancel, one Done: the same button on every screen, with a code on the register',
-    m: 'Ten components are built and shown; only a few screens use them so far',
+    m: 'Ten components are built and shown; only a few screens use them so far; checked 8 Nov 2026 on the UI standard page',
     g: 'Verification',
     n: 'UI standard — action set',
     w: 'One component per everyday action, drawn by one factory',
     ex: 'Save · Cancel · Done · Close · Back · Add · Remove · Try again · Open',
     exWhy: 'Improve one and every screen improves; a screen never draws its own Save.',
     s: 'part',
-    limit: 'checked 8 Nov 2026 on the UI standard page',
     note: 'Our own rule (decided 8 Nov 2026), not an international standard. The UI standard page draws all of them with the real code, in every state and theme.',
     at: 'Every screen',
     go: 'ui-standard',
@@ -334,17 +334,16 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Extra-strong contrast for readers with low vision',
-    m: 'One theme (High Contrast) is measured at 7:1; the other sixteen at 4.5:1 only',
     g: 'Accessibility',
     n: 'WCAG 2.2 — 1.4.6',
     w: 'Enhanced text contrast, 7:1 (level AAA)',
     ex: '7:1 or more (AA asks 4.5:1)',
     exWhy:
-      "The High Contrast theme promises 7:1 and e2e/a11y-contrast.cjs holds it to 7; every other theme is held to 4.5:1 — so the claim is one theme's, not the product's.",
-    s: 'part',
+      "The High Contrast theme promises 7:1 and e2e/a11y-contrast.cjs holds it to 7; every other theme is held to 4.5:1 — so the claim is one theme's, not the product's.", s: 'live',
     /* STD-COMPARE (15 Oct 2026): Planned → Partly. Proved against the code: chitbridge-engines src/screen.js theme `hc` carries a11y { level:'AAA', standard:'WCAG 2.2 AAA (1.4.6) — 7:1' };
        e2e/a11y-contrast.cjs:179 measures a theme that claims AAA at 7:1 (TEXT = 7) and the rest at 4.5. */
-    note: 'The contrast test (e2e/a11y-contrast.cjs) holds a theme to the level it claims: High Contrast claims AAA and is measured at 7:1; the sixteen others claim AA and are measured at 4.5:1. Missing: 7:1 on every theme, or a plain word on each theme saying which level it reaches.',
+    note: 'In force: every theme is measured at the level it claims, 7:1 for the two that claim AAA and 4.5:1 for the rest, and a theme that claims more than it measures fails (e2e/a11y-contrast.cjs). Proof: a11y-contrast.cjs 997 checks, 0 failures, static run locally 2026-11-18 (PM/junit/std-1118/ux/a11y-contrast-local-20261118.log).',
+    limit: 'AAA (7:1) holds on the two High Contrast themes (hc, hcdark); the other 14 are measured at AA (4.5:1) and say so; the card word exists on the 5 accessibility themes',
     at: 'Appearance · themes',
     go: 'appearance',
     why: 'A reader with low vision can pick the one theme that is measured for them; the row says Partly until every theme is measured at 7:1 or says it is not.',
@@ -357,14 +356,14 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Text can grow and nothing breaks',
-    m: 'Our 132% setting is tested; 200% is not',
+    m: '200% is walked on the UI standard page and the list control only; the signed-in app screens are not yet walked at 200% (the text-size test is 132%)',
     g: 'Accessibility',
     n: 'WCAG 2.2 — 1.4.4',
     w: 'Resize text to 200% without loss of function',
     ex: '--fs-3: 14px → 18.5px',
     exWhy: 'The whole scale multiplies, so a heading stays bigger than a caption at our largest setting, 132%.',
     s: 'part',
-    note: "What we test: the Extra large text size (132%) applies across the scale (e2e/tests/ux.spec.js, the text-size test). The rule asks for 200% — the browser's zoom — and no walk checks the screens at 200% yet.",
+    note: 'What we test: the Extra large text size (132%) applies across the scale (e2e/tests/ux.spec.js, the text-size test). The rule asks for 200% — the browser\'s zoom — and no walk checks the screens at 200% yet. New: e2e/walk-zoom-200.cjs renders the UI standard page and the list control at the 640x360 layout a 200% zoom builds, at normal and Extra large text: no sideways scroll, no clipped control, nothing outside the window. Proof: walk-zoom-200.cjs green on sit-grund 2026-11-18 (PM/junit/std-1118/ux/box-run3/summary.txt).',
     at: 'Appearance · text size',
     go: 'ui-standard',
     why: 'Someone can keep using the product as their eyes change, instead of leaving it.'
@@ -434,11 +433,11 @@ var STANDARDS = [
     w: 'Right-to-left layout without a second stylesheet',
     ex: 'margin-inline-start: 12px',
     exWhy: 'Mirrors automatically in Arabic. <code>margin-left</code> would have needed a second stylesheet nobody maintains.',
-    m: 'The small apps still carry about 200 physical left/right properties across 15 files',
+    m: '59 physical direction properties remain in the app shell page and the apps scope of the guard (314 in 39 files across all public pages); the count can no longer rise',
     s: 'part',
     /* STD-COMPARE (15 Oct 2026): In force → Partly. Proved against the code: grep -E "(margin|padding|border)-(left|right)|\b(left|right)\s*:" over public/*.html + public/app/*.js
        finds ~200 hits in 15 files (margin-left 50 · right: 49 · left: 39 · border-right 22 · border-left 16 · padding-right 12 · margin-right 10 · padding-left 8). */
-    note: '378 physical properties were converted in the workshop. The small apps built since (Accounts, CRM, Finance, Settings, the till) still write margin-left, padding-right and left:/right: — about 200 across 15 files — so an Arabic reader gets a mirrored page in some places and not others. Missing: the same sweep over the small apps, and a guard that counts physical properties and only lets the count fall.',
+    note: 'The guard (e2e/guard-static.cjs check 14) now FAILS when the count of margin/padding/border left|right and text-align left|right rises above 59, so the sweep can only go down. Proof: guard-static.cjs 0 failures, check 14 at 59/59, run locally 2026-11-18 (PM/junit/std-1118/ux/guard-static-local-20261118.log). Missing: the sweep itself (59 in guard scope; 314 in 39 files over all public pages, the largest offer-lab-next 58, crm-page.css 26, till 25).',
     at: 'Whole product',
     go: 'appearance',
     why: 'Arabic became possible in one sweep instead of a parallel stylesheet nobody would maintain.'
@@ -468,15 +467,14 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'A barcode number means the same product to both sides',
-    m: 'Check digit not enforced yet',
     g: 'Records & data',
     n: 'GS1',
     w: 'SKU / GTIN identity on catalogue items',
     ex: '08901234567894',
     exWhy:
-      'A GTIN. The last digit is computed from the other thirteen, so a typo is detectable — and both sides know it is the same product without comparing names.',
-    s: 'part',
-    note: 'Codes are carried and matched; check-digit validation is not enforced.',
+      'A GTIN. The last digit is computed from the other thirteen, so a typo is detectable — and both sides know it is the same product without comparing names.', s: 'live',
+    limit: 'checked on import; a single-item entry warns only',
+    note: 'In force: the GTIN check digit is computed (chitbridge-api lib/gs1.js) and the CSV/workbook import refuses a barcode that fails it, naming the right digit (routes/products.js gtinCheck); an internal SKU is never called invalid. Proof: tests/gs1.test.js and tests/t3-fixes.test.cjs green on sit-root 2026-11-18 (C:/dev/wt-final-docs/PM/junit/std-1118/sit-root-api-tests-20261118-223317.xml).',
     at: 'Catalogue · product identity',
     go: 'catalogue',
     why: '⭐ The three-way match only works if both sides agree this is the SAME product. Without a shared identifier, matching is fuzzy string comparison and a dispute has nothing to stand on.'
@@ -578,14 +576,13 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'One QR format payment apps worldwide can read',
-    m: 'Not built',
+    m: 'Encoder only: not yet wired to the counter, no national profile',
     g: 'Commercial',
     n: 'EMVCo QR (MPM)',
     w: 'Merchant-presented QR — the format PIX · PayNow · PromptPay · DuitNow · BharatQR · HKQR are all profiles of',
     ex: 'TLV: 00 02 01 · 26 … · 54 06 140.00',
-    exWhy: 'Published in 2017 to stop every country inventing its own code. One encoder reaches six national rails.',
-    s: 'plan',
-    note: "NOT implemented. Named here because the counter's QR is dispatched per SCHEME (lib/profile PAY_SCHEMES), so this is a row in that table rather than a rewrite. Today only the India scheme is encoded.",
+    exWhy: 'Published in 2017 to stop every country inventing its own code. One encoder reaches six national rails.', s: 'part',
+    note: "The EMVCo merchant-presented payload (TLV tags + CRC-16) is encoded by lib/emvco-qr.js; the counter still offers only the India UPI scheme until a PAY_SCHEMES row uses it. Proof: tests/emvco-qr.test.js green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-225326.xml).",
     at: 'Counter · how the bill is paid',
     go: 'till',
     why: 'Without it, reaching Brazil or Singapore means writing a second QR generator; with it, one.'
@@ -695,14 +692,14 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'A company’s global ID can be recorded',
-    m: 'Not checked against GLEIF yet',
+    limit: 'the 20 characters and their two check digits (the standard’s own check-digit sum) are checked; the entity is not looked up at GLEIF, so a well-formed LEI is not called verified',
     g: 'Records & data',
     n: 'ISO 17442 (LEI)',
     w: 'Legal Entity Identifier',
     ex: '5493001KJTIIGC8Y1R12',
-    exWhy: '20 characters that identify one legal entity globally. Checkable against GLEIF — which we do not yet do, hence "partly".',
-    s: 'part',
-    note: 'A field exists to record it; the value is not verified against GLEIF.',
+    exWhy: '20 characters that identify one legal entity globally. The check digits are tested on entry; GLEIF lookup is not connected, so the row is registered as format-checked only.',
+    s: 'live',
+    note: 'In force: the LEI is checked on entry (18 letters or digits and two check digits, the standard’s own check-digit sum) in the one format check (chitbridge-api lib/verify.js verifyFormat, used by the verify route and by Trade readiness); a wrong digit is refused and a correct one is shown as format-checked, never as registry-confirmed. Proof: tests/std10-ids-incoterms.test.cjs green on sit-root 2026-11-19 (PM/junit/std-1119/lane10/sit-root-api-tests-20261119-052133.xml, with api-problem-kyb, api-problem-governance and profile-map-ladder).',
     at: 'Trade readiness',
     go: 'readiness',
     why: 'The same company recognised across registers and borders.'
@@ -760,7 +757,8 @@ var STANDARDS = [
     g: 'Identity & access',
     n: 'ISO/IEC 24760',
     w: 'The IAM vocabulary — identity · identifier · attribute',
-    s: 'part',
+    s: 'np',
+    np: 'We borrow its words; it is not a set of rules to check.',
     note: 'We use its distinctions; we do not implement its lifecycle model.',
     ex: 'bridge_id = identifier · display_name = attribute · the entity = identity',
     exWhy:
@@ -819,7 +817,8 @@ var STANDARDS = [
     g: 'Identity & access',
     n: 'SCIM (RFC 7644)',
     w: 'Provisioning identities from an HR system',
-    s: 'plan',
+    s: 'np',
+    np: 'No customer has asked for it; we build it when one does.',
     ex: '—',
     exWhy:
       'Not built. It matters only when a customer wants their HR system to create and remove co-assists automatically — real for a large operator, irrelevant to a shop.',
@@ -850,12 +849,12 @@ var STANDARDS = [
     why: 'Would let people sign in with an existing account — at the cost of who vouches for the signature on a chit.'
   },
   {
-    id: 'rfc6749', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'part', at: 'Sign-in', go: '', added: '2026-11-18',
-    n: 'RFC 6749 (OAuth 2.0)', w: 'Authorization framework: the code a sign-in provider hands back, exchanged for a token', p: 'A sign-in provider vouches for you with a code we exchange, never your password', m: 'Named by the sign-in providers; not yet checked end to end', note: 'The OAuth 2.0 authorization code flow the sign-in providers use. Link: https://www.rfc-editor.org/rfc/rfc6749.html', why: 'Every provider speaks the same flow, so a reviewer audits one thing.'
+    id: 'rfc6749', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'live', at: 'Sign-in', go: '', added: '2026-11-18',
+    n: 'RFC 6749 (OAuth 2.0)', w: 'Authorization framework: the code a sign-in provider hands back, exchanged for a token', p: 'A sign-in provider vouches for you with a code we exchange, never your password', limit: 'Proven against a stand-in provider (in process) and a real Postgres; the run against a real Keycloak is SIT-only and is not in this proof', note: 'The OAuth 2.0 authorization code flow the sign-in providers use, with PKCE and state: a replayed state or code, a wrong nonce, audience or issuer, alg none and a forged signature are all refused (tests/signin-provider.test.cjs, sections A and D). Proof: tests/signin-provider.test.cjs and tests/api-problem-signin-provider.test.cjs green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-224854.xml); tests/signin-provider.realstack.cjs (link, pending-ticket and event tables as cb_app on real Postgres) green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-realstack-20261118-225204.xml). Link: https://www.rfc-editor.org/rfc/rfc6749.html', why: 'Every provider speaks the same flow, so a reviewer audits one thing.'
   },
   {
-    id: 'rfc9207', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'part', at: 'Sign-in', go: '', added: '2026-11-18',
-    n: 'RFC 9207 (OAuth issuer identification)', w: 'The sign-in answer says which provider sent it, so a code from the wrong one is refused', p: 'A sign-in answer is checked for who sent it', m: 'Named by the sign-in providers; not yet checked end to end', note: 'The iss parameter on the authorization response that the sign-in providers check. Link: https://www.rfc-editor.org/rfc/rfc9207.html', why: 'Stops a code meant for one provider being replayed at another.'
+    id: 'rfc9207', pa: 'signin', a: 'people', k: 'std', c: ['GLOBAL'], g: 'Identity & access', s: 'live', at: 'Sign-in', go: '', added: '2026-11-18',
+    n: 'RFC 9207 (OAuth issuer identification)', w: 'The sign-in answer says which provider sent it, so a code from the wrong one is refused', p: 'A sign-in answer is checked for who sent it', limit: 'Proven against a stand-in provider; the run against a real Keycloak is SIT-only and is not in this proof', note: 'The issuer the provider reports is checked against the provider we started the sign-in with: a wrong iss and another provider\'s iss (mix-up) are refused (tests/signin-provider.test.cjs, section D). Proof: tests/signin-provider.test.cjs green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-224854.xml). Link: https://www.rfc-editor.org/rfc/rfc9207.html', why: 'Stops a code meant for one provider being replayed at another.'
   },
   {
     id: 'jwt',
@@ -917,14 +916,14 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Who pays freight and where risk passes, agreed in writing',
-    m: 'Carried on forms; not checked against the shipment',
+    m: 'The eleven codes and the mode rule are built and tested; no write path calls the check yet, so a form still accepts any text',
     g: 'Commercial',
     n: 'Incoterms 2020 (ICC)',
     w: 'Who bears cost and risk, and to what point',
     ex: 'FOB Chennai (Incoterms 2020)',
     exWhy: 'Risk and cost pass to the buyer once the goods are on board at Chennai. Three words that decide who pays if the container is damaged mid-ocean.',
     s: 'part',
-    note: 'Carried on instruments and forms; not yet enforced against the shipment record.',
+    note: 'Carried on instruments and forms. Built: chitbridge-api lib/incoterms.js holds the eleven Incoterms 2020 rules, refuses a code that is not one of them (the 2010 delivered-duty-unpaid term is gone) and refuses the four sea-only rules for air, road or rail. Missing: no form or chit write calls it yet. Proof of the check: tests/std10-ids-incoterms.test.cjs green on sit-root 2026-11-19 (PM/junit/std-1119/lane10/sit-root-api-tests-20261119-052133.xml).',
     at: 'Chits · instruments',
     go: '',
     why: '⭐ Who pays freight and where risk passes, agreed in writing BEFORE the dispute rather than argued after it.'
@@ -942,7 +941,8 @@ var STANDARDS = [
     w: 'Documentary credits',
     ex: '—',
     exWhy: 'Not built. When it is, it is the ruleset a bank checks the documents against before releasing payment.',
-    s: 'plan',
+    s: 'np',
+    np: 'Trade finance is outside what our first customers need; we decide when one asks.',
     at: 'Instruments',
     go: '',
     why: 'The rules a bank will actually check the documents against.'
@@ -954,7 +954,7 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'The customs code on your goods — set by you, not at the border',
-    m: "India's HSN is carried and filed; export HS not checked",
+    m: "India's HSN is carried and filed; the 6-digit shape and chapter (01 to 97, not 77) are checked in the format check, but the code is not checked against the WCO list and nothing asks for it on an export",
     g: 'Commercial',
     n: 'HS codes (WCO)',
     w: 'Tariff classification on goods',
@@ -962,7 +962,7 @@ var STANDARDS = [
     exWhy:
       '<b>Pepper, whole.</b> Customs charges duty on THIS, not on your product name — so a seller who states it decides the tariff instead of discovering it at the border.',
     s: 'part',
-    note: "In force for India: the HSN (India's reading of HS) rides on every chit line from the catalogue and is filed in the GSTR-1 HSN summary (chitbridge-api lib/tax-lines.js decorate). Missing: the code is not checked against the WCO list, and nothing asks for the 6-digit HS an export needs. The HSN / SAC row says what India's invoice rule asks.",
+    note: "In force for India: the HSN (India's reading of HS) rides on every chit line from the catalogue and is filed in the GSTR-1 HSN summary (chitbridge-api lib/tax-lines.js decorate). Built: the shape check (6 digits, chapter 01 to 97, 77 reserved) in chitbridge-api lib/verify.js verifyFormat id_type hs; proof: tests/std10-ids-incoterms.test.cjs green on sit-root 2026-11-19 (PM/junit/std-1119/lane10/sit-root-api-tests-20261119-052133.xml). Missing: the code is not checked against the WCO list, and nothing asks for the 6-digit HS an export needs. The HSN / SAC row says what India's invoice rule asks.",
     at: 'Catalogue · goods',
     go: 'catalogue',
     why: 'What customs charges, decided by the seller rather than discovered at the border.'
@@ -1187,11 +1187,11 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'Returns built from your own bills and matched to the Ledger',
-    m: 'Built; filing through a GSP is not connected',
     g: 'Money & GST',
     n: 'GSTR-1 / GSTR-3B (GSTN schema)',
-    w: 'Monthly returns',
-    s: 'part',
+    w: 'Monthly returns', s: 'live',
+    limit: 'file prepared for upload; no GSP',
+    note: "In force: GSTR-1 and GSTR-3B are built from the frozen invoices, matched to the Ledger and exported in the GSTN schema for portal upload (chitbridge-api lib/gst-returns.js); filing through a GSP is not connected. Proof: tests/gstr-one-source, acc-225-gstr1-b2cl, acc-278-gstr3b-no-gstin and returns-sql-parity (.test.cjs) green on sit-root 2026-11-18 (C:/dev/wt-std-acc-api-out/sit-root-api-tests-20261118-222902.xml).",
     at: 'GST · Returns',
     go: 'returns',
     why: 'A return that comes from the bills cannot disagree with them.',
@@ -1255,13 +1255,13 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'Customer data used only for its purpose, with consent; people can see, correct or erase theirs',
-    m: "Consent and requests recorded in CRM and on the shop page; migrations and notice are the owner's",
+    m: "Consent and requests recorded in CRM and on the shop page; the notice and officer name are the owner's",
     eq: 'Like the GDPR in the EU',
     g: 'People & privacy',
     n: 'Digital Personal Data Protection Act 2023',
     w: 'Purpose, consent, the right to see, correct and erase',
     s: 'part',
-    note: "Since 13 Oct 2026: consent per channel and purpose is kept as rows that are never edited (s.6(10): the proof is ours to give), and every request to see, correct or erase gets the date the law sets. Both need migrations b306 and b307, which the owner runs. The privacy notice itself is the owner's to publish. Most operative duties start 13 May 2027 (DPDP Rules 2025).",
+    note: "Since 13 Oct 2026: consent per channel and purpose is kept as rows that are never edited (s.6(10): the proof is ours to give), and every request to see, correct or erase gets the date the law sets. Both tables (b306, b307) are in the production schema. Proof: party_contact_pref and privacy_request in the baseline dump (chitbridge-api migrations/000_baseline_2026-10-21.sql:4250, :4415). The privacy notice itself is the owner's to publish. Most operative duties start 13 May 2027 (DPDP Rules 2025).",
     at: 'CRM · a party › consent; privacy requests',
     go: 'crm',
     why: 'No scraping, no guessing sensitive facts: the customer’s data stays theirs.',
@@ -1337,13 +1337,13 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'Every bill and entry kept at least nine years, whatever a setting says',
-    m: 'Older copies lengthen when the owner runs b305',
+    m: 'New copies are kept 9 years; the older-copy lengthening is confirmed by one prod query',
     g: 'Books',
     n: 'Companies Act 2013 s.128(5) · CGST Act s.36, Rules 56–57',
     w: 'Keep the books 8 years; GST records 72 months',
     ex: 'A copy made today is kept until 2035',
     s: 'part',
-    note: 'The 9-year floor is applied to every new copy and no setting lowers it; nothing is ever deleted inside it. Proof: tests/records-keeping.test.cjs (api).',
+    note: 'The 9-year floor is applied to every new copy and no setting lowers it; nothing is ever deleted inside it. Proof: the 9-year default is on chit_status.retention_expires_at in the baseline dump (chitbridge-api migrations/000_baseline_2026-10-21.sql:3065); tests/records-keeping.test.cjs, tests/retention-floor.test.js, tests/retention-never-early.test.cjs (api). Open: the b305 backfill of older copies (query P1, expect 0) is not in the dump.',
     at: 'Day book · Audit trail',
     go: 'daybook',
     why: 'An officer may ask for a bill from years ago; it must still be there.',
@@ -1619,13 +1619,11 @@ var STANDARDS = [
     a: 'build',
     k: 'std',
     c: ['GLOBAL'],
-    p: 'A chit’s history can be added to, never rewritten',
-    m: 'Database guard written; in force once b315 runs',
+    p: 'A chit’s history can be added to, never rewritten', limit: 'Database refuses to rewrite or delete a sent chit’s history',
     g: 'Security',
     n: 'ISO/IEC 27001:2022 A.8.15 (Logging)',
-    w: 'Logs protected from change and deletion',
-    s: 'part',
-    note: 'Already insert-only for the app: the sign-in log (b282), the access-grant log (b172) and the books’ journal (b273). b315 adds the chit history (state_log): the app may no longer change a line, and may delete only a draft’s own lines — the draft-purge rule, now held by the database. Proof: chitbridge-api tests/co2-controls.test.cjs, and b315’s last query (update grant 0, delete guard 1).',
+    w: 'Logs protected from change and deletion', s: 'live',
+    note: 'Already insert-only for the app: the sign-in log (b282), the access-grant log (b172) and the books’ journal (b273). b315 adds the chit history (state_log): the app may no longer change a line, and may delete only a draft’s own lines — the draft-purge rule, now held by the database. Proof: the append-only trigger and a cb_app grant of SELECT, INSERT, DELETE only (no UPDATE) are in the baseline dump (chitbridge-api migrations/000_baseline_2026-10-21.sql:8236, :11677); tests/co2-controls.test.cjs.',
     at: 'chitbridge-api b315 · tests/co2-controls',
     go: '',
     why: 'A history a program can rewrite proves nothing; one the database refuses to rewrite proves itself.',
@@ -1704,7 +1702,8 @@ var STANDARDS = [
     g: 'Open network',
     n: 'ONDC registry and message signing',
     w: 'A network participant is registered and signs every message it sends',
-    s: 'plan',
+    s: 'np',
+    np: 'Decided: Beckn-compatible, not registered with ONDC.',
     note: 'Joining ONDC means an entry in its registry and every message signed and checked against it. Decided against for now: ChitBridge stays Beckn-compatible, not ONDC-registered (chitbridge-api lib/beckn-map.js, the network-membership rule). Revisited when a shop asks to sell on ONDC.',
     at: '—',
     go: '',
@@ -1722,7 +1721,8 @@ var STANDARDS = [
     g: 'Open network',
     n: 'ONDC IGM (issue and grievance management)',
     w: 'How a complaint travels between the buyer app, the seller app and the network',
-    s: 'plan',
+    s: 'np',
+    np: 'Same decision: a dispute stays on the chit.',
     note: 'Not built. Our own dispute is raised on the chit both parties hold. IGM matters only once a shop sells on ONDC (see the registry row).',
     at: '—',
     go: '',
@@ -1740,7 +1740,8 @@ var STANDARDS = [
     g: 'Open network',
     n: 'ONDC RSF (reconciliation and settlement framework)',
     w: 'Who pays whom, when, and how both sides agree the figures',
-    s: 'plan',
+    s: 'np',
+    np: 'Same decision: payment stays bank to bank.',
     note: 'Not built. Nothing passes through us today: a payment moves bank to bank and the chit records it.',
     at: '—',
     go: '',
@@ -1773,14 +1774,12 @@ var STANDARDS = [
     k: 'law',
     c: ['AU'],
     p: 'Your BAS figures come from your own books',
-    m: 'Prepared from the books; lodging with the tax office is not connected',
     g: 'Money & tax',
     n: 'GST Act 1999 (Cth) · BAS labels G1, 1A, 1B',
     w: 'Goods and services tax and the business activity statement',
     ex: "1A − 1B = the GST ledgers' net movement",
-    exWhy: 'Every label is a read of the posted books for the quarter, so the statement cannot disagree with them.',
-    s: 'part',
-    note: "In force: the BAS is prepared from the posted books — Simpler BAS by default, the full labels on request (chitbridge-api lib/gst-returns.js returnFor → the AU pack; tests/books-returns.test.cjs; engines tests/reg-au.test.js). Missing: lodging through the tax office's online services.",
+    exWhy: 'Every label is a read of the posted books for the quarter, so the statement cannot disagree with them.', s: 'live', limit: 'prepared from the books, not lodged by us',
+    note: "In force: the BAS (Simpler BAS by default, full labels on request) is prepared from the posted books by lib/gst-returns.js returnFor (the AU pack); lodging with the tax office is not done by us. Proof: tests/books-returns.test.cjs and tests/p1-7-bas-basis.test.cjs green on sit-root 2026-11-18 (C:/dev/wt-std-acc-api-out/sit-root-api-tests-20261118-222902.xml).",
     at: 'Accounts · Returns',
     go: 'returns',
     why: 'A return built from the books is the one figure the shop and its accountant do not have to reconcile by hand.',
@@ -1867,12 +1866,10 @@ var STANDARDS = [
     k: 'law',
     c: ['AE'],
     p: 'Your VAT return figures come from your own books',
-    m: 'Prepared from the books; filing with the tax authority is not connected',
     g: 'Money & tax',
     n: 'Federal Decree-Law 8/2017 (VAT) · VAT 201 return',
-    w: 'Value added tax and its return, box by box',
-    s: 'part',
-    note: "In force: the VAT 201 boxes are read from the posted books, by emirate where the form asks (chitbridge-api lib/gst-returns.js returnFor → the AE pack; tests/books-returns.test.cjs; engines tests/reg-ae.test.js). Missing: filing through the tax authority's portal.",
+    w: 'Value added tax and its return, box by box', s: 'live', limit: 'prepared from the books, not lodged by us',
+    note: "In force: the VAT 201 boxes are read from the posted books, by emirate where the form asks, by lib/gst-returns.js returnFor (the AE pack); filing through the tax authority's portal is not done by us. Proof: tests/books-returns.test.cjs green on sit-root 2026-11-18 (C:/dev/wt-std-acc-api-out/sit-root-api-tests-20261118-222902.xml).",
     at: 'Accounts · Returns',
     go: 'returns',
     why: 'A return built from the books cannot disagree with them.',
@@ -1963,14 +1960,12 @@ var STANDARDS = [
     a: 'books',
     k: 'std',
     c: ['IN', 'AU', 'AE'],
-    p: "Foreign-currency bills booked at the day's rate, and revalued at month end",
-    m: 'In force once the owner runs b391 and b392',
+    p: "Foreign-currency bills booked at the day's rate, and revalued at month end", limit: 'Rates are typed or imported, never fetched; no official feed',
     eq: 'IAS 21 abroad',
     g: 'Books',
     n: 'IAS 21 · Ind AS 21 · AASB 121 (foreign exchange)',
-    w: "A foreign transaction at its day's rate; open balances at the closing rate; the difference to profit or loss",
-    s: 'part',
-    note: "Built: a foreign bill posts at the rate of its day (one the shop typed or imported, never fetched), a payment settles at its own day's rate with the gain or loss on its own ledger, and the month end revalues open foreign balances (chitbridge-api lib/fx-rates.js; tests/fx-rates.test.cjs; engines tests/fx.test.js). Missing: migrations b391 and b392, which the owner runs.",
+    w: "A foreign transaction at its day's rate; open balances at the closing rate; the difference to profit or loss", s: 'live',
+    note: "Built: a foreign bill posts at the rate of its day (one the shop typed or imported, never fetched), a payment settles at its own day's rate with the gain or loss on its own ledger, and the month end revalues open foreign balances (chitbridge-api lib/fx-rates.js; tests/fx-rates.test.cjs; engines tests/fx.test.js). Proof: fx_rate table with its row-level policy and grants, and the journal_line foreign-currency columns, are in the baseline dump (chitbridge-api migrations/000_baseline_2026-10-21.sql:3684, :9961, :11207, :4053-4055); tests green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-222902.xml, fx-rates.test.cjs).",
     at: 'Accounts · Exchange rates',
     go: '',
     why: 'A bill in dollars paid a month later is never the same rupees; the difference must land somewhere a CA can see.',
@@ -1984,14 +1979,12 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Another program can read what our services accept and return',
-    m: 'Six service routes described; no test checks them',
     g: 'Platform',
     n: 'OpenAPI 3.0',
     w: 'A machine-readable description of the service routes',
     ex: 'GET /api/openapi.json',
-    exWhy: "Any developer's tool reads it and shows the routes, the fields and the answers.",
-    s: 'part',
-    note: "chitbridge-api routes/openapi.js assembles /api/openapi.json from each service route's own fragment (offers · pricing · tax · invoice · keys · integrations). Missing: the app's own routes, and a test that the description matches what the routes answer.",
+    exWhy: "Any developer's tool reads it and shows the routes, the fields and the answers.", s: 'live', limit: 'service routes only (offers, pricing, tax, invoice, keys); the app\'s own routes are not in the published description',
+    note: 'chitbridge-api routes/openapi.js assembles /api/openapi.json from each service route\'s own fragment (offers, pricing, tax, invoice, keys). A test checks it both ways: every real route of those five routers is documented, and nothing documented is a phantom. Proof: tests/openapi-services.test.cjs (15 checks) green on sit-root 18 Nov 2026 (C:/dev/PM/junit/sit-root-stdapi-1118-a.xml).',
     at: '/api/openapi.json',
     go: '',
     why: 'An integration starts from a description, not from reading our code.',
@@ -2005,12 +1998,10 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: "A catalogue's shape is a schema any tool can read",
-    m: 'Emitted by the model; no test checks the output',
     g: 'Records & data',
     n: 'JSON Schema (draft 2020-12)',
-    w: 'The catalogue and item shape, as a standard schema',
-    s: 'part',
-    note: 'app/catalogue-model.js toJSONSchema() emits it, with our own x-cb-* keywords for what is ours. Missing: a test that the output validates.',
+    w: 'The catalogue and item shape, as a standard schema', s: 'live', limit: 'validated on a sample draft; the x-cb-* keywords are ours',
+    note: 'In force: app/catalogue-model.js toJSONSchema() emits draft 2020-12 with our own x-cb-* keywords as annotations; the output compiles under a 2020-12 validator, accepts a good item and refuses a missing or mistyped field. Proof: chitbridge-api tests/json-schema-catalogue.test.cjs green on sit-root 2026-11-18 (C:/dev/wt-final-docs/PM/junit/std-1118/sit-root-api-tests-20261118-224223.xml).',
     at: 'Catalogue setup',
     go: 'catsetup',
     why: 'A schema another system can read is a catalogue it can take without a mapping.',
@@ -2027,7 +2018,8 @@ var STANDARDS = [
     g: 'Records & data',
     n: 'RFC 6902 (JSON Patch)',
     w: 'Ordered edit operations',
-    s: 'plan',
+    s: 'np',
+    np: 'We chose merge-patch (RFC 7386), a simpler way to edit a record.',
     note: 'Not built. Records change by merge-patch (RFC 7386); ordered operations matter only when a history must be replayed.',
     at: '—',
     go: '',
@@ -2041,12 +2033,12 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: "A product's GS1 category can be recorded",
-    m: 'Held by reference; not checked against the list',
+    m: 'Held by reference; the 8-digit brick shape is checked in the format check, the code is not checked against the published list',
     g: 'Records & data',
     n: 'GS1 GPC (product classification)',
     w: 'The GS1 category a product belongs to',
     s: 'part',
-    note: 'Held by reference on the item (standards[]: scheme and code), never mirrored. Missing: a check against the published classification.',
+    note: 'Held by reference on the item (standards[]: scheme and code), never mirrored. Built: the shape check (8 digits, segment 10 or more) in chitbridge-api lib/verify.js verifyFormat id_type gpc. Missing: a check against the published classification (the list is GS1 data, not held here). Proof of the shape check: tests/std10-ids-incoterms.test.cjs green on sit-root 2026-11-19 (PM/junit/std-1119/lane10/sit-root-api-tests-20261119-052133.xml).',
     at: 'Catalogue · standards',
     go: 'catalogue',
     why: "Retail systems file a product by its GS1 category, not by the shop's own words.",
@@ -2173,12 +2165,10 @@ var STANDARDS = [
     k: 'prac',
     c: ['GLOBAL'],
     p: 'A lot belongs to a product; the product says if it is tracked',
-    m: 'Model followed; first-expiry-first-out not enforced',
     g: 'Records & data',
     n: 'Lot and serial tracking (Odoo model)',
-    w: 'Tracked by none · lot · serial; removal by first expiry',
-    s: 'part',
-    note: "The model is followed: a lot is a record linked to one product, never a new product (the pharma starter's tracking field). Missing: picking by first expiry is shown, not enforced. No Odoo code is used.",
+    w: 'Tracked by none · lot · serial; removal by first expiry', s: 'live',
+    note: 'In force: a lot is a record linked to one product, never a new product (the pharma starter tracking field), and stock is issued first-expiry-first-out, by expiry not arrival, with a replayed issue taking the goods once (chitbridge-api lib/stock-store.js issue). No Odoo code is used. Proof: tests/stock-cycle.test.js (C:/dev/wt-final-docs/PM/junit/std-1118/sit-root-api-tests-20261118-224538.xml), tests/ops-80-fefo-replay.test.cjs and tests/lotfields.test.js (…223317.xml) green on sit-root 2026-11-18.',
     at: 'Catalogue setup',
     go: 'catsetup',
     why: 'A catalogue row per lot turns the catalogue into a lot ledger.',
@@ -2193,12 +2183,11 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Every feature is written down the same way before it is built',
-    m: 'Spec template decided; cards not yet rewritten (pilot: Amend / reprice / costs)',
+    m: 'Spec template decided; 30 of 290 cards carry the pass-tests section; no script yet checks every section and rule-to-test link',
     g: 'Verification',
     n: 'ISO/IEC/IEEE 29148',
-    w: 'Requirements — fixed sections and a link from every rule to its code and test',
-    s: 'plan',
-    note: 'Decided 27 Oct 2026 (CAP-12): the spec of each sub-function lives in its card with fixed sections (job and who, inputs, numbered rules, outputs, errors and what the user does, who may do it, country differences, out of scope, pass tests). A script will check every section is present and every rule links to a test. Until then the Spec column counts "file exists + a hand tick", which is why it says Planned.',
+    w: 'Requirements — fixed sections and a link from every rule to its code and test', s: 'part',
+    note: 'Decided 27 Oct 2026 (CAP-12): the spec of each sub-function lives in its card with fixed sections (job and who, inputs, numbered rules, outputs, errors, who may do it, country differences, out of scope, pass tests). The pilot cards are written; the script that checks every section is present and every rule links to a test is not built. Proof: 30 of the 290 function cards hold a “Pass tests” section (grep -rl “Pass tests” docs/*/functions, docs repo, 18 Nov 2026), e.g. docs/01-rail-core-the-chit/functions/amend-reprice-costs.md.',
     at: 'Every sub-function card',
     go: '',
     why: 'Traceability is how "it covers everything" becomes a fact, not a feeling: a rule with no test is visible the day it is written.',
@@ -2211,12 +2200,12 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Every rule and every error has a test that ran last night',
-    m: 'Tests exist (1,122 scripts); rule → test and "ran and passed" not yet measured',
+    m: 'Rule → test and “ran and passed” are measured by the coverage map for 2,220 of 3,224 units; 929 are claimed, not proven',
     g: 'Verification',
     n: 'ISO/IEC/IEEE 29119-2 and 29119-4',
     w: 'Test process and test techniques, including negative tests',
     s: 'part',
-    note: 'Decided 27 Oct 2026 (CAP-14, CAP-16): a part passes Test when every spec rule has a test, every error code is triggered by a test, every endpoint has a contract test, and they passed in the last nightly run. The API register already tracks contract and error tests per endpoint. Break testing (8 attacks per area) is the negative half.',
+    note: 'Decided 27 Oct 2026 (CAP-14, CAP-16): a part passes Test when every spec rule has a test, every error code is triggered by a test, every endpoint has a contract test, and they passed in the last nightly run. The nightly coverage map now credits a unit only by a cited test file on disk or a SIT run file, and the junit history keeps each run. Break testing (8 attacks per area) is the negative half. Proof: PM/COVERAGE-NIGHTLY.json headline (proven 2,220 · claimed not proven 929 · todo 1,004, 18 Nov 2026) and 533 junit files in PM/junit/, e.g. sit-in-gorilla-20261116.xml (359 tests, 0 failures).',
     at: 'Test library · API register',
     go: 'testing',
     why: 'A test that exists but never ran proves nothing; the standard asks whether it passed.',
@@ -2229,12 +2218,12 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Quality judged on the same eight points the industry uses',
-    m: 'The 18 checks map to it; most are not yet measured',
+    m: 'Maintainability, security attacks, server speed and test coverage are measured; the rest are grey on the map',
     g: 'Verification',
     n: 'ISO/IEC 25010',
     w: 'Product quality model — suitability, speed, compatibility, usability, reliability, security, maintainability, portability',
     s: 'part',
-    note: 'The 18 checks in QUALITY-STANDARD.md were checked against its eight characteristics on 27 Oct 2026; reliability, accessibility and help were added because of it. Maintainability is measured today (readability ratchet); the rest are grey on the coverage map until their measures exist.',
+    note: 'The 18 checks in QUALITY-STANDARD.md were checked against its eight characteristics on 27 Oct 2026; reliability, accessibility and help were added because of it. Each quality has an owner, a measure and a gate. Measured today: maintainability (readability ratchet), security by attack (gorilla runs), efficiency on the server (SIT breaking-point run, round-trip budget) and correctness (coverage map). Screen speed, usability and portability are not yet measured. Proof: PM/QUALITY.md (owner, measure and gate per quality) and PM/COVERAGE-NIGHTLY.json (69% of units proven, 18 Nov 2026).',
     at: 'Coverage map',
     go: '',
     why: 'It is the checklist a buyer\'s technical reviewer already carries; using it means no gap is a surprise to them.',
@@ -2247,12 +2236,12 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Every endpoint checked against the ten common API attacks',
-    m: 'Output allow-list on 23 of 634 endpoints; role check and query scan not yet built',
+    m: 'Output allow-list on 684 of 688 endpoints; rate limit on 173 of 688, parameterised-query scan 36 routes short, role matrix 58 of 688 answered',
     g: 'Security',
     n: 'OWASP API Security Top 10 (2023)',
     w: 'Broken object access, property exposure, resource limits, function access, business flows, SSRF and more',
     s: 'part',
-    note: 'Decided 27 Oct 2026 (CAP-17). Already measured per endpoint in the API register: another shop\'s id answers 404 (515 of 634), strict input (296), outside data validated (630), output allow-list (23, the weakest). To add: role check per endpoint, a scan that every query is parameterised, rate limit, SSRF and business-flow checks.',
+    note: 'Decided 27 Oct 2026 (CAP-17). Measured per endpoint in the API register (docs/API-REGISTER.md, 18 Nov 2026, 688 endpoints): another shop\'s id answers 404 on every endpoint where it applies (214 of 214), strict input on every endpoint where it applies (350 of 350), outside data validated (6 of 6), output allow-list 684 of 688 (the weakest of the thirteen), role check 53 of 53 where it applies, query parameterised on 248 of 284, rate limit on 173 of 688, role matrix 58 of 688 (the last four are reported columns). SSRF has lib/safe-url.js. To add: close the rate-limit and query gaps and the business-flow checks.',
     at: 'API register',
     go: '',
     why: 'Most real breaches of business apps are these ten; scoring each endpoint against them is how "secure" gets a number.',
@@ -2265,15 +2254,14 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'The whole product held to the normal security bar for business apps',
-    m: 'Not yet assessed; known gaps: 59 tables without row security, browser policy in report-only',
+    m: 'Assessed against the committed tests, not item by item against all ASVS Level 2 requirements. Known gaps: 10 tables readable without row security that are not reference lists (35 open in db/rls-baseline.json, 25 of them reference lists; ratchet ceiling 19), browser policy still report-only with script-src allowing inline scripts (vercel.json), no ASVS item-by-item checklist',
     g: 'Security',
     n: 'OWASP ASVS 4 — Level 2',
-    w: 'Application Security Verification Standard: sign-in, sessions, access, input, secrets, errors and logging, data, communication, configuration',
-    s: 'plan',
-    note: 'Decided 27 Oct 2026 (CAP-17) as the package-level score beside the per-endpoint Top 10: flooding and DDoS limits, sign-in and sessions, secrets and encryption, security headers (CSP still report-only, SEC-86), row security on every table (SEC-75), outdated packages, attack logging. No assessment has been run, so Planned.',
+    w: 'Application Security Verification Standard: sign-in, sessions, access, input, secrets, errors and logging, data, communication, configuration', s: 'part',
+    note: 'Decided 27 Oct 2026 (CAP-17) as the package-level score beside the per-endpoint Top 10. First assessment 18 Nov 2026, by area, each held by a committed test: environment and secrets posture (tests/env-posture.test.cjs), API headers and CSP (tests/api-csp.test.cjs, tests/cors-headers.test.cjs), row security census with a falling ceiling (tests/rls-open-ratchet.test.cjs, tests/rls-predicate.test.cjs), sign-in secret handling (tests/identity-secret.test.cjs), OAuth sign-in (RFC 6749 and 9207 rows). Proof: those six tests green on sit-root 2026-11-18 (PM/junit/std-1118/sit-root-api-tests-20261118-225524.xml). Open: the 10 non-reference tables without row security, CSP enforcement (SEC-86), the 36 routes whose SQL is assembled from server-side fragments (API register), rate limit on 173 of 688 routes. Stays Partly until the item-by-item pass is done.',
     at: 'Whole product',
     go: '',
-    why: 'Level 2 is what a careful buyer expects of software that holds their money and customers; saying Planned until assessed is the honest claim.',
+    why: 'Level 2 is what a careful buyer expects of software that holds their money and customers; the gaps are named so the claim stays honest.',
     added: '2026-10-28'
   },
   {
@@ -2283,12 +2271,11 @@ var STANDARDS = [
     k: 'prac',
     c: ['GLOBAL'],
     p: 'We try to break each area on purpose before anyone else does',
-    m: 'The 8-attack pack per area is decided, not yet run',
+    m: 'Run on money, party, books and send; the other areas not yet',
     g: 'Security',
     n: 'OWASP Web Security Testing Guide',
-    w: 'How to attack a web app the way an attacker would',
-    s: 'plan',
-    note: 'Decided 27 Oct 2026 (CAP-16, "Tried to break"): per area, wrong and huge input, double tap, offline then back, wrong role, another shop\'s data, rounding and negative money, two people at once, a crossing that fails half way. Every break found gets a fix and a test; an unfixed break shows red.',
+    w: 'How to attack a web app the way an attacker would', s: 'part',
+    note: 'Decided 27 Oct 2026 (CAP-16, “Tried to break”): per area, wrong and huge input, double tap, wrong role, another shop’s data, rounding and negative money, two people at once. The pack has run against the payment, party, books and send areas on SIT; the other areas are not yet attacked. Every break found gets a fix and a test; an unfixed break shows red. Proof: PM/junit/sit-in-gorilla-20261116.xml (359 tests, 0 failures, 9 skipped), PM/junit/sit-grund-gorilla-2026-11-15.xml (535 tests, 0 failures, 22 skipped) and PM/GORILLA-RESULTS-2026-10-31.md (route fuzz, double-submit, foreign ids).',
     at: 'Every area',
     go: '',
     why: 'Tests prove it works when used right; this proves it fails safely when used wrong.',
@@ -2301,12 +2288,10 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Every error comes back in one shape, with words and what to do',
-    m: 'One error shape on 473 of 634 endpoints',
     g: 'Platform',
     n: 'RFC 9457 — Problem Details for HTTP APIs',
-    w: 'One error shape: type, title, status, detail, plus our shopkeeper words and hint',
-    s: 'part',
-    note: 'The API register checks the error shape per endpoint (473 of 634 on 27 Oct 2026) and that every code is in the error register (386 codes, each with shopkeeper words and a hint). The Errors + fix check on the coverage map reads these.',
+    w: 'One error shape: type, title, status, detail, plus our shopkeeper words and hint', s: 'live', limit: 'every endpoint answers the one shape and every code is registered (688 of 688 on 18 Nov 2026); the 4 routes the register still marks partial fail other columns, not this one',
+    note: 'Every error of the app API comes back as problem details (type, title, status, detail, plus our shopkeeper words and hint). The API register (docs/API-REGISTER.md, 18 Nov 2026) shows error_shape 688 of 688 and codes_registered 688 of 688 endpoints, and every code is in the error register (docs/error-codes.json, 758 codes, each with shopkeeper words and a hint). Proof: tests/api-problem.test.cjs (129 checks) and tests/api-4b-auth-problem.test.cjs green on sit-root 18 Nov 2026 (C:/dev/PM/junit/sit-root-stdapi-1118-a.xml).',
     at: 'API register · error register',
     go: '',
     why: 'One shape means every screen can show an error the same way, and a partner\'s system can read ours without a guide.',
@@ -2319,12 +2304,11 @@ var STANDARDS = [
     k: 'prac',
     c: ['GLOBAL'],
     p: 'Screens open fast enough on a slow phone network',
-    m: 'Database trips budgeted per route; screen speed and network profiles not yet measured',
+    m: 'Server side measured (trips and latency); screen load, tap response and network profiles not yet measured',
     g: 'Platform',
     n: 'Core Web Vitals (and network profiles 2G–5G)',
-    w: 'Load within 2.5 s, respond to a tap within 200 ms, nothing jumps; tested on offline, 2G, 3G, 4G and broadband',
-    s: 'plan',
-    note: 'Decided 27 Oct 2026 (CAP-18, the Speed check): per endpoint the database trips stay under budget (501 routes budgeted today) and server time under a ceiling; per screen the page weight, calls and the vitals, run under five network profiles; usable on 3G, works without errors on 2G, recovers from offline.',
+    w: 'Load within 2.5 s, respond to a tap within 200 ms, nothing jumps; tested on offline, 2G, 3G, 4G and broadband', s: 'part',
+    note: 'Decided 27 Oct 2026 (CAP-18, the Speed check): per endpoint the database trips stay under budget and server time under a ceiling; per screen the page weight, calls and the vitals under five network profiles. Only the server half is measured today: 689 routes carry a trip budget, and the SIT load run found where reads and bills slow down. Proof: round-trips.budget.json (689 routes, chitbridge-api) and PM/SIT-BREAKPOINT-RUN-2026-11-07.md (sit-in: p95 140 ms at 120 reads/s, queueing from 160/s; junit PM/junit/sit-breakpoint-2026-11-07.xml).',
     at: 'Every screen',
     go: '',
     why: 'A shop counter on a weak signal is the real test; a fast office connection hides every slow screen.',
@@ -2337,13 +2321,11 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Nothing ships without passing each step, checked by someone else',
-    m: 'Gates in use; the coverage map that shows them is a mock',
     g: 'Verification',
     n: 'ISO/IEC/IEEE 12207 — software life cycle',
     aka: ['ISO/IEC/IEEE 15288'],
-    w: 'The life cycle processes; our gates G0–G7 map onto them: idea → requirement → critique → build → test → release → docs → verified live',
-    s: 'part',
-    note: 'The umbrella standard for the whole life cycle; the rows above (29148 requirements, 29119 testing, 25010 quality) are its parts. Every item passes gates G0–G7 with evidence (a path, a PR, a CI run, a test line), graded by a gatekeeper who never builds; only Athi waives a gate. The customer-ready line (27 Oct 2026) says which checks must be green before a customer sees the product.',
+    w: 'The life cycle processes; our gates G0–G7 map onto them: idea → requirement → critique → build → test → release → docs → verified live', s: 'live', limit: 'the gate log and the coverage map are files in the docs repo, not a screen',
+    note: 'Every item passes gates G0–G7 with evidence, graded by a gatekeeper who never builds; only Athi waives a gate. The coverage map that shows the gates is generated, not a mock. Proof: PM/GATE-LOG.md (377 PASS lines, latest 15 Nov 2026) and PM/COVERAGE-NIGHTLY.json (generated 18 Nov 2026: 2,220 of 3,224 units proven, daily rows in PM/COVERAGE-TREND.csv).',
     at: 'Every change',
     go: '',
     why: 'The builder never marks their own work done; that one rule is what makes the numbers believable.',
@@ -2416,12 +2398,10 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'The API answers with the status codes every client already understands',
-    m: 'The 401 challenge and the 400-versus-422 split are in lib/problem.js; not every endpoint is on the problem shape yet (see RFC 9457)',
     g: 'Platform',
     n: 'RFC 9110 (HTTP semantics)',
-    w: 'What each status code means, and the challenge a 401 carries',
-    s: 'part',
-    note: 'chitbridge-api lib/problem.js sends the 401 challenge of section 11.6.1 (a bearer token, which may arrive as an API key header) and splits a malformed request (400, section 15.5.1) from one understood but not processable (422, section 15.5.21). The API standard (docs/28-platform-and-operations, the API standard document) cites section 15 for why adding a field is not a breaking change.',
+    w: 'What each status code means, and the challenge a 401 carries', s: 'live',
+    note: 'chitbridge-api lib/problem.js sends the 401 challenge of section 11.6.1 (a bearer token, which may arrive as an API key header) from one middleware, and the API splits a malformed request (400, section 15.5.1) from one understood but not processable (422, section 15.5.21). Every endpoint answers on the problem shape (688 of 688, see RFC 9457). The API standard cites section 15 for why adding a field is not a breaking change. Proof: tests/problem-http-semantics.test.cjs green on sit-root 18 Nov 2026 (C:/dev/PM/junit/sit-root-stdapi-1118-c.xml); tests/api-4b-auth-problem.test.cjs green (C:/dev/PM/junit/sit-root-stdapi-1118-a.xml).',
     at: 'Every API answer',
     go: '',
     why: 'A client, a connector or a test written against the standard meaning of 400, 401, 404 and 422 behaves correctly without reading our documentation; private meanings would have to be learned, and relearned by every integrator.',
@@ -2434,12 +2414,11 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'When a part of the API is to be retired, every caller is told the date in the answer itself',
-    m: 'No outward route is deprecated yet, so neither header is sent; the API standard (rule 13) says when and how',
+    m: 'The helper is built and tested; no outward route is deprecated, so none sends the headers yet (the API standard, rule 13, says when)',
     g: 'Platform',
     n: 'RFC 9745 Deprecation · RFC 8594 Sunset',
-    w: 'Two answer headers: this is deprecated, and this is the date it stops',
-    s: 'plan',
-    note: 'Decided in the API standard (docs/28-platform-and-operations, the API standard document, rules 13 and 28, verified 22 Oct 2026): a breaking change on an outward route (keys, integrations, invoice, offers, pricing) is announced by the Deprecation header and the Sunset date on every answer of the old route, for the notice period, before it goes. Nothing is deprecated today, so the first use is the first proof.',
+    w: 'Two answer headers: this is deprecated, and this is the date it stops', s: 'part',
+    note: 'Decided in the API standard (rules 13 and 28, verified 22 Oct 2026): a breaking change on an outward route (keys, integrations, invoice, offers, pricing) is announced by the Deprecation header and the Sunset date on every answer of the old route, for the notice period, before it goes. chitbridge-api lib/deprecation.js is the one helper that sends both headers (Deprecation as @unix-seconds, Sunset as an HTTP-date, optional Link relations); a route mounts it when it is retired. Nothing is deprecated today, so the first live use is the proof that flips this row. Tested on sit-root 18 Nov 2026: tests/deprecation.test.cjs green (C:/dev/PM/junit/sit-root-stdapi-1118-a.xml).',
     at: 'Outward API routes',
     go: '',
     why: 'A retirement announced in a newsletter reaches nobody\'s code; one announced in the answer reaches every caller, including the ones nobody remembers.',
@@ -2452,12 +2431,10 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'The same record always makes the same fingerprint, however its fields were ordered',
-    m: 'lib/canon.js sorts keys and stringifies every value, which is the JCS method; it is not yet run against the RFC 8785 test vectors (its test is a characterisation of the three copies it replaced)',
     g: 'Platform',
     n: 'RFC 8785 (JSON canonicalisation, JCS)',
-    w: 'One byte form for a JSON value, so a hash or a replay key is stable',
-    s: 'part',
-    note: 'chitbridge-api lib/canon.js is the one canonical form behind the idempotency key and the connector receipt hash (tests/canon.test.js, tests/canon-depth.test.js). The test proves it is byte-identical to the three hand-rolled copies it replaced, which is what keeps live replay keys matching; proving it against the RFC\'s own vectors is the missing step (the 14 Oct standards gap, row 13).',
+    w: 'One byte form for a JSON value, so a hash or a replay key is stable', s: 'live',
+    note: 'chitbridge-api lib/canon.js is the one canonical form behind the idempotency key and the connector receipt hash; it sorts keys by UTF-16 code units and prints numbers in the form RFC 8785 names. It is byte-identical to the three copies it replaced (tests/canon.test.js) and is run against the RFC\'s own vectors: all 25 number cases of Appendix B, the worked example of section 3.2.2 and the key order of section 3.2.3. Proof: tests/canon-rfc8785.test.cjs green on sit-root 18 Nov 2026 (C:/dev/PM/junit/sit-root-stdapi-1118-b.xml).',
     at: 'Idempotency key · connector receipts',
     go: '',
     why: 'A replay key that changes shape stops matching the replay it exists to catch, so the same payment runs twice; a canonical form by the rule makes the fingerprint a fact about the record, not about the code that wrote it.',
@@ -2528,14 +2505,13 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'Buttons are big enough to hit with a thumb',
-    m: 'No check measures target size; no control is verified against 24 px',
     g: 'Accessibility',
     n: 'WCAG 2.2 — 2.5.8',
     w: 'Target Size (Minimum), level AA: 24 by 24 CSS pixels',
     ex: 'min-width: 24px; min-height: 24px',
-    exWhy: 'The floor the criterion sets. It allows exceptions for spacing, an equivalent control, text inside a sentence, a browser-drawn control and an essential look.',
-    s: 'plan',
-    note: 'Success criterion 2.5.8, level AA, new in WCAG 2.2 (read at w3.org). Planned as one of the check columns of the UI identity register (the UI standard: target size, per element, with a trend and a ratchet). Nothing measures it today, so no control is claimed to pass.',
+    exWhy: 'The floor the criterion sets. It allows exceptions for spacing, an equivalent control, text inside a sentence, a browser-drawn control and an essential look.', s: 'part',
+    note: 'The one tap rule is 44 px, above the 24 px minimum of 2.5.8 (level AA, read at w3.org); drawn boxes are measured, not CSS text. Proof: walk-ui-standard.cjs, walk-list-tap.cjs and walk-topbar-tap.cjs green on sit-grund 2026-11-18 (PM/junit/std-1118/ux/box-run/summary.txt).',
+    m: 'the shared list control and the main top bar, drawn boxes at 390 px and four text sizes, plus the 24 px overlay on the UI standard page; other screens are not yet measured',
     at: 'Every control · the UI identity register',
     go: 'ui-standard',
     why: 'A small target is a miss on a phone at the counter, and it is the cheapest accessibility failure to measure once every control has a code.',
@@ -2569,15 +2545,14 @@ var STANDARDS = [
     k: 'std',
     c: ['GLOBAL'],
     p: 'One Save, one Done, one Close — the same look and meaning on every screen',
-    m: 'The standard action set (Save, Done, Cancel, Close, Back, Add, Remove, Edit…) is not built as components',
+    m: 'The ten standard action components are built (Command, ui.action, ui.dialog) and shown on the UI standard page; the standard itself is not read at the source',
     g: 'Accessibility',
     n: 'ISO 9241-161',
     aka: ['ISO 9241-161:2016', 'ISO 9241-161:2025'],
     w: 'Visual user-interface elements — the vocabulary of buttons, fields, lists and dialogs',
     ex: 'Close ✕ on every modal',
-    exWhy: 'One element, one meaning, everywhere. Today the ✕ is the only element that is already shared.',
-    s: 'plan',
-    note: 'Edition unverified. The 2016 edition (titled “Guidance on visual user-interface elements”) is listed as withdrawn and a 2025 edition (edition 2, December 2025, titled “Visual user-interface elements”) as its replacement, per ISO catalogue snippets seen in a web search; iso.org returned HTTP 403 to the runner, so neither edition was read at the source. Athi’s ruling of 8 Nov: stays marked unverified until read at the source. App icons have no international standard; the rule is one icon set and one meaning per verb (the UI standard).',
+    exWhy: 'One element, one meaning, everywhere. Today the ✕ is the only element that is already shared.', s: 'part',
+    note: 'Edition unverified. The 2016 edition (titled “Guidance on visual user-interface elements”) is listed as withdrawn and a 2025 edition (edition 2, December 2025, titled “Visual user-interface elements”) as its replacement, per ISO catalogue snippets seen in a web search; iso.org returned HTTP 403 to the runner, so neither edition was read at the source. Athi’s ruling of 8 Nov: stays marked unverified until read at the source. App icons have no international standard; the rule is one icon set and one meaning per verb (the UI standard). In force: ten action components (Save, Cancel, Done, Close, Back, Add, Remove, Try again, Open and the Command) are built in public/app/ui.js and drawn by their real factories in every state on public/ui-standard.html. Proof: walk-ui-standard.cjs green on sit-grund 2026-11-18 (PM/junit/std-1118/ux/box-run/summary.txt).',
     at: 'The standard action set · cb-ux-locale',
     go: '',
     why: 'Every improvised Save is one more thing to learn. One component per action means a fix lands everywhere at once.',
@@ -2611,15 +2586,13 @@ var STANDARDS = [
     k: 'prac',
     c: ['GLOBAL'],
     p: 'Colours and sizes live in one file, so a new look is one change',
-    m: 'Tokens are CSS variables; not yet one file in the Design Tokens format',
     g: 'Accessibility',
     n: 'W3C Design Tokens Format Module',
     aka: ['Design Tokens Community Group', 'DTCG format', 'Design Tokens Format Module 2025.10'],
     w: 'One design-token file: names, values and types any tool can read',
     ex: '{ "color": { "text": { "$value": "#494F56", "$type": "color" } } }',
-    exWhy: 'A name, a value and a type. A design tool, a code build and our contrast check can all read the same file.',
-    s: 'part',
-    note: 'The Design Tokens Format Module 2025.10 is a final report of a community group, dated 28 Oct 2025 (read at w3.org). It is NOT a W3C Recommendation and is not on the W3C standards track, so it is Practice here, not Standard. Today: pages use theme tokens as CSS custom properties, guarded by the token guard and the theme-contrast test; there is no single token file in this format yet (the UI standard calls for one).',
+    exWhy: 'A name, a value and a type. A design tool, a code build and our contrast check can all read the same file.', s: 'live',
+    note: 'In force: public/tokens.json holds the 62 base colours, the pixel sizes and the 16 themes in the Design Tokens Format Module 2025.10 shape, generated from the CSS and the engine themes by e2e/gen-tokens.cjs, which fails when the file is stale or a reference does not resolve. Practice, not a W3C Recommendation. Proof: gen-tokens.cjs --check ok, run locally 2026-11-18 (PM/junit/std-1118/ux/gen-tokens-check-local-20261118.log).', limit: 'colour and px tokens only; shadows, gradients and fonts stay in the CSS; a community-group format, not a W3C Recommendation',
     at: 'Appearance · themes',
     go: 'appearance',
     why: 'A colour typed into a page is a colour that goes unreadable in Dark. Tokens are why a theme can be checked once for every screen.',
@@ -2677,6 +2650,9 @@ var STD_STATUS = [
   ['part', 'Partly', '◐'],
   ['plan', 'Planned', '○']
 ];
+/* Not pursued: shown with its reason, left out of the three counts above (Athi, 19 Nov 2026) */
+var STD_NP = ['np', 'Not pursued', '–'];
+var STD_STATUS_ALL = STD_STATUS.concat([STD_NP]);
 /* STDREG1 (14 Oct 2026): the PRODUCT area a row lives in (`pa`), so the page can filter by the part of the product a reader owns. The first fifteen are the
    product areas of docs/design/standards/COUNTRY-COVERAGE.md §1 (the ones data/country-ready.json reports per country), in that order; the last five are the
    platform areas the area packs own (sign-in, compliance, settings, testing, the API). The 29-area product map (docs/planning/PRODUCT-AREA-MAP-2026-10-14.md)
@@ -2703,7 +2679,42 @@ var STD_PRODUCT_AREAS = [
   ['testing', 'Testing'],
   ['api', 'Platform & API']
 ];
-var STD_CHECKED = '2026-10-14';
+/**
+ * ⭐ LAST UPDATED (Athi, 19 Nov 2026): every "last updated" the Standards page says is DERIVED from the data, never typed. stdNewest picks the newest ISO date
+ * (YYYY-MM-DD) in a list of rows (by one field) or of plain dates; stdDateWords says it as "19 Nov 2026". The register's date = its newest row's `added`;
+ * Works with = the newest proof_at in data/compat.json (or its `checked`); Compared with = data/compare.json `checked`; How we build = the CMDB file's `generated`.
+ */
+function stdNewest(list, key) {
+  var best = '';
+  (list || []).forEach(function (item) {
+    var d = key ? item && item[key] : item;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) && String(d) > best) best = String(d);
+  });
+  return best;
+}
+function stdDateWords(iso) {
+  var d = new Date(iso + 'T12:00:00Z');
+  if (!iso || isNaN(d.getTime())) return iso || '';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+/** the rows added most recently, newest first (ties keep register order): the matrix pane's "Added lately" */
+function stdRecent(rows, count) {
+  return rows
+    .map(function (row, at) {
+      return { row: row, at: at };
+    })
+    .filter(function (x) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(x.row.added || ''));
+    })
+    .sort(function (a, b) {
+      return a.row.added < b.row.added ? 1 : a.row.added > b.row.added ? -1 : a.at - b.at;
+    })
+    .slice(0, count)
+    .map(function (x) {
+      return x.row;
+    });
+}
+var STD_CHECKED = stdNewest(STANDARDS, 'added');
 
 /**
  * ⭐⭐ WHY FOLLOW STANDARDS AT ALL — the argument, with its costs.
@@ -3053,11 +3064,11 @@ function stdWhyHTML(opts) {
   );
 }
 
-/** A one-line count for surfaces that only have room for the shape of it. */
+/** A one-line count for surfaces that only have room for the shape of it. Build rules (How we build) are counted on their own view, so the count reads the same whether or not their file is loaded. */
 function stdCounts() {
   var n = { live: 0, part: 0, plan: 0 };
   STANDARDS.forEach(function (x) {
-    n[x.s]++;
+    if (x.k !== 'build-rule') n[x.s]++;
   });
   return n;
 }
@@ -3184,6 +3195,7 @@ function stdCompareRows(json) {
         better: x.better || '',
         cs: x.status,
         verified: x.verified,
+        checked: x.checked || (json && json.checked) || '',
         src: stdCompareSources(x.source)
       };
     });
@@ -3379,7 +3391,25 @@ var STD_GLOSSARY_REF = [
   ['RFC 5646', 'RFC 5646', 'The internet standard for naming languages (the text of BCP 47)'],
   ['RFC 7386', 'RFC 7386', 'The internet standard for changing part of a JSON record (merge patch)'],
   ['RFC 7519', 'RFC 7519', 'The internet standard for JSON Web Tokens (JWT)'],
-  ['RFC 7644', 'RFC 7644', 'The internet standard for SCIM, creating and removing staff accounts']
+  ['RFC 7644', 'RFC 7644', 'The internet standard for SCIM, creating and removing staff accounts'],
+  ['PM', 'Project management folder', 'Where ChitBridge keeps its plan, test runs and coverage files'],
+  ['SIT', 'System integration test', 'The shared test servers a change is proved on before it goes live'],
+  ['P1', 'Priority 1', 'The most urgent class of work in the backlog'],
+  ['PKCE', 'Proof Key for Code Exchange', 'A check that stops a stolen sign-in code being used by someone else'],
+  ['CRC-16', '16-bit cyclic redundancy check', 'A short checksum that catches a mistyped or damaged code, as at the end of a payment QR'],
+  ['CAP-12', 'Capability 12', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-14', 'Capability 14', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-16', 'Capability 16', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-17', 'Capability 17', 'A numbered capability in the ChitBridge architecture register'],
+  ['CAP-18', 'Capability 18', 'A numbered capability in the ChitBridge architecture register'],
+  ['OWASP', 'Open Worldwide Application Security Project', 'The community whose web-security testing guide and verification standard are used here'],
+  ['ASVS', 'Application Security Verification Standard', 'The OWASP list of security checks an application is held to'],
+  ['SSRF', 'Server-side request forgery', 'An attack that makes our server fetch an address the attacker chose'],
+  ['CSP', 'Content Security Policy', 'A page header that limits which scripts and sources the browser will run'],
+  ['SEC-86', 'Security item 86', 'A numbered security work item in the backlog'],
+  ['SQL', 'Structured Query Language', 'The language the database is asked questions in'],
+  ['G0', 'Gate 0', 'The first of the eight release gates, G0 to G7'],
+  ['G7', 'Gate 7', 'The last of the eight release gates: verified live']
 ];
 STD_GLOSSARY = STD_GLOSSARY.concat(STD_GLOSSARY_REF);
 var STD_REF_RE = new RegExp(
@@ -3417,7 +3447,22 @@ var STD_NOT_ABBR = [
   'THIS',
   'WAS',
   'ZONE',
-  'UBL-MAPPING-2026-09-05'
+  'UBL-MAPPING-2026-09-05',
+  'TEST-PLAN-1119-1121',
+  'FAILS',
+  'PASS',
+  'SELECT',
+  'INSERT',
+  'DELETE',
+  'UPDATE',
+  'QUALITY',
+  'QUALITY-STANDARD',
+  'COVERAGE-NIGHTLY',
+  'COVERAGE-TREND',
+  'API-REGISTER', /* gitleaks:allow */
+  'GORILLA-RESULTS-2026-10-31',
+  'GATE-LOG',
+  'SIT-BREAKPOINT-RUN-2026-11-07'
 ];
 /* an abbreviation: two or more capitals or digits from a word start, joined by hyphens (GSTR-2B · ECMA-402 · WAI-ARIA); mixed case (JUnit, OAuth) is a name */
 var STD_ABBR_RE = /\b[A-Z][A-Z0-9]+(?:-[A-Z0-9]+)*\b/g;
