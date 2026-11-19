@@ -86,10 +86,11 @@ async function look(page, vp) {
     const doc = document.documentElement, rows = Array.from(document.querySelectorAll('[data-testid^="practice-row-"]')).filter((e) => { const b = e.getBoundingClientRect(); return b.top >= 0 && b.bottom <= window.innerHeight && b.width > 0; });
     const list = document.querySelector('.cbl-list') || document.body, box = list.getBoundingClientRect();
     const tabs = Array.from(document.querySelectorAll('.cbl-vtab')).map((b) => b.textContent.replace(/\s+/g, ' ').trim());
+    const lit = document.querySelector('.cbl-vtab[aria-selected="true"]'), litTab = lit ? lit.textContent.replace(/s+/g, ' ').trim() : '';
     const empty = document.querySelector('.cbl-state'), emptyWords = empty ? empty.innerText.replace(/\s+/g, ' ').trim() : '';
     const controls = Array.from(document.querySelectorAll('.cbl button,.cbl input,.cbl select,[data-view-tab],[data-bulk]')).filter((e) => e.getBoundingClientRect().width > 0);
     const noCode = controls.filter((e) => !e.getAttribute('data-cbsid') && !e.closest('[data-cbsid]')).map((e) => (e.getAttribute('data-testid') || e.className || e.tagName).toString().slice(0, 40));
-    return { scrollY: Math.max(0, doc.scrollHeight - window.innerHeight), scrollX: Math.max(0, doc.scrollWidth - window.innerWidth), rowsFirstScreen: rows.length, listTop: Math.round(box.top), tabs, emptyWords, controls: controls.length, noCode };
+    return { scrollY: Math.max(0, doc.scrollHeight - window.innerHeight), scrollX: Math.max(0, doc.scrollWidth - window.innerWidth), rowsFirstScreen: rows.length, listTop: Math.round(box.top), litTab, tabs, emptyWords, controls: controls.length, noCode };
   });
   const dark = await page.evaluate(measure);
   base.contrastFails = dark.filter((e) => !e.grad && e.ratio < e.need && /cbl|assign|as-|bulk/.test(e.html)).map((e) => e.text + ' ' + e.ratio);
@@ -128,7 +129,7 @@ async function rec(page, place, vp, seat, flow, extra) {
           await page.locator('[data-view-tab="held-none"]').click(); clicks++; await pause(400);
           await page.locator('[data-selrow="' + id(13) + '"]').check(); clicks++;
           await page.locator('[data-bulk="me"]').click(); clicks++; await pause(1500);
-          await page.locator('[data-view-tab="held-mine"]').click(); clicks++; await pause(500);
+          if ((await page.locator('[data-view-tab="held-mine"]').getAttribute('aria-selected')) !== 'true') { await page.locator('[data-view-tab="held-mine"]').click(); clicks++; await pause(500); }
         }
         const mineNow = await page.locator('[data-testid^="practice-row-"]').count();
         clicks++; /* the press on the client's name opens it */
@@ -140,4 +141,5 @@ async function rec(page, place, vp, seat, flow, extra) {
   await browser.close();
   fs.writeFileSync(path.join(OUT, 'h3-metrics-' + TAG + '.json'), JSON.stringify(metrics, null, 1));
   console.log('done ' + TAG + ' ' + metrics.length);
+  process.exit(0);
 })().catch((e) => { console.log('FATAL ' + (e.stack || e)); process.exit(2); });
