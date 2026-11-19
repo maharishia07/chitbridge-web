@@ -2345,7 +2345,7 @@ function bkDvNext(e, c, lines, noParty, mine) {
               esc(item.code) +
               '</span> ' +
               esc(item.name) +
-              rate(item) +
+              rate(item) + (item.fx ? ' · ' + esc(item.fx.currency) + ' ' + esc(bkMoney(item.fx.foreign_minor, item.fx.currency)) + ' @ ' + esc(String(item.fx.rate)) : '') + /* C4: AUD 350.00 @ 54.60 */
               (item.party_name && !noParty ? ' · ' + esc(bkPartyLabel(item.party_id, item.party_name)) : ''),
             item.dr_minor ? esc(bkMoney(item.dr_minor, c)) : '',
             item.cr_minor ? esc(bkMoney(item.cr_minor, c)) : ''
