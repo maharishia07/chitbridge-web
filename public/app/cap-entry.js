@@ -1018,6 +1018,14 @@ function enPaintSaved(body, acts) {
 }
 
 /* ── Reverse this entry: a plain confirm, then the mirror entry (insert-only) ── */
+/** SHOPBK-B: the owner asked to OK entries first, so a Bookkeeper's Reverse answers 202 with the held reversal: nothing is reversed yet, the sheet says it was sent and the Day book is not repainted. true = held (the caller stops) */
+function enReverseHeld(reply, fromSheet) {
+  if (!(reply && reply.state === 'waiting_accept' && reply.action_id && !reply.entry_no)) return false;
+  toast(tx('Sent to the owner for OK'));
+  if (fromSheet) enClose();
+  if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function (failure) { if (typeof cbQuiet === 'function') cbQuiet('reversal held: the to-do count was not refreshed', failure); });
+  return true;
+}
 /**
  * ⭐ THE ONE REVERSE (M29): the confirm asks the REASON (the API wants one with every reversal), posts the mirror entry and tells the caller
  * what came back — `done(r, why)` — so a statement row repaints itself (cap-books.js bkReverseLine) without a Day book read. The answer's
@@ -1045,6 +1053,7 @@ function enReverse(id, no, fromSheet, done) {
         try {
           var reply = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: why } });
           delete EN.rev[id];
+          if (enReverseHeld(reply, fromSheet)) return;
           toast((reply && reply.words) || txf('Reversed — new entry {no}', { no: (reply && (reply.entry_no || reply.no)) || '' }));
           if (fromSheet) enClose();
           if (typeof done === 'function') done(reply, why);

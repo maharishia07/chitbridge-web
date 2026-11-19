@@ -723,9 +723,10 @@ function bkTime(ts) {
     return bkQuiet('time', failure, '');
   }
 }
-/** the small line under a Day book entry an adviser posted for the client: "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by; nothing for an entry nobody posted for the client) */
+/** the small line under a Day book entry: an adviser's "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by), else the shop's own person who made it "Made by Ravi" (the api's made_by, the entry's created_by named; a bill the counter rang already says who rang it) */
 function bkPostedByHTML(e) {
   var words = typeof CBBooksActing !== 'undefined' ? CBBooksActing.postedByWords(e) : '';
+  if (!words && e && e.made_by && !(e.source && e.source.by)) words = txf('Made by {name}', { name: e.made_by });
   return words ? '<div class="sub" data-testid="db-posted-by">' + esc(words) + '</div>' : '';
 }
 /**
