@@ -653,6 +653,7 @@
     return entry.pillar || PDEFAULT[entry.area] || entry.area;
   }
   function sectionOf(entry) {
+    if (root.CBPractice && root.CBPractice.movesToSetup && root.CBPractice.movesToSetup(entry.id)) return 'setup'; /* a practice's People card stands in its Setup (W5) */
     var pillar = pillarOf(entry),
       area;
     for (area in PILLARS) if (PILLARS[area].indexOf(pillar) >= 0) return area;
