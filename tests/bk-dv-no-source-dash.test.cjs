@@ -19,6 +19,14 @@ const chipFor = (may) => E.use({ attach: () => {}, mayAttach: () => may }).chip(
 assert(/Attach receipt/.test(chipFor(true)), 'a seat that may attach: Attach receipt');
 assert(/No receipt/.test(chipFor(false)) && !/Attach receipt/.test(chipFor(false)), 'a read-only seat: No receipt');
 assert(/data-ev-open="a"/.test(chipFor(true)), 'the chip still opens the sheet');
+// the firm Day book (books-grant-cells.js) and the drill use the same chip: no dash for a no-source entry
+const firm = fs.readFileSync(__dirname + '/../public/app/books-grant-cells.js', 'utf8');
+const fl = firm.split('\n').find((l) => l.includes("kind === 'evidence'"));
+assert(fl && fl.includes('state.ev.chip(row)') && !fl.includes('noSourceRow'), 'the firm cell paints the chip for every state');
+assert(!/noSourceRow/.test(firm), 'no no-source dash branch left in the firm cells');
+const drill = fs.readFileSync(__dirname + '/../public/app/books-grant-drill.js', 'utf8');
+assert(drill.includes('ctx.ev && ctx.ev.chip(entry)'), 'the drill uses the same chip');
+assert(/No receipt/.test(E.use({ raw() {} }).chip(nodoc)), 'the firm (cannot attach) reads No receipt');
 // foreign line
 const a = src.indexOf('function bkFxText'), b = src.indexOf('/** a balance the way', a);
 const ctx = { bkDec: (c) => (c === 'JPY' ? 0 : 2), CBLocale: { number: (n, o) => n.toLocaleString('en-US', o) } };
