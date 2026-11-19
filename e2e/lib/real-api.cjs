@@ -22,6 +22,8 @@ const { spawn } = require('child_process');
 const ROOT = path.join(__dirname, '..', '..');
 const API_DIR = process.env.CB_API_DIR || path.join(ROOT, '..', 'chitbridge-api');
 const DB = process.env.CB_DB || 'postgres://postgres:pw@127.0.0.1:5432/cb_sim';
+/* SEC-113: a sign-in without a device id is refused NO_DEVICE, and a token only works from the device it was made on. One id per process, in the api's shape (8-80 of A-Za-z0-9_.:-), sent as X-Device-Id like public/app/device-id.js; a page that takes the session over must keep the same id (cb_device_id) */
+const DEVICE = process.env.CB_TEST_DEVICE || (process.env.CB_TEST_DEVICE = 'walk-' + require('crypto').randomUUID().slice(0, 12));
 const SHOP = process.env.CB_SHOP || 'simstores';
 const OTP = process.env.CB_OTP || '123456';
 
@@ -54,7 +56,7 @@ async function start(opts) {
 
   async function j(p, opt) {
     opt = opt || {};
-    const r = await fetch(base + p, { method: opt.method || 'GET', headers: Object.assign({ 'content-type': 'application/json' }, opt.token ? { authorization: 'Bearer ' + opt.token } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
+    const r = await fetch(base + p, { method: opt.method || 'GET', headers: Object.assign({ 'content-type': 'application/json', 'x-device-id': DEVICE }, opt.token ? { authorization: 'Bearer ' + opt.token } : {}), body: opt.body ? JSON.stringify(opt.body) : undefined });
     let b = null; try { b = await r.json(); } catch (_) {}
     return { status: r.status, b: b || {} };
   }

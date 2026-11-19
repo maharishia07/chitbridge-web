@@ -19,7 +19,7 @@ const SEL = '[role=tab], .tab, summary, [aria-expanded=false]';
     const row = { page: name, vp: {} };
     for (const [w, h] of VPS) {
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, locale: 'en-IN', serviceWorkers: 'block' });
-      await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); window.print = function () {}; } catch (_) {} }, shop.session);
+      await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s.session); if (s.device) localStorage.setItem('cb_device_id', s.device); window.print = function () {}; } catch (_) {} }, { session: shop.session, device: shop.device });
       const counts = { writes: 0 }; await L.guardContext(ctx, counts);
       const page = await ctx.newPage(); page.on('dialog', (d) => d.dismiss().catch(() => {})); page.on('download', (d) => d.cancel().catch(() => {})); ctx.on('page', (p) => { if (p !== page) p.close().catch(() => {}); });
       const url = BASE + route.replace('{bridge}', encodeURIComponent(sess.bridgeId || '')); const m = { views: 0, rules: {}, err: null };

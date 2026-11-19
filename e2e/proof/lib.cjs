@@ -26,7 +26,7 @@ if (REMOTE_OK) {
 const HOSTS = [new URL(BASE).host, new URL(API).host];
 
 /** → { email, session } the cb_sess the pages store, from the local api's DEV_OTP door */
-async function ownShop() { if (REMOTE_OK) return remoteShop(); const s = await RS.signIn(API, SHOP); return { email: SHOP, session: s.session }; }
+async function ownShop() { if (REMOTE_OK) return remoteShop(); const s = await RS.signIn(API, SHOP); return { email: SHOP, session: s.session, device: s.device }; }
 /** SIT: sign in as one of our own test users by the day's tester code (template + tz in the users file); -> the same { email, session } */
 async function remoteShop() {
   const all = JSON.parse(fs.readFileSync(arg('users', path.join(require('os').homedir(), '.cb-sit-users.json')), 'utf8')), srv = all.servers[arg('server', 'sit-au')], email = arg('as', 'cbt-au-retail') + '@test.chitbridge';

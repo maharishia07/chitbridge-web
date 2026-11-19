@@ -201,9 +201,9 @@ async function main() {
   } catch (e) { if (PART === 'b') { console.log('TOUR STOPPED · cannot sign in ' + EMAIL + ' on ' + API + ': ' + e.message); await w.close(); process.exit(1); } }
 
   const ctx = await w.contextAt();
-  await ctx.addInitScript(([theme, s]) => {
-    try { localStorage.setItem('cb_theme', theme); if (s) localStorage.setItem('cb_sess', s); else if (!sessionStorage.getItem('__tour_keep')) localStorage.removeItem('cb_sess'); } catch (_) {}
-  }, [THEME, sess]);
+  await ctx.addInitScript(([theme, s, dev]) => {
+    try { localStorage.setItem('cb_theme', theme); if (s) { localStorage.setItem('cb_sess', s); localStorage.setItem('cb_device_id', dev); } else if (!sessionStorage.getItem('__tour_keep')) localStorage.removeItem('cb_sess'); } catch (_) {}
+  }, [THEME, sess, R.DEVICE]);
   await ctx.setDefaultTimeout(8000);
   let page = await ctx.newPage(); await page.setViewportSize(viewport);
   /* the bucket the listeners fill; swapped at every state */

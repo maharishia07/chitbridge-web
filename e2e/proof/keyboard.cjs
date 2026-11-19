@@ -37,7 +37,7 @@ const initPage = (page) => page.evaluate(HELPERS).catch(() => {});
   const result = { generated: new Date().toISOString(), base: BASE, shop: shop.email, viewports: VPS.map((v) => v[0]), pages: [] };
   for (const [name, route, W, H] of JOBS) {
     const ctx = await browser.newContext({ viewport: { width: W, height: H }, locale: 'en-IN', serviceWorkers: 'block' });
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); window.print = function () {}; } catch (_) {} }, shop.session);
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s.session); if (s.device) localStorage.setItem('cb_device_id', s.device); window.print = function () {}; } catch (_) {} }, { session: shop.session, device: shop.device });
     const counts = { writes: 0 }; await L.guardContext(ctx, counts);
     await ctx.addInitScript(HELPERS); /* every new document (a key press that navigates) gets the helper again: crm @390 lost window.__K on real rows */
     const page = await ctx.newPage(); page.on('dialog', (d) => d.dismiss().catch(() => {})); page.on('download', (d) => d.cancel().catch(() => {})); ctx.on('page', (p) => { if (p !== page) p.close().catch(() => {}); });
