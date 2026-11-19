@@ -20,13 +20,16 @@ const API_DIR = process.env.CB_API_DIR || path.join(__dirname, '..', '..', '..',
 const DB = process.env.CB_REAL_DB || 'postgres://postgres:pw@127.0.0.1:5432/cb_sim';
 const OTP = '123456', OTP_CUSTOMER = '123123';
 
+/* SEC-113: a sign-in without a device id is refused NO_DEVICE, and a token only works from the device it was made on. One id per process, in the api's shape (8-80 of A-Za-z0-9_.:-), sent as X-Device-Id like public/app/device-id.js; a page that takes the session over must keep the same id (cb_device_id) */
+const DEVICE = process.env.CB_TEST_DEVICE || (process.env.CB_TEST_DEVICE = 'walk-' + require('crypto').randomUUID().slice(0, 12));
+
 /** j(url, { method, token, body }) → { status, b } — a JSON call, never throws on a status */
 function j(url, o) {
   o = o || {};
   return new Promise((res, rej) => {
     const u = new URL(url), body = o.body === undefined ? null : JSON.stringify(o.body);
     const q = http.request({ host: u.hostname, port: u.port, path: u.pathname + u.search, method: o.method || (body ? 'POST' : 'GET'),
-      headers: Object.assign({ 'content-type': 'application/json' }, o.token ? { authorization: 'Bearer ' + o.token } : {}, o.headers || {}) }, (r) => {
+      headers: Object.assign({ 'content-type': 'application/json', 'x-device-id': DEVICE }, o.token ? { authorization: 'Bearer ' + o.token } : {}, o.headers || {}) }, (r) => {
       let s = ''; r.setEncoding('utf8'); r.on('data', (c) => { s += c; });
       r.on('end', () => { let b = null; try { b = JSON.parse(s); } catch (_) { b = { raw: s.slice(0, 300) }; } res({ status: r.statusCode, b }); });
     });
@@ -72,7 +75,7 @@ async function signIn(api, email) {
   if (a.status !== 200) throw new Error('real-stack: sign-in ask refused ' + a.status + ' ' + JSON.stringify(a.b).slice(0, 200));
   const v = await j(api + '/api/entities/verify', { body: { email, otp: OTP } });
   if (v.status !== 200 || !v.b.token) throw new Error('real-stack: verify refused ' + v.status + ' ' + JSON.stringify(v.b).slice(0, 200));
-  return { token: v.b.token, entity: v.b.entity || null, answer: v.b, session: sessionOf(v.b, email) };
+  return { token: v.b.token, entity: v.b.entity || null, answer: v.b, session: sessionOf(v.b, email), device: DEVICE };
 }
 
 /** an employee's sign-in (name@shop) — the actor door, used for a view-only login */
@@ -135,4 +138,4 @@ async function lastWalkBill() {
   } finally { await c.end(); }
 }
 
-module.exports = { up, j, billByNo, lastWalkBill, signIn, signInActor, viewer, shopperOrder, sessionOf, OTP, OTP_CUSTOMER, DB, API_DIR };
+module.exports = { DEVICE, up, j, billByNo, lastWalkBill, signIn, signInActor, viewer, shopperOrder, sessionOf, OTP, OTP_CUSTOMER, DB, API_DIR };
