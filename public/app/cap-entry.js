@@ -154,10 +154,8 @@ async function enOpen(preset) {
   EN.lines = [];
   EN.pv = null;
   EN.dateRef = null;
-  EN.saved = null;
-  EN.err = null;
-  EN.denied = false;
-  EN.deniedWhy = null;
+  EN.saved = null; EN.err = null;
+  EN.denied = false; EN.deniedWhy = null;
   EN.photo = null;
   EN.ref = (preset && preset.ref) || bkRef();
   EN.pre = (preset && preset.v) || null;
@@ -179,9 +177,7 @@ async function enOpen(preset) {
       }),
       typeof booksDuesLoad === 'function' ? booksDuesLoad(false).catch(function () {}) : null
     ]);
-    /* W25: the server says on this FIRST read whether this seat may post (may.post, the same test POST /events gates on); an acting adviser posts through the actions door, so is not stopped here */
-    EN.deniedWhy = rr[0] && rr[0].may && rr[0].may.post && rr[0].may.post.ok === false && !enActingAdviser() ? rr[0].may.post.why || '' : null;
-    if (EN.deniedWhy !== null) EN.denied = true;
+    enReadDenial(rr[0]);
     EN.picks = (rr[0] && rr[0].picks) || {};
     EN.accounts = (rr[1] && rr[1].accounts) || [];
     /* the events that POST /events can preview and save; the ones with a route of their own (asset, loan …) are not offered on this sheet */
@@ -207,6 +203,12 @@ async function enOpen(preset) {
   enPaint();
 }
 
+/** W25: the server says on the FIRST read whether this seat may post (may.post, the same test POST /events gates on); an acting adviser posts through the actions door, so is not stopped here */
+function enReadDenial(first) {
+  var post = first && first.may && first.may.post;
+  EN.deniedWhy = post && post.ok === false && !enActingAdviser() ? post.why || '' : null;
+  if (EN.deniedWhy !== null) EN.denied = true;
+}
 /** what the opener wants done after a save (R106: Payables reads again), or nothing */
 function enAfterOf(preset) {
   return preset && typeof preset.after === 'function' ? preset.after : null;
