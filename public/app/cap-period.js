@@ -1196,7 +1196,7 @@ async function peReturnCopy(btn) {
 }
 
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, refusals: [{ name, why }], months: [{ period, status }], next } — what a close would say, nothing written
+   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, refusals: [{ name, why }], warnings: [{ name, count, why }], months: [{ period, status }], next } — what a close would say, nothing written
    POST /year/:fy/close { returns_lodged?: true } → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
   let L;
@@ -1322,13 +1322,18 @@ function peYearLodged(box) {
   const btn = document.querySelector('[data-testid="py-close"]');
   if (btn) btn.disabled = !box.checked;
 }
+/** YEARCLOSE: what waits before a close (the server's warnings[], never a gate) — listed in the dialog so the owner confirms with it in view */
+function peYearWarningsHtml(list) {
+  if (!list || !list.length) return '';
+  return '<div class="pe-note" data-testid="py-warnings"><b>' + esc(tx('Before you close:')) + '</b><ul>' + list.map((w) => '<li>' + esc(w.why) + '</li>').join('') + '</ul>' + esc(tx('You can still close the year.')) + '</div>';
+}
 function peYearClose(btn) {
   const fy = peVal('py_fy'),
     tick = document.querySelector('[data-testid="py-lodged"]'),
     lodged = !!(tick && tick.checked && PE.year && PE.year.can_close_if_lodged);
   confirmAsk(
     tx('Close the year?'),
-    esc(lodged ? txf('{fy} is carried forward and locked for good, with its returns marked as lodged outside ChitBridge. This cannot be undone.', { fy }) : txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })),
+    esc(lodged ? txf('{fy} is carried forward and locked for good, with its returns marked as lodged outside ChitBridge. This cannot be undone.', { fy }) : txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })) + peYearWarningsHtml(PE.year && PE.year.warnings),
     tx('Close the year'),
     () => {
       bkOnce('pe-year-' + fy, btn, async () => {
