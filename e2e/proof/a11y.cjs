@@ -20,8 +20,8 @@ const SEL = '[role=tab], .tab, summary, [aria-expanded=false]';
     for (const [w, h] of VPS) {
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, locale: 'en-IN', serviceWorkers: 'block' });
       await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s.session); if (s.device) localStorage.setItem('cb_device_id', s.device); window.print = function () {}; } catch (_) {} }, { session: shop.session, device: shop.device });
-      const counts = { writes: 0 }; await L.guardContext(ctx, counts);
-      const page = await ctx.newPage(); page.on('dialog', (d) => d.dismiss().catch(() => {})); page.on('download', (d) => d.cancel().catch(() => {})); ctx.on('page', (p) => { if (p !== page) p.close().catch(() => {}); });
+      const counts = { writes: 0 }; await L.guardContext(ctx, counts); const trace = [];
+      const page = await ctx.newPage(); page.on('framenavigated', (f) => { if (f === page.mainFrame()) trace.push('NAV ' + f.url().slice(0, 90)); }); page.on('response', (r) => { if (r.status() >= 400 && //api//.test(r.url())) trace.push(r.status() + ' ' + r.request().method() + ' ' + r.url().replace(/^https?://[^/]+/, '').slice(0, 80)); }); page.on('dialog', (d) => d.dismiss().catch(() => {})); page.on('download', (d) => d.cancel().catch(() => {})); ctx.on('page', (p) => { if (p !== page) p.close().catch(() => {}); });
       const url = BASE + route.replace('{bridge}', encodeURIComponent(sess.bridgeId || '')); const m = { views: 0, rules: {}, err: null };
       try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 }); await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {}); await sleep(1500);
@@ -39,7 +39,7 @@ const SEL = '[role=tab], .tab, summary, [aria-expanded=false]';
           if ((await page.evaluate(() => typeof window.axe).catch(() => 'undefined')) === 'undefined') await page.addScriptTag({ content: axeSrc }).catch(() => {});
           await merge('view:' + o.label).catch(() => {});
         }
-      } catch (e) { m.err = String(e && e.message || e).slice(0, 200); }
+      } catch (e) { m.err = String(e && e.message || e).slice(0, 200); console.log('TRACE', name, w, trace.slice(0, 12).join(' | ')); }
       const sc = (imp) => Object.values(m.rules).filter((r) => r.impact === imp).reduce((a, r) => a + Object.keys(r.nodes).length, 0);
       m.s = sc('serious'); m.c = sc('critical'); m.mod = sc('moderate');
       m.writes = counts.writes; row.vp[w] = m; await ctx.close();
