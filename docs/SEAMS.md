@@ -106,9 +106,9 @@ of file each thing is; this says what already does the job.
 | 38 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 37 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
+| 37 | `money` | `cart.js` |  |
 | 37 | `hold` | `orders.js` |  |
 | 37 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
-| 36 | `money` | `cart.js` |  |
 | 36 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
 | 35 | `names` | `shortcuts.js` |  |
 | 35 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |

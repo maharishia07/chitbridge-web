@@ -33,7 +33,7 @@
   }
   var TILE = {
     books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Filed (owner's word)", { stage: 'lodged' }],
-    bas_due_30: ['Due in 30 days', { bas: 'soon' }],
+    return_due_30: ['Due in 30 days', { bas: 'soon' }],
     changed: ['Clients with changes since I checked', { changed: 'yes' }], /* rank 10: the server's count of clients with entries posted since THIS person said checked; the tile only filters, never re-sorts */
     queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Clients with entries to check (quarter)', { checked: 'behind' }], months_unlocked: ['Clients with months to lock', { unlocked: 'yes' }],
     cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]

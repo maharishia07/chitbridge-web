@@ -38,7 +38,7 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');   /* the contrast measurement, run INSIDE the page - one copy, shared with crm-themes.cjs */
-const SA_WHY = 'ChitBridge does not keep books for Saudi Arabia yet — selling and the rail still work; books arrive when its pack ships.';
+const SA_WHY = "The Saudi Arabia pack is missing, so Saudi Arabia rules can't be checked."; /* XC-1119: the one sentence */
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
 const verdicts = async (page) => { const raw = await page.evaluate(() => { const o = {}; document.querySelectorAll('#rows-body tr[data-row]').forEach((t) => { o[t.dataset.row] = t.querySelector('.verdict').textContent.trim(); }); return o; }); Object.keys(raw).forEach((k) => { raw[k] = kind(raw[k]); }); return raw; };
 /** CTRY-49: a verdict cell reads "Same" or "Changes: ..." - the word is the first one */

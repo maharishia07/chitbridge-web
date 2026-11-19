@@ -120,6 +120,10 @@
   function minorText(minor, currency) {
     return minor == null ? '—' : fmtMoney({ amount_minor: minor, currency: currency }, currency);
   }
+  /** XC-1119: the row's own currency code beside its money (a symbol alone can be AUD or USD); nothing when the row names none */
+  function currencyTag(r) {
+    return r.currency ? ' <span class="sub" data-testid="practice-currency-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.currency) + '</span>' : '';
+  }
   function dayWords(value) {
     return value ? (typeof root.shopDay === 'function' ? root.shopDay(value) : String(value).slice(0, 10)) : '—';
   }
@@ -158,8 +162,8 @@
       num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return escapeHtml(practiceKit.trend(r)); }, function (r) { return practiceKit.trend(r); }),
       num('margin', 'Margin', 80, function (r) { return practiceKit.figureOrWhy(r, r.health.gross_margin_pct, escapeHtml(r.health.gross_margin_pct) + '%'); }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
-      num('cash', 'Cash', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.cash_minor, escapeHtml(minorText(r.health.cash_minor, r.currency)), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
-      num('profit', 'Profit (qtr)', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.profit_quarter_minor, escapeHtml(minorText(r.health.profit_quarter_minor, r.currency))); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
+      num('cash', 'Cash', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.cash_minor, escapeHtml(minorText(r.health.cash_minor, r.currency)) + currencyTag(r), true); }, function (r) { return r.health.cash_minor == null ? '' : r.health.cash_minor; }, { prio: 3 }),
+      num('profit', 'Profit (qtr)', 110, function (r) { return practiceKit.figureOrWhy(r, r.health.profit_quarter_minor, escapeHtml(minorText(r.health.profit_quarter_minor, r.currency)) + currencyTag(r)); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return escapeHtml(dayWords(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
       num('look', 'My last look', 100, function (r) { return escapeHtml(dayWords(r.last_look)); }, function (r) { return r.last_look || ''; }),
       num('saved', 'Saved', 80, function (r) { return flagsOn() ? practiceKit.practiceState.fl.chip(r.entity_id, r.name) : ''; }, function (r) { return flagsOn() && practiceKit.practiceState.fl.any(r.entity_id) ? 1 : 0; }, { prio: 1, keep: true }) /* CMP066: my own bookmark of this client */
@@ -175,10 +179,12 @@
   }
   function sorts(band) {
     var by = function (k, get, text) { return { key: k, label: translate(text), cmp: function (a, b) { var x = get(a), y = get(b); return typeof x === 'string' || typeof y === 'string' ? String(x).localeCompare(String(y)) : (x == null ? -1e18 : x) - (y == null ? -1e18 : y); } }; };
+    /* XC-1119: an amount is never compared with an amount in another currency: group by the row's currency, then the amount (no rate exists to compare them) */
+    var inCurrency = function (k, get, text) { var base = by(k, get, text), plain = base.cmp; base.cmp = function (a, b) { var ca = String(a.currency || ''), cb = String(b.currency || ''); return ca !== cb ? ca.localeCompare(cb) : plain(a, b); }; return base; };
     return (band === 'pipeline' ? [{ key: 'pipeline', label: translate('Work order'), cmp: workOrder }] : []).concat([
       by('urgency', function (r) { return r._n; }, 'Most urgent first'),
       by('name', function (r) { return r.name || ''; }, 'Client'),
-      by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
+      inCurrency('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
       by('queries', function (r) { return r.queries.open; }, 'Queries open'),
       by('bas', function (r) { return r.bas.due_date || '9999'; }, 'Return due'),
       by('checked', practiceKit.checkedLeft, 'Entries left to check (year end)'),
@@ -186,8 +192,8 @@
       by('unlocked', function (r) { return r.months_unlocked; }, 'Months not locked'),
       by('sales', function (r) { return r.health.sales_trend_pct; }, 'Sales vs 3-month average'),
       by('margin', function (r) { return r.health.gross_margin_pct; }, 'Gross margin'),
-      by('cash', function (r) { return r.health.cash_minor; }, 'Cash and bank'),
-      by('profit', function (r) { return r.health.profit_quarter_minor; }, 'Profit this quarter'),
+      inCurrency('cash', function (r) { return r.health.cash_minor; }, 'Cash and bank'),
+      inCurrency('profit', function (r) { return r.health.profit_quarter_minor; }, 'Profit this quarter'),
       by('ending', function (r) { return r.grant.expires_at || ''; }, 'Access ends'),
       by('changed', function (r) { return r.changed ? r.changed.n : 0; }, 'Changes since I checked'),
       by('look', function (r) { return r.last_look || ''; }, 'My last look')

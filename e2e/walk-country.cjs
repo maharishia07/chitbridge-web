@@ -37,7 +37,7 @@ const TD = require('./lib/today.cjs');
 const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');   /* the contrast measurement, one copy */
 const J = (o) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
-const JP_WHY = 'ChitBridge does not keep books for Japan yet — selling and the rail still work; books arrive when its pack ships.';
+const JP_WHY = "The Japan pack is missing, so Japan rules can't be checked."; /* XC-1119 */
 /* CS2: the server's `countries[]` = exactly the registered packs (regulation.list()), with what each derives — the picker reads THIS, never the browser's locale */
 const AU_ZONES = ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Perth', 'Australia/Adelaide', 'Australia/Darwin', 'Australia/Hobart'];
 const COUNTRIES = [

@@ -212,7 +212,7 @@ function nm(v, fb) {
  * browsers" for the tests — but it showed 09:15 pm to a reader in Tokyo (21:15) and Dubai (09:15 م). Keeping
  * the test honest and the product wrong is the wrong trade: determinism belongs in the TEST, by setting a
  * locale, not in the product by denying every reader their own.
- * ⚠️ A reader who has chosen nothing still gets en-IN — see CBLocale's FALLBACK. Nothing changes today.
+ * ⚠️ A reader who has chosen nothing gets their shop's country format, else the browser's (engines locale, XC-1119) — never a fixed country.
  */
 function fmtAt(ts) {
   return CBLocale.time(ts);
