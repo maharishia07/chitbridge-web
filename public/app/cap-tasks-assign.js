@@ -15,12 +15,16 @@
   function holdersOf(row) {
     return row && row.assignee && row.assignee.id ? [{ actor_id: row.assignee.id, name: row.assignee.name || '' }] : [];
   }
+  /** back from a client's books to his queue: the list keeps the filter it remembers, not the opening preset */
+  function cameBack() {
+    try { return new root.URLSearchParams(root.location.search).get('keep') === '1'; } catch (failure) { if (root.cbQuiet) root.cbQuiet('tasks-assign:keep', failure); return false; } /* no address to read: the opening preset */
+  }
   /** the board's queue: CBAssign.queue over its rows; the opening view only the first time this view is drawn */
   function queue(board, reload) {
     board.rows.forEach(function (row) { row.holders = holdersOf(row); });
     var key = 'tasks-' + board.view;
     var made = root.CBAssign.queue({ key: key, rows: board.rows, said: true, everyone: board.rows.some(function (row) { return row.may_assign === true; }), plug: 'task', noun: 'task', nounMany: 'tasks', subjectOf: function (row) { return row.chit_id; }, roleOf: function () { return ''; }, reload: reload });
-    if (opened[key]) delete made.preset;
+    if (opened[key] || cameBack()) delete made.preset; /* TSK004: back from a client's books (keep=1) the list opens on the filter he left */
     if (made.views) opened[key] = true;
     return made;
   }

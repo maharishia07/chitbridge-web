@@ -174,7 +174,7 @@
     if (failure.status === 401) throw failure;
     grantKit.viewState.answer = null;
     grantKit.viewState.why = true; /* the frame says it (CBShell.readFailed); the server's raw word is never printed */
-    grantKit.viewState.failure = { status: failure.status || 0, detail: failure.status === 403 ? failure.message : '' };
+    grantKit.viewState.failure = { status: failure.status || 0, detail: failure.status === 403 ? failure.message : '', code: failure.code || '' };
   }
 
   /* ── the screen ── */
@@ -274,10 +274,16 @@
       (grantKit.viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + grantKit.bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wirePainted(report);
   }
+  /** the failure frame: a 403 the server named by a code says why and what to do and the way back to his queue (W19); anything else is the one frame as before */
+  function drawWhy(host) {
+    var failure = grantKit.viewState.failure || {};
+    if (failure.status === 403 && failure.code) return root.CBBooksGrantApi.closedFrame(host, words('These books'), failure.code, failure.detail);
+    return root.CBShell.readFailed(host, { what: words('These books'), status: failure.status, detail: failure.detail, retry: function () { reload(); } });
+  }
   /** the painted screen's controls are wired: the band, the failure frame, the period slot, the buttons, the day box and the list */
   function wirePainted(report) {
     wireBand();
-    if (grantKit.viewState.why && $('bv_why')) root.CBShell.readFailed($('bv_why'), { what: words('These books'), status: grantKit.viewState.failure && grantKit.viewState.failure.status, detail: grantKit.viewState.failure && grantKit.viewState.failure.detail, retry: function () { reload(); } });
+    if (grantKit.viewState.why && $('bv_why')) drawWhy($('bv_why'));
     fillPeriodSlot(report);
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     if ($('bv_bank')) $('bv_bank').onclick = openBank;

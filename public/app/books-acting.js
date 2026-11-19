@@ -249,11 +249,15 @@
   function clientAddress(store, carry) {
     return '/network.html?open=' + encodeURIComponent(store.id) + (carry || '');
   }
+  /** TSK004: this client was opened from the accountant's queue */
+  function queued() {
+    return !!(root.CBQueueBack && root.CBQueueBack.on());
+  }
   /** the breadcrumb on every client screen: Clients › <client> › <screen>. Clients leaves the client (to the practice list, Home); the client name is a link on a screen of the books, plain on the client's own page */
   function crumbs(screen, onScreen) {
     var actingTag = esc(context.store.name || '');
     return (
-      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" title="' + actingTag + (screen ? ' › ' + esc(screen) : '') + '"><a href="/" data-testid="crumb-clients">' + esc(words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
+      '<nav class="ba-crumbs" data-testid="ba-crumbs" aria-label="' + esc(words('Clients')) + '" title="' + actingTag + (screen ? ' › ' + esc(screen) : '') + '"><a href="' + (queued() ? root.CBQueueBack.href() : '/') + '" data-testid="crumb-clients">' + esc(queued() ? words('My queue') : words('Clients')) + '</a> <span aria-hidden="true">›</span> ' +
       (onScreen ? '<a href="' + esc(clientAddress(context.store, carriedOf(root.location.search))) + '" data-testid="crumb-client">' + actingTag + '</a>' : '<span data-testid="crumb-client">' + actingTag + '</span>') +
       (screen ? ' <span aria-hidden="true">›</span> <span id="ba_screen" aria-current="page" data-testid="crumb-screen">' + esc(screen) + '</span>' : '') + '</nav>'
     );
@@ -269,6 +273,7 @@
   }
   /** the band's one way back goes up ONE level: from a screen of the books to the client's page, from the client's page to the practice list */
   function backLabel(onScreen) {
+    if (!onScreen && root.CBQueueBack && root.CBQueueBack.on()) return root.CBQueueBack.label(words); /* TSK004: he came from his queue, so the one way back says so */
     return onScreen ? (context.store.name || words('Clients')) : words('Clients');
   }
   /** the banner's markup: who this is for, in which currency, a way to another store (when the firm holds more than one), the breadcrumb and the way back one level (screen: the screen's name; onScreen: this is a screen of the books page, not the client's own page) */
