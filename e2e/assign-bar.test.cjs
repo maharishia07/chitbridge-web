@@ -68,7 +68,16 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   check(owner.win.CBAssign.showsBar() === false && manager.win.CBAssign.showsBar() === false && assistant.win.CBAssign.showsBar() === false, 'with no server verdict nobody is shown the bar: the token and the role say nothing');
   check(manager.win.CBAssign.showsBar(true) === true && owner.win.CBAssign.showsBar(false) === false && assistant.win.CBAssign.showsBar(true) === true, "the server's verdict alone decides (a manager the server approves sees it, an owner it refuses does not)");
   check(manager.quiet.length === 0, 'no token is read, so nothing is logged');
-  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).length === 3, 'bulk gives three buttons (Assign to… · Hand over · Back to pool) when the server said yes and none when it said nothing');
+  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).length === 4, 'bulk gives four buttons (Assign to me · Assign to… · Hand over · Back to pool) when the server said yes and none when it said nothing');
+  /* H3 (20 Nov): the one empty state of the work queue */
+  const rowsQ = [{ holders: [] }, { holders: [] }, { holders: [{ actor_id: 'x', name: 'Ben' }] }];
+  const qMgr = fakeWindow({ role: 'actor', token: tokenWith({ hat: 'Manager' }), actor_id: 'me1' }, []).win.CBAssign.queue({ key: 'k', rows: rowsQ, said: true, everyone: true, plug: 'p', noun: 'client', subjectOf: (r) => r, roleOf: () => '', reload: () => null });
+  const qMine = qMgr.emptyFor({ filt: { held: 'mine' }, q: '', total: 3 }), qNone = qMgr.emptyFor({ filt: { held: 'none' }, q: '', total: 3 });
+  check(!!qMine && /Nothing waiting for you/.test(qMine.title) && /2 unassigned/.test(qMine.sub) && /Pick up the next one/.test(qMine.actionLabel) && typeof qMine.run === 'function', 'Mine with nothing held says "Nothing waiting for you · 2 unassigned" with ONE action, Pick up the next one');
+  check(!!qNone && /Nothing unassigned/.test(qNone.title) && !qNone.actionLabel, 'Unassigned with nothing says "Nothing unassigned" and offers nothing to press');
+  check(qMgr.emptyFor({ filt: { held: 'mine', other: 'x' }, q: '', total: 3 }) === null && qMgr.emptyFor({ filt: { held: 'ben' }, q: '', total: 3 }) === null, 'another narrowing too, or a person filter: the list keeps its own words');
+  const qView = assistant.win.CBAssign.queue({ key: 'k', rows: [{ holders: [] }], said: false, everyone: false, plug: 'p', noun: 'client', subjectOf: (r) => r, roleOf: () => '', reload: () => null }).emptyFor({ filt: { held: 'mine' }, q: '', total: 1 });
+  check(!!qView && !qView.actionLabel && !qView.run, 'a seat the server does not let assign is told what is waiting but is offered no Pick up');
   check(!manager.win.CBAssign.bulk({ plug: 'p', said: true }).some((button) => button.id === 'open'), 'there is no Open jobs button: the server opens the job (I8)');
 
   check(owner.win.CBAssign.heldBy({ holders: [{ name: 'Anna <Lee>' }, { name: 'Ben' }] }) === 'Anna &lt;Lee&gt;, Ben', 'Held by lists the names the server sent, escaped');
