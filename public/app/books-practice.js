@@ -483,6 +483,8 @@
     if (hintRaw() !== '0') { practiceKit.practiceState.failedFirm = true; drawFailed(); return; }
     settle(); /* a known shop: the shop Home, as before */
   }
+  /** W15: an answer with no client, for a login /me (or the last answer) says is a practice */
+  function emptyFirm(answer) { return !!answer && !!answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1')); }
   function tick() {
     var tokenNow = token();
     if (!tokenNow) return;
@@ -495,7 +497,7 @@
       practiceKit.practiceState.since = Date.now();
       read().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
-        if (answer && answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1'))) answer.practice_empty = true; /* W15: a firm's employee who holds no client yet is still on the practice (its own empty screen), never the shop Home */
+        if (emptyFirm(answer)) answer.practice_empty = true; /* W15: a firm's employee who holds no client yet is still on the practice (its own empty screen), never the shop Home */
         if (!answer || !answer.clients || (!answer.clients.length && !answer.practice_empty)) { hint(false); return settle(); }
         practiceKit.practiceState.data = answer;
         hint(answer.own_trade === false);

@@ -214,10 +214,11 @@
   function undoOf(plug, role, previous, write) {
     var by = {}, order = [];
     (previous || []).forEach(function (p) {
-      if (!p.subject_id) return;
+      if (!p.subject_id && !p.chit_id) return;
       var k = String(p.actor_id || '');
-      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], write: write }; order.push(k); }
-      by[k].subject_ids.push(p.subject_id);
+      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], chit_ids: [], write: write }; order.push(k); }
+      if (p.chit_id && !write) by[k].chit_ids.push(p.chit_id); /* W12: undo per COPY (each copy's own previous holder), never per client: a client with several period copies held by different people would put them all back to one */
+      else by[k].subject_ids.push(p.subject_id);
     });
     return order.map(function (k) { return by[k]; });
   }
@@ -272,7 +273,7 @@
     return groups.reduce(function (chain, g) {
       return chain.then(function () {
         if (refused) return null;
-        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
+        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, g.chit_ids && g.chit_ids.length ? { chit_ids: g.chit_ids, target_actor_id: g.actor_id } : { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
         return put.then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
       });
     }, root.Promise.resolve()).then(function () {

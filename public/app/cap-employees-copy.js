@@ -60,25 +60,25 @@
    * W14: the line "They sign in as <name>@<practice or shop>" under the sign-in name. It follows the name AS TYPED and shows the whole ID: the part after @ is the one the server printed
    * (suggest-key's login_format), kept; nothing is composed before the server has said it. watchKey(input, note, suggest(word) → promise of the server's reply, T) → { typed(), ask(word, then) }.
    */
-  function watchKey(input, note, suggest, T) {
+  function watchKey(input, note, suggest, translate) {
     var typedKey = false, suffix = '';
-    function say() {
+    function paintNote() {
       var key = String(input.value || '').trim().toLowerCase();
-      note.textContent = key && suffix ? T('They sign in as') + ' ' + key + '@' + suffix : '';
+      note.textContent = key && suffix ? translate('They sign in as') + ' ' + key + '@' + suffix : '';
     }
-    function ask(word, then) {
+    function askSuggest(word, then) {
       return suggest(word).then(function (reply) {
         suffix = String((reply && reply.login_format) || '').split('@')[1] || suffix;
         if (then && !typedKey) then(reply);
-        say();
+        paintNote();
       }, function () {});
     }
     input.oninput = function () {
       typedKey = true;
-      if (suffix) say();
-      else ask(input.value.trim() || 'xx');
+      if (suffix) paintNote();
+      else askSuggest(input.value.trim() || 'xx');
     };
-    return { typed: function () { return typedKey; }, ask: ask };
+    return { typed: function () { return typedKey; }, ask: askSuggest };
   }
   root.CBEmployeesCopy = { watchKey: watchKey, signInName: signInName, nameWithCopy: nameWithCopy, peopleCount: peopleCount, wireCopy: wireCopy };
 })(typeof window !== 'undefined' ? window : this);
