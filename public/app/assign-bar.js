@@ -376,6 +376,18 @@
       ' style="max-width:100%;min-height:32px;padding:2px 10px;border:1px ' + (empty ? 'dashed' : 'solid') + ' var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:' + (empty ? 'var(--grey,#5B5B5B)' : 'inherit') + ';font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">' +
       root.esc(empty ? '+ ' + tr('Assign to…') : holderNames + ' ▾') + '</button>';
   };
+  /**
+   * the Held-by cell as PLAIN TEXT (Athi 19 Nov: no button on every row): the holder's name, or a quiet dash when nobody holds it. Assigning is the tick-bar's one "Assign to…"; the A and I keys still
+   * find the row through the data-as-* facts this cell carries (shown only on the server's verdict, like the chip). opts as for bulk
+   */
+  assignApi.heldCell = function (row, opts) {
+    if (!row || !Array.isArray(row.holders)) return '';
+    var names = row.holders.map(function (h) { return h.name || ''; }).join(', ');
+    var text = names ? root.esc(names) : '<span style="color:var(--grey,#5B5B5B)" aria-label="' + root.esc(tr('Unassigned')) + '">—</span>';
+    if (!assignApi.showsBar(opts && opts.said)) return text;
+    assignApi.mount(opts);
+    return '<span data-as-cell data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '" data-testid="assign-held">' + text + '</span>';
+  };
   /** the row a chip stands for, in the shape the calls read (subject, role, whether it has a holder) */
   function chipRow(chip) {
     var held = chip.getAttribute('data-as-held') === '1';
@@ -403,7 +415,7 @@
   function onKey(ev) {
     var key = String(ev.key || '').toLowerCase();
     if (notShortcut(ev, key)) return;
-    var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip]');
+    var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip],[data-as-cell]');
     if (!chip) return;
     ev.preventDefault();
     if (key === 'a') openChip(chip); else takeChip(chip);

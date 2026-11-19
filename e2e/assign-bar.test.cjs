@@ -165,6 +165,11 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   await settle();
   check(written.length === 1 && written[0][0].join() === 'f1,f2' && written[0][1] === null && writeWin.calls.length === 0, 'a plug with its own writer is written through opts.write, never through assign-bulk');
 
+  /* the Held-by cell is plain text (Athi 19 Nov): a name or a dash, never a button; the keys still find the row by its data */
+  const cellOpts = { plug: 'client', said: true, subjectOf: (r) => r.id, roleOf: () => 'adviser' };
+  const cellHeld = owner.win.CBAssign.heldCell({ id: 'c1', holders: [{ name: 'Priya Shah' }] }, cellOpts), cellFree = owner.win.CBAssign.heldCell({ id: 'c2', holders: [] }, cellOpts);
+  check(!/<button/.test(cellHeld + cellFree) && cellHeld.includes('Priya Shah') && cellFree.includes('—') && /data-as-cell/.test(cellFree) && /data-as-held="0"/.test(cellFree), 'the Held by cell is plain text: the name, or a quiet dash, and no button on the row');
+  check(!/data-as-cell/.test(owner.win.CBAssign.heldCell({ id: 'c3', holders: [] }, Object.assign({}, cellOpts, { said: false }))), 'with no server verdict the cell carries no assign facts');
   /* WALKFIX-1119 (walk 19 Nov, W3 · W7 · W8): the person popover, driven through a fake popup host */
   const PEOPLE = { actors: [{ actor_id: 'p1', display_name: 'Priya Shah', job_assignable: true, open_load: 0, suggested: true }, { actor_id: 'v1', display_name: 'Vera View', job_assignable: false, access_level: 'viewer' }], suggested: 'p1' };
   /** a window with a popup host: ui.dialog keeps what it was given, modal/closeModal count, and two bodies stand on the page (a decoy sheet first, then the popup's own) */
