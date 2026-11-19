@@ -50,6 +50,7 @@ async function bkstFetch(fy, extra) {
   const query = Object.assign({ accounts: bkstBanks().map((item) => item.code).join(','), months: BKST_MONTHS, to: bkhFyEnd(fy), limit: BKST_PAGE }, fy === BKST.fy ? { asOf: bkstPeriodEnd() } : {}, extra || {});
   const answer = await api('booksStmtList', { query, fresh: true });
   if (!answer || !Array.isArray(answer.cells) || !Array.isArray(answer.accounts) || !Array.isArray(answer.files)) throw new Error('the statements answer is not the statements box answer');
+  if (typeof bkSeatRead === 'function') bkSeatRead(answer); /* W26: what this seat may do, as the server says it (may.write, may.post) */
   return answer;
 }
 /** bank17 D2: the period in the address (&fy=2025-26, or &from=&to=) as { fy: the year's first calendar year, to: the day it ends or null }; null when none is named. The same words Books writes (CBPeriodPick.toAddress). */

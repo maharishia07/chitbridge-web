@@ -155,6 +155,7 @@ async function enOpen(preset) {
   EN.saved = null;
   EN.err = null;
   EN.denied = false;
+  EN.deniedWhy = null;
   EN.photo = null;
   EN.ref = (preset && preset.ref) || bkRef();
   EN.pre = (preset && preset.v) || null;
@@ -176,6 +177,9 @@ async function enOpen(preset) {
       }),
       typeof booksDuesLoad === 'function' ? booksDuesLoad(false).catch(function () {}) : null
     ]);
+    /* W25: the server says on this FIRST read whether this seat may post (may.post, the same test POST /events gates on); an acting adviser posts through the actions door, so is not stopped here */
+    EN.deniedWhy = rr[0] && rr[0].may && rr[0].may.post && rr[0].may.post.ok === false && !enActingAdviser() ? rr[0].may.post.why || '' : null;
+    if (EN.deniedWhy !== null) EN.denied = true;
     EN.picks = (rr[0] && rr[0].picks) || {};
     EN.accounts = (rr[1] && rr[1].accounts) || [];
     /* the events that POST /events can preview and save; the ones with a route of their own (asset, loan …) are not offered on this sheet */
@@ -272,7 +276,7 @@ function enPaint() {
   if (EN.denied) {
     body.innerHTML =
       '<div class="en-warn" data-testid="en-denied">' +
-      esc(tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) +
+      esc(EN.deniedWhy ? tx(EN.deniedWhy) : tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) +
       '</div>';
     acts.innerHTML = '<button data-cbsid="CMP005" class="en-btn" onclick="enClose()">' + esc(tx('Close')) + '</button>';
     return;

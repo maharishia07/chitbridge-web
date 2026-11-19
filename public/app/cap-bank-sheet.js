@@ -88,7 +88,8 @@ function bkshTaxRegisteredFor(answer) {
 /** who is signed in, as the post adapter reads it: the shop's own login is the owner */
 function bkshSignedIn() {
   if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return { role: 'adviser', posts: CBBooksActing.posts() }; /* the grant's posting, known up front; the server decides */
-  return { role: bkshIsOwner() ? 'owner' : 'other' };
+  if (bkshIsOwner()) return { role: 'owner' };
+  return { role: typeof bkIsBookkeeper === 'function' && bkIsBookkeeper() && BK_SEAT.post ? 'bookkeeper' : 'other' }; /* W26: may record entries (the server's may.post), not lock or reopen */
 }
 /** the books account the statement is for */
 function bkshStatementAccount() {
@@ -437,7 +438,7 @@ const bkshLockGroups = () => CBBankLock.groupsOf(BKSH.ctl && BKSH.ctl.view().ite
 function bkshLockNotice() {
   const signedIn = bkshSignedIn(),
     owner = signedIn.role === 'owner',
-    mayPost = owner || (signedIn.role === 'adviser' && !!signedIn.posts);
+    mayPost = owner || signedIn.role === 'bookkeeper' || (signedIn.role === 'adviser' && !!signedIn.posts);
   return bkshLockGroups()
     .map((group, at) => {
       const reopen = owner && group.may ? '<button data-cbsid="BKS014-B60" type="button" class="act" data-testid="bank-lock-reopen-' + at + '" onclick="bkshReopen(\'' + group.key + '\')">' + bkbE(txf('Reopen {month}', { month: group.name })) + '</button>' : '',
