@@ -2332,7 +2332,7 @@ var o = inst.o;
       (index === 0 ? ' first' : '') +
       (amt ? ' r mono strong amt' : '') +
       ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
-      (item.mono ? ' mono' : '') +
+      (item.mono ? ' mono' : '') + (item.wrap ? ' cbl-wrap' : '') /* wrap:true = this column always wraps, never ends in … (a sign-in name, an address: the whole word is the point) */ +
       (item.cardAct ? ' cbl-actline' : '') + (item.cl ? ' cl' + item.cl : '') /* cl: a phone card line, 1 = head (name, amount), 2 = under it, the rest follow as chips; nl: no label on the card */
     );
   }
@@ -2898,8 +2898,8 @@ ctx.pin = cols.filter(function (item) {
   }
 
   /* forget what a person typed, chose and opened in list `key` (a different record is on screen under the same list: a new ledger, the other tab) */
-  function reset(key) {
-    delete STATE[String(key)];
+  function reset(key, onlyTicks) {
+    if (onlyTicks) { if (STATE[String(key)]) STATE[String(key)].sel = {}; } else delete STATE[String(key)]; /* onlyTicks: the ticks go, the search and filters stay (after an assign) */
   }
 
   /**
