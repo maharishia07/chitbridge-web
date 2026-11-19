@@ -53,6 +53,7 @@ const ROWS = (k) => IDS[k].map((id) => BYID[id]).filter(Boolean);
 const CO = ROWS('CO3').concat(ROWS('CO1'), ROWS('CO2'));
 const NEW = REG.S.filter((r) => r.added === '2026-10-14');   /* STDREG1's rows */
 const PROVED = (r) => r.s !== 'live' || /Proof:|In force:/.test(r.note || '');   /* a status the register has FLIPPED since must carry its evidence (other lanes flip rows; counts are read, not fixed) */
+const NPIDS = ['iso24760', 'scim', 'rfc6902', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ucp600'];
 const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { if (r.s in COUNT) COUNT[r.s]++; });
 /* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
 const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
@@ -130,7 +131,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const CO1 = ROWS('CO1'), CO2 = ROWS('CO2');
     ok(ROWS('CO3').length === 4 && ROWS('CO3').map((r) => r.n).join('|') === CO3.join('|') && ROWS('CO3').every((r) => r.s === 'part' && r.added === '2026-10-13'),
       'CO3\'s 4 record-keeping rows are on the register by id, each Partly');
-    ok(COUNT.live + COUNT.part + COUNT.plan === REG.S.length && REG.S.length >= 109, 'the register holds ' + REG.S.length + ' standards, counted from the source: in force ' + COUNT.live + ' · partly ' + COUNT.part + ' · planned ' + COUNT.plan);
+    ok(COUNT.live + COUNT.part + COUNT.plan + REG.S.filter((r) => r.s === 'np').length === REG.S.length && REG.S.length >= 109, 'the register holds ' + REG.S.length + ' standards, counted from the source: in force ' + COUNT.live + ' · partly ' + COUNT.part + ' · planned ' + COUNT.plan + ' (+ not pursued, listed and never counted)');
     const fields = REG.S.filter((r) => !r.id || !r.a || !r.pa || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
     ok(fields.length === 0, 'every row has an id, an area, a product area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
@@ -177,12 +178,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(want.every((id) => BYID[id] && BYID[id].added === '2026-10-14'), 'STDREG1\'s rows are on the register (' + NEW.length + ' added 14 Oct 2026): Beckn · ONDC registry, IGM, RSF, taxonomy · BAS · AASB 101/102 · Division 40 · ABN · VAT 201 · PINT-AE · TRN · HSN/SAC · GSTIN · IAS 21 · OpenAPI · GS1 batch/expiry/serial · WCAG 1.4.6');
     ok(NEW.filter((r) => r.s === 'live').every((r) => /Proof: |tests?\//.test(r.note || '')), 'every In force row STDREG1 added names the test that proves it (' + NEW.filter((r) => r.s === 'live').map((r) => r.id).join(' · ') + ')');
     ok(BYID['ondc-registry'].s === 'np' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
-    const NPIDS = ['iso24760', 'scim', 'rfc6902', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ucp600'];
     ok(NPIDS.every((id) => BYID[id] && BYID[id].s === 'np' && BYID[id].np && BYID[id].np.length > 15) && REG.S.filter((r) => r.s === 'np').length === NPIDS.length, 'NOT PURSUED (Athi 19 Nov): the ' + NPIDS.length + ' rows carry s:np and a one-line why, and no other row does');
-    await p.click('[data-testid="std-np-open"]'); await p.waitForTimeout(300);
-    ok((await rowIds(p)).length === NPIDS.length && await p.locator('[data-testid="std-row-' + REG.S.findIndex((r) => r.id === NPIDS[0]) + '"]').count() === 1, 'the "not pursued" button lists exactly those ' + NPIDS.length + ' rows (they are listed, never counted)');
-    ok((await p.locator('[data-testid="std-status-more"]').first().textContent()).length > 15, 'and each says why in its status cell');
-    await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(250);
     ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
     ok(BYID['wcag-1.4.6'].s === 'live' && /High Contrast/.test(BYID['wcag-1.4.6'].limit) && /Proof: /.test(BYID['wcag-1.4.6'].note) && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row, In force only with its stated Limit (AAA on the High Contrast themes) and a Proof line; the AA row does not claim it');
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');
@@ -217,6 +213,10 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(hl === CA.live + ' of ' + (CA.live + CA.part + CA.plan) + ' in force · ' + CA.part + ' partly · ' + CA.plan + ' planned', 'the headline says where we stand, with the counts of every row listed: ' + hl);
     ok(/in force/.test(await p.getAttribute('[data-testid="std-bar"]', 'aria-label')) && await p.locator('[data-testid="std-bar"] i').count() >= 2, 'and its bar carries the same three counts in words');
     ok(await p.locator('[data-testid="std-recent"] [data-cbsid="STD001-B07"]').count() >= 1, '"Added lately" lists the newest rows, each a button with its register code');
+    await p.click('[data-testid="std-np-open"]'); await p.waitForTimeout(300);
+    ok((await rowIds(p)).length === NPIDS.length && await p.locator('[data-testid="std-row-' + REG.S.findIndex((r) => r.id === NPIDS[0]) + '"]').count() === 1, 'the "not pursued" button lists exactly those ' + NPIDS.length + ' rows (they are listed, never counted)');
+    ok((await p.locator('[data-testid="std-status-more"]').first().textContent()).length > 15, 'and each says why in its status cell');
+    await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(250);
     ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
     ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
     ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
