@@ -145,6 +145,9 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .todo-sym{font-size:18px}
 .todo-n{font-size:15px;font-weight:700;min-width:1.5ch}
 .todo-words{font-size:14px;color:var(--ink);overflow-wrap:anywhere}
+.held-list{display:grid;gap:6px;margin:-4px 0 6px 28px}
+.held-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border:1px solid var(--line,#DDE3EA);border-radius:10px;background:var(--card,#fff);padding:8px 12px;font-size:14px;color:var(--ink)}
+.held-row .held-words{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
 .todo-go{align-self:center;white-space:nowrap}
 .todo-ok{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--green-d);padding:18px 0}
 .todo-ok.off{color:var(--muted-2)}

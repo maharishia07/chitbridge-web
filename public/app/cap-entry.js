@@ -26,7 +26,9 @@ if (typeof EP !== 'undefined') {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
-    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
+    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */,
+    booksActionAccept: { m: 'POST', p: '/api/books-actions/:id/accept', idem: 'attempt' } /* SHOPBK-B: the owner accepts a held entry (the one writer posts) */,
+    booksActionReturn: { m: 'POST', p: '/api/books-actions/:id/return', idem: 'attempt' } /* SHOPBK-B: the owner returns it with a note, nothing posts */
   });
 }
 
@@ -951,7 +953,11 @@ async function enSaveWrite() {
   try {
     var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
     EN.saved = reply || {}; EN.saving = false; EN.ref = null;
-    if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
+    if (EN.saved.state === 'waiting_accept' && EN.saved.action_id && !EN.saved.entry_no) {
+      /* SHOPBK-B: the owner asked to OK entries first: the server answered 202 with the held entry, nothing is in the books yet, so the Day book and the opener are not told of an entry */
+      EN.saved.held = true;
+      if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {});
+    } else if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
     EN.saving = false;
@@ -974,8 +980,18 @@ function enSavedTell(saved) {
     if (typeof cblog === 'function') cblog('error', 'entry saved, a painter failed: ' + ((e && e.message) || e));
   }
 }
+/** SHOPBK-B: the screen after a Bookkeeper's Save while the owner OKs entries first: said plainly, with what was sent and its amount (the server's, in its currency); no entry number, because there is none yet */
+function enPaintHeld(body, acts) {
+  var s = EN.saved;
+  body.innerHTML =
+    '<h3 data-testid="en-held"><span class="en-ok">✓</span> ' + esc(tx('Sent to the owner for OK')) + '</h3>' +
+    (s.total_minor != null ? '<div data-testid="en-held-total" class="en-chip">' + esc(bkMoney(s.total_minor, s.currency)) + '</div>' : '') +
+    '<div class="en-why" style="border:0;margin-top:10px">' + esc(tx('Not in the books until the owner accepts.')) + '</div>';
+  acts.innerHTML = '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc(tx('Done')) + '</button>';
+}
 /** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
+  if (EN.saved.held) return enPaintHeld(body, acts);
   if (EN.saved.prepared) return CBBooksActing.paintPrepared(body, acts, EN.saved, tx, esc);
   var s = EN.saved,
     no = s.entry_no || s.no || '';
