@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0 · bank-recon · sha256 68bba956b8022251c87ca1b87f8dd49fd50b1ada89bcab65b287dd8f0230b70b — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.99.0 · bank-recon · sha256 02b1257df2f8e44c4b615cb1f89266789d73706a28acfdc70aa80a99d72cb513 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -59,6 +59,7 @@
     MONEY_ = null,
     ENTRY_ = null,
     JSON_ = null,
+    FILES_ = null,
     BRS_ = null,
     LOAD_FAILURES_ = {}; /* a sibling engine that would not load: file → why, one entry per file (a later call tries again, as before); the callers still get null and say so in plain words */
   function dep_(file, globalName) {
@@ -79,6 +80,10 @@
   }
   function bankEntry_() {
     return ENTRY_ || (ENTRY_ = dep_('./bank-entry', 'CBBankEntry'));
+  }
+  /** the OFX / QFX / QIF statement reader (bank-files.js): a sibling, loaded like bank-json */
+  function files_() {
+    return FILES_ || (FILES_ = dep_('./bank-files', 'CBBankFiles'));
   }
   /** the JSON statement reader (bank-json.js) and the BRS builder (bank-brs.js): siblings, loaded like bank-entry */
   function bankJson_() {
@@ -518,7 +523,7 @@
     var options = opts || {},
       bankRules = bankOf_(options);
     if (!bankRules) return fail_('The regulation pack has no bank-statement rules (pack.bank), so a statement cannot be read.');
-    var ctx = { re: prefixRe_(bankRules.bank.amountPrefixes), dp: decimalsOf_(options.currency || bankRules.pack.currency), presets: bankRules.bank.presets, minorUnit: bankRules.bank.minorUnit, amountOf: amountOf_, dateOf: dateOf_, fail: fail_ };
+    var ctx = { re: prefixRe_(bankRules.bank.amountPrefixes), dp: decimalsOf_(options.currency || bankRules.pack.currency), presets: bankRules.bank.presets, minorUnit: bankRules.bank.minorUnit, cur: String(options.currency || bankRules.pack.currency || '').toUpperCase(), amountOf: amountOf_, ymd: ymd_, minorOf: minorOfDigits_, dateOf: dateOf_, fail: fail_ };
     var res = readStatement_(text, options, ctx);
     if (!res.ok) return res;
     var lines = res.lines,
@@ -538,15 +543,22 @@
       data = text;
       format = 'json';
     } else if (typeof text !== 'string' || !text.trim()) return fail_('Nothing to read: the statement is empty.');
-    else if (format === 'auto') format = /^\s*[\[{]/.test(text) ? 'json' : 'csv';
+    else if (format === 'auto') format = sniffFormat_(text);
     return readAs_(format, data, text, options, ctx);
+  }
+  /** the file's format from its first words: JSON, OFX / QFX, QIF, else CSV */
+  function sniffFormat_(text) {
+    if (/^[\[{]/.test(text.replace(/^\uFEFF/, '').trimStart())) return 'json';
+    return files_().sniff(text) || 'csv';
   }
   /** the statement read as `format` (json from a document already parsed, or from its text; csv); a reader that throws becomes a refusal */
   function readAs_(format, data, text, options, ctx) {
     try {
       if (format === 'json') return data === null ? parseJsonText_(text, ctx) : bankJson_().parse(data, ctx);
       if (format === 'csv') return parseCsv_(text, options, ctx);
-      return fail_('Unknown format "' + format + '" — csv or json.');
+      if (format === 'ofx' || format === 'qfx') return files_().parseOfx(text.replace(/^\uFEFF/, ''), ctx);
+      if (format === 'qif') return files_().parseQif(text.replace(/^\uFEFF/, ''), options, ctx);
+      return fail_('Unknown format "' + format + '" — csv, json, ofx, qfx or qif.');
     } catch (e) {
       return fail_('The statement could not be read: ' + e.message);
     }

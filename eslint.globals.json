@@ -263,6 +263,7 @@
  "public/config.js":["public/accounts.html","public/app.html","public/authority-forms.html","public/catalogue.html","public/chart-sample.html","public/cmdb/record.html","public/conversion-lab.html","public/country-lab.html","public/crm.html","public/embed.html","public/employees.html","public/finance.html","public/intake.html","public/know-your-business.html","public/lifecycle-test.html","public/list-lab.html","public/network-design.html","public/network-shop.html","public/network.html","public/offer-lab-next.html","public/operations.html","public/product-lab.html","public/promo.html","public/settings.html","public/shell-lab.html","public/shop.html","public/signin-lab.html","public/standards.html","public/store.html","public/tasks.html","public/testing.html","public/till.html","public/ui-standard.html"],
  "public/engine/accounts-packs.js":["public/accounts.html","public/bank-demo.html"],
  "public/engine/bank-brs.js":["public/accounts.html","public/bank-demo.html"],
+ "public/engine/bank-files.js":["public/accounts.html","public/bank-demo.html"],
  "public/engine/bank-entry.js":["public/accounts.html","public/bank-demo.html"],
  "public/engine/bank-json.js":["public/accounts.html","public/bank-demo.html"],
  "public/engine/bank-project.js":["public/accounts.html","public/bank-demo.html"],

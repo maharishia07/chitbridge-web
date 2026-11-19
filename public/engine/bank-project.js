@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0 · bank-project · sha256 a51e3b1b4a4e8dab843783f8176bf7da046c473ffc52eeae70887060a740e0cb — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.99.0 · bank-project · sha256 de173a3dce423148181e854cabf65c692c61ff65b620c8e7fa23fc7fedc1ad5d — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-project.js: THE BANK LEDGER AND THE RECONCILIATION AS THEY WILL READ ONCE THE PROPOSED ENTRIES ARE POSTED. PURE: no I/O, no clock, nothing saved.
  * OWNS project (the preview: bank ledger after posting, the BRS, each line's state) · refsOf / fingerprintOf / readRef (the idempotency key of a statement line) · partyKeyOf.
@@ -63,15 +63,29 @@
    * fingerprintOf(line, account) → 24 hex digits: the hash of the account, the line's date, its signed amount in minor units and its normalised description.
    * NO row number and NO file hash: a re-export of the same statement, with its rows shifted or a new file hash, gives the same fingerprint.
    */
-  function fingerprintOf(line, account) {
+  function narrationFingerprintOf(line, account) {
     var parts = [String(account || '').trim().toUpperCase(), (line && line.date) || '', signedOf_(line || {}), descriptionKey_(line && line.narration)];
     return digest_(parts.join('|'));
   }
+  /** the bank's own reference of a line as the key reads it (OFX FITID, MT940/CAMT ref, a CSV reference column): upper case, spaces gone; '' when the line has none */
+  function bankRefKey_(line) {
+    return String((line && line.ref) || '').toUpperCase().replace(/\s+/g, '');
+  }
+  /**
+   * ⭐ fingerprintOf(line, account) → 24 hex digits. A line that carries the bank's own reference is keyed on account | date | signed amount | THAT REFERENCE, never its words: the same
+   * transactions exported as CSV and as OFX/QIF word the narration differently but carry the one bank id. Date and amount stay in the key so a reference a bank reuses (or a CSV column that
+   * says 'RENT' every month) never merges two different lines. Without a reference: the narration fingerprint, as before (narrationFingerprintOf).
+   */
+  function fingerprintOf(line, account) {
+    var ref = bankRefKey_(line);
+    if (!ref) return narrationFingerprintOf(line, account);
+    return digest_([String(account || '').trim().toUpperCase(), (line && line.date) || '', signedOf_(line || {}), 'REF', ref].join('|'));
+  }
   /** the period's lines grouped by fingerprint, each with its place (ordinal) in its group: { fp: [{ balance, ordinal, taken }] } */
-  function groupsOf_(period, account) {
+  function groupsOf_(period, account, printOf) {
     var groups = {};
     period.forEach(function (line) {
-      var print = fingerprintOf(line, account),
+      var print = printOf(line, account),
         group = (groups[print] = groups[print] || []);
       group.push({ balance: line.balance_minor == null ? null : line.balance_minor, ordinal: group.length + 1, taken: false });
     });
@@ -95,12 +109,25 @@
    * a re-export holding only the second of them is still -2 (matched to its place by the running balance when both lines carry one). Without the period a subset file counts from 1:
    * a known limit, the second guard is the match against the ledger after posting. 5 + 24 + 1 + at most 4 digits: inside the api's 80-character slice.
    */
-  function refsOf(lines, account, period) {
-    var groups = groupsOf_(period && period.length ? period : lines || [], account);
+  function refsWith_(lines, account, period, printOf) {
+    var groups = groupsOf_(period && period.length ? period : lines || [], account, printOf);
     return (lines || []).map(function (line) {
-      var print = fingerprintOf(line, account);
+      var print = printOf(line, account);
       groups[print] = groups[print] || [];
       return 'bank:' + print + '-' + ordinalOf_(groups[print], line);
+    });
+  }
+  function refsOf(lines, account, period) {
+    return refsWith_(lines, account, period, fingerprintOf);
+  }
+  /**
+   * oldRefsOf(lines, account, period?) → per line the client_ref the narration fingerprint gave BEFORE the bank reference became the key (what every line stored so far carries), or null for a
+   * line with no reference (its refsOf IS that ref). postedFlags takes it as the second key: a re-import of an old CSV still dedupes against lines stored under the old key. Stored data is never rewritten.
+   */
+  function oldRefsOf(lines, account, period) {
+    var old = refsWith_(lines, account, period, narrationFingerprintOf);
+    return (lines || []).map(function (line, at) {
+      return bankRefKey_(line) ? old[at] : null;
     });
   }
   var REF_NEW_ = /^bank:([0-9a-f]{24})-(\d{1,4})$/;
@@ -110,13 +137,13 @@
    * matched as it is; an OLD-form one has no fingerprint, so it is matched on what it holds, the file hash and the line's row (`line.row`, else its place in the file + 1), and only when `file.hash`
    * is given (the same file loaded again). A re-export with a new hash cannot match an old ref: the ledger match after posting is the guard for those.
    */
-  function postedFlags(lines, refs, posted, file) {
+  function postedFlags(lines, refs, posted, file, olds) {
     var have = {};
     (posted || []).forEach(function (ref) {
       have[ref] = true;
     });
     return (lines || []).map(function (line, at) {
-      return !!(have[refs[at]] || (file && file.hash && have['bank:' + String(file.hash).toLowerCase() + ':' + (line.row != null ? line.row : at + 1)]));
+      return !!(have[refs[at]] || (olds && olds[at] && have[olds[at]]) || (file && file.hash && have['bank:' + String(file.hash).toLowerCase() + ':' + (line.row != null ? line.row : at + 1)]));
     });
   }
   /**
@@ -389,7 +416,7 @@
     }));
     if (refusal) return refusal;
     var refs = refsOf(lines, given.account, given.period_lines),
-      posted = postedFlags(lines, refs, given.posted_refs, given.file);
+      posted = postedFlags(lines, refs, given.posted_refs, given.file, oldRefsOf(lines, given.account, given.period_lines));
     var ctx = { currency: given.currency, bankAccount: given.bank_account || 'bank', refs: refs, near: given.near || {} };
     var views = (lines || []).map(function (line, at) {
       return lineView_(M, at, line, posted[at] ? null : (proposals || [])[at], ctx, posted[at]);
@@ -416,7 +443,7 @@
     };
   }
 
-  var EXPORTS = { project: project, refsOf: refsOf, postedFlags: postedFlags, fingerprintOf: fingerprintOf, readRef: readRef, partyKeyOf: partyKeyOf, currencyRefusal: currencyRefusal_ };
+  var EXPORTS = { project: project, refsOf: refsOf, postedFlags: postedFlags, oldRefsOf: oldRefsOf, fingerprintOf: fingerprintOf, readRef: readRef, partyKeyOf: partyKeyOf, currencyRefusal: currencyRefusal_ };
   /* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page takes window.CBBankProject. */
   if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
   if (root && typeof root.window !== 'undefined') root.window.CBBankProject = EXPORTS;
