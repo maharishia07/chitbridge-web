@@ -27,6 +27,7 @@
  *   k      kind: law (you must) · std (agreed worldwide) · prac (the common way), one of STD_KINDS (here; the page)
  *   c      applies in: ISO 3166 codes and GLOBAL, one of STD_COUNTRIES — a new country is a new code here and a new matrix row, nothing else
  *   p      the plain-words line a shopkeeper reads first (here; the page's first column)
+ *   np     ONLY on a row with s:'np' (Not pursued, Athi 19 Nov 2026): one line, WHY we do not pursue it. Such a row is listed and filterable but is never counted in the in-force/partly/planned figures (STD_STATUS holds the three counted statuses; STD_NP the fourth)
  *   m      what is missing, short — REQUIRED on every Partly and Planned row (e2e/standards-page.cjs asserts it); the long `note` stays for the opened row
  *   limit  a stated limit on an In force row, e.g. "company format only" (optional; the page shows it as Limit:)
  *   eq     the equivalent abroad, so a buyer outside India reads an Indian law in their own terms (optional; the opened row)
@@ -756,7 +757,8 @@ var STANDARDS = [
     g: 'Identity & access',
     n: 'ISO/IEC 24760',
     w: 'The IAM vocabulary — identity · identifier · attribute',
-    s: 'part',
+    s: 'np',
+    np: 'We borrow its words; it is not a set of rules to check.',
     note: 'We use its distinctions; we do not implement its lifecycle model.',
     ex: 'bridge_id = identifier · display_name = attribute · the entity = identity',
     exWhy:
@@ -815,7 +817,8 @@ var STANDARDS = [
     g: 'Identity & access',
     n: 'SCIM (RFC 7644)',
     w: 'Provisioning identities from an HR system',
-    s: 'plan',
+    s: 'np',
+    np: 'No customer has asked for it; we build it when one does.',
     ex: '—',
     exWhy:
       'Not built. It matters only when a customer wants their HR system to create and remove co-assists automatically — real for a large operator, irrelevant to a shop.',
@@ -938,7 +941,8 @@ var STANDARDS = [
     w: 'Documentary credits',
     ex: '—',
     exWhy: 'Not built. When it is, it is the ruleset a bank checks the documents against before releasing payment.',
-    s: 'plan',
+    s: 'np',
+    np: 'Trade finance is outside what our first customers need; we decide when one asks.',
     at: 'Instruments',
     go: '',
     why: 'The rules a bank will actually check the documents against.'
@@ -1698,7 +1702,8 @@ var STANDARDS = [
     g: 'Open network',
     n: 'ONDC registry and message signing',
     w: 'A network participant is registered and signs every message it sends',
-    s: 'plan',
+    s: 'np',
+    np: 'Decided: Beckn-compatible, not registered with ONDC.',
     note: 'Joining ONDC means an entry in its registry and every message signed and checked against it. Decided against for now: ChitBridge stays Beckn-compatible, not ONDC-registered (chitbridge-api lib/beckn-map.js, the network-membership rule). Revisited when a shop asks to sell on ONDC.',
     at: '—',
     go: '',
@@ -1716,7 +1721,8 @@ var STANDARDS = [
     g: 'Open network',
     n: 'ONDC IGM (issue and grievance management)',
     w: 'How a complaint travels between the buyer app, the seller app and the network',
-    s: 'plan',
+    s: 'np',
+    np: 'Same decision: a dispute stays on the chit.',
     note: 'Not built. Our own dispute is raised on the chit both parties hold. IGM matters only once a shop sells on ONDC (see the registry row).',
     at: '—',
     go: '',
@@ -1734,7 +1740,8 @@ var STANDARDS = [
     g: 'Open network',
     n: 'ONDC RSF (reconciliation and settlement framework)',
     w: 'Who pays whom, when, and how both sides agree the figures',
-    s: 'plan',
+    s: 'np',
+    np: 'Same decision: payment stays bank to bank.',
     note: 'Not built. Nothing passes through us today: a payment moves bank to bank and the chit records it.',
     at: '—',
     go: '',
@@ -2011,7 +2018,8 @@ var STANDARDS = [
     g: 'Records & data',
     n: 'RFC 6902 (JSON Patch)',
     w: 'Ordered edit operations',
-    s: 'plan',
+    s: 'np',
+    np: 'We chose merge-patch (RFC 7386), a simpler way to edit a record.',
     note: 'Not built. Records change by merge-patch (RFC 7386); ordered operations matter only when a history must be replayed.',
     at: '—',
     go: '',
@@ -2642,6 +2650,9 @@ var STD_STATUS = [
   ['part', 'Partly', '◐'],
   ['plan', 'Planned', '○']
 ];
+/* Not pursued: shown with its reason, left out of the three counts above (Athi, 19 Nov 2026) */
+var STD_NP = ['np', 'Not pursued', '–'];
+var STD_STATUS_ALL = STD_STATUS.concat([STD_NP]);
 /* STDREG1 (14 Oct 2026): the PRODUCT area a row lives in (`pa`), so the page can filter by the part of the product a reader owns. The first fifteen are the
    product areas of docs/design/standards/COUNTRY-COVERAGE.md §1 (the ones data/country-ready.json reports per country), in that order; the last five are the
    platform areas the area packs own (sign-in, compliance, settings, testing, the API). The 29-area product map (docs/planning/PRODUCT-AREA-MAP-2026-10-14.md)

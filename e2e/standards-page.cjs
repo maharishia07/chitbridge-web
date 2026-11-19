@@ -53,13 +53,13 @@ const ROWS = (k) => IDS[k].map((id) => BYID[id]).filter(Boolean);
 const CO = ROWS('CO3').concat(ROWS('CO1'), ROWS('CO2'));
 const NEW = REG.S.filter((r) => r.added === '2026-10-14');   /* STDREG1's rows */
 const PROVED = (r) => r.s !== 'live' || /Proof:|In force:/.test(r.note || '');   /* a status the register has FLIPPED since must carry its evidence (other lanes flip rows; counts are read, not fixed) */
-const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
+const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { if (r.s in COUNT) COUNT[r.s]++; });
 /* M41: the page lists the register AND the Compatibility rows of public/data/compat.json (the 4th Kind); ALL is what the list and the matrix hold */
 const COMPAT_JSON = JSON.parse(fs.readFileSync(path.join(PUB, 'data', 'compat.json'), 'utf8'));
 const CROWS = REG.compat(COMPAT_JSON);
 const cjHas = (sys) => (COMPAT_JSON.rows || []).some((x) => x.system === sys);
 const ALL = REG.S.concat(CROWS), N = ALL.length;
-const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { CA[r.s]++; });
+const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { if (r.s in CA) CA[r.s]++; });   /* Not pursued is listed, never counted */
 const shownAll = () => new RegExp('^' + N + ' shown');
 /* the design's data.js is DERIVED from the register (STDREG1): load it the way its index.html does — data.js, then the register — and read what it built */
 const DESIGN_DERIVED = (() => { const g = {}; g.window = g; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8') + fs.readFileSync(path.join(PUB, 'app', 'cap-standards-build.js'), 'utf8'), g); return vm.runInContext('window.STD_PAGE', g); })();
@@ -136,7 +136,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
     const pas = REG.PA.map((a) => a[0]);
     ok(REG.S.every((r) => areas.indexOf(r.a) >= 0 && pas.indexOf(r.pa) >= 0 && kinds.indexOf(r.k) >= 0 && r.c.every((c) => ctry.indexOf(c) >= 0)), 'every area, product area, kind and country code is one the vocabularies define');
-    const noMiss = REG.S.filter((r) => r.s !== 'live' && !(r.m && r.m.length > 3));
+    const noMiss = REG.S.filter((r) => r.s !== 'live' && r.s !== 'np' && !(r.m && r.m.length > 3));
     ok(noMiss.length === 0, 'every Partly and Planned row says what is missing' + (noMiss.length ? ' — ' + noMiss.map((r) => r.n).join('; ') : ''));
     ok(REG.S.every((r) => r.s !== 'live' || !r.m), 'an In force row carries no "missing" line (a stated limit is `limit`, shown as Limit:)');
     ok(REG.S.filter((r) => r.limit).every((r) => r.s === 'live') && ['schedule-iii', 'as2-inventories', 'gst-rcm', 'iso8601', 'country-standard'].every((id) => BYID[id] && BYID[id].limit), 'a stated limit sits only on an In force row; Schedule III, AS 2, reverse charge, ISO 8601 (N11) and the Country Standard (CPS1) still carry theirs');
@@ -176,7 +176,13 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     const want = ['beckn-core', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ondc-taxonomy', 'au-gst-bas', 'aasb-101', 'aasb-102', 'au-div40', 'au-abn', 'ae-vat-201', 'pint-ae', 'ae-trn', 'hsn-sac', 'gstin-check', 'fx-ias21', 'openapi', 'gs1-ai', 'wcag-1.4.6'];
     ok(want.every((id) => BYID[id] && BYID[id].added === '2026-10-14'), 'STDREG1\'s rows are on the register (' + NEW.length + ' added 14 Oct 2026): Beckn · ONDC registry, IGM, RSF, taxonomy · BAS · AASB 101/102 · Division 40 · ABN · VAT 201 · PINT-AE · TRN · HSN/SAC · GSTIN · IAS 21 · OpenAPI · GS1 batch/expiry/serial · WCAG 1.4.6');
     ok(NEW.filter((r) => r.s === 'live').every((r) => /Proof: |tests?\//.test(r.note || '')), 'every In force row STDREG1 added names the test that proves it (' + NEW.filter((r) => r.s === 'live').map((r) => r.id).join(' · ') + ')');
-    ok(BYID['ondc-registry'].s === 'plan' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
+    ok(BYID['ondc-registry'].s === 'np' && /Beckn-compatible, not ONDC-registered/.test(BYID['ondc-registry'].note) && /Beckn-compatible, not ONDC-registered/.test(BYID['beckn-core'].note), 'the recorded decision stands, on both rows: Beckn-compatible, not ONDC-registered');
+    const NPIDS = ['iso24760', 'scim', 'rfc6902', 'ondc-registry', 'ondc-igm', 'ondc-rsf', 'ucp600'];
+    ok(NPIDS.every((id) => BYID[id] && BYID[id].s === 'np' && BYID[id].np && BYID[id].np.length > 15) && REG.S.filter((r) => r.s === 'np').length === NPIDS.length, 'NOT PURSUED (Athi 19 Nov): the ' + NPIDS.length + ' rows carry s:np and a one-line why, and no other row does');
+    await p.click('[data-testid="std-np-open"]'); await p.waitForTimeout(300);
+    ok((await rowIds(p)).length === NPIDS.length && await p.locator('[data-testid="std-row-' + REG.S.findIndex((r) => r.id === NPIDS[0]) + '"]').count() === 1, 'the "not pursued" button lists exactly those ' + NPIDS.length + ' rows (they are listed, never counted)');
+    ok((await p.locator('[data-testid="std-status-more"]').first().textContent()).length > 15, 'and each says why in its status cell');
+    await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(250);
     ok(/200%/.test(BYID['wcag-1.4.4'].w) && BYID['wcag-1.4.4'].s !== 'live' && /132%/.test(BYID['wcag-1.4.4'].m), 'WCAG 1.4.4 says 200%, and says what we test (132%) — not In force');
     ok(BYID['wcag-1.4.6'].s === 'live' && /High Contrast/.test(BYID['wcag-1.4.6'].limit) && /Proof: /.test(BYID['wcag-1.4.6'].note) && !/1\.4\.6/.test(BYID['wcag-1.4.3'].n), 'WCAG 1.4.6 is its own row, In force only with its stated Limit (AAA on the High Contrast themes) and a Proof line; the AA row does not claim it');
     ok(/AAL1/.test(BYID['nist-800-63b'].m) && !/about AAL2/i.test(BYID['nist-800-63b'].m), 'NIST SP 800-63B: one factor is AAL1');

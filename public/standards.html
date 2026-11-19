@@ -205,6 +205,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
 .rc .d{flex:0 0 auto;color:var(--muted);font-size:calc(12px * var(--k,1));white-space:nowrap}
 .rc .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .rc:hover{background:var(--page)}
+.rc.np{margin-top:6px;justify-content:space-between}
 .mx-rh{position:relative}
 .mx-prog{position:absolute;inset-inline:10px;bottom:3px;height:3px;display:flex;border-radius:2px;overflow:hidden;background:var(--line-soft)}
 .mx-prog i{display:block}
@@ -350,12 +351,12 @@ const AREA = (r) => lab(STD_AREAS, r.a),
   PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa),
   KIND = (r) => lab(STD_KINDS, r.k),
   COUNTRY = (r) => r.c.map((item) => lab(STD_COUNTRIES, item)).join(' · '),
-  STATUS = (r) => lab(STD_STATUS, r.s);
-const SORD = { live: 0, part: 1, plan: 2 };
+  STATUS = (r) => lab(STD_STATUS_ALL, r.s);
+const SORD = { live: 0, part: 1, plan: 2, np: 3 };
 function countOf(rows) {
   var n = { live: 0, part: 0, plan: 0 };
   rows.forEach((item) => {
-    n[item.s]++;
+    if (item.s in n) n[item.s]++; /* Not pursued is listed, never counted */
   });
   return n;
 }
@@ -370,7 +371,7 @@ function cmpFig(rows) {
 
 /* ═════ THE DECLARATION — what this page tells CBList ═════ */
 const FILTERS = [
-  { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS.map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.s === v },
+  { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS_ALL.map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.s === v },
   { key: 'area', label: 'Area', all: 'Any', options: STD_AREAS.map((item) => ({ v: item[0], label: item[1] })), match: (x, v) => x.r.a === v },
   /* STDREG1: the PRODUCT area (`pa`, STD_PRODUCT_AREAS) — the part of the product a row lives in, beside the business Area. A filter, a column (⚙) and a
      sort; not a Group by button — a fifth button wraps the toolbar past the head's 20% (the walk measures it) */
@@ -566,7 +567,7 @@ function cols() {
         html: true,
         value: (x) => SORD[x.r.s],
         cell: (x) => {
-          var more = x.r.m ? x.r.m : x.r.limit ? 'limit: ' + x.r.limit : '',
+          var more = x.r.np ? x.r.np : x.r.m ? x.r.m : x.r.limit ? 'limit: ' + x.r.limit : '',
             t = STATUS(x.r) + (more ? ' — ' + more : '');
           return (
             '<span class="st st-' +
@@ -574,7 +575,7 @@ function cols() {
             '" title="' +
             esc(t) +
             '"><span aria-hidden="true">' +
-            esc(lab(STD_STATUS, x.r.s, 2)) +
+            esc(lab(STD_STATUS_ALL, x.r.s, 2)) +
             '</span> ' +
             esc(STATUS(x.r)) +
             '</span>' +
@@ -696,7 +697,7 @@ function openNext(x) {
 /** the opened row's own date: when it joined the register (a compat row's date is in its Proof line) */
 function rowUpdatedHTML(r, ix) {
   if (r.k === 'compat') return '';
-  return '<dt>Last updated</dt><dd data-testid="std-row-updated-' + ix + '">' + (r.added ? esc(stdDateWords(r.added)) : 'In the register from its first release') + '</dd>';
+  return (r.np ? '<dt>Why not pursued</dt><dd data-testid="std-np-why-' + ix + '">' + esc(r.np) + '</dd>' : '') + '<dt>Last updated</dt><dd data-testid="std-row-updated-' + ix + '">' + (r.added ? esc(stdDateWords(r.added)) : 'In the register from its first release') + '</dd>';
 }
 /* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
 function nextOf(x) {
@@ -1092,11 +1093,16 @@ function barHTML(counts, total) {
 /** the head of the matrix pane: the headline, the bar, the date, and the two newest rows */
 function heroHTML(rowsAll, rowsIx) {
   var counts = countOf(rowsAll),
+    notPursued = rowsAll.filter((r) => r.s === 'np').length,
+    total = rowsAll.length - notPursued,
     recent = stdRecent(rowsAll.filter((r) => r.k !== 'build-rule' && r.k !== 'compat'), 2);
   var html =
-    '<section class="hero" data-testid="std-hero" aria-label="Where we stand"><h2 class="hero-h" data-testid="std-headline"><b>' + counts.live + '</b> of ' + rowsAll.length +
-    ' in force · ' + counts.part + ' partly · ' + counts.plan + ' planned</h2>' + barHTML(counts, rowsAll.length) +
-    '<p class="hero-upd" data-testid="std-updated">Last updated ' + esc(stdDateWords(allAt())) + '</p>';
+    '<section class="hero" data-testid="std-hero" aria-label="Where we stand"><h2 class="hero-h" data-testid="std-headline"><b>' + counts.live + '</b> of ' + total +
+    ' in force · ' + counts.part + ' partly · ' + counts.plan + ' planned</h2>' + barHTML(counts, total) +
+    '<p class="hero-upd" data-testid="std-updated">Last updated ' + esc(stdDateWords(allAt())) + '</p>' +
+    (notPursued
+      ? '<button data-cbsid="STD001-B08" type="button" class="rc np" data-mxr="*" data-mxs="np" data-testid="std-np-open"><span class="t">' + notPursued + ' not pursued, with why</span><span class="d">›</span></button>'
+      : '');
   if (recent.length) {
     html += '<div class="recent-h">Added lately</div><ul class="recent" data-testid="std-recent">';
     recent.forEach((r) => {
