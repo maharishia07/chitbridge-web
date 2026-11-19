@@ -46,14 +46,14 @@ of file each thing is; this says what already does the job.
 | 69 | `pack` | `books-store-packs.js` |  |
 | 67 | `host` | `chit-sheet.js` |  |
 | 67 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
+| 66 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 66 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 66 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 65 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
-| 64 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 64 | `open` | `bank-statement-file.js` | The event is written in the same request unless the request is read only (an auditor: |
 | 63 | `toast` | `accounts-shell.js` |  |
+| 63 | `view` | `country-ready.js` |  |
 | 63 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
-| 62 | `view` | `country-ready.js` |  |
 | 62 | `shape` | `books-practice.js` | a client's practice row: |
 | 61 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 61 | `view` | `books-payables.js` | group: |
@@ -78,8 +78,8 @@ of file each thing is; this says what already does the job.
 | 48 | `account` | `home-facts.js` | OMITTED: |
 | 47 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 47 | `rules` | `docnumber.js` | the rule set for a country — |
+| 46 | `open` | `cap-attention.js` | a count pressed: |
 | 45 | `closeModal` | `app.html` |  |
-| 45 | `open` | `cap-attention.js` | a count pressed: |
 | 45 | `refuse` | `bank-rec-log.js` | a refusal in words (422); `code` names the kind when it is not the general one |
 | 45 | `statement` | `books-practice.js` | the one statement a client's books answer ($1 the client, $2 today). |
 | 45 | `gate` | `country-setup.js` | gate(h, entity): |
@@ -102,10 +102,10 @@ of file each thing is; this says what already does the job.
 | 39 | `counts` | `private-flag.js` | counts: |
 | 39 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 39 | `mine` | `crm.js` | `opt.removedOk`: |
+| 38 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 38 | `opts` | `books-grant-filters.js` |  |
 | 38 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
-| 37 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 37 | `money` | `cart.js` |  |
 | 37 | `hold` | `orders.js` |  |
 | 37 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
