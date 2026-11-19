@@ -39,7 +39,7 @@
     root.CBAction.run(
       button,
       function () {
-        return deps.api('booksActionAccept', { params: { id: item.action_id }, body: { store_id: item.store_id, body_hash: item.body_hash, total_minor: item.total_minor, currency: item.currency } });
+        return deps.api('actionsAccept', { params: { id: item.action_id }, body: { store_id: item.store_id, body_hash: item.body_hash, total_minor: item.total_minor, currency: item.currency } });
       },
       {
         key: 'held-accept-' + item.action_id,
@@ -56,7 +56,7 @@
     root.CBAction.run(
       doc.getElementById('held_send'),
       function () {
-        return deps.api('booksActionReturn', { params: { id: item.action_id }, body: { store_id: item.store_id, body_hash: item.body_hash, reason: reason } });
+        return deps.api('actionsReturn', { params: { id: item.action_id }, body: { store_id: item.store_id, body_hash: item.body_hash, reason: reason } });
       },
       {
         key: 'held-return-' + item.action_id,

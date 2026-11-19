@@ -26,9 +26,7 @@ if (typeof EP !== 'undefined') {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
-    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */,
-    booksActionAccept: { m: 'POST', p: '/api/books-actions/:id/accept', idem: 'attempt' } /* SHOPBK-B: the owner accepts a held entry (the one writer posts) */,
-    booksActionReturn: { m: 'POST', p: '/api/books-actions/:id/return', idem: 'attempt' } /* SHOPBK-B: the owner returns it with a note, nothing posts */
+    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
   });
 }
 
