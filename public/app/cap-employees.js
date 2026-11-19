@@ -732,12 +732,14 @@
   }
 
   /* ── add a person ── */
+  /** W6: the picker's first choice: a practice's leads with Bookkeeper (the work), a shop's with Counter staff */
+  function firstChoiceKey() {
+    return E.choices.some(function (item) { return item.key === 'bookkeeper'; }) ? 'bookkeeper' : 'counter';
+  }
   function openAdd() {
-    /* W6: the server's picker for a practice leads with Bookkeeper (the work); a shop's leads with Counter staff */
-    var first = E.choices.some(function (item) { return item.key === 'bookkeeper'; }) ? 'bookkeeper' : 'counter';
     var cs = E.choices
       .map(function (item, index) {
-        return '<option value="' + index + '"' + (item.key === first ? ' selected' : '') + '>' + esc(item.label) + '</option>';
+        return '<option value="' + index + '"' + (item.key === firstChoiceKey() ? ' selected' : '') + '>' + esc(item.label) + '</option>';
       })
       .join('');
     sheet(
