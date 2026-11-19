@@ -49,6 +49,26 @@
       }
     );
   }
+  /** send the note: the server returns the held entry to its Bookkeeper, nothing posts, then the list is read again */
+  function returnWithNote(item, deps) {
+    var doc = root.document;
+    var reason = doc.getElementById('held_reason').value.trim();
+    root.CBAction.run(
+      doc.getElementById('held_send'),
+      function () {
+        return deps.api('booksActionReturn', { params: { id: item.action_id }, body: { store_id: item.store_id, body_hash: item.body_hash, reason: reason } });
+      },
+      {
+        key: 'held-return-' + item.action_id,
+        failed: deps.tx("Not returned. Nothing changed."),
+        out: 'held_out',
+        outcome: function () {
+          deps.closeModal();
+          deps.reload();
+        }
+      }
+    );
+  }
   /** Return asks for a note (3 to 300 characters): the Bookkeeper reads it, nothing is posted */
   function askReturn(item, deps) {
     deps.modal(
@@ -61,24 +81,7 @@
     var doc = root.document;
     doc.getElementById('held_cancel').onclick = deps.closeModal;
     /** Return pressed: the note as typed goes with the entry's body hash; nothing is posted, the list is read again */
-    doc.getElementById('held_send').onclick = function sendReturn() {
-      var reason = doc.getElementById('held_reason').value.trim();
-      root.CBAction.run(
-        doc.getElementById('held_send'),
-        function () {
-          return deps.api('booksActionReturn', { params: { id: item.action_id }, body: { store_id: item.store_id, body_hash: item.body_hash, reason: reason } });
-        },
-        {
-          key: 'held-return-' + item.action_id,
-          failed: deps.tx("Not returned. Nothing changed."),
-          out: 'held_out',
-          outcome: function () {
-            deps.closeModal();
-            deps.reload();
-          }
-        }
-      );
-    };
+    doc.getElementById('held_send').onclick = function () { returnWithNote(item, deps); };
     doc.getElementById('held_reason').focus();
   }
   /** paint the entries under the To do row and wire their buttons; `deps` = { api, tx, esc, money, modal, closeModal, reload } from the page */
