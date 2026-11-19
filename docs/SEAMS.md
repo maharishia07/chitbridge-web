@@ -166,7 +166,7 @@ of file each thing is; this says what already does the job.
 | 24 | `field` | `ui-field.js` | the part: |
 | 24 | `setting` | `books-store.js` | FROM books_setting s LEFT JOIN identities i ON i.identity_id = s.entity_id WHERE s.entity_id = $1`; |
 | 24 | `update` | `folder-rules.js` |  |
-| 23 | `done` | `attach-ui.js` |  |
+| 24 | `done` | `attach-ui.js` |  |
 | 23 | `figures` | `bank-demo.js` |  |
 | 23 | `more` | `lab-kit.js` | idKey: |
 | 23 | `dialog` | `ui.js` | ui.dialog({ mount, title · titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bod |

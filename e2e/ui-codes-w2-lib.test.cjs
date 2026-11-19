@@ -3,7 +3,7 @@
 /**
  * ui-codes-w2-lib.test.cjs - the shared library scripts and the Standards page wear their identity codes (UX-137, queue 359 lane w2-lib).
  *
- * OWNS      the proof that 23 elements drawn by shared scripts carry a data-cbsid code, that each code sits INSIDE its own tag (a marker only that
+ * OWNS      the proof that 25 elements drawn by shared scripts carry a data-cbsid code, that each code sits INSIDE its own tag (a marker only that
  *           element carries must follow the code before the next code starts, or sit just before it), that no code is written twice, and that
  *           the choice component's three tags in ui.js carry CMP025-B01 as a literal (a census could not see it while it came through a list).
  *           Screens: STD001 Standards (standards.html + its register script), SCR038 Helpers, SCR039 Step flow, SCR040 Attach, SCR041 List legacy,
@@ -40,6 +40,8 @@ const WANT = {
   'STD001-B04': ['standards.html', 'std-open-why'],
   'STD001-B05': ['standards.html', 'std-open-record'],
   'STD001-B06': ['app/cap-standards.js', 'style="font:inherit'],
+  'STD001-B07': ['standards.html', 'data-recent'],
+  'STD001-B08': ['standards.html', 'std-np-open'],
   'SCR038-B01': ['app/helpers.js', 'empty-act'],
   'SCR039-B01': ['app/step-flow.js', 'tidBack'],
   'SCR039-B02': ['app/step-flow.js', 'tidDraft'],
@@ -80,7 +82,7 @@ Object.keys(SRC).filter((f) => f !== 'app/ui.js').forEach((f) => {
 });
 const dup = written.filter((c, i) => written.indexOf(c) !== i);
 check(dup.length === 0, 'no code is written on two elements' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(written.length === 23 && Object.keys(WANT).length === 23, 'the files hold 23 coded elements, counted by code: ' + written.length + ' written, ' + Object.keys(WANT).length + ' expected');
+check(written.length === 25 && Object.keys(WANT).length === 25, 'the files hold 25 coded elements, counted by code: ' + written.length + ' written, ' + Object.keys(WANT).length + ' expected');
 
 /** ui.js: the three choice tags write the component code as a literal, none of them through the attribute list */
 const choiceTags = SRC['app/ui.js'].split("'<button data-cbsid=" + '"CMP025-B01"' + " ' + attributeList(").length - 1;

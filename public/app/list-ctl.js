@@ -2130,7 +2130,7 @@ ctx.limit = inst.limit;
       ctx.end +
       footHTML(inst);
     setHdrH(inst, ctx.box);
-    wrapCut(ctx.box);
+    if (inst.o.wrapCut !== false) wrapCut(ctx.box); /* wrapCut:false = a list that keeps ONE LINE per row: a cut cell ends in … and its full words are the title and the opened row */
     ctx.box.scrollTop = ctx.keepTop;
   }
   /** ONE LINE keeps a cell on one line while its words fit; a cell whose words do NOT fit its column wraps instead of being cut (standard: no clipped text; a person who cannot read well must never meet half a word). Read all, then write, so the paint costs one layout. */

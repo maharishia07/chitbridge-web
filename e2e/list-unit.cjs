@@ -3,7 +3,7 @@
  *
  * The page under test is public/list-lab.html: it loads ONE script (/app/list-ctl.js) and defines nothing the list needs from a host.
  *   1  works with NO host globals: every name the old list-ctl.js borrowed (tx · esc · uk · UI · mvBtn · emptyState · lazyWrap …) is a
- *      trap that records a read; loading the file adds exactly one global (CBList); nothing was read
+ *      trap that records a read; loading the file adds exactly two globals (CBList, CBListParts); nothing was read
  *   2  storage that THROWS still renders, and a choice (a ticked column) still holds for the session
  *   3  390 px: no sideways scroll, on every list, in grid and in lines
  *   4  keyboard: ↑ ↓ move between rows · Enter opens · ← → open / close · Esc closes a popover and gives the focus back · ← → on a column edge resize by 8 px
@@ -84,11 +84,11 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
     await p0.goto('about:blank');
     const added = await p0.evaluate(async (src) => {
       const before = Object.getOwnPropertyNames(window);
-      await new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+      for (const part of ['list-ctl-css.js', 'list-ctl-click.js', 'list-ctl-wire.js', 'list-ctl.js']) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = src.replace('list-ctl.js', part); s.onload = res; s.onerror = rej; document.head.appendChild(s); }); /* the unit is four files since shrink W2: its three parts load first */
       return Object.getOwnPropertyNames(window).filter((k) => before.indexOf(k) < 0);
     }, S.url('/app/list-ctl.js')).catch(() => null);
     /* about:blank cannot load a cross-origin script on every build — fall back to the lab page itself */
-    if (added) ok(added.length === 1 && added[0] === 'CBList', 'loading list-ctl.js adds exactly one global: ' + JSON.stringify(added));
+    if (added) ok(added.slice().sort().join() === 'CBList,CBListParts', 'loading the list control (list-ctl.js and its three parts) adds exactly two globals, CBList and its CBListParts namespace: ' + JSON.stringify(added));
     await c0.close();
   }
   const { ctx, p } = await open();
