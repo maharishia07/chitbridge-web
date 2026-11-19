@@ -956,7 +956,7 @@ async function enSaveWrite() {
     if (EN.saved.state === 'waiting_accept' && EN.saved.action_id && !EN.saved.entry_no) {
       /* SHOPBK-B: the owner asked to OK entries first: the server answered 202 with the held entry, nothing is in the books yet, so the Day book and the opener are not told of an entry */
       EN.saved.held = true;
-      if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {});
+      if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function (failure) { if (typeof cbQuiet === 'function') cbQuiet('entry held: the to-do count was not refreshed', failure); }); /* best effort: the sheet says Sent to the owner either way */
     } else if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
