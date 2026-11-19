@@ -613,7 +613,7 @@
     var cur = p.access;
     var cs = E.choices
       .map(function (item, index) {
-        var on = item.level === cur.level && item.whole_entity === cur.whole_entity && item.can_see_costs === cur.can_see_costs;
+        var on = item.label === cur.label; /* the server names the preset the three facts and the hat make (lib/access presetFor): the label is the one answer, so Bookkeeper and Regional manager are never both ticked */
         return (
           '<label class="emp-opt"><input data-cbsid="EMP001-I01" type="radio" name="emp_lvl" value="' +
           index +
@@ -640,7 +640,7 @@
         function () {
           return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), {
             access_level: c.level,
-            hat: HAT_OF[c.level] || 'act',
+            hat: c.hat || HAT_OF[c.level] || 'act' /* a pinned seat (Bookkeeper) carries its own hat */,
             whole_entity: c.whole_entity,
             can_see_costs: c.can_see_costs
           });
@@ -797,7 +797,7 @@
         phone: $('emp_p').value.trim() || undefined,
         email: $('emp_e').value.trim() || undefined,
         access_level: c.level,
-        hat: HAT_OF[c.level] || 'act',
+        hat: c.hat || HAT_OF[c.level] || 'act' /* a pinned seat (Bookkeeper) carries its own hat */,
         whole_entity: !!c.whole_entity
       };
       root.CBAction.run(

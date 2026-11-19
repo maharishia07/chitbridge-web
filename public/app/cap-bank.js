@@ -136,7 +136,7 @@ function bankAcctPick(code, loading) {
 /** one step action: the engine's step, the device copy, then the shared record */
 /** an acting adviser works the bank page for the client; the owner's own login too. Only the owner's grant decides whether the adviser may POST (the server stays the authority) */
 const bkbActing = () => typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser();
-const bkbMayAct = () => peOwner() || bkbActing();
+const bkbMayAct = () => peOwner() || bkbActing() || (typeof bkIsBookkeeper === 'function' && bkIsBookkeeper()); /* W26: the shop's own Bookkeeper adds statements, matches and signs off months; the api's editor gate allows it, the server stays the authority */
 /** W15-71: the auditor's seat reads the bank (home, kept files, a month's lines, who matched, the sign-off) and writes nothing: no Add, Post, Match, Note, Sign off or Reopen is drawn, and the rail (party and bank details) is not asked */
 const bkbReadOnly = () => typeof bkReadOnlySeat === 'function' && bkReadOnlySeat();
 /** the sentence for an adviser whose grant does not post straight into these books ('' when the person may act) */

@@ -5752,6 +5752,20 @@ function bkReadOnlySeat() {
 function bkIsOwner() {
   return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity' && !bkReadOnlySeat();
 } /* the server enforces it; this only decides who is offered the buttons */
+/**
+ * W26: the shop's own Bookkeeper (an in-house seat the owner gave the books to). The SERVER says what the seat may do — GET /bank/statement-files carries may { write, post } (the same tests the writes gate on) —
+ * and bkSeatRead keeps the answer; the page holds no rule of its own. bkIsBookkeeper() is true only for a signed-in shop employee the server lets write; it never makes a seat the owner
+ * (lock, year close, reverse and the rest stay on bkIsOwner). BK_SEAT.post = may record entries (POST /events), so a bank line can be added from the sheet.
+ */
+var BK_SEAT = { write: false, post: false };
+function bkSeatRead(reply) {
+  var may = (reply && reply.may) || {};
+  BK_SEAT.write = !!(may.write && may.write.may === true);
+  BK_SEAT.post = !!(may.post && may.post.ok === true);
+}
+function bkIsBookkeeper() {
+  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'actor' && !bkReadOnlySeat() && BK_SEAT.write;
+}
 var BK_PERIOD_SYM = { open: '○', soft_locked: '🔒', hard_locked: '⛔' };
 /**
  * ⭐ ONE READ of the twelve months: GET /api/books/periods (no fy) answers every month of every year the data holds, with its

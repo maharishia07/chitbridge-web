@@ -25,6 +25,7 @@
     state.el.innerHTML =
       '<div class="emp-give" data-testid="emp-give" style="max-width:560px"><label class="sub" for="emp_give_who">' + root.esc(words('Who gets the work?')) + '</label>' +
       '<select data-cbsid="BKS027-S01" id="emp_give_who" class="inp" data-testid="emp-give-who"><option value="">' + root.esc(words('Choose a person')) + '</option>' + opts + '</select>' +
+      (opts ? '' : '<p class="sub" data-testid="emp-give-none">' + root.esc(words('Add a person to your team first.')) + '</p>') +
       '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div><div id="emp_more"></div></div>';
     if (keep) el('emp_out').textContent = keep;
     el('emp_give_who').onchange = function () {

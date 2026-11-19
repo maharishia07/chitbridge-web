@@ -15,7 +15,7 @@
   /** why this login may not post (the server decides; this only says it first, once); null when it may */
   function ownerRefusal(who) {
     if (who && who.role === 'adviser') return who.posts ? null : catalogueText('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.'); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
-    return who && who.role && who.role !== 'owner' ? catalogueText('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
+    return who && who.role && who.role !== 'owner' && who.role !== 'bookkeeper' ? catalogueText('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
   }
   /** one catalogue sentence: the page's tx() when it has one */
   function catalogueText(s) {
