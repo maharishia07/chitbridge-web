@@ -277,6 +277,9 @@ function build() {
       .sort()
       .forEach((item) => addFile('engines', item, /[\\/]reg-[a-z]+\.js$/.test(item) ? 'pack' : 'engine'));
     addFile('engines', path.join(E, 'index.js'), 'engine');
+    walk(path.join(E, 'tools'), (p) => /\.c?js$/.test(p))
+      .sort()
+      .forEach((item) => addFile('engines', item, 'engine'));
     walk(path.join(E, 'tests'), (p) => /\.(cjs|js)$/.test(p) && !/[\\/]fixtures[\\/]/.test(p))
       .sort()
       .forEach((item) => addFile('engines', item, 'test'));
