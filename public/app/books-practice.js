@@ -111,7 +111,7 @@
   }
   /** a firm: it holds clients by live grants and has no trade of its own: the DATA says so (the server's own_trade), never a trade switch */
   function isFirm() {
-    return !!(practiceKit.practiceState.data && practiceKit.practiceState.data.clients && practiceKit.practiceState.data.clients.length && practiceKit.practiceState.data.own_trade === false);
+    return !!(practiceKit.practiceState.data && practiceKit.practiceState.data.clients && ((practiceKit.practiceState.data.clients.length && practiceKit.practiceState.data.own_trade === false) || practiceKit.practiceState.data.practice_empty === true));
   }
   function hidesShopCards(id) {
     return isFirm() && !FIRM_KEEPS[id];
@@ -250,19 +250,12 @@
   function reloadAfterAssign() {
     return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
   }
-  /** ASSIGN-1: the list's bulk actions (assign · hand over · back to pool · open jobs): generic CBAssign with this list's plug and row facts; [] when the bar is not for this person */
-  function bulkActions() {
-    return !holdersOn() || !root.CBAssign ? [] : root.CBAssign.bulk(assignOpts());
-  }
   /** ASSIGN-W2: the plug, the noun and the row facts of THIS list, read by the chip, the bar, the keys and Undo; "said" is the server's verdict (may_assign) and nothing else */
   function assignOpts() {
-    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', noun: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
+    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', noun: 'client', listKey: 'practice-clients-' + practiceKit.bandNow(), subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
   }
-  /** I3 + walk 19 Nov: a person who HOLDS work opens on Mine (0 clicks); a seat that may not assign (staff) opens on Mine too; the rest on Everyone. The server's verdict (may_assign) and holders decide, only when the page knows who the person is */
-  function defaultHeld() {
-    var d = practiceKit.practiceState.data, me = holdersOn() && root.CBAssign.meId(), holds = !!me && ((d && d.clients) || []).some(function (r) { return root.CBAssign.heldFilter([r]).match(r, 'mine'); });
-    return me && d && (holds || d.may_assign === false) ? { held: 'mine' } : {};
-  }
+  /** the ONE work-queue capability (CBAssign.queue): views Mine · Unassigned · Everyone, the tick-bar, the opening view (Mine for a seat that holds work or may not assign), ticks cleared after every assign; {} when the server sent no holders */
+  function practiceQueue() { var d = practiceKit.practiceState.data; return holdersOn() ? root.CBAssign.queue(Object.assign(assignOpts(), { key: 'practice-clients-' + practiceKit.bandNow(), rows: d.clients, everyone: d.may_assign !== false })) : {}; }
   /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
   function heldFilterOf(filterOf) {
     var held = root.CBAssign.heldFilter((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []);
@@ -300,15 +293,15 @@
   }
   /** the client list: its key, rows, columns, sorts, filters, search and empty state */
   function listOptions(rows, bandKey) {
-    return {
+    var queue = practiceQueue(); return {
       key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : { filt: defaultHeld() },
+      columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : queue.preset || { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
-      empty: { title: translate('No clients match') },
+      empty: { title: translate(practiceKit.practiceState.data.practice_empty ? 'No clients yet' : 'No clients match') },
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; },
-      bulk: bulkActions(), bulkAlways: holdersOn() && !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), /* ASSIGN-W2: ticks always on, the bar on the first tick */
-      views: holdersOn() ? root.CBAssign.quickViews() : undefined /* Mine · Unassigned · Everyone */
+      bulk: queue.bulk || [], bulkAlways: !!queue.bulkAlways, /* ASSIGN-W2: ticks always on, the bar on the first tick */
+      views: queue.views /* Mine · Unassigned · Everyone */
     };
   }
   function practiceCss() {
@@ -417,7 +410,7 @@
   }
   /** l16 R5-2: Home paints ONLY the loading frame while this login may be a firm (signed in, and the last answer for this login was not "a shop"): no shop card, no card facts, until settled() answers.
       A login known to be a shop (hint 0) paints at once as before, so an owner is never slower. */
-  var holding = !!token() && hintRaw() !== '0';
+  var holding = !!token() && hintRaw() !== '0', meSays; /* meSays: /me's is_practice (true | false), undefined until /me answers */
   function release() {
     if (!holding) return;
     holding = false;
@@ -427,7 +420,7 @@
   root.document.addEventListener('cb:me', function (ev) {
     var says = ev && ev.detail && ev.detail.is_practice;
     if (typeof says !== 'boolean') return;
-    hint(says);
+    meSays = says; hint(says);
     if (!says) release();
   });
   if (holding) {
@@ -502,7 +495,8 @@
       practiceKit.practiceState.since = Date.now();
       read().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
-        if (!answer || !answer.clients || !answer.clients.length) { hint(false); return settle(); }
+        if (answer && answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1'))) answer.practice_empty = true; /* W15: a firm's employee who holds no client yet is still on the practice (its own empty screen), never the shop Home */
+        if (!answer || !answer.clients || (!answer.clients.length && !answer.practice_empty)) { hint(false); return settle(); }
         practiceKit.practiceState.data = answer;
         hint(answer.own_trade === false);
         markFirm();

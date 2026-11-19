@@ -177,6 +177,7 @@
  "public/app/cap-suppliers.js":["public/app.html","public/operations.html"],
  "public/app/cap-supplies.js":"*",
  "public/app/cap-tasks.js":["public/tasks.html"],
+ "public/app/cap-tasks-assign.js":["public/tasks.html"],
  "public/app/cap-testing.js":"*",
  "public/app/cap-traceability.js":"*",
  "public/app/cap-workforce.js":"*",

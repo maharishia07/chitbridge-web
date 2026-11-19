@@ -243,6 +243,7 @@
         prio: 2,
         w: 230,
         mono: true,
+        wrap: true /* the whole sign-in name, wrapped, never cut (W10) */,
         cell: function (p) {
           return Copy.signInName(p.user_id) || '—';
         }
@@ -766,24 +767,15 @@
         esc(T('Add')) +
         '</button></form>'
     );
-    var typedKey = false,
-      tm = null;
-    $('emp_k').oninput = function () {
-      typedKey = true;
-    };
+    var tm = null,
+      /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
+      kw = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T);
     $('emp_n').oninput = function () {
       clearTimeout(tm);
       var name = $('emp_n').value.trim();
-      if (typedKey || name.length < 2) return;
+      if (kw.typed() || name.length < 2) return;
       tm = setTimeout(function () {
-        call('POST', '/api/actors/suggest-key', { display_name: name }).then(
-          function (reply) {
-            if (typedKey) return;
-            $('emp_k').value = reply.suggested_key || '';
-            $('emp_kn').textContent = reply.login_format ? T('They sign in as') + ' ' + reply.login_format : '';
-          },
-          function () {}
-        );
+        kw.ask(name, function (reply) { $('emp_k').value = reply.suggested_key || ''; });
       }, 300);
     };
     $('emp_add_go').onclick = function () {
