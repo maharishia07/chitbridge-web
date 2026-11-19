@@ -53,13 +53,13 @@
   };
   /** W19: why a client's books did not open, said by the SERVER'S refusal code (api middleware/books-grant, lib/books-grant WORDS): [what happened, what to do]. A code not listed keeps the server's own words and no next step. */
   var CLOSED_BOOKS = {
-    BOOKS_GRANT_NOT_ASSIGNED: ['This client is not assigned to you.', 'Pick it up from Unassigned in your queue, or ask the partner to assign it.'],
-    BOOKS_GRANT_NONE: ['Your firm has no access to these books.', 'Ask the owner of the business to give your firm access.'],
-    BOOKS_GRANT_ENDED: ["Your firm's access to these books has ended.", 'Ask the owner of the business to give access again.'],
-    BOOKS_GRANT_NOT_LIVE: ['Your firm is not connected to this business now.', 'Ask the owner of the business to connect again.'],
-    BOOKS_GRANT_NOT_FOR_YOU: ["Your role does not open other businesses' books.", 'Ask the firm partner to change your role.'],
-    GRANT_ROUTE_NOT_LISTED: ['Your role reads only part of these books, and this part is not open to it.', 'Ask the firm partner to change your role.'],
-    GRANT_READ_ONLY: ['Your role reads these books and cannot change them.', 'Ask the firm partner to change your role.']
+    BOOKS_GRANT_NOT_ASSIGNED: ['This client is not assigned to you.', 'Take it from Unassigned, or ask the partner.'],
+    BOOKS_GRANT_NONE: ['Your firm has no access to these books.', 'Ask the business owner to give access.'],
+    BOOKS_GRANT_ENDED: ["Your firm's access has ended.", 'Ask the business owner to give it again.'],
+    BOOKS_GRANT_NOT_LIVE: ['Your firm is not connected to this business.', 'Ask the business owner to connect again.'],
+    BOOKS_GRANT_NOT_FOR_YOU: ["Your role cannot open other businesses' books.", 'Ask the partner to change your role.'],
+    GRANT_ROUTE_NOT_LISTED: ['Your role cannot open this part.', 'Ask the partner to change your role.'],
+    GRANT_READ_ONLY: ['Your role can read, not change.', 'Ask the partner to change your role.']
   };
   /** closedBooks(code, fallback) → { why, next } for the refusal page: the sentence and what to do, or the server's own sentence alone */
   function closedBooks(code, fallback) {

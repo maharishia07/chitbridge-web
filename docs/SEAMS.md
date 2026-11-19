@@ -95,6 +95,7 @@ of file each thing is; this says what already does the job.
 | 41 | `owner` | `books.js` |  |
 | 40 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 39 | `order` | `cap-iddocs.js` | var LIST = null; |
+| 39 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 39 | `changes` | `books-store.js` |  |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 39 | `flags` | `cmdb.js` | the flags a record raises about itself — |
@@ -104,7 +105,6 @@ of file each thing is; this says what already does the job.
 | 39 | `mine` | `crm.js` | `opt.removedOk`: |
 | 38 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 38 | `opts` | `books-grant-filters.js` |  |
-| 38 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 37 | `money` | `cart.js` |  |
 | 37 | `hold` | `orders.js` |  |
@@ -156,13 +156,13 @@ of file each thing is; this says what already does the job.
 | 26 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 26 | `match` | `itemmatch.js` | actually state. |
 | 25 | `side` | `books-grant-reports.js` |  |
+| 25 | `step` | `cart.js` |  |
 | 25 | `cblog` | `core.js` | const __cblog = []; |
 | 25 | `textOf` | `bank-statement-file.js` | the file's text: |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 25 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 25 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 24 | `done` | `attach-ui.js` |  |
-| 24 | `step` | `cart.js` |  |
 | 24 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 24 | `check` | `network-app.js` |  |
 | 24 | `field` | `ui-field.js` | the part: |
@@ -194,6 +194,7 @@ of file each thing is; this says what already does the job.
 | 21 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 21 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
 | 20 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
+| 20 | `said` | `cap-shop.js` |  |
 | 20 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 20 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 20 | `verdict` | `rail-thread.js` |  |
@@ -207,5 +208,4 @@ of file each thing is; this says what already does the job.
 | 19 | `cols` | `cap-catalogue.js` |  |
 | 19 | `query` | `cap-dispute.js` |  |
 | 19 | `account` | `cap-settings.js` |  |
-| 19 | `said` | `cap-shop.js` |  |
 | 19 | `confirm` | `lab-kit.js` | opts: |
