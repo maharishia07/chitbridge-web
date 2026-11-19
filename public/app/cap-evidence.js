@@ -2,6 +2,7 @@
  * cap-evidence.js — CMP062 the Evidence chip and CMP063 the Evidence sheet: what stands behind a books row (ASA 500: the auditor vouches an entry to its source).
  * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: an opening balance, a receipt or a journal, so nothing to attach to; the firm, owner and adviser Day books paint a quiet dash there, not a pill), or, for a purchase that claims GST above the tax-invoice threshold with no file,
  * No tax invoice (a warning). A press opens the sheet: the source document (its number) and its files; a file opens in a new tab.
+ * S1 (b887): the sheet of a seat that may attach (cfg.mayAttach) carries CMP063-B03 "Attach receipt" (a file on the entry itself; the server decides the type, the size and the seat) and the exact-copy note (evidence.duplicate, the server's own words).
  *
  * OWNS      the chip html · the sheet · the one door a file is read through (GET /api/books/evidence/:id, with the seat's own headers, never cached)
  * CALLED BY cap-books.js (the owner's and the adviser's Day book) · books-grant-view.js (the auditor's Day book) · books-grant-drill.js (the entry sheet)
@@ -42,7 +43,12 @@
     claimRiskOne: '{amount}{kind} if the {n} purchase without a tax invoice is not claimed',
     claimRiskMany: '{amount}{kind} if the {n} purchases without a tax invoice are not claimed',
     claimBox: 'the tax you claim',
-    claimSee: 'See them'
+    claimSee: 'See them',
+    attach: 'Attach receipt',
+    attaching: 'Attaching…',
+    attached: 'Receipt attached.',
+    attachFailed: 'Could not attach that file. Nothing was changed.',
+    twin: 'Check: same file as entry {no}'
   };
   var EVIDENCE_CSS =
     '.ev{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#DDD6C6);border-radius:99px;background:var(--card,#fff);color:inherit;font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 10px;min-height:28px;cursor:pointer;white-space:nowrap}' +
@@ -168,31 +174,56 @@
     : evidence.doc ? '<div class="ev-sub" data-testid="ev-nofiles">' + esc(evidenceText(EVIDENCE_WORDS.noFiles)) + '</div>' : '';
     return files;
   }
+  /** S1: the exact-copy note (the server found the very same file on another entry of this shop) and, for a seat that may attach, the Attach receipt control */
+  function attachHTML(evidence, canAttach) {
+    var d = evidence.duplicate;
+    var note = d ? '<div class="ev-warnbox" role="status" data-testid="ev-duplicate">' + esc(d.note || evidenceText(EVIDENCE_WORDS.twin).replace('{no}', d.entry_no)) + '</div>' : '';
+    var button = canAttach ? '<button type="button" class="ev-file" data-cbsid="CMP063-B03" data-ev-attach="1" data-testid="ev-attach"><b>' + esc(evidenceText(EVIDENCE_WORDS.attach)) + '</b><span>JPEG · PNG · PDF</span></button>' : '';
+    return note + button;
+  }
   /** the sheet's body: the flag's reason, where the entry's source is, and its files */
-  function sheetHTML(evidence, no) {
+  function sheetHTML(evidence, no, canAttach) {
     var flag = evidence.flag === 'no_tax_invoice' ? '<div class="ev-warnbox" role="status" data-testid="ev-flag">' + esc(evidence.flag_why || evidenceText(EVIDENCE_WORDS.flagWhy).replace('{tax}', (typeof packWord === 'function' && packWord('taxName')) || 'Tax')) + (evidence.cite ? '<small>' + esc(evidenceText(EVIDENCE_WORDS.rule)) + ': ' + esc(evidence.cite) + '</small>' : '') + '</div>' : '';
     var srcLine = evidence.doc ? '<div data-testid="ev-source"><b>' + esc(evidenceText(EVIDENCE_WORDS.source)) + '</b>: ' + esc(evidence.doc.ref || '') + '</div>' : '<div class="ev-sub" data-testid="ev-source">' + esc(evidenceText(EVIDENCE_WORDS.noSource)) + '</div>';
     var files = filesHTML(evidence);
     return (
       '<div class="ev-in"><div class="ev-hd"><h2 data-testid="ev-title">' + esc(evidenceText(EVIDENCE_WORDS.head).replace('{no}', no)) + '</h2>' +
       '<button type="button" class="ev-x" data-cbsid="CMP063-B01" data-ev-close="1" aria-label="' + esc(evidenceText(EVIDENCE_WORDS.close)) + '">✕</button></div>' +
-      flag + srcLine + files + '<div class="ev-out" role="status" data-testid="ev-out"></div></div>'
+      flag + srcLine + files + attachHTML(evidence, canAttach) + '<div class="ev-out" role="status" data-testid="ev-out"></div></div>'
     );
   }
   /** a press in the sheet closes it or opens a file; closing gives the focus back to the chip that opened it */
-  function wireSheet(dialog, control, evidence, options) {
+  function wireSheet(dialog, control, evidence, options, entry) {
     var out = dialog.querySelector('.ev-out');
     dialog.addEventListener('click', function (e) {
       var t = e.target && e.target.closest ? e.target.closest('button') : null;
       if (!t) return;
       if (t.hasAttribute('data-ev-close')) dialog.close();
       else if (t.hasAttribute('data-ev-file')) openFile(control, evidence.files[Number(t.getAttribute('data-ev-file'))], out);
+      else if (t.hasAttribute('data-ev-attach')) attachFile(control, entry, dialog, out);
     });
     dialog.addEventListener('close', function () {
       dialog.remove();
       if (options.opener && options.opener.focus) try { options.opener.focus(); } catch (failure) { if (root.cbQuiet) root.cbQuiet('evidence:focus', failure); /* the row repainted */ }
     });
     return out;
+  }
+  /** S1: pick a file and put it on the entry through the page's own door (cfg.attach(entry) → a promise; it refuses in the server's words); then the page repaints (cfg.after) and the sheet closes */
+  function attachFile(control, entry, dialog, out) {
+    out.removeAttribute('data-tone');
+    out.textContent = '';
+    return control.cfg.attach(entry).then(
+      function (done) {
+        if (!done) return; /* cancelled: nothing to say */
+        out.textContent = evidenceText(EVIDENCE_WORDS.attached);
+        if (control.cfg.after) control.cfg.after(entry);
+        dialog.close();
+      },
+      function (failure) {
+        out.setAttribute('data-tone', 'error');
+        out.textContent = (failure && failure.message) || evidenceText(EVIDENCE_WORDS.attachFailed);
+      }
+    );
   }
   /** CMP063 the sheet */
   function openSheet(control, entry, options) {
@@ -206,9 +237,9 @@
     dialog.setAttribute('data-testid', 'ev-sheet');
     var no = entry.entry_no || '';
     dialog.setAttribute('aria-label', evidenceText(EVIDENCE_WORDS.head).replace('{no}', no));
-    dialog.innerHTML = sheetHTML(evidence, no);
+    dialog.innerHTML = sheetHTML(evidence, no, !!(control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach()));
     (doc.body || doc.documentElement).appendChild(dialog);
-    wireSheet(dialog, control, evidence, options);
+    wireSheet(dialog, control, evidence, options, entry);
     if (dialog.showModal) dialog.showModal();
     else dialog.setAttribute('open', '');
     var first = dialog.querySelector('.ev-file') || dialog.querySelector('.ev-x');

@@ -2851,9 +2851,26 @@ function bkEvidenceIngest(list) {
     BK.ev = CBEvidence.use({
       raw: function (path) {
         return fetch(CFG.API_BASE + path, { cache: 'no-store', headers: CBBooksActing.authHeaders() });
-      }
+      },
+      mayAttach: function () { return bkIsOwner() || bkIsBookkeeper(); } /* the server decides again (POST /api/attachments with entry_id: owner or an edit seat; never a firm) */,
+      attach: bkAttachToEntry,
+      after: function () { bkTab('daybook', true); }
     });
   BK.ev.ingest(list);
+}
+/** S1 (b887): a receipt on a posted entry: the page's one file picker and size/empty check (attach-ui.js), then POST /api/attachments { entry_id } — the server checks the seat, the type by its bytes and the entry; → the answer, or null when the picker was cancelled */
+function bkAttachToEntry(entry) {
+  return cbAttachChoose().then(function (file) {
+    if (!file || !cbAttachAccept(file)) return null;
+    return cbAttachB64(file).then(function (data) {
+      return fetch(CFG.API_BASE + '/api/attachments', { method: 'POST', cache: 'no-store', headers: Object.assign(CBBooksActing.tokenHeader(), { 'Content-Type': 'application/json' }), body: JSON.stringify({ entry_id: entry.entry_id, name: file.name, mime: file.type || 'application/octet-stream', data_base64: data }) }).then(function (r) {
+        return r.json().catch(function (failure) { return bkQuiet('attach-entry', failure, {}); }).then(function (j) {
+          if (!r.ok) throw new Error(j.detail || j.message || j.error || 'API ' + r.status);
+          return j;
+        });
+      });
+    });
+  });
 }
 /**
  * CMP066 (cap-flag.js): the owner's own private bookmarks and notes on this business's entries. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the caller's own organisation.
