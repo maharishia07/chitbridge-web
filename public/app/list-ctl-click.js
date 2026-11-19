@@ -279,6 +279,10 @@ ctx.o = list.o;
       paintAll(list);
       return true;
     }
+    if (ctx.b.hasAttribute('data-cbl-emptyact')) {
+      if (list.emptyRun) safe(list.emptyRun); /* H3: the empty state's own one action (the work queue's "Pick up the next one") */
+      return true;
+    }
     if (ctx.b.hasAttribute('data-cbl-retry')) {
       if (ctx.o.onRetry)
         safe(function () {

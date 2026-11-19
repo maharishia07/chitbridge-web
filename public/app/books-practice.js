@@ -301,7 +301,8 @@
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; },
       bulk: queue.bulk || [], bulkAlways: !!queue.bulkAlways, /* ASSIGN-W2: ticks always on, the bar on the first tick */
-      views: queue.views /* Mine · Unassigned · Everyone */
+      views: queue.views, /* Mine · Unassigned · Everyone */
+      emptyFor: queue.emptyFor /* H3: one empty state, "Nothing waiting for you · N unassigned · Pick up the next one" */
     };
   }
   function practiceCss() {

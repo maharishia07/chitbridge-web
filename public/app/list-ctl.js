@@ -2002,7 +2002,15 @@ ctx.items = itemsOf(inst, ctx.m.rows);
   function paintListStep5(inst, ctx) {
     if (!ctx.m.rows.length) {
       var narrowed = isNarrowed(inst);
-      if (ctx.m.all.length && narrowed && !remote(inst)) {
+      /* H3 (20 Nov): a list may say its own empty words for a narrowing that is not a failed search (the work queue's Mine · Unassigned): o.emptyFor({ filt, q, total }) → { title, sub, actionLabel, run } */
+      var own = ctx.m.all.length && narrowed && !remote(inst) && !ctx.R.q && ctx.o.emptyFor ? safe(function () { return ctx.o.emptyFor({ filt: ctx.R.filt, q: ctx.R.q, total: ctx.m.all.length }); }, null) : null;
+      inst.emptyRun = own && own.run ? own.run : null;
+      if (own && own.title) {
+        ctx.box.innerHTML =
+          '<div class="cbl-state" data-testid="cbl-empty-own-' + esc(inst.key) + '"><div class="big">' + esc(own.title) + '</div>' + esc(own.sub || '') +
+          (own.actionLabel ? '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-emptyact data-testid="cbl-empty-act">' + esc(own.actionLabel) + '</button>' : '') +
+          '</div>';
+      } else if (ctx.m.all.length && narrowed && !remote(inst)) {
         ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +
           esc(inst.key) +

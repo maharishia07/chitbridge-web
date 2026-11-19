@@ -253,6 +253,17 @@
       return opts.reload ? opts.reload() : null;
     });
   }
+  /** H3 (20 Nov): the ONE empty state of the work queue, the same in every place: "Nothing waiting for you · N unassigned" with ONE press, "Pick up the next one" (the person who may assign takes the first unassigned item; the list reloads on Mine) */
+  function queueEmpty(opts, rows, state) {
+    var views = Object.keys(state.filt || {}).filter(function (k) { return state.filt[k]; });
+    if (views.length !== 1 || views[0] !== 'held') return null; /* some other narrowing too: the list's own words */
+    var pool = rows.filter(function (r) { return Array.isArray(r.holders) && !r.holders.length; });
+    if (state.filt.held === 'none') return { title: tr('Nothing unassigned'), sub: tr('Everything has someone on it.') };
+    if (state.filt.held !== 'mine') return null;
+    var sub = pool.length ? sayText('{n} unassigned', { n: pool.length }) : tr('Nothing is unassigned either.');
+    var take = pool.length && assignApi.showsBar(opts.said) && assignApi.meId();
+    return { title: tr('Nothing waiting for you'), sub: sub, actionLabel: take ? tr('Pick up the next one') : '', run: take ? function () { takeFor(opts, [pool[0]]); } : null };
+  }
   /**
    * CBAssign.queue(q) → the options a list merges into its CBList.mount: THE WORK-QUEUE CAPABILITY (Athi 19 Nov: "the capability, so we can use it anywhere"). q = the assign options (plug · noun · nounMany · subjectOf · roleOf · said · reload · write? · heldOf? · flag?)
    * + { key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
@@ -262,7 +273,9 @@
     var rows = q.rows || [], me = assignApi.meId(), held = assignApi.heldFilter(rows);
     if (!assignApi.hasHolders(rows)) return {};
     var holds = !!me && rows.some(function (r) { return held.match(r, 'mine'); });
-    return { views: assignApi.quickViews(), bulk: assignApi.bulk(Object.assign({ listKey: q.key }, q)), bulkAlways: assignApi.showsBar(q.said), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+    var opts = Object.assign({ listKey: q.key }, q);
+    return { views: assignApi.quickViews(), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsBar(q.said), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+      emptyFor: function (state) { return queueEmpty(opts, rows, state); },
       filter: { key: 'held', label: tr('Held by'), all: tr('Anyone'), options: held.options.map(function (o) { return { v: o[0], label: tr(o[1]) }; }), match: held.match } };
   };
   /** Undo: one more assign-bulk call per (role, previous holder), using the holders the server returned */
