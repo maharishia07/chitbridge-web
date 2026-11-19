@@ -243,7 +243,7 @@ async function bankView(body) {
     ) +
     peField(
       'bk_file',
-      'Statement file (CSV, JSON, OFX, QFX or QIF)',
+      'Statement file (CSV, JSON, OFX, QIF)',
       '<input data-cbsid="BKS014-I01" class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,.ofx,.qfx,.qif,text/csv,application/json" onchange="bankPick(this)">'
     )].join('')) +
     '</div>' + (bkbReadOnly() ? '' : '<div class="pe-note" data-testid="bank-private">🔒 ' + bkbE(tx('The file is read on this device and is never uploaded. This device keeps the latest one.')) + '</div>') +
