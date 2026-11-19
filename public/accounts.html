@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="/fonts/cb-fonts.css">
 <link rel="stylesheet" href="/app/lab-kit.css">   <!-- CMP060 figure card, CMP064 status icon: the Bank band and its lines -->
 <link rel="stylesheet" href="/app/bank-band.css">   <!-- the band over a bank statement, shared with the public demo -->
-<link rel="stylesheet" href="/app/accounts-page.css">   <!-- the page's own rules (the designer's tokens, the sidebar, the Ledgers views, the Bank statements box, the sheets) -->
+<link rel="stylesheet" href="/app/cap-employees.css"><link rel="stylesheet" href="/app/accounts-page.css">   <!-- the page's own rules (the designer's tokens, the sidebar, the Ledgers views, the Bank statements box, the sheets) -->
 </head>
 <body>
 <div class="app">
@@ -126,7 +126,7 @@ function go() {
 <script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
 <script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script><script src="/app/mis-charts.js"></script><script src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
 <script src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
-<script src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
+<script src="/app/cap-employees-copy.js"></script><script src="/app/cap-employees.js"></script><script src="/app/cap-employees-give.js"></script><script src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
 <script src="/app/one-person.js"></script>
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
@@ -172,7 +172,7 @@ const NAV = [
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
   ['movein', 'Move in', 'M4 12h12M12 8l4 4-4 4M20 4v16'] /* IM1: move in from Xero / QuickBooks — the five exports, each file → columns → preview → import */,
   ['access', 'Who can see my books', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 .01'] /* the second door: the owner gives, changes or ends an adviser's view (network.html#books) */,
-  ['rates', 'Rates', 'M4 7h13l-3-3M20 17H7l3 3'] /* FX1: exchange rates — a foreign bill posts at its day's rate (cap-fx.js) */
+  ['delegate', 'Delegate work', 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 4-6 8-6s8 2 8 6'] /* the People access panel mounted where the work is given (DECISIONS 19 Nov) */, ['rates', 'Rates', 'M4 7h13l-3-3M20 17H7l3 3'] /* FX1: exchange rates — a foreign bill posts at its day's rate (cap-fx.js) */
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
 const KURAL_OF = {
@@ -233,7 +233,7 @@ const NAV_GROUPS = [
   /* Athi, 2026-10-03 (T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Dues is the two sides together and has its button, lit while open (ACC-175) */
   ['Outstandings', ['dues', 'receivables', 'payables', 'bills', 'cheques']],
   ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
-  ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates', 'access']]
+  ['Setup', ['packs', 'opening', 'accounts', 'movein', 'rates', 'delegate', 'access']]
 ];
 const navFolded = () => {
   try {
@@ -434,7 +434,7 @@ BK.views = {
   opening: (b) => obView(b),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
-  rates: (b) => fxView(b),
+  rates: (b) => fxView(b), delegate: (b) => CBEmployees.mountAccess(b, { token: SESS.token, base: CFG.API_BASE, onEnded: () => location.reload() }),
   access: () => {
     location.href = CB_HOMES.network + '#books';
   }
