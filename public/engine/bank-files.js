@@ -1,6 +1,10 @@
-/* ADOPTED from chitbridge-engines v1.99.0 · bank-files · sha256 898144e459c5cb4a07f0e524c3f98b1b8d690c3beae34af6ac42b9d6100a0dbe — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.99.0 · bank-files · sha256 1da255b51273f56b4470d5eb620f1168d79137ef2d5dbb2ad056b1908f40d977 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-files. Edited ONLY in chitbridge-engines/src/bank-files.js; every platform adopts a released version of it. */
 /*
+ * src/bank-files.js — OFX, QFX and QIF bank statement files read into statement lines
+ *
+ * OWNER     cb-finance
+ * RISK      money
  * OWNS      reading an OFX (v1 SGML, v2 XML), QFX or QIF bank statement into statement lines, and telling those files from the others by their first words.
  * CALLED BY bank-recon.js parse (the one caller; it hands in ctx with its own ymd / minorOf / fail and the currency, so the date and amount readers stay written once). Athi, 19 Nov 2026: no bank feed, more statement FILE formats.
  * FLOW      text ──▶ parseOfx | parseQif (text, ctx) ──▶ { ok, lines, warnings, account?, closing_minor? } or a refusal in plain words; a row that cannot be read is skipped and warned by its number. MT940 and CAMT.053 are next.
@@ -36,65 +40,88 @@
   function ofxDay_(text, ctx) {
     return /^\d{8}/.test(text || '') ? ctx.ymd(+text.slice(0, 4), +text.slice(4, 6), +text.slice(6, 8)) : null;
   }
-  /** OFX v1 (SGML, tags left open) and v2 (XML) read the same way: `<TAG>value` runs to the next `<`; a QFX is an OFX with Intuit's extra tags */
-  function parseOfx_(text, ctx) {
-    var warnings = [],
-      lines = [],
-      seen = {},
-      accounts = {},
-      account = null,
-      currency = null,
-      closing = null,
-      txn = null,
-      inBalance = false,
-      tokens = /<(\/?)([A-Za-z0-9.]+)>([^<]*)/g,
-      token;
-    function flush() {
-      if (!txn) return;
-      var date = ofxDay_(txn.DTPOSTED, ctx),
-        amount = plainAmount_(ctx, txn.TRNAMT, false),
-        no = lines.length + 1;
-      if (!date) warnings.push('transaction ' + no + ': unreadable date — skipped');
-      else if (!amount) warnings.push('transaction ' + no + ': unreadable amount "' + (txn.TRNAMT || '') + '" — skipped');
-      else addOfxLine_(txn, date, amount, no, lines, seen, warnings, ctx);
-      txn = null;
-    }
-    while ((token = tokens.exec(text))) {
-      var closes = token[1] === '/',
-        tag = token[2].toUpperCase(),
-        value = unEntity_(token[3].trim());
-      if (tag === 'STMTTRN') {
-        flush();
-        if (!closes) txn = {};
-      } else if (txn && !closes && value && !/^(BANKACCTTO|CCACCTTO)$/.test(tag)) txn[tag] = value;
-      else if (tag === 'LEDGERBAL') inBalance = !closes;
-      else if (inBalance && tag === 'BALAMT' && value) closing = plainAmount_(ctx, value, false);
-      else if (!txn && tag === 'ACCTID' && value) {
-        accounts[value] = true;
-        account = account || value;
-      } else if (!txn && tag === 'CURDEF' && value) currency = value.toUpperCase();
-    }
-    flush();
-    if (Object.keys(accounts).length > 1) return ctx.fail('This file holds more than one account (' + Object.keys(accounts).join(', ') + '). Download one account at a time.');
-    if (currency && ctx.cur && currency !== ctx.cur) return ctx.fail('This statement is in ' + currency + ' but this business keeps its books in ' + ctx.cur + '. It was not read.');
-    if (!lines.length && !/<STMTTRN>/i.test(text)) return ctx.fail('No transactions found in the OFX file.');
-    var out = { ok: true, account: account, lines: lines, warnings: warnings };
-    if (closing) out.closing_minor = closing.neg ? -closing.minor : closing.minor;
+  /** the open transaction becomes a statement line (or a warning saying why not), then no transaction is open */
+  function flushOfx_(state) {
+    var transaction = state.transaction;
+    if (!transaction) return;
+    var date = ofxDay_(transaction.DTPOSTED, state.ctx),
+      amount = plainAmount_(state.ctx, transaction.TRNAMT, false),
+      no = state.lines.length + 1;
+    if (!date) state.warnings.push('transaction ' + no + ': unreadable date — skipped');
+    else if (!amount) state.warnings.push('transaction ' + no + ': unreadable amount "' + (transaction.TRNAMT || '') + '" — skipped');
+    else addOfxLine_(transaction, date, amount, no, state);
+    state.transaction = null;
+  }
+  /** a STMTTRN tag: the one open transaction is finished, and an opening tag starts the next */
+  function ofxTransactionTag_(state, closes) {
+    flushOfx_(state);
+    if (!closes) state.transaction = {};
+  }
+  /** a tag outside a transaction: the ledger balance block, the account number, the currency */
+  function ofxHeaderTag_(state, tag, value) {
+    if (tag === 'ACCTID' && value) {
+      state.accounts[value] = true;
+      state.account = state.account || value;
+    } else if (tag === 'CURDEF' && value) state.currency = value.toUpperCase();
+  }
+  /** a tag that is not a field of an open transaction: opens or closes the balance block, reads the closing balance, else header facts */
+  function ofxOutsideTag_(state, closes, tag, value) {
+    if (tag === 'LEDGERBAL') state.inBalance = !closes;
+    else if (state.inBalance && tag === 'BALAMT' && value) state.closing = plainAmount_(state.ctx, value, false);
+    else if (!state.transaction) ofxHeaderTag_(state, tag, value);
+  }
+  /** one tag of the file: a field of the open transaction (the receiving account's own tags are left out), or one of the others */
+  function ofxTag_(state, closes, tag, value) {
+    if (tag === 'STMTTRN') ofxTransactionTag_(state, closes);
+    else if (state.transaction && !closes && value && !/^(BANKACCTTO|CCACCTTO)$/.test(tag)) state.transaction[tag] = value;
+    else ofxOutsideTag_(state, closes, tag, value);
+  }
+  /** what the whole read answers: a refusal in words (two accounts, another currency, nothing to read), else the lines with the closing balance when the file gave one */
+  function ofxResult_(state, text) {
+    var ctx = state.ctx,
+      accountIds = Object.keys(state.accounts);
+    if (accountIds.length > 1) return ctx.fail('This file holds more than one account (' + accountIds.join(', ') + '). Download one account at a time.');
+    if (state.currency && ctx.cur && state.currency !== ctx.cur) return ctx.fail('This statement is in ' + state.currency + ' but this business keeps its books in ' + ctx.cur + '. It was not read.');
+    if (!state.lines.length && !/<STMTTRN>/i.test(text)) return ctx.fail('No transactions found in the OFX file.');
+    var out = { ok: true, account: state.account, lines: state.lines, warnings: state.warnings };
+    if (state.closing) out.closing_minor = state.closing.neg ? -state.closing.minor : state.closing.minor;
     return out;
   }
-  /** one OFX transaction → a statement line, the FITID riding as `ref`; a FITID seen again with the same day and amount is the same transaction, kept once */
-  function addOfxLine_(txn, date, amount, no, lines, seen, warnings, ctx) {
-    var line = signedLine_(date, joinWords_(txn.NAME || txn.PAYEE || '', txn.MEMO || ''), amount, no),
-      id = txn.FITID || '',
-      sameAs = id && seen[id];
-    if (sameAs && sameAs.date === date && sameAs.minor === amount.minor && sameAs.neg === amount.neg) return warnings.push('transaction id ' + id + ' appears twice with the same day and amount — kept once');
-    if (sameAs) warnings.push('transaction id ' + id + ' is used by two different transactions — both kept');
-    if (id) seen[id] = { date: date, minor: amount.minor, neg: amount.neg };
-    if (id || txn.REFNUM) line.ref = id || txn.REFNUM;
-    if (txn.CHECKNUM) line.cheque_no = txn.CHECKNUM;
-    var valueDay = ofxDay_(txn.DTUSER, ctx);
+  /** OFX v1 (SGML, tags left open) and v2 (XML) read the same way: `<TAG>value` runs to the next `<`; a QFX is an OFX with Intuit's extra tags */
+  function parseOfx_(text, ctx) {
+    var state = { ctx: ctx, warnings: [], lines: [], seen: {}, accounts: {}, account: null, currency: null, closing: null, transaction: null, inBalance: false },
+      tokens = /<(\/?)([A-Za-z0-9.]+)>([^<]*)/g,
+      token;
+    while ((token = tokens.exec(text))) ofxTag_(state, token[1] === '/', token[2].toUpperCase(), unEntity_(token[3].trim()));
+    flushOfx_(state);
+    return ofxResult_(state, text);
+  }
+  /** a seen FITID again: 'same' when the day and amount match (the same transaction), 'other' when they differ, '' when the id is new */
+  function ofxRepeat_(seenRow, date, amount) {
+    if (!seenRow) return '';
+    return seenRow.date === date && seenRow.minor === amount.minor && seenRow.neg === amount.neg ? 'same' : 'other';
+  }
+  /** one OFX transaction → a statement line, the FITID (else REFNUM) riding as `ref`, the cheque number and the value day when it has them */
+  function ofxLineOf_(transaction, date, amount, no, ctx) {
+    var line = signedLine_(date, joinWords_(transaction.NAME || transaction.PAYEE || '', transaction.MEMO || ''), amount, no),
+      reference = transaction.FITID || transaction.REFNUM,
+      valueDay = ofxDay_(transaction.DTUSER, ctx);
+    if (reference) line.ref = reference;
+    if (transaction.CHECKNUM) line.cheque_no = transaction.CHECKNUM;
     if (valueDay) line.value_date = valueDay;
-    lines.push(line);
+    return line;
+  }
+  /** one OFX transaction → a statement line; a FITID seen again with the same day and amount is the same transaction, kept once */
+  function addOfxLine_(transaction, date, amount, no, state) {
+    var id = transaction.FITID || '',
+      repeat = ofxRepeat_(id && state.seen[id], date, amount);
+    if (repeat === 'same') {
+      state.warnings.push('transaction id ' + id + ' appears twice with the same day and amount — kept once');
+      return;
+    }
+    if (repeat) state.warnings.push('transaction id ' + id + ' is used by two different transactions — both kept');
+    if (id) state.seen[id] = { date: date, minor: amount.minor, neg: amount.neg };
+    state.lines.push(ofxLineOf_(transaction, date, amount, no, state.ctx));
   }
   /** the day-month-year order of a QIF's dates when the file itself shows it (a part above 12), the person's choice, or '' when it cannot be told */
   function qifOrder_(triples, apostrophe, chosen) {
@@ -120,8 +147,8 @@
     var records = [],
       current = {},
       kind = null;
-    text.split(/\r\n|\r|\n/).forEach(function (raw) {
-      var row = raw.replace(/\s+$/, '');
+    text.split(/\r\n|\r|\n/).forEach(function (rawLine) {
+      var row = rawLine.replace(/\s+$/, '');
       if (!row) return;
       if (row[0] === '!') {
         var header = /^!Type:\s*(.*)$/i.exec(row);
