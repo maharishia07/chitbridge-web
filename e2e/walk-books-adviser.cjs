@@ -37,12 +37,12 @@ W.run('books-adviser', async (w) => {
   const make = (store, n, over) => named(heldAction(Object.assign({
     action_id: 'd0000000-0000-4000-8000-0000000000' + store.slice(-2) + n, store, kind: 'journal', state: 'waiting_review', client_ref: 'REF-' + store.slice(-1) + n, body_hash: 'hash-' + store.slice(-1) + n,
     total_minor: 100000 * n, currency: store === S2 ? 'AUD' : 'INR', body: { lines: [{ account: '1000', dr_minor: 100000 * n }, { account: '4000', cr_minor: 100000 * n }] },
-    prepared: stamp(COLLEAGUE, 'Priya Nair', 'preparer'), reviewed: null, closed: null, access_ended: false, entry_id: null }, over)));
+    prepared: stamp(COLLEAGUE, 'Priya Nair', 'preparer'), reviewed: null, review_state: 'not_reviewed', reviewed_by: null, reviewed_at: null, closed: null, access_ended: false, entry_id: null }, over)));
   const reset = () => {
     S.by = {};
     S.by[S1] = [make(S1, 1), make(S1, 2, { prepared: stamp(ME, 'Me Myself', 'preparer') })];
     S.by[S2] = [make(S2, 1), make(S2, 2)];
-    S.by[OWN] = [1, 2, 3].map((n) => make(OWN, n, { state: 'waiting_accept', reviewed: stamp('id-rev', 'Ravi Menon', 'reviewer') }));
+    S.by[OWN] = [1, 2, 3].map((n) => make(OWN, n, { state: 'waiting_accept', reviewed: stamp('id-rev', 'Ravi Menon', 'reviewer'), review_state: 'reviewed', reviewed_by: 'Ravi Menon', reviewed_at: '2026-11-18T09:00:00Z' }));
     S.by[OWN][2].client_ref = 'REF-BAD'; S.by[OWN][2].body.narration = 'REF-BAD';
     S.given = [{ grant_id: G1, grantor_entity: OWN, grantee_entity: BRAND, preset: 'auditor', can_see_costs: true, purpose: 'Year-end audit', granted_at: DAY(-5), expires_at: DAY(200), revoked_at: null, state: 'live' }];
   };
@@ -80,7 +80,7 @@ W.run('books-adviser', async (w) => {
     if (asOwner(h)) return refuse(r, 403, 'ACTION_FIRM_ONLY', 'Only the firm reviews.');
     if (row.prepared.identity_id === ME) return refuse(r, 403, 'ACTION_SELF_REVIEW', 'You prepared this.');
     if (body.body_hash !== row.body_hash) return refuse(r, 409, 'ACTION_BODY_CHANGED', 'Changed.');
-    Object.assign(row, { state: 'waiting_accept', reviewed: stamp(ME, 'Me Myself', 'reviewer') });
+    Object.assign(row, { state: 'waiting_accept', reviewed: stamp(ME, 'Me Myself', 'reviewer'), review_state: 'reviewed', reviewed_by: 'Me Myself', reviewed_at: '2026-11-19T09:00:00Z' });
     return J(r, 200, row);
   };
   const returnOne = (r, row, body) => {

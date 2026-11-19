@@ -327,10 +327,10 @@
     return { token: sess ? sess.token : null, session: sess, shell: shell, skeleton: skel };
   }
   /** a 401 from the API: the session is no longer good - drop it and show the sign-in window (it is the same window the apps show) */
-  /** walk 19 Nov: a refusal that says WHY access went (books removed by whom and when, a switched-off account) is the sentence the server chose; only the bare "Sign in to continue." stays generic. Words only, decides nothing. */
+  /** walk 19 Nov: a refusal that says WHY access went is the sentence the server chose, matched by its CODE (api #1378), never by its words. BOOKS_GRANT_ENDED: books access ended or ran out; ACCOUNT_SWITCHED_OFF: the person was switched off; BOOKS_SIGNOFF_SELF_PREPARED and BOOKS_FOR_READ_ONLY: a refusal the server explains in full. A bare "Sign in to continue." stays generic. Words only, decides nothing. */
+  var SAID_BY_CODE = { BOOKS_GRANT_ENDED: 1, ACCOUNT_SWITCHED_OFF: 1, BOOKS_SIGNOFF_SELF_PREPARED: 1, BOOKS_FOR_READ_ONLY: 1 };
   function endedWords(status, body) {
-    var said = String((body && (body.message || body.error)) || '').trim();
-    return (status === 401 || status === 403) && /switched off|removed|ended|no longer/i.test(said) && !/^sign in to continue.?$/i.test(said) ? said : '';
+    return (status === 401 || status === 403) && body && SAID_BY_CODE[body.code] === 1 ? String(body.message || body.error || body.detail || '').trim() : '';
   }
   /** the reason a page's session ended, kept for the one sign-in window that follows the reload (read once) */
   function endedNote() {

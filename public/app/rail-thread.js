@@ -230,7 +230,7 @@
       tag +
       ln +
       '<b>' +
-      esc(mine ? threadKit.threadText(threadKit.THREAD_WORDS.you) : x.sender_left === true && x.sender_display_name ? threadKit.fill(threadKit.threadText(threadKit.THREAD_WORDS.left), { name: x.sender_display_name }) : x.sender_display_name || '—') + /* walk 19 Nov: a person who has left is named as having left, when the api says so */
+      esc(mine ? threadKit.threadText(threadKit.THREAD_WORDS.you) : x.sender_display_name || '—') +
       '</b>' +
       (dec && dec.by ? '<span class="rt-why">· ' + esc(dec.by) + '</span>' : '') +
       '<span class="rt-t">' +

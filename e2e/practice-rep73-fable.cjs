@@ -3,7 +3,7 @@
  * Run: node e2e/practice-rep73-fable.cjs   (no browser: the page file is loaded against a stub window) */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
-const root = { Promise, tx: (s) => s, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {}, remove() {}, toggle() {} } }, querySelector: () => null, getElementById: () => null }, location: { hostname: 'x' }, localStorage: { getItem: () => null, setItem() {} } };
+const root = { Promise, tx: (s) => s, document: { readyState: 'loading', addEventListener(n, h) { (root.heard = root.heard || {})[n] = h; }, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {}, remove() {}, toggle() {} } }, querySelector: () => null, getElementById: () => null }, location: { hostname: 'x' }, localStorage: { getItem: (k) => (root.kept || {})[k] || null, setItem(k, v) { (root.kept = root.kept || {})[k] = v; } } };
 /* the page loads helpers.js first (the one esc · fmtMoney · monthNames); so does this sandbox */
 const sandbox = vm.createContext({ module: { exports: {} }, window: root, globalThis: root, setInterval() {}, setTimeout() {} });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'money.js'), 'utf8'), sandbox, { filename: 'money.js' });
@@ -72,5 +72,12 @@ t('W9 a firm hides every card it does not keep; its Setup cards stay on the keep
   assert.strictEqual(P.hidesShopCards('sales'), true); assert.strictEqual(P.hidesShopCards('shop'), false);
   T.use({ clients: [row()], own_trade: true });
   assert.strictEqual(P.hidesShopCards('sales'), false);
+});
+t('api #1378: /me is_practice reaches Home at once (the cb:me event): a shop is remembered as not a practice, a practice as one, an unknown answer changes nothing', () => {
+  const hear = root.heard['cb:me'], hint = () => String((root.kept || {}).cb_practice_hint || '').slice(0, 1);
+  assert.strictEqual(typeof hear, 'function');
+  hear({ detail: { is_practice: null } }); hear({}); assert.strictEqual(hint(), '');
+  hear({ detail: { is_practice: true } }); assert.strictEqual(hint(), '1');
+  hear({ detail: { is_practice: false } }); assert.strictEqual(hint(), '0');
 });
 process.exit(bad ? 1 : 0);

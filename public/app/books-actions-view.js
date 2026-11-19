@@ -62,17 +62,15 @@
   }
   /**
    * the review state in words, wherever the work is shown (Athi 19 Nov: second-person review is optional, always recorded): "Not reviewed" · "Reviewed by <name> · <date>" · "Self-reviewed by <name> · <date>".
-   * The server's record says it: reviewed = the step's stamp (null = nobody); the same person as the preparer = self-reviewed (row.self_reviewed from the api, or the same identity). Words only, decides nothing.
+   * The api says it (#1378): review_state not_reviewed | reviewed | self_reviewed, with reviewed_by (the name) and reviewed_at. Words only, decides nothing.
    */
   function reviewWords(row) {
-    var by = row.reviewed;
-    if (!by) return words('Not reviewed');
-    var self = row.self_reviewed === true || !!(row.prepared && by.identity_id && by.identity_id === row.prepared.identity_id);
-    return words(self ? 'Self-reviewed by' : 'Reviewed by') + ' ' + by.name + (by.at ? ' · ' + dayWords(by.at) : '');
+    if (row.review_state !== 'reviewed' && row.review_state !== 'self_reviewed') return words('Not reviewed');
+    return words(row.review_state === 'self_reviewed' ? 'Self-reviewed by' : 'Reviewed by') + ' ' + row.reviewed_by + (row.reviewed_at ? ' · ' + dayWords(row.reviewed_at) : '');
   }
   /** the one library status chip (.bp-chip) carrying the review words; a code per place it stands; the tokens are the chip's own, so a page that does not load books-practice.js draws it the same */
   function reviewChip(row, code) {
-    var done = !!row.reviewed;
+    var done = row.review_state === 'reviewed' || row.review_state === 'self_reviewed';
     return '<span class="bp-chip" data-cbsid="' + code + '" data-testid="ba-review-' + esc(row.action_id) + '" style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid ' + (done ? 'var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#2a2418)' : 'var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205)') + '">' + esc(reviewWords(row)) + '</span>';
   }
   function byWords(stamp) {

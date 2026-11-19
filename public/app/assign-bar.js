@@ -137,8 +137,8 @@
       var mine = assignApi.meId();
       var rows = reply.body.actors || reply.body.items || [], key = flag || 'job_assignable';
       var list = rows.filter(function (a) { return a[key] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
-      /* W7: a view-only person holds nothing (rule A5, the server's flag stays false); they are NAMED, never silently missing. Words only: the server's reason (assign_blocked: 'view_only', api #1378) picks the sentence, it decides nothing; until the api lands the level stands in. */
-      var viewOnly = rows.filter(function (a) { return a[key] !== true && (a.assign_blocked ? a.assign_blocked === 'view_only' : a.access_level === 'viewer'); }).map(function (a) { return a.display_name || a.name || ''; }).filter(Boolean);
+      /* W7: a view-only person holds nothing (rule A5, the server's flag stays false); they are NAMED, never silently missing. Words only: the server's reason (assign_blocked: 'view_only', api #1378) picks the sentence, it decides nothing. */
+      var viewOnly = rows.filter(function (a) { return a[key] !== true && a.assign_blocked === 'view_only'; }).map(function (a) { return a.display_name || a.name || ''; }).filter(Boolean);
       return { list: list, viewOnly: viewOnly };
     });
   }

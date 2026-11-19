@@ -543,7 +543,7 @@
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
-      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON } }));
+      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON, is_practice: entity && typeof entity.is_practice === 'boolean' ? entity.is_practice : null } }));
     } catch (e) {
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
     }

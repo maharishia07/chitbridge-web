@@ -423,6 +423,13 @@
     holding = false;
     root.document.documentElement.classList.remove('bp-hold');
   }
+  /* api #1378: /me says whether this shop is a practice, for every seat (employees too), so Home knows at once: a shop paints without waiting for the practice read */
+  root.document.addEventListener('cb:me', function (ev) {
+    var says = ev && ev.detail && ev.detail.is_practice;
+    if (typeof says !== 'boolean') return;
+    hint(says);
+    if (!says) release();
+  });
   if (holding) {
     root.document.documentElement.classList.add('bp-hold');
     var hideStyle = root.document.createElement('style');
