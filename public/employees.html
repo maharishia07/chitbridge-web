@@ -115,8 +115,8 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
       base: api == null ? API : api,
       embed: embed,
       view: view,
-      onEnded: function () {
-        embed ? start(null) : CBFrame.ended();
+      onEnded: function (said) {
+        embed ? start(null) : CBFrame.ended(said);
       }
     });
   }

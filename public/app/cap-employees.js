@@ -53,7 +53,7 @@
             return {};
           })
           .then(function (j) {
-            if (reply.status === 401 && E.o.onEnded) E.o.onEnded();
+            if (reply.status === 401 && E.o.onEnded) E.o.onEnded(j);
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
               e.status = reply.status;
@@ -368,10 +368,8 @@
     if (!node) return;
     var add = E.may.add || { ok: false };
     node.innerHTML =
-      '<span class="emp-count" data-testid="emp-count"><b>' +
-      (E.counts.on || 0) +
-      '</b> ' +
-      esc(T('on')) +
+      '<span class="emp-count" data-testid="emp-count">' +
+      Copy.peopleCount(E.counts.on || 0) +
       (E.counts.off ? ' · <b>' + E.counts.off + '</b> ' + esc(T('off')) : '') +
       '</span>' +
       '<span class="emp-add">' +
@@ -735,7 +733,7 @@
   function openAdd() {
     var cs = E.choices
       .map(function (item, index) {
-        return '<option value="' + index + '"' + (item.key === 'counter' ? ' selected' : '') + '>' + esc(item.label) + '</option>';
+        return '<option value="' + index + '"' + (item.key === (E.choices[0] && E.choices[0].key === 'bookkeeper' ? 'bookkeeper' : 'counter') ? ' selected' : '') + '>' + esc(item.label) + '</option>';
       })
       .join('');
     sheet(

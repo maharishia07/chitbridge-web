@@ -165,6 +165,65 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   await settle();
   check(written.length === 1 && written[0][0].join() === 'f1,f2' && written[0][1] === null && writeWin.calls.length === 0, 'a plug with its own writer is written through opts.write, never through assign-bulk');
 
+  /* the Held-by cell is plain text (Athi 19 Nov): a name or a dash, never a button; the keys still find the row by its data */
+  const cellOpts = { plug: 'client', said: true, subjectOf: (r) => r.id, roleOf: () => 'adviser' };
+  const cellHeld = owner.win.CBAssign.heldCell({ id: 'c1', holders: [{ name: 'Priya Shah' }] }, cellOpts), cellFree = owner.win.CBAssign.heldCell({ id: 'c2', holders: [] }, cellOpts);
+  check(!/<button/.test(cellHeld + cellFree) && cellHeld.includes('Priya Shah') && cellFree.includes('—') && /data-as-cell/.test(cellFree) && /data-as-held="0"/.test(cellFree), 'the Held by cell is plain text: the name, or a quiet dash, and no button on the row');
+  check(!/data-as-cell/.test(owner.win.CBAssign.heldCell({ id: 'c3', holders: [] }, Object.assign({}, cellOpts, { said: false }))), 'with no server verdict the cell carries no assign facts');
+  /* WALKFIX-1119 (walk 19 Nov, W3 · W7 · W8): the person popover, driven through a fake popup host */
+  const PEOPLE = { actors: [{ actor_id: 'p1', display_name: 'Priya Shah', job_assignable: true, open_load: 0, suggested: true }, { actor_id: 'v1', display_name: 'Vera View', job_assignable: false, access_level: 'viewer' }], suggested: 'p1' };
+  /** a window with a popup host: ui.dialog keeps what it was given, modal/closeModal count, and two bodies stand on the page (a decoy sheet first, then the popup's own) */
+  function popupWindow(answers, firm) {
+    const fake = ownerWindow(answers);
+    const seen = { dialog: null, closed: 0, decoyHits: 0, handler: null };
+    const popupBody = { addEventListener(kind, fn) { if (kind === 'click') seen.handler = fn; }, querySelector: (sel) => (/assign-note/.test(sel) ? { value: '' } : null) };
+    const decoy = { addEventListener() { seen.decoyHits++; }, querySelector: () => null };
+    const anchor = { closest: (sel) => (sel === '.mbody' ? popupBody : null) };
+    fake.win.document.querySelector = (sel) => (sel === '[data-as-people]' ? anchor : /modalhost|dialog[open]/.test(sel) ? decoy : null);
+    fake.win.ui = { dialog: (spec) => { seen.dialog = spec; } };
+    fake.win.modal = () => {};
+    fake.win.closeModal = () => { seen.closed++; };
+    if (firm) fake.win.CBPractice = { isFirm: () => true };
+    return Object.assign(fake, { seen });
+  }
+  const popOpts = { plug: 'client', noun: 'client', said: true, subjectOf: (r) => r.id, roleOf: () => 'adviser', reload: () => null };
+  const popup = popupWindow([reply(true, PEOPLE), reply(true, { assigned: 1, skipped: [], previous: [] })]);
+  popup.win.CBAssign.bulk(popOpts).find((button) => button.id === 'assign').run([{ id: 'c1' }]);
+  await settle();
+  const popBody = popup.seen.dialog ? popup.seen.dialog.body : '';
+  check(/data-testid="assign-person-p1"/.test(popBody) && !/assign-person-v1/.test(popBody), 'W7 the person who may hold is listed; the view-only person is not a choice');
+  check(/data-testid="assign-viewonly"/.test(popBody) && /Vera View is view-only — change what they can do to assign/.test(popBody), 'W7 the view-only person is NAMED with what to change, not silently missing');
+  /* walk 19 Nov: the api's own reason (assign_blocked: 'view_only', api #1378) names the person, with no access_level sent; a person blocked for another reason is not called view-only */
+  const REASONED = { actors: [{ actor_id: 'p1', display_name: 'Priya Shah', job_assignable: true, open_load: 0 }, { actor_id: 'v2', display_name: 'Wes Watcher', job_assignable: false, assign_blocked: 'view_only' }, { actor_id: 'o1', display_name: 'Olly Off', job_assignable: false, assign_blocked: 'switched_off', access_level: 'viewer' }] };
+  const reasoned = popupWindow([reply(true, REASONED), reply(true, { assigned: 1, skipped: [], previous: [] })]);
+  reasoned.win.CBAssign.bulk(popOpts).find((button) => button.id === 'assign').run([{ id: 'c1' }]);
+  await settle();
+  const reasonedBody = reasoned.seen.dialog ? reasoned.seen.dialog.body : '';
+  check(/Wes Watcher is view-only — change what they can do to assign/.test(reasonedBody) && !/Olly Off is view-only/.test(reasonedBody), 'W7 the server reason names the view-only person; another reason is not called view-only');
+  check(popup.seen.handler !== null && popup.seen.decoyHits === 0, 'W8 the click handler stands on the body that holds the list, not on another sheet that happens to come first');
+  popup.seen.handler({ target: { closest: () => ({ hasAttribute: () => false, getAttribute: (name) => (name === 'data-as-pick' ? 'p1' : null) }) } });
+  await settle();
+  const assignCall = popup.calls.find((call) => /assign-bulk$/.test(call.url));
+  check(popup.seen.closed === 1 && assignCall && assignCall.body.target_actor_id === 'p1' && assignCall.body.subject_ids.join() === 'c1', 'W8 pressing the person row closes the popup and assigns: POST assign-bulk with that person and the ticked client');
+  check(popup.slot.innerHTML.includes('Priya Shah') && popup.slot.innerHTML.includes('assigned to'), 'W8 and the result line says who now holds it');
+  const refusing = popupWindow([reply(true, PEOPLE)]);
+  refusing.win.closeModal = () => { throw new Error('boom'); };
+  refusing.win.CBAssign.bulk(popOpts).find((button) => button.id === 'assign').run([{ id: 'c1' }]);
+  await settle();
+  refusing.seen.handler({ target: { closest: () => ({ hasAttribute: () => false, getAttribute: () => 'p1' }) } });
+  await settle();
+  check(/Not done/.test(refusing.slot.innerHTML) && refusing.quiet.some((line) => /assign:pick/.test(line)), 'W8 a failure while assigning is said in words (never a dialog that just stays open)');
+  const nobody = popupWindow([reply(true, { actors: [] })]);
+  nobody.win.CBAssign.bulk(popOpts).find((button) => button.id === 'assign').run([{ id: 'c1' }]);
+  await settle();
+  const nobodyBody = nobody.seen.dialog.body;
+  check(nobodyBody.includes('No one in your team yet') && nobodyBody.includes('<a href="/employees.html"') && nobodyBody.includes('data-testid="assign-add-person"') && nobodyBody.includes('>T(Add a person)</a>'), 'W3 an empty list says no one is there yet, with Add a person linking to employees.html');
+  const firmNobody = popupWindow([reply(true, { actors: [] })], true);
+  firmNobody.win.CBAssign.bulk(popOpts).find((button) => button.id === 'assign').run([{ id: 'c1' }]);
+  await settle();
+  check(/No one in your practice yet/.test(firmNobody.seen.dialog.body), 'W3 a practice reads "No one in your practice yet"');
+  check(!/assign-empty/.test(popBody), 'W3 the empty words are not shown when someone can hold the work');
+
   console.log(failures ? '\nFAIL ' + failures : '\nall ok');
   process.exit(failures ? 1 : 0);
 })();

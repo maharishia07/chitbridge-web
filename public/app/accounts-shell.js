@@ -366,7 +366,7 @@ function txn(one, other, n, vars) {
 function friendlyErr(e) {
   const m = (e && e.message) || String(e || '');
   if (/Already working/i.test(m)) return 'still finishing the last one — one moment';
-  if (/session expired|sign in/i.test(m)) return 'your session expired — please sign in again';
+  if (/session expired|sign in/i.test(m)) return (e && e.status === 401 && window.CBFrame && window.CBFrame.endedWords && window.CBFrame.endedWords(401, { message: m })) || 'your session expired — please sign in again'; /* removed access / switched off: the server's plain words */
   if (/Failed to fetch|network/i.test(m)) return 'network hiccup — check your connection and retry';
   return m || 'something went wrong';
 }
@@ -557,7 +557,7 @@ var CBAction = (function () {
   function actWords(e, fallback) {
     var m = String((e && e.message) || '');
     if (/Already working/i.test(m)) return tx('Still finishing the last one — one moment');
-    if (/session expired|sign in again/i.test(m)) return tx('Your session expired — please sign in again');
+    if (/session expired|sign in again/i.test(m)) return (e && e.status === 401 && window.CBFrame && window.CBFrame.endedWords && window.CBFrame.endedWords(401, { message: m })) || tx('Your session expired — please sign in again'); /* removed access / switched off: the server's plain words */
     if (typeof isKeptKeyWords === 'function' && isKeptKeyWords(m)) return m; /* core.js: a 5xx or a 90 s abort on a kept key says check first; never "nothing was sent" */
     if (/offline|Failed to fetch|network|No answer from the server/i.test(m)) return tx('No connection — nothing was sent. Try again');
     var st = e && e.status;

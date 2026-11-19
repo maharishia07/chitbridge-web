@@ -169,8 +169,8 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
     base: API,
     sidebar: true,
     tab: location.hash === '#books' ? 'books' : 'mine',
-    onEnded: function () {
-      CBFrame.ended();
+    onEnded: function (said) {
+      CBFrame.ended(said);
     }
   });
 })();

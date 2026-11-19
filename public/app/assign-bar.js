@@ -135,8 +135,11 @@
     return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (reply) {
       if (!reply.ok) return { error: sentenceOf(reply.body) || tr('People did not load.'), list: [] };
       var mine = assignApi.meId();
-      var list = (reply.body.actors || reply.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
-      return { list: list };
+      var rows = reply.body.actors || reply.body.items || [], key = flag || 'job_assignable';
+      var list = rows.filter(function (a) { return a[key] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
+      /* W7: a view-only person holds nothing (rule A5, the server's flag stays false); they are NAMED, never silently missing. Words only: the server's reason (assign_blocked: 'view_only', api #1378) picks the sentence, it decides nothing; until the api lands the level stands in. */
+      var viewOnly = rows.filter(function (a) { return a[key] !== true && (a.assign_blocked ? a.assign_blocked === 'view_only' : a.access_level === 'viewer'); }).map(function (a) { return a.display_name || a.name || ''; }).filter(Boolean);
+      return { list: list, viewOnly: viewOnly };
     });
   }
   function personRow(p, label) {
@@ -151,11 +154,26 @@
     var list = '<div data-as-people style="display:flex;flex-direction:column;margin-top:8px">' + (me && !me.suggested ? personRow(me, tr('Me') + ' · ' + me.name) : '') + roster.list.filter(function (p) { return !p.me || p.suggested; }).sort(function (a, b) { return (b.suggested ? 1 : 0) - (a.suggested ? 1 : 0); }).map(function (p) { return personRow(p); }).join('') + '</div>';
     var pool = spec.held ? '<button type="button" data-as-pool data-cbsid="HOM001-B22" data-cbmount="' + MOUNT + '" data-testid="assign-pool" style="width:100%;min-height:44px;padding:6px 10px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer">' + root.esc(tr('Back to pool')) + '</button>' : '';
     var note = '<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;margin-top:8px">' + root.esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="' + MOUNT + '" data-testid="assign-note" maxlength="200" type="text" style="min-height:44px;font:inherit;padding:6px 8px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit"></label>';
-    return head + list + pool + note;
+    return head + list + whyNot(roster) + pool + note;
+  }
+  /** W3 · W7: what the list does not show, in words: no one at all (with the way to add a person), and each view-only person with what to change */
+  function whyNot(roster) {
+    if (roster.error) return '';
+    var out = '';
+    if (!roster.list.length) {
+      var where = root.CBPractice && typeof root.CBPractice.isFirm === 'function' && root.CBPractice.isFirm() ? 'No one in your practice yet' : 'No one in your team yet';
+      out += '<div data-testid="assign-empty" style="margin-top:8px;font-size:14px">' + root.esc(tr(where)) + ' — <a href="/employees.html" data-cbsid="HOM001-C01" data-cbmount="' + MOUNT + '" data-testid="assign-add-person" style="color:var(--accent,#1F5F5B);font-weight:600">' + root.esc(tr('Add a person')) + '</a></div>';
+    }
+    (roster.viewOnly || []).forEach(function (name) {
+      out += '<div data-testid="assign-viewonly" style="margin-top:6px;font-size:13px;color:var(--grey,#5B5B5B)">' + root.esc(sayText('{name} is view-only — change what they can do to assign', { name: name })) + '</div>';
+    });
+    return out;
   }
   /** wire the opened popup: the search narrows the people in place; a person (or Back to pool) is the whole answer */
   function wirePopover(done) {
-    var body = root.document.querySelector('#modalhost .mbody, dialog[open] .mbody');
+    /* W8: the body that HOLDS this list, found from the list itself: the first .mbody on the page can be another open sheet's, and a click handler left on that one never hears a person pressed */
+    var mine = root.document.querySelector('[data-as-people]');
+    var body = (mine && mine.closest && mine.closest('.mbody')) || (mine && mine.parentNode) || root.document.querySelector('#modalhost .mbody, dialog[open] .mbody');
     if (!body) return;
     var search = body.querySelector('[data-testid="assign-search"]'), note = body.querySelector('[data-testid="assign-note"]');
     if (search) search.addEventListener('input', function () {
@@ -166,8 +184,10 @@
       var b = ev.target.closest && ev.target.closest('[data-as-pick],[data-as-pool]');
       if (!b) return;
       var value = { id: b.hasAttribute('data-as-pool') ? null : b.getAttribute('data-as-pick'), note: note ? note.value.trim() : '' };
-      if (typeof root.closeModal === 'function') root.closeModal();
-      done(value);
+      try { if (typeof root.closeModal === 'function') root.closeModal(); done(value); } catch (failure) { /* an error here left the popup open and said nothing (W8): say it */
+        if (root.cbQuiet) root.cbQuiet('assign:pick', failure);
+        showOutcome('bad', tr('Not done.'), []);
+      }
     });
   }
   /** open the person popover (ui.dialog, the library popup) → done({ id|null, note }) on a press; nothing when it is cancelled. spec: { title, held (some row has a holder) } */
@@ -356,6 +376,18 @@
       ' style="max-width:100%;min-height:32px;padding:2px 10px;border:1px ' + (empty ? 'dashed' : 'solid') + ' var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:' + (empty ? 'var(--grey,#5B5B5B)' : 'inherit') + ';font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">' +
       root.esc(empty ? '+ ' + tr('Assign to…') : holderNames + ' ▾') + '</button>';
   };
+  /**
+   * the Held-by cell as PLAIN TEXT (Athi 19 Nov: no button on every row): the holder's name, or a quiet dash when nobody holds it. Assigning is the tick-bar's one "Assign to…"; the A and I keys still
+   * find the row through the data-as-* facts this cell carries (shown only on the server's verdict, like the chip). opts as for bulk
+   */
+  assignApi.heldCell = function (row, opts) {
+    if (!row || !Array.isArray(row.holders)) return '';
+    var names = row.holders.map(function (h) { return h.name || ''; }).join(', ');
+    var text = names ? root.esc(names) : '<span style="color:var(--grey,#5B5B5B)" aria-label="' + root.esc(tr('Unassigned')) + '">—</span>';
+    if (!assignApi.showsBar(opts && opts.said)) return text;
+    assignApi.mount(opts);
+    return '<span data-as-cell data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '" data-testid="assign-held">' + text + '</span>';
+  };
   /** the row a chip stands for, in the shape the calls read (subject, role, whether it has a holder) */
   function chipRow(chip) {
     var held = chip.getAttribute('data-as-held') === '1';
@@ -383,7 +415,7 @@
   function onKey(ev) {
     var key = String(ev.key || '').toLowerCase();
     if (notShortcut(ev, key)) return;
-    var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip]');
+    var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip],[data-as-cell]');
     if (!chip) return;
     ev.preventDefault();
     if (key === 'a') openChip(chip); else takeChip(chip);

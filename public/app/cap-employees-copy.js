@@ -23,9 +23,14 @@
   function nameWithCopy(u, idTid, cls) {
     var name = signInName(u);
     return (
-      '<span class="' + cls + '" data-testid="' + idTid + '">' + esc(name) + '</span> ' +
+      '<span class="' + cls + '" data-testid="' + idTid + '" style="overflow-wrap:anywhere;word-break:break-all;min-width:0">' + esc(name) + '</span> ' +
       (name ? '<button data-cbsid="EMP001-B14" type="button" class="act emp-copy" id="emp_copy" data-testid="emp-copy" data-copy="' + esc(name) + '">' + esc(words('Copy')) + '</button>' : '')
     );
+  }
+  /** the count in words, never "0 on" (UX-196): "No people yet" · "1 person" · "N people" (the locale's plural rule), bold */
+  function peopleCount(n) {
+    if (!n) return esc(words('No people yet'));
+    return '<b>' + esc(typeof root.txn === 'function' ? root.txn('{count} person', '{count} people', n) : n === 1 ? '1 person' : n + ' people') + '</b>';
   }
   /** Copy: the whole sign-in name to the clipboard, said on the button itself (no toast to miss) */
   function wireCopy() {
@@ -51,5 +56,5 @@
       }
     };
   }
-  root.CBEmployeesCopy = { signInName: signInName, nameWithCopy: nameWithCopy, wireCopy: wireCopy };
+  root.CBEmployeesCopy = { signInName: signInName, nameWithCopy: nameWithCopy, peopleCount: peopleCount, wireCopy: wireCopy };
 })(typeof window !== 'undefined' ? window : this);

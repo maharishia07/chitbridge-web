@@ -18,7 +18,7 @@
   practiceKit.practiceState = { token: null, data: null, drawn: false, filter: null, list: null, band: null, fl: null, flOff: false, flReady: false, flTotal: 0 };
   /* l16 n12: what a firm with no trade of its own KEEPS of the shop's Home, by id: its own Setup (the business, account, plan, policy, privacy, standards, connectors). Everything else is shop: every other card, so
      every area that would hold only those cards (the left rail), and the two shop panels named by id here: 'sides' (We lean on / Leans on us) and 'rail' (Your work). ONE list, ONE test (hidesShopCards). */
-  var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1 };
+  var FIRM_KEEPS = { shop: 1, account: 1, plan: 1, governance: 1, privacy: 1, standards: 1, connectors: 1, employees: 1 }, FIRM_SETUP = { employees: 1 }; /* employees (W5, walk 19 Nov): a practice reaches People from its own Setup; FIRM_SETUP: kept cards a firm files under Setup (Running it is hidden for a firm) */
   var PRACTICE_ENDPOINT = { practice: { m: 'GET', p: '/api/books-grants/practice' } };
   function translate(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -146,7 +146,7 @@
     return [
       { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly') + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
       num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
-      num('held', 'Held by', 130, function (r) { return root.CBAssign ? root.CBAssign.chip(r, assignOpts()) : ''; }, function (r) { return root.CBAssign ? root.CBAssign.heldByText(r) : ''; }, { prio: 1, keep: true, minw: 100, hfilter: 'held' }),
+      num('held', 'Held by', 130, function (r) { return root.CBAssign ? root.CBAssign.heldCell(r, assignOpts()) : ''; }, function (r) { return root.CBAssign ? root.CBAssign.heldByText(r) : ''; }, { prio: 1, keep: true, minw: 100, hfilter: 'held' }),
       num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, practiceKit.queriesCell, function (r) { return r.queries.open; }),
@@ -252,10 +252,10 @@
   function assignOpts() {
     return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), plug: 'client', noun: 'client', subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
   }
-  /** I3: a seat that may not assign (staff) opens on Mine; owner and manager open on Everyone. The server's verdict (may_assign) decides, and only when the page knows who the person is */
+  /** I3 + walk 19 Nov: a person who HOLDS work opens on Mine (0 clicks); a seat that may not assign (staff) opens on Mine too; the rest on Everyone. The server's verdict (may_assign) and holders decide, only when the page knows who the person is */
   function defaultHeld() {
-    var d = practiceKit.practiceState.data;
-    return holdersOn() && d && d.may_assign === false && root.CBAssign.meId() ? { held: 'mine' } : {};
+    var d = practiceKit.practiceState.data, me = holdersOn() && root.CBAssign.meId(), holds = !!me && ((d && d.clients) || []).some(function (r) { return root.CBAssign.heldFilter([r]).match(r, 'mine'); });
+    return me && d && (holds || d.may_assign === false) ? { held: 'mine' } : {};
   }
   /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
   function heldFilterOf(filterOf) {
@@ -429,7 +429,7 @@
     root.document.documentElement.classList.toggle('bp-firm', hidesShopCards('sides'));
   }
   var fs = root.document.createElement('style');
-  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox{display:none!important}html.bp-firm:not(.bp-setup) .cbsh-main[data-tab=home] .cbsh-sec.setup{display:none!important}'; /* W9: a firm's Home is its practice only: the folded "What it all stands on" holds only the cards FIRM_KEEPS names (its own Setup), so it is not drawn on Home; the Setup button reveals it (shell go) */
+  fs.textContent = 'html.bp-firm [data-testid="shell-sidetools"],html.bp-firm .cbsh-side,html.bp-firm #railbox,html.bp-firm .ix-sw,html.bp-firm [data-testid="till-paired"]{display:none!important}html.bp-firm:not(.bp-setup) .cbsh-main[data-tab=home] .cbsh-sec.setup{display:none!important}'; /* W9: a firm's Home is its practice only: the folded "What it all stands on" holds only the cards FIRM_KEEPS names (its own Setup), so it is not drawn on Home; the Setup button reveals it (shell go) */
   (root.document.head || root.document.documentElement).appendChild(fs);
   function dropWaiting() {
     var w = root.document.getElementById('bp_wait');
@@ -510,7 +510,7 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
+  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
     parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

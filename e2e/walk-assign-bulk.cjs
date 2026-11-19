@@ -237,7 +237,7 @@ async function w3Employees(browser, base) {
       const api = standIn();
       const { ctx, page } = await open(browser, base, api, vp, theme, 'owner');
       ok(tag + ' · 1 the list is drawn from the 150 clients', (await rows(page)) > 0, await rows(page));
-      ok(tag + ' · 1 an empty row is the action itself: + Assign to…', /Assign to…/.test(await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip]').first().innerText()), await heldText(page, 1));
+      ok(tag + ' · 1 Held by is plain text, no button on the row (a dash when nobody holds it)', (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip]').count()) === 0 && (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-testid="assign-held"]').first().innerText()).trim() === '—', await heldText(page, 1));
       ok(tag + ' · 1 the quick views Mine · Unassigned · Everyone are on the first paint', /Mine[^]*Unassigned[^]*Everyone/.test(await page.locator('.cbl-views').first().innerText()));
       ok(tag + ' · no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
       await page.screenshot({ path: file('1-list') });
@@ -297,12 +297,13 @@ async function w3Employees(browser, base) {
       await pause(900);
       const a4 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[3];
       ok(tag + ' · 6 back to pool sends target_actor_id null for that client', !!a4 && a4.body.target_actor_id === null && a4.body.subject_ids.length === 1 && a4.body.subject_ids[0] === id(2), JSON.stringify(a4));
-      ok(tag + ' · 6 Held by is empty again (the chip says + Assign to…)', /Assign to…/.test(await heldText(page, 2)), await heldText(page, 2));
+      ok(tag + ' · 6 Held by is empty again (a dash)', /—/.test(await page.locator('[data-testid="practice-row-' + id(2) + '"] [data-testid="assign-held"]').first().innerText()), await heldText(page, 2));
 
       /* 3b one press on a chip, one on a person; 3c Undo from the previous holders; 3d the A key */
       await page.locator('[data-cbl-selclear]').click();
       const callsBefore = api.calls.filter((c) => c.path === '/api/chits/assign-bulk').length;
-      await page.locator('[data-testid="practice-row-' + id(23) + '"] [data-as-chip]').first().click();
+      await page.locator('[data-testid="practice-row-' + id(23) + '"]').first().focus();
+      await page.keyboard.press('a');
       await page.waitForSelector('[data-as-pick]');
       ok(tag + ' · 3b the popover for ONE client shows the suggested person first', /Suggested/.test(await page.locator('[data-as-pick]').first().innerText()), await page.locator('[data-as-pick]').first().innerText());
       await pickAndGo(page, ANNA.display_name);
