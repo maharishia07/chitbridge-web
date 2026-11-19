@@ -16,7 +16,7 @@ of file each thing is; this says what already does the job.
 | 146 | `words` | `variant.browser.js` |  |
 | 136 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 131 | `answer` | `availability.js` | from March; then nearest. |
-| 126 | `item` | `bank-band.js` |  |
+| 127 | `item` | `bank-band.js` |  |
 | 112 | `money` | `bill-privacy.js` |  |
 | 110 | `list` | `cap-flag.js` |  |
 | 101 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
@@ -24,7 +24,7 @@ of file each thing is; this says what already does the job.
 | 96 | `next` | `dayopen.js` | the next thing to do — |
 | 91 | `entry` | `books-store.js` |  |
 | 91 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
-| 87 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
+| 88 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 86 | `register` | `regulation.js` | register(pack) → the pack — |
 | 84 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 83 | `catalogue` | `books-manual.js` | GET /events → the grid. |
@@ -44,7 +44,7 @@ of file each thing is; this says what already does the job.
 | 70 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 70 | `adopt` | `remote-party.js` | local → the input names a business in THIS installation's namespace (or is an e-mail): |
 | 69 | `pack` | `books-store-packs.js` |  |
-| 67 | `host` | `chit-sheet.js` |  |
+| 68 | `host` | `chit-sheet.js` |  |
 | 67 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
 | 66 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 66 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
@@ -74,9 +74,9 @@ of file each thing is; this says what already does the job.
 | 50 | `lines` | `cart.js` |  |
 | 50 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 49 | `missing` | `signin-pending.js` | a store failure that means "b879 is not applied": |
+| 48 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 48 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 48 | `account` | `home-facts.js` | OMITTED: |
-| 47 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 47 | `rules` | `docnumber.js` | the rule set for a country — |
 | 46 | `open` | `cap-attention.js` | a count pressed: |
 | 45 | `closeModal` | `app.html` |  |
@@ -87,15 +87,16 @@ of file each thing is; this says what already does the job.
 | 43 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 43 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
 | 42 | `load` | `books-grant-view.js` |  |
+| 42 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 42 | `note` | `dbwatch.js` |  |
-| 41 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 41 | `sentence` | `one-person.js` |  |
 | 41 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 41 | `rate` | `convert.js` | A rate, with its evidence. |
 | 41 | `owner` | `books.js` |  |
 | 40 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
+| 40 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
+| 39 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 39 | `order` | `cap-iddocs.js` | var LIST = null; |
-| 39 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 39 | `changes` | `books-store.js` |  |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 39 | `flags` | `cmdb.js` | the flags a record raises about itself — |
@@ -103,7 +104,6 @@ of file each thing is; this says what already does the job.
 | 39 | `counts` | `private-flag.js` | counts: |
 | 39 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 39 | `mine` | `crm.js` | `opt.removedOk`: |
-| 38 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 38 | `opts` | `books-grant-filters.js` |  |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 37 | `money` | `cart.js` |  |
@@ -117,12 +117,12 @@ of file each thing is; this says what already does the job.
 | 33 | `modal` | `app.html` |  |
 | 33 | `call` | `assign-bar.js` |  |
 | 33 | `shown` | `country-compare.js` | one side's value for the line: |
+| 33 | `note` | `device-id.js` | note(where, problem) — |
 | 33 | `entries` | `books-store.js` |  |
 | 33 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 33 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `next` | `cap-stock.js` | the next level: |
-| 32 | `note` | `device-id.js` | note(where, problem) — |
 | 32 | `guard` | `amend.js` | would disturb what has gone out. |
 | 32 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 32 | `governance` | `home-facts.js` |  |
@@ -197,6 +197,7 @@ of file each thing is; this says what already does the job.
 | 20 | `said` | `cap-shop.js` |  |
 | 20 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 20 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 20 | `confirm` | `lab-kit.js` | opts: |
 | 20 | `verdict` | `rail-thread.js` |  |
 | 20 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 20 | `payment` | `books-store.js` |  |
@@ -208,4 +209,3 @@ of file each thing is; this says what already does the job.
 | 19 | `cols` | `cap-catalogue.js` |  |
 | 19 | `query` | `cap-dispute.js` |  |
 | 19 | `account` | `cap-settings.js` |  |
-| 19 | `confirm` | `lab-kit.js` | opts: |
