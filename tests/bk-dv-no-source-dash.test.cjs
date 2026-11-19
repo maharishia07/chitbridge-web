@@ -1,30 +1,29 @@
 'use strict';
-/* 17 Nov (first-impression, Fable fab1424b): the owner/adviser Day book shows a quiet dash for an entry whose Evidence state is "No source" (nothing to attach, not a fault), as the firm Day book does;
-   "No tax invoice", "No file" and "Evidence n" keep their chip. The state is CBEvidence.stateOf's (the chip's own), never re-decided in cap-books.js.
+/* 20 Nov (S1: attach to ANY posted entry): an entry whose Evidence state is "No source" no longer paints a dash in the owner/adviser Day book; it paints the chip, worded "Attach receipt" for a seat that may attach and "No receipt" for one that may not (the state, filter and count stay "No source": stateOf is unchanged).
+   The Lines view carries the chip too; the foreign line reads "AUD 350.00 @ 54.60".
    Run: node tests/bk-dv-no-source-dash.test.cjs */
 const fs = require('fs'), assert = require('assert'), vm = require('vm');
 const src = fs.readFileSync(__dirname + '/../public/app/cap-books.js', 'utf8');
 const ev = fs.readFileSync(__dirname + '/../public/app/cap-evidence.js', 'utf8');
-const win = { document: { addEventListener() {}, getElementById: () => null, head: {}, createElement: () => ({ style: {}, setAttribute() {} }) }, tx: (s) => s };
+const win = { document: { addEventListener() {}, getElementById: () => null, head: { appendChild() {} }, createElement: () => ({ style: {}, setAttribute() {} }) }, tx: (s) => s, esc: (s) => String(s) };
 vm.createContext(win);
 vm.runInContext(ev, Object.assign(win, { window: win }));
 const E = win.CBEvidence;
-const a = src.indexOf('function bkDvEvState'), b = src.indexOf('function bkDvEvRank', a);
-const ctx = { CBEvidence: E, BK: { ev: { chip: (e) => '<chip ' + e.id + '>' } } };
-vm.createContext(ctx);
-vm.runInContext(src.slice(a, b), ctx);
 const line = src.split('\n').find((l) => l.includes("key: 'evidence', sort: 'evidence'"));
-assert(line && line.includes("s.key === 'nodoc' ? '—' : BK.ev.chip(e)"), 'the evidence cell paints a dash for nodoc');
-const cell = vm.runInContext('(function (e) { var s = bkDvEvState(e); return s && s.key === \'nodoc\' ? \'—\' : BK.ev.chip(e); })', ctx);
-const states = {
-  nodoc: { id: 'a', evidence: { doc: null, count: 0 } },
-  none: { id: 'b', evidence: { doc: 'INV-1', count: 0 } },
-  held: { id: 'c', evidence: { doc: 'INV-2', count: 2 } }
-};
-const keyOf = (e) => E.stateOf(e.evidence).key;
-assert.strictEqual(keyOf(states.nodoc), 'nodoc');
-assert.strictEqual(cell(states.nodoc), '—', 'No source: a dash');
-assert.strictEqual(cell(states.none), '<chip b>', 'No file keeps its chip');
-assert.strictEqual(cell(states.held), '<chip c>', 'a held file keeps its chip');
-assert.strictEqual(cell({ id: 'd' }), '<chip d>', 'no evidence from the server: the chip decides');
+assert(line && line.includes('return BK.ev.chip(e);') && !line.includes("'—'"), 'the evidence cell paints the chip for every state');
+assert(/ctx\.view === 'lines' && BK\.ev \? .*BK\.ev\.chip\(e\)/.test(src), 'the Lines view carries the chip');
+const nodoc = { entry_id: 'a', entry_no: 'J-1', evidence: { doc: null, count: 0 } };
+assert.strictEqual(E.stateOf(nodoc.evidence).key, 'nodoc');
+assert.strictEqual(E.stateOf(nodoc.evidence).word, 'No source', 'the state word is unchanged');
+const chipFor = (may) => E.use({ attach: () => {}, mayAttach: () => may }).chip(nodoc);
+assert(/Attach receipt/.test(chipFor(true)), 'a seat that may attach: Attach receipt');
+assert(/No receipt/.test(chipFor(false)) && !/Attach receipt/.test(chipFor(false)), 'a read-only seat: No receipt');
+assert(/data-ev-open="a"/.test(chipFor(true)), 'the chip still opens the sheet');
+// foreign line
+const a = src.indexOf('function bkFxText'), b = src.indexOf('/** a balance the way', a);
+const ctx = { bkDec: (c) => (c === 'JPY' ? 0 : 2), CBLocale: { number: (n, o) => n.toLocaleString('en-US', o) } };
+vm.createContext(ctx); vm.runInContext(src.slice(a, b), ctx);
+assert.strictEqual(ctx.bkFxText({ currency: 'AUD', rate: 54.6, foreign_minor: 35000 }), 'AUD 350.00 @ 54.60');
+assert.strictEqual(ctx.bkFxText({ currency: 'AUD', rate: '54.6025', foreign_minor: 35000 }), 'AUD 350.00 @ 54.6025');
+assert.strictEqual(ctx.bkFxText({ currency: 'JPY', rate: 0.55, foreign_minor: 1200 }), 'JPY 1,200 @ 0.55');
 console.log('PASS bk-dv-no-source-dash');

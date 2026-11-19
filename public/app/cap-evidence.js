@@ -1,6 +1,6 @@
 /**
  * cap-evidence.js — CMP062 the Evidence chip and CMP063 the Evidence sheet: what stands behind a books row (ASA 500: the auditor vouches an entry to its source).
- * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: an opening balance, a receipt or a journal, so nothing to attach to; the firm, owner and adviser Day books paint a quiet dash there, not a pill), or, for a purchase that claims GST above the tax-invoice threshold with no file,
+ * A chip on each Day book row says what is held: the files on its source document (Evidence 2), none yet (No file), no source document at all (No source: a hand-keyed entry or a bank fee; S1: a receipt can still be attached to the entry itself, so the owner and adviser Day books paint a quiet chip "Attach receipt" for a seat that may attach, "No receipt" for one that may not; the firm Day book keeps its dash), or, for a purchase that claims GST above the tax-invoice threshold with no file,
  * No tax invoice (a warning). A press opens the sheet: the source document (its number) and its files; a file opens in a new tab.
  * S1 (b887): the sheet of a seat that may attach (cfg.mayAttach) carries CMP063-B03 "Attach receipt" (a file on the entry itself; the server decides the type, the size and the seat) and the exact-copy note (evidence.duplicate, the server's own words).
  *
@@ -26,6 +26,7 @@
     flag: 'No tax invoice',
     none: 'No file',
     nodoc: 'No source',
+    noReceipt: 'No receipt',
     evidence: 'Evidence',
     head: 'Evidence for {no}',
     source: 'Source document',
@@ -107,6 +108,7 @@
         if (!ev || !entry.entry_id) return '';
         if (!seen[String(entry.entry_id)]) control.ingest([entry]);
         var s = stateOf(ev);
+        if (s.key === 'nodoc') s = { key: s.key, tone: s.tone, sym: s.sym, word: evidenceText(control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach() ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) }; /* the chip's word only; stateOf (filter, sort, count) stays No source */
         return (
           '<button type="button" class="ev ev-' + s.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + s.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '">' +
           '<span aria-hidden="true">' + s.sym + '</span> ' + esc(s.word) + '</button>'

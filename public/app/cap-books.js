@@ -297,6 +297,15 @@ function bkMoney(minor, c) {
     return n.toFixed(bkDec(c));
   }
 }
+/** a foreign line's figure: "AUD 350.00 @ 54.60" — the code and the number (no second symbol), the rate with at least 2 places (more if it has them), in the reader's number marks */
+function bkFxText(fx) {
+  var places = bkDec(fx.currency);
+  var given = (String(fx.rate).split('.')[1] || '').length;
+  var num = function (n, lo, hi) {
+    return typeof CBLocale !== 'undefined' && CBLocale.number ? CBLocale.number(n, { minimumFractionDigits: lo, maximumFractionDigits: hi }) : Number(n).toFixed(lo);
+  };
+  return fx.currency + ' ' + num(Number(fx.foreign_minor || 0) / Math.pow(10, places), places, places) + ' @ ' + num(Number(fx.rate), 2, Math.max(2, given));
+}
 /** a balance the way a ledger writes it: the amount, then Dr or Cr — never a minus sign (the server's figure is Dr − Cr) */
 function bkDrCr(v, c) {
   v = Number(v || 0);
@@ -2345,7 +2354,7 @@ function bkDvNext(e, c, lines, noParty, mine) {
               esc(item.code) +
               '</span> ' +
               esc(item.name) +
-              rate(item) + (item.fx ? ' · ' + esc(item.fx.currency) + ' ' + esc(bkMoney(item.fx.foreign_minor, item.fx.currency)) + ' @ ' + esc(String(item.fx.rate)) : '') + /* C4: AUD 350.00 @ 54.60 */
+              rate(item) + (item.fx ? ' · ' + esc(bkFxText(item.fx)) : '') + /* C4: AUD 350.00 @ 54.60 */
               (item.party_name && !noParty ? ' · ' + esc(bkPartyLabel(item.party_id, item.party_name)) : ''),
             item.dr_minor ? esc(bkMoney(item.dr_minor, c)) : '',
             item.cr_minor ? esc(bkMoney(item.cr_minor, c)) : ''
@@ -2657,7 +2666,7 @@ function bkDvFilters(entries) {
 function bkDvColumns(c) {
   var cols = bkDvCols(c);
   if (BK.ev)
-    cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { var s = bkDvEvState(e); return s && s.key === 'nodoc' ? '—' : BK.ev.chip(e); }, value: function (e) { var s = bkDvEvState(e); return s ? s.word : ''; } }); /* CMP062: never cut to make room; No source = no document to attach, so a quiet dash, not a pill that reads as a fault (rule in cap-evidence.js header, as the firm Day book) */
+    cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = bkDvEvState(e); return s ? s.word : ''; } }); /* CMP062: never cut to make room; every posted entry carries the chip (S1: attach to ANY entry); No source reads Attach receipt / No receipt, quiet, never a fault */
   if (BK.mk && BK.mk.state().may)
     cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
   if (bkFlagsOn())
@@ -2778,7 +2787,7 @@ function bkDvMount(el) {
       return 'db-gist-' + e.entry_no;
     },
     next: function (e, ctx) {
-      return bkDvNext(e, currency, ctx.view === 'lines');
+      return bkDvNext(e, currency, ctx.view === 'lines') + (ctx.view === 'lines' && BK.ev ? '<div data-testid="db-ev-' + esc(e.entry_no) + '" style="padding:4px 0">' + BK.ev.chip(e) + '</div>' : ''); /* CMP062 S1: the chip on every posted entry in Lines too, so a no-source entry can take a receipt */
     },
     group: {
       default: 'day',
