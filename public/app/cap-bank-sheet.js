@@ -103,6 +103,13 @@ function bkshPostedFeed() {
   });
   return feed;
 }
+/** a line stored before the bank's own ref became the key is still paired with the entry it made: posted[new ref] takes posted[old ref] */
+function bkshPairOldRefs(engine, posted, refs, lines) {
+  const olds = typeof engine.project.oldRefsOf === 'function' ? engine.project.oldRefsOf(lines, bkshRefAccount(), lines) : []; /* engines #153/#154: guard until the engines adopt carries it */
+  olds.forEach((old, at) => {
+    if (old && posted[old] && !posted[refs[at]]) posted[refs[at]] = posted[old];
+  });
+}
 /**
  * B5: the pairing of a statement line with the entry it made, ONE TO ONE BY OCCURRENCE: the line's own client_ref (the engine's refsOf: bank:<fingerprint>-<n>) and the posted record (ref → entry_no).
  * Two equal lines on one day carry two refs, so after posting each is paired with its own entry (never by amount and date alone). Nothing is worked out here: the engine's match() reads both.
@@ -121,11 +128,8 @@ function bkshPairing(lines) {
   Object.keys(made).forEach((ref) => {
     posted[ref] = String(made[ref]).split('#')[0]; /* "Same payment": the owner said which entry this line is; the page counts it too (the id is entry_no#line) */
   });
-  const refs = engine.project.refsOf(lines, bkshRefAccount(), lines),
-    olds = typeof engine.project.oldRefsOf === 'function' ? engine.project.oldRefsOf(lines, bkshRefAccount(), lines) : []; /* engines #153/#154: guard until the engines adopt carries it */
-  olds.forEach((old, at) => {
-    if (old && posted[old] && !posted[refs[at]]) posted[refs[at]] = posted[old]; /* a line stored before the bank's own ref became the key is still paired with the entry it made */
-  });
+  const refs = engine.project.refsOf(lines, bkshRefAccount(), lines);
+  bkshPairOldRefs(engine, posted, refs, lines);
   return { line_refs: refs, posted };
 }
 /** the ONE account key every statement-line ref is fingerprinted with: the ledger CODE, the same the statement check hands back (fingerprint_account) and the controller posts with. A name here made the page pair by other refs than the entries were posted under (B5, reload showed twins as "Not on the statement") */
