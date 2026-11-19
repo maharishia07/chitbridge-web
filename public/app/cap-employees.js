@@ -79,7 +79,6 @@
   function ask(c, fn, btn, o) {
     return root.CBAction.run(btn, fn, Object.assign({ confirm: c }, o || {}));
   }
-
   /* ── words ── */
   function sinceWord(iso) {
     if (!iso) return T('Not yet');
@@ -494,6 +493,7 @@
   /** after a write: re-read the one list, repaint the sheet on the fresh row, tell the host */
   function changed(id, event) {
     return load().then(function () {
+      if (E.onChanged) return E.onChanged(id); /* Delegate work (cap-employees-give.js): the panel repaints in place, no sheet */
       if (E.list) E.list.refresh();
       paintBar();
       var node = byId(id);
@@ -932,5 +932,5 @@
     start();
     return { reload: reload };
   }
-  root.CBEmployees = { mount: mount, sinceWord: sinceWord };
+  root.CBEmployees = { mount: mount, sinceWord: sinceWord, inPlace: { E: E, load: load, byId: byId, accessPanel: accessPanel } }; /* the in-place door cap-employees-give.js mounts the SAME access panel through */
 })(typeof window !== 'undefined' ? window : globalThis);

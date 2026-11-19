@@ -355,7 +355,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +
