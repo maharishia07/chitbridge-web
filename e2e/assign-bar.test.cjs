@@ -68,7 +68,8 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   check(owner.win.CBAssign.showsBar() === false && manager.win.CBAssign.showsBar() === false && assistant.win.CBAssign.showsBar() === false, 'with no server verdict nobody is shown the bar: the token and the role say nothing');
   check(manager.win.CBAssign.showsBar(true) === true && owner.win.CBAssign.showsBar(false) === false && assistant.win.CBAssign.showsBar(true) === true, "the server's verdict alone decides (a manager the server approves sees it, an owner it refuses does not)");
   check(manager.quiet.length === 0, 'no token is read, so nothing is logged');
-  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).length === 4, 'bulk gives four buttons (Assign to me · Assign to… · Hand over · Back to pool) when the server said yes and none when it said nothing');
+  check(assistant.win.CBAssign.bulk({}).length === 0 && manager.win.CBAssign.bulk({ plug: 'p', said: true }).map((button) => button.id).join() === 'me,assign,handover,pool', 'bulk gives four buttons (Assign to me · Assign to… · Hand over · Back to pool) when the server said yes and none when it said nothing');
+  check(assistant.win.CBAssign.bulk({ plug: 'p', take: true }).map((button) => button.id).join() === 'me', 'MTX-new-4: a seat the server lets only take (may_take) gets Assign to me alone');
   /* H3 (20 Nov): the one empty state of the work queue */
   const rowsQ = [{ holders: [] }, { holders: [] }, { holders: [{ actor_id: 'x', name: 'Ben' }] }];
   const qMgr = fakeWindow({ role: 'actor', token: tokenWith({ hat: 'Manager' }), actor_id: 'me1' }, []).win.CBAssign.queue({ key: 'k', rows: rowsQ, said: true, everyone: true, plug: 'p', noun: 'client', subjectOf: (r) => r, roleOf: () => '', reload: () => null });

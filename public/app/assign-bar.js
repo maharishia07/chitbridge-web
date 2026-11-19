@@ -36,6 +36,8 @@
   }
   /** SHOW only, on the SERVER's verdict (`may_assign` on the practice answer and on GET /api/actors): no token is read. Not a permission: the api refuses a call that is not allowed. Nothing said yet = not shown. */
   assignApi.showsBar = function (said) { return said === true; };
+  /** MTX-new-4: a seat that may only TAKE work (the server's `may_take`, W17 staff pick-up) gets the ticks and the one "Assign to me" button, never Assign to… / Hand over / Back to pool */
+  assignApi.showsTake = function (opts) { return !!opts && (opts.said === true || opts.take === true); };
   /** the signed-in person's id as the sign-in stored it (for the Mine view and the I key); '' when the session does not carry one */
   assignApi.meId = function () {
     var s = session();
@@ -274,7 +276,7 @@
     if (!assignApi.hasHolders(rows)) return {};
     var holds = !!me && rows.some(function (r) { return held.match(r, 'mine'); });
     var opts = Object.assign({ listKey: q.key }, q);
-    return { views: assignApi.quickViews(), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsBar(q.said), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+    return { views: assignApi.quickViews(), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsTake(q), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
       emptyFor: function (state) { return queueEmpty(opts, rows, state); },
       filter: { key: 'held', label: tr('Held by'), all: tr('Anyone'), options: held.options.map(function (o) { return { v: o[0], label: tr(o[1]) }; }), match: held.match } };
   };
@@ -309,11 +311,12 @@
    * opts: { plug, noun, nounMany?, subjectOf(row), roleOf(row), reload(), said (a server verdict), heldOf? (row → bool: has a holder) }
    */
   assignApi.bulk = function (opts) {
-    if (!assignApi.showsBar(opts.said)) return [];
+    if (!assignApi.showsTake(opts)) return [];
     assignApi.mount(opts);
-    var held = heldOf(opts);
+    var held = heldOf(opts), take = { id: 'me', label: tr('Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    if (!assignApi.showsBar(opts.said)) return [take];
     return [
-      { id: 'me', label: tr('Assign to me'), run: function (rows) { takeFor(opts, rows); } },
+      take,
       { id: 'assign', label: tr('Assign to…'), run: function (rows) {
         pick({ title: 'Assign to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
       } },
