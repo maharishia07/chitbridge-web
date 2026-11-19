@@ -29,7 +29,7 @@ const src = {}; FILES.forEach((f) => (src[f] = read(f)));
 const WANT = {
   'cap-tasks.js': { 'tk-retry': 'TSK003-B01', 'tk-view': 'TSK003-S01', 'tk-new"': 'TSK003-B02', 'id="tk_x"': 'TSK003-B03', 'id="tk_sheet_retry"': 'TSK003-B04',
     'tk-reason"': 'TSK003-I01', 'tk-reason-go': 'TSK003-B11', 'tk-deliver-qty': 'TSK003-I02',
-    'tk-deliver-go': 'TSK003-B13', 'tk-new-what': 'TSK003-I03', 'tk-new-go': 'TSK003-B14' },
+    'tk-deliver-go': 'TSK003-B13', 'tk-new-what': 'TSK003-I03', 'tk-new-go': 'TSK003-B14', 'tk-client-': 'TSK003-L01', 'tk-panel-': 'TSK003-L02' },
   'cap-dispute.js': { 'id="adv_disp"': 'TSK006-I01', 'dispute-category': 'TSK006-S03', 'dispute-reason"': 'TSK006-T01', 'dispute-raise': 'TSK006-B10',
     'dispute-resolve-note': 'TSK006-T02', 'dispute-resolve-submit': 'TSK006-B12', 'dp-retry': 'TSK006-B13', 'dp-prev': 'TSK006-B14', 'dp-next': 'TSK006-B15',
     'id="dp_cat"': 'TSK006-S04', 'id="dp_reason"': 'TSK006-T03', 'dp-raise-go': 'TSK006-B18', 'id="dp_sheet_retry"': 'TSK006-B19', 'dp-rwho': 'TSK006-S05',
@@ -55,7 +55,7 @@ for (const f of FILES) {
 }
 const dup = Object.keys(all).filter((c) => all[c].length > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 56, 'the page has 56 tagged elements, counted by code: ' + Object.keys(all).length);
+check(Object.keys(all).length === 58, 'the page has 58 tagged elements, counted by code: ' + Object.keys(all).length);
 check(src['cap-tasks.js'].indexOf('function actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'actRow takes the stamp code as its 6th parameter');
 check(src['cap-dispute.js'].indexOf('root.CBTasks.actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'the dispute wrapper hands the code on');
 

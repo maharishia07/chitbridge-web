@@ -55,13 +55,19 @@
     page.seatToKeep = null;
     try { root.localStorage.setItem(SEAT_KEY + keep.id, keep.preset); } catch (failure) { quietSeat(failure); } /* a seat not remembered is asked again */
   }
+  /** why no door opened, in the server's refusal code: its grant ran out (ended), it holds one this seat may not use (not for you), or none at all */
+  function noDoorCode(id) {
+    if (page.seats[id]) return 'BOOKS_GRANT_NOT_FOR_YOU';
+    return page.ended && page.ended[id] ? 'BOOKS_GRANT_ENDED' : 'BOOKS_GRANT_NONE';
+  }
+  /** open a client's books: the seat chosen once, or the refusal page (why, what to do, back to the queue) when no door of this login opens */
   function openSeat(id, name, at) {
     var door = root.CBBooksGrantApi.doorsFor({ seats: page.seats, mine: page.mine }, id, rememberedSeat(id));
     if (door.stale) forgetSeat(id); /* a stored seat the server no longer lets this login use is dropped */
     if (door.refused) {
       page.opened = null;
       page.el.innerHTML = '<div data-testid="nw-refused"></div>';
-      root.CBShell.readFailed(page.el.firstChild, { what: name, status: 403, back: { href: '/network.html', label: words('Back to My network') } });
+      root.CBBooksGrantApi.closedFrame(page.el.firstChild, name, noDoorCode(id)); /* W19: why, what to do, back to my queue */
       return;
     }
     if (door.open) return sitAs(id, name, door.open, at);
@@ -75,7 +81,7 @@
   }
   /* ── l16 R4-2b: the client is in the address (?open=<client>&view=<screen>): every open client and every screen of its books is a history entry (pushState), Back and Forward restore it, and the page never falls back to the network list ── */
   function addressOfClient(id, view, period) {
-    return '/network.html?open=' + encodeURIComponent(id) + (view ? '&view=' + encodeURIComponent(view) : '') + (view && period ? root.CBPeriodPick.toAddress(period) : '') + (view === 'daybook' && root.CBBooksGrantFilters ? root.CBBooksGrantFilters.carry(root.location.search, id) : '') + (view === 'daybook' && new root.URLSearchParams(root.location.search).get('open') === id && new root.URLSearchParams(root.location.search).get('since') === 'mine' ? '&since=mine' : ''); /* the period rides the address (&fy= or &from=&to=): Back and a shared link keep it; so do the Day book's filters (A3C, &dbf_*) */
+    return '/network.html?open=' + encodeURIComponent(id) + (view ? '&view=' + encodeURIComponent(view) : '') + (view && period ? root.CBPeriodPick.toAddress(period) : '') + (view === 'daybook' && root.CBBooksGrantFilters ? root.CBBooksGrantFilters.carry(root.location.search, id) : '') + (view === 'daybook' && new root.URLSearchParams(root.location.search).get('open') === id && new root.URLSearchParams(root.location.search).get('since') === 'mine' ? '&since=mine' : '') + (root.CBQueueBack ? root.CBQueueBack.carry(root.location.search) : ''); /* TSK004: the way back to his queue rides every screen of the client */ /* the period rides the address (&fy= or &from=&to=): Back and a shared link keep it; so do the Day book's filters (A3C, &dbf_*) */
   }
   /** record the client now open (or the list, id null) in history: push a new entry (replace: the one the address already names, on a deep link or a restore) */
   function record(replace, view, period) {
@@ -131,12 +137,13 @@
       onSwitch: function (id, name) { openSeat(id, (page.held[id] && page.held[id].grantor_name) || name); },
       onBack: function () {
         /* E2 (Fable walk 17 Nov): "← Clients" goes to the practice list BY ADDRESS. history.back() stepped one TAB back (every screen of the books is a history entry), so the address and the screen disagreed and the list was never reached. The list is a new entry; Back from it returns to the client. */
+        if (root.CBQueueBack && root.CBQueueBack.on()) { root.location.assign(root.CBQueueBack.href()); return; } /* TSK004: he came from his queue: back to it, his filter kept */
         if (page.cameFromHome) { root.location.assign('/'); return; } /* fix1117 F1 (walk 17 Nov): a client opened from the practice Home goes back to that Home (the practice list), never to the network page's old client list (acc17 E2 sent it there) */
-        var was = page.opened && page.opened.id;
+        var closedId = page.opened && page.opened.id;
         page.opened = null; page.view = ''; page.period = null;
         record(false);
         paint();
-        var door = was && page.el && page.el.querySelector('[data-open-books="' + was + '"]'); /* focus lands on the "Open books" that opened it */
+        var door = closedId && page.el && page.el.querySelector('[data-open-books="' + closedId + '"]'); /* focus lands on the "Open books" that opened it */
         if (door) door.focus();
       }
     });
