@@ -110,6 +110,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
 | `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
+| `cap-tasks-assign.js` | — | cap-tasks-assign.js — Tasks & Orders: the board's rows on the ONE work-queue capability (CBAssign.queue) |
 | `cap-tasks.js` | — |  |
 | `cap-testing.js` | lazy · on demand |  |
 | `cap-traceability.js` | lazy · traceability | TRACEABILITY capability (lazy via ensureCap('traceability')) |

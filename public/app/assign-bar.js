@@ -214,10 +214,11 @@
   function undoOf(plug, role, previous, write) {
     var by = {}, order = [];
     (previous || []).forEach(function (p) {
-      if (!p.subject_id) return;
+      if (!p.subject_id && !p.chit_id) return;
       var k = String(p.actor_id || '');
-      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], write: write }; order.push(k); }
-      by[k].subject_ids.push(p.subject_id);
+      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], chit_ids: [], write: write }; order.push(k); }
+      if (p.chit_id && !write) by[k].chit_ids.push(p.chit_id); /* W12: undo per COPY (each copy's own previous holder), never per client: a client with several period copies held by different people would put them all back to one */
+      else by[k].subject_ids.push(p.subject_id);
     });
     return order.map(function (k) { return by[k]; });
   }
@@ -247,10 +248,23 @@
     }, root.Promise.resolve()).then(function () {
       if (sum.refused) showOutcome('bad', sum.refused, []);
       else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
+      if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
       if (last) last.reload = opts.reload;
       return opts.reload ? opts.reload() : null;
     });
   }
+  /**
+   * CBAssign.queue(q) → the options a list merges into its CBList.mount: THE WORK-QUEUE CAPABILITY (Athi 19 Nov: "the capability, so we can use it anywhere"). q = the assign options (plug · noun · nounMany · subjectOf · roleOf · said · reload · write? · heldOf? · flag?)
+   * + { key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
+   * → { views (Mine · Unassigned · Everyone), bulk (Assign to me · Assign to… · Hand over · Back to pool), bulkAlways, preset (the opening view: Mine for a seat that holds work or may not assign, Everyone otherwise), filter (the Held by filter, list shape) }; {} when no row carries holders.
+   * Nothing here names a trade: the noun, the door (plug / write) and the rows come from the screen. */
+  assignApi.queue = function (q) {
+    var rows = q.rows || [], me = assignApi.meId(), held = assignApi.heldFilter(rows);
+    if (!assignApi.hasHolders(rows)) return {};
+    var holds = !!me && rows.some(function (r) { return held.match(r, 'mine'); });
+    return { views: assignApi.quickViews(), bulk: assignApi.bulk(Object.assign({ listKey: q.key }, q)), bulkAlways: assignApi.showsBar(q.said), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+      filter: { key: 'held', label: tr('Held by'), all: tr('Anyone'), options: held.options.map(function (o) { return { v: o[0], label: tr(o[1]) }; }), match: held.match } };
+  };
   /** Undo: one more assign-bulk call per (role, previous holder), using the holders the server returned */
   function undo() {
     var groups = last && last.undo ? last.undo : [], reload = last && last.reload;
@@ -259,7 +273,7 @@
     return groups.reduce(function (chain, g) {
       return chain.then(function () {
         if (refused) return null;
-        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
+        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, g.chit_ids && g.chit_ids.length ? { chit_ids: g.chit_ids, target_actor_id: g.actor_id } : { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
         return put.then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
       });
     }, root.Promise.resolve()).then(function () {
@@ -286,6 +300,7 @@
     assignApi.mount(opts);
     var held = heldOf(opts);
     return [
+      { id: 'me', label: tr('Assign to me'), run: function (rows) { takeFor(opts, rows); } },
       { id: 'assign', label: tr('Assign to…'), run: function (rows) {
         pick({ title: 'Assign to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
       } },
@@ -399,15 +414,17 @@
     if (!opts) return;
     pick({ title: 'Assign to…', held: row.held, forWord: opts.write ? undefined : opts.plug + ':' + row.sid, before: opts.beforePick, flag: opts.flag }, function (holder) { apply(oneRowOpts(opts), [row], holder); });
   }
-  /** the I key: take it, when the person is among the people the server lets hold this work */
-  function takeChip(chip) {
-    var opts = mounts[chip.getAttribute('data-as-plug')], row = chipRow(chip);
-    if (!opts) return;
-    people(undefined, opts.flag).then(function (roster) {
+  /** Assign to me (the bar) and the I key (a row): take these rows, when the person is among the people the server lets hold this work; the server still says yes or why not */
+  function takeFor(opts, rows) {
+    return people(undefined, opts.flag).then(function (roster) {
       var me = roster.list.filter(function (p) { return p.me; })[0];
       if (!me) return showOutcome('bad', tr('You cannot take this one.'), []);
-      return apply(oneRowOpts(opts), [row], { id: me.id, note: '' });
+      return apply(opts, rows, { id: me.id, note: '' });
     });
+  }
+  function takeChip(chip) {
+    var opts = mounts[chip.getAttribute('data-as-plug')];
+    if (opts) takeFor(oneRowOpts(opts), [chipRow(chip)]);
   }
   function typingIn(node) { return !!(node && node.closest && node.closest('input,select,textarea,[contenteditable],#modalhost,dialog')); }
   /** whether a key press is not the assign shortcut (a modifier is held, another key, or the person is typing) */

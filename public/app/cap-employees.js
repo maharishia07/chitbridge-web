@@ -243,6 +243,7 @@
         prio: 2,
         w: 230,
         mono: true,
+        wrap: true /* the whole sign-in name, wrapped, never cut (W10) */,
         cell: function (p) {
           return Copy.signInName(p.user_id) || '—';
         }
@@ -733,7 +734,7 @@
   function openAdd() {
     var cs = E.choices
       .map(function (item, index) {
-        return '<option value="' + index + '"' + (item.key === (E.choices[0] && E.choices[0].key === 'bookkeeper' ? 'bookkeeper' : 'counter') ? ' selected' : '') + '>' + esc(item.label) + '</option>';
+        return '<option value="' + index + '"' + (item.key === (E.choices.some(function (c) { return c.key === 'counter'; }) ? 'counter' : (E.choices[0] || {}).key) ? ' selected' : '') /* a shop defaults to Counter staff; a practice (no Counter staff) to its FIRST choice, Accountant / Bookkeeper */ + '>' + esc(item.label) + '</option>';
       })
       .join('');
     sheet(
@@ -766,24 +767,15 @@
         esc(T('Add')) +
         '</button></form>'
     );
-    var typedKey = false,
-      tm = null;
-    $('emp_k').oninput = function () {
-      typedKey = true;
-    };
+    var tm = null,
+      /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
+      keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T);
     $('emp_n').oninput = function () {
       clearTimeout(tm);
       var name = $('emp_n').value.trim();
-      if (typedKey || name.length < 2) return;
+      if (keyWatch.typed() || name.length < 2) return;
       tm = setTimeout(function () {
-        call('POST', '/api/actors/suggest-key', { display_name: name }).then(
-          function (reply) {
-            if (typedKey) return;
-            $('emp_k').value = reply.suggested_key || '';
-            $('emp_kn').textContent = reply.login_format ? T('They sign in as') + ' ' + reply.login_format : '';
-          },
-          function () {}
-        );
+        keyWatch.ask(name, function (reply) { $('emp_k').value = reply.suggested_key || ''; });
       }, 300);
     };
     $('emp_add_go').onclick = function () {
