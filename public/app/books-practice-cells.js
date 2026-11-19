@@ -29,6 +29,8 @@
   practiceKit.changedCell = changedCell;
   practiceKit.readOnlyChip = readOnlyChip;
   function statusCell(r) {
+    /* XC-1119: a client whose country has no pack: the server's one sentence, never "Not enough books yet" (that reads like a new empty shop) */
+    if (r.pack_missing) return '<span class="tag warn" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(r.pack_missing) + '</span>';
     /* A3P rank 1: on Year end the Status is a chip only (the reasons move to the opened row), so Due fits at 1366 */
     var why = practiceKit.bandNow() !== 'pipeline' && r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + practiceKit.escapeHtml(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
     return '<span class="tag ' + (practiceKit.STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(r.health.words)) + '</span>' + why;
