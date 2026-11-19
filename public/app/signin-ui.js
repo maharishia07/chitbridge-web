@@ -225,6 +225,10 @@
     if (role === 'actor') s.duty = 'duty';
     return s;
   }
+  /** why a person is at the sign-in window: the page's own reason, else the one the frame kept when their access ended (BOOKS_GRANT_ENDED, ACCOUNT_SWITCHED_OFF: the server's sentence, read once) */
+  function endedWhy(c) {
+    return c.why ? String(c.why) : root.CBFrame && root.CBFrame.endedNote ? root.CBFrame.endedNote() : '';
+  }
   /** the apps' session, stored (cb_sess) — the same keys app.html writes; then CBOnePerson.claim says whose this browser's work is */
   function keep(c, s, store) {
     /* a sign-in by the host's LOCAL credential (the till's counter PIN) carries no token — there is no session to keep */
@@ -263,7 +267,7 @@
       resolved: '',
       sent: null,
       choices: [],
-      why: c.why ? String(c.why) : root.CBFrame && root.CBFrame.endedNote ? root.CBFrame.endedNote() : '',
+      why: endedWhy(c),
       said: '',
       busy: false,
       token: null,
@@ -322,7 +326,7 @@
       if (code === 'NO_ACCOUNT') return W.noAccount;
       if (r.status === 429) return W.tooMany;
       /* a NAMED refusal (DEVICE_REVOKED, AMBIGUOUS_NAME, …) already carries the sentence the server chose — say that, not "wrong code" */
-      if ((code && b.message) || (root.CBFrame && root.CBFrame.endedWords && root.CBFrame.endedWords(r.status, b))) return String(b.message || b.error); /* walk 19 Nov: removed access / switched off, said plainly */
+      if (code && b.message) return String(b.message);
       return E.refusal({ status: r.status, message: b.message || b.error });
     }
     /* the secret typed before a choice of account, kept in this closure only until the person picks (never in S, never painted) */

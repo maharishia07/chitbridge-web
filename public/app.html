@@ -3998,7 +3998,7 @@ function noteLedgerOn(profile) {
         });
   }
 }
-/** l16 W4: where an ACTOR lands: 'home' (a firm's practice) · 'rail' · or a promise of either (one practice read, 4 s at most, its answer kept as the one hint books-practice.js reads) */
+/** l16 W4: where an ACTOR lands: 'home' (a firm's practice) · 'rail' · or a promise of either (one read of /me's is_practice, 4 s at most, its answer kept as the one hint books-practice.js reads) */
 function firmLanding() {
   var tail = String(SESSION.token || '').slice(-12),
     kept = '';
@@ -4012,14 +4012,14 @@ function firmLanding() {
     timer = setTimeout(function () {
       if (abortRead) abortRead.abort();
     }, 4000);
-  return fetch(CFG.API_BASE + '/api/books-grants/practice', { headers: { Authorization: 'Bearer ' + SESSION.token }, signal: abortRead ? abortRead.signal : undefined })
+  return fetch(CFG.API_BASE + '/api/entities/me', { headers: { Authorization: 'Bearer ' + SESSION.token }, signal: abortRead ? abortRead.signal : undefined })
     .then(function (r) {
       return r.ok ? r.json() : null;
     })
-    .then(function (practice) {
+    .then(function (answer) {
       clearTimeout(timer);
-      if (!practice) return 'rail'; /* no answer (403, 429, a hang): not decided, not kept */
-      var firm = !!(practice.clients && practice.clients.length && practice.own_trade === false);
+      var firm = answer && answer.entity ? answer.entity.is_practice : null; /* api #1378: /me says it for every seat (employees too): true | false | null = unknown */
+      if (typeof firm !== 'boolean') return 'rail'; /* no answer (403, 429, a hang) or the api did not say: not decided, not kept */
       try {
         localStorage.setItem('cb_practice_hint', (firm ? '1' : '0') + ':' + tail);
       } catch (failure) {
@@ -4035,9 +4035,9 @@ function firmLanding() {
 /** l16 W4: an actor of a firm lands on Home (a practice read decides); true = the route was handled here */
 function routeFirmLanding(text) {
   /* l16 W4 (walk 16 Nov): STAFF OF A FIRM LAND ON THE PRACTICE. An actor whose firm practice answers (clients held by live grants, no trade of its own: the same rule as books-practice.js isFirm)
-     opens Home, the same as the firm's owner; a shop's counter staff keep the rail. The per-login hint (cb_practice_hint, the one books-practice.js keeps) answers at once; with none, ONE practice read decides and is kept.
+     opens Home, the same as the firm's owner; a shop's counter staff keep the rail. The per-login hint (cb_practice_hint, the one books-practice.js keeps) answers at once; with none, ONE read of /api/entities/me (is_practice) decides and is kept.
      ONLY the app's own front (#/app, empty), as the paired-counter rule above. A read that fails or is slow lets the rail draw (the practice frame on Home carries its own retry). */
-  if (SESSION.token && (SESSION.role === 'actor' || SESSION.role === 'entity') && (text === '#/' || text === '' || text === '#/app') && !window._firmLandingDone) {
+  if (SESSION.token && ['actor', 'entity'].indexOf(SESSION.role) >= 0 && (text === '#/' || text === '' || text === '#/app') && !window._firmLandingDone) {
     var landing = firmLanding();
     if (landing === 'home') {
       location.replace('/');

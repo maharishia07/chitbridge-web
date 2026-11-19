@@ -338,7 +338,8 @@
       var kept = root.sessionStorage.getItem('cb_ended_why') || '';
       root.sessionStorage.removeItem('cb_ended_why');
       return kept;
-    } catch (_) {
+    } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('frame:ended-note', failure); /* storage blocked: no reason kept, the plain sign-in window follows */
       return '';
     }
   }
