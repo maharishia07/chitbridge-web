@@ -2048,7 +2048,7 @@ function bkDvCsv(list, c) {
       return (Number(m || 0) / pow).toFixed(bkDec(c));
     };
   var cell = bkCsvCell;
-  var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'dr', 'cr', 'gist']];
+  var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'made_by', 'currency', 'dr', 'cr', 'gist']]; /* H-h2-008/009: who made the entry and the money's currency ride every line */
   list.forEach(function (e) {
     var s = e.source || {},
       cr = (e.lines || []).reduce(function (total, item) {
@@ -2063,6 +2063,8 @@ function bkDvCsv(list, c) {
       bkDvTenders(e).join(' · '),
       s.counter || '',
       s.by || '',
+      e.made_by || '',
+      String(c || '').toUpperCase(),
       '#' + amt(bkDvTotal(e)),
       '#' + amt(cr),
       bkDvGist(e)
