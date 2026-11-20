@@ -58,6 +58,10 @@ function esc(v) {
 function opt(arr, sel) {
   return arr.map((item) => `<option ${item === sel ? 'selected' : ''}>${item}</option>`).join('');
 }
+/** errLine(testid, words) → one small line of the failure card, or '' when there are no words */
+function errLine(testid, words) {
+  return words ? '<div class="sub" data-testid="' + testid + '">' + esc(words) + '</div>' : '';
+}
 /**
  * ⚠️ ONE SHAPE FOR "IT DID NOT LOAD", because there were four. Measured across the app: "Couldn't load",
  * "Couldn't load suppliers", "Couldn't load co-assists", "Could not load customers" — three spellings of the
@@ -67,10 +71,6 @@ function opt(arr, sel) {
  * ⚠️ AND IT OFFERS RETRY. A failure with no way out makes the reader reload the whole app, which costs them
  * every bit of unsaved state on the screen. `subject` names what failed; `retry` is a call expression.
  */
-/** errLine(testid, words) → one small line of the failure card, or '' when there are no words */
-function errLine(testid, words) {
-  return words ? '<div class="sub" data-testid="' + testid + '">' + esc(words) + '</div>' : '';
-}
 function scrErr(e, subject, retry) {
   /* B7 (ERR-13): the register sentence (e.message = the api's detail) AND its next step (e.hint) and the request id, with the error code as data-cb-error-code so the UI CMDB can link the card to its code (ERR-14 part 1);
      a capability that would not load names itself (e.capability) */
