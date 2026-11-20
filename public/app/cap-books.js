@@ -3036,7 +3036,7 @@ async function bkDvOlder() {
     if (d.api) d.api.refresh();
     bkPagerPaint('bk_dvpager', 'db', d.r, 'Older', 'newest first', bkDvOlder);
   } catch (e) {
-    if (typeof toast === 'function') toast(tx('Could not load more'));
+    if (typeof toast === 'function') toast(bkWhy(e));
   } finally {
     d.busy = false;
   }
@@ -3180,7 +3180,7 @@ async function bkLgMore() {
     if (BK.lt.api) BK.lt.api.refresh();
     bkPagerPaint('lg_pager', 'lg', held, 'Next', 'oldest first', bkLgMore);
   } catch (e) {
-    if (typeof toast === 'function') toast(tx('Could not load more'));
+    if (typeof toast === 'function') toast(bkWhy(e));
   } finally {
     BK.lt.busy = false;
   }
