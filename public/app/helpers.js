@@ -68,16 +68,47 @@ function opt(arr, sel) {
  * every bit of unsaved state on the screen. `subject` names what failed; `retry` is a call expression.
  */
 function scrErr(e, subject, retry) {
+  /* B7 (ERR-13): the register sentence (e.message = the api's detail) AND its next step (e.hint) and the request id, with the error code as data-cb-error-code so the UI CMDB can link the card to its code (ERR-14 part 1);
+     a capability that would not load names itself (e.capability) */
+  var name = subject || (e && e.capability) || '';
   return (
-    '<div class="empty"><div class="big">⚠</div>' +
+    '<div class="empty" role="alert" data-cb-error-code="' +
+    esc((e && e.code) || '') +
+    '"><div class="big">⚠</div>' +
     '<div class="t">' +
-    esc("Couldn't load" + (subject ? ' ' + subject : '')) +
+    esc("Couldn't load" + (name ? ' ' + name : '')) +
     '</div>' +
     '<div>' +
     esc(e && e.message) +
     '</div>' +
+    (e && e.hint ? '<div class="sub" data-testid="err-hint">' + esc(e.hint) + '</div>' : '') +
+    (e && e.requestId && e.status >= 500 ? '<div class="sub" data-testid="err-request-id">' + esc(tx('Quote this reference:') + ' ' + e.requestId) + '</div>' : '') +
     (retry ? '<button data-cbsid="CMP009" class="btn" data-testid="err-retry" onclick="' + esc(retry) + '" style="margin-top:4px">' + tx('Try again') + '</button>' : '') +
     '</div>'
+  );
+}
+/** apiRead(key, opts, emptyOf?, limitMs?) → Promise<{ state: 'ok' | 'empty' | 'failed', data, error }>; B7 (ERR-5): the ONE read that tells EMPTY (a 200 with nothing in it) from FAILED (a refusal, a dead network, or no answer inside limitMs, default 10 s);
+   it never throws. A failed read is painted with scrErr(result.error); an empty one with the screen's own empty sentence. A 401 still goes to sign-in inside api() — it is also 'failed' here, with no card needed. */
+function apiRead(key, opts, emptyOf, limitMs) {
+  var limit = limitMs || 10000;
+  var timer;
+  var late = new Promise(function (resolve, reject) {
+    timer = setTimeout(function () {
+      var slow = new Error(tx('No answer yet.'));
+      slow.kind = 'timeout';
+      reject(slow);
+    }, limit);
+  });
+  return Promise.race([api(key, opts), late]).then(
+    function (data) {
+      clearTimeout(timer);
+      var empty = typeof emptyOf === 'function' ? emptyOf(data) : data == null || (Array.isArray(data) && !data.length);
+      return { state: empty ? 'empty' : 'ok', data: data, error: null };
+    },
+    function (error) {
+      clearTimeout(timer);
+      return { state: 'failed', data: null, error: error };
+    }
   );
 }
 function cap(s) {

@@ -375,6 +375,7 @@ function friendlyErr(e) {
 const TOAST_HOST_CSS =
   '#toast{position:fixed;left:50%;bottom:var(--cb-toast-bottom,20px);transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}' +
   '#toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}' +
+  '#toast .toast-hint{display:block;margin-top:4px;font-size:13px}' +
   '#toast .toast.err{background:var(--red-i,#8e3517)}#toast .toast.warn{background:var(--amber-i,#7a5205)}' +
   '#toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}';
 /**
@@ -401,7 +402,9 @@ function toast(msg, undo) {
   const _lvl = toastLevel(msg);
   if (typeof cblog === 'function') cblog(_lvl, msg);
   const node = toastHost(_lvl === 'error');
-  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
+  /* B7: a toast that says the api's refusal also says its next step (hint) and carries the error code as data-cb-error-code (ERR-14 part 1) */
+  const _ref = typeof window !== 'undefined' && window.CB_LAST_REFUSAL && window.CB_LAST_REFUSAL.message === msg ? window.CB_LAST_REFUSAL : null;
+  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}"${_ref && _ref.code ? ' data-cb-error-code="' + esc(_ref.code) + '"' : ''}>${esc(msg)}${_ref && _ref.hint ? ' <span class="toast-hint">' + esc(_ref.hint) + '</span>' : ''}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
       undo();

@@ -1220,6 +1220,7 @@
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
   .toast.err{background:var(--disp);color:var(--on-danger)}
   .toast.warn{background:#8a6d1f}
+  .toast-hint{display:block;margin-top:4px;font-size:13px}
   .toast button{border:0;background:none;color:var(--gold);font-weight:700}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #cfe0ec;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
   .loadwrap{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:var(--fs-2)}
@@ -6235,11 +6236,21 @@ function _capOne(name) {
     node.async = false;
     node.onload = function () {
       CAP_LOADED[name] = true;
+      if (typeof _limit !== 'undefined') clearTimeout(_limit);
       resolve();
     };
-    node.onerror = function () {
+    /* B7 (ERR-4/10): the load has a time limit (10 s) and its error NAMES the capability (e.capability), so scrErr paints one "couldn't load <name>" card instead of a spinner for ever or a console line */
+    var _fail = function (kind) {
       delete _capPromise[name];
-      reject(new Error(txf('Could not load the {capability} capability.', { capability: name })));
+      var er = new Error(txf('Could not load the {capability} capability.', { capability: name }));
+      er.capability = name;
+      er.kind = kind;
+      reject(er);
+    };
+    var _limit = setTimeout(function () { if (!CAP_LOADED[name]) _fail('timeout'); }, 10000);
+    node.onerror = function () {
+      clearTimeout(_limit);
+      _fail('load');
     };
     document.head.appendChild(node);
   }));
