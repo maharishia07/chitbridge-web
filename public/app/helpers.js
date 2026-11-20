@@ -77,7 +77,7 @@ function scrErr(e, subject, retry) {
   e = e || {};
   var name = subject || e.capability || '';
   return (
-    '<div class="empty" role="alert" data-cb-error-code="' +
+    '<div class="empty" role="alert" data-cbsid="CMP068" data-cb-error-code="' +
     esc(e.code || '') +
     '"><div class="big">⚠</div>' +
     '<div class="t">' +

@@ -410,7 +410,7 @@ function toast(msg, undo) {
   const node = toastHost(_lvl === 'error');
   /* B7: a toast that says the api's refusal also says its next step (hint) and carries the error code as data-cb-error-code (ERR-14 part 1) */
   const _ref = toastRefusal(msg);
-  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}"${_ref.attr}>${esc(msg)}${_ref.hint}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
+  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}" data-cbsid="CMP069"${_ref.attr}>${esc(msg)}${_ref.hint}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
       undo();
