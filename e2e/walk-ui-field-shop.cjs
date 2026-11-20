@@ -145,7 +145,7 @@ W.run('ui-field-shop', async (w) => {
     const dateEcho = await page.evaluate(() => { const d = document.getElementById('o_date'); d.value = '2026-11-13'; d.dispatchEvent(new Event('change', { bubbles: true })); return (document.getElementById('o_date-x') || {}).textContent; });
     const ok = r.grouped.value === '1234.5' && r.grouped.read.value === '1234.5' && r.grouped.echo === '1,234.5' && r.arabic.value === '123'
       && r.comma.value === '1,50' && r.comma.invalid === 'true' && /dot|\./.test(r.comma.err) && Number.isNaN(r.comma.read.value) && r.bad.invalid === 'true'
-      && r.fixed.value === '7' && r.fixed.invalid === null && /13 Nov 2026/.test(dateEcho);
+      && r.fixed.value === '7' && r.fixed.invalid === null && /^13[.]? Nov[.]? 2026$/.test(dateEcho) /* XC-1119 (locale 1.100.0): a reader with no choice gets the BROWSER's tag, so under de-DE the date reads 13. Nov. 2026 */;
     return { ok, saw: '"1,234.5" -> ' + r.grouped.value + ' echo ' + r.grouped.echo + ' · Arabic -> ' + r.arabic.value + ' · "1,50" -> kept, error "' + r.comma.err + '", read ' + r.comma.read.value + ' (browser language de-DE) · "12,34.5" invalid=' + r.bad.invalid + ' · date echo "' + dateEcho + '"' };
   });
 

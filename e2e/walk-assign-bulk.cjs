@@ -246,7 +246,7 @@ async function w3Employees(browser, base) {
       const first22 = Array.from({ length: 22 }, (_, i) => id(i + 1));
       ok(tag + ' · 2 no Select mode button and no bar before a tick', (await page.locator('[data-cbl-selmode]').count()) === 0 && (await page.locator('[data-bulk]').count()) === 0);
       await tick(page, first22);
-      ok(tag + ' · 2 the bar offers Assign to…, Hand over, Back to pool (3 buttons, no Open jobs)', (await page.locator('[data-bulk]').count()) === 3, await page.locator('[data-bulk]').allInnerTexts());
+      ok(tag + ' · 2 the bar offers Assign to me, Assign to…, Hand over, Back to pool (4 buttons, no Open jobs; MTX-new-4 put Assign to me first)', (await page.locator('[data-bulk]').count()) === 4, await page.locator('[data-bulk]').allInnerTexts());
       ok(tag + ' · 2 the count is said once: 22 selected', /22 selected/.test(await page.locator('[data-testid^="cbl-selcount-"]').first().innerText()));
       await page.screenshot({ path: file('2-bulk-bar') });
 
@@ -266,7 +266,7 @@ async function w3Employees(browser, base) {
       const a1 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[0];
       ok(tag + ' · 3 assign-bulk got plug client, role, 10 subject ids and Anna', !!a1 && a1.body.plug === 'client' && a1.body.role === 'adviser' && a1.body.subject_ids.length === 10 && a1.body.target_actor_id === ANNA.actor_id && !('chit_ids' in a1.body), JSON.stringify(a1));
       ok(tag + ' · 3 the line says 10 clients assigned', /10 clients assigned to Anna Lee/.test(await page.locator('[data-testid="assign-result"]').innerText()));
-      ok(tag + ' · 3 the ticks stay after the action and the bar stays for the next group', (await page.locator('[data-bulk]').count()) === 3);
+      ok(tag + ' · 3 the ticks stay after the action and the bar stays for the next group', (await page.locator('[data-bulk]').count()) === 4);
       ok(tag + ' · 3 Held by now shows Anna on a ticked row', /Anna Lee/.test(await heldText(page, 1)), await heldText(page, 1));
 
       /* 4 twelve to Ben: Clear the first group, tick the next */
