@@ -184,6 +184,12 @@ function shopReg(cc) {
     return null;
   }
 }
+/** ⭐ ACC-363: THE PACK'S REGISTRATION FORM, the one reader (pack.tax.registrationForm: partyIds · schemes · idCheck · secondIds · extraIds · hintTags · railReturn). A screen asks here what a shop of this country registers with, never a country code. No pack known → the neutral form: one regular scheme, no second id, no India-only ids, no rail return. */
+var REG_FORM_NONE = { partyIds: [], schemes: ['regular'], idCheck: null, secondIds: [], extraIds: [], hintTags: [], railReturn: false };
+function packRegForm(cc) {
+  var pack = shopReg(cc);
+  return (pack && pack.tax && pack.tax.registrationForm) || REG_FORM_NONE;
+}
 /* ⭐ FX-QA1 + STD2: THE PACK'S OWN WORDS for what a form asks — the tax id, the postal code, the region. ONE helper; a screen never types "GSTIN" or "PIN".
    The pack's `words` first (engines: `words: { taxId, postcode, region }` — not yet carried); then the words keyed by the pack's id here — the tax id is
    the api's profile.taxIdWordOf answer for the same pack (what GET /entities/constitutions sends as countries[].tax.id); NO pack known → NEUTRAL words,
@@ -197,7 +203,7 @@ var PACK_WORDS = {
   AE: { taxName: 'VAT', taxId: 'TRN', postcode: 'P.O. Box', region: 'Emirate', bankCode: ['IBAN', 'iban'] },
   US: { stock: 'Inventory' }
 };
-var PACK_WORDS_NONE = { taxName: 'Tax', taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock' };
+var PACK_WORDS_NONE = { taxName: 'Tax', taxId: 'Tax number', postcode: 'Postcode', region: 'Region', stock: 'Stock', bankCode: ['Bank code', 'bank_code'] };
 function packWord(kind, cc) {
   var p = shopReg(cc),
     own = p && ((p.words && p.words[kind]) || (kind === 'returnName' && p.returns && p.returns.short));  /* the return's name is the pack's own returns.short (BAS, VAT return), never typed here */
@@ -205,10 +211,10 @@ function packWord(kind, cc) {
   var w = PACK_WORDS[packRowKey(p, cc)] || PACK_WORDS_NONE;
   return w[kind] || PACK_WORDS_NONE[kind] || '';
 }
-/** the bank's own code word [label, tag] per country (IFSC · BSB · IBAN): the one table, read by the shop vault and the Bank details form. India's IFSC when no pack is known (the vault's old default) */
+/** the bank's own code word [label, tag] per country (IFSC · BSB · IBAN): the one table, read by the shop vault and the Bank details form. A neutral 'Bank code' when no pack is known (ACC-363: never India's) */
 function bankCodeWord(cc) {
   var row = PACK_WORDS[packRowKey(shopReg(cc), cc)];
-  return (row && row.bankCode) || PACK_WORDS.IN.bankCode;
+  return (row && row.bankCode) || PACK_WORDS_NONE.bankCode;
 }
 /** the branch-code rule of the country's bank: the pack's own (pack.bank.branchCode) first, else the table above; null = a free, neutral branch code */
 function bankBranchRule(cc) {

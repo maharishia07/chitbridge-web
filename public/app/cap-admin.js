@@ -378,7 +378,7 @@ function taxDroppedHTML(ledger) {
 }
 function misTax() {
   /* ⭐ CX0: this band is India's GST (CGST · SGST · IGST, GSTR-1 / 3B from the rail). Another country's shop is told where its own return is. */
-  if (typeof SESSION !== 'undefined' && SESSION && SESSION.country && String(SESSION.country).toUpperCase() !== 'IN')
+  if (typeof SESSION !== 'undefined' && SESSION && SESSION.country && !packRegForm(SESSION.country).railReturn)
     return _misHead('Tax', tx("This band reads India's GST. Your return is prepared in Accounts."));
   const L = UI._taxLedger;
   if (L === undefined || L === null) {

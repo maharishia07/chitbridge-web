@@ -111,7 +111,7 @@ function frPaint() {
   }
   var pk = FR.pack;
   /* India's GSTR-1 / 3B are the RAIL's read (books-period.taxReturn refuses the ledgers for the IN pack the same way): the pack id decides, not a word */
-  if (pk && pk.id === 'IN') {
+  if (pk && packRegForm(pk.id).railReturn) {
     var months = frMonths();
     node.innerHTML = frCard(
       '<h2>' +
