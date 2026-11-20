@@ -122,7 +122,7 @@
     ctx = ctx || {};
     var flagHelper = ctx.fl || null;
     var period = function () { return ctx.period ? ctx.period() : null; }, currencyOf = function () { return ctx.currency ? ctx.currency() : ''; }, regionOf = function () { return ctx.region ? ctx.region() : ''; };
-    var EVIDENCE_WORDS = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No source', held: 'File attached' }; /* the chip's own words: one wording per state */
+    var EVIDENCE_WORDS = (root.CBEvidence && root.CBEvidence.words) || { flag: 'No tax invoice', none: 'No file', nodoc: 'No receipt', held: 'File attached' }; /* the chip's own words: one wording per state */
     return [
       { key: 'mark', label: words('Mark'), all: words('All'), options: opts([['notchecked', 'Not checked'], ['checked', 'Checked'], ['hold', 'On hold'], ['query', 'Queried']]), match: function (row, v) { var st = markState(markHelper, row).state; return v === 'checked' ? isChecked(markHelper, row) : v === 'notchecked' ? !isChecked(markHelper, row) : v === 'hold' ? st === 'hold' : st === 'open'; } },
       { key: 'ev', label: words('Evidence'), all: words('All'), options: opts([['flag', EVIDENCE_WORDS.flag], ['none', EVIDENCE_WORDS.none], ['nodoc', EVIDENCE_WORDS.nodoc], ['held', EVIDENCE_WORDS.held]]), match: function (row, v) { return evidenceKey(row) === v; } },

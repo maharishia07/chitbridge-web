@@ -295,5 +295,5 @@
       .replace('{n}', String(u.count));
   }
 
-  root.CBEvidence = { use: useEvidence, stateOf: stateOf, claimWarning: claimWarning, claimRisk: claimRisk, words: { flag: EVIDENCE_WORDS.flag, none: EVIDENCE_WORDS.none, nodoc: EVIDENCE_WORDS.nodoc, held: 'File attached' } };
+  root.CBEvidence = { use: useEvidence, stateOf: stateOf, claimWarning: claimWarning, claimRisk: claimRisk, words: { flag: EVIDENCE_WORDS.flag, none: EVIDENCE_WORDS.none, nodoc: EVIDENCE_WORDS.noReceipt, held: 'File attached' } };
 })(typeof window !== 'undefined' ? window : globalThis);
