@@ -220,6 +220,9 @@
     var row = state.rows[String(id)], who = row && row.by_name, out = state.outEl || null;
     var text = markText(fill(markKit.MARK_WORDS.changedBy, { who: who || markText(markKit.MARK_WORDS.theOther) }));
     if (out) { out.textContent = text; out.setAttribute('data-tone', 'error'); } else if (root.toast) root.toast(text);
+    state.changed = state.changed || {};
+    state.changed[String(id)] = text; /* the chip keeps the sentence until this seat writes again: a toast alone is gone before the person looks */
+    paint(root.document);
   }
   /** a partner's mark can land after this seat's save answer: read the marks again (the same marksRead) and say so when one differs from what this screen shows */
   function rereadMarks(state, ids) {
@@ -265,6 +268,7 @@
       /* two seats at once: the server keeps the LATER mark, so the screen shows what the server answered (or, on a 409, re-reads it) and says who changed it, never the mark it asked for */
       var tell = function (id2) { tellChanged(state, id2); };
       var sendMark = function () {
+        if (state.changed) delete state.changed[String(id)];
         return askMark(state, 'marksSet', { body: body }).then(null, function (failure) {
           if (!failure || failure.status !== 409) throw failure;
           return loadMarks(state, [String(id)]).then(function () { fire(state); tell(id); throw failure; });
@@ -275,6 +279,7 @@
         var got = classOf(state.rows[String(id)]), asked = SEND[kind] || kind;
         paint(root.document); fire(state);
         if (got && asked !== 'removed' && (SEND[got] || got) !== asked) tell(id);
+        else rereadMarks(state, [String(id)]); /* the partner's mark can have landed between this seat's save and its answer: the next read says so (Changed by …) */
         return v;
       };
       if (!runAction) return sendMark().then(done);

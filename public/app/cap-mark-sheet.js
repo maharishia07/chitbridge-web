@@ -48,8 +48,9 @@
     if (record === undefined) return '<span class="mk-none" aria-hidden="true">…</span>';
     if (state.failed && !record) return '<span class="mk-none" role="img" aria-label="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '" title="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '">!</span>';
     var markClass = markKit.classOf(record);
-    if (!record || !markClass) return emptyChip(state, id);
-    return markedChip(state, id, record, markClass);
+    var note = state.changed && state.changed[id] ? ' <span class="mk-changed" data-testid="mk-changed" role="status">' + esc(state.changed[id]) + '</span>' : '';
+    if (!record || !markClass) return emptyChip(state, id) + note;
+    return markedChip(state, id, record, markClass) + note;
   }
   /** no mark yet: a quiet dash for a reader who may not mark, else the ghost buttons (check · ask) */
   function emptyChip(state, id) {

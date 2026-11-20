@@ -36,6 +36,21 @@ const ok = async (n, f) => { await f(); pass++; console.log('  ok   ' + n); };
     assert.ok(/ctl\.watch|control\.watch/.test(rd('cap-mark-sheet.js')), 'the sheet starts the watch');
     const same = await ctl.reread(['e1']); assert.strictEqual(same.length, 0, 'no change, no message');
   });
+  await ok('mark: seat A saves Checked, seat B Query landed before the answer: A re-reads at once and its chip says who changed it', async () => {
+    const doc = { hidden: false, querySelectorAll: () => [], createElement: () => ({ setAttribute() {}, appendChild() {}, style: {} }), head: { appendChild() {} }, body: {}, documentElement: {}, addEventListener() {} };
+    const root = { tx: (s) => s, document: doc, addEventListener() {}, setInterval: () => 1, clearInterval() {}, esc: (s) => String(s) };
+    root.window = root; root.globalThis = root; const ctx = vm.createContext(root);
+    ['cap-mark-sheet.js', 'cap-mark.js'].forEach((f) => vm.runInContext(rd(f), ctx, { filename: f }));
+    const clear = { subject_id: 'e1', kind: 'clear', class: 'clear', by_name: 'Me' }, query = { subject_id: 'e1', kind: 'query', class: 'open', by_name: 'Anna' };
+    let stored = null; const actions = { set: { ok: true } };
+    const ctl = root.CBMark.use({ adopter: 'acc.audit', call: (key) => Promise.resolve(key === 'marksSet' ? { marks: [clear], actions } : { marks: stored ? [stored] : [], actions }) });
+    await ctl.load(['e1']);
+    stored = query; /* B's write is stored before A's answer comes back */
+    root.toast = () => {};
+    await ctl.set('e1', 'clear', '', null); await new Promise((r) => setTimeout(r, 20));
+    assert.strictEqual(ctl.row('e1').class, 'open', 'the screen holds the server mark, not the optimistic one');
+    assert.ok(/Changed by Anna/.test(ctl.chip('e1')), 'the chip says Changed by Anna');
+  });
   await ok('months: Reopen month only on the last hard-locked month; Reopen year only on the newest closed year', () => {
     const cb = rd('cap-books.js'), lk = rd('cap-books-lock.js'), cp = rd('cap-period.js');
     const BK = { lk: { fy: '2026', rows: {}, years: ['2026', '2025', '2024'] } };
