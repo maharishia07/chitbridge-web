@@ -428,7 +428,7 @@
   }
   /** the ONE work-queue capability (CBAssign.queue via cap-tasks-assign.js): views, ticks and bar, Held by filter */
   var tkMade = {};
-  function tkQueue() { tkMade = root.CBTasksAssign.queue(board, reload); return tkMade; }
+  function tkQueue() { tkMade = root.CBTasksAssign.queue(board, reload, closeSheet); return tkMade; }
   function tkHeldFilter() { return tkMade.filter; }
   function mountList(host) {
     if (!host) return;

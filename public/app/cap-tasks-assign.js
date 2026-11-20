@@ -2,7 +2,7 @@
  * ID        TSK001
  * OWNER     cb-ux-locale
  * OWNS      the client cell of a client's job (clientCell · dueWord · roleWord, moved from cap-tasks.js 20 Nov: file-size ratchet) and only what is the board's own: a row's assignee as CBAssign's `holders`, and the door (plug 'task', the chit id). Every view, filter, tick, bar and clear-after-assign is CBAssign.queue's
- * FLOW      cap-tasks.js mountList → CBTasksAssign.queue(board, reload) → CBAssign.queue → { views, bulk, bulkAlways, preset, filter } merged into the CBList mount
+ * FLOW      cap-tasks.js mountList → CBTasksAssign.queue(board, reload, beforePick) → CBAssign.queue → { views, bulk, bulkAlways, preset, filter } merged into the CBList mount
  * CARD      01-rail-core-the-chit/assign
  * RISK      plain
  * CALLED BY tasks.html (script tag, after assign-bar.js, before cap-tasks.js) · app/cap-tasks.js
@@ -20,10 +20,10 @@
     try { return new root.URLSearchParams(root.location.search).get('keep') === '1'; } catch (failure) { if (root.cbQuiet) root.cbQuiet('tasks-assign:keep', failure); return false; } /* no address to read: the opening preset */
   }
   /** the board's queue: CBAssign.queue over its rows; the opening view only the first time this view is drawn */
-  function queue(board, reload) {
+  function queue(board, reload, beforePick) {
     board.rows.forEach(function (row) { row.holders = holdersOf(row); });
     var key = 'tasks-' + board.view;
-    var made = root.CBAssign.queue({ key: key, rows: board.rows, said: true, everyone: board.rows.some(function (row) { return row.may_assign === true; }), plug: 'task', noun: 'task', nounMany: 'tasks', subjectOf: function (row) { return row.chit_id; }, roleOf: function () { return ''; }, reload: reload });
+    var made = root.CBAssign.queue({ key: key, rows: board.rows, said: true, everyone: board.rows.some(function (row) { return row.may_assign === true; }), plug: 'task', beforePick: beforePick, noun: 'task', nounMany: 'tasks', subjectOf: function (row) { return row.chit_id; }, roleOf: function () { return ''; }, reload: reload });
     if (opened[key] || cameBack()) delete made.preset; /* TSK004: back from a client's books (keep=1) the list opens on the filter he left */
     if (made.views) opened[key] = true;
     return made;
