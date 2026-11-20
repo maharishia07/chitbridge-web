@@ -1087,7 +1087,7 @@ async function peReturnCopy(btn) {
 }
 
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, refusals: [{ name, why }], warnings: [{ name, count, why }], months: [{ period, status }], next } — what a close would say, nothing written
+   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, reclosing, refusals: [{ name, why }], warnings: [{ name, count, why }], months: [{ period, status }], next } — what a close would say, nothing written
    POST /year/:fy/close { returns_lodged?: true } → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
   let L;
@@ -1167,7 +1167,7 @@ function peYearActionsHtml(yearState) {
       '<button data-cbsid="BKS016-B09" type="button" class="supact-pri" data-testid="py-close"' +
       (yearState.can_close ? '' : ' disabled') +
       ' onclick="peYearClose(this)">' +
-      esc(tx('Close the year')) +
+      esc(tx(yearState.reclosing ? 'Close the year again' : 'Close the year')) + /* ACC-380: reopened, the server says reclosing */
       '</button></div>';
   const newest = typeof bkLastClosedYear === 'function' ? bkLastClosedYear() : '', thisYear = yearState.fiscal_year || peVal('py_fy');
   if (yearState.closed && peOwner() && (!newest || newest === thisYear)) /* Reopen year only on the newest closed year (from the periods list the screen holds) */
@@ -1244,9 +1244,10 @@ function peYearClose(btn) {
   const fy = peVal('py_fy'),
     tick = document.querySelector('[data-testid="py-lodged"]'),
     lodged = !!(tick && tick.checked && PE.year && PE.year.can_close_if_lodged);
+  const again = !!(PE.year && PE.year.reclosing); /* ACC-380: after a reopen the close locks the 12 months and closes the tax periods again */
   confirmAsk(
     tx('Close the year?'),
-    esc(lodged ? txf('{fy} is carried forward and locked, with its returns marked as lodged outside ChitBridge. You can reopen only this latest year later, with a reason; it is logged.', { fy }) : txf('{fy} is carried forward and locked. You can reopen only this latest year later, with a reason; it is logged.', { fy })) + peYearWarningsHtml(PE.year && PE.year.warnings),
+    esc(again ? txf('{fy} will lock the 12 months again and close the tax periods that were closed before the reopen. A period whose return was lodged stays lodged. You can reopen only this latest year later, with a reason; it is logged.', { fy }) : lodged ? txf('{fy} is carried forward and locked, with its returns marked as lodged outside ChitBridge. You can reopen only this latest year later, with a reason; it is logged.', { fy }) : txf('{fy} is carried forward and locked. You can reopen only this latest year later, with a reason; it is logged.', { fy })) + peYearWarningsHtml(PE.year && PE.year.warnings),
     tx('Close the year'),
     () => {
       bkOnce('pe-year-' + fy, btn, async () => {
