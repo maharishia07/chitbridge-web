@@ -110,12 +110,12 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
       }
       if (p === '/api/books/gst/pay') { if (S.payRefuse) return J(r, 409, { error: 'That is more than the tax owed — SGST owed 4200.00, paid 420000.00. Run the month close first, or correct the amount.' }); return J(r, 200, books.posted({ entry_no: 'JV/26-27/0024', challan_no: body.challan_no, payment_ref: body.challan_no, paid_minor: { cgst: 0, sgst: 420000 } })); }
       let ym = /^\/api\/books\/year\/([^/]+)\/status$/.exec(p);
-      if (ym && S.yearLodged) return J(r, 200, { fiscal_year: ym[1], returns_lodged: false, closed: !!S.yearHas, can_close: false, can_close_if_lodged: !S.yearHas, refusals: [{ name: 'return_open', why: '2 BAS periods of ' + ym[1] + ' are not closed: Q1, Q2.' }], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' });
-      if (ym) return J(r, 200, S.yearReady ? { fiscal_year: ym[1], returns_lodged: false, closed: !!S.yearHas, can_close: !S.yearHas, can_close_if_lodged: false, refusals: [], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' }
-        : { fiscal_year: ym[1], returns_lodged: false, closed: false, can_close: false, can_close_if_lodged: false, months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: i < 10 ? 'soft_locked' : 'open' })), next: '2026-27',
+      if (ym && S.yearLodged) return J(r, 200, { fiscal_year: ym[1], warnings: [], returns_lodged: false, closed: !!S.yearHas, can_close: false, can_close_if_lodged: !S.yearHas, refusals: [{ name: 'return_open', why: '2 BAS periods of ' + ym[1] + ' are not closed: Q1, Q2.' }], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' });
+      if (ym) return J(r, 200, S.yearReady ? { fiscal_year: ym[1], warnings: [], returns_lodged: false, closed: !!S.yearHas, can_close: !S.yearHas, can_close_if_lodged: false, refusals: [], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' }
+        : { fiscal_year: ym[1], warnings: [], returns_lodged: false, closed: false, can_close: false, can_close_if_lodged: false, months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: i < 10 ? 'soft_locked' : 'open' })), next: '2026-27',
           refusals: [{ name: 'months_locked', why: 'Month 11 (Feb) and month 12 (Mar) are still open — lock every month first.' }, { name: 'suspense_nil', why: 'Suspense holds 1,200.00 — clear it with an entry first.' }] });
       ym = /^\/api\/books\/year\/([^/]+)\/close$/.exec(p);
-      if (ym) { S.yearHas = true; return J(r, 200, { ok: true, fiscal_year: ym[1], next: '2026-27', locked: 13, opening: { rows: 40, retained_minor: 0, profit_minor: 0, balanced: true } }); }
+      if (ym) { S.yearHas = true; return J(r, 200, { ok: true, fiscal_year: ym[1], warnings: [], next: '2026-27', locked: 13, opening: { rows: 40, retained_minor: 0, profit_minor: 0, balanced: true } }); }
       if (p === '/api/books/daybook') return J(r, 200, books.daybook([]));
       if (p === '/api/books/dues') return J(r, 200, books.dues([]));
       if (p === '/api/books/cheques') return J(r, 200, books.cheques({ asOf: TODAY }));   /* the contract's answer, not the catch-all {} below */
