@@ -158,7 +158,7 @@
           "test": ["api:tests/books-day-bills.test.cjs", "api:tests/books-counter-snapshot.test.cjs", "api:tests/till-exits.test.js", "api:tests/stuck-close.test.cjs", "engines:tests/dayopen.test.js", "web:e2e/till-summary.cjs", "web:e2e/till-day-server.cjs"],
           "status": "ok", "note": "FX-CT1 (2026-10-14): the day report asks the server for THIS counter's day (GET /api/till/bills?till=) and compares by bill number; when they differ it says so in one line with its fix (Read the day again · Send them now) and Close the day is greyed until they agree; offline it says it could not check and does not hold the close." },
         { "n": 4, "step": "month lock", "module": "Accounts", "who": "the owner",
-          "screen": [{ "file": "web:public/app/cap-books.js", "fn": "bkLockDo" }],
+          "screen": [{ "file": "web:public/app/cap-books-lock.js", "fn": "bkLockDo" }],
           "engine": [{ "file": "api:lib/books.js", "fn": "setPeriod" }, { "file": "api:lib/books.js", "fn": "periodAdvice" }, { "file": "engines:src/period.js", "fn": "periodState" }, { "file": "engines:src/period.js", "fn": "postingDate" }],
           "route": [{ "m": "POST", "p": "/api/books/periods/:fy/:p/:act", "file": "api:routes/books.js" }, { "m": "GET", "p": "/api/books/periods", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "none — a locked period refuses a dated entry (PERIOD_LOCKED)",
