@@ -279,15 +279,8 @@ async function bankPick(input) {
 async function bankTake(text, name, remembered) {
   const hash = await bkbHash(text);
   if (bkbNoCountryWords()) return peBad('bk_out', bkbNoCountryWords());
-  const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, country: bkbCountry() });
-  if (!parsed || !parsed.ok) {
-    BKB.parsed = null;
-    BKB.rows = [];
-    bkbEl('bk_res').innerHTML = '';
-    bankLayout(false, false);
-    if (remembered) bkbSave('stmt:' + BKB.acct, null);
-    return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
-  }
+  const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, mapping: BKB.mapping, country: bkbCountry() }); /* BKB.mapping: the column map's answer, for this one read (cap-bank-map.js) */
+  if (!parsed || !parsed.ok) return bankRefused(parsed, text, name, remembered);
   if (!remembered) bkbSave('stmt:' + BKB.acct, { name, text }); /* the page opens on the latest statement of this account next time; only this device keeps it */
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
   BKB.postedLocal = {};
