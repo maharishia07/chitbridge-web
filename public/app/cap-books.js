@@ -5869,6 +5869,25 @@ async function bkPeriodsLoad() {
   if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();
   return L;
 }
+/** the newest hard-locked month in the periods list the screen already holds, as 'fy|month' ('' when none): only it may be reopened (the server refuses the rest in words) */
+function bkLastHardKey() {
+  var rows = (BK.lk && BK.lk.rows) || {}, best = null;
+  Object.keys(rows).forEach(function (key) {
+    if (rows[key] !== 'hard_locked') return;
+    var parts = key.split('|'), month = Number(parts[1]);
+    if (!best || parts[0] > best[0] || (parts[0] === best[0] && month > best[1])) best = [parts[0], month, key];
+  });
+  return best ? best[2] : '';
+}
+/** the newest closed year in the periods list: a year whose twelve months are all hard-locked ('' when none is known) */
+function bkLastClosedYear() {
+  var rows = (BK.lk && BK.lk.rows) || {}, years = (BK.lk && BK.lk.years) || [], best = '';
+  years.forEach(function (fy) {
+    for (var m = 1; m <= 12; m++) if (rows[fy + '|' + m] !== 'hard_locked') return;
+    if (fy > best) best = fy;
+  });
+  return best;
+}
 /* a select of the financial years for the Month lock and Packs tabs */
 function bkFyPicker(id, tid, sty) {
   return (
@@ -5942,8 +5961,9 @@ function bkLockRowHTML(item, index, isOwner) {
     month = index + 1,
     state = lock.rows[lock.fy + '|' + month] || 'open',
     info = (lock.info || {})[lock.fy + '|' + month] || null,
-    rule = bkLockRule(info, state),
-    buttons = bkLockButtonsHTML(isOwner, state, month, rule);
+    rule = bkLockRule(info, state);
+  rule.lastHard = bkLastHardKey() === lock.fy + '|' + month; /* Reopen month only on the LAST hard-locked month */
+  var buttons = bkLockButtonsHTML(isOwner, state, month, rule);
   return (
     '<tr data-testid="lk-row-' +
     month +
@@ -6001,7 +6021,7 @@ function bkLockButtonsHTML(isOwner, st, month, rule) {
       ')">⛔ ' +
       tx('Close for good') +
       '</button>';
-  if (isOwner && st === 'hard_locked')
+  if (isOwner && st === 'hard_locked' && rule.lastHard !== false)
     b =
       '<button data-cbsid="CMP042-B28"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-reopen-month-' + month + '" onclick="bkLockReopen(' + month + ', true)" title="' + esc(tx('Only the last closed month can be reopened, with a reason; it is logged.')) + '">🔓 ' + tx('Reopen month') + '</button>';
   return b;
