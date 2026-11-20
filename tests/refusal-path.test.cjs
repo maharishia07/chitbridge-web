@@ -10,7 +10,7 @@ cx.window = cx;
 /* refusalFacts + errWords + answerWords are plain functions: lift them out of core.js, scrErr + apiRead + esc out of helpers.js */
 const grab = (src, name) => { const i = src.indexOf('function ' + name + '('); let d = 0, j = src.indexOf('{', i); for (let k = j; k < src.length; k++) { if (src[k] === '{') d++; else if (src[k] === '}' && --d === 0) return src.slice(i, k + 1); } };
 const core = app('core.js'), helpers = app('helpers.js');
-vm.runInContext(['refusalFacts', 'errWords'].map((f) => grab(core, f)).join('\n') + '\n' + ['esc', 'scrErr', 'apiRead'].map((f) => grab(helpers, f)).join('\n'), cx);
+vm.runInContext(['refusalFacts', 'errWords'].map((f) => grab(core, f)).join('\n') + '\n' + ['esc', 'errLine', 'scrErr', 'apiRead'].map((f) => grab(helpers, f)).join('\n'), cx);
 const run = (code) => vm.runInContext(code, cx);
 
 const body = { code: 'PERIOD_LOCKED', detail: 'January is locked.', hint: 'Ask the owner to reopen the month.', request_id: 'abc123', status: 409 };

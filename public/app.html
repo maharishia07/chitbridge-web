@@ -6213,6 +6213,13 @@ function ensureCap(name) {
   }
   return _capOne(name);
 }
+/** capLoadError(name, kind) → the Error a capability that did not load rejects with; it NAMES the capability (B7) */
+function capLoadError(name, kind) {
+  var er = new Error(txf('Could not load the {capability} capability.', { capability: name }));
+  er.capability = name;
+  er.kind = kind;
+  return er;
+}
 function _capOne(name) {
   if (CAP_LOADED[name]) return Promise.resolve();
   if (_capPromise[name]) return _capPromise[name];
@@ -6242,10 +6249,7 @@ function _capOne(name) {
     /* B7 (ERR-4/10): the load has a time limit (10 s) and its error NAMES the capability (e.capability), so scrErr paints one "couldn't load <name>" card instead of a spinner for ever or a console line */
     var _fail = function (kind) {
       delete _capPromise[name];
-      var er = new Error(txf('Could not load the {capability} capability.', { capability: name }));
-      er.capability = name;
-      er.kind = kind;
-      reject(er);
+      reject(capLoadError(name, kind));
     };
     var _limit = setTimeout(function () { if (!CAP_LOADED[name]) _fail('timeout'); }, 10000);
     node.onerror = function () {

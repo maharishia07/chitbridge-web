@@ -398,13 +398,19 @@ function toastHost(isError) {
   node.setAttribute('aria-atomic', 'true');
   return node;
 }
+/** toastRefusal(msg) → { attr, hint } html bits when msg is the api's last refusal (B7): the error code attribute and the next-step line; empty otherwise */
+function toastRefusal(msg) {
+  const last = window.CB_LAST_REFUSAL;
+  if (!last || last.message !== msg) return { attr: '', hint: '' };
+  return { attr: last.code ? ' data-cb-error-code="' + esc(last.code) + '"' : '', hint: last.hint ? ' <span class="toast-hint">' + esc(last.hint) + '</span>' : '' };
+}
 function toast(msg, undo) {
   const _lvl = toastLevel(msg);
   if (typeof cblog === 'function') cblog(_lvl, msg);
   const node = toastHost(_lvl === 'error');
   /* B7: a toast that says the api's refusal also says its next step (hint) and carries the error code as data-cb-error-code (ERR-14 part 1) */
-  const _ref = typeof window !== 'undefined' && window.CB_LAST_REFUSAL && window.CB_LAST_REFUSAL.message === msg ? window.CB_LAST_REFUSAL : null;
-  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}"${_ref && _ref.code ? ' data-cb-error-code="' + esc(_ref.code) + '"' : ''}>${esc(msg)}${_ref && _ref.hint ? ' <span class="toast-hint">' + esc(_ref.hint) + '</span>' : ''}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
+  const _ref = toastRefusal(msg);
+  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}"${_ref.attr}>${esc(msg)}${_ref.hint}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
       undo();

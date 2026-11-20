@@ -1359,12 +1359,12 @@ function errWords(value) {
 /** refusalFacts(err, body, requestId, kind?) → err; B7 (ERR-13): the api's problem body carries `code`, `hint` and `request_id`; they ride on the error (err.code, err.hint, err.requestId, err.kind = 'network' | 'timeout')
    so ONE card (helpers.js scrErr) and ONE toast (accounts-shell.js toast) show the register sentence AND its next step. The last one is also kept for the toast, which only receives words. */
 function refusalFacts(err, body, requestId, kind) {
-  var b = body && typeof body === 'object' ? body : {};
-  if (typeof b.code === 'string') err.code = b.code;
-  if (typeof b.hint === 'string' && b.hint) err.hint = b.hint;
+  var b = body || {};
+  err.code = String(b.code || '');
+  err.hint = String(b.hint || '');
   err.requestId = b.request_id || requestId || '';
-  if (kind) err.kind = kind;
-  if (typeof window !== 'undefined') window.CB_LAST_REFUSAL = { message: err.message, code: err.code || '', hint: err.hint || '', requestId: err.requestId };
+  err.kind = kind || '';
+  if (typeof window !== 'undefined') window.CB_LAST_REFUSAL = err;
   return err;
 }
 /* answerWords(body, status) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence).

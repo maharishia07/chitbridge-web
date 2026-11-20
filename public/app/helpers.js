@@ -67,22 +67,27 @@ function opt(arr, sel) {
  * ⚠️ AND IT OFFERS RETRY. A failure with no way out makes the reader reload the whole app, which costs them
  * every bit of unsaved state on the screen. `subject` names what failed; `retry` is a call expression.
  */
+/** errLine(testid, words) → one small line of the failure card, or '' when there are no words */
+function errLine(testid, words) {
+  return words ? '<div class="sub" data-testid="' + testid + '">' + esc(words) + '</div>' : '';
+}
 function scrErr(e, subject, retry) {
   /* B7 (ERR-13): the register sentence (e.message = the api's detail) AND its next step (e.hint) and the request id, with the error code as data-cb-error-code so the UI CMDB can link the card to its code (ERR-14 part 1);
      a capability that would not load names itself (e.capability) */
-  var name = subject || (e && e.capability) || '';
+  e = e || {};
+  var name = subject || e.capability || '';
   return (
     '<div class="empty" role="alert" data-cb-error-code="' +
-    esc((e && e.code) || '') +
+    esc(e.code || '') +
     '"><div class="big">⚠</div>' +
     '<div class="t">' +
     esc("Couldn't load" + (name ? ' ' + name : '')) +
     '</div>' +
     '<div>' +
-    esc(e && e.message) +
+    esc(e.message) +
     '</div>' +
-    (e && e.hint ? '<div class="sub" data-testid="err-hint">' + esc(e.hint) + '</div>' : '') +
-    (e && e.requestId && e.status >= 500 ? '<div class="sub" data-testid="err-request-id">' + esc(tx('Quote this reference:') + ' ' + e.requestId) + '</div>' : '') +
+    errLine('err-hint', e.hint) +
+    errLine('err-request-id', e.status >= 500 && e.requestId ? tx('Quote this reference:') + ' ' + e.requestId : '') +
     (retry ? '<button data-cbsid="CMP009" class="btn" data-testid="err-retry" onclick="' + esc(retry) + '" style="margin-top:4px">' + tx('Try again') + '</button>' : '') +
     '</div>'
   );
