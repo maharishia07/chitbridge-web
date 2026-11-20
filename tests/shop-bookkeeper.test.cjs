@@ -21,7 +21,7 @@ const fn = (source, name) => {
 const books = read('cap-books.js');
 const sandbox = { SESSION: { role: 'actor' }, CBBooksActing: { current: () => null, isAdviser: () => false } };
 vm.createContext(sandbox);
-vm.runInContext('var BK_SEAT = { write: false, post: false };' + fn(books, 'bkSeatRead') + fn(books, 'bkReadOnlySeat') + fn(books, 'bkIsOwner') + fn(books, 'bkIsBookkeeper'), sandbox);
+vm.runInContext('var BK_SEAT = { write: false, post: false };' + fn(books, 'bkSeatRead') + fn(books, 'bkReadOnlySeat') + fn(books, 'bkSessionRole') + fn(books, 'bkIsOwner') + fn(books, 'bkIsBookkeeper'), sandbox);
 const seat = (may) => { sandbox.bkSeatRead({ may }); return { book: sandbox.bkIsBookkeeper(), owner: sandbox.bkIsOwner() }; };
 
 let n = 0;

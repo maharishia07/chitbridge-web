@@ -39,7 +39,7 @@ const EXCEPTIONS = {
   'app/country-profiles.js::invoiceHTML': 'the sample e-invoice a country pack would issue (Item · Qty · Price · Rate · Tax · Total): a printed-document preview of one frozen sample, like the bill slip.',
   'app/cap-books.js::bkPlHeadHTML': 'the PROFIT AND LOSS statement on screen (income, costs, profit with this year and last year): a statement with a totals foot read top to bottom, like bkTable. Not a list a person sorts or resizes. (Athi 17 Nov)',
   'app/cap-books.js::bkBS': 'the BALANCE SHEET on screen (assets, liabilities, equity with a check line): a statement, like bkTable. (Athi 17 Nov)',
-  'app/cap-books.js::bkLockRowsPaint': 'the 12-MONTH lock calendar: one fixed row per month of the year in calendar order. Not a list a person sorts or resizes. (Athi 17 Nov)',
+  'app/cap-books-lock.js::bkLockRowsPaint': 'the 12-MONTH lock calendar: one fixed row per month of the year in calendar order. Not a list a person sorts or resizes. (Athi 17 Nov)',
   'app/cap-bank-home.js::bankHomeGridHtml': 'the bank ACCOUNT-BY-MONTH matrix: accounts down, months across, a fixed grid. Not a list a person sorts or resizes. (Athi 17 Nov)',
   'app/cap-books-overview.js::ovTable': 'the data table under an MIS chart (the chart in figures, for screen readers): fixed order of the chart. (Athi 17 Nov)',
   'app/cap-mis-pictures.js::pcTable': 'the data table under an MIS picture (the picture in figures): fixed order of the chart. (Athi 17 Nov)',

@@ -79,8 +79,8 @@ const slice = (src, from, to) => { const a = src.indexOf(from), b = src.indexOf(
     const acts = slice(cp, 'function peYearActionsHtml', 'async function peYearStatus');
     assert.ok(/yearState\.closed && peOwner\(\)/.test(acts) && /data-testid="py-reopen"/.test(acts) && /BKS016-B12/.test(acts));
     assert.ok(cp.includes("perYearReopen: { m: 'POST', p: '/api/books/year/:fy/reopen' }") && cp.includes('bkReasonDialog('));
-    assert.ok(cb.includes("isOwner && st === 'hard_locked'") && cb.includes("booksReopenMonth: { m: 'POST', p: '/api/books/periods/:fy/:p/reopen' }"));
-    assert.ok(/if \(!reason\)/.test(slice(cb, 'function bkReasonGo', 'async function bkLockDo')), 'the reason is required');
+    assert.ok(rd('cap-books-lock.js').includes("state === 'hard_locked'") && cb.includes("booksReopenMonth: { m: 'POST', p: '/api/books/periods/:fy/:p/reopen' }"));
+    assert.ok(/if \(!reason\)/.test(slice(rd('cap-books-lock.js'), 'function bkReasonGo', 'async function bkLockDo')), 'the reason is required');
   });
   console.log('\n' + pass + ' passed');
 })().catch((e) => { console.error('FAIL', e.message); process.exit(1); });

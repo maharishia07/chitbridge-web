@@ -4,7 +4,7 @@
  * HAND-COMPUTED  Two seats: A's save answered Checked, then B's Query landed. A's screen re-reads on focus and every 20 s while the sheet is open: Checked -> Query + "Changed by Anna just now.".
  *   Months 1..8 of FY all hard_locked -> Reopen month on month 8 only. Years 2024, 2025 closed (12 hard months each) -> Reopen year on 2025 only.
  *   Firm ledger drill: a line of entry e1 with evidence shows the same chip column as the Day book.
- * OWNS checks on cap-mark.js (reread/watch), cap-books.js (bkLastHardKey, bkLastClosedYear), cap-period.js (peYearActionsHtml), books-grant-drill.js (evidence column). CARD 12-ux-locale */
+ * OWNS checks on cap-mark.js (reread/watch), cap-books.js (bkLastHardKey), cap-books-lock.js (the lock buttons, bkLastClosedYear), cap-period.js (peYearActionsHtml), books-grant-drill.js (evidence column). CARD 12-ux-locale */
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const APP = path.join(__dirname, '..', 'public', 'app');
 const rd = (f) => fs.readFileSync(path.join(APP, f), 'utf8');
@@ -37,18 +37,18 @@ const ok = async (n, f) => { await f(); pass++; console.log('  ok   ' + n); };
     const same = await ctl.reread(['e1']); assert.strictEqual(same.length, 0, 'no change, no message');
   });
   await ok('months: Reopen month only on the last hard-locked month; Reopen year only on the newest closed year', () => {
-    const cb = rd('cap-books.js'), cp = rd('cap-period.js');
+    const cb = rd('cap-books.js'), lk = rd('cap-books-lock.js'), cp = rd('cap-period.js');
     const BK = { lk: { fy: '2026', rows: {}, years: ['2026', '2025', '2024'] } };
     for (let m = 1; m <= 8; m++) BK.lk.rows['2026|' + m] = 'hard_locked';
     for (const y of ['2025', '2024']) for (let m = 1; m <= 12; m++) BK.lk.rows[y + '|' + m] = 'hard_locked';
     const fns = new Function('BK', slice(cb, 'function bkLastHardKey', '/* a select of the financial years') + '; return { bkLastHardKey, bkLastClosedYear };')(BK);
     assert.strictEqual(fns.bkLastHardKey(), '2026|8');
     assert.strictEqual(fns.bkLastClosedYear(), '2025', 'newest year with 12 hard months');
-    const btn = new Function('esc', 'tx', 'bkMountAttribute', slice(cb, 'function bkLockButtonsHTML', '/** who locked or opened') + '; return bkLockButtonsHTML;')((s) => s, (s) => s, () => '');
+    const btn = new Function('esc', 'tx', 'bkMountAttribute', slice(lk, 'function bkLockOpenButton', '/** who locked or opened') + '; return bkLockButtonsHTML;')((s) => s, (s) => s, () => '');
     const shown = [];
     for (let m = 1; m <= 8; m++) shown.push(btn(true, 'hard_locked', m, { lastHard: m === 8 }).includes('lk-reopen-month-' + m));
     assert.deepStrictEqual(shown, [false, false, false, false, false, false, false, true]);
-    assert.ok(/rule\.lastHard = bkLastHardKey\(\) === lock\.fy/.test(cb), 'the row asks the periods list');
+    assert.ok(/rule\.lastHard = bkLastHardKey\(\) === lock\.fy/.test(lk), 'the row asks the periods list');
     const acts = new Function('peOwner', 'peVal', 'esc', 'tx', 'bkLastClosedYear', 'peNote', 'peYearLodgedTick', slice(cp, 'function peYearActionsHtml', 'async function peYearStatus') + '; return peYearActionsHtml;');
     const mk = (fy) => acts(() => true, () => fy, (s) => s, (s) => s, fns.bkLastClosedYear, () => '', () => '');
     assert.ok(mk('2025')({ closed: true }).includes('py-reopen'));
