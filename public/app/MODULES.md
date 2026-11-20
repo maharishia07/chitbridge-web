@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (96)
+## Capabilities (99)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -33,6 +33,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-bank-store.js` | — | cap-bank-store.js — the SERVER STORE of the Bank view's marks (FIN-70, web half; api: POST /bank/marks, POST /bank/statements, GET /bank/log) |
 | `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
 | `cap-books-cheques.js` | — | CB ACCOUNTS: the Cheques tab (the cheques still held, grouped by what happens next). Split out of cap-books.js, code moved verbatim; nothing is added |
+| `cap-books-lock.js` | — | CB ACCOUNTS: the Month lock tab's rows and buttons (who locked, why a month waits, Lock · Reopen). Split out of cap-books.js (file-size ratchet, 20 No |
 | `cap-books-overview.js` | — | CB ACCOUNTS › HOW WE ARE DOING: the owner's overview, one read, painted (REP-26, REQ-MIS-SHOWCASE 14, critic c26fe54e) |
 | `cap-books-party.js` | — | CB ACCOUNTS: the party's own fields, edited where the party is shown (name, phone, tax ids, terms). Split out of cap-books.js, code moved verbatim |
 | `cap-books-tree.js` | — | CB ACCOUNTS: the Ledgers tab tree: bands, groups, ledgers and the parties under a control account. Split out of cap-books.js, code moved verbatim; not |
@@ -63,6 +64,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-definitions.js` | lazy · definitions | DEFINITIONS · the shelf a catalogue takes things off. (lazy capability) |
 | `cap-dispute.js` | lazy · disputes | the DISPUTE capability (the USP), lazy-loaded via ensureCap('dispute') |
 | `cap-employees-copy.js` | — |  |
+| `cap-employees-give.js` | — | public/app/cap-employees-give.js — Accounts > Setup > Delegate work: a person picker over the People access panel, mounted in place ID BKS02 |
 | `cap-employees.js` | — |  |
 | `cap-entry-preview.js` | — | cap-entry-preview.js — ＋ ENTRY: the preview round trip (ask the server to preview the journal, read its answer, check the date) |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
@@ -110,14 +112,14 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
 | `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
-| `cap-tasks-assign.js` | — | cap-tasks-assign.js — Tasks & Orders: the board's rows on the ONE work-queue capability (CBAssign.queue) |
+| `cap-tasks-assign.js` | — | cap-tasks-assign.js — Tasks & Orders: the board's rows on the ONE work-queue capability (CBAssign.queue, app/assign-bar.js): Mine · Unassigned · Every |
 | `cap-tasks.js` | — |  |
 | `cap-testing.js` | lazy · on demand |  |
 | `cap-traceability.js` | lazy · traceability | TRACEABILITY capability (lazy via ensureCap('traceability')) |
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (116)
+## Shared (119)
 
 | file | loading | what it is |
 |---|---|---|
@@ -155,8 +157,10 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `books-grant-reports.js` | — |  |
 | `books-grant-view.js` | — |  |
 | `books-grant-words.js` | — |  |
+| `books-held-ok.js` | — |  |
 | `books-practice-band.js` | — |  |
 | `books-practice-cells.js` | — |  |
+| `books-practice-mine.js` | — | public/app/books-practice-mine.js — 'Your books today: <client> · <country>': the first line of a firm seat's Home ID HOM001 OWNER cb |
 | `books-practice.js` | — |  |
 | `cart.js` | eager |  |
 | `catalogue-lines.js` | eager |  |
@@ -197,6 +201,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back. · CARD 06-catalogue-pim/catalogue-picker |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `product-lab-rows.js` | — |  |
+| `queue-back.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
 | `rail-bell-html.js` | — |  |
 | `rail-bell-rows.js` | — |  |
@@ -255,7 +260,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 78 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 83 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 46 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 15 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 24 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
@@ -266,11 +271,11 @@ Each page is a module of its own (its inline script and header). The count is th
 | `combo-lab.html` | 0 | the old Combo Lab address: it only forwards to offer-lab-next.html?mode=combo (T2-LABS), the page that wears the Finance frame. |
 | `conversion-lab.html` | 10 | the Conversion lab: a quantity valued, or a priced basket converted, by the real engine (engine/convert.js · CBConvert, with CBMoney and CBUnits) on a bare page, so a con |
 | `country-lab.html` | 15 | the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines. |
-| `crm.html` | 59 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
+| `crm.html` | 60 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
 | `design-mock.html` | 1 | a paper prototype of the network store page: no API, no build |
 | `embed.html` | 9 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
 | `employees.html` | 26 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
-| `finance.html` | 52 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
+| `finance.html` | 53 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
 | `intake.html` | 2 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
 | `iot-howitworks.html` | 0 | the how-IoT-works showcase page: a standalone explainer with no data |
 | `know-your-business.html` | 15 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
@@ -278,7 +283,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `list-lab.html` | 14 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 11 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 9 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 46 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 47 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 14 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 22 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
@@ -293,7 +298,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `store.html` | 10 | the network Store page: a network's shops and their catalogues as one storefront (?net=). |
 | `storefront-design.html` | 2 | the paper drawing of the Storefront order: four steps (items, delivery, review, who you are), mock only, no request leaves the page. |
 | `supplier-design.html` | 2 | the paper drawing of the Suppliers order: three steps (items, details, review), mock only, no request leaves the page. |
-| `tasks.html` | 41 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
+| `tasks.html` | 45 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
 | `testing.html` | 8 | the test board: cases, runs and findings in one list, filters and folds; column widths through app/table-resize.js. |
 | `till.html` | 5 | the counter: sign-in · day open · the bill (CBTax · CBOffers · the rewards words) · the slip · the offline queue — ONE master, vendored to the web. |
 | `ui-standard.html` | 17 | the UI standard page (screen UIS001): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js. |
@@ -302,4 +307,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*212 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*218 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
