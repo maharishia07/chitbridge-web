@@ -94,5 +94,16 @@
       if (back) back.onclick = () => askReturn(item, deps);
     });
   }
-  root.CBBooksHeldOk = { paint: paint };
+  /** SHOPBK-B: under the row "entries waiting for your OK" the OWNER gets each entry with Accept and Return (drawn for the owner only; the server refuses anyone else) */
+  function paintUnder(body, list, isOwner, deps) {
+    var row = list.find(function (x) { return x.kind === 'entries_to_ok'; });
+    var node = row && body.querySelector('[data-kind="entries_to_ok"]');
+    if (!row || !node || !isOwner) return;
+    var host = document.createElement('div');
+    host.className = 'held-list';
+    host.setAttribute('data-testid', 'held-list');
+    node.after(host);
+    paint(host, row.items || [], deps);
+  }
+  root.CBBooksHeldOk = { paint: paint, paintUnder: paintUnder };
 })(window);

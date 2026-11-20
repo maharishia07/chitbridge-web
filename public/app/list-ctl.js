@@ -1076,51 +1076,6 @@ ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes
     }
     return html;
   }
-  /** the toggle: on narrows the list to what needs the person and starts the count "0 of n"; off puts the list back */
-  function needsToggle(I) {
-    if (!needsOf(I) || (needsCount(I) === 0 && !needsOn(I))) return;
-    var R = I.r;
-    R.needsOn = !R.needsOn;
-    R.open = {};
-    R.allOpen = false;
-    R.needsAt = 0;
-    R.hl = null;
-    if (R.needsOn) R.needsTotal = needsRows(I).length;
-    resetLimit(I);
-    safe(function () {
-      if (needsOf(I).onToggle) needsOf(I).onToggle(R.needsOn);
-    });
-    paintAll(I);
-  }
-  /** Next ›: the row after the one in hand (or, when that one was cleared and dropped off, the one that took its place) opens, the one before closes */
-  function needsNext(I) {
-    var spec = needsOf(I),
-      R = I.r;
-    var rows = needsRows(I);
-    if (!spec || !rows.length) return;
-    var ids = rows.map(function (row, index) {
-        return rowIdOf(I, row, index);
-      }),
-      at = ids.indexOf(String(R.hl)),
-      pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
-    if (pos >= ids.length) pos = ids.length - 1 === at ? at : 0;
-    R.needsAt = pos;
-    var id = ids[pos];
-    R.hl = id;
-    if (spec.onNext) {
-      safe(function () {
-        spec.onNext(rows[pos]);
-      });
-      paintTools(I);
-      return;
-    }
-    R.allOpen = false;
-    R.open = {};
-    R.open[id] = true;
-    paintTools(I);
-    paintList(I);
-    refocusRow(I, id);
-  }
   function fopts(f) {
     return (typeof f.options === 'function' ? f.options() || [] : f.options || []).map(function (x) {
       return typeof x === 'object' ? x : { v: x, label: x };
@@ -2996,7 +2951,7 @@ ctx.pin = cols.filter(function (item) {
 
   /* click: 20 statements live in app/list-ctl-click.js (shrink W2, 2026-11-17); the page loads that file before this one */
   if (!root.CBListParts || !root.CBListParts.click) throw new Error('app/list-ctl-click.js must load before app/list-ctl.js');
-  root.CBListParts.click.bind({ closePop: closePop, columns: columns, curSort: curSort, download: download, head: head, matched: matched, minW: minW, needsNext: needsNext, needsToggle: needsToggle, openRow: openRow, paintAll: paintAll, paintList: paintList, paintTitle: paintTitle, paintTools: paintTools, query: query, remote: remote, resetLimit: resetLimit, rowById: rowById, rowIdOf: rowIdOf, safe: safe, saveChoices: saveChoices, selectedRows: selectedRows, shownKeys: shownKeys, sortId: sortId, togglePop: togglePop, toggleRow: toggleRow, viewKeys: viewKeys, viewOn: viewOn, widthOf: widthOf });
+  root.CBListParts.click.bind({ closePop: closePop, columns: columns, curSort: curSort, download: download, head: head, matched: matched, minW: minW, needsCount: needsCount, needsOf: needsOf, needsOn: needsOn, needsRows: needsRows, refocusRow: refocusRow, openRow: openRow, paintAll: paintAll, paintList: paintList, paintTitle: paintTitle, paintTools: paintTools, query: query, remote: remote, resetLimit: resetLimit, rowById: rowById, rowIdOf: rowIdOf, safe: safe, saveChoices: saveChoices, selectedRows: selectedRows, shownKeys: shownKeys, sortId: sortId, togglePop: togglePop, toggleRow: toggleRow, viewKeys: viewKeys, viewOn: viewOn, widthOf: widthOf });
   colByKey = root.CBListParts.click.colByKey;
   cssId = root.CBListParts.click.cssId;
   onClick = root.CBListParts.click.onClick;

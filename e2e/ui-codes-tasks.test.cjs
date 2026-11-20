@@ -17,6 +17,7 @@ const mutate = process.env.TASKS_ID_MUTATE || '';
 const FILES = ['cap-tasks.js', 'cap-dispute.js', 'cap-assist.js'];
 const read = (f) => {
   let t = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8').split('\r\n').join('\n');
+  if (f === 'cap-tasks.js') t += '\n' + fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-tasks-assign.js'), 'utf8'); /* the client cell (TSK003-L01, L02) moved there, 20 Nov */
   if (mutate === 'remove') t = t.split('data-cbsid="TSK007-B01"').join('');
   if (mutate === 'swap') t = t.split('TSK007-B01').join('SWAPX').split('TSK007-B02').join('TSK007-B01').split('SWAPX').join('TSK007-B02');
   return t;

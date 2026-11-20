@@ -1631,10 +1631,9 @@
     if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
     return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
   }
-  /** the way out of a failed read: a link, only when the page gave one */
+  /** the way out of a failed read: a link, only when the page gave one — one way out, or a list of them (W19: back to my queue, back to the client list) */
   function readFailedBack(options) {
-    var ways = [].concat(options.back || []).filter(function (way) { return way && way.href; }); /* one way out, or a list of them (W19: back to my queue, back to the client list) */
-    return ways.map(function (way, at) { return '<a class="cbsh-rf-back" href="' + esc(way.href) + '" data-testid="read-failed-back' + (at ? '-' + at : '') + '" style="margin-inline-start:12px">' + esc(way.label || T('Back')) + '</a>'; }).join('');
+    return [].concat(options.back || []).filter(function (way) { return way && way.href; }).map(function (way, at) { return '<a class="cbsh-rf-back" href="' + esc(way.href) + '" data-testid="read-failed-back' + (at ? '-' + at : '') + '" style="margin-inline-start:12px">' + esc(way.label || T('Back')) + '</a>'; }).join('');
   }
   function readFailed(host, options) {
     if (!host) return null;
@@ -1645,8 +1644,7 @@
       back = readFailedBack(options);
     host.innerHTML =
       '<div class="cbsh-readfail" data-testid="read-failed" data-status="' + (refused ? '403' : status >= 500 ? '5xx' : status === 429 ? '429' : 'none') + '" role="alert" style="padding:12px 0">' +
-      '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' +
-      (refused && options.next ? '<p style="margin:0 0 10px" data-testid="read-failed-next">' + esc(options.next) + '</p>' : '') + /* W19: what to do about it, only on a refusal */
+      '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' + (refused && options.next ? '<p style="margin:0 0 10px" data-testid="read-failed-next">' + esc(options.next) + '</p>' : '') + /* W19: what to do about it, only on a refusal */
       (typeof options.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
     var again = host.querySelector('[data-testid="read-failed-retry"]');
     if (again) again.onclick = options.retry;

@@ -832,49 +832,6 @@ function enItemsBody() {
     return { name: String(item.name || '').trim(), qty: Number(item.qty), unit_price: Number(item.unit_price), gst_rate: String(item.gst_rate).trim() === '' ? 0 : Number(item.gst_rate) };
   });
 }
-/* every refusal and every warning carries a button that takes the person to the fix */
-function enRefusalHTML(list, w) {
-  w = w || 'date';
-  return (list || [])
-    .map(function (x, index) {
-      return (
-        '<div class="en-bad" data-testid="en-refusal-' +
-        esc(x.code || index) +
-        '">' +
-        esc(x.message) +
-        '<button data-cbsid="SCR022-B05" type="button" data-testid="en-fix-' +
-        esc(x.code || index) +
-        '" onclick="enFixGo(' +
-        index +
-        ",'" +
-        w +
-        '\')">' +
-        esc((x.fix && x.fix.label) || tx('Change it')) +
-        '</button></div>'
-      );
-    })
-    .join('');
-}
-/** the server's warnings and refusals as a list, each with its fix button */
-function enWarnHTML(list) {
-  return (list || [])
-    .map(function (x, index) {
-      return (
-        '<div class="en-warn" data-testid="en-warning-' +
-        esc(x.code || index) +
-        '">' +
-        esc(x.message) +
-        '<button data-cbsid="SCR022-B06" type="button" data-testid="en-wfix-' +
-        esc(x.code || index) +
-        '" onclick="enFixGo(' +
-        index +
-        ",'warnings')\">" +
-        esc((x.fix && x.fix.label) || tx('Change it')) +
-        '</button></div>'
-      );
-    })
-    .join('');
-}
 /** one journal line of the preview: account, side, amount, and the rule that placed it */
 function enLineHTML(l, c) {
   var rate = l.rate != null && l.rate !== '' ? ' ' + esc(String(l.rate)) + '%' : '';
