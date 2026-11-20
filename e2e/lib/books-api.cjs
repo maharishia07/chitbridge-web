@@ -62,7 +62,7 @@ const recRow = (o) => Object.assign({ entity: 'ent-M', recurring_id: 'r1', name:
 /** GET /api/books/todo rows always carry items and the action's call */
 const todoRow = (x) => Object.assign({ items: [] }, x, { action: Object.assign({ call: 'GET /api/books/health' }, x.action || {}) });
 /** GET /api/books/events: every event carries preview/post/ledger_group, every field `required` */
-const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { dr: 'Dr the receiver', cr: 'Cr the giver' }, real: { dr: 'Dr what comes in', cr: 'Cr what goes out' }, nominal: { dr: 'Dr expenses and losses', cr: 'Cr incomes and gains' } } }, a, {
+const eventsAnswer = (a) => Object.assign({ may: { post: { ok: true, code: null, why: null } }, pending: [], golden: { personal: { dr: 'Dr the receiver', cr: 'Cr the giver' }, real: { dr: 'Dr what comes in', cr: 'Cr what goes out' }, nominal: { dr: 'Dr expenses and losses', cr: 'Cr incomes and gains' } } }, a, {
   events: (a.events || []).map((e) => Object.assign({ preview: true, post: 'POST /events', ledger_group: null, words: e.kind, icon: 'pen', band: 'adjust' }, e, e.fields ? { fields: e.fields.map((f) => Object.assign({ required: false }, f)) } : {})),
   picks: Object.assign({ mode: [], expense_class: [], income_class: [], blocked_credit: [], debit_reason: [] }, a.picks) });
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */

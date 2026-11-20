@@ -74,7 +74,7 @@ W.run('tasks', async (w) => {
     assignment: l.assignment, settings: l.settings, actions: { assign_line: a.assign_line, deliver_line: a.deliver_line, amend: a.amend } });
   const rowOut = (r) => {
     const a = verdicts(r), held = r.lines.filter((l) => l.assignment && l.assignment.assignee_actor_id).length;
-    return { chit_id: r.chit_id, kind: r.kind, tab: tab(r), stage: stage(r), word: word(r), status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id,
+    return { client: null, chit_id: r.chit_id, kind: r.kind, tab: tab(r), stage: stage(r), word: word(r), status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id,
       channel: r.channel, fulfilment: r.fulfilment, address: r.address, requested_for: r.requested_for, remark: r.remark, total_minor: r.total_minor, currency: r.currency,
       lines_n: r.lines.length, lines_open_n: open(r), billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: held || null, created_at: r.created_at, age_days: r.age_days, actions: a };
   };

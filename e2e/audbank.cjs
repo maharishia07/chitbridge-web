@@ -88,7 +88,7 @@ function periodRows() {
       if (p === '/api/books/ledger/1500') return json(r, 200, books.ledger('1500', 'Bank', [{ date: '2026-09-05', what: 'KV Traders cheque 0001234', ref: 'PAY/2026-27/1', entry_no: 'PAY/2026-27/1', dr_minor: 0, cr_minor: 500000, source: null }], { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: 10000000, closing_minor: 10000000, currency: 'AUD' }));
       /* GET /fx-revalue as the API holds it (contract): nothing in a foreign currency to revalue */
       if (p === '/api/books/fx-revalue' && m === 'GET') return json(r, 200, { ready: false, why: 'No foreign balances.', may: { post: { may: false, why: 'No foreign balances.' } }, date: '2026-10-31', reverses_on: '2026-11-01', functional: 'AUD', rows: [], missing: [], gain_minor: 0, posted: null });
-      if (p === '/api/books/events' && m === 'GET') return json(r, 200, { events: [], picks: {}, kinds: [] });
+      if (p === '/api/books/events' && m === 'GET') return json(r, 200, { may: { post: { ok: true, code: null, why: null } }, events: [], picks: {}, kinds: [] });
       if (p === '/api/books/bank/statement-files' && m === 'GET') return json(r, 200, list(u.searchParams));
       const f = /^\/api\/books\/bank\/statement-files\/([^/]+)\/file$/.exec(p);
       if (f) { const found = S.files.find((x) => x.id === f[1]); return found ? r.fulfill({ status: 200, headers: { 'content-type': 'application/octet-stream', 'x-content-type-options': 'nosniff', 'cache-control': 'private, no-store' }, body: found.text }) : json(r, 404, { code: 'NOT_FOUND', error: 'Not found', message: 'No such statement.' }); }

@@ -171,7 +171,7 @@ W.run('books-grant', async (w) => {
     await page.click(T('bv-tab-bs')); await page.waitForSelector(T('bv-why'), { timeout: 10000 });
     const why = await txt(T('bv-why') + ' p'), tbl = await has(T('bv-row-0'));
     S.refuse = null;
-    return { ok: why === 'This part of the books is not open to an auditor.' && !tbl, saw: why };
+    return { ok: why === 'Your role cannot open this part.' /* W19: the code's own words */ && !tbl, saw: why };
   });
   await w.step('A6', 'the auditor · fits 1366×768 with no page scroll, in the view and on the list', async () => {
     const a = await noScroll();

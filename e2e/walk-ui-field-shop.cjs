@@ -134,11 +134,11 @@ W.run('ui-field-shop', async (w) => {
       const type = (v) => { q.focus(); q.value = v; q.dispatchEvent(new Event('input', { bubbles: true })); q.blur(); return { value: q.value, read: ui.field.read(q), echo: (document.getElementById(q.id + '-x') || {}).textContent, err: (document.getElementById(q.id + '-e') || {}).textContent || '', invalid: q.getAttribute('aria-invalid') }; };
       out.grouped = type('1,234.5');
       out.arabic = type('١٢٣');
-      Object.defineProperty(navigator, 'language', { configurable: true, get: () => 'de-DE' });
-      Object.defineProperty(navigator, 'languages', { configurable: true, get: () => ['de-DE'] });
-      out.comma = type('1,50');
+      out.comma = type('1,50'); /* XC-1119 (locale 1.100.0): a reader with no choice follows the BROWSER's tag, so the comma test runs on the page's own language, before the de-DE switch that the date echo below uses */
       out.bad = type('12,34.5');
       out.fixed = type('7');
+      Object.defineProperty(navigator, 'language', { configurable: true, get: () => 'de-DE' });
+      Object.defineProperty(navigator, 'languages', { configurable: true, get: () => ['de-DE'] });
       return out;
     });
     await paint('mode');
@@ -146,7 +146,7 @@ W.run('ui-field-shop', async (w) => {
     const ok = r.grouped.value === '1234.5' && r.grouped.read.value === '1234.5' && r.grouped.echo === '1,234.5' && r.arabic.value === '123'
       && r.comma.value === '1,50' && r.comma.invalid === 'true' && /dot|\./.test(r.comma.err) && Number.isNaN(r.comma.read.value) && r.bad.invalid === 'true'
       && r.fixed.value === '7' && r.fixed.invalid === null && /^13[.]? Nov[.]? 2026$/.test(dateEcho) /* XC-1119 (locale 1.100.0): a reader with no choice gets the BROWSER's tag, so under de-DE the date reads 13. Nov. 2026 */;
-    return { ok, saw: '"1,234.5" -> ' + r.grouped.value + ' echo ' + r.grouped.echo + ' · Arabic -> ' + r.arabic.value + ' · "1,50" -> kept, error "' + r.comma.err + '", read ' + r.comma.read.value + ' (browser language de-DE) · "12,34.5" invalid=' + r.bad.invalid + ' · date echo "' + dateEcho + '"' };
+    return { ok, saw: '"1,234.5" -> ' + r.grouped.value + ' echo ' + r.grouped.echo + ' · Arabic -> ' + r.arabic.value + ' · "1,50" -> kept, error "' + r.comma.err + '", read ' + r.comma.read.value + ' (the page language) · "12,34.5" invalid=' + r.bad.invalid + ' · date echo "' + dateEcho + '"' };
   });
 
   await w.step('U5', 'checks 2, 13, 14 · no role=alert on first render; ui.field.error adds exactly one; focusFirstError lands on the first error with its sentence', async () => {
