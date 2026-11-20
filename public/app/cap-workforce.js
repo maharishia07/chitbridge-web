@@ -1190,7 +1190,7 @@ async function acOpenManage(id) {
     try {
       await ensureCap(reg.module);
     } catch (e) {
-      UI.acManageErr = (e && e.message) || 'Could not load management';
+      UI.acManageErr = friendlyErr(e);
     }
     UI.acManageLoading = false;
   }
