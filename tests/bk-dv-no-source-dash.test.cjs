@@ -27,6 +27,10 @@ assert(!/noSourceRow/.test(firm), 'no no-source dash branch left in the firm cel
 const drill = fs.readFileSync(__dirname + '/../public/app/books-grant-drill.js', 'utf8');
 assert(drill.includes('ctx.ev && ctx.ev.chip(entry)'), 'the drill uses the same chip');
 assert(/No receipt/.test(E.use({ raw() {} }).chip(nodoc)), 'the firm (cannot attach) reads No receipt');
+// one wording: the Evidence filter (shop Day book + firm) names the no-source state as the chip does
+assert.strictEqual(E.words.nodoc, 'No receipt', 'filter word = chip word');
+assert.strictEqual(E.words.none, 'No file', 'doc held, no file: one word everywhere');
+assert(!/nodoc: 'No source'/.test(fs.readFileSync(__dirname + '/../public/app/books-grant-filters.js', 'utf8')), 'no second wording in the firm filter fallback');
 // foreign line
 const a = src.indexOf('function bkFxText'), b = src.indexOf('/** a balance the way', a);
 const ctx = { bkDec: (c) => (c === 'JPY' ? 0 : 2), CBLocale: { number: (n, o) => n.toLocaleString('en-US', o) } };
