@@ -363,12 +363,17 @@ function txn(one, other, n, vars) {
 
 /* ── a failure's words, and the toast ── */
 
-function friendlyErr(e) {
-  const m = (e && e.message) || String(e || '');
+/** the words for a failure that has no code of its own (a network drop, an expired session): a plain line instead of the browser's */
+function rewordPlain(m) {
   if (/Already working/i.test(m)) return 'still finishing the last one — one moment';
   if (/session expired|sign in/i.test(m)) return 'your session expired — please sign in again';
   if (/Failed to fetch|network/i.test(m)) return 'network hiccup — check your connection and retry';
   return m || 'something went wrong';
+}
+function friendlyErr(e) {
+  const m = (e && e.message) || String(e || '');
+  /* the api's own sentence keeps its words, so the toast can still find its code and hint (B7) */
+  return e && e.code && e.message ? m : rewordPlain(m);
 }
 
 /** the look of a host the page did not draw itself; a page with a bottom dock sets --cb-toast-bottom to clear it (shop.html) (same tokens and sizes as the pages that carry their own #toast rules) */

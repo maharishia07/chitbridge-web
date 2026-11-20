@@ -27,6 +27,13 @@ const cap = run("(function(){ var e = new Error('Could not load the books capabi
 cx.cap = cap;
 ok(run('scrErr(cap)').includes('load books'), 'a capability that fails to load shows one card with its name');
 
+const shell = app('accounts-shell.js');
+vm.runInContext([grab(shell, 'rewordPlain'), grab(shell, 'friendlyErr'), grab(shell, 'toastRefusal')].join(String.fromCharCode(10)), cx);
+const sessionErr = run("(function(){ var e = new Error('Your session expired, sign in again.'); e.code = 'AUTH_EXPIRED'; return e; })()");
+cx.sessionErr = sessionErr; cx.window.CB_LAST_REFUSAL = sessionErr;
+ok(run('friendlyErr(sessionErr)') === sessionErr.message && run('toastRefusal(friendlyErr(sessionErr)).attr').includes('AUTH_EXPIRED'), 'friendlyErr leaves an api error with a code alone, so its toast keeps the code');
+ok(run("friendlyErr(new Error('Failed to fetch'))").includes('network hiccup'), 'a codeless network failure is still reworded');
+
 (async () => {
   cx.api = (key) => key === 'empty' ? Promise.resolve([]) : key === 'full' ? Promise.resolve([1]) : key === 'slow' ? new Promise(() => {}) : Promise.reject(err);
   const empty = await run("apiRead('empty')"), full = await run("apiRead('full')"), failed = await run("apiRead('bad')");
