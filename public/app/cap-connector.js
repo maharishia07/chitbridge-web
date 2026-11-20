@@ -51,7 +51,7 @@ async function acLoadDevices(id) {
   if (!ok) {
     UI.acConns = [];
     UI.acHealth = 'offline';
-    UI.acConnsErr = (lastErr && lastErr.message) || 'Could not load devices';
+    UI.acConnsErr = friendlyErr(lastErr);
   }
   try {
     UI.acProv = await api('connectorProvision', { params: { actorId: id } });
@@ -73,7 +73,7 @@ async function acLoadReceipts(id) {
     UI.acReceiptsErr = null;
   } catch (e) {
     UI.acReceipts = [];
-    UI.acReceiptsErr = (e && e.message) || 'Could not load receipts';
+    UI.acReceiptsErr = friendlyErr(e);
   }
   if (UI.acSel === id) paintAcDetail();
 }
