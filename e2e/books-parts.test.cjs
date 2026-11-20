@@ -17,6 +17,7 @@ const path = require('path');
 const cp = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const PARTS = [
+  { file: 'public/app/cap-books-lock.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-tree.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-cheques.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-waiting-cells.js', parent: 'public/app/cap-books.js' },
@@ -25,7 +26,7 @@ const PARTS = [
   { file: 'public/app/cap-period-accruals.js', parent: 'public/app/cap-period.js' }
 ];
 /** changed on the branch before the split (not by it): the one place a part differs from main */
-const CHANGED_BEFORE_SPLIT = ['bkLtPaneHTML'];
+const CHANGED_BEFORE_SPLIT = ['bkLtPaneHTML', 'bkLockRowHTML', 'bkLockButtonsHTML', 'bkLockReopen', 'bkReasonDialog', 'bkReasonGo', 'bkLockDo'];
 /* empty catches each part carried when its split was proven (PR #756, CI green before the 18 Nov landing): the one in cap-period-accruals.js is a commented catch moved unchanged from cap-period.js */
 const EMPTY_CATCH_AT_SPLIT = { 'cap-period-accruals.js': 1 };
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').split('\r\n').join('\n');

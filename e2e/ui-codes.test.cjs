@@ -9,7 +9,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const readOne = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8').split('\r\n').join('\n');
 /* the Books screens are cap-books.js and the part files split out of it (tree · cheques · waiting · party): their stamps are one census */
-const BOOKS_PARTS = ['cap-books-tree', 'cap-books-cheques', 'cap-books-waiting-cells', 'cap-books-waiting-view', 'cap-books-party'];
+const BOOKS_PARTS = ['cap-books-lock', 'cap-books-tree', 'cap-books-cheques', 'cap-books-waiting-cells', 'cap-books-waiting-view', 'cap-books-party'];
 const read = (rel) => (rel === 'public/app/cap-books.js' ? [rel].concat(BOOKS_PARTS.map((part) => 'public/app/' + part + '.js')).map(readOne).join('\n') : readOne(rel));
 
 let pass = 0, fail = 0;
