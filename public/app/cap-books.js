@@ -2743,6 +2743,44 @@ function bkDvSorts() {
     { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) }
   ].concat(BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : []);
 }
+var BK_DV_GROUPS = [
+  ['day', 'Day'],
+  ['week', 'Week'],
+  ['month', 'Month']
+];
+/** the columns shown at first: every one the Day book does not pin to the end */
+function bkDvDefaultCols(cols) {
+  return cols
+    .filter(function (col) {
+      return col.pin !== 'end';
+    })
+    .map(function (col) {
+      return col.key;
+    });
+}
+/** a Day book row's second line: its next-step words, and in the lines view its evidence chip (CMP062) */
+function bkDvNextCell(e, currency, ctx) {
+  return bkDvNext(e, currency, ctx.view === 'lines') + (ctx.view === 'lines' && BK.ev ? '<div data-testid="db-ev-' + esc(e.entry_no) + '" style="padding:4px 0">' + BK.ev.chip(e) + '</div>' : '');
+}
+/** Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first); none when the page has no enReverse */
+function bkDvActions() {
+  return typeof enReverse === 'function'
+    ? [
+        {
+          id: 'reverse',
+          icon: '↩',
+          label: 'Reverse this entry',
+          tid: 'db-reverse',
+          when: function (e) {
+            return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal';
+          },
+          run: function (e) {
+            enReverse(e.entry_id, e.entry_no);
+          }
+        }
+      ]
+    : undefined;
+}
 /** declare the Day book's list once per read: its columns, grouping, five filters (Kind · Tender · Counter · Person · Evidence), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
   var d = BK.dv,
@@ -2773,13 +2811,7 @@ function bkDvMount(el) {
     },
     head: bkDvHead,
     columns: cols,
-    defaultCols: cols
-      .filter(function (x) {
-        return x.pin !== 'end';
-      })
-      .map(function (x) {
-        return x.key;
-      }),
+    defaultCols: bkDvDefaultCols(cols),
     rowTid: function (e) {
       return 'db-entry-' + e.entry_no;
     },
@@ -2793,16 +2825,12 @@ function bkDvMount(el) {
       return 'db-gist-' + e.entry_no;
     },
     next: function (e, ctx) {
-      return bkDvNext(e, currency, ctx.view === 'lines') + (ctx.view === 'lines' && BK.ev ? '<div data-testid="db-ev-' + esc(e.entry_no) + '" style="padding:4px 0">' + BK.ev.chip(e) + '</div>' : ''); /* CMP062 S1: the chip on every posted entry in Lines too, so a no-source entry can take a receipt */
+      return bkDvNextCell(e, currency, ctx); /* CMP062 S1: the chip on every posted entry in Lines too, so a no-source entry can take a receipt */
     },
     group: {
       default: 'day',
       tid: 'db',
-      options: [
-        ['day', 'Day'],
-        ['week', 'Week'],
-        ['month', 'Month']
-      ],
+      options: BK_DV_GROUPS,
       by: function (e, mode) {
         var g = bkDvGroupOf(e.posting_date, mode);
         return [g.label, g.key];
@@ -2821,24 +2849,7 @@ function bkDvMount(el) {
     csv: function (rows) {
       bkDvDownload(rows);
     },
-    /* Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first) */
-    actions:
-      typeof enReverse === 'function'
-        ? [
-            {
-              id: 'reverse',
-              icon: '↩',
-              label: 'Reverse this entry',
-              tid: 'db-reverse',
-              when: function (e) {
-                return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal';
-              },
-              run: function (e) {
-                enReverse(e.entry_id, e.entry_no);
-              }
-            }
-          ]
-        : undefined,
+    actions: bkDvActions(),
     tids: { expand: 'db-expand-all', collapse: 'db-collapse-all', csv: 'db-csv', count: 'db-count' },
     empty: { title: tx('Nothing in these dates') }
   });
@@ -2982,32 +2993,33 @@ function bkDvPartialNote(d) {
   return txf('NOT COMPLETE: only {held} of {total} entries were loaded, so this list and file leave out the older ones. Narrow the dates to see them all.', { held: held, total: Number(d.r.total || held) });
 }
 function bkDvLoadAll() {
-  var d = BK.dv;
-  if (!d || !bkDvIncomplete()) return Promise.resolve();
-  if (d.allRead) return d.allRead;
-  d.allRead = (async function () {
+  var book = BK.dv;
+  if (!book || !bkDvIncomplete()) return Promise.resolve();
+  if (book.allRead) return book.allRead;
+  book.allRead = (async function () {
     try {
-      for (var pages = 0; d.r.next && pages < BK_ALL_PAGES; pages++) {
-        var reply = await api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc', after: d.r.next }, d.range) });
-        if (BK.dv !== d) return;
+      for (var pages = 0; book.r.next && pages < BK_ALL_PAGES; pages++) {
+        var reply = await api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc', after: book.r.next }, book.range) });
+        if (BK.dv !== book) return;
         bkMarksIngest(reply);
         bkEvidenceIngest(reply.entries);
         bkFlagsIngest(reply.entries);
-        d.r = await bkDvAppend(d.r, reply);
+        book.r = await bkDvAppend(book.r, reply);
       }
-      if (d.r.next) d.capped = true;
-    } catch (e) {
-      d.failed = true;
+      if (book.r.next) book.capped = true;
+    } catch (failure) {
+      book.failed = true;
+      bkQuiet('dv-load-all', failure);
     } finally {
-      d.allRead = null;
-      if (BK.dv === d) {
-        var note = bkDvPartialNote(d);
+      book.allRead = null;
+      if (BK.dv === book) {
+        var note = bkDvPartialNote(book);
         if (note && typeof toast === 'function') toast(note);
-        bkPagerPaint('bk_dvpager', 'db', d.r, 'Older', 'newest first', bkDvOlder);
+        bkPagerPaint('bk_dvpager', 'db', book.r, 'Older', 'newest first', bkDvOlder);
       }
     }
   })();
-  return d.allRead;
+  return book.allRead;
 }
 /** "Older": the next page of the Day book, newest first */
 async function bkDvOlder() {
