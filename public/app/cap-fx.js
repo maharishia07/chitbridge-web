@@ -244,19 +244,19 @@ function fxAddOpen() {
  * Nothing is filled in and nothing is saved on its own — a suggestion is words, the rate is the owner's entry. The sentence and the figures are the server's.
  */
 function fxSuggest() {
-  var day = fxVal('fx_date'),
-    cur = fxVal('fx_cur').toUpperCase(),
+  var dayKey = fxVal('fx_date'),
+    currency = fxVal('fx_cur').toUpperCase(),
     hint = document.getElementById('fx_hint');
   if (!hint) return;
   hint.textContent = '';
-  if (!day || cur.length !== 3) return;
-  var asked = day + cur;
+  if (!dayKey || currency.length !== 3) return;
+  var asked = dayKey + currency;
   FXV.asked = asked;
-  api('booksFxRates', { query: { from: cur, suggest_for: day } }).then(
+  api('booksFxRates', { query: { from: currency, suggest_for: dayKey } }).then(
     function (reply) {
       var near = reply && reply.suggestion;
       if (FXV.asked !== asked || !near) return;
-      hint.textContent = txf('No {c} rate for {d}. The last one was {r} on {e} — type it below to use it.', { c: cur, d: bkDate(day), r: near.rate, e: bkDate(near.date) });
+      hint.textContent = txf('No {c} rate for {d}. The last one was {r} on {e} — type it below to use it.', { c: currency, d: bkDate(dayKey), r: near.rate, e: bkDate(near.date) });
     },
     function () {}
   );

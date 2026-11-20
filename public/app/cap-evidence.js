@@ -104,14 +104,14 @@
       },
       /** the chip for an entry (html); empty when the server sent no evidence (an older server) */
       chip: function (entry) {
-        var ev = entry && entry.evidence;
-        if (!ev || !entry.entry_id) return '';
+        var record = entry && entry.evidence;
+        if (!record || !entry.entry_id) return '';
         if (!seen[String(entry.entry_id)]) control.ingest([entry]);
-        var s = stateOf(ev);
-        if (s.key === 'nodoc') s = { key: s.key, tone: s.tone, sym: s.sym, word: evidenceText(control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach() ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) }; /* the chip's word only; stateOf (filter, sort, count) stays No source */
+        var look = stateOf(record);
+        if (look.key === 'nodoc') look = { key: look.key, tone: look.tone, sym: look.sym, word: evidenceText(control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach() ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) }; /* the chip's word only; stateOf (filter, sort, count) stays No source */
         return (
-          '<button type="button" class="ev ev-' + s.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + s.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '">' +
-          '<span aria-hidden="true">' + s.sym + '</span> ' + esc(s.word) + '</button>'
+          '<button type="button" class="ev ev-' + look.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + look.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '">' +
+          '<span aria-hidden="true">' + look.sym + '</span> ' + esc(look.word) + '</button>'
         );
       },
       sheet: function (entry, o) {

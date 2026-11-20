@@ -261,10 +261,10 @@
       var body = { adopter: state.cfg.adopter, subject_id: String(id), kind: SEND[kind] || kind };
       if (note) body.note = note;
       var out = state.outEl || null;
-      var run = root.CBAction && root.CBAction.run;
+      var runAction = root.CBAction && root.CBAction.run;
       /* two seats at once: the server keeps the LATER mark, so the screen shows what the server answered (or, on a 409, re-reads it) and says who changed it, never the mark it asked for */
       var tell = function (id2) { tellChanged(state, id2); };
-      var go = function () {
+      var sendMark = function () {
         return askMark(state, 'marksSet', { body: body }).then(null, function (failure) {
           if (!failure || failure.status !== 409) throw failure;
           return loadMarks(state, [String(id)]).then(function () { fire(state); tell(id); throw failure; });
@@ -277,8 +277,8 @@
         if (got && asked !== 'removed' && (SEND[got] || got) !== asked) tell(id);
         return v;
       };
-      if (!run) return go().then(done);
-      return run(button || null, go, { key: 'mk:' + state.cfg.adopter + ':' + id, busy: markText('Saving…'), out: out, done: markText(markKit.MARK_WORDS.saved), failed: markText(markKit.MARK_WORDS.failed), outcome: done });
+      if (!runAction) return sendMark().then(done);
+      return runAction(button || null, sendMark, { key: 'mk:' + state.cfg.adopter + ':' + id, busy: markText('Saving…'), out: out, done: markText(markKit.MARK_WORDS.saved), failed: markText(markKit.MARK_WORDS.failed), outcome: done });
   }
   /** the open list + checked n of m, ONE read */
   function summaryOf(state) {
@@ -290,6 +290,8 @@
         return state.sum;
       }, function () { state.sum = null; return null; });
   }
+  /** the row's left bar for a turn: waiting for you = the full bar, answered = the quiet one */
+  function markRowClass(turn) { return turn === 'waiting' ? 'mk-wait' : turn === 'answered' ? 'mk-answered' : ''; }
   function useMark(cfg) {
     addCss();
     var state = { cfg: cfg || {}, rows: {}, names: {}, may: null, on: false, sum: null, subs: [], failed: false };
@@ -304,10 +306,7 @@
       nameOf: function (id) { return state.names[String(id)] || ''; },
       turn: function (id) { return turnOf(state, control, id); },
       /** the row's left bar: waiting for you = the full bar, answered = the quiet one */
-      rowClass: function (id) {
-        var t = control.turn(id);
-        return t === 'waiting' ? 'mk-wait' : t === 'answered' ? 'mk-answered' : '';
-      },
+      rowClass: function (id) { return markRowClass(control.turn(id)); },
       /** the mark's neutral class for one record, for a filter or a count by the page: { state: 'none'|'clear'|'open'|'hold'|'reject', altered } — the server's words, nothing decided here (A3C) */
       markOf: function (id) {
         var r = state.rows[String(id)];

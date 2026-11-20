@@ -1334,16 +1334,16 @@ function peYearWarningsHtml(list) {
 }
 /** REOPEN YEAR (owner only; the server refuses any year but the newest closed, in words): the reason is asked in the one reason dialog, then the server opens the year and logs it */
 function peYearReopen(btn) {
-  const fy = peVal('py_fy');
+  const year = peVal('py_fy');
   bkReasonDialog({
-    title: txf('Reopen {fy}?', { fy }),
+    title: txf('Reopen {fy}?', { fy: year }),
     yes: 'Reopen year',
     go: (reason) =>
-      bkOnce('pe-year-reopen-' + fy, btn, async () => {
+      bkOnce('pe-year-reopen-' + year, btn, async () => {
         try {
-          await api('perYearReopen', { params: { fy }, body: { reason } });
+          await api('perYearReopen', { params: { fy: year }, body: { reason } });
           await peYearStatus();
-          peOk('py_out', esc(txf('{fy} is open again · the reason is in the change log', { fy })));
+          peOk('py_out', esc(txf('{fy} is open again · the reason is in the change log', { fy: year })));
         } catch (e) {
           peBad('py_out', e);
         }
