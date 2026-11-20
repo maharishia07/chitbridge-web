@@ -51,7 +51,7 @@ function standIn() {
   s.assignBulk = (body) => {
     if (s.refuse) return { status: 403, body: { type: 'about:blank', title: 'Not permitted', status: 403, code: 'CHIT_NOT_PERMITTED', detail: REFUSAL, may: false, why: REFUSAL, message: REFUSAL } };
     const skipped = [], previous = []; let assigned = 0;
-    body.subject_ids.forEach((sub) => {
+    (body.subject_ids || (body.chit_ids || []).map((chit) => String(chit).replace(/^h-/, ''))).forEach((sub) => {
       if (!s.jobs.has(sub)) return skipped.push({ subject_id: sub, code: 'JOB_NOT_OPEN', reason: NO_JOB });
       previous.push({ chit_id: 'h-' + sub, subject_id: sub, actor_id: s.holder.has(sub) ? s.holder.get(sub).actor_id : null });
       if (body.target_actor_id === null) s.holder.delete(sub);
@@ -313,7 +313,7 @@ async function w3Employees(browser, base) {
       await page.locator('[data-testid="assign-undo"]').click();
       await pause(900);
       const undoCall = api.calls.filter((c) => c.path === '/api/chits/assign-bulk').slice(-1)[0];
-      ok(tag + ' · 3c Undo sends the previous holder (the pool, null) for that client', !!undoCall && undoCall.body.target_actor_id === null && undoCall.body.subject_ids[0] === id(23), JSON.stringify(undoCall) + ' | result: ' + (await page.locator('[data-testid="assign-result"]').innerText()));
+      ok(tag + ' · 3c Undo sends the previous holder (the pool, null) for that client', !!undoCall && undoCall.body.target_actor_id === null && ((undoCall.body.chit_ids && undoCall.body.chit_ids[0] === 'h-' + id(23)) || (undoCall.body.subject_ids && undoCall.body.subject_ids[0] === id(23))) /* W12: Undo goes per COPY (chit_ids) */, JSON.stringify(undoCall) + ' | result: ' + (await page.locator('[data-testid="assign-result"]').innerText()));
       await page.locator('[data-testid="practice-row-' + id(4) + '"]').first().focus();
       await page.keyboard.press('a');
       await page.waitForSelector('[data-as-pick]');
