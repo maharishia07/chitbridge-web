@@ -143,6 +143,7 @@ of file each thing is; this says what already does the job.
 | 27 | `bkMoney` | `cap-books.js` |  |
 | 27 | `head` | `list-ctl.js` |  |
 | 27 | `panel` | `sides.js` |  |
+| 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 27 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 27 | `allowed` | `trips.js` | let _idsFrom = null, |
@@ -152,7 +153,6 @@ of file each thing is; this says what already does the job.
 | 26 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 26 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 26 | `label` | `screen-id.js` |  |
-| 26 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 26 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 26 | `match` | `itemmatch.js` | actually state. |
 | 25 | `side` | `books-grant-reports.js` |  |
