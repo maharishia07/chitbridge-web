@@ -5825,8 +5825,10 @@ function bkReadOnlySeat() {
   var seat = typeof CBBooksActing !== 'undefined' && CBBooksActing.current ? CBBooksActing.current() : null;
   return !!seat && seat.role === 'auditor';
 }
+/** the one read of the signed-in role for the seat tests below ('' when nobody is signed in) */
+function bkSessionRole() { return typeof SESSION !== 'undefined' && SESSION ? SESSION.role : ''; }
 function bkIsOwner() {
-  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity' && !bkReadOnlySeat();
+  return bkSessionRole() === 'entity' && !bkReadOnlySeat();
 } /* the server enforces it; this only decides who is offered the buttons */
 /**
  * W26: the shop's own Bookkeeper (an in-house seat the owner gave the books to). The SERVER says what the seat may do — GET /bank/statement-files carries may { write, post } (the same tests the writes gate on) —
@@ -5840,7 +5842,7 @@ function bkSeatRead(reply) {
   BK_SEAT.post = !!(may.post && may.post.ok === true);
 }
 function bkIsBookkeeper() {
-  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'actor' && !bkReadOnlySeat() && BK_SEAT.write;
+  return bkSessionRole() === 'actor' && !bkReadOnlySeat() && BK_SEAT.write;
 }
 var BK_PERIOD_SYM = { open: '○', soft_locked: '🔒', hard_locked: '⛔' };
 /**
