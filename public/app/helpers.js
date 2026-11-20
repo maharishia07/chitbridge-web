@@ -116,6 +116,60 @@ function apiRead(key, opts, emptyOf, limitMs) {
     }
   );
 }
+/* ERR-8 (B5/B6): THE ONE READ OF THE OUTSIDE SERVICES (AI · mail · WhatsApp · speech). GET /api/integrations/status carries outside[] = { name|connector, state: connected | not_set_up | down, code, sentence, hint, last_failure }.
+   Read once and kept 60 s (apiRead); a failed read says nothing is wrong (we never grey an action on a guess). An action that needs a service says so with outsideAttrs('ai'): it stays SHOWN, greyed WITH the api's sentence + hint
+   (show-action rule); when the read lands, every [data-outside] button on the page is greyed or freed. A raw-HTML button adds outsideAttrs(name); a ui.action passes disabled: outsideReason(name). Never hide the button. */
+var OUTSIDE = { at: 0, byName: {}, pending: null };
+/** read the outside services once (kept 60 s) and grey the drawn buttons; resolves with the by-name map */
+function outsideLoad() {
+  if (OUTSIDE.pending) return OUTSIDE.pending;
+  if (OUTSIDE.at && Date.now() - OUTSIDE.at < 60000) return Promise.resolve(OUTSIDE.byName);
+  OUTSIDE.pending = apiRead('intStatus', undefined, function (d) {
+    return !d || !Array.isArray(d.outside);
+  }).then(function (read) {
+    OUTSIDE.pending = null;
+    if (read.state === 'ok') {
+      OUTSIDE.byName = {};
+      read.data.outside.forEach(function (o) {
+        OUTSIDE.byName[o.connector || o.name] = o;
+      });
+      OUTSIDE.at = Date.now();
+      outsideApply();
+    }
+    return OUTSIDE.byName;
+  });
+  return OUTSIDE.pending;
+}
+/** the sentence + hint when the service is not connected, else null (unknown = null) */
+function outsideReason(name) {
+  var o = OUTSIDE.byName[name];
+  if (!o || o.state === 'connected' || !o.sentence) return null;
+  return o.hint ? o.sentence + ' ' + o.hint : o.sentence;
+}
+/** the attributes for a raw-HTML button that needs the service; also starts the one read when it has not run */
+function outsideAttrs(name) {
+  outsideLoad();
+  var why = outsideReason(name);
+  return ' data-outside="' + name + '"' + (why ? ' disabled aria-disabled="true" data-disabled="1" title="' + esc(why) + '"' : '');
+}
+/** grey or free every [data-outside] button now on the page, from what was read */
+function outsideApply(root) {
+  if (typeof document === 'undefined') return;
+  [].forEach.call((root || document).querySelectorAll('[data-outside]'), function (button) {
+    var reason = outsideReason(button.getAttribute('data-outside'));
+    if (reason) {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+      button.setAttribute('data-disabled', '1');
+      button.title = reason;
+    } else if (button.getAttribute('data-disabled') === '1') {
+      button.disabled = false; /* only what THIS read greyed is freed; a button its own screen keeps disabled stays so */
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('data-disabled');
+      button.removeAttribute('title');
+    }
+  });
+}
 function cap(s) {
   return s[0].toUpperCase() + s.slice(1);
 }

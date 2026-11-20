@@ -27071,7 +27071,7 @@ function detailInner() {
         : UI.folder === 'archive'
           ? `<button data-cbsid="DTL001-B13" class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>`
           : SESSION.role === 'customer'
-            ? `<button data-cbsid="DTL001-B14" onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri ? 'Priority requested' : 'Request priority'}</button><button data-cbsid="DTL001-B15" class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button data-cbsid="DTL001-B16" onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button data-cbsid="DTL001-B17" onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button data-cbsid="DTL001-B18" onclick="todo('pdf')">⬇ PDF</button>`
+            ? `<button data-cbsid="DTL001-B14" onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri ? 'Priority requested' : 'Request priority'}</button><button data-cbsid="DTL001-B15" class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button data-cbsid="DTL001-B16" onclick="askAiOrderDoc()"${outsideAttrs('ai')} title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button data-cbsid="DTL001-B17" onclick="askAiOrder()"${outsideAttrs('ai')} title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button data-cbsid="DTL001-B18" onclick="todo('pdf')">⬇ PDF</button>`
             : (function () {
                 /* ⭐ Each action declares itself once; `dactShows` decides whether it is pinned to the row or waits
            under ⋯. The visibility RULES are unchanged — they are in DACT's `on`, and a preference cannot
@@ -27104,11 +27104,11 @@ function detailInner() {
                     tx('⊘ Withdraw') +
                     '</button>',
                   doc:
-                    '<button data-cbsid="DTL001-B27" onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">' +
+                    '<button data-cbsid="DTL001-B27" onclick="askAiOrderDoc()"' + outsideAttrs('ai') + ' title="AI drafts a trade document from this order — review and confirm">' +
                     tx('✨ Draft doc') +
                     '</button>',
                   ai:
-                    '<button data-cbsid="DTL001-B28" onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">' +
+                    '<button data-cbsid="DTL001-B28" onclick="askAiOrder()"' + outsideAttrs('ai') + ' title="AI reviews this order — clearances &amp; cover met, and what to ask">' +
                     tx('✨ Ask AI') +
                     '</button>',
                   pdf: '<button data-cbsid="DTL001-B29" onclick="todo(\'pdf\')">⬇ PDF</button>'

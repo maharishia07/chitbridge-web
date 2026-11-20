@@ -658,7 +658,7 @@ function _rdDetailPane(it) {
       esc(it.doc) +
       "','" +
       skill +
-      '\')" title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
+      '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
       tx('✨ Draft with AI') +
       '</button>'
     : '';
@@ -1278,7 +1278,7 @@ function _rdComDetail(g) {
         m.ai.skill +
         "','" +
         esc(g.label) +
-        '\')" title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
+        '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
         tx('✨ Draft with AI') +
         '</button>'
       : '';
