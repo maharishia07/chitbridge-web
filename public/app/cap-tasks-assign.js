@@ -29,15 +29,15 @@
     return made;
   }
   /** W16: a row for a client's job says WHICH client, where it trades and in what money, and what falls due next; the name opens that client's BOOKS (W18/W20), the small Task link the comment panel */
-  function clientCell(row, T, esc) {
+  function clientCell(row, sayWord, escText) {
     var client = row.client,
       where = [client.country, client.currency].filter(Boolean).join(' · '),
-      dueText = client.due ? T('Next return') + ' ' + dueWord(client.due) : [T(client.role ? roleWord(client.role) : ''), client.period && client.period !== 'standing' ? client.period : ''].filter(Boolean).join(' · ');
+      dueText = client.due ? sayWord('Next return') + ' ' + dueWord(client.due) : [sayWord(client.role ? roleWord(client.role) : ''), client.period && client.period !== 'standing' ? client.period : ''].filter(Boolean).join(' · ');
     return (
-      '<a class="tk-client" data-cbsid="TSK003-L01" href="' + esc(root.CBQueueBack.booksAddress(client.entity_id)) + '" data-testid="tk-client-' + esc(row.chit_id) + '"><b>' + esc(client.name || row.party || T('Client')) + '</b></a>' +
-      (where ? ' <span class="sub" data-testid="tk-where-' + esc(row.chit_id) + '">' + esc(where) + '</span>' : '') +
-      (dueText ? ' <span class="sub" data-testid="tk-due-' + esc(row.chit_id) + '">' + esc(dueText) + '</span>' : '') +
-      ' <a class="sub" data-cbsid="TSK003-L02" href="/tasks.html?open=' + encodeURIComponent(row.chit_id) + '" data-testid="tk-panel-' + esc(row.chit_id) + '">' + esc(T('Task')) + '</a>'
+      '<a class="tk-client" data-cbsid="TSK003-L01" href="' + escText(root.CBQueueBack.booksAddress(client.entity_id)) + '" data-testid="tk-client-' + escText(row.chit_id) + '"><b>' + escText(client.name || row.party || sayWord('Client')) + '</b></a>' +
+      (where ? ' <span class="sub" data-testid="tk-where-' + escText(row.chit_id) + '">' + escText(where) + '</span>' : '') +
+      (dueText ? ' <span class="sub" data-testid="tk-due-' + escText(row.chit_id) + '">' + escText(dueText) + '</span>' : '') +
+      ' <a class="sub" data-cbsid="TSK003-L02" href="/tasks.html?open=' + encodeURIComponent(row.chit_id) + '" data-testid="tk-panel-' + escText(row.chit_id) + '">' + escText(sayWord('Task')) + '</a>'
     );
   }
   /** the next return's form and day, in the shop's own date words */

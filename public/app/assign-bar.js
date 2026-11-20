@@ -261,7 +261,10 @@
     if (views.length !== 1 || views[0] !== 'held') return null; /* some other narrowing too: the list's own words */
     var pool = rows.filter(function (r) { return Array.isArray(r.holders) && !r.holders.length; });
     if (state.filt.held === 'none') return { title: tr('Nothing unassigned'), sub: tr('Everything has someone on it.') };
-    if (state.filt.held !== 'mine') return null;
+    return state.filt.held === 'mine' ? queueEmptyMine(opts, pool) : null;
+  }
+  /** the Mine view with nothing in it: the pool's count in words and, for the person who may assign, the one press that takes the first unassigned */
+  function queueEmptyMine(opts, pool) {
     var sub = pool.length ? sayText('{n} unassigned', { n: pool.length }) : tr('Nothing is unassigned either.');
     var take = pool.length && assignApi.showsBar(opts.said) && assignApi.meId();
     return { title: tr('Nothing waiting for you'), sub: sub, actionLabel: take ? tr('Pick up the next one') : '', run: take ? function () { takeFor(opts, [pool[0]]); } : null };

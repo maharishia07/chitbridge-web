@@ -1953,18 +1953,25 @@ ctx.items = itemsOf(inst, ctx.m.rows);
       ctx.hdr = headerHTML(inst, ctx.cols, ctx.tpl, false);
     }
   }
+  /** a list's own empty words for a narrowing that is not a failed search; '' when it has none (inst.emptyRun is its action, if any) */
+  function emptyWordsHTML(inst, ctx, narrowed) {
+    /* H3 (20 Nov): a list may say its own empty words for a narrowing that is not a failed search (the work queue's Mine · Unassigned): o.emptyFor({ filt, q, total }) → { title, sub, actionLabel, run } */
+    var words = ctx.m.all.length && narrowed && !remote(inst) && !ctx.R.q && ctx.o.emptyFor ? safe(function () { return ctx.o.emptyFor({ filt: ctx.R.filt, q: ctx.R.q, total: ctx.m.all.length }); }, null) : null;
+    inst.emptyRun = words && words.run ? words.run : null;
+    if (!(words && words.title)) return '';
+    return (
+    '<div class="cbl-state" data-testid="cbl-empty-own-' + esc(inst.key) + '"><div class="big">' + esc(words.title) + '</div>' + esc(words.sub || '') +
+    (words.actionLabel ? '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-emptyact data-testid="cbl-empty-act">' + esc(words.actionLabel) + '</button>' : '') +
+    '</div>'
+    );
+  }
   /** paintList, step 5 of 10 (part 5, lines 2088-2127 of the one function): true when it handled the call and nothing else should run */
   function paintListStep5(inst, ctx) {
     if (!ctx.m.rows.length) {
       var narrowed = isNarrowed(inst);
-      /* H3 (20 Nov): a list may say its own empty words for a narrowing that is not a failed search (the work queue's Mine · Unassigned): o.emptyFor({ filt, q, total }) → { title, sub, actionLabel, run } */
-      var own = ctx.m.all.length && narrowed && !remote(inst) && !ctx.R.q && ctx.o.emptyFor ? safe(function () { return ctx.o.emptyFor({ filt: ctx.R.filt, q: ctx.R.q, total: ctx.m.all.length }); }, null) : null;
-      inst.emptyRun = own && own.run ? own.run : null;
-      if (own && own.title) {
-        ctx.box.innerHTML =
-          '<div class="cbl-state" data-testid="cbl-empty-own-' + esc(inst.key) + '"><div class="big">' + esc(own.title) + '</div>' + esc(own.sub || '') +
-          (own.actionLabel ? '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-emptyact data-testid="cbl-empty-act">' + esc(own.actionLabel) + '</button>' : '') +
-          '</div>';
+      var ownHtml = emptyWordsHTML(inst, ctx, narrowed);
+      if (ownHtml) {
+        ctx.box.innerHTML = ownHtml;
       } else if (ctx.m.all.length && narrowed && !remote(inst)) {
         ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +

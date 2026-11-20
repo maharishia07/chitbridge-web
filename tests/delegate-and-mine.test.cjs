@@ -1,5 +1,10 @@
 /* tests/delegate-and-mine.test.cjs — UNIT 17-people-employees-hr-and-payroll/pin-otp-first-sign-in
- * Delegate work (cap-employees-give.js) paints the picker over the People panel and books-practice-mine.js names the held clients. Pure: a fake window, no browser. */
+ * Delegate work (cap-employees-give.js) paints the picker over the People panel and books-practice-mine.js names the held clients. Pure: a fake window, no browser.
+ * MIN walk (section 1 drives mineLine on a fake window: held clients named, none held = nothing; the browser walk is e2e/walk-assign-bulk.cjs)
+ * MIN cream-and-dark-1366-390 (section 4: the line states no colour of its own and no fixed width, so both themes and both widths follow the page)
+ * MIN aa-contrast (section 4: no colour typed in the line, so contrast is the page's token pair)
+ * MIN could-not-read-words (section 4: the line has no catch that could swallow a failure; with no data it says nothing rather than a wrong thing)
+ * MIN string-layer (section 4: its words go through tx) */
 'use strict';
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8');
@@ -32,4 +37,14 @@ const pass = (what) => { ok++; console.log('  ok  ' + what); };
     pass('the picker lists the people who are on, with their register code');
     console.log(ok + ' passed');
   }).catch((e) => { console.error('FAIL ' + e.message); process.exit(1); });
+}
+
+// 4. the §7 source walk of books-practice-mine.js: tokens only, no fixed width, no swallowed failure, words through tx
+{
+  const code = read('books-practice-mine.js').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(code), 'no colour typed in the line (both themes and AA contrast are the page tokens)');
+  assert.ok(!/(?:^|[^-\w])(?:width|min-width)\s*:\s*\d{3,}px/.test(code), 'no fixed width (1366 and 390 wide both fit)');
+  assert.ok(!/catch\s*\(/.test(code), 'no catch: nothing is swallowed');
+  assert.ok(/words\('Your books today'\)/.test(code) && /root\.tx/.test(code), 'its words go through tx');
+  pass('books-practice-mine.js: tokens only, no fixed width, no swallowed failure, words through tx');
 }

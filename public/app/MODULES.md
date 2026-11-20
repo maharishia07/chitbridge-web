@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (99)
+## Capabilities (100)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -96,6 +96,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-opening-years.js` | — | cap-opening-years.js — the YEAR STRIP under Opening balances: one chip per financial year, read only; every figure is the server's carry (GET /api/boo |
 | `cap-opening.js` | — | cap-opening.js — OPENING BALANCES on CB Accounts (Setup › Opening balances): a start date, a Debit · Credit grid of the shop's ledgers, the bills behi |
 | `cap-period-accruals.js` | — | CB ACCOUNTS › Month & year end › Accruals & recurring. Split out of cap-period.js, code moved verbatim |
+| `cap-period-stock.js` | — | CB ACCOUNTS › Month & year end › Closing stock. Split out of cap-period.js (file-size ratchet, 20 Nov), code moved verbatim |
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
 | `cap-print.js` | — | PRINT SETUP: what prints on the bill, set ONCE and previewed LIVE (SET-WALK1 · W27 / W27b, 2026-10-15) |
 | `cap-quotes.js` | lazy · on demand | QUOTES: the rounds of a chit that is a quotation (RAIL-117). ONE painter, mounted wherever a chit is shown |
@@ -260,7 +261,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 83 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 84 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 46 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 15 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 24 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
@@ -307,4 +308,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*218 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*219 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

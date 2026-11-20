@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html (script tag, after cap-period.js); BK.views closingstock opens peStockView
  * FLOW      Closing stock tab → peStockView → peStockList (the server's lines) → peStockAdd → peStockSave (POST /closing-stock) → the list paints again
  * CARD      14-accounting/periods-month-lock-year-close
+ * ID        BKS016
+ * OWNER     cb-accounting
+ * RISK      money
  */
 'use strict';
 /* ═══ 1 · CLOSING STOCK ═════════════════════════════════════════════════════════════════════════════════════════════════

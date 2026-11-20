@@ -316,9 +316,7 @@
         var r = state.rows[String(id)], a = (r && r.actions) || state.may || {};
         return !!(a.set && a.set.ok !== false && a.set.ok != null) || (a.set === true);
       },
-      chip: function (id) {
-        return '<span class="mk-host" data-mark=\'' + esc(JSON.stringify({ adopter: state.cfg.adopter, id: String(id) })) + '\'>' + markKit.chipHTML(state, String(id)) + '</span>';
-      },
+      chip: function (id) { return '<span class="mk-host" data-mark=\'' + esc(JSON.stringify({ adopter: state.cfg.adopter, id: String(id) })) + '\'>' + markKit.chipHTML(state, String(id)) + '</span>'; },
       set: function (id, kind, note, button) { return setMark(state, id, kind, note, button); },
       /** the Query sheet for one record (CMP059) */
       sheet: function (id, o) { return markKit.openSheet(state, control, String(id), o || {}); },
