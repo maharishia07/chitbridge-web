@@ -39,7 +39,8 @@ if (typeof EP !== 'undefined') {
     perGstPay: { m: 'POST', p: '/api/books/gst/pay', idem: 'attempt' },
     perReturn: { m: 'GET', p: '/api/books/returns' } /* BAS1: the shop's OWN return (AU BAS · AE VAT201), read from the posted books */,
     perYearStatus: { m: 'GET', p: '/api/books/year/:fy/status' },
-    perYearClose: { m: 'POST', p: '/api/books/year/:fy/close' }
+    perYearClose: { m: 'POST', p: '/api/books/year/:fy/close' },
+    perYearReopen: { m: 'POST', p: '/api/books/year/:fy/reopen' }
   });
 }
 
@@ -1278,6 +1279,9 @@ function peYearActionsHtml(yearState) {
       ' onclick="peYearClose(this)">' +
       esc(tx('Close the year')) +
       '</button></div>';
+  if (yearState.closed && peOwner())
+    html +=
+      '<div class="supacts"><button data-cbsid="BKS016-B12" type="button" data-testid="py-reopen" onclick="peYearReopen(this)" title="' + esc(tx('Only the latest closed year can be reopened, with a reason; it is logged.')) + '">🔓 ' + esc(tx('Reopen year')) + '</button></div>';
   if (!yearState.closed && !peOwner()) html += peNote('pe-readonly', 'Only the owner can close the year');
   return html;
 }
@@ -1299,7 +1303,7 @@ async function peYearStatus() {
   const months = st.months || [],
     refs = st.refusals || [];
   let h = '<div class="pe-card" data-testid="py-checks">';
-  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed for good', { fy })) + '</div>';
+  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed', { fy })) + '</div>';
   else h += peYearChecksHtml(st, months, refs);
   h += '</div>';
   h += peYearActionsHtml(st);
@@ -1327,13 +1331,31 @@ function peYearWarningsHtml(list) {
   if (!list || !list.length) return '';
   return '<div class="pe-note" data-testid="py-warnings"><b>' + esc(tx('Before you close:')) + '</b><ul>' + list.map((w) => '<li>' + esc(w.why) + '</li>').join('') + '</ul>' + esc(tx('You can still close the year.')) + '</div>';
 }
+/** REOPEN YEAR (owner only; the server refuses any year but the newest closed, in words): the reason is asked in the one reason dialog, then the server opens the year and logs it */
+function peYearReopen(btn) {
+  const fy = peVal('py_fy');
+  bkReasonDialog({
+    title: txf('Reopen {fy}?', { fy }),
+    yes: 'Reopen year',
+    go: (reason) =>
+      bkOnce('pe-year-reopen-' + fy, btn, async () => {
+        try {
+          await api('perYearReopen', { params: { fy }, body: { reason } });
+          await peYearStatus();
+          peOk('py_out', esc(txf('{fy} is open again · the reason is in the change log', { fy })));
+        } catch (e) {
+          peBad('py_out', e);
+        }
+      })
+  });
+}
 function peYearClose(btn) {
   const fy = peVal('py_fy'),
     tick = document.querySelector('[data-testid="py-lodged"]'),
     lodged = !!(tick && tick.checked && PE.year && PE.year.can_close_if_lodged);
   confirmAsk(
     tx('Close the year?'),
-    esc(lodged ? txf('{fy} is carried forward and locked for good, with its returns marked as lodged outside ChitBridge. This cannot be undone.', { fy }) : txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })) + peYearWarningsHtml(PE.year && PE.year.warnings),
+    esc(lodged ? txf('{fy} is carried forward and locked, with its returns marked as lodged outside ChitBridge. You can reopen only this latest year later, with a reason; it is logged.', { fy }) : txf('{fy} is carried forward and locked. You can reopen only this latest year later, with a reason; it is logged.', { fy })) + peYearWarningsHtml(PE.year && PE.year.warnings),
     tx('Close the year'),
     () => {
       bkOnce('pe-year-' + fy, btn, async () => {

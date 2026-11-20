@@ -2046,6 +2046,8 @@ ctx.items = itemsOf(inst, ctx.m.rows);
           '</div>' +
           footHTML(inst);
       }
+      var emptyCount = $(inst, '.cbl-count');
+      if (emptyCount) emptyCount.textContent = countText(inst, ctx.m); /* a narrowing that matches nothing says '0 shown of N', never the last count */
       return true;
     }
     return false;
@@ -2678,6 +2680,17 @@ ctx.pin = cols.filter(function (item) {
     I.nextCache = {};
     paintAll(I);
   }
+  /* LOAD-ALL (VOLUME-2026-11-20): a list that holds one page of a long range declares loadAll: { incomplete(), run() → Promise }. A search or the CSV needs every row, never the page held:
+     the count says 'Loading all…', the rest is read, THEN the search is drawn / the file made — a search over 100 of 307 rows would say 'Nothing matches' for a row that exists. */
+  function loadAllThen(I, after) {
+    var la = I.o.loadAll;
+    if (!la || remote(I) || !safe(function () { return la.incomplete(); }, false)) return false;
+    var node = $(I, '.cbl-count');
+    if (node) node.textContent = T(I, 'Loading all…');
+    var done = function () { after(); };
+    Promise.resolve(safe(function () { return la.run(); }, null)).then(done, done);
+    return true;
+  }
   function setQ(I, v) {
     I.r.q = v;
     resetLimit(I);
@@ -2685,6 +2698,7 @@ ctx.pin = cols.filter(function (item) {
       var node = $(I, '.cbl-count');
       return;
     }
+    if (String(v || '').trim() && loadAllThen(I, function () { paintList(I); })) return;
     paintList(I);
   }
   function toggleRow(I, id, focus) {
@@ -2788,6 +2802,7 @@ ctx.pin = cols.filter(function (item) {
     return lines.join('\r\n');
   }
   function download(I) {
+    if (loadAllThen(I, function () { download(I); })) return;
     if (typeof I.o.csv === 'function') {
       safe(function () {
         I.o.csv(matched(I).rows, shownCols(I), csv(I));

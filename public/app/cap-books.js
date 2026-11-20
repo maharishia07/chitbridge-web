@@ -34,6 +34,7 @@ if (typeof EP !== 'undefined') {
     booksPayPreview: { m: 'POST', p: '/api/books/payments/preview' } /* M26: the bills table + the duplicate warnings; writes nothing */,
     booksLock: { m: 'POST', p: '/api/books/periods/:fy/:p/lock' },
     booksUnlock: { m: 'POST', p: '/api/books/periods/:fy/:p/unlock' },
+    booksReopenMonth: { m: 'POST', p: '/api/books/periods/:fy/:p/reopen' } /* the owner opens the LAST hard-locked month again, with a reason (the server refuses any other in words) */,
     booksPeriods: { m: 'GET', p: '/api/books/periods' } /* every month of every year, with its status — the twelve rows of Month lock */,
     booksOpening: { m: 'POST', p: '/api/books/opening' },
     booksPacks: { m: 'GET', p: '/api/books/packs' },
@@ -428,9 +429,11 @@ function bkErr(e) {
 }
 /** STAFF-BOOKS: a view the server refuses this seat (403: the money reads are the owner's and the auditor's) says so in the server's own sentence, in the ONE empty/refused state (emptyState), never a raw error and never a blank pane.
  *  Any other failure keeps bkErr's words. `what` names the view. */
+/** the ONE sentence of who may read a gated books screen (twin of the api gate lib/books-readers.js READ_MONEY_WORDS: owner · the shop's accountant or bookkeeper · auditor) */
+var BK_READ_WORDS = "Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.";
 function bkRefused(e, what) {
   if (!e || e.status !== 403) return bkErr(e);
-  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || "Only the owner or the shop's auditor may read these figures.")));
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)));
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
@@ -2099,7 +2102,10 @@ function bkDvCsv(list, c) {
 function bkDvDownload(rows) {
   var d = BK.dv;
   if (!d) return;
-  bkSaveCsv('day-book-' + d.range.from + '-' + d.range.to + '.csv', bkDvCsv(rows, d.r.currency));
+  /* never silently partial: when the range could not be read to its end (the page cap, or a failed read) the file and the screen say how many of how many */
+  var note = bkDvPartialNote(d);
+  bkSaveCsv('day-book-' + d.range.from + '-' + d.range.to + '.csv', bkDvCsv(rows, d.r.currency) + (note ? bkCsvCell(note) + '\r\n' : ''));
+  if (note && typeof toast === 'function') toast(note);
 }
 /** what the search looks in: the entry, its bill, its party (by name AND by number — "P0007"), its lines, and its amounts the way they are read */
 function bkDvText(e, c) {
@@ -2810,6 +2816,7 @@ function bkDvMount(el) {
       return bkDvText(e, currency);
     },
     searchHint: tx('Search party, bill, amount'),
+    loadAll: { incomplete: bkDvIncomplete, run: bkDvLoadAll },
     sorts: bkDvSorts(),
     csv: function (rows) {
       bkDvDownload(rows);
@@ -2961,6 +2968,46 @@ function bkDvOpenDay(r, q) {
 /** the next page joined to what is held (entries appended, the cursor and the range's totals the newest reply's) */
 async function bkDvAppend(r, reply) {
   return Object.assign({}, reply, { entries: (r.entries || []).concat(reply.entries || []), count: (r.entries || []).length + (reply.entries || []).length });
+}
+/** LOAD-ALL: a search and the CSV cover the WHOLE selected range, so every page is read before they run (BK_ALL_PAGES pages at most; a cap or a failed read is said, never hidden) */
+var BK_ALL_PAGES = 100;
+function bkDvIncomplete() {
+  var d = BK.dv;
+  return !!(d && d.r && d.r.next && !d.capped && !d.failed);
+}
+/** '' when every entry of the range is held, else the sentence that goes in the file and on the screen */
+function bkDvPartialNote(d) {
+  if (!d || !d.r || !d.r.next) return '';
+  var held = (d.r.entries || []).length;
+  return txf('NOT COMPLETE: only {held} of {total} entries were loaded, so this list and file leave out the older ones. Narrow the dates to see them all.', { held: held, total: Number(d.r.total || held) });
+}
+function bkDvLoadAll() {
+  var d = BK.dv;
+  if (!d || !bkDvIncomplete()) return Promise.resolve();
+  if (d.allRead) return d.allRead;
+  d.allRead = (async function () {
+    try {
+      for (var pages = 0; d.r.next && pages < BK_ALL_PAGES; pages++) {
+        var reply = await api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc', after: d.r.next }, d.range) });
+        if (BK.dv !== d) return;
+        bkMarksIngest(reply);
+        bkEvidenceIngest(reply.entries);
+        bkFlagsIngest(reply.entries);
+        d.r = await bkDvAppend(d.r, reply);
+      }
+      if (d.r.next) d.capped = true;
+    } catch (e) {
+      d.failed = true;
+    } finally {
+      d.allRead = null;
+      if (BK.dv === d) {
+        var note = bkDvPartialNote(d);
+        if (note && typeof toast === 'function') toast(note);
+        bkPagerPaint('bk_dvpager', 'db', d.r, 'Older', 'newest first', bkDvOlder);
+      }
+    }
+  })();
+  return d.allRead;
 }
 /** "Older": the next page of the Day book, newest first */
 async function bkDvOlder() {
@@ -5954,6 +6001,9 @@ function bkLockButtonsHTML(isOwner, st, month, rule) {
       ')">⛔ ' +
       tx('Close for good') +
       '</button>';
+  if (isOwner && st === 'hard_locked')
+    b =
+      '<button data-cbsid="CMP042-B28"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-reopen-month-' + month + '" onclick="bkLockReopen(' + month + ', true)" title="' + esc(tx('Only the last closed month can be reopened, with a reason; it is logged.')) + '">🔓 ' + tx('Reopen month') + '</button>';
   return b;
 }
 /** who locked or opened the month, and its history (the first row's line, the notes and the full list on a fold) */
@@ -6010,23 +6060,31 @@ function bkLockWhy(node) {
 /**
  * W15-97 · OPEN AGAIN asks its reason in its own popup, beside the button that sends it (the box used to sit under the twelve rows, apart from the action). The reason is kept in the trail with the name and the day; Cancel sends nothing.
  */
-function bkLockReopen(period) {
+function bkLockReopen(period, hard) {
   var monthName = tx(bkMonths()[period - 1] || String(period));
+  bkReasonDialog({
+    title: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
+    go: function (reason) { return bkLockDo(hard ? 'reopen' : 'unlock', period, reason); }
+  });
+}
+/** ⭐ THE ONE "why are you opening it again?" dialog (POP092): a month's Open again, a hard-locked month's Reopen month and a closed year's Reopen year all ask the reason here, then Confirm sends it (the reason is required, kept in the change log) */
+function bkReasonDialog(o) {
+  BK.reasonGo = o.go;
   /* where-used: out-of-scope the mount is bkDialogMount(6): the host screen's own code plus -U26, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(6),
     pop: 'POP092',
-    titleText: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
+    titleText: o.title,
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body:
       '<label>' + tx('Why are you opening it again?') + '<input class="inp" data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' id="lk_why" data-testid="lk_why" maxlength="200" autocomplete="off" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>' +
       '<div id="lk_whyout" data-testid="lk-whyout" role="alert" style="color:var(--warn-2)"></div>',
     footerHtml:
       '<button type="button" data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' + tx('Cancel') + '</button>' +
-      '<button type="button" class="supact-pri" data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' data-testid="lk-reopen-go" onclick="bkLockReopenGo(' + period + ')">' + tx('Open again') + '</button>'
+      '<button type="button" class="supact-pri" data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' data-testid="lk-reopen-go" onclick="bkReasonGo()">' + tx(o.yes || 'Open again') + '</button>'
   });
 }
-function bkLockReopenGo(period) {
+function bkReasonGo() {
   var reason = String((document.getElementById('lk_why') || {}).value || '').trim(),
     out = document.getElementById('lk_whyout');
   if (!reason) {
@@ -6034,7 +6092,7 @@ function bkLockReopenGo(period) {
     return;
   }
   closeModal();
-  return bkLockDo('unlock', period, reason);
+  return BK.reasonGo ? BK.reasonGo(reason) : undefined;
 }
 /* lock or unlock one month, asking the server and flipping only that row */
 async function bkLockDo(what, period, reason) {
@@ -6043,14 +6101,14 @@ async function bkLockDo(what, period, reason) {
     node = reason || '',
     out = document.getElementById('lk_out');
   var monthName = tx(bkMonths()[period - 1] || String(period));
-  if (what === 'unlock' && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
+  if ((what === 'unlock' || what === 'reopen') && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
   var btn = document.querySelector('[data-testid="lk-' + what + '-' + period + '"]');
   return CBAction.run(
     btn,
     function () {
-      return api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fiscalYear, p: period }, body: { reason: node, hard: what === 'hard' } });
+      return api(what === 'reopen' ? 'booksReopenMonth' : what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fiscalYear, p: period }, body: { reason: node, hard: what === 'hard' } });
     },
     {
       key: 'lk-' + fiscalYear + '-' + period,
@@ -6062,7 +6120,7 @@ async function bkLockDo(what, period, reason) {
           : { title: txf('Lock {m} {fy}?', { m: monthName, fy: fiscalYear }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }, /* E12: Lock is a commit, so it asks first in the library's confirm */
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {
-        var status = answer && answer.period && answer.period.status;
+        var status = (answer && answer.period && answer.period.status) || (what === 'reopen' && answer && answer.status) || (what === 'reopen' ? 'open' : '');
         if (status) lockState.rows[fiscalYear + '|' + period] = status; /* flip the ROW, never the whole list */
         if (lockState.fy === fiscalYear) bkLockRowsPaint();
         bkPeriodsLoad()

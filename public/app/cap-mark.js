@@ -67,6 +67,7 @@
     today: 'today',
     by: 'by {who}',
     changedNote: 'This entry changed after it was checked. Check it again.',
+    changedBy: 'Changed by {who} just now.',
     questionHead: 'Question',
     threadHead: 'Replies',
     replyOff: 'Replies are closed.',
@@ -220,8 +221,25 @@
       if (note) body.note = note;
       var out = state.outEl || null;
       var run = root.CBAction && root.CBAction.run;
-      var go = function () { return askMark(state, 'marksSet', { body: body }); };
-      var done = function (v) { merge(state, v, String(id)); paint(root.document); fire(state); return v; };
+      /* two seats at once: the server keeps the LATER mark, so the screen shows what the server answered (or, on a 409, re-reads it) and says who changed it, never the mark it asked for */
+      var tell = function (id2) {
+        var row = state.rows[String(id2)], who = row && row.by_name;
+        var text = markText(fill(markKit.MARK_WORDS.changedBy, { who: who || markText(markKit.MARK_WORDS.theOther) }));
+        if (out) { out.textContent = text; out.setAttribute('data-tone', 'error'); } else if (root.toast) root.toast(text);
+      };
+      var go = function () {
+        return askMark(state, 'marksSet', { body: body }).then(null, function (failure) {
+          if (!failure || failure.status !== 409) throw failure;
+          return loadMarks(state, [String(id)]).then(function () { fire(state); tell(id); throw failure; });
+        });
+      };
+      var done = function (v) {
+        merge(state, v, String(id));
+        var got = classOf(state.rows[String(id)]), asked = SEND[kind] || kind;
+        paint(root.document); fire(state);
+        if (got && asked !== 'removed' && (SEND[got] || got) !== asked) tell(id);
+        return v;
+      };
       if (!run) return go().then(done);
       return run(button || null, go, { key: 'mk:' + state.cfg.adopter + ':' + id, busy: markText('Saving…'), out: out, done: markText(markKit.MARK_WORDS.saved), failed: markText(markKit.MARK_WORDS.failed), outcome: done });
   }
