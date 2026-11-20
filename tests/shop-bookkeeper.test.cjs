@@ -60,10 +60,10 @@ assert(/role === 'bookkeeper'/.test(sheet) && !/reopen = .*bookkeeper/.test(shee
 ok('Reopen a locked month is drawn for the owner only');
 
 const entry = read('cap-entry.js');
-assert(/rr\[0\]\.may\.post\.ok === false && !enActingAdviser\(\)/.test(entry), 'the first read decides');
+assert(/post.ok === false && !enActingAdviser()/.test(entry) && /first.may/.test(entry), 'the first read decides');
 assert(/EN\.deniedWhy \? tx\(EN\.deniedWhy\)/.test(entry), 'the server sentence is shown');
 const open = entry.indexOf('async function enOpen'), saveAt = entry.indexOf('function enSaveWrite');
-assert(entry.indexOf('EN.deniedWhy = rr[0]') > open && entry.indexOf('EN.deniedWhy = rr[0]') < saveAt, 'told while the sheet opens, not at Save');
+assert(/EN.deniedWhy = post/.test(entry) && entry.indexOf('enReadDenial(rr[0])') > open && entry.indexOf('enReadDenial(rr[0])') < saveAt, 'told while the sheet opens, not at Save');
 ok('the entry form says a seat that cannot post on its first step, with the server\'s sentence, not at Save');
 
 const emp = read('cap-employees.js');

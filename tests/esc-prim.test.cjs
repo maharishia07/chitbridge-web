@@ -24,7 +24,7 @@ ok(cx.esc(0) === '0' && cx.esc(12.5) === '12.5', 'esc: numbers as text');
 ok(cx.fmtMoney(null, 'INR', '—') === '—' && cx.fmtMoney('', 'INR', '') === '' && cx.fmtMoney('abc', 'INR', '—') === '—', 'fmtMoney: a missing amount reads as the given empty word');
 ok(/₹\s?0\.00/.test(cx.fmtMoney(null, 'INR')), 'fmtMoney: two arguments — a missing amount still formats as zero, as before');
 ok(/\$\s?12\.50/.test(cx.fmtMoney(12.5, 'USD')), 'fmtMoney: no locale engine on the page → the currency\'s own symbol from Intl, never ₹');
-vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'locale.js'), 'utf8'), cx);
+vm.runInContext(fs.readFileSync(path.join(PUB, 'engine', 'locale.js'), 'utf8'), cx);
 ok(cx.fmtMoney(123456.5, 'INR') === cx.CBLocale.money(123456.5, 'INR'), 'fmtMoney: with the engine it IS CBLocale.money');
 
 /* ── monthNames: CBLocale's words, twelve, January first ── */
