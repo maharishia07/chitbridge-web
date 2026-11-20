@@ -16,7 +16,8 @@
 const fs = require('fs'), path = require('path');
 const mutate = process.env.PASSCAT_MUTATE || '';
 const APP = path.join(__dirname, '..', 'public', 'app');
-const read = (f) => fs.readFileSync(path.join(APP, f + '.js'), 'utf8').split('\r\n').join('\n');
+const readOne = (f) => fs.readFileSync(path.join(APP, f + '.js'), 'utf8').split('\r\n').join('\n');
+const read = (f) => readOne(f) + (f === 'cap-entry' ? '\n' + readOne('cap-entry-preview') : ''); /* the refusal and warning lists (SCR022-B05, B06) moved to cap-entry-preview.js, 20 Nov */
 let failures = 0;
 const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) failures++; };
 
