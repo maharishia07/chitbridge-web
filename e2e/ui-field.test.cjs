@@ -94,12 +94,12 @@ check(value('-12.5', AU) === '-12.5' && value('007', AU) === '7' && value('.5', 
 check(value('abc', AU) === 'ERR' && value('', AU) === 'ERR' && value('1.2.3', AU) === 'ERR', 'text, empty and two marks are errors');
 
 console.log('the real locale supplies the marks');
-const locale = { console, window: {}, navigator: { language: 'en-AU' }, localStorage: { getItem: () => null, setItem: () => {} }, document: {}, Intl, setTimeout };
+const locale = { console, window: {}, navigator: { language: 'en-AU' }, localStorage: { getItem: (key) => (key === 'cb_locale' ? 'en-IN' : null), setItem: () => {} }, document: {}, Intl, setTimeout };
 locale.globalThis = locale; vm.createContext(locale);
 try {
   vm.runInContext(read('engine/locale.js'), locale);
   const CBLocale = locale.CBLocale || locale.window.CBLocale;
-  check(!!CBLocale && CBLocale.number(1234567.5, { minimumFractionDigits: 1 }) === '12,34,567.5', 'engine/locale.js loads; its default (India) groups 1234567.5 as lakhs, which marksOf reads from it');
+  check(!!CBLocale && CBLocale.number(1234567.5, { minimumFractionDigits: 1 }) === '12,34,567.5', 'engine/locale.js loads; a reader who chose en-IN (locale 1.100.0 has no fixed default country) groups 1234567.5 as lakhs, which marksOf reads from it');
   sandbox.CBLocale = CBLocale;
   const r = ui.field.parse('1,23,456.50');
   check(r.ok && r.value === '123456.50' && !ui.field.parse('1,50').ok && !ui.field.parse('12,34.5').ok, 'with the real CBLocale: lakh grouping accepted, "1,50" and "12,34.5" refused');
