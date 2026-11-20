@@ -1284,7 +1284,7 @@ async function catcolPick() {
   try {
     r = await api('prodStarters');
   } catch (e) {
-    if (typeof toast === 'function') toast((e && e.message) || 'Could not load the standard sets.');
+    if (typeof toast === 'function') toast(typeof friendlyErr === 'function' ? friendlyErr(e) : (e && e.message) || '');
     return;
   }
   var verts = (r && r.verticals) || [];
