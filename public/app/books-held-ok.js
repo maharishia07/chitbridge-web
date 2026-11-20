@@ -76,7 +76,8 @@
         '<label class="sub" for="held_reason">' + safe(deps.tx('Say why (3 to 300 characters)'), deps) + '</label><textarea data-cbsid="BKS001-I01" id="held_reason" class="inp" rows="3" maxlength="300" data-testid="held-reason"></textarea>' +
         '<div class="nw-out" id="held_out" data-testid="held-out" role="status"></div>' +
         '<div class="nw-acts"><button data-cbsid="BKS001-B10" type="button" class="act" id="held_send" data-testid="held-send">' + safe(deps.tx('Return'), deps) + '</button>' +
-        '<button data-cbsid="BKS001-B11" type="button" class="act quiet" id="held_cancel" data-testid="held-cancel">' + safe(deps.tx('Cancel'), deps) + '</button></div></div>'
+        '<button data-cbsid="BKS001-B11" type="button" class="act quiet" id="held_cancel" data-testid="held-cancel">' + safe(deps.tx('Cancel'), deps) + '</button></div></div>',
+      false, { pop: 'POP217' }
     );
     var doc = root.document;
     doc.getElementById('held_cancel').onclick = deps.closeModal;
