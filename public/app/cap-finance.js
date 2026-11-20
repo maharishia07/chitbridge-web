@@ -24,15 +24,13 @@ var FIN_EP = { workFacts: { m: 'GET', p: '/api/work/facts', ok: 'y' } }; /* the 
 Object.assign(EP, FIN_EP);
 var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 
-/** FIN-15: a customer row stays while money is owed OR a bill of theirs is in dispute (a net of 0 from a disputed bill and an advance is still a question to answer) */
+/** FIN-15: a customer row stays while money is owed OR a bill is in dispute (net 0 from a disputed bill and an advance is still a question) */
 function finOwes(p) {
   return Number(p.balance_minor) > 0 || Number(p.disputed_minor) > 0;
 }
-/** FIN-15: the server's disputed figure on the row ("In dispute ₹170"), '' when none — the dispute is said beside the amount, never hidden in it */
+/** FIN-15: the server's disputed figure said beside the amount ("In dispute ₹170"), '' when none */
 function finDisputeHTML(party) {
-  return Number(party.disputed_minor) > 0
-    ? '<div data-b="disputed" style="font-size:var(--fs-1);color:var(--warn-2)">' + esc(tx('In dispute')) + ' ' + esc(bkMoney(Number(party.disputed_minor), FIN.cur)) + '</div>'
-    : '';
+  return Number(party.disputed_minor) > 0 ? '<div data-b="disputed" style="font-size:var(--fs-1);color:var(--warn-2)">' + esc(tx('In dispute')) + ' ' + esc(bkMoney(Number(party.disputed_minor), FIN.cur)) + '</div>' : '';
 }
 /** the unbilled orders in words: "1 order unpaid, not yet billed ₹420" (no figure when the orders are in two currencies — the server says null) — '' when none */
 function finUnbilledWords(unbilled) {
@@ -86,16 +84,10 @@ async function finLoad(quiet) {
     ftNav(); /* the tabs' words again, now the language pack has had the boot to land */
   } catch (e) {
     if (generation !== FIN.gen) return;
-    if (e && e.status === 404) {
-      finOff();
-      return;
-    } /* the Ledger is off for this shop (M212) */
+    if (e && e.status === 404) return finOff(); /* the Ledger is off for this shop (M212) */
     FIN.state = e && e.status === 403 ? 'denied' : 'error';
     FIN.err = e;
-    if (FIN.state === 'denied') {
-      finDenied();
-      return;
-    }
+    if (FIN.state === 'denied') return finDenied();
   }
   if (FIN.api) FIN.api.refresh();
 }
