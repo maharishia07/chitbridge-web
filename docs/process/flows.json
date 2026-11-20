@@ -236,7 +236,7 @@
           "screen": [], "engine": [], "route": [], "chit": "none", "ledger": "none", "test": [],
           "status": "missing", "note": "No route or screen takes a physical count. Evidence: api routes/integrations.js says 'returns and stock counting are version 2'; lib/stock-store.js shrinkage() reports reason-coded losses but nothing writes a count; closing stock 'automatic' (step 5) refuses a product below zero and asks for a count no screen can take yet." },
         { "n": 5, "step": "closing stock", "module": "Accounts", "who": "the owner (types the value, or values the stock ledger)",
-          "screen": [{ "file": "web:public/app/cap-period.js", "fn": "peStockSave" }],
+          "screen": [{ "file": "web:public/app/cap-period-stock.js", "fn": "peStockSave" }],
           "engine": [{ "file": "api:lib/books-period.js", "fn": "closingStock" }, { "file": "api:lib/books-period.js", "fn": "ledgerValue" }, { "file": "api:lib/stock-store.js", "fn": "asAt" }, { "file": "engines:src/posting.js", "fn": "closing_stock" }],
           "route": [{ "m": "POST", "p": "/api/books/closing-stock", "file": "api:routes/books.js" }],
           "chit": "none", "ledger": "closing_stock · Dr 1200 Stock-in-hand · Cr 5050 Changes in inventories (or the reverse) — the difference from the books, lower of cost and NRV",
