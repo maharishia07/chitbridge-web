@@ -362,10 +362,15 @@ async function doRegister() {
             cblog('warn', 'register: Country setup unloaded — the panel shows country codes, not names: ' + (e && e.message));
           });
         REG.verticals = (answer && answer.constitutions) || [];
+        /* GREY-VERT: the default is never a setup that is not ready (the answer's `ready`; an older answer without it reads as ready) */
         const dv =
           REG.verticals.find(function (x) {
-            return x.is_default;
-          }) || REG.verticals[0];
+            return x.is_default && x.ready !== false;
+          }) ||
+          REG.verticals.find(function (x) {
+            return x.ready !== false;
+          }) ||
+          null;
         REG.constitution = dv ? dv.key : null;
         /* GOV-SPIN: the installation's country and the packs a registrant may choose — the panel's first country is the installation's */
         REG.spin =
@@ -411,6 +416,20 @@ function regVerticalChooser() {
       .map(function (item) {
         const sel = (REG.constitution || '') === item.key;
         const caps = (item.capabilities || []).join(' · ');
+        /* GREY-VERT (Athi, 21 Nov): a setup the api says is not ready is the same grey tile as the Home card (cbsh-box off, "Being finished · not ready yet") and cannot be chosen */
+        if (item.ready === false)
+          return (
+            '<div class="cbsh-box off" aria-disabled="true" data-cbsid="SCR053-C03" data-ready="no" data-testid="reg-vertical-' +
+            esc(item.key) +
+            '" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default"><div style="font-weight:700;font-size:var(--fs-2)">' +
+            '○ ' +
+            esc(regSetupLabel(item)) +
+            '</div><span class="no" data-testid="reg-vertical-off-' +
+            esc(item.key) +
+            '" style="display:block;font-size:var(--fs-1);margin-top:4px">' +
+            esc(tx('Being finished · not ready yet')) +
+            '</span></div>'
+          );
         return (
           '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' +
           esc(item.key) +
