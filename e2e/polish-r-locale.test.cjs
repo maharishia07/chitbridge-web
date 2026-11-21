@@ -11,10 +11,12 @@ const win = { localStorage: { getItem: (k) => (k in store ? store[k] : null), se
 win.window = win; win.self = win; win.globalThis = win;
 const ctx = vm.createContext(Object.assign(win, { console, Intl, Date, Math }));
 vm.runInContext(fs.readFileSync(path.join(pub, 'engine', 'locale.js'), 'utf8'), ctx);
+win.CB_SHOP_TZ = 'Australia/Sydney';
+vm.runInContext(fs.readFileSync(path.join(pub, 'app', 'shop-time.js'), 'utf8'), ctx); /* the one formatter (date-zone 1121): helpers route through it */
 vm.runInContext(fs.readFileSync(path.join(pub, 'app', 'helpers.js'), 'utf8') + '\nthis.shopDay = shopDay; this.shopStamp = shopStamp;', ctx);
 ctx.CBLocale.setRegion('AU');
-let bad = 0;
-const t = (name, got, want) => { const ok = got === want; if (!ok) bad++; console.log((ok ? '  ok    ' : '  FAIL  ') + name + (ok ? '' : '  got ' + JSON.stringify(got) + ' want ' + JSON.stringify(want))); };
+let bad = 0, n = 0;
+const t = (name, got, want) => { n++; const ok = got === want; if (!ok) bad++; console.log((ok ? '  ok    ' : '  FAIL  ') + name + (ok ? '' : '  got ' + JSON.stringify(got) + ' want ' + JSON.stringify(want))); };
 t('bare day, AU', ctx.shopDay('2026-11-15'), '15 Nov 2026');
 t('moment, AU, Sydney', ctx.shopStamp('2026-11-15T02:36:00Z').replace(/\s/g, ' '), '15 Nov 2026, 1:36 pm');
 t('empty is the dash', ctx.shopDay(''), '—');
@@ -26,5 +28,5 @@ t('ISO moment', ctx.CBLocale.date('2026-10-08T00:00:00.000Z'), '08 Oct 2026');
 t('day with words and year', ctx.CBLocale.date('8 Oct 2026'), '08 Oct 2026');
 t('epoch ms', ctx.CBLocale.date(Date.UTC(2026, 9, 8, 12)), '08 Oct 2026');
 t('shopDay of a year-less string is kept, not 2001', ctx.shopDay('Thu Oct 08').indexOf('2001'), -1);
-console.log('\n  checks · ' + bad + ' failed');
+console.log('\n  ' + n + ' checks · ' + bad + ' failed');
 process.exit(bad ? 1 : 0);

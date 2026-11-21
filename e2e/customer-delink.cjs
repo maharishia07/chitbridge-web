@@ -18,7 +18,7 @@ let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok
 
 const CUSTOMER_PAGES = ['public/shop.html', 'public/store.html', 'public/network-shop.html', 'public/embed.html', 'public/promo.html'];
 /* neutral = no staff session, no staff endpoint map, no staff page name (avatar.js carries the staff menu; screen-id.js lists every staff page: neither is loaded) */
-const ALLOW = new Set(['app/device-id.js', 'config.js', 'app/helpers.js', 'cb-offline.js', 'engine/offers.js', 'engine/pricing.js', 'app/catalogue-lines.js', 'engine/screen.js',
+const ALLOW = new Set(['app/device-id.js', 'app/shop-time.js' /* judged 21 Nov: the one date formatter, no session, no api, no storage */, 'config.js', 'app/helpers.js', 'cb-offline.js', 'engine/offers.js', 'engine/pricing.js', 'app/catalogue-lines.js', 'engine/screen.js',
   'app/ui.js', 'app/ui-field.js', 'app/customer-bar.js', 'app/cb-words.js', 'engine/locale.js', 'engine/money.js', 'engine/tax.js',
   'app/shop-privacy.js', 'app/cart.js', 'app/kbd-press.js', 'app/step-flow.js', 'app/sheet-keys.js', 'app/workflow.js', 'app/showcase-templates.js']);
 const OFFICE_PAGE = /(?:^|[^\w-])(?:app|accounts|finance|crm|catalogue|settings|employees|operations|tasks|till|network|know-your-business|authority-forms|intake|bill-print)\.html/;
