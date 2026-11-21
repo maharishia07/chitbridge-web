@@ -7,6 +7,7 @@
   'use strict';
   var NEUTRAL = {
     cc: '',
+    comboName: 'Combo deal',   /* the Combo Lab's worked example (lab/combo-mode.js) */
     shopName: 'Sample shop',
     city: 'Your city',
     place: 'Your address · Your city',
@@ -95,6 +96,7 @@
   });
   var IN = derive({
     cc: 'IN',
+    comboName: 'Tiffin Combo',
     shopName: 'Sample Tiffin Corner',
     city: 'Chennai',
     place: 'Chennai 600 126 · Tamil Nadu',
