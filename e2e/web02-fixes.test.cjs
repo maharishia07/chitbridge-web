@@ -58,7 +58,7 @@ const ok = (name) => console.log('ok  ' + name) || ran++;
   const grab = (start) => { const a = shell.indexOf(start); let depth = 0, i = shell.indexOf('{', a); for (; i < shell.length; i++) { if (shell[i] === '{') depth++; if (shell[i] === '}' && --depth === 0) break; } return shell.slice(a, i + 1); };
   const sandbox = { SESSION: { entityId: 'e1', entity: 'Alpha Timers' }, IGNORED_TYPES: ['button', 'submit'] };
   vm.createContext(sandbox);
-  vm.runInContext(grab('function chitIsSelf') + '\n' + grab('function inputMoved'), sandbox);
+  vm.runInContext(grab('function chitIsSelf') + '\n' + grab('function selectBase') + '\n' + grab('function inputMoved'), sandbox);
   assert.strictEqual(sandbox.chitIsSelf('e1', 'Anyone'), true, 'my id is me');
   assert.strictEqual(sandbox.chitIsSelf('e2', 'Alpha Timers'), false, 'another shop with my name is another shop (both ids known)');
   assert.strictEqual(sandbox.chitIsSelf('', 'Alpha Timers'), true, 'no id on the row: the name decides');

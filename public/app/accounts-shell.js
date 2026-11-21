@@ -470,14 +470,35 @@ var CBUnsaved = (function () {
     if (registration && typeof registration.dirty === 'function') pending.forms.push(registration);
     return registration;
   }
+  /** what a select is measured against: the choice recorded AFTER the page's own script had set it (selectRemember, on first idle or on the person's first touch), else the option the screen painted. A select set by script after paint is therefore not "unsaved". */
+  function selectBase(select) {
+    if (select._cbUnsavedBase != null) return select._cbUnsavedBase;
+    var painted = 0; /* the option marked selected, else the first (what a browser shows for a select with none marked) */
+    Array.prototype.some.call(select.options, function (option, index) { if (option.defaultSelected) { painted = index; return true; } return false; });
+    return painted;
+  }
+  /** record a select's choice once, as it stands now */
+  function selectRemember(select) {
+    if (select && select.tagName === 'SELECT' && !select.multiple && select._cbUnsavedBase == null) select._cbUnsavedBase = select.selectedIndex;
+  }
+  /** every select under a node that has no record yet */
+  function selectsRemember(node) {
+    Array.prototype.forEach.call((node || document).querySelectorAll('select'), selectRemember);
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    /* first idle after a paint: the page's own script has run; and the person's first touch (before any change of theirs) */
+    var idle = null;
+    var later = function () { if (!idle) idle = setTimeout(function () { idle = null; selectsRemember(document); }, 300); };
+    ['focusin', 'pointerdown', 'keydown'].forEach(function (name) { document.addEventListener(name, function (event) { selectRemember(event.target); }, true); });
+    if (typeof MutationObserver === 'function') new MutationObserver(later).observe(document.documentElement, { childList: true, subtree: true });
+    later();
+  }
   /** has this one input, select or textarea moved from what the screen painted? */
   function inputMoved(input) {
     if (input.disabled || IGNORED_TYPES.indexOf(input.type) >= 0 || input.hasAttribute('data-unsaved-ignore')) return false;
     if (input.tagName === 'SELECT') {
       if (input.multiple) return Array.prototype.some.call(input.options, function (option) { return option.selected !== option.defaultSelected; });
-      var painted = 0; /* the option the screen painted: the one marked selected, else the first (what a browser shows for a select with none marked) */
-      Array.prototype.some.call(input.options, function (option, index) { if (option.defaultSelected) { painted = index; return true; } return false; });
-      return input.selectedIndex !== painted;
+      return input.selectedIndex !== selectBase(input);
     }
     if (input.type === 'checkbox' || input.type === 'radio') return input.checked !== input.defaultChecked;
     return input.value !== input.defaultValue;

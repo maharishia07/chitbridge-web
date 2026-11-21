@@ -218,7 +218,9 @@
   }
   /** the new party's name or kind was edited on a line: the controller gets the change, a refusal is said */
   function editPartyFrom(cfg, field, action, key) {
-    var party = cfg.controller().view().items.filter(function (one) { return one.key === key; })[0].party;
+    var found = cfg.controller().view().items.filter(function (one) { return one.key === key; })[0],
+      party = found && found.party;
+    if (!party) return; /* the line is gone or has no new party (a repaint beat the edit): nothing to edit */
     var said = cfg.controller().editParty(key, { name: action === 'pname' ? field.value : party.name, kind: action === 'pkind' ? field.value : party.kind });
     if (!said.ok) cfg.say(said.why);
     cfg.changed();
