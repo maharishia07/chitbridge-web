@@ -314,11 +314,12 @@
   function serverSaid(m) {
     var w = m && m.billRx ? m.wait : null;
     if (!w || !w.todo || w.todo === 'accept') return null;
-    var add = w.todo === 'add_supplier';
+    var add = w.todo === 'add_supplier', rail = w.wait === 'supplier' && !add; /* AE-F-19: a rail seller is listed by their own key (for_bill), never a typed name */
     return {
       why: String(w.why || ''),
       todo: w.todo,
-      name: add && w.name ? String(w.name) : null,
+      rail: rail,
+      name: add && w.name ? String(w.name) : rail ? String((w.supplier && w.supplier.name) || '') || '-' : null,
       cands: add && Array.isArray(w.candidates) ? w.candidates.slice(0, 3) : []
     };
   }
@@ -919,7 +920,7 @@
             '"><span class="ic" aria-hidden="true">' +
             ACT[item][0] +
             '</span><span>' +
-            esc(T(ACT[item][1])) +
+            esc(item === 'supplier' && serverSaid(view) && serverSaid(view).rail ? tf('Add {name} as supplier and post', { name: serverSaid(view).name }) : T(ACT[item][1])) +
             '</span></button>'
           );
         })
@@ -1357,15 +1358,14 @@
       return;
     }
     if (k === 'supplier') {
-      var nm = serverSaid(m).name;
-      if (typeof root.bkAddSupplier !== 'function') {
+      var nm = serverSaid(m).name, addIt = serverSaid(m).rail ? root.bkAddSellerAndPost : root.bkAddSupplier; /* AE-F-19: a rail seller is listed by their own key and posted */
+      if (typeof addIt !== 'function') {
         CS.note = T('Add them on the Suppliers page.');
         return paint();
       }
       CS.busy = true;
       paint();
-      return root
-        .bkAddSupplier(nm)
+      return addIt(serverSaid(m).rail ? id : nm)
         .then(function (said) {
           CS.busy = false;
           CS.note = said || null;

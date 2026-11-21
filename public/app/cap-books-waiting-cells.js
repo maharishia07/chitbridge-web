@@ -179,6 +179,15 @@ async function bkAddSupplier(name) {
   }
   return bkHealthAgain(tx('Added — open Waiting again to see the bill'));
 }
+/** AE-F-19: the bill sheet's one press "Add <seller> as supplier and post" — the seller of THIS bill is listed by their own key (supAdd { for_bill }), the server posts what waited → the sentence to show, or null */
+async function bkAddSellerAndPost(chitId) {
+  try {
+    await api('supAdd', { body: { for_bill: chitId, supply_kind: 'resale' } });
+  } catch (e) {
+    if (!(e && (e.status === 409 || /already/i.test(String(e.message || ''))))) return bkWhy(e, tx('Could not add the supplier'));
+  }
+  return null;
+}
 /* add the supplier a waiting row names, then refresh the waiting list */
 async function bkWaitAddSupplier(rowIndex, btn) {
   var waitingRow = (BK.waiting || [])[rowIndex],
