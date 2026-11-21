@@ -193,7 +193,7 @@ function frViewHTML(reply) {
   var outputTax = ((reply || {}).sup_details || {}).osup_det || {},
     credit = ((reply || {}).itc_elg || {}).itc_net || {},
     setOff = ((reply || {})._cb || {}).setoff;
-  if (!setOff) return '<p class="hint" data-testid="fr-view-none">' + esc(tx('The set-setOff could not be worked out for this month.')) + '</p>';
+  if (!setOff) return '<p class="hint" data-testid="fr-view-none">' + esc(tx('The set-off could not be worked out for this month.')) + '</p>';
   var heads = [
     { name: 'CGST', out: outputTax.camt, inp: credit.camt, pay: setOff.payable.cgst, keep: setOff.carried.cgst },
     { name: 'SGST', out: outputTax.samt, inp: credit.samt, pay: setOff.payable.sgst, keep: setOff.carried.sgst },

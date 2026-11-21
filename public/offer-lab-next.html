@@ -1454,8 +1454,8 @@ function countryOfReply(body, code) {
   return /^[A-Z]{2}$/.test(cc) ? cc : CBSample.countryOfCurrency(code);
 }
 /** a signed-in shop outside India (or with no country) sees ITS country's sample menu and names, never the Chennai one (CBSample is the one list) */
-function useCountrySample(cc) {
-  var set = CBSample.forCountry(cc);
+function useCountrySample(countryCode) {
+  var set = CBSample.forCountry(countryCode);
   if (CBSample.isHome(set)) return;
   HOTEL.name = set.hotelName;
   HOTEL.cats = set.hotelCats;

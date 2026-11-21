@@ -308,6 +308,40 @@ function renderRegister() {
   const node = document.getElementById('r_go');
   if (node) node.onclick = doRegister;
 }
+/** the sentence that refuses a User ID typed at sign-up, or '' when it is fine (the same rule as the server, said before the round trip) */
+function regUserIdWhy(uid) {
+  if (uid.indexOf('@') >= 0) {
+    return 'A User ID cannot contain "@". That separator makes an employee sign-in — ravi@yourbusiness.';
+  }
+  if (uid.indexOf('.') >= 0) {
+    return 'A User ID cannot contain ".". That separator makes a network store — yourbusiness.clothing.';
+  }
+  if (uid.length < 8) {
+    return 'A User ID is at least 8 characters. "' + uid + '" is ' + uid.length + '.';
+  }
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(uid) || /-$/.test(uid)) {
+    /* ⚠ SAY WHICH CHARACTER. "letters, numbers and dashes" makes the person re-read their own typing to find
+       what offended; the first bad character is something we already know. */
+    var badch = (uid.match(/[^a-z0-9-]/) || [])[0];
+    return badch
+      ? badch === ' '
+        ? 'A User ID cannot contain a space. Use a dash instead — corner-hardware.'
+        : 'A User ID cannot contain "' + badch + '". Letters, numbers and dashes only — the rest are kept for internal use.'
+      : 'A User ID starts and ends with a letter or number — not a dash.';
+  }
+  return '';
+}
+/** the sign-up form's own checks: the sentence for the first thing wrong, or '' (business name, User ID, email address) — said before the round trip */
+function regFormWhy(shop, name, email) {
+  /* A-F-01: the shop's name prints on every bill and is the name everywhere — asked here, not left to the User ID */
+  if (shop.length < 2) return 'Type your business name (2 letters or more) — it prints on every bill.';
+  if (!name || !email) return 'A User ID and an email address are required.';
+  /* ⚠️ THE SAME RULE AS THE SERVER, SAID BEFORE THE ROUND TRIP — not INSTEAD of it. handleLib.checkRoot is the
+       authority (routes/entities.js refuses on its own); this only spares someone a wasted OTP request. It is
+       deliberately the same three sentences, so a person never sees two different explanations of one rule. */
+  /* WALK S S-F-01: an address no code can reach is refused here, in words, before the register call (the shared ui.field.emailWhy) */
+  return regUserIdWhy(name.trim().toLowerCase()) || ui.field.emailWhy(email) || '';
+}
 async function doRegister() {
   const R = REG;
   const v_shop = val('r_shop'),
@@ -316,49 +350,12 @@ async function doRegister() {
     v_otp = val('r_otp');
   if (R.step === 'form') {
     R.shop = (v_shop || '').trim();
-    if (R.shop.length < 2) {
-      /* A-F-01: the shop's name prints on every bill and is the name everywhere — asked here, not left to the User ID */
-      R.err = 'Type your business name (2 letters or more) — it prints on every bill.';
+    const refusal = regFormWhy(R.shop, v_name, v_email);
+    if (refusal) {
+      R.err = refusal;
       return renderRegister();
     }
-    if (!v_name || !v_email) {
-      R.err = 'A User ID and an email address are required.';
-      return renderRegister();
-    }
-    /* ⚠️ THE SAME RULE AS THE SERVER, SAID BEFORE THE ROUND TRIP — not INSTEAD of it. handleLib.checkRoot is the
-       authority (routes/entities.js refuses on its own); this only spares someone a wasted OTP request. It is
-       deliberately the same three sentences, so a person never sees two different explanations of one rule. */
-    const uid = v_name.trim().toLowerCase();
-    if (uid.indexOf('@') >= 0) {
-      R.err = 'A User ID cannot contain "@". That separator makes an employee sign-in — ravi@yourbusiness.';
-      return renderRegister();
-    }
-    if (uid.indexOf('.') >= 0) {
-      R.err = 'A User ID cannot contain ".". That separator makes a network store — yourbusiness.clothing.';
-      return renderRegister();
-    }
-    if (uid.length < 8) {
-      R.err = 'A User ID is at least 8 characters. "' + uid + '" is ' + uid.length + '.';
-      return renderRegister();
-    }
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(uid) || /-$/.test(uid)) {
-      /* ⚠ SAY WHICH CHARACTER. "letters, numbers and dashes" makes the person re-read their own typing to find
-         what offended; the first bad character is something we already know. */
-      var badch = (uid.match(/[^a-z0-9-]/) || [])[0];
-      R.err = badch
-        ? badch === ' '
-          ? 'A User ID cannot contain a space. Use a dash instead — corner-hardware.'
-          : 'A User ID cannot contain "' + badch + '". Letters, numbers and dashes only — the rest are kept for internal use.'
-        : 'A User ID starts and ends with a letter or number — not a dash.';
-      return renderRegister();
-    }
-    /* WALK S S-F-01: an address no code can reach is refused here, in words, before the register call (the shared ui.field.emailWhy) */
-    const emailWhy = ui.field.emailWhy(v_email);
-    if (emailWhy) {
-      R.err = emailWhy;
-      return renderRegister();
-    }
-    R.name = uid;
+    R.name = v_name.trim().toLowerCase();
     R.email = v_email.trim();
   }
   R.err = '';
@@ -439,10 +436,10 @@ function regVerticalChooser() {
       .map(function (item) {
         const sel = (REG.constitution || '') === item.key;
         /* GREY-VERT (Athi, 21 Nov): a setup the api says is not ready is the same grey tile as the Home card (cbsh-box off, "Being finished · not ready yet") and cannot be chosen; ONE element, two states, so the one code SCR053-C03 is written once */
-        const off = item.ready === false;
+        const greyedOut = item.ready === false;
         return (
           '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' + esc(item.key) + '"' +
-          (off
+          (greyedOut
             ? ' class="cbsh-box off" aria-disabled="true" data-ready="no" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default"><div style="font-weight:700;font-size:var(--fs-2)">○ ' +
               esc(regSetupLabel(item)) + '</div><span class="no" data-testid="reg-vertical-off-' + esc(item.key) + '" style="display:block;font-size:var(--fs-1);margin-top:4px">' + esc(tx('Being finished · not ready yet')) + '</span>'
             : ' onclick="REG.constitution=\'' + esc(item.key) + '\';renderRegister()" style="border:1px solid ' + (sel ? 'var(--blue)' : 'var(--line)') + ';background:' + (sel ? 'var(--blue-tint)' : 'var(--card)') +
