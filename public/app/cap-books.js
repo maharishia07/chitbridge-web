@@ -364,6 +364,24 @@ function bkDate(d) {
     return String(d).slice(0, 10);
   }
 }
+/** a period said in words (the screen is the product: a money figure names the days it covers). ONE helper for the Sold figure of every books screen:
+ *  "Sold this week so far · 16 Nov – 22 Nov". The days are the server's (period.from / period.to), written by CBLocale.date; a period it did not send is
+ *  named by its words alone, never guessed. Each phrase is a literal tx key so the hi / ar packs carry it. */
+function bkSoldLabel(period) {
+  var by = {
+    week: 'Sold this week so far · {from} – {to}',
+    mtd: 'Sold this month so far · {from} – {to}',
+    quarter: 'Sold this quarter so far · {from} – {to}',
+    ytd: 'Sold this year so far · {from} – {to}',
+    today: 'Sold today'
+  };
+  var word = period && period.word,
+    key = by[word];
+  if (!key) return tx('Sold');
+  if (word === 'today') return tx(key);
+  if (!period.from || !period.to) return tx(key.split(' · ')[0]);
+  return txf(key, { from: bkDate(period.from), to: bkDate(period.to) });
+}
 /** the SHOP's day — the browser's local calendar day (F3b, 2026-10-13: toISOString() is the UTC day, which for an Indian shop between midnight and
  *  05:30 is YESTERDAY — the entry date, the dues as-of and the Cash tab's Today tag were all a day behind every early morning). Same day as crmLocalISO / peYmd. */
 function bkToday() {
