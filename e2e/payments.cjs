@@ -173,6 +173,8 @@ async function route(S, r) {
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => { offHost.push(r.request().url()); return r.abort(); });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
+    /* F-54: a short window folds the menu groups by default; these walks need every item reachable, so the stored choice is 'all open' */
+    await ctx.addInitScript(() => { try { localStorage.setItem('cb_acc_navfold', JSON.stringify({ Books: false, Outstandings: false, 'Period end': false, Setup: false })); } catch (_) {} });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
     const p = await ctx.newPage(); p.on('pageerror', (e) => { threw.push(e.message); console.log('  PAGEERR ' + e.message); });
     await p.goto(base + url); return { ctx, p };

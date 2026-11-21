@@ -57,7 +57,7 @@ const ledger = (code, name, lines, o) => Object.assign({ months: ledgerMonths(li
 const ledgerMonths = (lines, opening) => { const by = {}; let run = opening || 0; (lines || []).forEach((l) => { run += (l.dr_minor || 0) - (l.cr_minor || 0); const m = String(l.date || l.doc_date || '').slice(0, 7); const row = by[m] || (by[m] = { month: m, debit_minor: 0, credit_minor: 0, closing_minor: 0 }); row.debit_minor += l.dr_minor || 0; row.credit_minor += l.cr_minor || 0; row.closing_minor = run; }); return Object.keys(by).sort().map((m) => by[m]); };
 /** one asset register row (lib/books-assets) */
 const assetRow = (o) => Object.assign({ entity: 'ent-M', asset_id: 'a1', name: 'Asset', asset_class: 'furniture', cost_minor: 0, currency: 'INR', put_to_use: DAY, source_entry_id: 'e1', source_chit_id: null,
-  accumulated_minor: 0, last_dep_fy: null, disposed_on: null, disposal_entry_id: null, proceeds_minor: null, created_by: 'u1', wdv_minor: 0 }, o || {});
+  accumulated_minor: 0, last_dep_fy: null, disposed_on: null, disposal_entry_id: null, proceeds_minor: null, created_by: 'u1', method: 'it_act_wdv', life_years: 3, rate_pct: 40, wdv_minor: 0 }, o || {});
 /** one repeating-entry template (lib/books-recurring) */
 const recRow = (o) => Object.assign({ entity: 'ent-M', recurring_id: 'r1', name: 'Template', event: { kind: 'expense', class: 'rent', amount_minor: 100, paid_from: 'bank' }, frequency: 'monthly', next_on: DAY,
   anchor_day: 1, end_on: null, auto: false, active: true, last_done_on: null, created_by: 'u1', due: false }, o || {});

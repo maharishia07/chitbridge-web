@@ -76,6 +76,8 @@ W.run('books-door', async (w) => {
     await page.goto(base + '/network.html#books'); await page.reload(); await page.waitForSelector(T('bg-list'), { timeout: 15000 });
     return { ok: (await page.getAttribute(T('skel-nav-books'), 'aria-current')) === 'page', saw: 'books section is the current one' };
   });
+  /* F-54: a short window folds the menu groups by default; these walks need every item reachable, so the stored choice is 'all open' */
+  await page.evaluate(() => { try { localStorage.setItem('cb_acc_navfold', JSON.stringify({ Books: false, Outstandings: false, 'Period end': false, Setup: false })); } catch (_) {} });
   await page.goto(base + '/accounts.html'); await page.waitForSelector(T('acc-nav-access'), { timeout: 20000 });
   await w.step('D8', 'Accounts › Setup carries "Who can see my books" and it opens the grants list IN PLACE (ACC-384, no jump to the network page)', async () => {
     const label = await txt(T('acc-nav-access'));
