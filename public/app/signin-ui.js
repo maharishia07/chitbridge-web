@@ -266,8 +266,7 @@
 
   /** the sentence for a refused call: the page's words for the known codes, else the server's own sentence, else the shared refusal wording */
   function refusalWords(words, failed) {
-    var said = failed.body || {},
-      code = said.code;
+    var said = failed.body || {}, code = said.code;
     if (code === 'NO_ACCOUNT') return words.noAccount;
     if (failed.status === 429) return words.tooMany;
     if (code === 'PIN_ALREADY_SET') return words.pinSet; /* 409: a first-PIN write on a person who has one — the change-PIN door (PUT /api/actors/change-pin, current PIN) is the way */
@@ -343,9 +342,6 @@
       emit();
       return S;
     }
-    function refusalOf(failed) {
-      return refusalWords(W, failed);
-    }
     /* the secret typed before a choice of account, kept in this closure only until the person picks (never in S, never painted) */
     var held = null;
 
@@ -360,7 +356,7 @@
       S.asks++;
       return post('/api/signin/ask', a.body).then(function (reply) {
         var b = reply.body || {};
-        if (reply.status < 200 || reply.status >= 300) return set({ busy: false, why: refusalOf(reply) });
+        if (reply.status < 200 || reply.status >= 300) return set({ busy: false, why: refusalWords(W, reply) });
         var resolved = String(typedId);
         return set({
           busy: false,
@@ -460,7 +456,7 @@
           return set({ busy: false, at: 'choose', choices: answer.choices, said: '' });
         }
         held = null;
-        if (verifyRefused(reply, answer, c)) return set({ busy: false, why: isCustomerOnApps(answer, c) ? W.customerOnly : refusalOf(reply) });
+        if (verifyRefused(reply, answer, c)) return set({ busy: false, why: isCustomerOnApps(answer, c) ? W.customerOnly : refusalWords(W, reply) });
         var s = sessionOf(answer);
         S.sent = null; /* ⚠️ the code is spent: nothing here asks for it again */
         S.answer = answer; /* the verify body as it came — handed to onIn beside the session */
@@ -493,8 +489,8 @@
       }
       return post('/api/signin/pin', { pin: p.value, confirm_pin: p.value }, S.token).then(function (reply) {
         var said = reply.body && reply.body.code;
-        if (said === 'PIN_ALREADY_SET' || said === 'SESSION_EXPIRED') return set({ busy: false, at: 'credential', token: null, session: null, why: refusalOf(reply) }); /* the set-PIN step is over: back to the box, in words */
-        if (reply.status < 200 || reply.status >= 300) return set({ busy: false, why: refusalOf(reply) });
+        if (said === 'PIN_ALREADY_SET' || said === 'SESSION_EXPIRED') return set({ busy: false, at: 'credential', token: null, session: null, why: refusalWords(W, reply) }); /* the set-PIN step is over: back to the box, in words */
+        if (reply.status < 200 || reply.status >= 300) return set({ busy: false, why: refusalWords(W, reply) });
         return signedIn(S.session, S.answer || null);
       });
     }

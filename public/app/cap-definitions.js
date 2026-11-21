@@ -669,8 +669,7 @@ function cbDefRetiredOf(kind) {
 
 /** the slab fields only a pack with HSN-style codes has (cess on top and the code list); none for a VAT shop */
 function cbDefCodeFields(scheme) {
-  if (!scheme.codes) return [];
-  return [
+  return !scheme.codes ? [] : [
     { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
     { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true }
   ];
@@ -1538,14 +1537,11 @@ function cbDefFieldHTML(x, v) {
   return box;
 }
 
-/** the placeholder of the Name box, per KIND: an instruction, so a wrong one teaches the wrong thing */
+/** the placeholder of the Name box, per KIND: an instruction, so a wrong one teaches the wrong thing. ⚠️ The NAME is what a product cites and what a chit freezes, so a tax one must read as a rate to someone who never opens this form: "GST 18%", not "standard". */
 function cbDefNamePlaceholder(kind) {
-  if (kind === 'ordermodel') return 'Carton of 6';
-  if (kind === 'offer') return 'Diwali 10%';
-  if (kind === 'requirement') return 'Minimum for food suppliers';
-  /* ⚠️ The NAME is what a product cites and what a chit freezes, so it must read as a rate to someone who never opens this form. "GST 18%", not "standard". */
+  var examples = { ordermodel: 'Carton of 6', offer: 'Diwali 10%', requirement: 'Minimum for food suppliers' };
   if (kind === 'tax') return cbDefTaxScheme().word + ' ' + cbDefTaxScheme().sample + '%';
-  return 'Spices';
+  return examples[kind] || 'Spices';
 }
 function cbDefFormHTML() {
   var f = CBDEF_FORM;
