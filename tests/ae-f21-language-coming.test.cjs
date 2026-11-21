@@ -9,4 +9,4 @@ assert.strictEqual(vm.runInContext("regLangsOrdered(['ar','en','hi']).join()", c
 const ar = vm.runInContext("regLangHTML('ar')", cx), en = vm.runInContext("regLangHTML('en')", cx);
 assert(/reg-lang-coming-ar/.test(ar) && /coming/.test(ar), 'Arabic is greyed "coming"');
 assert(!/coming/.test(en), 'English is offered');
-console.log('2 passed');
+console.log('2 passed · 2 checks');

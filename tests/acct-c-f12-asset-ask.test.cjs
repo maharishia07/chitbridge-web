@@ -22,5 +22,5 @@ const ok = async (name, fn) => { await fn(); pass++; console.log('  ok   ' + nam
   });
   await ok('Cancel sends nothing', async () => { ctx.answer = false; await ctx.save({}); assert.ok(asked && sent === 0); });
   await ok('Yes sends the one write', async () => { ctx.answer = true; await ctx.save({}); assert.strictEqual(sent, 1); });
-  console.log('\n' + pass + ' passed');
+  console.log('\n' + pass + ' passed · ' + pass + ' checks');
 })().catch((e) => { console.log('  FAIL', e.message); process.exit(1); });
