@@ -1698,8 +1698,8 @@ const CFG = {
     try {
       const forced = localStorage.getItem('cb_api_base');
       if (forced) return forced === 'stage' ? STAGES[this.STAGE].base || '' : forced;
-      const h = location.hostname;
-      if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+      const hostName = location.hostname;
+      if (hostName === 'localhost' || hostName === '127.0.0.1') return 'http://localhost:3000';
     } catch (e) {
       /* storage blocked — fall through to the stage */
     }
@@ -3175,9 +3175,9 @@ function curScreen() {
   try {
     if (_assistCtx) return _assistCtx;
     if (typeof SESSION !== 'undefined' && SESSION.token) return _fineScreen();
-    const h = location.hash || '';
-    if (h.indexOf('register') >= 0) return 'register';
-    if (h.indexOf('login') >= 0) return 'login';
+    const hashText = location.hash || '';
+    if (hashText.indexOf('register') >= 0) return 'register';
+    if (hashText.indexOf('login') >= 0) return 'login';
     return 'welcome';
   } catch (_) {
     return 'welcome';
@@ -3255,9 +3255,9 @@ function mountAssist() {
   node.id = 'assistfab';
   node.innerHTML = ui.action('assistant', { mount: 'PNL001-U01', surface: 'float', hint: 'Ask the assistant', testid: 'assistant-open', onPress: () => openAssist() });
   document.body.appendChild(node);
-  const h = document.createElement('div');
-  h.id = 'assisthost';
-  document.body.appendChild(h);
+  const assistHost = document.createElement('div');
+  assistHost.id = 'assisthost';
+  document.body.appendChild(assistHost);
 }
 let _assistCtx = null; // optional screen/modal context from a per-screen "?" (else curScreen() derives it)
 function openAssist(ctx) {
@@ -7614,13 +7614,13 @@ async function selfBillCart() {
  * Not built → grey, with words, one readiness state — never a silent standard rate. Nothing is chosen here; the sale is taxed as any other until the zone feature is built.
  */
 function sbZoneGreyHTML() {
-  var cc = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase(),
-    pack = window.CBCountries && CBCountries.packFor && cc ? CBCountries.packFor(cc) : null,
-    dz = pack && pack.designatedZones;
-  if (!dz) return '';
+  var countryCode = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase(),
+    pack = window.CBCountries && CBCountries.packFor && countryCode ? CBCountries.packFor(countryCode) : null,
+    zones = pack && pack.designatedZones;
+  if (!zones) return '';
   return (
     '<div data-testid="sb-zone-grey" style="margin-top:6px;font-size:var(--fs-1);color:var(--grey);opacity:.75" title="' +
-    esc(dz.cite || '') +
+    esc(zones.cite || '') +
     '">' +
     esc(tx('Designated Zone buyer — not built yet. This sale is taxed like any other; a zone buyer is not recorded or treated differently.')) +
     '</div>'
