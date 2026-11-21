@@ -1364,6 +1364,14 @@ function payAllocs() {
     return { against_ref: item.against_ref, amount_minor: m, disputed: !!item.disputed, open_minor: item.open_minor };
   });
 }
+/** F-20: what the money does to the bills it is set against: settles them, or (a part payment) pays part of them and says what is left open */
+function payAllocWords(list, used, n) {
+  var open = list.reduce(function (total, x) {
+    return total + (x.amount_minor > 0 && x.amount_minor < x.open_minor ? x.open_minor - x.amount_minor : 0);
+  }, 0);
+  if (!open) return txn('{amt} settles {count} bill', '{amt} settles {count} bills', n, { amt: bkMoney(used) });
+  return txn('{amt} part-pays {count} bill, {open} still open', '{amt} part-pays {count} bills, {open} still open', n, { amt: bkMoney(used), open: bkMoney(open) });
+}
 /** the line under the table — says where the money goes, and follows every edit */
 function payLeftPaint() {
   var box = document.getElementById('pay_left');
@@ -1389,7 +1397,7 @@ function payLeftPaint() {
     }).length,
     left = amt - used,
     parts = [];
-  if (n) parts.push(txn('{amt} settles {count} bill', '{amt} settles {count} bills', n, { amt: bkMoney(used) }));
+  if (n) parts.push(payAllocWords(list, used, n));
   if (left > 0)
     parts.push(
       txf(PAY.kind === 'supplier' ? '{amt} stays with {name} as an advance' : '{amt} is kept as an advance from {name}', { amt: bkMoney(left), name: PAY.name })
@@ -3105,6 +3113,29 @@ function bkLtBand(code) {
   if (/^[456]/.test(c)) return 'income';
   return 'things';
 }
+/** the pack's own groups a liability sits in — never under what the shop holds (F-15) */
+var BK_LT_OWE = { current_liabilities: 1, trade_creditors: 1, sundry_creditors: 1, loans: 1, secured_loans: 1, unsecured_loans: 1, bank_od: 1, bank_overdraft: 1 };
+/**
+ * F-15: ONE grouping source with the statements. A ledger the pack files on a P&L line (pack `line`, e.g. Wages → "Employee benefits expense") is grouped under THAT line's
+ * label, the same words the P&L prints; a liability the pack files under its liabilities groups sits in "What you owe". null = the code ranges above decide.
+ */
+function bkLtPackGroup(code) {
+  var pack = shopReg();
+  if (!pack) return null;
+  var rec = [pack.ledgers, pack.expense_classes, pack.income_classes].reduce(function (found, list) {
+    return found || (list || []).filter(function (x) {
+      return String(x.code) === String(code);
+    })[0];
+  }, null);
+  if (!rec) return null;
+  var line = rec.line && pack.presentation && pack.presentation.lines && pack.presentation.lines[rec.line];
+  if (line && line.st === 'pl') return line.label;
+  return BK_LT_OWE[rec.group] ? 'What you owe' : null;
+}
+/** where a group title sorts: the code ranges' order, then the pack's own groups, "Other" last */
+function bkLtRank(order, title) {
+  return title === 'Other' ? 100 : order.indexOf(title) < 0 ? 50 : order.indexOf(title);
+}
 /** the accounts become bands → groups → ledgers. The per-party sub-accounts (1300-P…, 2100-P…) are NOT leaves: a party is read from /dues */
 function bkLtModel(accounts) {
   var bands = BK_LT_BANDS.map(function (item) {
@@ -3130,7 +3161,7 @@ function bkLtModel(accounts) {
       var g = BK_LT_GROUPS.filter(function (x) {
           return x[2].test(code);
         })[0],
-        title = g ? g[1] : 'Other';
+        title = bkLtPackGroup(code) || (g ? g[1] : 'Other');
       var grp = band.groups.filter(function (x) {
         return x.title === title;
       })[0];
@@ -3142,7 +3173,7 @@ function bkLtModel(accounts) {
     });
   bands.forEach(function (item) {
     item.groups.sort(function (x, y) {
-      return order.indexOf(x.title) + 100 * (x.title === 'Other') - (order.indexOf(y.title) + 100 * (y.title === 'Other'));
+      return bkLtRank(order, x.title) - bkLtRank(order, y.title);
     });
     item.groups.forEach(function (entry) {
       entry.accts.sort(function (x, y) {

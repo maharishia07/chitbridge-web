@@ -133,12 +133,8 @@ const peSel = (id, opts, cur, extra) =>
     .map((item) => '<option value="' + esc(item[0]) + '"' + (String(item[0]) === String(cur) ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>')
     .join('') +
   '</select>';
-const peMODES = [
-  ['cash', 'Cash'],
-  ['bank', 'Bank'],
-  ['upi', 'UPI'],
-  ['card', 'Card']
-];
+/** the ways to pay the books take (cash, bank, card) plus UPI only where the shop's pack carries it (payHasUpi: the country pack, never a hard-coded list; F-33) */
+const peModeList = () => [['cash', 'Cash'], ['bank', 'Bank']].concat(payHasUpi() ? [['upi', 'UPI']] : [], [['card', 'Card']]);
 const peBtn = (tid, label, fn, cls) =>
   '<button data-cbsid="BKS016-B02" type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
 /** a minor amount as the text of an amount field (the field is parsed back with bkToMinor — the same digits) */
@@ -255,7 +251,7 @@ function peAssetForm() {
     peField('pa_cost', 'Cost', peAmt('pa_cost')) +
     peField('pa_date', 'Bought on', peInput('pa_date', peYmd(new Date()), '', 'date')) +
     peField('pa_use', 'Put to use on (if later)', peInput('pa_use', '', '', 'date')) +
-    peField('pa_how', 'Paid from', peSel('pa_how', peMODES, 'bank')) +
+    peField('pa_how', 'Paid from', peSel('pa_how', peModeList(), 'bank')) +
     '</div><div class="supacts">' +
     peBtn('pa-save', 'Add asset', 'peAssetSave(this)') +
     peBtn('pa-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
@@ -287,7 +283,7 @@ function peSellForm(id) {
     '</div><div class="pe-form">' +
     peField('pd_date', 'Sold or scrapped on', peInput('pd_date', peYmd(new Date()), '', 'date')) +
     peField('pd_get', 'What it fetched (empty if scrapped)', peAmt('pd_get', '', tx('Leave empty if scrapped'))) +
-    peField('pd_into', 'Money came into', peSel('pd_into', peMODES, 'bank')) +
+    peField('pd_into', 'Money came into', peSel('pd_into', peModeList(), 'bank')) +
     '</div><div class="supacts">' +
     peBtn('pd-save', 'Save', "peSellSave(this,'" + esc(id) + "')") +
     peBtn('pd-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
@@ -599,7 +595,7 @@ function peGstPayForm(r) {
     hint = r.ref_hint || tx('The CPIN on the challan'); /* no ref words: an older server, which answered India alone */
   return (
     '<div class="pe-card" data-testid="pg-pay-form"><div class="pe-form">' +
-    peField('pgp_bank', 'Paid from', peSel('pgp_bank', peMODES, 'bank')) +
+    peField('pgp_bank', 'Paid from', peSel('pgp_bank', peModeList(), 'bank')) +
     peField('pgp_ch', label, peInput('pgp_ch', '', hint)) +
     heads.map((item) => peField('pgp_' + item, item.toUpperCase(), peAmt('pgp_' + item, peText(toPay[item + '_minor'])))).join('') +
     list.map((item) => peField('pgr_' + item, item.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + item, peText(rcmStill[item])))).join('') +
@@ -1123,6 +1119,16 @@ function peYearFix(x) {
   if (/balance|trial/i.test(s)) return { label: tx('Open Trial balance'), tab: 'tb' };
   return null;
 }
+/** F-16: the server's year-close sentence for the owner — dates as dates (bkDate), "still open: 2026-07" as month words, the raw period keys in [brackets] dropped */
+function peYearWhy(text) {
+  const words = String(text == null ? '' : text)
+    .replace(/\s*\[\d{4}-[A-Za-z0-9]+\]/g, '')
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, (iso) => bkDate(iso));
+  const at = words.indexOf('still open:');
+  if (at < 0) return words;
+  const names = monthNames('short');
+  return words.slice(0, at) + words.slice(at).replace(/\b(\d{4})-(0[1-9]|1[0-2])\b/g, (_, year, month) => names[Number(month) - 1] + ' ' + year);
+}
 /** the checks of a year still open: every month locked, then each thing the server says stands in the way (each with the tab that fixes it), or that nothing else does */
 function peYearChecksHtml(year, months, refs) {
   const open = months.filter((item) => item.status === 'open').length;
@@ -1147,7 +1153,7 @@ function peYearChecksHtml(year, months, refs) {
         '<div class="pe-check bad" data-testid="py-check-' +
         index +
         '"><span>✗</span><span>' +
-        esc(x.why) +
+        esc(peYearWhy(x.why)) +
         '</span>' +
         (f ? '<button data-cbsid="BKS016-B08" type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
         '</div>'
