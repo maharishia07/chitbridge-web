@@ -148,7 +148,9 @@
   }
   /** the P&L's heading: for a period, never "as at" a day (W18) */
   function forTag(a) {
-    return '<span class="tag" data-testid="bv-for">' + esc(grantKit.words('For')) + ' ' + esc(root.shopDay(a.from)) + ' – ' + esc(root.shopDay(a.to)) + '</span>';
+    /* F-67: the server says the day a range running past today is read to (period.through): "1 Jul 2026 – 21 Nov 2026 · year to date", never the year to come */
+    var through = a.period && a.period.through, last = through || a.to;
+    return '<span class="tag" data-testid="bv-for">' + esc(grantKit.words('For')) + ' ' + esc(root.shopDay(a.from)) + ' – ' + esc(root.shopDay(last)) + (through ? ' · ' + esc(grantKit.words('year to date')) : '') + '</span>';
   }
   /** the "As at <day>" tag, with "year to date" while the year is still running */
   function asAtTag(date, running) {

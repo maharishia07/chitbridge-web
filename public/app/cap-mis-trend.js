@@ -158,6 +158,7 @@ function trPaintTop() {
   var box = document.getElementById('tr_top');
   if (!box) return;
   var head = TR.state === 'ready' ? trHeadline() : '';
+  var note = TR.state === 'ready' && TR.answer && TR.answer.sales_note ? TR.answer.sales_note : '';
   var refused =
     TR.state === 'refused'
       ? '<p class="sub" data-testid="tr-refused" style="margin:6px 20px">' +
@@ -176,6 +177,7 @@ function trPaintTop() {
     (head
       ? '<p data-testid="tr-headline" style="margin:4px 20px 0;font:600 var(--fs-3,17px) var(--sans,sans-serif);color:var(--ink,#2a2418)">' + esc(head) + '</p>'
       : '') +
+    (note ? '<p class="sub" data-testid="tr-sales-note" style="margin:2px 20px 0">' + esc(tx(note)) + '</p>' : '') + /* F-61: the server's words: these sales are the books', and the months before the books have no figure */
     refused;
 }
 

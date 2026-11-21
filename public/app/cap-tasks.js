@@ -662,7 +662,11 @@
       tell('bill', { chit_id: chit.chit_id, kind: chit.kind, stage: chit.stage, word: chit.word, party: chit.party || null });
       return;
     }
-    root.location.href = '/till.html';
+    root.location.href = tkBillAddress(chit);
+  }
+  /** F-43: the counter is opened AT the order (the till reads ?bill= once, goes to Sell and puts the order on the bill), not at whatever mode it last held */
+  function tkBillAddress(chit) {
+    return '/till.html' + (chit && chit.chit_id ? '?bill=' + encodeURIComponent(chit.chit_id) : '');
   }
   function lineHTML(line, chit) {
     var assignment = line.assignment || {},

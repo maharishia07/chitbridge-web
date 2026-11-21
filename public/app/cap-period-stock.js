@@ -48,7 +48,7 @@ async function peStockList() {
   if (PE_STOCK.api) {
     try {
       PE_STOCK.api.destroy();
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+    } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('stock:destroy', failure); } /* best effort: the person sees nothing change */
   }
   PE_STOCK.api = CBList.mount(host, {
     key: 'stock',

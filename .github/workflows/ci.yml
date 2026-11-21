@@ -67,8 +67,15 @@ jobs:
           node scripts/check-adoption.js
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs
+      - name: Misfix 1121 (F-54 menu fits 1366x768, F-67 P&L head to today)
+        run: node tests/misfix-1121-web.test.cjs
       - name: Proofs 2026-11-14 (AI-13 promptAsk · DOC-5/68 seams and MODULES · DOC-7 glossary tap · JAN-7 method models · MNT-16 checklist anchor · PM-8 verdict+incident build · PM-53 edition chip)
         run: |
+          node tests/accfix-1121-staffledger.test.cjs
+          node tests/accfix-1121-ledgergroups.test.cjs
+          node tests/accfix-1121-debitnote.test.cjs
+          node tests/accfix-1121-payleft.test.cjs
+          node tests/accfix-1121-modes.test.cjs
           node tests/ai-13-prompt-ask.test.cjs
           node tests/doc-5-seams-write.test.cjs
           node tests/doc-7-glossary-tap.test.cjs
@@ -368,6 +375,8 @@ jobs:
           node tests/books-grant-parts.test.cjs
           node tests/books-practice-parts.test.cjs
           node tests/cap-mark-sheet.test.cjs
+          node tests/aud-f73-auditor-tax-return.test.cjs
+          node tests/aud-f70-take-mark-off.test.cjs
           node tests/shrink-w4-parts.test.cjs
           node e2e/books-parts.test.cjs
           node e2e/assign-bar.test.cjs
@@ -401,6 +410,7 @@ jobs:
           node tests/t2f-backdrop.test.cjs
           node tests/t3a-money.test.cjs
           node tests/tasks-orders-list.test.cjs
+          node tests/tasks-bill-it-address.test.cjs
           node tests/wx-bills-cols.test.cjs
           node tests/acc342-todo-no-action.test.cjs
           node tests/shop-bookkeeper.test.cjs
@@ -451,6 +461,8 @@ jobs:
         env:
           B: ${{ github.head_ref || github.ref_name }}
         run: |
+          # the batch branches are named per repo (batch/web-<date> here, batch/api-<date> there): the twin of batch/web-X is batch/api-X
+          case "$B" in batch/web-*) B="batch/api-${B#batch/web-}";; esac
           if [ -n "$B" ] && git ls-remote --exit-code --heads https://github.com/maharishia07/chitbridge-api "$B" >/dev/null 2>&1; then
             echo "ref=$B" >> "$GITHUB_OUTPUT"; else echo "ref=main" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v4

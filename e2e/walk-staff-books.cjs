@@ -56,6 +56,8 @@ const VIEWS = [['tb', 'Trial balance'], ['pl', 'P&L'], ['bs', 'Balance sheet'], 
         console.log('— ' + tag);
         const ctx = await browser.newContext({ viewport: { width, height }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
         await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+        /* F-54: a short window folds the menu groups by default; this walk clicks every money view, so the stored choice is 'all open' */
+        await ctx.addInitScript(() => { try { localStorage.setItem('cb_acc_navfold', JSON.stringify({ Books: false, Outstandings: false, 'Period end': false, Setup: false })); } catch (_) {} });
         const S = standIn();
         await ctx.route('**/api/**', (r) => route(S, r));
         const periodCalls = [];
