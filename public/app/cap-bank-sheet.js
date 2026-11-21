@@ -305,12 +305,24 @@ function bkshNoteAdded() {
     if (item.moveTo && results[item.key] && results[item.key].ok && results[item.key].entry_no) BKSH.movedAdded[item.key] = results[item.key].entry_no; /* posted in the next open month: its own accept mark names it below */
   });
   bkshBook().postedLocal = bkshBook().postedLocal || {};
+  BKSH.ruleOf = BKSH.ruleOf || {};
+  const taught = (BKSH.ctl && BKSH.ctl.view().taught) || {};
+  items.forEach((item) => {
+    if (!(results[item.key] && results[item.key].ok)) return;
+    if (taught[item.key]) bkbKeepRule(taught[item.key]); /* the line posted, so the answer is remembered: the next one like it is proposed from the rule */
+    if (item.rule === 'learned' && item.learned_id) BKSH.ruleOf[item.key] = item.learned_id; /* the audit: this line was decided by a rule */
+  });
   Object.keys(results).forEach((ref) => {
     if (results[ref] && results[ref].ok) {
       BKSH.added[ref] = true;
       if (results[ref].entry_no) bkshBook().postedLocal[ref] = results[ref].entry_no;
     }
   });
+}
+/** the accept mark's `how` says rule:<id> when a taught rule decided the line (the auditor's log names the rule); otherwise the row's own */
+function bkshHowRule(row, ref) {
+  const id = (BKSH.ruleOf || {})[ref];
+  return id ? Object.assign({}, row, { how: ('rule:' + id).slice(0, 40) }) : row;
 }
 /** accept each added line that now reads as matched, by its own client_ref (one to one by occurrence) */
 function bkshAcceptAdded() {
@@ -319,11 +331,12 @@ function bkshAcceptAdded() {
   if (!parsed || !Object.keys(added).length) return;
   const refs = bkshPairing(parsed.lines).line_refs || [];
   (bkshBook().rows || []).forEach((row) => {
-    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(row, true);
-    else if (added[refs[row.i]] && BKSH.movedAdded && BKSH.movedAdded[refs[row.i]]) bankAccept(Object.assign({}, row, { chits: [], books: [{ entry_no: BKSH.movedAdded[refs[row.i]] }] }), true); /* W15-85: the same mark as a normal add (line key to the entry), though the entry sits in the next month */
+    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(bkshHowRule(row, refs[row.i]), true);
+    else if (added[refs[row.i]] && BKSH.movedAdded && BKSH.movedAdded[refs[row.i]]) bankAccept(bkshHowRule(Object.assign({}, row, { chits: [], books: [{ entry_no: BKSH.movedAdded[refs[row.i]] }] }), refs[row.i]), true); /* W15-85: the same mark as a normal add (line key to the entry), though the entry sits in the next month */
   });
   BKSH.added = {};
   BKSH.movedAdded = {};
+  BKSH.ruleOf = {};
 }
 /** the sheet closed: the Bank view reads the books again so the lines that were added show as matched, and the owner's own adds are accepted */
 function bkshClose() {
@@ -407,7 +420,7 @@ async function bankSheetOpen(row) {
     titleText: tx('Add to your books'), wide: true,
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body: '<div class="pe-note" id="bks_strip" data-testid="bank-sheet-strip" aria-live="polite"></div><div class="pe-bad" id="bks_say" data-testid="bank-sheet-say" role="status"></div><div id="bks_lines" class="bks-lines" data-testid="bank-sheet-lines"></div>',
-    footerHtml: '<span class="bks-keep" data-testid="bank-sheet-kept">' + bkbE(tx('Your answers are kept if you close this. They clear when you load another statement.')) + '</span><button data-cbsid="BKS014-B17" type="button" data-testid="bank-sheet-close" onclick="bkshClose()">' + bkbE(tx('Close')) + '</button>' +
+    footerHtml: '<span class="bks-keep" data-testid="bank-sheet-kept">' + bkbE(tx('Your answers are kept if you close this. A line you add is remembered as a rule, so the next one like it is proposed. Answers not added clear when you load another statement.')) + '</span><button data-cbsid="BKS014-B17" type="button" data-testid="bank-sheet-close" onclick="bkshClose()">' + bkbE(tx('Close')) + '</button>' +
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({

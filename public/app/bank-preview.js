@@ -77,14 +77,16 @@
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
+    delete preview.taught[ref];
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
     var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, kind: asked.kind, account: asked.account, tax_kind: asked.tax_kind };
-    var resolved = entry.resolve(line, answers, suggestOpts); /* engines #147: a payee-less line composes once with learned:false and no taught rule — nothing is stored on the device either way */
+    var resolved = entry.resolve(line, answers, suggestOpts); /* the rule the answer taught is held here by line and kept by the host ONLY when Add posts the line (view().taught): an abandoned answer teaches nothing */
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
       return proposal;
     }
     delete preview.resolveRefusal[ref];
+    if (resolved.taught) preview.taught[ref] = resolved.taught;
     return holdProposal_(resolved, opts);
   }
   /** the statement as the engine's project() reads it: its currency is what the FILE or the person said (B5-05), its balances and the rows the reader skipped */
@@ -290,7 +292,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -419,7 +421,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -453,7 +455,7 @@
         return readyItems(preview).length;
       },
       view: function () {
-        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal, check: preview.check || null };
+        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, taught: preview.taught, refusal: preview.refusal, check: preview.check || null };
       }
     });
   }
