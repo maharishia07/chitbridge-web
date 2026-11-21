@@ -1149,6 +1149,11 @@ function cbcatAncestorIds(cid) {
   }
   return out;
 }
+/** the words on a category's tax chip: the slab's name when it has no rate, else the pack's tax word and the rate ("GST 18%") */
+function cbcatTaxChipWords(t) {
+  if (t.rate === null || t.rate === undefined) return t.name || '?';
+  return ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' ' + t.rate + '%';
+}
 function cbcatTaxChipHTML(cid) {
   var t = cbcatTaxOf(cid);
   if (t === null) return '';
@@ -1160,7 +1165,7 @@ function cbcatTaxChipHTML(cid) {
     esc(t.name || '') +
     (t.inherited_from ? ' · ' + tx('inherits') + ' ' + esc(t.inherited_from) : '') +
     '">' +
-    esc(t.rate === null || t.rate === undefined ? t.name || '?' : ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' ' + t.rate + '%') +
+    esc(cbcatTaxChipWords(t)) +
     (t.inherited_from ? ' <span style="opacity:.7">↑</span>' : '') +
     '</span>'
   );
