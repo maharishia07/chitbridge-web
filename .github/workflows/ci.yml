@@ -264,6 +264,7 @@ jobs:
           node e2e/stmts-pl-bs.test.cjs
           node e2e/crm-26-sheet-reads-invoice.test.cjs
           node e2e/crm-30-31-sum-scope.test.cjs
+          node e2e/web-1128.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs

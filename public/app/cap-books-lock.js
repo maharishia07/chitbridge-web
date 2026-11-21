@@ -194,11 +194,12 @@ function bkLockWhy(node) {
 /**
  * W15-97 · OPEN AGAIN asks its reason in its own popup, beside the button that sends it (the box used to sit under the twelve rows, apart from the action). The reason is kept in the trail with the name and the day; Cancel sends nothing.
  */
-function bkLockReopen(period, hard) {
+function bkLockReopen(period, hard, amend) {
   var monthName = tx(bkMonths()[period - 1] || String(period));
   bkReasonDialog({
     title: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
-    go: function (reason) { return bkLockDo(hard ? 'reopen' : 'unlock', period, reason); }
+    yes: amend ? 'Amend this return' : undefined,
+    go: function (reason) { return bkLockDo(hard ? 'reopen' : 'unlock', period, reason, amend); }
   });
 }
 /** ⭐ THE ONE "why are you opening it again?" dialog (POP092): a month's Open again, a hard-locked month's Reopen month and a closed year's Reopen year all ask the reason here, then Confirm sends it (the reason is required, kept in the change log) */
@@ -246,8 +247,26 @@ function bkLockStatusOf(what, answer) {
   if (what !== 'reopen') return '';
   return (answer && answer.status) || 'open';
 }
+/** the refusal's own words are the server's; a closed-tax-period refusal also offers the amendment (the owner gives the reason, we send amend_tax:true) */
+function bkLockRefused(what, period, words, failure) {
+  var out = document.getElementById('lk_out');
+  if (!out) return;
+  out.textContent = words;
+  out.setAttribute('data-tone', 'error');
+  var taxClosed = what === 'unlock' && failure && failure.status >= 400 && failure.status < 500 && /closed tax period/i.test(String(failure.message || ''));
+  if (!taxClosed) return;
+  var go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'supact-pri';
+  go.setAttribute('data-cbsid', 'CMP042-B08'); /* the one Open again action, asked again as an amendment */
+  go.setAttribute('data-testid', 'lk-amend-' + period);
+  go.textContent = tx('Amend this return');
+  go.onclick = function () { bkLockReopen(period, false, true); };
+  out.appendChild(document.createTextNode(' '));
+  out.appendChild(go);
+}
 /* lock or unlock one month, asking the server and flipping only that row */
-async function bkLockDo(what, period, reason) {
+async function bkLockDo(what, period, reason, amend) {
   var lockState = BK.lk,
     fiscalYear = lockState.fy,
     node = reason || '',
@@ -261,13 +280,14 @@ async function bkLockDo(what, period, reason) {
   return CBAction.run(
     btn,
     function () {
-      return api(bkLockRoute(what), { params: { fy: fiscalYear, p: period }, body: { reason: node, hard: what === 'hard' } });
+      return api(bkLockRoute(what), { params: { fy: fiscalYear, p: period }, body: amend && what === 'unlock' ? { reason: node, hard: false, amend_tax: true } : { reason: node, hard: what === 'hard' } });
     },
     {
       key: 'lk-' + fiscalYear + '-' + period,
       out: 'lk_out',
       failed: tx('Could not change it'),
       confirm: bkLockConfirm(what, monthName, calendarYear),
+      onFail: function (words, failure) { bkLockRefused(what, period, words, failure); },
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {
         var status = bkLockStatusOf(what, answer);

@@ -545,8 +545,9 @@ function monthNames(form) {
 /* ⭐ T3-P1-MONEY: THE ONE GSTR DOWNLOAD — the offline-tool JSON GET /api/tax/gstr builds (tax-lines gstr1 · gstr3b, the one builder), saved as a file
    named gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json. The workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js)
    both call this; neither builds a second. → Promise<filename>; a failure rejects with api()'s error — the caller says its own sentence. */
-function gstrDownload(month, form) {
+function gstrDownload(month, form, onReply) {
   return api('taxGstr', { query: { month: month, form: form } }).then(function (reply) {
+    if (typeof onReply === 'function') onReply(reply); /* the screen reads the return's _cb notes from the same answer — never a second request */
     var name = form + '-' + month + '.json',
       url = URL.createObjectURL(new Blob([JSON.stringify(reply, null, 2)], { type: 'application/json' }));
     var node = document.createElement('a');

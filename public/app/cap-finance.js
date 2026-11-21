@@ -409,7 +409,7 @@ function finMount(frame) {
       },
       fig: function (rows) {
         return (
-          txn('{count} party', '{count} parties', rows.length) +
+          txn('{count} owes you', '{count} owe you', rows.length) +
           ' · ' +
           bkOwes(
             rows.reduce(function (total, item) {
@@ -495,7 +495,7 @@ function finQueueSheet() {
   ui.dialog({
     mount: 'FIN001-U01',
     pop: 'POP107',
-    titleText: tx('Remind') + ' · ' + txn('{count} party', '{count} parties', list.length),
+    titleText: tx('Remind') + ' · ' + txn('{count} owes you', '{count} owe you', list.length),
     titleTestid: 'fin-queue-title',
     body:
       list
