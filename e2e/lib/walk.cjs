@@ -102,7 +102,7 @@ async function start(name, opts) {
       n++;
       await banner(page, 'Step ' + n + ' · ' + pathText, null);
       let ok = false, saw = '';
-      try { const r = await fn(); ok = !!(r && r.ok); saw = (r && r.saw) || ''; } catch (e) { ok = false; saw = 'it stopped: ' + String(e && e.message || e).split('\n')[0].slice(0, 160); }
+      try { const r = await fn(); ok = !!(r && r.ok); saw = (r && r.saw) || ''; } catch (e) { ok = false; saw = 'it stopped: ' + String(e && e.message || e).replace(/\n/g, ' | ').slice(0, 1200); }
       results.push({ id, path: pathText, ok, saw });
       await banner(page, (ok ? 'PASS' : 'FAIL') + ' · ' + pathText + (saw ? '  -  ' + saw : ''), ok ? 'pass' : 'fail');
       try { await page.screenshot({ path: path.join(SHOTS, 'walk-' + name + '-' + String(n).padStart(2, '0') + '.png') }); } catch (_) {}
