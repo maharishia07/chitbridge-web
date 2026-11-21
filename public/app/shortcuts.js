@@ -101,7 +101,7 @@
   function goCard(id) {
     var entries = (shellRef && shellRef.manifest() && shellRef.manifest().entries) || [];
     var entry = entries.filter(function (item) {
-      return item.id === id && item.state === 'built';
+      return item.id === id && item.state === 'built' && item.ready !== false;
     })[0];
     if (entry && shellRef.route) root.location.href = shellRef.route(entry);
   }

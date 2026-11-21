@@ -96,6 +96,7 @@ jobs:
           node tests/fin116-registration-notice.test.cjs
           node tests/fin111-statement-currency.test.cjs
           node tests/graph-apifeed.test.cjs
+          node tests/grey-ready.test.cjs
           node tests/index2-draws-manifest.test.cjs
           node tests/ledger-columns.test.cjs
           node tests/list-count-total.test.cjs

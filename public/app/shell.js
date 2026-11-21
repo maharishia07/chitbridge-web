@@ -101,6 +101,8 @@
     },
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
+    unfinished: 'Being finished · not ready yet',
+    unfinishedHome: 'Back to Home',
     factsFailed: 'Could not read',
     backToClients: 'Back to Clients',
     skip: 'Skip to content',
@@ -296,6 +298,7 @@
     '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
     '.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
+    '.cbsh-unready{position:fixed;left:0;right:0;bottom:0;top:var(--sh-bar,52px);z-index:90;background:var(--sh-panel);color:var(--sh-muted);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}.cbsh-unready h2{margin:0 0 6px;font-size:18px;color:var(--sh-ink,inherit)}.cbsh-unready p{margin:0 0 12px;font-size:14px}.cbsh-unready a{color:var(--sh-green);font-weight:600}',
     /* cards (max three columns, DECISIONS.md) */
     '.cbsh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
     '.cbsh-box{display:block;width:100%;text-align:left;background:var(--sh-card);border:1px solid var(--sh-line);border-radius:13px;padding:14px 16px;position:relative;transition:border-color .12s}',
@@ -777,8 +780,11 @@
   }
   /* NAV-MAP 8: a tile that needs THIS shop's id and has none is greyed with its sentence (show the action, say why) - never a link to a blank page */
   function greyedTileHTML(entry, iconHTML, signedIn) {
+    var unfinished = entry.ready === false; /* READY-GREY (Athi 21 Nov): the manifest's `ready` — the same grey tile, a different sentence */
     return (
-      '<div class="cbsh-box off" aria-disabled="true" data-testid="shell-card-' +
+      '<div class="cbsh-box off" aria-disabled="true"' +
+      (unfinished ? ' data-cbsid="HOM001-B01" data-ready="no"' : '') +
+      ' data-testid="shell-card-' +
       esc(entry.id) +
       '" data-id="' +
       esc(entry.id) +
@@ -791,9 +797,49 @@
       '<span class="no" data-testid="shell-off-' +
       esc(entry.id) +
       '">' +
-      esc(T(signedIn ? W.noShop : W.signInShop)) +
+      esc(T(unfinished ? W.unfinished : signedIn ? W.noShop : W.signInShop)) +
       '</span></div>'
     );
+  }
+  /* READY-GREY: the manifest entry a typed address belongs to — the most specific route that matches the path (and its #hash or ?query, when the route has one) */
+  function entryOfAddress(entries, where) {
+    var best = null, bestLen = -1;
+    (entries || []).forEach(function (e) {
+      var route = String((e && e.route) || '').replace('{bridge_id}', '');
+      if (!route) return;
+      var parts = route.split('#'), pq = parts[0].split('?'), tail = parts[1] ? '#' + parts[1] : '';
+      if (pq[0] !== where.pathname) return;
+      if (tail && String(where.hash || '').indexOf(tail) !== 0) return;
+      if (pq[1] && String(where.search || '').indexOf(pq[1].split('&')[0]) < 0) return;
+      var len = pq[0].length + (tail ? tail.length : 0) + (pq[1] ? pq[1].length : 0);
+      if (len > bestLen) { best = e; bestLen = len; }
+    });
+    return best;
+  }
+  /* READY-GREY: a typed address to a not-ready page shows the same note, over the page, with the way back (no bypass: no GOV switch exists) */
+  function gateUnready(doc, manifest, where) {
+    var old = doc.querySelector('[data-testid="shell-unready"]');
+    var entry = manifest && entryOfAddress(manifest.entries, where);
+    if (!entry || entry.ready !== false) {
+      if (old) old.remove();
+      return false;
+    }
+    if (old) return true;
+    var cover = doc.createElement('div');
+    cover.className = 'cbsh-unready';
+    cover.setAttribute('data-testid', 'shell-unready');
+    cover.setAttribute('data-cbsid', 'HOM001-B01');
+    cover.setAttribute('role', 'alert');
+    cover.innerHTML = '<div><h2>' + entryName(entry) + '</h2><p>' + esc(T(W.unfinished)) + '</p><a href="/" data-testid="shell-unready-home">' + esc(T(W.unfinishedHome)) + '</a></div>';
+    doc.body.appendChild(cover);
+    return true;
+  }
+  /* the gate at mount, and again when the address changes inside the page (a #route) */
+  function watchUnready(state, doc, win) {
+    gateUnready(doc, state.manifest, win.location);
+    win.addEventListener('hashchange', function () {
+      gateUnready(doc, state.manifest, win.location);
+    });
   }
   /* the area a go() asks for, made real: More is the phone's tab (a laptop shows the three areas themselves); an area this showing does not draw is Home */
   function resolveArea(areaId, onPhone, drawn) {
@@ -811,7 +857,7 @@
       return tile.getAttribute('data-id');
     });
     return ((manifest && manifest.entries) || []).filter(function (entry) {
-      return entry && wanted.indexOf(entry.id) >= 0;
+      return entry && entry.ready !== false && wanted.indexOf(entry.id) >= 0;
     });
   }
   /* the nav buttons an edition leaves out: an area it does not draw; More only when none of its three areas is drawn */
@@ -1084,7 +1130,7 @@
       return bid ? text.replace('{bridge_id}', encodeURIComponent(bid)) : text.split('?')[0];
     }
     function card(e) {
-      if (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf()) return greyedTileHTML(e, glyph(e.icon), !!person);
+      if (e.ready === false || (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf())) return greyedTileHTML(e, glyph(e.icon), !!person);
       return (
         '<a class="cbsh-box" data-cbsid="HOM001-B01" href="' +
         esc(routeOf(e)) +
@@ -1506,9 +1552,7 @@
           S.manifest = null;
         }
       )
-      .then(function () {
-        S.loadingApps = false;
-      })
+      .then(function () { S.loadingApps = false; watchUnready(S, doc, root); })
       .then(function () {
         paintEdition();
         if (mode === 'home') {
@@ -1660,6 +1704,9 @@
     PHONE_TABS: PHONE_TABS.slice(),
     PHONE_MORE: PHONE_MORE.slice(),
     sectionOf: sectionOf,
+    greyedTileHTML: greyedTileHTML,
+    entryOfAddress: entryOfAddress,
+    gateUnready: gateUnready,
     openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);
