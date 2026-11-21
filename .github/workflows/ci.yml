@@ -142,6 +142,8 @@ jobs:
           node e2e/bank-lock.test.cjs
           node e2e/outside-state.test.cjs
           node e2e/network-browse-failed.test.cjs
+          node e2e/cap-network-theme.test.cjs
+          node e2e/lab-pages-static.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
           node e2e/dues-one-sign.test.cjs
