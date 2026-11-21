@@ -243,9 +243,10 @@ function stand() {
   ({ ctx, p } = await open(S, {}));
   if (await p.locator('[data-testid="bank-change"]').isVisible() && !(await p.locator('#bk_preset').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await p.selectOption('#bk_preset', 'hdfc');
   await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
-  /* l16-bank-9: the account has its currency on record (a known fact), so nothing is asked and the statement is read at once */
-  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
-  ok('B10', (await p.locator('[data-testid="bank-currency"]').count()) === 0, 'B5-05 (changed): the account has its currency on record, so no currency question and the statement is read');
+  /* FIN-111 (B5-05): a file that does not say its currency is asked, prefilled with the account's (one press), never read as the account's unasked */
+  await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 });
+  ok('B10', (await p.inputValue('[data-testid="bank-currency"]')).length === 3, 'FIN-111: the file is silent on currency, so the question shows, prefilled with the account value');
+  await p.click('[data-testid="bank-currency-go"]');
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
   if (!(await p.locator('#bk_acct').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen: open it to pick another account */
   await p.selectOption('#bk_acct', '1501');

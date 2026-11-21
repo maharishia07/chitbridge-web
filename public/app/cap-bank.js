@@ -296,7 +296,8 @@ async function bankTake(text, name, remembered) {
   BKB.file = { name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
-  BKB.stmtCur = parsed.currency || bkbAcctCur(); /* the file's own currency, else the account's when the account has it on record (a known fact), else asked below; nothing is guessed */
+  BKB.curKey = 'cur:' + BKB.acct + ':' + BKB.file.hash;
+  BKB.stmtCur = bkbStatementCurrency(parsed.currency, bkbLoad(BKB.curKey, '')); /* FIN-111: the file's own currency, else the one the person confirmed for THIS file on this device, else asked below (prefilled with the account's, one press); never taken from the account unasked */
   BKB.bal = '';
   const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0];
@@ -304,12 +305,16 @@ async function bankTake(text, name, remembered) {
   if (!parsed.lines.length) return peBad('bk_out', tx('There are no transactions in that file.'));
   await bankCurrencyRun();
 }
+/** FIN-111 (B5-05): a statement's currency is what the FILE says, else what the person confirmed for this file; never the account's by default (a USD file would be read as AUD). '' = ask. */
+function bkbStatementCurrency(fileCurrency, confirmed) {
+  return String(fileCurrency || confirmed || '').toUpperCase();
+}
 /** the currency the statement's bank account has on record: the account's own, else the ledger's; '' when neither is known (then the person is asked) */
 function bkbAcctCur() {
   const ledger = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {};
   return String(ledger.currency || bkCur() || '').toUpperCase();
 }
-/** B5-05: the file does not say its currency AND the account has none on record, so ask once; the statement is not read against the books until the person answers */
+/** B5-05: the file does not say its currency (and this device has no confirmation for it), so ask once; the statement is not read against the books until the person answers */
 function bankCurrencyAsk() {
   const shopCurrency = bkbAcctCur(); /* the one fact the shop already states, shown filled in: one press confirms it, the field changes it */
   bkbEl('bk_res').innerHTML = '';
@@ -325,6 +330,7 @@ function bankCurrencyUse() {
   if (!chosen) return toast(tx('Say which currency the statement is in first.'));
   if (typeof CBMoney !== 'undefined' && CBMoney.isIsoCurrency && !CBMoney.isIsoCurrency(chosen)) return toast(tx('That is not a currency code. Use three capital letters.'));
   BKB.stmtCur = chosen;
+  if (BKB.curKey) bkbSave(BKB.curKey, chosen); /* asked once per file on this device */
   bankCurrencyRun().catch((failure) => bkQuiet('bank-currency', failure));
 }
 /** the statement's currency, asked when the file did not say: it must be the bank account's (nothing is converted), then the books are read */

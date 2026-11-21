@@ -94,6 +94,7 @@ jobs:
           node tests/crm-consent-holders.test.cjs
           node tests/fin-d7-terms-bank.test.cjs
           node tests/fin116-registration-notice.test.cjs
+          node tests/fin111-statement-currency.test.cjs
           node tests/graph-apifeed.test.cjs
           node tests/index2-draws-manifest.test.cjs
           node tests/ledger-columns.test.cjs
