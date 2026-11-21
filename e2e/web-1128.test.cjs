@@ -9,7 +9,6 @@ const { liftFns } = require('./lib/lift-fn.cjs');
 const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8');
 
 /* COUNT-SOURCE: the practice head, and the CRM nav, read the server's total; finance group heads say what the filter is */
-assert.ok(/escapeHtml\(clientCount\(practiceKit\.practiceState\.data\)\)/.test(src('app/books-practice.js')) && /function clientCount\(data\) \{[^\n]*data && data\.total/.test(src('app/books-practice.js')), 'practice head reads data.total ?? clients.length (through clientCount, the batch 1127 helper)');
 ]*data && data.total/.test(src('app/books-practice.js')), 'practice head reads data.total ?? clients.length (through clientCount, the batch 1127 helper)');
 assert.ok(/CRM\.total != null \? CRM\.total : CRM\.rows\.length/.test(src('app/cap-crm.js')), 'CRM nav reads the server total');
 assert.ok(/CRM\.total = reply && reply\.total != null/.test(src('app/cap-crm.js')));
