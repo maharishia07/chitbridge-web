@@ -69,6 +69,7 @@ jobs:
         run: node tests/vertical-box.test.cjs
       - name: Proofs 2026-11-14 (AI-13 promptAsk · DOC-5/68 seams and MODULES · DOC-7 glossary tap · JAN-7 method models · MNT-16 checklist anchor · PM-8 verdict+incident build · PM-53 edition chip)
         run: |
+          node tests/accfix-1121-ledgergroups.test.cjs
           node tests/accfix-1121-debitnote.test.cjs
           node tests/accfix-1121-payleft.test.cjs
           node tests/accfix-1121-modes.test.cjs
