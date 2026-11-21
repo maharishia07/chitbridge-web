@@ -2,7 +2,7 @@
  * Mocked api (the pattern of phone-card.cjs / index-page.cjs); no live site. Seats: out (signed out: the showcase) · shop (a new shop) · live (a shop with figures) · firm (the practice list).
  * Proves (exit 1 on any failure): the page is no taller or wider than the viewport; no clipped child; no page error; every tile (signed out) opens its in-page panel
  * listing each entry Live or Coming; every row (signed in) opens and the page still does not scroll; and the REPEAT RULE (Athi 21 Nov): no visible string repeats more
- * than 3 times on one screen except data values. The firm's practice list is held to the rule only with FIRM_REPEATS=1 (its owner, the books practice list, is still repeating "Assign to").
+ * than 3 times on one screen except data values. The firm's practice list (FIRM_N=150 clients, health groups, holders) is held to it too; FIRM_REPEATS=0 switches it off.
  * Run:  NODE_PATH=e2e/node_modules node e2e/walk-index-one-screen.cjs   (env WHO=out,shop,live,firm  VIEWS=1366x768,390x844  THEMES=cream,dark  SHOTS=dir) */
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -17,9 +17,16 @@ const tok = (c) => e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(
 const SHOP = { token: tok({ identity_id: 'ent-NEW', identity_type: 'entity' }), role: 'entity', name: 'Asha', entity: 'Bluegum Cafe', bridgeId: 'CBNEW00001', country: 'AU', currency: 'AUD' };
 const FIRM = { token: tok({ identity_id: 'ent-FIRM', identity_type: 'entity' }), role: 'entity', name: 'Pat Accountant', entity: 'Blue Gum Books', country: 'AU', currency: 'AUD' };
 const NAMES = ['Eastlake Fresh', 'Harbour Cafe', 'Northside Plumbing', 'Wattle Bakery', 'Coastal Cycles', 'Bayside Books', 'Redgum Timber', 'Lakeview Dental', 'Manly Surf Co', 'Pyrmont Print'];
-const client = (n, i) => ({ entity_id: 'c' + i, name: n, country: 'AU', role: 'auditor', currency: 'AUD', stage: i % 3 === 0 ? 'needs_help' : i % 2 ? 'books_in' : 'checked', stage_blocker: i % 2 ? 'months' : null,
-  year_end: { fy: '2025-26', of: 12, locked: 9, bank_to_end: true, end: '2026-06-30' }, queries: i % 3, unexplained_minor: i % 3 ? 120000 : 0 });
-const practice = () => ({ own_trade: false, clients: NAMES.map(client), band: { bands: [{ key: 'pipeline', first: true, tiles: [{ key: 'books_in', n: 4 }, { key: 'checked', n: 4 }] }] }, words: {} });
+const STAFF = ['Asha Rao', 'Ben Ortiz', 'Chen Wei'], HEALTH = [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help']], STAGES = ['books_in', 'complete', 'checked', 'ready', 'lodged'];
+/* a client row as the server sends it (books-practice): health, stage, bank, queries, checked, grant and holders; FIRM_N clients (the auditor brings about 150 shops) */
+const client = (n, i) => { const h = HEALTH[i % 7 === 0 ? 2 : i % 7 < 3 ? 1 : 0];
+  return { entity_id: 'c' + i, name: n + (i >= NAMES.length ? ' ' + (i + 1) : ''), country: 'AU', role: 'auditor', currency: 'AUD', stage: STAGES[i % 5], stage_blocker: i % 2 ? 'months' : null,
+  year_end: { fy: '2025-26', of: 12, locked: 9, bank_to_end: true, end: '2026-06-30' }, queries: { open: i % 3, on_us: i % 3, waiting_over_14: 0, oldest_days: 0 }, bank: { state: 'reconciled', unexplained_minor: 0 },
+  checked: { n: 8, of: 12 }, to_check: 4, months_unlocked: 3, bas: { due_date: '2026-12-15', due_in_days: 24 }, changed: null, last_look: null, grant: { expires_at: null, ends_in_days: null, read_only: true, can_see_costs: false },
+  health: { status: h[0], words: h[1], reasons: [], codes: [], sales_trend_pct: null, gross_margin_pct: null, cash_minor: null, profit_quarter_minor: null, withheld: { costs: null } },
+  holders: i % 4 === 0 ? [] : [{ name: STAFF[i % 3] }] }; };
+const FIRM_N = Number(process.env.FIRM_N || 150), NAMES_N = Array.from({ length: FIRM_N }, (_, i) => NAMES[i % NAMES.length]);
+const practice = () => ({ own_trade: false, may_assign: true, clients: NAMES_N.map(client), band: { bands: [{ key: 'pipeline', first: true, tiles: STAGES.map((k, x) => ({ key: k, n: NAMES_N.filter((_, i) => i % 5 === x).length })) }] }, words: {} });
 const G = (i) => ({ grant_id: 'g' + i, grantor_entity: 'c' + i, grantor_name: NAMES[i], preset: 'auditor', state: 'live', revoked_at: null, ended_at: null });
 const LIVE = {
   '/api/facts/till': { state: 'in_use', lines: ['12 bills · A$428', '1 bill waiting to send'], figures: { trend: { spark: [400, 380, 410, 420, 450, 410, 470, 480], vs_last_year_pct: 12 } } },
@@ -93,13 +100,13 @@ async function main() {
       [].slice.call(document.querySelectorAll('body *')).forEach((x) => {
         if (x.children.length || x.closest('[hidden],[aria-hidden=true],dialog:not([open])')) return;
         const r = x.getBoundingClientRect(), t = (x.textContent || '').replace(/\s+/g, ' ').trim();
-        if (r.width < 1 || r.height < 1 || r.top > innerHeight || r.left > innerWidth || !t || t.length > 60 || /\d/.test(t)) return;
+        if (r.width < 1 || r.height < 1 || r.top > innerHeight || r.left > innerWidth || !t || t.length > 60 || /\d/.test(t) || !/\p{L}/u.test(t) || x.closest('[data-value]')) return; /* a digit, a bare glyph (caret, sort arrow) or a marked data value (a holder's initials) is not a repeated string */
         count[t] = (count[t] || 0) + 1;
       });
       return Object.keys(count).filter((t) => count[t] > 3).map((t) => t + ' x' + count[t]);
     });
     console.log('  ' + tag + ' repeated strings (>3): ' + (reps.join(' | ') || 'none') + ' · first paint ' + Math.round(bytes / 1024) + ' KB');
-    if (who !== 'firm' || process.env.FIRM_REPEATS) ok(!reps.length, tag + ': no visible string repeats more than 3 times');
+    if (process.env.FIRM_REPEATS !== '0') ok(!reps.length, tag + ': no visible string repeats more than 3 times');
     const noScroll = () => p.evaluate(() => { const mn = document.querySelector('.cbsh-main'); return { mainY: mn.scrollHeight - mn.clientHeight, sy: document.documentElement.scrollHeight - innerHeight, sx: document.documentElement.scrollWidth - innerWidth }; });
     if (who === 'out') {
       const ids = await p.$$eval('.ix-row', (n) => n.map((x) => x.parentNode.getAttribute('data-pillar')));

@@ -12,6 +12,7 @@
   'use strict';
   var practiceKit = (root.CBPracticeKit = root.CBPracticeKit || {});
   practiceKit.statusCell = statusCell;
+  practiceKit.statusWhy = statusWhy;
   practiceKit.trend = trend;
   practiceKit.basCell = basCell;
   practiceKit.queriesCell = queriesCell;
@@ -34,6 +35,11 @@
     /* A3P rank 1: on Year end the Status is a chip only (the reasons move to the opened row), so Due fits at 1366 */
     var why = practiceKit.bandNow() !== 'pipeline' && r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + practiceKit.escapeHtml(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
     return '<span class="tag ' + (practiceKit.STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(r.health.words)) + '</span>' + why;
+  }
+  /** the Status column once the list is grouped by health (the group heading says Needs help · Watch · Doing well, so the row never repeats it): only what the heading cannot say, the pack sentence or the reasons; blank otherwise */
+  function statusWhy(r) {
+    if (r.pack_missing) return '<span class="tag warn" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(r.pack_missing) + '</span>';
+    return r.health.reasons && r.health.reasons.length ? '<span class="sub" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
   }
   /** the server's grant.read_only: an auditor's seat can look, never write. The one library chip (.bp-chip), a code per place it stands; nothing is drawn when the grant is not read-only. */
   function readOnlyChip(r, code, testid) {
@@ -67,10 +73,15 @@
     /* fix1117 F4: an older seed or a client with no year-end answer still reads: the stage when there is one, else the bank's own words (F2), never a bare dash */
     if (!y && !r.stage) return r.bank && r.bank.state === 'unexplained' ? practiceKit.escapeHtml(bankWords(r)) : '—';
     if (y && y.first_year) return practiceKit.escapeHtml(practiceKit.translate('First year'));
-    if (!y) return '<span class="bp-yend" data-cbsid="HOM001-P16"><b data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>';
+    if (!y) return stageLine(r, '');
     var figures = practiceKit.escapeHtml(y.locked) + '/' + practiceKit.escapeHtml(y.of) + ' ' + practiceKit.escapeHtml(practiceKit.translate('locked')) + ' · ' + (y.bank_to_end ? practiceKit.escapeHtml(practiceKit.translate('bank to')) + ' ' + practiceKit.escapeHtml(shortDay(y.end)) : practiceKit.escapeHtml(bankWords(r)));
     /* F4 (17 Nov): ONE line per client, the stage and the one blocker; the figures sit in the title and one press away on the sheet (no second statement of the blocker, so the row is not two lines) */
-    return r.stage ? '<span class="bp-yend" data-cbsid="HOM001-P16" title="' + practiceKit.escapeHtml(figures.replace(/<[^>]*>/g, '')) + '"><b data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>' : figures;
+    return r.stage ? stageLine(r, figures.replace(/<[^>]*>/g, '')) : figures;
+  }
+  /** Athi 21 Nov (no repeats): the stage is a FILTER CHIP with its count (the band's tiles), so the row says only what stands in its way; the stage word stays in the row's title and its opened sheet. Blank when nothing does. */
+  function stageLine(r, figures) {
+    var word = practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))), why = blockerWords(r).replace(/^ · /, '');
+    return '<span class="bp-yend" data-cbsid="HOM001-P16" data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '" title="' + word + (figures ? ' · ' + practiceKit.escapeHtml(figures) : '') + '">' + why + '</span>';
   }
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {

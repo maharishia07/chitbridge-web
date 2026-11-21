@@ -139,17 +139,17 @@
   /* REP-73 B2: the columns follow the open band, so a tile counts something its rows show: Year end shows the stage and the year's figures; On us today shows the bank, the queries, the entries to check and the months to lock
      (the four tiles); Advice shows the figures its rules read. The page knows which columns a band opens with; the server decides which band exists and what each tile counts. */
   var BAND_COLS = {
-    pipeline: ['name', 'status', 'yend', 'checked', 'queries', 'bas'],
+    pipeline: ['name', 'yend', 'checked', 'queries', 'bas'], /* Status is the group heading (Needs help · Watch · Doing well), not a word on every row */
     on_us: ['name', 'status', 'bank', 'queries', 'changed', 'tocheck', 'unlocked'],
     advisory: ['name', 'status', 'sales', 'margin', 'cash', 'profit']
   };
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
-      return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
+      return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: function (r) { var html = cell(r); return html === '—' ? '' : html; /* Athi 21 Nov: no cell says "no data" twenty times; the sheet's labelled lines keep their dash */ }, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly') + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
+      { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (allReadOnly() ? '' : practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly')) + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusWhy, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
       num('held', 'Held by', 130, function (r) { return root.CBAssign ? root.CBAssign.heldCell(r, assignOpts()) : ''; }, function (r) { return root.CBAssign ? root.CBAssign.heldByText(r) : ''; }, { prio: 1, keep: true, minw: 100, hfilter: 'held' }),
       num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
@@ -225,6 +225,19 @@
     var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? practiceKit.sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) + (BLOCKER_MARK[r.stage_blocker] ? '&dbf_mark=' + BLOCKER_MARK[r.stage_blocker] : '') : '';
     root.location.href = to || '/network.html?open=' + encodeURIComponent(id);
   }
+  /** every client is a read-only (auditor) seat: said ONCE in the heading, not as a chip on every row (a row carries the chip only when it differs from the rest) */
+  function allReadOnly() {
+    var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
+    return rows.length > 1 && rows.every(function (r) { return r.grant && r.grant.read_only === true; });
+  }
+  var HEALTH_HEADS = { help: 'Needs help', watch: 'Watch', good: 'Doing well', none: 'Not enough books yet' };
+  /** the group a client stands under: its health status, the heading's words, the key the order and the fold read */
+  function healthGroup(r) {
+    var status = r.health && r.health.status;
+    return status ? [translate(HEALTH_HEADS[status] || status), status] : null;
+  }
+  /** the heading's count: how many clients stand under it */
+  function healthFig(rows) { return rows.length + ' ' + translate(rows.length === 1 ? 'client' : 'clients'); }
   /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
   function withList(then) {
     if (root.CBList) return then();
@@ -297,6 +310,7 @@
       key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
       columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : queue.preset || { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
+      group: { default: 'health', tid: 'bp', order: ['help', 'watch', 'good', 'none'], by: healthGroup, fig: healthFig, folded: function (key, rows) { return key === 'good' && rows.length > 12; } }, /* Athi 21 Nov: health is the heading, with its count; Doing well folds when it is long */
       empty: { title: translate(practiceKit.practiceState.data.practice_empty ? 'No clients yet' : 'No clients match') },
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; },
@@ -349,7 +363,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +

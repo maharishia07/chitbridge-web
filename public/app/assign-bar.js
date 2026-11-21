@@ -410,17 +410,22 @@
       ' style="max-width:100%;min-height:32px;padding:2px 10px;border:1px ' + (empty ? 'dashed' : 'solid') + ' var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:' + (empty ? 'var(--grey,#5B5B5B)' : 'inherit') + ';font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">' +
       root.esc(empty ? '+ ' + tr('Assign to…') : holderNames + ' ▾') + '</button>';
   };
+  /** the holder's initials for the chip: "Asha Rao" → AR; several holders → each one's initials, joined (the full names stay in the label and the title) */
+  function initialsOf(names) {
+    return names.map(function (n) { return String(n || '').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join(''); }).filter(Boolean).join(' ') || '?';
+  }
   /**
-   * the Held-by cell as PLAIN TEXT (Athi 19 Nov: no button on every row): the holder's name, or a quiet dash when nobody holds it. Assigning is the tick-bar's one "Assign to…"; the A and I keys still
-   * find the row through the data-as-* facts this cell carries (shown only on the server's verdict, like the chip). opts as for bulk
+   * the Held-by cell (Athi 21 Nov: no repeating "+ Assign to…"): an assigned row shows ONLY the holder's initials chip, and pressing it reassigns (the same picker); an unassigned row shows nothing, with the control
+   * (a quiet ghost button, its "+" drawn by css) on hover, focus or tap. Without the server's verdict the cell is the holder's name as plain text. The A and I keys find the row through the data-as-* facts. opts as for bulk
    */
   assignApi.heldCell = function (row, opts) {
     if (!row || !Array.isArray(row.holders)) return '';
-    var names = row.holders.map(function (h) { return h.name || ''; }).join(', ');
-    var text = names ? root.esc(names) : '<span style="color:var(--grey,#5B5B5B)" aria-label="' + root.esc(tr('Unassigned')) + '">—</span>';
-    if (!assignApi.showsBar(opts && opts.said)) return text;
+    var list = row.holders.map(function (h) { return h.name || ''; }).filter(Boolean), names = list.join(', ');
+    if (!assignApi.showsBar(opts && opts.said)) return root.esc(names);
     assignApi.mount(opts);
-    return '<span data-as-cell data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '" data-testid="assign-held">' + text + '</span>';
+    var label = names ? tr('Held by') + ' ' + names + '. ' + tr('Assign to…') : tr('Unassigned') + '. ' + tr('Assign to…');
+    return '<button type="button" class="as-held' + (names ? '' : ' as-ghost') + '" data-as-chip data-nolist data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '"' +
+      ' data-cbsid="HOM001-B20" data-cbmount="HOM001-D05" data-testid="assign-held" data-value aria-haspopup="dialog" aria-label="' + root.esc(label) + '"' + (names ? ' title="' + root.esc(names) + '"' : '') + '>' + (names ? root.esc(initialsOf(list)) : '') + '</button>';
   };
   /** the row a chip stands for, in the shape the calls read (subject, role, whether it has a holder) */
   function chipRow(chip) {
