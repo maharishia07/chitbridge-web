@@ -1068,8 +1068,7 @@ function peReturnList(r) {
     t: tx,
     rows: () => rows,
     id: (b) => String(b.code),
-    rowTid: (b) => 'pr-box-' + b.code,
-    columns: cols,
+    rowTid: (b) => 'pr-box-' + b.code, columns: cols,
     bottom: 150 /* the notes line and the Close bar sit under the list: the list leaves them their room, so the page ends at the screen */,
     defaultCols: cols.map((x) => x.key) /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */,
     next: (b) => peReturnLedgers(r, b, two) /* ACC-357: the row opens BELOW: one line per ledger with its amount for the period (a shop may have hundreds of places: the server sends the top ten) */

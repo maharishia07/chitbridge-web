@@ -4496,8 +4496,7 @@ async function bkTB(body) {
       (window.CBBankTbLine && reply.bank ? CBBankTbLine.html(reply.bank, bkTbBankOptions(reply, asOf)) : '') +
       bkTable(
         [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }].concat(comparison ? [{ t: tx('Last year'), num: 1 }, { t: tx('Change'), num: 1 }, { t: '%', num: 1 }] : []),
-        rows,
-        bkTbTotalRowHTML(reply, currency, comparison),
+        rows, bkTbTotalRowHTML(reply, currency, comparison),
         'bk-tbm'
       ) +
       (comparison ? bkOverNote(reply.over_rule, currency, 'BKS004-P03', 'tb-over-note') : ''); /* the note sits UNDER the list: the first data row stays where it was */
