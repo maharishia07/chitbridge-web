@@ -28,6 +28,9 @@ ctx.fmtMoney = (amount, code) => code + ' ' + Number(amount).toFixed(2);
 ctx.myCur = () => 'INR';
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'public', 'engine', 'money.js'), 'utf8'), ctx);
+/* B7: failed() words an error through friendlyErr (accounts-shell.js); load the real one with its rewordPlain, not a copy */
+const shellSrc = fs.readFileSync(path.join(ROOT, 'public', 'app', 'accounts-shell.js'), 'utf8');
+vm.runInContext(shellSrc.slice(shellSrc.indexOf('function rewordPlain('), shellSrc.indexOf('\n}\n', shellSrc.indexOf('function friendlyErr(')) + 3), ctx);
 vm.runInContext(fs.readFileSync(file, 'utf8'), ctx);
 const P = ctx.CBPriceMoved;
 
@@ -85,7 +88,7 @@ P.askQuestion = (data, choices, currency) => { asked = { data, choices, currency
 const sentBody = { recipients: [], line_items: [mint()], promote_draft_id: 'D1' };
 check('failed: an ordinary error says its own words and asks nothing', P.failed(new Error('Boom'), sentBody, fail, resend) === null && said === 'Boom' && asked === null, said);
 said = null;
-check('failed: an error with no message says the old plain sentence', P.failed(null, sentBody, fail, resend) === null && /Something went wrong/.test(said), said);
+check('failed: an error with no message says the old plain sentence', P.failed(null, sentBody, fail, resend) === null && /something went wrong/i.test(said), said);
 check('failed: PRICE_MOVED opens the question with the answer and the shop currency, says nothing as an error', P.failed(err(answer()), sentBody, fail, resend) === null && asked && asked.data.code === 'PRICE_MOVED' && asked.currency === 'INR', '');
 sent = null; asked.choices.onNew();
 check('choose new prices: resent once with the re-priced lines, no ack, the rest of the send as it was', sent && sent.line_items[0].price === 120 && !('total' in sent.line_items[0]) && sent.price_ack === null && sent.promote_draft_id === 'D1' && sentBody.line_items[0].price === 100, JSON.stringify(sent));
