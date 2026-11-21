@@ -3119,7 +3119,7 @@ var BK_LT_OWE = { current_liabilities: 1, trade_creditors: 1, sundry_creditors: 
 function bkLtPackGroup(code) {
   var pack = shopReg();
   if (!pack) return null;
-  var rec = [pack.ledgers, pack.expense_classes, pack.income_classes].reduce(function (found, list) {
+  var rec = [pack.ledgers, pack.expense_classes, pack.income_classes, pack.retired].reduce(function (found, list) { /* F-66: a retired code (wages 5100 → 6015) still resolves, under the pack's opex line */
     return found || (list || []).filter(function (x) {
       return String(x.code) === String(code);
     })[0];
