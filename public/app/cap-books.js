@@ -1823,6 +1823,22 @@ function bkMajor(n, cur) {
   }
 }
 
+/** the sum of one sales entry: a walk-in day adds its split, a bill adds its debit lines, summed once */
+function bkDayEntryTotal(e, text) {
+  var rows = text.kind === 'day' ? text.split || [] : e.lines || [],
+    field = text.kind === 'day' ? 'amount_minor' : 'dr_minor';
+  return rows.reduce(function (sum, item) {
+    return sum + Number(item[field] || 0);
+  }, 0);
+}
+/** add an amount to its tender's running total, remembering the order the tenders were first seen */
+function bkDayAddTender(tenders, order, how, amount) {
+  if (!tenders[how]) {
+    tenders[how] = { how: how, amount_minor: 0 };
+    order.push(how);
+  }
+  tenders[how].amount_minor += amount;
+}
 /**
  * ⭐ THE DAY'S STRIP (Athi, 2026-10-01: "in the daybook, you should be able to see the total sale in different
  * counters, sellers' pending invoices and so on, so you can act one by one"). ONE function adds up the day's sales;
@@ -1843,14 +1859,7 @@ function bkDaySales(entries, day) {
     if (text.kind === 'day') hasDay = true; /* the counter closed its day — walk-ins are in */
     if (text.kind !== 'day' && text.kind !== 'bill') return; /* sales only: a bill, or a walk-in day */
     if (e.reversed_by) return; /* a reversed bill is no sale: its mirror row carries no source, so the original must not count either (GF-05 M9) */
-    var total =
-      text.kind === 'day'
-        ? (text.split || []).reduce(function (sum, x) {
-            return sum + Number(x.amount_minor || 0);
-          }, 0)
-        : (e.lines || []).reduce(function (sum, item) {
-            return sum + Number(item.dr_minor || 0);
-          }, 0);
+    var total = bkDayEntryTotal(e, text);
     var bills = text.kind === 'day' ? Number(text.count || 0) : 1;
     var c = text.counter || '—';
     if (!counters[c]) {
@@ -1859,18 +1868,11 @@ function bkDaySales(entries, day) {
     }
     counters[c].amount_minor += total;
     counters[c].bills += bills;
-    var add = function (how, amt) {
-      if (!tenders[how]) {
-        tenders[how] = { how: how, amount_minor: 0 };
-        torder.push(how);
-      }
-      tenders[how].amount_minor += amt;
-    };
     if (text.kind === 'day')
       (text.split || []).forEach(function (x) {
-        add(x.how, Number(x.amount_minor || 0));
+        bkDayAddTender(tenders, torder, x.how, Number(x.amount_minor || 0));
       });
-    else if (text.how) add(text.how, total);
+    else if (text.how) bkDayAddTender(tenders, torder, text.how, total);
   });
   corder.sort();
   return {
