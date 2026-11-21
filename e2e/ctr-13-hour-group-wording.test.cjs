@@ -19,7 +19,7 @@ class EnDate extends Date {
 /* the till's one formatter (shopFmt) and its zone readers are lifted as the page has them; the shop here states no country and no zone, so the tag is plain en */
 const sandbox = { Date: EnDate, Number, String, Intl, window: {}, docCountry: () => null, shopPack: () => null, cbQuiet() {} };
 vm.createContext(sandbox);
-vm.runInContext(liftFns('public/till.html', ['shopTz', 'tzOpt', 'shopFmt', 'hourRangeWords']) + '\nthis.hourRangeWords = hourRangeWords;', sandbox);
+vm.runInContext(liftFns('public/till.html', ['shopOwnTz', 'shopTz', 'tzOpt', 'shopFmt', 'hourRangeWords']) + '\nthis.hourRangeWords = hourRangeWords;', sandbox);
 const say = sandbox.hourRangeWords;
 
 let bad = 0, n = 0;
