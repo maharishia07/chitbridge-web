@@ -3926,10 +3926,17 @@ async function profGuardDo(which) {
     var secs = profDirtySections(map);
     /* ⚠️ WHICH SAVER DEPENDS ON WHICH SCREEN ASKED. A single saveProfile() here would have written Profile
        fields in response to a Settings prompt — the map is what tells them apart. */
+    var refused = false;
     for (var index = 0; index < secs.length; index++) {
-      if (map === PROF_FIELDS) await saveProfile(secs[index]);
-      else if (secs[index] === 'work') await saveSettings();
-      else if (secs[index] === 'assign') await saveAutoAssign();
+      var done = true;
+      if (map === PROF_FIELDS) done = await saveProfile(secs[index]);
+      else if (secs[index] === 'work') done = await saveSettings();
+      else if (secs[index] === 'assign') done = await saveAutoAssign();
+      if (done === false) refused = true;
+    }
+    if (refused) {
+      toast(tx('Not saved — the reason is on the screen. Nothing was lost; you are still here.'));
+      return; /* reviews5 GF-03 M1: a refused save stays on the screen with the edit in it, never navigates away over a 'Saved.' */
     }
     toast(tx('Saved.'));
   } else {
@@ -3960,8 +3967,10 @@ async function saveProfile(sec) {
     toast(MSG.profileSaved());
     UI._me = null;
     loadProfile();
+    return true;
   } catch (e) {
     if (x) x.textContent = e.message;
+    return false; /* reviews5 GF-03 M1: the unsaved-changes guard reads this, it must not say Saved. over a refusal */
   }
 }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
@@ -9323,8 +9332,10 @@ async function saveSettings() {
       }
     });
     toast(MSG.settingsSaved());
+    return true;
   } catch (e) {
     if (x) x.textContent = e.message;
+    return false;
   }
 }
 /* ---- POLICY FLAGS — per-entity governance toggles, SERVER-PERSISTED (b130).
@@ -9876,13 +9887,15 @@ async function saveAutoAssign() {
     da = val('st_ada');
   if (mode === 'default_assignee' && !da) {
     if (x) x.textContent = 'Pick a default assignee for this mode.';
-    return;
+    return false;
   }
   try {
     await api('saveSettings', { body: { auto_assign_mode: mode, default_assignee_actor_id: da || null } });
     toast('Auto-assign saved ✓');
+    return true;
   } catch (e) {
     if (x) x.textContent = e.message;
+    return false;
   }
 }
 
