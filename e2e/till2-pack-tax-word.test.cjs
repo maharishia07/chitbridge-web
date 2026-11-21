@@ -17,7 +17,7 @@ const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, 
 ok('cap-categories: the slab badge uses the pack word', /packWord\('taxName'\)/.test(read('cap-categories.js')) && !/'GST '\s*\+\s*t\.rate/.test(read('cap-categories.js')));
 ok('cap-chit2: a line with no tax name falls back to the pack word, not GST', !/tax_name \|\| 'GST'/.test(read('cap-chit2.js')) && /tax_name \|\| \(\(typeof packWord/.test(read('cap-chit2.js')));
 const cs = code(read('cap-catsetup.js'));
-ok('cap-catsetup: the slab sentence and the reference heading say the pack word', !/“GST 18%”/.test(cs) && !/tx\('GST slab rates/.test(cs) && /\{tax\} slab rates \(reference\)/.test(cs));
+ok('cap-catsetup: the slab sentence and the reference heading say the pack word', !/“GST 18%”/.test(cs) && !/tx\('GST slab rates/.test(cs) && (/\{tax\} slab rates \(reference\)/.test(cs) || /catsetScheme\(\)\.word \+ ' ' \+ tx\('slab rates \(reference\)'\)/.test(cs))); /* batch 1128: the merged screen takes the word from catsetScheme() (the pack scheme): one helper */
 ok('cap-standards: the area label is not GST-only', !/\['money', 'Money & GST'\]/.test(read('cap-standards.js')) && /\['money', 'Money & tax'\]/.test(read('cap-standards.js')));
 const defs = read('cap-definitions.js'), i = defs.indexOf('var CBDEF_AUTHORABLE'), j = defs.indexOf('\n};', i) + 3;
 const ctx = { tx: (s) => s, packWord: () => 'VAT' };
