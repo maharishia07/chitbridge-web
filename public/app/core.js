@@ -1356,6 +1356,17 @@ function errWords(value) {
   if (typeof value !== 'object') return String(value);
   return errWords(value.detail) || errWords(value.message) || errWords(value.title) || errWords(value.error) || '';
 }
+/** refusalFacts(err, body, requestId, kind?) → err; B7 (ERR-13): the api's problem body carries `code`, `hint` and `request_id`; they ride on the error (err.code, err.hint, err.requestId, err.kind = 'network' | 'timeout')
+   so ONE card (helpers.js scrErr) and ONE toast (accounts-shell.js toast) show the register sentence AND its next step. The last one is also kept for the toast, which only receives words. */
+function refusalFacts(err, body, requestId, kind) {
+  var b = body || {};
+  err.code = String(b.code || '');
+  err.hint = String(b.hint || '');
+  err.requestId = b.request_id || requestId || '';
+  err.kind = kind || '';
+  if (typeof window !== 'undefined') window.CB_LAST_REFUSAL = err;
+  return err;
+}
 /* answerWords(body, status) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence).
    A 429 that names its wait says the ONE rate-limit sentence, read by shell.js rateWords (window.cbRateWords) (Fable review R2/R3, 18 Nov). */
 function answerWords(body, status) {
@@ -1453,7 +1464,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
       /* a DEADLINE is not "offline": never queue it, say what happened */
       if (netErr && netErr.name === 'AbortError') {
         cblog('error', ep.m + ' ' + key + ' → no answer in 90 s [' + _rid + ']');
-        throw new Error(deadlineWords(ep));
+        throw refusalFacts(new Error(deadlineWords(ep)), null, _rid, 'timeout');
       }
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
       if (outboxSafe && CB) {
@@ -1462,8 +1473,11 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
         return { queued: true, offline: true };
       }
       cblog('error', ep.m + ' ' + key + ' → network unreachable [' + _rid + ']');
-      throw new Error(
-        ep.m === 'GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved."
+      throw refusalFacts(
+        new Error(ep.m === 'GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved."),
+        null,
+        _rid,
+        'network'
       );
     }
     if (!res.ok) {
@@ -1515,6 +1529,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
         const er = new Error(m);
         er.status = res.status;
         er.data = j;
+        refusalFacts(er, j, _rid); /* B7: the register code, the hint (next step) and the request id ride on the error, for the one card and toast */
         return er;
       };
       if (res.status === 401) {

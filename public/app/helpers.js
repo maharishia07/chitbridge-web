@@ -58,6 +58,10 @@ function esc(v) {
 function opt(arr, sel) {
   return arr.map((item) => `<option ${item === sel ? 'selected' : ''}>${item}</option>`).join('');
 }
+/** errLine(testid, words) → one small line of the failure card, or '' when there are no words */
+function errLine(testid, words) {
+  return words ? '<div class="sub" data-testid="' + testid + '">' + esc(words) + '</div>' : '';
+}
 /**
  * ⚠️ ONE SHAPE FOR "IT DID NOT LOAD", because there were four. Measured across the app: "Couldn't load",
  * "Couldn't load suppliers", "Couldn't load co-assists", "Could not load customers" — three spellings of the
@@ -68,17 +72,103 @@ function opt(arr, sel) {
  * every bit of unsaved state on the screen. `subject` names what failed; `retry` is a call expression.
  */
 function scrErr(e, subject, retry) {
+  /* B7 (ERR-13): the register sentence (e.message = the api's detail) AND its next step (e.hint) and the request id, with the error code as data-cb-error-code so the UI CMDB can link the card to its code (ERR-14 part 1);
+     a capability that would not load names itself (e.capability) */
+  e = e || {};
+  var name = subject || e.capability || '';
   return (
-    '<div class="empty"><div class="big">⚠</div>' +
+    '<div class="empty" role="alert" data-cbsid="CMP068" data-cb-error-code="' +
+    esc(e.code || '') +
+    '"><div class="big">⚠</div>' +
     '<div class="t">' +
-    esc("Couldn't load" + (subject ? ' ' + subject : '')) +
+    esc("Couldn't load" + (name ? ' ' + name : '')) +
     '</div>' +
     '<div>' +
-    esc(e && e.message) +
+    esc(e.message) +
     '</div>' +
+    errLine('err-hint', e.hint) +
+    errLine('err-request-id', e.status >= 500 && e.requestId ? tx('Quote this reference:') + ' ' + e.requestId : '') +
     (retry ? '<button data-cbsid="CMP009" class="btn" data-testid="err-retry" onclick="' + esc(retry) + '" style="margin-top:4px">' + tx('Try again') + '</button>' : '') +
     '</div>'
   );
+}
+/** apiRead(key, opts, emptyOf?, limitMs?) → Promise<{ state: 'ok' | 'empty' | 'failed', data, error }>; B7 (ERR-5): the ONE read that tells EMPTY (a 200 with nothing in it) from FAILED (a refusal, a dead network, or no answer inside limitMs, default 10 s);
+   it never throws. A failed read is painted with scrErr(result.error); an empty one with the screen's own empty sentence. A 401 still goes to sign-in inside api() — it is also 'failed' here, with no card needed. */
+function apiRead(key, opts, emptyOf, limitMs) {
+  var limit = limitMs || 10000;
+  var timer;
+  var late = new Promise(function (resolve, reject) {
+    timer = setTimeout(function () {
+      var slow = new Error(tx('No answer yet.'));
+      slow.kind = 'timeout';
+      reject(slow);
+    }, limit);
+  });
+  return Promise.race([api(key, opts), late]).then(
+    function (data) {
+      clearTimeout(timer);
+      var empty = typeof emptyOf === 'function' ? emptyOf(data) : data == null || (Array.isArray(data) && !data.length);
+      return { state: empty ? 'empty' : 'ok', data: data, error: null };
+    },
+    function (error) {
+      clearTimeout(timer);
+      return { state: 'failed', data: null, error: error };
+    }
+  );
+}
+/* ERR-8 (B5/B6): THE ONE READ OF THE OUTSIDE SERVICES (AI · mail · WhatsApp · speech). GET /api/integrations/status carries outside[] = { name|connector, state: connected | not_set_up | down, code, sentence, hint, last_failure }.
+   Read once and kept 60 s (apiRead); a failed read says nothing is wrong (we never grey an action on a guess). An action that needs a service says so with outsideAttrs('ai'): it stays SHOWN, greyed WITH the api's sentence + hint
+   (show-action rule); when the read lands, every [data-outside] button on the page is greyed or freed. A raw-HTML button adds outsideAttrs(name); a ui.action passes disabled: outsideReason(name). Never hide the button. */
+var OUTSIDE = { at: 0, byName: {}, pending: null };
+/** read the outside services once (kept 60 s) and grey the drawn buttons; resolves with the by-name map */
+function outsideLoad() {
+  if (OUTSIDE.pending) return OUTSIDE.pending;
+  if (OUTSIDE.at && Date.now() - OUTSIDE.at < 60000) return Promise.resolve(OUTSIDE.byName);
+  OUTSIDE.pending = apiRead('intStatus', undefined, function (d) {
+    return !d || !Array.isArray(d.outside);
+  }).then(function (read) {
+    OUTSIDE.pending = null;
+    if (read.state === 'ok') {
+      OUTSIDE.byName = {};
+      read.data.outside.forEach(function (o) {
+        OUTSIDE.byName[o.connector || o.name] = o;
+      });
+      OUTSIDE.at = Date.now();
+      outsideApply();
+    }
+    return OUTSIDE.byName;
+  });
+  return OUTSIDE.pending;
+}
+/** the sentence + hint when the service is not connected, else null (unknown = null) */
+function outsideReason(name) {
+  var o = OUTSIDE.byName[name];
+  if (!o || o.state === 'connected' || !o.sentence) return null;
+  return o.hint ? o.sentence + ' ' + o.hint : o.sentence;
+}
+/** the attributes for a raw-HTML button that needs the service; also starts the one read when it has not run */
+function outsideAttrs(name) {
+  outsideLoad();
+  var why = outsideReason(name);
+  return ' data-outside="' + name + '"' + (why ? ' disabled aria-disabled="true" data-disabled="1" title="' + esc(why) + '"' : '');
+}
+/** grey or free every [data-outside] button now on the page, from what was read */
+function outsideApply(root) {
+  if (typeof document === 'undefined') return;
+  [].forEach.call((root || document).querySelectorAll('[data-outside]'), function (button) {
+    var reason = outsideReason(button.getAttribute('data-outside'));
+    if (reason) {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+      button.setAttribute('data-disabled', '1');
+      button.title = reason;
+    } else if (button.getAttribute('data-disabled') === '1') {
+      button.disabled = false; /* only what THIS read greyed is freed; a button its own screen keeps disabled stays so */
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('data-disabled');
+      button.removeAttribute('title');
+    }
+  });
 }
 function cap(s) {
   return s[0].toUpperCase() + s.slice(1);

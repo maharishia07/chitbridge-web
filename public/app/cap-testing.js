@@ -10866,7 +10866,7 @@ async function testSeed() {
       );
     }
   } catch (e) {
-    if (typeof toast === 'function') toast(tx('Could not load the test cases') + ' — ' + e.message, true);
+    if (typeof toast === 'function') toast(friendlyErr(e), true);
   }
   CBTEST.seeding = false;
   testPaint();

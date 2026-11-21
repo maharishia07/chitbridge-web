@@ -363,18 +363,24 @@ function txn(one, other, n, vars) {
 
 /* ── a failure's words, and the toast ── */
 
-function friendlyErr(e) {
-  const m = (e && e.message) || String(e || '');
+/** the words for a failure that has no code of its own (a network drop, an expired session): a plain line instead of the browser's */
+function rewordPlain(m) {
   if (/Already working/i.test(m)) return 'still finishing the last one — one moment';
   if (/session expired|sign in/i.test(m)) return 'your session expired — please sign in again';
   if (/Failed to fetch|network/i.test(m)) return 'network hiccup — check your connection and retry';
   return m || 'something went wrong';
+}
+function friendlyErr(e) {
+  const m = (e && e.message) || String(e || '');
+  /* the api's own sentence keeps its words, so the toast can still find its code and hint (B7) */
+  return e && e.code && e.message ? m : rewordPlain(m);
 }
 
 /** the look of a host the page did not draw itself; a page with a bottom dock sets --cb-toast-bottom to clear it (shop.html) (same tokens and sizes as the pages that carry their own #toast rules) */
 const TOAST_HOST_CSS =
   '#toast{position:fixed;left:50%;bottom:var(--cb-toast-bottom,20px);transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}' +
   '#toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}' +
+  '#toast .toast-hint{display:block;margin-top:4px;font-size:13px}' +
   '#toast .toast.err{background:var(--red-i,#8e3517)}#toast .toast.warn{background:var(--amber-i,#7a5205)}' +
   '#toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}';
 /**
@@ -397,11 +403,19 @@ function toastHost(isError) {
   node.setAttribute('aria-atomic', 'true');
   return node;
 }
+/** toastRefusal(msg) → { attr, hint } html bits when msg is the api's last refusal (B7): the error code attribute and the next-step line; empty otherwise */
+function toastRefusal(msg) {
+  const last = window.CB_LAST_REFUSAL;
+  if (!last || last.message !== msg) return { attr: '', hint: '' };
+  return { attr: last.code ? ' data-cb-error-code="' + esc(last.code) + '"' : '', hint: last.hint ? ' <span class="toast-hint">' + esc(last.hint) + '</span>' : '' };
+}
 function toast(msg, undo) {
   const _lvl = toastLevel(msg);
   if (typeof cblog === 'function') cblog(_lvl, msg);
   const node = toastHost(_lvl === 'error');
-  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
+  /* B7: a toast that says the api's refusal also says its next step (hint) and carries the error code as data-cb-error-code (ERR-14 part 1) */
+  const _ref = toastRefusal(msg);
+  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}" data-cbsid="CMP069"${_ref.attr}>${esc(msg)}${_ref.hint}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
       undo();

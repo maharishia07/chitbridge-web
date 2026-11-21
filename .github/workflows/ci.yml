@@ -106,6 +106,8 @@ jobs:
           node e2e/bank-cost-blind.test.cjs
           node e2e/bank-engine199.test.cjs
           node e2e/bank-lock.test.cjs
+          node e2e/outside-state.test.cjs
+          node e2e/network-browse-failed.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
           node e2e/dues-one-sign.test.cjs

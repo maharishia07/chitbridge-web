@@ -658,7 +658,7 @@ function _rdDetailPane(it) {
       esc(it.doc) +
       "','" +
       skill +
-      '\')" title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
+      '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
       tx('✨ Draft with AI') +
       '</button>'
     : '';
@@ -727,7 +727,7 @@ async function loadCommerce() {
   try {
     UI.commerce = await api('instruments', { query: { incoterm: 'CIF', cross_border: 1 } });
   } catch (e) {
-    UI.commerce = { error: (e && e.message) || 'x' };
+    UI.commerce = { error: e || {} };
   }
   UI.commerceLoading = false;
   if (typeof renderApp === 'function') bgRenderApp();
@@ -755,7 +755,7 @@ async function loadLanes() {
   try {
     UI.laneMatrix = await api('lanes', { query: _laneQuery() });
   } catch (e) {
-    UI.laneMatrix = { error: (e && e.message) || 'Could not load', lanes: [] };
+    UI.laneMatrix = { error: e || {}, lanes: [] };
   }
   if (UI.laneMatrix && UI.laneMatrix.lanes && UI.laneMatrix.lanes.length) {
     if (
@@ -774,7 +774,7 @@ async function loadLaneReadiness(dest) {
   try {
     UI.laneRd = await api('readinessOwn', { query: _laneQuery({ destination: dest }) });
   } catch (e) {
-    UI.laneRd = { error: (e && e.message) || 'Could not load' };
+    UI.laneRd = { error: e || {} };
   }
   if (typeof renderApp === 'function') bgRenderApp();
 }
@@ -1278,7 +1278,7 @@ function _rdComDetail(g) {
         m.ai.skill +
         "','" +
         esc(g.label) +
-        '\')" title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
+        '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
         tx('✨ Draft with AI') +
         '</button>'
       : '';
@@ -1339,11 +1339,7 @@ function _rdComTwoPane() {
     return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading commercial cover…') + '</div>';
   }
   if (UI.commerce.error || !UI.commerce.cluster)
-    return (
-      '<div style="flex:1;padding:20px;color:var(--grey);font-size:var(--fs-2)">Could not load commercial cover' +
-      (UI.commerce.error ? ' — ' + esc(UI.commerce.error) : '') +
-      '.</div>'
-    );
+    return '<div style="flex:1;padding:20px">' + scrErr(UI.commerce.error, tx('commercial cover')) + '</div>';
   var list = UI.commerce.cluster,
     sel = UI.comSel != null && UI.comSel < list.length ? UI.comSel : 0;
   UI.comSel = sel;
@@ -1425,7 +1421,7 @@ function readinessScreen() {
   var rd = UI.laneRd;
   if (rd.error)
     return shell(
-      '<div style="padding:20px">' + (typeof emptyState === 'function' ? emptyState('⚠️', 'Could not load', esc(rd.error)) : esc(rd.error)) + '</div>'
+      '<div style="padding:20px">' + scrErr(rd.error, tx('this destination')) + '</div>'
     );
   var items = rd.clearances || [];
   var list =

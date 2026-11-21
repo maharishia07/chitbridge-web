@@ -2842,7 +2842,7 @@ function shopMyOrders(more) {
       _MYO.busy = false;
       var list = res.status === 200 && res.j && Array.isArray(res.j.orders) ? res.j.orders : null;
       if (!list) {
-        _MYO.err = (res.j && res.j.message) || 'Could not load your orders.';
+        _MYO.err = (res.j && res.j.message) || friendlyErr({});
       } else {
         _MYO.err = null;
         _MYO.rows = _MYO.rows.concat(list);

@@ -1122,7 +1122,11 @@ window.CBSCREENS = {
 "Control › Saved chip (CMP066) • Explain":"CMP066-B02",
 "Popup › assignPick":"POP212",
 "Control › Account › Settings • Which clients staff can open":"ACC002-S19",
-"Popup › ixSheet":"POP216"
+"Popup › ixSheet":"POP216",
+"Component › Error card • Error card":"CMP068",
+"Control › Error card (CMP068) • Error code":"CMP068-D01",
+"Component › Error toast • Error toast":"CMP069",
+"Control › Error toast (CMP069) • Error code":"CMP069-D01"
 },
 "rows":[
 {"code":"CTR001","path":"Counter › Counter","group":"Counter","screen":"Counter","nav":"counter","cases":10,"since":"2026-09-12","reached_from":null,"purpose":null,"walk":1},
@@ -1558,7 +1562,7 @@ window.CBSCREENS = {
 {"code":"PNL004","path":"Panel › Test lab","group":"Panel","screen":"Test lab","nav":null,"cases":0,"since":"2026-09-12","reached_from":null,"purpose":null,"walk":435},
 {"code":"PNL005","path":"Panel › Line card","group":"Panel","screen":"Line card","nav":null,"cases":0,"since":"2026-09-12","reached_from":null,"purpose":null,"walk":436},
 {"code":"BUS009","path":"Business › Supplier detail","group":"Business","screen":"Supplier detail","nav":"supplier-detail","cases":0,"since":"2026-09-12","reached_from":"suppliers","purpose":null,"walk":22},
-{"code":"BUS010","path":"Business › Customer detail","group":"Business","screen":"Customer detail","nav":"customer-detail","cases":0,"since":"2026-09-12","reached_from":"customers","purpose":null,"walk":1076},
+{"code":"BUS010","path":"Business › Customer detail","group":"Business","screen":"Customer detail","nav":"customer-detail","cases":0,"since":"2026-09-12","reached_from":"customers","purpose":null,"walk":1080},
 {"code":"BUS011","path":"Business › Find a product","group":"Business","screen":"Find a product","nav":"supplier-find","cases":0,"since":"2026-09-12","reached_from":"suppliers","purpose":null,"walk":23},
 {"code":"BUS012","path":"Business › Required certificates","group":"Business","screen":"Required certificates","nav":"supplier-certs","cases":0,"since":"2026-09-12","reached_from":"suppliers","purpose":null,"walk":24},
 {"code":"DTL007","path":"Detail › Chit input","group":"Detail","screen":"Chit input","nav":"chit-input","cases":0,"since":"2026-09-12","reached_from":"chit-detail","purpose":null,"walk":7},
@@ -2200,7 +2204,11 @@ window.CBSCREENS = {
 {"code":"CMP066-B02","path":"Control › Saved chip (CMP066) • Explain","group":"Control","screen":"Saved chip (CMP066) • Explain","nav":null,"cases":0,"since":"2026-11-17","reached_from":null,"purpose":null,"walk":1072},
 {"code":"POP212","path":"Popup › assignPick","group":"Popup","screen":"assignPick","nav":null,"cases":0,"since":"2026-11-18","reached_from":null,"purpose":null,"walk":1073},
 {"code":"ACC002-S19","path":"Control › Account › Settings • Which clients staff can open","group":"Control","screen":"Account › Settings • Which clients staff can open","nav":null,"cases":0,"since":"2026-11-18","reached_from":null,"purpose":null,"walk":1074},
-{"code":"POP216","path":"Popup › ixSheet","group":"Popup","screen":"ixSheet","nav":null,"cases":0,"since":"2026-11-18","reached_from":null,"purpose":null,"walk":1075}
+{"code":"POP216","path":"Popup › ixSheet","group":"Popup","screen":"ixSheet","nav":null,"cases":0,"since":"2026-11-18","reached_from":null,"purpose":null,"walk":1075},
+{"code":"CMP068","path":"Component › Error card • Error card","group":"Component","screen":"Error card • Error card","nav":null,"cases":0,"since":"2026-11-20","reached_from":null,"purpose":null,"walk":1076},
+{"code":"CMP068-D01","path":"Control › Error card (CMP068) • Error code","group":"Control","screen":"Error card (CMP068) • Error code","nav":null,"cases":0,"since":"2026-11-20","reached_from":null,"purpose":null,"walk":1077},
+{"code":"CMP069","path":"Component › Error toast • Error toast","group":"Component","screen":"Error toast • Error toast","nav":null,"cases":0,"since":"2026-11-20","reached_from":null,"purpose":null,"walk":1078},
+{"code":"CMP069-D01","path":"Control › Error toast (CMP069) • Error code","group":"Control","screen":"Error toast (CMP069) • Error code","nav":null,"cases":0,"since":"2026-11-20","reached_from":null,"purpose":null,"walk":1079}
 ],
 "byFn":{
 "_aiCtxExporter":{"code":"POP001","file":"cap-readiness.js","ambiguous":false},

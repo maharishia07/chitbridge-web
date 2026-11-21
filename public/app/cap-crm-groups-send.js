@@ -39,7 +39,7 @@ function crmSendOpen(group, prefill) {
       '</button><button data-cbsid="CRM008-B02" type="button" data-crm="sendcheck" data-testid="crm-send-check">' +
       esc(tx('Who may be sent?')) +
       '</button>' +
-      '<button data-cbsid="CRM008-B03" type="button" class="pri" data-crm="sendgo" data-testid="crm-send-go" disabled title="' +
+      '<button data-cbsid="CRM008-B03" type="button" class="pri" data-crm="sendgo" data-testid="crm-send-go" data-outside="whatsapp" disabled title="' +
       esc(tx('Check first')) +
       '">' +
       esc(tx('Send')) +
@@ -90,13 +90,15 @@ function crmSendDryShown(reply, node, goButton) {
   var words = crmReachWords({ may: reply.may, not: reply.refused_n, refused_by: reply.refused_by });
   node.innerHTML = '<b data-testid="crm-send-may">' + esc(words.may) + '</b>' + (words.not ? ' · ' + esc(words.not) : '') + crmSendRefusedHtml(reply.refused);
   if (goButton) {
-    goButton.disabled = !(reply.may > 0);
-    goButton.title = reply.may > 0 ? '' : tx('Nobody may be sent this');
+    var offline = outsideReason('whatsapp'); /* ERR-8: WhatsApp not connected → Send stays greyed with the connector's sentence */
+    goButton.disabled = !(reply.may > 0) || !!offline;
+    goButton.title = offline || (reply.may > 0 ? '' : tx('Nobody may be sent this'));
     goButton.textContent = reply.may > 0 ? txf('Send to {n}', { n: reply.may }) : tx('Send');
   }
 }
 /** the dry run: ask the server who may be sent this message and show the count before anything is sent */
 function crmSendCheck(btn) {
+  outsideLoad(); /* ERR-8: the one read of the outside services, before the Send button is freed */
   var node = document.getElementById('crm_send_who'),
     goButton = document.getElementById('crm_send_go') || document.querySelector('[data-testid="crm-send-go"]');
   var body = crmSendBody(true);

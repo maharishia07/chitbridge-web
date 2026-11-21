@@ -135,7 +135,7 @@
   /** the people who may hold this kind of work, as the server flags them (job_assignable), with `open_load` and the ONE `suggested` person (GET /api/actors?for=plug:subject, one client only: a mixed bulk asks for no suggestion and pre-picks nobody, A5); the page filters on the flag and never on a hat */
   function people(forWord, flag) {
     return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (reply) {
-      if (!reply.ok) return { error: sentenceOf(reply.body) || tr('People did not load.'), list: [] };
+      if (!reply.ok) return { error: sentenceOf(reply.body) || friendlyErr({}), list: [] };
       var mine = assignApi.meId();
       var rows = reply.body.actors || reply.body.items || [], key = flag || 'job_assignable';
       var list = rows.filter(function (a) { return a[key] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
