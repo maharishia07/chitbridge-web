@@ -338,7 +338,7 @@ function stand() {
     const pg = await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-next"]'); if (!n) return null; const r = n.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), b = document.querySelector('.bkh-body').getBoundingClientRect(); return { in: !!hit && (hit === n || n.contains(hit)), r: [Math.round(r.top), Math.round(r.bottom)], body: [Math.round(b.top), Math.round(b.bottom)] }; });
     ok(pg && pg.in, '390: Previous and Next are on screen without scrolling the page ' + JSON.stringify(pg));
     const head = (await p.textContent('[data-testid="bank-stmts-sum"]')).trim();
-    ok(/^Oct ✓ · (\d+ missing|Every month is kept)$/.test(head) && (await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-sum"]'); return n.scrollWidth <= n.clientWidth; })), '390: the header line reads whole, not clipped: "' + head + '"');
+    ok(/^Oct kept · (\d+ missing|Every month is kept)$/.test(head) && (await p.evaluate(() => { const n = document.querySelector('[data-testid="bank-stmts-sum"]'); return n.scrollWidth <= n.clientWidth; })), '390: the header line reads whole, not clipped: "' + head + '"');
     await shot2('23-files-390.png');
     await p.click('[data-testid="bank-stmts-filesbox"] summary');
     await p.click('[data-testid="bank-home-fy-all"]');

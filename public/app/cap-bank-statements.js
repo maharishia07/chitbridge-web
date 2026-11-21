@@ -200,7 +200,7 @@ function bkstSummary() {
   const data = BKST.data;
   if (!data || !BKST.fileTotal) return bkstEmptyWords(data);
   const gaps = bkstMissing(data),
-    kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
+    kept = BKST.last ? txf('{m} kept', { m: bkstMonth(BKST.last) }) + ' · ' : ''; /* C-F-03: "kept", never ✓: on this screen ✓ means signed off */
   return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept')) + bkstSignedLine();
 }
 /** bkbSeatUnasked() → true when no refusal can be said: a read-only or acting seat, the owner, or the server has not answered the seat question yet */

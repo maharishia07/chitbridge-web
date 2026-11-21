@@ -116,6 +116,7 @@ jobs:
           node tests/acct-c-f01-lock-income.test.cjs
           node tests/acct-c-f02-lock-month.test.cjs
           node tests/acct-c-f06-debit-note-fix.test.cjs
+          node tests/acct-c-f03-bank-summary.test.cjs
           node tests/product-lab-rows.test.cjs
           node tests/shop-attempt-key.test.cjs
           node tests/trace-entries.test.cjs
