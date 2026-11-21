@@ -64,6 +64,8 @@
   /** closedBooks(code, fallback) → { why, next } for the refusal page: the sentence and what to do, or the server's own sentence alone */
   function closedBooks(code, fallback) {
     var row = CLOSED_BOOKS[code];
+    /* S2-F-09: the server says BOOKS_GRANT_NONE with `Choose the adviser or auditor view` when no view was named: that is its sentence, not 'no access' */
+    if (code === 'BOOKS_GRANT_NONE' && /^Choose the adviser or auditor view/.test(String(fallback || ''))) row = [fallback, 'Pick Adviser or Auditor for this client, then open it again.'];
     return row ? { why: words(row[0]), next: words(row[1]) } : { why: fallback || '', next: '' };
   }
   /** W19: the refusal page of a client's books, drawn by the ONE failed-read frame: why (the server's code), what to do, and the way back to his queue */
