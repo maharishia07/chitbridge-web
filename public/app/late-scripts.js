@@ -6,6 +6,9 @@
  *           (a script inserted with async=false) · ready(group) = a promise that settles when that group's last script has run
  * CALLED BY accounts.html and finance.html (loaded before the first late tag) · the views of those pages and chit-sheet.js open() wait on ready()
  * FLOW      load event → start() → one <script async=false> per tag → each tag's data-late-group resolves its group → ready(group) resolves
+ * OWNER     cb-speed
+ * RISK      plain
+ * ID        LIB002
  * CARD      23-speed/first-open (batch 1128 fixSpeed: Accounts 111 and Finance 64 blocking scripts, 3.7 MB, before the first paint)
  *
  * Decides nothing: a screen that needs a late script waits for ready() and then runs exactly the code it ran before; it never runs without it.
@@ -21,32 +24,32 @@
 
   function groupOf(name) {
     if (!groups[name]) {
-      var g = { name: name, left: 0, failed: [], resolve: null };
-      g.promise = new root.Promise(function (resolve) {
-        g.resolve = resolve;
+      var group = { name: name, left: 0, failed: [], resolve: null };
+      group.promise = new root.Promise(function (resolve) {
+        group.resolve = resolve;
       });
-      groups[name] = g;
+      groups[name] = group;
     }
     return groups[name];
   }
 
-  function settle(g, src, ok) {
-    if (!ok) g.failed.push(src);
-    g.left -= 1;
-    if (g.left <= 0) g.resolve(g.failed.length ? { failed: g.failed } : { failed: [] });
+  function settle(group, src, ok) {
+    if (!ok) group.failed.push(src);
+    group.left -= 1;
+    if (group.left <= 0) group.resolve(group.failed.length ? { failed: group.failed } : { failed: [] });
   }
 
   /** one tag → one real script, run in the order the tags are written */
-  function run(tag) {
-    var g = groupOf(tag.getAttribute('data-late-group') || 'late');
+  function runTag(tag) {
+    var group = groupOf(tag.getAttribute('data-late-group') || 'late');
     var node = root.document.createElement('script');
     node.async = false;
     node.src = tag.getAttribute('src');
     node.onload = function () {
-      settle(g, node.src, true);
+      settle(group, node.src, true);
     };
     node.onerror = function () {
-      settle(g, node.src, false);
+      settle(group, node.src, false);
       if (typeof root.cbQuiet === 'function') root.cbQuiet('late script not loaded', node.src);
     };
     root.document.head.appendChild(node);
@@ -60,7 +63,7 @@
     tags.forEach(function (tag) {
       groupOf(tag.getAttribute('data-late-group') || 'late').left += 1;
     });
-    tags.forEach(run);
+    tags.forEach(runTag);
     allDone = root.Promise.all(
       Object.keys(groups).map(function (n) {
         return groups[n].promise;

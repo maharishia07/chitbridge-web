@@ -1,9 +1,16 @@
-/* OWNS: the ONE place the web keeps SAMPLE data (names, places, a small menu) per country: CBSample.forCountry(cc).
-   CALLED BY: offer-lab-next.html, bill-print.html, list-lab.html, screen-gallery.html (labs and previews that show a made-up shop).
-   WHY (batch 1128 fixLeak, Athi 21 Nov): no India word, sample, city or price on a non-India shop; a shop with no country gets the NEUTRAL set.
-   The api's own starter lists (catalogue-blueprint.js) stay the api's; this file is only what a web page shows before real data exists.
-   The data itself lives in sample-set.data.json (country data is data, not code; red1128): this file only reads it and derives each country's set from the neutral one.
-   Prices are plain numbers: the page formats them in the SHOP's currency, never with a sign typed here. */
+/* public/app/sample-set.js — CBSample: the one place the web keeps SAMPLE data per country (CBSample.forCountry(cc))
+ * ID        LIB003
+ * OWNER     cb-demo
+ * OWNS      the ONE place the web keeps SAMPLE data (names, places, a small menu) per country: CBSample.forCountry(cc).
+ * CALLED BY offer-lab-next.html, bill-print.html, list-lab.html, screen-gallery.html (labs and previews that show a made-up shop).
+ * FLOW      sample-set.data.json (country data is data, not code) -> readData() -> derive(each country over the neutral set) -> forCountry(cc) -> a lab or preview page.
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/sample-set
+ * RISK      plain: no India word, sample, city or price on a non-India shop; a shop with no country gets the NEUTRAL set (batch 1128 fixLeak, Athi 21 Nov).
+ *
+ * The api's own starter lists (catalogue-blueprint.js) stay the api's; this file is only what a web page shows before real data exists.
+ * The data itself lives in sample-set.data.json (red1128): this file only reads it and derives each country's set from the neutral one.
+ * Prices are plain numbers: the page formats them in the SHOP's currency, never with a sign typed here.
+ */
 (function (root) {
   'use strict';
   /* the data: Node reads the file; a page reads it once, synchronously, from beside this script (same origin, 8 KB, so forCountry stays a plain call) */
