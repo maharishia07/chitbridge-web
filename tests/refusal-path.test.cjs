@@ -27,7 +27,7 @@ const cap = run("(function(){ var e = new Error('Could not load the books capabi
 cx.cap = cap;
 ok(run('scrErr(cap)').includes('load books'), 'a capability that fails to load shows one card with its name');
 
-const shell = app('accounts-shell.js');
+const shell = app('cb-words.js'); /* rewordPlain · friendlyErr · toastRefusal live in the neutral words file since the customer delink */
 vm.runInContext([grab(shell, 'rewordPlain'), grab(shell, 'friendlyErr'), grab(shell, 'toastRefusal')].join(String.fromCharCode(10)), cx);
 const sessionErr = run("(function(){ var e = new Error('Your session expired, sign in again.'); e.code = 'AUTH_EXPIRED'; return e; })()");
 cx.sessionErr = sessionErr; cx.window.CB_LAST_REFUSAL = sessionErr;
