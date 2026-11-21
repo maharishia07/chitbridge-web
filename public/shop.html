@@ -3197,31 +3197,22 @@ function shopFrame() {
  * had been handed in full). After the code is verified the read goes again WITH the customer's token (_MYTOK, memory only) and the
  * server sends the catalogue. The storefront_access test stays only for an api that predates the cut (no code, no token yet).
  */
-/** the owner's preview of a shop with nothing published (no items, finishes or schema) */
-function shopPreviewEmpty(answer) {
-  return !!answer.preview && !(answer.items || []).length && !(answer.finishes || []).length && !answer.schema;
-}
-/** a shop that asks for sign-in first: the server said so, or its storefront access is login and this browser holds no token */
-function shopGated(answer) {
-  return (answer.sign_in && answer.sign_in.code === 'sign_in_first') || (!_MYTOK && answer.shop && answer.shop.storefront_access === 'login');
-}
 /** paints the catalogue answer: the gate when sign-in comes first, the shop otherwise, and the plain words when there is no public catalogue or nothing published (preview) */
 function shopShowAnswer(res) {
   if (res.status !== 200) {
-    /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a
-     buyer with a problem about last week's order has nowhere else to go. supLinkHtml() has no name to
-     show yet; /support/preview supplies it the moment the panel opens. */
+    /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a buyer with a problem about last week's order
+     has nowhere else to go. supLinkHtml() has no name to show yet; /support/preview supplies it the moment the panel opens. */
     el('app').innerHTML =
       '<div class="msg">' + esc((res.j && res.j.message) || 'Shop not found or has no public catalogue.') + '</div>' + (BRIDGE ? supLinkHtml() : '');
     return;
   }
   _SHOPDATA = res.j;
   /* WALK S S-F-07: the owner's preview of a shop with nothing published is an empty answer (200), said in words, not a failed call */
-  if (shopPreviewEmpty(res.j)) {
+  if (res.j.preview && !(res.j.items || []).length && !(res.j.finishes || []).length && !res.j.schema) {
     el('app').innerHTML = '<div class="msg">Nothing is on your online shop yet. Add products in Catalogue and they will show here.</div>';
     return;
   }
-  if (shopGated(res.j)) renderLoginGate(res.j.shop || {});
+  if ((res.j.sign_in && res.j.sign_in.code === 'sign_in_first') || (!_MYTOK && res.j.shop && res.j.shop.storefront_access === 'login')) renderLoginGate(res.j.shop || {});
   else {
     _lg = {};
     render(res.j);
