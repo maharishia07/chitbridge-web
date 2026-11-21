@@ -2095,6 +2095,7 @@ function c2SpendHTML(reply, header, delivery) {
       ? '<div style="padding:8px 14px 2px">' +
         chitSpendStrip({
           id: C2.id,
+          purpose: header.purpose /* AU-F-11: a credit note shows no Mark paid */,
           amt: billTotalOf(summary, (reply.detail && reply.detail.total_value) || header.total_value, wire) || 0,
           currency: (wire && wire.currency_code) || (summary && summary.currency_code),
           cost_hidden: c2CostHidden(reply) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,

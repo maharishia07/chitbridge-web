@@ -95,6 +95,7 @@ jobs:
           node tests/bk-dv-no-source-dash.test.cjs
           node tests/books-paging.test.cjs
           node tests/cat-258-unpriced-bands-web.test.cjs
+          node tests/chit-doc-head-1129.test.cjs
           node tests/chit-mark-paid-dead.test.cjs
           node tests/chit-sheet-dispute-opener.test.cjs
           node tests/country-compare.test.cjs

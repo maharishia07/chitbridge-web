@@ -830,7 +830,7 @@
       '</span> <span class="cs-step" data-testid="cs-step">' +
       esc(T(STEP[m.status] || statusWord(m.status))) +
       '</span></div>' +
-      pageNoteHTML() +
+      pageNoteHTML() + (root.CBDocHead ? root.CBDocHead.html(m) : '') + /* AU-F-11: the document head, app/chit-doc-head.js */
       orderHTML(m) +
       linesHTML(m) +
       (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstBlockHTML(m)) +
