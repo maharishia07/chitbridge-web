@@ -883,6 +883,15 @@ var CBShop = (function () {
         : '<button data-cbsid="ACC002-B09" type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>')
     );
   }
+  /** a person who may not write (an actor) sees the shop's fields greyed, read-only, with the sentence under the Business card (LENS2 1129: they could type and nothing saved) */
+  function greyForActor(node) {
+    if (!(SESSION && SESSION.actorId) || !node) return;
+    var why = tx('Only the owner can change these.');
+    Array.prototype.forEach.call(node.querySelectorAll('input, select, textarea, button.act'), function (el) {
+      el.disabled = true;
+      el.setAttribute('title', why);
+    });
+  }
   function paint() {
     var node = H.host;
     if (!node) return;
@@ -903,7 +912,12 @@ var CBShop = (function () {
       node._autosave = true;
       node.addEventListener('change', onChange);
     }
-    loadVault().then(prefillIdentity);
+    greyForActor(node);
+    loadVault()
+      .then(prefillIdentity)
+      .then(function () {
+        greyForActor(document.getElementById('vaulthost'));
+      });
   }
   /* ── WALK-REG 2026-10-16 R19: the fields save themselves (the pattern of Print setup, cap-print.js saveSoon): a changed field saves after a short pause,
      saves never overlap (one waits for the one in flight), and "✓ Saved" stands beside the field that was saved. The two Save buttons stay in the page,

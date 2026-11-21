@@ -102,20 +102,28 @@ function loginView(msg) {
     '<div class="card"><label>Business email</label><input data-cbsid="WRK003-I01" id="lg_email" placeholder="you@company.com">' +
     '<div id="otpwrap" style="display:none"><label>OTP</label><input data-cbsid="WRK003-I02" id="lg_otp" autocomplete="one-time-code" placeholder="6-digit code"></div>' +
     '<div class="row" style="margin-top:10px"><button data-cbsid="WRK003-B01" class="pri" id="lg_btn" onclick="doLogin()">Send code</button></div>' +
-    (msg ? '<div class="err">' + esc(msg) + '</div>' : '') +
+    '<div class="err" id="lg_err" data-testid="lg-err">' + (msg ? esc(msg) : '') + '</div>' +
     '</div>';
+}
+/** the sentence a refused call gives (the RFC 9457 problem body: detail, else message, else title), or the fallback — never silence */
+function problemWords(reply, fallback) {
+  var j = (reply && reply.j) || {};
+  return String(j.detail || j.message || j.title || fallback);
+}
+/** the line under the form: the form (and what was typed) stays where it is */
+function loginSay(words) {
+  if (el('lg_err')) el('lg_err').textContent = words;
 }
 var _stage = 'email';
 async function doLogin() {
   var email = (el('lg_email') || {}).value;
   email = (email || '').trim();
   if (_stage === 'email') {
-    if (!email.includes('@')) {
-      el('app').querySelector('.err') && 0;
-      return;
-    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return loginSay('Type your e-mail address in full, like you@company.com.');
     var regReply = await api('POST', '/api/entities/register', { email: email });
-    if (regReply.status === 0) return loginView(regReply.j.message);
+    /* only a 2xx opens the code box: a 429 or a 500 says its own sentence and the e-mail stays to try again */
+    if (regReply.status < 200 || regReply.status > 299) return loginSay(problemWords(regReply, 'We could not send the code just now. Wait a moment and try again.'));
+    loginSay('');
     _stage = 'otp';
     el('otpwrap').style.display = '';
     el('lg_btn').textContent = 'Verify & open inbox';

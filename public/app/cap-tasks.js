@@ -981,21 +981,22 @@
     var buyer = chit.kind === 'order_out'; /* the buyer confirms what CAME IN, offered the seller's claim */
     var offer = buyer && line.theirs > 0 ? Math.max(0, Math.round((line.theirs - (line.delivered || 0)) * 1000) / 1000) || line.remaining : line.remaining;
     var asked = false;
+    var qid = 'tk_dq_' + line.line_id; /* one id per line: two open panels never share a field (LENS2 1129) */
     host.innerHTML =
-      '<div class="tk-panel"><label class="sub" for="tk_dq">' +
+      '<div class="tk-panel"><label class="sub" for="' + qid + '">' +
       esc(T(buyer ? 'How much came in?' : 'How much went out?')) +
       ' <span class="mono">' +
       esc(line.unit || '') +
       '</span></label>' +
-      '<input data-cbsid="TSK003-I02" class="inp mono" id="tk_dq" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
+      '<input data-cbsid="TSK003-I02" class="inp mono" id="' + qid + '" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
       esc(offer) +
       '" autocomplete="off">' +
-      '<button data-cbsid="TSK003-B13" type="button" class="act" id="tk_dq_go" data-testid="tk-deliver-go">' +
+      '<button data-cbsid="TSK003-B13" type="button" class="act" id="' + qid + '_go" data-testid="tk-deliver-go">' +
       esc(T(buyer ? 'Received' : 'Record')) +
       '</button></div>';
-    $('tk_dq').focus();
-    $('tk_dq_go').onclick = function () {
-      var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.-]/g, ''));
+    $(qid).focus();
+    $(qid + '_go').onclick = function () {
+      var typed = parseFloat(String($(qid).value).replace(/[^0-9.-]/g, ''));
       if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
         return;
@@ -1007,7 +1008,7 @@
         $('tk_out').textContent = total + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered') + '. ' + T('Press again to record it anyway.');
         return;
       }
-      tkDeliver(chit, line, typed, $('tk_dq_go'));
+      tkDeliver(chit, line, typed, $(qid + '_go'));
     };
   }
   /** what went out on a line: POST /chits/:id/deliver-lines (lib/deliverline — events, never a stored total) */
