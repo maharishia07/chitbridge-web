@@ -123,11 +123,11 @@ const walk = async (w) => {
     await page.fill('[data-testid="cl-id-to"]', '100 0000 0000 0003');
     const trn = await text(page, '[data-testid="cl-idres-to"]');
     const notes = await text(page, '[data-testid="cl-notes-to"]');
-    /* the rice line names gst_free (Australia's word); the UAE pack has standard · zero_rated · exempt */
+    /* the rice line names gst_free (Australia's word); the UAE pack has standard · zero_rated · exempt. 1128: the lab sends a kind only to a pack that knows it (country-lab.html:1262), so AE says no note instead of refusing it */
     await page.selectOption('[data-testid="cl-kind-1"]', 'zero_rated'); await page.waitForTimeout(100);
     const notes2 = await text(page, '[data-testid="cl-notes-to"]');
     const ok = /GST/.test(sch) && /VAT/.test(sch) && /BAS/.test(ret) && /VAT201/.test(ret) && /boxes/.test(ret) && /ABN/.test(tid) && /TRN/.test(tid) && /no check digit/.test(tid)
-      && /valid TRN/.test(trn) && /not a supply kind this pack knows/.test(notes) && /Zero-rated/.test(notes2) && /simplified invoice/.test(inv) && /English accepted/.test(inv);
+      && /valid TRN/.test(trn) && /the engine added no note/.test(notes) && /Zero-rated/.test(notes2) && /simplified invoice/.test(inv) && /English accepted/.test(inv);
     return { ok, saw: trn + ' · ' + notes.slice(0, 60) + '… · then: ' + notes2.slice(0, 40) + '…' };
   });
 

@@ -107,9 +107,10 @@ const walk = async (w) => {
       await home('?edition=auditor');
       await w.step('E7-' + theme + '-' + vw, 'Auditor Home, ' + theme + ' at ' + vw + ' px -> AA contrast, no sideways scroll, chip and line whole, nothing over the bar, no app.html, copy in budget', async () => {
         const fails = [];
-        const tabs = vw === 390 ? await navs() : ['home'];
+        /* the one Home (1128 fold): .ix-on hides the old shell-nav-* buttons, so at 390 each drawn pillar row is opened in turn (the foot words open sheets, walked elsewhere) */
+        const tabs = vw === 390 ? await page.$$eval('.ix-item[data-pillar]', (bs) => bs.filter((b) => !b.hidden && b.offsetParent).map((b) => b.getAttribute('data-pillar'))) : ['home'];
         for (const t of tabs) {
-          if (vw === 390) { await page.click('[data-testid="shell-nav-' + t + '"]'); await page.waitForTimeout(250); }
+          if (vw === 390) { await page.click('.ix-item[data-pillar="' + t + '"] .ix-row', { timeout: 5000 }); await page.waitForTimeout(250); }
           const rec = await page.evaluate(measure);
           rec.filter((r) => !r.grad && r.ratio < r.need).forEach((r) => fails.push(t + ':' + r.text + ' ' + r.ratio));
         }
