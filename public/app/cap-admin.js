@@ -321,14 +321,17 @@ function misTaxSetMonth(m) {
   UI._taxLedger = null;
   loadTaxLedger();
 }
+/** the tax ledger of a month as the api answers it, or { error } in words when it cannot be read */
+async function misTaxRead(month) {
+  try {
+    return await api('taxLedger', { query: { month: month } });
+  } catch (e) {
+    return { error: (e && e.message) || 'Could not read the ledger.' };
+  }
+}
 async function loadTaxLedger() {
   const asked = misTaxMonth();
-  let reply;
-  try {
-    reply = await api('taxLedger', { query: { month: asked } });
-  } catch (e) {
-    reply = { error: (e && e.message) || 'Could not read the ledger.' };
-  }
+  const reply = await misTaxRead(asked);
   if (asked !== misTaxMonth()) return; /* the month moved while this read was out: its answer is not the month on the label (GF-03 M3); the newer read paints */
   UI._taxLedger = reply;
   const node = document.getElementById('misbody');
@@ -3915,6 +3918,18 @@ function profGuard(go, map, nameMap) {
   };
 }
 
+/** save each dirty section with the saver its screen owns; true when any save was refused (the saver answers false) */
+async function profSaveSections(map, secs) {
+  var refused = false;
+  for (var index = 0; index < secs.length; index++) {
+    var done = true;
+    if (map === PROF_FIELDS) done = await saveProfile(secs[index]);
+    else if (secs[index] === 'work') done = await saveSettings();
+    else if (secs[index] === 'assign') done = await saveAutoAssign();
+    if (done === false) refused = true;
+  }
+  return refused;
+}
 /** ⭐ EVERY OUTCOME CONFIRMS ITSELF. Athi: *"a confirmation message for both save and cancel."* Silence after
  *  discarding is indistinguishable from silence after saving, and the difference is the person's work. */
 async function profGuardDo(which) {
@@ -3930,15 +3945,7 @@ async function profGuardDo(which) {
     var secs = profDirtySections(map);
     /* ⚠️ WHICH SAVER DEPENDS ON WHICH SCREEN ASKED. A single saveProfile() here would have written Profile
        fields in response to a Settings prompt — the map is what tells them apart. */
-    var refused = false;
-    for (var index = 0; index < secs.length; index++) {
-      var done = true;
-      if (map === PROF_FIELDS) done = await saveProfile(secs[index]);
-      else if (secs[index] === 'work') done = await saveSettings();
-      else if (secs[index] === 'assign') done = await saveAutoAssign();
-      if (done === false) refused = true;
-    }
-    if (refused) {
+    if (await profSaveSections(map, secs)) {
       toast(tx('Not saved — the reason is on the screen. Nothing was lost; you are still here.'));
       return; /* reviews5 GF-03 M1: a refused save stays on the screen with the edit in it, never navigates away over a 'Saved.' */
     }
