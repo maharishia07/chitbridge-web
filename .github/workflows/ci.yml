@@ -104,7 +104,7 @@ jobs:
           node tests/fin111-statement-currency.test.cjs
           node tests/graph-apifeed.test.cjs
           node tests/grey-ready.test.cjs
-          node tests/index2-draws-manifest.test.cjs
+          node tests/home-draws-manifest.test.cjs
           node tests/ledger-columns.test.cjs
           node tests/list-count-total.test.cjs
           node tests/lock-words-shop-day.test.cjs

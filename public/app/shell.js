@@ -748,7 +748,7 @@
     });
   }
   /* THE one way to open a row (one open at a time; force = open it, a tap on an open row closes it). The More page's three rows are the default shape;
-     index2's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
+     Home's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
   var MORE_ROWS = { items: '.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup', key: 'data-area', row: '.cbsh-row', panel: '' };
   function openRow(scope, key, force, shape) {
     var rows = shape || MORE_ROWS, now = '';

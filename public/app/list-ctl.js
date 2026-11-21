@@ -761,6 +761,15 @@
       buckets[key].rows.push(item);
       buckets[key].items.push(it);
     });
+    /* a group that opens folded (g.folded(key, rows) → true, e.g. a long "Doing well"): decided once per group per list, and only while the list shows more than one group, so a narrowing to that one group never leaves it shut */
+    if (g.folded && I.r && order.length > 1) {
+      I.r.gseen = I.r.gseen || {};
+      order.forEach(function (key) {
+        if (I.r.gseen[key]) return;
+        I.r.gseen[key] = 1;
+        if (safe(function () { return g.folded(key, buckets[key].rows); }, false)) I.r.gcol[key] = true;
+      });
+    }
     if (g.order)
       order.sort(function (x, y) {
         return g.order.indexOf(x) - g.order.indexOf(y);

@@ -642,18 +642,17 @@ const CAP_CATALOGUE = [
   },
   {
     id: 'home',
-    name: 'Home (index2)',
+    name: 'Home (the one page)',
     icon: '🏠',
     load: 'eager',
     maturity: 1,
     target: 2,
     gov: null,
-    governedUnder: '— reads the same card facts as the classic Home (nothing to govern); the switch is the viewer own preference, no setting key yet (listed for cb-settings)',
-    blurb: 'The crisp one-page Home beside the classic one: a Do-first row, six pillar rows as an accordion, Labs · Standards · Setup in the foot (home2.js, index2.html, manifest.json home2).',
+    governedUnder: '— reads the same card facts the Home cards always did (nothing to govern); one Home, no switch',
+    blurb: 'The one Home (the long Home and index2 were folded in, 21 Nov): signed out, six tiles + Labs · Standards · Setup that open an in-page panel (live or coming); signed in, a Do-first row and six pillar rows as an accordion (home2.js, index.html, manifest.json home2).',
     features: [
-      { n: 'index2 — Do first + six pillar rows, one open at a time, pillar sheet (CBHome2)', s: 'done' },
-      { n: 'Per-viewer switch between index2 and the classic Home', s: 'done' },
-      { n: 'A setting key for the switch (GOV layer)', s: 'backlog' }
+      { n: 'One Home — Do first + six pillar rows, one open at a time, pillar sheet (CBHome2)', s: 'done' },
+      { n: 'Signed-out showcase: six tiles, hero, in-page live/coming panel (CBHome2 out)', s: 'done' }
     ]
   },
   {

@@ -85,7 +85,7 @@ function rawColours(text) {
   check(badStatus.length === 0, 'legend: every feature has a name and a status done, partial or backlog' + (badStatus.length ? ' (not: ' + badStatus.slice(0, 3).join(' | ') + ')' : ''));
   const home = catalogue.filter((entry) => entry.id === 'home')[0];
   check(!!home && home.load === 'eager' && home.features.some((feature) => /CBHome2/.test(feature.n) && feature.s === 'done'), 'legend: the Home (index2) capability is listed, eager, with CBHome2 done');
-  check(!!home && home.features.some((feature) => feature.s === 'backlog'), 'legend: what is not built (the setting key for the switch) is listed as backlog, not claimed');
+  check(!!home && home.features.every((feature) => feature.s === 'done') && home.features.length >= 2, 'legend: the Home lists the accordion and the signed-out showcase, both done (the switch and its setting key are gone)');
   check(/data-cbsid="SCR006-C01"/.test(source) && /data-cbsid="SCR006-C02"/.test(source), 'legend: the panel and its overlay carry their register codes SCR006-C01 and SCR006-C02');
 }
 
@@ -104,21 +104,9 @@ function rawColours(text) {
   const refusing = { getItem() { throw new Error('storage refused'); }, setItem() { throw new Error('storage refused'); } };
   const normal = load(memory);
   const api = normal.api;
-  check(!!api && ['pref', 'setPref', 'gate', 'switchHTML', 'wireSwitch', 'mount', 'setWork', 'headline'].every((name) => typeof api[name] === 'function'), 'home2: CBHome2 keeps its eight public functions');
-  /* the viewer's own choice */
-  check(api.pref() === '' && api.gate() === false && normal.replaced.length === 0, 'home2: no choice yet means the classic Home stays (gate false, no redirect)');
-  api.setPref('new');
-  check(api.pref() === 'new' && api.gate() === true && normal.replaced[0] === '/index2.html', 'home2: a viewer who chose the new Home is sent to /index2.html');
-  const blocked = load(refusing);
-  let threw = false;
-  let blockedGate;
-  try { blocked.api.setPref('new'); blockedGate = blocked.api.gate(); } catch (failure) { threw = true; }
-  check(!threw && blocked.api.pref() === '' && blockedGate === false, 'home2: a browser that refuses storage answers "" and stays on the classic Home, no throw');
-  /* the switch link, both ways round */
-  const toNew = api.switchHTML('classic');
-  const toClassic = api.switchHTML('new');
-  check(/data-to="new"/.test(toNew) && /href="\/index2\.html"/.test(toNew) && /Try the new Home/.test(toNew), 'home2: on the classic Home the link says "Try the new Home" and goes to /index2.html');
-  check(/data-to="classic"/.test(toClassic) && /href="\/"/.test(toClassic) && /Back to classic/.test(toClassic), 'home2: on the new Home the link says "Back to classic" and goes to /');
+  check(!!api && ['mount', 'setWork', 'headline'].every((name) => typeof api[name] === 'function'), 'home2: CBHome2 keeps its three public functions');
+  /* one Home: no choice, no gate, no switch (retired 21 Nov) */
+  check(api.pref === undefined && api.gate === undefined && api.switchHTML === undefined && normal.replaced.length === 0, 'home2: no layout switch is left (one Home)');
   /* headline: a row's one figure and word */
   function card(state, fact, name) {
     return {
@@ -134,7 +122,7 @@ function rawColours(text) {
   const panel = (cards) => ({ querySelectorAll: () => cards });
   const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
   check(same(api.headline(panel([])), { n: '', w: '', full: '', tone: 'q', amber: 0 }), 'home2: a row with no card has no figure and no word');
-  check(same(api.headline(panel([card('not_started', '', 'Till')])), { n: '', w: 'Set up ›', full: 'Set up Till', tone: 'q', amber: 0 }), 'home2: a row with only not-started cards offers its first step, never a 0');
+  check(same(api.headline(panel([card('not_started', '', 'Till')])), { n: '', w: '', full: 'Set up Till', tone: 'q', amber: 0 }), 'home2: a row with only not-started cards says nothing on its line (Start here names the steps), never a 0 or the same words six times');
   check(same(api.headline(panel([card('in_use', '12 bills today · 4 paid', 'Till'), card('needs_you', '3 invoices overdue · A$40', 'Dues')])), { n: '3', w: 'invoices overdue', full: '3 invoices overdue · A$40', tone: 'dn', amber: 1 }), 'home2: the needs-you fact leads: its number, its first two words, the whole fact as the title, amber 1');
   check(same(api.headline(panel([card('in_use', '12 bills today · 4 paid', 'Till')])), { n: '12', w: 'bills today', full: '12 bills today · 4 paid', tone: '', amber: 0 }), 'home2: with nothing needing you the first fact of a card in use leads');
   check(same(api.headline(panel([card('in_use', '0 open', 'Till')])), { n: '', w: '0 open', full: '0 open', tone: '', amber: 0 }), 'home2: a leading 0 is never shown as the figure');
