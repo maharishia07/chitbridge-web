@@ -42,13 +42,21 @@ const audit = (page, hostId) => page.evaluate((hostId) => {
 }, hostId);
 
 /** page: the walk's own unless another context's page is given (the spin matrix opens one per place) · restore: an async function that brings the screen back after each theme/width change (the workshop repaints over a window) */
+/** paint a theme on the page: the staff pages through CBAvatar; the customer shop (CUSTOMER-DELINK: no avatar) through CBCustomerBar.theme, after clearing the last theme's inline tokens; no t = the page's own look back */
+async function setTheme(page, t) {
+  await page.evaluate((key) => {
+    if (window.CBAvatar) return CBAvatar.applyTheme(key || CBAvatar.themeKey());
+    document.documentElement.removeAttribute('style');
+    return CBCustomerBar.theme(key || 'cream');
+  }, t || null);
+}
 async function rule13(w, id, label, hostId, page, restore) {
   page = page || w.page;
   for (const theme of ['cream', 'dark']) {
     for (const width of [1366, 390]) {
       await page.setViewportSize({ width, height: width > 500 ? 900 : 844 });
       await w.step(id + '·' + theme + '·' + width, label + ' · ' + theme + ' · ' + width + ' px -> AA contrast, no clipping, no inner sideways scroll, nothing over a control, no app.html link, copy in budget', async () => {
-        await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(150);
+        await setTheme(page, theme); await page.waitForTimeout(150);
         if (restore) await restore();   /* a workshop screen (a window, a pane) is repainted away by a theme change: the caller puts it back before it is measured */
         const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need), a = await audit(page, hostId);
         const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x),
@@ -57,8 +65,8 @@ async function rule13(w, id, label, hostId, page, restore) {
       });
     }
   }
-  await page.evaluate(() => { CBAvatar.applyTheme(CBAvatar.themeKey()); }).catch(() => {});
+  await setTheme(page).catch(() => {});
   await page.setViewportSize({ width: 1366, height: 900 });
 }
 
-module.exports = { rule13, audit };
+module.exports = { rule13, audit, setTheme };
