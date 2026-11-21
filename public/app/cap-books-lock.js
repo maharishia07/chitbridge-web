@@ -108,7 +108,7 @@ function bkLockOpenButton(month, rule) {
       '</button>'
   );
 }
-/** Open again + Close for good of a soft-locked month; Open again is disabled with the server's sentence when it may not */
+/** Open again + Close month of a soft-locked month; Open again is disabled with the server's sentence when it may not */
 function bkLockSoftButtons(month, rule) {
   var openMay = rule.openMay,
     blockWhy = rule.blockWhy;
@@ -122,7 +122,7 @@ function bkLockSoftButtons(month, rule) {
       '" onclick="bkLockDo(\'hard\',' +
       month +
       ')">⛔ ' +
-      tx('Close for good') +
+      tx('Close month') +
       '</button>'
   );
 }
@@ -132,7 +132,7 @@ function bkLockHardButton(month) {
       '<button data-cbsid="CMP042-B28"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-reopen-month-' + month + '" onclick="bkLockReopen(' + month + ', true)" title="' + esc(tx('Only the last closed month can be reopened, with a reason; it is logged.')) + '">🔓 ' + tx('Reopen month') + '</button>'
   );
 }
-/** the Lock button of an open month, or Open again + Close for good of a soft-locked one (owner only), or Reopen month of the last closed one */
+/** the Lock button of an open month, or Open again + Close month of a soft-locked one (owner only), or Reopen month of the last closed one */
 function bkLockButtonsHTML(isOwner, state, month, rule) {
   if (!isOwner) return '';
   if (state === 'open') return bkLockOpenButton(month, rule);
@@ -165,7 +165,7 @@ function bkLockRowsPaint() {
   if (!el) return;
   if (typeof fxLockLine === 'function') fxLockLine();
   var foot = document.getElementById('lk_foot');
-  if (foot) foot.textContent = !own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. Close for good never opens.');
+  if (foot) foot.textContent = !own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. A closed month opens again only if it is the newest closed month: the owner gives a reason and it is logged.');
   var rows = bkMonths()
     .map(function (item, index) {
       return bkLockRowHTML(item, index, own);
@@ -229,13 +229,13 @@ function bkReasonGo() {
   closeModal();
   return BK.reasonGo ? BK.reasonGo(reason) : undefined;
 }
-/** the question a Lock or Close for good asks first (Cancel sends nothing) */
+/** the question a Lock or Close month asks first (Cancel sends nothing) */
 function bkLockConfirm(what, monthName, yearName) {
   return what === 'hard'
-    ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: yearName })), yes: tx('Close for good') }
+    ? { title: tx('Close month?'), body: esc(txf('{m} {fy} will be closed. Only the owner can open the newest closed month again, with a reason, and it is logged.', { m: monthName, fy: yearName })), yes: tx('Close month') }
     : { title: txf('Lock {m} {fy}?', { m: monthName, fy: yearName }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }; /* E12: Lock is a commit, so it asks first in the library's confirm */
 }
-/** the api route a Lock · Close for good · Open again · Reopen month press calls */
+/** the api route a Lock · Close month · Open again · Reopen month press calls */
 function bkLockRoute(what) {
   if (what === 'reopen') return 'booksReopenMonth';
   return what === 'unlock' ? 'booksUnlock' : 'booksLock';
@@ -274,7 +274,7 @@ async function bkLockDo(what, period, reason, amend) {
   var monthName = tx(bkMonths()[period - 1] || String(period)),
     calendarYear = String(((lockState.info || {})[fiscalYear + '|' + period] || {}).start_date || fiscalYear).slice(0, 4); /* C-F-02: the month's own year (Jul 2026), never the financial-year key (2026-27) */
   if ((what === 'unlock' || what === 'reopen') && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
-  /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
+  /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close month asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
   var btn = document.querySelector('[data-testid="lk-' + what + '-' + period + '"]');
   return CBAction.run(

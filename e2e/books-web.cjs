@@ -811,7 +811,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const sep = String((new Date().getMonth() + 9) % 12 + 1);
   ok(await p.locator('[data-testid^="lk-row-"]').count() === 12 && await p.inputValue('[data-testid="lk_fy"]') === FYNOW, 'Month lock: the financial year is a picker on the current year, and the twelve months are rows');
   ok(await p.locator('[data-testid="lk-state-' + sep + '"][data-state="open"]').count() === 1 && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0 && await p.locator('[data-testid="lk-lock-' + sep + '"]').count() === 1, 'an open month offers Lock, not Open again');
-  ok(/Close for good/.test(await p.textContent('[data-testid="lk_note"]')) && /never opens again/.test(await p.textContent('[data-testid="lk_note"]')), 'Close for good is explained in one line');
+  ok(/closed month opens again only/.test(await p.textContent('[data-testid="lk_note"]')) && /newest closed month/.test(await p.textContent('[data-testid="lk_note"]')), 'Close month is explained in one line');
   await p.click('[data-testid="lk-lock-' + sep + '"]');
   await p.waitForFunction((n) => /Locked/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 1 && await p.locator('[data-testid="lk-hard-' + sep + '"]').count() === 1, 'this month locked: its row now says Locked and offers Open again and Close for good');
@@ -849,7 +849,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(S.lastLock === b4, 'close for good: Cancel sends nothing');
   await p.click('[data-testid="lk-hard-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
   await p.click('[data-testid="confirm-ok"]');
-  await p.waitForFunction((n) => /Closed for good/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
+  await p.waitForFunction((n) => /Closed/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.lastLock !== b4 && S.lastLock.body.hard === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0, 'close for good: asked, then sent as a hard lock; a closed month offers nothing more');
   S.locked[+sep] = false; S.hard[+sep] = false;
 
