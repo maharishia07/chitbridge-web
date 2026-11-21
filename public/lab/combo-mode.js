@@ -31,6 +31,14 @@ var MODLAB = { pid: null, q: '', building: false, draft: [], name: '', price: ''
   MODLABPREV = [];
 /** ⭐ the saved-combo library (b266) — loaded once per open, refreshed after a save or a delete */
 var COMBO_LIB = { items: null, loaded: false };
+/** ⭐ WALK-H H-F-01/02: a combo's money reads in the SHOP's currency with that currency's own minor units (A$25.50, never A$26) through
+ *  CBLocale.money, the one formatter; shopCurrency is the Offer Lab page's (GET /api/entities/me), '' = the library answers the shop's own country. */
+function comboMoney(n) {
+  return CBLocale.money(Number(n), shopCurrency || '');
+}
+function comboSign() {
+  return CBLocale.moneySign(shopCurrency || '');
+}
 /**
  * ⚠️⚠️⚠️ [OFFR-03→OFFR-06] "CREATE NEW COMBO" — from a static example to a real builder + saved library.
  *
@@ -202,6 +210,7 @@ function modLabSetGroups(newGroups) {
  *     offer, because that path only ever edits a product that already exists.
  */
 function comboExampleFresh() {
+  if (otherShopMoney()) return comboExampleNeutral();
   return {
     name: 'Tiffin Combo',
     price: 110,
@@ -235,6 +244,18 @@ function comboExampleFresh() {
           { name: 'Extra chutney', price: 15 }
         ]
       }
+    ]
+  };
+}
+/** WALK-H H-F-02: no India sample on a non-India shop — a trade-neutral combo (main + drink + extras), prices in the shop's own units */
+function comboExampleNeutral() {
+  return {
+    name: 'Lunch combo',
+    price: 12,
+    groups: [
+      { name: 'Choose the main', required: true, max: 1, options: [{ name: 'Main 1', price: 0 }, { name: 'Main 2', price: 0 }, { name: 'Main 3', price: 0 }] },
+      { name: 'Choose a drink', required: true, max: 1, options: [{ name: 'Drink 1', price: 0 }, { name: 'Drink 2', price: 0 }] },
+      { name: 'Add extras', required: false, max: 2, options: [{ name: 'Extra 1', price: 1 }, { name: 'Extra 2', price: 2 }] }
     ]
   };
 }
@@ -306,7 +327,7 @@ async function modLabCreateNew() {
     toastSay('Could not create "' + name + '": ' + ((response.body && response.body.message) || 'try again.'));
     return;
   }
-  toastSay('Created "' + name + '" — ' + M0(priceNum) + ', with its combo groups already on it.');
+  toastSay('Created "' + name + '" — ' + comboMoney(priceNum) + ', with its combo groups already on it.');
   MODLAB.building = false;
   MODLAB.draft = [];
   MODLAB.name = '';
@@ -607,7 +628,7 @@ function comboGroupsEditorHTML(groups) {
               ',' +
               optionIndex +
               ',{name:this.value})">' +
-              '<div class="inp" style="width:100px;height:36px"><span>₹</span><input type="number" step="0.01" value="' +
+              '<div class="inp" style="width:100px;height:36px"><span>' + esc(comboSign()) + '</span><input type="number" step="0.01" value="' +
               entry.price +
               '" onchange="modLabSetOption(' +
               index +
@@ -714,7 +735,7 @@ function paintComboTillPreview() {
   if (node) node.textContent = preview.name || 'Preview';
   /* ⭐ the same "Separately ₹X" banner spot the till's #combohead sits in — here it just names the combo's
    * own price, since a draft has no "separate items" to compare against yet (see PATCHNOTE below). */
-  var head = '<div class="combohead">' + esc(preview.name || 'This combo') + (preview.price != null ? '<b>' + M0(Number(preview.price)) + '</b>' : '') + '</div>';
+  var head = '<div class="combohead">' + esc(preview.name || 'This combo') + (preview.price != null ? '<b>' + comboMoney(Number(preview.price)) + '</b>' : '') + '</div>';
   body.innerHTML =
     head +
     CBVariant.chooserHTML(preview.groups, MODLABPREV, {
@@ -782,7 +803,7 @@ function comboLibraryRowsHTML(filterQ) {
       '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">' +
       '<div><div style="font-weight:700">' +
       esc(template.name) +
-      (template.price != null ? ' · ' + M0(Number(template.price)) : '') +
+      (template.price != null ? ' · ' + comboMoney(Number(template.price)) : '') +
       '</div>' +
       '<div style="font-size:12px;color:var(--muted)">' +
       groupCount +
@@ -832,7 +853,7 @@ function comboLibraryRowsHTML(filterQ) {
       '<div><div style="font-weight:700">' +
       esc(product.name) +
       ' · ' +
-      M0(product.price) +
+      comboMoney(product.price) +
       '</div>' +
       '<div style="font-size:12px;color:var(--muted)">' +
       groupCount +
@@ -973,7 +994,7 @@ function modsTabHTML(pendingDraft) {
           chips +
           '</span></span>' +
           '<span class="rt">' +
-          (maxUp ? 'up to +' + M0(maxUp) : 'no price change') +
+          (maxUp ? 'up to +' + comboMoney(maxUp) : 'no price change') +
           '</span><span class="go">›</span></button>';
       });
     });
@@ -1095,8 +1116,8 @@ function paintModLab() {
       '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">' +
       '<input class="inp" style="flex:2;min-width:180px;height:40px;font-weight:700" value="' +
       esc(MODLAB.name) +
-      '" placeholder="Combo name — e.g. ‘Tiffin Combo’" onchange="modLabSetName(this.value)">' +
-      '<div class="inp" style="flex:1;min-width:120px;height:40px"><span>₹</span><input type="number" step="0.01" value="' +
+      '" placeholder="Combo name — e.g. ‘' + (otherShopMoney() ? 'Lunch combo' : 'Tiffin Combo') + '’" onchange="modLabSetName(this.value)">' +
+      '<div class="inp" style="flex:1;min-width:120px;height:40px"><span>' + esc(comboSign()) + '</span><input type="number" step="0.01" value="' +
       esc(MODLAB.price) +
       '" placeholder="Price" onchange="modLabSetPrice(this.value)"></div>' +
       '</div>';
@@ -1149,7 +1170,7 @@ function paintModLab() {
     '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">' +
     esc(catName(node.cat) || '—') +
     ' · sells at ' +
-    M0(node.price) +
+    comboMoney(node.price) +
     '</div>' +
     comboGroupsEditorHTML(groups) +
     '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>' +
