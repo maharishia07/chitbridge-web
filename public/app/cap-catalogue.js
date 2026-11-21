@@ -1065,24 +1065,48 @@ var CBCatalogueApp = (function () {
       '</div>'
     );
   }
+  /** the pack's short word of a kind id ("Zero-rated"), or the id itself */
+  function kindWord(question, id) {
+    var found = ((question && question.kinds) || []).filter(function (row) { return row.id === id; })[0];
+    return found ? found.short : id;
+  }
+  /** the 0% question on an item: the pack's words, one button per kind, no default, no "confirm all"; a tap answers THIS item and goes through ratePickBare's one ask-first PATCH */
+  function askKind(item, question) {
+    var data = pData(item),
+      body = cbKindAskHTML(question, { chosen: data.tax_kind || '', pick: function (id) { return "CBCatalogueApp.ratePickKind('" + id + "')"; }, cls: 'choice', tid: 'cat-kind-ask-body', sid: 'SCR046-B01' });
+    /* catalogue.html has no modal(): the question then opens in the sheet's own answer line, the same buttons */
+    if (typeof modal === 'function')
+      return modal('<div class="mhd"><div class="t">' + esc(pName(data) + ': ' + taxWord() + ' 0%') + '</div></div><div class="mbody" data-testid="cat-kind-ask">' + body + '</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' + esc(T('Cancel')) + '</button></div>', true, { key: 'cb_mv_catkind', minW: 360, minH: 200 });
+    var slot = document.getElementById('cat_sheet_out');
+    if (slot) slot.innerHTML = '<div data-testid="cat-kind-ask">' + body + '</div>';
+  }
+  /** a kind tapped in that question: the same ask-first PATCH, now with the kind beside the rate */
+  function ratePickKind(id) {
+    if (typeof closeModal === 'function') closeModal();
+    return ratePickBare(0, null, id);
+  }
   /** a pack rate tapped on an item: the same ask-first and ONE PATCH as a slab, the bare rate (resolve's own rung 1b) */
-  function ratePickBare(rate, button) {
+  function ratePickBare(rate, button, kind) {
     var item = S.sel ? itemOf(S.sel) : null;
     if (!item) return;
+    /* SUPPLY KIND: a rate of 0 is not an answer — the pack's own question first (one button per kind, none preselected), then the same ask-first PATCH with the kind beside the rate. A pack that names no 0% kind asks nothing. */
+    var question = Number(rate) === 0 && typeof cbKindAskOf === 'function' ? cbKindAskOf(shopReg()) : null;
+    if (question && !kind) return askKind(item, question);
     if (!rateMay().ok) {
       say('cat_sheet_out', rateMay().why, 'warn');
       return;
     }
+    kind = kind || '';
     var data = pData(item),
-      words = taxWord() + ' ' + rate + '%';
-    if (Number(data.gst_rate) === rate) {
+      words = taxWord() + ' ' + rate + '%' + (kind ? ' (' + kindWord(question || cbKindAskOf(shopReg()), kind) + ')' : '');
+    if (Number(data.gst_rate) === rate && (data.tax_kind || '') === kind) {
       say('cat_sheet_out', T('{n} already carries {w}.', { n: pName(data), w: words }), 'ok');
       return;
     }
     return CBAction.run(
       button,
       function () {
-        return api('prodEdit', { params: { id: S.sel }, body: { item_data: { gst_rate: rate }, merge: true } });
+        return api('prodEdit', { params: { id: S.sel }, body: { item_data: kind ? { gst_rate: rate, tax_kind: kind } : { gst_rate: rate }, merge: true } });
       },
       {
         key: 'cat-rate-set',
@@ -1952,6 +1976,7 @@ var CBCatalogueApp = (function () {
     changed: changed,
     ratePickOpen: ratePickOpen,
     ratePickBare: ratePickBare,
+    ratePickKind: ratePickKind,
     ratePick: ratePick,
     state: function () {
       return S;

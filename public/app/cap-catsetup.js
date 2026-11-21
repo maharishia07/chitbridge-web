@@ -2846,7 +2846,7 @@ function catsetTaxWords_(id) {
   })[0];
   var slab = row ? CBTaxSlab.slabOf({ definition_id: row.id, name: row.name, rules: row.rules || {} }) : null;
   if (!slab) return tx('no default');
-  return CBTaxSlab.describe({ source: 'catalogue', rate: slab.rate, nil_kind: slab.nil_kind }, { short: true, country: (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '' });
+  return CBTaxSlab.describe({ source: 'catalogue', rate: slab.rate, nil_kind: slab.nil_kind, tax_kind: slab.tax_kind }, { short: true, country: (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '' });
 }
 /** how many products a changed default reaches: those resolving to nothing or to the catalogue today (null when the products are not read yet) */
 function catsetTaxFollowers_() {

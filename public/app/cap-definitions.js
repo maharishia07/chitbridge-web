@@ -1017,6 +1017,11 @@ function cbDefSetRule(k, v, num) {
   if (parts.length === 1) {
     if (v === '' || v == null) delete R[k];
     else R[k] = v;
+    /* SUPPLY KIND: the question exists only at 0%; a kind never rides with a rate it does not mean (the server refuses it) */
+    if (k === 'rate' && CBDEF_FORM.kind === 'tax') {
+      if (!cbDefRateIsZero()) delete R.tax_kind;
+      cbDefKindRepaint();
+    }
     return;
   }
   var head = parts[0],
@@ -1030,6 +1035,29 @@ function cbDefSetRule(k, v, num) {
   }
   if (!R[head] || typeof R[head] !== 'object') R[head] = {};
   R[head][tail] = v;
+}
+/** is the slab's rate typed and 0 (a blank rate is not 0: it is not answered yet) */
+function cbDefRateIsZero() {
+  var rate = CBDEF_FORM && CBDEF_FORM.rules ? CBDEF_FORM.rules.rate : undefined;
+  return rate !== undefined && rate !== null && rate !== '' && Number(rate) === 0;
+}
+/** the question under a 0% slab's rate: the shop pack's own words (cbKindAskHTML), one button per kind, none preselected; empty when the rate is not 0 or the pack names no 0% kind */
+function cbDefKindHTML() {
+  var f = CBDEF_FORM;
+  if (!f || f.kind !== 'tax' || !cbDefRateIsZero() || typeof cbKindAskOf !== 'function') return '';
+  var ask = cbKindAskOf(shopReg());
+  return ask ? cbKindAskHTML(ask, { chosen: f.rules.tax_kind || '', suggested: f.suggested_kind || '', pick: function (id) { return "cbDefSetKind('" + id + "')"; }, tid: 'cbdef-kind', sid: 'SCR003-B01' }) : '';
+}
+function cbDefKindRepaint() {
+  var box = document.getElementById('cbdef_kind');
+  if (box) box.innerHTML = cbDefKindHTML();
+}
+/** a kind tapped (or tapped again to take it back): the slab stores it beside the rate, in the pack's own id */
+function cbDefSetKind(id) {
+  if (!CBDEF_FORM || !CBDEF_FORM.rules) return;
+  if (CBDEF_FORM.rules.tax_kind === id) delete CBDEF_FORM.rules.tax_kind;
+  else CBDEF_FORM.rules.tax_kind = id;
+  cbDefKindRepaint();
 }
 function cbDefGetRule(k) {
   var R = CBDEF_FORM.rules,
@@ -1614,6 +1642,7 @@ function cbDefFormHTML() {
       })
       .join('') +
     (f.kind === 'requirement' ? '<div class="cbdef-w2">' + cbDefStdChipsHTML() + '</div>' : '') +
+    (f.kind === 'tax' ? '<div class="cbdef-w2" id="cbdef_kind">' + cbDefKindHTML() + '</div>' : '') +
     /**
      * ⚠️⚠️ "NOTE — WHERE WILL IT REFLECT?" (Athi, 2026-09-03). Nowhere, was the answer. It was saved on every
      * definition and read back by exactly one thing: this form. Neither the Catalogue setup row nor the
