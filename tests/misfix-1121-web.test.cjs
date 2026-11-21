@@ -11,7 +11,7 @@ const cut = (src, head, end) => { const i = src.indexOf(head); assert.ok(i >= 0,
 /* F-54 */
 const page = read('accounts.html');
 const nav = { innerHTML: '' }, store = {};
-const ctx = { window: { innerHeight: 768, innerWidth: 1366 }, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } }, esc: (x) => String(x), tx: (x) => x, $: () => nav, typeof: undefined };
+const ctx = { window: { innerHeight: 768, innerWidth: 1366 }, localStorage: { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } }, esc: (x) => String(x), tx: (x) => x, $: () => nav, typeof: undefined, viewOnlyLogin: () => false /* red1128: the nav now greys shut views (WALK M); a full login shuts none */ };
 ctx.NAV = [['todo', 'To do', ''], ['overview', 'Overview', ''], ['daybook', 'Day book', ''], ['lock', 'Month lock', ''], ['packs', 'Packs', '']];
 vm.createContext(ctx);
 vm.runInContext(cut(page, 'const NAV_GROUPS', 'const navFolded').replace('const NAV_GROUPS', 'var NAV_GROUPS'), ctx);
