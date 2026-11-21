@@ -37,7 +37,8 @@ if (typeof EP !== 'undefined') {
 var MIV = { st: null, f: null, pre: null, dec: {}, plan: null, out: null, err: '', busy: false, gen: 0 };
 var MI_SOURCES = [
   ['xero', 'Xero'],
-  ['qbo', 'QuickBooks Online']
+  ['qbo', 'QuickBooks Online'],
+  ['myob', 'MYOB — not built yet, export a Xero-style CSV', true] /* AP-F-06: greyed with its sentence; the api refuses it in the same words (api lib/move-in sourcesFor) */
 ];
 var MI_KINDS = [
   ['accounts', 'Chart of accounts'],
@@ -198,7 +199,7 @@ function miSel(id, field, opts, selected) {
     '\', this.value)">' +
     opts
       .map(function (item) {
-        return '<option value="' + esc(item[0]) + '"' + (item[0] === selected ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>';
+        return '<option value="' + esc(item[0]) + '"' + (item[0] === selected ? ' selected' : '') + (item[2] ? ' disabled' : '') + '>' + esc(tx(item[1])) + '</option>';
       })
       .join('') +
     '</select>'
