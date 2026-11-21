@@ -71,6 +71,15 @@ t('the pack\'s words are escaped and the page wires both doors to the one builde
   assert.ok(/if \(!cbDefRateIsZero\(\)\) delete R\.tax_kind/.test(read('cap-definitions.js')), 'a kind never rides with a rate that is not 0');
 });
 
+t('a rate tap on an item: a non-zero rate sends tax_kind null (the stale zero-rated or exempt answer is deleted), a rate of 0 sends the rate alone, a kind rides only with its own tap', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-catalogue.js'), 'utf8'), at = src.indexOf('function ratePatchOf'), end = src.indexOf('\n  }\n', at) + 4;
+  const patchOf = new Function(src.slice(at, end) + '; return ratePatchOf;')();
+  assert.deepStrictEqual(patchOf(5), { gst_rate: 5, tax_kind: null });
+  assert.deepStrictEqual(patchOf(0), { gst_rate: 0 });
+  assert.deepStrictEqual(patchOf(0, 'exempt'), { gst_rate: 0, tax_kind: 'exempt' });
+  assert.ok(/item_data: ratePatchOf\(rate, kind\)/.test(src), 'the rate button sends that body');
+});
+
 if (process.env.CB_ENGINES_DIR) {
   const IN = require(path.join(path.resolve(process.env.CB_ENGINES_DIR), 'src', 'reg-in'));
   t('India 1.1.0: nil, exempt and non-GST, the pack\'s own question', () => {

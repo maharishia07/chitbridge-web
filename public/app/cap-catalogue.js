@@ -1085,6 +1085,11 @@ var CBCatalogueApp = (function () {
     if (typeof closeModal === 'function') closeModal();
     return ratePickBare(0, null, id);
   }
+  /** the PATCH body of a rate tap: a kind applies only at rate 0, so a non-zero rate sends tax_kind: null (merge-patch deletes it) and the old zero-rated or exempt answer cannot keep billing 0% (EGM-T1; the server clears it too) */
+  function ratePatchOf(rate, kind) {
+    if (kind) return { gst_rate: rate, tax_kind: kind };
+    return Number(rate) !== 0 ? { gst_rate: rate, tax_kind: null } : { gst_rate: rate };
+  }
   /** a pack rate tapped on an item: the same ask-first and ONE PATCH as a slab, the bare rate (resolve's own rung 1b) */
   function ratePickBare(rate, button, kind) {
     var item = S.sel ? itemOf(S.sel) : null;
@@ -1106,7 +1111,7 @@ var CBCatalogueApp = (function () {
     return CBAction.run(
       button,
       function () {
-        return api('prodEdit', { params: { id: S.sel }, body: { item_data: kind ? { gst_rate: rate, tax_kind: kind } : { gst_rate: rate }, merge: true } });
+        return api('prodEdit', { params: { id: S.sel }, body: { item_data: ratePatchOf(rate, kind), merge: true } });
       },
       {
         key: 'cat-rate-set',
@@ -1117,7 +1122,10 @@ var CBCatalogueApp = (function () {
           if (reply && reply.item) {
             var index = S.items.indexOf(item);
             if (index >= 0) S.items[index] = reply.item;
-          } else data.gst_rate = rate;
+          } else {
+            data.gst_rate = rate;
+            if (Number(rate) !== 0) delete data.tax_kind;
+          }
           paintTaxRow();
           if (S.list) S.list.refresh();
           say('cat_sheet_out', T('{n} now carries {w}.', { n: pName(data), w: words }), 'ok');
