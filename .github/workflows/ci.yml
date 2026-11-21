@@ -375,6 +375,8 @@ jobs:
           node tests/books-grant-parts.test.cjs
           node tests/books-practice-parts.test.cjs
           node tests/cap-mark-sheet.test.cjs
+          node tests/aud-f73-auditor-tax-return.test.cjs
+          node tests/aud-f70-take-mark-off.test.cjs
           node tests/shrink-w4-parts.test.cjs
           node e2e/books-parts.test.cjs
           node e2e/assign-bar.test.cjs

@@ -169,7 +169,7 @@
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
   /** the Bank tab opens for an acting ADVISER (reads and posts through /api/books/bank/*, /events and /payments) and for an AUDITOR (reads only: bank/log and the kept statements; W15-71, every write control is left out) */
   function tabOpen(tab) {
-    if (context && context.role === 'auditor') return tab === 'bank' || tab === 'lock'; /* the auditor's other reads are the network's own books view; here only what needs the books page: the Bank and the Month lock, read only */
+    if (context && context.role === 'auditor') return tab === 'bank' || tab === 'lock' || tab === 'gstclose'; /* the auditor's other reads are the network's own books view; here only what needs the books page, read only: the Bank, the Month lock and the tax return (F-73: GET /returns is on the grant's read list, peGstView shows a reader the return and never the Close card) */
     return TABS.indexOf(tab) >= 0 || (tab === 'bank' && !!context && context.role === 'adviser');
   }
   function mayCall(path) {
