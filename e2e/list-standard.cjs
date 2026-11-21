@@ -37,6 +37,7 @@ const EXCEPTIONS = {
   'app/cap-books.js::bkTable': 'the FINAL ACCOUNTS printout: trial balance, profit and loss and balance sheet are statements with a totals foot, read top to bottom and printed.',
   'app/cap-books.js::statementHTML': 'a party STATEMENT printout (opening … running balance … closing), a printed document.',
   'app/country-profiles.js::invoiceHTML': 'the sample e-invoice a country pack would issue (Item · Qty · Price · Rate · Tax · Total): a printed-document preview of one frozen sample, like the bill slip.',
+  'app/cap-finance-returns.js::frViewHTML': 'the GST of the running month BY HEAD (CGST · SGST · IGST x sales · credit · to pay · kept) with its set-off line: a fixed-row statement the server works out, read top to bottom, like the final accounts. Not a list a person sorts or resizes. (IN-F-08; red1128 web, for cb-ux-locale to confirm or move to a CBList mount)',
   'app/cap-books.js::bkPlHeadHTML': 'the PROFIT AND LOSS statement on screen (income, costs, profit with this year and last year): a statement with a totals foot read top to bottom, like bkTable. Not a list a person sorts or resizes. (Athi 17 Nov)',
   'app/cap-books.js::bkBS': 'the BALANCE SHEET on screen (assets, liabilities, equity with a check line): a statement, like bkTable. (Athi 17 Nov)',
   'app/cap-books-lock.js::bkLockRowsPaint': 'the 12-MONTH lock calendar: one fixed row per month of the year in calendar order. Not a list a person sorts or resizes. (Athi 17 Nov)',
