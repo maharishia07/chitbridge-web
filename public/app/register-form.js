@@ -280,7 +280,7 @@ function renderRegister() {
     form = `<div ${who}>${R.shop ? esc(R.shop) + ' · ' : ''}${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 6 })}
+       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'text', maxlength: 320 })}
        ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
   }
@@ -350,6 +350,12 @@ async function doRegister() {
           ? 'A User ID cannot contain a space. Use a dash instead — corner-hardware.'
           : 'A User ID cannot contain "' + badch + '". Letters, numbers and dashes only — the rest are kept for internal use.'
         : 'A User ID starts and ends with a letter or number — not a dash.';
+      return renderRegister();
+    }
+    /* WALK S S-F-01: an address no code can reach is refused here, in words, before the register call (the shared ui.field.emailWhy) */
+    const emailWhy = ui.field.emailWhy(v_email);
+    if (emailWhy) {
+      R.err = emailWhy;
       return renderRegister();
     }
     R.name = uid;

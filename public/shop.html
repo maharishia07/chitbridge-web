@@ -3222,6 +3222,11 @@ function shopLoad() {
         return;
       }
       _SHOPDATA = res.j;
+      /* WALK S S-F-07: the owner's preview of a shop with nothing published is an empty answer (200), said in words, not a failed call */
+      if (res.j.preview && !(res.j.items || []).length && !(res.j.finishes || []).length && !res.j.schema) {
+        el('app').innerHTML = '<div class="msg">Nothing is on your online shop yet. Add products in Catalogue and they will show here.</div>';
+        return;
+      }
       var gated = (res.j.sign_in && res.j.sign_in.code === 'sign_in_first') || (!_MYTOK && res.j.shop && res.j.shop.storefront_access === 'login');
       if (gated) renderLoginGate(res.j.shop || {});
       else {
