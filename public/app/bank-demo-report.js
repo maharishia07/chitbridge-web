@@ -71,8 +71,10 @@
   /** the last row: the difference the engine carried, a pending note while lines are outside the books, and the tick ONLY when none is */
   function differenceRow(recon, outsideCount, done) {
     var pending = done ? '' : ' <span class="bd-pending">' + esc(host.plural(outsideCount, 'statement line', 'statement lines') + ' not in the books yet') + '</span>';
+    var gap = host.amountText(recon.difference_before).replace(/^-/, ''),
+      words = window.CBBankBand ? window.CBBankBand.differenceWords(host.preview.minorOf(recon.closing_statement) - host.preview.minorOf(recon.closing_books_before), gap) : '';
     var tick = done ? ' <span class="bd-tick" aria-label="Reconciled">\u2713</span>' : '';
-    return '<tr class="bd-res"><td colspan="2">Difference' + pending + '</td><td class="bd-r">' + esc(host.amountText(recon.difference_before).replace(/^-/, '')) + tick + '</td></tr>';
+    return '<tr class="bd-res"><td colspan="2">Difference' + (words ? ' <span class="bd-pending">' + esc(words) + '</span>' : '') + pending + '</td><td class="bd-r">' + esc(gap) + tick + '</td></tr>';
   }
   function reportHead(recon, model) {
     return '<header class="bd-sheet-h"><div><h2>Bank reconciliation</h2><p class="bd-sheet-sub"><b>Demo, sample data</b> \u00b7 ' + esc(host.ACCOUNT) + ' \u00b7 as at ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + ' \u00b7 amounts in ' + host.CURRENCY + '</p></div>' +

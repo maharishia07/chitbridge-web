@@ -169,7 +169,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   const text = (selector) => page.textContent(selector);
   const phone = width < 700;
   const figs = await text('#bd_figs');
-  check(figs.includes('18,280.75') && figs.includes('19,963.00') && figs.includes('1,682.25') && !/AUD \d/.test(figs), tag + ': frame 0: statement 18,280.75, books 19,963.00, difference 1,682.25 (the figures of the product for the October file), AUD not on a figure');
+  check(figs.includes('18,280.75') && figs.includes('19,963.00') && figs.includes('1,682.25') && figs.includes('Your books show 1,682.25 more') && !/AUD \d/.test(figs), tag + ': frame 0: statement 18,280.75, books 19,963.00, difference 1,682.25 (the figures of the product for the October file), AUD not on a figure');
   check((await page.locator('#bd_list [data-row]').count()) === 12, tag + ': the twelve lines of the October file are listed in the one list');
   check((await text('#bd_lines')).includes('8 Oct 2026') && /KENSINGTON/.test(await text('#bd_lines')) && (await openLine(page, 'KENSINGTON')) && (await text('#bd_lines .bd-openrow')).includes('Invoice INV-1'), tag + ': dates read "8 Oct 2026", the payee is as the bank wrote it, and an in-books line names the entry it matched when it opens (W15-13)');
   check(/Business bank account/.test(figs) && /2 Oct to 31 Oct 2026 · 12 lines/.test(figs) && figs.includes('All amounts in Australian dollars (AUD)') && figs.includes('Right account?') && /10 lines to go/.test(figs) && /2 of 12 in your books/.test(figs), tag + ': the band names the account, the period and the lines, says the currency once, asks "Right account?" and counts "10 lines to go" with "2 of 12 in your books" (W15-18, W15-20 to W15-23, W15-27)');

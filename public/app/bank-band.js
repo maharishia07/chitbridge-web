@@ -58,6 +58,7 @@
   }
   /** the line breaks the reader named while it checked the running balance */
   function balanceBreaks(parsed) {
+    if (parsed && typeof parsed.balance_breaks === 'number') return parsed.balance_breaks; /* the reader's own count, when it carries one (an engines ask: the English match below is the fallback) */
     return ((parsed && parsed.warnings) || []).filter(function (words) { return /does not follow from the line before/.test(words); }).length;
   }
   /** 1 · the opening against the books */
@@ -65,8 +66,8 @@
     if (parsed.opening_minor == null) return item('opening', 'none', sayText('The file does not state its opening balance'));
     var differs = checkItem(check, 'opening_not_books') || (!check && books != null && Number(books) !== Number(parsed.opening_minor));
     if (differs) return item('opening', 'bad', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('differs from your books') + (books != null ? ' (' + fact.fmt(books) + ')' : ''));
-    var agreeWords = books != null || check ? sayText('agrees with your books') : sayText('(worked from the file)');
-    return item('opening', 'ok', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + agreeWords);
+    if (books == null && !check) return item('opening', 'none', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('(not compared with your books)')); /* nothing to compare with is not agreement */
+    return item('opening', 'ok', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('agrees with your books'));
   }
   /** 2 · the running balance adds up line by line: the reader's own break warnings against the lines that carry a balance */
   function runningFact(parsed) {
@@ -80,6 +81,7 @@
   function currencyFact(fact, parsed) {
     var said = fact.statementCurrency || parsed.currency || '';
     if (said && fact.currency && said !== fact.currency) return item('currency', 'bad', sayText('The file is in') + ' ' + said + ', ' + sayText('the account in') + ' ' + fact.currency);
+    if (!(fact.currency || said)) return item('currency', 'none', sayText('The currency is not stated'));
     return item('currency', 'ok', sayText('Currency') + ' ' + (fact.currency || said));
   }
   /** 4 · the account number: the file's tail against the one the account holds */
@@ -119,18 +121,26 @@
       previousFact(fact, fact.check)
     ];
   }
+  /** the ONE count of the facts: how many agree, differ, or could not be compared (the toggle and the open list both read this) */
+  function factCounts(items) {
+    var out = { ok: 0, bad: 0, none: 0 };
+    (items || []).forEach(function (one) { if (out[one.state] != null) out[one.state]++; });
+    return out;
+  }
   var MARK = { ok: '✓', bad: '✕', none: '○' };
   /** the one small button that opens the "Right account?" facts (Fiori: the header stays one line; the detail is a press away). Open at once when any fact differs. */
   function toggleHtml(items, tid) {
     if (!items || !items.length) return '';
     var bad = items.some(function (one) { return one.state === 'bad'; }),
-      agree = items.filter(function (one) { return one.state === 'ok'; }).length,
-      open = items.length - agree;
+      counts = factCounts(items),
+      agree = counts.ok,
+      open = counts.bad + counts.none;
     return '<button type="button" data-cbsid="CMP065-B01" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + root.esc(tid) + '-toggle">' + root.esc(sayText('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
   }
   function rightHtml(items, testId, extraHtml) {
-    var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
-      open = items.filter(function (one) { return one.state === 'none'; }).length;
+    var counts = factCounts(items),
+      agree = counts.ok,
+      open = counts.none;
     return (
       '<div class="bb-right' + (items.some(function (one) { return one.state === 'bad'; }) ? ' bb-has-bad' : '') + '"' + (items.some(function (one) { return one.state === 'bad'; }) ? '' : ' hidden') + ' data-cbsid="CMP065-D02" data-testid="' + root.esc(testId) + '" role="group" aria-label="' + root.esc(sayText('Right account?')) + '"><b>' + root.esc(sayText('Right account?')) + '</b>' +
       (agree ? '<span class="bb-sum bb-ok" data-testid="' + root.esc(testId) + '-agree">' + MARK.ok + ' ' + agree + ' ' + root.esc(sayText('agree')) + '</span>' : '') +
@@ -152,6 +162,11 @@
       '</div>'
     );
   }
+  /** the direction of the gap in words, ONE helper for the real band and the demo: the amount stays unsigned, the word says who shows more. bankMinusBooks = the two carried closing figures subtracted; '' when they agree or are unknown */
+  function differenceWords(bankMinusBooks, amountText) {
+    if (typeof bankMinusBooks !== 'number' || !isFinite(bankMinusBooks) || bankMinusBooks === 0 || !amountText) return '';
+    return sayText(bankMinusBooks > 0 ? 'The bank shows' : 'Your books show') + ' ' + amountText + ' ' + sayText('more');
+  }
   /** the bar of lines already in the books, or '' when the statement has no lines */
   function progressHtml(fact, prefix) {
     return fact.total
@@ -162,7 +177,7 @@
   function goRowHtml(fact, prefix, tied, curHtml) {
     var go = tied ? sayText('Nothing left to add') : many(fact.toGo || 0, 'line to go', 'lines to go');
     return (
-      '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + root.esc(prefix) + '-togo" aria-live="polite">' + root.esc(go) + (fact.unexplained ? ' · ' + root.esc(sayText('Unexplained')) + ' ' + root.esc(fact.unexplained) : '') + '</span>' + progressHtml(fact, prefix) + '</div>' + curHtml + '</div>'
+      '<div class="bb-gorow">' + (fact.differenceWords ? '<span class="bb-dir" data-testid="' + root.esc(prefix) + '-dir">' + root.esc(fact.differenceWords) + '</span>' : '') + '<span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + root.esc(prefix) + '-togo" aria-live="polite">' + root.esc(go) + (fact.unexplained ? ' · ' + root.esc(sayText('Unexplained')) + ' ' + root.esc(fact.unexplained) : '') + '</span>' + progressHtml(fact, prefix) + '</div>' + curHtml + '</div>'
     );
   }
   /** the head of the band: the account, its period and lines, the way back, the toggle, the currency (when no tiles) and the actions */
@@ -178,7 +193,7 @@
   /**
    * html(f) → the band
    *   f.account name · f.from · f.to · f.count lines · f.currency · f.change (html of the way back, "Wrong account? Change") · f.actions (html at the right of the figures: Add, Sign off, More)
-   *   f.right [item] (rightAccount) · f.statement · f.books · f.difference (the host's money text, or '' when the statement's closing was not given)
+   *   f.right [item] (rightAccount) · f.statement · f.books · f.difference (the host's money text, or '' when the statement's closing was not given) · f.differenceWords (differenceWords(): who shows more)
    *   f.toGo · f.inBooks · f.total lines · f.unexplained (text shown only when it is not nil) · f.nil · f.tid (prefix of the testids)
    */
   function html(fact) {
@@ -203,6 +218,6 @@
     panel.hidden = !open;
     button.setAttribute('aria-expanded', String(open));
   });
-  root.CBBankBand = { html: html, rightAccount: rightAccount, periodText: periodText, currencyLine: currencyLine, currencyWords: currencyWords, dayText: dayText };
+  root.CBBankBand = { html: html, differenceWords: differenceWords, rightAccount: rightAccount, factCounts: factCounts, periodText: periodText, currencyLine: currencyLine, currencyWords: currencyWords, dayText: dayText };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankBand;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
