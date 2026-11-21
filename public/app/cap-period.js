@@ -833,7 +833,7 @@ function peReturnPeriodField(returnAnswer) {
           'Period',
           peSel(
             'pr_p',
-            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open')) + peRetStateWord(item.state)]),
+            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? (item.overdue ? ' · ' + tx('overdue') : '') : ' · ' + tx('open')) + peRetStateWord(item.state)]), /* YE-F-07: an ended, unclosed period past its due day says so */
             period ? period.period : '',
             ' onchange="peReturnPick(\'period\', this.value)"'
           )

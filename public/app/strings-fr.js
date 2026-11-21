@@ -1026,6 +1026,9 @@
     '{what} could not be read. Nothing was changed.': '{what} n’a pas pu être lu. Rien n’a été modifié.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(jusqu\'ici)',
+    'overdue': 'en retard',
+    'Overdue': 'En retard',
+    'Return overdue': 'Déclaration en retard',
     'Closed on {day} by {name}': 'Clôturé le {day} par {name}',
     'Closed on {day}': 'Clôturé le {day}',
     'Returns lodged outside ChitBridge, as you said': 'Déclarations déposées hors de ChitBridge, comme vous l'avez indiqué',

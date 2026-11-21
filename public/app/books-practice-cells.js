@@ -50,7 +50,15 @@
     var v = r.health.sales_trend_pct;
     return v == null ? '—' : (v > 0.5 ? '▲ ' : v < -0.5 ? '▼ ' : '► ') + (v > 0 ? '+' : '') + Math.round(v) + '%';
   }
+  /** YE-F-07: the server's bas.overdue ({ n, form, label, due, days_late }) in words, the oldest named; '' when none */
+  function basOverdueWords(r) {
+    var o = r.bas && r.bas.overdue;
+    if (!o) return '';
+    return practiceKit.translate('overdue') + ': ' + (o.label || o.form) + ' · ' + practiceKit.translate('due') + ' ' + practiceKit.dayWords(o.due) + (o.n > 1 ? ' (+' + (o.n - 1) + ')' : '');
+  }
   function basCell(r) {
+    var late = basOverdueWords(r);
+    if (late) return '<span style="color:var(--red-i)" data-testid="bas-overdue-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(late) + '</span>';
     if (!r.bas.due_date) return '—';
     return practiceKit.escapeHtml(r.bas.form || '') + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(r.bas.due_date)) + (r.bas.due_in_days != null && r.bas.due_in_days <= 30 ? ' <span class="sub">(' + practiceKit.escapeHtml(r.bas.due_in_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days')) + ')</span>' : '');
   }

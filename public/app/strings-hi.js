@@ -1027,6 +1027,9 @@
     '{what} could not be read. Nothing was changed.': '{what} पढ़ा नहीं जा सका। कुछ बदला नहीं गया।',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(अब तक)',
+    'overdue': 'विलंबित',
+    'Overdue': 'विलंबित',
+    'Return overdue': 'रिटर्न विलंबित',
     'Closed on {day} by {name}': '{day} को {name} ने बंद किया',
     'Closed on {day}': '{day} को बंद किया',
     'Returns lodged outside ChitBridge, as you said': 'रिटर्न ChitBridge के बाहर भरे गए, जैसा आपने बताया',

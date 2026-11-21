@@ -1026,6 +1026,9 @@
     '{what} could not be read. Nothing was changed.': '{what} படிக்க முடியவில்லை. எதுவும் மாற்றப்படவில்லை.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(இதுவரை)',
+    'overdue': 'தாமதம்',
+    'Overdue': 'தாமதம்',
+    'Return overdue': 'தாமதமான ரிட்டர்ன்',
     'Closed on {day} by {name}': '{day} அன்று {name} மூடினார்',
     'Closed on {day}': '{day} அன்று மூடப்பட்டது',
     'Returns lodged outside ChitBridge, as you said': 'ரிட்டர்ன்கள் ChitBridge க்கு வெளியே தாக்கல் செய்யப்பட்டன, நீங்கள் கூறியபடி',

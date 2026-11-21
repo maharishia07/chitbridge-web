@@ -1130,6 +1130,9 @@
     '{what} could not be read. Nothing was changed.': 'تعذّرت قراءة {what}. لم يتغيّر شيء.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(حتى الآن)',
+    'overdue': 'متأخر',
+    'Overdue': 'متأخر',
+    'Return overdue': 'الإقرار متأخر',
     'Closed on {day} by {name}': 'أُقفلت في {day} بواسطة {name}',
     'Closed on {day}': 'أُقفلت في {day}',
     'Returns lodged outside ChitBridge, as you said': 'الإقرارات قُدّمت خارج ChitBridge، كما ذكرتَ',
