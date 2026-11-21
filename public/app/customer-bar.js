@@ -98,9 +98,9 @@
     return true;
   }
   /* a pack calls renderApp() on the way out (locale.js pack): a page with its own renderApp keeps it, the bar redraws beside it */
-  var own = root.renderApp;
+  var pageRenderApp = root.renderApp;
   root.renderApp = function () {
-    if (typeof own === 'function') own.apply(this, arguments);
+    if (typeof pageRenderApp === 'function') pageRenderApp.apply(this, arguments);
     sayAgain();
   };
   root.CBCustomerBar = { mount: mount, theme: theme };
