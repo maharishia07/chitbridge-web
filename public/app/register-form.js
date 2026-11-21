@@ -14,7 +14,7 @@
  * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
  */
 'use strict';
-var REG = { step: 'form', name: '', email: '', busy: false, err: '' };
+var REG = { step: 'form', shop: '', name: '', email: '', busy: false, err: '' };
 var REG_AT = { host: null, onDone: null }; /* host · onDone: a small app's pane (CB Settings › New shop) — null = app.html's auth card at #root */
 /** the gate tick (SCR053-U01): the answer is kept and the form repaints, so Verify enables */
 function regAgreeChanged(checked) {
@@ -22,7 +22,7 @@ function regAgreeChanged(checked) {
   renderRegister();
 }
 function regReset() {
-  REG = { step: 'form', name: '', email: '', busy: false, err: '' };
+  REG = { step: 'form', shop: '', name: '', email: '', busy: false, err: '' };
   renderRegister();
 }
 /* SCREEN: Register (#/register) · module target: auth.js
@@ -260,14 +260,16 @@ function renderRegister() {
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', autocomplete: 'username', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
+    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U05', kind: 'text', id: 'r_shop', testid: 'reg-shop-name', label: 'Business name', autocomplete: 'organization', placeholder: 'Acme Traders', maxlength: 255, value: R.shop })}
+       <div data-testid="reg-shop-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${esc(tx('Printed on every bill · you can change it any time'))}</div>
+       ${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', autocomplete: 'username', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
        <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
-         <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). Your business name can be anything; set it after you sign in.'))}">ⓘ</span></div>
+         <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). The User ID is only for signing in; your business name is the line above.'))}">ⓘ</span></div>
        ${ui.field({ mount: 'SCR053-U03', kind: 'email', id: 'r_email', testid: 'reg-email', label: 'Email', placeholder: 'you@yourshop.example', value: R.email })}
        ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
   } else {
-    form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
+    form = `<div ${who}>${R.shop ? esc(R.shop) + ' · ' : ''}${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
        ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 6 })}
@@ -300,10 +302,17 @@ function renderRegister() {
 }
 async function doRegister() {
   const R = REG;
-  const v_name = val('r_name'),
+  const v_shop = val('r_shop'),
+    v_name = val('r_name'),
     v_email = val('r_email'),
     v_otp = val('r_otp');
   if (R.step === 'form') {
+    R.shop = (v_shop || '').trim();
+    if (R.shop.length < 2) {
+      /* A-F-01: the shop's name prints on every bill and is the name everywhere — asked here, not left to the User ID */
+      R.err = 'Type your business name (2 letters or more) — it prints on every bill.';
+      return renderRegister();
+    }
     if (!v_name || !v_email) {
       R.err = 'A User ID and an email address are required.';
       return renderRegister();
@@ -343,11 +352,11 @@ async function doRegister() {
   renderRegister();
   try {
     if (R.step === 'form') {
-      /* user_id is the permanent one; display_name simply STARTS as it and is free to change in IAM after. */
+      /* user_id is the permanent one; display_name is the business name typed above (A-F-01) and is free to change after. */
       /* ⭐ FX-AU1: the guess the governance panel SHOWED travels with the registration — the server names it in the write that creates the
          shop (routes/entities.registerNew), so the column default never decides a Sydney shop is Indian. Verify still sends it (COALESCE). */
       const response = await api('register', {
-        body: { user_id: R.name, display_name: R.name, email: R.email, context: window.CBGov ? CBGov.payload(govCtx()) : undefined }
+        body: { user_id: R.name, display_name: R.shop || R.name, email: R.email, context: window.CBGov ? CBGov.payload(govCtx()) : undefined }
       });
       R.email = (response && response.email) || R.email;
       R.busy = false;

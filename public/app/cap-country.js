@@ -649,7 +649,13 @@ function csuSet(field, typed) {
   CSU.touched = true; /* W24: something moved since the read */
   CSU.err = '';
   CSU.saved = false;
+  var savePressed = CSU.savePressed && !CSU.taxErr;
   renderCountrySetup();
+  /* A-F-15: a press on Save is what made this field leave (blur → change → repaint), and the repaint replaced the button before its click landed — the press is not lost, it saves now */
+  if (savePressed) {
+    CSU.savePressed = false;
+    csuSave();
+  }
 }
 /* CL3 → W28(c): the "Where ChitBridge is for <country>" rows left this step — they are Standards › Country readiness (standards.html ?ready=<cc>, the same CBCountryReady unit); the link above opens it */
 /** Change: the row's picker opens in place; choosing closes it again (no "Done" — WALK-REG R10c) */
@@ -1017,7 +1023,16 @@ function renderCountrySetup() {
       body +
       '</div></div>';
   var saveButton = document.getElementById('cs-save');
-  if (saveButton) saveButton.onclick = csuSave;
+  if (saveButton) {
+    saveButton.onclick = csuSave;
+    saveButton.onpointerdown = function () {
+      CSU.savePressed = true;
+      /* the click (when the button survives) or this timer (when it was repainted and csuSet took the press) ends the press */
+      setTimeout(function () {
+        CSU.savePressed = false;
+      }, 600);
+    };
+  }
 }
 /** the body of the one write, from the edit record; CS2: the zone picked of the pack's several (a one-zone pack: the server sets it anyway) */
 function csuSaveBody(e, confirmed) {
@@ -1056,6 +1071,7 @@ function csuTaxNeedsPick(e) {
 }
 /** the one write — M64: one press, one call; a server refusal is said in the form, in its own words */
 function csuSave() {
+  CSU.savePressed = false;
   var btn = document.getElementById('cs-save'),
     e = CSU.edit;
   if (!e) return;
