@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.99.0 · bank-recon · sha256 02b1257df2f8e44c4b615cb1f89266789d73706a28acfdc70aa80a99d72cb513 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.109.0 · bank-recon · sha256 fc2f0870de035d2973cfa9a706a2fad476289b9c297a2fe58687e3a8df0f2247 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -221,6 +221,7 @@
   }
   /** the digits of an amount → its minor units, read as text and never through a float; null when they are not an amount or a decimal runs past the currency's minor unit */
   function minorOfDigits_(text, decimals) {
+    if (/\.\d{3},/.test(text)) return null; /* 1.000,00 is dot-grouped with a decimal comma: refused, never read as a thousand times too small */
     text = text.replace(/,/g, '');
     if (!/^\d*\.?\d*$/.test(text) || !/\d/.test(text)) return null;
     var parts = text.split('.'),
@@ -966,8 +967,8 @@
     for (var index = 0; index < words.length; index++) {
       var pattern = String(words[index])
         .toUpperCase()
-        .replace(/[.\-\/]/g, function (character) {
-          return '\\' + character;
+        .replace(/[.*+?^${}()|[\]\\\-\/]/g, function (character) {
+          return '\\' + character; /* every regex metacharacter: a party called "Sunil + Sons" threw and killed the whole list */
         })
         .replace(/\s+/g, '\\s+');
       if (new RegExp('(^|[^A-Z0-9])' + pattern + '([^A-Z0-9]|$)').test(text)) return words[index];
@@ -982,7 +983,7 @@
     (parties || []).forEach(function (item) {
       var ids = [].concat(item.vpa || [], item.vpas || [], item.account || [], item.accounts || []).filter(Boolean);
       var strong = ids.some(function (entry) {
-        return lower.indexOf(String(entry).toLowerCase()) >= 0;
+        return hasWord_(upper, [String(entry).trim()]) !== null; /* on token boundaries: a short number is not inside a longer one, raj@bank is not in braj@bank */
       });
       var names = [item.name, item.id].concat(item.aliases || []).filter(function (x) {
         return x && String(x).trim().length >= 3;
@@ -1793,6 +1794,13 @@
       });
     return words.length ? words.slice(0, 2).join(' ') : null;
   }
+  /** reviews1 M5: a rule whose only condition is a generic word (or under 3 characters) matches too much; Xero and QuickBooks rules match on explicit conditions the user sees. A handle (name@bank) is never too common. */
+  var GENERIC_WORDS_ = ['PAYMENT', 'PAYMENTS', 'TRANSFER', 'TRANSFERS', 'PAID', 'PAY', 'CASH', 'CHEQUE', 'CHECK', 'DEPOSIT', 'WITHDRAWAL', 'ACCOUNT', 'BANK', 'ONLINE', 'FROM', 'THE', 'AND', 'FOR', 'REF', 'REFERENCE', 'INVOICE', 'BILL', 'SALARY', 'CREDIT', 'DEBIT', 'CHARGES', 'FEE', 'FEES', 'MISC', 'OTHER', 'GENERAL'];
+  function tooCommon_(text) {
+    if (String(text).indexOf('@') >= 0) return false;
+    var words = String(text).toUpperCase().split(/\s+/).filter(Boolean);
+    return !words.length || words.every(function (w) { return w.length < 3 || GENERIC_WORDS_.indexOf(w) >= 0; });
+  }
   function learnedFor_(line, rules, out) {
     if (!rules || !rules.length) return null;
     var lower = String(line.narration || '').toLowerCase(),
@@ -1840,6 +1848,7 @@
     var bankRules = bankOf_(taught),
       text = tokenOf_(statementLine.narration, bankRules ? bankRules.pack : null);
     if (!text) return { ok: false, why: 'the narration has no word that names who paid' };
+    if (tooCommon_(text)) return { ok: false, why: 'a rule on "' + text.toLowerCase() + '" alone would match unrelated lines — add the payer name or handle, then teach it again' };
     return { ok: true, rule: learnedRuleOf_(statementLine, e, taught, text, SIDE_(money.debit)) };
   }
   /** the rule a confirmed explanation becomes: the words to look for, the side, who or what it was, and where it came from (the line's date and first 60 characters, when and by whom) */
