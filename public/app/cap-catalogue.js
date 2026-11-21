@@ -202,6 +202,7 @@ function ctCategoryChips(itemData, live, opts) {
   const data = itemData || {},
     hostDoor = (opts && opts.newAction) || '';
   if (!Array.isArray(live)) return '';
+  if (!live.length && !catgIdsOf(data).length) return '<label class="fl">' + esc(tx('Categories')) + '</label><div class="ctcatgs" id="ct_categories" data-testid="cat-field-category"><span class="sub">' + esc(tx('No categories yet. Add one under Categories, then file the item here.')) + '</span></div>'; /* P-F-11: a label with nothing under it says why */
   const list = catgIdsOf(data),
     names = catgNamesOf(data);
   const orphans = list.filter((id) => !live.some((item) => item.id === id));
@@ -679,12 +680,22 @@ var CBCatalogueApp = (function () {
   function T(s, v) {
     return v ? txf(s, v) : tx(s);
   }
+  /** P-F-03: a view-only login is refused every item write by the api (403 read_only): New · Edit · Mark are GREYED with the reason (one readiness state), never offered live (helpers.js viewOnlyLogin, the one reading of the claim) */
+  function viewerWhy() {
+    return typeof viewOnlyLogin === 'function' && viewOnlyLogin() ? T('Your login is view-only, so items cannot be added or changed. Ask the owner.') : '';
+  }
+  /** the disabled attributes of a write button for a view-only login ('' for anyone else) */
+  function viewerShut() {
+    var why = viewerWhy();
+    return why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '';
+  }
   function cur() {
     return (S.me && (S.me.currency_code || S.me.currency)) || (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || '';
   }
   function sym() {
     try {
-      return CBLocale.symbol(cur());
+      var sign = String(fmtMoney(0, cur())).replace(/[\d.,\s ]/g, ''); /* P-F-11: the sign the rest of the screen prints ("A$"), from the one money formatter, never CLDR's bare "$" */
+      return sign || CBLocale.symbol(cur());
     } catch (_) {
       return cur();
     }
@@ -700,13 +711,15 @@ var CBCatalogueApp = (function () {
   }
   function catNames(d) {
     var ids = catgIdsOf(d),
+      carried = typeof catgNamesOf === 'function' ? catgNamesOf(d) : [],
       live = (typeof _CATG !== 'undefined' && _CATG) || [];
     return ids
-      .map(function (id) {
+      .map(function (id, at) {
         var c = live.filter(function (x) {
           return String(x.id) === String(id);
         })[0];
-        return c ? c.name : null;
+        /* P-F-04: the till names a category by catgIdsOf too, so an item filed by a name that has no definition (the legacy single `category`) shows that name here, never "-" */
+        return c ? c.name : carried[at] || (Array.isArray(d.categories) ? null : String(id));
       })
       .filter(Boolean);
   }
@@ -778,9 +791,9 @@ var CBCatalogueApp = (function () {
   function itemsHTML() {
     return (
       '<div class="cat-top" data-testid="cat-items-top"><div class="cat-count" id="cat_count" data-testid="cat-count"></div>' +
-      '<div class="cat-acts"><button data-cbsid="CTG001-B03" type="button" class="act" data-testid="cat-new" id="cat_new">＋ ' +
+      '<div class="cat-acts"><button data-cbsid="CTG001-B03" type="button" class="act" data-testid="cat-new" id="cat_new"' + viewerShut() + '>＋ ' +
       esc(T('New item')) +
-      '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out"></div></div></div>' +
+      '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out">' + esc(viewerWhy()) + '</div></div></div>' +
       '<div class="cat-list" id="cat_items" data-testid="cat-items"></div>' +
       '<dialog class="sheet" id="cat_sheet" data-pop="POP127" data-testid="cat-sheet"></dialog>'
     );
@@ -1302,9 +1315,52 @@ var CBCatalogueApp = (function () {
       '</label><textarea data-cbsid="CTG001-T01" class="inp" id="ct_desc" data-testid="cat-field-desc" rows="3">' +
       esc(pDesc(d)) +
       '</textarea>' +
+      gstFieldHTML(d) +
       '<div id="ct_catg_wrap">' + catgChipsHTML(d) + '</div>' /* F5 W1b (R85): the item goes INTO a category here */ +
       ctDeclaredFields(d)
     );
+  }
+  /**
+   * P-F-05: the item form asks for the tax rate (the pack's word: GST), so no new item is saved with no answer. Blank = the shop's default (a registered shop: the pack's rate, shown as the
+   * placeholder; an unregistered one: zero, the api says so on the bill); a typed 0 is GST-free and asks WHY from the pack's own supply kinds. Shown only where the pack has a tax scheme.
+   */
+  function gstFieldHTML(d) {
+    var pack = taxPack();
+    if (!pack || !pack.scheme) return '';
+    var fallback = defaultRate(),
+      kinds = (pack.supplyKinds && Object.keys(pack.supplyKinds)) || [],
+      saidKind = d.tax_kind || d.supply_kind || '',
+      shown = d.gst_rate === undefined || d.gst_rate === null ? '' : String(d.gst_rate);
+    return (
+      '<div class="cat-two"><div>' +
+      ctField('gst', esc(pack.scheme) + ' %', shown, 'inputmode="decimal" autocomplete="off" placeholder="' + esc(fallback === null ? T('rate') : String(fallback) + ' (' + T('the shop default') + ')') + '"') +
+      '</div><div>' +
+      ctField('gst_kind', esc(T('If zero, why')), kindName(pack, saidKind), 'list="ct_gst_kinds" autocomplete="off" placeholder="' + esc(T('pick one')) + '"') +
+      '<datalist id="ct_gst_kinds">' + kinds.map(function (id) { return '<option value="' + esc(kindName(pack, id)) + '"></option>'; }).join('') + '</datalist></div></div>'
+    );
+  }
+  /** a supply kind's name as the pack words it (its id when it has no name) */
+  function kindName(pack, id) {
+    var row = id && pack.supplyKinds && pack.supplyKinds[id];
+    return id ? (row && row.name) || id : '';
+  }
+  /** the GST field → the item: a typed rate is written (a zero only with its reason: refused in words here, before the api is asked); blank leaves the shop's default to the api */
+  function readGst(next) {
+    var rate = el('ct_gst'),
+      kind = el('ct_gst_kind');
+    if (!rate) return '';
+    var typed = String(rate.value || '').replace(/[%\s]/g, '');
+    if (typed === '') return '';
+    if (!isFinite(+typed) || +typed < 0) return T('Enter the tax rate as a number, like 10.');
+    next.gst_rate = +typed;
+    if (+typed !== 0) return '';
+    var pack = taxPack(),
+      said = String((kind && kind.value) || '').trim().toLowerCase(),
+      ids = Object.keys((pack && pack.supplyKinds) || {}),
+      id = ids.filter(function (one) { return one.toLowerCase() === said || kindName(pack, one).toLowerCase() === said; })[0];
+    if (!id) return T('A zero rate needs its reason: pick one from the list.');
+    next.tax_kind = id;
+    return '';
   }
   /** the category chips from the live shelf (core.js _CATG); not read yet → '' and fillCatgChips paints the block when it lands */
   function catgChipsHTML(itemData) {
@@ -1395,13 +1451,13 @@ var CBCatalogueApp = (function () {
         kv(esc(T('Description')), pDesc(d)) +
         ctDeclaredViewRows(d, kv) +
         '</div>' +
-        '<div class="cat-sheet-acts"><button data-cbsid="CMP012" data-cbmount="CTG001-U112" type="button" class="act" data-testid="cat-edit" id="cat_edit">' +
+        '<div class="cat-sheet-acts"><button data-cbsid="CMP012" data-cbmount="CTG001-U112" type="button" class="act" data-testid="cat-edit" id="cat_edit"' + viewerShut() + '>' +
         esc(T('Edit')) +
         '</button>' +
-        '<button data-cbsid="CTG001-B04" type="button" class="act quiet" data-testid="cat-status" id="cat_status">' +
+        '<button data-cbsid="CTG001-B04" type="button" class="act quiet" data-testid="cat-status" id="cat_status"' + viewerShut() + '>' +
         esc(statusOf(d) === 'available' ? T('Mark not available') : T('Mark available')) +
         '</button></div>' +
-        '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out"></div>'
+        '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out">' + esc(viewerWhy()) + '</div>'
       );
     }
     return (
@@ -1472,7 +1528,12 @@ var CBCatalogueApp = (function () {
     }
     var p = S.sel ? itemOf(S.sel) : null,
       nestedCur = p ? pData(p) : {},
-      next = readForm(nestedCur, codeSlots);
+      next = readForm(nestedCur, codeSlots),
+      gstWhy = readGst(next);
+    if (gstWhy) {
+      say(out, gstWhy, 'error'); /* a bad or reasonless tax rate: refused in words, nothing sent (P-F-05) */
+      return;
+    }
     if (!next.name) {
       say(out, T('A name is needed.'), 'error');
       return;
@@ -1582,8 +1643,14 @@ var CBCatalogueApp = (function () {
       node.innerHTML = '<span class="err" data-testid="catg-read-err">' + esc(CBCAT_UI.err) + '</span>';
       return;
     }
-    var live = catgRows().filter(function (x) {
-      return x.status !== 'retired';
+    var rows = catgRows(),
+      live = rows.filter(function (x) {
+        return x.status !== 'retired';
+      }).length,
+      byId = (CBCAT_UI.counts && CBCAT_UI.counts.by) || {};
+    /* P-F-04: a name the items (and the till's chips) carry that has no definition row is still a category the shop uses: counted once, beside the defined ones */
+    live += Object.keys(byId).filter(function (key) {
+      return byId[key] && !rows.some(function (x) { return String(x.id) === key; });
     }).length;
     node.innerHTML =
       '<b>' +
