@@ -698,17 +698,18 @@ const TODO_SCREEN = {
   bank: 'bank'
 };
 /* an item the server could not check (503 · not migrated yet) is not a task: it says so, and its button waits */
-const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || it.migrated === false || it.available === false);
+const todoOff = (item) => item && (item.status === 503 || item.not_migrated === true || item.migrated === false || item.available === false);
+/** todoGo(i) → opens the screen the i-th To do row names; a row with no known screen says it starts after an update */
 function todoGo(i) {
-  const it = ACC.todo && ACC.todo[i];
-  if (!it) return;
-  const screen = (it.action || {}).screen;
+  const todoItem = ACC.todo && ACC.todo[i];
+  if (!todoItem) return;
+  const screen = (todoItem.action || {}).screen;
   if (screen === 'catalogue') {
     navTo('catalogue'); /* supply kind: the 0% slabs and products that wait for their kind are answered in the catalogue, one tap each */
     return;
   }
-  const tab = TODO_SCREEN[screen];
-  if (tab) show(tab);
+  const targetTab = TODO_SCREEN[screen];
+  if (targetTab) show(targetTab);
   else toast(tx('This starts after an update'));
 }
 /* the row's one button — only when the server named an action; a row with none (bills not in the books) is a count and a sentence, no dead button */
@@ -727,19 +728,23 @@ function todoRow(item, index) {
     ${todoButton(item, index, notChecked)}
   </div>`;
 }
+/** addBankTodo(list) → adds the bank row to the To do list once (kept out of accTodo so that stays short) */
+function addBankTodo(list) {
+  const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
+  if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
+}
 /** accTodo(body) → paints the To do list from the books' todo read, or the failure card with Try again */
 async function accTodo(body) {
   const g = ACC.gen;
   try {
     const early = ACC.todoEarly; ACC.todoEarly = null; /* the read that left with the health read (start) is used once; Try again reads fresh */
-    const got = early ? await early : null;
-    if (got && got.e) throw got.e;
-    const reply = got ? got.r : await api('booksTodo');
+    const earlyRead = early ? await early : null;
+    if (earlyRead && earlyRead.e) throw earlyRead.e;
+    const reply = earlyRead ? earlyRead.r : await api('booksTodo');
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
-    if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
+    addBankTodo(list);
     ACC.todo = list;
     body.innerHTML = list.length
       ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
@@ -910,6 +915,24 @@ function paintFrame() {
   if (v0 !== 'ledgers')
     $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
 }
+/** startTodoEarly(known) → SPEED (batch 1128, speed2): when the Ledger is known on and To do is the first view, the To do read leaves with the health read */
+function startTodoEarly(known) {
+  if (known === true && (hashPageOf() === 'todo' || (!NAV.some((item) => item[0] === hashPageOf()) && CBBooksActing.firstTab() === 'todo'))) {
+    ACC.todoEarly = api('booksTodo').then((r) => ({ r }), (e) => ({ e }));
+  }
+}
+/** otherShopTraces() → the other shops' fingerprints this browser holds; none when the read fails */
+async function otherShopTraces() {
+  try {
+    return await CBOnePerson.traces(MINE);
+  } catch (_) {
+    return { others: [] };
+  }
+}
+/** knownLedgerOn() → whether the avatar already read the Ledger switch for this page (true · false), or null when it has not */
+function knownLedgerOn() {
+  return window.CBAvatar && CBAvatar.ledgerOn ? CBAvatar.ledgerOn() : null;
+}
 async function start() {
   SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
@@ -932,22 +955,14 @@ async function start() {
   const g = ++ACC.gen;
   paintFrame();
   /* ⭐ ONE BROWSER, ONE SHOP: nothing is read until this browser holds no other shop's fingerprint */
-  let t;
-  try {
-    t = await CBOnePerson.traces(MINE);
-  } catch (_) {
-    t = { others: [] };
-  }
+  const t = await otherShopTraces();
   if (g !== ACC.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
     /* SPEED (batch 1128): the avatar already read /me for this page; when it has answered, its ledger_on is the answer - no second /me round trip before the ledger read */
-    const known = window.CBAvatar && CBAvatar.ledgerOn ? CBAvatar.ledgerOn() : null;
-    /* SPEED (batch 1128, speed2): To do needs nothing from the health answer (it reads only the shop), so when the Ledger is known on and To do is the first view the two reads leave together: one round trip, not two in a row. Failures are kept and shown by accTodo; nothing is read for a shop with the Ledger off. */
-    if (known === true && (hashPageOf() === 'todo' || (!NAV.some((item) => item[0] === hashPageOf()) && CBBooksActing.firstTab() === 'todo'))) {
-      ACC.todoEarly = api('booksTodo').then((r) => ({ r }), (e) => ({ e }));
-    }
+    const known = knownLedgerOn();
+    startTodoEarly(known);
     const profile = typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
     if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
