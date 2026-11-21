@@ -279,10 +279,10 @@
   }
   /** ASSIGN-W2: the plug, the noun and the row facts of THIS list, read by the chip, the bar, the keys and Undo; "said" is the server's verdict (may_assign) and nothing else */
   function assignOpts() {
-    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), take: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_take), plug: 'client', noun: 'client', listKey: 'practice-clients-' + practiceKit.bandNow(), subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
+    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), take: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_take), plug: 'client', noun: 'client', staff: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign === false && practiceKit.practiceState.data.may_take === true), listKey: 'practice-clients-' + practiceKit.bandNow(), subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
   }
   /** the ONE work-queue capability (CBAssign.queue): views Mine · Unassigned · Everyone, the tick-bar, the opening view (Mine for a seat that holds work or may not assign), ticks cleared after every assign; {} when the server sent no holders */
-  function practiceQueue() { var d = practiceKit.practiceState.data; return holdersOn() ? root.CBAssign.queue(Object.assign(assignOpts(), { key: 'practice-clients-' + practiceKit.bandNow(), rows: d.clients, everyone: d.may_assign !== false })) : {}; }
+  function practiceQueue() { var d = practiceKit.practiceState.data; return holdersOn() ? root.CBAssign.queue(Object.assign(assignOpts(), { key: 'practice-clients-' + practiceKit.bandNow(), rows: d.clients, everyone: d.may_assign !== false, staff: d.may_assign === false && d.may_take === true })) : {}; }
   /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
   function heldFilterOf(filterOf) {
     var held = root.CBAssign.heldFilter((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []);
