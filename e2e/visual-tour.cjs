@@ -343,7 +343,7 @@ async function main() {
       const v = await page.evaluate(() => { const e = document.querySelector('[data-testid="reg-err"],[role=alert],.err,.cbsi-why,:invalid'); return e ? (e.textContent || e.validationMessage || e.getAttribute('name') || '').trim().slice(0, 120) || ('invalid: ' + (e.getAttribute('data-testid') || e.name)) : null; }).catch(() => null);
       await screenState('/settings.html#/new', 'register-2-empty', { kind: 'form', validation: v || '(nothing said)' });
       const handle = 'tour' + String(Date.now()).slice(-7);
-      await page.fill('[data-testid="reg-name"]', handle); await page.fill('[data-testid="reg-email"]', handle + '@test.example');
+      await page.fill('[data-testid="reg-shop-name"]', 'Walk Shop'); await page.fill('[data-testid="reg-name"]', handle); await page.fill('[data-testid="reg-email"]', handle + '@test.example');
       await page.click('[data-testid="reg-submit"]').catch(() => {});
       await page.waitForSelector('[data-testid="reg-otp"]', { timeout: 15000 }).catch(() => {});
       await screenState('/settings.html#/new', 'register-3-code', { kind: 'form' });
