@@ -65,7 +65,8 @@ function enAsk(body) {
 }
 /** the POST body for preview and save: the typed fields, with the amount parsed to minor units */
 function enBody() {
-  var b = { event: EN.ev.kind || EN.ev.id };
+  /* the sheet's ONE client_ref (bkRef, minted at open) rides the preview too: the server's debit/credit-note preview refuses a call without it, and the save sends the same one */
+  var b = { event: EN.ev.kind || EN.ev.id, client_ref: EN.ref };
   Object.keys(EN.v).forEach(function (item) {
     if (EN.v[item] !== '' && EN.v[item] != null) b[item] = EN.v[item];
   });

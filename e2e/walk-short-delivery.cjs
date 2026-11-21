@@ -98,7 +98,7 @@ W.run('short-delivery', async (w) => {
     }
     if (p === '/api/books/events' && m === 'GET') return J(r, 200, EVENTS);
     if (p === '/api/books/accounts') return J(r, 200, { accounts: [] });
-    if (p === '/api/books/preview' && m === 'POST') { S.previews.push(b); return J(r, 200, PREVIEW); }
+    if (p === '/api/books/preview' && m === 'POST') { S.previews.push(b); /* the real server refuses a debit note preview with no client_ref (f09, 21 Nov) */ if (b && b.event === 'debit_note' && !b.client_ref) return J(r, 422, { error: 'A reference (client_ref) is needed, so a second tap never posts twice.' }); return J(r, 200, PREVIEW); }
     if (p === '/api/books/events' && m === 'POST') { S.events.push(b); return J(r, 200, Object.assign(books.posted({ entry_no: 'MJ/26-27/0009', lines: 3, items: 1 }), { kind: 'debit_note' })); }
     if (p.match(/^\/api\/chits\/[^/]+\/messages$/) && m === 'GET') return J(r, 200, { messages: [], total: 0, page: 1, limit: 50 });
     if ((x = p.match(/^\/api\/chits\/([^/]+)$/)) && m === 'GET') return x[1] === CHIT ? J(r, 200, chitRead(S)) : J(r, 404, { error: 'no chit' });
@@ -231,7 +231,7 @@ W.run('short-delivery', async (w) => {
     const d0 = S.previews.length;
     await yes(); await page.waitForSelector('#entrysheet [data-testid="en-saved"]', { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(500);
     const e = S.events[0] || {}, saved = await txt('#entrysheet [data-testid="en-saved"]');
-    const okE = S.events.length === 1 && e.event === 'debit_note' && e.supplier === PID && e.against_ref === CHIT && e.reason === 'rate' && typeof e.client_ref === 'string' && e.client_ref.length > 4 && JSON.stringify(e.lines) === JSON.stringify([{ name: 'Toor dal: billed ₹150, agreed ₹140', qty: 10, unit_price: 10, gst_rate: 5 }]);
+    const okE = S.events.length === 1 && e.event === 'debit_note' && e.supplier === PID && e.against_ref === CHIT && e.reason === 'rate' && typeof e.client_ref === 'string' && e.client_ref.length > 4 && S.previews.filter((b) => b && b.event === 'debit_note').every((b) => b.client_ref === e.client_ref) && JSON.stringify(e.lines) === JSON.stringify([{ name: 'Toor dal: billed ₹150, agreed ₹140', qty: 10, unit_price: 10, gst_rate: 5 }]);
     return { ok: okE && /Saved/.test(saved), saw: 'events ' + S.events.length + ' ' + JSON.stringify({ event: e.event, supplier: e.supplier, against_ref: e.against_ref, reason: e.reason, lines: e.lines, client_ref: !!e.client_ref }) + '; "' + saved + '"; previews since ' + (S.previews.length - d0) };
   });
   await page.click('#entrysheet [data-testid="en-done"]').catch(() => {});

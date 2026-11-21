@@ -905,7 +905,7 @@ async function enSave(btn) {
 /** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */
 async function enSaveWrite() {
   EN.saving = true;
-  var body = enBody(); body.client_ref = EN.ref;
+  var body = enBody();
   if (EN.photo) body.attachment = EN.photo;
   try {
     var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
