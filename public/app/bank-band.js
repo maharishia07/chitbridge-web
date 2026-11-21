@@ -152,6 +152,11 @@
       '</div>'
     );
   }
+  /** the direction of the gap in words, ONE helper for the real band and the demo: the amount stays unsigned, the word says who shows more. bankMinusBooks = the two carried closing figures subtracted; '' when they agree or are unknown */
+  function differenceWords(bankMinusBooks, amountText) {
+    if (typeof bankMinusBooks !== 'number' || !isFinite(bankMinusBooks) || bankMinusBooks === 0 || !amountText) return '';
+    return sayText(bankMinusBooks > 0 ? 'The bank shows' : 'Your books show') + ' ' + amountText + ' ' + sayText('more');
+  }
   /** the bar of lines already in the books, or '' when the statement has no lines */
   function progressHtml(fact, prefix) {
     return fact.total
@@ -162,7 +167,7 @@
   function goRowHtml(fact, prefix, tied, curHtml) {
     var go = tied ? sayText('Nothing left to add') : many(fact.toGo || 0, 'line to go', 'lines to go');
     return (
-      '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + root.esc(prefix) + '-togo" aria-live="polite">' + root.esc(go) + (fact.unexplained ? ' · ' + root.esc(sayText('Unexplained')) + ' ' + root.esc(fact.unexplained) : '') + '</span>' + progressHtml(fact, prefix) + '</div>' + curHtml + '</div>'
+      '<div class="bb-gorow">' + (fact.differenceWords ? '<span class="bb-dir" data-testid="' + root.esc(prefix) + '-dir">' + root.esc(fact.differenceWords) + '</span>' : '') + '<span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + root.esc(prefix) + '-togo" aria-live="polite">' + root.esc(go) + (fact.unexplained ? ' · ' + root.esc(sayText('Unexplained')) + ' ' + root.esc(fact.unexplained) : '') + '</span>' + progressHtml(fact, prefix) + '</div>' + curHtml + '</div>'
     );
   }
   /** the head of the band: the account, its period and lines, the way back, the toggle, the currency (when no tiles) and the actions */
@@ -178,7 +183,7 @@
   /**
    * html(f) → the band
    *   f.account name · f.from · f.to · f.count lines · f.currency · f.change (html of the way back, "Wrong account? Change") · f.actions (html at the right of the figures: Add, Sign off, More)
-   *   f.right [item] (rightAccount) · f.statement · f.books · f.difference (the host's money text, or '' when the statement's closing was not given)
+   *   f.right [item] (rightAccount) · f.statement · f.books · f.difference (the host's money text, or '' when the statement's closing was not given) · f.differenceWords (differenceWords(): who shows more)
    *   f.toGo · f.inBooks · f.total lines · f.unexplained (text shown only when it is not nil) · f.nil · f.tid (prefix of the testids)
    */
   function html(fact) {
@@ -203,6 +208,6 @@
     panel.hidden = !open;
     button.setAttribute('aria-expanded', String(open));
   });
-  root.CBBankBand = { html: html, rightAccount: rightAccount, periodText: periodText, currencyLine: currencyLine, currencyWords: currencyWords, dayText: dayText };
+  root.CBBankBand = { html: html, differenceWords: differenceWords, rightAccount: rightAccount, periodText: periodText, currencyLine: currencyLine, currencyWords: currencyWords, dayText: dayText };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankBand;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

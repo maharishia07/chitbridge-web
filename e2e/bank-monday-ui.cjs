@@ -96,7 +96,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const band = (await p.textContent('[data-testid="bank-finish"]')).replace(/\s+/g, ' ');
     ok(/18,280\.75/.test(band) && !/18,280\.75 Dr/.test(band) && /19,963\.00/.test(band), tag + ': the band gives the statement and the books figures, no "Dr" on the statement (' + band.slice(0, 120) + ')');
     /* CHANGED ON PURPOSE (W15-18, W15-27): the band is the shared one (bank-band.js): the Difference tile holds the figure only, the count is its own line under the tiles ("10 lines to go"), "Unexplained" shows only when it is not 0.00 */
-    ok(/Difference\s*A?\$?1,682\.25/.test(band) && /10 lines to go/.test(band) && !/Unexplained/.test(band), tag + ': Difference 1,682.25, "10 lines to go" on its own line, no Unexplained while it is 0.00');
+    ok(/Difference\s*A?\$?1,682\.25/.test(band) && /Your books show 1,682\.25 more/.test(band) && /10 lines to go/.test(band) && !/Unexplained/.test(band), tag + ': Difference 1,682.25, "10 lines to go" on its own line, no Unexplained while it is 0.00');
     ok(/2 of 12 in your books/.test(band) && await p.locator('[data-testid="bank-finish-tiles"] .lk-fig').count() === 3, tag + ': three tiles and the progress "2 of 12 in your books"');
     ok(/All amounts in Australian dollars \(AUD\)/.test(band) && /Right account\?/.test(band) && /Business bank account/.test(band) && /2 Oct to 31 Oct 2026 · 12 lines/.test(band), tag + ': the band names the account, the period and the lines, says the currency once and asks "Right account?" (W15-20, W15-21)');
     ok(/Opening 18,500\.00 agrees with your books/.test(band) || tag === 'phone', tag + ': the opening agrees with the books (read from the engine check, not worked again)');
