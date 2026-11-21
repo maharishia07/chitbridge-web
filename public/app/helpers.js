@@ -312,6 +312,54 @@ function nm(v, fb) {
 function fmtAt(ts) {
   return CBLocale.time(ts);
 }
+/**
+ * ONE READER FOR EVERY DATE AND TIME (walks I-F-14, L-F-01, 21 Nov): a UAE shop's format tag is ar-AE, so CBLocale.date/time put "21 نوفمبر 2026" and "01:42 م" inside
+ * English sentences, two scripts on one line. The rule: the WORDS (month, weekday, am/pm) are the language the person chose (CBLocale.lang()), the order, numerals and
+ * clock come from the format tag's region, the zone is CBLocale.zoned() (the chosen zone). en + ar-AE reads through "en-AE" ("21 Nov 2026", "1:42 pm");
+ * a person whose language IS the format's language gets the engine's own tag untouched. Never a mix inside one sentence.
+ * The engine file is adopted (DO NOT EDIT), so the one reader is installed over CBLocale.date/time/datetime here, once; every call site is covered.
+ */
+function cbReadTag() {
+  var engine = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!engine || typeof engine.tag !== 'function') return '';
+  var format = engine.tag(),
+    lang = typeof engine.lang === 'function' ? String(engine.lang() || '') : '';
+  if (!lang || lang.split('-')[0].toLowerCase() === format.split('-')[0].toLowerCase()) return format;
+  var ext = (format.match(/-u-.*$/) || [''])[0],
+    region = (format.replace(/-u-.*$/, '').match(/-([A-Za-z]{2})(?:-|$)/) || [])[1],
+    tries = [region ? lang + '-' + region + ext : '', lang + ext, lang];
+  for (var i = 0; i < tries.length; i++) {
+    try {
+      if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i];
+    } catch (_) {}
+  }
+  return format;
+}
+function cbInstallReader() {
+  var engine = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!engine || engine._readerWords || typeof engine.zoned !== 'function' || typeof engine._d !== 'function') return false;
+  var shapes = {
+    time: ['toLocaleTimeString', { hour: '2-digit', minute: '2-digit' }],
+    date: ['toLocaleDateString', { day: '2-digit', month: 'short', year: 'numeric' }],
+    datetime: ['toLocaleString', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }]
+  };
+  Object.keys(shapes).forEach(function (name) {
+    engine[name] = function (ts, opts) {
+      var when = engine._d(ts);
+      if (!when) return '';
+      try {
+        return engine.ltr(when[shapes[name][0]](cbReadTag(), engine.zoned(opts || shapes[name][1])));
+      } catch (_) {
+        return '';
+      }
+    };
+  });
+  engine._readerWords = true;
+  return true;
+}
+try {
+  cbInstallReader();
+} catch (_) {}
 /* R5: connector/device health — ONE source (colour · dot · signal), was duplicated across cap-connector + cap-workforce. */
 function healthColor(h) {
   return { live: 'var(--ok-3)', slow: 'var(--warn-2)', offline: 'var(--disp)' }[h] || 'var(--grey-4)';

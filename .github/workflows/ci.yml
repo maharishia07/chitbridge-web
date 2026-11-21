@@ -394,6 +394,11 @@ jobs:
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
           node tests/avatar-hydrate.test.cjs
+          node tests/locale-reader.test.cjs
+          node tests/tasks-sheet-words.test.cjs
+          node tests/assist-owner-readonly.test.cjs
+          node tests/till-one-clock.test.cjs
+          node tests/year-close-corptax-grey.test.cjs
           node tests/dead-code-sweep.test.cjs
           node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
