@@ -1801,9 +1801,9 @@ function bkRangeHTML(id, again) {
   );
 }
 /* a report table from its head cells, row HTML and optional foot */
-function bkTable(head, rows, foot, cls) {
+function bkTable(head, rows, foot, extraClass) {
   return (
-    '<div class="bk-scroll"><table class="bktab' + (cls ? ' ' + cls : '') + '" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
+    '<div class="bk-scroll"><table class="bktab' + (extraClass ? ' ' + extraClass : '') + '" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
     head
       .map(function (item) {
         return '<th' + (item.num ? ' class="num"' : '') + '>' + item.t + '</th>';
