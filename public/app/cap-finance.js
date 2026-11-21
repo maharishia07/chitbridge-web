@@ -321,7 +321,6 @@ function finCols() {
       pin: 'end',
       w: 130,
       html: true,
-      /** the row's Receive and Remind buttons; clicking them does not open the row */
       cell: function (party) {
         var id = esc(party.party_id);
         return (
@@ -379,7 +378,6 @@ function finMount(frame) {
     defaultCols: ['party', 'due', 'age', 'limit', 'interest', 'last'],
     cardMax: 4,
     fill: false,
-      /** the list header: the title, the age chips and the sentence about unbilled work */
     head: function () {
       var said = finUnbilledWords(FIN.unbilled);
       return {
@@ -418,7 +416,6 @@ function finMount(frame) {
       by: function (p) {
         return p.over_limit ? [tx('Over limit'), 'over'] : [tx('To collect'), 'coll'];
       },
-      /** the footer: how many owe you and what they owe together */
       fig: function (rows) {
         return (
           txn('{count} owes you', '{count} owe you', rows.length) +

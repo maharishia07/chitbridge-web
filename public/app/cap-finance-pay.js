@@ -115,7 +115,6 @@ function fpCols() {
       return FP.cur;
     },
     dash = '<span style="color:var(--grey)">—</span>';
-  /** one ageing-bucket column: its label and a right-aligned money cell, a dash where the supplier owes nothing in it */
   var bucket = function (k, label, prio) {
     return {
       key: 'b' + k,
@@ -191,7 +190,6 @@ function fpCols() {
       pin: 'end',
       w: 100,
       html: true,
-      /** the row's Pay button, which opens that supplier's payment without opening the row */
       cell: function (party) {
         return (
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fp-pay-' +
@@ -467,7 +465,6 @@ function fpMount(frame) {
       by: function (p) {
         return [tx(FP_GROUPS[p.payable.group] || 'Later'), p.payable.group];
       },
-      /** the footer total: how many suppliers are listed and what is payable to them together */
       fig: function (rows) {
         return (
           txn('{count} supplier', '{count} suppliers', rows.length) +
