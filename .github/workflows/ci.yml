@@ -67,6 +67,8 @@ jobs:
           node scripts/check-adoption.js
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs
+      - name: Misfix 1121 (F-54 menu fits 1366x768, F-67 P&L head to today)
+        run: node tests/misfix-1121-web.test.cjs
       - name: Proofs 2026-11-14 (AI-13 promptAsk · DOC-5/68 seams and MODULES · DOC-7 glossary tap · JAN-7 method models · MNT-16 checklist anchor · PM-8 verdict+incident build · PM-53 edition chip)
         run: |
           node tests/ai-13-prompt-ask.test.cjs
