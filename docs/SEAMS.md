@@ -32,7 +32,7 @@ of file each thing is; this says what already does the job.
 | 82 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 81 | `again` | `signin-ui.js` |  |
 | 81 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
-| 79 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 80 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 77 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 77 | `read` | `books-grant-drill.js` |  |
 | 77 | `count` | `money-check.js` | the count /health reads |
