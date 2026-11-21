@@ -116,7 +116,7 @@ function render() {
           '<button type="button" data-cbsid="NSH001-C02" aria-pressed="' + (DEPT === item.bridge_id) + '" class="chip' +
           (DEPT === item.bridge_id ? ' on' : '') +
           '" onclick="pick(\'' +
-          esc(String(item.bridge_id).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+          escJs(String(item.bridge_id).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
           '\')">' +
           esc(item.name) +
           '</button>'

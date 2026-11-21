@@ -291,13 +291,13 @@ function matchDetail(o) {
     '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
     (o.verdict === 'differs'
       ? '<button data-cbsid="BUS003-B03" class="composebtn" data-testid="match-dispute" onclick="matchDispute(\'' +
-        esc(o.chit_id) +
+        escJs(o.chit_id) +
         '\')">⚑ ' +
         esc(tx('Raise a dispute')) +
         '</button>'
       : '') +
     '<button data-cbsid="BUS003-B04" class="pill" onclick="openChit(\'' +
-    esc(o.chit_id) +
+    escJs(o.chit_id) +
     '\')">' +
     esc(tx('Open the order')) +
     '</button>' +
@@ -423,7 +423,7 @@ function matchDispute(chit_id) {
       esc(tx('Cancel')) +
       '</button>' +
       '<button data-cbsid="BUS003-B05" class="composebtn" data-testid="match-dispute-send" onclick="matchDisputeSend(\'' +
-      esc(chit_id) +
+      escJs(chit_id) +
       '\')">' +
       esc(tx('Raise it')) +
       '</button></div>' +

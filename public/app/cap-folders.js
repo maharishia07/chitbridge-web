@@ -1312,19 +1312,19 @@ function _ruleRow(r, i, n) {
        single rule cannot be reordered, and two dead buttons beside it just invite a click that does nothing. */
     (n > 1
       ? '<span style="display:inline-flex;gap:3px;flex:0 0 auto">' +
-        mvBtn('↑', i > 0, 'Run earlier — this rule will beat the one above it', "ruleMove('" + esc(r.rule_id) + "',-1)") +
-        mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one', "ruleMove('" + esc(r.rule_id) + "',1)") +
+        mvBtn('↑', i > 0, 'Run earlier — this rule will beat the one above it', "ruleMove('" + escJs(r.rule_id) + "',-1)") +
+        mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one', "ruleMove('" + escJs(r.rule_id) + "',1)") +
         '</span>'
       : '') +
     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input data-cbsid="SCR004-I01" type="checkbox" data-testid="rule-enabled" ' +
     (r.enabled ? 'checked' : '') +
     ' onchange="ruleToggle(\'' +
-    esc(r.rule_id) +
+    escJs(r.rule_id) +
     '\',this.checked)"><span style="font-weight:700;font-size:var(--fs-2)">' +
     esc(r.name || 'Rule') +
     '</span></label>' +
     '<span data-cbsid="CMP011" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' +
-    esc(r.rule_id) +
+    escJs(r.rule_id) +
     '\')">' +
     tx('Delete') +
     '</span></div>' +

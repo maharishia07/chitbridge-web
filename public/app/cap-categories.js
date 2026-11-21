@@ -405,7 +405,7 @@ function cbcatSeedAsk() {
         esc(item) +
         '"' +
         ' onclick="cbcatSeedPick(\'' +
-        esc(item) +
+        escJs(item) +
         '\')">' +
         tx('See these →') +
         '</button></div>'
@@ -492,7 +492,7 @@ function cbcatSeedPick(v) {
         esc(item.gid) +
         '"' +
         ' onchange="cbcatSeedTick(\'' +
-        esc(item.gid) +
+        escJs(item.gid) +
         '\', this.checked)">' +
         '<span class="bn" style="font-weight:' +
         (kid ? '400' : '700') +
@@ -850,7 +850,7 @@ function cbcatRowsHTML() {
       esc(c.id) +
       '"' +
       ' onclick="cbcatSelect(\'' +
-      esc(c.id) +
+      escJs(c.id) +
       '\')"' +
       (ret ? ' style="opacity:.72"' : '') +
       '>' +
@@ -1085,14 +1085,14 @@ function cbcatDetailHTML() {
     '</div>' +
     '<div class="actbar">' +
     (ret
-      ? '<button data-cbsid="CTG002-B11" class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
+      ? '<button data-cbsid="CTG002-B11" class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + escJs(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
       : '<button data-cbsid="CTG002-B12" class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' +
-        esc(c.id) +
+        escJs(c.id) +
         '\')">' +
         tx('Edit') +
         '</button>' +
         '<button data-cbsid="CTG002-B13" data-testid="catg-retire" onclick="cbcatRetire(\'' +
-        esc(c.id) +
+        escJs(c.id) +
         '\')">' +
         tx('Retire') +
         '</button>') +
@@ -1265,7 +1265,7 @@ function cbcatProductTicksHTML(cid) {
     '" value="' +
     esc(CBCAT_UI.pq || '') +
     '" oninput="CBCAT_UI.pq=this.value; cbcatProdTicksRepaint(\'' +
-    esc(cid) +
+    escJs(cid) +
     '\')"></div>' +
     '<div id="cbcat_prodstrip" style="padding:6px 10px 0">' +
     (typeof prodCatgStripHTML === 'function' ? prodCatgStripHTML(ctx) : '') +
@@ -1361,9 +1361,9 @@ function cbcatOfferTicksHTML(cid) {
           '" data-testid="catg-offer-' +
           esc(item.id) +
           '" onclick="cbcatOfferToggle(\'' +
-          esc(cid) +
+          escJs(cid) +
           "','" +
-          esc(item.id) +
+          escJs(item.id) +
           '\',this)">' +
           (on ? '✓ ' : '') +
           esc(item.name) +

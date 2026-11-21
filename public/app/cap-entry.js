@@ -382,7 +382,7 @@ function enGridHTML() {
               '<button data-cbsid="SCR022-B02" type="button" class="en-tile" data-testid="en-event-' +
               esc(entry.id) +
               '" onclick="enPick(\'' +
-              esc(entry.id) +
+              escJs(entry.id) +
               '\')"><span class="ic" aria-hidden="true">' +
               esc(entry.icon || '＋') +
               '</span><span>' +
@@ -626,7 +626,7 @@ function enFieldHTML(f) {
   var wrap = function (inner) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
   };
-  var on = "enSet('" + esc(k) + "',this.value)";
+  var on = "enSet('" + escJs(k) + "',this.value)";
   if (EN.ev && EN.ev.kind === 'contra' && (k === 'from' || k === 'to')) return enOwnField(k, lab, tid, v, on);
   var picked = enPickHTML(f, lab, tid, v, on);
   if (picked) return picked;
@@ -1001,9 +1001,9 @@ function enPaintSaved(body, acts) {
     '</div>';
   acts.innerHTML =
     '<button data-cbsid="SCR022-B07" class="en-btn" data-testid="en-reverse-now" onclick="enReverse(\'' +
-    esc(s.entry_id || s.id || '') +
+    escJs(s.entry_id || s.id || '') +
     "','" +
-    esc(no) +
+    escJs(no) +
     '\',true)">↩ ' +
     esc(tx('Reverse this entry')) +
     '</button>' +

@@ -194,7 +194,7 @@ function fpCols() {
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fp-pay-' +
           esc(party.party_id) +
           '" onclick="event.stopPropagation();fpPay(\'' +
-          esc(party.party_id) +
+          escJs(party.party_id) +
           '\')">' +
           esc(tx('Pay')) +
           '</button>'

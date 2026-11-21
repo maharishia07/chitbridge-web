@@ -151,7 +151,7 @@ function listCtlToolbarHTML(key) {
         ' onchange="listCtlSetFilter(' +
         k +
         ",'" +
-        esc(item.key) +
+        escJs(item.key) +
         '\',this.value)">' +
         opts +
         '</select>'

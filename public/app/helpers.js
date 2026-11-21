@@ -55,6 +55,13 @@ function deepClone(x) {
 function esc(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
+/* A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": the browser decodes the attribute's HTML
+   entities BEFORE the JS runs, so esc() alone lets a quote end the string (reviews5 GF-03 M8, GF-05 M10, EL-04 M14). Quote, backslash, angle,
+   ampersand and line breaks become \uXXXX (the same characters inside the string, none able to end it), then esc for the attribute.
+   e2e/guard-xss-handlers.cjs fails an esc( in that position. */
+function escJs(v) {
+  return esc(String(v == null ? '' : v).replace(/[\\'"<>&\r\n\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')));
+}
 function opt(arr, sel) {
   return arr.map((item) => `<option ${item === sel ? 'selected' : ''}>${item}</option>`).join('');
 }

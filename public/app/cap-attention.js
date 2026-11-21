@@ -67,7 +67,7 @@
       total += n;
       if (!n) return '';
       return (
-        '<button type="button" class="attn-chip" data-cbsid="CMP033-B01" data-b="attn-' + item[0] + '" data-testid="attn-' + item[0] + '" aria-pressed="' + (slot.kind === item[0]) + '" onclick="CBAttention.open(\'' + esc(host.id) + '\',\'' + item[0] + '\')">' +
+        '<button type="button" class="attn-chip" data-cbsid="CMP033-B01" data-b="attn-' + item[0] + '" data-testid="attn-' + item[0] + '" aria-pressed="' + (slot.kind === item[0]) + '" onclick="CBAttention.open(\'' + escJs(host.id) + '\',\'' + item[0] + '\')">' +
         '<span aria-hidden="true">' + item[1] + '</span> <b>' + esc(String(n)) + '</b> ' + esc(translate(item[3] === 'flag' ? 'flag' : item[3] === 'none' ? 'none' : item[3] === 'nodoc' ? 'nodoc' : 'query')) + '</button>'
       );
     }).filter(Boolean).join(' · ');
@@ -98,7 +98,7 @@
     });
     var pages = Math.max(1, Math.ceil(Number(list.count || 0) / LIMIT)),
       press = function (side, off, step) {
-        return '<button type="button" data-cbsid="CMP037-' + (side === 'prev' ? 'B06' : 'B07') + '" class="act quiet cbl-pgbtn" data-testid="attn-' + side + '"' + (off ? ' disabled' : '') + ' onclick="CBAttention.page(\'' + esc(host.id) + '\',' + step + ')">' + (side === 'prev' ? '‹ ' + esc(translate('prev')) : esc(translate('next')) + ' ›') + '</button>';
+        return '<button type="button" data-cbsid="CMP037-' + (side === 'prev' ? 'B06' : 'B07') + '" class="act quiet cbl-pgbtn" data-testid="attn-' + side + '"' + (off ? ' disabled' : '') + ' onclick="CBAttention.page(\'' + escJs(host.id) + '\',' + step + ')">' + (side === 'prev' ? '‹ ' + esc(translate('prev')) : esc(translate('next')) + ' ›') + '</button>';
       };
     return (
       '<div class="attn-list" data-testid="attn-list"><div class="cbl" style="overflow-x:auto">' + table + '</div>' +

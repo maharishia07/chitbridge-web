@@ -196,7 +196,7 @@ function catsetDefListHTML(kind, one) {
           '-reinstate-' +
           esc(d.id) +
           '" onclick="catsetDefStatus(\'' +
-          esc(d.id) +
+          escJs(d.id) +
           "','live')\">" +
           tx('Reinstate') +
           '</span>'
@@ -208,7 +208,7 @@ function catsetDefListHTML(kind, one) {
           '-live-' +
           esc(d.id) +
           '" onclick="catsetDefStatus(\'' +
-          esc(d.id) +
+          escJs(d.id) +
           "','" +
           (d.status === 'live' ? 'draft' : 'live') +
           '\')">' +
@@ -217,16 +217,16 @@ function catsetDefListHTML(kind, one) {
           '<span data-cbsid="CMP012" class="da" onclick="catsetDefEdit(\'' +
           kind +
           "','" +
-          esc(d.id) +
+          escJs(d.id) +
           '\')">' +
           tx('Edit') +
           '</span>' +
           '<span data-cbsid="CAT004-C03" class="da" onclick="catsetDefRetire(\'' +
           kind +
           "','" +
-          esc(d.id) +
+          escJs(d.id) +
           "','" +
-          esc(String(d.name).replace(/'/g, '')) +
+          escJs(String(d.name).replace(/'/g, '')) +
           '\')">' +
           tx('Retire') +
           '</span>') +
@@ -613,7 +613,7 @@ function catsetLangBar() {
       (on ? ' on' : '') +
       (fixed ? ' fixed' : '') +
       '"' +
-      (fixed ? ' title="English always shows — it is what every list falls back to"' : ' onclick="catsetLangToggle(\'' + esc(l.code) + '\')"') +
+      (fixed ? ' title="English always shows — it is what every list falls back to"' : ' onclick="catsetLangToggle(\'' + escJs(l.code) + '\')"') +
       '>' +
       (on ? '✓ ' : '') +
       esc(l.label) +
@@ -1403,7 +1403,7 @@ async function catcolLoad(v) {
             esc(item.field_key) +
             '"' +
             ' onchange="catcolTick(\'' +
-            esc(item.field_key) +
+            escJs(item.field_key) +
             '\', this.checked)">' +
             '<span class="bn">' +
             esc(item.field_name || item.field_key) +
@@ -2062,7 +2062,7 @@ function catsetErpHTML() {
           esc(item.field_key) +
           '"' +
           ' onchange="catsetErpSet(\'' +
-          esc(item.field_key) +
+          escJs(item.field_key) +
           "','system',this.value)\"" +
           ' style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">' +
           CATSET_SYS.map(function (entry) {
@@ -2277,7 +2277,7 @@ function catsetOfferPlanHTML() {
               .map(function (entry) {
                 return (
                   '<div data-cbsid="CAT004-C06" style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' +
-                  esc(entry.id) +
+                  escJs(entry.id) +
                   '\')">' +
                   esc(entry.name) +
                   '</div>'
@@ -2572,7 +2572,7 @@ function catsetTaxCatgChipsHTML(rows) {
       '<span data-cbsid="CAT004-C07" class="pill" data-testid="catset-tax-catg-' +
       esc(id || 'all') +
       '" onclick="catsetTaxCatg(\'' +
-      esc(id) +
+      escJs(id) +
       '\')" style="cursor:pointer;' +
       (on ? 'background:var(--accent);color:#fff;' : 'color:var(--on-bg);') +
       '">' +
@@ -2647,7 +2647,7 @@ function catsetTaxRegisterHTML() {
         '<tr data-testid="catset-tax-row-' +
         esc(id(x)) +
         '" style="cursor:pointer" onclick="catsetOpenProduct(\'' +
-        esc(id(x)) +
+        escJs(id(x)) +
         '\')">' +
         cell('<b>' + esc(x.name) + '</b>' + (x.code ? '<div style="color:var(--grey);font-size:var(--fs-1)"><code>' + esc(x.code) + '</code></div>' : '')) +
         cell(tax + ' ' + from + warn) +
@@ -3198,7 +3198,7 @@ function catsetSfHTML() {
         esc(item.k) +
         '"' +
         ' onclick="catsetSfMethod(\'' +
-        esc(item.k) +
+        escJs(item.k) +
         '\')" style="cursor:pointer">' +
         '<span class="bn">' +
         esc(item.label) +
@@ -3225,7 +3225,7 @@ function catsetSfHTML() {
         ' data-testid="catset-sf-unit-' +
         esc(item) +
         '" onclick="catsetSfUnit(\'' +
-        esc(item) +
+        escJs(item) +
         '\')">' +
         esc(item) +
         '</button>'
@@ -3253,7 +3253,7 @@ function catsetSfHTML() {
             ' data-testid="catset-sf-def-' +
             esc(item) +
             '" onclick="catsetSfDefUnit(\'' +
-            esc(item) +
+            escJs(item) +
             '\')">' +
             esc(item) +
             '</button>'
@@ -3278,7 +3278,7 @@ function catsetSfHTML() {
         ' data-testid="catset-sf-facet-' +
         esc(item) +
         '" onclick="catsetSfFacet(\'' +
-        esc(item) +
+        escJs(item) +
         '\')">' +
         esc(item) +
         '</button>'

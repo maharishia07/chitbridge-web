@@ -334,7 +334,7 @@ function peSellForm(id) {
     peField('pd_get', 'What it fetched (empty if scrapped)', peAmt('pd_get', '', tx('Leave empty if scrapped'))) +
     peField('pd_into', 'Money came into', peSel('pd_into', peModeList(), 'bank')) +
     '</div><div class="supacts">' +
-    peBtn('pd-save', 'Save', "peSellSave(this,'" + esc(id) + "')") +
+    peBtn('pd-save', 'Save', "peSellSave(this,'" + escJs(id) + "')") +
     peBtn('pd-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
     '</div><div id="pd_out" class="pe-slot"></div></div>';
   peEl('pa_form').scrollIntoView && peEl('pa_form').scrollIntoView({ block: 'nearest' });
@@ -1097,7 +1097,7 @@ function peReturnLedgers(answer, b, taxColumns) {
   const lines = (b.accounts || []).map((item) =>
     CBList.nextRow(
       [
-        '<button data-cbsid="BKS016-B06" type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" data-testid="pr-open-' + esc(b.code) + '-' + esc(item.code) + '" onclick="peReturnOpen(\'' + esc(item.code) + '\')">' + esc(item.code + ' ' + item.name) + '</button>'
+        '<button data-cbsid="BKS016-B06" type="button" style="background:none;border:0;padding:0;min-height:0;font:inherit;color:var(--link,#1a5f8a);cursor:pointer;text-align:left" data-testid="pr-open-' + esc(b.code) + '-' + esc(item.code) + '" onclick="peReturnOpen(\'' + escJs(item.code) + '\')">' + esc(item.code + ' ' + item.name) + '</button>'
       ].concat(taxColumns ? [money(item.amount_minor), money(item.tax_minor)] : [money(item.amount_minor != null ? item.amount_minor : item.tax_minor)]),
       widths
     )

@@ -151,9 +151,9 @@ function supRow(s) {
     kept +
     (s.keep_stock
       ? '<button data-cbsid="SCR009-B03" class="btn2" data-testid="supply-use" onclick="supUseModal(\'' +
-        esc(s.supply_item_id) +
+        escJs(s.supply_item_id) +
         "','" +
-        esc(s.name) +
+        escJs(s.name) +
         '\')">' +
         tx('Used some') +
         '</button>'
@@ -423,7 +423,7 @@ function supUseModal(id, name) {
       tx('Cancel') +
       '</button>' +
       '<button data-cbsid="SCR009-B06" class="composebtn pri" style="flex:1" data-testid="supply-use-save" onclick="supUse(\'' +
-      esc(id) +
+      escJs(id) +
       '\')">' +
       tx('Record') +
       '</button>' +

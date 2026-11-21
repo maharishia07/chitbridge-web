@@ -279,7 +279,7 @@ function ftRulesHtml(rules, prefix) {
         '-fix-' +
         index +
         '" onclick="ftFix(\'' +
-        esc(rule.field) +
+        escJs(rule.field) +
         '\')">' +
         esc(rule.fix) +
         '</button></div>'
@@ -706,7 +706,7 @@ async function ftOpen(pid) {
       '<button data-cbsid="CMP001" type="button" class="act" data-testid="ftp-save" data-off="' +
       (off ? '1' : '0') +
       '" disabled onclick="ftSaveParty(\'' +
-      esc(pid) +
+      escJs(pid) +
       '\',this)">' +
       esc(tx('Save')) +
       '</button></div>'

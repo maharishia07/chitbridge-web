@@ -54,7 +54,7 @@ function partyTaxRowHTML(kind, partyId, t, i) {
     '" style="width:100%" oninput="partyDupCheck(\'' +
     kind +
     "','" +
-    esc(partyId) +
+    escJs(partyId) +
     '\')"></div>'
   );
 }
@@ -120,7 +120,7 @@ function partyEditOpen(kind, partyId) {
       '<button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' +
       kind +
       "','" +
-      esc(partyId) +
+      escJs(partyId) +
       '\')">+ ' +
       tx('Add a tax id') +
       '</button></div>' +
@@ -143,7 +143,7 @@ function partyEditOpen(kind, partyId) {
       '</button><button data-cbsid="CMP001-B01"' + bkMountAttribute('CMP001') + ' class="pri" data-testid="pe_save" onclick="partyEditSave(\'' +
       kind +
       "','" +
-      esc(partyId) +
+      escJs(partyId) +
       '\')">' +
       tx('Save') +
       '</button>'

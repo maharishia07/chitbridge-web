@@ -966,7 +966,7 @@ function c2PaneDel(d) {
         '<button data-cbsid="DTL006-B04" class="btn pri" data-testid="c2-delivered" onclick="c2Deliver(\'' +
         e.line_id +
         "','" +
-        esc(l.unit || '') +
+        escJs(l.unit || '') +
         '\')">' +
         tx('Delivered') +
         '</button>' +
@@ -975,7 +975,7 @@ function c2PaneDel(d) {
           ? '<button data-cbsid="DTL006-B11" class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' +
             e.line_id +
             "','" +
-            esc(l.unit || '') +
+            escJs(l.unit || '') +
             '\',true)">' +
             tx('Take back') +
             '</button>'

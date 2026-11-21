@@ -156,7 +156,7 @@ function _erpReceiptsHTML() {
       '<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ ' +
       esc(UI.acReceiptsErr) +
       ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\'' +
-      esc(UI.acSel) +
+      escJs(UI.acSel) +
       '\')">' +
       tx('Retry') +
       '</button></div>'
@@ -190,7 +190,7 @@ function _erpReceiptsHTML() {
         '</span>' +
         (item.chit_id
           ? '<button data-cbsid="SCR002-B01" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="openChit(\'' +
-            esc(item.chit_id) +
+            escJs(item.chit_id) +
             '\')">' +
             tx('Open chit') +
             '</button>'
@@ -251,7 +251,7 @@ function piCockpit(x) {
     ico(
       '🗑',
       'Delete this ' + (iot ? 'gateway' : 'system'),
-      "acDeleteConnector('" + x.id + "','" + esc(String(x.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + "')"
+      "acDeleteConnector('" + x.id + "','" + escJs(String(x.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + "')"
     ) +
     '</span></div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">📍 ' +
@@ -410,7 +410,7 @@ function _provPanel(iot, aid) {
   var regen =
     iot && aid
       ? '<div style="margin-top:9px"><button data-cbsid="SCR002-B08" class="composebtn" onclick="acRegenKey(\'' +
-        esc(aid) +
+        escJs(aid) +
         '\')">' +
         tx('♻ Reissue raw key (advanced)') +
         '</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +

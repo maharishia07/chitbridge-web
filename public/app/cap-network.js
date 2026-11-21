@@ -619,9 +619,9 @@ function netReissueKey(userId) {
         '</div>' +
         '<div style="color:var(--grey);font-size:var(--fs-2)">Expires in 7 days. The previous code no longer works.</div>' +
         '<button data-cbsid="BUS004-B01" class="pri" onclick="netCopyKey(\'' +
-        esc(reply.user_id) +
+        escJs(reply.user_id) +
         "','" +
-        esc(reply.claim_code) +
+        escJs(reply.claim_code) +
         '\')" style="margin-top:12px;width:100%;padding:9px">' +
         tx('Copy') +
         '</button></div>';
@@ -1947,9 +1947,9 @@ function netMintGo() {
               esc(item.claim_code) +
               '</span>' +
               '<button data-cbsid="BUS004-B05" onclick="netCopyKey(\'' +
-              esc(item.handle) +
+              escJs(item.handle) +
               "','" +
-              esc(item.claim_code) +
+              escJs(item.claim_code) +
               '\')" style="padding:4px 10px;font-size:var(--fs-1)">' +
               tx('Copy') +
               '</button>' +
@@ -5373,7 +5373,7 @@ function _netGeneralTab(n) {
         '</b> · ' +
         esc(n.built.bridge_id) +
         '<br><button data-cbsid="BUS004-B18" onclick="netReissueKey(\'' +
-        esc(n.built.user_id) +
+        escJs(n.built.user_id) +
         '\')" style="margin-top:7px;padding:5px 11px;font-size:var(--fs-1)">' +
         tx('Issue a new sign-in code') +
         '</button></div>'

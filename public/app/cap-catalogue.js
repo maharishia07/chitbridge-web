@@ -1223,7 +1223,7 @@ var CBCatalogueApp = (function () {
     return cbSlabMenuHTML(menu, {
       cls: 'act quiet',
       pick: function (slabId) {
-        return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)";
+        return "CBCatalogueApp.ratePick('" + escJs(slabId) + "', this)";
       }
     });
   }

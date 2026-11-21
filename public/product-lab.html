@@ -215,7 +215,7 @@ function storeLine(item) {
 function listPill(item) {
   return (
     '<button data-cbsid="PLB001-B02" class="pill ' + (item.key === LIST.key ? 'on' : '') + (item.store_name ? ' has-sub' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' +
-    ' onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
+    ' onclick="pickList(\'' + escJs(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
   );
 }
 function pickList(k, keep) {
@@ -424,7 +424,7 @@ function buildChoose() {
                 '" data-testid="pl-lang-' +
                 esc(item) +
                 '" onclick="toggleLang(\'' +
-                esc(item) +
+                escJs(item) +
                 '\')">' +
                 esc((DATA.language_names || {})[item] || item) +
                 '</button>'
@@ -475,7 +475,7 @@ function buildChoose() {
               ' data-testid="pl-unit-' +
               esc(item) +
               '" onclick="toggleUnit(\'' +
-              esc(item) +
+              escJs(item) +
               '\')">' +
               esc(item) +
               ' <b>' +
