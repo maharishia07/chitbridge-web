@@ -451,10 +451,14 @@ async function _cfRun(btn) {
 
     var s = r.summary || {};
     var blocking = (s.errors || 0) > 0;
+    var takeGood = blocking && (s.importable || 0) > 0; // S2-F-02: the good rows can go in; the bad ones come back listed, with a file to fix
+    UI._cf.skipBad = takeGood;
     var badge = blocking
       ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
         s.errors +
-        ' row problem(s) — fix the file first</span>'
+        (takeGood
+          ? ' row problem(s) — the other ' + s.importable + ' row(s) can still go in; the problem rows come back listed</span>'
+          : ' row problem(s) — fix the file first</span>')
       : r.ready
         ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
           tx('Every column is placed') +
@@ -523,9 +527,10 @@ async function _cfRun(btn) {
     // the server refuses them too, and offering the button anyway teaches people to ignore it.
     var node = document.getElementById('cf_import');
     if (node) {
-      node.disabled = blocking;
-      node.style.opacity = blocking ? '.5' : '1';
-      node.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue';
+      var stopped = blocking && !takeGood;
+      node.disabled = stopped;
+      node.style.opacity = stopped ? '.5' : '1';
+      node.title = stopped ? 'Fix the row problems first' : takeGood ? 'Import the good rows; the problem rows are listed' : 'Apply these choices to your catalogue';
     }
   } catch (e) {
     out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">' + esc((e && e.message) || 'Could not read the file.') + '</div>';
@@ -576,13 +581,37 @@ function _cfImport(btn) {
     }
   );
 }
+/** S2-F-02: the rows an import left out, each with its line, field and reason, and the button for the file to fix and send again (the answer's rejects / rejects_csv) */
+function _cfRejectsHtml(reply) {
+  var bad = reply.rejects || [];
+  if (!bad.length) return '';
+  return (
+    '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--disp);margin:12px 0 4px">' + bad.length + ' row(s) not imported</div>' +
+    '<ul data-testid="cf-rejects" style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">' +
+    bad.slice(0, 40).map(function (item) {
+      return '<li style="color:var(--disp)">line ' + item.line + ' · <b>' + esc(item.field) + '</b> — ' + esc(item.message) + '</li>';
+    }).join('') +
+    '</ul><button id="cf_rejects_dl" data-testid="cf-rejects-download" type="button" class="act quiet" style="margin-top:8px">Download the rows to fix</button>'
+  );
+}
+/** the rejected rows as a .csv the person fixes and imports again (BOM: Excel keeps accents without it) */
+function _cfDownloadRejects(text) {
+  var url = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+  var node = document.createElement('a');
+  node.href = url;
+  node.download = 'rows-to-fix.csv';
+  document.body.appendChild(node);
+  node.click();
+  node.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
 async function _cfImportRun(btn, decisions, out) {
   var was = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Importing…';
   try {
     var reply = await api('prodImport', {
-      body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true })
+      body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true }, UI._cf.skipBad ? { skip_bad_rows: true } : {})
     }); /* the SAME file the preflight read */
     out.innerHTML =
       '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">' +
@@ -615,7 +644,10 @@ async function _cfImportRun(btn, decisions, out) {
       '</ul>' +
       ((reply.outcome || []).length > 40
         ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + ((reply.outcome || []).length - 40) + ' more.</div>'
-        : '');
+        : '') +
+      _cfRejectsHtml(reply);
+    var again = document.getElementById('cf_rejects_dl');
+    if (again) again.onclick = function () { _cfDownloadRejects(reply.rejects_csv); };
     btn.disabled = true;
     btn.style.opacity = '.5';
     if (typeof loadProducts === 'function') loadProducts(); /* the workshop's list */
