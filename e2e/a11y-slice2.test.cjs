@@ -13,6 +13,7 @@
  *   - a view switch made of pressed buttons is a labelled group, not a tab list (axe aria-required-children)
  * The words on screen are unchanged ("Could not reach the network." is still said, now at 4.5:1 or better); no string moved, so the string layer is untouched.
  *
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/themes-contrast-accessibility
  * Run: node e2e/a11y-slice2.test.cjs        exit 1 on a failure
  */
 // MIN walk (a source walk of each fixed element, not a browser walk; the axe run on SIT is the browser proof)
