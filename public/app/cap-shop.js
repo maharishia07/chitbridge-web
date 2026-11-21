@@ -801,13 +801,13 @@ function shopFieldsHTML(e, licLabel) {
     ' <span title="' +
     esc(tx('Your business registration')) +
     '" style="color:var(--grey);font-weight:400;cursor:help">ⓘ</span></label>' +
-    '<input data-cbsid="ACC002-I04" class="inp" id="pf_gstn" value="' +
+    '<input data-cbsid="ACC002-I04" data-testid="pf-tax-id" class="inp" id="pf_gstn" value="' +
     esc(e.gstn || '') +
     '">' +
     '<label class="fl" for="pf_addr">' +
     tx('Address') +
     '</label>' +
-    '<input data-cbsid="ACC002-I05" class="inp" id="pf_addr" value="' +
+    '<input data-cbsid="ACC002-I05" data-testid="pf-address" class="inp" id="pf_addr" value="' +
     esc(e.address || '') +
     '">'
   );

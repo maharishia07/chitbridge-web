@@ -2230,11 +2230,11 @@ ctx.limit = inst.limit;
             '<div class="cbl-hc lhcell' +
             (r ? ' r' : '') +
             (id ? ' sortable' : '') +
-            '" role="columnheader" aria-sort="' +
+            '" role="columnheader"' + (id ? ' data-testid="list-col-' + esc(id) + '"' : '') + ' aria-sort="' +
             (sorted ? (sortState.dir === -1 ? 'descending' : 'ascending') : 'none') +
             '">' +
             (id
-              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
+              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" data-testid="list-sort-' + esc(id) + '" title="' + label + '"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
                 '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
