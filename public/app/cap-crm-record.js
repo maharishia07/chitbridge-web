@@ -66,6 +66,14 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
+/** one chit that is an order not cancelled: counted into the unbilled total (never two currencies into one sum) */
+function crmCountUnbilled(un, e) {
+  un.n++;
+  if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the total (an unpriced order, null without the flag, still adds 0)
+  else if (un.minor != null) un.minor += Number(e.amount_minor || 0);
+  if (e.currency && un.currency && e.currency !== un.currency) un.minor = null; /* two currencies are never one sum: the count alone is said (GF-08 M3) */
+  un.currency = un.currency || e.currency;
+}
 /** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
 function crmBillFacts(entries) {
   var chitBills = 0,
@@ -77,13 +85,7 @@ function crmBillFacts(entries) {
       if (e.src === 'ledger') ledBills++;
       else chitBills++;
       if (!lastBill || e.at > lastBill) lastBill = e.at;
-    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
-      un.n++;
-      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the total (an unpriced order, null without the flag, still adds 0)
-      else if (un.minor != null) un.minor += Number(e.amount_minor || 0);
-      if (e.currency && un.currency && e.currency !== un.currency) un.minor = null; /* two currencies are never one sum: the count alone is said (GF-08 M3) */
-      un.currency = un.currency || e.currency;
-    }
+    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) crmCountUnbilled(un, e);
   });
   return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, unbilled: un };
 }
