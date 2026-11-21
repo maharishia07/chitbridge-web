@@ -130,10 +130,20 @@
     );
     observer.observe(spot);
   }
+  /** AF-F-03: a card the server greyed for this seat (may.ok false) is its sentence only; '' for every other answer */
+  function noMoneyHTML(reply) {
+    if (!reply || !reply.may || reply.may.ok !== false) return '';
+    return '<span class="f" data-testid="shell-no-money" style="color:var(--sh-mut,#6b7280)">' + esc(translate(String(reply.may.say || ''))) + '</span>';
+  }
   /** a card's answer into its spot: its lines, its state badge and trend; a failed read says so with a dash */
   function paintFacts(ctx, card, spot) {
     factsOnce(ctx, card.facts)
       .then(function (reply) {
+        var refused = noMoneyHTML(reply);
+        if (refused) {
+          spot.innerHTML = refused; /* AF-F-03: the books refuse this seat the figures: greyed with the server's sentence, no figure, no "Set up" invite */
+          return;
+        }
         var lines = (reply && reply.lines) || [],
           state = ctx.noteNeeds(card, ctx.cardState(reply, lines), ctx.routeOf);
         ctx.paintBadges(ctx.el);
@@ -312,5 +322,5 @@
       }
     };
   }
-  root.CBShellFacts = { create: create, painters: painters, wordsOf: wordsOf, groupSetUp: groupSetUp };
+  root.CBShellFacts = { create: create, painters: painters, wordsOf: wordsOf, groupSetUp: groupSetUp, noMoneyHTML: noMoneyHTML };
 })(typeof window !== 'undefined' ? window : this);
