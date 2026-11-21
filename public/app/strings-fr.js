@@ -1026,6 +1026,8 @@
     '{what} could not be read. Nothing was changed.': '{what} n’a pas pu être lu. Rien n’a été modifié.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(jusqu\'ici)',
+    'Opening rolled forward from {year}: its profit and the earlier retained earnings (computed, not an entry)': 'Ouverture reportée de {year} : son résultat et les bénéfices non distribués antérieurs (calculé, pas une écriture)',
+    '{year} is not closed yet': '{year} n'est pas encore clôturé',
     '(part month)': '(mois partiel)',
     'A month ago': 'Il y a un mois',
     'A year ago': 'Il y a un an',

@@ -1026,6 +1026,8 @@
     '{what} could not be read. Nothing was changed.': '{what} படிக்க முடியவில்லை. எதுவும் மாற்றப்படவில்லை.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(இதுவரை)',
+    'Opening rolled forward from {year}: its profit and the earlier retained earnings (computed, not an entry)': '{year} இலிருந்து கொண்டுவந்த தொடக்க இருப்பு: அதன் இலாபமும் முந்தைய தக்கவைத்த வருவாயும் (கணக்கிடப்பட்டது, பதிவு அல்ல)',
+    '{year} is not closed yet': '{year} இன்னும் மூடப்படவில்லை',
     '(part month)': '(பகுதி மாதம்)',
     'A month ago': 'ஒரு மாதத்துக்கு முன்',
     'A year ago': 'ஒரு ஆண்டுக்கு முன்',

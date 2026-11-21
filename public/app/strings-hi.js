@@ -1027,6 +1027,8 @@
     '{what} could not be read. Nothing was changed.': '{what} पढ़ा नहीं जा सका। कुछ बदला नहीं गया।',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(अब तक)',
+    'Opening rolled forward from {year}: its profit and the earlier retained earnings (computed, not an entry)': '{year} से आगे लाया गया शुरुआती शेष: उसका मुनाफ़ा और पहले की रोकी गई कमाई (गणना से, प्रविष्टि नहीं)',
+    '{year} is not closed yet': '{year} अभी बंद नहीं हुआ',
     '(part month)': '(आंशिक महीना)',
     'A month ago': 'एक महीने पहले',
     'A year ago': 'एक साल पहले',

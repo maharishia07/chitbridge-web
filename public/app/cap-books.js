@@ -3741,6 +3741,7 @@ function bkLgHead() {
   if (ledgerReply) {
     var figures = bkLgFigs(ledgerReply, currency, selection);
     head.chips.push({ tid: 'lg-sum', text: figures.text });
+    if (ledgerReply.carried) head.chips.push({ tid: 'lg-carried', text: bkCarriedWords(ledgerReply.carried, currency) }); /* YE-F-04 */
     var agreedUpTo = ownsParty ? bkAgreedTo(ledgerReply) || bkAgreedTo(BK.dues && BK.dues[selection.party]) : '';
     if (agreedUpTo) head.chips.push({ tid: 'lg-agreed', text: tx('✓ Agreed up to') + ' ' + bkDate(agreedUpTo) });
     if (figures.check && !figures.check.agree) {
@@ -4555,6 +4556,13 @@ function bkSpan(from, to) {
 function bkFig(minor, c) {
   return minor == null ? '<span style="color:var(--grey)">—</span>' : esc(bkMoney(minor, c));
 }
+/** YE-F-04: what the retained-earnings opening IS, in words — the server's `carried` (computed roll, no entry); '' when it sent none */
+function bkCarriedWords(carried, currency) {
+  if (!carried || !carried.computed) return '';
+  var words = txf('Opening rolled forward from {year}: its profit and the earlier retained earnings (computed, not an entry)', { year: carried.from_year });
+  if (carried.year_closed === false) words += ' · ' + txf('{year} is not closed yet', { year: carried.from_year });
+  return words + ' · ' + bkDrCr(-Number(carried.retained_minor || 0), currency);
+}
 /** a ledger's name as a button that opens its entries BELOW the line (the server's page of ten), "Open all" going on to the Ledgers page and Back returning here; every line of every statement, one pattern */
 function bkDrillLink(code, name, tid, from, to, tab, label) {
   if (!code) return esc(name);
@@ -4584,9 +4592,11 @@ async function bkDrillToggle(btn, code, from, to, fromTab, label) {
     var ledgerReply = await api('booksLedger', { params: { account: code }, query: { from: from, to: to, limit: 10, order: 'desc' } });
     var currency = ledgerReply.currency,
       lines = ledgerReply.lines || [],
-      total = ledgerReply.total != null ? ledgerReply.total : lines.length;
+      total = ledgerReply.total != null ? ledgerReply.total : lines.length,
+      carriedWords = bkCarriedWords(ledgerReply.carried, currency);
     td.innerHTML =
       '<div style="padding:4px 0 8px 16px;font-size:var(--fs-1)" data-testid="drill-' + esc(code) + '">' +
+      (carriedWords ? '<div data-testid="drill-carried-' + esc(code) + '">' + esc(carriedWords) + '</div>' : '') +
       (lines.length
         ? lines
             .map(function (l) {

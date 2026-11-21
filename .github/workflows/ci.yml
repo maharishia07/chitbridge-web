@@ -118,6 +118,7 @@ jobs:
           node tests/acct-c-f06-debit-note-fix.test.cjs
           node tests/acct-c-f03-bank-summary.test.cjs
           node tests/acct-c-f04-bank-difference.test.cjs
+          node tests/ye-f04-carried-words.test.cjs
           node tests/ye-f03-last-year-part.test.cjs
           node tests/acct-c-f12-asset-ask.test.cjs
           node tests/product-lab-rows.test.cjs
