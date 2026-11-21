@@ -1227,6 +1227,10 @@ function peYearWhy(text) {
   return words.slice(0, at) + words.slice(at).replace(/\b(\d{4})-(0[1-9]|1[0-2])\b/g, (_, year, month) => names[Number(month) - 1] + ' ' + year);
 }
 /** the checks of a year still open: every month locked, then each thing the server says stands in the way (each with the tab that fixes it), or that nothing else does */
+/** YE-F-08: the server's warnings (an auditor's open query, a bank not reconciled…) in the checks, beside the ticks — named, never a gate, so a warn line and no button */
+function peYearWarnLines(list) {
+  return (list || []).map((w, index) => '<div class="pe-check warn" data-testid="py-warn-' + index + '"><span>⚠</span><span>' + esc(peYearWhy(w.why)) + '</span></div>').join('');
+}
 function peYearChecksHtml(year, months, refs) {
   const open = months.filter((item) => item.status === 'open').length;
   let html = '';
@@ -1257,6 +1261,7 @@ function peYearChecksHtml(year, months, refs) {
       );
     })
     .join('');
+  html += peYearWarnLines(year && year.warnings);
   if (!refs.length) html += '<div class="pe-check ok" data-testid="py-rest"><span>✓</span><span>' + esc(tx('Nothing else stands in the way')) + '</span></div>';
   return html;
 }
