@@ -342,7 +342,8 @@ function go() {
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
 <script src="/app/helpers.js"></script><script src="/app/day-book-kind.js"></script>
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: the one list -->
-<script src="/engine/tax.js"></script>
+<script src="/app/late-scripts.js"></script>   <!-- CBLate: the tags written type="cb-late" below load AFTER the page is usable, in this order; a screen that needs them waits on CBLate.ready() (batch 1128 fixSpeed) -->
+<script type="cb-late" data-late-group="tax" src="/engine/tax.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
 <script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears; this page's own sidebar stays -->
@@ -363,17 +364,17 @@ function go() {
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) -->
 <script src="/app/cap-finance.js"></script>
 <script src="/app/cap-finance-terms.js"></script>   <!-- Terms tab (F2): shop default + per-party override -->
-<script src="/app/cap-finance-pay.js"></script>   <!-- Payables tab (F4): what we owe, aged, MSME day 45, the early-pay offer; Pay is payOpen -->
-<script src="/app/cap-finance-cash.js"></script>   <!-- Cash tab (F3): the 7/30-day cash position, the shortfall sentence; every figure the server's -->
-<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
-<script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow ("Repeat this…" composes on it) -->
-<script src="/app/cap-repeat.js"></script>   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
-<script src="/app/cap-finance-cheques.js"></script>   <!-- Cheques tab (T3-P1-MONEY): the cheques held (cap-books.js's list and steps), the post-dated reminders, the owner's switch -->
-<script src="/app/cap-finance-returns.js"></script>   <!-- Returns tab (T3-P1-MONEY): country-first — India downloads the GSTR files the server builds; AU/AE are told where their return is prepared -->
-<script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
-<script src="/app/mis-charts.js"></script><script src="/app/cap-mis-pictures.js"></script>   <!-- MC (MISCH): the MIS pictures' adapters — the server's answers to CBDraw shapes, no calculation; Trend reads its period words -->   <!-- Reports › Pictures (MISCH): sales · dues by age · income and expense · cash 30 days, each with its table -->
-<script src="/app/cap-mis-trend.js"></script>   <!-- Reports › Trend (RPT2): sales by week · month · quarter · year beside last year — rollup.series on the server, drawn here -->
-<script src="/app/cap-mis.js"></script>   <!-- Reports tab (T3-P4-ACCOUNT): the server's one measurement (lib/measure through GET /api/folders/mis) as one CBList; every number opens the list that holds it -->   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-finance-pay.js"></script>   <!-- Payables tab (F4): what we owe, aged, MSME day 45, the early-pay offer; Pay is payOpen -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-finance-cash.js"></script>   <!-- Cash tab (F3): the 7/30-day cash position, the shortfall sentence; every figure the server's -->
+<script type="cb-late" data-late-group="tabs" src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
+<script type="cb-late" data-late-group="tabs" src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow ("Repeat this…" composes on it) -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-repeat.js"></script>   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-finance-cheques.js"></script>   <!-- Cheques tab (T3-P1-MONEY): the cheques held (cap-books.js's list and steps), the post-dated reminders, the owner's switch -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-finance-returns.js"></script>   <!-- Returns tab (T3-P1-MONEY): country-first — India downloads the GSTR files the server builds; AU/AE are told where their return is prepared -->
+<script type="cb-late" data-late-group="tabs" src="/engine/chart-draw.js"></script><script type="cb-late" data-late-group="tabs" src="/engine/chart-draw-status.js"></script><script type="cb-late" data-late-group="tabs" src="/engine/chart-draw-rows.js"></script>   <!-- CBDraw (RPT2): the one small chart helper — inline SVG bars and sparklines, no library -->
+<script type="cb-late" data-late-group="tabs" src="/app/mis-charts.js"></script><script type="cb-late" data-late-group="tabs" src="/app/cap-mis-pictures.js"></script>   <!-- MC (MISCH): the MIS pictures' adapters — the server's answers to CBDraw shapes, no calculation; Trend reads its period words -->   <!-- Reports › Pictures (MISCH): sales · dues by age · income and expense · cash 30 days, each with its table -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-mis-trend.js"></script>   <!-- Reports › Trend (RPT2): sales by week · month · quarter · year beside last year — rollup.series on the server, drawn here -->
+<script type="cb-late" data-late-group="tabs" src="/app/cap-mis.js"></script>   <!-- Reports tab (T3-P4-ACCOUNT): the server's one measurement (lib/measure through GET /api/folders/mis) as one CBList; every number opens the list that holds it -->   <!-- Repeat supply tab (RI1): the agreements, "Repeat this…", the agreement panel in the chit sheet -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head -->
 <script>
 'use strict';
