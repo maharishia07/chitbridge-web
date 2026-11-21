@@ -20,7 +20,7 @@ function load(code, asks, asked) {
     document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], createElement: () => ({ style: {} }), addEventListener() {} },
   };
   sb.window = sb; const cx = vm.createContext(sb);
-  for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/helpers.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/' + f, 'utf8'), cx);
+  for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/shop-time.js', 'app/helpers.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/' + f, 'utf8'), cx);
   vm.runInContext(src, cx);
   const host = { innerHTML: '' };
   sb.CSU.host = host; sb.CSU.loading = false; sb.CSU.readErr = true; sb.CSU.flags = {};

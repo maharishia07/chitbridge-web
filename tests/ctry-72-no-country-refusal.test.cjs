@@ -24,8 +24,8 @@ function sandbox(extra) {
     location: { search: '?preview=1', hash: '' },
     navigator: { language: 'en-IN' },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
-    document: { getElementById: el, querySelector: () => null, querySelectorAll: () => [], createElement: () => el('x' + Math.random()), addEventListener() {}, head: { appendChild() {} }, body: el('body'), documentElement: { setAttribute() {} } }
-  }, extra || {});
+    document: { getElementById: el, querySelector: () => null, querySelectorAll: () => [], createElement: () => el('x' + Math.random()), addEventListener() {}, head: { appendChild() {} }, body: el('body'), documentElement: { setAttribute() {} } },
+  CBSample: require('../public/app/sample-set.js') /* red1128: the sample set is data read by node in a sandbox */ }, extra || {});
   sb.window = sb; sb.self = sb; sb.addEventListener = () => {};
   return { cx: vm.createContext(sb), el, nodes };
 }
@@ -34,7 +34,7 @@ const run = (cx, src) => vm.runInContext(src, cx);
 /* ── 1 · cap-print.js: the tax words the sample bill is told ─────────────────────────────────────────────── */
 {
   const { cx } = sandbox();
-  for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/helpers.js']) run(cx, read(f));
+  for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/shop-time.js', 'app/helpers.js']) run(cx, read(f));
   run(cx, read('app/cap-print.js'));
   const P = vm.runInContext('CBPrint', cx);
   ok(typeof P.previewFor === 'function', 'CBPrint.previewFor exists');
