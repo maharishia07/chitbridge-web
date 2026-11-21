@@ -17,7 +17,7 @@ const bkhE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 /** 'September 2026' for '2026-09', in the reader's language (a date helper, no money) */
 function bkhMonthLong(month) {
   try {
-    return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    return CBShopTime.day(month, { month: 'long', year: 'numeric' });
   } catch (_) {
     return month;
   }

@@ -106,7 +106,7 @@ function regLangHTML(code) {
 function regFormatSample(locale) {
   try {
     var n = new Intl.NumberFormat(locale).format(1234567890.5),
-      d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+      d = CBShopTime.sample(locale, new Date(), { day: '2-digit', month: '2-digit', year: 'numeric' });
     return '<bdi dir="auto">' + esc(n) + '</bdi> · <bdi dir="auto">' + esc(d) + '</bdi>';
   } catch (_) {
     return esc(locale);

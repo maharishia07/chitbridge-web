@@ -43,12 +43,8 @@
   /** a moment in the shop's zone → { day: 'YYYY-MM-DD', dow: the short weekday name, hour: 0-23 }; null when it is not a moment */
   function zoned(iso) {
     if (!iso || isNaN(new Date(iso).getTime())) return null;
-    var o = { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', hourCycle: 'h23' };
-    if (root.CB_SHOP_TZ) o.timeZone = String(root.CB_SHOP_TZ);
-    var p = {};
-    function read() { new Intl.DateTimeFormat('en-CA', o).formatToParts(new Date(iso)).forEach(function (x) { p[x.type] = x.value; }); }
-    try { read(); } catch (failure) { delete o.timeZone; read(); } /* an unknown zone: the viewer's own, as shopDateTime does */
-    return { day: p.year + '-' + p.month + '-' + p.day, dow: p.weekday, hour: Number(p.hour) % 24 };
+    var p = root.CBShopTime.parts(iso); /* the shop's zone, the viewer's own when it is unknown */
+    return { day: p.day, dow: p.weekday, hour: p.hour };
   }
   function recordedDay(row) {
     var z = zoned(row && row.recorded_at);

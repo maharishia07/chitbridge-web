@@ -686,7 +686,7 @@ function testAgo(iso) {
   if (s < 90) return 'just now';
   if (s < 5400) return Math.round(s / 60) + ' min ago';
   if (s < 172800) return Math.round(s / 3600) + ' h ago';
-  return new Date(iso).toLocaleDateString();
+  return CBShopTime.date(iso);
 }
 
 /**

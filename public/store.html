@@ -71,7 +71,7 @@
 <script src="/app/cb-words.js"></script>   <!-- the string door · toast · confirm: the neutral floor; never the back-office shell (CUSTOMER-DELINK) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/customer-bar.js"></script>   <!-- CBCustomerBar: the customer header — no staff session, no staff menu (CUSTOMER-DELINK) -->
-<script src="/engine/locale.js"></script>
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
 <script>
 if (window.CBCustomerBar)
   CBCustomerBar.mount({ host: document.getElementById('shell'), screen: 'STR001', homeHref: location.pathname + location.search, title: { icon: '◇', name: 'Store' } });

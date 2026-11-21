@@ -139,7 +139,7 @@
     if (!year || month < 0) return null;
     for (var i = 0; i < y.of; i++) {
       var d = new Date(Date.UTC(year, month + i, 1));
-      out.push({ label: new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' }).format(d), state: i < y.locked ? 'locked' : 'open' });
+      out.push({ label: CBShopTime.month(d.getUTCMonth(), 'short'), state: i < y.locked ? 'locked' : 'open' });
     }
     return out;
   }

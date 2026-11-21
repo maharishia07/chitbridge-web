@@ -106,7 +106,7 @@
     return b.reconciled_to ? practiceKit.translate('Signed off to {d}').replace('{d}', practiceKit.dayWords(b.reconciled_to)) : practiceKit.translate('bank not to year end');
   }
   function shortDay(iso) {
-    try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return practiceKit.dayWords(iso); }
+    try { return CBShopTime.day(String(iso).slice(0, 10), { year: undefined }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return practiceKit.dayWords(iso); }
   }
   /** W3 (Athi, 16 Nov): the Checked cell says the share WITH the counts, so a big book's 50% pending is not read like a small one's; the share rounds DOWN and is never 100% unless every entry is checked */
   function checkedWords(e) {

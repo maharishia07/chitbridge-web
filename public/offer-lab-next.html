@@ -10,7 +10,7 @@
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
-<script src="/engine/locale.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Offer Lab · ChitBridge</title>
@@ -5602,7 +5602,7 @@ function historyHTML(sv) {
     body = sv._history
       .map(function (item) {
         var who = item.changed_by_name || 'someone no longer on this shop';
-        var when = new Date(item.changed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+        var when = CBShopTime.datetime(item.changed_at, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
         var status = item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : item.status;
         return '<div>' + esc(status) + ' — ' + esc(who) + ' · ' + esc(when) + '</div>';
       })

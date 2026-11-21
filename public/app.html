@@ -1572,7 +1572,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ MONEY — an amount is never a bare number. The ONE reader (lib/money.js, vendored). Loaded BEFORE
      everything that reads a price, because cbAmount() and the cart both forward to it. -->
 <script src="/engine/money.js"></script>
-<script src="/engine/locale.js"></script>
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the template names the Settings › Policy chooser lists (S2) -->
 <script src="/app/preview-key.js"></script>   <!-- CBPreviewKey: the one-way hand-off the customer shop page reads for the owner preview (CUSTOMER-DELINK) -->
 <script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick: the chooser itself, ONE copy (T3-P2-CRM) — Settings › Policy and CB CRM's Shop window draw it -->
@@ -3701,7 +3701,7 @@ function renderMsgConsole() {
   host.innerHTML = `<div data-cbsid="WRK001-C06" class="notifover" onclick="closeMsgConsole()"><div data-cbsid="WRK001-C07" class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
     <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all', 'All')}${chip('info', 'Info')}${chip('warn', 'Warning')}${chip('error', 'Critical')}${chip('debug', 'Requests')}<button data-cbsid="CMP014" onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
-    <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map((e) => `<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:var(--fs-1);align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level] || 'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join('') : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
+    <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map((e) => `<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:var(--fs-1);align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${CBShopTime.time(e.t, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span><span style="color:${COL[e.level] || 'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join('') : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
 }
@@ -6369,7 +6369,7 @@ function sessionFromMe(entity) {
   if (entity.currency_code) SESSION.currency = entity.currency_code;
   if (entity.user_id) SESSION.handle = entity.user_id;
   if (entity.country) SESSION.country = entity.country;
-  if (entity.timezone) window.CB_SHOP_TZ = SESSION.timezone = entity.timezone; /* UX-123: the shop's own zone, for message times (shopDateTime) */
+  if (entity.timezone) SESSION.timezone = entity.timezone; /* UX-123: the shop's own zone; window.CB_SHOP_TZ is set once, in core.js api('me'), for every page */
 }
 var _rendering = false,
   _renderAgain = false;
@@ -7518,13 +7518,7 @@ function selfBillOpen() {
 
 /** A sale on a date needs no naming ceremony — but it stays editable, because some do. */
 function selfBillSubject() {
-  var d = '';
-  try {
-    d = CBLocale.date(new Date().toISOString());
-  } catch (_) {
-    d = new Date().toISOString().slice(0, 10);
-  }
-  return tx('Counter sale') + ' · ' + d;
+  return tx('Counter sale') + ' · ' + CBShopTime.today(); /* AE-F-10: stored text holds the ISO day, never a formatted one; screens format it at display (CBShopTime.inText) */
 }
 
 /**
@@ -26733,7 +26727,7 @@ function _aiOrderPdf() {
       '</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">' +
       esc(d.label || 'Order review') +
       '</div><div class="meta">AI buyer-side review · ' +
-      esc(new Date().toLocaleString()) +
+      esc(CBShopTime.datetime(new Date(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })) +
       (d.cost != null ? ' · est. $' + d.cost : '') +
       ' · informational, not a commitment</div></div><div class="amddoc">' +
       _aiMd(d.draft || '') +
@@ -26896,7 +26890,7 @@ function _aiOrderDocPdf() {
       '</div><div class="meta">AI-drafted for ' +
       esc(d.orderSubject || 'order') +
       ' · ' +
-      esc(new Date().toLocaleString()) +
+      esc(CBShopTime.datetime(new Date(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })) +
       (d.cost != null ? ' · est. $' + d.cost : '') +
       ' · review &amp; confirm</div></div><div class="amddoc">' +
       _aiMd(d.draft || '') +
@@ -26980,7 +26974,7 @@ function _aiRunPdf() {
       '</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">' +
       esc(d.title || 'AI') +
       '</div><div class="meta">AI co-assist · ' +
-      esc(new Date().toLocaleString()) +
+      esc(CBShopTime.datetime(new Date(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })) +
       (d.cost != null ? ' · est. $' + d.cost : '') +
       '</div></div><div class="amddoc">' +
       _aiMd(d.draft || '') +

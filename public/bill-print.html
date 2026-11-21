@@ -95,7 +95,7 @@
 <div class="slip" id="slip"></div>
 
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
-<script src="/engine/locale.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
 <script src="/engine/money.js"></script>   <!-- CBMoney: assertSameCurrency (CUR-1) and decimals — the sample builder refuses a mixed bill with its words -->
 <script src="/engine/tax.js"></script>      <!-- CBTax.determine then moneyOf: the ONE place the sample bill's tax is worked out (R12: never halved here; see sampleBill) · CBRegulation: the pack's tenders -->
 <script src="/engine/docnumber.js"></script> <!-- CBDoc: the bill number as the till writes it, by the shop's country (R49) -->

@@ -92,7 +92,7 @@
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field draws every input on this page (label, hint, error, 44 px, --field-edge) -->   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/customer-bar.js"></script>   <!-- CBCustomerBar: the customer header — no staff session, no staff menu (CUSTOMER-DELINK) -->
 <script src="/app/cb-words.js"></script>   <!-- the string door · toast · confirm: the neutral floor; never the back-office shell (CUSTOMER-DELINK) -->
-<script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05); one home since T2-ENGONCE -->
+<script src="engine/locale.js"></script><script src="app/shop-time.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05); one home since T2-ENGONCE -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="engine/tax.js"></script>     <!-- ⭐ WX-O2C: the one tax split (splitLineTax) — a tax-inclusive shelf's GST comes OUT of the price in the cart, never on top -->
 <script src="app/shop-privacy.js"></script>   <!-- T3-P3-CONSENT: the shopper's own privacy sheet (what the shop holds · offers on/off · ask for a copy or erasure), on the order's session -->
@@ -2878,7 +2878,7 @@ function shopMyOrdersPaint(head) {
             .map(function (item) {
               var sm = item.summary_json || {},
                 tv = Number(sm.total_value) || 0,
-                dt = item.created_at ? new Date(item.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+                dt = item.created_at ? CBShopTime.date(item.created_at, { day: 'numeric', month: 'short' }) : '';
               return (
                 '<div data-testid="shop-order-row" style="padding:9px 0;border-top:1px dashed var(--line,#e7e3d8);font-size:13px"><div style="display:flex;gap:8px"><b style="flex:1">#CB-' +
                 esc(String(item.chit_id || '').slice(0, 8)) +

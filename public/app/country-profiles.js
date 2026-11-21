@@ -369,7 +369,7 @@
       langs = (pack.locale && pack.locale.langs) || [],
       today = '';
     try {
-      today = new Date().toLocaleDateString(tag, { year: 'numeric', month: 'long', day: 'numeric' }) + ' · ' + new Date().toLocaleDateString(tag);
+      today = CBShopTime.sample(tag, new Date(), { year: 'numeric', month: 'long', day: 'numeric' }) + ' · ' + CBShopTime.sample(tag, new Date());
     } catch (failure) {
       quiet('today', failure);
       today = '';
