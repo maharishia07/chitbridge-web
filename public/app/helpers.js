@@ -330,7 +330,7 @@ function cbReadTag() {
     tries = [region ? lang + '-' + region + ext : '', lang + ext, lang];
   for (var i = 0; i < tries.length; i++) {
     try {
-      if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i];
+      if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */
     } catch (_) {}
   }
   return format;
@@ -546,12 +546,16 @@ function shopZoneInstall() {
     try { chosen = localStorage.getItem('cb_tz') || ''; } catch (e) { chosen = ''; }
     var shop = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '';
     if (!chosen && shop) {
-      try { new Intl.DateTimeFormat('en', { timeZone: shop }); return shop; } catch (e) { /* unknown zone: fall through to the device */ }
+      try { new Intl.DateTimeFormat('en', { timeZone: shop }); return shop; /* zone-ok: a zone validity check, formats nothing */ } catch (e) { /* unknown zone: fall through to the device */ }
     }
     return own.call(L);
   };
   L.timezone.shopZone = true;
   return true;
+}
+/** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its own /me read) call this; a blank zone changes nothing. */
+function shopZoneSet(zone) {
+  if (zone && typeof window !== 'undefined') window.CB_SHOP_TZ = String(zone);
 }
 shopZoneInstall();
 /**

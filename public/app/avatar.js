@@ -530,7 +530,7 @@
           try {
             if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null });
           } catch (_) {}
-          if (e.timezone) root.CB_SHOP_TZ = String(e.timezone); /* E-F-06: the shop's own zone for every clock (helpers.js shopZoneInstall reads it) */
+          if (e.timezone && typeof shopZoneSet === 'function') shopZoneSet(e.timezone); /* E-F-06: the shop's own zone for every clock (helpers.js shopZoneInstall reads it) */
           announceShop(e);
         })
         .catch(function () {});

@@ -200,7 +200,7 @@ function unwrap(j, _key) {
    * under all of them. Carrying one key across keeps both contracts true.
    */
   if (j.entity) {
-    if (_key === 'me' && j.entity.timezone && typeof window !== 'undefined') window.CB_SHOP_TZ = j.entity.timezone; /* AE-F-06: the shop's own zone on EVERY page that reads /me (was app.html only): CBShopTime reads it */
+    if (_key === 'me' && j.entity.timezone && typeof shopZoneSet === 'function') shopZoneSet(j.entity.timezone); /* AE-F-06: the shop's own zone on EVERY page that reads /me (was app.html only): CBShopTime reads it */
     if (j.included && j.entity && typeof j.entity === 'object') {
       try {
         j.entity.included = j.included;
