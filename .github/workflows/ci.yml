@@ -492,6 +492,8 @@ jobs:
         run: node e2e/cmdb-records.cjs
       - name: Every stand-in that answers /api/books or /api/crm holds its answers to the API contract (M43)
         run: node e2e/contract.cjs
+      - name: No page reads ?api= except through cbApiParam; evil origin refused (SEC-FIX 1129)
+        run: node e2e/guard-api-param.cjs
       - name: No NEW raw colour in a page or app file (ratchet; e2e/token-guard.baseline.json)
         run: node e2e/token-guard.cjs
       - name: The process map names files and functions that exist (PM1; docs/process/flows.json)

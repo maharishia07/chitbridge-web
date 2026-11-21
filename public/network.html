@@ -126,7 +126,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
     location.replace('/network-shop.html' + location.search);
     return;
   }
-  var API = query.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
+  var API = cbApiParam(query.get('api')) || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('nw');
   var sideSections = [];
   /* a language pack lands after the first paint and calls renderApp(): the menu's words go through the catalogue again (walk-locale: "Who can see my books") */

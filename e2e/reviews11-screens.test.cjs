@@ -45,9 +45,9 @@ const c3 = vm.createContext({ URL, location: { href: 'https://web.chitbridge.exa
 vm.runInContext(liftFns('public/app/cb-words.js', ['cbApiParam']) + '\nthis.f = { cbApiParam };', c3);
 const P = c3.f.cbApiParam;
 t('?api= to a foreign host is dropped', P('https://evil.example') === '', P('https://evil.example'));
-t('?api= to this site, a local host and a sibling host is kept', P('https://web.chitbridge.example/x') && P('http://localhost:4000') && P('https://api.chitbridge.example'), 'allowed');
+t('?api= to this site is kept; a sibling and a local host are not (localhost only from a localhost page)', P('https://web.chitbridge.example/x') && !P('http://localhost:4000') && !P('https://api.chitbridge.example'), 'allowed');
 t('shop.html and tasks.html use it', has('shop.html', 'cbApiParam(new URLSearchParams') && has('tasks.html', 'cbApiParam(q.get'), 'pages');
-t('conversion-lab honours ?api= for this origin or local only', has('conversion-lab.html', 'u.origin === location.origin'), 'lab');
+t('conversion-lab honours ?api= for this origin or local only', has('conversion-lab.html', 'cbApiParam(new URLSearchParams'), 'lab');
 t('a source link must be http(s)', has('know-your-business.html', 'x.source_url || \'\').trim())'), 'kyb');
 t('a fact link goes only to a path of this site', has('app/shell.js', "[a-z0-9_-]+[.]html)/i.test(go)") && has('app/sides.js', '[.]html)/i.test(String(r.href'), 'href');
 t('the greyed tile redraw tolerates a missing tile', has('app/shell.js', 'if (tile) tile.outerHTML = card(entry);'), 'null');

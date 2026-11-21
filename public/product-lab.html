@@ -7,7 +7,8 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script>
+<script src="/app/cb-words.js"></script> <!-- cbApiParam: a ?api= link never re-points the token -->   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/engine/units.js"></script>   <!-- CBUnits: the GST unit codes (UQC) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -129,7 +130,7 @@ tr.has .ul.got{opacity:1}
 </div>
 <div class="foot" id="foot"></div>
 <script>
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API;
 var STEP = 1,
   DATA = null,
   LIST = null,

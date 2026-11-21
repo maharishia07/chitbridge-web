@@ -169,17 +169,19 @@ function failWords(e, fallback) {
   var plain = m ? rewordPlain(m) : '';
   return plain && plain !== m ? plain : fallback || 'something went wrong';
 }
-/** cbApiParam(raw) → the ?api= value only when it names this site, a local dev host or a sibling host of this site (api.<site>); else ''. reviews11 GF-21/GF-20: a crafted link must not aim a Bearer token at another host */
+/** cbApiParam(raw) → the ?api= value only when it names this site, this deployment's own api (window.CB_API) or localhost on a localhost page; else '' with a console note. SEC-FIX GF-21/GF-20: a crafted link must not aim a Bearer token at another host */
 function cbApiParam(raw) {
   try {
     if (!raw) return '';
     var u = new URL(raw, location.href),
       h = u.hostname,
       mine = location.hostname;
-    if (u.origin === location.origin || h === 'localhost' || h === '127.0.0.1') return raw;
-    var tail = mine.split('.').slice(-2).join('.');
-    if (/^(railway[.]app|vercel[.]app|netlify[.]app|github[.]io|herokuapp[.]com|onrender[.]com|fly[.]dev|pages[.]dev|workers[.]dev|run[.]app)$/.test(tail)) return ''; /* a shared host suffix is not one site */
-    return tail.indexOf('.') > 0 && (h === tail || h.slice(-(tail.length + 1)) === '.' + tail) ? raw : '';
+    var local = /^(localhost|127[.]0[.]0[.]1)$/,
+      known = '';
+    try { known = window.CB_API ? new URL(window.CB_API, location.href).origin : ''; } catch (_) { known = ''; } /* the deployment's own api (config.js) */
+    if (/^https?:$/.test(u.protocol) && (u.origin === location.origin || (known && u.origin === known) || (local.test(h) && local.test(mine)))) return raw; /* localhost only from a localhost page */
+    if (typeof console !== 'undefined' && console.warn) console.warn('?api= ignored: not this deployment’s api'); /* never used, never sent a token */
+    return '';
   } catch (_) {
     return '';
   }
