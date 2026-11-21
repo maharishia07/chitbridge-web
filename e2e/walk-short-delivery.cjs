@@ -77,7 +77,7 @@ const PREVIEW = { ok: true, kind: 'debit_note', voucher: { series: 'MJ', type: '
   lines: [{ code: '2100', ledger: WHO, dr_minor: 10500, cr_minor: 0, type: 'personal', rule: 'Dr the receiver' },
     { code: '4150', ledger: 'Purchase returns', dr_minor: 0, cr_minor: 10000, type: 'real', rule: 'Cr what goes out' },
     { code: '1470', ledger: 'Input tax', dr_minor: 0, cr_minor: 500, type: 'real', rule: 'Cr what goes out' }],
-  balanced: true, totals: { dr_minor: 10500, cr_minor: 10500 }, credit: null, bill: null, flags: [], refusals: [], code: null, duplicate: null };
+  balanced: true, totals: { dr_minor: 10500, cr_minor: 10500 }, credit: null, bill: null, flags: [], refusals: [], code: null, needs: null, duplicate: null };
 
 W.run('short-delivery', async (w) => {
   const { page, ctx, base } = w;

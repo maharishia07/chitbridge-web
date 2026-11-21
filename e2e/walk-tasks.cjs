@@ -70,11 +70,11 @@ W.run('tasks', async (w) => {
       assign_task: { ok: true }, assign_line: { ok: true }, deliver_line: { ok: true }, amend: { ok: true },
     };
   };
-  const lineOut = (r, l, a) => ({ line_id: l.line_id, particulars: l.particulars, qty: l.qty, unit: l.unit, price_minor: l.price_minor, delivered: l.delivered, remaining: Math.max(0, l.qty - l.delivered),
+  const lineOut = (r, l, a) => ({ line_id: l.line_id, particulars: l.particulars, qty: l.qty, unit: l.unit, price_minor: l.price_minor, delivered: l.delivered, theirs: 0, over_theirs: 0, remaining: Math.max(0, l.qty - l.delivered),
     assignment: l.assignment, settings: l.settings, actions: { assign_line: a.assign_line, deliver_line: a.deliver_line, amend: a.amend } });
   const rowOut = (r) => {
     const a = verdicts(r), held = r.lines.filter((l) => l.assignment && l.assignment.assignee_actor_id).length;
-    return { client: null, chit_id: r.chit_id, kind: r.kind, tab: tab(r), stage: stage(r), word: word(r), status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id,
+    return { client: null, seen_status: null, chit_id: r.chit_id, kind: r.kind, tab: tab(r), stage: stage(r), word: word(r), status: r.status, side: r.side, subject: r.subject, ref: r.ref, party: r.party, party_id: r.party_id,
       channel: r.channel, fulfilment: r.fulfilment, address: r.address, requested_for: r.requested_for, remark: r.remark, total_minor: r.total_minor, currency: r.currency,
       lines_n: r.lines.length, lines_open_n: open(r), billed: r.billed, despatched: r.despatched, assignee: r.assignee, lines_assigned_n: held || null, created_at: r.created_at, age_days: r.age_days, actions: a };
   };
@@ -107,7 +107,7 @@ W.run('tasks', async (w) => {
       return J(r, 200, { view, page: 1, limit: Number(u.searchParams.get('limit')) || 50, truncated: false, counts: counts(), total: rows.length, rows });
     }
     let mm = /^\/api\/work\/([^/]+)$/.exec(p);
-    if (mm && m === 'GET') { const x = find(mm[1]); if (!x) return J(r, 404, { error: 'Not found', message: 'Chit not found or you do not have access' }); const o = rowOut(x); o.lines = x.lines.map((l) => lineOut(x, l, o.actions)); return J(r, 200, o); }
+    if (mm && m === 'GET') { const x = find(mm[1]); if (!x) return J(r, 404, { error: 'Not found', message: 'Chit not found or you do not have access' }); const o = rowOut(x); o.tax_minor = 0; o.lines = x.lines.map((l) => lineOut(x, l, o.actions)); return J(r, 200, o); }
     if (p === '/api/people' && m === 'GET') return J(r, 200, { people: PEOPLE, may: { add: { ok: true } }, access_choices: [], counts: { on: 2, off: 1 } });
     mm = /^\/api\/chits\/([^/]+)\/status$/.exec(p);
     if (mm && m === 'PUT') { const x = find(mm[1]); if (!x) return J(r, 404, { error: 'Not found' }); if (S.level === 'viewer') return J(r, 403, { error: 'Forbidden', message: SAY.read_only, why: 'read_only' }); x.status = body.status; x.note = body.note || ''; return J(r, 200, { chit_id: x.chit_id, status: x.status, message: 'Status updated' }); }
