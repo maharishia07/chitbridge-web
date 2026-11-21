@@ -290,6 +290,7 @@
     var apiObj = {
       el: el,
       refresh: read,
+      repaint: paint,
       count: function () {
         return bell.count;
       },
@@ -329,5 +330,10 @@
     return apiObj;
   }
 
-  root.CBBell = { mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle };
+  /** the page's own needs-you count replaces the feed's unread count on every bell (null = the feed's own again); the list inside the bell is unchanged */
+  function setNeeds(count) {
+    bellKit.needs = count == null ? null : Number(count) || 0;
+    LIVE.forEach(function (item) { if (item.repaint) item.repaint(); });
+  }
+  root.CBBell = { mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle, setNeeds: setNeeds };
 })(typeof window !== 'undefined' ? window : this);

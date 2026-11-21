@@ -80,7 +80,14 @@
     var pick = needs[0] || cards.filter(function (card) { return rank(card) === 1 && factOf(card); })[0];
     if (!pick) return firstStepHeadline(cards);
     var fact = factOf(pick), figure = figureOf(fact, pick);
-    return { n: figure.n, w: figure.w, full: fact, tone: needs.length ? 'dn' : '', amber: needs.length };
+    return { n: figure.n, w: figure.w, full: fact, tone: needs.length ? 'dn' : '', amber: needs.length, trend: trendOf(panel) };
+  }
+  /** the sales change against last year, as the Till card's teaser says it ("↑ +12% vs last year") split for a closed row: the arrow and percent shown, "vs last year" in the title and the spoken label; null when the server sent none.
+   * Leader practice (Shopify, Stripe, Xero home): the change rides the headline sales figure as a small delta, never a card of its own that a closed row hides. */
+  function trendOf(panel) {
+    var node = panel.querySelector('[data-testid="shell-fact-trend"]'), words = node ? (node.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    var parts = /^(\S+\s*\S*%)\s+(.+)$/.exec(words);
+    return parts ? { short: parts[1], full: words } : null;
   }
 
   /** the manifest's pillars and foundation as groups, and which group owns each card id */
@@ -251,7 +258,8 @@
     var head = headline(home.panels[group.id]), figureNode = item.querySelector('.ix-v'), amberNode = item.querySelector('.ix-a');
     figureNode.className = 'ix-v ' + head.tone;
     if (head.full) figureNode.title = head.full; else figureNode.removeAttribute('title');
-    figureNode.innerHTML = (head.n ? '<b>' + esc(head.n) + '</b> ' : '') + '<span>' + esc(head.w) + '</span>';
+    figureNode.innerHTML = (head.n ? '<b>' + esc(head.n) + '</b> ' : '') + '<span>' + esc(head.w) + '</span>' +
+      (head.trend ? ' <span class="ix-tr" data-testid="ix2-trend" title="' + esc(head.trend.full) + '" aria-label="' + esc(head.trend.full) + '">' + esc(head.trend.short) + '</span>' : '');
     amberNode.hidden = !head.amber;
     if (head.amber) {
       amberNode.textContent = String(head.amber);
@@ -314,6 +322,7 @@
       home.df.innerHTML = html;
     }
     home.df._items = doors;
+    if (root.CBBell && root.CBBell.setNeeds) root.CBBell.setNeeds(doors.length); /* the bell's dot is THIS list's size (Do first), not the activity feed's unread count */
   }
   /* the shell draws (and, for a firm, redraws) its cards into .cbsh-more; every card keeps its own node, so the facts the shell paints keep landing in it */
   function adoptCards(home) {

@@ -4688,7 +4688,13 @@ function meNow(force) {
   return _meReq;
 }
 
+/* the shop's NAME as a string, whatever shape a sign-in or a saved session hands over: the verify reply carries `entity` as an object, and one stored that way printed "[object Object]" in the header (AM-F-11, sit-ae2) */
+function entityNameOf(value, fallback) {
+  if (value && typeof value === 'object') return String(value.display_name || value.name || fallback || '');
+  return value == null ? fallback || '' : String(value);
+}
 function setSession(s) {
+  if (s && s.entity && typeof s.entity === 'object') s = { ...s, entity: entityNameOf(s.entity, s.name) };
   SESSION = { ...SESSION, ...s };
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p = jwtPayload(SESSION.token);
