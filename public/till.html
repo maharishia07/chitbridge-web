@@ -18942,11 +18942,26 @@ function dayWarnWords(){
   if (open && !old) return '';
   return (open ? '' : 'Day not opened') + (open || !old ? '' : ' · ') + (old ? 'prices ' + h + ' h old' : '');
 }
+/**
+ * ⭐ WALK I I-F-04 · the supplier's ADDRESS on a tax invoice: the pack names the lines its invoice must carry (CBCountries.meta(country).invoice.requiredLines — AE: trade_name, tax_id, address;
+ * ER Art. 59(1)(b) and 59(2)(b) name the supplier's address) and the shop's profile says what is missing (snapshot shop.missing). A shop that charges tax and has no address is told at the counter,
+ * before the slip prints without it — in the pack's words, never a typed country. → the sentence, or '' when nothing is missing or the pack does not ask for an address.
+ */
+function addressWarnWords(){
+  try {
+    var meta = window.CBCountries && docCountry() ? CBCountries.meta(docCountry()) : null;
+    var need = meta && meta.invoice && Array.isArray(meta.invoice.requiredLines) && meta.invoice.requiredLines.indexOf('address') >= 0;
+    var sh = (S && S.shop) || {}, gone = (Array.isArray(sh.missing) && sh.missing.indexOf('address') >= 0) || !String(sh.address || sh.street || '').trim();
+    if (!need || !gone || !shopTax().charges) return '';
+    return 'Shop address is missing — a tax invoice must show the supplier’s name, address and ' + (countryWords().taxId || 'tax number');
+  } catch (e) { cbQuiet('addressWarnWords:1', e); return ''; }
+}
 function billWarnHTML(m){
   var out = [], un = unratedNames(), cl = shopTax().charges ? shopStateClash() : null;
   var dw = dayWarnWords(); if (dw) out.push(billWarnLine('day', dw, 'Open the day'));
   if (un.length) out.push(billWarnLine('norate', un.length + (un.length === 1 ? ' item has' : ' items have') + ' no tax rate', 'Fix', rateMay()));
   if (cl) out.push(billWarnLine('state', 'GSTIN state ≠ address'));
+  var aw = addressWarnWords(); if (aw) out.push(billWarnLine('address', aw, 'Add it'));
   var bw = buyerWarnWords(m); if (bw) out.push(billWarnLine('buyer', bw, 'Name them'));
   if (m && m.stop) out.push('<div class="t warnrow" data-testid="till-warn-money"><span>⚠ ' + esc(m.stop.words) + ' Only the owner can let it through.</span><span></span></div>');   /* ACC-206 H: said where it is sold; Bill asks the owner PIN */
   return out.join('');
@@ -18985,6 +19000,7 @@ function billWarnDoor(which){
 }
 async function billWarnFix(which){
   if (billWarnDoor(which)) return;
+  if (which === 'address') { shopEditOpen(); return; }   /* I-F-04: the shop's details box, where the address is typed */
   var st = which === 'state', cl = st ? shopStateClash() : null, un = st ? [] : unratedNames();
   var msg = st ? (cl ? cl.words + '\n\n' + cl.fix : 'The shop’s details agree now.')
                : (un.length ? un.join(', ') + '\n\nNo ' + schemeWord() + ' is charged on ' + (un.length === 1 ? 'it' : 'them')
