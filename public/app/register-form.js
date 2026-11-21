@@ -435,18 +435,9 @@ function regVerticalChooser() {
         const caps = (item.capabilities || []).join(' · ');
         /* GREY-VERT (Athi, 21 Nov): a setup the api says is not ready is the same grey tile as the Home card (cbsh-box off, "Being finished · not ready yet") and cannot be chosen */
         if (item.ready === false)
-          return (
-            '<div class="cbsh-box off" aria-disabled="true" data-cbsid="SCR053-C03" data-ready="no" data-testid="reg-vertical-' +
-            esc(item.key) +
-            '" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default"><div style="font-weight:700;font-size:var(--fs-2)">' +
-            '○ ' +
-            esc(regSetupLabel(item)) +
-            '</div><span class="no" data-testid="reg-vertical-off-' +
-            esc(item.key) +
-            '" style="display:block;font-size:var(--fs-1);margin-top:4px">' +
-            esc(tx('Being finished · not ready yet')) +
-            '</span></div>'
-          );
+          return `<div class="cbsh-box off" aria-disabled="true" data-cbsid="SCR053-C03" data-ready="no" data-testid="reg-vertical-${esc(item.key)}" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default">` +
+            `<div style="font-weight:700;font-size:var(--fs-2)">○ ${esc(regSetupLabel(item))}</div>` +
+            `<span class="no" data-testid="reg-vertical-off-${esc(item.key)}" style="display:block;font-size:var(--fs-1);margin-top:4px">${esc(tx('Being finished · not ready yet'))}</span></div>`;
         return (
           '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' +
           esc(item.key) +

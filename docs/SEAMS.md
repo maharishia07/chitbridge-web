@@ -39,9 +39,9 @@ of file each thing is; this says what already does the job.
 | 76 | `record` | `access-events.js` |  |
 | 76 | `items` | `books-store.js` | PERF1: |
 | 76 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
+| 75 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 75 | `failed` | `service.js` | what every catch answers: |
-| 74 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
-| 73 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 74 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 71 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
 | 70 | `pack` | `books-store-packs.js` |  |
 | 70 | `adopt` | `remote-party.js` | local → the input names a business in THIS installation's namespace (or is an e-mail): |
@@ -72,9 +72,9 @@ of file each thing is; this says what already does the job.
 | 52 | `lines` | `cart.js` |  |
 | 52 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 51 | `sheet` | `cap-employees.js` |  |
+| 50 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 50 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 50 | `missing` | `signin-pending.js` | a store failure that means "b879 is not applied": |
-| 49 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 49 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 49 | `account` | `home-facts.js` | OMITTED: |
 | 48 | `refuse` | `bank-rec-log.js` | a refusal in words (422); `code` names the kind when it is not the general one |
@@ -149,20 +149,20 @@ of file each thing is; this says what already does the job.
 | 28 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 28 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
 | 27 | `bkMoney` | `cap-books.js` |  |
-| 27 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 27 | `head` | `list-ctl.js` |  |
 | 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 26 | `cblog` | `core.js` | const __cblog = []; |
+| 26 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 26 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 26 | `label` | `screen-id.js` |  |
+| 26 | `field` | `ui-field.js` | the part: |
 | 26 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 26 | `textOf` | `bank-statement-file.js` | the file's text: |
 | 26 | `setting` | `books-store.js` | FROM books_setting s LEFT JOIN identities i ON i.identity_id = s.entity_id WHERE s.entity_id = $1`; |
 | 26 | `match` | `itemmatch.js` | actually state. |
 | 25 | `side` | `books-grant-reports.js` |  |
 | 25 | `group` | `cart.js` | A heading's control adds ONE of each — |
-| 25 | `field` | `ui-field.js` | the part: |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 25 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 25 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |

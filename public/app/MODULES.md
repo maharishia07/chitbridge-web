@@ -121,7 +121,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (122)
+## Shared (123)
 
 | file | loading | what it is |
 |---|---|---|
@@ -221,6 +221,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `shell-facts.js` | — |  |
 | `shell.js` | — | .html public/app/ |
 | `shop-privacy.js` | — |  |
+| `shop-time.js` | eager | ID CBShopTime |
 | `shortcuts-register.js` | — |  |
 | `shortcuts.js` | — |  |
 | `showcase-templates.js` | eager |  |
@@ -265,22 +266,22 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 90 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
-| `app.html` | 48 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
+| `accounts.html` | 91 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `app.html` | 49 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 16 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 24 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
-| `bill-print.html` | 1 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |
+| `bill-print.html` | 2 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |
 | `cart-design.html` | 3 | the paper drawing of the Compose (author a chit) cart: four steps, mock only, no request leaves the page. |
-| `catalogue.html` | 26 | the Catalogue page: the shop's products as it keeps them (one CBList), their offers and slabs attached with the downstream result shown beside. |
+| `catalogue.html` | 27 | the Catalogue page: the shop's products as it keeps them (one CBList), their offers and slabs attached with the downstream result shown beside. |
 | `chart-sample.html` | 17 | the REP-36 theme sample: each kind of the shared chart helper (column with previous, sparkline, status bar, month strip) drawn in every one of the 16 themes with its cont |
 | `combo-lab.html` | 0 | the old Combo Lab address: it only forwards to offer-lab-next.html?mode=combo (T2-LABS), the page that wears the Finance frame. |
 | `conversion-lab.html` | 10 | the Conversion lab: a quantity valued, or a priced basket converted, by the real engine (engine/convert.js · CBConvert, with CBMoney and CBUnits) on a bare page, so a con |
-| `country-lab.html` | 15 | the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines. |
-| `crm.html` | 62 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
-| `design-mock.html` | 1 | a paper prototype of the network store page: no API, no build |
-| `embed.html` | 4 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
-| `employees.html` | 27 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
-| `finance.html` | 54 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
+| `country-lab.html` | 16 | the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines. |
+| `crm.html` | 63 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
+| `design-mock.html` | 2 | a paper prototype of the network store page: no API, no build |
+| `embed.html` | 5 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
+| `employees.html` | 28 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
+| `finance.html` | 55 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
 | `intake.html` | 2 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
 | `iot-howitworks.html` | 0 | the how-IoT-works showcase page: a standalone explainer with no data |
 | `know-your-business.html` | 16 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
@@ -288,23 +289,23 @@ Each page is a module of its own (its inline script and header). The count is th
 | `list-lab.html` | 14 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 11 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 4 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 48 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
-| `offer-lab-next.html` | 14 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
+| `network.html` | 49 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `offer-lab-next.html` | 15 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
-| `operations.html` | 23 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
+| `operations.html` | 24 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
 | `product-lab.html` | 12 | the Product Lab: adopt a ready-made list, one row per product with its units as choices (each with its GST unit code), then price and shelf. |
 | `promo.html` | 4 | the shop screen (a second screen / TV): the shop's offers as a carousel drawn on one canvas, the same drawing saved as a PNG |
 | `screen-gallery.html` | 1 | the Screen Library: every entry of every screen registry drawn on one page |
-| `settings.html` | 27 | the CB Settings page: Business · Counters & keys · Connectors · Policy & Localisation · Plan & usage · Standards. |
+| `settings.html` | 28 | the CB Settings page: Business · Counters & keys · Connectors · Policy & Localisation · Plan & usage · Standards. |
 | `shell-lab.html` | 12 | the Shell Lab: the shell (app/shell.js · CBShell) on a page, the pass mark e2e/shell.cjs measures; ?harness=1 is the bare gallery. |
 | `shop.html` | 6 | the Storefront: a shop's public front (its items, the cart, the order) — the shop's own name in its brand row, the frame's bar above. |
 | `signin-lab.html` | 11 | the Sign-in Lab: the sign-in window on a practice shop, roles and access, and the Roadmap tab (every manifest entry by state, with its fits line). |
 | `standards.html` | 22 | the Standards page: the register (cap-standards.js), Works with (compat.json), Compared with (compare.json), the country matrix — one CBList. |
-| `store.html` | 5 | the network Store page: a network's shops and their catalogues as one storefront (?net=). |
+| `store.html` | 6 | the network Store page: a network's shops and their catalogues as one storefront (?net=). |
 | `storefront-design.html` | 2 | the paper drawing of the Storefront order: four steps (items, delivery, review, who you are), mock only, no request leaves the page. |
 | `supplier-design.html` | 2 | the paper drawing of the Suppliers order: three steps (items, details, review), mock only, no request leaves the page. |
-| `tasks.html` | 46 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
-| `testing.html` | 8 | the test board: cases, runs and findings in one list, filters and folds; column widths through app/table-resize.js. |
+| `tasks.html` | 47 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
+| `testing.html` | 9 | the test board: cases, runs and findings in one list, filters and folds; column widths through app/table-resize.js. |
 | `till.html` | 5 | the counter: sign-in · day open · the bill (CBTax · CBOffers · the rewards words) · the slip · the offline queue — ONE master, vendored to the web. |
 | `ui-standard.html` | 18 | the UI standard page (screen UIS001): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js. |
 | `cmdb/record.html` | 1 | the one page for every CMDB record, drawn from the cloud definition of kind 'cmdb' |
@@ -312,4 +313,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*223 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*224 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

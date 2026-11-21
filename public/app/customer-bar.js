@@ -27,10 +27,7 @@
   function sayWords(words) {
     return typeof root.tx === 'function' ? root.tx(words) : words;
   }
-  /** the one escaper is helpers.js esc (every customer page loads it first) */
-  function escapeHtml(text) {
-    return root.esc(text);
-  }
+  /* the one escaper is helpers.js esc (every customer page loads it first): called as root.esc, never redefined here */
   function addCss() {
     if (doc.getElementById('cbcb-css')) return;
     var style = doc.createElement('style');
@@ -61,7 +58,7 @@
   }
   function titleHTML(title) {
     if (!title) return '';
-    return '<span class="cbcb-title" data-testid="shell-title"><span aria-hidden="true">' + escapeHtml(title.icon || '') + '</span><span class="tw">' + escapeHtml(sayWords(title.name || '')) + '</span></span>';
+    return '<span class="cbcb-title" data-testid="shell-title"><span aria-hidden="true">' + root.esc(title.icon || '') + '</span><span class="tw">' + root.esc(sayWords(title.name || '')) + '</span></span>';
   }
   /** mount({ host, screen: 'SHP001', title: { icon, name }, homeHref }) → the header element */
   function mount(opts) {

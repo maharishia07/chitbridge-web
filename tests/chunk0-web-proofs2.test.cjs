@@ -71,17 +71,17 @@ ok('CTR-79 the kitchen surface is declared as an option: kotOn() is true only wh
   assert(/MODE !== 'sell' \|\| \(!kotOn\(\) && !purposeHas\('open_orders'\)\)\) \{ el\.innerHTML = ''; return; \}/.test(src), 'the kitchen strip is emptied unless kot is on or the purpose has open orders');
 });
 
-ok('NET-19 shop/store/embed/network read the session only to show the login state: one getItem of cb_sess in shop.html, no writes in any of the four', () => {
+ok('NET-19 shop/store/embed/network read the session only to show the login state: no page reads or writes cb_sess (customer-delink 1126: the owner preview key is handed to the preview, never read from the staff session), no writes in any of the four', () => {
   const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
   const pages = { 'shop.html': strip(read('shop.html')), 'store.html': strip(read('store.html')), 'embed.html': strip(read('embed.html')), 'network.html': strip(read('network.html')) };
   Object.keys(pages).forEach((p) => {
     assert(!/(localStorage|sessionStorage)\s*\.\s*(setItem|removeItem|clear)\s*\(\s*['"]cb_sess/.test(pages[p]), p + ' writes the session');
     assert(!/SESSION\s*(\.\w+)?\s*=[^=]/.test(pages[p]), p + ' assigns to a SESSION');
-    if (p !== 'shop.html') assert(!/cb_sess/.test(pages[p]), p + ' reads the session key');
+    assert(!/cb_sess/.test(pages[p]), p + ' reads the session key');
   });
   const reads = pages['shop.html'].match(/getItem\(\s*['"]cb_sess['"]/g) || [];
-  assert.strictEqual(reads.length, 1, 'shop.html reads cb_sess exactly once (the owner preview token)');
-  assert(/function _ownerToken\(\)\s*\{\s*try \{\s*var parsed = JSON\.parse\(localStorage\.getItem\('cb_sess'\)/.test(pages['shop.html']), 'and that read is _ownerToken()');
+  assert.strictEqual(reads.length, 0, 'shop.html no longer reads cb_sess (the customer page is delinked from the staff session)');
+  assert(!/_ownerToken/.test(pages['shop.html']), 'and has no _ownerToken');
 });
 
 ok('CAT-154 / CAT-155 a category offers no members field (the relationship lives on the product)', () => {
