@@ -27,8 +27,9 @@ async function crmShopLiveRead() {
   try {
     if (typeof meNow !== 'function') return;
     SHOW.me = await meNow();
-  } catch (e) {
-    return; /* unreadable: say nothing false; the link stays as it was */
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('crm: the shop read for the window link failed, the link stays as it was', failure);
+    return; /* unreadable: say nothing false */
   }
   var note = document.getElementById('crm_sc_notlive');
   if (note) note.textContent = crmShopWhyNot(SHOW.me);

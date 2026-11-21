@@ -1616,7 +1616,9 @@ repaint();
   var token = null;
   try {
     token = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;
-  } catch (_) {}
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('country-lab: the saved session could not be read', failure);
+  }
   if (!token || !window.CB_API) return;
   fetch(window.CB_API + '/api/entities/me', { headers: { Authorization: 'Bearer ' + token } })
     .then(function (reply) { return reply.ok ? reply.json() : null; })

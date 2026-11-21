@@ -325,16 +325,23 @@ function cbReadTag() {
   var format = engine.tag(),
     lang = typeof engine.lang === 'function' ? String(engine.lang() || '') : '';
   if (!lang || lang.split('-')[0].toLowerCase() === format.split('-')[0].toLowerCase()) return format;
-  var ext = (format.match(/-u-.*$/) || [''])[0],
+  var unicodeExt = (format.match(/-u-.*$/) || [''])[0],
     region = (format.replace(/-u-.*$/, '').match(/-([A-Za-z]{2})(?:-|$)/) || [])[1],
-    tries = [region ? lang + '-' + region + ext : '', lang + ext, lang];
+    tries = [region ? lang + '-' + region + unicodeExt : '', lang + unicodeExt, lang];
+  return firstSupportedTag(tries) || format;
+}
+/** the first of the tags this browser supports, or '' when none (a tag it throws on is skipped) */
+function firstSupportedTag(tries) {
   for (var i = 0; i < tries.length; i++) {
     try {
       if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */
-    } catch (_) {}
+    } catch (failure) {
+      if (typeof cbQuiet === 'function') cbQuiet('locale: a read tag was not supported, the next one is tried', failure);
+    }
   }
-  return format;
+  return '';
 }
+/** cbInstallReader() → puts the reader over CBLocale.date/time/datetime once; false when the engine is absent, already done, or lacks zoned/_d */
 function cbInstallReader() {
   var engine = typeof CBLocale !== 'undefined' ? CBLocale : null;
   if (!engine || engine._readerWords || typeof engine.zoned !== 'function' || typeof engine._d !== 'function') return false;
@@ -349,7 +356,8 @@ function cbInstallReader() {
       if (!when) return '';
       try {
         return engine.ltr(when[shapes[name][0]](cbReadTag(), engine.zoned(opts || shapes[name][1])));
-      } catch (_) {
+      } catch (failure) {
+        if (typeof cbQuiet === 'function') cbQuiet('locale: a moment could not be written in the reader words, shown blank', failure);
         return '';
       }
     };
@@ -359,7 +367,9 @@ function cbInstallReader() {
 }
 try {
   cbInstallReader();
-} catch (_) {}
+} catch (failure) {
+  if (typeof cbQuiet === 'function') cbQuiet('locale: the reader words were not installed, the engine keeps its own', failure);
+}
 /* R5: connector/device health — ONE source (colour · dot · signal), was duplicated across cap-connector + cap-workforce. */
 function healthColor(h) {
   return { live: 'var(--ok-3)', slow: 'var(--warn-2)', offline: 'var(--disp)' }[h] || 'var(--grey-4)';
@@ -538,22 +548,22 @@ function shopDateTime(ts, opts) {
  * date and shopDateTime all agree. The person's explicit choice still wins; no shop zone stated -> the device, as before (nothing is guessed).
  */
 function shopZoneInstall() {
-  var L = typeof CBLocale !== 'undefined' ? CBLocale : null;
-  if (!L || typeof L.timezone !== 'function' || L.timezone.shopZone) return false;
-  var own = L.timezone;
-  L.timezone = function () {
+  var localeEngine = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!localeEngine || typeof localeEngine.timezone !== 'function' || localeEngine.timezone.shopZone) return false;
+  var ownTimezone = localeEngine.timezone;
+  localeEngine.timezone = function () {
     var chosen = '';
-    try { chosen = localStorage.getItem('cb_tz') || ''; } catch (e) { chosen = ''; }
+    try { chosen = localStorage.getItem('cb_tz') || ''; } catch (failure) { chosen = ''; if (typeof cbQuiet === 'function') cbQuiet('locale: the chosen time zone could not be read, the shop zone is used', failure); }
     var shop = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '';
     if (!chosen && shop) {
-      try { new Intl.DateTimeFormat('en', { timeZone: shop }); return shop; /* zone-ok: a zone validity check, formats nothing */ } catch (e) { /* unknown zone: fall through to the device */ }
+      try { new Intl.DateTimeFormat('en', { timeZone: shop }); return shop; /* zone-ok: a zone validity check, formats nothing */ } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: the shop time zone is unknown, the device zone is used', failure); }
     }
-    return own.call(L);
+    return ownTimezone.call(localeEngine);
   };
-  L.timezone.shopZone = true;
+  localeEngine.timezone.shopZone = true;
   return true;
 }
-/** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its own /me read) call this; a blank zone changes nothing. */
+/** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its ownTimezone /me read) call this; a blank zone changes nothing. */
 function shopZoneSet(zone) {
   if (zone && typeof window !== 'undefined') window.CB_SHOP_TZ = String(zone);
 }
