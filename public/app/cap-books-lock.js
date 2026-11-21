@@ -1,5 +1,5 @@
 /* app/cap-books-lock.js — CB ACCOUNTS: the Month lock tab's rows and buttons (who locked, why a month waits, Lock · Reopen). Split out of cap-books.js (file-size ratchet, 20 Nov), code moved unchanged.
- * OWNS      the month-lock rows: bkLockWho · bkLockWhyWords · bkLockView · bkLockRule · bkLockRowHTML · bkLockButtonsHTML · bkLockRowsPaint · bkLockWhy · bkLockReopen · bkLockReopenGo · bkLockRoute · bkLockStatusOf · bkLockSalesWord · bkLockOpenButton · bkLockSoftButtons · bkLockHardButton · bkLockConfirm · bkLockDo · bkReasonDialog · bkReasonGo
+ * OWNS      the month-lock rows: bkLockWho · bkLockWhyWords · bkLockView · bkLockRule · bkLockRowHTML · bkLockButtonsHTML · bkLockBarHTML · bkLockSoftCount · bkLockRowsPaint · bkLockWhy · bkLockReopen · bkLockReopenGo · bkLockRoute · bkLockStatusOf · bkLockSalesWord · bkLockOpenButton · bkLockSoftButtons · bkLockHardButton · bkLockConfirm · bkLockDo · bkReasonDialog · bkReasonGo
  * CALLED BY public/accounts.html, crm.html, finance.html, tasks.html (script tag, after cap-books.js) · app.html CAP_WITH books; its functions are global and cap-books.js calls them at run time
  * FLOW      the Month lock tab → bkLockView → bkLockRowsPaint (one row per month) → Lock / Reopen → bkLockDo (the server decides; the row repaints from its answer)
  * CARD      16-finance/cb-finance
@@ -64,6 +64,7 @@ function bkLockRowHTML(item, index, isOwner) {
     state = lock.rows[lock.fy + '|' + month] || 'open',
     info = (lock.info || {})[lock.fy + '|' + month] || null,
     rule = bkLockRule(info, state);
+  rule.crowded = bkLockSoftCount() > 3; /* more than three soft-locked months: Open again · Close for good only where the server lets one open, never a greyed pair on each */
   rule.lastHard = bkLastHardKey() === lock.fy + '|' + month; /* Reopen month only on the LAST hard-locked month */
   var buttons = bkLockButtonsHTML(isOwner, state, month, rule);
   return (
@@ -92,8 +93,13 @@ function bkLockRowHTML(item, index, isOwner) {
     '</td></tr>'
   );
 }
+/** how many months of the year on screen are soft-locked */
+function bkLockSoftCount() {
+  var lock = BK.lk;
+  return bkMonths().filter(function (item, index) { return lock.rows[lock.fy + '|' + (index + 1)] === 'soft_locked'; }).length;
+}
 /** the Lock button of an open month; a refused one is disabled with the server's sentence */
-function bkLockOpenButton(month, rule) {
+function bkLockOpenButton(month, rule, monthName) {
   var mayLock = rule.may,
     lockWhy = rule.why;
   return (
@@ -104,7 +110,7 @@ function bkLockOpenButton(month, rule) {
         ? " onclick=\"bkLockDo('lock'," + month + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '"'
         : ' disabled style="opacity:.55;cursor:not-allowed" title="' + esc(tx(lockWhy)) + '"') +
       '>🔒 ' +
-      tx('Lock') +
+      tx('Lock') + (monthName ? ' ' + esc(monthName) : '') +
       '</button>'
   );
 }
@@ -132,11 +138,42 @@ function bkLockHardButton(month) {
       '<button data-cbsid="CMP042-B28"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-reopen-month-' + month + '" onclick="bkLockReopen(' + month + ', true)" title="' + esc(tx('Only the last closed month can be reopened, with a reason; it is logged.')) + '">🔓 ' + tx('Reopen month') + '</button>'
   );
 }
+/**
+ * GREY-AU (U-F-04 · U-F-10): the ONE Lock of the page, in a bar above the months — the month it acts on is the first open month the SERVER lets lock (oldest first), else the first open month with ITS sentence, greyed.
+ * A seat that may not lock sees it greyed with the server's sentence for that seat (GET /periods answers lock.may for the asker); the server still refuses the write.
+ * Open months that cannot be locked yet carry no button and no repeated sentence: the bar's one sentence is the reason (the later months wait on it).
+ */
+function bkLockBarHTML(isOwner) {
+  var lock = BK.lk,
+    pick = null,
+    waiting = '';
+  bkMonths().forEach(function (item, index) {
+    var month = index + 1,
+      state = lock.rows[lock.fy + '|' + month] || 'open',
+      rule = bkLockRule((lock.info || {})[lock.fy + '|' + month] || null, state);
+    if (state !== 'open') return;
+    if (!pick || (!pick.rule.may && rule.may)) pick = { month: month, name: item, rule: rule };
+  });
+  bkMonths().forEach(function (item, index) {
+    var month = index + 1,
+      rule = bkLockRule((lock.info || {})[lock.fy + '|' + month] || null, lock.rows[lock.fy + '|' + month] || 'open');
+    if ((lock.rows[lock.fy + '|' + month] || 'open') === 'soft_locked' && !rule.openMay && !waiting) waiting = rule.blockWhy;
+  });
+  if (!pick) return waiting ? '<div class="lk-bar" data-testid="lk-bar" style="margin-bottom:6px"><span class="lk-bar-why" data-testid="lk-bar-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(waiting)) + '</span></div>' : '';
+  var may = pick.rule.may && isOwner,
+    why = pick.rule.may && !isOwner ? tx('Only the owner may do this.') : tx(pick.rule.why || '');
+  return (
+    '<div class="lk-bar" data-testid="lk-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">' +
+    bkLockOpenButton(pick.month, { may: may, why: why }, tx(pick.name)) +
+    (may ? '' : '<span class="lk-bar-why" data-testid="lk-bar-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(why) + '</span>') +
+    '</div>'
+  );
+}
 /** the Lock button of an open month, or Open again + Close for good of a soft-locked one (owner only), or Reopen month of the last closed one */
 function bkLockButtonsHTML(isOwner, state, month, rule) {
   if (!isOwner) return '';
-  if (state === 'open') return bkLockOpenButton(month, rule);
-  if (state === 'soft_locked') return bkLockSoftButtons(month, rule);
+  /* GREY-AU (U-F-10): an open month carries no Lock of its own — twelve identical buttons and eight identical sentences were one action repeated: the ONE Lock is in the bar above the table (bkLockBarHTML) */
+  if (state === 'soft_locked') return rule.openMay || !rule.crowded ? bkLockSoftButtons(month, rule) : '';
   if (state === 'hard_locked' && rule.lastHard !== false && !rule.byYear) return bkLockHardButton(month);
   return '';
 }
@@ -172,6 +209,7 @@ function bkLockRowsPaint() {
     })
     .join('');
   el.innerHTML =
+    bkLockBarHTML(own) +
     '<style>@media(max-width:620px){.lk-t thead{display:none}.lk-t,.lk-t tbody{display:block}.lk-t tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}.lk-t td,.lk-t th{padding:0!important}.lk-t .lk-ent{display:none}.lk-t .lk-act{grid-column:1 / -1}.lk-t .lk-sales{text-align:right}}.lk-t button.lk-why{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;font:inherit!important;font-size:var(--fs-1)!important;font-weight:400!important;color:var(--grey)!important;text-align:left;cursor:pointer;display:inline-block;vertical-align:middle;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}@media(max-width:620px){.lk-t button.lk-why{display:block;margin:2px 0 0;max-width:100%}}.lk-t button.lk-why[aria-expanded=true]{white-space:normal;max-width:100%}.lk-who{color:var(--grey);font-size:var(--fs-1);font-weight:400}.lk-hist{font-size:var(--fs-1);color:var(--grey)}.lk-hist summary{cursor:pointer;display:inline-block}.lk-hist ul{margin:2px 0 0;padding-left:16px}.lk-box{max-height:calc(100vh - 405px);min-height:160px;overflow:auto}body:has(#acting-band) .lk-box{max-height:calc(100vh - 465px)}@media(max-width:620px){.lk-box{max-height:calc(100vh - 480px)}}.lk-t th{position:sticky;top:0;background:var(--surface,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
     '<div class="lk-box" data-testid="lk-box"><table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
     tx('Month') +

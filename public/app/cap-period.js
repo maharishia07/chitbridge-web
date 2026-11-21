@@ -898,6 +898,13 @@ function peReturnPaint(r) {
   if (!host) return;
   PE_RET.r = r;
   const currency = r.currency;
+  /* GREY-AU (U-F-09): the server says this shop is not registered for the tax (needs 'registration' + its sentence): no pickers, no boxes, the Close greyed with that sentence */
+  if (r.needs === 'registration') {
+    host.innerHTML =
+      '<div class="pe-card" data-testid="pr-card"><div class="pe-note" data-testid="pr-needs">' + esc(tx(r.why || '')) + '</div>' +
+      '<div class="supacts"><button data-cbsid="BKS016-B05" type="button" class="supact-pri" data-testid="pr-close" disabled style="opacity:.55;cursor:not-allowed" title="' + esc(tx(r.why || '')) + '">' + esc(tx('Close')) + '</button></div></div>';
+    return;
+  }
   let h = peReturnPickers(r);
   if (r.needs) {
     host.innerHTML = h + '<div class="pe-note" data-testid="pr-needs">' + esc(r.why || '') + '</div></div>';
