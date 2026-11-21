@@ -265,7 +265,7 @@ document.getElementById('q').addEventListener('input', function (e) {
 function load() {
   if (!NET) {
     document.getElementById('body').innerHTML =
-      '<div class="msg"><div class="big">🛍️</div>Link needs <code>?net=&lt;network id&gt;</code>.</div>';
+      '<div class="msg"><div class="big">🛍️</div>This store link is incomplete. Ask the shop to send its store link again.</div>';
     return;
   }
   document.getElementById('netlabel').textContent = NET;

@@ -5278,7 +5278,7 @@ function ruleParamsOf() {
 }
 /** a unique-enough name — the API refuses a second definition of one kind with the same name */
 function saveName(l) {
-  return l.title + (l.detail ? ' · ' + l.detail : '') + ' · ' + new Date().toISOString().slice(0, 16);
+  return l.title + (l.detail ? ' · ' + l.detail : '') + ' · ' + CBLocale.datetime(Date.now(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); /* WALK-H H-F-07: the shop's own date words, not an ISO stamp (still unique to the minute) */
 }
 /**
  * ⭐ [found live, 2026-09-26] "editing the current offer to reduce or include more items" — when this save
