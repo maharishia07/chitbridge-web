@@ -1803,7 +1803,7 @@ function bkRangeHTML(id, again) {
 /* a report table from its head cells, row HTML and optional foot */
 function bkTable(head, rows, foot) {
   return (
-    '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
+    '<div class="bk-scroll"><table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
     head
       .map(function (item) {
         return '<th' + (item.num ? ' class="num"' : '') + '>' + item.t + '</th>';
@@ -1813,7 +1813,7 @@ function bkTable(head, rows, foot) {
     rows +
     '</tbody>' +
     (foot ? '<tfoot>' + foot + '</tfoot>' : '') +
-    '</table>'
+    '</table></div>' /* F-53: only the rows scroll, the head and Total stay (accounts-page.css .bk-scroll) */
   );
 }
 /** a money figure the server holds in MAJOR units (a chit's frozen total) — through the same formatter the chit sheet uses */
@@ -4746,14 +4746,14 @@ async function bkPL(body) {
       bkStmtCss() +
       bkPeriodBar({ tid: 'pl', aria: 'Period', opts: opts, cur: BK_PL.preset, pick: 'bkPlPick', step: 'bkPlStep', custom: custom, canNext: period.can_next, dates: dates, extra: cmpSel, range: range }) +
       lead +
-      '<table class="bk-st" data-testid="pl-table">' + head + '<tbody>' +
+      '<div class="bk-scroll"><table class="bk-st" data-testid="pl-table">' + head + '<tbody>' +
       bkStRow('bk-sec', esc(tx('Income')), []).replace('</tr>', '<td colspan="' + (comparison ? 5 : 2) + '"></td></tr>') +
       bkPlGroups(by.income, currency, comparison, reply.from, reply.to) +
       bkPlSectionTotal(reply, comparison, currency, 'income', tx('Total income')) +
       bkStRow('bk-sec', esc(tx('Expenses')), []).replace('</tr>', '<td colspan="' + (comparison ? 5 : 2) + '"></td></tr>') +
       bkPlGroups(by.expense, currency, comparison, reply.from, reply.to) +
       bkPlSectionTotal(reply, comparison, currency, 'expense', tx('Total expenses')) +
-      '</tbody></table>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
+      '</tbody></table></div>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
   } catch (e) {
     body.innerHTML = bkRefused(e, 'Profit and loss');
   }
@@ -4842,12 +4842,12 @@ async function bkBS(body) {
       bkPeriodBar({ tid: 'bs', aria: 'As at', opts: opts, cur: BK_BS.kind, pick: 'bkBsPick', step: 'bkBsStep', custom: custom, canNext: asAt.can_next, dates: dates, range: bkBsRange(reply, comparison),
         extra: bkBsBalancedChip(ok, reply) }) +
       lead +
-      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
+      '<div class="bk-scroll"><table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
       bkBsSide(tx('Assets'), reply.assets, groups.assets, currency, reply.total_assets_minor, wasOf('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change) +
       bkBsSide(tx('Liabilities'), reply.liabilities, groups.liabilities, currency, reply.total_liabilities_minor, wasOf('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change) +
       bkBsSide(tx('Equity'), reply.equity, groups.equity, currency, reply.total_equity_minor, wasOf('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change) +
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, currency), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
-      '</tbody></table>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
+      '</tbody></table></div>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {
     body.innerHTML = bkRefused(e, 'Balance sheet');
   }
