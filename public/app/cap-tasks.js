@@ -47,7 +47,6 @@
   var CB_WORK_EP = {
     workList: { m: 'GET', p: '/api/work/list', ok: 'y' }, // ?view=&limit=
     workOne: { m: 'GET', p: '/api/work/:id', ok: 'y' },
-    voidOrder: { m: 'PUT', p: '/api/chits/:id/void', ok: 'y' }, // { reason } — the BUYER's Cancel of the order it sent: withdraws its own copy and asks the seller to cancel theirs
     assign: { m: 'PUT', p: '/api/actors/assign/:id', ok: 'y' }, // { action: 'push', target_actor_id } · { action: 'return' }
     people: { m: 'GET', p: '/api/people', ok: 'y' }
     /* railChits (GET /api/facts/rail/chits: stuck + why, the server's overdue test) comes from CB_SHEET_EP — one name, registered once (TO1b) */
@@ -79,6 +78,8 @@
       if (set) for (var name in set) if (!EP[name]) EP[name] = set[name];
     });
     /* ＋ New task sends through the chit send, under app.html's name for it (one name per endpoint — as rail-advice.js registers it) */
+    /* the buyer's Cancel of the order it sent: app.html's voidChit (PUT /api/chits/:id/void, { reason }) — one name, as createChit */
+    if (!EP.voidChit) EP.voidChit = { m: 'PUT', p: '/api/chits/:id/void', ok: '✓' };
     if (!EP.createChit) EP.createChit = { m: 'POST', p: '/api/chits/send', ok: '✓' };
     return true;
   }
@@ -853,7 +854,7 @@
     var needs = (chit.actions && chit.actions[action] && chit.actions[action].needs) || [];
     var viaVoid = chit.actions && chit.actions[action] && chit.actions[action].via === 'void'; /* the buyer's cancel: the sender's own door, not the received copy's status step */
     var runMove = function (note) {
-      if (viaVoid) return call('voidOrder', { params: { id: chit.chit_id }, body: { reason: note } });
+      if (viaVoid) return call('voidChit', { params: { id: chit.chit_id }, body: { reason: note } });
       return call('status', { params: { id: chit.chit_id }, body: Object.assign({ status: to }, note ? { note: note } : {}) });
     };
     var opts = {
