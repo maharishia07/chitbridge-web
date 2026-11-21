@@ -33,4 +33,12 @@ function loadScript(relativeFile, extras) {
   return sb;
 }
 
-module.exports = { liftFns, loadScript };
+/** load public/app/shop-time.js (the one date/time formatter, CBShopTime) into a vm context; call AFTER engine/locale.js when the test loads it. Leaves CBShopTime global in the context. */
+function loadShopTime(cx) {
+  const vm = require('vm');
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'app', 'shop-time.js'), 'utf8'), cx);
+  vm.runInContext('this.CBShopTime = (typeof window !== "undefined" ? window : this).CBShopTime', cx); /* top-level this = the context's own global, even when the test names its own globalThis */
+  return cx;
+}
+
+module.exports = { liftFns, loadScript, loadShopTime };

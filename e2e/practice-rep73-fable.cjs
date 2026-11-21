@@ -3,15 +3,17 @@
  * Run: node e2e/practice-rep73-fable.cjs   (no browser: the page file is loaded against a stub window) */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
+const { loadShopTime } = require('./lib/lift-fn.cjs');
 const root = { Promise, tx: (s) => s, document: { readyState: 'loading', addEventListener(n, h) { (root.heard = root.heard || {})[n] = h; }, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {}, remove() {}, toggle() {} } }, querySelector: () => null, getElementById: () => null }, location: { hostname: 'x' }, localStorage: { getItem: (k) => (root.kept || {})[k] || null, setItem(k, v) { (root.kept = root.kept || {})[k] = v; } } };
 /* the page loads helpers.js first (the one esc · fmtMoney · monthNames); so does this sandbox */
 const sandbox = vm.createContext({ module: { exports: {} }, window: root, globalThis: root, setInterval() {}, setTimeout() {} });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'engine', 'money.js'), 'utf8'), sandbox, { filename: 'money.js' });
 sandbox.CBMoney = sandbox.module.exports;
+loadShopTime(sandbox); /* the one date formatter, before helpers.js routes through it */
 for (const part of ['helpers.js', 'assign-bar.js', 'books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), sandbox, { filename: part });
 const P = root.CBPractice, T = P.parts || {};
-let bad = 0;
-const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };
+let bad = 0, total = 0;
+const t = (n, f) => { total++; try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };
 const row = (o) => Object.assign({ entity_id: 'c1', currency: 'AUD', name: 'C', stage: 'lodged', stage_blocker: null, year_end: { fy: '2025-26', of: 12, locked: 12, bank_to_end: true, end: '2026-06-30' }, queries: { open: 0 }, bank: { state: 'reconciled' }, health: { status: 'good', words: 'Doing well', reasons: [], withheld: { costs: null, currencies: null }, gross_margin_pct: 40, profit_quarter_minor: 500, cash_minor: 900 }, checked: { n: 1, of: 1 }, months_unlocked: 0, grant: { can_see_costs: true } }, o || {});
 const WORDS = { ready: 'Ready to lodge', done: "Lodged (owner's word)" };
 const answer = (tiles, extra) => Object.assign({ band: { bands: [{ key: 'pipeline', first: true, tiles }] }, clients: [row()], words: WORDS }, extra || {});
@@ -59,12 +61,12 @@ t('B7 a grant without costs says "costs not shared", never 0, in the row and the
   const d = T.detailHTML(r);
   assert.ok((d.match(/costs not shared/g) || []).length >= 3, d); assert.ok(!/Not shown/.test(d));
 });
-t('B7 more than one currency is said so; no data with nothing withheld stays a dash', () => {
+t('B7 more than one currency is said so; no data with nothing withheld stays blank (empty cells are blank, 21 Nov)', () => {
   const c = cols();
   const mix = row({ health: { status: 'good', words: 'x', reasons: [], withheld: { costs: null, currencies: 'currencies' }, gross_margin_pct: null, profit_quarter_minor: null, cash_minor: null } });
   assert.strictEqual(c.margin.cell(mix), 'more than one currency'); assert.strictEqual(c.cash.cell(mix), 'more than one currency');
   const none = row({ health: { status: 'none', words: 'x', reasons: [], withheld: { costs: null, currencies: null }, gross_margin_pct: null, profit_quarter_minor: null, cash_minor: 0 } });
-  assert.strictEqual(c.margin.cell(none), '—');
+  assert.strictEqual(c.margin.cell(none), ''); /* the list shows empty cells blank since the firm list without repeats (46add060) */
 });
 t('W9 a firm hides every card it does not keep; its Setup cards stay on the keep-list', () => {
   T.use({ clients: [row()], own_trade: false });
@@ -80,4 +82,5 @@ t('api #1378: /me is_practice reaches Home at once (the cb:me event): a shop is 
   hear({ detail: { is_practice: true } }); assert.strictEqual(hint(), '1');
   hear({ detail: { is_practice: false } }); assert.strictEqual(hint(), '0');
 });
+console.log(total + ' checks' + (bad ? ', ' + bad + ' FAILED' : ''));
 process.exit(bad ? 1 : 0);

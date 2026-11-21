@@ -432,27 +432,17 @@ function regVerticalChooser() {
     list
       .map(function (item) {
         const sel = (REG.constitution || '') === item.key;
-        const caps = (item.capabilities || []).join(' · ');
-        /* GREY-VERT (Athi, 21 Nov): a setup the api says is not ready is the same grey tile as the Home card (cbsh-box off, "Being finished · not ready yet") and cannot be chosen */
-        if (item.ready === false)
-          return `<div class="cbsh-box off" aria-disabled="true" data-cbsid="SCR053-C03" data-ready="no" data-testid="reg-vertical-${esc(item.key)}" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default">` +
-            `<div style="font-weight:700;font-size:var(--fs-2)">○ ${esc(regSetupLabel(item))}</div>` +
-            `<span class="no" data-testid="reg-vertical-off-${esc(item.key)}" style="display:block;font-size:var(--fs-1);margin-top:4px">${esc(tx('Being finished · not ready yet'))}</span></div>`;
+        /* GREY-VERT (Athi, 21 Nov): a setup the api says is not ready is the same grey tile as the Home card (cbsh-box off, "Being finished · not ready yet") and cannot be chosen; ONE element, two states, so the one code SCR053-C03 is written once */
+        const off = item.ready === false;
         return (
-          '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' +
-          esc(item.key) +
-          '" onclick="REG.constitution=\'' +
-          esc(item.key) +
-          '\';renderRegister()" style="border:1px solid ' +
-          (sel ? 'var(--blue)' : 'var(--line)') +
-          ';background:' +
-          (sel ? 'var(--blue-tint)' : 'var(--card)') +
-          ';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">' +
-          (sel ? '● ' : '○ ') +
-          esc(regSetupLabel(item)) +
-          ' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="' +
-          esc(txf('Includes: {caps}', { caps: caps || 'core' })) +
-          '">ⓘ</span></div></div>'
+          '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' + esc(item.key) + '"' +
+          (off
+            ? ' class="cbsh-box off" aria-disabled="true" data-ready="no" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default"><div style="font-weight:700;font-size:var(--fs-2)">○ ' +
+              esc(regSetupLabel(item)) + '</div><span class="no" data-testid="reg-vertical-off-' + esc(item.key) + '" style="display:block;font-size:var(--fs-1);margin-top:4px">' + esc(tx('Being finished · not ready yet')) + '</span>'
+            : ' onclick="REG.constitution=\'' + esc(item.key) + '\';renderRegister()" style="border:1px solid ' + (sel ? 'var(--blue)' : 'var(--line)') + ';background:' + (sel ? 'var(--blue-tint)' : 'var(--card)') +
+              ';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">' + (sel ? '● ' : '○ ') + esc(regSetupLabel(item)) +
+              ' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="' + esc(txf('Includes: {caps}', { caps: (item.capabilities || []).join(' · ') || 'core' })) + '">ⓘ</span></div>') +
+          '</div>'
         );
       })
       .join('') +

@@ -4,6 +4,7 @@
  * Run: node e2e/practice-rep66-pictures.cjs */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
+const { loadShopTime } = require('./lib/lift-fn.cjs');
 const pub = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8');
 const root = { esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])), Promise, tx: (s) => s, innerWidth: 1366, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {} } } } };
 const ctx = { window: root, globalThis: root, setInterval() {}, setTimeout() {}, Intl, Date };
@@ -11,11 +12,12 @@ vm.runInNewContext(pub('engine/chart-draw.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-status.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-rows.js'), ctx, {});
 root.CBDraw = root.CBDraw || ctx.CBDraw;
+loadShopTime(ctx); /* the one date formatter, before helpers.js routes through it */
 vm.runInNewContext(pub('app/helpers.js'), ctx, {}); /* the page loads helpers.js first: the one esc · fmtMoney · monthNames */
 for (const part of ['books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(pub('app/' + part), ctx, {});
 const T = root.CBPractice.parts;
-let bad = 0;
-const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };
+let bad = 0, total = 0;
+const t = (n, f) => { total++; try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };
 const titles = (html) => [...html.matchAll(/<rect[^>]*data-kind[^>]*><title>([^<]*)<\/title>/g)].map((m) => m[1]);
 const num = (label) => Number(String(label).split(': ').pop());
 const stages = [{ key: 'books_in', n: 10 }, { key: 'complete', n: 10 }, { key: 'checked', n: 2 }, { key: 'ready', n: 4 }, { key: 'lodged', n: 4 }];
@@ -62,4 +64,5 @@ t('the strip sits in the opened row (detailHTML)', () => {
   const r = Object.assign(row({ fy: '2025-26', start: '2025-07-01', of: 12, locked: 12 }), { health: { reasons: [] }, bank: { state: 'none' }, grant: {}, months_unlocked: 0 });
   assert.ok(/practice-strip-c1/.test(T.detailHTML(r)));
 });
+console.log(total + ' checks' + (bad ? ', ' + bad + ' FAILED' : ''));
 process.exit(bad ? 1 : 0);

@@ -19,6 +19,7 @@ const fs = require('fs'),
   assert = require('assert');
 const pub = (rel) => path.join(__dirname, '..', 'public', rel);
 const read = (rel) => fs.readFileSync(pub(rel), 'utf8').split('\r\n').join('\n');
+require(pub('app/shop-time.js')); /* the one date formatter: bank-preview-line.js words its dates through the CBShopTime global */
 const P = require(pub('app/bank-preview.js')),
   POST = require(pub('app/cap-bank-post.js'));
 let ran = 0;
@@ -347,7 +348,7 @@ const make = (over) => {
   assert.strictEqual(settled.amount_minor, 275000);
   ok('M4: a receipt that is exactly one open invoice is posted AGAINST it (allocations from the against the engine gave, no allocate none)');
 
-  console.log(ran + ' checks passed');
+  console.log(ran + ' checks');
 })().catch((err) => {
   console.error('FAIL', err && err.stack ? err.stack : err);
   process.exit(1);

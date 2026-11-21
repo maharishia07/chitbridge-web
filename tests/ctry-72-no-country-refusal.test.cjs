@@ -122,7 +122,7 @@ const run = (cx, src) => vm.runInContext(src, cx);
   ok(vm.runInContext('money(40)', cx) === '—', 'no money: a price prints a dash, not rupees');
   ok(vm.runInContext('live().length', cx) === 0, 'no money: no product is advertised');
   vm.runInContext('paintNoMoney()', cx);
-  ok(el('nomoney').hidden === false && el('nomoney').innerHTML.includes('Country setup).') && /#\/country/.test(el('nomoney').innerHTML), 'no money: the sentence and the link show above the stage');
+  ok(el('nomoney').hidden === false && el('nomoney').innerHTML.includes('Country setup).') && !/href|#\/country/.test(el('nomoney').innerHTML), 'no money: the sentence shows above the stage and carries no staff link (a customer page, CUSTOMER-DELINK 469649ce)');
   set({ shop: { currency: 'INR' }, items });
   vm.runInContext('paintNoMoney()', cx);
   ok(/₹/.test(vm.runInContext('money(40)', cx)) && vm.runInContext('live().length', cx) === 1 && el('nomoney').hidden === true, 'IN shop: rupees, products advertised, no banner (unchanged)');
@@ -136,4 +136,4 @@ const run = (cx, src) => vm.runInContext(src, cx);
   const std = read('standards.html');
   ok(!/CMP_COUNTRY_FALLBACK/.test(std) && /std_nocountry/.test(std) && /#\/country/.test(std), 'standards.html: no India fallback; the no-country line links Country setup');
 }
-console.log('\n' + n + ' ok');
+console.log('\n' + n + ' checks');

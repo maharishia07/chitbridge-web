@@ -28,6 +28,7 @@ const code = [
   script.slice(script.indexOf('var CHART_TONES'), script.indexOf('function chartLegend')),
   pick('chartLegend'), pick('chartStack'), pick('chartTrend'),
 ].join('\n');
+require('../public/app/shop-time.js'); /* the one date formatter (CBShopTime global): the trend labels its dates through it */
 const F = new Function(code + '; return { chartStack, chartTrend, chartLegend };')();
 
 const AREAS = [
@@ -42,8 +43,9 @@ const TREND = [
   { at: '2026-09-10T10:00:00Z', run_label: 'c', passed: 30, failed: 0, blocked: 0, total: 30 },
 ];
 
-let bad = 0;
+let bad = 0, total = 0;
 const check = (what, svg, vbW, vbH) => {
+  total++;
   const nan = /NaN|undefined|Infinity/.test(svg);
   if (nan) { bad++; console.log('  NaN/undefined in ' + what); }
   /* every x/y must sit inside the declared viewBox — a label outside it is simply not drawn */
@@ -69,4 +71,5 @@ check('trend', F.chartTrend(TREND));
 console.log('  empty rows        → ' + JSON.stringify(F.chartStack([], {}).slice(0, 46)));
 console.log('  one sitting       → ' + JSON.stringify(F.chartTrend([TREND[0]]).slice(0, 60)));
 console.log('\n  ' + bad + ' problems\n');
+console.log(total + ' checks');
 process.exitCode = bad ? 1 : 0;

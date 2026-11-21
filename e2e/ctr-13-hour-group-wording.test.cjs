@@ -16,13 +16,14 @@ const { liftFns } = require('./lib/lift-fn.cjs');
 class EnDate extends Date {
   toLocaleTimeString(locale, options) { return super.toLocaleTimeString('en-US', options).replace(/[\u202f\u00a0]/g, ' '); }
 }
-const sandbox = { Date: EnDate, Number, String };
+/* the till's one formatter (shopFmt) and its zone readers are lifted as the page has them; the shop here states no country and no zone, so the tag is plain en */
+const sandbox = { Date: EnDate, Number, String, Intl, window: {}, docCountry: () => null, shopPack: () => null, cbQuiet() {} };
 vm.createContext(sandbox);
-vm.runInContext(liftFns('public/till.html', ['hourRangeWords']) + '\nthis.hourRangeWords = hourRangeWords;', sandbox);
+vm.runInContext(liftFns('public/till.html', ['shopTz', 'tzOpt', 'shopFmt', 'hourRangeWords']) + '\nthis.hourRangeWords = hourRangeWords;', sandbox);
 const say = sandbox.hourRangeWords;
 
-let bad = 0;
-const ok = (m, c, info) => { console.log((c ? '  ok   ' : '  FAIL ') + m + (c || !info ? '' : ' -> ' + info)); if (!c) bad++; };
+let bad = 0, n = 0;
+const ok = (m, c, info) => { n++; console.log((c ? '  ok   ' : '  FAIL ') + m + (c || !info ? '' : ' -> ' + info)); if (!c) bad++; };
 ok('hour 20 (the 2 bills Rs 460 of the walk) reads "8 pm – 9 pm"', say('20') === '8 pm – 9 pm', say('20'));
 ok('hour 09 reads "9 am – 10 am"', say('09') === '9 am – 10 am', say('09'));
 ok('hour 23 wraps: "11 pm – 12 am"', say('23') === '11 pm – 12 am', say('23'));
@@ -32,4 +33,5 @@ ok('it is never the bare 24-hour "20:00"', !/\d\d:\d\d/.test(say('20')), say('20
 const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'till.html'), 'utf8');
 ok('the group head prints hourRangeWords(g.h) and the count as "1 bill" / "N bills"', /esc\(hourRangeWords\(g\.h\)\) \+ ' · <span class="u"[^\n]*\n\s*\+ n \+ \(n === 1 \? ' bill' : ' bills'\)/.test(src), '');
 ok('and nowhere is the raw hour printed as the head ("' + "g.h + ':00'" + '")', !/g\.h \+ ':00'/.test(src), '');
+console.log(n + ' checks' + (bad ? ', ' + bad + ' FAILED' : ''));
 process.exitCode = bad ? 1 : 0;

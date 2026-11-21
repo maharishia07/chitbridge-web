@@ -34,7 +34,7 @@ function check(world) {
   const folders = (row.match(/\bfolders:\s*\[([^\]]*)\]/) || [])[1] || '';
   const parts = files.filter((file) => file !== 'cap-folders.js');
   for (const file of parts) if (!folders.includes("'" + file.replace(/^cap-|\.js$/g, '') + "'")) fails.push('CAP_WITH.folders must name ' + file.replace(/^cap-|\.js$/g, ''));
-  const precache = (world.sw.match(/const PRECACHE = \[([^\]]*)\]/) || [])[1] || '';
+  const precache = (world.sw.match(/const OFFICE_PRECACHE = \[([^\]]*)\]/) || [])[1] || '';
   for (const file of files) if (!precache.includes("'" + urlOf(file) + "'")) fails.push('cb-sw.js PRECACHE must list ' + urlOf(file));
   const build = (world.app.match(/const CB_BUILD =\s*'([^']+)'/) || [])[1], version = (world.sw.match(/CB_SW_VERSION = '([^']+)'/) || [])[1];
   if (!/^\d{4}-\d\d-\d\d[a-z]?$/.test(build || '')) fails.push('CB_BUILD not found in app.html');
@@ -87,5 +87,5 @@ fails.forEach((line) => console.log('FAIL ' + line));
 const bad = (fails.length ? [] : selfTests(world)).filter((test) => !test.ok);
 bad.forEach((test) => console.log('FAIL self-test: ' + test.why + (test.fails.length ? ' -> ' + test.fails.join(' | ') : ' -> not red')));
 const total = fails.length + bad.length;
-console.log(total ? '\nfolders-guard: ' + total + ' FAILED' : '\nfolders-guard: all passed (names in one file each, tags, CAP_WITH, PRECACHE, stamps; 8 self-tests red or green as expected)');
+console.log(total ? '\nfolders-guard: ' + total + ' FAILED' : '\nfolders-guard: all passed (names in one file each, tags, CAP_WITH, PRECACHE, stamps; 8 self-tests red or green as expected) · 8 checks');
 process.exit(total ? 1 : 0);

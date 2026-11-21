@@ -16,7 +16,7 @@ function load(taxAnswer) {
     document: { getElementById: (id) => nodes[id] || null, querySelector: () => null, querySelectorAll: () => [], createElement: () => ({ style: {} }), addEventListener() {} },
   };
   sb.window = sb; const cx = vm.createContext(sb);
-  for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/helpers.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/' + f, 'utf8'), cx);
+  for (const f of ['engine/money.js', 'engine/tax.js', 'engine/locale.js', 'app/shop-time.js', 'app/helpers.js']) vm.runInContext(fs.readFileSync(__dirname + '/../public/' + f, 'utf8'), cx);
   vm.runInContext(src, cx);
   const host = { innerHTML: '' };
   vm.runInContext('CSU.host = null;', cx);
@@ -49,4 +49,4 @@ t.nodes['cs-save'].onpointerdown();
 t.sb.csuSet('number', '12345'); /* a number the checker refuses keeps the row open with its reason — nothing is sent */
 ok(t.sent.length === 0 && /cs-tax-error|Registered/.test(t.host.innerHTML) && t.sb.CSU.taxErr, 'a refused number is not sent by the press; the reason is on the row');
 setTimeout(() => process.exit(0), 50);
-console.log(n + ' passed');
+console.log(n + ' checks');
