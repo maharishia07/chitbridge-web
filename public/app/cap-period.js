@@ -1089,6 +1089,20 @@ async function peReturnCopy(btn) {
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
    GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, reclosing, refusals: [{ name, why }], warnings: [{ name, count, why }], months: [{ period, status }], next } — what a close would say, nothing written
    POST /year/:fy/close { returns_lodged?: true } → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
+/** I-F-13: a country whose pack carries Corporate Tax as DATA but whose books do not compute it yet (UAE) says so, greyed, beside the year close: not built is grey and said, never silent */
+function peCorpTaxGrey() {
+  const pack = typeof shopReg === 'function' ? shopReg() : null;
+  if (!pack || !pack.corporateTax) return '';
+  return (
+    '<div class="pe-card" data-testid="py-corptax-grey" aria-disabled="true" style="opacity:.6;color:var(--grey)"><b>' +
+    esc(tx('Corporate tax')) +
+    '</b> · ' +
+    esc(tx('Not built yet')) +
+    '<div class="sub">' +
+    esc(tx('ChitBridge does not work out Corporate tax. The ledger has the accounts for it; the figure comes from your adviser.')) +
+    '</div></div>'
+  );
+}
 async function peYearView(body) {
   let L;
   try {
@@ -1111,7 +1125,9 @@ async function peYearView(body) {
         ' onchange="peYearStatus()"'
       )
     ) +
-    '</div></div><div id="py_res" data-testid="py-res"></div>';
+    '</div></div>' +
+    peCorpTaxGrey() +
+    '<div id="py_res" data-testid="py-res"></div>';
   peYearStatus();
 }
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
