@@ -21,15 +21,16 @@
 var FR = { gen: 0, state: 'loading', code: null, pack: null };
 var FR_SEE = 'Only the owner may see returns.';
 
+/** the Returns page's read: the shop's country and its tax pack (a late answer is dropped, an owner-only refusal is said in words) */
 async function frLoad(quiet) {
-  var g = ++FR.gen;
+  var generation = ++FR.gen;
   if (!quiet) {
     FR.state = 'loading';
     frPaint();
   }
   try {
     var reply = await api('me');
-    if (g !== FR.gen) return;
+    if (generation !== FR.gen) return;
     var e = (reply && reply.entity) || reply || {},
       code = e.country ? String(e.country).toUpperCase() : null;
     FR.code = code;
@@ -38,7 +39,7 @@ async function frLoad(quiet) {
     FR.state = 'ready';
     ftNav();
   } catch (e2) {
-    if (g !== FR.gen) return;
+    if (generation !== FR.gen) return;
     if (e2 && e2.status === 403) {
       finDenied(FR_SEE, 'Returns');
       return;
@@ -53,19 +54,19 @@ function frRetry() {
 
 /** the running month and the eleven before it, newest first, from the shop's day — value YYYY-MM, label in the reader's month words (IN-F-08: the month in progress can be asked for, marked as running) */
 function frMonths() {
-  var t = bkToday(),
-    y = Number(t.slice(0, 4)),
-    m = Number(t.slice(5, 7)),
+  var today = bkToday(),
+    y = Number(today.slice(0, 4)),
+    monthNo = Number(today.slice(5, 7)),
     names = monthNames('short'),
     out = [];
   for (var index = 0; index < 12; index++) {
-    var mm = m - index,
-      yy = y;
-    while (mm < 1) {
-      mm += 12;
-      yy -= 1;
+    var shownMonth = monthNo - index,
+      shownYear = y;
+    while (shownMonth < 1) {
+      shownMonth += 12;
+      shownYear -= 1;
     }
-    out.push({ v: yy + '-' + String(mm).padStart(2, '0'), label: names[mm - 1] + ' ' + yy + (index === 0 ? ' · ' + tx('running') : '') });
+    out.push({ v: shownYear + '-' + String(shownMonth).padStart(2, '0'), label: names[shownMonth - 1] + ' ' + shownYear + (index === 0 ? ' · ' + tx('running') : '') });
   }
   return out;
 }
@@ -109,6 +110,7 @@ function frPaintRail(node) {
   );
   if (!shut) frShow(); /* IN-F-08: the running month's GST is on the screen as it opens (a view-only login is refused it, so it is not asked) */
 }
+/** the Returns screen drawn from FR: loading, the read failed, no country set, the GST rail (frPaintRail), or the country pack's own return */
 function frPaint() {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -145,18 +147,18 @@ function frPaint() {
     );
     return;
   }
-  var pk = FR.pack;
+  var pack = FR.pack;
   /* India's GSTR-1 / 3B are the RAIL's read (books-period.taxReturn refuses the ledgers for the IN pack the same way): the pack id decides, not a word */
-  if (pk && packRegForm(pk.id).railReturn) {
+  if (pack && packRegForm(pack.id).railReturn) {
     frPaintRail(node);
     return;
   }
-  if (pk && pk.returns && pk.returns.id) {
+  if (pack && pack.returns && pack.returns.id) {
     node.innerHTML = frCard(
       '<h2 data-testid="fr-which">' +
-        esc(pk.returns.short || pk.returns.id) +
+        esc(pack.returns.short || pack.returns.id) +
         '</h2><p>' +
-        esc(txf('{name}: prepared in Accounts, not here.', { name: pk.returns.name || pk.returns.id })) +
+        esc(txf('{name}: prepared in Accounts, not here.', { name: pack.returns.name || pack.returns.id })) +
         '</p>' +
         '<a class="act" href="/accounts.html#gstclose" data-testid="fr-accounts">' +
         esc(tx('Open Accounts')) +
@@ -169,7 +171,7 @@ function frPaint() {
     '<h2>' +
       esc(tx('No return built yet')) +
       '</h2><p data-testid="fr-none-why">' +
-      esc(txf('Nothing is built for {country} yet.', { country: (pk && pk.name) || FR.code })) +
+      esc(txf('Nothing is built for {country} yet.', { country: (pack && pack.name) || FR.code })) +
       '</p>',
     'fr-none'
   );
