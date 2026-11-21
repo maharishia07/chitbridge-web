@@ -320,7 +320,7 @@ async function peAssetSave(btn) {
     };
     delete body.cost_minor;
   }
-  if (!(await CBAction.ask(peAssetAsk(body, peEl('pa_how'))))) return; /* C-F-12: a posting asks first, as Month lock and the debit note do; Cancel sends nothing */
+  if (!(await CBAction.ask(peAssetAsk(Object.assign({}, body, { cost_minor: cost }), peEl('pa_how'))))) return; /* C-F-12: a posting asks first, as Month lock and the debit note do; Cancel sends nothing */
   await bkOnce('pe-asset', btn, async () => {
     try {
       const reply = await api('perAssetAdd', { body });
