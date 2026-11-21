@@ -33,7 +33,7 @@ function simulate(src, start, d) {
       if (d === '`' && c === '$' && src[i + 1] === '{') {
         push(); let depth = 1, j = i + 2;
         while (j < src.length && depth) { if (src[j] === '{') depth++; else if (src[j] === '}') depth--; j++; }
-        out.push({ expr: src.slice(i + 2, j - 1).trim() }); i = j; continue;
+        out.push({ expr: src.slice(i + 2, j - 1).trim(), pos: i + 2 }); i = j; continue;
       }
       if (c === d) { inStr = false; i++; continue; }
       if (c === '"') { push(); closed = true; break; }
@@ -44,12 +44,12 @@ function simulate(src, start, d) {
       if (src[i] !== '+') break;
       i++; while (/\s/.test(src[i])) i++;
       if (src[i] === d) { i++; inStr = true; continue; }
-      const e = readExpr(src, i); push(); out.push({ expr: e.text }); i = e.end;
+      const e = readExpr(src, i); push(); out.push({ expr: e.text, pos: i }); i = e.end;
       while (i < src.length && /\s/.test(src[i])) i++;
       if (src[i] === '+') {
         i++; while (/\s/.test(src[i])) i++;
         if (src[i] === d) { i++; inStr = true; continue; }
-        const e2 = readExpr(src, i); out.push({ expr: e2.text }); i = e2.end; continue;
+        const e2 = readExpr(src, i); out.push({ expr: e2.text, pos: i }); i = e2.end; continue;
       }
       break;
     }
@@ -79,9 +79,9 @@ function scanHandlerEsc(src) {
         /* the handler's own JS quote is ' or the entity &quot; / &#39; (the browser decodes it before the JS runs) */
         const lit = p.lit.replace(/&quot;|&#34;|&#39;|&apos;/g, "'");
         for (let k = 0; k < lit.length; k++) { const c = lit[k]; if (c === '\\') { k++; continue; } if (c === "'") inQ = !inQ; }
-      } else if (inQ && /^esc\(/.test(p.expr)) hit = p.expr;
+      } else if (inQ && /^esc\(/.test(p.expr)) hit = p;
     }
-    if (hit) found.push({ line: src.slice(0, m.index).split('\n').length, expr: hit });
+    if (hit) found.push({ line: src.slice(0, m.index).split('\n').length, expr: hit.expr, at: hit.pos });
   }
   return found;
 }

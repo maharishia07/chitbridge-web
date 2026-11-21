@@ -791,7 +791,7 @@ function comboLibraryRowsHTML(filterQ) {
       '</div></div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="openComboTillPreview(\'' +
-      esc(String(template.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+      escJs(template.name) +
       "'," +
       (template.price == null ? 'null' : Number(template.price)) +
       ",comboLibDef('" +
@@ -831,7 +831,7 @@ function comboLibraryRowsHTML(filterQ) {
       (groupCount === 1 ? '' : 's') +
       ' · already on your product list</div></div>' +
       '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\'' +
-      esc(String(product.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+      escJs(product.name) +
       "'," +
       product.price +
       ',JSON.parse(this.dataset.g))" data-g=\'' +

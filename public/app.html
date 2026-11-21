@@ -11308,7 +11308,7 @@ function supInfoCardHTML(x) {
     tx('✎ Edit') +
     '</button>' +
     '<button data-cbsid="BUS002-B09" data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\'' +
-    esc(x.bridge_id) +
+    escJs(x.bridge_id) +
     "','" +
     String(supName(x)).replace(/[\\']/g, '') +
     '\')">Passport <span class=arw>→</span></button>' +
@@ -11609,7 +11609,7 @@ function supFindBodyHTML() {
               esc(d.unit || 'unit') +
               (item.item_id
                 ? ' <button data-cbsid="BUS011-B01" type="button" data-testid="enq-ask" onclick="enquiryOpen(\'' +
-                  esc(item.item_id) +
+                  escJs(item.item_id) +
                   "','" +
                   esc(String(d.name || d.product || 'item').replace(/'/g, '')) +
                   '\')" style="margin-inline-start:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">' +
@@ -12160,7 +12160,7 @@ function platRowHTML(r) {
     '" data-testid="plat-row-' +
     esc(r.user_id || r.identity_id) +
     '" onclick="selectPlat(\'' +
-    esc(r.identity_id) +
+    escJs(r.identity_id) +
     '\')">' +
     '<div class="main2">' +
     /* line 1 · WHO, and how alive — the dot gets a soft ring so it reads as a state, not a bullet */
@@ -14377,7 +14377,7 @@ function custNamedGroupsHTML(c) {
         '"><input data-cbsid="BUS010-I01" type="checkbox" ' +
         (on ? 'checked' : '') +
         ' onchange="custToggleNamedGroup(\'' +
-        esc(c.customer_list_id) +
+        escJs(c.customer_list_id) +
         "','" +
         esc(item) +
         '\',this.checked)" style="margin:0 4px 0 0;vertical-align:middle">' +
@@ -14392,9 +14392,9 @@ function custNamedGroupsHTML(c) {
     '" data-testid="cust-ngroup-new" placeholder="' +
     tx('+ new group') +
     '" style="width:130px;padding:3px 6px" onkeydown="if(event.key===\'Enter\')custAddNamedGroup(\'' +
-    esc(c.customer_list_id) +
+    escJs(c.customer_list_id) +
     '\')"><button data-cbsid="CMP007" class="btn2" data-testid="cust-ngroup-add" onclick="custAddNamedGroup(\'' +
-    esc(c.customer_list_id) +
+    escJs(c.customer_list_id) +
     '\')">' +
     tx('Add') +
     '</button></span>';
@@ -14954,7 +14954,7 @@ function supStepReview(x) {
      */
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? ' +
     '<span data-cbsid="BUS009-C03" data-testid="sup-open-compose" onclick="composeFromSupplier(\'' +
-    esc(x.supplier_list_id) +
+    escJs(x.supplier_list_id) +
     '\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>'
   );
 }
@@ -15851,7 +15851,7 @@ function supDetailHTML() {
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
     const chip =
       supFactsHTML(x.facts) +
-      `<div style="padding:2px 0 0"><div data-cbsid="BUS009-C04" data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g, '')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad ? 'var(--gold-line)' : 'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad ? 'var(--gold-soft)' : 'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">` +
+      `<div style="padding:2px 0 0"><div data-cbsid="BUS009-C04" data-testid="sup-chip" onclick="viewSupplierPassport('${escJs(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g, '')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad ? 'var(--gold-line)' : 'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad ? 'var(--gold-soft)' : 'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">` +
       `<span style="font-size:var(--fs-1);color:${bad ? 'var(--warn-2)' : 'var(--ok-2)'};font-weight:700">${warnTxt}</span>` +
       `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
@@ -16609,7 +16609,7 @@ function prodOfferPaint() {
           esc(item.id) +
           '"' +
           ' onclick="prodOfferApply(\'' +
-          esc(item.id) +
+          escJs(item.id) +
           '\', true)">+</button>' +
           (already
             ? '<button data-cbsid="CAT001-B09" type="button" class="badd" title="' +
@@ -16618,7 +16618,7 @@ function prodOfferPaint() {
               ' data-testid="po-del-' +
               esc(item.id) +
               '" onclick="prodOfferApply(\'' +
-              esc(item.id) +
+              escJs(item.id) +
               '\', false)">−</button>'
             : '') +
           '</div>'
@@ -18398,7 +18398,7 @@ function ctOfferField(d) {
             ' <button data-cbsid="CAT005-B19" type="button" data-testid="cat-offer-exclude-' +
             esc(item.id) +
             '" onclick="prodOfferExcludeToggle(\'' +
-            esc(pid) +
+            escJs(pid) +
             "','" +
             esc(item.id) +
             '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--on-bg);cursor:pointer;padding:0 6px">' +
@@ -18419,7 +18419,7 @@ function ctOfferField(d) {
           esc(terms + (win ? ' · ' + win : '')) +
           '"' +
           ' onclick="ctToggleOffer(\'' +
-          esc(item.id) +
+          escJs(item.id) +
           '\', this)">' +
           (on ? '✓ ' : '') +
           esc(item.name) +
@@ -20284,7 +20284,7 @@ function prodMediaTab(d, edit) {
         ? `<div style="padding:0 12px">${gal}</div>`
         : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No pictures or videos yet.'))}</div>`) +
       (edit
-        ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+        ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${escJs(id)}', this.files)">` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures up to 8 MB each; the first is the cover the storefront shows. Saved at once — not with this form.')}</div>` +
           `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>`
@@ -20300,7 +20300,7 @@ function prodMediaTab(d, edit) {
         : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`) +
     `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name || '')}">${esc(x.name || '')}</div>` +
     (edit
-      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
+      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${escJs(id)}','${escJs(x.id)}')">✕</button>`
       : '') +
     `</div>`;
   return (
@@ -20309,7 +20309,7 @@ function prodMediaTab(d, edit) {
       ? `<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px">${list.map(tile).join('')}</div>`
       : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(d.image ? tx('One picture, by link — upload here to keep it with the product.') : tx('No pictures or videos yet.'))}</div>`) +
     (edit
-      ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I14" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+      ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I14" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${escJs(id)}', this.files)">` +
         `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures or videos, up to 8 MB each. The first picture is the cover the storefront shows. Saved at once — not with this form.')}</div></div>`
       : '')
   );
@@ -20640,7 +20640,7 @@ function prodIdentifiersTab(d, edit) {
       return (
         `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span data-cbsid="CAT005-C09" class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
         (edit && xi >= 0
-          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
+          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${escJs(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
           : '') +
         '</div>'
       );
@@ -21201,7 +21201,7 @@ function prodBarcodeTab(d) {
     `<div class="sec">${tx('Barcode')}</div>` +
     `<div data-testid="prod-barcode" data-code="${esc(code)}" style="padding:10px 12px;overflow-x:auto;background:#fff;color:#000;border-radius:9px;margin:0 12px;max-width:100%">${r.svg}</div>` +
     `<div style="padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:var(--fs-2)">` +
-    `<button data-cbsid="CAT005-B14" class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>` +
+    `<button data-cbsid="CAT005-B14" class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${escJs(code)}')">🖨️ ${tx('Print label')}</button>` +
     `<span style="color:var(--grey)">${tx('Code 128 · internal · a GS1 barcode needs an assigned prefix.')}</span></div>`
   );
 }
@@ -21535,7 +21535,7 @@ function prodTaxAttachHTML(d, r, slabs) {
   return (
     `<div data-testid="prod-tax-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">` +
     `<select data-cbsid="CAT005-S09" class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>` +
-    `<button data-cbsid="CAT005-B16" class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
+    `<button data-cbsid="CAT005-B16" class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${escJs(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
   );
 }
 async function prodTaxAttach(id) {
@@ -22012,7 +22012,7 @@ function prodScheduledHTML(id) {
     rows
       .map(
         (item) =>
-          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button data-cbsid="CMP003" class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(item.schedule_id)}')">${tx('Cancel')}</button></div>`
+          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button data-cbsid="CMP003" class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${escJs(id)}','${escJs(item.schedule_id)}')">${tx('Cancel')}</button></div>`
       )
       .join('') +
     `</div>`
@@ -22341,7 +22341,7 @@ function taskPanel() {
             : `<span data-testid="crumb-track">${_tname}</span>`
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
-      ${_fsel ? `<span data-cbsid="RAL002-C23" data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
+      ${_fsel ? `<span data-cbsid="RAL002-C23" data-testid="folder-rename" onclick="renameFolder('${escJs(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
       ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
@@ -27628,7 +27628,7 @@ function booksBlockHTML(c) {
   var btn =
     !B.order && !bj.books_request && /^(order|offer)$/.test(purpose) && !/^(cancelled|rejected)$/.test(st) && UI.folder === 'task'
       ? '<div style="padding:8px 12px"><button data-cbsid="DTL001-B38" class="btn2" data-testid="books-send" onclick="booksSend(\'' +
-        esc(c.id || (c.header && c.header.chit_id)) +
+        escJs(c.id || (c.header && c.header.chit_id)) +
         '\')">📒 ' +
         tx('Send to books') +
         (at === 'manual' ? '' : ' ' + tx('now')) +
@@ -28091,7 +28091,7 @@ function cancelBanner(c) {
      */
     '<div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">' +
     '<button data-cbsid="DTL001-B39" type="button" class="btn" data-testid="cancel-agree" onclick="cancelAgree(\'' +
-    esc(c.id) +
+    escJs(c.id) +
     '\')"' +
     ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;' +
     'padding:4px 11px;font-size:var(--fs-1);cursor:pointer">' +
@@ -29945,7 +29945,7 @@ function amendPaint() {
     const units = [...new Set([].concat(l.unit ? [l.unit] : [], ((cat && cat.items) || []).map((x) => x.unit).filter(Boolean), AMD_UNITS))].slice(0, 10);
     return _amdSheet(
       'Which unit?',
-      `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map((item) => `<span data-cbsid="DTL001-C06" onclick="amdPickUnit('${esc(item)}')" style="cursor:pointer;border:1px solid ${item === l.unit ? 'var(--blue)' : 'var(--line)'};${item === l.unit ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : ''}border-radius:18px;padding:9px 18px;font-size:var(--fs-3)">${esc(item)}</span>`).join('')}</div>`
+      `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map((item) => `<span data-cbsid="DTL001-C06" onclick="amdPickUnit('${escJs(item)}')" style="cursor:pointer;border:1px solid ${item === l.unit ? 'var(--blue)' : 'var(--line)'};${item === l.unit ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : ''}border-radius:18px;padding:9px 18px;font-size:var(--fs-3)">${esc(item)}</span>`).join('')}</div>`
     );
   }
   if (AMD.view === 'note') {
