@@ -236,6 +236,19 @@
     var named = names.filter(function (n, i) { return n && names.indexOf(n) === i; });
     return named.length ? [sayText('Was held by {names}.', { names: named.join(', ') })] : [];
   }
+  /** the one outcome line of a run: some done and one refused · refused · or all done with the skipped named */
+  function sayRunOutcome(sum, opts, rows, wordsFor) {
+    if (sum.refused && sum.done) showOutcome('bad', sayText('{n} {noun} assigned, {m} refused.', { n: sum.done, noun: nounOf(opts, sum.done), m: Math.max(rows.length - sum.done - sum.skipped.length, 0) }), [sum.refused].concat(skipLines(sum.skipped)), sum.undo); /* the part that went through keeps its Undo and its count; the refusal is the reason */
+    else if (sum.refused) showOutcome('bad', sum.refused, []);
+    else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
+  }
+  /** after the calls: say the outcome (good · bad), clear the ticks, keep the last run's reload, then reload the list */
+  function finishRun(sum, opts, rows, wordsFor) {
+    sayRunOutcome(sum, opts, rows, wordsFor);
+    if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
+    if (last) last.reload = opts.reload;
+    return opts.reload ? opts.reload() : null;
+  }
   /** one call per role (the api takes one role per call); counts, skip sentences and previous holders are added; the first refusal stops the run and its sentence is shown */
   function runCalls(opts, rows, target, note, wordsFor) {
     var sum = { done: 0, skipped: [], refused: null, undo: [], before: [] };
@@ -254,14 +267,7 @@
           (r.body.previous || []).forEach(function (p) { if (p.actor_id && p.actor_id !== target) sum.before.push(nameById[p.actor_id] || ''); });
         });
       });
-    }, root.Promise.resolve()).then(function () {
-      if (sum.refused && sum.done) showOutcome('bad', sayText('{n} {noun} assigned, {m} refused.', { n: sum.done, noun: nounOf(opts, sum.done), m: Math.max(rows.length - sum.done - sum.skipped.length, 0) }), [sum.refused].concat(skipLines(sum.skipped)), sum.undo); /* the part that went through keeps its Undo and its count; the refusal is the reason */
-      else if (sum.refused) showOutcome('bad', sum.refused, []);
-      else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
-      if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
-      if (last) last.reload = opts.reload;
-      return opts.reload ? opts.reload() : null;
-    });
+    }, root.Promise.resolve()).then(function () { return finishRun(sum, opts, rows, wordsFor); });
   }
   /** H3 (20 Nov): the ONE empty state of the work queue, the same in every place: "Nothing waiting for you · N unassigned" with ONE press, "Pick up the next one" (the person who may assign takes the first unassigned item; the list reloads on Mine) */
   function queueEmpty(opts, rows, state) {
