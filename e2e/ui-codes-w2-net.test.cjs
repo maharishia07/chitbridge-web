@@ -53,7 +53,7 @@ const WANT = [
   ["SCR053-C01","app/register-form.js","a","onclick=\"regReset()\">${esc(tx('change'))}</a></div> ${regVertica"],
   ["SCR053-B02","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy || "],
   ["SCR053-C02","app/register-form.js","a","onclick=\"go('#/login')\">${tx('Sign in')}</a></div> </div> </div>"],
-  ["SCR053-C03","app/register-form.js","div","data-testid=\"reg-vertical-' + esc(item.key) + '\"' + (off"],
+  ["SCR053-C03","app/register-form.js","div","data-testid=\"reg-vertical-' + esc(item.key) + '\"' + (greyedOut"],
   ["SCR053-C04","app/register-form.js","a","onclick=\"regTailor();return false\" style=\"color:var(--blue);curs"],
   ["SCR053-C05","app/register-form.js","a","onclick=\"regContact();return false\" style=\"color:var(--blue);cur"],
   ["SCR054-B01","app/signin-ui.js","button","type=\"button\" class=\"cbsi-m\" data-cbsi=\"method\" data-method=\"' +"],

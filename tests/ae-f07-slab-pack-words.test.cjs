@@ -12,7 +12,7 @@ function grab(name) {
 function page(pack) {
   const c = { shopReg: () => pack, console };
   vm.createContext(c);
-  vm.runInContext(grab('cbDefTaxScheme') + '\n' + grab('cbDefSubLabel') + '\n' + grab('cbDefRuleFields'), c);
+  vm.runInContext(grab('cbDefTaxScheme') + '\n' + grab('cbDefSubLabel') + '\n' + grab('cbDefCodeFields') + '\n' + grab('cbDefRuleFields'), c);
   return c;
 }
 const keys = (c) => vm.runInContext("cbDefRuleFields('tax','gst_slab').map(function(f){return f.k})", c).join();

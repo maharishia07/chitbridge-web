@@ -47,6 +47,6 @@ ok('the standards register names no Chennai · Madras · INMAA example (internat
 
 /* the offer lab's swap: the code that applies a country's sample exists and reads the ONE list */
 const lab = fs.readFileSync(path.join(root, 'public', 'offer-lab-next.html'), 'utf8');
-ok('offer lab loads CBSample and swaps its sample for a non-India shop', /src="\/app\/sample-set\.js"/.test(lab) && /function useCountrySample\(/.test(lab) && /CBSample\.forCountry\(cc\)/.test(lab) && /useCountrySample\(countryOfReply\(/.test(lab));
+ok('offer lab loads CBSample and swaps its sample for a non-India shop', /src="\/app\/sample-set\.js"/.test(lab) && /function useCountrySample\(/.test(lab) && /CBSample\.forCountry\((cc|countryCode)\)/.test(lab) && /useCountrySample\(countryOfReply\(/.test(lab));
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
