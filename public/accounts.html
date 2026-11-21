@@ -704,7 +704,7 @@ function todoGo(i) {
   if (!it) return;
   const screen = (it.action || {}).screen;
   if (screen === 'catalogue') {
-    location.href = CB_HOMES.catalogue; /* supply kind: the 0% slabs and products that wait for their kind are answered in the catalogue, one tap each */
+    navTo('catalogue'); /* supply kind: the 0% slabs and products that wait for their kind are answered in the catalogue, one tap each */
     return;
   }
   const tab = TODO_SCREEN[screen];
