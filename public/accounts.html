@@ -77,7 +77,7 @@ function go() {
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
-<script src="/app/books-grant-api.js"></script><script src="/app/books-acting.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
+<script src="/app/books-grant-api.js"></script><script src="/app/books-grant-words.js"></script><script src="/app/books-grant-member.js"></script><script src="/app/books-acting.js"></script><script src="/app/books-actions-view.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
@@ -171,7 +171,7 @@ const NAV = [
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
   ['movein', 'Move in', 'M4 12h12M12 8l4 4-4 4M20 4v16'] /* IM1: move in from Xero / QuickBooks — the five exports, each file → columns → preview → import */,
-  ['access', 'Who can see my books', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 .01'] /* the second door: the owner gives, changes or ends an adviser's view (network.html#books) */,
+  ['access', 'Who can see my books', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 .01'] /* the second door: the owner gives, changes or ends an adviser's view (in place, books-grant-member.js; ACC-384) */,
   ['delegate', 'Delegate work', 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 4-6 8-6s8 2 8 6'] /* the People access panel mounted where the work is given (DECISIONS 19 Nov) */, ['rates', 'Rates', 'M4 7h13l-3-3M20 17H7l3 3'] /* FX1: exchange rates — a foreign bill posts at its day's rate (cap-fx.js) */
 ];
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
@@ -434,11 +434,35 @@ BK.views = {
   opening: (b) => obView(b),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
-  rates: (b) => fxView(b), delegate: (b) => CBEmployees.mountAccess(b, { token: SESS.token, base: CFG.API_BASE, onEnded: () => location.reload() }),
-  access: () => {
-    location.href = CB_HOMES.network + '#books';
-  }
-}; /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
+  rates: (b) => fxView(b),
+  delegate: (b) => CBEmployees.mountAccess(b, { token: SESS.token, base: CFG.API_BASE, onEnded: () => location.reload(), grants: () => CBBooksGrantApi.run(grantCall(), 'grantsList'), openAccess: () => show('access') }), /* ACC-383: people AND the firms that hold a books grant, one picker */
+  access: (b) => accessView(b) /* ACC-384: the member's grants screen mounted here, in place (books-grant-member.js, the same component the Network page mounts) */
+};
+/** the one api call of the grant screens on this page: token + base, no acting header (the grants are the shop's own) */
+function grantCall() {
+  return CBBooksActing.grantCall(CFG.API_BASE, SESS.token);
+}
+/** Who can see my books, in place: the Network page's component in a host div; the sheet is this page's modal(); Give access offers the network parents the server names */
+function accessView(host) {
+  const listKeys = {};
+  return CBBooksGrantMember.mount(host, {
+    call: grantCall(),
+    parents: () => [],
+    ownStore: CBBooksActing.ownStore(SESS.token, tx('Your books')),
+    sheet: (html) => modal(html, false, { pop: 'POP047' }),
+    closeSheet: closeModal,
+    mountList: (node, cfg) => {
+      if (listKeys[cfg.key]) {
+        try {
+          listKeys[cfg.key].destroy();
+        } catch (_) { /* best effort: a list already gone */ }
+      }
+      CBList.reset && CBList.reset(cfg.key);
+      cfg.t = tx;
+      listKeys[cfg.key] = CBList.mount(node, cfg);
+    }
+  });
+} /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view) {
   if (!ON) {
     chrome(NAV.some((item) => item[0] === view) ? view : 'todo');
