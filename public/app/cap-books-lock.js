@@ -160,12 +160,12 @@ function bkLockBarHTML(isOwner) {
     if ((lock.rows[lock.fy + '|' + month] || 'open') === 'soft_locked' && !rule.openMay && !waiting) waiting = rule.blockWhy;
   });
   if (!pick) return waiting ? '<div class="lk-bar" data-testid="lk-bar" style="margin-bottom:6px"><span class="lk-bar-why" data-testid="lk-bar-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(waiting)) + '</span></div>' : '';
-  var may = pick.rule.may && isOwner,
-    why = pick.rule.may && !isOwner ? tx('Only the owner may do this.') : tx(pick.rule.why || '');
+  var mayLockNow = pick.rule.may && isOwner,
+    lockWords = pick.rule.may && !isOwner ? tx('Only the owner may do this.') : tx(pick.rule.why || '');
   return (
     '<div class="lk-bar" data-testid="lk-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">' +
-    bkLockOpenButton(pick.month, { may: may, why: why }, tx(pick.name)) +
-    (may ? '' : '<span class="lk-bar-why" data-testid="lk-bar-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(why) + '</span>') +
+    bkLockOpenButton(pick.month, { may: mayLockNow, why: lockWords }, tx(pick.name)) +
+    (mayLockNow ? '' : '<span class="lk-bar-why" data-testid="lk-bar-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(lockWords) + '</span>') +
     '</div>'
   );
 }
