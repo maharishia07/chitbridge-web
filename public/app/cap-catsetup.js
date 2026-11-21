@@ -1235,7 +1235,7 @@ function catsetBody(k) {
       '</summary>' +
       catsetCard(
         'Name a rate, then a product cites it',
-        'A slab is “GST 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names ' +
+        'A slab is “' + ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names ' +
           'none inherits — first from its category, then from the catalogue default.' +
           '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and ' +
           'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>' +
@@ -1246,7 +1246,7 @@ function catsetBody(k) {
       ) +
       '</details>' +
       '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' +
-      tx('GST slab rates (reference)') +
+      (typeof txf === 'function' ? txf('{tax} slab rates (reference)', { tax: ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') }) : ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' slab rates (reference)') +
       '</summary>' +
       catsetRegistry(['tax']) +
       '</details>'

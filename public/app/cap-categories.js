@@ -1160,7 +1160,7 @@ function cbcatTaxChipHTML(cid) {
     esc(t.name || '') +
     (t.inherited_from ? ' · ' + tx('inherits') + ' ' + esc(t.inherited_from) : '') +
     '">' +
-    esc(t.rate === null || t.rate === undefined ? t.name || '?' : 'GST ' + t.rate + '%') +
+    esc(t.rate === null || t.rate === undefined ? t.name || '?' : ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' ' + t.rate + '%') +
     (t.inherited_from ? ' <span style="opacity:.7">↑</span>' : '') +
     '</span>'
   );

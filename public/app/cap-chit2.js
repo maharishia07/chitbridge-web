@@ -504,7 +504,7 @@ function c2PaneOrd(d) {
             }
           : null
     };
-    var tax = l.gst_rate != null ? { rate: Number(l.gst_rate), name: l.tax_name || 'GST' } : null;
+    var tax = l.gst_rate != null ? { rate: Number(l.gst_rate), name: l.tax_name || ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') } : null;
     items.push({ item_id: id, item_data: nestedD, tax: tax, _e: e, _i: index, _l: l });
     if (!e.removed) recLines.push(l);
   });
