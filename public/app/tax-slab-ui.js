@@ -314,6 +314,19 @@ function cbSlabMenuHTML(menu, opts) {
   return '<div class="slab-menu" data-testid="rate-menu">' + menu.rows.map((row) => slabMenuButton_(row, menu, opts)).join('') + '</div>';
 }
 
+/** the pack's supply kinds that sit at rate 0, each as { id, name, short, why } */
+function zeroRateKinds(table) {
+  return Object.keys(table)
+    .map(function (id) {
+      return table[id];
+    })
+    .filter(function (kind) {
+      return kind && Number(kind.rate) === 0;
+    })
+    .map(function (kind) {
+      return { id: kind.id, name: kind.name || kind.id, short: kind.short || kind.name || kind.id, why: kind.why || '' };
+    });
+}
 /**
  * ⭐ THE 0% QUESTION (supply kind, AE-F-11; Athi 21 Nov 2026: ask the owner, never a default). A rate of 0 is not an answer: is it zero-rated, exempt, nil-rated? The shop PACK says what the
  * kinds are and how to ask (its own `supplyKinds` rows at rate 0 and its `unknownKind` question); nothing here knows a country or a kind word.
@@ -326,16 +339,7 @@ function cbKindAskOf(pack) {
   var table = taxPack && taxPack.supplyKinds && typeof taxPack.supplyKinds === 'object' ? taxPack.supplyKinds : null;
   if (!table) return null;
   var row = (pack && pack.returns && pack.returns.unknownKind) || (taxPack && taxPack.unknownKind) || null;
-  var kinds = Object.keys(table)
-    .map(function (id) {
-      return table[id];
-    })
-    .filter(function (kind) {
-      return kind && Number(kind.rate) === 0;
-    })
-    .map(function (kind) {
-      return { id: kind.id, name: kind.name || kind.id, short: kind.short || kind.name || kind.id, why: kind.why || '' };
-    });
+  var kinds = zeroRateKinds(table);
   if (!kinds.length) return null;
   return { ask: (row && row.ask) || slabT_('What kind of sale is this at 0%?'), kinds: kinds };
 }
