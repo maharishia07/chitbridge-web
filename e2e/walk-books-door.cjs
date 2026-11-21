@@ -77,10 +77,10 @@ W.run('books-door', async (w) => {
     return { ok: (await page.getAttribute(T('skel-nav-books'), 'aria-current')) === 'page', saw: 'books section is the current one' };
   });
   await page.goto(base + '/accounts.html'); await page.waitForSelector(T('acc-nav-access'), { timeout: 20000 });
-  await w.step('D8', 'Accounts › Setup carries "Who can see my books" and it opens the network page on that section', async () => {
+  await w.step('D8', 'Accounts › Setup carries "Who can see my books" and it opens the grants list IN PLACE (ACC-384, no jump to the network page)', async () => {
     const label = await txt(T('acc-nav-access'));
-    await page.click(T('acc-nav-access')); await page.waitForSelector(T('nw-body'), { timeout: 15000 });
-    return { ok: /Who can see my books/.test(label) && /network\.html#books/.test(page.url()), saw: label + ' → ' + page.url() };
+    await page.click(T('acc-nav-access')); await page.waitForSelector(T('bg-list'), { timeout: 15000 });
+    return { ok: /Who can see my books/.test(label) && /accounts\.html/.test(page.url()) && !/network\.html/.test(page.url()), saw: label + ' → ' + page.url() };
   });
   await w.step('D9', 'fits 1366×768 and 390×844 with no page scroll', async () => {
     const a = await noScroll(); await page.setViewportSize(NARROW); await page.waitForTimeout(300); const b = await noScroll();
