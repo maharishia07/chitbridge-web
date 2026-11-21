@@ -74,7 +74,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
     };
   }
   var r = rnd(42);
-  var PARTIES = ['P-00002 · Tally Test Shop', 'P-00007 · Kumar Spares', 'P-00011 · Ravi Stores', 'P-00014 · Meena Traders', '—'];
+  var PARTIES = ['P-00002 · Sample Test Shop', 'P-00007 · Sample Spares', 'P-00011 · Sample Stores', 'P-00014 · Sample Traders', '—'];
   var KINDS = [
     ['Sales', 'sale'],
     ['Purchase', 'purchase'],
@@ -83,7 +83,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
     ['Payment', 'payment']
   ];
   var TENDERS = ['Cash', 'UPI', 'Card', 'On credit'],
-    PEOPLE = ['Athi', 'Priya', 'Tally Test'];
+    PEOPLE = ['Athi', 'Priya', 'Sample Staff'];
   function rs(paise) {
     var neg = paise < 0;
     paise = Math.abs(paise);
@@ -160,12 +160,12 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
     }
   })();
   var DUES = [
-    ['P-00007', 'Kumar Spares', 1880000, 47, [520000, 0, 1360000, 0]],
-    ['P-00011', 'Ravi Stores', 612000, 12, [612000, 0, 0, 0]],
-    ['P-00014', 'Meena Traders', 0, 0, [0, 0, 0, 0]],
-    ['P-00002', 'Tally Test Shop', 372012, 3, [372012, 0, 0, 0]],
-    ['P-00021', 'Lakshmi Hardware', 955050, 96, [0, 105050, 300000, 550000]],
-    ['P-00023', 'Senthil Auto', 128000, 31, [0, 128000, 0, 0]]
+    ['P-00007', 'Sample Spares', 1880000, 47, [520000, 0, 1360000, 0]],
+    ['P-00011', 'Sample Stores', 612000, 12, [612000, 0, 0, 0]],
+    ['P-00014', 'Sample Traders', 0, 0, [0, 0, 0, 0]],
+    ['P-00002', 'Sample Test Shop', 372012, 3, [372012, 0, 0, 0]],
+    ['P-00021', 'Sample Hardware', 955050, 96, [0, 105050, 300000, 550000]],
+    ['P-00023', 'Sample Auto', 128000, 31, [0, 128000, 0, 0]]
   ].map(function (x) {
     return { id: x[0], party: x[0] + ' · ' + x[1], total: x[2], days: x[3], b: x[4] };
   });

@@ -733,12 +733,12 @@ var STANDARDS = [
     g: 'Records & data',
     n: 'UN/LOCODE',
     w: 'Places, ports and terminals',
-    ex: 'INMAA',
-    exWhy: 'Chennai, India. Five characters, and no argument about whether "Madras", "Chennai Port" and "MAA" are the same place.',
+    ex: 'NLRTM',
+    exWhy: 'Rotterdam, Netherlands. Five characters, and no argument about whether "Rotterdam", "Port of Rotterdam" and "RTM" are the same place.',
     s: 'plan',
     at: 'Network · places',
     go: 'network',
-    why: '"Chennai" is a city, a port and three terminals. A shipment needs to know which.'
+    why: '"Rotterdam" is a city, a port and three terminals. A shipment needs to know which.'
   },
   /**
    * ⭐ IAM STANDARDS — added after Athi asked *"can you check any specific standard should be followed as part
@@ -920,8 +920,8 @@ var STANDARDS = [
     g: 'Commercial',
     n: 'Incoterms 2020 (ICC)',
     w: 'Who bears cost and risk, and to what point',
-    ex: 'FOB Chennai (Incoterms 2020)',
-    exWhy: 'Risk and cost pass to the buyer once the goods are on board at Chennai. Three words that decide who pays if the container is damaged mid-ocean.',
+    ex: 'FOB Rotterdam (Incoterms 2020)',
+    exWhy: 'Risk and cost pass to the buyer once the goods are on board at Rotterdam. Three words that decide who pays if the container is damaged mid-ocean.',
     s: 'part',
     note: 'Carried on instruments and forms. Built: chitbridge-api lib/incoterms.js holds the eleven Incoterms 2020 rules, refuses a code that is not one of them (the 2010 delivered-duty-unpaid term is gone) and refuses the four sea-only rules for air, road or rail. Missing: no form or chit write calls it yet. Proof of the check: tests/std10-ids-incoterms.test.cjs green on sit-root 2026-11-19 (PM/junit/std-1119/lane10/sit-root-api-tests-20261119-052133.xml).',
     at: 'Chits · instruments',
@@ -2797,7 +2797,7 @@ function stdGoto(key) {
  * visualise."*
  *
  * ⚠️ A LIST OF STANDARDS IS ABSTRACT; A RECORD IS NOT. Twenty-six rows saying "we follow X" asks a reader to
- * assemble the picture themselves. One chit — pepper leaving Chennai for Dubai — with every standard-bearing
+ * assemble the picture themselves. One chit — pepper leaving Rotterdam for Dubai — with every standard-bearing
  * field labelled shows the same information as a thing they could receive, forward to their own IT person, and
  * argue with.
  *
@@ -2821,7 +2821,7 @@ var STD_RECORD = [
   { k: 'buyer.locale', v: '"ar-AE"', std: 'BCP 47', s: 'live', c: 'How the buyer reads figures. It does NOT change what the seller wrote.' },
   {
     k: 'terms',
-    v: '"FOB INMAA (Incoterms 2020)"',
+    v: '"FOB NLRTM (Incoterms 2020)"',
     std: 'Incoterms · UN/LOCODE',
     s: 'part',
     c: 'Carried on the record. We do not yet check the shipment against it, and UN/LOCODE is not validated.'
@@ -2927,7 +2927,7 @@ function stdRecordHTML(opts) {
     tx('One chit, every standard in it') +
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:6px">' +
-    "500 kg of pepper leaving Chennai for Dubai. Each field carries somebody else's standard, so the record " +
+    "500 kg of pepper leaving Rotterdam for Dubai. Each field carries somebody else's standard, so the record " +
     'arrives already legible to a system that has never heard of us. <b>' +
     tx('Greyed fields are not built yet') +
     '</b> — ' +
@@ -3287,7 +3287,7 @@ var STD_GLOSSARY = [
   ['III', 'Schedule III', "The layout of a company's balance sheet and P&L in India"],
   ['IN', 'India (country code)', 'The ISO 3166 code for India'],
   ['INCITS', 'InterNational Committee for Information Technology Standards', 'A US standards committee'],
-  ['INMAA', 'Chennai port (UN/LOCODE)', 'The world code for Chennai'],
+  ['NLRTM', 'Rotterdam port (UN/LOCODE)', 'The world code for Rotterdam'],
   ['INR', 'Indian rupee', 'The currency of India (ISO 4217 code)'],
   ['INV-01', 'e-invoice schema INV-01', "India's e-invoice format"],
   ['IRN', 'Invoice Reference Number', 'The number the GST portal gives an e-invoice'],
@@ -3312,7 +3312,7 @@ var STD_GLOSSARY = [
   ],
   ['LOCODE', 'UN Location Code', 'The world code for a port or city'],
   ['LTR', 'Left to right', 'Writing direction, as in English'],
-  ['MAA', 'Chennai (IATA code)', 'The airport code for Chennai'],
+  ['RTM', 'Rotterdam (IATA code)', 'The airport code for Rotterdam'],
   ['MDM', 'Master data management', 'Keeping one true copy of product and party data'],
   ['MIT', 'MIT License', 'A free software licence'],
   ['MJ', 'Manual journal', 'An entry typed by hand, so it is checked first'],
