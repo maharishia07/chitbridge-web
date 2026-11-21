@@ -7241,6 +7241,22 @@ function t(key, english) {
 
 /* txn() — a sentence whose wording depends on a COUNT — lives in app/accounts-shell.js, next to tx() and txf() (every CB page counts) */
 
+/** the greyed Compose of a view-only login: it stays on the rail with the reason as its title and label */
+function composeViewOnlyBtn(key, on, ic, label) {
+  const reason = composeViewOnlyWhy();
+  return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}" aria-disabled="true" data-ready="no" title="${esc(reason)}" aria-label="${esc(label + ' — ' + reason)}" style="opacity:.5;cursor:not-allowed"><span class="ic">${ic}</span>${label}</button>`;
+}
+/** the Messages rail item with its unread badge (the server's real reply count) */
+function messagesBtn(key, on, ic, label, click) {
+  const unread = UI.replyCount || 0;
+  return (
+    `<button data-cbsid="APP001-B21" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}` +
+    (unread
+      ? `<span data-testid="nav-messages-badge" style="margin-inline-start:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${unread}</span>`
+      : '') +
+    `</button>`
+  );
+}
 function menuBtn(x) {
   /* ⚠️ THE LABEL GOES THROUGH t() HERE, at the ONE place every rail item is built — not at the fourteen places
      they are declared. Translating at the declaration would mean fourteen call sites to keep in step, and the
@@ -7253,8 +7269,7 @@ function menuBtn(x) {
      go through navTo. A third would want a registry; two do not. */
   /* WALK-N N-F-02: a VIEW-ONLY login cannot send (the api refuses it): Compose stays on the rail, greyed, with the reason (helpers.js viewOnlyLogin - the one reading of the login's level) */
   if (key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin()) {
-    const why = composeViewOnlyWhy();
-    return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}" aria-disabled="true" data-ready="no" title="${esc(why)}" aria-label="${esc(label + ' — ' + why)}" style="opacity:.5;cursor:not-allowed"><span class="ic">${ic}</span>${label}</button>`;
+    return composeViewOnlyBtn(key, on, ic, label);
   }
   const click = key === 'compose' ? `compose()` : key === 'selfbill' ? `selfBillOpen()` : key === 'counter' ? `counterOpen()` : `navTo('${key}')`;
   /**
@@ -7269,14 +7284,7 @@ function menuBtn(x) {
    * always zero on a badge that looked authoritative. This one reads b156's real server-side state.
    */
   if (key === 'messages') {
-    const n = UI.replyCount || 0;
-    return (
-      `<button data-cbsid="APP001-B21" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}` +
-      (n
-        ? `<span data-testid="nav-messages-badge" style="margin-inline-start:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${n}</span>`
-        : '') +
-      `</button>`
-    );
+    return messagesBtn(key, on, ic, label, click);
   }
   /* ⭐ THE LEDGER HAS ITS OWN PAGE (Athi, 2026-10-01: CB Accounts — "its own identity, its own menu"). Its rail item is one
      link, same tab. A nav to 'ledger' (#/app/ledger, a remembered cb_nav) is redirected there by route(). */
@@ -8256,41 +8264,43 @@ async function compose(prefill) {
   UI._ccFlow.paintFoot();
   // Now that the modal is OPEN, fetch YOUR products and fill the picker in place (non-supplier only). Keeps any cached
   // list on failure; only shows the error state if we had nothing. ccRenderCatPick is a no-op if the modal was closed.
-  if (!UI._supplier) {
-    try {
-      /* ⭐ Through the SHARED loader — the mapping below moved into ensureCatalogue() so the worklist picker
-         and compose fill STORE.catalogue the same way. Two mappings of one record is how the same product
-         obeyed different rules on different screens, which the note below records happening once already. */
-      await ensureCatalogue(true);
-      /**
-       * ⚠️⚠️ CARRY THE WHOLE RECORD. THIS LINE USED TO ENUMERATE THREE FIELDS AND THROW THE REST AWAY.
-       *
-       * Athi, 2026-08-15: *"product should be able to carry million parameters if required, what we have is
-       * sample"*. He is right, and the backend already agrees — `item_data` is jsonb and stores whatever is put
-       * in it. Measured with a real Pochampally silk record: 16 fields in (sku, gtin, hsn, gi_certificate,
-       * handloom_mark, tier pricing, incoterm, lead_time_days, moq, care, notes_for_buyer, nested origin and
-       * attributes) and THREE fields out. Everything a trade document actually needs was discarded here, before
-       * any screen could see it.
-       *
-       * ⚠️ AND IT SILENTLY DISABLED THE ORDER MODELS. `order:{model:'pack',step:6}` died on this line, so a
-       * product sold in sixes became a loose count in compose — while Suppliers and Network, which pass the
-       * catalogue payload through untouched, enforced it correctly. The same product obeying two different rules
-       * depending on which screen you opened.
-       *
-       * The rule now: SPREAD, never enumerate. `particulars` is added as the display alias the flat shape uses;
-       * nothing is removed. A field added to the catalogue next month arrives here without anyone editing this.
-       */
-      /* ⚠️ The map that stood here is now inside ensureCatalogue(), called above. It is deliberately NOT left
-         duplicated here: two mappings of one record is precisely how the quantity models died on this line
-         once before, with Suppliers and Network enforcing a rule compose had quietly dropped. */
-      /* WALK-N N-F-01: an EMPTY catalogue is "No items yet" with the add action, not a fault; the error words only when the read FAILED */
-      UI._catState = (STORE.catalogue || []).length || !_catFailed ? 'ready' : 'error';
-    } catch (e) {
-      UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
-    }
-    ccCartSync(); // the products just arrived — point the cart at them before painting it
-    ccRenderCatPick();
+  if (!UI._supplier) await composeFillCatalogue();
+}
+/** compose, once its modal is open: fetch YOUR products (never for a supplier's own catalogue) and fill the picker in place. Keeps any cached list on failure; the error state only when there was nothing. ccRenderCatPick is a no-op if the modal was closed. */
+async function composeFillCatalogue() {
+  try {
+    /* ⭐ Through the SHARED loader — the mapping below moved into ensureCatalogue() so the worklist picker
+       and compose fill STORE.catalogue the same way. Two mappings of one record is how the same product
+       obeyed different rules on different screens, which the note below records happening once already. */
+    await ensureCatalogue(true);
+    /**
+     * ⚠️⚠️ CARRY THE WHOLE RECORD. THIS LINE USED TO ENUMERATE THREE FIELDS AND THROW THE REST AWAY.
+     *
+     * Athi, 2026-08-15: *"product should be able to carry million parameters if required, what we have is
+     * sample"*. He is right, and the backend already agrees — `item_data` is jsonb and stores whatever is put
+     * in it. Measured with a real Pochampally silk record: 16 fields in (sku, gtin, hsn, gi_certificate,
+     * handloom_mark, tier pricing, incoterm, lead_time_days, moq, care, notes_for_buyer, nested origin and
+     * attributes) and THREE fields out. Everything a trade document actually needs was discarded here, before
+     * any screen could see it.
+     *
+     * ⚠️ AND IT SILENTLY DISABLED THE ORDER MODELS. `order:{model:'pack',step:6}` died on this line, so a
+     * product sold in sixes became a loose count in compose — while Suppliers and Network, which pass the
+     * catalogue payload through untouched, enforced it correctly. The same product obeying two different rules
+     * depending on which screen you opened.
+     *
+     * The rule now: SPREAD, never enumerate. `particulars` is added as the display alias the flat shape uses;
+     * nothing is removed. A field added to the catalogue next month arrives here without anyone editing this.
+     */
+    /* ⚠️ The map that stood here is now inside ensureCatalogue(), called above. It is deliberately NOT left
+       duplicated here: two mappings of one record is precisely how the quantity models died on this line
+       once before, with Suppliers and Network enforcing a rule compose had quietly dropped. */
+    /* WALK-N N-F-01: an EMPTY catalogue is "No items yet" with the add action, not a fault; the error words only when the read FAILED */
+    UI._catState = (STORE.catalogue || []).length || !_catFailed ? 'ready' : 'error';
+  } catch (e) {
+    UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
   }
+  ccCartSync(); // the products just arrived — point the cart at them before painting it
+  ccRenderCatPick();
 }
 /**
  * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
