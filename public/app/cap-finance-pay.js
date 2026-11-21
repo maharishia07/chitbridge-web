@@ -37,6 +37,7 @@ var FP_BUCKETS = [
 ];
 var FP_GROUPS = { overdue: 'Overdue', msme: 'MSME at risk', week: 'Due this week', later: 'Later' };
 
+/** the Payables read: the suppliers' payable rows kept in FP (a late answer is dropped; Ledger-off and not-allowed are said in the page's words) */
 async function fpLoad(quiet) {
   var generation = ++FP.gen;
   if (!quiet) {
@@ -114,6 +115,7 @@ function fpCols() {
       return FP.cur;
     },
     dash = '<span style="color:var(--grey)">—</span>';
+  /** one ageing-bucket column: its label and a right-aligned money cell, a dash where the supplier owes nothing in it */
   var bucket = function (k, label, prio) {
     return {
       key: 'b' + k,
@@ -189,6 +191,7 @@ function fpCols() {
       pin: 'end',
       w: 100,
       html: true,
+      /** the row's Pay button, which opens that supplier's payment without opening the row */
       cell: function (party) {
         return (
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fp-pay-' +
@@ -421,6 +424,7 @@ function fpHead() {
   if (FP.state === 'ready' && FP.total != null) chips.push({ tid: 'fp-total', text: tx('To pay') + ' ' + bkMoney(FP.total, FP.cur) });
   return { title: tx('Payables'), chips: chips };
 }
+/** the Payables screen: its frame and the list of suppliers with what is payable to each */
 function fpMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -463,6 +467,7 @@ function fpMount(frame) {
       by: function (p) {
         return [tx(FP_GROUPS[p.payable.group] || 'Later'), p.payable.group];
       },
+      /** the footer total: how many suppliers are listed and what is payable to them together */
       fig: function (rows) {
         return (
           txn('{count} supplier', '{count} suppliers', rows.length) +
