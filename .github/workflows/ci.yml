@@ -363,6 +363,7 @@ jobs:
           node tests/walki-sell-preview.test.cjs
           node tests/walki-tax-word.test.cjs
           node tests/walki-slip-address.test.cjs
+          node tests/walki-zone-grey.test.cjs
           node tests/ctry-72-no-country-refusal.test.cjs
           node tests/country-literals.test.cjs
           node tests/proof-nightly.test.cjs

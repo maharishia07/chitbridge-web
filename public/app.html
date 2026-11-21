@@ -7613,6 +7613,23 @@ async function selfBillCart() {
  * The total, the subject, and the two things that are optional — kept together so the reader can see everything
  * they are about to record without leaving the picker.
  */
+/**
+ * ⭐ WALK I I-F-01 · where a Designated Zone choice WOULD be: a pack that names Designated Zones (pack.designatedZones, DL Art. 50 in the UAE pack) has a buyer kind this form cannot yet record.
+ * Not built → grey, with words, one readiness state — never a silent standard rate. Nothing is chosen here; the sale is taxed as any other until the zone feature is built.
+ */
+function sbZoneGreyHTML() {
+  var cc = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase(),
+    pack = window.CBCountries && CBCountries.packFor && cc ? CBCountries.packFor(cc) : null,
+    dz = pack && pack.designatedZones;
+  if (!dz) return '';
+  return (
+    '<div data-testid="sb-zone-grey" style="margin-top:6px;font-size:var(--fs-1);color:var(--grey);opacity:.75" title="' +
+    esc(dz.cite || '') +
+    '">' +
+    esc(tx('Designated Zone buyer — not built yet. This sale is taxed like any other; a zone buyer is not recorded or treated differently.')) +
+    '</div>'
+  );
+}
 function selfBillFoot() {
   var c = UI._sbCart;
   var n = c ? c.lines() : 0;
@@ -7649,6 +7666,7 @@ function selfBillFoot() {
       esc(txf('{id}, if a business', { id: taxIdWord() })) +
       '" style="flex:1 1 150px;margin:0;font-family:ui-monospace,monospace">' +
       '</div>' +
+      sbZoneGreyHTML() +
       /* ⭐ "on a picker" — closed, because a date that defaults to today and a note most sales do not need are
          exactly the things that should cost nothing when unused. */
       '<details style="margin-top:7px"><summary style="cursor:pointer;font-size:var(--fs-1);color:var(--grey)">' +
