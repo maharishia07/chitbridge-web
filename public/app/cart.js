@@ -740,7 +740,9 @@
         })
         .join(',') +
       '|' +
-      viewerGroups(s.cat).join(',');
+      viewerGroups(s.cat).join(',') +
+      '|' +
+      (s.opts && s.opts.priceIncludesTax ? 'incl' : 'excl');
     if (s._M && s._M.key === key) return s._M.M;
     var M = money(EL, {
       offers: offs,
@@ -748,6 +750,7 @@
         now: new Date(),
         currency: currencyOf(ns),
         customer_groups: viewerGroups(s.cat),
+        priceIncludesTax: !!(s.opts && s.opts.priceIncludesTax) /* I-F-02: the cart's money uses the basis the save uses (the shop's price_includes_tax) */,
         money: function (n) {
           return fmt(ns, n);
         }

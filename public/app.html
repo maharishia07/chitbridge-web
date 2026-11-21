@@ -7586,6 +7586,7 @@ async function selfBillCart() {
     barEl: 'cbcartbar_sb',
     renderer: CBCatUI,
     cart: false,
+    priceIncludesTax: !!(cat && cat.shop && cat.shop.price_includes_tax) /* I-F-02: preview = saved = till: the shop's own basis */,
     searchTestid: 'sb-search',
     listTestid: 'sb-list',
     placeholder: tx('Search what you sell…'),
