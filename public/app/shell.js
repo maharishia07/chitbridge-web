@@ -108,6 +108,8 @@
     skip: 'Skip to content',
     state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' },
     setUp: 'Set up',
+    notStartedGroup: 'Not set up yet',
+    notStartedCount: function (count) { return count + ' areas are waiting for you'; },
     needsYou: 'Needs you',
     today: 'today',
     switcher: 'Go to',
@@ -319,6 +321,8 @@
     '.cbsh-box .f{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;min-width:0}.cbsh-box .facts>.f{flex:1}',
     /* the rest DROPS DOWN over the page on hover or keyboard focus — the tile keeps its size and nothing below it moves (Athi: "show as a dropdown") */
     /* walk 17 Oct (Athi: "represent the status, active / not active"): THE SERVER SAYS which of three a card is (facts `state`) — the dot is never colour alone */
+    '.cbsh-more[data-ns-grouped] .cbsh-box .st.not_started,.cbsh-more[data-ns-grouped] .cbsh-box .facts .f.ns{display:none}' /* S-F-04: one group line says it, not 19 chips */,
+    '.cbsh-nsgroup{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 12px;padding:9px 14px;border:1px dashed var(--sh-line);border-radius:11px;background:var(--sh-panel);color:var(--sh-muted);font-size:13.5px}.cbsh-nsgroup .ns-t{font-weight:700;color:var(--sh-ink)}.cbsh-nsgroup .ns-go{margin-inline-start:auto;font-weight:700;color:var(--sh-green-d);text-decoration:none;min-height:32px;display:inline-flex;align-items:center}',
     '.cbsh-box .st{flex:none;font-size:11.5px;font-weight:700;white-space:nowrap}.cbsh-box .st.needs_you{color:var(--sh-amber-i)}.cbsh-box .st.in_use{color:var(--sh-green-d)}.cbsh-box .st.not_started{color:var(--sh-muted)}',
     '.cbsh-needs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 12px;font-size:13.5px}.cbsh-needs[hidden]{display:none}.cbsh-needs b{color:var(--sh-amber-i)}',
     '.cbsh-needs a{border:1px solid var(--sh-line);border-radius:999px;padding:3px 10px;background:var(--sh-card);text-decoration:none;color:inherit}.cbsh-needs a:hover{border-color:var(--sh-green)}',
