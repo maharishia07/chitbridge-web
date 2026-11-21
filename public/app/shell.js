@@ -1676,6 +1676,7 @@
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
   /** the sentence a failed read says: a 403 uses the server's own words (detail), anything else says it could not be read and nothing was changed */
   function readFailedSentence(options, refused) {
+    if (Number(options.status) === 429) { var wait = Math.ceil(Number(options.retryAfter)); return wait >= 1 ? T('Too many requests — try again in {n} s.').replace('{n}', wait) : T('Too many requests — try again in a moment.'); } /* M-F-07: a busy answer is not a failed read */
     if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
     return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
   }

@@ -1529,6 +1529,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
         const er = new Error(m);
         er.status = res.status;
         er.data = j;
+        er.retryAfter = Math.ceil(Number(j && j.params && j.params.retry_after_seconds) || Number(res.headers && res.headers.get && res.headers.get('Retry-After')) || 0); /* M-F-07: a 429 says how long to wait (the body's own, else the Retry-After header) */
         refusalFacts(er, j, _rid); /* B7: the register code, the hint (next step) and the request id ride on the error, for the one card and toast */
         return er;
       };
