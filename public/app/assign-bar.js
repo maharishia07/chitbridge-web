@@ -16,7 +16,7 @@
   'use strict';
   var assignApi = (root.CBAssign = root.CBAssign || {});
   var ASSIGN_PATH = '/api/chits/assign-bulk', ACTORS_PATH = '/api/actors', HANDOVER_PATH = '/api/chits/hand-over-all', HOLDS_PATH = '/api/chits/holds', MYWORK_PATH = '/api/chits/my-work', UNDO_MS = 30000, MOUNT = 'HOM001-U02';
-  var mounts = {}, bound = false, last = null, undoTimer = null, nameById = {};
+  var mounts = {}, bound = false, last = null, undoTimer = null, nameById = {}, undoing = false;
   function tr(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   /** a whole sentence with {placeholders}: never built by joining words */
   function sayText(sentence, vars) {
@@ -79,11 +79,17 @@
     };
   };
 
+  /** one call to the api; a network failure is NOT thrown: it answers { ok: false, status: 0 } so every caller says "no connection" in words instead of hanging silent */
   function call(method, path, body) {
     return root.fetch(base() + path, { method: method, headers: { Authorization: 'Bearer ' + session().token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
       return r.json().catch(function (failure) { if (root.cbQuiet) root.cbQuiet('assign:json', failure); return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j || {} }; });
+    }, function (failure) {
+      if (root.cbQuiet) root.cbQuiet('assign:network', failure);
+      return { ok: false, status: 0, body: {} };
     });
   }
+  /** what to say when a call was refused: no connection (status 0, nothing was sent), the server's own sentence, or the plain "Not done." */
+  function refusalOf(r) { return r.status === 0 ? tr('No connection, nothing was sent.') : sentenceOf(r.body) || tr('Not done.'); }
   /** the server's own sentence for a refusal: the Problem's detail, or the older may/why/message keys (never the page's words) */
   function sentenceOf(j) { return String(j.detail || j.why || j.message || j.error || j.title || ''); }
   function nounOf(opts, n) { return tr(n === 1 ? opts.noun || 'client' : opts.nounMany || (opts.noun || 'client') + 's'); }
@@ -181,7 +187,7 @@
     var search = body.querySelector('[data-testid="assign-search"]'), note = body.querySelector('[data-testid="assign-note"]');
     if (search) search.addEventListener('input', function () {
       var q = search.value.trim().toLowerCase();
-      [].forEach.call(body.querySelectorAll('[data-as-pick]'), function (b) { b.hidden = !!q && (b.getAttribute('data-as-name') || '').toLowerCase().indexOf(q) < 0; });
+      [].forEach.call(body.querySelectorAll('[data-as-pick]'), function (b) { var off = !!q && (b.getAttribute('data-as-name') || '').toLowerCase().indexOf(q) < 0; b.hidden = off; b.style.display = off ? 'none' : 'flex'; /* the row's own inline display:flex beats [hidden], so the display is set too */ });
     });
     body.addEventListener('click', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-as-pick],[data-as-pool]');
@@ -241,7 +247,7 @@
         /* opts.write: a plug whose rows are not chits (CRM follow-ups) is written by its own route; it answers like assign-bulk: { ok, sentence?, assigned, skipped, previous[{subject_id, actor_id}] } */
         return (opts.write ? opts.write(body.subject_ids, target, note) : call('POST', ASSIGN_PATH, body)).then(function (r) {
           if (opts.write) r = { ok: r.ok !== false, body: { assigned: r.assigned, skipped: r.skipped, previous: r.previous, detail: r.sentence } };
-          if (!r.ok) { sum.refused = sentenceOf(r.body) || tr('Not done.'); return null; }
+          if (!r.ok) { sum.refused = refusalOf(r); return null; }
           sum.done += Number(r.body.assigned) || 0;
           sum.skipped = sum.skipped.concat(r.body.skipped || []);
           sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous, opts.write));
@@ -249,7 +255,8 @@
         });
       });
     }, root.Promise.resolve()).then(function () {
-      if (sum.refused) showOutcome('bad', sum.refused, []);
+      if (sum.refused && sum.done) showOutcome('bad', sayText('{n} {noun} assigned, {m} refused.', { n: sum.done, noun: nounOf(opts, sum.done), m: Math.max(rows.length - sum.done - sum.skipped.length, 0) }), [sum.refused].concat(skipLines(sum.skipped)), sum.undo); /* the part that went through keeps its Undo and its count; the refusal is the reason */
+      else if (sum.refused) showOutcome('bad', sum.refused, []);
       else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
       if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
       if (last) last.reload = opts.reload;
@@ -287,15 +294,17 @@
   /** Undo: one more assign-bulk call per (role, previous holder), using the holders the server returned */
   function undo() {
     var groups = last && last.undo ? last.undo : [], reload = last && last.reload;
-    if (!groups.length) return null;
+    if (!groups.length || undoing) return null; /* a second press while the first runs would put the holders back twice */
+    undoing = true;
     var refused = null;
     return groups.reduce(function (chain, g) {
       return chain.then(function () {
         if (refused) return null;
         var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, g.chit_ids && g.chit_ids.length ? { chit_ids: g.chit_ids, target_actor_id: g.actor_id } : { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
-        return put.then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
+        return put.then(function (r) { if (!r.ok) refused = refusalOf(r); });
       });
     }, root.Promise.resolve()).then(function () {
+      undoing = false;
       showOutcome(refused ? 'bad' : 'good', refused || tr('Undone.'), []);
       return reload ? reload() : null;
     });

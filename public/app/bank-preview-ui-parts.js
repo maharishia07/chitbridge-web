@@ -205,9 +205,15 @@
       if (!words) return '';
       return '<span class="bd-say" role="status" data-testid="bd-line-say" data-line-say="' + escapeHtml(item.key) + '">' + escapeHtml(words) + ' <button data-cbsid="BKS017-B18" type="button" class="bd-btn bd-go" data-act="entry"' + dataKey(item) + '>' + escapeHtml(cfg.entryWords || 'Add it as an entry') + '</button></span>';
     }
+    /** after an account was chosen for a line: the same-words lines of the same direction still waiting, and the ONE press that gives them the same answer (never silent) */
+    function similarBox(item) {
+      var count = ctx.offers && ctx.offers[item.key] && ctx.similarFor ? ctx.similarFor(item.key).length : 0;
+      if (!count) return '';
+      return '<span class="bd-ask">' + count + (count === 1 ? ' other line says' : ' other lines say') + ' the same, the same way round.</span> <button data-cbsid="BKS017-B08" type="button" class="bd-btn" data-act="similar"' + dataKey(item) + '>Use this for ' + count + ' similar</button>';
+    }
     function lineNote(item, result) {
       var moved = item.moveTo && !result && root.CBBankLock ? tag('plain', 'Posts ' + root.CBBankLock.dayText(item.moveTo.next.date) + ' · ' + item.moveTo.name + ' locked') : ''; /* W15-85 */
-      return moved + lineNoteCore(item, result);
+      return moved + lineNoteCore(item, result) + (result ? '' : similarBox(item));
     }
     /** the reason a line the rules could not place gives, when nothing else was asked of the person: the engine's words, or what to do */
     function reasonBox(item, asked) {

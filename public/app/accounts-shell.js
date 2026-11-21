@@ -178,7 +178,8 @@ var CB_ASSIST_EP = {
 /* ── the chit-sheet helpers both pages share (MOVED from app.html, not copied) ── */
 /** is this entity me? by id when the session knows it, else by the shop's name */
 function chitIsSelf(e, n) {
-  return (SESSION.entityId && e === SESSION.entityId) || (SESSION.entity && String(n || '') === String(SESSION.entity));
+  if (e && SESSION.entityId) return e === SESSION.entityId; /* both ids known: they are the whole answer, two shops with the same name are two shops */
+  return !!SESSION.entity && String(n || '') === String(SESSION.entity); /* the name decides only when there is no id to compare */
 }
 /**
  * ⭐ WHAT THE GOODS ARE FOR — one tap before Accept (Athi, 2026-10-01). Nothing tapped: the shop's own catalogue decides
@@ -473,8 +474,10 @@ var CBUnsaved = (function () {
   function inputMoved(input) {
     if (input.disabled || IGNORED_TYPES.indexOf(input.type) >= 0 || input.hasAttribute('data-unsaved-ignore')) return false;
     if (input.tagName === 'SELECT') {
-      var chosen = input.options[input.selectedIndex];
-      return !!(chosen && !chosen.defaultSelected && input.querySelector('option[selected]'));
+      if (input.multiple) return Array.prototype.some.call(input.options, function (option) { return option.selected !== option.defaultSelected; });
+      var painted = 0; /* the option the screen painted: the one marked selected, else the first (what a browser shows for a select with none marked) */
+      Array.prototype.some.call(input.options, function (option, index) { if (option.defaultSelected) { painted = index; return true; } return false; });
+      return input.selectedIndex !== painted;
     }
     if (input.type === 'checkbox' || input.type === 'radio') return input.checked !== input.defaultChecked;
     return input.value !== input.defaultValue;
