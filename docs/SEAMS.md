@@ -161,6 +161,7 @@ of file each thing is; this says what already does the job.
 | 26 | `textOf` | `bank-statement-file.js` | the file's text: |
 | 26 | `setting` | `books-store.js` | FROM books_setting s LEFT JOIN identities i ON i.identity_id = s.entity_id WHERE s.entity_id = $1`; |
 | 26 | `match` | `itemmatch.js` | actually state. |
+| 25 | `figures` | `bank-demo.js` |  |
 | 25 | `side` | `books-grant-reports.js` |  |
 | 25 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
@@ -169,7 +170,6 @@ of file each thing is; this says what already does the job.
 | 25 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 25 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 24 | `done` | `attach-ui.js` |  |
-| 24 | `figures` | `bank-demo.js` |  |
 | 24 | `check` | `network-app.js` |  |
 | 24 | `post` | `books-manual.js` | POST /events — |
 | 24 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
