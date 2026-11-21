@@ -1,6 +1,6 @@
 {
- "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.45.0) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
- "engines": "1.45.0",
+ "source": "scripts/country-ready.cjs — public/data/country-matrix.json (engines 1.107.0) × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand",
+ "engines": "1.107.0",
  "coverage": {
   "sha": "0f8d3e50c0f20417"
  },
@@ -8,10 +8,10 @@
   "IN": {
    "pack": {
     "name": "India · GST",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "verified": true,
-    "ok": 75,
-    "of": 95
+    "ok": 90,
+    "of": 114
    },
    "areas": [
     {
@@ -125,8 +125,8 @@
     "name": "Australia · GST",
     "version": "1.0.0",
     "verified": false,
-    "ok": 81,
-    "of": 94
+    "ok": 90,
+    "of": 112
    },
    "areas": [
     {
@@ -240,8 +240,8 @@
     "name": "United Arab Emirates · VAT",
     "version": "1.0.0",
     "verified": false,
-    "ok": 83,
-    "of": 98
+    "ok": 92,
+    "of": 117
    },
    "areas": [
     {
@@ -336,6 +336,70 @@
      "of": 5
     }
    ],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  },
+  "SG": {
+   "pack": {
+    "name": "Singapore · GST",
+    "version": "1.0.0",
+    "verified": false,
+    "ok": 87,
+    "of": 112
+   },
+   "areas": [],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  },
+  "MY": {
+   "pack": {
+    "name": "Malaysia · SST",
+    "version": "1.0.0",
+    "verified": false,
+    "ok": 82,
+    "of": 111
+   },
+   "areas": [],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  },
+  "US": {
+   "pack": {
+    "name": "United States · Sales tax",
+    "version": "1.0.0",
+    "verified": false,
+    "ok": 83,
+    "of": 111
+   },
+   "areas": [],
+   "out": [
+    {
+     "member": "payroll",
+     "area": "Payroll"
+    }
+   ]
+  },
+  "JP": {
+   "pack": {
+    "name": "Japan · Consumption tax",
+    "version": "1.0.0",
+    "verified": false,
+    "ok": 85,
+    "of": 111
+   },
+   "areas": [],
    "out": [
     {
      "member": "payroll",

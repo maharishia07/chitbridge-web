@@ -135,12 +135,15 @@ var CBDEF_AUTHORABLE = {
     title: 'Tax slabs',
     one: 'tax slab',
     home: { nav: 'catsetup', sec: 'tax', label: 'Open Catalogue setup →' },
-    blurb:
-      'A named rate — “GST 18%” — that a product cites instead of repeating the number. ⚠️ A ' +
+    get blurb() {   /* read when drawn, so the tax word is the shop's country's once it is known */
+      return (
+      'A named rate — “' + ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' 18%” — that a product cites instead of repeating the number. ⚠️ A ' +
       'product with no slab inherits: first from its category, then from the catalogue default. ' +
       'Blank means INHERIT, never nil-rated. Authored under <b>' +
       tx('Catalogue setup') +
       '</b>.'
+      );
+    }
   },
   pricing: {
     icon: '💱',
@@ -159,11 +162,14 @@ var CBDEF_AUTHORABLE = {
     icon: '📋',
     title: 'Required certificates',
     one: 'requirement',
-    blurb:
-      'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a GST ' +
+    get blurb() {   /* read when drawn, so the tax word is the shop's country's once it is known */
+      return (
+      'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a ' + ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' ' +
       'registration. Declare it once and every supplier is measured against your list instead of ' +
       'against every standard in the system. ⚠️ It scopes what you are shown; it cannot waive a ' +
       'rule the destination or the product imposes.'
+      );
+    }
   }
 };
 /**
@@ -307,7 +313,7 @@ function cbDefRegistries() {
   /* CX0: the rate menu and the scheme's word are the shop's PACK's (pack.tax.rates · pack.tax.scheme — GST 10 % in Australia, VAT 5 % in the UAE);
      India's GST_SLAB_RATES only under India's pack or none known */
   var tp = (typeof shopReg === 'function' && shopReg()) || null,
-    tsch = (tp && tp.tax && tp.tax.scheme) || 'GST';
+    tsch = cbDefTaxScheme().word;
   var trates = (tp && tp.tax && tp.tax.rates) || (typeof CBTaxSlab !== 'undefined' && CBTaxSlab.GST_SLAB_RATES) || null;
   out.push({
     key: 'tax',
@@ -661,6 +667,13 @@ function cbDefRetiredOf(kind) {
   });
 }
 
+/** the slab fields only a pack with HSN-style codes has (cess on top and the code list); none for a VAT shop */
+function cbDefCodeFields(scheme) {
+  return !scheme.codes ? [] : [
+    { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
+    { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true }
+  ];
+}
 /** The rule fields a kind offers — read from the registries, never listed here. */
 function cbDefRuleFields(kind, sub) {
   /**
@@ -698,12 +711,11 @@ function cbDefRuleFields(kind, sub) {
    *                   old rate with nothing on screen to say why.
    */
   if (kind === 'tax') {
-    return [
-      { k: 'rate', label: 'Rate', ph: '18', num: true, pct: true },
-      { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
-      { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
+    /* AE-F-07: the pack decides which fields a slab has — a VAT shop has no cess and no HSN list */
+    var scheme = cbDefTaxScheme();
+    return [{ k: 'rate', label: 'Rate', ph: String(scheme.sample), num: true, pct: true }].concat(cbDefCodeFields(scheme), [
       { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD', date: true } /* a real date control (Athi, 2026-09-05: "date picker is not there") */
-    ];
+    ]);
   }
   if (kind === 'pricing') {
     /* the names the engine reads (pricing.js copyOf): amount · tiers · min · max */
@@ -1015,6 +1027,11 @@ function cbDefSetRule(k, v, num) {
   if (parts.length === 1) {
     if (v === '' || v == null) delete R[k];
     else R[k] = v;
+    /* SUPPLY KIND: the question exists only at 0%; a kind never rides with a rate it does not mean (the server refuses it) */
+    if (k === 'rate' && CBDEF_FORM.kind === 'tax') {
+      if (!cbDefRateIsZero()) delete R.tax_kind;
+      cbDefKindRepaint();
+    }
     return;
   }
   var head = parts[0],
@@ -1028,6 +1045,29 @@ function cbDefSetRule(k, v, num) {
   }
   if (!R[head] || typeof R[head] !== 'object') R[head] = {};
   R[head][tail] = v;
+}
+/** is the slab's rate typed and 0 (a blank rate is not 0: it is not answered yet) */
+function cbDefRateIsZero() {
+  var rate = CBDEF_FORM && CBDEF_FORM.rules ? CBDEF_FORM.rules.rate : undefined;
+  return rate !== undefined && rate !== null && rate !== '' && Number(rate) === 0;
+}
+/** the question under a 0% slab's rate: the shop pack's own words (cbKindAskHTML), one button per kind, none preselected; empty when the rate is not 0 or the pack names no 0% kind */
+function cbDefKindHTML() {
+  var f = CBDEF_FORM;
+  if (!f || f.kind !== 'tax' || !cbDefRateIsZero() || typeof cbKindAskOf !== 'function') return '';
+  var ask = cbKindAskOf(shopReg());
+  return ask ? cbKindAskHTML(ask, { chosen: f.rules.tax_kind || '', suggested: f.suggested_kind || '', pick: function (id) { return "cbDefSetKind('" + id + "')"; }, tid: 'cbdef-kind', sid: 'SCR003-B01' }) : '';
+}
+function cbDefKindRepaint() {
+  var box = document.getElementById('cbdef_kind');
+  if (box) box.innerHTML = cbDefKindHTML();
+}
+/** a kind tapped (or tapped again to take it back): the slab stores it beside the rate, in the pack's own id */
+function cbDefSetKind(id) {
+  if (!CBDEF_FORM || !CBDEF_FORM.rules) return;
+  if (CBDEF_FORM.rules.tax_kind === id) delete CBDEF_FORM.rules.tax_kind;
+  else CBDEF_FORM.rules.tax_kind = id;
+  cbDefKindRepaint();
 }
 function cbDefGetRule(k) {
   var R = CBDEF_FORM.rules,
@@ -1322,7 +1362,23 @@ function cbDefSetReward(id) {
  * headed "KIND", above a field headed "PERCENT OFF" — the screen was reading its own source code out loud. The
  * labels already existed one function away and were already published on the Registries screen.
  */
+/**
+ * AE-F-07: the shop's tax slab in the shop PACK's words — { word: 'VAT', sample: 5, codes: false } — never India's. word = the pack's scheme (pack.tax.scheme);
+ * sample = its standard rate (pack.tax.standard_rate), else the first rate above 0; codes = whether the pack's slabs carry an HSN list and a cess
+ * (only a pack that names hsn_digits does: India's); no pack known → the old India-shaped form, as before.
+ */
+function cbDefTaxScheme() {
+  var pack = (typeof shopReg === 'function' && shopReg()) || null,
+    tax = pack && pack.tax ? pack.tax : null;
+  tax = tax || {}; /* no pack known: the old shape (word, sample and codes below) */
+  var rates = (tax.rates || []).filter(function (r) {
+    return typeof r === 'number' && r > 0;
+  });
+  var standard = typeof tax.standard_rate === 'number' ? tax.standard_rate : pack && typeof pack.standard_rate === 'number' ? pack.standard_rate : rates[0];
+  return { word: tax.scheme || 'GST', sample: standard == null ? 18 : standard, codes: !pack || !!tax.hsn_digits };
+}
 function cbDefSubLabel(kind, sub) {
+  if (kind === 'tax') return cbDefTaxScheme().word + ' slab';
   if (kind === 'offer') return cbDefOfferLabel(sub);
   if (kind === 'pricing') return cbDefPricingLabel(sub);
   if (kind === 'ordermodel' && typeof CBCart !== 'undefined' && CBCart.models && CBCart.models[sub]) return CBCart.models[sub].label || sub;
@@ -1481,6 +1537,12 @@ function cbDefFieldHTML(x, v) {
   return box;
 }
 
+/** the placeholder of the Name box, per KIND: an instruction, so a wrong one teaches the wrong thing. ⚠️ The NAME is what a product cites and what a chit freezes, so a tax one must read as a rate to someone who never opens this form: "GST 18%", not "standard". */
+function cbDefNamePlaceholder(kind) {
+  var examples = { ordermodel: 'Carton of 6', offer: 'Diwali 10%', requirement: 'Minimum for food suppliers' };
+  if (kind === 'tax') return cbDefTaxScheme().word + ' ' + cbDefTaxScheme().sample + '%';
+  return examples[kind] || 'Spices';
+}
 function cbDefFormHTML() {
   var f = CBDEF_FORM;
   if (!f) return '';
@@ -1556,17 +1618,7 @@ function cbDefFormHTML() {
        requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
        teaches the wrong thing. */
     ' placeholder="' +
-    (f.kind === 'ordermodel'
-      ? 'Carton of 6'
-      : f.kind === 'offer'
-        ? 'Diwali 10%'
-        : f.kind === 'requirement'
-          ? 'Minimum for food suppliers'
-          : /* ⚠️ The NAME is what a product cites and what a chit freezes, so it must read as a rate
-                           to someone who never opens this form. "GST 18%", not "standard". */
-            f.kind === 'tax'
-            ? 'GST 18%'
-            : 'Spices') +
+    cbDefNamePlaceholder(f.kind) +
     '"' +
     ' oninput="cbDefSetField(\'name\',this.value)">' +
     /* ⚠️ THE NAME IS NOT PRIVATE. defToOffer carries it as the offer's `label`, and every adjustment the engine
@@ -1596,6 +1648,7 @@ function cbDefFormHTML() {
       })
       .join('') +
     (f.kind === 'requirement' ? '<div class="cbdef-w2">' + cbDefStdChipsHTML() + '</div>' : '') +
+    (f.kind === 'tax' ? '<div class="cbdef-w2" id="cbdef_kind">' + cbDefKindHTML() + '</div>' : '') +
     /**
      * ⚠️⚠️ "NOTE — WHERE WILL IT REFLECT?" (Athi, 2026-09-03). Nowhere, was the answer. It was saved on every
      * definition and read back by exactly one thing: this form. Neither the Catalogue setup row nor the

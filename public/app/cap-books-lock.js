@@ -44,6 +44,7 @@ function bkLockRule(info, state) {
   return {
     may: mayLock,
     openMay: openMay,
+    byYear: !!(info && info.reopen && info.reopen.by_year), /* YE-F-05: locked by the year close — it opens with the year, so no Reopen month */
     why: lockWhy,
     who: bkLockWho(info, state),
     blocked: state === 'open' ? !mayLock : state === 'soft_locked' && !openMay,
@@ -53,6 +54,7 @@ function bkLockRule(info, state) {
 /** a month's income cell: a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
 function bkLockSalesWord(info) {
   if (info && info.sales_minor === undefined) return '—';
+  if (info && info.profit_minor !== undefined && info.profit_minor !== null) return bkMoney(info.profit_minor); /* C-F-01: the P&L's income less expenses before tax, a loss month reads its loss */
   return info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No income'));
 }
 /** one month's row of the lock table: its state with who did it, the entries and sales, and the button the SERVER says may be pressed (owner only) with the reason it may not */
@@ -135,7 +137,7 @@ function bkLockButtonsHTML(isOwner, state, month, rule) {
   if (!isOwner) return '';
   if (state === 'open') return bkLockOpenButton(month, rule);
   if (state === 'soft_locked') return bkLockSoftButtons(month, rule);
-  if (state === 'hard_locked' && rule.lastHard !== false) return bkLockHardButton(month);
+  if (state === 'hard_locked' && rule.lastHard !== false && !rule.byYear) return bkLockHardButton(month);
   return '';
 }
 /** who locked or opened the month, and its history (the first row's line, the notes and the full list on a fold) */
@@ -178,7 +180,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Income before tax') +
+    tx('Income, tax out') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';
@@ -192,11 +194,12 @@ function bkLockWhy(node) {
 /**
  * W15-97 · OPEN AGAIN asks its reason in its own popup, beside the button that sends it (the box used to sit under the twelve rows, apart from the action). The reason is kept in the trail with the name and the day; Cancel sends nothing.
  */
-function bkLockReopen(period, hard) {
+function bkLockReopen(period, hard, amend) {
   var monthName = tx(bkMonths()[period - 1] || String(period));
   bkReasonDialog({
     title: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
-    go: function (reason) { return bkLockDo(hard ? 'reopen' : 'unlock', period, reason); }
+    yes: amend ? 'Amend this return' : undefined,
+    go: function (reason) { return bkLockDo(hard ? 'reopen' : 'unlock', period, reason, amend); }
   });
 }
 /** ⭐ THE ONE "why are you opening it again?" dialog (POP092): a month's Open again, a hard-locked month's Reopen month and a closed year's Reopen year all ask the reason here, then Confirm sends it (the reason is required, kept in the change log) */
@@ -227,10 +230,10 @@ function bkReasonGo() {
   return BK.reasonGo ? BK.reasonGo(reason) : undefined;
 }
 /** the question a Lock or Close for good asks first (Cancel sends nothing) */
-function bkLockConfirm(what, monthName, fiscalYear) {
+function bkLockConfirm(what, monthName, yearName) {
   return what === 'hard'
-    ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: fiscalYear })), yes: tx('Close for good') }
-    : { title: txf('Lock {m} {fy}?', { m: monthName, fy: fiscalYear }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }; /* E12: Lock is a commit, so it asks first in the library's confirm */
+    ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: yearName })), yes: tx('Close for good') }
+    : { title: txf('Lock {m} {fy}?', { m: monthName, fy: yearName }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }; /* E12: Lock is a commit, so it asks first in the library's confirm */
 }
 /** the api route a Lock · Close for good · Open again · Reopen month press calls */
 function bkLockRoute(what) {
@@ -244,13 +247,32 @@ function bkLockStatusOf(what, answer) {
   if (what !== 'reopen') return '';
   return (answer && answer.status) || 'open';
 }
+/** the refusal's own words are the server's; a closed-tax-period refusal also offers the amendment (the owner gives the reason, we send amend_tax:true) */
+function bkLockRefused(what, period, words, failure) {
+  var out = document.getElementById('lk_out');
+  if (!out) return;
+  out.textContent = words;
+  out.setAttribute('data-tone', 'error');
+  var taxClosed = what === 'unlock' && failure && failure.status >= 400 && failure.status < 500 && /closed tax period/i.test(String(failure.message || ''));
+  if (!taxClosed) return;
+  var amendButton = document.createElement('button');
+  amendButton.type = 'button';
+  amendButton.className = 'supact-pri';
+  amendButton.setAttribute('data-cbsid', 'CMP042-B08'); /* the one Open again action, asked again as an amendment */
+  amendButton.setAttribute('data-testid', 'lk-amend-' + period);
+  amendButton.textContent = tx('Amend this return');
+  amendButton.onclick = function () { bkLockReopen(period, false, true); };
+  out.appendChild(document.createTextNode(' '));
+  out.appendChild(amendButton);
+}
 /* lock or unlock one month, asking the server and flipping only that row */
-async function bkLockDo(what, period, reason) {
+async function bkLockDo(what, period, reason, amend) {
   var lockState = BK.lk,
     fiscalYear = lockState.fy,
     node = reason || '',
     out = document.getElementById('lk_out');
-  var monthName = tx(bkMonths()[period - 1] || String(period));
+  var monthName = tx(bkMonths()[period - 1] || String(period)),
+    calendarYear = String(((lockState.info || {})[fiscalYear + '|' + period] || {}).start_date || fiscalYear).slice(0, 4); /* C-F-02: the month's own year (Jul 2026), never the financial-year key (2026-27) */
   if ((what === 'unlock' || what === 'reopen') && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
@@ -258,13 +280,14 @@ async function bkLockDo(what, period, reason) {
   return CBAction.run(
     btn,
     function () {
-      return api(bkLockRoute(what), { params: { fy: fiscalYear, p: period }, body: { reason: node, hard: what === 'hard' } });
+      return api(bkLockRoute(what), { params: { fy: fiscalYear, p: period }, body: amend && what === 'unlock' ? { reason: node, hard: false, amend_tax: true } : { reason: node, hard: what === 'hard' } });
     },
     {
       key: 'lk-' + fiscalYear + '-' + period,
       out: 'lk_out',
       failed: tx('Could not change it'),
-      confirm: bkLockConfirm(what, monthName, fiscalYear),
+      confirm: bkLockConfirm(what, monthName, calendarYear),
+      onFail: function (words, failure) { bkLockRefused(what, period, words, failure); },
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {
         var status = bkLockStatusOf(what, answer);
@@ -278,7 +301,7 @@ async function bkLockDo(what, period, reason) {
             bkQuiet('periods-reload', failure);
           }); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
         var element = document.getElementById('lk_out');
-        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: fiscalYear, s: status ? CBLockWords.stateWord(status) : tx('Done') });
+        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: calendarYear, s: status ? CBLockWords.stateWord(status) : tx('Done') });
       }
     }
   );

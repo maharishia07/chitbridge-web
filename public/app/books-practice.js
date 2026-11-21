@@ -40,11 +40,25 @@
       return null;
     }
   }
-  function read(left) {
+  /* PRAC150: the list is the server's whole answer (no page words = every client). Should the server ever answer a page (has_more), the rest is read here, page by page at the contract's own maximum,
+     so the list, the tiles' rows and the count never stop at the first page. The next page is asked at the size the server answered (page n+1 of the same limit): a page number only means something at one page size. The count and the tiles are the server's (total, band), never counted from rows. */
+  function readAll() {
+    return read().then(function (answer) { return restOf(answer, Number(answer && answer.page) + 1, Number(answer && answer.limit)); });
+  }
+  function restOf(answer, page, limit) {
+    if (!answer || answer.failed === true || answer.has_more !== true || !Array.isArray(answer.clients) || !(limit >= 1) || page > 50) return answer;
+    return read(undefined, '?page=' + page + '&limit=' + limit).then(function (next) {
+      if (!next || next.failed === true || !Array.isArray(next.clients) || !next.clients.length) return answer;
+      answer.clients = answer.clients.concat(next.clients);
+      answer.has_more = next.has_more === true;
+      return restOf(answer, page + 1, limit);
+    });
+  }
+  function read(left, query) {
     left = left === undefined ? 3 : left;
-    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p, { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
+    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p + (query || ''), { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
       if (r.status === 503 && left > 0) {
-        return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1); });
+        return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1, query); });
       }
       if (r.status === 429 || r.status >= 500) return { failed: true, status: r.status }; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
       if (!r.ok) return null; /* a login that may not read the practice (403) or a server without it: nothing is drawn */
@@ -139,17 +153,17 @@
   /* REP-73 B2: the columns follow the open band, so a tile counts something its rows show: Year end shows the stage and the year's figures; On us today shows the bank, the queries, the entries to check and the months to lock
      (the four tiles); Advice shows the figures its rules read. The page knows which columns a band opens with; the server decides which band exists and what each tile counts. */
   var BAND_COLS = {
-    pipeline: ['name', 'status', 'yend', 'checked', 'queries', 'bas'],
+    pipeline: ['name', 'yend', 'checked', 'queries', 'bas'], /* Status is the group heading (Needs help · Watch · Doing well), not a word on every row */
     on_us: ['name', 'status', 'bank', 'queries', 'changed', 'tocheck', 'unlocked'],
     advisory: ['name', 'status', 'sales', 'margin', 'cash', 'profit']
   };
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
-      return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
+      return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: function (r) { var html = cell(r); return html === '—' ? '' : html; /* Athi 21 Nov: no cell says "no data" twenty times; the sheet's labelled lines keep their dash */ }, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly') + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
-      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
+      { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (allReadOnly() ? '' : practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly')) + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
+      num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusWhy, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
       num('held', 'Held by', 130, function (r) { return root.CBAssign ? root.CBAssign.heldCell(r, assignOpts()) : ''; }, function (r) { return root.CBAssign ? root.CBAssign.heldByText(r) : ''; }, { prio: 1, keep: true, minw: 100, hfilter: 'held' }),
       num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
@@ -157,7 +171,7 @@
       num('changed', 'Changed', 130, practiceKit.changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
       num('bas', 'Due', 120, practiceKit.basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
       num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1, cl: 2 }),
-      num('checked', 'Checked ' + practiceKit.yearLabel(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
+      num('checked', practiceKit.checkedHeader(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
       num('tocheck', 'To check (qtr)', 100, function (r) { return escapeHtml(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
       num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return escapeHtml(practiceKit.trend(r)); }, function (r) { return practiceKit.trend(r); }),
@@ -209,7 +223,7 @@
       filterOf('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
       filterOf('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
       filterOf('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
-      filterOf('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
+      filterOf('bas', 'Return due', [['overdue', 'Overdue'], ['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'overdue' ? !!r.bas.overdue : v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
       filterOf('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
       filterOf('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
       filterOf('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
@@ -225,6 +239,19 @@
     var to = r && r.stage_blocker && BLOCKER_VIEW[r.stage_blocker] ? practiceKit.sheetAddress(r, BLOCKER_VIEW[r.stage_blocker]) + (BLOCKER_MARK[r.stage_blocker] ? '&dbf_mark=' + BLOCKER_MARK[r.stage_blocker] : '') : '';
     root.location.href = to || '/network.html?open=' + encodeURIComponent(id);
   }
+  /** every client is a read-only (auditor) seat: said ONCE in the heading, not as a chip on every row (a row carries the chip only when it differs from the rest) */
+  function allReadOnly() {
+    var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
+    return rows.length > 1 && rows.every(function (r) { return r.grant && r.grant.read_only === true; });
+  }
+  var HEALTH_HEADS = { help: 'Needs help', watch: 'Watch', good: 'Doing well', none: 'Not enough books yet' };
+  /** the group a client stands under: its health status, the heading's words, the key the order and the fold read */
+  function healthGroup(r) {
+    var status = r.health && r.health.status;
+    return status ? [translate(HEALTH_HEADS[status] || status), status] : null;
+  }
+  /** the heading's count: how many clients stand under it */
+  function healthFig(rows) { return rows.length + ' ' + translate(rows.length === 1 ? 'client' : 'clients'); }
   /** the list unit is loaded when the practice has answered (Home carries no list otherwise) */
   function withList(then) {
     if (root.CBList) return then();
@@ -248,14 +275,14 @@
   function holdersOn() { return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []); }
   /** ASSIGN-1: read the practice again after an assign, so the Held by column shows what the server now holds */
   function reloadAfterAssign() {
-    return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
+    return readAll().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
   }
   /** ASSIGN-W2: the plug, the noun and the row facts of THIS list, read by the chip, the bar, the keys and Undo; "said" is the server's verdict (may_assign) and nothing else */
   function assignOpts() {
-    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), take: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_take), plug: 'client', noun: 'client', listKey: 'practice-clients-' + practiceKit.bandNow(), subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
+    return { said: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign), take: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_take), plug: 'client', noun: 'client', nameOf: function (r) { return r.name; }, staff: !!(practiceKit.practiceState.data && practiceKit.practiceState.data.may_assign === false && practiceKit.practiceState.data.may_take === true), listKey: 'practice-clients-' + practiceKit.bandNow(), subjectOf: function (r) { return r.entity_id; }, roleOf: function (r) { return r.role; }, reload: reloadAfterAssign };
   }
   /** the ONE work-queue capability (CBAssign.queue): views Mine · Unassigned · Everyone, the tick-bar, the opening view (Mine for a seat that holds work or may not assign), ticks cleared after every assign; {} when the server sent no holders */
-  function practiceQueue() { var d = practiceKit.practiceState.data; return holdersOn() ? root.CBAssign.queue(Object.assign(assignOpts(), { key: 'practice-clients-' + practiceKit.bandNow(), rows: d.clients, everyone: d.may_assign !== false })) : {}; }
+  function practiceQueue() { var d = practiceKit.practiceState.data; return holdersOn() ? root.CBAssign.queue(Object.assign(assignOpts(), { key: 'practice-clients-' + practiceKit.bandNow(), rows: d.clients, everyone: d.may_assign !== false, staff: d.may_assign === false && d.may_take === true })) : {}; }
   /** the Held by filter: Unassigned · Mine · each person who holds a client (the one vocabulary and the one matcher live in CBAssign) */
   function heldFilterOf(filterOf) {
     var held = root.CBAssign.heldFilter((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []);
@@ -297,6 +324,7 @@
       key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowClass: function () { return 'bp-r'; } /* F-04: a dense row on a desktop screen (see .bp-r) */, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
       columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : queue.preset || { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
+      group: { default: 'health', tid: 'bp', order: ['help', 'watch', 'good', 'none'], by: healthGroup, fig: healthFig, folded: function (key, rows) { return key === 'good' && rows.length > 12; } }, /* Athi 21 Nov: health is the heading, with its count; Doing well folds when it is long */
       empty: { title: translate(practiceKit.practiceState.data.practice_empty ? 'No clients yet' : 'No clients match') },
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; },
@@ -313,7 +341,7 @@
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--card,#fff);color:var(--ink,#1d1b16);border-color:var(--ink,#1d1b16);font-weight:600;box-shadow:inset 0 -3px 0 var(--ink,#1d1b16)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
-      '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
+      '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-stage{display:none}@media(max-width:700px){.bp-stage{display:inline;font-weight:600}}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '@media(min-width:701px){.cbl .cbl-row.bp-r>.cbl-cell,.cbl .cbl-row.bp-r>.cbl-lead{padding-block:2px}}' +
       '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;min-width:0}.bp-fig>b,.bp-fig>a{min-width:0;overflow-wrap:anywhere}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
@@ -350,7 +378,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(clientCount(practiceKit.practiceState.data)) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +
@@ -486,6 +514,8 @@
     settle(); /* a known shop: the shop Home, as before */
   }
   /** W15: an answer with no client, for a login /me (or the last answer) says is a practice */
+  /** how many clients the firm has: the server's total (a number at least the rows in hand), else the rows */
+  function clientCount(data) { var rows = data.clients.length, total = data && data.total; return typeof total === 'number' && isFinite(total) && total >= rows ? total : rows; }
   function emptyFirm(answer) { return !!answer && !!answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1')); }
   function tick() {
     var tokenNow = token();
@@ -497,7 +527,7 @@
       practiceKit.practiceState.fl = null; practiceKit.practiceState.flReady = false; practiceKit.practiceState.flOff = false; practiceKit.practiceState.flTotal = 0; /* another login: its own flags */
       practiceKit.practiceState.pending = true;
       practiceKit.practiceState.since = Date.now();
-      read().then(function (answer) {
+      readAll().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
         if (emptyFirm(answer)) answer.practice_empty = true; /* W15: a firm's employee who holds no client yet is still on the practice (its own empty screen), never the shop Home */
         if (!answer || !answer.clients || (!answer.clients.length && !answer.practice_empty)) { hint(false); return settle(); }
@@ -521,7 +551,7 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
+  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft, checkedCell: practiceKit.checkedCell, checkedHeader: practiceKit.checkedHeader,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
+    parts: { clientCount: clientCount, readAll: readAll, bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

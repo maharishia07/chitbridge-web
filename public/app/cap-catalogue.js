@@ -1038,6 +1038,103 @@ var CBCatalogueApp = (function () {
       flags = shop.policy_flags || {};
     return typeof cbTaxCharges === 'function' && cbTaxCharges({ gstin: shop.gstn || shop.gstin, reg_type: flags.gst_registration }, taxPack());
   }
+  /**
+   * B-F-22 / B-F-01 (walk B 21 Nov): THE SHOP'S DEFAULT RATE for an item that has none, from the country pack's own standard rate (engines tax.js
+   * standard_rate: AU 10, UAE 5; India has none: slab-rated). Null when the shop charges no tax, when the pack has no one standard rate, or when the shop
+   * already declared a catalogue default slab (that answer wins, nothing is stamped over it).
+   */
+  function defaultRate() {
+    var pack = taxPack(),
+      face = S.face || {};
+    if (!shopCharges() || !pack || (face.tax && face.tax.default_slab)) return null;
+    return typeof pack.standard_rate === 'number' ? pack.standard_rate : null;
+  }
+  /** the pack's own rates as a menu for a shop with no live slab yet (the dead end "No GST slab yet — Catalogue setup › Tax" was never reachable here) */
+  function packRateMenuHTML() {
+    var pack = taxPack(),
+      rates = pack && Array.isArray(pack.rates) ? pack.rates.filter(function (r) { return typeof r === 'number'; }) : [];
+    if (!rates.length) return '';
+    return (
+      '<div class="slab-menu" data-testid="rate-menu-pack">' +
+      rates
+        .map(function (r) {
+          var words = taxWord() + ' ' + r + '%' + (r === pack.standard_rate ? ' (' + T('standard rate') + ')' : r === 0 ? ' (' + T('no tax') + ')' : '');
+          return '<button type="button" class="act quiet" data-testid="rate-pick-pack-' + esc(r) + '" onclick="CBCatalogueApp.ratePickBare(' + esc(r) + ', this)" data-cbsid="SCR046-B01">' + esc(words) + '</button>';
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+  /** the pack's short word of a kind id ("Zero-rated"), or the id itself */
+  function kindWord(question, id) {
+    var found = ((question && question.kinds) || []).filter(function (row) { return row.id === id; })[0];
+    return found ? found.short : id;
+  }
+  /** the 0% question on an item: the pack's words, one button per kind, no default, no "confirm all"; a tap answers THIS item and goes through ratePickBare's one ask-first PATCH */
+  function askKind(item, question) {
+    var data = pData(item),
+      body = cbKindAskHTML(question, { chosen: data.tax_kind || '', pick: function (id) { return "CBCatalogueApp.ratePickKind('" + id + "')"; }, cls: 'choice', tid: 'cat-kind-ask-body', sid: 'SCR046-B01' });
+    /* catalogue.html has no modal(): the question then opens in the sheet's own answer line, the same buttons */
+    if (typeof modal === 'function')
+      return modal('<div class="mhd"><div class="t">' + esc(pName(data) + ': ' + taxWord() + ' 0%') + '</div></div><div class="mbody" data-testid="cat-kind-ask">' + body + '</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' + esc(T('Cancel')) + '</button></div>', true, { key: 'cb_mv_catkind', pop: 'POP218', minW: 360, minH: 200 });
+    var slot = document.getElementById('cat_sheet_out');
+    if (slot) slot.innerHTML = '<div data-testid="cat-kind-ask">' + body + '</div>';
+  }
+  /** a kind tapped in that question: the same ask-first PATCH, now with the kind beside the rate */
+  function ratePickKind(id) {
+    if (typeof closeModal === 'function') closeModal();
+    return ratePickBare(0, null, id);
+  }
+  /** the PATCH body of a rate tap: a kind applies only at rate 0, so a non-zero rate sends tax_kind: null (merge-patch deletes it) and the old zero-rated or exempt answer cannot keep billing 0% (EGM-T1; the server clears it too) */
+  function ratePatchOf(rate, kind) {
+    if (kind) return { gst_rate: rate, tax_kind: kind };
+    return Number(rate) !== 0 ? { gst_rate: rate, tax_kind: null } : { gst_rate: rate };
+  }
+  /** a pack rate tapped on an item: the same ask-first and ONE PATCH as a slab, the bare rate (resolve's own rung 1b) */
+  function ratePickBare(rate, button, kind) {
+    var item = S.sel ? itemOf(S.sel) : null;
+    if (!item) return;
+    /* SUPPLY KIND: a rate of 0 is not an answer — the pack's own question first (one button per kind, none preselected), then the same ask-first PATCH with the kind beside the rate. A pack that names no 0% kind asks nothing. */
+    var question = cbKindQuestionFor(rate);
+    if (question && !kind) return askKind(item, question);
+    if (!rateMay().ok) {
+      say('cat_sheet_out', rateMay().why, 'warn');
+      return;
+    }
+    kind = kind || '';
+    var data = pData(item),
+      words = rateWords(rate, kind, question);
+    if (Number(data.gst_rate) === rate && (data.tax_kind || '') === kind) {
+      say('cat_sheet_out', T('{n} already carries {w}.', { n: pName(data), w: words }), 'ok');
+      return;
+    }
+    return CBAction.run(
+      button,
+      function () {
+        return api('prodEdit', { params: { id: S.sel }, body: { item_data: ratePatchOf(rate, kind), merge: true } });
+      },
+      {
+        key: 'cat-rate-set',
+        confirm: { title: pName(data) + ': ' + words + '?', body: esc(T('Every new bill carries it.')), yes: T('Set rate'), danger: false },
+        out: 'cat_sheet_out',
+        busy: T('Saving…'),
+        /** the rate was saved: take the server's item in (or set it here when it sent none), repaint and say so */
+        outcome: function (reply) {
+          rateSaved(reply, item, data, rate, words);
+        }
+      }
+    );
+  }
+  /** the tax word, the rate and the kind in words ("GST 18% (goods)") */
+  function rateWords(rate, kind, question) { return taxWord() + ' ' + rate + '%' + (kind ? ' (' + kindWord(question || cbKindAskOf(shopReg()), kind) + ')' : ''); }
+  /** a rate saved on an item: the server's item replaces the one on the list (else the rate is set on the copy held here), the tax row repaints, the list refreshes, and it is said */
+  function rateSaved(reply, item, data, rate, words) {
+    if (reply && reply.item) { var index = S.items.indexOf(item); if (index >= 0) S.items[index] = reply.item; }
+    else { data.gst_rate = rate; if (Number(rate) !== 0) delete data.tax_kind; }
+    paintTaxRow();
+    if (S.list) S.list.refresh();
+    say('cat_sheet_out', T('{n} now carries {w}.', { n: pName(data), w: words }), 'ok');
+  }
   /** the slabs and categories (core.js's one live-definition loader) and the face, once; a re-read is never needed inside one sheet */
   function readTax() {
     if (S.taxReady) return Promise.resolve();
@@ -1107,12 +1204,12 @@ var CBCatalogueApp = (function () {
     var data = pData(item);
     /* the code only ever SUGGESTS (critic 12): hsn first, then sac, then the shop's own code — never stamped */
     var menu = cbSlabMenu(cbDefsCached('tax') || [], taxPack(), data.hsn || data.sac || data.code || '');
-    pickHost.innerHTML = cbSlabMenuHTML(menu, {
-      cls: 'act quiet',
-      pick: function (slabId) {
-        return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)";
-      }
-    });
+    pickHost.innerHTML = rateMenuHTML(menu);
+  }
+  /** the live slabs as buttons; with none, the pack's own rates */
+  function rateMenuHTML(menu) {
+    if (!menu.rows.length && packRateMenuHTML()) return packRateMenuHTML();
+    return cbSlabMenuHTML(menu, { cls: 'act quiet', pick: function (slabId) { return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)"; } });
   }
   /** the merge-patch setOn makes on this item: every key it changed; a key it removed travels as null (RFC 7386) — the api's slabPatchOf, on the client */
   function slabPatch(data, slab) {
@@ -1384,7 +1481,12 @@ var CBCatalogueApp = (function () {
       return CBAction.run(
         btn,
         function () {
-          return api('prodAdd', { body: { item_data: next } });
+          /* B-F-22: a new item in a tax-charging shop is born with the shop's default rate (read after the face is, so a declared default slab still wins) */
+          return (shopCharges() ? readTax() : Promise.resolve()).then(function () {
+            var rate = defaultRate();
+            if (rate !== null && next.gst_rate == null && !next.tax_slab) next.gst_rate = rate;
+            return api('prodAdd', { body: { item_data: next } });
+          });
         },
         {
           out: out,
@@ -1880,6 +1982,8 @@ var CBCatalogueApp = (function () {
     page: page,
     changed: changed,
     ratePickOpen: ratePickOpen,
+    ratePickBare: ratePickBare,
+    ratePickKind: ratePickKind,
     ratePick: ratePick,
     state: function () {
       return S;

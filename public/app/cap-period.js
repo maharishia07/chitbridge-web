@@ -299,8 +299,7 @@ async function peAssetSave(btn) {
     /* an asset owned before the books began: one opening entry on the server — no bank, no tax */
     const accumulated = peVal('pa_acc') ? bkMoneyMinor(peVal('pa_acc')) : 0;
     if (isNaN(accumulated)) return peBad('pa_fout', tx('Depreciation so far must be an amount.'));
-    Object.assign(body, { existing: true, accumulated_minor: accumulated });
-    delete body.how;
+    Object.assign(body, { existing: true, accumulated_minor: accumulated }); delete body.how;
   } else if (peVal('pa_rate')) {
     /* tax on the price: the same bill the expense door sends, so the server claims the tax like any purchase (cost = the taxable part) */
     body.bill = {
@@ -311,6 +310,7 @@ async function peAssetSave(btn) {
     };
     delete body.cost_minor;
   }
+  if (!(await CBAction.ask(peAssetAsk(Object.assign({}, body, { cost_minor: cost }), peEl('pa_how'))))) return; /* C-F-12: a posting asks first, as Month lock and the debit note do; Cancel sends nothing */
   await bkOnce('pe-asset', btn, async () => {
     try {
       const reply = await api('perAssetAdd', { body });
@@ -823,7 +823,7 @@ function peReturnPeriodField(returnAnswer) {
           'Period',
           peSel(
             'pr_p',
-            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? '' : ' · ' + tx('open')) + peRetStateWord(item.state)]),
+            periods.map((item) => [item.period, (peNarrow() ? item.label.replace(/s*([^)]*)/, '') : item.label) + ' · ' + tx('due') + ' ' + bkDate(item.due) + (item.ended ? (item.overdue ? ' · ' + tx('overdue') : '') : ' · ' + tx('open')) + peRetStateWord(item.state)]), /* YE-F-07: an ended, unclosed period past its due day says so */
             period ? period.period : '',
             ' onchange="peReturnPick(\'period\', this.value)"'
           )
@@ -916,16 +916,16 @@ function peReturnPaint(r) {
     '</div>' +
     peReturnClaimBand(r) +
     '<div class="pe-note" data-testid="pr-prepared">' +
-    esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) +
+    esc(peReturnStage(r).lodge ? peReturnStage(r).word + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal }) : peReturnStage(r).word) +
     '</div>' +
     '</div><div id="pr_list" data-testid="pr-list"></div>';
   if ((r.notes || []).length)
     h +=
-      '<div class="pe-card" data-testid="pr-basis"><div class="pe-sub">' +
+      '<details class="pe-card pe-fold" data-testid="pr-basis"><summary class="pe-sub">' +
       esc(tx('How it was read')) +
-      '</div>' +
+      '</summary>' +
       r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
-      '</div>';
+      '</details>';
   host.innerHTML = '<div id="bk_attn_bas"></div>' + h + peReturnCloseSection(r);
   if (typeof CBAttention !== 'undefined' && r.period) CBAttention.mount(document.getElementById('bk_attn_bas'), { from: r.period.start, to: r.period.end }); /* W15-102: the same strip, the return's days */
   peReturnList(r);
@@ -969,6 +969,16 @@ function peReturnClaimMark(r, b) {
 }
 /* PAST-YEARS: each return period carries its state from the server (set_off · months_locked · year_closed · declared_lodged · open): said in the shop's words, never the code */
 const PE_RET_STATE = { set_off: 'closed', months_locked: 'closed', year_closed: 'closed with the year', declared_lodged: 'lodged, as you said' };
+/** YE-F-06: the ONE stage word of a return — the server's `stage` (declared_lodged · overdue · closed · prepared), else derived from the period's state for an older api: the note under the total and the copied figures say the same thing */
+function peReturnStage(r) {
+  if (r.stage && r.stage.words) return { word: tx(r.stage.words), lodge: r.stage.code !== 'declared_lodged' }; /* the server's one stage word (api: GET /returns stage) */
+  const cur = (r.periods || []).find((item) => r.period && item.period === r.period.period);
+  if (cur && cur.state === 'declared_lodged') {
+    const word = tx(PE_RET_STATE.declared_lodged);
+    return { word: word.charAt(0).toUpperCase() + word.slice(1), lodge: false };
+  }
+  return { word: r.prepared, lodge: true };
+}
 const peRetStateWord = (state) => (PE_RET_STATE[state] ? ' · ' + tx(PE_RET_STATE[state]) : '');
 /** a period closed with its year, or whose months are locked, is READ ONLY: the sentence says why (the server refuses a write all the same) */
 const PE_RET_READ_ONLY = {
@@ -1068,8 +1078,8 @@ function peReturnList(r) {
     t: tx,
     rows: () => rows,
     id: (b) => String(b.code),
-    rowTid: (b) => 'pr-box-' + b.code,
-    columns: cols,
+    rowTid: (b) => 'pr-box-' + b.code, columns: cols,
+    bottom: 150 /* the notes line and the Close bar sit under the list: the list leaves them their room, so the page ends at the screen */,
     defaultCols: cols.map((x) => x.key) /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */,
     next: (b) => peReturnLedgers(r, b, two) /* ACC-357: the row opens BELOW: one line per ledger with its amount for the period (a shop may have hundreds of places: the server sends the top ten) */
   });
@@ -1128,7 +1138,7 @@ function peReturnBlock(r) {
     );
   });
   lines.push((r.net_minor < 0 ? tx('Refund due') : tx('To pay')) + '\t' + bkMinorText(Math.abs(r.net_minor || 0), c));
-  lines.push(r.prepared + ' · ChitBridge');
+  lines.push(peReturnStage(r).word + ' · ChitBridge');
   return lines.join('\n');
 }
 async function peReturnCopy(btn) {
@@ -1163,6 +1173,20 @@ async function peReturnCopy(btn) {
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
    GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, reclosing, refusals: [{ name, why }], warnings: [{ name, count, why }], months: [{ period, status }], next } — what a close would say, nothing written
    POST /year/:fy/close { returns_lodged?: true } → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
+/** I-F-13: a country whose pack carries Corporate Tax as DATA but whose books do not compute it yet (UAE) says so, greyed, beside the year close: not built is grey and said, never silent */
+function peCorpTaxGrey() {
+  const pack = typeof shopReg === 'function' ? shopReg() : null;
+  if (!pack || !pack.corporateTax) return '';
+  return (
+    '<div class="pe-card" data-testid="py-corptax-grey" aria-disabled="true" style="opacity:.6;color:var(--grey)"><b>' +
+    esc(tx('Corporate tax')) +
+    '</b> · ' +
+    esc(tx('Not built yet')) +
+    '<div class="sub">' +
+    esc(tx('ChitBridge does not work out Corporate tax. The ledger has the accounts for it; the figure comes from your adviser.')) +
+    '</div></div>'
+  );
+}
 async function peYearView(body) {
   let L;
   try {
@@ -1185,7 +1209,9 @@ async function peYearView(body) {
         ' onchange="peYearStatus()"'
       )
     ) +
-    '</div></div><div id="py_res" data-testid="py-res"></div>';
+    '</div></div>' +
+    peCorpTaxGrey() +
+    '<div id="py_res" data-testid="py-res"></div>';
   peYearStatus();
 }
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
@@ -1208,6 +1234,10 @@ function peYearWhy(text) {
   return words.slice(0, at) + words.slice(at).replace(/\b(\d{4})-(0[1-9]|1[0-2])\b/g, (_, year, month) => names[Number(month) - 1] + ' ' + year);
 }
 /** the checks of a year still open: every month locked, then each thing the server says stands in the way (each with the tab that fixes it), or that nothing else does */
+/** YE-F-08: the server's warnings (an auditor's open query, a bank not reconciled…) in the checks, beside the ticks — named, never a gate, so a warn line and no button */
+function peYearWarnLines(list) {
+  return (list || []).map((w, index) => '<div class="pe-check warn" data-testid="py-warn-' + index + '"><span>⚠</span><span>' + esc(peYearWhy(w.why)) + '</span></div>').join('');
+}
 function peYearChecksHtml(year, months, refs) {
   const open = months.filter((item) => item.status === 'open').length;
   let html = '';
@@ -1238,6 +1268,7 @@ function peYearChecksHtml(year, months, refs) {
       );
     })
     .join('');
+  html += peYearWarnLines(year && year.warnings);
   if (!refs.length) html += '<div class="pe-check ok" data-testid="py-rest"><span>✓</span><span>' + esc(tx('Nothing else stands in the way')) + '</span></div>';
   return html;
 }
@@ -1256,6 +1287,16 @@ function peYearActionsHtml(yearState) {
   html += peYearReopenHtml(yearState);
   if (!yearState.closed && !peOwner()) html += peNote('pe-readonly', 'Only the owner can close the year');
   return html;
+}
+/** YE-F-06: what the closed year shows as evidence — when and by whom, the returns declared lodged outside ChitBridge, the profit carried (the server's closed_with; a line it did not send is not drawn) */
+function peYearClosedEvidence(st) {
+  const w = st.closed_with;
+  if (!w) return '';
+  const lines = [];
+  if (w.at) lines.push(w.by_name ? txf('Closed on {day} by {name}', { day: bkDate(String(w.at).slice(0, 10)), name: w.by_name }) : txf('Closed on {day}', { day: bkDate(String(w.at).slice(0, 10)) }));
+  if (w.how === 'declared_lodged') lines.push(tx('Returns lodged outside ChitBridge, as you said'));
+  if (w.profit_minor != null) lines.push(txf('Profit carried forward: {money}', { money: peMoney(w.profit_minor, w.currency) }));
+  return lines.map((line, index) => '<div class="pe-note" data-testid="py-closed-' + index + '">' + esc(line) + '</div>').join('');
 }
 /** Reopen year: offered to the owner, and only on the newest closed year (from the periods list the screen holds); '' otherwise */
 function peYearReopenHtml(yearState) {
@@ -1284,7 +1325,7 @@ async function peYearStatus() {
   const months = st.months || [],
     refs = st.refusals || [];
   let h = '<div class="pe-card" data-testid="py-checks">';
-  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed', { fy })) + '</div>';
+  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed', { fy })) + '</div>' + peYearClosedEvidence(st);
   else h += peYearChecksHtml(st, months, refs);
   h += '</div>';
   h += peYearActionsHtml(st);

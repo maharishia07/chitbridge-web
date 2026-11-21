@@ -131,6 +131,23 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   check(!/data-as-chip/.test(chipWin.win.CBAssign.chip({ id: 'a', role: 'adviser', holders: [] }, { ...chipOpts, said: false })), 'with no server verdict the cell is plain words, not a button');
   check(chipWin.win.CBAssign.chip({}, chipOpts) === '', 'a row with no holders key shows nothing');
 
+  /* fixWeb02 row 3: a bulk assign over two roles, the first goes through and the second is refused: "1 assigned, 1 refused", the reason, and Undo for the one that went */
+  const twoRoles = [{ id: 'a', role: 'adviser', holders: [{ name: 'X' }] }, { id: 'b', role: 'accountant', holders: [{ name: 'Y' }] }];
+  const cut = ownerWindow([reply(true, { assigned: 1, skipped: [], previous: [{ chit_id: 'c1', subject_id: 'a', actor_id: null }] }), { ok: false, status: 403, json: () => Promise.resolve({ detail: SERVER_SENTENCE }) }]);
+  await poolOf({ ...opts, roleOf: (row) => row.role }, cut).run(twoRoles);
+  await settle();
+  check(/assigned, 1 refused/.test(cut.slot.innerHTML), 'a part-done bulk assign says how many went and how many were refused: ' + cut.slot.innerHTML.slice(0, 160));
+  check(cut.slot.innerHTML.includes(SERVER_SENTENCE) && /data-as-undo/.test(cut.slot.innerHTML), 'the refusal reason is shown AND Undo stays for the one that went');
+  const refusedAll = ownerWindow([{ ok: false, status: 403, json: () => Promise.resolve({ detail: SERVER_SENTENCE }) }]);
+  await poolOf({ ...opts, roleOf: (row) => row.role }, refusedAll).run(twoRoles);
+  await settle();
+  check(refusedAll.slot.innerHTML.includes(SERVER_SENTENCE) && !/refused/.test(refusedAll.slot.innerHTML) && !/data-as-undo/.test(refusedAll.slot.innerHTML), 'nothing went through: the plain refusal, no count, no Undo');
+  /* fixWeb02 row 6: a network failure is said in words, never silent */
+  const offline = ownerWindow([{ then: (resolve, reject) => reject(new Error('offline')) }]);
+  await poolOf(opts, offline).run([heldRow]);
+  await settle();
+  check(/No connection, nothing was sent/.test(offline.slot.innerHTML) && offline.quiet.some((line) => /assign:network/.test(line)), 'no network: "No connection, nothing was sent." is said and counted in cbQuiet');
+
   /* Undo reads the holders the server returned */
   const undoWin = ownerWindow([reply(true, { assigned: 2, skipped: [], previous: [{ chit_id: 'c1', subject_id: 'a', actor_id: 'ben' }, { chit_id: 'c2', subject_id: 'b', actor_id: null }] }), reply(true, { assigned: 2 })]);
   await poolOf(opts, undoWin).run([heldRow, { id: 'b', role: 'adviser', holders: [{ name: 'Y' }] }]);
@@ -175,11 +192,11 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
   await settle();
   check(written.length === 1 && written[0][0].join() === 'f1,f2' && written[0][1] === null && writeWin.calls.length === 0, 'a plug with its own writer is written through opts.write, never through assign-bulk');
 
-  /* the Held-by cell is plain text (Athi 19 Nov): a name or a dash, never a button; the keys still find the row by its data */
+  /* the Held-by cell (Athi 21 Nov): initials chip when held, nothing when not; the keys find the row by its data */
   const cellOpts = { plug: 'client', said: true, subjectOf: (r) => r.id, roleOf: () => 'adviser' };
   const cellHeld = owner.win.CBAssign.heldCell({ id: 'c1', holders: [{ name: 'Priya Shah' }] }, cellOpts), cellFree = owner.win.CBAssign.heldCell({ id: 'c2', holders: [] }, cellOpts);
-  check(!/<button/.test(cellHeld + cellFree) && cellHeld.includes('Priya Shah') && cellFree.includes('—') && /data-as-cell/.test(cellFree) && /data-as-held="0"/.test(cellFree), 'the Held by cell is plain text: the name, or a quiet dash, and no button on the row');
-  check(!/data-as-cell/.test(owner.win.CBAssign.heldCell({ id: 'c3', holders: [] }, Object.assign({}, cellOpts, { said: false }))), 'with no server verdict the cell carries no assign facts');
+  check(/>PS<\/button>/.test(cellHeld) && /title="Priya Shah"/.test(cellHeld) && /data-as-held="1"/.test(cellHeld) && /as-ghost/.test(cellFree) && !/—|\+ /.test(cellFree) && />\s*<\/button>/.test(cellFree) && /data-as-held="0"/.test(cellFree), 'the Held by cell: an assigned row shows only the holders initials chip (press = reassign); an unassigned row shows nothing, a ghost control on hover, focus or tap');
+  check(!/data-as-chip/.test(owner.win.CBAssign.heldCell({ id: 'c3', holders: [] }, Object.assign({}, cellOpts, { said: false }))), 'with no server verdict the cell carries no assign facts');
   /* WALKFIX-1119 (walk 19 Nov, W3 · W7 · W8): the person popover, driven through a fake popup host */
   const PEOPLE = { actors: [{ actor_id: 'p1', display_name: 'Priya Shah', job_assignable: true, open_load: 0, suggested: true }, { actor_id: 'v1', display_name: 'Vera View', job_assignable: false, assign_blocked: 'view_only' }], suggested: 'p1' };
   /** a window with a popup host: ui.dialog keeps what it was given, modal/closeModal count, and two bodies stand on the page (a decoy sheet first, then the popup's own) */
@@ -241,5 +258,6 @@ const poolOf = (opts, fake) => fake.win.CBAssign.bulk(opts).find((button) => but
 (function sourceChecks() {
   const src = text(BAR);
   check(!/atob|payload\.hat|hatOfToken/.test(src), 'assign-bar.js reads no token and no hat');
+  check(/b\.style\.display = off \? 'none' : 'flex'/.test(src), 'the search hides a row by its display as well as [hidden] (the row has an inline display:flex that beats [hidden])');
   check(!/selected disabled/.test(src), 'the popover pre-chooses nobody: every person is one press');
 })();

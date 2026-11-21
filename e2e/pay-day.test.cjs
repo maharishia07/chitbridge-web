@@ -6,10 +6,11 @@
 const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
-const { liftFns } = require('./lib/lift-fn.cjs');
+const { liftFns, loadShopTime } = require('./lib/lift-fn.cjs');
 const books = require('./lib/books-api.cjs');
 let bad = 0;
-const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
+let n = 0;
+const ok = (c, m) => { n++; console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** bkToday as the page runs it, with the clock fixed at `iso` and the shop's zone `zone` */
@@ -18,6 +19,7 @@ function todayAt(iso, zone) {
   function FakeDate(...a) { return a.length ? new RealDate(...a) : new RealDate(at); }
   FakeDate.prototype = RealDate.prototype; FakeDate.now = () => at; FakeDate.UTC = RealDate.UTC;
   const cx = vm.createContext({ Date: FakeDate, Intl, window: zone ? { CB_SHOP_TZ: zone } : {} });
+  loadShopTime(cx);
   vm.runInContext(liftFns('public/app/cap-books.js', ['bkToday']) + '\nthis.out = bkToday();', cx);
   return cx.out;
 }
@@ -39,4 +41,5 @@ ok(books.dayRefusal('received_at', '2026-11-22') === null, 'stand-in takes a day
 const bk = fs.readFileSync(path.join(__dirname, 'books-web.cjs'), 'utf8');
 ok(/dayRefusal\('received_at'/.test(bk), 'books-web.cjs POST /payments uses it');
 
+console.log(n + ' checks' + (bad ? ', ' + bad + ' FAILED' : ''));
 process.exit(bad ? 1 : 0);

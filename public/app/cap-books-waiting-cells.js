@@ -106,7 +106,15 @@ function bkWaitCols() {
  * the Step cell of a Waiting row: a posting that failed says why, in the server's words; a bill naming a supplier the books do not know carries the fix
  * (F10/F11: the near matches first, then the add-party door); R106: their bill above the count offers the accept AT the count, or Reject; else the step word.
  */
+/** M-F-05: a row that is waiting on the books (not on the owner's accept) carries its own "Try again" — the one retry (bkWaitingRetry → POST /api/books/outbox/retry) */
+function bkWaitRetryButton(row, rowIndex) {
+  if (!bkWaitFailed(row)) return '';
+  return ' <button data-cbsid="CMP009-B01"' + bkMountAttribute('CMP009') + ' type="button" data-testid="wait-retry-' + rowIndex + '" onclick="event.stopPropagation(); bkWaitingRetry(this)">' + esc(tx('Try again')) + '</button>';
+}
 function bkWaitStepCell(row) {
+  return bkWaitStepText(row) + bkWaitRetryButton(row, (BK.waiting || []).indexOf(row));
+}
+function bkWaitStepText(row) {
   var rowIndex = (BK.waiting || []).indexOf(row),
     model = bkWaitModel(row);
   if (bkWaitWho(row)) return bkWaitSupplierHTML(row, rowIndex);
@@ -178,6 +186,15 @@ async function bkAddSupplier(name) {
     return bkWhy(e, tx('Added — try again from Waiting'));
   }
   return bkHealthAgain(tx('Added — open Waiting again to see the bill'));
+}
+/** AE-F-19: the bill sheet's one press "Add <seller> as supplier and post" — the seller of THIS bill is listed by their own key (supAdd { for_bill }), the server posts what waited → the sentence to show, or null */
+async function bkAddSellerAndPost(chitId) {
+  try {
+    await api('supAdd', { body: { for_bill: chitId, supply_kind: 'resale' } });
+  } catch (e) {
+    if (!(e && (e.status === 409 || /already/i.test(String(e.message || ''))))) return bkWhy(e, tx('Could not add the supplier'));
+  }
+  return null;
 }
 /* add the supplier a waiting row names, then refresh the waiting list */
 async function bkWaitAddSupplier(rowIndex, btn) {

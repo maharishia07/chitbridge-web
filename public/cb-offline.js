@@ -511,9 +511,9 @@
   }
 
   // ── service worker (Phase 3) — app opens offline + read-cache. Safe no-op where SW is unavailable. ──
-  function registerSW(path) {
+  function registerSW(path, scope) {
     try {
-      if (root.navigator && 'serviceWorker' in root.navigator) root.navigator.serviceWorker.register(path || '/cb-sw.js').catch(function () {});
+      if (root.navigator && 'serviceWorker' in root.navigator) root.navigator.serviceWorker.register(path || '/cb-sw.js', scope ? { scope: scope } : undefined).catch(function () {});
     } catch (e) {}
   }
 

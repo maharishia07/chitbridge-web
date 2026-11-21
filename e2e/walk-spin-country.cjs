@@ -99,7 +99,7 @@ const walk = async (w) => {
     const email = handle + '@test.example';
     await page.goto(w.base + '/settings.html#/new');
     await page.waitForSelector('[data-testid="reg-name"]', { timeout: 20000 });
-    await page.fill('[data-testid="reg-name"]', handle); await page.fill('[data-testid="reg-email"]', email);
+    await page.fill('[data-testid="reg-shop-name"]', 'Walk Shop'); await page.fill('[data-testid="reg-name"]', handle); await page.fill('[data-testid="reg-email"]', email);
     await page.click('[data-testid="reg-submit"]');
     await page.waitForSelector('[data-testid="reg-gov-country"]', { timeout: 20000 });
     return { page, ctx, calls, email };

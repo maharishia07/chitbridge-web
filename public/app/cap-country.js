@@ -165,7 +165,7 @@ function csuDeviceZone() {
     if (g && g.timezone && g.timezone.value) return g.timezone.value;
   } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return CBShopTime.deviceZone();
   } catch (_) {
     return '';
   }
@@ -205,6 +205,7 @@ function csuStoredFields(answer, edit) {
   edit.registered = answer.tax && typeof answer.tax.registered === 'boolean' ? answer.tax.registered : null; /* SET-49: unknown stays null, never false */
   edit.number = (answer.tax && answer.tax.number) || '';
   edit.scheme = (answer.tax && answer.tax.scheme) || 'regular';
+  edit.asked = Object.assign({}, answer.asked || {}); /* AE-F-03: the pack's own setup answers (emirate · period · zone · form) */
 }
 /** each stored value's source in words; a value with no source is "not confirmed yet" until the step is done */
 function csuStoredSources(answer, guess, edit) {
@@ -405,33 +406,11 @@ function csuBigWords(amount, wordsChoice, currency) {
 /* ── WALK-REG 2026-10-16 R49: THE MONTH WORDS ARE THE SCREEN'S LANGUAGE; THE ORDER IS THE COUNTRY'S. A UAE shop's format tag is ar-AE, so CBLocale.date() put
    "16 أكتوبر 2026" and an Arabic "Year starts" list on an English screen. Here the parts come from the country's own tag (day · month · year, in its order) and
    only the month WORD is taken from the reader's language (CBLocale.lang(), the language tx() translates to). Same language and format → the engine's own answer. */
-function csuUiTag() {
-  try {
-    return (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en';
-  } catch (failure) {
-    csuLogExample('ui language', failure);
-    return 'en';
-  }
-}
 function csuMonthNames(form) {
   return monthNames(form);
 } /* the one helper (helpers.js) — kept as a name so callers here read the same */
 function csuDate(ts) {
-  var locale = window.CBLocale;
-  try {
-    var when = new Date(ts),
-      zone = locale.zoned ? locale.zoned({}).timeZone : undefined;
-    var parts = new Intl.DateTimeFormat(locale.tag(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: zone }).formatToParts(when);
-    var word = new Intl.DateTimeFormat(csuUiTag(), { month: 'short', timeZone: zone }).format(when);
-    return parts
-      .map(function (part) {
-        return part.type === 'month' ? word : part.value;
-      })
-      .join('');
-  } catch (failure) {
-    csuLogExample('date example', failure);
-    return locale.date(ts);
-  }
+  return CBShopTime.date(ts, { day: '2-digit', month: 'short', year: 'numeric' }); /* the screen's words, the shop's order and zone: the one formatter */
 }
 /** the live examples for a currency, from the engine the bills use: money · date · the symbol part of the money · decimals */
 function csuMoneyExamples(currency, wordsChoice) {
@@ -627,10 +606,16 @@ function csuTaxIdWhy(country, number) {
   }
   return '';
 }
+/** a row after a change: a tax number the checker refuses keeps the tax row open; otherwise the row counts as answered and closes (the tax row only once it has its number) */
+function csuSettleRow(row) {
+  if (CSU.taxErr) { CSU.open.tax = true; CSU.answered.tax = false; }
+  else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) { CSU.answered[row] = true; CSU.open[row] = false; }
+}
 /** one field changed on screen: hold the cleaned value, say "you chose" as its source (W12), mark the step touched (W24), close its row once answered
     (WALK-REG R10c — the tax row stays open while it still needs the number), and repaint */
 function csuSet(field, typed) {
   if (!CSU.edit) return;
+  if (/^ask:/.test(field)) return csuSetAsk(field, typed);
   if (field === 'country') csuApplyCountry(String(typed || '').toUpperCase());
   else if (CSU_CLEAN[field]) CSU.edit[field] = CSU_CLEAN[field](typed);
   /* W12: where the value came from, in words a person reads — "you chose", never "typed" */
@@ -639,17 +624,17 @@ function csuSet(field, typed) {
   /* R49: a number the checker refuses keeps the row OPEN with the reason on it; any other change to the row re-reads the held number */
   if (row === 'tax') CSU.taxErr = CSU.edit.registered && CSU.edit.number ? csuTaxIdWhy(CSU.edit.country, CSU.edit.number) : '';
   if (field === 'country') CSU.taxErr = '';
-  if (CSU.taxErr) {
-    CSU.open.tax = true;
-    CSU.answered.tax = false;
-  } else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) {
-    CSU.answered[row] = true;
-    CSU.open[row] = false;
-  }
+  csuSettleRow(row);
   CSU.touched = true; /* W24: something moved since the read */
   CSU.err = '';
   CSU.saved = false;
+  var savePressed = CSU.savePressed && !CSU.taxErr;
   renderCountrySetup();
+  /* A-F-15: a press on Save is what made this field leave (blur → change → repaint), and the repaint replaced the button before its click landed — the press is not lost, it saves now */
+  if (savePressed) {
+    CSU.savePressed = false;
+    csuSave();
+  }
 }
 /* CL3 → W28(c): the "Where ChitBridge is for <country>" rows left this step — they are Standards › Country readiness (standards.html ?ready=<cc>, the same CBCountryReady unit); the link above opens it */
 /** Change: the row's picker opens in place; choosing closes it again (no "Done" — WALK-REG R10c) */
@@ -661,6 +646,7 @@ function csuOpen(k) {
 function csuAnswered(key) {
   if (CSU.answered[key]) return true;
   if (key === 'supplies') return !!csuStoredSupplies();
+  if (/^ask_/.test(key)) return !!((CSU.edit && CSU.edit.asked) || {})[key.slice(4)];
   return !!(CSU.p && CSU.p.done);
 }
 /**
@@ -927,8 +913,51 @@ function csuRowsHTML(e, sources, fixed) {
     csuTimezoneRow(e, sources) +
     csuTaxRow(e, sources) +
     /* W27(a): the supplies live beside the registration — a tax attribute, not a bill line */
-    csuSuppliesRow(e)
+    csuSuppliesRow(e) +
+    csuAskRows(e)
   );
+}
+/** AE-F-03: the questions the shop's PACK asks at setup (the server's `asks`: emirate · VAT period · designated zone · legal form) — each a row, its words and choices the pack's; none for a pack that asks nothing */
+function csuAskRows(e) {
+  var asks = (CSU.p && CSU.p.asks) || [];
+  if (!asks.length || !CSU.p.country || CSU.p.country.code !== e.country) return '';
+  return asks
+    .map(function (setupAsk) {
+      var current = (e.asked || {})[setupAsk.key] || '',
+        chosen = setupAsk.options.filter(function (o) {
+          return o.value === current;
+        })[0];
+      var options = [{ v: '', t: tx('Pick one'), off: !!current }].concat(
+        setupAsk.options.map(function (o) {
+          return { v: o.value, t: tx(o.label) };
+        })
+      );
+      return csuRow('ask_' + setupAsk.key, tx(setupAsk.label), chosen ? esc(tx(chosen.label)) : '', setupAsk.why ? tx(setupAsk.why) : '', csuSel('cs-ask-' + setupAsk.key, 'ask:' + setupAsk.key, options, current));
+    })
+    .join('');
+}
+/** AE-F-03: one setup answer chosen on screen (a field named ask:<key>) — held, the row closed, repainted */
+function csuSetAsk(field, typed) {
+  var key = field.slice(4);
+  CSU.edit.asked = CSU.edit.asked || {};
+  if (typed) CSU.edit.asked[key] = String(typed);
+  else delete CSU.edit.asked[key];
+  CSU.answered['ask_' + key] = !!typed;
+  CSU.open['ask_' + key] = false;
+  CSU.touched = true;
+  CSU.err = '';
+  CSU.saved = false;
+  renderCountrySetup();
+}
+/** AE-F-03: the body's `particulars`: every question the pack asks, answered or cleared (null) — only when the screen's country is the held one */
+function csuParticulars(e) {
+  var asks = (CSU.p && CSU.p.asks) || [];
+  if (!asks.length || !CSU.p.country || CSU.p.country.code !== e.country) return null;
+  var out = {};
+  asks.forEach(function (ask) {
+    out[ask.key] = (e.asked || {})[ask.key] || null;
+  });
+  return out;
 }
 /** the two doors out of the step: the Country Standard, and "Where ChitBridge is for <country>" (Standards › Country readiness, W28(c)) */
 function csuLinksHTML(e) {
@@ -1017,7 +1046,16 @@ function renderCountrySetup() {
       body +
       '</div></div>';
   var saveButton = document.getElementById('cs-save');
-  if (saveButton) saveButton.onclick = csuSave;
+  if (saveButton) {
+    saveButton.onclick = csuSave;
+    saveButton.onpointerdown = function () {
+      CSU.savePressed = true;
+      /* the click (when the button survives) or this timer (when it was repainted and csuSet took the press) ends the press */
+      setTimeout(function () {
+        CSU.savePressed = false;
+      }, 600);
+    };
+  }
 }
 /** the body of the one write, from the edit record; CS2: the zone picked of the pack's several (a one-zone pack: the server sets it anyway) */
 function csuSaveBody(e, confirmed) {
@@ -1029,6 +1067,8 @@ function csuSaveBody(e, confirmed) {
     timezone: e.timezone || null,
     source: CSU.src
   };
+  var particulars = csuParticulars(e);
+  if (particulars) body.particulars = particulars;
   /* SET-86: the server wants the owner's deliberate confirm to take a registered shop off its tax; sent only after the popup said yes */
   if (confirmed === true && csuDeregisters(e)) body.confirm_deregister = true;
   return body;
@@ -1056,6 +1096,7 @@ function csuTaxNeedsPick(e) {
 }
 /** the one write — M64: one press, one call; a server refusal is said in the form, in its own words */
 function csuSave() {
+  CSU.savePressed = false;
   var btn = document.getElementById('cs-save'),
     e = CSU.edit;
   if (!e) return;

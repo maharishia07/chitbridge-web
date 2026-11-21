@@ -1,0 +1,498 @@
+{
+ "_about": "The made-up shop data the labs and previews show before real data exists, per country (batch 1128 fixLeak). DATA, read by public/app/sample-set.js (country data lives here, not in code). neutral = the set for a shop with no country or one with no set of its own. sets[cc] holds only what differs from neutral; hotelNames maps a neutral hotel product id to that country name. home = the country the built-in (Chennai) lab data already belongs to. ccy = the currency code of that country (reads a sample set from a shop currency).",
+ "home": "IN",
+ "neutral": {
+  "cc": "",
+  "comboName": "Combo deal",
+  "shopName": "Sample shop",
+  "city": "Your city",
+  "place": "Your address · Your city",
+  "parties": [
+   "Sample customer A",
+   "Sample customer B",
+   "Sample customer C",
+   "Sample customer D"
+  ],
+  "menu": [
+   {
+    "name": "Main dish",
+    "price": 14,
+    "unit": "plate",
+    "group": "Day"
+   },
+   {
+    "name": "Hot drink",
+    "price": 4,
+    "unit": "cup",
+    "group": "Day"
+   },
+   {
+    "name": "Side dish",
+    "price": 6,
+    "unit": "plate",
+    "group": "Day"
+   },
+   {
+    "name": "Dessert",
+    "price": 7,
+    "unit": "pc",
+    "group": "Evening"
+   },
+   {
+    "name": "Cold drink",
+    "price": 5,
+    "unit": "cup",
+    "group": "Evening"
+   },
+   {
+    "name": "Bread",
+    "price": 3,
+    "unit": "pc",
+    "group": "Evening"
+   }
+  ],
+  "hotelName": "Sample counter",
+  "hotelCats": [
+   [
+    "mains",
+    "Mains"
+   ],
+   [
+    "drinks",
+    "Drinks"
+   ],
+   [
+    "sides",
+    "Sides"
+   ],
+   [
+    "sweets",
+    "Sweets"
+   ],
+   [
+    "combos",
+    "Combos"
+   ]
+  ],
+  "hotelProds": [
+   [
+    "idli",
+    "Main dish A",
+    "mains",
+    12,
+    5
+   ],
+   [
+    "plain",
+    "Main dish B",
+    "mains",
+    14,
+    6
+   ],
+   [
+    "masala",
+    "Main dish C",
+    "mains",
+    18,
+    9
+   ],
+   [
+    "upma",
+    "Main dish D",
+    "mains",
+    10,
+    4
+   ],
+   [
+    "coffee",
+    "Hot drink",
+    "drinks",
+    4,
+    1.5
+   ],
+   [
+    "tea",
+    "Tea",
+    "drinks",
+    3,
+    1
+   ],
+   [
+    "juice",
+    "Fresh juice",
+    "drinks",
+    6,
+    null
+   ],
+   [
+    "sambarc",
+    "Side dish A",
+    "sides",
+    6,
+    3
+   ],
+   [
+    "chana",
+    "Side dish B",
+    "sides",
+    8,
+    4
+   ],
+   [
+    "gulab",
+    "Dessert A",
+    "sweets",
+    7,
+    3
+   ],
+   [
+    "halwa",
+    "Dessert B",
+    "sweets",
+    6,
+    3
+   ],
+   [
+    "lunch",
+    "Meal deal",
+    "combos",
+    24,
+    18
+   ],
+   [
+    "tiffinc",
+    "Breakfast deal",
+    "combos",
+    16,
+    12
+   ]
+  ],
+  "hotelCust": [
+   [
+    "ravi",
+    "Sample catering client",
+    "trade",
+    3
+   ],
+   [
+    "lakshmi",
+    "Sample events client",
+    "trade",
+    5
+   ],
+   [
+    "velcan",
+    "Sample office canteen",
+    "trade",
+    0
+   ]
+  ],
+  "pharmaName": "Sample distributor",
+  "pharmaCust": [
+   [
+    "sharma",
+    "Sample reseller A",
+    "reseller",
+    8
+   ],
+   [
+    "nandha",
+    "Sample reseller chain",
+    "reseller",
+    6
+   ],
+   [
+    "citysub",
+    "Sample sub-stockist",
+    "reseller",
+    7
+   ],
+   [
+    "gh",
+    "Sample hospital pharmacy",
+    "trade",
+    4
+   ]
+  ]
+ },
+ "sets": {
+  "AU": {
+   "ccy": "AUD",
+   "cc": "AU",
+   "shopName": "Sample Cafe",
+   "city": "Sydney",
+   "place": "1 Sample Street · Sydney NSW 2000",
+   "parties": [
+    "Sample Catering Pty Ltd",
+    "Sample Office Supplies",
+    "Sample Events Co",
+    "Sample Hospital Pharmacy"
+   ],
+   "menu": [
+    {
+     "name": "Flat white",
+     "price": 4.5,
+     "unit": "cup",
+     "group": "Morning"
+    },
+    {
+     "name": "Avocado toast",
+     "price": 16,
+     "unit": "plate",
+     "group": "Morning"
+    },
+    {
+     "name": "Chicken parmigiana",
+     "price": 26,
+     "unit": "plate",
+     "group": "Afternoon"
+    },
+    {
+     "name": "Meat pie",
+     "price": 7.5,
+     "unit": "pc",
+     "group": "Afternoon"
+    },
+    {
+     "name": "Lamington",
+     "price": 4,
+     "unit": "pc",
+     "group": "Morning"
+    },
+    {
+     "name": "Fish and chips",
+     "price": 18,
+     "unit": "plate",
+     "group": "Night"
+    }
+   ],
+   "hotelName": "Sample Cafe counter",
+   "hotelNames": {
+    "idli": "Avocado toast",
+    "plain": "Eggs on toast",
+    "masala": "Chicken parmigiana",
+    "upma": "Porridge",
+    "coffee": "Flat white",
+    "sambarc": "Chips",
+    "chana": "Garden salad",
+    "gulab": "Lamington",
+    "halwa": "Pavlova slice",
+    "lunch": "Lunch special",
+    "tiffinc": "Breakfast special"
+   },
+   "hotelCust": [
+    [
+     "ravi",
+     "Sample Catering Pty Ltd",
+     "trade",
+     3
+    ],
+    [
+     "lakshmi",
+     "Sample Events Co",
+     "trade",
+     5
+    ],
+    [
+     "velcan",
+     "Sample Office canteen",
+     "trade",
+     0
+    ]
+   ],
+   "pharmaName": "Sample Pharma Wholesale",
+   "pharmaCust": [
+    [
+     "sharma",
+     "Sample Pharmacy",
+     "reseller",
+     8
+    ],
+    [
+     "nandha",
+     "Sample Chemist group",
+     "reseller",
+     6
+    ],
+    [
+     "citysub",
+     "Sample Sub-wholesaler",
+     "reseller",
+     7
+    ],
+    [
+     "gh",
+     "Sample Hospital pharmacy",
+     "trade",
+     4
+    ]
+   ]
+  },
+  "AE": {
+   "ccy": "AED",
+   "cc": "AE",
+   "shopName": "Sample Cafeteria",
+   "city": "Dubai",
+   "place": "Sample Street · Dubai · UAE",
+   "parties": [
+    "Sample Catering LLC",
+    "Sample Trading LLC",
+    "Sample Events FZ-LLC",
+    "Sample Hospital Pharmacy"
+   ],
+   "menu": [
+    {
+     "name": "Karak tea",
+     "price": 3,
+     "unit": "cup",
+     "group": "Morning"
+    },
+    {
+     "name": "Shawarma plate",
+     "price": 18,
+     "unit": "plate",
+     "group": "Afternoon"
+    },
+    {
+     "name": "Hummus and bread",
+     "price": 14,
+     "unit": "plate",
+     "group": "Afternoon"
+    },
+    {
+     "name": "Falafel",
+     "price": 8,
+     "unit": "plate",
+     "group": "Morning"
+    },
+    {
+     "name": "Luqaimat",
+     "price": 12,
+     "unit": "plate",
+     "group": "Night"
+    },
+    {
+     "name": "Fresh juice",
+     "price": 10,
+     "unit": "cup",
+     "group": "Night"
+    }
+   ],
+   "hotelName": "Sample Cafeteria counter",
+   "hotelNames": {
+    "idli": "Falafel wrap",
+    "plain": "Hummus plate",
+    "masala": "Shawarma plate",
+    "upma": "Labneh and bread",
+    "coffee": "Arabic coffee",
+    "tea": "Karak tea",
+    "sambarc": "Fattoush",
+    "chana": "Tabbouleh",
+    "gulab": "Luqaimat",
+    "halwa": "Umm Ali",
+    "lunch": "Lunch special",
+    "tiffinc": "Breakfast special"
+   },
+   "hotelCust": [
+    [
+     "ravi",
+     "Sample Catering LLC",
+     "trade",
+     3
+    ],
+    [
+     "lakshmi",
+     "Sample Events FZ-LLC",
+     "trade",
+     5
+    ],
+    [
+     "velcan",
+     "Sample Office canteen",
+     "trade",
+     0
+    ]
+   ],
+   "pharmaName": "Sample Pharma Trading LLC",
+   "pharmaCust": [
+    [
+     "sharma",
+     "Sample Pharmacy",
+     "reseller",
+     8
+    ],
+    [
+     "nandha",
+     "Sample Pharmacy group",
+     "reseller",
+     6
+    ],
+    [
+     "citysub",
+     "Sample Sub-distributor",
+     "reseller",
+     7
+    ],
+    [
+     "gh",
+     "Sample Hospital pharmacy",
+     "trade",
+     4
+    ]
+   ]
+  },
+  "IN": {
+   "ccy": "INR",
+   "cc": "IN",
+   "comboName": "Tiffin Combo",
+   "shopName": "Sample Tiffin Corner",
+   "city": "Chennai",
+   "place": "Chennai 600 126 · Tamil Nadu",
+   "parties": [
+    "Tally Test Shop",
+    "Kumar Spares",
+    "Ravi Stores",
+    "Meena Traders"
+   ],
+   "menu": [
+    {
+     "name": "Masala Dosa",
+     "price": 70,
+     "unit": "plate",
+     "group": "Morning"
+    },
+    {
+     "name": "Filter Coffee",
+     "price": 25,
+     "unit": "cup",
+     "group": "Morning"
+    },
+    {
+     "name": "Veg Biryani",
+     "price": 140,
+     "unit": "plate",
+     "group": "Afternoon"
+    },
+    {
+     "name": "Curd Rice",
+     "price": 70,
+     "unit": "plate",
+     "group": "Afternoon"
+    },
+    {
+     "name": "Ven Pongal",
+     "price": 55,
+     "unit": "plate",
+     "group": "Morning"
+    },
+    {
+     "name": "Parotta",
+     "price": 30,
+     "unit": "pc",
+     "group": "Night"
+    }
+   ],
+   "hotelNames": {}
+  }
+ }
+}

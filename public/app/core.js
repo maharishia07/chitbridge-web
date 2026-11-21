@@ -200,11 +200,8 @@ function unwrap(j, _key) {
    * under all of them. Carrying one key across keeps both contracts true.
    */
   if (j.entity) {
-    if (j.included && j.entity && typeof j.entity === 'object') {
-      try {
-        j.entity.included = j.included;
-      } catch (_) {}
-    }
+    noteShopZone(j, _key); /* AE-F-06: the shop's own zone on EVERY page that reads /me (was app.html only): CBShopTime reads it */
+    keepIncluded(j);
     return j.entity;
   }
   if (j.settings) return j.settings;
@@ -1526,9 +1523,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
       /* e.data = the answer's own body (M27: a 409 ALREADY_PAID carries .warnings the payment form paints) */
       const _fail = function (m) {
         const er = new Error(m);
-        er.status = res.status;
-        er.data = j;
-        refusalFacts(er, j, _rid); /* B7: the register code, the hint (next step) and the request id ride on the error, for the one card and toast */
+        errorFacts(er, res, j, _rid); /* B7: the register code, the hint (next step) and the request id ride on the error, for the one card and toast */
         return er;
       };
       if (res.status === 401) {

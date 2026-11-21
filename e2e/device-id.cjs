@@ -55,7 +55,7 @@ pages(PUB).concat([HOME]).forEach((file) => {
   const html = fs.readFileSync(file, 'utf8');
   if (!HOLDS_SESSION.test(html)) return;
   const first = html.search(/<script\b/i);
-  if (html.indexOf('<script src="/app/device-id.js"></script>') !== first) missing.push(rel);
+  if (html.indexOf('<script src="/app/device-id.js"></script>') !== first && html.indexOf('<script src="/app/device-id.js" data-customer-page></script>') !== first) missing.push(rel); /* a customer page names itself (CUSTOMER-DELINK 2) */
 });
 /* a scan that finds nothing proves nothing: these session pages must be among the ones it judged (and they load the file) */
 const KNOWN = ['index.html', 'public/app.html', 'public/accounts.html', 'public/crm.html', 'public/intake.html'].map((rel) => path.join(__dirname, '..', rel));

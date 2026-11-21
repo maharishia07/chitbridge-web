@@ -39,6 +39,7 @@ function page() {
   const sb = { console, setTimeout, clearTimeout, Intl, Date, Math, JSON, location: { search: '?preview=1', hash: '' }, navigator: { language: 'en-IN' },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     document: { getElementById: el, querySelector: () => null, querySelectorAll: () => [], createElement: () => el('x' + Math.random()), addEventListener() {}, head: { appendChild() {} }, body: el('body'), documentElement: el('html') } };
+  sb.CBSample = require('../public/app/sample-set.js'); /* red1128: the sample set is data read by node in a sandbox */
   sb.window = sb; sb.self = sb; sb.addEventListener = () => {};
   const cx = vm.createContext(sb);
   for (const f of ['engine/money.js', 'app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) vm.runInContext(read(f), cx);

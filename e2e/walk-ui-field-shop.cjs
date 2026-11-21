@@ -15,7 +15,7 @@
 const fs = require('fs'), path = require('path');
 const W = require('./lib/walk.cjs');
 const A = require('./lib/a11y-check.cjs');
-const { rule13 } = require('./lib/rule13.cjs');
+const { rule13, setTheme } = require('./lib/rule13.cjs');
 const J = (o, status) => ({ status: status || 200, contentType: 'application/json', body: JSON.stringify(o) });
 const VIEW = { available: true, visibility: 'public', categories: [],
   shop: { bridge_id: 'CBSIMFIT', display_name: 'Sim Fit', currency_code: 'INR', country: 'IN', is_verified: true, business_status: 'open', storefront_access: 'browse',
@@ -190,7 +190,7 @@ W.run('ui-field-shop', async (w) => {
   await w.step('U7', 'check 6 · the field edge reaches 3:1 on its card in Cream and Dark; the error colour reaches 4.5:1', async () => {
     const res = [];
     for (const theme of ['cream', 'dark']) {
-      await page.evaluate((t) => CBAvatar.applyTheme(t), theme); await page.waitForTimeout(150);
+      await setTheme(page, theme); await page.waitForTimeout(150);
       await paint('schema');
       await page.evaluate(() => { ui.field.error(document.getElementById('f_notes'), 'Not saved. Too long. Shorten it.'); });
       const m = await page.evaluate(() => {
@@ -204,7 +204,7 @@ W.run('ui-field-shop', async (w) => {
       });
       res.push(theme + ' edge ' + m.edge + ' (page ' + m.edgeOnPage + ') error ' + m.err); res[res.length - 1] = { t: res[res.length - 1], ok: m.edge >= 3 && m.edgeOnPage >= 3 && m.err >= 4.5 };
     }
-    await page.evaluate(() => CBAvatar.applyTheme(CBAvatar.themeKey()));
+    await setTheme(page);
     return { ok: res.every((x) => x.ok), saw: res.map((x) => x.t).join(' · ') };
   });
 
@@ -266,5 +266,5 @@ W.run('ui-field-shop', async (w) => {
   }
   const shots = path.join(__dirname, 'shots'); fs.mkdirSync(shots, { recursive: true });
   await open(390, 844); await paint('who'); await page.screenshot({ path: path.join(shots, 'ui-field-shop-who-390.png') });
-  await page.evaluate(() => CBAvatar.applyTheme('dark')); await paint('who'); await page.screenshot({ path: path.join(shots, 'ui-field-shop-who-390-dark.png') });
+  await setTheme(page, 'dark'); await paint('who'); await page.screenshot({ path: path.join(shots, 'ui-field-shop-who-390-dark.png') });
 });

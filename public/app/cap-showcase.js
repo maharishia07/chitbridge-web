@@ -18,6 +18,7 @@
   }; /* the ONE escaper (app/helpers.js esc), loaded by every host before this file — never a copy */
   var WORD = { gallery: 'Gallery', menu: 'Menu', specs: 'Specs', booking: 'Booking' };
   function previewUrl(o, name) {
+    if (root.CBPreviewKey) root.CBPreviewKey.hand(o.shopId); /* the preview frame reads only this hand-off key (CUSTOMER-DELINK) */
     return (o.origin || '') + '/shop.html?s=' + encodeURIComponent(o.shopId) + '&preview=1&showcase=' + encodeURIComponent(name);
   }
   function html(o) {

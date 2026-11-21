@@ -47,7 +47,7 @@ ok(!NAV.some(([, label]) => nonAscii(label.replace(/[&]/g, ''))), 'no emoji or p
 
 /* the one drawing function */
 const draw = liftFns(file, ['navItems']);
-const ctx = vm.createContext({ esc: (s) => String(s), tx: (s) => s });
+const ctx = vm.createContext({ esc: (s) => String(s), tx: (s) => s, shutWhy: () => '' }); /* red1128: navItems now greys a shut view (WALK M M-F-08); a full seat shuts none */
 vm.runInContext(draw, ctx);
 const html = vm.runInContext('navItems', ctx)(NAV, 'todo');
 const svgs = [...html.matchAll(/<svg viewBox="0 0 24 24" aria-hidden="true"><path d="([^"]+)"\/><\/svg>/g)];

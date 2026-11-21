@@ -1,15 +1,13 @@
 {
- "public/app.html": 220,
- "public/app/accounts-shell.js": 1,
+ "public/app.html": 192,
  "public/app/attach-ui.js": 1,
  "public/app/avatar.js": 3,
- "public/app/cap-admin.js": 3,
+ "public/app/cap-admin.js": 2,
  "public/app/cap-categories.js": 1,
  "public/app/cap-catsetup.js": 1,
  "public/app/cap-chit2.js": 1,
  "public/app/cap-cmdb.js": 1,
  "public/app/cap-connector.js": 5,
- "public/app/cap-definitions.js": 5,
  "public/app/cap-dispute.js": 7,
  "public/app/cap-entry.js": 2,
  "public/app/cap-folders.js": 4,
@@ -25,6 +23,7 @@
  "public/app/cap-worklist.js": 1,
  "public/app/cart.js": 31,
  "public/app/catalogue-lines.js": 10,
+ "public/app/cb-words.js": 1,
  "public/app/chit-sheet.js": 1,
  "public/app/core.js": 3,
  "public/app/helpers.js": 1,
@@ -50,6 +49,6 @@
  "public/store.html": 5,
  "public/storefront-design.html": 20,
  "public/supplier-design.html": 18,
- "public/testing.html": 35,
+ "public/testing.html": 34,
  "public/till.html": 167
 }

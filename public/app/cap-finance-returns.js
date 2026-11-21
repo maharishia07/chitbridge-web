@@ -51,21 +51,21 @@ function frRetry() {
   frLoad();
 }
 
-/** the last twelve calendar months, newest first, from the shop's day — value YYYY-MM, label in the reader's month words */
+/** the running month and the eleven before it, newest first, from the shop's day — value YYYY-MM, label in the reader's month words (IN-F-08: the month in progress can be asked for, marked as running) */
 function frMonths() {
   var t = bkToday(),
     y = Number(t.slice(0, 4)),
     m = Number(t.slice(5, 7)),
     names = monthNames('short'),
     out = [];
-  for (var index = 1; index <= 12; index++) {
+  for (var index = 0; index < 12; index++) {
     var mm = m - index,
       yy = y;
     while (mm < 1) {
       mm += 12;
       yy -= 1;
     }
-    out.push({ v: yy + '-' + String(mm).padStart(2, '0'), label: names[mm - 1] + ' ' + yy });
+    out.push({ v: yy + '-' + String(mm).padStart(2, '0'), label: names[mm - 1] + ' ' + yy + (index === 0 ? ' · ' + tx('running') : '') });
   }
   return out;
 }
@@ -73,6 +73,42 @@ function frCard(html, tid) {
   return '<div class="content"><div class="card" data-testid="' + tid + '" style="margin:0">' + html + '</div></div>';
 }
 
+/** India's return files (GSTR-1 and GSTR-3B), read from the rail: the month picker, the two file buttons greyed with the reason for a view-only login, the month's GST by head */
+function frPaintRail(node) {
+  var months = frMonths(),
+    shut = viewOnlyLogin() ? viewOnlyMoneyWhy() : ''; /* M-F-03: a view-only login is refused the figures by the api; the file buttons are GREYED with that reason (one readiness state), never offered */
+  var shutAttrs = shut ? ' aria-disabled="true" data-ready="no" disabled title="' + esc(shut) + '" style="opacity:.55;cursor:not-allowed"' : '';
+  node.innerHTML = frCard(
+    '<h2>' +
+      esc(tx('GSTR-1 and GSTR-3B')) +
+      '</h2><p>' +
+      esc(tx('Read from the rail. Check in the offline tool before filing.')) +
+      '</p>' +
+      '<label style="display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600">' +
+      esc(tx('Month')) +
+      '<select data-cbsid="FIN007-S01" class="inp" id="fr_month" data-testid="fr-month" onchange="frShow()">' +
+      months
+        .map(function (x) {
+          return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>';
+        })
+        .join('') +
+      '</select></label>' +
+      '<div class="supacts"><button data-cbsid="FIN007-B01" type="button" class="act" data-testid="fr-gstr1"' + shutAttrs + ' onclick="frGet(\'gstr1\',this)">' +
+      esc(tx('GSTR-1 file')) +
+      '</button>' +
+      '<button data-cbsid="FIN007-B02" type="button" class="act quiet" data-testid="fr-gstr3b"' + shutAttrs + ' onclick="frGet(\'gstr3b\',this)">' +
+      esc(tx('GSTR-3B file')) +
+      '</button></div>' +
+      (shut ? '<p class="hint" data-testid="fr-shut-why">' + esc(shut) + '</p>' : '') +
+      '<div id="fr_view" data-testid="fr-view" role="status"></div>' +
+      '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>' +
+      '<p class="hint" data-testid="fr-prepared">' +
+      esc(tx('Prepared, not filed.')) +
+      '</p>',
+    'fr-gstr'
+  );
+  if (!shut) frShow(); /* IN-F-08: the running month's GST is on the screen as it opens (a view-only login is refused it, so it is not asked) */
+}
 function frPaint() {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -112,34 +148,7 @@ function frPaint() {
   var pk = FR.pack;
   /* India's GSTR-1 / 3B are the RAIL's read (books-period.taxReturn refuses the ledgers for the IN pack the same way): the pack id decides, not a word */
   if (pk && packRegForm(pk.id).railReturn) {
-    var months = frMonths();
-    node.innerHTML = frCard(
-      '<h2>' +
-        esc(tx('GSTR-1 and GSTR-3B')) +
-        '</h2><p>' +
-        esc(tx('Read from the rail. Check in the offline tool before filing.')) +
-        '</p>' +
-        '<label style="display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600">' +
-        esc(tx('Month')) +
-        '<select data-cbsid="FIN007-S01" class="inp" id="fr_month" data-testid="fr-month">' +
-        months
-          .map(function (x) {
-            return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>';
-          })
-          .join('') +
-        '</select></label>' +
-        '<div class="supacts"><button data-cbsid="FIN007-B01" type="button" class="act" data-testid="fr-gstr1" onclick="frGet(\'gstr1\',this)">' +
-        esc(tx('GSTR-1 file')) +
-        '</button>' +
-        '<button data-cbsid="FIN007-B02" type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' +
-        esc(tx('GSTR-3B file')) +
-        '</button></div>' +
-        '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>' +
-        '<p class="hint" data-testid="fr-prepared">' +
-        esc(tx('Prepared, not filed.')) +
-        '</p>',
-      'fr-gstr'
-    );
+    frPaintRail(node);
     return;
   }
   if (pk && pk.returns && pk.returns.id) {
@@ -165,15 +174,90 @@ function frPaint() {
     'fr-none'
   );
 }
+/** one table row per tax head (CGST · SGST · IGST): on your sales · credit from purchases · to pay now · credit kept */
+function frHeadRows(heads) {
+  var cell = function (v) {
+    return '<td style="text-align:end">' + esc(fmtMoney(v || 0)) + '</td>';
+  };
+  return heads
+    .map(function (h) {
+      return '<tr data-testid="fr-view-' + h.name.toLowerCase() + '"><th scope="row" style="text-align:start">' + esc(h.name) + '</th>' + cell(h.out) + cell(h.inp) + cell(h.pay) + cell(h.keep) + '</tr>';
+    })
+    .join('');
+}
+/**
+ * IN-F-08 (walk IN 21 Nov): THIS MONTH'S GST BY HEAD, ON SCREEN, with the set-off preview — read only. Every figure is the server's (GET /api/tax/gstr?form=gstr3b: tax on sales, credit from purchases and
+ * _cb.setoff, the engine's own CBPosting.gstSetOff in s.49 order); nothing is summed here. It posts nothing: the GST close stays closed until the month has ended.
+ */
+function frViewHTML(reply) {
+  var outputTax = ((reply || {}).sup_details || {}).osup_det || {},
+    credit = ((reply || {}).itc_elg || {}).itc_net || {},
+    setOff = ((reply || {})._cb || {}).setoff;
+  if (!setOff) return '<p class="hint" data-testid="fr-view-none">' + esc(tx('The set-off could not be worked out for this month.')) + '</p>';
+  var heads = [
+    { name: 'CGST', out: outputTax.camt, inp: credit.camt, pay: setOff.payable.cgst, keep: setOff.carried.cgst },
+    { name: 'SGST', out: outputTax.samt, inp: credit.samt, pay: setOff.payable.sgst, keep: setOff.carried.sgst },
+    { name: 'IGST', out: outputTax.iamt, inp: credit.iamt, pay: setOff.payable.igst, keep: setOff.carried.igst }
+  ];
+  var rows = frHeadRows(heads);
+  var used = (setOff.utilised || [])
+    .map(function (u) {
+      return esc(txf('{from} credit {amount} set against {against}', { from: String(u.from).toUpperCase(), amount: fmtMoney(u.amount), against: String(u.against).toUpperCase() }));
+    })
+    .join(' · ');
+  return (
+    '<table class="tbl" data-testid="fr-view-table" style="width:100%;margin-top:10px"><thead><tr><th style="text-align:start">' + esc(tx('Tax')) + '</th><th style="text-align:end">' + esc(tx('On your sales')) +
+    '</th><th style="text-align:end">' + esc(tx('Credit from purchases')) + '</th><th style="text-align:end">' + esc(tx('To pay now')) + '</th><th style="text-align:end">' + esc(tx('Credit kept')) + '</th></tr></thead><tbody>' +
+    rows + '</tbody></table>' +
+    (used ? '<p class="hint" data-testid="fr-view-setoff">' + used + '</p>' : '') +
+    '<p class="hint" data-testid="fr-view-note">' + esc(tx('A preview from your bills of the month, IGST credit first, then CGST, then SGST. Nothing is posted; the GST close opens when the month has ended.')) + '</p>'
+  );
+}
+/** the month chosen, on screen: the server's GSTR-3B read, painted by frViewHTML (a late answer for another month is dropped) */
+async function frShow() {
+  var select = document.getElementById('fr_month'),
+    box = document.getElementById('fr_view');
+  if (!select || !box) return;
+  var month = select.value,
+    seen = (FR.viewGen = (FR.viewGen || 0) + 1);
+  box.innerHTML = '<div class="hint">' + esc(tx('Loading…')) + '</div>';
+  try {
+    var reply = await api('taxGstr', { query: { month: month, form: 'gstr3b' } });
+    if (seen !== FR.viewGen) return;
+    box.innerHTML = frViewHTML(reply);
+  } catch (e) {
+    if (seen !== FR.viewGen) return;
+    box.innerHTML = '<p class="hint" data-testid="fr-view-failed">' + esc(tx('Could not read this month.')) + '</p>';
+  }
+}
+/** what the return says beside its figures (the server's own sentences, never reworded here): the tax the server's check does not reproduce, the e-invoice warning, and the bills reversed after filing (their credit-note rows) → [sentence] */
+function frNotes(cb) {
+  cb = cb || {};
+  var said = [];
+  function addNote(item) {
+    var t = typeof item === 'string' ? item : item && (item.words || item.says);
+    if (t) said.push(String(t));
+  }
+  (cb.tax_differs || []).forEach(addNote);
+  if (cb.einvoice) addNote(cb.einvoice);
+  (cb.reversed || []).forEach(addNote);
+  return said;
+}
+function frNotesHtml(cb) {
+  var said = frNotes(cb);
+  if (!said.length) return '';
+  return '<ul class="hint" data-testid="fr-notes" style="margin:6px 0 0;padding-left:18px">' + said.slice(0, 5).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + (said.length > 5 ? '<li>' + esc(txf('{n} more in the file', { n: said.length - 5 })) + '</li>' : '') + '</ul>';
+}
 /** one press, one file: the server's JSON saved as gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json (helpers.js gstrDownload) */
 function frGet(form, btn) {
   var node = document.getElementById('fr_month'),
     month = node ? node.value : null;
   if (!month) return;
+  var cb = null;
   return CBAction.run(
     btn,
     function () {
-      return gstrDownload(month, form);
+      return gstrDownload(month, form, function (reply) { cb = reply && reply._cb; });
     },
     {
       key: 'fr-' + form,
@@ -182,7 +266,7 @@ function frGet(form, btn) {
       done: tx('Downloaded'),
       outcome: function (name) {
         var element = document.getElementById('fr_out');
-        if (element) element.textContent = tx('Saved as') + ' ' + name;
+        if (element) element.innerHTML = esc(tx('Saved as') + ' ' + name) + frNotesHtml(cb);
       }
     }
   );

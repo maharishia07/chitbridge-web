@@ -16,7 +16,7 @@
   'use strict';
   var assignApi = (root.CBAssign = root.CBAssign || {});
   var ASSIGN_PATH = '/api/chits/assign-bulk', ACTORS_PATH = '/api/actors', HANDOVER_PATH = '/api/chits/hand-over-all', HOLDS_PATH = '/api/chits/holds', MYWORK_PATH = '/api/chits/my-work', UNDO_MS = 30000, MOUNT = 'HOM001-U02';
-  var mounts = {}, bound = false, last = null, undoTimer = null, nameById = {};
+  var mounts = {}, bound = false, last = null, undoTimer = null, nameById = {}, undoing = false;
   function tr(s) { return typeof root.tx === 'function' ? root.tx(s) : s; }
   /** a whole sentence with {placeholders}: never built by joining words */
   function sayText(sentence, vars) {
@@ -54,13 +54,14 @@
   assignApi.hasHolders = function (rows) { return (rows || []).some(function (r) { return Array.isArray(r.holders); }); };
 
   /* ── the one vocabulary, quick views and the filter by person (L12) ───────────────────────── */
-  /** Mine · Unassigned · Everyone: three views over the one `held` filter (list-ctl `views`, merge on) */
-  assignApi.quickViews = function () {
-    return { merge: true, tid: 'assign-views', items: [
+  /** Mine · Unassigned · Everyone: three views over the one `held` filter (list-ctl `views`, merge on). STAFFPICK (Athi 21 Nov): a seat that sees only its own and the unassigned (`staff`) is offered Mine and Unassigned, never Everyone (the server sends no other rows) */
+  assignApi.quickViews = function (staff) {
+    var items = [
       { key: 'held-mine', label: tr('Mine'), filt: { held: 'mine' } },
-      { key: 'held-none', label: tr('Unassigned'), filt: { held: 'none' } },
-      { key: 'held-all', label: tr('Everyone'), filt: {} }
-    ] };
+      { key: 'held-none', label: tr('Unassigned'), filt: { held: 'none' } }
+    ];
+    if (!staff) items.push({ key: 'held-all', label: tr('Everyone'), filt: {} });
+    return { merge: true, tid: 'assign-views', items: items };
   };
   /** the `held` filter: Unassigned · Mine · each person who holds something in these rows (the server's holder ids), so "what does Ben hold?" can be asked */
   assignApi.heldFilter = function (rows) {
@@ -78,11 +79,17 @@
     };
   };
 
+  /** one call to the api; a network failure is NOT thrown: it answers { ok: false, status: 0 } so every caller says "no connection" in words instead of hanging silent */
   function call(method, path, body) {
     return root.fetch(base() + path, { method: method, headers: { Authorization: 'Bearer ' + session().token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
       return r.json().catch(function (failure) { if (root.cbQuiet) root.cbQuiet('assign:json', failure); return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j || {} }; });
+    }, function (failure) {
+      if (root.cbQuiet) root.cbQuiet('assign:network', failure);
+      return { ok: false, status: 0, body: {} };
     });
   }
+  /** what to say when a call was refused: no connection (status 0, nothing was sent), the server's own sentence, or the plain "Not done." */
+  function refusalOf(r) { return r.status === 0 ? tr('No connection, nothing was sent.') : sentenceOf(r.body) || tr('Not done.'); }
   /** the server's own sentence for a refusal: the Problem's detail, or the older may/why/message keys (never the page's words) */
   function sentenceOf(j) { return String(j.detail || j.why || j.message || j.error || j.title || ''); }
   function nounOf(opts, n) { return tr(n === 1 ? opts.noun || 'client' : opts.nounMany || (opts.noun || 'client') + 's'); }
@@ -180,7 +187,7 @@
     var search = body.querySelector('[data-testid="assign-search"]'), note = body.querySelector('[data-testid="assign-note"]');
     if (search) search.addEventListener('input', function () {
       var q = search.value.trim().toLowerCase();
-      [].forEach.call(body.querySelectorAll('[data-as-pick]'), function (b) { b.hidden = !!q && (b.getAttribute('data-as-name') || '').toLowerCase().indexOf(q) < 0; });
+      [].forEach.call(body.querySelectorAll('[data-as-pick]'), function (b) { var off = !!q && (b.getAttribute('data-as-name') || '').toLowerCase().indexOf(q) < 0; b.hidden = off; b.style.display = off ? 'none' : 'flex'; /* the row's own inline display:flex beats [hidden], so the display is set too */ });
     });
     body.addEventListener('click', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-as-pick],[data-as-pool]');
@@ -229,31 +236,32 @@
     var named = names.filter(function (n, i) { return n && names.indexOf(n) === i; });
     return named.length ? [sayText('Was held by {names}.', { names: named.join(', ') })] : [];
   }
+  function sayRunOutcome(sum, opts, rows, wordsFor) { /* the one outcome line of a run: some done and one refused · refused · or all done with the skipped named */
+    if (sum.refused && sum.done) showOutcome('bad', sayText('{n} {noun} assigned, {m} refused.', { n: sum.done, noun: nounOf(opts, sum.done), m: Math.max(rows.length - sum.done - sum.skipped.length, 0) }), [sum.refused].concat(skipLines(sum.skipped)), sum.undo); /* the part that went through keeps its Undo and its count; the refusal is the reason */
+    else if (sum.refused) showOutcome('bad', sum.refused, []);
+    else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
+  }
+  function finishRun(sum, opts, rows, wordsFor) { /* after the calls: say the outcome (good · bad), clear the ticks, keep the last run's reload, then reload the list */
+    sayRunOutcome(sum, opts, rows, wordsFor);
+    if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
+    if (last) last.reload = opts.reload; return opts.reload ? opts.reload() : null;
+  }
   /** one call per role (the api takes one role per call); counts, skip sentences and previous holders are added; the first refusal stops the run and its sentence is shown */
   function runCalls(opts, rows, target, note, wordsFor) {
     var sum = { done: 0, skipped: [], refused: null, undo: [], before: [] };
     return byRole(rows, opts.roleOf).reduce(function (chain, group) {
       return chain.then(function () {
         if (sum.refused) return null;
-        var body = { plug: opts.plug, role: group.role, subject_ids: group.rows.map(function (r) { return opts.subjectOf(r); }), target_actor_id: target };
-        if (note) body.note = note;
+        var body = { plug: opts.plug, role: group.role, subject_ids: group.rows.map(function (r) { return opts.subjectOf(r); }), target_actor_id: target }; if (note) body.note = note;
         /* opts.write: a plug whose rows are not chits (CRM follow-ups) is written by its own route; it answers like assign-bulk: { ok, sentence?, assigned, skipped, previous[{subject_id, actor_id}] } */
         return (opts.write ? opts.write(body.subject_ids, target, note) : call('POST', ASSIGN_PATH, body)).then(function (r) {
           if (opts.write) r = { ok: r.ok !== false, body: { assigned: r.assigned, skipped: r.skipped, previous: r.previous, detail: r.sentence } };
-          if (!r.ok) { sum.refused = sentenceOf(r.body) || tr('Not done.'); return null; }
-          sum.done += Number(r.body.assigned) || 0;
-          sum.skipped = sum.skipped.concat(r.body.skipped || []);
-          sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous, opts.write));
-          (r.body.previous || []).forEach(function (p) { if (p.actor_id && p.actor_id !== target) sum.before.push(nameById[p.actor_id] || ''); });
+          if (!r.ok) { sum.refused = refusalOf(r); return null; }
+          sum.done += Number(r.body.assigned) || 0; sum.skipped = sum.skipped.concat(r.body.skipped || []);
+          sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous, opts.write)); (r.body.previous || []).forEach(function (p) { if (p.actor_id && p.actor_id !== target) sum.before.push(nameById[p.actor_id] || ''); });
         });
       });
-    }, root.Promise.resolve()).then(function () {
-      if (sum.refused) showOutcome('bad', sum.refused, []);
-      else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
-      if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
-      if (last) last.reload = opts.reload;
-      return opts.reload ? opts.reload() : null;
-    });
+    }, root.Promise.resolve()).then(function () { return finishRun(sum, opts, rows, wordsFor); });
   }
   /** H3 (20 Nov): the ONE empty state of the work queue, the same in every place: "Nothing waiting for you · N unassigned" with ONE press, "Pick up the next one" (the person who may assign takes the first unassigned item; the list reloads on Mine) */
   function queueEmpty(opts, rows, state) {
@@ -271,7 +279,7 @@
   }
   /**
    * CBAssign.queue(q) → the options a list merges into its CBList.mount: THE WORK-QUEUE CAPABILITY (Athi 19 Nov: "the capability, so we can use it anywhere"). q = the assign options (plug · noun · nounMany · subjectOf · roleOf · said · reload · write? · heldOf? · flag?)
-   * + { key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
+   * + { staff: true when this seat sees only its own and the unassigned (Mine · Unassigned, the take button reads Pick up) · key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
    * → { views (Mine · Unassigned · Everyone), bulk (Assign to me · Assign to… · Hand over · Back to pool), bulkAlways, preset (the opening view: Mine for a seat that holds work or may not assign, Everyone otherwise), filter (the Held by filter, list shape) }; {} when no row carries holders.
    * Nothing here names a trade: the noun, the door (plug / write) and the rows come from the screen. */
   assignApi.queue = function (q) {
@@ -279,22 +287,24 @@
     if (!assignApi.hasHolders(rows)) return {};
     var holds = !!me && rows.some(function (r) { return held.match(r, 'mine'); });
     var opts = Object.assign({ listKey: q.key }, q);
-    return { views: assignApi.quickViews(), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsTake(q), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+    return { views: assignApi.quickViews(q.staff === true), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsTake(q), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
       emptyFor: function (state) { return queueEmpty(opts, rows, state); },
       filter: { key: 'held', label: tr('Held by'), all: tr('Anyone'), options: held.options.map(function (o) { return { v: o[0], label: tr(o[1]) }; }), match: held.match } };
   };
   /** Undo: one more assign-bulk call per (role, previous holder), using the holders the server returned */
   function undo() {
     var groups = last && last.undo ? last.undo : [], reload = last && last.reload;
-    if (!groups.length) return null;
+    if (!groups.length || undoing) return null; /* a second press while the first runs would put the holders back twice */
+    undoing = true;
     var refused = null;
     return groups.reduce(function (chain, g) {
       return chain.then(function () {
         if (refused) return null;
         var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, g.chit_ids && g.chit_ids.length ? { chit_ids: g.chit_ids, target_actor_id: g.actor_id } : { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
-        return put.then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
+        return put.then(function (r) { if (!r.ok) refused = refusalOf(r); });
       });
     }, root.Promise.resolve()).then(function () {
+      undoing = false;
       showOutcome(refused ? 'bad' : 'good', refused || tr('Undone.'), []);
       return reload ? reload() : null;
     });
@@ -305,7 +315,13 @@
     var words = holder.id
       ? function (n) { return sayText('{n} {noun} assigned to {who}.', { n: n, noun: nounOf(opts, n), who: name }); }
       : function (n) { return sayText('{n} {noun} back in the pool.', { n: n, noun: nounOf(opts, n) }); };
-    return runCalls(opts, rows, holder.id, holder.note, words);
+    var named = namesOf(opts, rows);
+    return runCalls(opts, rows, holder.id, holder.note, named ? function (n) { return words(n).slice(0, -1) + ': ' + named + '.'; } : words);
+  }
+  /** STAFFPICK: the confirmation names what moved when the list can name its rows (opts.nameOf) and there are at most three */
+  function namesOf(opts, rows) {
+    if (typeof opts.nameOf !== 'function' || rows.length > 3) return '';
+    return rows.map(function (r) { return opts.nameOf(r) || ''; }).filter(Boolean).join(', ');
   }
   function heldOf(opts) { return opts.heldOf || function (r) { return Array.isArray(r.holders) && r.holders.length > 0; }; }
 
@@ -316,7 +332,8 @@
   assignApi.bulk = function (opts) {
     if (!assignApi.showsTake(opts)) return [];
     assignApi.mount(opts);
-    var held = heldOf(opts), take = { id: 'me', label: tr('Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    var held = heldOf(opts), take = { id: 'me', label: tr(opts.staff === true ? 'Pick up' : 'Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    if (opts.staff === true) return staffBulk(opts, take, held); /* STAFFPICK: a staff seat's bar is Pick up · Release · Hand to… */
     if (!assignApi.showsBar(opts.said)) return [take];
     return [
       take,
@@ -335,6 +352,15 @@
       } }
     ];
   };
+
+  /** STAFFPICK (Athi 21 Nov): the staff seat's bar over the ticked clients, through the ONE assign-bulk: Pick up (to me) · Release (mine back to the unassigned queue) · Hand to… (a colleague); the server refuses a client someone else holds */
+  function staffBulk(opts, take, held) {
+    return [
+      take,
+      { id: 'release', label: tr('Release'), run: function (rows) { var mine = rows.filter(held); return mine.length ? apply(opts, mine, { id: null, note: '' }) : showOutcome('bad', tr('Nothing ticked is yours to release.'), []); } },
+      { id: 'handto', label: tr('Hand to…'), run: function (rows) { pick({ title: 'Hand to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); }); } }
+    ];
+  }
 
   /* ── Hand over all (L11): everything one person holds, to another person or back to the pool ───────────── */
   /** the Undo groups of a hand-over-all answer: only chit entries can be put back through assign-bulk; ONE follow-up entry (no undo route yet) means no Undo at all */
@@ -410,17 +436,22 @@
       ' style="max-width:100%;min-height:32px;padding:2px 10px;border:1px ' + (empty ? 'dashed' : 'solid') + ' var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:' + (empty ? 'var(--grey,#5B5B5B)' : 'inherit') + ';font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">' +
       root.esc(empty ? '+ ' + tr('Assign to…') : holderNames + ' ▾') + '</button>';
   };
+  /** the holder's initials for the chip: "Asha Rao" → AR; several holders → each one's initials, joined (the full names stay in the label and the title) */
+  function initialsOf(names) {
+    return names.map(function (n) { return String(n || '').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join(''); }).filter(Boolean).join(' ') || '?';
+  }
   /**
-   * the Held-by cell as PLAIN TEXT (Athi 19 Nov: no button on every row): the holder's name, or a quiet dash when nobody holds it. Assigning is the tick-bar's one "Assign to…"; the A and I keys still
-   * find the row through the data-as-* facts this cell carries (shown only on the server's verdict, like the chip). opts as for bulk
+   * the Held-by cell (Athi 21 Nov: no repeating "+ Assign to…"): an assigned row shows ONLY the holder's initials chip, and pressing it reassigns (the same picker); an unassigned row shows nothing, with the control
+   * (a quiet ghost button, its "+" drawn by css) on hover, focus or tap. Without the server's verdict the cell is the holder's name as plain text. The A and I keys find the row through the data-as-* facts. opts as for bulk
    */
   assignApi.heldCell = function (row, opts) {
     if (!row || !Array.isArray(row.holders)) return '';
-    var names = row.holders.map(function (h) { return h.name || ''; }).join(', ');
-    var text = names ? root.esc(names) : '<span style="color:var(--grey,#5B5B5B)" aria-label="' + root.esc(tr('Unassigned')) + '">—</span>';
-    if (!assignApi.showsBar(opts && opts.said)) return text;
+    var list = row.holders.map(function (h) { return h.name || ''; }).filter(Boolean), names = list.join(', ');
+    if (!assignApi.showsBar(opts && opts.said)) return root.esc(names);
     assignApi.mount(opts);
-    return '<span data-as-cell data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '" data-testid="assign-held">' + text + '</span>';
+    var label = names ? tr('Held by') + ' ' + names + '. ' + tr('Assign to…') : tr('Unassigned') + '. ' + tr('Assign to…');
+    return '<button type="button" class="as-held' + (names ? '' : ' as-ghost') + '" data-as-chip data-nolist data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '"' +
+      ' data-cbsid="HOM001-B20" data-cbmount="HOM001-D05" data-testid="assign-held" data-value aria-haspopup="dialog" aria-label="' + root.esc(label) + '"' + (names ? ' title="' + root.esc(names) + '"' : '') + '>' + (names ? root.esc(initialsOf(list)) : '') + '</button>';
   };
   /** the row a chip stands for, in the shape the calls read (subject, role, whether it has a holder) */
   function chipRow(chip) {

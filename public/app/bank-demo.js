@@ -168,6 +168,7 @@
       account: ACCOUNT, from: parsed.from, to: parsed.to, count: total, currency: CURRENCY,
       right: root.CBBankBand.rightAccount({ parsed: parsed, check: model.check, fmt: moneyOf, currency: CURRENCY, statementCurrency: CURRENCY, accountNumber: '', previous: null }),
       statement: amountText(recon.closing_statement), books: amountText(recon.closing_books_before), difference: amountText(recon.difference_before).replace(/^-/, ''),
+      differenceWords: root.CBBankBand.differenceWords(preview.minorOf(recon.closing_statement) - preview.minorOf(recon.closing_books_before), amountText(recon.difference_before).replace(/^-/, '')),
       actions: '<span id="bd_addslot"></span>',
       toGo: total - inBooks, inBooks: inBooks, total: total, nil: preview.minorOf(recon.difference_before) === 0 && total === inBooks, tid: 'bd-band'
     });

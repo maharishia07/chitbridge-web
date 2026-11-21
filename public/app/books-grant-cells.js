@@ -43,7 +43,8 @@
   /** a group key (trade_debtors, gst_and_statutory) as words */
   function groupWords(key) {
     var tax = (typeof root.packWord === 'function' && root.packWord('taxName')) || '';
-    var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : part; }).join(' ');
+    var ACRONYMS = ['gst', 'vat', 'tds', 'tcs', 'payg', 'abn', 'bas']; /* YE-F-13: a tax name is capitals whichever country's page this is (the client's, not the firm's) */
+    var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : ACRONYMS.indexOf(part) >= 0 ? part.toUpperCase() : part; }).join(' ');
     return grantKit.words(text.charAt(0).toUpperCase() + text.slice(1));
   }
   /** the JET rules an entry trips (the filters file's riskOf, read with the period and currency on screen) */
@@ -128,10 +129,14 @@
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
   function moneyCell(row, key, value) {
     var nothing = isBlank(value);
-    if (key === 'sales_minor' && nothing) return grantKit.words('No income');
+    if ((key === 'sales_minor' || key === 'profit_minor') && nothing) return grantKit.words('No income');
     if ((key === 'dr_minor' || key === 'cr_minor') && (nothing || String(value) === '0')) return '';
     if (/^age_/.test(key)) return agedMoney(key, value);
-    return minorWords(row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(value))) : value);
+    return minorWords(owedValue(row, key, value));
+  }
+  /** a supplier's balance is what is owed, so no minus; every other value as it came */
+  function owedValue(row, key, value) {
+    return row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(value))) : value;
   }
   /** an aged bucket: an empty one is blank, as the leaders print it (W21); one never read is a dash */
   function agedMoney(key, value) {

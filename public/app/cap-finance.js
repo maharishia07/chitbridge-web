@@ -28,6 +28,16 @@ var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 function finOwes(p) {
   return Number(p.balance_minor) > 0 || Number(p.disputed_minor) > 0;
 }
+/** J-F-02: the Collections rows — the customer list's OWN figures (COUNT-SOURCE: the same sides.customer the tile reads). A party the server marks 'both' (it owes you and you owe it) carries the netted figure on the row and each list's own in row.sides.<side>; the netted figure can be 0 or negative while the customer half is 1,000, so the row takes sides.customer — nothing is worked out here. */
+function finCollectRows(parties) {
+  var out = [];
+  (parties || []).forEach(function (item) {
+    var row = bkSideHalf(item, 'customer');
+    if (row === item && bkDuesSide(item) !== 'rcv') return;
+    if (finOwes(row)) out.push(row);
+  });
+  return out;
+}
 /** FIN-15: the server's disputed figure said beside the amount ("In dispute ₹170"), '' when none */
 function finDisputeHTML(party) {
   return Number(party.disputed_minor) > 0 ? '<div data-b="disputed" style="font-size:var(--fs-1);color:var(--warn-2)">' + esc(tx('In dispute')) + ' ' + esc(bkMoney(Number(party.disputed_minor), FIN.cur)) + '</div>' : '';
@@ -56,14 +66,16 @@ async function finDuesRead() {
   return dues;
 }
 
+/* SPEED (batch 1128): the tabs other than Collect have their code in type="cb-late" tags (finance.html); until it has run they wait, then run exactly as before */
+var FIN_LATE_TABS = { terms: 0, cash: 1, repeat: 1, pay: 1, cheques: 1, returns: 1, reports: 1 };
+function finLate() {
+  return !!FIN_LATE_TABS[finTab()] && !!window.CBLate && !window.CBLate.isReady();
+}
+
 async function finLoad(quiet) {
-  if (finTab() === 'terms') return ftLoad(quiet); /* the Terms tab (cap-finance-terms.js) */
-  if (finTab() === 'cash') return fcLoad(quiet); /* the Cash tab (cap-finance-cash.js, F3) */
-  if (finTab() === 'repeat') return rpLoad(quiet); /* the Repeat supply tab (cap-repeat.js, RI1) */
-  if (finTab() === 'pay') return fpLoad(quiet); /* the Payables tab (cap-finance-pay.js, F4) */
-  if (finTab() === 'cheques') return fqLoad(quiet); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
-  if (finTab() === 'returns') return frLoad(quiet); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
-  if (finTab() === 'reports') return fmLoad(quiet); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
+  if (finLate() && (await finLeftWhileLate())) return; /* no await at all when nothing is late: the tab's load starts in the same tick */
+  var tabLoader = finTabLoader();
+  if (tabLoader) return tabLoader(quiet);
   var generation = ++FIN.gen;
   if (!quiet) {
     FIN.state = 'loading';
@@ -76,9 +88,7 @@ async function finLoad(quiet) {
     FIN.cur = (dues && dues.currency) || bkCur();
     if (dues && dues.currency && typeof SESSION !== 'undefined' && SESSION)
       SESSION.currency = dues.currency; /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
-    FIN.rows = ((dues && dues.parties) || []).filter(function (item) {
-      return bkDuesSide(item) === 'rcv' && finOwes(item);
-    });
+    FIN.rows = finCollectRows(dues && dues.parties);
     FIN.state = 'ready';
     FIN.err = null;
     ftNav(); /* the tabs' words again, now the language pack has had the boot to land */
@@ -338,13 +348,9 @@ function finCols() {
 function finMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
-  if (finTab() === 'terms') return ftMount(frame); /* the Terms tab (cap-finance-terms.js) */
-  if (finTab() === 'cash') return fcMount(frame); /* the Cash tab (cap-finance-cash.js, F3) */
-  if (finTab() === 'repeat') return rpMount(frame); /* the Repeat supply tab (cap-repeat.js, RI1) */
-  if (finTab() === 'pay') return fpMount(frame); /* the Payables tab (cap-finance-pay.js, F4) */
-  if (finTab() === 'cheques') return fqMount(frame); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
-  if (finTab() === 'returns') return frMount(frame); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
-  if (finTab() === 'reports') return fmMount(frame); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
+  if (finLate()) return finMountWhenReady(frame);
+  var tabMounter = finTabMounter();
+  if (tabMounter) return tabMounter(frame);
   ftNav();
   node.className = 'screen flush';
   node.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';
@@ -409,7 +415,7 @@ function finMount(frame) {
       },
       fig: function (rows) {
         return (
-          txn('{count} party', '{count} parties', rows.length) +
+          txn('{count} owes you', '{count} owe you', rows.length) +
           ' · ' +
           bkOwes(
             rows.reduce(function (total, item) {
@@ -495,7 +501,7 @@ function finQueueSheet() {
   ui.dialog({
     mount: 'FIN001-U01',
     pop: 'POP107',
-    titleText: tx('Remind') + ' · ' + txn('{count} party', '{count} parties', list.length),
+    titleText: tx('Remind') + ' · ' + txn('{count} owes you', '{count} owe you', list.length),
     titleTestid: 'fin-queue-title',
     body:
       list

@@ -733,12 +733,12 @@ var STANDARDS = [
     g: 'Records & data',
     n: 'UN/LOCODE',
     w: 'Places, ports and terminals',
-    ex: 'INMAA',
-    exWhy: 'Chennai, India. Five characters, and no argument about whether "Madras", "Chennai Port" and "MAA" are the same place.',
+    ex: 'NLRTM',
+    exWhy: 'Rotterdam, Netherlands. Five characters, and no argument about whether "Rotterdam", "Port of Rotterdam" and "RTM" are the same place.',
     s: 'plan',
     at: 'Network · places',
     go: 'network',
-    why: '"Chennai" is a city, a port and three terminals. A shipment needs to know which.'
+    why: '"Rotterdam" is a city, a port and three terminals. A shipment needs to know which.'
   },
   /**
    * ⭐ IAM STANDARDS — added after Athi asked *"can you check any specific standard should be followed as part
@@ -920,8 +920,8 @@ var STANDARDS = [
     g: 'Commercial',
     n: 'Incoterms 2020 (ICC)',
     w: 'Who bears cost and risk, and to what point',
-    ex: 'FOB Chennai (Incoterms 2020)',
-    exWhy: 'Risk and cost pass to the buyer once the goods are on board at Chennai. Three words that decide who pays if the container is damaged mid-ocean.',
+    ex: 'FOB Rotterdam (Incoterms 2020)',
+    exWhy: 'Risk and cost pass to the buyer once the goods are on board at Rotterdam. Three words that decide who pays if the container is damaged mid-ocean.',
     s: 'part',
     note: 'Carried on instruments and forms. Built: chitbridge-api lib/incoterms.js holds the eleven Incoterms 2020 rules, refuses a code that is not one of them (the 2010 delivered-duty-unpaid term is gone) and refuses the four sea-only rules for air, road or rail. Missing: no form or chit write calls it yet. Proof of the check: tests/std10-ids-incoterms.test.cjs green on sit-root 2026-11-19 (PM/junit/std-1119/lane10/sit-root-api-tests-20261119-052133.xml).',
     at: 'Chits · instruments',
@@ -1138,7 +1138,7 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'GST credit used in the legal order; CGST and SGST never cross',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'CGST Act s.49 / 49A / 49B, Rule 88A',
     w: 'The order GST credit is used in',
     s: 'live',
@@ -1155,7 +1155,7 @@ var STANDARDS = [
     c: ['IN'],
     p: 'Reverse-charge GST worked out, and paid in cash as the law requires',
     limit: 'Worked out by the engine; the screens follow',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)',
     w: 'Reverse charge, paid in cash only',
     s: 'live',
@@ -1171,7 +1171,7 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'Cess posted on its own; cess credit pays only cess',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'GST (Compensation to States) Cess Act 2017, s.11(2)',
     w: 'Cess and cess credit',
     s: 'live',
@@ -1187,7 +1187,7 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'Returns built from your own bills and matched to the Ledger',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'GSTR-1 / GSTR-3B (GSTN schema)',
     w: 'Monthly returns', s: 'live',
     limit: 'file prepared for upload; no GSP',
@@ -1205,7 +1205,7 @@ var STANDARDS = [
     c: ['IN'],
     p: 'Input credit claimed only when your supplier has filed',
     m: 'Matching built; its screen comes next',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'CGST Act s.16(2)(aa) + GSTR-2B',
     w: 'Input credit only when the supplier filed',
     s: 'part',
@@ -1223,7 +1223,7 @@ var STANDARDS = [
     p: 'e-invoices and e-way bills prepared and checked',
     m: 'No GSP connection yet (decision pending)',
     eq: 'PEPPOL BIS abroad (see UBL)',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'e-invoice INV-01 schema 1.1 (IRP); e-way bill, Rule 138',
     w: 'e-invoice and e-way bill payloads',
     s: 'part',
@@ -1239,7 +1239,7 @@ var STANDARDS = [
     k: 'law',
     c: ['IN'],
     p: 'Interest on late GST worked out for you',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'CGST Act s.50',
     w: 'Interest on late GST',
     s: 'live',
@@ -1275,7 +1275,7 @@ var STANDARDS = [
     c: ['IN'],
     p: 'Bank statements fetched with your consent, not typed in',
     m: 'Not built; decision pending (FIU)',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'RBI Account Aggregator (ReBIT FI schema)',
     w: 'Bank statements by consent',
     s: 'plan',
@@ -1921,7 +1921,7 @@ var STANDARDS = [
     c: ['IN'],
     p: 'Every line of a GST invoice carries its HSN or SAC code',
     m: 'Carried and filed; the digits your turnover asks for are not checked',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'HSN / SAC on invoices — CGST Rule 46 · GSTR-1 HSN summary',
     w: 'The goods or service code on each line, and its summary in the return',
     ex: '0904 · 4 digits up to ₹5 crore turnover',
@@ -1941,7 +1941,7 @@ var STANDARDS = [
     c: ['IN'],
     p: 'A GSTIN is checked when it is typed',
     limit: 'format and check character; not looked up on the GST portal',
-    g: 'Money & GST',
+    g: 'Money & tax',
     n: 'GSTIN — 15 characters with a check character',
     w: 'State code · PAN · entity number · Z · check character',
     ex: '33AAAAA0000A1Z5',
@@ -2627,7 +2627,7 @@ var STD_AREAS = [
   ['web', 'Web design'], /* UX-137: the rules every screen is drawn to; each row's status is what the UI standard page measured, on the date it says */
   ['sell', 'Selling'],
   ['buy', 'Buying'],
-  ['money', 'Money & GST'],
+  ['money', 'Money & tax'],
   ['books', 'Books'],
   ['people', 'People & privacy'],
   ['look', 'Look & access'],
@@ -2695,7 +2695,7 @@ function stdNewest(list, key) {
 function stdDateWords(iso) {
   var d = new Date(iso + 'T12:00:00Z');
   if (!iso || isNaN(d.getTime())) return iso || '';
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return CBShopTime.day(iso);
 }
 /** the rows added most recently, newest first (ties keep register order): the matrix pane's "Added lately" */
 function stdRecent(rows, count) {
@@ -2797,7 +2797,7 @@ function stdGoto(key) {
  * visualise."*
  *
  * ⚠️ A LIST OF STANDARDS IS ABSTRACT; A RECORD IS NOT. Twenty-six rows saying "we follow X" asks a reader to
- * assemble the picture themselves. One chit — pepper leaving Chennai for Dubai — with every standard-bearing
+ * assemble the picture themselves. One chit — pepper leaving Rotterdam for Dubai — with every standard-bearing
  * field labelled shows the same information as a thing they could receive, forward to their own IT person, and
  * argue with.
  *
@@ -2821,7 +2821,7 @@ var STD_RECORD = [
   { k: 'buyer.locale', v: '"ar-AE"', std: 'BCP 47', s: 'live', c: 'How the buyer reads figures. It does NOT change what the seller wrote.' },
   {
     k: 'terms',
-    v: '"FOB INMAA (Incoterms 2020)"',
+    v: '"FOB NLRTM (Incoterms 2020)"',
     std: 'Incoterms · UN/LOCODE',
     s: 'part',
     c: 'Carried on the record. We do not yet check the shipment against it, and UN/LOCODE is not validated.'
@@ -2927,7 +2927,7 @@ function stdRecordHTML(opts) {
     tx('One chit, every standard in it') +
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:6px">' +
-    "500 kg of pepper leaving Chennai for Dubai. Each field carries somebody else's standard, so the record " +
+    "500 kg of pepper leaving Rotterdam for Dubai. Each field carries somebody else's standard, so the record " +
     'arrives already legible to a system that has never heard of us. <b>' +
     tx('Greyed fields are not built yet') +
     '</b> — ' +
@@ -3287,7 +3287,7 @@ var STD_GLOSSARY = [
   ['III', 'Schedule III', "The layout of a company's balance sheet and P&L in India"],
   ['IN', 'India (country code)', 'The ISO 3166 code for India'],
   ['INCITS', 'InterNational Committee for Information Technology Standards', 'A US standards committee'],
-  ['INMAA', 'Chennai port (UN/LOCODE)', 'The world code for Chennai'],
+  ['NLRTM', 'Rotterdam port (UN/LOCODE)', 'The world code for Rotterdam'],
   ['INR', 'Indian rupee', 'The currency of India (ISO 4217 code)'],
   ['INV-01', 'e-invoice schema INV-01', "India's e-invoice format"],
   ['IRN', 'Invoice Reference Number', 'The number the GST portal gives an e-invoice'],
@@ -3312,7 +3312,7 @@ var STD_GLOSSARY = [
   ],
   ['LOCODE', 'UN Location Code', 'The world code for a port or city'],
   ['LTR', 'Left to right', 'Writing direction, as in English'],
-  ['MAA', 'Chennai (IATA code)', 'The airport code for Chennai'],
+  ['RTM', 'Rotterdam (IATA code)', 'The airport code for Rotterdam'],
   ['MDM', 'Master data management', 'Keeping one true copy of product and party data'],
   ['MIT', 'MIT License', 'A free software licence'],
   ['MJ', 'Manual journal', 'An entry typed by hand, so it is checked first'],

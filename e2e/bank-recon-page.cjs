@@ -87,7 +87,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.accounts.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer(EVENTS));
       if (p === '/api/books/ledger/1500') { S.ledgerCalls.push(u.search); return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: S.opening, closing_minor: closing(S) })); }
-      if (p === '/api/books/preview') return J(r, 200, { ok: true, kind: body.event, voucher: { series: 'MJ', type: 'Payment' }, date: body.date, balanced: true, totals: { dr_minor: body.amount_minor, cr_minor: body.amount_minor }, refusals: [], flags: [], credit: null, bill: null, code: null, duplicate: null,
+      if (p === '/api/books/preview') return J(r, 200, { ok: true, kind: body.event, voucher: { series: 'MJ', type: 'Payment' }, date: body.date, balanced: true, totals: { dr_minor: body.amount_minor, cr_minor: body.amount_minor }, refusals: [], flags: [], credit: null, bill: null, code: null, needs: null, duplicate: null,
         lines: [{ code: '6090', ledger: 'Bank charges', dr_minor: body.amount_minor, cr_minor: 0, type: 'nominal', rule: 'Dr expenses and losses' }, { code: '1500', ledger: 'Bank', dr_minor: 0, cr_minor: body.amount_minor, type: 'real', rule: 'Cr what goes out' }] });
       if (p === '/api/books/events' && m === 'POST') { S.lines.push({ date: body.date, what: body.narration, ref: 'MJ/26-27/0030', source: { how_ref: null }, dr_minor: 0, cr_minor: 2360 }); return J(r, 200, Object.assign({ kind: body.kind || body.event }, books.posted({ entry_no: 'MJ/26-27/0030', entry_id: 'e30' }))); }
       if (p === '/api/books/dues') return J(r, 200, books.dues([]));
@@ -155,7 +155,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   const brs = await p.textContent('[data-testid="bank-brs-card"]'); if (process.env.DEBUG_PE) console.log(brs.slice(0, 700));
   ok(/Balance as per books/.test(brs) && /1,04,476\.40/.test(brs) && /Balance as per bank/.test(brs) && /1,09,016\.40/.test(brs), 'books vs bank: books 1,04,476.40 Dr (the API\'s ledger figure after the new entry) and bank 1,09,016.40 Dr (the statement\'s) :: ' + brs.replace(/ +/g, ' ').replace(/\n/g, ' ').slice(0, 300));
   ok(await p.locator('[data-testid="brs-issued"] .pe-row').count() === 1 && await p.locator('[data-testid="brs-bankcr"] .pe-row').count() === 2 && await p.locator('[data-testid="brs-bankdr"] .pe-row').count() === 1, 'every reconciling item is named: 1 cheque not presented · 2 bank credits not in the books · 1 bank debit');
-  ok(/Difference/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Difference'))), 'the difference is nothing');
+  ok(/Unexplained/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Unexplained'))), 'the unexplained figure is nothing');
   await p.screenshot({ path: path.join(SHOTS, 'bank-brs-laptop.png') });
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await ctx.close();

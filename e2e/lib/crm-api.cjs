@@ -135,6 +135,7 @@ function record(rows, id, rec, fus, now) {
       completion: { closed: 0, completed: 0, rejected_or_cancelled: 0, completion_rate_pct: (r.scorecard && r.scorecard.completion_rate_pct) || null } },
     points: pts ? { programme: pts.programme || 'Rewards', points: pts.balance != null ? pts.balance : pts.points, worth: 0 } : null,
     migrated: true,
+    unbilled: row.unbilled || { n: 0, minor: 0, currency: null }, /* CRM-32: the record carries the server's "not billed yet" figure too (the contract lists it, batch 1126) */
     contact_prefs: prefsBefore(),
     followups: (fus || []).filter((f) => f.party_id === id && !f.done_at).map((f) => followupOne(f, now)),
     may: mayOf(null),   /* W2-CRM: the record carries the server's may/why; a handler overrides it with the request's */

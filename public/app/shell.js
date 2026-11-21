@@ -101,11 +101,15 @@
     },
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
+    unfinished: 'Being finished · not ready yet',
+    unfinishedHome: 'Back to Home',
     factsFailed: 'Could not read',
     backToClients: 'Back to Clients',
     skip: 'Skip to content',
     state: { needs_you: 'Needs you', in_use: 'In use', not_started: 'Not started' },
     setUp: 'Set up',
+    notStartedGroup: 'Not set up yet',
+    notStartedCount: function (count) { return count + ' areas are waiting for you'; },
     needsYou: 'Needs you',
     today: 'today',
     switcher: 'Go to',
@@ -193,7 +197,8 @@
   function session(anonymous) {
     try {
       var parsed = anonymous ? null : JSON.parse(lsGet('cb_sess') || 'null'); /* anonymous: a page that reads no stored session */
-      return parsed && parsed.token ? parsed : null;
+      /* CUSTOMER-DELINK: a customer's token in cb_sess is no staff session (CBOnePerson.who is the one reading) */
+      return parsed && parsed.token && (!root.CBOnePerson || root.CBOnePerson.who(parsed)) ? parsed : null;
     } catch (_) {
       return null;
     }
@@ -296,6 +301,7 @@
     '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
     '.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
+    '.cbsh-unready{position:fixed;left:0;right:0;bottom:0;top:var(--sh-bar,52px);z-index:90;background:var(--sh-panel);color:var(--sh-muted);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}.cbsh-unready h2{margin:0 0 6px;font-size:18px;color:var(--sh-ink,inherit)}.cbsh-unready p{margin:0 0 12px;font-size:14px}.cbsh-unready a{color:var(--sh-green);font-weight:600}',
     /* cards (max three columns, DECISIONS.md) */
     '.cbsh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
     '.cbsh-box{display:block;width:100%;text-align:left;background:var(--sh-card);border:1px solid var(--sh-line);border-radius:13px;padding:14px 16px;position:relative;transition:border-color .12s}',
@@ -315,6 +321,8 @@
     '.cbsh-box .f{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;min-width:0}.cbsh-box .facts>.f{flex:1}',
     /* the rest DROPS DOWN over the page on hover or keyboard focus — the tile keeps its size and nothing below it moves (Athi: "show as a dropdown") */
     /* walk 17 Oct (Athi: "represent the status, active / not active"): THE SERVER SAYS which of three a card is (facts `state`) — the dot is never colour alone */
+    '.cbsh-more[data-ns-grouped] .cbsh-box .st.not_started,.cbsh-more[data-ns-grouped] .cbsh-box .facts .f.ns{display:none}' /* S-F-04: one group line says it, not 19 chips */,
+    '.cbsh-nsgroup{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 12px;padding:9px 14px;border:1px dashed var(--sh-line);border-radius:11px;background:var(--sh-panel);color:var(--sh-muted);font-size:13.5px}.cbsh-nsgroup .ns-t{font-weight:700;color:var(--sh-ink)}.cbsh-nsgroup .ns-go{margin-inline-start:auto;font-weight:700;color:var(--sh-green-d);text-decoration:none;min-height:32px;display:inline-flex;align-items:center}',
     '.cbsh-box .st{flex:none;font-size:11.5px;font-weight:700;white-space:nowrap}.cbsh-box .st.needs_you{color:var(--sh-amber-i)}.cbsh-box .st.in_use{color:var(--sh-green-d)}.cbsh-box .st.not_started{color:var(--sh-muted)}',
     '.cbsh-needs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 12px;font-size:13.5px}.cbsh-needs[hidden]{display:none}.cbsh-needs b{color:var(--sh-amber-i)}',
     '.cbsh-needs a{border:1px solid var(--sh-line);border-radius:999px;padding:3px 10px;background:var(--sh-card);text-decoration:none;color:inherit}.cbsh-needs a:hover{border-color:var(--sh-green)}',
@@ -364,9 +372,8 @@
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
-    '@container (max-width:359px){.cbsh-who b{display:none}}',
-    /* the name has no room beside the controls, so a keyboard user who lands on the shop button is told it in a caption under the bar (the same words the aria-label says); it is the button's own name, drawn only while the ring is on it */
-    '@container (max-width:359px){.cbsh-who{position:relative}.cbsh-who:focus-visible b{display:block;position:absolute;top:calc(100% + 4px);left:0;z-index:40;width:max-content;max-width:calc(100cqw - 16px);white-space:normal;overflow:visible;padding:6px 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);color:var(--sh-ink);box-shadow:0 8px 18px var(--sh-shadow)}}',
+    /* YE-F-15 (21 Nov): the person must always see which shop they are in — a narrow bar (a pane beside the sidebar) keeps the name, cut with an ellipsis (the button's title and aria-label carry the whole name); it is never hidden */
+    '@container (max-width:359px){.cbsh-hdr .cbsh-who{min-width:96px}.cbsh-who b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
     '.cbsh-hdr .cbsh-who,.cbsh-hdr .cbsh-swb,.cbsh-hdr .cbsid,.cbsh-hdr .cbb-btn,.cbsh-hdr .cbav-btn,.cbsh-hdr .cbav-signin{min-height:44px;min-width:44px}' /* one level more specific: the bell's and the chip's own stylesheets load after this one */ /* a phone: ⌂ alone (aria-label keeps the word) */,
     '.cbsh-swb .sn{display:none}' /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */,
@@ -744,7 +751,7 @@
     });
   }
   /* THE one way to open a row (one open at a time; force = open it, a tap on an open row closes it). The More page's three rows are the default shape;
-     index2's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
+     Home's pillar accordion passes its own (shape = { items, key, row, panel }), so there is no second copy of the toggle. Returns the open key ('' when none). */
   var MORE_ROWS = { items: '.cbsh-sec.trade,.cbsh-sec.labs,.cbsh-sec.setup', key: 'data-area', row: '.cbsh-row', panel: '' };
   function openRow(scope, key, force, shape) {
     var rows = shape || MORE_ROWS, now = '';
@@ -777,8 +784,11 @@
   }
   /* NAV-MAP 8: a tile that needs THIS shop's id and has none is greyed with its sentence (show the action, say why) - never a link to a blank page */
   function greyedTileHTML(entry, iconHTML, signedIn) {
+    var unfinished = entry.ready === false; /* READY-GREY (Athi 21 Nov): the manifest's `ready` — the same grey tile, a different sentence */
     return (
-      '<div class="cbsh-box off" aria-disabled="true" data-testid="shell-card-' +
+      '<div class="cbsh-box off" aria-disabled="true"' +
+      (unfinished ? ' data-cbsid="HOM001-B01" data-ready="no"' : '') +
+      ' data-testid="shell-card-' +
       esc(entry.id) +
       '" data-id="' +
       esc(entry.id) +
@@ -791,9 +801,49 @@
       '<span class="no" data-testid="shell-off-' +
       esc(entry.id) +
       '">' +
-      esc(T(signedIn ? W.noShop : W.signInShop)) +
+      esc(T(unfinished ? W.unfinished : signedIn ? W.noShop : W.signInShop)) +
       '</span></div>'
     );
+  }
+  /* READY-GREY: the manifest entry a typed address belongs to — the most specific route that matches the path (and its #hash or ?query, when the route has one) */
+  function entryOfAddress(entries, where) {
+    var best = null, bestLen = -1;
+    (entries || []).forEach(function (e) {
+      var route = String((e && e.route) || '').replace('{bridge_id}', '');
+      if (!route) return;
+      var parts = route.split('#'), pq = parts[0].split('?'), tail = parts[1] ? '#' + parts[1] : '';
+      if (pq[0] !== where.pathname) return;
+      if (tail && String(where.hash || '').indexOf(tail) !== 0) return;
+      if (pq[1] && String(where.search || '').indexOf(pq[1].split('&')[0]) < 0) return;
+      var len = pq[0].length + (tail ? tail.length : 0) + (pq[1] ? pq[1].length : 0);
+      if (len > bestLen) { best = e; bestLen = len; }
+    });
+    return best;
+  }
+  /* READY-GREY: a typed address to a not-ready page shows the same note, over the page, with the way back (no bypass: no GOV switch exists) */
+  function gateUnready(doc, manifest, where) {
+    var old = doc.querySelector('[data-testid="shell-unready"]');
+    var entry = manifest && entryOfAddress(manifest.entries, where);
+    if (!entry || entry.ready !== false) {
+      if (old) old.remove();
+      return false;
+    }
+    if (old) return true;
+    var cover = doc.createElement('div');
+    cover.className = 'cbsh-unready';
+    cover.setAttribute('data-testid', 'shell-unready');
+    cover.setAttribute('data-cbsid', 'HOM001-B01');
+    cover.setAttribute('role', 'alert');
+    cover.innerHTML = '<div><h2>' + entryName(entry) + '</h2><p>' + esc(T(W.unfinished)) + '</p><a href="/" data-testid="shell-unready-home">' + esc(T(W.unfinishedHome)) + '</a></div>';
+    doc.body.appendChild(cover);
+    return true;
+  }
+  /* the gate at mount, and again when the address changes inside the page (a #route) */
+  function watchUnready(state, doc, win) {
+    gateUnready(doc, state.manifest, win.location);
+    win.addEventListener('hashchange', function () {
+      gateUnready(doc, state.manifest, win.location);
+    });
   }
   /* the area a go() asks for, made real: More is the phone's tab (a laptop shows the three areas themselves); an area this showing does not draw is Home */
   function resolveArea(areaId, onPhone, drawn) {
@@ -811,7 +861,7 @@
       return tile.getAttribute('data-id');
     });
     return ((manifest && manifest.entries) || []).filter(function (entry) {
-      return entry && wanted.indexOf(entry.id) >= 0;
+      return entry && entry.ready !== false && wanted.indexOf(entry.id) >= 0;
     });
   }
   /* the nav buttons an edition leaves out: an area it does not draw; More only when none of its three areas is drawn */
@@ -895,7 +945,7 @@
       if (who) {
         var levelWord = person && wordsOf(person.level) ? ' · ' + wordsOf(person.level) : '';
         who.querySelector('b').textContent = shopName() + levelWord;
-        who.setAttribute('aria-label', shopName() + levelWord); who.title = S.headerWhy || ''; /* the refused read's words */
+        who.setAttribute('aria-label', shopName() + levelWord); who.title = S.headerWhy || shopName(); /* the refused read's words */
       }
       if (sheet) sheet.setAttribute('aria-label', shopName());
       var element = $('.cbsh-lic'),
@@ -1084,7 +1134,7 @@
       return bid ? text.replace('{bridge_id}', encodeURIComponent(bid)) : text.split('?')[0];
     }
     function card(e) {
-      if (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf()) return greyedTileHTML(e, glyph(e.icon), !!person);
+      if (e.ready === false || (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf())) return greyedTileHTML(e, glyph(e.icon), !!person);
       return (
         '<a class="cbsh-box" data-cbsid="HOM001-B01" href="' +
         esc(routeOf(e)) +
@@ -1506,9 +1556,7 @@
           S.manifest = null;
         }
       )
-      .then(function () {
-        S.loadingApps = false;
-      })
+      .then(function () { S.loadingApps = false; watchUnready(S, doc, root); })
       .then(function () {
         paintEdition();
         if (mode === 'home') {
@@ -1626,8 +1674,14 @@
        detail  the server's sentence for a 403 (never invented here); anything else is not printed
        retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; next = what to do about a refusal, in words; back  { href, label } or a list of them: the way out
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
+  /** the ONE sentence for a 429 (M-F-07): how long to wait when the server said, else "a moment" — the failed-read frame and a list's own error state both say it */
+  function busySentence(retryAfter) {
+    var wait = Math.ceil(Number(retryAfter));
+    return wait >= 1 ? T('Too many requests — try again in {n} s.').replace('{n}', wait) : T('Too many requests — try again in a moment.');
+  }
   /** the sentence a failed read says: a 403 uses the server's own words (detail), anything else says it could not be read and nothing was changed */
   function readFailedSentence(options, refused) {
+    if (Number(options.status) === 429) return busySentence(options.retryAfter); /* M-F-07: a busy answer is not a failed read */
     if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
     return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
   }
@@ -1653,6 +1707,7 @@
   root.CBShell = {
     setWorking: setWorking,
     readFailed: readFailed,
+    busySentence: busySentence,
     mount: mount,
     apiBase: apiBase,
     WORDS: W,
@@ -1660,6 +1715,9 @@
     PHONE_TABS: PHONE_TABS.slice(),
     PHONE_MORE: PHONE_MORE.slice(),
     sectionOf: sectionOf,
+    greyedTileHTML: greyedTileHTML,
+    entryOfAddress: entryOfAddress,
+    gateUnready: gateUnready,
     openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);

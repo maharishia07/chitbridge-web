@@ -13,10 +13,10 @@ const pub = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf
 let failed = 0;
 const ok = (what, condition) => { console.log((condition ? '  ok   ' : '  FAIL ') + what); if (!condition) failed++; };
 
-const store = pub('store.html'), shell = pub('app/accounts-shell.js');
+const store = pub('store.html'), shell = pub('app/cb-words.js');
 const inline = store.slice(store.indexOf('<script>'));
 const declared = (src) => new Set([...src.matchAll(/^(?:async\s+)?function\s+([\w$]+)|^(?:const|let|var)\s+([\w$]+)/gm)].map((m) => m[1] || m[2]));
-const shellAt = store.indexOf('/app/accounts-shell.js'), ownScript = store.indexOf('\n<script>\n');
+const shellAt = store.indexOf('/app/cb-words.js'), ownScript = store.indexOf('\n<script>\n');
 ok('UX-142 store.html loads the shared shell', shellAt > -1);
 ok('UX-142 the shell loads before the page script that calls toast()', shellAt > -1 && shellAt < ownScript);
 ok('UX-142 store.html declares no toast() of its own', !declared(inline).has('toast'));

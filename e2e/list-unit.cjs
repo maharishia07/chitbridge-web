@@ -182,7 +182,7 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
   ok(await p.locator('.cbl-state[data-testid="cbl-nomatch-' + K + '"]').count() === 1 && /Nothing matches/.test(await p.textContent('.cbl-state')) && await p.locator('[data-cbl-clear]').count() === 1, 'no match: says so, with Clear search and filters');
   await p.click('[data-cbl-clear]');
   ok(await p.locator('.cbl-row').count() === before && await p.inputValue('[data-testid="listctl-search-' + K + '"]') === '', 'Clear brings the rows back and empties the box');
-  await p.fill('[data-testid="listctl-search-' + K + '"]', 'kumar');
+  await p.fill('[data-testid="listctl-search-' + K + '"]', 'spares');
   await p.waitForTimeout(80);
   const kum = await p.locator('.cbl-row').count();
   ok(kum > 0 && kum < before, 'search is live as you type (oninput, not Enter): ' + kum + ' of ' + before);

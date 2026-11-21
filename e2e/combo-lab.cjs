@@ -12,6 +12,7 @@
 'use strict';
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
+const CBSample = require('../public/app/sample-set.js'); /* the same neutral sample the page reads (node side: module.exports) */
 const ROOT = path.join(__dirname, '..', 'public');
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css' };
 let bad = 0;
@@ -110,9 +111,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     return {
       building: MODLAB.building, notTiedToProduct: MODLAB.pid === null,
       hasName: !!MODLAB.name, hasPrice: Number(MODLAB.price) > 0,
-      nameFieldShown: /value="Tiffin Combo"/.test(html), priceFieldShown: new RegExp('value="' + MODLAB.price + '"').test(html),
+      nameFieldShown: html.indexOf('value="' + comboExampleFresh().name + '"') >= 0, priceFieldShown: new RegExp('value="' + MODLAB.price + '"').test(html),
       groupCount: modLabGroups().length,
-      hasRealGroup: /value="Choose the main"/.test(html), hasRealOptions: /value="Masala Dosa"/.test(html) && /value="Idli \(2 pc\)"/.test(html),
+      hasRealGroup: /value="Choose the main"/.test(html), hasRealOptions: comboExampleFresh().groups[0].options.every(function (o) { return html.indexOf('value="' + o.name + '"') >= 0; }),   /* the neutral sample's mains (CBSample), never the Chennai menu */
       editable: /onchange="modLabSetGroup/.test(html), hasPreviewButton: /modLabPreviewLikeTill/.test(html),
       hasSaveAsButton: /modLabSaveAsOpen/.test(document.getElementById('modLabFoot').innerHTML),
       hasCreateNewButton: /modLabCreateNew/.test(document.getElementById('modLabFoot').innerHTML),
@@ -143,7 +144,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     await modLabSaveAsConfirm();
     return { call: call, dialogClosed: !MODLAB.savingAs, prefilled: prefilled };
   });
-  say('the save name starts prefilled with the combo’s own name — one less thing to retype', saved.prefilled === 'Tiffin Combo', '"' + saved.prefilled + '"');
+  say('the save name starts prefilled with the combo’s own name — one less thing to retype', saved.prefilled === CBSample.forCountry('').comboName, '"' + saved.prefilled + '"');
   say('Save as posts the built groups under the typed name', saved.call && saved.call.body.name === 'My topping combo', saved.call ? JSON.stringify(saved.call.body.name) : 'not called');
   say('carrying the real group definition — all three sections, not a stub', saved.call && Array.isArray(saved.call.body.definition) && saved.call.body.definition.length === 3, saved.call ? JSON.stringify(saved.call.body.definition.map((g) => g.name)) : '');
   say('and the inline save row closes on success', saved.dialogClosed, 'confirmed');
@@ -251,7 +252,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
 
   console.log('\n── ⭐⭐⭐ [OFFR-07] "CREATE AS A NEW PRODUCT" — the combo becomes a real, sellable product ' + '─'.repeat(0));
   const createdNew = await p.evaluate(async () => {
-    modLabBuildFresh();   /* fresh 'Tiffin Combo' example: a real name, a real price, three real sections */
+    modLabBuildFresh();   /* fresh neutral combo example (CBSample): a real name, a real price, three real sections */
     let postCall = null;
     const realApiFetch = window.apiFetch, realFetch = window.fetch;
     window.apiFetch = async (method, url, body) => {
@@ -267,7 +268,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   });
   say('"Create as a new product" POSTs to the real /api/products, not a combo-templates row', createdNew.postCall && createdNew.postCall.method === 'POST', createdNew.postCall ? createdNew.postCall.url : 'not called');
   say('carrying the real name, the real price, and all three sections — not a stub', createdNew.postCall
-    && createdNew.postCall.body.item_data.name === 'Tiffin Combo' && createdNew.postCall.body.item_data.price === 110
+    && createdNew.postCall.body.item_data.name === CBSample.forCountry('').comboName && createdNew.postCall.body.item_data.price === 18
     && createdNew.postCall.body.item_data.modifiers.length === 3,
     createdNew.postCall ? JSON.stringify(createdNew.postCall.body.item_data) : '');
   say('and the builder resets once the product exists for real', !createdNew.buildingAfter && !createdNew.nameAfter, 'confirmed');

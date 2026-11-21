@@ -89,7 +89,7 @@ async function run() {
   /* ── 1 · static ── */
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   /* the sign-in window's Register link is the workshop's page until a customer register page exists (BACKLOG: REGISTER PAGE) - the ONE allowed mention */
-  ok(!/app\.html/.test(src.replace(/registerHref:\s*'\/app\.html#\/register'/, '')), 'static · zero "app.html" in index.html (I12) bar the Register link');
+  ok(!/app\.html/.test(src.replace(/<!--[^]*?-->/g, '').replace(/registerHref:\s*'\/app\.html#\/register'/, '')), 'static · zero "app.html" in index.html (I12) bar the Register link (HTML comments aside)');
   ok(!/\btier\b/i.test(src), 'static · no word "tier" (Q5)');
   ok(!/accounting|books of account/i.test(src), 'static · neither "accounting" nor "books of account" (it is the Ledger)');
   ok(!/class="(box|lab|cbsh-box|cbsh-sc)[" ]/.test(src) && !/data-testid="(box|lab)-/.test(src), 'static · no hand-written card: every card is a manifest row');
@@ -130,6 +130,7 @@ async function run() {
     p = p || {};
     const seen = [], calls = [];
     const ctx = await b.newContext({ viewport: { width: vw, height: vh }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+    ctx._lbl = vw + 'x' + vh + (p.signedOut ? ' out' : '') + (p.manifest ? ' planted' : '');
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     if (p.manifest) await ctx.route('**/app/manifest.json', (r) => J(r, 200, p.manifest));
     await ctx.route('**/api/**', (r) => {
@@ -154,7 +155,7 @@ async function run() {
   }
   async function open(ctx, q) {
     const pg = await ctx.newPage();
-    pg.on('pageerror', (e) => errs.push(String(e.message)));
+    pg.on('pageerror', (e) => errs.push(String(e.message) + ' @ ' + String((e.stack || '').split(String.fromCharCode(10))[1] || '').trim().slice(0, 140) + ' [' + (q || '/') + ' ' + ctx._lbl + ']'));
     await pg.goto(base + '/' + (q || ''));
     await pg.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 });
     await pg.evaluate(() => window.SHELL && window.SHELL.ready);
@@ -170,216 +171,88 @@ async function run() {
   fs.mkdirSync(SHOTS, { recursive: true });
 
   try {
-    /* ── 2 + 3 · 1366, signed in, the shipped manifest, nothing wrong ── */
+    /* ── 2 · signed in, the shipped manifest, nothing planted: the one-screen Home (batch 1126) ── */
     {
-      const { ctx, seen, calls } = await profile(1366, 800), pg = await open(ctx);
-      ok(await pg.locator('[data-testid="cbshell"]').count() === 1 && await pg.getAttribute('[data-testid="cbshell"]', 'data-mode') === 'home', '1366 · Home mounts the shell once, as Home');
-      ok(await pg.locator('[data-testid="shell-nav"]').count() === 1 && await pg.locator('[data-testid="shell-avatar"] [data-testid="cbavatar"]').count() === 1, '1366 · the nav and the one avatar are the shell\'s');
-      const navAreas = await pg.$$eval('[data-testid="shell-nav"] .cbsh-nv', (bs) => bs.filter((b) => !b.hidden && b.offsetParent).map((b) => b.getAttribute('data-go')));
-      const shellAreas = await pg.evaluate(() => window.CBShell.AREAS); const W = await pg.evaluate(() => window.CBShell.WORDS);
-      ok(navAreas.join() === AREA_LIST.join() && shellAreas.join() === AREA_LIST.join(), '1366 · the nav has SEVEN areas, in order: ' + AREA_LIST.join(' · ') + ' (drawn: ' + navAreas.join(' · ') + ')');
-      const sections = await pg.$$eval('.cbsh-sec', (ss) => ss.map((x) => x.dataset.area));
-      ok(sections.join() === AREA_LIST.join(), '1366 · one section per area: Home (with the "Your work" box) · Selling · Money · Running it · Trade · Labs · Setup (' + sections.join(' · ') + ')');
-      const heads = await pg.$$eval('.cbsh-ph', (hs) => hs.map((h) => (h.querySelector('.rn') || h).textContent.trim()));   /* Trade · Labs · Setup are phone "rows": the name (.rn) beside a one-line purpose (.rs) */
-      ok(heads.length === 7 && heads[0] === W.areas.home && ['selling', 'money', 'running', 'trade', 'labs', 'setup'].every((a, i) => heads[i + 1] === W.caption[a]), '1366 · the section headings (' + heads.join(' · ') + ')');
-      const tiles = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
-      ok(tiles.length === BUILT.length && tiles.every((h) => h === 148), '1366 · all ' + tiles.length + ' tiles are 148px tall (' + [...new Set(tiles)].join(', ') + ')');
-      ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.locator('.cbsh-sc').count() === REST.length, '1366 · ' + BUILT.length + ' cards and ' + REST.length + ' dashed chips — one per manifest row');
-      let hrefsOk = true;
-      for (const e of BUILT) { const h = await pg.getAttribute('[data-testid="shell-card-' + e.id + '"]', 'href'); if (h !== e.route.replace('{bridge_id}', 'CBTEST1234')) { hrefsOk = false; console.log('      ' + e.id + ' → ' + h); } }
-      ok(hrefsOk, '1366 · every built card links to its utility page');
+      const { ctx, seen, calls } = await profile(1366, 768), pg = await open(ctx);
+      ok(await pg.locator('[data-testid="cbshell"]').count() === 1 && await pg.getAttribute('[data-testid="cbshell"]', 'data-mode') === 'home', '1366 · Home mounts the shell once (data-mode=home)');
+      ok(await pg.locator('[data-testid="shell-avatar"] [data-testid="cbavatar"]').count() === 1, '1366 · the avatar is the one CBAvatar in the shell\'s slot');
+      ok(!(await vis(pg, '[data-testid="shell-nav"]')), '1366 · the seven-area nav of the retired classic Home is not on the page');
+      const rows = await pg.$$eval('.ix-row', (n) => n.map((x) => x.parentNode.getAttribute('data-pillar')));
+      ok(rows.length >= 6, '1366 · the pillar rows are drawn (' + rows.join(',') + ')');
+      const fit = await pg.evaluate(() => { const d = document.documentElement; return { sy: d.scrollHeight - innerHeight, sx: d.scrollWidth - innerWidth }; });
+      ok(fit.sy <= 1 && fit.sx <= 0, '1366 · the page fits one screen (' + JSON.stringify(fit) + ')');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
-      const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
-      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
-      const before = pg.url(), pages = ctx.pages().length;
-      await pg.click('[data-testid="shell-chip-delivery"]'); await pg.waitForTimeout(250);   /* delivery: still a coming chip (Stock became a built card in T3-OPS) */
-      ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');
-      /* NAMES-1 (Athi, 17 Oct): "Running it" is one flat group, like Trade; Stock stands in it; every tile says what it is for */
-      const run = await pg.evaluate(() => { const s = document.querySelector('.cbsh-sec.running'); const ids = (sel) => [...s.querySelectorAll(sel)].map((n) => n.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
-        return { pils: s.querySelectorAll('.cbsh-pil').length, cards: ids('.cbsh-box'), chips: ids('.cbsh-sc'), stock: (s.querySelector('[data-testid="shell-card-stock"] h4') || {}).textContent }; });
-      ok(run.pils === 0 && run.cards.join() === 'operations,stock,tasks,suppliers,counters,employees,coassist' && run.chips.join() === 'delivery',
-        '1366 · Running it is flat: ' + run.cards.join(' · ') + ', then the later chips ' + run.chips.join(' · ') + ' (' + run.pils + ' sub-panels)');
-      ok(run.stock === 'Stock', '1366 · Stock is a tile under Running it, and a shop with no country reads the neutral word "Stock" (' + run.stock + ')');
-      const bare = await pg.$$eval('.cbsh-box', (bs) => bs.filter((b) => !((b.querySelector('.what') || {}).textContent || '').trim()).map((b) => b.dataset.id));
-      ok(bare.length === 0, '1366 · no tile without its purpose line' + (bare.length ? ' — bare: ' + bare.join(', ') : ''));
-      /* reads: only budgeted ones; null facts paint nothing */
+      /* rule (a): a card the manifest says is not ready draws the grey tile, never a live card; a ready built card is a link to its page */
+      for (const g of await pg.$$('.ix-row')) { await g.click(); await pg.waitForTimeout(120); }
+      const grey = await pg.$$eval('[data-ready="no"]', (n) => n.length);
+      const notReady = man.entries.filter((e) => e.ready === false && e.state === 'built');
+      ok(grey > 0 || notReady.length === 0, '1366 · not-ready cards draw grey (' + grey + ' grey, ' + notReady.length + ' built-but-not-ready entries in the manifest)');
+      const readyRoutes = man.entries.filter((e) => e.state === 'built' && e.ready !== false && e.route).map((e) => e.route.split('#')[0]);
+      const liveLinks = await pg.$$eval('.cbsh-box:not(.off)[href]', (n) => n.map((x) => x.getAttribute('href')));
+      const stray = liveLinks.filter((h) => !readyRoutes.includes(h.split('#')[0]));
+      ok(stray.length === 0, '1366 · every live card links to a READY built entry (a not-ready one is never a link)' + (stray.length ? ' - not: ' + stray.join(',') : ''));
+      /* every read the page makes is a budgeted one */
       const unbudgeted = [...new Set(calls.filter((c) => !budgeted(c.p, c.m)).map((c) => c.m + ' ' + c.p))];
-      unbudgeted.forEach((u) => found.push({ key: 'no budget line: ' + u, show: u }));
-      ok(true, '1366 · (known list, see below) every read has its budget line in ' + (BUDGET_FILE ? path.basename(path.dirname(BUDGET_FILE)) + '/round-trips.budget.json' : '(api checkout not found - the mirrored list)') + ' (' + [...new Set(seen)].length + ' routes)' + (unbudgeted.length ? ' — not: ' + unbudgeted.join(', ') : ''));
-      ok(seen.includes('/api/entities/sides') && seen.includes('/api/work/facts'), '1366 · the drawers asked /api/entities/sides and "Your work" asked /api/work/facts (both have a budget line)');
-      ok(seen.includes('/api/books/health'), '1366 · the ledger\'s waiting posts were asked (GET /api/books/health)');
-      /* the shipped manifest's facts reads answer 404 (not built yet): a tile says "—" at most - no figure, no status, nothing invented */
-      const factsText = await pg.$$eval('.cbsh-box .facts', (fs_) => fs_.map((f) => f.textContent.trim()));
-      ok(factsText.every((t) => t === '' || t === '—') && await pg.locator('[data-testid="shell-state"]').count() === 0 && await pg.locator('[data-testid="shell-needs"]').isHidden(), '1366 · a card whose facts read does not exist yet shows no figure and no status; the "Needs you" strip stays hidden');
-      const al = await pg.evaluate(() => { const a = document.querySelector('[data-slot="alerts"]'); return { kids: a.childElementCount, h: a.offsetHeight, ids: [...a.querySelectorAll('[data-testid]')].map((n) => n.dataset.testid).join() }; });
-      ok(al.kids === 0 && al.h === 0, '1366 · nothing wrong → the alerts slot draws nothing (' + al.h + 'px' + (al.kids ? '; it draws: ' + al.ids : '') + ')');
-      ok(await pg.locator('[data-testid="rail"]').count() === 0, '1366 · the rail has no read yet → it is not drawn (never an invented number)');
-      await pg.click('[data-testid="shell-shop"]');
-      const st = await pg.locator('[data-testid="shell-sheet"]').innerText();
-      ok(await vis(pg, '[data-testid="shell-sheet-empty"]') && /not available yet/i.test(st) && !/\d/.test(st), '1366 · N19 404 → the sheet\'s empty state, no number (kept)');
-      await pg.keyboard.press('Escape');
-      ok(await pg.evaluate(() => !!document.querySelector('.cbsh-foot #cbkural')), '1366 · the kural is the footer band');
-      for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); for (let w = 0; w < n - BUDGET[a]; w++) found.push({ key: 'words over budget in ' + a, show: a + ' word ' + (BUDGET[a] + w + 1) }); ok(n >= 0, '1366 · words in ' + a + ': ' + n + ' (budget ' + BUDGET[a] + ', ' + Math.max(0, n - BUDGET[a]) + ' over, ratcheted)'); }
-      {
-        const RK = require('./lib/known-findings.cjs').ratchet('index-page', found, { owner: 'ux-locale (words) / api (budget lines)' });
-        console.log(RK.line);
-        ok(RK.fresh.length === 0, 'no NEW unbudgeted read or word over budget' + (RK.fresh.length ? ': ' + RK.fresh.map((i) => i.key + ' [' + i.show + ']').join('; ') : ''));
-      }
+      unbudgeted.forEach((u) => found.push({ key: 'no budget line: ' + u, show: u }));   /* ratcheted in e2e/scanner-known.json (api owns the budget lines): a NEW unbudgeted read fails */
+      { const RK = require('./lib/known-findings.cjs').ratchet('index-page', found, { owner: 'api (budget lines)' }); console.log(RK.line); ok(RK.fresh.length === 0, '1366 · no NEW read without a budget line in the api round-trips.budget.json' + (RK.fresh.length ? ' - new: ' + RK.fresh.map((i) => i.show).join(', ') : '')); }
+      ok(seen.includes('/api/entities/me'), '1366 · the page asked its own reads (' + [...new Set(seen)].length + ' distinct)');
       ok(!/accounting|books of account|error|404/i.test(await pg.evaluate(() => document.body.innerText)), '1366 · no forbidden word, no error string on the screen');
-      await pg.screenshot({ path: path.join(SHOTS, 'index-laptop.png') });
       await ctx.close();
     }
 
-    /* ── 3b · a US shop: the Stock tile is the country's word, Inventory (NAMES-1: helpers.js packWord, the per-country words) ── */
+    /* ── 3 · planted manifest and api: the facts the cards draw are the API's ── */
     {
-      const { ctx } = await profile(1366, 800, { me: { entity: { display_name: 'Main Street Store', currency_code: 'USD', country: 'US' } } }), pg = await open(ctx);
-      await pg.waitForFunction(() => window.CBAvatar && window.CBAvatar.shopCountry && window.CBAvatar.shopCountry() === 'US', null, { timeout: 10000 }).catch(() => {});
-      await pg.waitForTimeout(200);
-      const word = await pg.locator('.cbsh-sec.running [data-testid="shell-card-stock"] h4').innerText().catch(() => '');
-      ok(word === 'Inventory', '1366 · a US shop: the Stock tile under Running it says "Inventory" (' + word + ')');
+      const { ctx, seen } = await profile(1366, 768, { manifest: Object.assign({}, PLANTED, { home2: Object.assign({}, man.home2, { pillars: man.home2.pillars.map((p) => Object.assign({}, p, { ids: (p.ids || []).filter((id) => PLANTED.entries.some((e) => e.id === id)) })) }) }) }), pg = await open(ctx);
+      await pg.waitForTimeout(600);
+      const asked = ['/api/facts/till', '/api/facts/accounts', '/api/facts/finance'].filter((u) => seen.includes(u));
+      ok(asked.length === 3, 'planted · each built card with a facts URL asked it (' + asked.join(',') + ')');
+      ok(!seen.includes('/api/facts/storefront') && !seen.includes('/api/facts/crm'), 'planted · a card with facts null asks nothing');
+      ok(seen.includes('/api/work/facts'), 'planted · "Your work" asked the manifest\'s rail facts read');
+      const text = await pg.evaluate(() => document.body.innerText);
+      ok(!/\{money\}|INR/.test(text), 'planted · a money line is written by the money unit, never the raw token');
       await ctx.close();
     }
 
-    /* ── 4 · 1366, a planted manifest and a planted API: facts, the rail, the alerts ── */
+    /* ── 4 · 390: no sideways scroll ── */
     {
-      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' }, { id: 2, reason: 'September is locked.' },
-        { id: 3, todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)' }, { id: 4, todo: 'add_supplier', name: 'Sri Ganesh', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.' }], pair: { ent: 'ent-C', name: 'Mayuri123' } });
-      const pg = await open(ctx);
-      await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
-      /* a tile shows its status, ONE line and a "+n"; every line is in the drop-down (.more) */
-      const tf = await pg.$eval('[data-testid="shell-facts-till"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), more: (n.querySelector('.more') || {}).textContent || '', n: (n.querySelector('.more-n') || {}).textContent, lines: n.querySelectorAll('.more .f').length }));
-      ok(/12 bills · ₹4,280/.test(tf.tile) && tf.n === '+1 more' && tf.lines === 2 && /1 bill waiting to send Send now ›/.test(tf.more) && !/INR|{money}/.test(tf.tile + tf.more), 'planted · the Till tile shows one line and "+1"; its drop-down holds both lines, from the API ("' + tf.tile + '" / "' + tf.more.trim() + '")');
-      /* RPT2: the Till card's teaser — the sparkline + "↑ +12% vs last year" (arrow + sign + words), a door into Reports › Trend, inside the tile's one row */
-      const teaser = await pg.evaluate(() => { const t = document.querySelector('[data-testid="shell-facts-till"] [data-testid="shell-fact-trend"]'); return t ? { words: t.textContent.replace(/\s+/g, ' ').trim(), href: t.getAttribute('data-href'), svg: !!t.querySelector('svg[role="img"][aria-label]'), h: Math.round(t.getBoundingClientRect().height) } : null; });
-      ok(teaser && teaser.svg && teaser.words === '↑ +12% vs last year' && teaser.href === '/finance.html#/reports/trend/week' && teaser.h <= 24, 'planted · the Till card carries the teaser: a sparkline + "↑ +12% vs last year", opening Reports › Trend, one line high (' + JSON.stringify(teaser) + ')');
-      ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the Accounts tile: one line from the API, no +n');
-      const fin = await pg.$eval('[data-testid="shell-facts-finance"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), n: (n.querySelector('.more-n') || {}).textContent, lines: [...n.querySelectorAll('.more .f')].map((x) => x.textContent.trim()) }));
-      ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2 more' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');
-      ok(await pg.$eval('[data-testid="shell-facts-finance"] .more-n', (n) => n.getAttribute('title')) === 'All 3 lines of this tile', 'UX-3 · the "+2" badge says what it counts: "All 3 lines of this tile"');
-      /* STATUS: shell-state on every card whose facts answered (state, or lines); none on a card with no facts read */
-      const sts = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => ({ id: b.dataset.id, st: (b.querySelector('[data-testid="shell-state"]') || { dataset: {} }).dataset.state || null })));
-      const wrongSt = sts.filter((x) => (PLANTED_STATE[x.id] || null) !== x.st);
-      ok(Object.keys(PLANTED_STATE).every((id) => sts.some((x) => x.id === id)) && wrongSt.length === 0, 'planted · every card whose facts answered carries its status (shell-state): ' + Object.keys(PLANTED_STATE).map((id) => id + '=' + PLANTED_STATE[id]).join(' · ') + (wrongSt.length ? ' — wrong: ' + wrongSt.map((x) => x.id + '=' + x.st).join(', ') : ''));
-      const ns = await pg.$eval('[data-testid="shell-facts-marketing"]', (n) => n.innerText.replace(/\s+/g, ' ').trim());
-      ok(/Not started/.test(ns) && /Set up ›/.test(ns) && !/No .* yet/i.test(ns), 'planted · a not-started card says so and invites ("' + ns + '"), never "No X yet"');
-      /* HOME'S NEEDS-YOU STRIP: exactly the needs_you cards, each a door to its page, above every tile */
-      const need = await pg.$eval('[data-testid="shell-needs"]', (n) => ({ hidden: n.hidden, ids: [...n.querySelectorAll('a')].map((a) => a.dataset.testid.replace('shell-needs-', '')).sort(), hrefs: [...n.querySelectorAll('a')].map((a) => a.getAttribute('href')).sort() }));
-      const wantNeed = Object.keys(PLANTED_STATE).filter((k) => PLANTED_STATE[k] === 'needs_you').sort();
-      ok(!need.hidden && need.ids.join() === wantNeed.join() && need.hrefs.join() === ['/accounts.html', '/till.html'].join(), 'planted · the "Needs you" strip lists exactly the needs_you cards (' + wantNeed.join(', ') + '), each a door (' + need.ids.join(', ') + ')');
-      const tiles2 = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
-      ok(tiles2.length > 0 && tiles2.every((h) => h === 148), 'planted · every tile stays 148px with a status, a +n and a drop-down (' + [...new Set(tiles2)].join(', ') + ')');
-      const yw = await pg.$eval('[data-testid="rail"]', (n) => ({ head: n.querySelector('h3').textContent.trim(), home: !!n.closest('.cbsh-sec.home') }));
-      ok(yw.head === 'Your work' && yw.home, 'planted · the "Your work" box sits in Home (' + yw.head + ')');
-      ok((await pg.locator('[data-testid="shell-facts-crm"]').innerText()).trim() === '', 'planted · a card with facts null shows nothing');
-      const rail = await pg.evaluate(() => { const t = (s) => (document.querySelector('[data-testid="' + s + '"]') || {}).textContent; const o = document.querySelector('[data-testid="rail-open"]'); return { n: t('work-new'), i: t('work-in'), o: t('work-out'), m: t('work-mine'), d: t('work-done'), open: o && o.getAttribute('href') }; });
-      ok(rail.n === '3' && rail.i === '5' && rail.o === '2' && rail.m === '2' && rail.d === '7', 'planted · "Your work" digits are the API\'s (' + JSON.stringify(rail) + ')');
-      ok(rail.open === '/tasks.html', 'planted · the "Your work" Open goes where the manifest says (rail.route)');
-      const rows = await pg.$$eval('[data-slot="alerts"] .al', (els) => els.map((e) => ({ id: e.dataset.testid, lvl: e.className.replace('al ', ''), text: e.textContent.replace(/\s+/g, ' ').trim(), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') })));
-      const led = rows.find((r) => r.id === 'ledger-waiting'), pr = rows.find((r) => r.id === 'till-paired');
-      ok(led && /things? (is|are) waiting for you/.test(led.text) && led.fix === '/accounts.html#waiting', 'planted · ONE waiting row with ONE count (NAV-MAP 7) - its number is the API sum, its fix opens Accounts (' + (led && led.text) + ')');
-      /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
-      ok(!rows.some((r) => r.id === 'ledger-accept' || r.id === 'ledger-supplier'), 'planted · the three waiting rows are ONE row');
-      ok(!rows.some((r) => /waiting for the ledger/.test(r.text)), 'planted · no row says "waiting for the ledger"');
-      ok(pr && pr.lvl === 'warn' && /Counter 1 · paired to Mayuri123, not this shop/.test(pr.text) && (pr.fix || '') === '/till.html#shop=ent-idx&as=Mayur%20Bhavan', 'planted · a counter paired to another shop earns an amber row whose button pairs it here (' + (pr && pr.text) + ' → ' + (pr && pr.fix) + ')');
-      ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
-      for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], 'planted 1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
-      await pg.screenshot({ path: path.join(SHOTS, 'index-alerts.png') });
-      await ctx.close();
-    }
-    /* ── 4b · STD1: Home says the server's ONE count (/health todo — GROUP BY over every waiting row), never the 50-row page's length ── */
-    {
-      const page = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, todo: 'accept', reason: 'Waiting for you to confirm the goods (bill B' + i + ')' }));
-      const { ctx } = await profile(1366, 800, { manifest: PLANTED, waiting: page, health: { total: 211, todo: { accept: 120, add_supplier: 90, record: 1 } } });
-      const pg = await open(ctx);
-      await pg.waitForSelector('[data-testid="ledger-waiting"]', { timeout: 8000 }).catch(() => {});
-      const t = (id) => pg.evaluate((x) => ((document.querySelector('[data-testid="' + x + '"]') || {}).textContent || '').replace(/\s+/g, ' '), id);
-      ok(/(^|[^0-9])211 things are waiting for you/.test(await t('ledger-waiting')),
-        'STD1 · > 50 rows: Home says the server count (120 + 90 + 1 = 211) in one row, not the page of 50 (' + (await t('ledger-waiting')) + ')');
+      const { ctx } = await profile(390, 844), pg = await open(ctx);
+      const sw = await pg.evaluate(() => document.documentElement.scrollWidth);
+      const wide = await pg.evaluate(() => [].slice.call(document.querySelectorAll('.cbsh-main *, .ix-row')).filter((x) => { const r = x.getBoundingClientRect(); return r.width > 0 && r.right > 391; }).length);
+      ok(sw === 390 && wide === 0, '390 · scrollWidth === 390 (' + sw + ') and no row or card reaches past the screen (' + wide + ' do)');
       await ctx.close();
     }
 
-    /* ── 5 + 6 · 390, the same planted day: bottom tabs, one area at a time, the rail and the alerts on Home, no sideways scroll ── */
+    /* ── 5 · signed out: no /api call, the showcase, grey for not-ready (rule a) ── */
     {
-      const { ctx } = await profile(390, 844, { manifest: PLANTED, waiting: [{ id: 1, reason: 'September is locked.' }] }), pg = await open(ctx);
-      await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
-      const sw = () => pg.evaluate(() => document.scrollingElement.scrollWidth);
-      ok(await sw() === 390, '390 · scrollWidth === 390 (' + await sw() + ')');
-      const nav = await pg.evaluate(() => { const r = document.querySelector('.cbsh-nav').getBoundingClientRect(); return { bottom: Math.round(r.bottom), w: Math.round(r.width) }; });
-      ok(nav.bottom === 844 && nav.w === 390, '390 · the seven areas are a bottom tab bar');
-      ok(await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join()) === 'home', '390 · one area at a time: Home first');
-      ok(await vis(pg, '[data-testid="rail"]') && await vis(pg, '[data-testid="ledger-waiting"]'), '390 · Home shows the rail and the alert');
-      const railR = await pg.evaluate(() => { const r = document.querySelector('[data-testid="rail"]').getBoundingClientRect(); return { l: r.left, r: Math.round(r.right) }; });
-      ok(railR.l >= 0 && railR.r <= 390, '390 · the rail sits inside the screen (' + railR.l + ' → ' + railR.r + ')');
-      ok(await pg.evaluate(() => !!document.querySelector('[data-testid="shell-pfoot"] #cbkural')), '390 · the kural sits in the footer above the tab bar (never a card in Home)');
-      await pg.screenshot({ path: path.join(SHOTS, 'index-phone.png') });
-      for (const a of Object.keys(BUDGET)) {
-        const isMore = ['trade', 'labs', 'setup'].includes(a);
-        await pg.click('[data-testid="shell-nav-' + (isMore ? 'more' : a) + '"]'); if (isMore) await pg.click('[data-testid="shell-row-' + a + '"]'); await pg.waitForTimeout(120);   /* five tabs: Trade, Labs and Setup are rows on More */
-        const shown = await pg.evaluate(() => [...document.querySelectorAll('.cbsh-sec')].filter((s) => s.offsetParent).map((s) => s.dataset.area).join());
-        const n = await areaWords(pg, a);
-        ok((isMore ? shown === 'trade,labs,setup' : shown === a) && n <= BUDGET[a] && await sw() === 390, '390 · tab ' + a + ' shows only ' + a + ', ' + n + ' words ≤ ' + BUDGET[a] + ', no sideways scroll');
-        if (a === 'selling') await pg.screenshot({ path: path.join(SHOTS, 'index-phone-selling.png') });
-      }
-      ok((await offList(pg)).length === 0, '390 · zero app.html hrefs outside the avatar');
-      await ctx.close();
-    }
-
-    /* ── the ledger off: a 404 is nothing wrong ── */
-    {
-      const { ctx, seen } = await profile(1366, 800, { booksOff: true }), pg = await open(ctx);
-      await pg.waitForTimeout(300);
-      ok(seen.includes('/api/books/health') && await pg.locator('[data-slot="alerts"] .al').count() === 0 && !/404/.test(await pg.evaluate(() => document.body.innerText)), 'ledger off · the 404 earns no row and never reaches the screen');
-      await ctx.close();
-    }
-
-    /* ── 7 · signed out ── */
-    {
-      const { ctx, seen } = await profile(1366, 800, { signedOut: true }), pg = await open(ctx);
+      const { ctx, seen } = await profile(1366, 768, { signedOut: true }), pg = await open(ctx);
       ok(seen.length === 0, 'signed out · not one /api call leaves the page (' + seen.length + ')');
-      ok(await pg.locator('.cbsh-box').count() === BUILT.length && await pg.$$eval('.cbsh-box .facts', (fs_) => fs_.every((f) => f.textContent.trim() === '')), 'signed out · the cards are still drawn, with no facts');
-      ok(await pg.locator('[data-testid="signin-door"]').count() === 1 && await pg.locator('[data-testid="shell-shop"]').count() === 0, 'signed out · the avatar is the one Sign in door; no shop button');
-      ok(await pg.locator('[data-slot="alerts"] .al').count() === 0, 'signed out · no alerts');
+      ok(await pg.locator('[data-testid="signin-door"]').count() === 1 && await pg.locator('[data-testid="shell-shop"]').count() === 0, 'signed out · the avatar is the one Sign in door');
       ok((await offList(pg)).length === 0, 'signed out · zero app.html hrefs outside the avatar');
-      await ctx.close();
-    }
-    {
-      const { ctx, seen } = await profile(1366, 800), pg = await open(ctx, '?left=Other%20Shop');
-      const row = pg.locator('[data-testid="signed-out-why"]');
-      ok(await row.count() === 1 && /Signed out — Other Shop opened in another tab\./.test(await row.innerText()), 'left · the row says why (' + (await row.innerText().catch(() => '')).replace(/\s+/g, ' ').trim() + ')');
-      ok(await pg.locator('[data-testid="signed-out-go"]').count() === 1 && await pg.locator('[data-testid="signin-door"]').count() === 1 && seen.length === 0, 'left · its button is the avatar\'s door, and nothing was read');
-      ok((await offList(pg)).length === 0, 'left · still zero app.html hrefs outside the avatar');
-      await ctx.close();
-    }
-
-    /* ── 8 · THE MANIFEST'S ROADMAP KEYS (read by the Sign-in Lab Roadmap tab) · every built route opens · no per-shop figure before sign-in ── */
-    {
-      const longFits = man.entries.filter((e) => e.fits && (typeof e.fits !== 'string' || e.fits.split(' ').length > 16)).map((e) => e.id + ' (' + e.fits.split(' ').length + ' words)');
-      ok(man.entries.every((e) => !e.rows || Array.isArray(e.rows)) && man.entries.every((e) => !e.phase || typeof e.phase === 'string') && longFits.length === 0, 'manifest · rows is a list, phase and fits are short strings (fits <= 16 words)' + (longFits.length ? ' - too long: ' + longFits.join(', ') : ''));
-      ok(/rows = /.test(man._) && /phase = /.test(man._) && /fits = /.test(man._) && /Sign-in Lab Roadmap/.test(man._), 'manifest · the keys (rows · phase · fits) are in the manifest\'s own dictionary, read by the Sign-in Lab Roadmap tab');
-      const { ctx } = await profile(1366, 800, { signedOut: true }), pg = await open(ctx);
-      let routesOk = true;
-      for (const e of BUILT) { if (/^https?:/.test(e.route)) continue; /* an external dev card (UX-141) is not a page we serve */ const r = await ctx.request.get(base + e.route.replace('{bridge_id}', 'CBTEST1234')); if (r.status() !== 200) { routesOk = false; console.log('      ' + e.route + ' → ' + r.status()); } }
-      ok(routesOk, 'every built entry\'s route returns 200');
       const txt = await pg.evaluate(() => document.body.innerText);
       ok(!/\d+ (bills|customers|suppliers)|₹/.test(txt), 'signed out · no per-shop figure (no bills, customers, rupees)');
+      /* a built entry the manifest marks not ready is listed Coming in its panel, never Live */
+      const byId = new Map(man.entries.map((e) => [e.id, e]));
+      const wrong = [];
+      for (const t of await pg.$$('.ix-item .ix-row, button.ix-fw')) {
+        await t.click(); await pg.waitForTimeout(150);
+        const lines = await pg.$$eval('dialog[open] .ix-se', (n) => n.map((x) => ({ id: (x.getAttribute('data-testid') || '').replace('ix2-show-', ''), soon: x.classList.contains('soon') })));
+        lines.forEach((l) => { const e = byId.get(l.id); if (e && e.state === 'built' && e.ready === false && !l.soon) wrong.push(l.id); });
+        await pg.click('dialog[open] .ix-x').catch(() => {}); await pg.waitForTimeout(80);
+      }
+      ok(wrong.length === 0, 'signed out · a built-but-not-ready entry is listed Coming, never Live' + (wrong.length ? ' - Live: ' + wrong.join(',') : ''));
       await ctx.close();
     }
     {
-      const { ctx } = await profile(1366, 800, { manifest: PLANTED }), pg = await open(ctx);
-      await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
-      ok(await pg.locator('[data-testid="roadmap"]').count() === 0 && await pg.locator('[data-testid="rail"]').count() === 1, 'signed in · Home draws "Your work" and no roadmap');
-      /* every "Your work" number is a door to the folder it counts */
-      const hrefs = await pg.evaluate(() => { const o = {}; ['work-new', 'work-in', 'work-out', 'work-mine', 'work-done'].forEach((k) => { const n = document.querySelector('[data-testid="' + k + '-open"]'); o[k] = n && n.getAttribute('href'); }); return o; });
-      ok(hrefs['work-new'] === '/tasks.html?view=orders_in' && hrefs['work-in'] === '/tasks.html?view=orders_in' && hrefs['work-out'] === '/tasks.html?view=orders_out' && hrefs['work-mine'] === '/tasks.html?view=tasks' && hrefs['work-done'] === '/tasks.html?view=done', 'work · each number opens its folder (' + JSON.stringify(hrefs) + ')');
+      const { ctx, seen } = await profile(1366, 768, { signedOut: true }), pg = await open(ctx, '?cleaned=1');
+      ok(seen.length === 0 && await pg.locator('[data-testid="signed-out-go"]').count() === 1 && /being cleaned/.test(await pg.locator('[data-testid="signed-out-why"]').innerText()), 'cleaned · the row says why, its button is the one Sign in door, not one /api call');
       await ctx.close();
     }
+
+    /* ── 6 · every built entry's route is served ── */
     {
-      /* SIGNED IN, a manifest whose rail has no read behind it: nothing is drawn, never a made-up number (index-page-breaks "the rail invents a number") */
-      const { ctx } = await profile(1366, 800, { manifest: Object.assign({}, PLANTED, { rail: { route: '/tasks.html', facts: null } }) }), pg = await open(ctx);
-      await pg.waitForSelector('.cbsh-box', { timeout: 8000 }).catch(() => {});
-      await pg.waitForTimeout(800);
-      ok(await pg.locator('[data-testid="rail"]').count() === 0, 'signed in · a rail with no read behind it draws nothing (never an invented number)');
-      await ctx.close();
+      const routes = [...new Set(man.entries.filter((e) => e.state === 'built' && e.route).map((e) => e.route.split(/[#?]/)[0]))];
+      const codes = await Promise.all(routes.map((r) => new Promise((res) => http.get(base + r, (q) => { q.resume(); res(q.statusCode); }).on('error', () => res(0)))));
+      ok(codes.every((c) => c === 200), 'every built entry\'s route returns 200' + (codes.some((c) => c !== 200) ? ' - not: ' + routes.filter((_, i) => codes[i] !== 200).join(',') : ''));
     }
 
     ok(...C.finish());

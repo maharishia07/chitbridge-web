@@ -66,7 +66,7 @@ const walk = async (w) => {
     return { ok: /settings\.html#\/new$/.test(url) && /New shop/.test(side) && !/Your shop|Country/.test(side) && win === 0, saw: url + ' · sidebar "' + side + '" · sign-in fields ' + win };
   });
   await w.step('R4', 'New shop -> User ID + e-mail -> Create -> one register call; the code step with the gov panel; Verify greyed until "These are right" is ticked', async () => {
-    await page.fill('[data-testid="reg-name"]', handle); await page.fill('[data-testid="reg-email"]', email);
+    await page.fill('[data-testid="reg-shop-name"]', 'Walk Shop'); await page.fill('[data-testid="reg-name"]', handle); await page.fill('[data-testid="reg-email"]', email);
     await page.click('[data-testid="reg-submit"]');
     await page.waitForSelector('[data-testid="reg-otp"]', { timeout: 15000 });
     const reg = wrote(/POST \/api\/entities\/register/), gov = await page.locator('[data-testid="reg-gov"]').count();

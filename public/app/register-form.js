@@ -14,7 +14,7 @@
  * Flow step: R2R step 1 · country — registration is its door (docs/process/flows.json).
  */
 'use strict';
-var REG = { step: 'form', name: '', email: '', busy: false, err: '' };
+var REG = { step: 'form', shop: '', name: '', email: '', busy: false, err: '' };
 var REG_AT = { host: null, onDone: null }; /* host · onDone: a small app's pane (CB Settings › New shop) — null = app.html's auth card at #root */
 /** the gate tick (SCR053-U01): the answer is kept and the form repaints, so Verify enables */
 function regAgreeChanged(checked) {
@@ -22,7 +22,7 @@ function regAgreeChanged(checked) {
   renderRegister();
 }
 function regReset() {
-  REG = { step: 'form', name: '', email: '', busy: false, err: '' };
+  REG = { step: 'form', shop: '', name: '', email: '', busy: false, err: '' };
   renderRegister();
 }
 /* SCREEN: Register (#/register) · module target: auth.js
@@ -100,13 +100,21 @@ function regLangHTML(code) {
   try {
     own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || '';
   } catch (_) { /* browser feature missing: the default applies */ }
-  return esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+  var label = esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+  return REG_LANGS_READY.indexOf(code) < 0 ? '<span style="color:var(--grey)" data-testid="reg-lang-coming-' + esc(code) + '">' + label + ' · ' + esc(tx('coming')) + '</span>' : label;
+}
+/** AE-F-21: the screens are English today; a language the pack lists but the app does not offer yet is shown greyed "coming", never promised (the readiness rule) */
+var REG_LANGS_READY = ['en'];
+/** the pack's languages, the ones the app offers first */
+function regLangsOrdered(list) {
+  var all = (list || []).slice();
+  return all.filter(function (c) { return REG_LANGS_READY.indexOf(c) >= 0; }).concat(all.filter(function (c) { return REG_LANGS_READY.indexOf(c) < 0; }));
 }
 /** how numbers and dates print in the pack's format — the browser's own Intl: one fixed number, today's date (R4: never a hard-coded day) */
 function regFormatSample(locale) {
   try {
     var n = new Intl.NumberFormat(locale).format(1234567890.5),
-      d = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+      d = CBShopTime.sample(locale, new Date(), { day: '2-digit', month: '2-digit', year: 'numeric' });
     return '<bdi dir="auto">' + esc(n) + '</bdi> · <bdi dir="auto">' + esc(d) + '</bdi>';
   } catch (_) {
     return esc(locale);
@@ -149,7 +157,7 @@ function regSpinRows() {
     out.push({
       key: 'language',
       what: tx('Language'),
-      value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '),
+      value: regLangsOrdered(pk.languages).slice(0, 2).map(regLangHTML).join(' · '),
       from: '',
       known: !!(pk.languages && pk.languages.length)
     });
@@ -260,17 +268,19 @@ function renderRegister() {
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', autocomplete: 'username', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
+    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}${ui.field({ mount: 'SCR053-U05', kind: 'text', id: 'r_shop', testid: 'reg-shop-name', label: 'Business name', autocomplete: 'organization', placeholder: 'Acme Traders', maxlength: 255, value: R.shop })}
+       <div data-testid="reg-shop-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${esc(tx('Printed on every bill · you can change it any time'))}</div>
+       ${ui.field({ mount: 'SCR053-U02', kind: 'text', id: 'r_name', testid: 'reg-name', label: 'User ID', autocomplete: 'username', placeholder: 'acmetraders', value: R.name, attrs: { autocapitalize: 'off', spellcheck: 'false' } })}
        <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
-         <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). Your business name can be anything; set it after you sign in.'))}">ⓘ</span></div>
+         <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). The User ID is only for signing in; your business name is the line above.'))}">ⓘ</span></div>
        ${ui.field({ mount: 'SCR053-U03', kind: 'email', id: 'r_email', testid: 'reg-email', label: 'Email', placeholder: 'you@yourshop.example', value: R.email })}
        ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
   } else {
-    form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
+    form = `<div ${who}>${R.shop ? esc(R.shop) + ' · ' : ''}${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 6 })}
+       ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'text', maxlength: 320 })}
        ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
        <button data-cbsid="SCR053-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
   }
@@ -298,44 +308,54 @@ function renderRegister() {
   const node = document.getElementById('r_go');
   if (node) node.onclick = doRegister;
 }
+/** the sentence that refuses a User ID typed at sign-up, or '' when it is fine (the same rule as the server, said before the round trip) */
+function regUserIdWhy(uid) {
+  if (uid.indexOf('@') >= 0) {
+    return 'A User ID cannot contain "@". That separator makes an employee sign-in — ravi@yourbusiness.';
+  }
+  if (uid.indexOf('.') >= 0) {
+    return 'A User ID cannot contain ".". That separator makes a network store — yourbusiness.clothing.';
+  }
+  if (uid.length < 8) {
+    return 'A User ID is at least 8 characters. "' + uid + '" is ' + uid.length + '.';
+  }
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(uid) || /-$/.test(uid)) {
+    /* ⚠ SAY WHICH CHARACTER. "letters, numbers and dashes" makes the person re-read their own typing to find
+       what offended; the first bad character is something we already know. */
+    var badch = (uid.match(/[^a-z0-9-]/) || [])[0];
+    return badch
+      ? badch === ' '
+        ? 'A User ID cannot contain a space. Use a dash instead — corner-hardware.'
+        : 'A User ID cannot contain "' + badch + '". Letters, numbers and dashes only — the rest are kept for internal use.'
+      : 'A User ID starts and ends with a letter or number — not a dash.';
+  }
+  return '';
+}
+/** the sign-up form's own checks: the sentence for the first thing wrong, or '' (business name, User ID, email address) — said before the round trip */
+function regFormWhy(shop, name, email) {
+  /* A-F-01: the shop's name prints on every bill and is the name everywhere — asked here, not left to the User ID */
+  if (shop.length < 2) return 'Type your business name (2 letters or more) — it prints on every bill.';
+  if (!name || !email) return 'A User ID and an email address are required.';
+  /* ⚠️ THE SAME RULE AS THE SERVER, SAID BEFORE THE ROUND TRIP — not INSTEAD of it. handleLib.checkRoot is the
+       authority (routes/entities.js refuses on its own); this only spares someone a wasted OTP request. It is
+       deliberately the same three sentences, so a person never sees two different explanations of one rule. */
+  /* WALK S S-F-01: an address no code can reach is refused here, in words, before the register call (the shared ui.field.emailWhy) */
+  return regUserIdWhy(name.trim().toLowerCase()) || ui.field.emailWhy(email) || '';
+}
 async function doRegister() {
   const R = REG;
-  const v_name = val('r_name'),
+  const v_shop = val('r_shop'),
+    v_name = val('r_name'),
     v_email = val('r_email'),
     v_otp = val('r_otp');
   if (R.step === 'form') {
-    if (!v_name || !v_email) {
-      R.err = 'A User ID and an email address are required.';
+    R.shop = (v_shop || '').trim();
+    const refusal = regFormWhy(R.shop, v_name, v_email);
+    if (refusal) {
+      R.err = refusal;
       return renderRegister();
     }
-    /* ⚠️ THE SAME RULE AS THE SERVER, SAID BEFORE THE ROUND TRIP — not INSTEAD of it. handleLib.checkRoot is the
-       authority (routes/entities.js refuses on its own); this only spares someone a wasted OTP request. It is
-       deliberately the same three sentences, so a person never sees two different explanations of one rule. */
-    const uid = v_name.trim().toLowerCase();
-    if (uid.indexOf('@') >= 0) {
-      R.err = 'A User ID cannot contain "@". That separator makes an employee sign-in — ravi@yourbusiness.';
-      return renderRegister();
-    }
-    if (uid.indexOf('.') >= 0) {
-      R.err = 'A User ID cannot contain ".". That separator makes a network store — yourbusiness.clothing.';
-      return renderRegister();
-    }
-    if (uid.length < 8) {
-      R.err = 'A User ID is at least 8 characters. "' + uid + '" is ' + uid.length + '.';
-      return renderRegister();
-    }
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(uid) || /-$/.test(uid)) {
-      /* ⚠ SAY WHICH CHARACTER. "letters, numbers and dashes" makes the person re-read their own typing to find
-         what offended; the first bad character is something we already know. */
-      var badch = (uid.match(/[^a-z0-9-]/) || [])[0];
-      R.err = badch
-        ? badch === ' '
-          ? 'A User ID cannot contain a space. Use a dash instead — corner-hardware.'
-          : 'A User ID cannot contain "' + badch + '". Letters, numbers and dashes only — the rest are kept for internal use.'
-        : 'A User ID starts and ends with a letter or number — not a dash.';
-      return renderRegister();
-    }
-    R.name = uid;
+    R.name = v_name.trim().toLowerCase();
     R.email = v_email.trim();
   }
   R.err = '';
@@ -343,11 +363,11 @@ async function doRegister() {
   renderRegister();
   try {
     if (R.step === 'form') {
-      /* user_id is the permanent one; display_name simply STARTS as it and is free to change in IAM after. */
+      /* user_id is the permanent one; display_name is the business name typed above (A-F-01) and is free to change after. */
       /* ⭐ FX-AU1: the guess the governance panel SHOWED travels with the registration — the server names it in the write that creates the
          shop (routes/entities.registerNew), so the column default never decides a Sydney shop is Indian. Verify still sends it (COALESCE). */
       const response = await api('register', {
-        body: { user_id: R.name, display_name: R.name, email: R.email, context: window.CBGov ? CBGov.payload(govCtx()) : undefined }
+        body: { user_id: R.name, display_name: R.shop || R.name, email: R.email, context: window.CBGov ? CBGov.payload(govCtx()) : undefined }
       });
       R.email = (response && response.email) || R.email;
       R.busy = false;
@@ -362,10 +382,15 @@ async function doRegister() {
             cblog('warn', 'register: Country setup unloaded — the panel shows country codes, not names: ' + (e && e.message));
           });
         REG.verticals = (answer && answer.constitutions) || [];
+        /* GREY-VERT: the default is never a setup that is not ready (the answer's `ready`; an older answer without it reads as ready) */
         const dv =
           REG.verticals.find(function (x) {
-            return x.is_default;
-          }) || REG.verticals[0];
+            return x.is_default && x.ready !== false;
+          }) ||
+          REG.verticals.find(function (x) {
+            return x.ready !== false;
+          }) ||
+          null;
         REG.constitution = dv ? dv.key : null;
         /* GOV-SPIN: the installation's country and the packs a registrant may choose — the panel's first country is the installation's */
         REG.spin =
@@ -410,22 +435,17 @@ function regVerticalChooser() {
     list
       .map(function (item) {
         const sel = (REG.constitution || '') === item.key;
-        const caps = (item.capabilities || []).join(' · ');
+        /* GREY-VERT (Athi, 21 Nov): a setup the api says is not ready is the same grey tile as the Home card (cbsh-box off, "Being finished · not ready yet") and cannot be chosen; ONE element, two states, so the one code SCR053-C03 is written once */
+        const greyedOut = item.ready === false;
         return (
-          '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' +
-          esc(item.key) +
-          '" onclick="REG.constitution=\'' +
-          esc(item.key) +
-          '\';renderRegister()" style="border:1px solid ' +
-          (sel ? 'var(--blue)' : 'var(--line)') +
-          ';background:' +
-          (sel ? 'var(--blue-tint)' : 'var(--card)') +
-          ';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">' +
-          (sel ? '● ' : '○ ') +
-          esc(regSetupLabel(item)) +
-          ' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="' +
-          esc(txf('Includes: {caps}', { caps: caps || 'core' })) +
-          '">ⓘ</span></div></div>'
+          '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' + esc(item.key) + '"' +
+          (greyedOut
+            ? ' class="cbsh-box off" aria-disabled="true" data-ready="no" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default"><div style="font-weight:700;font-size:var(--fs-2)">○ ' +
+              esc(regSetupLabel(item)) + '</div><span class="no" data-testid="reg-vertical-off-' + esc(item.key) + '" style="display:block;font-size:var(--fs-1);margin-top:4px">' + esc(tx('Being finished · not ready yet')) + '</span>'
+            : ' onclick="REG.constitution=\'' + esc(item.key) + '\';renderRegister()" style="border:1px solid ' + (sel ? 'var(--blue)' : 'var(--line)') + ';background:' + (sel ? 'var(--blue-tint)' : 'var(--card)') +
+              ';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">' + (sel ? '● ' : '○ ') + esc(regSetupLabel(item)) +
+              ' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="' + esc(txf('Includes: {caps}', { caps: (item.capabilities || []).join(' · ') || 'core' })) + '">ⓘ</span></div>') +
+          '</div>'
         );
       })
       .join('') +

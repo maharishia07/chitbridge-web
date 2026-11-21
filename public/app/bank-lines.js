@@ -228,7 +228,7 @@
       openNext: function (afterId) {
         var rows = sorted(cfg.rows()),
           at = Math.max(-1, rows.map(function (row) { return row.id; }).indexOf(afterId)),
-          pending = function (row) { return row.status === 'need' || row.status === 'ready'; },
+          pending = function (row) { return row.status === 'need'; }, /* a Ready line has its answer: the next one that still needs one opens */
           next = rows.slice(at + 1).filter(pending)[0] || rows.filter(pending)[0];
         if (next) list.open(next.id, true);
         else if (afterId) list.open(afterId, false);

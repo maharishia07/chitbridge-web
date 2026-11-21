@@ -671,7 +671,7 @@ function bankFigures() {
     statement: plain(worked.bank_balance_minor),
     books: plain(worked.book_balance_minor),
     gap: bkbFig(Math.abs(difference)),
-    dir: difference > 0 ? tx('the statement is higher than your books') : difference < 0 ? tx('your books are higher than the statement') : '' /* which side is higher: the two carried figures, set side by side */,
+    dir: CBBankBand.differenceWords(difference, bkbFig(Math.abs(difference))) /* which side shows more: the two carried figures, set side by side, ONE helper with the demo */,
     parts: [
       notIn ? txn('{count} line not yet in your books', '{count} lines not yet in your books', notIn) : '',
       notBank ? txn('{count} line not yet on the statement', '{count} lines not yet on the statement', notBank) : ''
@@ -767,7 +767,7 @@ function bankBandCore() {
       parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
       booksOpening_minor: BKB.ledgerRaw ? BKB.ledgerRaw.opening_minor : null, accountNumber: bkbHeldNumber(), previous: bkbPreviousStatement()
     }),
-    statement: figures.statement, books: figures.books, difference: figures.gap,
+    statement: figures.statement, books: figures.books, difference: figures.gap, differenceWords: figures.dir,
     toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: P.lines.length,
     unexplained: figures.unexplained && /[1-9]/.test(figures.unexplained) ? figures.unexplained : '', nil: figures.nil
   });
@@ -913,7 +913,7 @@ function bkbBrsRows(statement) {
         '<div class="pe-row" data-testid="brs-row-' +
         index +
         '"><span>' +
-        bkbE(tx(line.label)) +
+        bkbE(tx(line.label === 'Difference' ? 'Unexplained' : line.label)) + /* C-F-04: the engine's remainder after the timing items is the UNEXPLAINED figure; "Difference" is not used for two figures */
         '</span><span class="mono">' +
         bkbE(bkbFig(Math.abs(line.minor)) + (line.minor < 0 && line.sign === '' ? ' ' + tx('overdrawn') : '')) +
         '</span></div>'

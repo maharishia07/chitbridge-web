@@ -281,13 +281,12 @@ function route(S, r) {
       const label = vp.label + 'px-' + st.label;
       await p.goto(base + '/');
       await settle(p);
-      if (vp.w < 700) { await p.click('[data-testid="shell-nav-more"]').catch(() => {}); await p.click('[data-testid="shell-row-labs"]').catch(() => {}); }   /* a phone: More, then the Labs row */
-      const tax = await p.locator('[data-testid="shell-chip-rail-lab"]').first();
-      const taxTag = await tax.evaluate((el) => el.tagName).catch(() => '?');
-      const taxHref = await tax.getAttribute('href').catch(() => null);
-      const taxText = (await tax.locator('.tag').textContent().catch(() => '')) || '';
+      await p.click('[data-testid="ix2-foot-labs"]').catch(() => {}); await p.waitForTimeout(300);   /* 1128: the one Home keeps Labs behind its foot word: the sheet holds the chip (signed out: the showcase line, "Coming") */
+      const tax = await p.locator(st.signedOut ? '[data-testid="ix2-show-rail-lab"]' : '[data-testid="shell-chip-rail-lab"]').first();
+      const taxTag = await tax.evaluate((el) => el.tagName).catch(() => '?'), taxHref = await tax.getAttribute('href').catch(() => null);
+      const taxText = (st.signedOut ? await tax.locator('i').textContent().catch(() => '') : await tax.locator('.tag').textContent().catch(() => '')) || '';
       ok('index', taxTag !== 'A' && !taxHref, 'Dispute Lab chip is not a link (' + label + ')', 'tagName=' + taxTag + ' href=' + taxHref);
-      ok('index', /^later$/.test(taxText.trim()), 'Dispute Lab chip names its state, "later" (' + label + ')', 'got "' + taxText.trim() + '"');
+      ok('index', st.signedOut ? /^coming$/i.test(taxText.trim()) : /^later$/.test(taxText.trim()), 'Dispute Lab chip names its state, "' + (st.signedOut ? 'Coming' : 'later') + '" (' + label + ')', 'got "' + taxText.trim() + '"');
       const sw = await scrollWidthOk(p, vp.w);
       ok('index', sw, 'no horizontal scroll (' + label + ')', 'document.scrollWidth exceeded ' + vp.w);
       await p.screenshot({ path: path.join(SHOTS, 'labs-flow-index-' + label + '.png'), fullPage: true });

@@ -25,7 +25,7 @@ const fnSrc = (src, name) => {
   return src.slice(at, src.indexOf('\n}\n', at) + 3);
 };
 const admin = read('app/cap-admin.js');
-const shell = read('app/accounts-shell.js');
+const shell = read('app/cb-words.js');
 const core = read('app/core.js');
 
 const UUID = '0d102689-4f3a-4c2b-9a51-77aa31c0de01';

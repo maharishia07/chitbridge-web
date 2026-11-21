@@ -88,7 +88,8 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .bk-skel i{display:block;height:38px;border-radius:8px;background:linear-gradient(90deg,var(--line-2),var(--sub),var(--line-2));background-size:200% 100%;animation:bksk 1.2s linear infinite}
 @keyframes bksk{to{background-position:-200% 0}}
 @media (prefers-reduced-motion:reduce){.bk-skel i{animation:none}}
-.content{padding:24px 40px 120px;display:flex;flex-direction:column;gap:16px}   /* no width cap (T17): the page takes the screen; only prose is capped */
+.content{padding:24px 40px 24px;display:flex;flex-direction:column;gap:16px}   /* no width cap (T17): the page takes the screen; only prose is capped */
+.content:has([data-cbl-fit="window"]){padding-bottom:8px}   /* a list that fills the window ends at the window: the 120 px of end room below a long page would push the page 112 px past the screen (Day book, Dues 880 at 1366) */
 .empty{padding:48px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
 .empty strong,.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:700}
 .empty .big{font-size:26px}
@@ -137,6 +138,19 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 @keyframes sp{to{transform:rotate(360deg)}}
 #bk_body label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
 #bk_body table{max-width:100%}
+/* F-53 (21 Nov): a report fits the screen - only its rows scroll; the head stays on top, the Total row on the bottom (the no-scroll rule, 1366x768 + 390x844) */
+.bk-scroll{overflow:auto;min-height:160px}
+/* the statement tables (TB, P&L, Balance sheet): the page is the screen - the head and the figures bar keep their height, the rows take the rest and scroll; the old calc() max-height left P&L 22 px and the phone 44 px past the screen once the real lead and notes were drawn */
+body:has(.bk-scroll,.ov-pics) .main{display:flex;flex-direction:column;overflow:hidden}
+body:has(.bk-scroll,.ov-pics) .content{flex:1 1 auto;min-height:0;padding-bottom:8px}
+.content>#bk_body:has(>.bk-scroll){flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+#bk_body>.bk-scroll{flex:1 1 auto}
+/* How we are doing: the headline and tiles keep their height, the pictures take the rest and scroll inside - the page itself never does */
+.content>#bk_body:has(.ov-pics){flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#bk_body .ov,#bk_body #ov_main{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+#bk_body .ov-pics{flex:1 1 auto;min-height:150px;overflow:auto;align-content:start;grid-auto-rows:max-content}
+#bk_body .ov-tiles,#bk_body .ov-head{flex:0 0 auto}
+@media(max-width:620px){#bk_body .ov-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px}#bk_body .ov-tile{padding:4px 8px}#bk_body .ov-head{margin:2px 0 6px;font-size:var(--fs-2)}}.bk-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}.bk-scroll tfoot td{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line-3)}
 
 /* To do — one row a thing that needs doing: symbol · count · sentence · its one button; a phone puts the button under the sentence, full width */
 .todo{display:flex;flex-direction:column;gap:10px;max-width:760px}
@@ -184,7 +198,7 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .pe-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:18px;font-weight:700;padding-top:6px}
 .pe-basis{font-weight:700;font-size:14px}
 .pe-check{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:14px}
-.pe-check.ok>span:first-child{color:var(--green-d)}.pe-check.bad>span:first-child{color:var(--red-i)}
+.pe-check.ok>span:first-child{color:var(--green-d)}.pe-check.bad>span:first-child{color:var(--red-i)}.pe-check.warn>span:first-child{color:var(--amber-i)}
 .pe-tab{height:40px;padding:0 14px;display:flex;align-items:center;gap:8px;border:1px solid var(--line-3);border-radius:999px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600}
 .pe-tab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
 .pe-bank{display:flex;flex-direction:column;gap:12px}
@@ -361,6 +375,15 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
   #bk_body table.bktab td[data-l]::before{content:attr(data-l);font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:var(--muted-2);text-align:left;flex-shrink:0}
   #bk_body table.bktab td:empty{display:none}
   #bk_body .bktab tr.bkentry td{border:0}
+  /* Trial balance on a phone: one line a ledger - name left, figure right with its Dr/Cr; no CODE/LEDGER/DEBIT label on every card (the code is in the name link). 118 px a card -> one line */
+  #bk_body table.bk-tbm tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:0 10px;padding:6px 12px;margin-bottom:4px}
+  #bk_body table.bk-tbm tbody td{padding:0}
+  #bk_body table.bk-tbm tbody td:first-child{display:none}
+  #bk_body table.bk-tbm tbody td:nth-child(2){text-align:left;grid-column:1}
+  #bk_body table.bk-tbm tbody td:nth-child(2)::before{display:none}
+  #bk_body table.bk-tbm tbody td.num{grid-column:2;grid-row:1;white-space:nowrap}
+  #bk_body table.bk-tbm tbody td.num::before{order:2;margin-inline-start:6px;text-transform:none;font-weight:600}
+  #bk_body table.bk-tbm tbody td.num{flex-direction:row-reverse}
   /* the party table (1300 / 2100): one line a party — name · balance */
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
@@ -402,3 +425,19 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
 .bd-map-grid select{display:block;width:100%;font:inherit;min-height:44px;margin-top:4px}
 /* F-54: a short desktop window (1366×768): tighter menu rows so an opened group sits beside the folded ones without the menu scrolling */
 @media (min-width:761px) and (max-height:819px){.nav-btn{height:36px}.nav-grp{margin-top:4px}}
+
+/* BAS / VAT return on a wide window: the pickers in one row with Copy figures beside them, the notes one folded line, the Close bar one row - so the figures list has the screen (page 1,090 -> 768 px at 1366) */
+@media (min-width:900px){
+  #bk_body [data-testid="pr-card"]{max-width:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 14px;padding:8px 14px;margin-bottom:6px}
+  #bk_body [data-testid="pr-card"] .pe-form{grid-column:1/-1;grid-row:1;grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr));gap:6px 14px}
+  #bk_body [data-testid="pr-card"] .pe-form>[style*="grid-column"]{grid-column:auto !important}
+  #bk_body [data-testid="pr-card"] .pe-total{grid-column:1;grid-row:2;margin:0}
+  #bk_body [data-testid="pr-card"] [data-testid="pr-prepared"]{grid-column:2;grid-row:2;margin:0}
+  #bk_body [data-testid="pr-card"] .supacts{grid-column:3;grid-row:2;margin:0}
+  #bk_body [data-testid="pr-card"] .ev-warnbox,#bk_body [data-testid="pr-card"] .pe-slot{grid-column:1/-1}
+  #bk_body [data-testid="pr-close-card"]{max-width:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 14px;margin:6px 0 0}
+  #bk_body [data-testid="pr-close-card"] .supacts{margin:0}
+  #bk_body .pe-fold{max-width:none;padding:6px 14px;margin:6px 0 0;gap:4px}#bk_body .pe-fold>summary{cursor:pointer}
+}
+/* the repeat rule (Athi 21 Nov): an action that is the same on every row shows on the row you point at or tab into, not 40 times down the page (Dues: Receive and Remind x40). Opacity, not display: a keyboard still reaches it and the row does not jump. A touch screen has no pointing, so it keeps them. */
+@media (hover:hover){.cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-pay-"],.cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-remind-"]{opacity:0}}

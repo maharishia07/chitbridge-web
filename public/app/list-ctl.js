@@ -761,6 +761,15 @@
       buckets[key].rows.push(item);
       buckets[key].items.push(it);
     });
+    /* a group that opens folded (g.folded(key, rows) → true, e.g. a long "Doing well"): decided once per group per list, and only while the list shows more than one group, so a narrowing to that one group never leaves it shut */
+    if (g.folded && I.r && order.length > 1) {
+      I.r.gseen = I.r.gseen || {};
+      order.forEach(function (key) {
+        if (I.r.gseen[key]) return;
+        I.r.gseen[key] = 1;
+        if (safe(function () { return g.folded(key, buckets[key].rows); }, false)) I.r.gcol[key] = true;
+      });
+    }
     if (g.order)
       order.sort(function (x, y) {
         return g.order.indexOf(x) - g.order.indexOf(y);
@@ -1448,8 +1457,18 @@ ctx.se = null;
     }
   }
   /** paintToolsBar, step 7 of 7 (part 7, lines 1627-1638 of the one function): runs on, nothing here ends the call */
+  /** WALK S S-F-09: an opened popup (Columns, Filters) never runs below the viewport — its height is cut to the room under its top edge (the list scrolls inside it) */
+  function fitPop(box) {
+    var pop = box.querySelector('.cbl-pop'),
+      view = box.ownerDocument && box.ownerDocument.defaultView;
+    if (!pop || !view || !pop.getBoundingClientRect) return;
+    var rect = pop.getBoundingClientRect(),
+      room = view.innerHeight - rect.top - 8;
+    if (rect.height && rect.bottom > view.innerHeight - 8 && room >= 120) pop.style.maxHeight = room + 'px';
+  }
   function paintToolsBarStep7(list, ctx) {
     ctx.box.innerHTML = ctx.h;
+    fitPop(ctx.box);
     if (ctx.keepId) {
       var back = ctx.box.querySelector('#' + cssId(ctx.keepId));
       if (back) {
@@ -2221,11 +2240,11 @@ ctx.limit = inst.limit;
             '<div class="cbl-hc lhcell' +
             (r ? ' r' : '') +
             (id ? ' sortable' : '') +
-            '" role="columnheader" aria-sort="' +
+            '" role="columnheader"' + (id ? ' data-testid="list-col-' + esc(id) + '"' : '') + ' aria-sort="' +
             (sorted ? (sortState.dir === -1 ? 'descending' : 'ascending') : 'none') +
             '">' +
             (id
-              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
+              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" data-testid="list-sort-' + esc(id) + '" title="' + label + '"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
                 '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +

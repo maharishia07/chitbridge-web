@@ -83,6 +83,10 @@ function ovTile(tid, label, minor, note, href) {
 function ovChange(fig) {
   return fig && fig.change_bp != null ? bkPct(fig.change_bp, true) + ' ' + esc(tx('on last year')) : '';
 }
+/** the cash tile is a wide words tile only when the server sent words and no series for a chart */
+function ovCashWide(cash) {
+  return !!(cash && cash.words && !(cash.series && cash.series.length));
+}
 /** the headline tiles (sales · income · profit · to collect · to pay · cash): a figure the server did not send has no tile */
 function ovTiles(answer) {
   var salesFig = answer.sales || {},
@@ -94,17 +98,25 @@ function ovTiles(answer) {
     answer.to_collect ? ovTile('collect', 'To collect', answer.to_collect.minor, '', '#dues') : '',
     answer.to_pay ? ovTile('pay', 'To pay', answer.to_pay.minor, '', '#dues') : ''
   ];
-  if (cash && cash.words) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(ovMoneyWords(cash.words, OVERVIEW.answer && OVERVIEW.answer.currency)) + '</span></a>');
+  if (ovCashWide(cash)) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(MC.cashWords(cash, ovDeps())) + '</span></a>');
   return '<div class="ov-tiles">' + tiles.join('') + '</div>';
 }
 /** the words deps the adapters (app/mis-charts.js) take: the one text, money and date makers of this page */
 function ovDeps() {
   return { tx: tx, money: bkMoney, date: CBLocale.date, cur: OVERVIEW.answer && OVERVIEW.answer.currency };
 }
+/** three cards a row on a wide window (the whole page then fits 1366 x 768 without a page scroll), two on a tablet, one on a phone */
+function ovCols() {
+  return window.innerWidth >= 1200 ? 3 : window.innerWidth > 900 ? 2 : 1;
+}
+/** the chart's height: shorter when three cards share a row, so two rows of cards + the tiles end at the screen */
+function ovHigh() {
+  return ovCols() === 3 ? 84 : 140;
+}
 /** a card's chart width, so it is drawn at the size it shows (no scaling surprise at 390): half the page on a wide screen, all of it on a narrow one */
 function ovWidth() {
   var box = document.getElementById('ov_main');
-  return Math.max(220, Math.floor(((box && box.clientWidth) || 640) / (window.innerWidth > 900 ? 2 : 1)) - 28);
+  return Math.max(220, Math.floor(((box && box.clientWidth) || 640) / ovCols()) - 28);
 }
 /** the table under a chart (a table under every chart): head + rows from the adapter, behind "Show the figures" */
 function ovTable(table, code, tid) {
@@ -133,15 +145,15 @@ function ovSalesCards(a) {
     months = MC.monthPoints(a.bars, deps),
     days = MC.weekdayPoints(a.weekdays, deps);
   return (
-    ovCard('sales', 'BKS026-P02', 'Sales by month, tax in', ovHas(months) ? CBDraw.bars(months, { width: ovWidth(), height: 140, id: 'ovsales', tid: 'ov-sales', aria: tx('Sales by month, tax in') }) : '', tx('Solid = sales · line = same time last year · hatched = the month so far'), MC.monthTable(a.bars, 'sold_minor', deps, true), 'BKS026-B08') +
-    ovCard('weekday', 'BKS026-P04', 'This week by weekday', ovHas(days) ? CBDraw.bars(days, { width: ovWidth(), height: 140, id: 'ovweek', tid: 'ov-weekday', aria: tx('Sales by weekday this week') }) : '', tx('Solid = this week · line = the same weekday last year'), MC.weekdayTable(a.weekdays, deps), 'BKS026-B10')
+    ovCard('sales', 'BKS026-P02', 'Sales by month, tax in', ovHas(months) ? CBDraw.bars(months, { width: ovWidth(), height: ovHigh(), id: 'ovsales', tid: 'ov-sales', aria: tx('Sales by month, tax in') }) : '', tx('Solid = sales · line = same time last year · hatched = the month so far'), MC.monthTable(a.bars, 'sold_minor', deps, true), 'BKS026-B08') +
+    ovCard('weekday', 'BKS026-P04', 'This week by weekday', ovHas(days) ? CBDraw.bars(days, { width: ovWidth(), height: ovHigh(), id: 'ovweek', tid: 'ov-weekday', aria: tx('Sales by weekday this week') }) : '', tx('Solid = this week · line = the same weekday last year'), MC.weekdayTable(a.weekdays, deps), 'BKS026-B10')
   );
 }
 function ovProfitCard(a) {
   if (!a.profit_by_month) return '';
   var deps = ovDeps(),
     points = MC.profitPoints(a.profit_by_month, deps);
-  return ovCard('profit', 'BKS026-P03', 'Profit by month', ovHas(points) ? CBDraw.bars(points, { width: ovWidth(), height: 140, id: 'ovprofit', tid: 'ov-profit', aria: tx('Profit by month') }) : '', tx('Hatched = the month so far'), MC.monthTable(a.profit_by_month, 'profit_minor', deps, false), 'BKS026-B09');
+  return ovCard('profit', 'BKS026-P03', 'Profit by month', ovHas(points) ? CBDraw.bars(points, { width: ovWidth(), height: ovHigh(), id: 'ovprofit', tid: 'ov-profit', aria: tx('Profit by month') }) : '', tx('Hatched = the month so far'), MC.monthTable(a.profit_by_month, 'profit_minor', deps, false), 'BKS026-B09');
 }
 /** what customers owe and what we owe, each by age (hbars); a side the server did not send has no card */
 function ovDuesCard(a, side) {
@@ -153,21 +165,13 @@ function ovDuesCard(a, side) {
   var svg = CBDraw.hbars(out.rows, { width: ovWidth(), id: 'ov' + key, tid: 'ov-' + key + '-hb', title: tx(title), desc: out.rows.map(function (r) { return r.title; }).join(', ') });
   return ovCard(key, side === 'customer' ? 'BKS026-P05' : 'BKS026-P06', title, svg, tx('Hatched = late'), out.table, side === 'customer' ? 'BKS026-B11' : 'BKS026-B12');
 }
-/** the server's sentence states an amount as CODE + figure ("AUD 994,008.80": lib/money prints the code, never a symbol); the page's own money maker (bkMoney, CBLocale) owns the look, so each such amount in the shop's currency is re-drawn by it. The figure is the server's, read back to minor units by its own decimals; nothing is added or rounded. */
-function ovMoneyWords(words, cur) {
-  if (!words || !cur) return words || '';
-  return String(words).replace(new RegExp('\\b' + cur + ' (-?[\\d,]+)(?:\\.(\\d+))?', 'g'), function (whole, int, frac) {
-    var digits = String(frac || ''), minor = Number(String(int).replace(/,/g, '') + digits);
-    return isFinite(minor) ? bkMoney(minor, cur) : whole;
-  });
-}
 /** cash for the next 30 days (the cash view's own series, lowest day and words) */
 function ovCashCard(a) {
   if (!a.cash || !a.cash.series || !a.cash.series.length) return '';
   var deps = ovDeps(),
     out = MC.cashPoints(a.cash, deps);
-  var svg = CBDraw.cashLine(out.points, { width: ovWidth(), height: 140, id: 'ovcash', tid: 'ov-cashline-svg', title: tx('Cash for the next 30 days'), desc: ovMoneyWords(a.cash.words, deps.cur), startWords: out.startWords, endWords: out.endWords, lowestAt: out.lowestAt, lowestWords: out.lowestWords });
-  return ovCard('cashline', 'BKS026-P07', 'Cash, next 30 days', svg, ovMoneyWords(a.cash.words, deps.cur), out.table, 'BKS026-B13');
+  var svg = CBDraw.cashLine(out.points, { width: ovWidth(), height: ovHigh(), id: 'ovcash', tid: 'ov-cashline-svg', title: tx('Cash for the next 30 days'), desc: MC.cashWords(a.cash, deps), startWords: out.startWords, endWords: out.endWords, lowestAt: out.lowestAt, lowestWords: out.lowestWords });
+  return ovCard('cashline', 'BKS026-P07', 'Cash, next 30 days', svg, MC.cashWords(a.cash, deps), out.table, 'BKS026-B13');
 }
 /** profit PER ITEM is not drawn: it needs what each item cost (REP-29); the screen says so, never an empty chart */
 function ovItemNote() {
@@ -181,7 +185,7 @@ function ovCss() {
     '<style>.ov{padding:0 12px 12px}.ov-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}.ov-head{margin:4px 0 8px;font:600 var(--fs-3,17px) var(--sans,sans-serif);color:var(--ink,#2a2418)}',
     '.ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}.ov-tile{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line-3,#d8ccb0);border-radius:8px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);text-decoration:none}',
     '.ov-l{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-v{font:700 var(--fs-3,17px) var(--sans,sans-serif)}.ov-n{font-size:var(--fs-1,12px);color:var(--muted,#6f6450)}.ov-wide{grid-column:1/-1}',
-    '.ov-pics{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:901px){.ov-pics{grid-template-columns:1fr 1fr}}.ov-pic{border:1px solid var(--line-3,#d8ccb0);border-radius:8px;padding:6px 10px;background:var(--card,#fffdf8);min-width:0;overflow:hidden}.ov-pic h3{margin:0 0 2px;font-size:var(--fs-2,14px)}.ov-pic details{font-size:var(--fs-1,12px)}.ov .bk-st .num{text-align:right}.ov-pic .bk-st{width:100%;border-collapse:collapse}.ov-pic .bk-st th{text-align:start;color:var(--muted,#6f6450);font-weight:500}</style>'
+    '.ov-pics{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:901px){.ov-pics{grid-template-columns:1fr 1fr}}@media(min-width:1200px){.ov-pics{grid-template-columns:repeat(3,minmax(0,1fr))}}.ov-pic{border:1px solid var(--line-3,#d8ccb0);border-radius:8px;padding:6px 10px;background:var(--card,#fffdf8);min-width:0;overflow:hidden}.ov-pic h3{margin:0 0 2px;font-size:var(--fs-2,14px)}.ov-pic details{font-size:var(--fs-1,12px)}.ov .bk-st .num{text-align:right}.ov-pic .bk-st{width:100%;border-collapse:collapse}.ov-pic .bk-st th{text-align:start;color:var(--muted,#6f6450);font-weight:500}</style>'
   ].join('');
 }
 /** paint the bar and the main area for the state the view is in: loading · error with a retry · the answer (headline, tiles, pictures) */

@@ -107,7 +107,8 @@ const walk = async (w) => {
 
   /* HOME (HOM001): the area tabs, the cards, the side openers at 1366; the More tab and its rows on a phone. Every control wears a live code of its own kind. */
   const HOME_ZONE = '.cbsh-hdr, .cbsh-work';
-  const homeSteps = [['1366', { width: 1366, height: 768 }, ['HOM001-K01', 'HOM001-B01', 'HOM001-B03', 'HOM001-B04'], null], ['390', { width: 390, height: 844 }, ['HOM001-K01', 'HOM001-B02'], '[data-testid="shell-nav-more"]']];
+  /* 1128: the one Home (index2 folded in; index.html .ix-on hides the area tabs and the More page) draws the pillar rows and the foot words, so K01 (area tab) and B02 (More row) are not on it; B01 (a grey not-ready tile) is not drawn because walks see every entry ready (lib/ready-manifest.cjs; the grey is proved by tests/grey-ready.test.cjs). B09 is the foot word. */
+  const homeSteps = [['1366', { width: 1366, height: 768 }, ['HOM001-B03', 'HOM001-B04', 'HOM001-B09'], null], ['390', { width: 390, height: 844 }, ['HOM001-B09'], null]];
   for (const [vname, view, want, opener] of homeSteps) {
     await open('/index.html', view, 'cream');
     if (opener) { await page.click(opener); await page.waitForTimeout(400); }

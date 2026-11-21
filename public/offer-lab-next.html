@@ -10,7 +10,8 @@
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
-<script src="/engine/locale.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
+<script src="/app/sample-set.js"></script>   <!-- CBSample: the made-up shop's names and menu per country (batch 1128: no India sample on another country's shop) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Offer Lab · ChitBridge</title>
@@ -808,7 +809,7 @@ var GOALS = [
   { id: 'amount', kind: 'line', icon: '₹', n: 'Rupees off', ex: '₹10 off each' },
   { id: 'qty', kind: 'line', icon: '▦', n: 'Cheaper when they buy more', ex: '2+ → 5%, 5+ → 10%' },
   { id: 'free', kind: 'pair', icon: '+', n: 'Something free', ex: 'buy 2, get 1' },
-  { id: 'bundle', kind: 'pair', icon: '▣', n: 'Two things at one price', ex: 'dosa + coffee = ₹80' },
+  { id: 'bundle', kind: 'pair', icon: '▣', n: 'Two things at one price', ex: 'a meal + a drink = ₹80' },
   { id: 'spend', kind: 'bill', icon: '↑', n: 'Reward a big bill', ex: 'over ₹500 → ₹50 back' },
   { id: 'ship', kind: 'bill', icon: '⌁', n: 'Free delivery', ex: 'over ₹300 → free' },
   { id: 'band', kind: 'guard', icon: '⌂', n: 'Refuse very small or big bills', ex: '₹50 to ₹2,000' }
@@ -1445,12 +1446,42 @@ function currencyOfReply(body) {
   var code = String(entity.currency_code || '').toUpperCase();
   return /^[A-Z]{3}$/.test(code) ? code : '';
 }
+/** the shop's country from a /api/entities/me reply (its own country, else the one its currency implies), or '' */
+function countryOfReply(body, code) {
+  var entity = (body && body.data) || body || {};
+  entity = entity.entity || entity;
+  var cc = String(entity.country_code || entity.country || '').toUpperCase();
+  return /^[A-Z]{2}$/.test(cc) ? cc : CBSample.countryOfCurrency(code);
+}
+/** a signed-in shop outside India (or with no country) sees ITS country's sample menu and names, never the Chennai one (CBSample is the one list) */
+function useCountrySample(countryCode) {
+  var set = CBSample.forCountry(countryCode);
+  if (CBSample.isHome(set)) return;
+  HOTEL.name = set.hotelName;
+  HOTEL.cats = set.hotelCats;
+  HOTEL.prods = set.hotelProds;
+  HOTEL.cust = set.hotelCust;
+  PHARMA.name = set.pharmaName;
+  PHARMA.cust = set.pharmaCust;
+  if (S && BIZ[S.biz]) {
+    CATS = BIZ[S.biz].cats.map(function (item) {
+      return { id: item[0], name: item[1] };
+    });
+    P = BIZ[S.biz].prods.map(function (item) {
+      return { id: item[0], name: item[1], cat: item[2], price: item[3], cost: item[4], modifiers: Array.isArray(item[5]) ? item[5] : [] };
+    });
+    render();
+  }
+}
 async function loadShopMoney() {
   if (!savedLive()) return;
   try {
     var reply = await fetch(API + '/api/entities/me', { headers: { Authorization: 'Bearer ' + savedToken() } });
     if (!reply.ok) return;
-    var code = currencyOfReply(await reply.json());
+    var body = await reply.json();
+    var code = currencyOfReply(body);
+    useCountrySample(countryOfReply(body, code));
+    comboSampleCountry(countryOfReply(body, code));   /* the Combo Lab's worked example by the shop's country */
     if (code && code !== shopCurrency) {
       shopCurrency = code;
       var tool = document.getElementById('priceTool');
@@ -5247,7 +5278,7 @@ function ruleParamsOf() {
 }
 /** a unique-enough name — the API refuses a second definition of one kind with the same name */
 function saveName(l) {
-  return l.title + (l.detail ? ' · ' + l.detail : '') + ' · ' + new Date().toISOString().slice(0, 16);
+  return l.title + (l.detail ? ' · ' + l.detail : '') + ' · ' + CBLocale.datetime(Date.now(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); /* WALK-H H-F-07: the shop's own date words, not an ISO stamp (still unique to the minute) */
 }
 /**
  * ⭐ [found live, 2026-09-26] "editing the current offer to reduce or include more items" — when this save
@@ -5602,7 +5633,7 @@ function historyHTML(sv) {
     body = sv._history
       .map(function (item) {
         var who = item.changed_by_name || 'someone no longer on this shop';
-        var when = new Date(item.changed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+        var when = CBShopTime.datetime(item.changed_at, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
         var status = item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : item.status;
         return '<div>' + esc(status) + ' — ' + esc(who) + ' · ' + esc(when) + '</div>';
       })

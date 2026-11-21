@@ -56,7 +56,7 @@ sandbox.REG = { step: 'otp', name: 'acme', email: 'a@b.example', busy: false, er
 sandbox.CBRegistration.mount(host, () => {});
 html = host.innerHTML;
 const otp = tagOf(html, 'r_otp'), agree = tagOf(html, 'r_agree');
-check(/data-cbmount="SCR053-U04"/.test(otp) && /data-testid="reg-otp"/.test(otp) && /autocomplete="one-time-code"/.test(otp) && /inputmode="numeric"/.test(otp) && /maxlength="6"/.test(otp) && /placeholder="6-digit code"/.test(otp), 'code: a CMP055 field with one-time-code, numeric keypad, placeholder and testid kept');
+check(/data-cbmount="SCR053-U04"/.test(otp) && /data-testid="reg-otp"/.test(otp) && /autocomplete="one-time-code"/.test(otp) && /inputmode="text"/.test(otp) && /maxlength="320"/.test(otp) && /placeholder="6-digit code"/.test(otp), 'code: a CMP055 field with one-time-code, a text keyboard and room for the tester code (WALK S S-F-13, 4254e22a), placeholder and testid kept');
 check(/Code sent to a@b.example/.test(html), 'the code label still names the address');
 check(/type="checkbox"/.test(agree) && /data-cbmount="SCR053-U01"/.test(agree) && /data-testid="reg-agree"/.test(agree) && agree.indexOf(' checked') < 0, 'terms tick: a CMP055 checkbox, testid kept, unticked');
 check(!/data-cbsid="SCR053-I0[1-4]"/.test(html) && !/data-cbsid="SCR053-I0[1-4]"/.test(source), 'no hand-written SCR053-I01..I04 is left in the page or its output');

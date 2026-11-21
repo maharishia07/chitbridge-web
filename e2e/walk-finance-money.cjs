@@ -33,7 +33,8 @@ const dayN = (n) => ymd.format(new Date(NOW.getTime() + n * DAY_MS));
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DMY = (s) => Number(s.slice(8, 10)) + ' ' + MON[Number(s.slice(5, 7)) - 1] + ' ' + s.slice(0, 4);
 /* the month before day 0, as YYYY-MM and as the page words it (Sep 2026) */
-const lastMonth = () => { const y = Number(dayN(0).slice(0, 4)), m = Number(dayN(0).slice(5, 7)) - 1; const mm = m < 1 ? 12 : m, yy = m < 1 ? y - 1 : y; return { v: yy + '-' + String(mm).padStart(2, '0'), label: MON[mm - 1] + ' ' + yy }; };
+/* IN-F-08: the picker opens on the RUNNING month (the shop's own month, marked 'running'), then the eleven before it: the name stays, the month is this one */
+const lastMonth = () => { const y = Number(dayN(0).slice(0, 4)), m = Number(dayN(0).slice(5, 7)); const mm = m < 1 ? 12 : m, yy = m < 1 ? y - 1 : y; return { v: yy + '-' + String(mm).padStart(2, '0'), label: MON[mm - 1] + ' ' + yy }; };
 const MALA = 'pa', KUMAR = 'pb', RAVI = 'pc', SRI = 'pd';
 const UUIDS = { p1: '10000000-0000-4000-8000-000000000001', p2: '10000000-0000-4000-8000-000000000002', p3: '10000000-0000-4000-8000-000000000003', p4: '10000000-0000-4000-8000-000000000004', p5: '10000000-0000-4000-8000-000000000005' };
 
@@ -212,7 +213,7 @@ W.run(REAL ? 'finance-money-real' : 'finance-money', async (w) => {
       const h = await txt(T('fr-gstr') + ' h2'), opts = await page.locator(T('fr-month') + ' option').count(), v = await page.locator(T('fr-month')).inputValue().catch(() => ''), label = await page.locator(T('fr-month') + ' option').first().innerText().catch(() => '');
       const b1 = await page.locator(T('fr-gstr1')).count(), b3 = await page.locator(T('fr-gstr3b')).count(), cur = await page.locator(T('fin-nav-returns') + '[aria-current="page"]').count();
       /* the month word is CBLocale's (en-IN says "Sept"): the first three letters and the year are what is held */
-      const lbl = label.trim(), lblOk = lbl.slice(0, 3) === LM.label.slice(0, 3) && lbl.slice(-4) === LM.label.slice(-4);
+      const lbl = label.trim().replace(/ · running$/, ''), lblOk = lbl.slice(0, 3) === LM.label.slice(0, 3) && lbl.slice(-4) === LM.label.slice(-4);
       return { ok: h === 'GSTR-1 and GSTR-3B' && opts === 12 && v === LM.v && lblOk && b1 === 1 && b3 === 1 && cur === 1 && S.writes.length === 0,
         saw: '"' + h + '"; ' + opts + ' months, first ' + v + ' "' + label.trim() + '" (want ' + LM.v + ' ' + LM.label + '); buttons ' + b1 + '/' + b3 + '; nav ' + cur + '; writes ' + S.writes.length };
     });

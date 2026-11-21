@@ -18,7 +18,7 @@
  *   C4  (#4) the cart never cuts: beside the outcome it stacks as cards, every item name and supply kind is shown whole, no scroll bar inside the panel
  *   C5  (#5) one plain line per cell (<= 20 words visible), the legal detail and its citation behind a closed "why" fold (DL Art. 45 is in the fold only)
  *   C6  (#6) a reserved right gutter: the table ends before the window's edge; nothing fixed overlaps the "what it means" column
- *   C7  (#7) India's supply kinds say "India: each item's own GST rate decides."
+ *   C7  (#7) India's supply kinds list the pack's three 0% kinds: Nil-rated, Exempt, Non-GST
  *   C8  (#8) AU -> AU: sixteen rows are the same, collapsed under "16 rows are the same"; show opens them; IN -> AU folds only the voucher row
  *   L8  at 390 px (Cream): no sideways scroll, the rows read one under the other, the bills stack, the cart lines are cards with nothing cut
  *   C9  at 390 px (Dark): AA everywhere, no sideways scroll, the TO cell still carries its rule
@@ -237,7 +237,8 @@ const walk = async (w) => {
 
   await w.step('C7', '(#7) India\'s supply kinds say "India: each item\'s own GST rate decides."', async () => {
     const t = await text(page, '[data-testid="cl-row-kinds"] td.v.from');
-    const ok = t === 'India: each item\'s own GST rate decides.' || t === 'India: each item’s own GST rate decides.';
+    /* engines 1.105+ (1128): India's pack names its three 0% kinds (nil-rated, exempt, non-GST), so the row lists them; the "each item's own rate decides" sentence is for a pack with no kinds */
+    const ok = /Nil-rated 0%/.test(t) && /Exempt 0%/.test(t) && /Non-GST 0%/.test(t);
     return { ok, saw: '"' + t + '"' };
   });
 

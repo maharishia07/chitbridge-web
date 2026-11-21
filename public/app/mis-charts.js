@@ -26,7 +26,8 @@
 
   function monthWords(key, form, deps) {
     var parts = /^(\d{4})-(\d{2})$/.exec(key);
-    return parts ? deps.date(Date.UTC(+parts[1], +parts[2] - 1, 15), { month: form, year: form === 'long' ? 'numeric' : '2-digit' }) : key;
+    var words = parts ? deps.date(Date.UTC(+parts[1], +parts[2] - 1, 15), { month: form, year: form === 'long' ? 'numeric' : '2-digit' }) : key;
+    return form === 'long' ? words : words.replace(/^(Jun)e\b|^(Jul)y\b|^(Sep)t\b/, '$1$2$3'); /* YE-F-13: an English short month is three letters on every tick (en-AU gives June · July · Sept beside Jan · Mar) */
   }
   function fiscalWords(year, deps) {
     return /^\d{4}-\d{2}$/.test(year) ? deps.tx('FY') + ' ' + year : year;
@@ -124,11 +125,23 @@
   }
 
   /** /cashflow series → cashLine points; the lowest day is the SERVER's (lowest.date) found by key, never searched for by value */
+  /** a day as the shop reads it (21 Nov), never 2026-11-21 or 11-21: the one locale date maker; a malformed day is shown as sent */
+  function dayWords(day, deps) {
+    var at = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return at ? deps.date(Date.UTC(+at[1], +at[2] - 1, +at[3]), { day: 'numeric', month: 'short' }) : String(day || '');
+  }
+  /** the cash sentence: the server's own words for a shortfall (verbatim, never parsed); otherwise the lowest day built from lowest.balance_minor through deps.money — money is NEVER read back out of the server's text (its whole-unit "AUD 63,024" has no decimals to tell the unit by: GUARD cashwords) */
+  function cashWords(answer, deps) {
+    var lowest = answer && answer.lowest;
+    if (!answer) return '';
+    if (answer.shortfall || !lowest || lowest.balance_minor == null) return answer.words || '';
+    return deps.tx('Lowest') + ' ' + moneyOrDash(lowest.balance_minor, deps) + ' ' + deps.tx('on') + ' ' + dayWords(lowest.date, deps);
+  }
   function cashPoints(answer, deps) {
     var series = (answer && answer.series) || [],
       lowest = answer && answer.lowest,
       points = series.map(function (day) {
-        return { label: String(day.date || '').slice(5), value: day.balance_minor, title: day.date + ' · ' + moneyOrDash(day.balance_minor, deps) };
+        return { label: dayWords(day.date, deps), value: day.balance_minor, title: dayWords(day.date, deps) + ' · ' + moneyOrDash(day.balance_minor, deps) };
       }),
       at = lowest ? series.findIndex(function (day) { return day.date === lowest.date; }) : -1,
       end = series.length ? series[series.length - 1] : null;
@@ -141,7 +154,7 @@
       table: {
         head: [deps.tx('Day'), deps.tx('Balance')],
         rows: series.map(function (day) {
-          return [day.date, moneyOrDash(day.balance_minor, deps)];
+          return [dayWords(day.date, deps), moneyOrDash(day.balance_minor, deps)];
         })
       }
     };
@@ -167,7 +180,7 @@
       head: withLast ? [deps.tx('Month'), deps.tx('Sales'), deps.tx('Last year')] : [deps.tx('Month'), deps.tx('Profit')],
       rows: (list || []).map(function (item) {
         var name = monthWords(String(item.from).slice(0, 7), 'long', deps) + (item.running ? ' ' + deps.tx('(so far)') : '');
-        return withLast ? [name, moneyOrDash(item[key], deps), moneyOrDash(item.last_year_minor, deps)] : [name, moneyOrDash(item[key], deps)];
+        return withLast ? [name, moneyOrDash(item[key], deps), moneyOrDash(item.last_year_minor, deps) + (item.last_year_partial ? ' ' + deps.tx('(part month)') : '')] : [name, moneyOrDash(item[key], deps)]; /* YE-F-03: the month the books began in is a part month */
       })
     };
   }
@@ -207,7 +220,7 @@
     };
   }
 
-  var misCharts = { keyWords: keyWords, salesPoints: salesPoints, salesTable: salesTable, duesRows: duesRows, plRows: plRows, cashPoints: cashPoints, monthPoints: monthPoints, monthTable: monthTable, profitPoints: profitPoints, weekdayPoints: weekdayPoints, weekdayTable: weekdayTable };
+  var misCharts = { keyWords: keyWords, salesPoints: salesPoints, salesTable: salesTable, duesRows: duesRows, plRows: plRows, cashPoints: cashPoints, cashWords: cashWords, monthPoints: monthPoints, monthTable: monthTable, profitPoints: profitPoints, weekdayPoints: weekdayPoints, weekdayTable: weekdayTable };
   if (typeof module !== 'undefined' && module.exports) module.exports = misCharts;
   if (root) root.MC = misCharts;
 })(typeof window !== 'undefined' ? window : globalThis);

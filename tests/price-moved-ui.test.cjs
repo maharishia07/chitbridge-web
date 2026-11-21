@@ -13,10 +13,10 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-let failures = 0;
+let failures = 0, total = 0;
 const check = (name, cond, why) => {
   console.log((cond ? '  ok   ' : '  FAIL ') + name + (!cond && why ? '\n         ' + why : ''));
-  if (!cond) failures++;
+  total++; if (!cond) failures++;
 };
 const ROOT = path.join(__dirname, '..');
 const file = process.env.PMOVED_FILE || path.join(ROOT, 'public', 'app', 'chit-price-moved.js');
@@ -28,8 +28,8 @@ ctx.fmtMoney = (amount, code) => code + ' ' + Number(amount).toFixed(2);
 ctx.myCur = () => 'INR';
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'public', 'engine', 'money.js'), 'utf8'), ctx);
-/* B7: failed() words an error through friendlyErr (accounts-shell.js); load the real one with its rewordPlain, not a copy */
-const shellSrc = fs.readFileSync(path.join(ROOT, 'public', 'app', 'accounts-shell.js'), 'utf8');
+/* B7: failed() words an error through friendlyErr (cb-words.js); load the real one with its rewordPlain, not a copy */
+const shellSrc = fs.readFileSync(path.join(ROOT, 'public', 'app', 'cb-words.js'), 'utf8');
 vm.runInContext(shellSrc.slice(shellSrc.indexOf('function rewordPlain('), shellSrc.indexOf('\n}\n', shellSrc.indexOf('function friendlyErr(')) + 3), ctx);
 vm.runInContext(fs.readFileSync(file, 'utf8'), ctx);
 const P = ctx.CBPriceMoved;
@@ -107,5 +107,5 @@ check('app.html sendChit sends price_ack beside promote_draft_id', /promote_draf
 check('app.html sendChit: every failure goes through CBPriceMoved.failed with sendChit as the resend', /return CBPriceMoved\.failed\(e, v, fail, sendChit\)/.test(sendChit), '');
 check('app.html loads the module', /<script src="\/app\/chit-price-moved\.js"><\/script>/.test(html), '');
 
-console.log(failures ? '\n' + failures + ' FAILED' : '\nALL PASS');
+console.log(total + ' checks' + (failures ? ', ' + failures + ' FAILED' : ''));
 process.exit(failures ? 1 : 0);

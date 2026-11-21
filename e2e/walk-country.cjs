@@ -73,6 +73,7 @@ async function stubRegistration(ctx, prof, sent) {
 async function register(page, base) {
   await page.goto(base + '/app.html#/register');
   await page.waitForSelector('[data-testid="reg-name"]', { timeout: 15000 });
+  await page.fill('[data-testid="reg-shop-name"]', 'Walk Shop');
   await page.fill('[data-testid="reg-name"]', 'walkshop');
   await page.fill('[data-testid="reg-email"]', 'shop@example.in');
   await page.click('[data-testid="reg-submit"]');

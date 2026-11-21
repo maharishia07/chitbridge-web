@@ -32,7 +32,35 @@
     return area === 'money' && rank ? 30 : rank * 10; /* the books hold money facts -> Money leads, by the data and not by trade */
   }
   /** the areas lead by the DATA, not the trade; stable: areas the data does not tell apart keep the manifest's order; set ONCE, when every card has answered or failed */
+  /**
+   * WALK S S-F-04 (Athi: same status more than 3 times = a group, not a label on every row): once every card has answered, when MORE THAN 3 cards are "not started"
+   * the per-card "Not started" chip and "Set up ›" are not drawn — ONE group line says "Not set up yet · N areas" with ONE action, a link into the first of them
+   * (the same Home card link, HOM001-B01). Three or fewer keep their own chip. A firm's lazy Home is left alone.
+   */
+  var GROUP_OVER = 3;
+  function groupSetUp(ctx) {
+    var holder = ctx.$('.cbsh-more');
+    if (!holder || isFirm() || ctx.running || ctx.queue.length) return;
+    var waiting = [].slice.call(holder.querySelectorAll('.cbsh-box .st[data-state="not_started"]')).map(function (chip) { return chip.closest('.cbsh-box'); });
+    var line = ctx.$('[data-testid="shell-notstarted-group"]');
+    if (waiting.length <= GROUP_OVER) {
+      holder.removeAttribute('data-ns-grouped');
+      if (line) line.remove();
+      return;
+    }
+    holder.setAttribute('data-ns-grouped', '1');
+    var first = waiting[0].getAttribute('href') || '#';
+    var html = '<span class="ns-t">' + esc(translate(wording.notStartedGroup)) + '</span><span class="ns-n">' + esc(wording.notStartedCount(waiting.length)) + '</span><a class="ns-go" data-cbsid="HOM001-B01" data-testid="shell-notstarted-next" href="' + esc(first) + '">' + esc(translate(wording.setUp)) + ' ›</a>';
+    if (!line) {
+      line = root.document.createElement('div');
+      line.className = 'cbsh-nsgroup';
+      line.setAttribute('data-testid', 'shell-notstarted-group');
+      holder.insertAdjacentElement('beforebegin', line);
+    }
+    line.innerHTML = html;
+  }
   function leadByData(ctx) {
+    groupSetUp(ctx);
     var holder = ctx.$('.cbsh-more');
     if (!holder) return;
     if (isFirm()) return; /* l16 firmhome: a firm's Home is led by its practice and reads cards as they come into view, so the areas are not reshuffled under the reader */
@@ -122,7 +150,7 @@
     (onlyId ? root.Promise.resolve() : practiceFirst()).then(function () {
       var lazy = !onlyId && isFirm() && !!root.IntersectionObserver;
       ctx.shown().forEach(function (card) {
-        if (!card || card.state !== 'built' || !card.facts || (onlyId && card.id !== onlyId)) return;
+        if (!card || card.state !== 'built' || card.ready === false || !card.facts || (onlyId && card.id !== onlyId)) return;
         var spot = ctx.$('[data-testid="shell-facts-' + card.id + '"]');
         if (!spot) return;
         if (lazy)
@@ -164,7 +192,7 @@
      two or more → a +n badge with every line in the drop-down (.more) */
   function factsHTML(card, lines, state, nestedLineHTML) {
     var badge = state ? stateHTML(state) : '';
-    if (state === 'not_started') return badge + '<span class="f">' + esc(translate(wording.setUp)) + ' ›</span>';
+    if (state === 'not_started') return badge + '<span class="f ns">' + esc(translate(wording.setUp)) + ' ›</span>';
     if (lines.length < 2) return badge + lines.map(nestedLineHTML).join('');
     return (
       badge +
@@ -284,5 +312,5 @@
       }
     };
   }
-  root.CBShellFacts = { create: create, painters: painters, wordsOf: wordsOf };
+  root.CBShellFacts = { create: create, painters: painters, wordsOf: wordsOf, groupSetUp: groupSetUp };
 })(typeof window !== 'undefined' ? window : this);

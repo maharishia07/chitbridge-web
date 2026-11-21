@@ -99,7 +99,7 @@ W.run('bill', async (w) => {
     return { ok: /not closed yet/.test(title) && closeBtn && !marked, saw: '"' + title + '"; the "Close the day" button is ' + (closeBtn ? 'there' : 'MISSING') + '; day marked closed: ' + marked };
   });
   await w.step('TB9b', 'Press "Close the day" -> the sheet says "Day closed", the button goes away, the day is marked', async () => {
-    await page.click('[data-testid="till-day-close-do"]'); await page.waitForTimeout(400);
+    await page.click('[data-testid="till-day-close-do"]'); /* B-F-24: the till asks for the counted cash, then confirms */ await page.fill('#askinput', '0'); await page.click('#askok'); await page.waitForTimeout(200); await page.click('#askok'); await page.waitForTimeout(400);
     const title = await page.locator('#sliptitle').innerText(); const hidden = !(await page.locator('[data-testid="till-day-close-do"]').isVisible());
     const marked = await page.evaluate(() => !!dayClosedMark());
     return { ok: /^Day closed/.test(title) && hidden && marked, saw: '"' + title + '"; button ' + (hidden ? 'gone' : 'still there') + '; day marked closed: ' + marked };

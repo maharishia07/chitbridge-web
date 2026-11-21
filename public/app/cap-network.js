@@ -4495,7 +4495,7 @@ function _globalConfig(n) {
     // COUNTRY is set above with currency — it is an inherited-or-overridden value, not part of the address. Having
     // it in both places would be two controls for one field, which is how you set it once and find it changed.
     _fieldLabel('CITY') +
-    _inp(p.city, "netSetPlace('" + n.key + "','city',this.value)", 'Coimbatore') +
+    _inp(p.city, "netSetPlace('" + n.key + "','city',this.value)", 'City') +
     '<div style="display:flex;gap:8px">' +
     '<div style="flex:1">' +
     _fieldLabel('LATITUDE') +

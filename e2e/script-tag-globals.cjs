@@ -142,7 +142,7 @@ function pageScripts(root, pageFile) {
   const files = [], inline = [];
   for (const m of page.matchAll(SCRIPT_TAG)) {
     const attrs = m[1], type = (attrs.match(/\btype\s*=\s*["']?([\w/+-]+)/i) || [])[1];
-    if (type && !/^(text\/javascript|application\/javascript|text\/babel)$/i.test(type)) continue;
+    if (type && !/^(text\/javascript|application\/javascript|text\/babel|cb-late)$/i.test(type)) continue; /* cb-late = CBLate loads it after first paint, same page, same scope (batch 1128 fixSpeed) */
     const src = (attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i) || [])[1];
     if (src) { if (!/^https?:/i.test(src)) files.push(resolve(src)); } else if (m[2].trim()) inline.push(m[2]);
   }
