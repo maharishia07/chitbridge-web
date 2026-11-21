@@ -121,7 +121,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (124)
+## Shared (125)
 
 | file | loading | what it is |
 |---|---|---|
@@ -187,6 +187,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
 | `kural.js` | — |  |
 | `lab-kit.js` | — |  |
+| `late-scripts.js` | — |  |
 | `list-ctl-click.js` | eager | list-ctl-click.js — what a press on a mounted CBList does (the click half of app/list-ctl.js) |
 | `list-ctl-css.js` | eager | list-ctl-css.js — the look of CBList (app/list-ctl.js): the one stylesheet the list unit injects once (#cblist_css) |
 | `list-ctl-wire.js` | eager | list-ctl-wire.js — the listeners of a mounted CBList (the change, key and drag half of app/list-ctl.js) |
@@ -267,7 +268,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 91 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 92 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 49 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 16 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 24 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
@@ -282,7 +283,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `design-mock.html` | 2 | a paper prototype of the network store page: no API, no build |
 | `embed.html` | 5 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
 | `employees.html` | 28 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
-| `finance.html` | 55 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
+| `finance.html` | 56 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
 | `intake.html` | 2 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
 | `iot-howitworks.html` | 0 | the how-IoT-works showcase page: a standalone explainer with no data |
 | `know-your-business.html` | 16 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
@@ -314,4 +315,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*225 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*226 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
