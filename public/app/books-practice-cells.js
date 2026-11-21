@@ -89,7 +89,7 @@
   /** Athi 21 Nov (no repeats): the stage is a FILTER CHIP with its count (the band's tiles), so the row says only what stands in its way; the stage word stays in the row's title and its opened sheet. Blank when nothing does. */
   function stageLine(r, figures) {
     var word = practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))), why = blockerWords(r).replace(/^ · /, '');
-    return '<span class="bp-yend" data-cbsid="HOM001-P16" data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '" title="' + word + (figures ? ' · ' + practiceKit.escapeHtml(figures) : '') + '">' + why + '</span>';
+    return '<span class="bp-yend" data-cbsid="HOM001-P16" data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '" title="' + word + (figures ? ' · ' + practiceKit.escapeHtml(figures) : '') + '">' + '<b class="bp-stage" data-testid="practice-stage-word-' + practiceKit.escapeHtml(r.entity_id) + '">' + word + (why ? ' · ' : '') + '</b>' + why + '</span>'; /* YE-F-15: on a phone card the stage word shows (the filter chip is not on the card); a table row keeps its chip and shows only what stands in the way */
   }
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {
