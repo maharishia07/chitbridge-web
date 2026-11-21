@@ -52,17 +52,15 @@ ok('NET-45 a catalogue fetch that fails before reaching the api is tried once mo
   assert.deepStrictEqual([c.calls, c.warns.length], [2, 2], 'never more than two attempts, both logged');
 });
 
-ok('UX-123 shopDateTime formats in the shop\'s own zone, ignores an unknown zone, and leaves the person\'s zone when none is stated', () => {
+ok('UX-123 shopDateTime answers through the one formatter (CBShopTime.datetime: the shop zone and the UI language live in shop-time.js, proved by tests/date-one-formatter.test.cjs)', () => {
   const src = read('app/helpers.js');
   const f = fnText(src, 'function shopDateTime(', '\n}\n');
   const seen = [];
-  const mk = (tz) => run(f, { window: { CB_SHOP_TZ: tz }, console: { warn() {} }, Intl, Object, String, CBLocale: { datetime: (ts, o) => { seen.push(o); return 'x'; } } });
-  mk('Australia/Sydney').shopDateTime('2026-11-14T10:00:00Z');
-  mk('Not/AZone').shopDateTime('2026-11-14T10:00:00Z');
-  mk('').shopDateTime('2026-11-14T10:00:00Z');
-  assert.strictEqual(seen[0].timeZone, 'Australia/Sydney');
-  assert.strictEqual(seen[1].timeZone, undefined, 'an unknown zone is not passed on');
-  assert.strictEqual(seen[2].timeZone, undefined, 'no zone stated: nothing guessed');
+  const h = run(f, { CBShopTime: { datetime: (ts, o) => { seen.push([ts, o]); return 'x'; } }, Object, String });
+  assert.strictEqual(h.shopDateTime('2026-11-14T10:00:00Z', { hour: 'numeric' }), 'x');
+  assert.strictEqual(seen[0][1].hour, 'numeric');
+  h.shopDateTime('2026-11-14T10:00:00Z');
+  assert.strictEqual(seen[1][1].day, '2-digit', 'the default shape is day, month, hour, minute');
 });
 
 ok('CTR-79 the kitchen surface is declared as an option: kotOn() is true only when tillOpt().kot === true, and the order strip is hidden otherwise', () => {

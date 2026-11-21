@@ -2239,7 +2239,7 @@ function catsetOfferPlanHTML() {
   for (var index = 0; index < 6; index++) {
     var date = new Date(now.getFullYear(), now.getMonth() + index, 1),
       m1 = new Date(now.getFullYear(), now.getMonth() + index + 1, 0, 23, 59, 59);
-    months.push({ from: date, to: m1, label: date.toLocaleString(undefined, { month: 'short', year: 'numeric' }) });
+    months.push({ from: date, to: m1, label: CBShopTime.day(date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2), { month: 'short', year: 'numeric' }) });
   }
   var touches = function (d, m) {
     var r = d.rules || {};

@@ -24,7 +24,7 @@ const bkstEl = (id) => document.getElementById(id);
 /** 'Oct' for '2026-10', in the reader's own language (a date helper, no money) */
 function bkstMonth(month) {
   try {
-    return new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1)).toLocaleDateString(undefined, { month: 'short', timeZone: 'UTC' });
+    return CBShopTime.day(month, { month: 'short', year: undefined });
   } catch (_) {
     return month.slice(5);
   }

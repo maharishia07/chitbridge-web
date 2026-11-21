@@ -2695,7 +2695,7 @@ function stdNewest(list, key) {
 function stdDateWords(iso) {
   var d = new Date(iso + 'T12:00:00Z');
   if (!iso || isNaN(d.getTime())) return iso || '';
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return CBShopTime.day(iso);
 }
 /** the rows added most recently, newest first (ties keep register order): the matrix pane's "Added lately" */
 function stdRecent(rows, count) {

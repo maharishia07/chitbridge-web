@@ -140,7 +140,7 @@ function go() {
 <script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell.js"></script>  <!-- tx · txf · toast · CBAction · CBConfirm · CB_SHOP_EP -->
 <script>const confirmAsk = CBConfirm;   /* the page's own confirm — the <dialog> every small app asks through (cbcatRetire and the import's _cfImport ask by this name) */</script>
-<script src="/engine/locale.js"></script>          <!-- CBLocale: the page's language, direction, money and symbols -->
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>          <!-- CBLocale: the page's language, direction, money and symbols -->
 <script src="/app/helpers.js"></script>         <!-- esc · fmtMoney · packHasHsn · shopReg -->
 <script src="/engine/tax.js"></script>          <!-- CBRegulation: the shop's pack → its words (Code / HSN only under a pack with HSN); CBTaxSlab · CBTaxPacks: the item row's rate -->
 <script src="/app/tax-slab-ui.js"></script>     <!-- the rate chip, the ask-once menu and the slab pickers: ONE copy with app.html and the counter (F5 W1a) -->

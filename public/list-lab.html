@@ -90,7 +90,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
     return (neg ? '−' : '') + '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   } /* the unit's lab runs with CBLocale and fmtMoney TRAPPED (e2e/list-unit.cjs) — its sample figures cannot borrow the formatter */
   function dfmt(date, o) {
-    return date.toLocaleDateString('en-IN', o || { day: '2-digit', month: 'short' });
+    return date.toLocaleDateString('en-IN', o || { day: '2-digit', month: 'short' }); /* zone-ok: a lab page with fixed sample data, no shop */
   }
   var ENTRIES = [];
   (function () {

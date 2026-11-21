@@ -2853,7 +2853,7 @@ function _tzDiffers(a, b) {
   try {
     var t = Date.now();
     var f = function (z) {
-      return new Intl.DateTimeFormat('en-GB', { timeZone: z, dateStyle: 'short', timeStyle: 'short' }).format(t);
+      return CBShopTime.sample('en-GB', t, { dateStyle: 'short', timeStyle: 'short' }, z);
     };
     return f(a) !== f(b);
   } catch (_) {
@@ -5341,8 +5341,8 @@ function _locSample(kind, code) {
   var now = new Date();
   try {
     if (kind === 'nu') return new Intl.NumberFormat(base + '-u-nu-' + code).format(12345678.9);
-    if (kind === 'hc') return new Intl.DateTimeFormat(base + '-u-hc-' + code, { hour: '2-digit', minute: '2-digit' }).format(now);
-    if (kind === 'ca') return new Intl.DateTimeFormat(base + '-u-ca-' + code, { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+    if (kind === 'hc') return CBShopTime.sample(base + '-u-hc-' + code, now, { hour: '2-digit', minute: '2-digit' });
+    if (kind === 'ca') return CBShopTime.sample(base + '-u-ca-' + code, now, { day: 'numeric', month: 'long', year: 'numeric' });
   } catch (_) {
     /* ⚠️ an engine that does not know this extension shows the NAME alone rather than a wrong
                     sample — silence is honest here, a guess is not. */
@@ -7205,7 +7205,7 @@ function netoReload() {
 function _netWhen(iso) {
   if (!iso) return '';
   try {
-    return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return CBShopTime.datetime(iso);
   } catch (_) {
     return String(iso).slice(0, 16);
   }

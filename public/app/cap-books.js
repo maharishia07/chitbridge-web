@@ -367,10 +367,7 @@ function bkDate(d) {
 /** the SHOP's day — the browser's local calendar day (F3b, 2026-10-13: toISOString() is the UTC day, which for an Indian shop between midnight and
  *  05:30 is YESTERDAY — the entry date, the dues as-of and the Cash tab's Today tag were all a day behind every early morning). Same day as crmLocalISO / peYmd. */
 function bkToday() {
-  var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '', date = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
-  try { if (zone) return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); } /* the shop zone (entity.timezone → CB_SHOP_TZ); en-CA prints YYYY-MM-DD */
-  catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('bkToday:zone', failure); } /* an unknown zone falls through to the browser day */
-  return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate());
+  return CBShopTime.today(); /* the shop's day in the shop's zone (entity.timezone → CB_SHOP_TZ), YYYY-MM-DD; the one maker is shop-time.js */
 }
 /* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
 var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };

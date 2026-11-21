@@ -7,6 +7,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), assert = r
 const PUB = path.join(__dirname, '..', 'public');
 const cx = vm.createContext({ localStorage: { getItem: () => null, setItem() {} }, document: { documentElement: { setAttribute() {}, style: {} }, addEventListener() {} }, navigator: { language: 'en-IN' } });
 cx.window = cx; cx.self = cx;
+vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'shop-time.js'), 'utf8'), cx); /* the one date formatter helpers.js monthNames now reads */
 vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'helpers.js'), 'utf8'), cx);
 let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
 

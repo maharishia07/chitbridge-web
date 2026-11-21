@@ -165,7 +165,7 @@ function csuDeviceZone() {
     if (g && g.timezone && g.timezone.value) return g.timezone.value;
   } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return CBShopTime.deviceZone();
   } catch (_) {
     return '';
   }
@@ -405,33 +405,11 @@ function csuBigWords(amount, wordsChoice, currency) {
 /* ── WALK-REG 2026-10-16 R49: THE MONTH WORDS ARE THE SCREEN'S LANGUAGE; THE ORDER IS THE COUNTRY'S. A UAE shop's format tag is ar-AE, so CBLocale.date() put
    "16 أكتوبر 2026" and an Arabic "Year starts" list on an English screen. Here the parts come from the country's own tag (day · month · year, in its order) and
    only the month WORD is taken from the reader's language (CBLocale.lang(), the language tx() translates to). Same language and format → the engine's own answer. */
-function csuUiTag() {
-  try {
-    return (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en';
-  } catch (failure) {
-    csuLogExample('ui language', failure);
-    return 'en';
-  }
-}
 function csuMonthNames(form) {
   return monthNames(form);
 } /* the one helper (helpers.js) — kept as a name so callers here read the same */
 function csuDate(ts) {
-  var locale = window.CBLocale;
-  try {
-    var when = new Date(ts),
-      zone = locale.zoned ? locale.zoned({}).timeZone : undefined;
-    var parts = new Intl.DateTimeFormat(locale.tag(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: zone }).formatToParts(when);
-    var word = new Intl.DateTimeFormat(csuUiTag(), { month: 'short', timeZone: zone }).format(when);
-    return parts
-      .map(function (part) {
-        return part.type === 'month' ? word : part.value;
-      })
-      .join('');
-  } catch (failure) {
-    csuLogExample('date example', failure);
-    return locale.date(ts);
-  }
+  return CBShopTime.date(ts, { day: '2-digit', month: 'short', year: 'numeric' }); /* the screen's words, the shop's order and zone: the one formatter */
 }
 /** the live examples for a currency, from the engine the bills use: money · date · the symbol part of the money · decimals */
 function csuMoneyExamples(currency, wordsChoice) {

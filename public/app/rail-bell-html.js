@@ -76,7 +76,7 @@
     } catch (_) {
       try {
         var date = new Date(createdAt);
-        return isNaN(date) ? String(createdAt).replace('T', ' ').slice(0, 16) : date.toLocaleString(undefined, shape);
+        return isNaN(date) ? String(createdAt).replace('T', ' ').slice(0, 16) : root.CBShopTime.datetime(createdAt, shape);
       } catch (_2) {
         return String(createdAt).slice(0, 16);
       }

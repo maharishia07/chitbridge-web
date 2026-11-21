@@ -481,17 +481,7 @@ function plainStatuses(text) {
  * The shop's zone is the entity's own (/me timezone -> window.CB_SHOP_TZ); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
  */
 function shopDateTime(ts, opts) {
-  var base = opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
-  var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : ''; /* set by the app from /me (SESSION.timezone) */
-  if (zone) {
-    try {
-      new Intl.DateTimeFormat('en', { timeZone: zone });
-      base = Object.assign({}, base, { timeZone: zone });
-    } catch (e) {
-      if (typeof console !== 'undefined') console.warn('shopDateTime: unknown shop time zone', zone);
-    }
-  }
-  return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
+  return typeof CBShopTime !== 'undefined' ? CBShopTime.datetime(ts, opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : String(ts || '').replace('T', ' ').slice(0, 16); /* the one formatter: shop-time.js (shop zone, UI language, country order) */
 }
 /**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
@@ -548,21 +538,8 @@ function fmtMoneyWhole(amount, code, empty) {
 /* month WORDS in the screen's language (WALK-REG R49, 16 Oct: a UAE shop read Arabic months on an English screen) — the ORDER of a date is the
    country's; the WORD is the reader's. One helper: Country setup, Books, Returns, Register all read it. */
 function monthNames(form) {
-  var out = [],
-    tag = 'en';
-  try {
-    tag = (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en';
-  } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); /* the language reader is missing: English words, still correct */
-  }
-  for (var index = 0; index < 12; index++) {
-    try {
-      out.push(new Intl.DateTimeFormat(tag, { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, index, 15, 12)));
-    } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure);
-      out.push(CBLocale.date(Date.UTC(2000, index, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }));
-    }
-  }
+  var out = [];
+  for (var index = 0; index < 12; index++) out.push(CBShopTime.month(index, form));
   return out;
 }
 /* ⭐ T3-P1-MONEY: THE ONE GSTR DOWNLOAD — the offline-tool JSON GET /api/tax/gstr builds (tax-lines gstr1 · gstr3b, the one builder), saved as a file
