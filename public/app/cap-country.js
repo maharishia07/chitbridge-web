@@ -264,8 +264,8 @@ function csuYearFromPack(edit, sources) {
   var packRow = csuPackOf(edit.country),
     regulation = csuPack(edit.country);
   if (edit.fy) return;
-  edit.fy = (packRow && packRow.fy_start_month) || (regulation && regulation.fiscalYear && regulation.fiscalYear.startMonth) || (edit.country === 'IN' ? 4 : 1);
-  sources.fy_start_month = packRow || regulation || edit.country === 'IN' ? txf('the {c} pack', { c: csuCountryName(edit.country) }) : tx('the usual year');
+  edit.fy = (packRow && packRow.fy_start_month) || (regulation && regulation.fiscalYear && regulation.fiscalYear.startMonth) || 1; /* ACC-363: no pack says → the calendar year, never India's April */
+  sources.fy_start_month = packRow || regulation ? txf('the {c} pack', { c: csuCountryName(edit.country) }) : tx('the usual year');
 }
 /** the prefill: the server's answer first (it knows what registration stored), else what the browser worked out (M196) — each with its source */
 function csuPrefill() {
@@ -530,7 +530,7 @@ function csuApplyCountry(country) {
     edit.fy = packRow.fy_start_month;
     CSU.src.fy_start_month = packName;
   }
-  if (country !== 'IN' && edit.scheme === 'composition') edit.scheme = 'regular';
+  if (packRegForm(country).schemes.indexOf(edit.scheme) < 0) edit.scheme = 'regular'; /* a scheme the pack does not offer (composition outside India) falls back */
   var zone = csuZoneFor(country, edit.timezone);
   edit.timezone = zone.value;
   CSU.src.timezone = zone.from;
@@ -585,11 +585,11 @@ var CSU_ROW_OF = { registered: 'tax', number: 'tax', scheme: 'tax' };
  * Returns '' when fine (or when the checker is not here — the server still refuses on Save), else the reason in words. A GSTIN's 'format' answer covers a
  * wrong shape AND a holder letter outside CPHFATBLJG; they are told apart as the server does (api profile.gstinCheck): swap in a valid letter and ask again.
  */
-function csuGstinWhy(number) {
+function csuGstinWhy(number, country) {
   var profileMap = window.CBProfileMap;
   if (!profileMap) return '';
   var checked = profileMap.gstinChecksum(number),
-    idWord = taxIdWord('IN');
+    idWord = taxIdWord(country);
   if (checked.ok) return '';
   if (checked.reason !== 'format') return txf('That {id} does not check out — look at the last character.', { id: idWord });
   var upper = String(number).trim().toUpperCase();
@@ -603,7 +603,7 @@ function csuGstinWhy(number) {
 function csuTaxIdWhy(country, number) {
   var typed = String(number == null ? '' : number).trim();
   if (!typed) return '';
-  if (country === 'IN') {
+  if (packRegForm(country).idCheck === 'profilemap') {
     if (!window.CBProfileMap) {
       /* load the engine once, then check again */
       if (!CSU.pmLoading) {
@@ -611,13 +611,13 @@ function csuTaxIdWhy(country, number) {
         var script = document.createElement('script');
         script.src = '/engine/profilemap.js';
         script.onload = function () {
-          if (CSU.edit && CSU.edit.country === 'IN') csuSet('number', CSU.edit.number);
+          if (CSU.edit && packRegForm(CSU.edit.country).idCheck === 'profilemap') csuSet('number', CSU.edit.number);
         };
         document.head.appendChild(script);
       }
       return '';
     }
-    return csuGstinWhy(typed);
+    return csuGstinWhy(typed, country);
   }
   var pack = csuPack(country),
     taxId = pack && (pack.abn || pack.trn || pack.gstin);
@@ -815,7 +815,7 @@ function csuSchemeInfo(scheme) {
 }
 /** the tax registration row: registered or not, India's regular / composition scheme, and the number */
 function csuTaxRow(e, sources) {
-  var india = e.country === 'IN';
+  var india = packRegForm(e.country).schemes.length > 1; /* the pack offers a choice of scheme (India: regular · composition) */
   var summary = csuTaxSummary(e, india);
   return csuTaxRowHTML(e, sources, india, summary);
 }
