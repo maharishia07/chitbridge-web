@@ -33,7 +33,7 @@ ok(closeBody.indexOf('priceOvGiveBack()') > closeBody.indexOf('render()') && lab
 const FIXTURE = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>kb</title></head><body>' +
   '<button id="open1" data-cbsid="KBT001-B01">New thing</button><button id="other">Other</button><div id="saved">0</div>' +
   '<dialog class="sheet" id="sh"></dialog>' +
-  '<script src="/config.js"></script><script src="/app/accounts-shell.js"></script><script src="/app/helpers.js"></script><script src="/app/ui.js"></script><script src="/app/ui-field.js"></script><script src="/app/sheet-dialog.js"></script>' +
+  '<script src="/config.js"></script><script src="/app/cb-words.js"></script><script src="/app/accounts-shell.js"></script><script src="/app/helpers.js"></script><script src="/app/ui.js"></script><script src="/app/ui-field.js"></script><script src="/app/sheet-dialog.js"></script>' +
   '<script>' +
   'function paint(){document.getElementById("sh").innerHTML=\'<button type="button" class="mx" id="x" aria-label="Close">\\u2715</button><label for="f_name">Name</label><input class="inp" id="f_name" required data-required-msg="A name is needed.">' +
   '<textarea id="f_note"></textarea><button type="button" id="save" data-sheet-save>Save</button>\';' +

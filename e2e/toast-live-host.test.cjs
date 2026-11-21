@@ -9,7 +9,7 @@
  * Run: node e2e/toast-live-host.test.cjs
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const shell = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'accounts-shell.js'), 'utf8');
+const shell = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cb-words.js'), 'utf8');
 /** the source from startText to the first closing at column 0 (a function's brace, or a constant's semicolon) */
 function topLevel(startText, closing) {
   const start = shell.indexOf(startText);

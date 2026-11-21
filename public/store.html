@@ -2,7 +2,7 @@
 <html lang="en">
 <!-- OWNS  the network Store page: a network's shops and their catalogues as one storefront (?net=).
      CALLED BY network.html and a network's public link.
-     FLOW  load → CBFrame (bar) → the network's catalogue read → paint → network-shop.html
+     FLOW  load → CBCustomerBar → the network's catalogue read → paint → network-shop.html
      CARD storefront-and-catalogue/store -->
 <head>
 <meta charset="utf-8">
@@ -66,26 +66,15 @@
 <footer id="foot"></footer>
 <div class="cartbar" id="cartbar"></div>
 
-<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
-<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
-<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
-<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
-<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
-<script src="/app/accounts-shell.js"></script>   <!-- UX-142: toast() — the ONE shared toast (words, place, live region), not this page's own copy -->
+<!-- THE CUSTOMER HEADER (CUSTOMER-DELINK): mark · name · ⌂ the shop's front. No avatar, no staff session, no staff menu. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes (embed ?theme= paints one) -->
+<script src="/app/cb-words.js"></script>   <!-- the string door · toast · confirm: the neutral floor; never the back-office shell (CUSTOMER-DELINK) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
-<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
-<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<script src="/app/customer-bar.js"></script>   <!-- CBCustomerBar: the customer header — no staff session, no staff menu (CUSTOMER-DELINK) -->
 <script src="/engine/locale.js"></script>
 <script>
-if (window.CBFrame)
-  CBFrame.mount({
-    app: 'store',
-    bar: true,
-    signin: false,
-    host: document.getElementById('shell'),
-    homeHref: location.pathname + location.search,
-    title: { icon: '◇', name: 'Store' }
-  }); /* SHELL-ONE */
+if (window.CBCustomerBar)
+  CBCustomerBar.mount({ host: document.getElementById('shell'), screen: 'STR001', homeHref: location.pathname + location.search, title: { icon: '◇', name: 'Store' } });
 var API = window.CB_API;
 var NET = new URLSearchParams(location.search).get('net') || '';
 var STATE = { all: [], categories: [], q: '', cat: '', cart: {}, cur: '' };

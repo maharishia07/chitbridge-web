@@ -4,7 +4,7 @@
    Run: node e2e/guard-refusal-path.cjs [--count]   exit 1 when the count rises above e2e/refusal-path.baseline.json */
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..', 'public');
-const SHARED = new Set(['app/core.js', 'app/helpers.js', 'app/ui.js', 'app/accounts-shell.js', 'app.html']);
+const SHARED = new Set(['app/core.js', 'app/helpers.js', 'app/ui.js', 'app/cb-words.js', 'app/accounts-shell.js', 'app.html']);
 const GENERIC = /Something went wrong|Server error — please try again|Server error, try again|did not load|Could not load/i;
 /* WHAT THIS DOES NOT COUNT (each is not a screen telling a shopkeeper about a refused or failed reply):
    - comments (a line that is only a comment, or a // tail): they are notes, never shown;

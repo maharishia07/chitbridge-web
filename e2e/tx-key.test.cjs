@@ -10,7 +10,7 @@
  * Run: node e2e/tx-key.test.cjs
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const shell = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'accounts-shell.js'), 'utf8');
+const shell = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cb-words.js'), 'utf8');
 /** one top-level function's source: from its `function name(` line to the first closing brace at column 0 */
 function functionSource(name) {
   const start = shell.indexOf('\nfunction ' + name + '(') + 1;
