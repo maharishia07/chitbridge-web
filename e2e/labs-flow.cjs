@@ -263,11 +263,17 @@ function route(S, r) {
 
   const LABS = [
     /* N18: the index is the shell's Home — a Lab is a manifest card (shell-card-<id>) with its facts spot (shell-facts-<id>) */
-    { key: 'product', title: 'Product Lab', tile: 'shell-card-product-lab', fact: 'shell-facts-product-lab', href: 'product-lab.html' },
-    { key: 'offer', title: 'Offer Lab', tile: 'shell-card-offer-lab', fact: 'shell-facts-offer-lab', href: 'offer-lab-next.html' },
+    { key: 'product', id: 'product-lab', title: 'Product Lab', tile: 'shell-card-product-lab', fact: 'shell-facts-product-lab', href: 'product-lab.html' },
+    { key: 'offer', id: 'offer-lab', title: 'Offer Lab', tile: 'shell-card-offer-lab', fact: 'shell-facts-offer-lab', href: 'offer-lab-next.html' },
     /* T2-LABS: the tile still links combo-lab.html, which forwards to the Offer Lab's combo mode — the page the person lands on */
-    { key: 'combo', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'offer-lab-next.html?mode=combo' },
+    { key: 'combo', id: 'combo-lab', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'offer-lab-next.html?mode=combo' },
   ];
+  /* labsGrey (1128): the walk follows the manifest the shell reads (public/app/manifest.json, never a copy). ready:false = a grey
+   * non-link card with the shell's own sentence (signed out: the showcase line says Coming); the click-through is parked, loudly. */
+  const MANIFEST = JSON.parse(fs.readFileSync(path.join(PUB, 'app', 'manifest.json'), 'utf8'));
+  const SHELL_SRC = fs.readFileSync(path.join(PUB, 'app', 'shell.js'), 'utf8');
+  const UNFINISHED = (SHELL_SRC.match(/unfinished:\s*'([^']+)'/) || [])[1] || 'Being finished';
+  const readyOf = (id) => { const e = (MANIFEST.entries || []).filter((x) => x.id === id)[0]; return !!e && e.ready !== false; };
   const VIEWPORTS = [{ w: 1280, label: '1280' }, { w: 390, label: '390' }];
   const STATES = [{ signedOut: false, label: 'in' }, { signedOut: true, label: 'out' }];
 
@@ -318,6 +324,26 @@ function route(S, r) {
           }
           const shotIdx = 'labs-flow-' + lab.key + '-index-' + state + '.png';
           await p.screenshot({ path: path.join(SHOTS, shotIdx), fullPage: true });
+
+          if (!readyOf(lab.id)) {
+            if (st.signedOut) {
+              const line = p.locator('[data-testid="ix2-show-' + lab.id + '"]').first();
+              const lt = ((await line.textContent({ timeout: 3000 }).catch(() => '')) || '').trim();
+              ok(lab.key, /Coming/.test(lt) && lt.indexOf(lab.title) >= 0, 'signed out: the showcase line names ' + lab.title + ' as Coming (' + state + ')', 'got "' + lt + '"');
+            } else {
+              const card = p.locator('[data-testid="' + lab.tile + '"]').first();
+              const tag = await card.evaluate((n) => n.tagName).catch(() => '');
+              const at = await card.evaluate((n) => ({ href: n.getAttribute('href'), dis: n.getAttribute('aria-disabled'), rdy: n.getAttribute('data-ready') })).catch(() => ({}));
+              ok(lab.key, tag !== '' && tag !== 'A' && at.href == null && at.dis === 'true' && at.rdy === 'no', lab.title + ' is a grey non-link card (' + state + ')', 'tag=' + tag + ' href=' + at.href + ' aria-disabled=' + at.dis + ' data-ready=' + at.rdy);
+              const sentence = ((await p.locator('[data-testid="shell-off-' + lab.id + '"]').first().textContent({ timeout: 3000 }).catch(() => '')) || '').trim();
+              ok(lab.key, sentence === UNFINISHED, lab.title + ' carries its readiness sentence "' + UNFINISHED + '" (' + state + ')', 'got "' + sentence + '"');
+            }
+            console.log('  --  [' + lab.key + '] parked: ready:false in manifest (' + state + ')');
+            row(lab.key, 'click-through and Lab page (' + state + ')', 'PARKED', 'ready:false in manifest');
+            reportHealth(lab.key, state, h, state);
+            await h.ctx.close();
+            continue;
+          }
 
           await Promise.all([
             p.waitForLoadState('load').catch(() => {}),
