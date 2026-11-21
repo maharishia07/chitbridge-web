@@ -142,7 +142,7 @@ function ctrOpenTill(key) {
     if (typeof cblog === 'function') cblog('error', 'counter key not kept on this PC: ' + ((e && e.message) || e));
   } /* the till still opens: the key rides its address */
   var addr =
-    '/till.html#key=' + encodeURIComponent(key) + '&shop=' + encodeURIComponent(SESSION.entityId || '') + '&as=' + encodeURIComponent(SESSION.entity || '');
+    '/till.html#key=' + encodeURIComponent(key) + '&shop=' + encodeURIComponent(SESSION.entityId || '') + '&as=' + encodeURIComponent(SESSION.entity || '') + '&fixed=1'; /* tillbind: Settings > Counters is the ONE deliberate door; only a counter opened here holds its lock to this shop (SPEC-counter-identity G1) */
   window.open(addr, '_blank', 'noopener');
 }
 
