@@ -86,13 +86,13 @@ function enBody() {
 /** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */
 function enWords(list, code, dateStep, needs) {
   return (list || []).map(function (item, index) {
-    var c = index === 0 && code ? code : null,
+    var firstCode = index === 0 && code ? code : null,
       msg = typeof item === 'object' && item ? item.message : item;
     return {
-      code: c || (typeof item === 'object' && item && item.code) || 'R' + index,
+      code: firstCode || (typeof item === 'object' && item && item.code) || 'R' + index,
       message: String(msg),
       fix:
-        c === 'PERIOD_LOCKED'
+        firstCode === 'PERIOD_LOCKED'
           ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' }
           : index === 0 && needs && enFieldStep(needs)
             ? { label: tx('Add it'), step: enFieldStep(needs), focus: needs } /* C-F-06: the server names the box it lacks; the button goes to that box */

@@ -873,12 +873,12 @@ var CBShop = (function () {
   }
   /** the Business section: the same inputs the workshop's Profile paints (shopFieldsHTML), one Save (M64) */
   function shopCardHTML(e) {
-    var who = SESSION && SESSION.actorId;
+    var actorId = SESSION && SESSION.actorId;
     return (
       shopNameHTML(e || {}) +
       shopFieldsHTML(e || {}, shopLicLabel()) +
       '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>' +
-      (who
+      (actorId
         ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
         : '<button data-cbsid="ACC002-B09" type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>')
     );

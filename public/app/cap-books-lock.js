@@ -255,15 +255,15 @@ function bkLockRefused(what, period, words, failure) {
   out.setAttribute('data-tone', 'error');
   var taxClosed = what === 'unlock' && failure && failure.status >= 400 && failure.status < 500 && /closed tax period/i.test(String(failure.message || ''));
   if (!taxClosed) return;
-  var go = document.createElement('button');
-  go.type = 'button';
-  go.className = 'supact-pri';
-  go.setAttribute('data-cbsid', 'CMP042-B08'); /* the one Open again action, asked again as an amendment */
-  go.setAttribute('data-testid', 'lk-amend-' + period);
-  go.textContent = tx('Amend this return');
-  go.onclick = function () { bkLockReopen(period, false, true); };
+  var amendButton = document.createElement('button');
+  amendButton.type = 'button';
+  amendButton.className = 'supact-pri';
+  amendButton.setAttribute('data-cbsid', 'CMP042-B08'); /* the one Open again action, asked again as an amendment */
+  amendButton.setAttribute('data-testid', 'lk-amend-' + period);
+  amendButton.textContent = tx('Amend this return');
+  amendButton.onclick = function () { bkLockReopen(period, false, true); };
   out.appendChild(document.createTextNode(' '));
-  out.appendChild(go);
+  out.appendChild(amendButton);
 }
 /* lock or unlock one month, asking the server and flipping only that row */
 async function bkLockDo(what, period, reason, amend) {
