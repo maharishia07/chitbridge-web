@@ -596,7 +596,7 @@ async function route(S, r) {
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-off.png') });
     await p.click('[data-testid="acc-switch-on"]');
     await p.waitForSelector('[data-testid="confirm-ok"]');
-    ok(/Switch the Ledger on\?/.test(await p.textContent('[data-testid="confirm"]')) && /From today every bill/.test(await p.textContent('[data-testid="confirm"]')), 'a confirm says what switching on means (the Settings card\'s words)');
+    ok(/Switch the books on\?/.test(await p.textContent('[data-testid="confirm"]')) && /From today every bill/.test(await p.textContent('[data-testid="confirm"]')), 'a confirm says what switching on means (the Settings card\'s words)');
     ok(S.enables === 0, 'nothing is sent before the owner confirms');
     await p.click('[data-testid="confirm-cancel"]');
     await p.waitForTimeout(200);

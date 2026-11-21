@@ -445,7 +445,7 @@ function toastLevel(m) {
 var CBLedger = (function () {
   function words(on) {
     return {
-      title: on ? tx('Switch the Ledger on?') : tx('Switch the Ledger off?'),
+      title: on ? tx('Switch the books on?') : tx('Switch the books off?'),
       body: esc(
         on
           ? tx('From today every bill, payment and expense is recorded. Nothing before today is.')

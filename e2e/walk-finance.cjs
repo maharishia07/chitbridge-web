@@ -127,7 +127,7 @@ W.run('finance', async (w) => {
     const t1 = await txt('[data-testid="fin-off"]'), on1 = await page.locator('[data-testid="fin-turn-on"]').isEnabled().catch(() => false);
     const w0 = S.writes.length;
     await page.click('[data-testid="fin-turn-on"]'); await page.waitForTimeout(500);
-    const asked = /Switch the Ledger on/.test(await body()), sent = S.writes.length - w0;
+    const asked = /Switch the books on/.test(await body()), sent = S.writes.length - w0;
     await page.goto(base + '/finance.html#/terms'); await page.waitForSelector('[data-testid="fin-off"]', { timeout: 20000 }).catch(() => {}); await page.waitForTimeout(400);
     const t2 = await txt('[data-testid="fin-off"]'); S.mode = 'ok';
     return { ok: /Your ledger is off/.test(t1) && on1 && asked && sent === 0 && /Your ledger is off/.test(t2), saw: '"' + t1 + '"; enabled ' + on1 + '; asked first ' + asked + '; writes before yes ' + sent + '; Terms: "' + t2 + '"' };
