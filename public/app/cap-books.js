@@ -4465,7 +4465,7 @@ function bkTbPick(which) {
   bkTab('tb');
 }
 function bkTbPicksHTML() {
-  return '<button class="btn sm" data-testid="tb-pick-prior-end" onclick="bkTbPick(\'prior-end\')">' + tx('End of last year') + '</button><button class="btn sm" data-testid="tb-pick-year-start" onclick="bkTbPick(\'year-start\')">' + tx('Start of this year') + '</button>';
+  return '<button class="btn sm" data-cbsid="CMP042-B26"' + bkMountAttribute('CMP042') + ' data-testid="tb-pick-prior-end" onclick="bkTbPick(\'prior-end\')">' + tx('End of last year') + '</button><button class="btn sm" data-cbsid="CMP042-B27"' + bkMountAttribute('CMP042') + ' data-testid="tb-pick-year-start" onclick="bkTbPick(\'year-start\')">' + tx('Start of this year') + '</button>';
 }
 /** the bar over the trial balance: the date, Show, and the chip that says whether debits equal credits */
 function bkTbBarHTML(asOf, ok) {
