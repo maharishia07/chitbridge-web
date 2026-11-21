@@ -650,6 +650,8 @@
     'Trade-ready': 'व्यापार-तैयार',
     'Trash': 'कचरा',
     'Try again': 'फिर कोशिश करें',
+    'Too many requests — try again in {n} s.': 'बहुत अधिक अनुरोध — {n} सेकंड में फिर कोशिश करें।',
+    'Too many requests — try again in a moment.': 'बहुत अधिक अनुरोध — थोड़ी देर में फिर कोशिश करें।',
     'Turn on for this store': 'इस दुकान के लिए चालू करें',
     'Typeface': 'फ़ॉन्ट',
     'Unassigned': 'बिना सौंपा',

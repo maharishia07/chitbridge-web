@@ -108,8 +108,8 @@ async function bkWaitingView(body) {
   }
 }
 /* ask the server to retry every waiting item, then report how many cleared */
-async function bkWaitingRetry() {
-  await bkOnce('retry', document.querySelector('[data-testid="wait-retry"]'), async function () {
+async function bkWaitingRetry(button) {
+  await bkOnce('retry', button || document.querySelector('[data-testid="wait-retry"]'), async function () {
     var before = (BK.waiting || []).length;
     try {
       await api('booksRetry', { body: {} });

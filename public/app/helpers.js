@@ -633,6 +633,15 @@ function gstrDownload(month, form, onReply) {
     return name;
   });
 }
+/** ⭐ WALK M M-F-03/M-F-08: is this login VIEW-ONLY (level viewer, not the owner)? The ONE reading of the claim — Accounts greys its menu with it, Returns greys its file buttons; a firm seat is decided by its grant (accounts.html adds that). The api refuses a viewer the money in words (books money gate); this only greys what would be refused */
+function viewOnlyLogin() {
+  var claims = (typeof SESSION !== 'undefined' && SESSION && jwtPayload(SESSION.token)) || {};
+  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role !== 'entity' && String(claims.access_level || claims.level || '') === 'viewer';
+}
+/** the reason a view-only login is shown beside a greyed money door (one sentence for Accounts and Returns) */
+function viewOnlyMoneyWhy() {
+  return tx("Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.");
+}
 function jwtPayload(t) {
   try {
     const text = String(t || '').split('.')[1];

@@ -649,6 +649,8 @@
     'Trade-ready': 'Prêt au commerce',
     'Trash': 'Corbeille',
     'Try again': 'Réessayer',
+    'Too many requests — try again in {n} s.': 'Trop de requêtes — réessayez dans {n} s.',
+    'Too many requests — try again in a moment.': 'Trop de requêtes — réessayez dans un instant.',
     'Turn on for this store': 'Activer pour cette boutique',
     'Typeface': 'Police',
     'Unassigned': 'Non attribué',

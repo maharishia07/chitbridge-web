@@ -687,6 +687,8 @@
     'Trade readiness': 'جاهزية التجارة',
     'Trade-ready': 'جاهز للتجارة',
     'Try again': 'حاول مجددًا',
+    'Too many requests — try again in {n} s.': 'طلبات كثيرة جدًا — حاول مجددًا بعد {n} ثانية.',
+    'Too many requests — try again in a moment.': 'طلبات كثيرة جدًا — حاول مجددًا بعد قليل.',
     'Turn on for this store': 'التفعيل لهذا المتجر',
     'Typeface': 'الخط',
     'Unassigned': 'غير مُسند',
