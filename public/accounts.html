@@ -682,7 +682,12 @@ const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || 
 function todoGo(i) {
   const it = ACC.todo && ACC.todo[i];
   if (!it) return;
-  const tab = TODO_SCREEN[(it.action || {}).screen];
+  const screen = (it.action || {}).screen;
+  if (screen === 'catalogue') {
+    location.href = CB_HOMES.catalogue; /* supply kind: the 0% slabs and products that wait for their kind are answered in the catalogue, one tap each */
+    return;
+  }
+  const tab = TODO_SCREEN[screen];
   if (tab) show(tab);
   else toast(tx('This starts after an update'));
 }

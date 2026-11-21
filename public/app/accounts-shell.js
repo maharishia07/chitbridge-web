@@ -36,6 +36,7 @@ var CB_HOMES = {
   customers: '/crm.html#/parties?role=customer',
   suppliers: '/crm.html#/parties?role=supplier',
   ledger: '/accounts.html',
+  catalogue: '/catalogue.html' /* the 0% lines that wait for their kind (the to-do row zero_kind_unanswered): the catalogue's rates, where the owner answers */,
   network: '/network.html',
   coassists: '/employees.html',
   profile: '/settings.html#/shop' /* the avatar's own choice for Profile: Settings › Your business (avatar.js, UX-96) */,
