@@ -288,7 +288,7 @@
         </select></label>
       <label><input data-cbsid="CLB001-I01" type="checkbox" id="incl" onchange="LAB.incl=this.checked; paintBill()"> prices include tax</label>
     </div>
-    <div class="hint" style="margin-top:6px">The same figures, read in each pack's currency: ₹300 here is A$300 there.</div>
+    <div class="hint" style="margin-top:6px">The same figures, read in each pack's currency: the number stays, the money word changes.</div>
     <details class="why hint"><summary>why</summary><div>Converting money is the Conversion lab's job, with a rate and its source; this page shows what the TAX does to one cart. A supply kind is the pack's own word (taxable · GST-free · input-taxed; standard · zero-rated · exempt); a kind the other pack does not know is said by the engine on that side, never guessed. The rate column is read only by a pack that names no kinds (India: the product's slab).</div></details>
 
     <!-- ⚠️ THE OWNER'S RULE (DECISIONS, 13 Oct): a shop never changes country once it has a product or a transaction. Before that the country
@@ -1611,6 +1611,26 @@ if (window.CBCountryProfiles && CBCountryProfiles.mountAll) CBCountryProfiles.mo
 if (window.CBCountryProfiles) CBCountryProfiles.mount(document.getElementById('cp'), (/^#\/countries\/([A-Za-z]{2})/.exec(location.hash) || [])[1]);
 showView(labView());
 repaint();
+/* H-F-06 (batch 1128): a signed-in shop opens the Compare on ITS OWN country, not India's. The other side is the first pack that is not the shop's. */
+(function () {
+  var token = null;
+  try {
+    token = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;
+  } catch (_) {}
+  if (!token || !window.CB_API) return;
+  fetch(window.CB_API + '/api/entities/me', { headers: { Authorization: 'Bearer ' + token } })
+    .then(function (reply) { return reply.ok ? reply.json() : null; })
+    .then(function (body) {
+      var entity = (body && body.data) || body || {};
+      entity = entity.entity || entity;
+      var cc = String(entity.country_code || entity.country || '').toUpperCase();
+      if (!/^[A-Z]{2}$/.test(cc) || cc === LAB.from) return;
+      LAB.from = cc;
+      LAB.to = ['AU', 'AE', 'IN'].filter(function (other) { return other !== cc; })[0];
+      repaint();
+    })
+    .catch(function (failure) { if (window.cbQuiet) window.cbQuiet('country-lab:shop-country', failure); });
+})();
 </script>
 </body>
 </html>

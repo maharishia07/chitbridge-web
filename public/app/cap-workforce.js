@@ -836,7 +836,7 @@ function awRender() {
       else if (sk === 'gw')
         body =
           fld('aw_name', 'Gateway name', 'Line-1 Gateway') +
-          fld('aw_site', 'Site', 'Chennai') +
+          fld('aw_site', 'Site', 'e.g. your site name') +
           how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
       else if (sk === 'mode')
         body =
