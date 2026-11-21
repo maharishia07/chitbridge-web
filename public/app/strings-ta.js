@@ -1026,6 +1026,10 @@
     '{what} could not be read. Nothing was changed.': '{what} படிக்க முடியவில்லை. எதுவும் மாற்றப்படவில்லை.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(இதுவரை)',
+    'Tax return': 'வரி ரிட்டர்ன்',
+    'Box': 'பெட்டி',
+    'What': 'என்ன',
+    'To pay or refund': 'செலுத்த அல்லது திரும்பப் பெற',
     'Lodged, as you said': 'தாக்கல் செய்யப்பட்டது, நீங்கள் கூறியபடி',
     'Overdue — prepared, not lodged': 'தாமதம் — தயார், தாக்கல் செய்யப்படவில்லை',
     'Closed — prepared, not lodged': 'மூடப்பட்டது — தயார், தாக்கல் செய்யப்படவில்லை',

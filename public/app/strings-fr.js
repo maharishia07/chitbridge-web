@@ -1026,6 +1026,10 @@
     '{what} could not be read. Nothing was changed.': '{what} n’a pas pu être lu. Rien n’a été modifié.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(jusqu\'ici)',
+    'Tax return': 'Déclaration fiscale',
+    'Box': 'Case',
+    'What': 'Quoi',
+    'To pay or refund': 'À payer ou à rembourser',
     'Lodged, as you said': 'Déposée, comme vous l'avez indiqué',
     'Overdue — prepared, not lodged': 'En retard — préparée, non déposée',
     'Closed — prepared, not lodged': 'Clôturée — préparée, non déposée',

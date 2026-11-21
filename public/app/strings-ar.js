@@ -1130,6 +1130,10 @@
     '{what} could not be read. Nothing was changed.': 'تعذّرت قراءة {what}. لم يتغيّر شيء.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(حتى الآن)',
+    'Tax return': 'إقرار ضريبي',
+    'Box': 'الصندوق',
+    'What': 'ماذا',
+    'To pay or refund': 'المستحق أو المسترد',
     'Lodged, as you said': 'مُقدَّم، كما ذكرتَ',
     'Overdue — prepared, not lodged': 'متأخر — مُعدّ، غير مُقدَّم',
     'Closed — prepared, not lodged': 'مُقفل — مُعدّ، غير مُقدَّم',
