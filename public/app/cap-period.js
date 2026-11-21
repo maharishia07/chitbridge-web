@@ -284,6 +284,7 @@ function peAssetForm() {
       )
     ) +
     peField('pa_acc', 'Depreciation so far (existing asset only)', peAmt('pa_acc')) +
+    '<div class="pe-note" data-testid="pa-prior-note">' + esc(tx('An existing asset goes in here only. Do not enter the same asset again in Opening balances, or it is counted twice.')) + '</div>' +
     peField('pa_rate', 'Tax on the price, % (empty if none)', peInput('pa_rate', '', '', 'number')) +
     peField('pa_inc', 'Does the price include the tax?', peSel('pa_inc', [['no', 'No, tax is on top'], ['yes', 'Yes, tax is inside']], 'no')) +
     peField('pa_theirs', 'Supplier tax number (when there is tax)', peInput('pa_theirs', '')) +
