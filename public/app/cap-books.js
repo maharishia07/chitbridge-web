@@ -1801,9 +1801,9 @@ function bkRangeHTML(id, again) {
   );
 }
 /* a report table from its head cells, row HTML and optional foot */
-function bkTable(head, rows, foot) {
+function bkTable(head, rows, foot, cls) {
   return (
-    '<div class="bk-scroll"><table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
+    '<div class="bk-scroll"><table class="bktab' + (cls ? ' ' + cls : '') + '" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
     head
       .map(function (item) {
         return '<th' + (item.num ? ' class="num"' : '') + '>' + item.t + '</th>';
@@ -4440,9 +4440,9 @@ function bkTbRowHTML(x, reply, compare, currency, asOf) {
     esc(x.code) +
     '</td><td>' +
     bkDrillLink(x.code, x.name, 'tb', reply.fy_from || bkFyFrom(), asOf, 'tb', tx('Trial balance')) +
-    '</td><td class="num">' +
+    '</td><td class="num" data-l="' + esc(tx('Dr')) + '">' +
     (x.dr_minor ? esc(bkMoney(x.dr_minor, currency)) : '') +
-    '</td><td class="num">' +
+    '</td><td class="num" data-l="' + esc(tx('Cr')) + '">' +
     (x.cr_minor ? esc(bkMoney(x.cr_minor, currency)) : '') +
     '</td>' +
     (compare ? '<td class="num" data-testid="tb-prior">' + (x.prior_net_minor == null ? bkFig(null, currency) : esc(bkDrCr(x.prior_net_minor, currency))) + '</td><td class="num">' + bkChange(changed.change_minor, x.change_over, currency, 'BKS004-P02', changed.side) + '</td><td class="num">' + bkPct(changed.change_bp, true) + '</td>' : '') +
@@ -4497,7 +4497,8 @@ async function bkTB(body) {
       bkTable(
         [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }].concat(comparison ? [{ t: tx('Last year'), num: 1 }, { t: tx('Change'), num: 1 }, { t: '%', num: 1 }] : []),
         rows,
-        bkTbTotalRowHTML(reply, currency, comparison)
+        bkTbTotalRowHTML(reply, currency, comparison),
+        'bk-tbm'
       ) +
       (comparison ? bkOverNote(reply.over_rule, currency, 'BKS004-P03', 'tb-over-note') : ''); /* the note sits UNDER the list: the first data row stays where it was */
     if (window.CBBankTbLine && reply.bank) CBBankTbLine.wire(body, reply.bank, bkTbBankOptions(reply, asOf));

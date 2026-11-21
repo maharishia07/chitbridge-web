@@ -139,7 +139,12 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 #bk_body label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
 #bk_body table{max-width:100%}
 /* F-53 (21 Nov): a report fits the screen - only its rows scroll; the head stays on top, the Total row on the bottom (the no-scroll rule, 1366x768 + 390x844) */
-.bk-scroll{overflow:auto;max-height:max(220px,calc(100dvh - 322px))}@media(max-width:620px){.bk-scroll{max-height:max(220px,calc(100dvh - 372px))}}.bk-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}.bk-scroll tfoot td{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line-3)}
+.bk-scroll{overflow:auto;min-height:160px}
+/* the statement tables (TB, P&L, Balance sheet): the page is the screen - the head and the figures bar keep their height, the rows take the rest and scroll; the old calc() max-height left P&L 22 px and the phone 44 px past the screen once the real lead and notes were drawn */
+body:has(.bk-scroll) .main{display:flex;flex-direction:column;overflow:hidden}
+body:has(.bk-scroll) .content{flex:1 1 auto;min-height:0;padding-bottom:8px}
+.content>#bk_body:has(>.bk-scroll){flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+#bk_body>.bk-scroll{flex:1 1 auto}.bk-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}.bk-scroll tfoot td{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line-3)}
 
 /* To do — one row a thing that needs doing: symbol · count · sentence · its one button; a phone puts the button under the sentence, full width */
 .todo{display:flex;flex-direction:column;gap:10px;max-width:760px}
@@ -364,6 +369,15 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
   #bk_body table.bktab td[data-l]::before{content:attr(data-l);font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:var(--muted-2);text-align:left;flex-shrink:0}
   #bk_body table.bktab td:empty{display:none}
   #bk_body .bktab tr.bkentry td{border:0}
+  /* Trial balance on a phone: one line a ledger - name left, figure right with its Dr/Cr; no CODE/LEDGER/DEBIT label on every card (the code is in the name link). 118 px a card -> one line */
+  #bk_body table.bk-tbm tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:0 10px;padding:6px 12px;margin-bottom:4px}
+  #bk_body table.bk-tbm tbody td{padding:0}
+  #bk_body table.bk-tbm tbody td:first-child{display:none}
+  #bk_body table.bk-tbm tbody td:nth-child(2){text-align:left;grid-column:1}
+  #bk_body table.bk-tbm tbody td:nth-child(2)::before{display:none}
+  #bk_body table.bk-tbm tbody td.num{grid-column:2;grid-row:1;white-space:nowrap}
+  #bk_body table.bk-tbm tbody td.num::before{order:2;margin-inline-start:6px;text-transform:none;font-weight:600}
+  #bk_body table.bk-tbm tbody td.num{flex-direction:row-reverse}
   /* the party table (1300 / 2100): one line a party — name · balance */
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
