@@ -28,6 +28,17 @@ var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 function finOwes(p) {
   return Number(p.balance_minor) > 0 || Number(p.disputed_minor) > 0;
 }
+/** J-F-02: the Collections rows — the customer list's OWN figures (COUNT-SOURCE: the same sides.customer the tile reads). A party the server marks 'both' (it owes you and you owe it) carries the netted figure on the row and each list's own in row.sides.<side>; the netted figure can be 0 or negative while the customer half is 1,000, so the row takes sides.customer — nothing is worked out here. */
+function finCollectRows(parties) {
+  var out = [];
+  (parties || []).forEach(function (item) {
+    var row = item;
+    if (item.side === 'both' && item.sides && item.sides.customer) row = Object.assign({}, item, item.sides.customer, { side: 'customer' });
+    else if (bkDuesSide(item) !== 'rcv') return;
+    if (finOwes(row)) out.push(row);
+  });
+  return out;
+}
 /** FIN-15: the server's disputed figure said beside the amount ("In dispute ₹170"), '' when none */
 function finDisputeHTML(party) {
   return Number(party.disputed_minor) > 0 ? '<div data-b="disputed" style="font-size:var(--fs-1);color:var(--warn-2)">' + esc(tx('In dispute')) + ' ' + esc(bkMoney(Number(party.disputed_minor), FIN.cur)) + '</div>' : '';
@@ -76,9 +87,7 @@ async function finLoad(quiet) {
     FIN.cur = (dues && dues.currency) || bkCur();
     if (dues && dues.currency && typeof SESSION !== 'undefined' && SESSION)
       SESSION.currency = dues.currency; /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
-    FIN.rows = ((dues && dues.parties) || []).filter(function (item) {
-      return bkDuesSide(item) === 'rcv' && finOwes(item);
-    });
+    FIN.rows = finCollectRows(dues && dues.parties);
     FIN.state = 'ready';
     FIN.err = null;
     ftNav(); /* the tabs' words again, now the language pack has had the boot to land */
