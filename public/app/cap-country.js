@@ -679,7 +679,7 @@ function csuRow(key, what, valueHtml, from, editHtml, locked, lockHtml) {
           : '<a data-cbsid="ACC002-B10" data-testid="cs-change-' +
             key +
             '" onclick="csuOpen(\'' +
-            key +
+            escJs(key) +
             '\')" title="' +
             esc(tx('Change')) +
             '" aria-label="' +
@@ -716,7 +716,7 @@ function csuSel(id, k, opts, cur) {
     '" aria-label="' +
     esc(tx(CSU_SEL_NAME[id] || id)) +
     '" onchange="csuSet(\'' +
-    k +
+    escJs(k) +
     '\', this.value)">' +
     opts
       .map(function (item) {

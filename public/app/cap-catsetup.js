@@ -215,14 +215,14 @@ function catsetDefListHTML(kind, one) {
           (d.status === 'live' ? tx('Back to draft') : tx('Make live')) +
           '</span>' +
           '<span data-cbsid="CMP012" class="da" onclick="catsetDefEdit(\'' +
-          kind +
+          escJs(kind) +
           "','" +
           escJs(d.id) +
           '\')">' +
           tx('Edit') +
           '</span>' +
           '<span data-cbsid="CAT004-C03" class="da" onclick="catsetDefRetire(\'' +
-          kind +
+          escJs(kind) +
           "','" +
           escJs(d.id) +
           "','" +
@@ -886,7 +886,7 @@ function catsetRecheckCard() {
   if (CATSET_RECHECK === undefined) catsetRecheckLoad();
   var state = CATSET_RECHECK === 'on' ? tx('Yes, every bill') : CATSET_RECHECK === 'off' ? tx('No, only old parked bills') : tx('Not answered yet');
   var pick = function (value, label) {
-    return '<button data-cbsid="CAT004-B01" class="composebtn' + (CATSET_RECHECK === value ? ' pri' : '') + '" data-testid="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" data-ui-id="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" aria-pressed="' + (CATSET_RECHECK === value) + '" onclick="catsetRecheckSet(this,\'' + value + '\')">' + tx(label) + '</button>';
+    return '<button data-cbsid="CAT004-B01" class="composebtn' + (CATSET_RECHECK === value ? ' pri' : '') + '" data-testid="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" data-ui-id="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" aria-pressed="' + (CATSET_RECHECK === value) + '" onclick="catsetRecheckSet(this,\'' + escJs(value) + '\')">' + tx(label) + '</button>';
   };
   return catsetCard(
     tx('Check prices before each bill'),
@@ -1630,7 +1630,7 @@ function catsetColTabsHTML() {
           (catsetColTab() === item[0] ? 'on' : '') +
           '"' +
           ' onclick="catsetSetColTab(\'' +
-          item[0] +
+          escJs(item[0]) +
           '\')">' +
           item[1] +
           '</button>'
@@ -1680,7 +1680,7 @@ function catsetColRow(c, i, n) {
       esc(lockedType ? c.retype_because || '' : tx('What kind of value this column holds')) +
       '"' +
       ' onchange="catsetFieldPatch(\'' +
-      key +
+      escJs(key) +
       '\',{field_type:this.value})" style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">' +
       types
         .map(function (x) {
@@ -1698,7 +1698,7 @@ function catsetColRow(c, i, n) {
       '"' +
       (ready ? '' : ' disabled title="' + esc(tx('Not switched on for your shop yet')) + '"') +
       ' onchange="catsetFieldPatch(\'' +
-      key +
+      escJs(key) +
       '\',{unit:this.value})" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);text-transform:uppercase">' +
       '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:4px;white-space:nowrap" title="' +
       esc(lockedReq ? tx('Every catalogue requires this') : tx('Refuse a product that leaves this empty')) +
@@ -1709,7 +1709,7 @@ function catsetColRow(c, i, n) {
       (c.required ? ' checked' : '') +
       (lockedReq ? ' disabled' : '') +
       ' onchange="catsetFieldPatch(\'' +
-      key +
+      escJs(key) +
       '\',{required:this.checked})">' +
       tx('required') +
       '</label>' +
@@ -1739,7 +1739,7 @@ function catsetColRow(c, i, n) {
       esc(can ? tx('Remove this column') : c.locked_because || tx('This column cannot be removed.')) +
       '"' +
       ' onclick="catsetDrop(\'' +
-      key +
+      escJs(key) +
       '\')">' +
       (can ? '✕' : '🔒') +
       '</button>' +
@@ -1763,7 +1763,7 @@ function catsetColRow(c, i, n) {
     '"' +
     (i === 0 ? ' disabled' : '') +
     ' onclick="catsetMove(\'' +
-    key +
+    escJs(key) +
     '\',-1)">↑</button>' +
     '<button data-cbsid="CAT004-B18" type="button" title="' +
     esc(tx('Move down')) +
@@ -1772,7 +1772,7 @@ function catsetColRow(c, i, n) {
     '"' +
     (i === n - 1 ? ' disabled' : '') +
     ' onclick="catsetMove(\'' +
-    key +
+    escJs(key) +
     '\',1)">↓</button>' +
     (can ? '' : '<button data-cbsid="CAT004-B19" type="button" class="badd" disabled title="' + esc(c.locked_because || '') + '">🔒</button>') +
     '</div>'
@@ -2951,7 +2951,7 @@ function catsetRowsHTML() {
       item.key +
       '"' +
       ' onclick="catsetSetSec(\'' +
-      item.key +
+      escJs(item.key) +
       '\')">' +
       '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">' +
       '<span style="font-size:var(--fs-3)">' +

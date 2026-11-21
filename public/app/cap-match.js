@@ -77,7 +77,7 @@ function matchScreen() {
       '" data-testid="match-chip-' +
       key +
       '" onclick="MATCH.only=\'' +
-      key +
+      escJs(key) +
       '\';renderApp()">' +
       esc(label) +
       (key === 'all' ? '' : ' <b>' + (counts[key] || 0) + '</b>') +

@@ -96,7 +96,7 @@ function peBad(id, e, fallback) {
     (w.calm ? '⏳ ' : '⚠ ') +
     esc(w.text) +
     '</span>' +
-    (w.fix ? '<button data-cbsid="BKS016-B01" type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') +
+    (w.fix ? '<button data-cbsid="BKS016-B01" type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + escJs(w.fix.tab) + '\')">' + esc(w.fix.label) + '</button>' : '') +
     '</div>';
 }
 function peOk(id, html) {
@@ -1270,7 +1270,7 @@ function peYearChecksHtml(year, months, refs) {
         '"><span>✗</span><span>' +
         esc(peYearWhy(x.why)) +
         '</span>' +
-        (f ? '<button data-cbsid="BKS016-B08" type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
+        (f ? '<button data-cbsid="BKS016-B08" type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + escJs(f.tab) + '\')">' + esc(f.label) + '</button>' : '') +
         '</div>'
       );
     })

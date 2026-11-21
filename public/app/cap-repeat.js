@@ -763,7 +763,7 @@ function rpReasonForm(verb, label, placeholder) {
     '<button data-cbsid="FIN005-B04" type="button" class="act sm" data-testid="rp-' +
     verb +
     '-go" onclick="CBRepeat.go(\'' +
-    verb +
+    escJs(verb) +
     '\',this)">' +
     esc(label) +
     '</button></div>'
