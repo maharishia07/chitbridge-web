@@ -82,8 +82,6 @@ const ctx = {
   console,
   __painted: () => [...paints.values()].map((e) => e._html).join('\n'),
   UI: {},
-  esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
   cbAmount: (p) => (p && typeof p === 'object' && p.amount !== undefined ? p.amount : p),
   supCatalogueFull: async () => CAT,
   compose: (arg) => { ctx.__composed = arg; },
@@ -131,6 +129,8 @@ createContext(ctx);
 /* The REAL modules, in the order app.html loads them. */
 /* ⚠ locale.js FIRST. cart-ui and catalogue-ui both reach for CBLocale to format money, and without it
    the cart bar throws mid-paint — which the old null-returning DOM stub hid, because paintBar never ran. */
+/* the page loads app/helpers.js first: the ONE esc and escJs (no private copy here) */
+runInContext(read('public/app/helpers.js'), ctx, { filename: 'helpers.js' });
 runInContext(read('public/engine/locale.js'), ctx, { filename: 'locale.js' });
 runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' });
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });

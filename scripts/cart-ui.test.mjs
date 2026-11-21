@@ -11,6 +11,9 @@
  * ⚠️ ESM, imported for SIDE EFFECTS — both files are browser files that attach to `window`; under this package's
  * "type": "module" they land on globalThis, which is what a browser would give them too.
  */
+/* the page loads app/helpers.js first (the ONE esc and escJs, which cart.js calls) — so does this harness; never a second copy */
+const { runInThisContext } = await import('node:vm'); const { readFileSync } = await import('node:fs');
+runInThisContext(readFileSync(new URL('../public/app/helpers.js', import.meta.url), 'utf8'));
 /* the unit table — UNIT_KINDS is what tells a continuous unit from a countable one */
 await import('../public/app/catalogue-model.js');
 await import('../public/app/catalogue-lines.js');   // the walk cart-ui builds on
