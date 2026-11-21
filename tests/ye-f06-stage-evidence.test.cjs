@@ -14,6 +14,7 @@ let n = 0;
 const ok = (name, fn) => { fn(); n++; console.log('  ok   ' + name); };
 const ret = (state) => ({ prepared: 'Prepared, not lodged', period: { period: 'Q1' }, periods: [{ period: 'Q1', state }] });
 ok('a period declared lodged says "Lodged, as you said" and no portal line', () => { const s = ctx.stage(ret('declared_lodged')); assert.strictEqual(s.word, 'Lodged, as you said'); assert.strictEqual(s.lodge, false); });
+ok('the server stage wins: one word from one state', () => { const lodged = ctx.stage({ stage: { code: 'declared_lodged', words: 'Lodged, as you said' }, prepared: 'Prepared, not lodged' }); assert.strictEqual(lodged.word, 'Lodged, as you said'); assert.strictEqual(lodged.lodge, false); const late = ctx.stage({ stage: { code: 'overdue', words: 'Overdue — prepared, not lodged' } }); assert.strictEqual(late.lodge, true); });
 ok('a prepared period keeps "Prepared, not lodged" with the portal line', () => { const s = ctx.stage(ret('open')); assert.strictEqual(s.word, 'Prepared, not lodged'); assert.strictEqual(s.lodge, true); });
 ok('the closed year: when and by whom, declared lodged, the profit carried with its currency', () => {
   const html = ctx.ev({ closed_with: { at: '2026-11-02T01:00:00Z', by_name: 'Elm Park Physio', how: 'declared_lodged', profit_minor: 1436617, currency: 'AUD' } });

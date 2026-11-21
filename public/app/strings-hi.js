@@ -1027,6 +1027,9 @@
     '{what} could not be read. Nothing was changed.': '{what} पढ़ा नहीं जा सका। कुछ बदला नहीं गया।',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(अब तक)',
+    'Lodged, as you said': 'भरा गया, जैसा आपने बताया',
+    'Overdue — prepared, not lodged': 'विलंबित — तैयार, भरा नहीं गया',
+    'Closed — prepared, not lodged': 'बंद — तैयार, भरा नहीं गया',
     'overdue': 'विलंबित',
     'Overdue': 'विलंबित',
     'Return overdue': 'रिटर्न विलंबित',

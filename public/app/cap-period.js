@@ -926,7 +926,7 @@ function peReturnPaint(r) {
     '</div>' +
     peReturnClaimBand(r) +
     '<div class="pe-note" data-testid="pr-prepared">' +
-    esc(peReturnStage(r).lodge ? r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal }) : peReturnStage(r).word) +
+    esc(peReturnStage(r).lodge ? peReturnStage(r).word + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal }) : peReturnStage(r).word) +
     '</div>' +
     '</div><div id="pr_list" data-testid="pr-list"></div>';
   if ((r.notes || []).length)
@@ -979,8 +979,9 @@ function peReturnClaimMark(r, b) {
 }
 /* PAST-YEARS: each return period carries its state from the server (set_off · months_locked · year_closed · declared_lodged · open): said in the shop's words, never the code */
 const PE_RET_STATE = { set_off: 'closed', months_locked: 'closed', year_closed: 'closed with the year', declared_lodged: 'lodged, as you said' };
-/** YE-F-06: the ONE stage word of a return, from the state the server gives the period (declared_lodged · else prepared): the note under the total and the copied figures say the same thing */
+/** YE-F-06: the ONE stage word of a return — the server's `stage` (declared_lodged · overdue · closed · prepared), else derived from the period's state for an older api: the note under the total and the copied figures say the same thing */
 function peReturnStage(r) {
+  if (r.stage && r.stage.words) return { word: tx(r.stage.words), lodge: r.stage.code !== 'declared_lodged' }; /* the server's one stage word (api: GET /returns stage) */
   const cur = (r.periods || []).find((item) => r.period && item.period === r.period.period);
   if (cur && cur.state === 'declared_lodged') {
     const word = tx(PE_RET_STATE.declared_lodged);
