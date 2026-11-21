@@ -1374,6 +1374,14 @@ function payAllocs() {
     return { against_ref: item.against_ref, amount_minor: m, disputed: !!item.disputed, open_minor: item.open_minor };
   });
 }
+/** F-20: what the money does to the bills it is set against: settles them, or (a part payment) pays part of them and says what is left open */
+function payAllocWords(list, used, n) {
+  var open = list.reduce(function (total, x) {
+    return total + (x.amount_minor > 0 && x.amount_minor < x.open_minor ? x.open_minor - x.amount_minor : 0);
+  }, 0);
+  if (!open) return txn('{amt} settles {count} bill', '{amt} settles {count} bills', n, { amt: bkMoney(used) });
+  return txn('{amt} part-pays {count} bill, {open} still open', '{amt} part-pays {count} bills, {open} still open', n, { amt: bkMoney(used), open: bkMoney(open) });
+}
 /** the line under the table — says where the money goes, and follows every edit */
 function payLeftPaint() {
   var box = document.getElementById('pay_left');
@@ -1399,7 +1407,7 @@ function payLeftPaint() {
     }).length,
     left = amt - used,
     parts = [];
-  if (n) parts.push(txn('{amt} settles {count} bill', '{amt} settles {count} bills', n, { amt: bkMoney(used) }));
+  if (n) parts.push(payAllocWords(list, used, n));
   if (left > 0)
     parts.push(
       txf(PAY.kind === 'supplier' ? '{amt} stays with {name} as an advance' : '{amt} is kept as an advance from {name}', { amt: bkMoney(left), name: PAY.name })
