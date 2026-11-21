@@ -200,7 +200,7 @@ function adoptFields(r, refused) {
             'onclick="adoptUseSku(' +
             r.line +
             ",'" +
-            esc(seed.suggested_sku) +
+            escJs(seed.suggested_sku) +
             '\')">' +
             esc(seed.suggested_sku) +
             '</b>'

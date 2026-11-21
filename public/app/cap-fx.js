@@ -46,6 +46,7 @@ function fxLoad() {
     function (reply) {
       if (generation !== FXV.gen) return;
       FXV.r = reply || {};
+      FXV.lk = null; /* reviews7 EL-10 M2: new rates change the revaluation figure; never show the cached one */
       FXV.err = '';
       fxPaint();
     },

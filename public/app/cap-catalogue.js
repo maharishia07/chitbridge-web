@@ -1254,7 +1254,12 @@ var CBCatalogueApp = (function () {
   /** the live slabs as buttons; with none, the pack's own rates */
   function rateMenuHTML(menu) {
     if (!menu.rows.length && packRateMenuHTML()) return packRateMenuHTML();
-    return cbSlabMenuHTML(menu, { cls: 'act quiet', pick: function (slabId) { return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)"; } });
+    return cbSlabMenuHTML(menu, {
+      cls: 'act quiet',
+      pick: function (slabId) {
+        return "CBCatalogueApp.ratePick('" + escJs(slabId) + "', this)";
+      }
+    });
   }
   /** the merge-patch setOn makes on this item: every key it changed; a key it removed travels as null (RFC 7386) — the api's slabPatchOf, on the client */
   function slabPatch(data, slab) {
@@ -1423,14 +1428,32 @@ var CBCatalogueApp = (function () {
     return next;
   }
   /** the price field, only when it is enabled: empty → no price; the same amount → the stored {amount,currency} kept (no diff); else a bare number the server stamps */
+  /** reviews5 EL-06 M3: a typed price through the shop's money reader (its decimal mark: "12,50" is 12.50 where the comma is the mark, never 1250), refused in words when it is not a number or is below zero; {value} is the whole-unit number the server stamps, {why} the sentence */
+  function priceTyped(text) {
+    var typed = String(text == null ? '' : text).trim(),
+      reader = typeof CBUiMoney !== 'undefined' ? CBUiMoney : null,
+      sentence = T('Type the price as a number, like 250.00.'),
+      said,
+      minor;
+    if (reader && reader.minor && reader.refusal) {
+      said = reader.refusal(typed, cur());
+      minor = said ? NaN : reader.minor(typed, cur());
+      if (said || !(minor >= 0)) return { why: said || sentence };
+      return { value: minor / Math.pow(10, reader.decimals(cur())) };
+    }
+    if (!/^(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.test(typed)) return { why: sentence };
+    return { value: Number(typed.replace(/,/g, '')) };
+  }
   function readPrice(next, orig) {
     var node = el('ct_price');
     if (!node || node.disabled) return;
-    var typed = String(node.value || '').replace(/[,\s]/g, ''),
-      had = cbHasPrice(orig.price) ? cbAmount(orig.price) : null;
+    var typed = String(node.value || '').trim(),
+      had = cbHasPrice(orig.price) ? cbAmount(orig.price) : null,
+      read = typed === '' ? null : priceTyped(typed);
     if (typed === '') delete next.price;
-    else if (had !== null && Number(typed) === had) next.price = orig.price;
-    else next.price = Number(typed); /* as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
+    else if (read.why) next.price = orig.price; /* never cleared by a typo: save() refuses in words before this is sent */
+    else if (had !== null && read.value === had) next.price = orig.price;
+    else next.price = read.value; /* as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
   }
   /** the declared columns' inputs: an empty one removes the key, a number column parses, the rest is text */
   function readDeclared(next) {
@@ -1556,6 +1579,12 @@ var CBCatalogueApp = (function () {
       codeSlots = ctCodeSlots(val('ct_code'));
     if (codeSlots.why) {
       say(out, codeSlots.why, 'error'); /* digits that are not an HSN: refused in words, nothing sent */
+      return;
+    }
+    var priceNode = el('ct_price'),
+      priceRead = priceNode && !priceNode.disabled && String(priceNode.value || '').trim() !== '' ? priceTyped(priceNode.value) : {};
+    if (priceRead.why) {
+      say(out, priceRead.why, 'error'); /* "1O0" or "-5": refused in words, the price is never cleared, nothing sent */
       return;
     }
     var p = S.sel ? itemOf(S.sel) : null,

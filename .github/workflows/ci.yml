@@ -147,6 +147,11 @@ jobs:
           node e2e/lab-pages-static.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
+          node e2e/reviews5-csv-overnote.test.cjs
+          node e2e/reviews6-books-money.test.cjs
+          node e2e/reviews7-finance-fx-folders.test.cjs
+          node e2e/reviews5-price-typed.test.cjs
+          node e2e/reviews5-unsaved-guard.test.cjs
           node e2e/dues-one-sign.test.cjs
           node e2e/list-total-pinned.test.cjs
           node e2e/polish-r-locale.test.cjs
@@ -318,6 +323,7 @@ jobs:
           node e2e/offer-live-confirm.test.cjs
           node e2e/combo-lab-direct.test.cjs
           node e2e/detail-chip-errwords.test.cjs
+          node e2e/fail-words.test.cjs
           node e2e/pack-parity.test.cjs
           node e2e/cart-keys-words.test.cjs
           node e2e/match-money.test.cjs

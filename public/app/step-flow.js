@@ -184,7 +184,7 @@
 
   /* the attributes of a rail step a person may go back to: the click, and a button role with a tab stop; Enter and Space are pressed by app/kbd-press.js (every page that loads this file loads that one first) */
   function stepPress(flowKey, index) {
-    return ' onclick="CBSteps.go(\'' + esc(flowKey) + "'," + index + ')" style="cursor:pointer" role="button" tabindex="0"';
+    return ' onclick="CBSteps.go(\'' + escJs(flowKey) + "'," + index + ')" style="cursor:pointer" role="button" tabindex="0"';
   }
 
   /* ── the rail ────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -262,7 +262,7 @@
         '"' +
         (iconBack && s.i ? ' data-ic="back" aria-label="Back" title="Back"' : '') +
         ' onclick="CBSteps.back(\'' +
-        esc(ns) +
+        escJs(ns) +
         '\')">' +
         esc(backLbl) +
         '</button>';
@@ -273,7 +273,7 @@
         esc(tidDraft) +
         '"' +
         ' onclick="CBSteps.draft(\'' +
-        esc(ns) +
+        escJs(ns) +
         '\')">' +
         esc(opt(s, 'draftLabel')) +
         '</button>';
@@ -287,7 +287,7 @@
       ' onclick="CBSteps.' +
       (last ? 'send' : 'next') +
       "('" +
-      esc(ns) +
+      escJs(ns) +
       '\')">' +
       esc(nextLabel(s)) +
       '</button>';

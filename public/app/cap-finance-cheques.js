@@ -228,7 +228,7 @@ function fqDueCell(c) {
       : ' <button data-cbsid="FIN006-B04" type="button" class="cbl-tbtn" data-testid="fq-remind-' +
         esc(c.payment_id) +
         '" onclick="event.stopPropagation();fqRemindMe(\'' +
-        esc(c.payment_id) +
+        escJs(c.payment_id) +
         '\',this)">' +
         esc(tx('Remind me')) +
         '</button>')

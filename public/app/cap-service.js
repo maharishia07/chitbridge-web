@@ -164,12 +164,12 @@ function svcPauseRow(p) {
     !p.mine && p.accepted === null && !open
       ? '<div style="display:flex;gap:6px;margin-top:7px">' +
         '<button data-cbsid="SCR008-B01" class="btn" style="flex:1;font-size:var(--fs-2)" onclick="svcAnswer(\'' +
-        esc(p.pause_id) +
+        escJs(p.pause_id) +
         '\',true)">' +
         tx('Accept this pause') +
         '</button>' +
         '<button data-cbsid="SCR008-B02" class="btn" style="flex:1;font-size:var(--fs-2);color:var(--disp)" onclick="svcAnswer(\'' +
-        esc(p.pause_id) +
+        escJs(p.pause_id) +
         '\',false)">' +
         tx('Reject — the clock kept running') +
         '</button></div>'
@@ -177,7 +177,7 @@ function svcPauseRow(p) {
   var endBtn =
     p.mine && open
       ? '<button data-cbsid="SCR008-B03" class="btn" style="width:100%;margin-top:7px;font-size:var(--fs-2)" onclick="svcEndPause(\'' +
-        esc(p.pause_id) +
+        escJs(p.pause_id) +
         '\')">' +
         tx('End this pause') +
         '</button>'

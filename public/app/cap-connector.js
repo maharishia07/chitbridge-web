@@ -156,7 +156,7 @@ function _erpReceiptsHTML() {
       '<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ ' +
       esc(UI.acReceiptsErr) +
       ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\'' +
-      esc(UI.acSel) +
+      escJs(UI.acSel) +
       '\')">' +
       tx('Retry') +
       '</button></div>'
@@ -190,7 +190,7 @@ function _erpReceiptsHTML() {
         '</span>' +
         (item.chit_id
           ? '<button data-cbsid="SCR002-B01" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="openChit(\'' +
-            esc(item.chit_id) +
+            escJs(item.chit_id) +
             '\')">' +
             tx('Open chit') +
             '</button>'
@@ -251,7 +251,7 @@ function piCockpit(x) {
     ico(
       '🗑',
       'Delete this ' + (iot ? 'gateway' : 'system'),
-      "acDeleteConnector('" + x.id + "','" + esc(String(x.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + "')"
+      "acDeleteConnector('" + x.id + "','" + escJs(String(x.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + "')"
     ) +
     '</span></div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">📍 ' +
@@ -410,7 +410,7 @@ function _provPanel(iot, aid) {
   var regen =
     iot && aid
       ? '<div style="margin-top:9px"><button data-cbsid="SCR002-B08" class="composebtn" onclick="acRegenKey(\'' +
-        esc(aid) +
+        escJs(aid) +
         '\')">' +
         tx('♻ Reissue raw key (advanced)') +
         '</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
@@ -631,6 +631,7 @@ function _buildInstaller(cfg) {
   list.push('fi');
   list.push('DIR=/opt/chitbridge');
   list.push('sudo mkdir -p "$DIR/spool" "$DIR/sent"');
+  list.push('sudo install -m 600 /dev/null "$DIR/config.json"'); /* the file holds the ActorKey: owner-only BEFORE the key is written (GF-07 M5) */
   list.push('sudo tee "$DIR/config.json" >/dev/null <<\'CBCFG\'');
   list.push(cfgJson);
   list.push('CBCFG');
@@ -734,16 +735,23 @@ async function acReissueSubmit() {
       return;
     }
     closeModal();
+    var devs = null;
     if (mode === 'package') {
-      var r = await api('connectorConns', { params: { actorId: id } });
-      var devs = (Array.isArray(r) ? r : (r && r.connections) || []) /* ⚠️ collapsed to the array — see acLoadDevices */
-        .filter(function (item) {
-          return item.enabled !== false;
-        })
-        .map(function (item) {
-          var cf = item.conn_config || {};
-          return { bridge_id: item.bridge_id, ref: item.ref, folder: cf.folder || null, classes: cf.classes || null };
-        });
+      try {
+        var r = await api('connectorConns', { params: { actorId: id } });
+        devs = (Array.isArray(r) ? r : (r && r.connections) || []) /* ⚠️ collapsed to the array — see acLoadDevices */
+          .filter(function (item) {
+            return item.enabled !== false;
+          })
+          .map(function (item) {
+            var cf = item.conn_config || {};
+            return { bridge_id: item.bridge_id, ref: item.ref, folder: cf.folder || null, classes: cf.classes || null };
+          });
+      } catch (_) {
+        devs = null; /* the old key is already dead: the new one is shown once, never lost with the closed sheet (GF-07 M4 / EL-07 M2) */
+      }
+    }
+    if (devs) {
       _download(
         'chitbridge-install.sh',
         _buildInstaller({
@@ -761,7 +769,7 @@ async function acReissueSubmit() {
       UI.acFreshKey = key;
       UI.acProvOpen = true;
       if (typeof paintAcDetail === 'function') paintAcDetail(); // direct-device path: the raw key IS the deliverable, shown once
-      if (typeof toast === 'function') toast('New ActorKey issued — copy it now.');
+      if (typeof toast === 'function') toast(mode === 'package' ? 'The installer could not be built. The old key is dead: copy the new one now.' : 'New ActorKey issued — copy it now.');
     }
   } catch (e) {
     if (m) m.textContent = (e && e.message) || 'Reissue failed.';

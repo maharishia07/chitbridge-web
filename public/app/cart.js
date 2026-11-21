@@ -1001,9 +1001,9 @@
         (id ? '' : '-all') +
         '"' +
         ' onclick="CBCart.category(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         '\')">' +
         esc(label) +
         (n == null ? '' : ' <span class="cbpick-chipn">' + n + '</span>') +
@@ -1373,7 +1373,7 @@
       esc(ns) +
       '"' +
       (on
-        ? ' onclick="CBCart.open(\'' + esc(ns) + '\')" title="Open the cart to review and add these lines"'
+        ? ' onclick="CBCart.open(\'' + escJs(ns) + '\')" title="Open the cart to review and add these lines"'
         : ' title="' + esc(opt(ns, 'emptyHint', 'Press + on what you need')) + '"') +
       ' style="border-color:' +
       (on ? a : 'var(--line)') +
@@ -1388,7 +1388,7 @@
       (on ? '<span class="cbcart-sum">' + esc(sum) + '</span>' : '') +
       (on
         ? '<span data-cbsid="SCR037-C02" class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' +
-          esc(ns) +
+          escJs(ns) +
           '\')"' +
           ' title="' + esc(translated('Clear the cart')) + '" aria-label="' + esc(translated('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
         : '') +
@@ -1419,9 +1419,9 @@
     if (o_model === 'pick') {
       return (
         '<button data-cbsid="SCR037-B02" data-testid="cart-add" onclick="event.stopPropagation();CBCart.setQty(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         "'," +
         (q ? 0 : 1) +
         ')"' +
@@ -1438,7 +1438,7 @@
     }
     if (!q) {
       return (
-        '<button data-cbsid="SCR037-B03" data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + esc(ns) + "','" + esc(id) + '\')">+</button>'
+        '<button data-cbsid="SCR037-B03" data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + escJs(ns) + "','" + escJs(id) + '\')">+</button>'
       );
     }
     var off = '';
@@ -1450,9 +1450,9 @@
         esc(os.value == null ? '' : String(os.value)) +
         '" inputmode="decimal"' +
         ' onchange="CBCart.setOffer(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         '\',this.value)"' +
         ' style="width:78px;padding:5px;border:1.5px solid ' +
         (os.value != null && !os.ok ? 'var(--disp)' : 'var(--line)') +
@@ -1464,16 +1464,16 @@
       '<button data-cbsid="SCR037-B04" style="' +
       rnd +
       '" onclick="CBCart.dec(\'' +
-      esc(ns) +
+      escJs(ns) +
       "','" +
-      esc(id) +
+      escJs(id) +
       '\')">−</button>' +
       '<input data-cbsid="SCR037-I02" value="' +
       esc(String(q)) +
       '" inputmode="decimal" onchange="CBCart.setQty(\'' +
-      esc(ns) +
+      escJs(ns) +
       "','" +
-      esc(id) +
+      escJs(id) +
       '\',this.value)"' +
       ' style="width:52px;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);text-align:center">' +
       '<button data-cbsid="SCR037-B05" data-testid="cart-add" style="' +
@@ -1481,9 +1481,9 @@
       ';background:' +
       a +
       ';color:#fff" onclick="CBCart.add(\'' +
-      esc(ns) +
+      escJs(ns) +
       "','" +
-      esc(id) +
+      escJs(id) +
       '\')">+</button></span>'
     );
   }
@@ -1597,7 +1597,7 @@
         (s.catg
           ? '<div style="margin-top:8px"><button data-cbsid="SCR037-B06" type="button" class="cbpick-chip"' +
             ' onclick="CBCart.category(\'' +
-            esc(ns) +
+            escJs(ns) +
             "','')\">" +
             tx('Show everything') +
             '</button></div>'
@@ -1623,7 +1623,7 @@
             ' options</span>' +
             (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '') +
             '<span data-cbsid="SCR037-C04" class="cbcart-grp"' + KBD_PRESS + ' onclick="CBCart.group(\'' +
-            esc(ns) +
+            escJs(ns) +
             "'," +
             index +
             ')" style="cursor:pointer;font-size:var(--fs-1);color:' +
@@ -1706,7 +1706,7 @@
       esc(opt(ns, 'cartTitle', 'Your cart')) +
       '</b>' +
       '<button data-cbsid="CMP005" onclick="CBCart.close(\'' +
-      esc(ns) +
+      escJs(ns) +
       '\')" aria-label="Close" title="Close" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>' +
       '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">' +
       (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '') +
@@ -1737,9 +1737,9 @@
                 '</div></span>' +
                 stepperHTML(ns, item.item_id, item.qty) +
                 '<span data-cbsid="CMP008"' + KBD_PRESS + ' aria-label="' + esc(translated('Remove from the cart')) + '" onclick="CBCart.setQty(\'' +
-                esc(ns) +
+                escJs(ns) +
                 "','" +
-                esc(item.item_id) +
+                escJs(item.item_id) +
                 '\',0)" title="remove"' +
                 ' style="cursor:pointer;color:var(--grey-4);font-weight:800;padding:0 3px">×</span></div>'
               );
@@ -1785,7 +1785,7 @@
       ';background:var(--card);color:' +
       a +
       '" onclick="CBCart.close(\'' +
-      esc(ns) +
+      escJs(ns) +
       '\')">' +
       (list.length ? 'Keep shopping' : 'Browse the catalogue') +
       '</button>' +
@@ -1796,7 +1796,7 @@
           a +
           ';color:var(--on-card)"' +
           ' onclick="CBCart.checkout(\'' +
-          esc(ns) +
+          escJs(ns) +
           '\')">' +
           esc(opt(ns, 'checkoutLabel', 'Check out <span class=arw>→</span>')) +
           '</button>'
@@ -1850,7 +1850,7 @@
       '"' +
       (o.searchTestid ? ' data-testid="' + esc(o.searchTestid) + '"' : '') +
       ' oninput="CBCart.search(\'' +
-      esc(ns) +
+      escJs(ns) +
       '\', this.value)">' +
       '</div>' +
       /* ⭐ Athi, 2026-08-16: *"it should be below the search, scrolling"*. Inside the sticky block, so the way you
@@ -1951,7 +1951,7 @@
             '<button data-cbsid="SCR037-B09" type="button" class="cbcart-float-pill" data-testid="' +
             esc(text.replace(/-total$/, '')) +
             '-pill" onclick="CBCart.closeSummary(\'' +
-            esc(ns) +
+            escJs(ns) +
             '\', false)" title="' +
             esc('open the summary') +
             '">🧾 ' +
@@ -1973,7 +1973,7 @@
           '<button data-cbsid="SCR037-B10" type="button" class="cbcart-float-x" aria-label="minimise" title="' +
           esc('minimise') +
           '" onclick="CBCart.closeSummary(\'' +
-          esc(ns) +
+          escJs(ns) +
           '\', true)">—</button></div>' +
           h.reviewHTML({ totalTestid: text });
       } catch (e) {}
@@ -3056,7 +3056,7 @@
       ns = cart.ns,
       m = modelOf(r);
     var call = function (fn, arg) {
-      return 'CBCart.' + fn + "('" + esc(ns) + "','" + esc(id) + "'" + (arg === undefined ? '' : ',' + arg) + ')';
+      return 'CBCart.' + fn + "('" + escJs(ns) + "','" + escJs(id) + "'" + (arg === undefined ? '' : ',' + arg) + ')';
     };
     /**
      * ⚠️⚠️ `data-testid="cart-add"` IS A PUBLISHED HOOK AND GOES ON EVERY ADD CONTROL — the pick toggle, the bare
@@ -3095,9 +3095,9 @@
         esc(q) +
         '" inputmode="decimal" aria-label="quantity"' +
         ' onchange="CBCart.setQty(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         '\',this.value)"></span>' +
         '<button data-cbsid="SCR037-B13" type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' +
         esc(id) +
@@ -3282,9 +3282,9 @@
           esc(id) +
           '"' +
           ' onchange="CBCart.setOffer(\'' +
-          esc(cart.ns) +
+          escJs(cart.ns) +
           "','" +
-          esc(id) +
+          escJs(id) +
           '\',this.value)">'
         : '';
     var _pb = priceBits({
@@ -3618,7 +3618,7 @@
       r.count +
       ' options</span>' +
       '<span data-cbsid="SCR037-C06" class="cbcat-all" onclick="CBCart.group(\'' +
-      esc(cart.ns) +
+      escJs(cart.ns) +
       "'," +
       i +
       ')">add all</span></div>'
@@ -3813,7 +3813,7 @@
       esc(cart.ns) +
       '"' +
       ' onclick="CBCart.checkout(\'' +
-      esc(cart.ns) +
+      escJs(cart.ns) +
       '\')">' +
       esc(opts.checkoutLabel || 'Add to the chit') +
       '</button></div>'
@@ -4180,7 +4180,7 @@
       '"' +
       (opts.searchTestid ? ' data-testid="' + esc(opts.searchTestid) + '"' : '') +
       ' oninput="CBCart.search(\'' +
-      esc(cart.ns) +
+      escJs(cart.ns) +
       '\', this.value)">' +
       /**
        * ⭐⭐ THE CATEGORY STRIP — DELEGATED, NOT COPIED (Athi, 2026-08-16: *"can we add a category to the
@@ -4215,7 +4215,7 @@
           ((cart.state() || {}).onlyOffers ? ' on' : '') +
           '"' +
           ' data-testid="pick-onoffer" onclick="CBCart.onlyOffers(\'' +
-          esc(cart.ns) +
+          escJs(cart.ns) +
           '\')">' +
           '🏷️ ' +
           esc('On offer') +
@@ -4268,7 +4268,7 @@
       ' data-testid="cart-' +
       esc(cart.ns) +
       '"' +
-      (n ? ' onclick="CBCart.open(\'' + esc(cart.ns) + '\')"' : ' disabled') +
+      (n ? ' onclick="CBCart.open(\'' + escJs(cart.ns) + '\')"' : ' disabled') +
       ' title="' +
       esc(n ? 'Open the cart' : opts.emptyHint || 'Press + on what you need') +
       '">' +

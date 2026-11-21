@@ -292,7 +292,7 @@ function aiRowsHTML() {
           '<button data-cbsid="BUS005-B03" class="composebtn' +
           (on ? ' pri' : '') +
           '" style="padding:5px 12px;font-size:var(--fs-2)" onclick="aiToggle(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\')">' +
           (on ? '✓ Enabled' : 'Enable') +
           '</button>' +
@@ -300,7 +300,7 @@ function aiRowsHTML() {
           esc(item.rung) +
           '</span>' +
           '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select data-cbsid="BUS005-S01" onchange="aiSetGate(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:var(--fs-1)"' +
           (on ? '' : ' disabled') +
           '>' +
@@ -320,7 +320,7 @@ function aiRowsHTML() {
               tx('▶ Invoke') +
               '</button>') +
           '<button data-cbsid="BUS005-B06" class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\')">' +
           tx('How it works') +
           '</button>' +

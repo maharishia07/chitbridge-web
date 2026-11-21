@@ -81,7 +81,7 @@ g = guardFn({ lines: [{}], mode: 'delivery', loc: 'x', contact: '', step: 'conta
 ok(/phone or email/i.test(g('who')), 'Who you are asks for a phone or email');
 const sf = read('app/step-flow.js');
 const flowCtx = { document: undefined, module: { exports: {} }, console }; flowCtx.globalThis = flowCtx; vm.createContext(flowCtx);
-flowCtx.esc = ctx.esc; /* step-flow.js uses the page's esc (app/helpers.js loads first) */
+flowCtx.esc = ctx.esc; flowCtx.escJs = ctx.escJs; /* step-flow.js uses the page's esc (app/helpers.js loads first) */
 vm.runInContext(sf, flowCtx);
 const SF = flowCtx.module.exports;
 let want = 'A delivery address is needed.';

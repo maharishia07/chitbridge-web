@@ -17,6 +17,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 
 
 /* the rail */
 global.esc = (s) => String(s);
+global.escJs = global.esc;
 const Steps = require('../public/app/step-flow.js');
 const flow = Steps.create({ guard: (k) => (k === 'details' ? 'Fill the details first' : null), steps: [{ k: 'items', n: 'Items' }, { k: 'to', n: 'To' }, { k: 'details', n: 'Details' }, { k: 'review', n: 'Review' }] });
 Steps.go(flow.ns, 2);

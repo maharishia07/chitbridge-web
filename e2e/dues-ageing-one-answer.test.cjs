@@ -15,7 +15,7 @@ const varText = (name) => { const a = src.indexOf('var ' + name + ' = '), b = sr
 
 const money = (n, c) => 'M' + n;
 const cx = vm.createContext({
-  tx: (s) => s, esc: (s) => String(s), bkMoney: money, bkDate: (d) => 'D' + d,
+  tx: (s) => s, esc: (s) => String(s), escJs: (s) => String(s), bkMoney: money, bkDate: (d) => 'D' + d,
   txf: (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => v[k]),
   bkBillPart: (s) => '<i>' + (s && s.ref) + '</i>', bkBillNo: (no, ref) => no || ref,
   bkQuiet: (n, f, d) => d, bkCur: () => 'AUD', bkPartyKind: (pid) => (BK.dues[pid].side === 'supplier' ? 'supplier' : 'customer'),

@@ -322,11 +322,15 @@ function misTaxSetMonth(m) {
   loadTaxLedger();
 }
 async function loadTaxLedger() {
+  const asked = misTaxMonth();
+  let reply;
   try {
-    UI._taxLedger = await api('taxLedger', { query: { month: misTaxMonth() } });
+    reply = await api('taxLedger', { query: { month: asked } });
   } catch (e) {
-    UI._taxLedger = { error: (e && e.message) || 'Could not read the ledger.' };
+    reply = { error: (e && e.message) || 'Could not read the ledger.' };
   }
+  if (asked !== misTaxMonth()) return; /* the month moved while this read was out: its answer is not the month on the label (GF-03 M3); the newer read paints */
+  UI._taxLedger = reply;
   const node = document.getElementById('misbody');
   if (node && misBand() === 'tax') node.innerHTML = misBandHTML('tax', UI._mis || {});
   const rail = document.getElementById('mis_rail');
@@ -360,7 +364,7 @@ function taxDroppedHTML(ledger) {
         '<button data-cbsid="CMP010" class="lineopen" data-testid="mis-tax-dropped-open-' +
         at +
         '" style="background:none;border:0;padding:0 8px 0 0;font:inherit" onclick="openChit(\'' +
-        esc(id) +
+        escJs(id) +
         '\')">' +
         esc(txf('Open bill {n}', { n: at + 1 })) +
         '</button>'
@@ -424,7 +428,7 @@ function misTax() {
       const tone = item.side === 'output' ? 'var(--warn-3)' : item.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
       return (
         '<div data-cbsid="INS001-C02" class="row" style="cursor:pointer" onclick="openChit(\'' +
-        esc(item.chit_id) +
+        escJs(item.chit_id) +
         '\')">' +
         '<div class="main2"><div class="l1"><span class="code">' +
         esc(item.subject || item.purpose || 'chit') +
@@ -3926,10 +3930,17 @@ async function profGuardDo(which) {
     var secs = profDirtySections(map);
     /* ⚠️ WHICH SAVER DEPENDS ON WHICH SCREEN ASKED. A single saveProfile() here would have written Profile
        fields in response to a Settings prompt — the map is what tells them apart. */
+    var refused = false;
     for (var index = 0; index < secs.length; index++) {
-      if (map === PROF_FIELDS) await saveProfile(secs[index]);
-      else if (secs[index] === 'work') await saveSettings();
-      else if (secs[index] === 'assign') await saveAutoAssign();
+      var done = true;
+      if (map === PROF_FIELDS) done = await saveProfile(secs[index]);
+      else if (secs[index] === 'work') done = await saveSettings();
+      else if (secs[index] === 'assign') done = await saveAutoAssign();
+      if (done === false) refused = true;
+    }
+    if (refused) {
+      toast(tx('Not saved — the reason is on the screen. Nothing was lost; you are still here.'));
+      return; /* reviews5 GF-03 M1: a refused save stays on the screen with the edit in it, never navigates away over a 'Saved.' */
     }
     toast(tx('Saved.'));
   } else {
@@ -3960,8 +3971,10 @@ async function saveProfile(sec) {
     toast(MSG.profileSaved());
     UI._me = null;
     loadProfile();
+    return true;
   } catch (e) {
     if (x) x.textContent = e.message;
+    return false; /* reviews5 GF-03 M1: the unsaved-changes guard reads this, it must not say Saved. over a refusal */
   }
 }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
@@ -6288,11 +6301,11 @@ function intEnrolHTML(r) {
       '<div style="display:flex;gap:6px;margin-top:5px"><button data-cbsid="ACC002-B43" class="composebtn" data-testid="int-approve-' +
       esc(r.actor_id) +
       '" onclick="intApprove(\'' +
-      esc(r.actor_id) +
+      escJs(r.actor_id) +
       '\')">✓ ' +
       tx('Approve this PC') +
       '</button>' +
-      (r.key_jti ? '<button data-cbsid="ACC002-B44" class="btn2" onclick="intReject(\'' + esc(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') +
+      (r.key_jti ? '<button data-cbsid="ACC002-B44" class="btn2" onclick="intReject(\'' + escJs(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') +
       '</div></div>'
     );
   return '<div style="font-weight:400;font-size:var(--fs-1);color:var(--ok-2);margin-top:3px">✓ ' + tx('approved') + (facts ? ' · ' + facts : '') + '</div>';
@@ -6453,7 +6466,7 @@ function intConnectorsHTML() {
                 '"' +
                 (no
                   ? ' disabled aria-disabled="true" title="' + esc(may.why || '') + '" style="opacity:.55;cursor:not-allowed"'
-                  : ' onclick="intDownloadKit(\'' + esc(item.id) + "','" + esc(a) + '\')"') +
+                  : ' onclick="intDownloadKit(\'' + escJs(item.id) + "','" + escJs(a) + '\')"') +
                 '>⬇ ' +
                 esc(tx('Download')) +
                 ' · ' +
@@ -6467,7 +6480,7 @@ function intConnectorsHTML() {
             '<span data-cbsid="ACC002-C16" data-testid="int-card-' +
             esc(item.id) +
             '-toggle" onclick="intToggleCard(\'' +
-            esc(item.id) +
+            escJs(item.id) +
             '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' +
             (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: item.name })) +
             '</span>';
@@ -6487,7 +6500,7 @@ function intConnectorsHTML() {
             '"' +
             (use.indexOf(item.id) >= 0 ? ' checked' : '') +
             ' onchange="intUseToggle(\'' +
-            esc(item.id) +
+            escJs(item.id) +
             '\', this.checked)">' +
             esc(tx('we use this')) +
             '</label>';
@@ -6562,7 +6575,7 @@ function intConnectorsHTML() {
             ' · <span data-cbsid="ACC002-C17" data-testid="int-row-help-' +
             esc(item.id) +
             '" onclick="intToSetup(\'' +
-            esc(item.adapter || '') +
+            escJs(item.adapter || '') +
             '\')" style="cursor:pointer;color:var(--blue)">' +
             esc(txf('what to do for {name}', { name: item.adapter || 'this' })) +
             '</span></span>' +
@@ -6710,7 +6723,7 @@ function intFold(key, lines) {
     '<span data-cbsid="ACC002-C18" data-testid="int-fold-' +
     esc(key) +
     '" onclick="intFoldToggle(\'' +
-    esc(key) +
+    escJs(key) +
     '\')" style="cursor:pointer;color:var(--grey);font-size:var(--fs-1);user-select:none">' +
     (open ? '▾ ' + tx('less') : '▸ ' + tx('what this is')) +
     '</span>' +
@@ -6814,7 +6827,7 @@ function intStreamsHTML() {
             '<select data-cbsid="ACC002-S13" class="inp" data-testid="int-stream-' +
             esc(item.id) +
             '" onchange="intStreamSet(\'' +
-            esc(item.id) +
+            escJs(item.id) +
             '\', this.value)">' +
             '<option value="">' +
             esc(tx('nobody')) +
@@ -7057,7 +7070,7 @@ function intReconcileHTML() {
               ? ' · <span data-cbsid="ACC002-C19" data-testid="int-rec-raw-' +
                 esc(short) +
                 '" onclick="intRecRaw(\'' +
-                esc(short) +
+                escJs(short) +
                 '\')" style="cursor:pointer;color:var(--blue)">' +
                 (raw ? esc(tx('hide the technical detail')) : esc(tx('technical detail'))) +
                 '</span>'
@@ -7071,9 +7084,9 @@ function intReconcileHTML() {
             '<button data-cbsid="CMP010" class="btn2" data-testid="int-rec-open-' +
             esc(short) +
             '" onclick="intRecOpen(\'' +
-            esc(item.chit_id) +
+            escJs(item.chit_id) +
             "','" +
-            esc(item.side || '') +
+            escJs(item.side || '') +
             '\')">' +
             tx('Open') +
             '</button>' +
@@ -7081,21 +7094,21 @@ function intReconcileHTML() {
               ? '<button data-cbsid="ACC002-B46" class="btn2" data-testid="int-rec-unskip-' +
                 esc(short) +
                 '" onclick="intRecSkip(\'' +
-                esc(item.chit_id) +
+                escJs(item.chit_id) +
                 '\', false)">' +
                 tx('Send after all') +
                 '</button>'
               : '<button data-cbsid="ACC002-B47" class="btn2" data-testid="int-rec-retry-' +
                 esc(short) +
                 '" onclick="intRecRetry(\'' +
-                esc(item.chit_id) +
+                escJs(item.chit_id) +
                 '\')">' +
                 tx('Ask again') +
                 '</button>' +
                 '<button data-cbsid="ACC002-B48" class="btn2" data-testid="int-rec-skip-' +
                 esc(short) +
                 '" onclick="intRecSkip(\'' +
-                esc(item.chit_id) +
+                escJs(item.chit_id) +
                 '\', true)" title="' +
                 esc(tx('it will not go to the books, and nothing will ask again')) +
                 '">' +
@@ -7289,14 +7302,14 @@ function netOffersHTML() {
             ? '<button data-cbsid="BUS004-B24" class="pri" data-testid="neto-release-' +
               esc(item.id) +
               '" onclick="netoRelease(\'' +
-              esc(item.id) +
+              escJs(item.id) +
               '\',false)">' +
               tx('Release at next opening') +
               '</button>' +
               '<button data-cbsid="BUS004-B25" data-testid="neto-release-now-' +
               esc(item.id) +
               '" onclick="netoRelease(\'' +
-              esc(item.id) +
+              escJs(item.id) +
               '\',true)">' +
               (armed ? tx('Release NOW — mid-day, every store') : tx('Release now')) +
               '</button>'
@@ -7305,7 +7318,7 @@ function netOffersHTML() {
             ? '<button data-cbsid="BUS004-B26" class="warn" data-testid="neto-withdraw-' +
               esc(item.id) +
               '" onclick="netoWithdraw(\'' +
-              esc(item.id) +
+              escJs(item.id) +
               '\')">' +
               tx('Withdraw at next opening') +
               '</button>'
@@ -7355,7 +7368,7 @@ function netOffersHTML() {
           ? '<button data-cbsid="BUS004-B27" data-testid="neto-out-' +
             esc(entry.id) +
             '" onclick="netoChoice(\'' +
-            esc(entry.id) +
+            escJs(entry.id) +
             "','" +
             (optIn ? '' : 'out') +
             '\')">' +
@@ -7364,7 +7377,7 @@ function netOffersHTML() {
           : '<button data-cbsid="BUS004-B28" class="pri" data-testid="neto-in-' +
             esc(entry.id) +
             '" onclick="netoChoice(\'' +
-            esc(entry.id) +
+            escJs(entry.id) +
             "','" +
             (optIn ? 'in' : '') +
             '\')">' +
@@ -7486,9 +7499,9 @@ function netCatBrandHTML(c, stores) {
         '<input data-cbsid="BUS004-I45" type="checkbox" ' +
         (sel[item.item_id] ? 'checked ' : '') +
         'onchange="netcTick(\'' +
-        esc(key) +
+        escJs(key) +
         "','" +
-        esc(item.item_id) +
+        escJs(item.item_id) +
         '\',this.checked)">' +
         esc(item.name) +
         ' <span style="color:var(--grey)">' +
@@ -7501,7 +7514,7 @@ function netCatBrandHTML(c, stores) {
     ? '<div data-testid="netc-pending" style="padding:8px 0;color:var(--warn-2);font-size:var(--fs-2)">⏳ ' +
       esc((c.pending.changes || []).length + ' ' + tx('change(s) go to your stores') + ' ' + _netWhen(c.pending.at)) +
       ' <button data-cbsid="CMP003" class="warn" data-testid="netc-cancel" onclick="netcCancel(\'' +
-      esc(key) +
+      escJs(key) +
       '\')">' +
       tx('Cancel') +
       '</button></div>'
@@ -7537,7 +7550,7 @@ function netCatBrandHTML(c, stores) {
         '<input data-cbsid="BUS004-I46" type="checkbox" ' +
         (outSel[item] ? 'checked ' : '') +
         'onchange="netcOut(\'' +
-        esc(key) +
+        escJs(key) +
         "'," +
         index +
         ',this.checked)">' +
@@ -7552,7 +7565,7 @@ function netCatBrandHTML(c, stores) {
           ? ' <span data-cbsid="BUS004-B29" role="button" tabindex="0" data-testid="netc-at-open-' +
             index +
             '" onclick="event.preventDefault();netcAtOpen(\'' +
-            esc(key) +
+            escJs(key) +
             "'," +
             index +
             ')"' +
@@ -7579,7 +7592,7 @@ function netCatBrandHTML(c, stores) {
                   '<input data-cbsid="BUS004-I47" type="checkbox" ' +
                   (isOut(entry.id) ? 'checked ' : '') +
                   'onchange="netcAt(\'' +
-                  esc(key) +
+                  escJs(key) +
                   "'," +
                   index +
                   ',' +
@@ -7639,7 +7652,7 @@ function netCatBrandHTML(c, stores) {
       ? '<details data-testid="netc-shared"' +
         (_NETC_SHOW[key] || nOut || nAt || (c.missing || []).length ? ' open' : '') +
         ' ontoggle="_NETC_SHOW[\'' +
-        esc(key) +
+        escJs(key) +
         '\']=this.open" style="margin-top:8px"><summary data-testid="netc-shared-open" style="cursor:pointer;font-size:var(--fs-2)">' +
         esc(tx('With your stores') + ' (' + (c.published || []).length + ') — ' + tx('tick to withdraw')) +
         '</summary>' +
@@ -7649,12 +7662,12 @@ function netCatBrandHTML(c, stores) {
     (any
       ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
         '<button data-cbsid="BUS004-B30" class="pri" data-testid="netc-publish" onclick="netcPublish(\'' +
-        esc(key) +
+        escJs(key) +
         '\',false)">' +
         tx('Publish at next opening') +
         '</button>' +
         '<button data-cbsid="BUS004-B31" data-testid="netc-publish-now" onclick="netcPublish(\'' +
-        esc(key) +
+        escJs(key) +
         '\',true)">' +
         (armed ? tx('Publish NOW — mid-day, every store') : tx('Publish now')) +
         '</button>' +
@@ -7938,14 +7951,14 @@ function netMembersHTML(list) {
           '<button data-cbsid="BUS004-B34" class="pri" data-testid="netm-approve-' +
           index +
           "\" onclick=\"netmAct('netApprove','" +
-          esc(item.edge_id) +
+          escJs(item.edge_id) +
           '\')">' +
           tx('Approve') +
           '</button>' +
           '<button data-cbsid="BUS004-B35" data-testid="netm-decline-' +
           index +
           "\" onclick=\"netmAct('netDecline','" +
-          esc(item.edge_id) +
+          escJs(item.edge_id) +
           '\')">' +
           tx('Decline') +
           '</button>';
@@ -7954,7 +7967,7 @@ function netMembersHTML(list) {
           '<button data-cbsid="BUS004-B36" data-testid="netm-cancel-' +
           index +
           "\" onclick=\"netmAct('netDecline','" +
-          esc(item.edge_id) +
+          escJs(item.edge_id) +
           '\')">' +
           tx('Cancel invitation') +
           '</button>';
@@ -7963,7 +7976,7 @@ function netMembersHTML(list) {
           '<button data-cbsid="BUS004-B37" class="pri" data-testid="netm-resume-' +
           index +
           "\" onclick=\"netmAct('netResume','" +
-          esc(item.edge_id) +
+          escJs(item.edge_id) +
           '\')">' +
           tx('Resume') +
           '</button>';
@@ -7973,19 +7986,19 @@ function netMembersHTML(list) {
             ? '<button data-cbsid="BUS004-B38" class="warn" data-testid="netm-remove-' +
               index +
               "\" onclick=\"netmAct('netDisconnect','" +
-              esc(item.edge_id) +
+              escJs(item.edge_id) +
               '\')">' +
               tx('Remove — their counters stop selling your products') +
               '</button>'
             : '<button data-cbsid="CMP008" data-testid="netm-remove-' +
               index +
               '" onclick="_NETO_ARMED=\'rm:' +
-              esc(item.edge_id) +
+              escJs(item.edge_id) +
               '\';loadSettings()">' +
               tx('Remove') +
               '</button>';
       else if (item.state === 'active' && item.edge_id)
-        btns = '<button data-cbsid="BUS004-B39" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+        btns = '<button data-cbsid="BUS004-B39" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + escJs(item.edge_id) + '\')">' + tx('Pause') + '</button>';
       var words =
         item.state === 'requested'
           ? item.asked_by === 'store'
@@ -8046,14 +8059,14 @@ function netStandingHTML(nw) {
       '<button data-cbsid="BUS004-B41" class="pri" data-testid="neto-accept-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netApprove','" +
-        esc(m.edge_id) +
+        escJs(m.edge_id) +
         '\')">' +
         tx('Accept') +
         '</button>' +
         '<button data-cbsid="BUS004-B20" data-testid="neto-refuse-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netDecline','" +
-        esc(m.edge_id) +
+        escJs(m.edge_id) +
         '\')">' +
         tx('Decline') +
         '</button>'
@@ -8064,7 +8077,7 @@ function netStandingHTML(nw) {
       '<button data-cbsid="BUS004-B21" data-testid="neto-unask-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netDecline','" +
-        esc(m.edge_id) +
+        escJs(m.edge_id) +
         '\')">' +
         tx('Cancel request') +
         '</button>'
@@ -8076,7 +8089,7 @@ function netStandingHTML(nw) {
       ? '<button data-cbsid="BUS004-B22" class="pri" data-testid="neto-ask-' +
           esc(nw.brand_id) +
           '" onclick="netmAsk(\'' +
-          esc(m.brand_node) +
+          escJs(m.brand_node) +
           '\')">' +
           tx('Ask to join') +
           '</button>'
@@ -8201,7 +8214,7 @@ function ctrRegisterHTML() {
           ? '<button data-cbsid="ACC002-B49" class="warn" data-testid="ctr-release-' +
             esc(item.id) +
             '" onclick="ctrRelease(\'' +
-            esc(item.id) +
+            escJs(item.id) +
             '\')" title="' +
             esc(tx('only for a PC that cannot close the counter itself')) +
             '">' +
@@ -8210,7 +8223,7 @@ function ctrRegisterHTML() {
           : '<button data-cbsid="ACC002-B50" class="pri" data-testid="ctr-open-' +
             esc(item.id) +
             '" onclick="ctrOpenHere(\'' +
-            esc(item.id) +
+            escJs(item.id) +
             '\')"' +
             (item.state === 'opening' ? ' disabled' : '') +
             '>' +
@@ -8389,7 +8402,7 @@ function intPairingsHTML() {
         '<button data-cbsid="ACC002-B52" class="warn" data-testid="int-counter-close-' +
         esc(item.jti) +
         '" onclick="intCounterClose(\'' +
-        esc(item.jti) +
+        escJs(item.jti) +
         '\')">' +
         (armed ? tx('Really close — unsent bills stay on that PC') : tx('Close')) +
         '</button>' +
@@ -8570,7 +8583,7 @@ function integrationsSettingsHTML() {
             '</span><button data-cbsid="ACC002-B54" class="warn" data-testid="int-key-revoke-' +
             esc(item.jti) +
             '" onclick="intKeyRevoke(\'' +
-            esc(item.jti) +
+            escJs(item.jti) +
             '\')">' +
             tx('Revoke') +
             '</button></div>'
@@ -9323,8 +9336,10 @@ async function saveSettings() {
       }
     });
     toast(MSG.settingsSaved());
+    return true;
   } catch (e) {
     if (x) x.textContent = e.message;
+    return false;
   }
 }
 /* ---- POLICY FLAGS — per-entity governance toggles, SERVER-PERSISTED (b130).
@@ -9516,7 +9531,7 @@ function _chRow(c) {
     '<span data-cbsid="ACC002-C22" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-' +
     esc(c.key) +
     '" onclick="chToggleAdd(\'' +
-    esc(c.key) +
+    escJs(c.key) +
     '\')">' +
     (_CH.adding === c.key ? 'cancel' : '+ bind') +
     '</span>' +
@@ -9559,7 +9574,7 @@ function _chRow(c) {
           esc(item.status === 'verified' ? 'verified' + (item.verified_via ? ' · ' + item.verified_via : '') : 'declared — not receiving yet') +
           '</span>' +
           '<span data-cbsid="ACC002-C23" style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\'' +
-          esc(item.id) +
+          escJs(item.id) +
           '\')">✕</span></div>' +
           /**
            * ⚠️ HANDS-FREE, PER LINE (b131). Athi: *"no one will sit and create a chit from whatsapp, it has to be
@@ -9575,7 +9590,7 @@ function _chRow(c) {
               '<input data-cbsid="ACC002-I28" type="checkbox" data-testid="ch-autoraise" ' +
               (item.auto_raise ? 'checked' : '') +
               ' onchange="chSetAutoRaise(\'' +
-              esc(item.id) +
+              escJs(item.id) +
               '\',this.checked)">' +
               '<span>Raise messages on this line <b>automatically</b>' +
               (item.auto_raise && item.status !== 'verified' ? ' <span style="color:var(--warn-2);font-weight:700">— waiting on verification</span>' : '') +
@@ -9615,9 +9630,9 @@ function _chRow(c) {
                     esc(t.language) +
                     '</span>' +
                     '<span data-cbsid="ACC002-C24" style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\'' +
-                    esc(item.id) +
+                    escJs(item.id) +
                     "','" +
-                    esc(t.name) +
+                    escJs(t.name) +
                     "','" +
                     (state === 'approved' ? 'pending' : 'approved') +
                     '\')">' +
@@ -9646,7 +9661,7 @@ function _chRow(c) {
         '" data-testid="ch-addr" style="flex:1">' +
         '<input data-cbsid="ACC002-I30" class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">' +
         '<button data-cbsid="ACC002-B59" class="composebtn" data-testid="ch-save" onclick="chBind(\'' +
-        esc(c.key) +
+        escJs(c.key) +
         '\')">' +
         tx('Bind') +
         '</button></div>' +
@@ -9876,13 +9891,15 @@ async function saveAutoAssign() {
     da = val('st_ada');
   if (mode === 'default_assignee' && !da) {
     if (x) x.textContent = 'Pick a default assignee for this mode.';
-    return;
+    return false;
   }
   try {
     await api('saveSettings', { body: { auto_assign_mode: mode, default_assignee_actor_id: da || null } });
     toast('Auto-assign saved ✓');
+    return true;
   } catch (e) {
     if (x) x.textContent = e.message;
+    return false;
   }
 }
 
@@ -9943,7 +9960,7 @@ async function loadGaps() {
             .map(function (e) {
               const eb = isHelp
                 ? '<button data-cbsid="CMP012" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\'' +
-                  esc(e.id) +
+                  escJs(e.id) +
                   '\')">' +
                   tx('Edit') +
                   '</button>'

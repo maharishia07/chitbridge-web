@@ -10,7 +10,7 @@
 const { loadScript } = require('./lib/lift-fn.cjs');
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
-const sb = loadScript('public/app/cart.js', { esc, tx: (s) => s, txf: (s) => s });
+const sb = loadScript('public/app/cart.js', { esc, escJs: esc, tx: (s) => s, txf: (s) => s });
 const CATS = [{ id: 'c1', name: 'Zulu' }, { id: 'c2', name: 'Staples' }];
 const item = (id, name, categories) => ({ item_id: id, item_data: Object.assign({ name, price: 10 }, categories ? { categories } : {}) });
 const make = (items) => { const h = sb.CBCart.create({ items, categories: CATS, offers: [] }, { categories: CATS }); return h; };

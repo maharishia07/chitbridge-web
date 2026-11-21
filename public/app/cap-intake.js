@@ -294,22 +294,22 @@ function intakeCardHTML(c) {
       ? '<button data-cbsid="WRK003-B09" class="composebtn" data-testid="intake-raise" ' +
         (w.busy ? 'disabled' : '') +
         ' onclick="intakeRaise(\'' +
-        esc(c.id) +
+        escJs(c.id) +
         '\')" title="File as a request in your inbox, in their words">' +
         (w.busy ? 'Raising…' : '📥 Raise as a request') +
         '</button>' +
         '<button data-cbsid="WRK003-B10" data-testid="intake-make-chit" onclick="intakeMakeChit(\'' +
-        esc(c.id) +
+        escJs(c.id) +
         '\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--on-card)" title="Open Compose to edit, price and address it before sending">Make this a chit <span class=arw>→</span></button>'
       : '<button data-cbsid="WRK003-B11" class="composebtn" data-testid="intake-structure" ' +
         (w.busy ? 'disabled' : '') +
         ' onclick="intakeStructure(\'' +
-        esc(c.id) +
+        escJs(c.id) +
         '\')">' +
         (w.busy ? '✨ Reading…' : '✨ Structure it') +
         '</button>') +
     '<button data-cbsid="WRK003-B12" data-testid="intake-dismiss" onclick="intakeDismiss(\'' +
-    esc(c.id) +
+    escJs(c.id) +
     '\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--grey)">' +
     tx('Dismiss') +
     '</button>' +
@@ -319,7 +319,7 @@ function intakeCardHTML(c) {
        exactly the moment a person decides whether the reading is right. A button that shows the actual JSON is the
        difference between tuning a prompt and guessing at one. */
     '<button data-cbsid="WRK003-B13" data-testid="intake-json" onclick="intakeShowJson(\'' +
-    esc(c.id) +
+    escJs(c.id) +
     '\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace;color:var(--on-card)">{ } JSON</button>' +
     '</div>' +
     (w.err ? '<div style="color:var(--disp);font-size:var(--fs-2);margin-top:6px">' + esc(w.err) + '</div>' : '') +
@@ -382,9 +382,9 @@ async function loadIntake(quiet) {
     _INTAKE.migrated = true;
   } catch (e) {
     // 503 is the migration gate the route declares, not a fault — tell them apart.
-    if (/not migrated|b104|503/i.test((e && e.message) || '')) {
+    if (/not migrated|b104|503/i.test(failWords(e, ''))) {
       _INTAKE.migrated = false;
-    } else _INTAKE.err = (e && e.message) || 'Could not read the intake queue.';
+    } else _INTAKE.err = failWords(e, 'Could not read the intake queue.');
     _INTAKE.list = _INTAKE.list || [];
   }
   _INTAKE.busy = false;
@@ -431,7 +431,7 @@ async function intakeSimulate() {
     if (t) t.value = '';
     await loadIntake(true);
   } catch (e) {
-    toast((e && e.message) || 'Could not record the message', true);
+    toast(failWords(e, 'Could not record the message'), true);
   }
 }
 async function intakeStructure(id) {
@@ -441,7 +441,7 @@ async function intakeStructure(id) {
     var reply = await api('captureStructure', { params: { id: id } });
     _INTAKE.working[id] = { structured: (reply && reply.structured) || null };
   } catch (e) {
-    _INTAKE.working[id] = { err: (e && e.message) || 'AI could not read that message.' };
+    _INTAKE.working[id] = { err: failWords(e, 'AI could not read that message.') };
   }
   paintIntake();
 }
@@ -460,7 +460,7 @@ async function _intakeDismiss(id) {
     await api('captureDismiss', { params: { id: id } });
     await loadIntake(true);
   } catch (e) {
-    toast((e && e.message) || 'Could not dismiss it', true);
+    toast(failWords(e, 'Could not dismiss it'), true);
   }
 }
 /**
@@ -536,7 +536,7 @@ async function intakeRaise(id) {
     await loadIntake(true);
   } catch (e) {
     UI._captureId = null;
-    _INTAKE.working[id] = Object.assign({}, _INTAKE.working[id], { busy: false, err: (e && e.message) || 'Could not raise it as a request.' });
+    _INTAKE.working[id] = Object.assign({}, _INTAKE.working[id], { busy: false, err: failWords(e, 'Could not raise it as a request.') });
     paintIntake();
   }
 }
@@ -640,7 +640,7 @@ async function intakeShowJson(id) {
     try {
       payload = await api('captureRaise', { params: { id: id } });
     } catch (e) {
-      payErr = (e && e.message) || 'could not build the chit payload';
+      payErr = failWords(e, 'could not build the chit payload');
     }
   }
 

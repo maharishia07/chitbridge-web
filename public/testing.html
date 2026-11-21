@@ -4945,7 +4945,7 @@ async function paintSummary() {
     RUNS.forEach(function (item) {
       h +=
         '<tr class="clickable" onclick="openRun(\'' +
-        esc(item.run_id) +
+        escJs(item.run_id) +
         '\')">' +
         '<td><b>' +
         esc(item.run_label || 'unlabelled') +
@@ -5261,10 +5261,10 @@ function paint() {
       '<tr class="arow' +
       (open ? ' open' : '') +
       '" onclick="foldSection(\'' +
-      esc(item) +
+      escJs(item) +
       '\')"' +
       ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'){foldSection(\'' +
-      esc(item) +
+      escJs(item) +
       '\');}">' +
       '<td><span class="caret">' +
       (open ? '\u25be' : '\u25b8') +
@@ -5545,7 +5545,7 @@ function caseHTML(c) {
     esc(c.case_key) +
     '">' +
     '<div data-cbsid="OWN003-C05" class="chead" onclick="toggle(\'' +
-    esc(c.case_key) +
+    escJs(c.case_key) +
     '\')">' +
     '<span class="key" title="' +
     esc(c.case_key) +
@@ -5640,7 +5640,7 @@ function caseHTML(c) {
     (RUNNABLE[c.case_key]
       ? '<button data-cbsid="OWN003-B32" class="btn" title="Run this here \u2014 the real engine, your own input, no server" ' +
         'onclick="event.stopPropagation();runCase(\'' +
-        esc(c.case_key) +
+        escJs(c.case_key) +
         '\')" ' +
         'style="padding:2px 9px;font-weight:700;color:var(--blue);border-color:var(--blue)">\u25b6 Run</button>'
       : '') +
@@ -5722,19 +5722,19 @@ function caseHTML(c) {
       esc(c.case_key) +
       '" placeholder="What did you see? (kept with the result)">' +
       '<button data-cbsid="OWN003-B33" class="btn pass"    onclick="mark(\'' +
-      esc(c.case_key) +
+      escJs(c.case_key) +
       "','pass')\">Pass</button>" +
       '<button data-cbsid="OWN003-B34" class="btn fail"    onclick="mark(\'' +
-      esc(c.case_key) +
+      escJs(c.case_key) +
       "','fail')\">Fail</button>" +
       '<button data-cbsid="OWN003-B35" class="btn blocked" onclick="mark(\'' +
-      esc(c.case_key) +
+      escJs(c.case_key) +
       "','blocked')\">Blocked</button>" +
       '<button data-cbsid="OWN003-B36" class="btn"         onclick="mark(\'' +
-      esc(c.case_key) +
+      escJs(c.case_key) +
       "','skipped')\">Skip</button>" +
       '<button data-cbsid="OWN003-B37" class="btn"         onclick="caseHistory(\'' +
-      esc(c.case_key) +
+      escJs(c.case_key) +
       '\')">History</button>' +
       '</div>' +
       '<div class="hist" id="h_' +

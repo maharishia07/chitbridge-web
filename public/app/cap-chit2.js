@@ -141,6 +141,7 @@ function c2Back() {
    invite the next person to reach for it. */
 
 async function loadChit2() {
+  var asked = C2.id; /* the chit this read is for: an answer for another chit is never kept (GF-07 M3) */
   C2.busy = true;
   c2Paint();
   try {
@@ -153,6 +154,7 @@ async function loadChit2() {
         return [];
       })
     ]);
+    if (asked !== C2.id) return; /* another chit was opened while this read was out: its own read paints */
     C2.data = both[0];
     C2.data.msgs = (both[1] || []).map(function (item) {
       return typeof mapApiMsg === 'function' ? mapApiMsg(item) : item;
@@ -172,6 +174,7 @@ async function loadChit2() {
       }
     }
   } catch (e) {
+    if (asked !== C2.id) return;
     C2.err = (e && e.message) || 'Could not open this chit.';
   }
   C2.busy = false;
@@ -487,7 +490,7 @@ function c2PaneOrd(d) {
     var l = e.live || e.original || {};
     var id = String(e.line_id || l.line_id || l.item_id || 'ln' + index);
     var q = Number(l.quantity != null ? l.quantity : l.qty) || 0,
-      p = Number(l.price),
+      p = l.price == null || l.price === '' ? NaN : Number(l.price), /* a missing price is no price, never 0 (then a negative deal price, GF-07 M14) */
       off =
         l.offer && l.offer.line_off != null
           ? Number(l.offer.line_off)
@@ -961,7 +964,7 @@ function c2PaneDel(d) {
         '<button data-cbsid="DTL006-B04" class="btn pri" data-testid="c2-delivered" onclick="c2Deliver(\'' +
         e.line_id +
         "','" +
-        esc(l.unit || '') +
+        escJs(l.unit || '') +
         '\')">' +
         tx('Delivered') +
         '</button>' +
@@ -970,7 +973,7 @@ function c2PaneDel(d) {
           ? '<button data-cbsid="DTL006-B11" class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' +
             e.line_id +
             "','" +
-            esc(l.unit || '') +
+            escJs(l.unit || '') +
             '\',true)">' +
             tx('Take back') +
             '</button>'
@@ -1012,13 +1015,16 @@ function c2ApplyProgress(r) {
   return true;
 }
 
+var C2_DELIVERING = {}; /* a delivery is ADDITIVE: a double tap would record it twice, so one press per line at a time (GF-07 M13) */
 async function c2Deliver(line_id, unit, back) {
+  if (C2_DELIVERING[line_id]) return;
   var el = document.getElementById('c2dq_' + line_id);
   /* WX-P2P-19: the empty box SHOWS the pending quantity (its placeholder) — Delivered records what it shows, never "How many?" over a 2 */
   var typed = el ? el.value.trim() : '';
   var q = Number(typed || (!back && el && /^\d+(\.\d+)?$/.test(el.placeholder) ? el.placeholder : ''));
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
+  C2_DELIVERING[line_id] = true;
   try {
     var reply = await postDeliverLines('c2DeliverLines', C2.id, [{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }]);
     /**
@@ -1033,6 +1039,8 @@ async function c2Deliver(line_id, unit, back) {
     toast(back ? 'Taken back — the original claim stays on the record' : 'Recorded');
   } catch (e) {
     toast(MSG.fail('record the delivery', e));
+  } finally {
+    delete C2_DELIVERING[line_id];
   }
 }
 

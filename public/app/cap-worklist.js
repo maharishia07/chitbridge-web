@@ -403,7 +403,7 @@ function wlRollupText(rows) {
 function wlHead(title, right, tone, id) {
   return (
     '<div data-cbsid="RAL002-C03" data-testid="wl-head"' +
-    (id ? ' onclick="wlToggle(&quot;' + esc(id) + '&quot;)"' : '') +
+    (id ? ' onclick="wlToggle(&quot;' + escJs(id) + '&quot;)"' : '') +
     ' style="' +
     (id ? 'cursor:pointer;' : '') +
     'padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;' +
@@ -757,7 +757,7 @@ function wlRender(rows, keys, depth, path) {
         depth === 0
           ? wlHead(caret + (tone === 'var(--disp)' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
           : '<div data-cbsid="RAL002-C07" onclick="wlToggle(&quot;' +
-            esc(id) +
+            escJs(id) +
             '&quot;)" style="cursor:pointer;padding:7px ' +
             (ind - 2) +
             'px 2px ' +

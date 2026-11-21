@@ -307,7 +307,7 @@ function newFolder() {
       loadFolders();
       if (typeof toast === 'function') toast('Folder created.');
     } catch (e) {
-      if (typeof toast === 'function') toast((e && e.message) || 'Create failed');
+      if (typeof toast === 'function') toast(failWords(e, 'Create failed'));
     }
   });
 }
@@ -323,7 +323,7 @@ function renameFolder(id) {
       UI.folders = undefined;
       loadFolders();
     } catch (e) {
-      if (typeof toast === 'function') toast((e && e.message) || 'Rename failed');
+      if (typeof toast === 'function') toast(failWords(e, 'Rename failed'));
     }
   });
 }
@@ -338,7 +338,7 @@ function deleteFolder(id) {
       UI.folders = undefined;
       loadFolders();
     } catch (e) {
-      if (typeof toast === 'function') toast((e && e.message) || 'Delete failed');
+      if (typeof toast === 'function') toast(failWords(e, 'Delete failed'));
     }
   };
   if (typeof confirmAsk === 'function')
@@ -394,7 +394,7 @@ async function _doMove(chitId, folderId) {
       loadList();
     } // refresh Task (moved chit leaves the main list) or the folder view
   } catch (e) {
-    if (typeof toast === 'function') toast((e && e.message) || 'Move failed');
+    if (typeof toast === 'function') toast(failWords(e, 'Move failed'));
   }
 }
 
@@ -529,7 +529,7 @@ async function ruleMove(id, dir) {
     _FLD.rules = null;
     await loadFolderRules();
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not change the order.';
+    _FLD.err = failWords(e, 'Could not change the order.');
     _FLD.busy = false;
     _fldPaint();
   }
@@ -556,7 +556,7 @@ async function loadFolderMetrics() {
       _FLD.metrics = await api('folderMetrics', { params: { id: UI.folderSel } });
     }
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not read the metrics.';
+    _FLD.err = failWords(e, 'Could not read the metrics.');
   }
   _FLD.busy = false;
   _fldPaint();
@@ -586,7 +586,7 @@ async function loadFolderRules() {
     _FLD.rulesNote =
       r && r.migrated === false ? 'Folder rules are not switched on for your shop yet. You can still try a rule; nothing will save.' : null;
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not read the rules.';
+    _FLD.err = failWords(e, 'Could not read the rules.');
     _FLD.rules = [];
   }
   _FLD.busy = false;
@@ -625,7 +625,7 @@ async function loadGroupSum() {
     _FLD.gs = await api('folderGroupSum', { query: { scope: scope, folder_id: fid || undefined, chit_ids: ids ? ids.join(',') : undefined } });
     _FLD.err = null;
   } catch (e) {
-    var m = (e && e.message) || '';
+    var m = failWords(e, '');
     /* ⚠️ NAME THE ACTUAL CAUSE. Unlike the Rules pane there is no older endpoint to fall back to, so a 404 here
        means the API has not shipped this route yet — not that the sum failed or that there is nothing to add up.
        "Could not add it up" would send someone hunting through their data for a problem that is not there. */
@@ -846,7 +846,7 @@ function _groupSumPane() {
                     '<span style="width:130px;text-align:end">' +
                     (s.value == null
                       ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>'
-                      : esc((s.currency || '') + ' ' + s.value)) +
+                      : fmtMoney(s.value, s.currency)) +
                     '</span>' +
                     '<span style="width:74px"></span></div>'
                   );
@@ -962,7 +962,7 @@ function _groupSumPane() {
               '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' +
               esc(x.currency) +
               '</b> ' +
-              esc(String(x.total)) +
+              fmtMoney(x.total, x.currency) +
               ' <span style="color:var(--grey)">· ' +
               x.chits +
               ' chit' +
@@ -1100,7 +1100,7 @@ function _folderMetricsPane() {
             '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' +
             esc(item.currency) +
             '</b> ' +
-            esc(String(item.total)) +
+            fmtMoney(item.total, item.currency) +
             ' <span style="color:var(--grey)">· ' +
             item.chits +
             ' chit' +
@@ -1196,7 +1196,11 @@ function _draftWhen() {
   if (!d.term || !String(d.val).trim()) return null;
   var t = d.term,
     v = String(d.val).trim();
-  if (t === 'min_amount' || t === 'max_amount' || t === 'older_than_days') w[t] = Number(v);
+  if (t === 'min_amount' || t === 'max_amount' || t === 'older_than_days') {
+    var n = Number(v.replace(/[,\s]/g, '')); /* reviews7 EL-10 M7: 1,00,000 is a number; a word is not one, never NaN -> null on the wire */
+    if (!isFinite(n)) return null;
+    w[t] = n;
+  }
   else if (t === 'has_dispute' || t === 'unread') w[t] = v === 'true' || v === '1' || v === 'yes';
   else w[t] = v;
   return w;
@@ -1219,7 +1223,7 @@ async function rulePreview() {
   try {
     _FLD.preview = await api('folderRulePreview', { body: { when: w } });
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not preview.';
+    _FLD.err = failWords(e, 'Could not preview.');
   }
   _FLD.busy = false;
   _fldPaint();
@@ -1243,7 +1247,7 @@ async function ruleSave() {
     await loadFolderRules();
     if (typeof toast === 'function') toast('Rule saved — it files new arrivals from now on');
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not save the rule.';
+    _FLD.err = failWords(e, 'Could not save the rule.');
     _FLD.busy = false;
     _fldPaint();
   }
@@ -1254,7 +1258,7 @@ async function ruleToggle(id, on) {
     _FLD.rules = null;
     await loadFolderRules();
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not change that.';
+    _FLD.err = failWords(e, 'Could not change that.');
     _fldPaint();
   }
 }
@@ -1276,7 +1280,7 @@ async function _ruleDelete(id) {
     _FLD.rules = null;
     await loadFolderRules();
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not delete it.';
+    _FLD.err = failWords(e, 'Could not delete it.');
     _fldPaint();
   }
 }
@@ -1312,19 +1316,19 @@ function _ruleRow(r, i, n) {
        single rule cannot be reordered, and two dead buttons beside it just invite a click that does nothing. */
     (n > 1
       ? '<span style="display:inline-flex;gap:3px;flex:0 0 auto">' +
-        mvBtn('↑', i > 0, 'Run earlier — this rule will beat the one above it', "ruleMove('" + esc(r.rule_id) + "',-1)") +
-        mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one', "ruleMove('" + esc(r.rule_id) + "',1)") +
+        mvBtn('↑', i > 0, 'Run earlier — this rule will beat the one above it', "ruleMove('" + escJs(r.rule_id) + "',-1)") +
+        mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one', "ruleMove('" + escJs(r.rule_id) + "',1)") +
         '</span>'
       : '') +
     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input data-cbsid="SCR004-I01" type="checkbox" data-testid="rule-enabled" ' +
     (r.enabled ? 'checked' : '') +
     ' onchange="ruleToggle(\'' +
-    esc(r.rule_id) +
+    escJs(r.rule_id) +
     '\',this.checked)"><span style="font-weight:700;font-size:var(--fs-2)">' +
     esc(r.name || 'Rule') +
     '</span></label>' +
     '<span data-cbsid="CMP011" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' +
-    esc(r.rule_id) +
+    escJs(r.rule_id) +
     '\')">' +
     tx('Delete') +
     '</span></div>' +

@@ -545,9 +545,9 @@ function _rdExpand(it) {
       '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">' +
       esc(L.partner) +
       '</div></div><button data-cbsid="SCR033-B04" onclick="aiSuggestPartner(\'' +
-      esc(it.standard) +
+      escJs(it.standard) +
       "','" +
-      esc(it.doc) +
+      escJs(it.doc) +
       '\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">' +
       tx('✨ Suggest') +
       '</button></div>'
@@ -597,9 +597,9 @@ function _rdRow(it, selKey) {
     '<span data-cbsid="SCR033-C01" onclick="event.stopPropagation();' +
     (held ? '_rdSelect' : 'gatherReadiness') +
     "('" +
-    esc(it.standard) +
+    escJs(it.standard) +
     "','" +
-    esc(it.doc) +
+    escJs(it.doc) +
     '\')" title="' +
     (held ? 'Held — real, valid evidence' : 'Not held — click to provide evidence') +
     '" style="width:16px;height:16px;border-radius:4px;border:1.5px solid ' +
@@ -611,9 +611,9 @@ function _rdRow(it, selKey) {
     '</span>';
   return (
     '<div data-cbsid="SCR033-C02" onclick="_rdSelect(\'' +
-    esc(it.standard) +
+    escJs(it.standard) +
     "','" +
-    esc(it.doc) +
+    escJs(it.doc) +
     '\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:' +
     (on ? 'var(--blue-tint)' : 'transparent') +
     ';border:1px solid ' +
@@ -641,9 +641,9 @@ function _rdDetailPane(it) {
   var verifyBtn =
     idType && it.rung !== 'verified'
       ? '<button data-cbsid="SCR033-B05" onclick="verifyReadiness(\'' +
-        esc(it.standard) +
+        escJs(it.standard) +
         "','" +
-        esc(it.doc) +
+        escJs(it.doc) +
         "','" +
         idType +
         '\')" title="Checked against the source registry, live" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--ok-3);background:var(--ok-tint);color:var(--ok-3);border-radius:9px;padding:7px 12px;cursor:pointer">' +
@@ -653,9 +653,9 @@ function _rdDetailPane(it) {
   var skill = _rdSkill(it);
   var draftBtn = skill
     ? '<button data-cbsid="SCR033-B06" onclick="aiDraftReadiness(\'' +
-      esc(it.standard) +
+      escJs(it.standard) +
       "','" +
-      esc(it.doc) +
+      escJs(it.doc) +
       "','" +
       skill +
       '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
@@ -666,9 +666,9 @@ function _rdDetailPane(it) {
     it.status === 'gathered'
       ? '<span style="font-size:var(--fs-2);color:' + m.col + ';font-weight:700">' + m.lbl + '</span>'
       : '<button data-cbsid="SCR033-B07" onclick="gatherReadiness(\'' +
-        esc(it.standard) +
+        escJs(it.standard) +
         "','" +
-        esc(it.doc) +
+        escJs(it.doc) +
         '\')" style="font-size:var(--fs-2);font-weight:700;border:1px solid ' +
         (it.status === 'pending' ? 'var(--line)' : m.col) +
         ';background:' +
@@ -1277,7 +1277,7 @@ function _rdComDetail(g) {
       ? '<button data-cbsid="SCR033-B10" onclick="aiDraftCommerce(\'' +
         m.ai.skill +
         "','" +
-        esc(g.label) +
+        escJs(g.label) +
         '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
         tx('✨ Draft with AI') +
         '</button>'
