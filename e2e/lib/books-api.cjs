@@ -58,6 +58,8 @@ const ledgerMonths = (lines, opening) => { const by = {}; let run = opening || 0
 /** one asset register row (lib/books-assets) */
 const assetRow = (o) => Object.assign({ entity: 'ent-M', asset_id: 'a1', name: 'Asset', asset_class: 'furniture', cost_minor: 0, currency: 'INR', put_to_use: DAY, source_entry_id: 'e1', source_chit_id: null,
   accumulated_minor: 0, last_dep_fy: null, disposed_on: null, disposal_entry_id: null, proceeds_minor: null, created_by: 'u1', method: 'it_act_wdv', life_years: 3, rate_pct: 40, wdv_minor: 0 }, o || {});
+/** the asset as POST /api/books/assets and /dispose answer it: the contract lists method/life_years/rate_pct on the GET list only */
+const assetPosted = (o) => { const r = assetRow(o); delete r.method; delete r.life_years; delete r.rate_pct; return r; };
 /** one repeating-entry template (lib/books-recurring) */
 const recRow = (o) => Object.assign({ entity: 'ent-M', recurring_id: 'r1', name: 'Template', event: { kind: 'expense', class: 'rent', amount_minor: 100, paid_from: 'bank' }, frequency: 'monthly', next_on: DAY,
   anchor_day: 1, end_on: null, auto: false, active: true, last_done_on: null, created_by: 'u1', due: false }, o || {});
@@ -78,7 +80,7 @@ const entry = (e) => Object.assign({ evidence: { doc: null, files: [], count: 0,
 const returnsRail = (o) => Object.assign({ form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: "Your GSTR-1 and GSTR-3B are made from your bills, not from these books. Close and pay the month's GST here.", rail: '/api/tax/gstr' }, o || {});
 /** the period answer of POST /periods/:fy/:p/lock|unlock */
 const lockAnswer = (fy, period, status) => ({ ok: true, period: { fiscal_year: fy, period, status } });
-Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook, returnsRail });
+Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, assetPosted, recRow, todoRow, eventsAnswer, refusal, daybook, returnsRail });
 
 /* ── the reads of the books ── */
 /** one post waiting for the owner (lib/books-hooks waitingRow) */

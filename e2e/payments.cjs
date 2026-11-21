@@ -290,7 +290,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     await p.screenshot({ path: path.join(PNG, 'Pay.png') });
     await p.fill('[data-testid="alloc-3"]', '500');
     const l1 = await text(p, 'pay_left');
-    ok(/3,230\.00 settles 4 bills/.test(l1) && /1,770\.00 stays with Agro Mills as an advance/.test(l1), 'E2 edit one amount → the line follows (' + l1 + ')');
+    ok(/3,230\.00 part-pays 4 bills, 490\.12 still open/.test(l1) && /1,770\.00 stays with Agro Mills as an advance/.test(l1), 'E2 edit one amount → the line follows (' + l1 + ')');
     await ctx.close();
   }
   /* ── E3 · part payment, then an advance ── */
@@ -299,7 +299,7 @@ const popup = async (p) => { await p.click('[data-testid="crm-act-pay"], [data-t
     await popup(p); await type(p, '2000');
     const vals = await p.$$eval('input[data-testid^="alloc-"]', (e) => e.map((x) => Math.round(Number(x.value) * 100)));
     ok(JSON.stringify(vals) === JSON.stringify([112000, 56000, 32000, 0]), 'E3 ₹2,000 → two bills and part of the third (' + vals.join(', ') + ')');
-    ok(/2,000\.00 settles 3 bills/.test(await text(p, 'pay_left')) && !/advance/.test(await text(p, 'pay_left')) && await p.locator('[data-testid="pay_band"]').isHidden(), 'E3 the line says 3 bills, nothing left over, and no band');
+    ok(/2,000\.00 part-pays 3 bills, 730\.00 still open/.test(await text(p, 'pay_left')) && !/advance/.test(await text(p, 'pay_left')) && await p.locator('[data-testid="pay_band"]').isHidden(), 'E3 the line says 3 bills, nothing left over, and no band');
     await p.click('[data-testid="pay_record"]'); await yesPay(p);
     await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
     ok(posts(S) === 1 && JSON.stringify(S.pay.posts[0].allocations) === JSON.stringify([{ against_ref: 'bill-a', amount_minor: 112000 }, { against_ref: 'bill-b', amount_minor: 56000 }, { against_ref: 'bill-c', amount_minor: 32000 }]), 'E3 ONE call, with the allocations in it');
