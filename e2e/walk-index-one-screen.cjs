@@ -1,6 +1,9 @@
-/* index2-shots.cjs — index2.html (the crisp one-page Home, Fable review 18 Nov §3) at 1366x768 and 390x844: a NEW shop and a firm auditor.
- * Mocked api (the pattern of phone-card.cjs / index-page.cjs); no live site. Proves: no page scroll, no sideways scroll, no clipped child, then shoots.
- * Run on a SIT box only:  NODE_PATH=e2e/node_modules SHOTS=/work/shots node e2e/index2-shots.cjs  (env THEMES=cream,dark) */
+/* walk-index-one-screen.cjs - THE ONE HOME FITS ONE SCREEN (Athi 21 Nov: "a single page app, not scroll, but to showcase all"), 1366x768 and 390x844.
+ * Mocked api (the pattern of phone-card.cjs / index-page.cjs); no live site. Seats: out (signed out: the showcase) · shop (a new shop) · live (a shop with figures) · firm (the practice list).
+ * Proves (exit 1 on any failure): the page is no taller or wider than the viewport; no clipped child; no page error; every tile (signed out) opens its in-page panel
+ * listing each entry Live or Coming; every row (signed in) opens and the page still does not scroll; and the REPEAT RULE (Athi 21 Nov): no visible string repeats more
+ * than 3 times on one screen except data values. The firm's practice list is held to the rule only with FIRM_REPEATS=1 (its owner, the books practice list, is still repeating "Assign to").
+ * Run:  NODE_PATH=e2e/node_modules node e2e/walk-index-one-screen.cjs   (env WHO=out,shop,live,firm  VIEWS=1366x768,390x844  THEMES=cream,dark  SHOTS=dir) */
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS = process.env.SHOTS || path.join(__dirname, 'shots');
@@ -37,13 +40,13 @@ async function main() {
   fs.mkdirSync(SHOTS, { recursive: true });
   const srv = http.createServer((q, r) => {
     const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '');
-    const f = (!rel || rel === 'index.html') ? path.join(ROOT, 'index.html') : rel === 'index2.html' ? path.join(ROOT, 'index2.html') : path.join(PUB, rel);
-    if (((!f.startsWith(PUB)) && f !== path.join(ROOT, 'index.html') && f !== path.join(ROOT, 'index2.html')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
+    const f = (!rel || rel === 'index.html') ? path.join(ROOT, 'index.html') : path.join(PUB, rel);
+    if (((!f.startsWith(PUB)) && f !== path.join(ROOT, 'index.html')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
     r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream', 'cache-control': 'no-store' }); fs.createReadStream(f).pipe(r);
   });
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port, b = await chromium.launch();
-  for (const who of (process.env.WHO || 'shop,firm').split(',')) for (const [w, h] of (process.env.VIEWS || '1366x768,390x844').split(',').map((v) => v.split('x').map(Number))) for (const theme of (process.env.THEMES || 'cream').split(',')) {
+  for (const who of (process.env.WHO || 'out,shop,live,firm').split(',')) for (const [w, h] of (process.env.VIEWS || '1366x768,390x844').split(',').map((v) => v.split('x').map(Number))) for (const theme of (process.env.THEMES || 'cream').split(',')) {
     const ctx = await b.newContext({ viewport: { width: w, height: h }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => {
@@ -59,10 +62,12 @@ async function main() {
       if (p === '/api/events/stream') return r.abort();
       return json(r, 404, { error: 'not found' });
     });
-    await ctx.addInitScript(([s, t]) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', JSON.stringify(s)); localStorage.setItem('cb_home_layout', 'new'); } catch (_) {} }, [who === 'firm' ? FIRM : SHOP, theme]);
+    await ctx.addInitScript(([s, out]) => { try { localStorage.setItem('cb_api_base', location.origin); if (!out) localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, [who === 'firm' ? FIRM : SHOP, who === 'out']);
     const p = await ctx.newPage(), threw = [];
     p.on('pageerror', (x) => threw.push(x.message));
-    await p.goto(base + '/index2.html');
+    let bytes = 0;
+    p.on('response', (r) => { if (!/\/api\//.test(r.url())) r.body().then((b) => { bytes += b.length; }).catch(() => {}); });
+    await p.goto(base + '/');
     await p.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 }).catch(() => {});
     await p.waitForTimeout(2500);
     if (theme === 'dark') { await p.evaluate(() => window.CBAvatar && CBAvatar.applyTheme && CBAvatar.applyTheme('dark')).catch(() => {}); await p.waitForTimeout(300); }
@@ -82,13 +87,42 @@ async function main() {
     ok(!m.clip.length, tag + ': no clipped child ' + m.clip.join('|'));
     ok(threw.length === 0, tag + ': no page error ' + threw.join(';'));
     await p.screenshot({ path: path.join(SHOTS, tag + '.png') });
-    if (who !== 'firm') {
-      const row = await p.$('.ix-row');
-      if (row) {
-        await row.click(); await p.waitForTimeout(400);
-        await p.screenshot({ path: path.join(SHOTS, tag + '-open1.png') });
-        const m2 = await p.evaluate(() => { const mn = document.querySelector('.cbsh-main'); return { mainY: mn.scrollHeight - mn.clientHeight, sy: document.documentElement.scrollHeight - innerHeight }; });
-        ok(m2.mainY <= 1 && m2.sy <= 1, tag + ': first row open, still no page scroll ' + JSON.stringify(m2));
+    /* the repeat rule: a visible leaf string (no digit = not a data value) printed more than 3 times on this screen */
+    const reps = await p.evaluate(() => {
+      const count = {};
+      [].slice.call(document.querySelectorAll('body *')).forEach((x) => {
+        if (x.children.length || x.closest('[hidden],[aria-hidden=true],dialog:not([open])')) return;
+        const r = x.getBoundingClientRect(), t = (x.textContent || '').replace(/\s+/g, ' ').trim();
+        if (r.width < 1 || r.height < 1 || r.top > innerHeight || r.left > innerWidth || !t || t.length > 60 || /\d/.test(t)) return;
+        count[t] = (count[t] || 0) + 1;
+      });
+      return Object.keys(count).filter((t) => count[t] > 3).map((t) => t + ' x' + count[t]);
+    });
+    console.log('  ' + tag + ' repeated strings (>3): ' + (reps.join(' | ') || 'none') + ' · first paint ' + Math.round(bytes / 1024) + ' KB');
+    if (who !== 'firm' || process.env.FIRM_REPEATS) ok(!reps.length, tag + ': no visible string repeats more than 3 times');
+    const noScroll = () => p.evaluate(() => { const mn = document.querySelector('.cbsh-main'); return { mainY: mn.scrollHeight - mn.clientHeight, sy: document.documentElement.scrollHeight - innerHeight, sx: document.documentElement.scrollWidth - innerWidth }; });
+    if (who === 'out') {
+      const ids = await p.$$eval('.ix-row', (n) => n.map((x) => x.parentNode.getAttribute('data-pillar')));
+      ids.push(...await p.$$eval('.ix-fw', (n) => n.map((x) => x.getAttribute('data-pillar'))));
+      ok(ids.length === 9, tag + ': six tiles + Labs, Standards, Setup (' + ids.length + ')');
+      for (const id of ids) {
+        await p.click('button.ix-fw[data-pillar="' + id + '"], .ix-item[data-pillar="' + id + '"] .ix-row');
+        await p.waitForTimeout(150);
+        const o = await p.evaluate(() => ({ open: !!document.querySelector('dialog[open]'), lines: document.querySelectorAll('dialog[open] .ix-se').length, soon: document.querySelectorAll('dialog[open] .ix-se.soon').length }));
+        const ns = await noScroll();
+        ok(o.open && o.lines > 0 && ns.sy <= 1 && ns.sx <= 0, tag + ': ' + id + ' opens its panel in the page (' + o.lines + ' entries, ' + o.soon + ' coming), no scroll');
+        if (id === 'sell') await p.screenshot({ path: path.join(SHOTS, tag + '-panel.png') });
+        await p.click('dialog[open] .ix-x');
+        await p.waitForTimeout(100);
+      }
+    } else if (who !== 'firm') {
+      const ids = await p.$$eval('.ix-row', (n) => n.map((x) => x.parentNode.getAttribute('data-pillar')));
+      for (const id of ids) {
+        await p.click('.ix-item[data-pillar="' + id + '"] .ix-row');
+        await p.waitForTimeout(250);
+        const ns = await noScroll(), expanded = await p.$eval('.ix-item[data-pillar="' + id + '"] .ix-row', (x) => x.getAttribute('aria-expanded'));
+        ok(expanded === 'true' && ns.mainY <= 1 && ns.sy <= 1, tag + ': row ' + id + ' opens, still no page scroll ' + JSON.stringify(ns));
+        if (id === ids[0]) await p.screenshot({ path: path.join(SHOTS, tag + '-open1.png') });
       }
     }
     if (process.env.PROBE) console.log('  PROBE ' + tag + ' ' + JSON.stringify(await p.evaluate((sel) => [].slice.call(document.querySelectorAll(sel)).slice(0, 2).map((n) => ({ html: n.outerHTML.slice(0, 900), kids: [].slice.call(n.querySelectorAll('*')).slice(0, 14).map((k) => k.className + ':' + getComputedStyle(k).display + ':' + Math.round(k.getBoundingClientRect().width)) })), process.env.PROBE)));

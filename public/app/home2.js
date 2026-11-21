@@ -1,17 +1,15 @@
-/* home2.js — CBHome2: the crisp one-page Home (index2.html, UX-127, Athi 18 Nov 2026) and the switch between it and the classic Home.
- * OWNS      the layout of index2 (Fable review 18 Nov): a Do-first row, six pillar rows as an accordion (one open, at most 5 lines laptop / 6 phone, then the pillar sheet), Labs · Standards · Setup in the foot, and the switch with its per-viewer preference.
- * CALLED BY index2.html (mount) · index.html (gate + switch link only)
+/* home2.js — CBHome2: the one-page Home (index.html, UX-127, Athi 18 and 21 Nov 2026). The old long Home is gone: one Home, no switch.
+ * OWNS      the layout of the one Home (Fable review 18 Nov): a Do-first row, six pillar rows as an accordion (one open, at most 5 lines laptop / 6 phone, then the pillar sheet), Labs · Standards · Setup in the foot, and the switch with its per-viewer preference.
+ * CALLED BY index.html (mount; `out` = signed out, which draws the showcase tiles, not the shop's rows)
  * FLOW      CBShell.mount draws the frame and the cards and READS their facts as ever (one source, no second fetch path); this file only MOVES those same
  *           card nodes into the pillar panels named by manifest.json `home2`, and reads the digit off the facts the shell already painted.
  * CARD      26-reporting-mis-and-bi/home-facts
- * The preference is the viewer's own (localStorage, wrapped: a browser that refuses it just shows the classic Home). No setting key yet — listed for cb-settings.
  * Facts follow (Athi 18 Nov: "follow the leaders"; the four sources below are from memory and UNVERIFIED here — nothing was fetched):
  *   Xero dashboard, QuickBooks home, Shopify home, Stripe dashboard each lead with a few headline numbers and a to-do list, details on demand (unverified).
  */
 (function (root) {
   'use strict';
   if (root.CBHome2) return;
-  var KEY = 'cb_home_layout'; /* 'new' | 'classic' — the viewer's own choice */
   var OPEN_KEY = 'cb_home2_open';
   var doc = root.document;
   /* plain words for Home only (Fable review, 18 Nov: our words out of the top); the page behind keeps its own name */
@@ -47,34 +45,6 @@
       quiet('home2:write', failure);
     }
   }
-  /** the viewer's layout choice: 'new' | 'classic' | '' */
-  function pref() {
-    return lsGet(KEY);
-  }
-  function setPref(choice) {
-    lsSet(KEY, choice);
-  }
-  /* classic Home: a viewer who chose the new one is taken there; true = going */
-  function gate() {
-    if (pref() !== 'new') return false;
-    root.location.replace('/index2.html');
-    return true;
-  }
-  /* the one small link, either way round: 'classic' draws "Try the new Home" (on index.html), 'new' draws "Back to classic" (on index2.html) */
-  function switchHTML(from) {
-    var toNew = from === 'classic';
-    return (
-      '<div class="ix-sw"><a data-cbsid="HOM001-B07" data-testid="home-switch" data-to="' + (toNew ? 'new' : 'classic') + '" href="' + (toNew ? '/index2.html' : '/') + '">' +
-      esc(sayText(toNew ? 'Try the new Home' : 'Back to classic')) +
-      '</a></div>'
-    );
-  }
-  /** the switch link remembers the viewer's choice when pressed */
-  function wireSwitch(host) {
-    var link = host.querySelector('[data-testid="home-switch"]');
-    if (link) link.addEventListener('click', function () { setPref(link.getAttribute('data-to')); });
-  }
-
   /** a card's state rank: needs you 0, in use 1, anything else 2, not started 3 */
   function rank(card) {
     var stateNode = card.querySelector('[data-state]'), state = stateNode ? stateNode.getAttribute('data-state') : '';
@@ -94,7 +64,7 @@
   /** the row's line when no card needs you and none in use has a fact: its first step, never a 0 */
   function firstStepHeadline(cards) {
     var first = cards[0];
-    return { n: '', w: first ? sayText('Set up') + ' ›' : '', full: first ? sayText('Set up') + ' ' + nameOf(first) : '', tone: 'q', amber: 0 };
+    return { n: '', w: '', full: first ? sayText('Set up') + ' ' + nameOf(first) : '', tone: 'q', amber: 0 }; /* nothing started: the row says nothing (the Start here row names the steps), never the same "Set up ›" six times */
   }
   /** the figure and the words of a closed row from one fact: the leading number, then the first two words of what it counts (a 0 is never shown) */
   function figureOf(fact, pick) {
@@ -123,10 +93,11 @@
     return { groups: groups, owner: owner, byId: byId };
   }
   /** the state every step of one mounted Home reads and moves: the shell and host, the groups, the nodes drawn, the open sheet */
-  function newState(shell, host, manifest) {
+  function newState(shell, host, manifest, out) {
     var index = groupIndex(manifest.home2);
     return {
       shell: shell,
+      out: !!out,
       host: host,
       manifest: manifest,
       cfg: manifest.home2,
@@ -146,12 +117,13 @@
     };
   }
   /** one pillar row: the closed line (glyph, name, figure, amber count, chevron) and its panel, hidden until a card lands in it */
-  function pillarHTML(group) {
+  function pillarHTML(group, out) {
     var glyph = group.icon === '¤' ? '<span data-glyph="money">¤</span>' : esc(group.icon);
+    var tile = group.line ? '<span class="ix-l">' + esc(sayText(group.line)) + '</span>' : '';
     return (
-      '<div class="ix-item" data-pillar="' + group.id + '" hidden>' +
+      '<div class="ix-item" data-pillar="' + group.id + '"' + (out ? '' : ' hidden') + '>' +
       '<button type="button" class="ix-row" id="ixh-' + group.id + '" aria-expanded="false" aria-controls="ixp-' + group.id + '" data-cbsid="HOM001-B06" data-testid="ix2-row-' + group.id + '">' +
-      '<span class="ix-g" aria-hidden="true">' + glyph + '</span><span class="ix-n">' + esc(sayText(group.name)) + '</span>' +
+      '<span class="ix-g" aria-hidden="true">' + glyph + '</span><span class="ix-n">' + esc(sayText(group.name)) + '</span>' + (out ? tile : '') +
       '<span class="ix-v" data-testid="ix2-digit-' + group.id + '"></span><b class="ix-a" hidden></b><span class="ix-c" aria-hidden="true">▾</span></button>' +
       '<div class="ix-panel" id="ixp-' + group.id + '" role="region" aria-labelledby="ixh-' + group.id + '" hidden data-cbsid="HOM001-P17" data-testid="ix2-panel-' + group.id + '"></div></div>'
     );
@@ -161,13 +133,21 @@
     return '<button type="button" class="ix-fw" data-pillar="' + group.id + '" data-cbsid="HOM001-B09" data-testid="ix2-foot-' + group.id + '">' + esc(sayText(group.name)) + ' ›</button>';
   }
   /** the whole Home 2: the Do-first row, the pillar rows, the foot and the one pillar sheet */
-  function hostHTML(cfg) {
+  function heroHTML() {
     return (
-      '<div class="df" data-cbsid="HOM001-P18" data-testid="ix2-dofirst"></div><div class="ix-list">' +
-      cfg.pillars.map(pillarHTML).join('') +
+      '<div class="ix-hero" data-cbsid="HOM001-P20" data-testid="ix2-hero"><b>' + esc(sayText('One shop, one set of numbers')) + '</b>' +
+      '<span class="ix-hd"><button type="button" class="ix-door pri" data-door="in" data-cbsid="HOM001-B24" data-testid="ix2-door-signin">' + esc(sayText('Sign in')) + '</button>' +
+      '<button type="button" class="ix-door" disabled aria-disabled="true" title="' + esc(sayText('The guided tour is coming')) + '" data-cbsid="HOM001-B25" data-testid="ix2-door-tour">' + esc(sayText('See it work')) +
+      ' · ' + esc(sayText('coming')) + '</button></span></div>'
+    );
+  }
+  function hostHTML(cfg, out) {
+    return (
+      (out ? heroHTML() : '<div class="df" data-cbsid="HOM001-P18" data-testid="ix2-dofirst"></div>') + '<div class="ix-list">' +
+      cfg.pillars.map(function (group) { return pillarHTML(group, out); }).join('') +
       '</div><div class="ix-foot" data-testid="ix2-foot">' +
       cfg.foundation.map(footWordHTML).join('') +
-      '<span class="ix-fs"></span>' + switchHTML('new') + '</div>' +
+      '<span class="ix-fs"></span></div>' +
       '<dialog class="ix-sheet" data-pop="POP216" data-cbsid="HOM001-P19" data-testid="ix2-sheet"><div class="ix-sh-h"><b></b><button type="button" class="ix-x" data-cbsid="HOM001-B08" aria-label="' +
       esc(sayText('Close')) + '">✕</button></div><div class="ix-sh-b"></div></dialog>'
     );
@@ -176,8 +156,8 @@
   function drawHost(home) {
     home.host.setAttribute('data-testid', 'ix2');
     home.host.className = 'ix';
-    home.host.innerHTML = hostHTML(home.cfg);
-    wireSwitch(home.host);
+    home.host.innerHTML = hostHTML(home.cfg, home.out);
+    home.host.classList.toggle('out', home.out);
     home.list = home.host.querySelector('.ix-list');
     home.df = home.host.querySelector('.df');
     home.dlg = home.host.querySelector('dialog');
@@ -340,7 +320,7 @@
     if (!more) return;
     [].forEach.call(more.querySelectorAll('[data-id],[data-testid^="shell-chip-"]'), function (node) {
       var group = home.owner[idOf(node)];
-      if (!group || node.getAttribute('data-state') === 'coming') return node.remove(); /* `coming` is not drawn (Athi, 26 Oct) */
+      if (!group) return node.remove(); /* a `coming` chip stays: it shows grey with its word (Athi, 21 Nov: not ready = coming, still on the page) */
       var panel = home.panels[group.id], old = cardsOf(panel).filter(function (card) { return idOf(card) === idOf(node); })[0];
       if (old) old.remove();
       node.hidden = false;
@@ -354,7 +334,7 @@
       if (home.items[group.id]) paintRow(home, group);
       if (home.items[group.id] && !home.panels[group.id].hidden) fitRow(home, group.id);
     });
-    [].forEach.call(home.host.querySelectorAll('.ix-fw'), function (button) { button.hidden = !cardsOf(home.panels[button.getAttribute('data-pillar')]).length; });
+    [].forEach.call(home.host.querySelectorAll('.ix-fw'), function (button) { button.hidden = !home.out && !cardsOf(home.panels[button.getAttribute('data-pillar')]).length; });
   }
   /** take the shell's cards into their rows, then repaint the rows and the Do-first row */
   function adopt(home) {
@@ -388,6 +368,21 @@
     if (home.dlg.showModal) home.dlg.showModal();
     else home.dlg.setAttribute('open', '');
   }
+  /** one manifest entry as a showcase line: its name, what it does, and Live or Coming (a built page is live; anything else is grey) */
+  function showcaseLineHTML(entry) {
+    var live = entry.state === 'built' && !!entry.route;
+    return '<div class="ix-se' + (live ? '' : ' soon') + '" data-testid="ix2-show-' + esc(entry.id) + '"><b>' + esc(sayText(entry.name)) + '</b><i>' + esc(sayText(live ? 'Live' : 'Coming')) +
+      '</i><span>' + esc(sayText(entry.what || '')) + '</span></div>';
+  }
+  /** a signed-out press on a tile or a foot word: the in-page panel of what that area does, every entry live or coming; no page change */
+  function showcase(home, id) {
+    var group = home.byId[id], entries = group.ids.map(function (key) { return (home.manifest.entries || []).filter(function (entry) { return entry.id === key; })[0]; }).filter(Boolean);
+    home.sheetOwner = 'show';
+    home.dlg.querySelector('.ix-sh-h b').textContent = sayText(group.name);
+    home.dlg.querySelector('.ix-sh-b').innerHTML = '<p class="ix-sp">' + esc(sayText(group.line || '')) + '</p><div class="ix-sc">' + entries.map(showcaseLineHTML).join('') + '</div>';
+    if (home.dlg.showModal) home.dlg.showModal();
+    else home.dlg.setAttribute('open', '');
+  }
   /** the Do-first doors in the sheet (the "+n" press) */
   function openDoSheet(home) {
     home.sheetOwner = 'do';
@@ -401,7 +396,7 @@
     if (id && home.items[id]) {
       home.items[id].appendChild(home.panels[id]);
       home.panels[id].hidden = !home.items[id].classList.contains('open');
-    } else if (id === 'do') home.dlg.querySelector('.ix-sh-b').innerHTML = '';
+    } else if (id === 'do' || id === 'show') home.dlg.querySelector('.ix-sh-b').innerHTML = '';
     else if (id) home.panels[id].hidden = true;
   }
   /** close the sheet: its panel goes home, the dialog closes, the rows repaint */
@@ -417,6 +412,12 @@
   function onHostClick(home, event) {
     var target = event.target.closest ? event.target : null;
     if (!target) return;
+    if (home.out) {
+      var tile = target.closest('.ix-row'), word = target.closest('.ix-fw'), door = target.closest('[data-door]');
+      if (door) return root.dispatchEvent(new root.CustomEvent('cb-home-signin'));
+      if (tile || word) return showcase(home, (tile ? tile.parentNode : word).getAttribute('data-pillar'));
+      return;
+    }
     var row = target.closest('.ix-row'), sheetLine = target.closest('[data-sheet]'), foot = target.closest('.ix-fw'), more = target.closest('[data-more]');
     if (row && home.list.contains(row)) return open(home, row.getAttribute('aria-expanded') === 'true' ? '' : row.parentNode.getAttribute('data-pillar'));
     if (sheetLine) return sheet(home, sheetLine.getAttribute('data-sheet'));
@@ -449,12 +450,13 @@
     Object.keys(home.panels).forEach(function (key) { observer.observe(home.panels[key], { childList: true, subtree: true, characterData: true }); });
   }
   /** mount Home 2 on a host: draw it, wire it, open the remembered row and keep adopting the shell's cards; null when the manifest has no `home2` or there is no host */
-  function mount(shell, host) {
+  function mount(shell, host, opts) {
     var manifest = shell.manifest && shell.manifest();
     if (!manifest || !manifest.home2 || !host) return null;
-    var home = newState(shell, host, manifest);
+    var home = newState(shell, host, manifest, !!(opts && opts.out));
     drawHost(home);
     wireEvents(home);
+    if (home.out) return { out: true, owner: home.owner };
     openFromAddress(home);
     observeShell(home);
     /* Your work: the same read index.html makes (one budgeted ask, the shell's); only a figure above zero is drawn, as a door in the Do-first row */
@@ -469,16 +471,16 @@
     };
   }
   /** mount, then hand over the figures that arrived before the mount */
-  function mountAndKeep(shell, host) {
-    live = mount(shell, host);
-    if (live && pending) live.setWork(pending);
+  function mountAndKeep(shell, host, opts) {
+    live = mount(shell, host, opts);
+    if (live && live.setWork && pending) live.setWork(pending);
     return live;
   }
   /** the Your-work figures: straight to the mounted Home, or kept until it is */
   function setWork(figures) {
-    if (live) live.setWork(figures);
+    if (live && live.setWork) live.setWork(figures);
     else pending = figures;
   }
 
-  root.CBHome2 = { pref: pref, setPref: setPref, gate: gate, switchHTML: switchHTML, wireSwitch: wireSwitch, mount: mountAndKeep, setWork: setWork, headline: headline };
+  root.CBHome2 = { mount: mountAndKeep, setWork: setWork, headline: headline };
 })(window);

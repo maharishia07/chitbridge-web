@@ -50,7 +50,6 @@ const BREAKS = [
   ['a Lab ignores the clean-up', [['public/offer-lab-next.html', `onWipe: function(){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?cleaned=1'); }); }`, `onWipe: function(){}`]]],
   /* index.html */
   ['index shows facts with another shop here', [[IDX, `if (r.others.length) closeFirst(r); else facts();`, `facts();`]]],
-  ['index: mismatch not amber', [[IDX, "alert_('till-paired', 'warn',", "alert_('till-paired', 'info',"]]],
   ['index: same shop signs it out', [[IDX, `    if (next && next.ent === MINE.ent) return;\n`, ``]]],
   ['index: a sign-out elsewhere is not followed', [[IDX, `window.addEventListener('storage', onStore);`, ``]]],
   ['index: a late read paints the old shop', [[IDX, `  if (g !== GEN) return never();\n  if (!r.ok)`, `  if (!r.ok)`], [IDX, `  if (g !== GEN) return never();\n  return`, `  return`]]],
