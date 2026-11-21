@@ -667,6 +667,14 @@ function cbDefRetiredOf(kind) {
   });
 }
 
+/** the slab fields only a pack with HSN-style codes has (cess on top and the code list); none for a VAT shop */
+function cbDefCodeFields(scheme) {
+  if (!scheme.codes) return [];
+  return [
+    { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
+    { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true }
+  ];
+}
 /** The rule fields a kind offers — read from the registries, never listed here. */
 function cbDefRuleFields(kind, sub) {
   /**
@@ -706,12 +714,9 @@ function cbDefRuleFields(kind, sub) {
   if (kind === 'tax') {
     /* AE-F-07: the pack decides which fields a slab has — a VAT shop has no cess and no HSN list */
     var scheme = cbDefTaxScheme();
-    return [
-      { k: 'rate', label: 'Rate', ph: String(scheme.sample), num: true, pct: true },
-      scheme.codes && { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
-      scheme.codes && { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
+    return [{ k: 'rate', label: 'Rate', ph: String(scheme.sample), num: true, pct: true }].concat(cbDefCodeFields(scheme), [
       { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD', date: true } /* a real date control (Athi, 2026-09-05: "date picker is not there") */
-    ].filter(Boolean);
+    ]);
   }
   if (kind === 'pricing') {
     /* the names the engine reads (pricing.js copyOf): amount · tiers · min · max */
@@ -1533,6 +1538,15 @@ function cbDefFieldHTML(x, v) {
   return box;
 }
 
+/** the placeholder of the Name box, per KIND: an instruction, so a wrong one teaches the wrong thing */
+function cbDefNamePlaceholder(kind) {
+  if (kind === 'ordermodel') return 'Carton of 6';
+  if (kind === 'offer') return 'Diwali 10%';
+  if (kind === 'requirement') return 'Minimum for food suppliers';
+  /* ⚠️ The NAME is what a product cites and what a chit freezes, so it must read as a rate to someone who never opens this form. "GST 18%", not "standard". */
+  if (kind === 'tax') return cbDefTaxScheme().word + ' ' + cbDefTaxScheme().sample + '%';
+  return 'Spices';
+}
 function cbDefFormHTML() {
   var f = CBDEF_FORM;
   if (!f) return '';
@@ -1608,17 +1622,7 @@ function cbDefFormHTML() {
        requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
        teaches the wrong thing. */
     ' placeholder="' +
-    (f.kind === 'ordermodel'
-      ? 'Carton of 6'
-      : f.kind === 'offer'
-        ? 'Diwali 10%'
-        : f.kind === 'requirement'
-          ? 'Minimum for food suppliers'
-          : /* ⚠️ The NAME is what a product cites and what a chit freezes, so it must read as a rate
-                           to someone who never opens this form. "GST 18%", not "standard". */
-            f.kind === 'tax'
-            ? cbDefTaxScheme().word + ' ' + cbDefTaxScheme().sample + '%'
-            : 'Spices') +
+    cbDefNamePlaceholder(f.kind) +
     '"' +
     ' oninput="cbDefSetField(\'name\',this.value)">' +
     /* ⚠️ THE NAME IS NOT PRIVATE. defToOffer carries it as the offer's `label`, and every adjustment the engine
