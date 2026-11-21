@@ -124,11 +124,16 @@
   }
 
   /** /cashflow series → cashLine points; the lowest day is the SERVER's (lowest.date) found by key, never searched for by value */
+  /** a day as the shop reads it (21 Nov), never 2026-11-21 or 11-21: the one locale date maker; a malformed day is shown as sent */
+  function dayWords(day, deps) {
+    var at = /^(d{4})-(d{2})-(d{2})$/.exec(day);
+    return at ? deps.date(Date.UTC(+at[1], +at[2] - 1, +at[3]), { day: 'numeric', month: 'short' }) : String(day || '');
+  }
   function cashPoints(answer, deps) {
     var series = (answer && answer.series) || [],
       lowest = answer && answer.lowest,
       points = series.map(function (day) {
-        return { label: String(day.date || '').slice(5), value: day.balance_minor, title: day.date + ' · ' + moneyOrDash(day.balance_minor, deps) };
+        return { label: dayWords(day.date, deps), value: day.balance_minor, title: dayWords(day.date, deps) + ' · ' + moneyOrDash(day.balance_minor, deps) };
       }),
       at = lowest ? series.findIndex(function (day) { return day.date === lowest.date; }) : -1,
       end = series.length ? series[series.length - 1] : null;
@@ -141,7 +146,7 @@
       table: {
         head: [deps.tx('Day'), deps.tx('Balance')],
         rows: series.map(function (day) {
-          return [day.date, moneyOrDash(day.balance_minor, deps)];
+          return [dayWords(day.date, deps), moneyOrDash(day.balance_minor, deps)];
         })
       }
     };
