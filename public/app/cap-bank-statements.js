@@ -69,6 +69,12 @@ function bkstPeriodEnd() {
   const end = bkhFyEnd(BKST.fy);
   return end + '-' + bkhPad(new Date(Date.UTC(Number(end.slice(0, 4)), Number(end.slice(5, 7)), 0)).getUTCDate());
 }
+/** the end of a sign-off line: the books have changed (WALK U U-F-03: the api re-reads the books at the period end), else what is unexplained, else nothing */
+function bkstRestWords(row, cur) {
+  if (row.stale) return txf('the books have changed since: now {a}', { a: bkMoney(row.books_now_minor, cur) });
+  if (row.unexplained_minor) return txf('unexplained {a}', { a: bkMoney(row.unexplained_minor, cur) });
+  return tx('nothing unexplained');
+}
 /** the bank balance at the period end, READ from the sign-off the api chose (GET /bank/statement-files asOf → signed_as_at: the ONE rule, the newest period end on or before the day; no choosing, no sum here).
  *  The words: the statement figure and "nothing unexplained" / "unexplained A$Y" (the absolute remainder after the timing items; it is NOT statement minus books, so no Books or Difference figure is shown). '' when no account was signed by then. */
 function bkstBalanceHtml() {
@@ -80,7 +86,7 @@ function bkstBalanceHtml() {
         if (!row) return '';
         const cur = row.currency || BKST.data.currency,
           day = typeof shopDay === 'function' ? shopDay(String(row.period_to).slice(0, 10)) : String(row.period_to).slice(0, 10),
-          rest = row.unexplained_minor ? txf('unexplained {a}', { a: bkMoney(row.unexplained_minor, cur) }) : tx('nothing unexplained');
+          rest = bkstRestWords(row, cur);
         return '<div data-testid="bank-stmts-bal-' + bkstE(account.account_id) + '">' + (accounts.length > 1 ? '<b>' + bkstE(account.name || account.code) + '</b> · ' : '') + bkstE(txf('Signed off to {d}', { d: day }) + ' · ' + tx('Statement') + ' ' + bkMoney(row.statement_minor, cur) + ' · ' + rest) + '</div>';
       })
       .filter(Boolean);
