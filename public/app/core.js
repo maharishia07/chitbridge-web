@@ -12,6 +12,18 @@ function fill(path, params) {
   return path.replace(/:(\w+)/g, (_, k) => encodeURIComponent((params && params[k]) ?? ''));
 }
 
+/** the shop's own time zone from the /me answer, handed to the one owner of window.CB_SHOP_TZ (shopZoneSet) */
+function noteShopZone(j, key) {
+  if (key === 'me' && j.entity.timezone && typeof shopZoneSet === 'function') shopZoneSet(j.entity.timezone);
+}
+/** the answer's `included` rides on the flattened entity (a frozen entity just keeps going without it) */
+function keepIncluded(j) {
+  if (j.included && j.entity && typeof j.entity === 'object') {
+    try {
+      j.entity.included = j.included;
+    } catch (_) {}
+  }
+}
 // Single response envelope. Accepts a real {ok,data,error} envelope, or normalises the legacy
 // wrappers ({chits,…}, {entity}, {messages,…}, …) so feature code uses `data` directly.
 /**
@@ -200,12 +212,8 @@ function unwrap(j, _key) {
    * under all of them. Carrying one key across keeps both contracts true.
    */
   if (j.entity) {
-    if (_key === 'me' && j.entity.timezone && typeof shopZoneSet === 'function') shopZoneSet(j.entity.timezone); /* AE-F-06: the shop's own zone on EVERY page that reads /me (was app.html only): CBShopTime reads it */
-    if (j.included && j.entity && typeof j.entity === 'object') {
-      try {
-        j.entity.included = j.included;
-      } catch (_) {}
-    }
+    noteShopZone(j, _key); /* AE-F-06: the shop's own zone on EVERY page that reads /me (was app.html only): CBShopTime reads it */
+    keepIncluded(j);
     return j.entity;
   }
   if (j.settings) return j.settings;
@@ -1380,6 +1388,13 @@ function answerWords(body, status) {
   if (rate) return rate;
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
+/** the facts a failed call's error carries: the status, the answer's own body (e.data), how long to wait after a 429 (M-F-07: the body's own, else the Retry-After header), then the register code, hint and request id (B7) */
+function errorFacts(er, res, j, requestId) {
+  er.status = res.status;
+  er.data = j;
+  er.retryAfter = Math.ceil(Number(j && j.params && j.params.retry_after_seconds) || Number(res.headers && res.headers.get && res.headers.get('Retry-After')) || 0);
+  refusalFacts(er, j, requestId);
+}
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
 const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}); const actingEp = (ep) => (ep && typeof CBBooksActing !== 'undefined' ? CBBooksActing.guard(ep) : ep); /* the store header never goes outside /api/books*: a call outside it is refused before it is sent */
 async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
@@ -1527,10 +1542,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
       /* e.data = the answer's own body (M27: a 409 ALREADY_PAID carries .warnings the payment form paints) */
       const _fail = function (m) {
         const er = new Error(m);
-        er.status = res.status;
-        er.data = j;
-        er.retryAfter = Math.ceil(Number(j && j.params && j.params.retry_after_seconds) || Number(res.headers && res.headers.get && res.headers.get('Retry-After')) || 0); /* M-F-07: a 429 says how long to wait (the body's own, else the Retry-After header) */
-        refusalFacts(er, j, _rid); /* B7: the register code, the hint (next step) and the request id ride on the error, for the one card and toast */
+        errorFacts(er, res, j, _rid); /* B7: the register code, the hint (next step) and the request id ride on the error, for the one card and toast */
         return er;
       };
       if (res.status === 401) {
