@@ -3355,6 +3355,10 @@
       <datalist id="custlist"></datalist>
       <input id="cphone" placeholder="Phone" autocomplete="off" inputmode="tel" style="max-width:150px" oninput="rwTyped()" data-cbsid="CTR002-I04">
       <button class="pill" id="micphone" data-testid="till-mic-phone" onclick="listen('cphone')" title="speak the number" data-cbsid="CTR002-B42">🎤</button>
+      <!-- ⭐ fix-till2 1128 (UAE I-F-03): the BUYER'S tax number, optional — a business buyer's TRN / ABN / GSTIN makes this a B2B tax invoice (business_json.customer.gstin, the one slot).
+           Word and check are the shop's COUNTRY PACK's (CBCountries.taxId; India: the GSTIN checksum) — see buyerTaxCheck. Register path: Counter › Page header, search and bill. -->
+      <input id="cgstin" data-testid="till-buyer-tax-id" placeholder="Buyer tax number" aria-label="Buyer tax number (optional)" title="optional" autocomplete="off" autocapitalize="characters" style="max-width:170px" oninput="paintBuyerTax(); rwTyped()" data-cbsid="CTR002-I14">
+      <span id="cgstinsay" class="dim" role="status" hidden></span>
       <!-- ⭐ BOOKS v2 — money received from a KNOWN customer; hidden until exactly one customer matches (custKnown) -->
       <button class="pill" id="rcvpaybtn" data-testid="till-receive-pay" onclick="rcvPayOpen()" hidden data-cbsid="CTR002-B43">Received</button>
       <!-- ⭐ CTR-186: where the goods go. Another state = IGST (s10(1)(a)); left alone, the bill is over the counter. Shown for a state-split pack only (paintDeliver). -->
@@ -3417,8 +3421,8 @@
            first backwards is wrong by exactly the tax on every line; the second decides which head the credit sits
            under, and it is left blank rather than guessed. -->
       <select id="rcv_incl" class="wide" data-testid="rcv-incl" onchange="RCV.tax_inclusive=(this.value==='in'); paintReceive()" data-cbsid="CTR002-S04">
-        <option value="ex">Their rates are before tax (usual)</option>
-        <option value="in">Their rates already include tax</option>
+        <option value="ex">Their rates are before GST (usual)</option>
+        <option value="in">Their rates already include GST</option>
       </select>
       <input id="rcv_vstate" placeholder="Their state code (33, 29…) — for CGST/SGST vs IGST" autocomplete="off"
              data-testid="rcv-vstate" oninput="RCV.vendor_state=this.value.trim(); paintReceive()" data-cbsid="CTR002-I10">
@@ -7367,7 +7371,7 @@ function paintStatus(){
   /* ⚠️ THE ABSENCE OF TAX IS ALSO AN ANSWER, and it should not look like a fault. A shop that charges no GST is told why, once,
      rather than left wondering where the tax column went. */
   var tx0 = shopTax();
-  if (S && !tx0.charges) note = (tx0.reg === 'composition' ? 'Composition dealer — no ' + schemeWord() + ' on a bill, and the slip says so.'
+  if (S && !tx0.charges) note = (tx0.reg === 'composition' ? 'Composition dealer — no GST on a bill, and the slip says so.'
       : (!tx0.gstin ? 'No ' + taxIdLabel() + ' on this shop, so no ' + schemeWord() + ' is charged or shown (Settings → Profile).'
                     : 'This shop is registered as ' + esc(tx0.reg) + ', so no ' + schemeWord() + ' is charged.'))
     /* ⚠️ THE SAME WORDS WHEREVER IT APPEARS. An unregistered shop took a different branch and got the short form, "1 bill(s)
@@ -8905,7 +8909,7 @@ async function retainAtClose(){
 function gstAsked(){ try { return ls.get(shopLs('cb_till_gst_answer'), ''); } catch (_) { return ''; } }
 function gstNotRegistered(){
   try { ls.set(shopLs('cb_till_gst_answer'), 'not_registered'); } catch (e) { cbQuiet('gstNotRegistered:1', e); }
-  toastLine('Noted — this shop is not registered for ' + schemeWord() + '. It will not be asked again.');
+  toastLine('Noted — this shop is not registered for GST. It will not be asked again.');
   try { paintMenu(); } catch (e) { cbQuiet('gstNotRegistered:2', e); }
 }
 /** ⭐ the one place these are edited is the shop's profile, in ChitBridge — and the mark says it leaves (§2) */
@@ -17549,7 +17553,7 @@ function bumpLast(d){
 function drop(k){ CART.splice(k,1); if (CARTSEL === k) CARTSEL = -1; else if (CARTSEL > k) CARTSEL--; repaint(); }
 function clearBill(){
   BILL_ORDER = null;   /* M126: clearing the bill lets go of the online order on it - the order stays open */
-  KOT_N = 0;   /* a new customer is a new set of tickets — see sendKOT */ ageClear(); CART = []; CARTSEL = -1; PARTS = []; PAY_ASKED = false; paintParts(); document.getElementById('tendered').value=''; document.getElementById('cname').value=''; document.getElementById('cphone').value=''; price(); stepGo('pick'); focusSearch();
+  KOT_N = 0;   /* a new customer is a new set of tickets — see sendKOT */ ageClear(); CART = []; CARTSEL = -1; PARTS = []; PAY_ASKED = false; paintParts(); document.getElementById('tendered').value=''; document.getElementById('cname').value=''; document.getElementById('cphone').value=''; if (typeof clearBuyerTax === 'function') clearBuyerTax(); price(); stepGo('pick'); focusSearch();
   /* ⭐ a screen style that was held back because a bill was in hand lands HERE ([TILL-84]) */
   try { stylePendFlush(); } catch (e) { cbQuiet('clearBill:1', e); }
   try { shopHeldFlush(); } catch (e) { cbQuiet('clearBill:3', e); }   /* CTR-157: offers that changed under that bill land now */
@@ -17611,7 +17615,7 @@ function parkBill(){
   parkedSave();
   /* and the next bill starts clean — parts taken on the parked one are not the next customer's */
   PICKED = 'Cash'; PAY_ASKED = false; PARTS = []; try { paintParts(); } catch (e) { cbQuiet('parkBill:1', e); }
-  ageClear(); CART = []; document.getElementById('cname').value = ''; document.getElementById('cphone').value = ''; document.getElementById('tendered').value = '';
+  ageClear(); CART = []; document.getElementById('cname').value = ''; document.getElementById('cphone').value = ''; if (typeof clearBuyerTax === 'function') clearBuyerTax(); document.getElementById('tendered').value = '';
   price(); focusSearch();
 }
 function unpark(n){
@@ -18942,26 +18946,11 @@ function dayWarnWords(){
   if (open && !old) return '';
   return (open ? '' : 'Day not opened') + (open || !old ? '' : ' · ') + (old ? 'prices ' + h + ' h old' : '');
 }
-/**
- * ⭐ WALK I I-F-04 · the supplier's ADDRESS on a tax invoice: the pack names the lines its invoice must carry (CBCountries.meta(country).invoice.requiredLines — AE: trade_name, tax_id, address;
- * ER Art. 59(1)(b) and 59(2)(b) name the supplier's address) and the shop's profile says what is missing (snapshot shop.missing). A shop that charges tax and has no address is told at the counter,
- * before the slip prints without it — in the pack's words, never a typed country. → the sentence, or '' when nothing is missing or the pack does not ask for an address.
- */
-function addressWarnWords(){
-  try {
-    var meta = window.CBCountries && docCountry() ? CBCountries.meta(docCountry()) : null;
-    var need = meta && meta.invoice && Array.isArray(meta.invoice.requiredLines) && meta.invoice.requiredLines.indexOf('address') >= 0;
-    var sh = (S && S.shop) || {}, gone = (Array.isArray(sh.missing) && sh.missing.indexOf('address') >= 0) || !String(sh.address || sh.street || '').trim();
-    if (!need || !gone || !shopTax().charges) return '';
-    return 'Shop address is missing — a tax invoice must show the supplier’s name, address and ' + (countryWords().taxId || 'tax number');
-  } catch (e) { cbQuiet('addressWarnWords:1', e); return ''; }
-}
 function billWarnHTML(m){
   var out = [], un = unratedNames(), cl = shopTax().charges ? shopStateClash() : null;
   var dw = dayWarnWords(); if (dw) out.push(billWarnLine('day', dw, 'Open the day'));
   if (un.length) out.push(billWarnLine('norate', un.length + (un.length === 1 ? ' item has' : ' items have') + ' no tax rate', 'Fix', rateMay()));
   if (cl) out.push(billWarnLine('state', 'GSTIN state ≠ address'));
-  var aw = addressWarnWords(); if (aw) out.push(billWarnLine('address', aw, 'Add it'));
   var bw = buyerWarnWords(m); if (bw) out.push(billWarnLine('buyer', bw, 'Name them'));
   if (m && m.stop) out.push('<div class="t warnrow" data-testid="till-warn-money"><span>⚠ ' + esc(m.stop.words) + ' Only the owner can let it through.</span><span></span></div>');   /* ACC-206 H: said where it is sold; Bill asks the owner PIN */
   return out.join('');
@@ -18983,8 +18972,8 @@ function notInvoiceWhy(bill){
 function buyerWarnWords(m){
   if (!m || shopTax().kind !== 'tax' || !(Number(m.tax) > 0)) return '';
   var cust = custKnown(), nm = String((document.getElementById('cname') || {}).value || '').trim();
-  var rule = invoiceRule(m.net, cust && cust.gstin);
-  if (!rule || !rule.buyer_identity || buyerNamed({ name: nm, gstin: cust && cust.gstin })) return '';
+  var rule = invoiceRule(m.net, (window.BUYER_TAX_TYPED || (cust && cust.gstin ? String(cust.gstin).trim().toUpperCase() : '')));
+  if (!rule || !rule.buyer_identity || buyerNamed({ name: nm, gstin: (window.BUYER_TAX_TYPED || (cust && cust.gstin ? String(cust.gstin).trim().toUpperCase() : '')) })) return '';
   return 'Over ' + money(buyerFromMajor()) + ' a tax invoice names the buyer';
 }
 /** the amount from which the pack wants the buyer named (reg-au tax.taxInvoice.buyer_identity_from_minor), in the shop's money */
@@ -19000,10 +18989,9 @@ function billWarnDoor(which){
 }
 async function billWarnFix(which){
   if (billWarnDoor(which)) return;
-  if (which === 'address') { shopEditOpen(); return; }   /* I-F-04: the shop's details box, where the address is typed */
   var st = which === 'state', cl = st ? shopStateClash() : null, un = st ? [] : unratedNames();
   var msg = st ? (cl ? cl.words + '\n\n' + cl.fix : 'The shop’s details agree now.')
-               : (un.length ? un.join(', ') + '\n\nNo ' + schemeWord() + ' is charged on ' + (un.length === 1 ? 'it' : 'them')
+               : (un.length ? un.join(', ') + '\n\nNo GST is charged on ' + (un.length === 1 ? 'it' : 'them')
                               + ', and the slip will not say TAX INVOICE.' : 'Every item has a tax rate now.');
   var go = await sure(msg, st ? 'Open the shop’s details' : 'Open the catalogue', st ? 'GSTIN state ≠ address' : 'No tax rate', 'Close');
   /* the state half opens Settings › Your shop (SET1); the rate half still opens the workshop's catalogue until CAT1 builds catalogue.html */
@@ -19176,13 +19164,13 @@ function health(){
   if (tx.charges) {
     if (!(S.slabs || []).length)
       add('bad', 'No tax slabs reached this counter',
-        'You charge ' + schemeWord() + ', but no rate came down with the shop — so every line would be billed with no tax at all.',
+        'You charge GST, but no rate came down with the shop — so every line would be billed with no tax at all.',
         'Check ChitBridge → Catalogue setup → Tax, then press ↻ here.');
     else {
       var noRate = items.filter(function(i){ return rateOf(i) == null; });
       if (noRate.length)
         add('bad', noRate.length + ' of ' + items.length + ' products have no tax rate',
-          'Those lines would go onto a tax invoice with no ' + schemeWord() + ' on them. It is usually a slab that was never set on the product, or one whose name was typed differently.',
+          'Those lines would go onto a tax invoice with no GST on them. It is usually a slab that was never set on the product, or one whose name was typed differently.',
           'Open each in ChitBridge → Catalogue and set its tax slab.', noRate.slice(0, 5).map(function(i){ return i.name; }));
     }
   }
@@ -19221,8 +19209,8 @@ function health(){
   add('note', ((S.policy && S.policy.price_includes_tax) === 'no')
       ? 'Shelf prices are quoted WITHOUT tax' : 'Shelf prices already include tax',
     ((S.policy && S.policy.price_includes_tax) === 'no')
-      ? 'The counter will ADD ' + schemeWord() + ' on top of the price you set. A customer pays more than the shelf says.'
-      : 'The counter splits the ' + schemeWord() + ' OUT of the price you set. A customer pays exactly what the shelf says.',
+      ? 'The counter will ADD GST on top of the price you set. A customer pays more than the shelf says.'
+      : 'The counter splits the GST OUT of the price you set. A customer pays exactly what the shelf says.',
     'Change it in ChitBridge → Settings if that is the wrong way round.');
 
   /* ── the other silent faults ── */
@@ -19479,7 +19467,7 @@ async function deliverPick(){
 /** a registered buyer of ANOTHER state, no delivery chosen: over the counter or despatched? (asked once per bill; despatched = their state) */
 async function deliverAsk(){
   if (BILL_DELIVERY || BILL_DELIVERY_ASKED || !packSplitsByState()) return true;
-  var cust = custKnown(), buyerTax = cust && cust.gstin ? String(cust.gstin).trim().toUpperCase() : '';
+  var cust = custKnown(), buyerTax = (window.BUYER_TAX_TYPED || (cust && cust.gstin ? String(cust.gstin).trim().toUpperCase() : ''));
   var shopRec = (S && S.shop) || {}, mine = String(shopRec.state_code || String(shopRec.gstin || '').trim().slice(0, 2) || '');
   if (!/^\d{2}/.test(buyerTax) || buyerTax.slice(0, 2) === mine) return true;
   BILL_DELIVERY_ASKED = true;
@@ -19515,7 +19503,7 @@ function billMoney(){
      digits of an ABN or a TRN are not a state — they printed "Place of supply 51" on an Australian slip. No pack known → India's rule, as before. */
   var stateTax = packSplitsByState();
   var sc = stateTax ? String(sh.state_code || String(sh.gstin || '').trim().slice(0, 2) || '') : '';
-  var cust = custKnown(), g = cust && cust.gstin ? String(cust.gstin).trim().toUpperCase() : '';
+  var cust = custKnown(), g = (window.BUYER_TAX_TYPED || (cust && cust.gstin ? String(cust.gstin).trim().toUpperCase() : ''));
   /* ⭐⭐ BUY1 (2026-10-12): THE COUNTER'S BUYER IS INSIDE THE SHOP'S COUNTRY. A pack whose tax turns on the BORDER (Australia, the
      UAE) answers a buyer with no country 'unknown' — no GST, no VAT — and a walk-in has no country on record, so an Australian or
      UAE shop billed tax-free. The goods are handed over at the counter, inside the shop's country: the same rule placeOfSupply
@@ -21530,7 +21518,7 @@ var SUMFOLD = (function(){ try { return localStorage.getItem('till_sumfold') !==
 function toggleSum(){ SUMFOLD = !SUMFOLD; try { localStorage.setItem('till_sumfold', SUMFOLD ? '1' : '0'); } catch (e) { cbQuiet('toggleSum:1', e); } paintTotals(); }
 function paintTotals(){
   var m = billMoney();
-  try { paintStepBar(); paintDeliver(); } catch (e) { cbQuiet('paintTotals:1', e); }   /* CTR-186: paintDeliver rides the step bar's repaint */
+  try { paintStepBar(); paintDeliver(); var bx = document.getElementById('cgstin'); if (bx) bx.placeholder = 'Buyer ' + taxIdLabel(); } catch (e) { cbQuiet('paintTotals:1', e); }   /* CTR-186: paintDeliver rides the step bar's repaint */
   /* ⭐ the Pay button carries the amount, so it has to move when the amount does */
   try { payGo(); } catch (e) { cbQuiet('paintTotals:2', e); }
   /* ⚠️ BEFORE the markup is assembled, because it decides whether the Saved row carries a * — a string already
@@ -22428,7 +22416,7 @@ async function finish(){
   ageClear(); CART = []; PARTS = []; BILL_DELIVERY = null; BILL_DELIVERY_ASKED = false; paintDeliver(); paintParts();
   /* ⚠️ the balance on screen belonged to the customer who just left */
   RW = { holder:null, points:0, worth:0, spend:0, says:null, seq: RW.seq + 1 }; paintRw();
-  document.getElementById('tendered').value=''; document.getElementById('cname').value=''; document.getElementById('cphone').value='';
+  document.getElementById('tendered').value=''; document.getElementById('cname').value=''; document.getElementById('cphone').value=''; if (typeof clearBuyerTax === 'function') clearBuyerTax();
   price(); document.getElementById('lastnote').textContent = 'last bill ' + r.bill.no;
   /* ⚠ the day just changed — so must anything on screen that is showing the day. See menuFresh(). */
   menuFresh();
@@ -22477,6 +22465,27 @@ finish = singleFlight(finish, paintSaving);
 retIssue = singleFlight(retIssue, holdButton('retgo'));
 expIssue = singleFlight(expIssue, holdButton('expgo'));
 subIssue = singleFlight(subIssue, holdButton('subgo'));
+/** the next bill starts without the last buyer's tax number */
+function clearBuyerTax(){ window.BUYER_TAX_TYPED = ''; var box = document.getElementById('cgstin'), say = document.getElementById('cgstinsay'); if (box) { box.value = ''; box.setAttribute('aria-invalid', 'false'); } if (say) { say.hidden = true; say.textContent = ''; } }
+/** ⭐ fix-till2 1128: does this typed buyer tax number pass the SHOP'S COUNTRY PACK's own check? { ok, why } — the registry's check (AE TRN 15 digits · AU ABN checksum), India's GSTIN checksum, no check known = ok (the server still checks) */
+function buyerTaxCheck(v){
+  var tid = registryTaxId();
+  if (tid && typeof tid.check === 'function') { var c = tid.check(v); return { ok: !!(c && c.ok), why: (c && c.why) || ('That is not the shape of a ' + taxIdLabel() + '.') }; }
+  if (window.CBProfileMap && CBProfileMap.gstinChecksum) { var k = CBProfileMap.gstinChecksum(v); return { ok: !!k.ok, why: k.ok ? '' : 'That is not a valid ' + taxIdLabel() + ' — one character is mistyped.' }; }
+  return { ok: true, why: '' };
+}
+/** the buyer tax number typed on the bill, checked and upper-cased ('' when blank or failing its pack's check — paintBuyerTax says why). ONE state, window.BUYER_TAX_TYPED: the readers (billMoney, billCustomerOf, deliverAsk, buyerWarnWords) read it inline so a harness that lifts them by name needs no new function. */
+/** the box's word comes from the pack (taxIdLabel), and a number that fails the pack's check is SAID beside the box, never dropped silently */
+function paintBuyerTax(){
+  var box = document.getElementById('cgstin'), say = document.getElementById('cgstinsay'); if (!box) return;
+  box.placeholder = 'Buyer ' + taxIdLabel();
+  box.setAttribute('aria-label', 'Buyer ' + taxIdLabel() + ' (optional)');
+  var v = fieldVal('cgstin').replace(/\s+/g, '').toUpperCase(), bad = v ? buyerTaxCheck(v) : { ok: true };
+  box.setAttribute('aria-invalid', bad.ok ? 'false' : 'true');
+  if (say) { say.hidden = bad.ok; say.textContent = bad.ok ? '' : bad.why + ' It is not put on the bill.'; }
+  window.BUYER_TAX_TYPED = bad.ok ? v : '';
+  try { if (CART.length) price(); } catch (e) { cbQuiet('paintBuyerTax:1', e); }
+}
 /** the buyer as the bill stores it: name and phone as typed (Walk-in when blank), the known customer by id, a business on the rail by entity, and the buyer's ABN / TRN where the pack's tax invoice names it */
 function billCustomerOf(cust, billTotal){
   return Object.assign({ name:(document.getElementById('cname').value||'').trim() || 'Walk-in', phone:(document.getElementById('cphone').value||'').trim() },
@@ -22486,7 +22495,7 @@ function billCustomerOf(cust, billTotal){
   cust && cust.entity_id ? { entity_id: cust.entity_id } : {},
   /* ⭐ CX1 (T1): the buyer's ABN / TRN on the bill, under a pack whose tax invoice names it (invoiceRule; reg-au · reg-ae).
      The slot the chit already has — business_json.customer.gstin (lib/books-hooks, lib/tax-copy read it). India: unchanged. */
-  cust && cust.gstin && invoiceRule(billTotal, cust.gstin) ? { gstin: cust.gstin } : {});
+  window.BUYER_TAX_TYPED ? { gstin: window.BUYER_TAX_TYPED } : (cust && cust.gstin && invoiceRule(billTotal, cust.gstin) ? { gstin: cust.gstin } : {}));
 }
 /** one cart line as the bill stores it: who it is and what decided its price (billLineFigures), every offer on the record, the chosen modifiers, hsn · rate · catalogue_stamp */
 function billLineOf(cartLine){
@@ -22731,8 +22740,8 @@ function dayCloseHTML(d){
     + solid + t('TAKEN', money(d.total), true) + solid
     + (d.taxed ? dash + '<div style="font-weight:700">Tax</div>'
         + Object.keys(d.rate).sort(function(a,b){ return Number(a)-Number(b); }).map(function(r){
-            return t(schemeWord() + ' ' + r + '% on ' + money(d.rate[r].base), money(d.rate[r].tax)); }).join('')
-        + t('Taxable', money(d.taxable)) + t(schemeWord() + ' total', money(d.tax)) : '')
+            return t('GST ' + r + '% on ' + money(d.rate[r].base), money(d.rate[r].tax)); }).join('')
+        + t('Taxable', money(d.taxable)) + t('GST total', money(d.tax)) : '')
     + dash + '<div style="font-weight:700">How it was paid</div>'
     + (Object.keys(d.modes).length ? Object.keys(d.modes).map(function(k){ return t(esc(k), money(d.modes[k])); }).join('') : '<div>nothing taken</div>')
     + ((d.unasked || 0) > 0
@@ -23531,7 +23540,7 @@ function paintReceive(){
          claimed against. Hidden entirely for a shop that charges no GST: it would have nothing to claim. */
       + (shopTax().charges
           ? '<input data-cbsid="CTR007-I04" class="gstin" type="number" min="0" max="100" step="0.5" inputmode="decimal" placeholder="' + esc(schemeWord()) + '%"'
-            + ' value="' + (l.gst_rate == null ? '' : l.gst_rate) + '" title="the ' + schemeWord() + ' rate on their invoice"'
+            + ' value="' + (l.gst_rate == null ? '' : l.gst_rate) + '" title="the GST rate on their invoice"'
             + ' data-testid="rcv-gst-' + n + '" onchange="rcvSet(' + n + ',\'gst\',this.value)">'
           : '')
       + (d && !ok ? '<select data-testid="rcv-reason-' + n + '" onchange="rcvSet(' + n + ',\'reason\',this.value)" data-cbsid="CTR007-S01">'
@@ -23683,7 +23692,7 @@ function paintRcvSum(){
   var bc = rcvBillCheck(RCV.bill_total, tx.taxable, tx.tax, (RCV.bill_no || '').trim());
   var taxLine = '';
   if (shopTax().charges && tx.tax > 0) {
-    taxLine = '<div style="margin-top:4px">' + schemeWord() + ' paid <b data-testid="rcv-tax">' + money(tx.tax) + '</b>'
+    taxLine = '<div style="margin-top:4px">GST paid <b data-testid="rcv-tax">' + money(tx.tax) + '</b>'
       + (tx.heads.length ? ' · ' + tx.heads.map(function(h){ return h.name + ' ' + h.rate + '% ' + money(h.amount); }).join(' + ')
                          : ' · <b style="color:var(--warn)">not split — the supplier\'s state is not known</b>')
       + ' <span class="u">· to set against what you collect, not part of the cost</span></div>';
@@ -29116,6 +29125,21 @@ async function tasksBill(id){
   if (!t) { say('That order is not on the counter’s list yet.\n\nRead the shop again (F4), then tap 🛒 and the order.'); return; }
   orderToBill(t);
 }
+/**
+ * F-43 (walk 2026-11-21): the Tasks & Orders PAGE's "Bill it" opens the counter at /till.html?bill=<chit_id> (it is not inside this frame, so it
+ * cannot message us). The counter used to open in whatever mode this browser last held (Receive) and the order was lost. Now the address names the
+ * order: read once at start-up, taken off the address, and put on the bill through the same tasksBill path the frame's Bill it uses.
+ */
+function billAskedId(){
+  var found = /[?&]bill=([A-Za-z0-9_-]{8,64})(?:&|$)/.exec(location.search);
+  return found ? found[1] : '';
+}
+async function billFromAddress(){
+  var id = billAskedId(); if (!id) return;
+  try { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])bill=[^&]*&?/, '$1').replace(/[?&]$/, '') + location.hash); } catch (e) { cbQuiet('billFromAddress:1', e); }
+  if (MODE !== 'sell') setMode('sell');
+  await tasksBill(id);
+}
 /** a row → that order, in place: Despatch with it chosen (the same list loadTasks reads) */
 async function onlineOrderPick(id){
   try { document.getElementById('onlinedlg').close(); } catch (e) { cbQuiet('onlineOrderPick:1', e); }
@@ -29563,6 +29587,7 @@ try { paintSide(); } catch (e) { cbQuiet('top:20', e); }
 /* the watchdog rides the repaint that already runs - a second timer would be a second path ([TILL-144]) */
 setInterval(function(){ if (!HOST) return; HOST.state().then(function(st){ STATE = st || STATE; if (st && st.snapshot) S = catRestamp(st.snapshot); paintStatus(); watchTick(); keyWatch(); }).catch(function(e){ cbQuiet('top:21', e); }); }, 15000);
 setInterval(function(){ if (HOST && HOST.drain) HOST.drain(); }, 20000);
+TILL_BOOT.then(billFromAddress).catch(function(e){ cbQuiet('top:23', e); });   /* F-43: opened by Bill it on the Tasks & Orders page */
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0)
   navigator.serviceWorker.register('/till-sw.js').catch(function(e){ cbQuiet('top:22', e); });
 /* ═══ CTR-243 helpers that sit at the end of the page, so no anonymous function of theirs shifts the readability ratchet's ordinals above ═══ */
