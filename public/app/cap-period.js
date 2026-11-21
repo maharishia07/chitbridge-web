@@ -297,9 +297,9 @@ async function peAssetSave(btn) {
   if (peVal('pa_use')) body.put_to_use = peVal('pa_use');
   if (peVal('pa_prior') === 'yes') {
     /* an asset owned before the books began: one opening entry on the server — no bank, no tax */
-    const so = peVal('pa_acc') ? bkMoneyMinor(peVal('pa_acc')) : 0;
-    if (isNaN(so)) return peBad('pa_fout', tx('Depreciation so far must be an amount.'));
-    Object.assign(body, { existing: true, accumulated_minor: so });
+    const accumulated = peVal('pa_acc') ? bkMoneyMinor(peVal('pa_acc')) : 0;
+    if (isNaN(accumulated)) return peBad('pa_fout', tx('Depreciation so far must be an amount.'));
+    Object.assign(body, { existing: true, accumulated_minor: accumulated });
     delete body.how;
   } else if (peVal('pa_rate')) {
     /* tax on the price: the same bill the expense door sends, so the server claims the tax like any purchase (cost = the taxable part) */
@@ -391,58 +391,62 @@ function peDepLabel() {
   const node = peEl('pdp_run');
   if (node) node.textContent = txf('Run depreciation for {fy}', { fy: peVal('pdp_fy') });
 }
+/** one schedule row: the asset, its rate, the charge so far, what is due */
+function peDepScheduleRow(asset, currency) {
+  return (
+    '<div class="pe-row"><span>' + esc(asset.name) + '</span><span class="mono">' + esc(asset.rate_pct == null ? '' : asset.rate_pct + '%') + '</span><span class="mono">' +
+    esc(peMoney(asset.ytd_minor, currency)) + '</span><span class="mono">' + esc(peMoney(asset.due_minor, currency)) + '</span></div>'
+  );
+}
 /** the schedule to a day, posting nothing: per asset its rate, the charge so far, what is already posted, what is due */
 async function peDepPreview() {
-  const fy = peVal('pdp_fy'),
+  const fiscalYear = peVal('pdp_fy'),
     through = peVal('pdp_through');
   try {
-    const r = (await api('perDepSchedule', { query: through ? { fy, through } : { fy } })) || {};
-    const rows = (r.assets || [])
-      .map(
-        (a) =>
-          '<div class="pe-row"><span>' + esc(a.name) + '</span><span class="mono">' + esc(a.rate_pct == null ? '' : a.rate_pct + '%') + '</span><span class="mono">' +
-          esc(peMoney(a.ytd_minor, r.currency)) + '</span><span class="mono">' + esc(peMoney(a.due_minor, r.currency)) + '</span></div>'
-      )
-      .join('');
+    const schedule = (await api('perDepSchedule', { query: through ? { fy: fiscalYear, through } : { fy: fiscalYear } })) || {};
+    const rows = (schedule.assets || []).map((asset) => peDepScheduleRow(asset, schedule.currency)).join('');
     peEl('pdp_out').innerHTML =
-      '<div class="pe-basis" data-testid="pdp-preview-head">' + esc(txf('Depreciation of {fy} up to {d} — nothing is posted yet', { fy, d: bkDate(r.through) })) + '</div>' +
+      '<div class="pe-basis" data-testid="pdp-preview-head">' + esc(txf('Depreciation of {fy} up to {d} — nothing is posted yet', { fy: fiscalYear, d: bkDate(schedule.through) })) + '</div>' +
       '<div class="pe-rows" data-testid="pdp-preview">' + (rows || '<div class="pe-note">' + esc(tx('No asset in use yet')) + '</div>') + '</div>' +
-      '<div class="pe-note" data-testid="pdp-preview-total">' + esc(txf('To post now: {m}', { m: peMoney(r.total_due_minor, r.currency) })) + '</div>';
+      '<div class="pe-note" data-testid="pdp-preview-total">' + esc(txf('To post now: {m}', { m: peMoney(schedule.total_due_minor, schedule.currency) })) + '</div>';
   } catch (e) {
     peBad('pdp_out', e);
   }
 }
+/** the by-class rows of a depreciation run: class word, rate, amount */
+function peDepClassRows(byClass) {
+  return (
+    '<div class="pe-rows" data-testid="pdp-classes">' +
+    byClass
+      .map(
+        (item) =>
+          '<div class="pe-row"><span>' + esc(tx(PE_CLASS_WORD[item.class] || item.class)) + '</span><span class="mono">' + esc(item.rate) +
+          '%</span><span class="mono">' + esc(CBLocale.money(Number(item.amount), bkCur())) + '</span></div>'
+      )
+      .join('') +
+    '</div>'
+  );
+}
+/** what a depreciation run tells the owner: the basis used, the note, then posted / nothing / already run, then the classes */
+function peDepRunHtml(answer, fiscalYear) {
+  const basis = (PE_ENTITY[answer.entity_basis] || answer.entity_basis || '') + ': ' + tx(PE_BASIS[answer.basis_rule] || 'as set for this shop');
+  let html = '<div class="pe-basis" data-testid="pdp-basis">' + esc(txf('Basis used — {b}', { b: basis })) + '</div>';
+  if (answer.entity_note) html += '<div class="pe-warn" data-testid="pdp-note">⚠ ' + esc(answer.entity_note) + '</div>';
+  if (answer.nothing_to_post) html += '<div class="pe-note" data-testid="pdp-nothing">' + esc(answer.why || tx('Nothing to depreciate')) + '</div>';
+  else if (answer.duplicate)
+    html += '<div class="pe-note" data-testid="pdp-dup">' + esc(txf('Already run for {fy} · {no}', { fy: fiscalYear, no: answer.entry_no || '' })) + '</div>';
+  else html += '<div class="pe-ok" data-testid="pdp-done">✓ ' + esc(txf('Depreciation for {fy} saved · {no}', { fy: fiscalYear, no: answer.entry_no || '' })) + '</div>';
+  if ((answer.by_class || []).length) html += peDepClassRows(answer.by_class);
+  return html;
+}
 async function peDepRun(btn) {
-  const fy = peVal('pdp_fy'),
+  const fiscalYear = peVal('pdp_fy'),
     through = peVal('pdp_through');
   await bkOnce('pe-dep', btn, async () => {
     try {
-      const r = (await api('perDepRun', { body: Object.assign({ fy, client_ref: peRef('dep' + fy + (through || '')) }, through ? { through } : {}) })) || {};
-      PE.ref['dep' + fy + (through || '')] = null;
-      const basis = (PE_ENTITY[r.entity_basis] || r.entity_basis || '') + ': ' + tx(PE_BASIS[r.basis_rule] || 'as set for this shop');
-      let h = '<div class="pe-basis" data-testid="pdp-basis">' + esc(txf('Basis used — {b}', { b: basis })) + '</div>';
-      if (r.entity_note) h += '<div class="pe-warn" data-testid="pdp-note">⚠ ' + esc(r.entity_note) + '</div>';
-      if (r.nothing_to_post) h += '<div class="pe-note" data-testid="pdp-nothing">' + esc(r.why || tx('Nothing to depreciate')) + '</div>';
-      else if (r.duplicate)
-        h += '<div class="pe-note" data-testid="pdp-dup">' + esc(txf('Already run for {fy} · {no}', { fy, no: r.entry_no || '' })) + '</div>';
-      else h += '<div class="pe-ok" data-testid="pdp-done">✓ ' + esc(txf('Depreciation for {fy} saved · {no}', { fy, no: r.entry_no || '' })) + '</div>';
-      if ((r.by_class || []).length)
-        h +=
-          '<div class="pe-rows" data-testid="pdp-classes">' +
-          r.by_class
-            .map(
-              (item) =>
-                '<div class="pe-row"><span>' +
-                esc(tx(PE_CLASS_WORD[item.class] || item.class)) +
-                '</span><span class="mono">' +
-                esc(item.rate) +
-                '%</span><span class="mono">' +
-                esc(CBLocale.money(Number(item.amount), bkCur())) +
-                '</span></div>'
-            )
-            .join('') +
-          '</div>';
-      peEl('pdp_out').innerHTML = h;
+      const answer = (await api('perDepRun', { body: Object.assign({ fy: fiscalYear, client_ref: peRef('dep' + fiscalYear + (through || '')) }, through ? { through } : {}) })) || {};
+      PE.ref['dep' + fiscalYear + (through || '')] = null;
+      peEl('pdp_out').innerHTML = peDepRunHtml(answer, fiscalYear);
       peAssetsList();
     } catch (e) {
       peBad('pdp_out', e);
