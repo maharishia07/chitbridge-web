@@ -5915,6 +5915,8 @@ const MENUS = {
         'Work',
         [
           ['worklist', '🧰', "Everyone's work"],
+          /* WALK-N N-F-07: the owner reads Messages too (the actor's rail had it; the owner's had no door). Control id APP001-B21 (menuBtn), screen cap-messages.js (WRK001) */
+          ['messages', '💬', 'Messages'],
           ['intake', '📨', 'Intake'],
           ['disputes', '⚖️', 'Disputes']
         ]
@@ -7249,6 +7251,11 @@ function menuBtn(x) {
   const on = key === 'task' || key === 'order' ? UI.nav === key && !UI.folderSel : UI.nav === key;
   /* ⚠️ Two entries are ACTS, not destinations — they open something rather than navigating, so they cannot
      go through navTo. A third would want a registry; two do not. */
+  /* WALK-N N-F-02: a VIEW-ONLY login cannot send (the api refuses it): Compose stays on the rail, greyed, with the reason (helpers.js viewOnlyLogin - the one reading of the login's level) */
+  if (key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin()) {
+    const why = composeViewOnlyWhy();
+    return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}" aria-disabled="true" data-ready="no" title="${esc(why)}" aria-label="${esc(label + ' — ' + why)}" style="opacity:.5;cursor:not-allowed"><span class="ic">${ic}</span>${label}</button>`;
+  }
   const click = key === 'compose' ? `compose()` : key === 'selfbill' ? `selfBillOpen()` : key === 'counter' ? `counterOpen()` : `navTo('${key}')`;
   /**
    * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
@@ -7890,7 +7897,7 @@ function ccCatPickHTML() {
      are where they will be, greyed, and the real rows replace them in place. Nothing moves when the data lands. */
   if (UI._catState === 'loading') return CBCatUI.skeletonHTML({ rows: 8 });
   if (!(STORE.catalogue || []).length)
-    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3)">${UI._catState === 'error' ? esc(MSG.catalogueLoadErr()) : 'Your catalogue is empty — a chit needs at least one line item. <a data-cbsid="RAL001-C01" onclick="closeModal();navTo(\'catalogue\')" style="color:var(--blue);cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
+    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3)">${UI._catState === 'error' ? esc(MSG.catalogueLoadErr()) : 'No items yet — a chit needs at least one line item. <a data-cbsid="RAL001-C01" onclick="closeModal();navTo(\'catalogue\')" style="color:var(--blue);cursor:pointer;font-weight:600">Add a product in Catalogue &rarr;</a>'}</div>`;
   /**
    * ── THE FOURTH PLACE ─────────────────────────────────────────────────────────────────────────────────────────
    * Athi, 2026-08-08: *"the same functionality should be used in storefront and in self compose as well, these are
@@ -8128,6 +8135,7 @@ function ccRenderCatPick() {
 async function ensureCatalogue(force) {
   if (!force && (STORE.catalogue || []).length) return STORE.catalogue;
   if (_catLoading) return _catLoading;
+  _catFailed = false;
   _catLoading = (async function () {
     try {
       const rows = (await api('prodList')) || [];
@@ -8149,6 +8157,7 @@ async function ensureCatalogue(force) {
       });
     } catch (e) {
       STORE.catalogue = STORE.catalogue || [];
+      _catFailed = true; /* WALK-N N-F-01: a read that FAILED is told apart from a catalogue that is EMPTY */
     }
     _catLoading = null;
     return STORE.catalogue;
@@ -8156,13 +8165,20 @@ async function ensureCatalogue(force) {
   return _catLoading;
 }
 var _catLoading = null;
+var _catFailed = false; /* set by ensureCatalogue when the read failed; cleared at the start of the next read */
 /** what kind of chit compose starts (purpose, business_json) and whether "Ask for a quote" starts ticked, from the caller's prefill */
 function ccCarryPurpose(prefill) {
   CC.purpose = (prefill && prefill.purpose) || null;
   CC.business_json = (prefill && prefill.business_json) || null;
   CC.rfq = !!(CC.business_json && CC.business_json.deal_type === 'rfq'); /* RAIL-117: the compose switch "Ask for a quote" */
 }
+/** the one sentence a view-only login is shown where Compose is greyed or refused */
+function composeViewOnlyWhy() {
+  return tx('Your login can read but not send: ask the owner for editor access to compose.');
+}
 async function compose(prefill) {
+  /* WALK-N N-F-02: never a live Compose for a view-only login - the send is refused by the api, so say why instead of opening a form that cannot be sent */
+  if (typeof viewOnlyLogin === 'function' && viewOnlyLogin()) return toast(composeViewOnlyWhy());
   UI.drawer = false;
   CC = { items: prefill && prefill.items ? prefill.items.slice() : [], rcpts: prefill && prefill.recipients ? prefill.recipients.slice() : [], fields: {} };
   UI._forwardFrom = (prefill && prefill.forwardFrom) || null;
@@ -8267,7 +8283,8 @@ async function compose(prefill) {
       /* ⚠️ The map that stood here is now inside ensureCatalogue(), called above. It is deliberately NOT left
          duplicated here: two mappings of one record is precisely how the quantity models died on this line
          once before, with Suppliers and Network enforcing a rule compose had quietly dropped. */
-      UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
+      /* WALK-N N-F-01: an EMPTY catalogue is "No items yet" with the add action, not a fault; the error words only when the read FAILED */
+      UI._catState = (STORE.catalogue || []).length || !_catFailed ? 'ready' : 'error';
     } catch (e) {
       UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
     }
