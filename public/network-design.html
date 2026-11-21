@@ -141,6 +141,7 @@ function labCheck() {
 document.addEventListener('DOMContentLoaded', labPaint);
 </script>
 <script src="app/catalogue-lines.js"></script>
+<script src="/app/sample-set.js"></script>   <!-- CBSample: the ONE list of made-up shop data per country -->
 <script src="engine/locale.js"></script><script src="app/shop-time.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="app/cart.js"></script>
@@ -263,22 +264,24 @@ document.addEventListener('DOMContentLoaded', labPaint);
 <script>
 /* The network, in the operator's own arrangement (sort_order), then by name. Distances are from ME. */
 var ME = 'n0';
+/* the sample's money is the SHOP's (CBSample.forCountry, the one list): '' until the shop's country is read, then bare amounts, never a rupee on a guess */
+var SAMPLE_CCY = '';
 var STORES = [
   { id: 'n0', name: 'Alpha Timers · North', bid: 'CBNORTH01', city: 'City A', km: 0, purpose: 'Head office & main store' },
-  { id: 'n1', name: 'Alpha Timers · East', bid: 'CBERODE22', city: 'City B', km: 92, purpose: 'Regional depot' },
-  { id: 'n2', name: 'Alpha Timers · South', bid: 'CBSALEM33', city: 'City C', km: 161, purpose: 'Overflow / seasonal stock' },
+  { id: 'n1', name: 'Alpha Timers · East', bid: 'CBEAST022', city: 'City B', km: 92, purpose: 'Regional depot' },
+  { id: 'n2', name: 'Alpha Timers · South', bid: 'CBSOUTH33', city: 'City C', km: 161, purpose: 'Overflow / seasonal stock' },
   { id: 'n3', name: 'Model Yard (all 6 order models)', bid: 'CBMODELS1', city: 'City D', km: 507, purpose: 'one item per order model' }
 ];
 
 /* ⚠️ `avail` is what the store REPORTED, with WHEN. No avail at all = never reported ≠ zero. */
 var CATS = {
   n0: {
-    shop: { bridge_id: 'CBNORTH01', currency_code: 'INR' },
+    shop: { bridge_id: 'CBNORTH01', currency_code: SAMPLE_CCY },
     groups: [],
     items: [{ item_id: 'x1', item_data: { name: 'Test North Product', unit: 'Unit', price: 250, avail: { qty: 14, as_of: '2026-08-07' } } }]
   },
   n1: {
-    shop: { bridge_id: 'CBERODE22', currency_code: 'INR' },
+    shop: { bridge_id: 'CBEAST022', currency_code: SAMPLE_CCY },
     items: [
       { item_id: 'e1', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 950, avail: { qty: 40, as_of: '2026-08-08' } } },
       { item_id: 'e2', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 3400, avail: { qty: 0, as_of: '2026-08-08' } } },
@@ -296,9 +299,9 @@ var CATS = {
       }
     ]
   },
-  n2: { shop: { bridge_id: 'CBSALEM33', currency_code: 'INR' }, groups: [], items: [] },
+  n2: { shop: { bridge_id: 'CBSOUTH33', currency_code: SAMPLE_CCY }, groups: [], items: [] },
   n3: {
-    shop: { bridge_id: 'CBMODELS1', currency_code: 'INR' },
+    shop: { bridge_id: 'CBMODELS1', currency_code: SAMPLE_CCY },
     groups: [],
     items: [
       { item_id: 'm1', item_data: { name: 'Paint tin', unit: 'tin', price: 100, avail: { qty: 80, as_of: '2026-08-08' } } },
@@ -325,7 +328,6 @@ function armCart() {
     popupEl: 'cartov',
     popupBodyEl: 'cartovc',
     popupClass: 'cbcart-ov',
-    symbol: '₹',
     accent: '#3F66A6',
     soft: '#eef4ff',
     from: S.st ? S.st.name : '',
@@ -578,7 +580,26 @@ function paint() {
         : stepReview();
   paintFoot();
 }
+/** read the shop's country from /api/entities/me and give the sample stores THAT country's currency (CBSample, the one list); signed out or no country = bare amounts */
+function sampleMoneyFromShop() {
+  var tok = null;
+  try { tok = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null; } catch (_) { tok = null; }
+  var api = new URLSearchParams(location.search).get('api') || window.CB_API;
+  if (!tok || !api || typeof CBSample === 'undefined') return;
+  fetch(api + '/api/entities/me', { headers: { Authorization: 'Bearer ' + tok } }).then(function (reply) { return reply.ok ? reply.json() : null; }).then(function (body) {
+    var entity = (body && body.data) || body || {};
+    entity = entity.entity || entity;
+    var cc = String(entity.country_code || entity.country || '').toUpperCase();
+    var ccy = String(entity.currency_code || '').toUpperCase() || CBSample.forCountry(cc).ccy || '';
+    if (!ccy) return;
+    SAMPLE_CCY = ccy;
+    Object.keys(CATS).forEach(function (key) { CATS[key].shop.currency_code = ccy; });
+    armCart();
+  }).catch(function () { /* the sample stays money-less */ });
+}
+
 armCart();
+sampleMoneyFromShop();
 paint();
 
 /* ── SMOKE TEST — this screen's own rules; the cart's are in scripts/cart-ui.test.mjs ── */

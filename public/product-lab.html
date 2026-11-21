@@ -53,11 +53,12 @@ body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 var(--f-ui,
    shopkeeper through numbered steps with .stp — same markup, same on/done states, same click-to-go-back.
    Two labs sitting in the same menu should not teach two different ways to walk a flow. */
 .steps{display:flex;gap:8px;margin-bottom:16px}
-.stp{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;
+.stp{flex:1 1 0;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;
   display:flex;align-items:center;gap:10px;text-align:start;cursor:pointer}
 .stp .n{width:27px;height:27px;border-radius:8px;background:var(--hair);color:var(--dim);
   font-size:13px;font-weight:700;display:grid;place-items:center;flex:0 0 auto}
-.stp .t{display:block;font-size:13.5px;font-weight:700}
+.stp > span:last-child{min-width:0;flex:1 1 auto} /* WALK-X X-F-09: the title wraps in its box, never clips at 390 */
+.stp .t{display:block;font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
 .stp .v{display:block;font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stp.on{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
 .stp.on .n{background:var(--ok);color:#fff}
@@ -101,7 +102,7 @@ tr.has .ul.got{opacity:1}
 .ul.got{opacity:.5}
 .uqc{font-size:.75em;color:var(--dim);border:1px solid var(--hair);border-radius:5px;padding:0 4px}
 .why{color:var(--dim);font-size:.88em}
-@media (max-width:560px){ th:nth-child(2),td:nth-child(2),th:nth-child(4),td:nth-child(4){display:none} .foot{padding:8px 12px} }
+@media (max-width:560px){ .stp{padding:10px 8px;gap:6px} th:nth-child(2),td:nth-child(2),th:nth-child(4),td:nth-child(4){display:none} .foot{padding:8px 12px} }
 </style>
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->

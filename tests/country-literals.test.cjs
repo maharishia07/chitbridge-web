@@ -73,7 +73,6 @@ const BASELINE = {
   'public/app/cart.js': { n: [0, 0, 0, 4], split: [4, 0, 0], cls: 'a', to: 'words.taxName · words.productCode', why: 'scheme falls back to the word "GST" (three places) and an HSN chip' },
   'public/app/ui-standard.js': { n: [0, 1, 3, 0], split: [0, 4, 0], cls: 'b', why: 'standards gallery text and a USD mock amount' },
   'public/list-lab.html': { n: [0, 0, 0, 4], split: [0, 4, 0], cls: 'b', why: 'list lab demo ledger rows (Output CGST / SGST)' },
-  'public/network-design.html': { n: [0, 4, 0, 0], split: [0, 4, 0], cls: 'b', why: 'network design mock data (currency_code INR)' },
   'public/offer-lab-next.html': { n: [0, 4, 0, 0], split: [0, 4, 0], cls: 'b', why: 'offer lab (next): INR fallback and rupee sign in a lab page' },
   'public/supplier-design.html': { n: [0, 4, 0, 0], split: [0, 4, 0], cls: 'b', why: 'supplier design mock data (currency_code INR)' },
   'public/app/cap-catalogue.js': { n: [0, 0, 0, 3], split: [3, 0, 0], cls: 'a', to: 'catalogue.tariffCode { lengths: [4, 6, 8], word: "HSN" } · words.productCode', why: 'catalogue code checks: HSN length rule (4, 6 or 8 digits) and the Code / HSN label' },
