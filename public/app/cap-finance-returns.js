@@ -112,7 +112,9 @@ function frPaint() {
   var pk = FR.pack;
   /* India's GSTR-1 / 3B are the RAIL's read (books-period.taxReturn refuses the ledgers for the IN pack the same way): the pack id decides, not a word */
   if (pk && packRegForm(pk.id).railReturn) {
-    var months = frMonths();
+    var months = frMonths(),
+      shut = viewOnlyLogin() ? viewOnlyMoneyWhy() : ''; /* M-F-03: a view-only login is refused the figures by the api; the file buttons are GREYED with that reason (one readiness state), never offered */
+    var shutAttrs = shut ? ' aria-disabled="true" data-ready="no" disabled title="' + esc(shut) + '" style="opacity:.55;cursor:not-allowed"' : '';
     node.innerHTML = frCard(
       '<h2>' +
         esc(tx('GSTR-1 and GSTR-3B')) +
@@ -128,12 +130,13 @@ function frPaint() {
           })
           .join('') +
         '</select></label>' +
-        '<div class="supacts"><button data-cbsid="FIN007-B01" type="button" class="act" data-testid="fr-gstr1" onclick="frGet(\'gstr1\',this)">' +
+        '<div class="supacts"><button data-cbsid="FIN007-B01" type="button" class="act" data-testid="fr-gstr1"' + shutAttrs + ' onclick="frGet(\'gstr1\',this)">' +
         esc(tx('GSTR-1 file')) +
         '</button>' +
-        '<button data-cbsid="FIN007-B02" type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' +
+        '<button data-cbsid="FIN007-B02" type="button" class="act quiet" data-testid="fr-gstr3b"' + shutAttrs + ' onclick="frGet(\'gstr3b\',this)">' +
         esc(tx('GSTR-3B file')) +
         '</button></div>' +
+        (shut ? '<p class="hint" data-testid="fr-shut-why">' + esc(shut) + '</p>' : '') +
         '<div id="fr_view" data-testid="fr-view" role="status"></div>' +
         '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>' +
         '<p class="hint" data-testid="fr-prepared">' +
@@ -141,7 +144,7 @@ function frPaint() {
         '</p>',
       'fr-gstr'
     );
-    frShow(); /* IN-F-08: the running month's GST is on the screen as it opens */
+    if (!shut) frShow(); /* IN-F-08: the running month's GST is on the screen as it opens (a view-only login is refused it, so it is not asked) */
     return;
   }
   if (pk && pk.returns && pk.returns.id) {

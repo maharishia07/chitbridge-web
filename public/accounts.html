@@ -269,10 +269,9 @@ function navPaint(active) {
 const VIEW_ONLY_SHUT = { overview: 'money', daybook: 'money', ledgers: 'money', tb: 'money', pl: 'money', bs: 'money', receivables: 'money', payables: 'money', dues: 'money', bills: 'money', cheques: 'money', gstclose: 'money', delegate: 'owner', access: 'owner' };
 const viewOnlySeat = () => {
   if (window.CBBooksActing && CBBooksActing.current()) return false; /* a firm seat is decided by its grant, not the login's level */
-  const claims = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
-  return SESSION.role !== 'entity' && String(claims.access_level || claims.level || '') === 'viewer';
+  return viewOnlyLogin(); /* helpers.js: the one reading of the login's level */
 };
-const shutWhy = (id) => (!viewOnlySeat() || !VIEW_ONLY_SHUT[id] ? '' : VIEW_ONLY_SHUT[id] === 'owner' ? tx('Only the owner can open this.') : tx("Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures."));
+const shutWhy = (id) => (!viewOnlySeat() || !VIEW_ONLY_SHUT[id] ? '' : VIEW_ONLY_SHUT[id] === 'owner' ? tx('Only the owner can open this.') : viewOnlyMoneyWhy());
 function navItems(items, active) {
   return items
     .map(

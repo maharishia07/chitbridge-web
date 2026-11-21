@@ -28,5 +28,5 @@ assert(ids, 'the shut list exists');
 ['tb', 'pl', 'bs', 'gstclose', 'delegate', 'access'].forEach((id) => assert(new RegExp('(^|[ ,{])' + id + ':').test(ids[1]), id + ' is greyed for a view-only login'));
 assert(!/(^|[ ,{])todo:/.test(ids[1]), 'To do stays open');
 assert(page.includes('aria-disabled="true" data-ready="no"') && page.includes("getAttribute('aria-disabled') === 'true') return;"), 'a greyed entry carries the reason, does not open');
-assert(/viewOnlySeat = \(\) =>[\s\S]*CBBooksActing\.current\(\)[\s\S]*=== 'viewer'/.test(page), 'only a view-only login (not a firm seat, not the owner) is greyed');
+assert(/viewOnlySeat = \(\) =>[\s\S]*CBBooksActing\.current\(\)[\s\S]*viewOnlyLogin\(\)/.test(page), 'only a view-only login (not a firm seat, not the owner) is greyed');
 console.log('walkm-f07-f08-busy-and-grey: ok');

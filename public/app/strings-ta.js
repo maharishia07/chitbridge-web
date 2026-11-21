@@ -649,6 +649,8 @@
     'Trade-ready': 'வர்த்தகத் தயார்',
     'Trash': 'குப்பை',
     'Try again': 'மீண்டும் முயற்சி',
+    'Too many requests — try again in {n} s.': 'மிக அதிக கோரிக்கைகள் — {n} வினாடிகளில் மீண்டும் முயற்சிக்கவும்.',
+    'Too many requests — try again in a moment.': 'மிக அதிக கோரிக்கைகள் — சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்.',
     'Turn on for this store': 'இந்தக் கடைக்கு இயக்கு',
     'Typeface': 'எழுத்துரு',
     'Unassigned': 'ஒப்படைக்கப்படவில்லை',

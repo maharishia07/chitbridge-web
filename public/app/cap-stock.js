@@ -199,6 +199,8 @@ var CBStock = (function () {
         return S.err ? 'error' : S.rows === null ? 'loading' : null;
       },
       error: function () {
+        /* OPS001 · M-F-07: a busy answer (429) says the shared "try again in n s" sentence, never "could not read" */
+        if (S.err && Number(S.err.status) === 429 && window.CBShell && window.CBShell.busySentence) return { title: window.CBShell.busySentence(S.err.retryAfter) };
         return { title: translate('Could not read your stock.'), sub: translate('Nothing was changed. Try again in a moment.') };
       },
       onRetry: load,

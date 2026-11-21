@@ -1674,9 +1674,14 @@
        detail  the server's sentence for a 403 (never invented here); anything else is not printed
        retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; next = what to do about a refusal, in words; back  { href, label } or a list of them: the way out
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
+  /** the ONE sentence for a 429 (M-F-07): how long to wait when the server said, else "a moment" — the failed-read frame and a list's own error state both say it */
+  function busySentence(retryAfter) {
+    var wait = Math.ceil(Number(retryAfter));
+    return wait >= 1 ? T('Too many requests — try again in {n} s.').replace('{n}', wait) : T('Too many requests — try again in a moment.');
+  }
   /** the sentence a failed read says: a 403 uses the server's own words (detail), anything else says it could not be read and nothing was changed */
   function readFailedSentence(options, refused) {
-    if (Number(options.status) === 429) { var wait = Math.ceil(Number(options.retryAfter)); return wait >= 1 ? T('Too many requests — try again in {n} s.').replace('{n}', wait) : T('Too many requests — try again in a moment.'); } /* M-F-07: a busy answer is not a failed read */
+    if (Number(options.status) === 429) return busySentence(options.retryAfter); /* M-F-07: a busy answer is not a failed read */
     if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
     return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
   }
@@ -1702,6 +1707,7 @@
   root.CBShell = {
     setWorking: setWorking,
     readFailed: readFailed,
+    busySentence: busySentence,
     mount: mount,
     apiBase: apiBase,
     WORDS: W,
