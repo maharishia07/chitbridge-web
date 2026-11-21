@@ -1612,7 +1612,7 @@ if (window.CBCountryProfiles) CBCountryProfiles.mount(document.getElementById('c
 showView(labView());
 repaint();
 /* H-F-06 (batch 1128): a signed-in shop opens the Compare on ITS OWN country, not India's. The other side is the first pack that is not the shop's. */
-(function openOnShopCountry() {
+(function () {
   var token = null;
   try {
     token = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;
