@@ -33,17 +33,17 @@ ok(/Total incl\. tax/.test(CB.moneyRowsHTML(ex, {})), '…and the block says "To
 /* the shop's default — prices that include tax: the split comes out of the price, the total IS the price */
 const inc = CB.money(lines, { ctx, taxOf, priceIncludesTax: true });
 ok(inc.inclusive === true && inc.grand === 209, 'prices that INCLUDE tax: the total is the shelf price, 209 — nothing added');
-ok(inc.taxTotal === 9.96 && inc.byRate['GST · 5%'] === 9.96, 'the GST inside the prices is the engine\'s own split per line (124 → 118.10 + 5.91 · 85 → 80.95 + 4.05 = 9.96), never a second formula');
+ok(inc.taxTotal === 9.95 && inc.byRate['GST · 5%'] === 9.95, 'the GST inside the prices is the engine\'s own split per line (124 → 118.10 + 5.90 · 85 → 80.95 + 4.05 = 9.95), never a second formula');
 const html = CB.moneyRowsHTML(inc, { plainUntaxed: true });
 ok(/included/.test(html) && !/Total incl\. tax/.test(html) && /₹209\.00/.test(html), 'the block says "GST · 5% included" and "Total ₹209.00"');
 /* the same from recorded lines (the order page prints what the cart printed) */
 const rec = CB.moneyFromLines([{ name: 'Ponni raw rice 1 kg', quantity: 2, price: 62, gst_rate: 5 }, { name: 'Toor dal 500 g', quantity: 1, price: 85, gst_rate: 5 }], Object.assign({ priceIncludesTax: true }, ctx));
-ok(rec.grand === 209 && rec.taxTotal === 9.96 && rec.inclusive === true, 'moneyFromLines with priceIncludesTax: the same 209 / 9.96');
+ok(rec.grand === 209 && rec.taxTotal === 9.95 && rec.inclusive === true, 'moneyFromLines with priceIncludesTax: the same 209 / 9.95');
 /* the ctx can carry it too (shop.html passes its context once) */
 ok(CB.money(lines, { ctx: Object.assign({ priceIncludesTax: true }, ctx), taxOf }).grand === 209, 'ctx.priceIncludesTax is honoured when the option is not given');
 
 /* the storefront wires the flag from the catalogue answer, and loads the engine before the cart */
 const shop = fs.readFileSync(__dirname + '/../public/shop.html', 'utf8');
-ok(/priceIncludesTax:\s*!!\(_SHOPDATA&&_SHOPDATA\.shop&&_SHOPDATA\.shop\.price_includes_tax\)/.test(shop), 'shop.html passes shop.price_includes_tax as priceIncludesTax');
+ok(/priceIncludesTax:\s*!!\(_SHOPDATA\s*&&\s*_SHOPDATA\.shop\s*&&\s*_SHOPDATA\.shop\.price_includes_tax\)/.test(shop), 'shop.html passes shop.price_includes_tax as priceIncludesTax');
 ok(shop.indexOf('src="engine/tax.js"') > 0 && shop.indexOf('src="engine/tax.js"') < shop.indexOf('src="app/cart.js"'), 'shop.html loads engine/tax.js before cart.js');
 console.log(n + ' passed');

@@ -1076,51 +1076,6 @@ ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes
     }
     return html;
   }
-  /** the toggle: on narrows the list to what needs the person and starts the count "0 of n"; off puts the list back */
-  function needsToggle(I) {
-    if (!needsOf(I) || (needsCount(I) === 0 && !needsOn(I))) return;
-    var R = I.r;
-    R.needsOn = !R.needsOn;
-    R.open = {};
-    R.allOpen = false;
-    R.needsAt = 0;
-    R.hl = null;
-    if (R.needsOn) R.needsTotal = needsRows(I).length;
-    resetLimit(I);
-    safe(function () {
-      if (needsOf(I).onToggle) needsOf(I).onToggle(R.needsOn);
-    });
-    paintAll(I);
-  }
-  /** Next ›: the row after the one in hand (or, when that one was cleared and dropped off, the one that took its place) opens, the one before closes */
-  function needsNext(I) {
-    var spec = needsOf(I),
-      R = I.r;
-    var rows = needsRows(I);
-    if (!spec || !rows.length) return;
-    var ids = rows.map(function (row, index) {
-        return rowIdOf(I, row, index);
-      }),
-      at = ids.indexOf(String(R.hl)),
-      pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
-    if (pos >= ids.length) pos = ids.length - 1 === at ? at : 0;
-    R.needsAt = pos;
-    var id = ids[pos];
-    R.hl = id;
-    if (spec.onNext) {
-      safe(function () {
-        spec.onNext(rows[pos]);
-      });
-      paintTools(I);
-      return;
-    }
-    R.allOpen = false;
-    R.open = {};
-    R.open[id] = true;
-    paintTools(I);
-    paintList(I);
-    refocusRow(I, id);
-  }
   function fopts(f) {
     return (typeof f.options === 'function' ? f.options() || [] : f.options || []).map(function (x) {
       return typeof x === 'object' ? x : { v: x, label: x };
@@ -1998,11 +1953,26 @@ ctx.items = itemsOf(inst, ctx.m.rows);
       ctx.hdr = headerHTML(inst, ctx.cols, ctx.tpl, false);
     }
   }
+  /** a list's own empty words for a narrowing that is not a failed search; '' when it has none (inst.emptyRun is its action, if any) */
+  function emptyWordsHTML(inst, ctx, narrowed) {
+    /* H3 (20 Nov): a list may say its own empty words for a narrowing that is not a failed search (the work queue's Mine · Unassigned): o.emptyFor({ filt, q, total }) → { title, sub, actionLabel, run } */
+    var words = ctx.m.all.length && narrowed && !remote(inst) && !ctx.R.q && ctx.o.emptyFor ? safe(function () { return ctx.o.emptyFor({ filt: ctx.R.filt, q: ctx.R.q, total: ctx.m.all.length }); }, null) : null;
+    inst.emptyRun = words && words.run ? words.run : null;
+    if (!(words && words.title)) return '';
+    return (
+    '<div class="cbl-state" data-testid="cbl-empty-own-' + esc(inst.key) + '"><div class="big">' + esc(words.title) + '</div>' + esc(words.sub || '') +
+    (words.actionLabel ? '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-emptyact data-testid="cbl-empty-act">' + esc(words.actionLabel) + '</button>' : '') +
+    '</div>'
+    );
+  }
   /** paintList, step 5 of 10 (part 5, lines 2088-2127 of the one function): true when it handled the call and nothing else should run */
   function paintListStep5(inst, ctx) {
     if (!ctx.m.rows.length) {
       var narrowed = isNarrowed(inst);
-      if (ctx.m.all.length && narrowed && !remote(inst)) {
+      var ownHtml = emptyWordsHTML(inst, ctx, narrowed);
+      if (ownHtml) {
+        ctx.box.innerHTML = ownHtml;
+      } else if (ctx.m.all.length && narrowed && !remote(inst)) {
         ctx.box.innerHTML =
           '<div class="cbl-state" data-testid="cbl-nomatch-' +
           esc(inst.key) +
@@ -2038,6 +2008,8 @@ ctx.items = itemsOf(inst, ctx.m.rows);
           '</div>' +
           footHTML(inst);
       }
+      var emptyCount = $(inst, '.cbl-count');
+      if (emptyCount) emptyCount.textContent = countText(inst, ctx.m); /* a narrowing that matches nothing says '0 shown of N', never the last count */
       return true;
     }
     return false;
@@ -2332,7 +2304,7 @@ var o = inst.o;
       (index === 0 ? ' first' : '') +
       (amt ? ' r mono strong amt' : '') +
       ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
-      (item.mono ? ' mono' : '') +
+      (item.mono ? ' mono' : '') + (item.wrap ? ' cbl-wrap' : '') /* wrap:true = this column always wraps, never ends in … (a sign-in name, an address: the whole word is the point) */ +
       (item.cardAct ? ' cbl-actline' : '') + (item.cl ? ' cl' + item.cl : '') /* cl: a phone card line, 1 = head (name, amount), 2 = under it, the rest follow as chips; nl: no label on the card */
     );
   }
@@ -2670,6 +2642,17 @@ ctx.pin = cols.filter(function (item) {
     I.nextCache = {};
     paintAll(I);
   }
+  /* LOAD-ALL (VOLUME-2026-11-20): a list that holds one page of a long range declares loadAll: { incomplete(), run() → Promise }. A search or the CSV needs every row, never the page held:
+     the count says 'Loading all…', the rest is read, THEN the search is drawn / the file made — a search over 100 of 307 rows would say 'Nothing matches' for a row that exists. */
+  function loadAllThen(I, after) {
+    var la = I.o.loadAll;
+    if (!la || remote(I) || !safe(function () { return la.incomplete(); }, false)) return false;
+    var node = $(I, '.cbl-count');
+    if (node) node.textContent = T(I, 'Loading all…');
+    var done = function () { after(); };
+    Promise.resolve(safe(function () { return la.run(); }, null)).then(done, done);
+    return true;
+  }
   function setQ(I, v) {
     I.r.q = v;
     resetLimit(I);
@@ -2677,6 +2660,7 @@ ctx.pin = cols.filter(function (item) {
       var node = $(I, '.cbl-count');
       return;
     }
+    if (String(v || '').trim() && loadAllThen(I, function () { paintList(I); })) return;
     paintList(I);
   }
   function toggleRow(I, id, focus) {
@@ -2780,6 +2764,7 @@ ctx.pin = cols.filter(function (item) {
     return lines.join('\r\n');
   }
   function download(I) {
+    if (loadAllThen(I, function () { download(I); })) return;
     if (typeof I.o.csv === 'function') {
       safe(function () {
         I.o.csv(matched(I).rows, shownCols(I), csv(I));
@@ -2898,8 +2883,8 @@ ctx.pin = cols.filter(function (item) {
   }
 
   /* forget what a person typed, chose and opened in list `key` (a different record is on screen under the same list: a new ledger, the other tab) */
-  function reset(key) {
-    delete STATE[String(key)];
+  function reset(key, onlyTicks) {
+    if (onlyTicks) { if (STATE[String(key)]) STATE[String(key)].sel = {}; } else delete STATE[String(key)]; /* onlyTicks: the ticks go, the search and filters stay (after an assign) */
   }
 
   /**
@@ -2973,7 +2958,7 @@ ctx.pin = cols.filter(function (item) {
 
   /* click: 20 statements live in app/list-ctl-click.js (shrink W2, 2026-11-17); the page loads that file before this one */
   if (!root.CBListParts || !root.CBListParts.click) throw new Error('app/list-ctl-click.js must load before app/list-ctl.js');
-  root.CBListParts.click.bind({ closePop: closePop, columns: columns, curSort: curSort, download: download, head: head, matched: matched, minW: minW, needsNext: needsNext, needsToggle: needsToggle, openRow: openRow, paintAll: paintAll, paintList: paintList, paintTitle: paintTitle, paintTools: paintTools, query: query, remote: remote, resetLimit: resetLimit, rowById: rowById, rowIdOf: rowIdOf, safe: safe, saveChoices: saveChoices, selectedRows: selectedRows, shownKeys: shownKeys, sortId: sortId, togglePop: togglePop, toggleRow: toggleRow, viewKeys: viewKeys, viewOn: viewOn, widthOf: widthOf });
+  root.CBListParts.click.bind({ closePop: closePop, columns: columns, curSort: curSort, download: download, head: head, matched: matched, minW: minW, needsCount: needsCount, needsOf: needsOf, needsOn: needsOn, needsRows: needsRows, refocusRow: refocusRow, openRow: openRow, paintAll: paintAll, paintList: paintList, paintTitle: paintTitle, paintTools: paintTools, query: query, remote: remote, resetLimit: resetLimit, rowById: rowById, rowIdOf: rowIdOf, safe: safe, saveChoices: saveChoices, selectedRows: selectedRows, shownKeys: shownKeys, sortId: sortId, togglePop: togglePop, toggleRow: toggleRow, viewKeys: viewKeys, viewOn: viewOn, widthOf: widthOf });
   colByKey = root.CBListParts.click.colByKey;
   cssId = root.CBListParts.click.cssId;
   onClick = root.CBListParts.click.onClick;

@@ -128,10 +128,11 @@ function go() {
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
 <script src="/app/sheet-dialog.js"></script>   <!-- the keyboard contract of every dialog.sheet: first field, focus back, Enter saves, empty save names the field, Esc asks (rules 1b 2c 4 5 8) -->
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
-<script src="/app/cap-books.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-party.js"></script>   <!-- bkMoney (M36): minor units → the shop's figure; nothing here does money arithmetic -->
+<script src="/app/attach-ui.js"></script>   <!-- CBAttach (R07): cap-books.js cbAttachAccept/cbAttachB64 read it; BEFORE cap-books.js -->
+<script src="/app/cap-books.js"></script><script src="/app/cap-books-lock.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-party.js"></script>   <!-- bkMoney (M36): minor units → the shop's figure; nothing here does money arithmetic -->
 <script src="/app/chit-sheet.js"></script>   <!-- CBSheet: THE chit popup — a dispute row opens its chit here, with the dispute section (T3) -->
 <script src="/app/cap-quotes.js"></script>   <!-- CBQuotes (RAIL-117 · F8): the Rounds section of a quotation, mounted by the chit sheet -->
-<script src="/app/modal-host.js"></script><script src="/app/assign-bar.js"></script>   <!-- ASSIGN-W3 L7: the Held-by chip on the sheet (the one CBAssign popover, the library popup) -->
+<script src="/app/modal-host.js"></script><script src="/app/assign-bar.js"></script><script src="/app/queue-back.js"></script><script src="/app/cap-tasks-assign.js"></script>   <!-- ASSIGN-W3 L7: the Held-by chip on the sheet (the one CBAssign popover, the library popup) -->
 <script src="/app/cap-tasks.js"></script>
 <script src="/app/cap-dispute.js"></script>   <!-- CBDispute (T3): the Disputes section and the sheet's dispute section — the workshop's dispute capability file -->
 <script src="/app/cap-assist.js"></script>    <!-- CBAssistReview (T3): CB Assist's drafts → Accept (publish) · Reject -->

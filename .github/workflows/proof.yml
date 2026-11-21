@@ -56,7 +56,7 @@ jobs:
           fetch-depth: 0
       # a web_ref cut before the packs landed has no e2e/proof (nor the lay-api action): take both from main, the file this workflow itself runs from
       - name: Packs and stack step from main
-        run: git fetch --depth 1 origin main && git checkout FETCH_HEAD -- e2e/proof .github/actions
+        run: git fetch --depth 1 origin main && git checkout FETCH_HEAD -- .github/actions && { [ -d e2e/proof ] || git checkout FETCH_HEAD -- e2e/proof; }   # SEC-113: a branch that has its own e2e/proof keeps it (the packs hand the device id to the page)
       - uses: ./.github/actions/lay-api
         with:
           ref: ${{ inputs.api_ref || 'main' }}

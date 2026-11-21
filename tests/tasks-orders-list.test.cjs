@@ -12,7 +12,7 @@ let config = null;
 const node = () => new Proxy({ style: {}, classList: { add() {}, remove() {} }, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], showModal() {}, close() {}, value: '' }, { get: (t, k) => (k in t ? t[k] : undefined), set: (t, k, v) => { t[k] = v; return true; } });
 const nodes = {};
 const rows = [
-  { chit_id: 'c1', kind: 'order_in', stage: 'new', word: 'New', channel: 'online', fulfilment: 'pickup', subject: 'Bolts', party: 'Ravi', assignee: { name: 'Meena' }, lines_n: 3, lines_open_n: 2, age_days: 2, billed: true, requested_for: '2026-11-09' },
+  { chit_id: 'c1', kind: 'order_in', stage: 'new', word: 'New', channel: 'online', fulfilment: 'pickup', subject: 'Bolts', party: 'Ravi', assignee: { id: 'a1', name: 'Meena' }, lines_n: 3, lines_open_n: 2, age_days: 2, billed: true, requested_for: '2026-11-09' },
   { chit_id: 'c2', kind: 'task', stage: 'closed', word: 'Done', lines_n: 0, age_days: 0, stuck: true, stuck_why: 'No reply' }
 ];
 const sandbox = {
@@ -24,6 +24,8 @@ const sandbox = {
 };
 const cx = vm.createContext(sandbox);
 cx.window = cx; cx.globalThis = cx;
+cx.CBAssign = { slotHTML: () => '', queue: (cfg) => ({ views: [], key: cfg.key, filter: { key: 'assignee', match: (row, v) => v === 'none' ? !row.holders.length : row.holders.some((h) => h.name === v) } }) }; /* the shared queue is its own test; here only the board's own part runs */
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-assign.js', 'utf8'), cx); /* tasks.html loads it before cap-tasks.js */
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks.js', 'utf8'), cx);
 const T = cx.CBTasks;
 

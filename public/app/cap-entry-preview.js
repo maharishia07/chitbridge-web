@@ -1,5 +1,5 @@
 /* cap-entry-preview.js — ＋ ENTRY: the preview round trip (ask the server to preview the journal, read its answer, check the date).
- * OWNS      the field's label and value (enFieldLabel, enValueOf) · the question before a debit note (enAskWords, enAsk) · the preview body (enBody) · the server's refusals and warnings as the sheet shows them (enWords, enSeen) · enPreview, enPaint2, enCheckDate, enFixGo; moved out of cap-entry.js (2026-11-17, size ratchet; behaviour unchanged)
+ * OWNS      the refusal and warning lists with their fix buttons (enRefusalHTML · enWarnHTML, moved from cap-entry.js 20 Nov, file-size ratchet) · the field's label and value (enFieldLabel, enValueOf) · the question before a debit note (enAskWords, enAsk) · the preview body (enBody) · the server's refusals and warnings as the sheet shows them (enWords, enSeen) · enPreview, enPaint2, enCheckDate, enFixGo; moved out of cap-entry.js (2026-11-17, size ratchet; behaviour unchanged)
  * CALLED BY accounts.html and finance.html (<script src>, after cap-entry.js: it reads EN and the en* painters declared there) · cap-entry.js (enNext, enPick, enSave call enPreview)
  * FLOW      a field changes → enPreview → enBody → enAsk (POST /api/books/preview) → enSeen → enPaint2 draws step 4; Save (cap-entry.js) is enabled only when the server said balanced and refused nothing
  * CARD      16-finance/manual-entry
@@ -65,7 +65,8 @@ function enAsk(body) {
 }
 /** the POST body for preview and save: the typed fields, with the amount parsed to minor units */
 function enBody() {
-  var b = { event: EN.ev.kind || EN.ev.id };
+  /* the sheet's ONE client_ref (bkRef, minted at open) rides the preview too: the server's debit/credit-note preview refuses a call without it, and the save sends the same one */
+  var b = { event: EN.ev.kind || EN.ev.id, client_ref: EN.ref };
   Object.keys(EN.v).forEach(function (item) {
     if (EN.v[item] !== '' && EN.v[item] != null) b[item] = EN.v[item];
   });
@@ -175,4 +176,47 @@ function enFixGo(i, w) {
     var el = document.querySelector('[data-testid="en-f-' + node.focus + '"]');
     if (el) el.focus();
   }
+}
+/* every refusal and every warning carries a button that takes the person to the fix */
+function enRefusalHTML(list, w) {
+  w = w || 'date';
+  return (list || [])
+    .map(function (x, index) {
+      return (
+        '<div class="en-bad" data-testid="en-refusal-' +
+        esc(x.code || index) +
+        '">' +
+        esc(x.message) +
+        '<button data-cbsid="SCR022-B05" type="button" data-testid="en-fix-' +
+        esc(x.code || index) +
+        '" onclick="enFixGo(' +
+        index +
+        ",'" +
+        w +
+        '\')">' +
+        esc((x.fix && x.fix.label) || tx('Change it')) +
+        '</button></div>'
+      );
+    })
+    .join('');
+}
+/** the server's warnings and refusals as a list, each with its fix button */
+function enWarnHTML(list) {
+  return (list || [])
+    .map(function (x, index) {
+      return (
+        '<div class="en-warn" data-testid="en-warning-' +
+        esc(x.code || index) +
+        '">' +
+        esc(x.message) +
+        '<button data-cbsid="SCR022-B06" type="button" data-testid="en-wfix-' +
+        esc(x.code || index) +
+        '" onclick="enFixGo(' +
+        index +
+        ",'warnings')\">" +
+        esc((x.fix && x.fix.label) || tx('Change it')) +
+        '</button></div>'
+      );
+    })
+    .join('');
 }

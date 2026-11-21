@@ -212,8 +212,8 @@ function fxAddOpen() {
   var today = bkToday();
   node.innerHTML =
     '<div data-testid="fx-form" style="max-width:420px;margin-bottom:10px">' +
-    miRow(tx('Day'), '<input data-cbsid="BKS025-I02" class="inp" type="date" id="fx_date" data-testid="fx-date" value="' + esc(today) + '" style="width:auto;max-width:100%">') +
-    miRow(tx('Currency'), '<input data-cbsid="BKS025-I03" class="inp" id="fx_cur" data-testid="fx-cur" maxlength="3" placeholder="USD" style="width:6em;text-transform:uppercase">') +
+    miRow(tx('Day'), '<input data-cbsid="BKS025-I02" class="inp" type="date" id="fx_date" data-testid="fx-date" value="' + esc(today) + '" onchange="fxSuggest()" style="width:auto;max-width:100%">') +
+    miRow(tx('Currency'), '<input data-cbsid="BKS025-I03" class="inp" id="fx_cur" data-testid="fx-cur" maxlength="3" placeholder="USD" oninput="fxSuggest()" style="width:6em;text-transform:uppercase">') +
     miRow(
       txf('Rate in {c}', { c: (FXV.r && FXV.r.currency) || '' }),
       '<input data-cbsid="BKS025-I04" class="inp" id="fx_rate" data-testid="fx-rate" inputmode="decimal" placeholder="83.25" style="width:9em">'
@@ -230,6 +230,7 @@ function fxAddOpen() {
       tx('Reference'),
       '<input data-cbsid="BKS025-I05" class="inp" id="fx_ref" data-testid="fx-ref" maxlength="120" placeholder="' + esc(tx('Where it came from')) + '" style="width:100%">'
     ) +
+    '<div id="fx_hint" data-testid="fx-hint" style="color:var(--ink-2,#555);font-size:var(--fs-1)"></div>' +
     '<div id="fx_ferr" data-testid="fx-form-err" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
     '<div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="BKS025-B02" type="button" class="supact-pri" data-testid="fx-save" onclick="fxAddSave(this)">' +
     esc(tx('Save rate')) +
@@ -237,6 +238,28 @@ function fxAddOpen() {
     '<button data-cbsid="BKS025-B03" type="button" data-testid="fx-cancel" onclick="fxAddCancel()">' +
     esc(tx('Cancel')) +
     '</button></div></div>';
+}
+/**
+ * ACC-377 (d) — a day with no rate (a weekend, a holiday): the server NAMES the newest earlier rate and its day; the owner reads it and types the rate to use it.
+ * Nothing is filled in and nothing is saved on its own — a suggestion is words, the rate is the owner's entry. The sentence and the figures are the server's.
+ */
+function fxSuggest() {
+  var dayKey = fxVal('fx_date'),
+    currency = fxVal('fx_cur').toUpperCase(),
+    hint = document.getElementById('fx_hint');
+  if (!hint) return;
+  hint.textContent = '';
+  if (!dayKey || currency.length !== 3) return;
+  var asked = dayKey + currency;
+  FXV.asked = asked;
+  api('booksFxRates', { query: { from: currency, suggest_for: dayKey } }).then(
+    function (reply) {
+      var near = reply && reply.suggestion;
+      if (FXV.asked !== asked || !near) return;
+      hint.textContent = txf('No {c} rate for {d}. The last one was {r} on {e} — type it below to use it.', { c: currency, d: bkDate(dayKey), r: near.rate, e: bkDate(near.date) });
+    },
+    function () {}
+  );
 }
 function fxAddCancel() {
   FXV.add = null;

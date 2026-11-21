@@ -45,6 +45,7 @@ async function ovLoad() {
     if (generation !== OVERVIEW.gen) return;
     if (typeof cblog === 'function') cblog('error', 'overview: ' + ((error && error.message) || error));
     OVERVIEW.state = 'error';
+    OVERVIEW.error = error;
   }
   ovPaint();
 }
@@ -190,7 +191,7 @@ function ovPaint() {
   if (!bar || !main) return;
   bar.innerHTML = ovCss() + '<div class="ov-bar">' + ovSelect() + (OVERVIEW.state === 'ready' && OVERVIEW.answer && OVERVIEW.answer.sales && OVERVIEW.answer.sales.through ? '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="ov-through">' + esc(txf('Books in to {date}', { date: bkDate(OVERVIEW.answer.sales.through) })) + '</span>' : '') + '</div>';
   if (OVERVIEW.state === 'loading') main.innerHTML = '<p class="hint">' + esc(tx('Loading…')) + '</p>';
-  else if (OVERVIEW.state !== 'ready' || !OVERVIEW.answer) main.innerHTML = '<p class="hint" data-testid="ov-error">' + esc(tx('This did not load.')) + ' <button class="btn" type="button" data-cbsid="' + OV_CODES.retry + '" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></p>';
+  else if (OVERVIEW.state !== 'ready' || !OVERVIEW.answer) main.innerHTML = '<div data-testid="ov-error">' + scrErr(OVERVIEW.error, tx('the overview')) + ' <button class="btn" type="button" data-cbsid="' + OV_CODES.retry + '" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></div>';
   else {
     var answer = OVERVIEW.answer;
     main.innerHTML = ovHeadline(answer) + ovTiles(answer) + ovPictures(answer);

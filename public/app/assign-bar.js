@@ -36,6 +36,8 @@
   }
   /** SHOW only, on the SERVER's verdict (`may_assign` on the practice answer and on GET /api/actors): no token is read. Not a permission: the api refuses a call that is not allowed. Nothing said yet = not shown. */
   assignApi.showsBar = function (said) { return said === true; };
+  /** MTX-new-4: a seat that may only TAKE work (the server's `may_take`, W17 staff pick-up) gets the ticks and the one "Assign to me" button, never Assign to… / Hand over / Back to pool */
+  assignApi.showsTake = function (opts) { return !!opts && (opts.said === true || opts.take === true); };
   /** the signed-in person's id as the sign-in stored it (for the Mine view and the I key); '' when the session does not carry one */
   assignApi.meId = function () {
     var s = session();
@@ -133,10 +135,13 @@
   /** the people who may hold this kind of work, as the server flags them (job_assignable), with `open_load` and the ONE `suggested` person (GET /api/actors?for=plug:subject, one client only: a mixed bulk asks for no suggestion and pre-picks nobody, A5); the page filters on the flag and never on a hat */
   function people(forWord, flag) {
     return call('GET', ACTORS_PATH + (forWord ? '?for=' + encodeURIComponent(forWord) : '')).then(function (reply) {
-      if (!reply.ok) return { error: sentenceOf(reply.body) || tr('People did not load.'), list: [] };
+      if (!reply.ok) return { error: sentenceOf(reply.body) || friendlyErr({}), list: [] };
       var mine = assignApi.meId();
-      var list = (reply.body.actors || reply.body.items || []).filter(function (a) { return a[flag || 'job_assignable'] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
-      return { list: list };
+      var rows = reply.body.actors || reply.body.items || [], key = flag || 'job_assignable';
+      var list = rows.filter(function (a) { return a[key] === true; }).map(function (a) { return personOf(a, reply.body, mine); });
+      /* W7: a view-only person holds nothing (rule A5, the server's flag stays false); they are NAMED, never silently missing. Words only: the server's reason (assign_blocked: 'view_only', api #1378) picks the sentence, it decides nothing. */
+      var viewOnly = rows.filter(function (a) { return a[key] !== true && a.assign_blocked === 'view_only'; }).map(function (a) { return a.display_name || a.name || ''; }).filter(Boolean);
+      return { list: list, viewOnly: viewOnly };
     });
   }
   function personRow(p, label) {
@@ -151,11 +156,26 @@
     var list = '<div data-as-people style="display:flex;flex-direction:column;margin-top:8px">' + (me && !me.suggested ? personRow(me, tr('Me') + ' · ' + me.name) : '') + roster.list.filter(function (p) { return !p.me || p.suggested; }).sort(function (a, b) { return (b.suggested ? 1 : 0) - (a.suggested ? 1 : 0); }).map(function (p) { return personRow(p); }).join('') + '</div>';
     var pool = spec.held ? '<button type="button" data-as-pool data-cbsid="HOM001-B22" data-cbmount="' + MOUNT + '" data-testid="assign-pool" style="width:100%;min-height:44px;padding:6px 10px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer">' + root.esc(tr('Back to pool')) + '</button>' : '';
     var note = '<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;margin-top:8px">' + root.esc(tr('Note (optional)')) + '<input data-cbsid="CMP055-I01" data-cbmount="' + MOUNT + '" data-testid="assign-note" maxlength="200" type="text" style="min-height:44px;font:inherit;padding:6px 8px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:inherit"></label>';
-    return head + list + pool + note;
+    return head + list + whyNot(roster) + pool + note;
+  }
+  /** W3 · W7: what the list does not show, in words: no one at all (with the way to add a person), and each view-only person with what to change */
+  function whyNot(roster) {
+    if (roster.error) return '';
+    var out = '';
+    if (!roster.list.length) {
+      var where = root.CBPractice && typeof root.CBPractice.isFirm === 'function' && root.CBPractice.isFirm() ? 'No one in your practice yet' : 'No one in your team yet';
+      out += '<div data-testid="assign-empty" style="margin-top:8px;font-size:14px">' + root.esc(tr(where)) + ' — <a href="/employees.html" data-cbsid="HOM001-C01" data-cbmount="' + MOUNT + '" data-testid="assign-add-person" style="color:var(--accent,#1F5F5B);font-weight:600">' + root.esc(tr('Add a person')) + '</a></div>';
+    }
+    (roster.viewOnly || []).forEach(function (name) {
+      out += '<div data-testid="assign-viewonly" style="margin-top:6px;font-size:13px;color:var(--grey,#5B5B5B)">' + root.esc(sayText('{name} is view-only — change what they can do to assign', { name: name })) + '</div>';
+    });
+    return out;
   }
   /** wire the opened popup: the search narrows the people in place; a person (or Back to pool) is the whole answer */
   function wirePopover(done) {
-    var body = root.document.querySelector('#modalhost .mbody, dialog[open] .mbody');
+    /* W8: the body that HOLDS this list, found from the list itself: the first .mbody on the page can be another open sheet's, and a click handler left on that one never hears a person pressed */
+    var mine = root.document.querySelector('[data-as-people]');
+    var body = (mine && mine.closest && mine.closest('.mbody')) || (mine && mine.parentNode) || root.document.querySelector('#modalhost .mbody, dialog[open] .mbody');
     if (!body) return;
     var search = body.querySelector('[data-testid="assign-search"]'), note = body.querySelector('[data-testid="assign-note"]');
     if (search) search.addEventListener('input', function () {
@@ -166,8 +186,10 @@
       var b = ev.target.closest && ev.target.closest('[data-as-pick],[data-as-pool]');
       if (!b) return;
       var value = { id: b.hasAttribute('data-as-pool') ? null : b.getAttribute('data-as-pick'), note: note ? note.value.trim() : '' };
-      if (typeof root.closeModal === 'function') root.closeModal();
-      done(value);
+      try { if (typeof root.closeModal === 'function') root.closeModal(); done(value); } catch (failure) { /* an error here left the popup open and said nothing (W8): say it */
+        if (root.cbQuiet) root.cbQuiet('assign:pick', failure);
+        showOutcome('bad', tr('Not done.'), []);
+      }
     });
   }
   /** open the person popover (ui.dialog, the library popup) → done({ id|null, note }) on a press; nothing when it is cancelled. spec: { title, held (some row has a holder) } */
@@ -194,10 +216,11 @@
   function undoOf(plug, role, previous, write) {
     var by = {}, order = [];
     (previous || []).forEach(function (p) {
-      if (!p.subject_id) return;
+      if (!p.subject_id && !p.chit_id) return;
       var k = String(p.actor_id || '');
-      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], write: write }; order.push(k); }
-      by[k].subject_ids.push(p.subject_id);
+      if (!(k in by)) { by[k] = { plug: plug, role: role, actor_id: p.actor_id || null, subject_ids: [], chit_ids: [], write: write }; order.push(k); }
+      if (p.chit_id && !write) by[k].chit_ids.push(p.chit_id); /* W12: undo per COPY (each copy's own previous holder), never per client: a client with several period copies held by different people would put them all back to one */
+      else by[k].subject_ids.push(p.subject_id);
     });
     return order.map(function (k) { return by[k]; });
   }
@@ -227,10 +250,39 @@
     }, root.Promise.resolve()).then(function () {
       if (sum.refused) showOutcome('bad', sum.refused, []);
       else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
+      if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
       if (last) last.reload = opts.reload;
       return opts.reload ? opts.reload() : null;
     });
   }
+  /** H3 (20 Nov): the ONE empty state of the work queue, the same in every place: "Nothing waiting for you · N unassigned" with ONE press, "Pick up the next one" (the person who may assign takes the first unassigned item; the list reloads on Mine) */
+  function queueEmpty(opts, rows, state) {
+    var views = Object.keys(state.filt || {}).filter(function (k) { return state.filt[k]; });
+    if (views.length !== 1 || views[0] !== 'held') return null; /* some other narrowing too: the list's own words */
+    var pool = rows.filter(function (r) { return Array.isArray(r.holders) && !r.holders.length; });
+    if (state.filt.held === 'none') return { title: tr('Nothing unassigned'), sub: tr('Everything has someone on it.') };
+    return state.filt.held === 'mine' ? queueEmptyMine(opts, pool) : null;
+  }
+  /** the Mine view with nothing in it: the pool's count in words and, for the person who may assign, the one press that takes the first unassigned */
+  function queueEmptyMine(opts, pool) {
+    var sub = pool.length ? sayText('{n} unassigned', { n: pool.length }) : tr('Nothing is unassigned either.');
+    var take = pool.length && assignApi.showsBar(opts.said) && assignApi.meId();
+    return { title: tr('Nothing waiting for you'), sub: sub, actionLabel: take ? tr('Pick up the next one') : '', run: take ? function () { takeFor(opts, [pool[0]]); } : null };
+  }
+  /**
+   * CBAssign.queue(q) → the options a list merges into its CBList.mount: THE WORK-QUEUE CAPABILITY (Athi 19 Nov: "the capability, so we can use it anywhere"). q = the assign options (plug · noun · nounMany · subjectOf · roleOf · said · reload · write? · heldOf? · flag?)
+   * + { key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
+   * → { views (Mine · Unassigned · Everyone), bulk (Assign to me · Assign to… · Hand over · Back to pool), bulkAlways, preset (the opening view: Mine for a seat that holds work or may not assign, Everyone otherwise), filter (the Held by filter, list shape) }; {} when no row carries holders.
+   * Nothing here names a trade: the noun, the door (plug / write) and the rows come from the screen. */
+  assignApi.queue = function (q) {
+    var rows = q.rows || [], me = assignApi.meId(), held = assignApi.heldFilter(rows);
+    if (!assignApi.hasHolders(rows)) return {};
+    var holds = !!me && rows.some(function (r) { return held.match(r, 'mine'); });
+    var opts = Object.assign({ listKey: q.key }, q);
+    return { views: assignApi.quickViews(), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsTake(q), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+      emptyFor: function (state) { return queueEmpty(opts, rows, state); },
+      filter: { key: 'held', label: tr('Held by'), all: tr('Anyone'), options: held.options.map(function (o) { return { v: o[0], label: tr(o[1]) }; }), match: held.match } };
+  };
   /** Undo: one more assign-bulk call per (role, previous holder), using the holders the server returned */
   function undo() {
     var groups = last && last.undo ? last.undo : [], reload = last && last.reload;
@@ -239,7 +291,7 @@
     return groups.reduce(function (chain, g) {
       return chain.then(function () {
         if (refused) return null;
-        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
+        var put = g.write ? g.write(g.subject_ids, g.actor_id, '').then(function (r) { return { ok: r.ok !== false, body: { detail: r.sentence } }; }) : call('POST', ASSIGN_PATH, g.chit_ids && g.chit_ids.length ? { chit_ids: g.chit_ids, target_actor_id: g.actor_id } : { plug: g.plug, role: g.role, subject_ids: g.subject_ids, target_actor_id: g.actor_id });
         return put.then(function (r) { if (!r.ok) refused = sentenceOf(r.body) || tr('Not done.'); });
       });
     }, root.Promise.resolve()).then(function () {
@@ -262,10 +314,12 @@
    * opts: { plug, noun, nounMany?, subjectOf(row), roleOf(row), reload(), said (a server verdict), heldOf? (row → bool: has a holder) }
    */
   assignApi.bulk = function (opts) {
-    if (!assignApi.showsBar(opts.said)) return [];
+    if (!assignApi.showsTake(opts)) return [];
     assignApi.mount(opts);
-    var held = heldOf(opts);
+    var held = heldOf(opts), take = { id: 'me', label: tr('Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    if (!assignApi.showsBar(opts.said)) return [take];
     return [
+      take,
       { id: 'assign', label: tr('Assign to…'), run: function (rows) {
         pick({ title: 'Assign to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
       } },
@@ -356,6 +410,18 @@
       ' style="max-width:100%;min-height:32px;padding:2px 10px;border:1px ' + (empty ? 'dashed' : 'solid') + ' var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:' + (empty ? 'var(--grey,#5B5B5B)' : 'inherit') + ';font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">' +
       root.esc(empty ? '+ ' + tr('Assign to…') : holderNames + ' ▾') + '</button>';
   };
+  /**
+   * the Held-by cell as PLAIN TEXT (Athi 19 Nov: no button on every row): the holder's name, or a quiet dash when nobody holds it. Assigning is the tick-bar's one "Assign to…"; the A and I keys still
+   * find the row through the data-as-* facts this cell carries (shown only on the server's verdict, like the chip). opts as for bulk
+   */
+  assignApi.heldCell = function (row, opts) {
+    if (!row || !Array.isArray(row.holders)) return '';
+    var names = row.holders.map(function (h) { return h.name || ''; }).join(', ');
+    var text = names ? root.esc(names) : '<span style="color:var(--grey,#5B5B5B)" aria-label="' + root.esc(tr('Unassigned')) + '">—</span>';
+    if (!assignApi.showsBar(opts && opts.said)) return text;
+    assignApi.mount(opts);
+    return '<span data-as-cell data-as-plug="' + root.esc(opts.plug) + '" data-as-sub="' + root.esc(opts.subjectOf(row)) + '" data-as-role="' + root.esc(opts.roleOf(row)) + '" data-as-held="' + (names ? '1' : '0') + '" data-testid="assign-held">' + text + '</span>';
+  };
   /** the row a chip stands for, in the shape the calls read (subject, role, whether it has a holder) */
   function chipRow(chip) {
     var held = chip.getAttribute('data-as-held') === '1';
@@ -367,15 +433,17 @@
     if (!opts) return;
     pick({ title: 'Assign to…', held: row.held, forWord: opts.write ? undefined : opts.plug + ':' + row.sid, before: opts.beforePick, flag: opts.flag }, function (holder) { apply(oneRowOpts(opts), [row], holder); });
   }
-  /** the I key: take it, when the person is among the people the server lets hold this work */
-  function takeChip(chip) {
-    var opts = mounts[chip.getAttribute('data-as-plug')], row = chipRow(chip);
-    if (!opts) return;
-    people(undefined, opts.flag).then(function (roster) {
+  /** Assign to me (the bar) and the I key (a row): take these rows, when the person is among the people the server lets hold this work; the server still says yes or why not */
+  function takeFor(opts, rows) {
+    return people(undefined, opts.flag).then(function (roster) {
       var me = roster.list.filter(function (p) { return p.me; })[0];
       if (!me) return showOutcome('bad', tr('You cannot take this one.'), []);
-      return apply(oneRowOpts(opts), [row], { id: me.id, note: '' });
+      return apply(opts, rows, { id: me.id, note: '' });
     });
+  }
+  function takeChip(chip) {
+    var opts = mounts[chip.getAttribute('data-as-plug')];
+    if (opts) takeFor(oneRowOpts(opts), [chipRow(chip)]);
   }
   function typingIn(node) { return !!(node && node.closest && node.closest('input,select,textarea,[contenteditable],#modalhost,dialog')); }
   /** whether a key press is not the assign shortcut (a modifier is held, another key, or the person is typing) */
@@ -383,7 +451,7 @@
   function onKey(ev) {
     var key = String(ev.key || '').toLowerCase();
     if (notShortcut(ev, key)) return;
-    var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip]');
+    var row = ev.target && ev.target.closest && ev.target.closest('[data-row]'), chip = row && row.querySelector('[data-as-chip],[data-as-cell]');
     if (!chip) return;
     ev.preventDefault();
     if (key === 'a') openChip(chip); else takeChip(chip);

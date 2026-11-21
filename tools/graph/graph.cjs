@@ -273,7 +273,7 @@ function build() {
   }
   /* engines */
   if (meta.present.engines) {
-    walk(path.join(E, 'src'), (p) => /\.js$/.test(p))
+    [path.join(E, 'src'), path.join(E, 'tools')].flatMap((dir) => walk(dir, (p) => /\.c?js$/.test(p)))
       .sort()
       .forEach((item) => addFile('engines', item, /[\\/]reg-[a-z]+\.js$/.test(item) ? 'pack' : 'engine'));
     addFile('engines', path.join(E, 'index.js'), 'engine');

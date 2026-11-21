@@ -46,10 +46,6 @@
     var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : part; }).join(' ');
     return grantKit.words(text.charAt(0).toUpperCase() + text.slice(1));
   }
-  /** an entry whose Evidence state is "No source" (no document to attach to: not a fault; the pill stays for No tax invoice, No file and a held file); the state is cap-evidence.js's own (stateOf), never re-decided here */
-  function noSourceRow(row) {
-    return !!(row && row.evidence && root.CBEvidence && root.CBEvidence.stateOf(row.evidence).key === 'nodoc');
-  }
   /** the JET rules an entry trips (the filters file's riskOf, read with the period and currency on screen) */
   function riskWords(e) {
     var F = root.CBBooksGrantFilters;
@@ -98,7 +94,7 @@
     if (kind === 'flag') return state.fl ? state.fl.chip(row.entry_id, grantKit.flagLabel(row)) : ''; /* CMP066: my own bookmark; never the client's, never the mark */
     if (column[0] === 'lock_note') return value || '—'; /* html built from the server's trail, each line escaped */
     if (column[0] === 'party_ref') return partyCell(row, value); /* one painter: the party · ref, and under it who posted it when an adviser did */
-    if (kind === 'evidence') return state.ev && !noSourceRow(row) ? state.ev.chip(row) : '—'; /* CMP062: what stands behind the row (cap-evidence.js); an entry with no source document (a cash sale, an opening balance, a journal) has nothing to hold, so a quiet dash, never a pill that reads as a fault */
+    if (kind === 'evidence') return state.ev ? state.ev.chip(row) : '—'; /* CMP062: what stands behind the row (cap-evidence.js); the same chip as the shop Day book, 'No receipt' for a no-source entry (a firm cannot attach in S1), so owner, firm and auditor read the same */
     return undefined;
   }
   /** any other value: blank or a dash when nothing, a day as the shop's day, a key as words, else the text */

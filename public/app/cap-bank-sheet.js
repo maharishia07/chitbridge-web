@@ -88,7 +88,8 @@ function bkshTaxRegisteredFor(answer) {
 /** who is signed in, as the post adapter reads it: the shop's own login is the owner */
 function bkshSignedIn() {
   if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return { role: 'adviser', posts: CBBooksActing.posts() }; /* the grant's posting, known up front; the server decides */
-  return { role: bkshIsOwner() ? 'owner' : 'other' };
+  if (bkshIsOwner()) return { role: 'owner' };
+  return { role: typeof bkIsBookkeeper === 'function' && bkIsBookkeeper() && BK_SEAT.post ? 'bookkeeper' : 'other' }; /* W26: may record entries (the server's may.post), not lock or reopen */
 }
 /** the books account the statement is for */
 function bkshStatementAccount() {
@@ -102,6 +103,13 @@ function bkshPostedFeed() {
     feed[row.ref] = { at: row.made_at, by: bankStoreMadeBy(row), entry_no: row.entry_no, for_client: !!row.for_client };
   });
   return feed;
+}
+/** a line stored before the bank's own ref became the key is still paired with the entry it made: posted[new ref] takes posted[old ref] */
+function bkshPairOldRefs(engine, posted, refs, lines) {
+  const olds = typeof engine.project.oldRefsOf === 'function' ? engine.project.oldRefsOf(lines, bkshRefAccount(), lines) : []; /* engines #153/#154: guard until the engines adopt carries it */
+  olds.forEach((old, at) => {
+    if (old && posted[old] && !posted[refs[at]]) posted[refs[at]] = posted[old];
+  });
 }
 /**
  * B5: the pairing of a statement line with the entry it made, ONE TO ONE BY OCCURRENCE: the line's own client_ref (the engine's refsOf: bank:<fingerprint>-<n>) and the posted record (ref → entry_no).
@@ -121,7 +129,9 @@ function bkshPairing(lines) {
   Object.keys(made).forEach((ref) => {
     posted[ref] = String(made[ref]).split('#')[0]; /* "Same payment": the owner said which entry this line is; the page counts it too (the id is entry_no#line) */
   });
-  return { line_refs: engine.project.refsOf(lines, bkshRefAccount(), lines), posted };
+  const refs = engine.project.refsOf(lines, bkshRefAccount(), lines);
+  bkshPairOldRefs(engine, posted, refs, lines);
+  return { line_refs: refs, posted };
 }
 /** the ONE account key every statement-line ref is fingerprinted with: the ledger CODE, the same the statement check hands back (fingerprint_account) and the controller posts with. A name here made the page pair by other refs than the entries were posted under (B5, reload showed twins as "Not on the statement") */
 function bkshRefAccount() {
@@ -428,7 +438,7 @@ const bkshLockGroups = () => CBBankLock.groupsOf(BKSH.ctl && BKSH.ctl.view().ite
 function bkshLockNotice() {
   const signedIn = bkshSignedIn(),
     owner = signedIn.role === 'owner',
-    mayPost = owner || (signedIn.role === 'adviser' && !!signedIn.posts);
+    mayPost = owner || signedIn.role === 'bookkeeper' || (signedIn.role === 'adviser' && !!signedIn.posts);
   return bkshLockGroups()
     .map((group, at) => {
       const reopen = owner && group.may ? '<button data-cbsid="BKS014-B60" type="button" class="act" data-testid="bank-lock-reopen-' + at + '" onclick="bkshReopen(\'' + group.key + '\')">' + bkbE(txf('Reopen {month}', { month: group.name })) + '</button>' : '',

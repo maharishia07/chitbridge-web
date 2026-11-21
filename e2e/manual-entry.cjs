@@ -106,7 +106,7 @@ async function route(S, r) {
   if (!p.startsWith('/api/books')) return J(r, m === 'GET' ? 200 : 200, m === 'GET' ? {} : { ok: true });
   if (p === '/api/books/health') return J(r, 200, books.health());
   if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', parent_code: 'G1000', active: true }, a)) });
-  if (p === '/api/books/events' && m === 'GET') return J(r, 200, { events: EVENTS.map((e) => Object.assign({ ledger_group: null }, e)), picks: Object.assign({ debit_reason: [] }, PICKS), pending: [], golden: GOLDEN });
+  if (p === '/api/books/events' && m === 'GET') return J(r, 200, { may: { post: { ok: true, code: null, why: null } }, events: EVENTS.map((e) => Object.assign({ ledger_group: null }, e)), picks: Object.assign({ debit_reason: [] }, PICKS), pending: [], golden: GOLDEN });
   if (p === '/api/books/events' && m === 'POST') { const b0 = body(); S.saves.push({ path: p, body: b0 }); await new Promise((z) => setTimeout(z, S.delay)); if (S.failSave) return J(r, 500, { error: 'Server error' }); return J(r, 200, { ok: true, kind: b0.event, entry_id: 'mj' + S.saves.length, entry_no: 'MJ/2026-27/00000' + S.saves.length, posting_date: b0.date || TODAY, doc_date: b0.date || TODAY, moved: false, lines: 2, items: 0, note: null }); }
   if (p === '/api/books/preview') { const b = body(); S.previews.push(b); return J(r, 200, compose(b, S)); }
   let x;

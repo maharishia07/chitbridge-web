@@ -136,7 +136,7 @@ function bankAcctPick(code, loading) {
 /** one step action: the engine's step, the device copy, then the shared record */
 /** an acting adviser works the bank page for the client; the owner's own login too. Only the owner's grant decides whether the adviser may POST (the server stays the authority) */
 const bkbActing = () => typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser();
-const bkbMayAct = () => peOwner() || bkbActing();
+const bkbMayAct = () => peOwner() || bkbActing() || (typeof bkIsBookkeeper === 'function' && bkIsBookkeeper()); /* W26: the shop's own Bookkeeper adds statements, matches and signs off months; the api's editor gate allows it, the server stays the authority */
 /** W15-71: the auditor's seat reads the bank (home, kept files, a month's lines, who matched, the sign-off) and writes nothing: no Add, Post, Match, Note, Sign off or Reopen is drawn, and the rail (party and bank details) is not asked */
 const bkbReadOnly = () => typeof bkReadOnlySeat === 'function' && bkReadOnlySeat();
 /** the sentence for an adviser whose grant does not post straight into these books ('' when the person may act) */
@@ -243,8 +243,8 @@ async function bankView(body) {
     ) +
     peField(
       'bk_file',
-      'Statement file (CSV or JSON)',
-      '<input data-cbsid="BKS014-I01" class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,text/csv,application/json" onchange="bankPick(this)">'
+      'Statement file (CSV, JSON, OFX, QIF)',
+      '<input data-cbsid="BKS014-I01" class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,.ofx,.qfx,.qif,text/csv,application/json" onchange="bankPick(this)">'
     )].join('')) +
     '</div>' + (bkbReadOnly() ? '' : '<div class="pe-note" data-testid="bank-private">🔒 ' + bkbE(tx('The file is read on this device and is never uploaded. This device keeps the latest one.')) + '</div>') +
     '<div id="bk_out" class="pe-slot"></div></div>' +
@@ -279,15 +279,8 @@ async function bankPick(input) {
 async function bankTake(text, name, remembered) {
   const hash = await bkbHash(text);
   if (bkbNoCountryWords()) return peBad('bk_out', bkbNoCountryWords());
-  const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, country: bkbCountry() });
-  if (!parsed || !parsed.ok) {
-    BKB.parsed = null;
-    BKB.rows = [];
-    bkbEl('bk_res').innerHTML = '';
-    bankLayout(false, false);
-    if (remembered) bkbSave('stmt:' + BKB.acct, null);
-    return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
-  }
+  const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, mapping: BKB.mapping, country: bkbCountry() }); /* BKB.mapping: the column map's answer, for this one read (cap-bank-map.js) */
+  if (!parsed || !parsed.ok) return bankRefused(parsed, text, name, remembered);
   if (!remembered) bkbSave('stmt:' + BKB.acct, { name, text }); /* the page opens on the latest statement of this account next time; only this device keeps it */
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
   BKB.postedLocal = {};
@@ -296,7 +289,8 @@ async function bankTake(text, name, remembered) {
   BKB.file = { name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
-  BKB.stmtCur = parsed.currency || bkbAcctCur(); /* the file's own currency, else the account's when the account has it on record (a known fact), else asked below; nothing is guessed */
+  BKB.curKey = 'cur:' + BKB.acct + ':' + BKB.file.hash;
+  BKB.stmtCur = bkbStatementCurrency(parsed.currency, bkbLoad(BKB.curKey, '')); /* FIN-111: the file's own currency, else the one the person confirmed for THIS file on this device, else asked below (prefilled with the account's, one press); never taken from the account unasked */
   BKB.bal = '';
   const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0];
@@ -304,12 +298,16 @@ async function bankTake(text, name, remembered) {
   if (!parsed.lines.length) return peBad('bk_out', tx('There are no transactions in that file.'));
   await bankCurrencyRun();
 }
+/** FIN-111 (B5-05): a statement's currency is what the FILE says, else what the person confirmed for this file; never the account's by default (a USD file would be read as AUD). '' = ask. */
+function bkbStatementCurrency(fileCurrency, confirmed) {
+  return String(fileCurrency || confirmed || '').toUpperCase();
+}
 /** the currency the statement's bank account has on record: the account's own, else the ledger's; '' when neither is known (then the person is asked) */
 function bkbAcctCur() {
   const ledger = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {};
   return String(ledger.currency || bkCur() || '').toUpperCase();
 }
-/** B5-05: the file does not say its currency AND the account has none on record, so ask once; the statement is not read against the books until the person answers */
+/** B5-05: the file does not say its currency (and this device has no confirmation for it), so ask once; the statement is not read against the books until the person answers */
 function bankCurrencyAsk() {
   const shopCurrency = bkbAcctCur(); /* the one fact the shop already states, shown filled in: one press confirms it, the field changes it */
   bkbEl('bk_res').innerHTML = '';
@@ -325,6 +323,7 @@ function bankCurrencyUse() {
   if (!chosen) return toast(tx('Say which currency the statement is in first.'));
   if (typeof CBMoney !== 'undefined' && CBMoney.isIsoCurrency && !CBMoney.isIsoCurrency(chosen)) return toast(tx('That is not a currency code. Use three capital letters.'));
   BKB.stmtCur = chosen;
+  if (BKB.curKey) bkbSave(BKB.curKey, chosen); /* asked once per file on this device */
   bankCurrencyRun().catch((failure) => bkQuiet('bank-currency', failure));
 }
 /** the statement's currency, asked when the file did not say: it must be the bank account's (nothing is converted), then the books are read */
@@ -710,11 +709,20 @@ function bankOpeningHtml() {
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
   if (bkbReadOnly()) return typeof bankStoreSignButton === 'function' ? bankStoreSignButton() : ''; /* the auditor: the sign-off is SAID whenever the month is signed, whatever the difference; no button */
-  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct();
+  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), no = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
-  if (!canAdd || (fig && !bkbCount('books'))) return '';
+  if (no || !canAdd || (fig && !bkbCount('books'))) return bankPrimaryGreyed(no); /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
   const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
-  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books')) + '</button>';
+  return bankAddButton(held + ' onclick="bankAdd()"', bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books'));
+}
+/** FIN-129: the greyed button with the server's sentence beside it, or nothing when the seat is not refused (no = '') */
+function bankPrimaryGreyed(no) {
+  if (!no) return '';
+  return bankAddButton(' disabled aria-disabled="true" title="' + bkbE(no) + '"', tx('Add to your books')) + '<span class="pe-note" data-testid="bank-sheet-why">' + bkbE(no) + '</span>';
+}
+/** BKS014-B18, the ONE definition of the Add to your books button: live (an onclick) or, FIN-129, greyed (disabled, the why beside it) */
+function bankAddButton(state, label) {
+  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + state + '>' + bkbE(label) + '</button>';
 }
 
 /** the statement signed off just before this one (the log's newest period that ended before this one starts): { to, by }, or null when there is none (continuity: the engine's check words a gap or an overlap) */

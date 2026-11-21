@@ -70,7 +70,7 @@ const has = (page, id) => page.locator('[data-testid="' + id + '"]').first().isV
   }
   for (const u of ACTORS) {
     console.log(u);
-    /* W4, first sign-in (no hint): the one practice read decides, the page ends on Home with the practice */
+    /* W4, first sign-in (no hint): the one read of /me is_practice (api #1378) decides, the page ends on Home with the practice */
     let { ctx, page } = await open(browser, base, seats[u], '', 'real');
     await page.goto(base + '/app.html#/app');
     await page.waitForSelector('[data-testid="practice-list"],[data-testid="nav-task"]', { timeout: 20000 }).catch(() => {});

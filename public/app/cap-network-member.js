@@ -836,6 +836,13 @@ function netOpenInCompose() {
     })
   });
 }
+/** "Try again" on the failed network list: forget the failure and read the list once more */
+function netBrowseRetry() {
+  UI._brStores = undefined;
+  UI._brErr = null;
+  _netPaintBrowse();
+  _netBrowseScreen();
+}
 function _netPaintBrowse() {
   var el = typeof document !== 'undefined' ? document.getElementById('netBrowseBody') : null;
   if (el) el.innerHTML = _netBrowseBody();
@@ -905,7 +912,7 @@ function _netBrowseBody() {
 
   var L = UI._brStores;
   if (L === undefined) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the network…') + '</div>';
-  if (L === null) return '<div style="padding:20px 2px;color:var(--disp-2);font-size:var(--fs-2)">Could not load the network.</div>';
+  if (L === null) return scrErr(UI._brErr, tx('the network'), 'netBrowseRetry()'); /* B7 (ERR-13): the api's own sentence and hint on the shared card, with Try again */
   if (L.not_in_network) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">This business is not part of a network.</div>';
   var stores = L.stores || [];
   if (!stores.length) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">No store in this network is visible to you.</div>';
@@ -948,8 +955,9 @@ function _netBrowseScreen() {
         UI._brBusyList = false;
         _netPaintBrowse();
       })
-      .catch(function () {
+      .catch(function (error) {
         UI._brStores = null;
+        UI._brErr = error;
         UI._brBusyList = false;
         _netPaintBrowse();
       });

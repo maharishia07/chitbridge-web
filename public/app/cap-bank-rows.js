@@ -137,11 +137,15 @@ function bkbBookActions(mayAct) {
     }
   ];
 }
+/** bkbSeatNoPost() → the server's sentence when this seat may not add lines to the books, '' when it may (or the Statements box is not loaded) */
+function bkbSeatNoPost() {
+  return typeof bkbSeatNo === 'function' ? bkbSeatNo('post') : '';
+}
 /** the Bank view's lines list: one row per statement line (and per line only the books or only a chit has), the rail's columns and actions on the shared lines list */
 function bankList() {
   const host = bkbEl('bkl_bank');
   if (!host) return;
-  const mayAct = bkbMayAct();
+  const mayAct = bkbMayAct() && !bkbSeatNoPost(); /* FIN-129: the row's Add missing is left to the page button, greyed there with the server's sentence (bankPrimaryHtml) */
   const askRight = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
   if (BKB.rail && BKB.rail.failed)

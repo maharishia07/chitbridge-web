@@ -82,7 +82,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     {
       const { ctx, p, threw } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.reconciled] });
       const t = await line(p);
-      ok(/Signed off to 30 Jun 2026/.test(t) && /Statement A[$]203,360[.]00/.test(t) && /nothing unexplained/.test(t) && !/differ|Difference/.test(t), width + ' · P9.1b reconciled with a timing item (statement differs from books, nothing unexplained): ' + t);
+      ok(/Signed off to 30 June? 2026/.test(t) && /Statement A[$]203,360[.]00/.test(t) && /nothing unexplained/.test(t) && !/differ|Difference/.test(t), width + ' · P9.1b reconciled with a timing item (statement differs from books, nothing unexplained): ' + t);
       ok(await p.locator('[data-testid="bv-tb-bank-open-acc-1500"]').count() === 1 && await p.locator('[data-cbsid="BKS004-P01"]').count() === 1, width + ' · the note and its Open Bank button carry their register codes');
       ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), width + ' · no horizontal page scroll');
       await p.screenshot({ path: path.join(SHOTS, 'rank9-reconciled-' + width + '.png') });

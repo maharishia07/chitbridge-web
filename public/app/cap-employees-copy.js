@@ -23,9 +23,14 @@
   function nameWithCopy(u, idTid, cls) {
     var name = signInName(u);
     return (
-      '<span class="' + cls + '" data-testid="' + idTid + '">' + esc(name) + '</span> ' +
+      '<span class="' + cls + '" data-testid="' + idTid + '" style="overflow-wrap:anywhere;word-break:break-all;min-width:0">' + esc(name) + '</span> ' +
       (name ? '<button data-cbsid="EMP001-B14" type="button" class="act emp-copy" id="emp_copy" data-testid="emp-copy" data-copy="' + esc(name) + '">' + esc(words('Copy')) + '</button>' : '')
     );
+  }
+  /** the count in words, never "0 on" (UX-196): "No people yet" · "1 person" · "N people" (the locale's plural rule), bold */
+  function peopleCount(n) {
+    if (!n) return esc(words('No people yet'));
+    return '<b>' + esc(typeof root.txn === 'function' ? root.txn('{count} person', '{count} people', n) : n === 1 ? '1 person' : n + ' people') + '</b>';
   }
   /** Copy: the whole sign-in name to the clipboard, said on the button itself (no toast to miss) */
   function wireCopy() {
@@ -51,5 +56,29 @@
       }
     };
   }
-  root.CBEmployeesCopy = { signInName: signInName, nameWithCopy: nameWithCopy, wireCopy: wireCopy };
+  /**
+   * W14: the line "They sign in as <name>@<practice or shop>" under the sign-in name. It follows the name AS TYPED and shows the whole ID: the part after @ is the one the server printed
+   * (suggest-key's login_format), kept; nothing is composed before the server has said it. watchKey(input, note, suggest(word) → promise of the server's reply, T) → { typed(), ask(word, then) }.
+   */
+  function watchKey(input, note, suggest, translate) {
+    var typedKey = false, suffix = '';
+    function paintNote() {
+      var key = String(input.value || '').trim().toLowerCase();
+      note.textContent = key && suffix ? translate('They sign in as') + ' ' + key + '@' + suffix : '';
+    }
+    function askSuggest(word, then) {
+      return suggest(word).then(function (reply) {
+        suffix = String((reply && reply.login_format) || '').split('@')[1] || suffix;
+        if (then && !typedKey) then(reply);
+        paintNote();
+      }, function () {});
+    }
+    input.oninput = function () {
+      typedKey = true;
+      if (suffix) paintNote();
+      else askSuggest(input.value.trim() || 'xx');
+    };
+    return { typed: function () { return typedKey; }, ask: askSuggest };
+  }
+  root.CBEmployeesCopy = { watchKey: watchKey, signInName: signInName, nameWithCopy: nameWithCopy, peopleCount: peopleCount, wireCopy: wireCopy };
 })(typeof window !== 'undefined' ? window : this);

@@ -71,6 +71,7 @@
       return read(ctx, 'readDaybook', {}, { entries: ids.join(','), from: answer.from, to: answer.to }).then(function (book) {
         (book.entries || []).forEach(function (entry) { state.entries[entry.entry_id] = entry; });
         if (ctx.mk) ctx.mk.ingest(book.entries, book);
+        if (ctx.ev) ctx.ev.ingest(book.entries); /* CMP062: the ledger line's entry carries its evidence, the same chip as the Day book */
       });
     });
   }
@@ -95,6 +96,7 @@
     var rows = state.lines.map(function (line, n) { return Object.assign({ _n: n, party: partyOf(state, line) }, line); });
     var cols = [['date', 'Date'], ['entry_no', 'Entry'], ['what', 'What it was'], ['party', 'Party'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY], ['running_minor', 'Balance', MONEY]];
     if (ctx.mk && state.answer.mark_actions) cols.push(['mark', 'Mark', 'mark']); /* ACC-358: the marker chip (cap-mark.js); absent when marking is not switched on */
+    if (ctx.ev) cols.splice(cols.length - (ctx.mk && state.answer.mark_actions ? 1 : 0), 0, ['evidence', 'Evidence', 'ev']); /* the same read-only chip as the Day book, before the mark */
     ctx.mountList($('bd_list'), {
       key: 'books-grant-ledger',
       csv: false,
@@ -104,8 +106,8 @@
       rowTid: function (row) { return 'bd-line-' + row._n; },
       columns: cols.map(function (c, i) {
         return {
-          key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, keep: c[2] === 'mark', w: c[2] === 'mark' ? 190 : c[2] ? 120 : c[0] === 'what' ? 200 : 110, html: c[2] === 'mark',
-          cell: function (row) { return c[2] === 'mark' ? ctx.mk.chip(row.entry_id) : c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : c[0] === 'date' && row.date ? root.shopDay(row.date) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
+          key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, keep: c[2] === 'mark', w: c[2] === 'mark' ? 190 : c[2] === 'ev' ? 170 : c[2] ? 120 : c[0] === 'what' ? 200 : 110, html: c[2] === 'mark' || c[2] === 'ev',
+          cell: function (row) { return c[2] === 'mark' ? ctx.mk.chip(row.entry_id) : c[2] === 'ev' ? (state.entries[row.entry_id] ? ctx.ev.chip(state.entries[row.entry_id]) : '') : c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : c[0] === 'date' && row.date ? root.shopDay(row.date) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
           value: function (row) { return row[c[0]] == null ? '' : String(row[c[0]]); }
         };
       }),

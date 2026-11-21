@@ -34,6 +34,7 @@ if (typeof EP !== 'undefined') {
     booksPayPreview: { m: 'POST', p: '/api/books/payments/preview' } /* M26: the bills table + the duplicate warnings; writes nothing */,
     booksLock: { m: 'POST', p: '/api/books/periods/:fy/:p/lock' },
     booksUnlock: { m: 'POST', p: '/api/books/periods/:fy/:p/unlock' },
+    booksReopenMonth: { m: 'POST', p: '/api/books/periods/:fy/:p/reopen' } /* the owner opens the LAST hard-locked month again, with a reason (the server refuses any other in words) */,
     booksPeriods: { m: 'GET', p: '/api/books/periods' } /* every month of every year, with its status — the twelve rows of Month lock */,
     booksOpening: { m: 'POST', p: '/api/books/opening' },
     booksPacks: { m: 'GET', p: '/api/books/packs' },
@@ -297,6 +298,15 @@ function bkMoney(minor, c) {
     return n.toFixed(bkDec(c));
   }
 }
+/** a foreign line's figure: "AUD 350.00 @ 54.60" — the code and the number (no second symbol), the rate with at least 2 places (more if it has them), in the reader's number marks */
+function bkFxText(fx) {
+  var places = bkDec(fx.currency);
+  var given = (String(fx.rate).split('.')[1] || '').length;
+  var num = function (n, lo, hi) {
+    return typeof CBLocale !== 'undefined' && CBLocale.number ? CBLocale.number(n, { minimumFractionDigits: lo, maximumFractionDigits: hi }) : Number(n).toFixed(lo);
+  };
+  return fx.currency + ' ' + num(Number(fx.foreign_minor || 0) / Math.pow(10, places), places, places) + ' @ ' + num(Number(fx.rate), 2, Math.max(2, given));
+}
 /** a balance the way a ledger writes it: the amount, then Dr or Cr — never a minus sign (the server's figure is Dr − Cr) */
 function bkDrCr(v, c) {
   v = Number(v || 0);
@@ -357,11 +367,10 @@ function bkDate(d) {
 /** the SHOP's day — the browser's local calendar day (F3b, 2026-10-13: toISOString() is the UTC day, which for an Indian shop between midnight and
  *  05:30 is YESTERDAY — the entry date, the dues as-of and the Cash tab's Today tag were all a day behind every early morning). Same day as crmLocalISO / peYmd. */
 function bkToday() {
-  var date = new Date(),
-    p = function (n) {
-      return (n < 10 ? '0' : '') + n;
-    };
-  return date.getFullYear() + '-' + p(date.getMonth() + 1) + '-' + p(date.getDate());
+  var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '', date = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
+  try { if (zone) return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); } /* the shop zone (entity.timezone → CB_SHOP_TZ); en-CA prints YYYY-MM-DD */
+  catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('bkToday:zone', failure); } /* an unknown zone falls through to the browser day */
+  return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate());
 }
 /* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
 var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };
@@ -419,9 +428,11 @@ function bkErr(e) {
 }
 /** STAFF-BOOKS: a view the server refuses this seat (403: the money reads are the owner's and the auditor's) says so in the server's own sentence, in the ONE empty/refused state (emptyState), never a raw error and never a blank pane.
  *  Any other failure keeps bkErr's words. `what` names the view. */
+/** the ONE sentence of who may read a gated books screen (twin of the api gate lib/books-readers.js READ_MONEY_WORDS: owner · the shop's accountant or bookkeeper · auditor) */
+var BK_READ_WORDS = "Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.";
 function bkRefused(e, what) {
   if (!e || e.status !== 403) return bkErr(e);
-  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || "Only the owner or the shop's auditor may read these figures.")));
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)));
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
@@ -723,9 +734,10 @@ function bkTime(ts) {
     return bkQuiet('time', failure, '');
   }
 }
-/** the small line under a Day book entry an adviser posted for the client: "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by; nothing for an entry nobody posted for the client) */
+/** the small line under a Day book entry: an adviser's "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by), else the shop's own person who made it "Made by Ravi" (the api's made_by, the entry's created_by named; a bill the counter rang already says who rang it) */
 function bkPostedByHTML(e) {
   var words = typeof CBBooksActing !== 'undefined' ? CBBooksActing.postedByWords(e) : '';
+  if (!words && e && e.made_by && !(e.source && e.source.by)) words = txf('Made by {name}', { name: e.made_by });
   return words ? '<div class="sub" data-testid="db-posted-by">' + esc(words) + '</div>' : '';
 }
 /**
@@ -1509,7 +1521,7 @@ function payWrite(amount, acknowledged, viaBand) {
         currency: bkCur(),
         mode: mode,
         reference: (document.getElementById('pay_ref') || {}).value || null,
-        received_at: new Date().toISOString(),
+        received_at: bkToday(),
         allocate: q.allocate,
         client_ref: PAY.ref,
         cheque:
@@ -2047,7 +2059,7 @@ function bkDvCsv(list, c) {
       return (Number(m || 0) / pow).toFixed(bkDec(c));
     };
   var cell = bkCsvCell;
-  var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'dr', 'cr', 'gist']];
+  var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'made_by', 'currency', 'dr', 'cr', 'gist']]; /* H-h2-008/009: who made the entry and the money's currency ride every line */
   list.forEach(function (e) {
     var s = e.source || {},
       cr = (e.lines || []).reduce(function (total, item) {
@@ -2062,6 +2074,8 @@ function bkDvCsv(list, c) {
       bkDvTenders(e).join(' · '),
       s.counter || '',
       s.by || '',
+      e.made_by || '',
+      String(c || '').toUpperCase(),
       '#' + amt(bkDvTotal(e)),
       '#' + amt(cr),
       bkDvGist(e)
@@ -2087,7 +2101,10 @@ function bkDvCsv(list, c) {
 function bkDvDownload(rows) {
   var d = BK.dv;
   if (!d) return;
-  bkSaveCsv('day-book-' + d.range.from + '-' + d.range.to + '.csv', bkDvCsv(rows, d.r.currency));
+  /* never silently partial: when the range could not be read to its end (the page cap, or a failed read) the file and the screen say how many of how many */
+  var note = bkDvPartialNote(d);
+  bkSaveCsv('day-book-' + d.range.from + '-' + d.range.to + '.csv', bkDvCsv(rows, d.r.currency) + (note ? bkCsvCell(note) + '\r\n' : ''));
+  if (note && typeof toast === 'function') toast(note);
 }
 /** what the search looks in: the entry, its bill, its party (by name AND by number — "P0007"), its lines, and its amounts the way they are read */
 function bkDvText(e, c) {
@@ -2342,7 +2359,7 @@ function bkDvNext(e, c, lines, noParty, mine) {
               esc(item.code) +
               '</span> ' +
               esc(item.name) +
-              rate(item) +
+              rate(item) + (item.fx ? ' · ' + esc(bkFxText(item.fx)) : '') + /* C4: AUD 350.00 @ 54.60 */
               (item.party_name && !noParty ? ' · ' + esc(bkPartyLabel(item.party_id, item.party_name)) : ''),
             item.dr_minor ? esc(bkMoney(item.dr_minor, c)) : '',
             item.cr_minor ? esc(bkMoney(item.cr_minor, c)) : ''
@@ -2654,7 +2671,7 @@ function bkDvFilters(entries) {
 function bkDvColumns(c) {
   var cols = bkDvCols(c);
   if (BK.ev)
-    cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { var s = bkDvEvState(e); return s && s.key === 'nodoc' ? '—' : BK.ev.chip(e); }, value: function (e) { var s = bkDvEvState(e); return s ? s.word : ''; } }); /* CMP062: never cut to make room; No source = no document to attach, so a quiet dash, not a pill that reads as a fault (rule in cap-evidence.js header, as the firm Day book) */
+    cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = bkDvEvState(e); return s ? s.word : ''; } }); /* CMP062: never cut to make room; every posted entry carries the chip (S1: attach to ANY entry); No source reads Attach receipt / No receipt, quiet, never a fault */
   if (BK.mk && BK.mk.state().may)
     cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
   if (bkFlagsOn())
@@ -2725,6 +2742,44 @@ function bkDvSorts() {
     { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) }
   ].concat(BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : []);
 }
+var BK_DV_GROUPS = [
+  ['day', 'Day'],
+  ['week', 'Week'],
+  ['month', 'Month']
+];
+/** the columns shown at first: every one the Day book does not pin to the end */
+function bkDvDefaultCols(cols) {
+  return cols
+    .filter(function (col) {
+      return col.pin !== 'end';
+    })
+    .map(function (col) {
+      return col.key;
+    });
+}
+/** a Day book row's second line: its next-step words, and in the lines view its evidence chip (CMP062) */
+function bkDvNextCell(e, currency, ctx) {
+  return bkDvNext(e, currency, ctx.view === 'lines') + (ctx.view === 'lines' && BK.ev ? '<div data-testid="db-ev-' + esc(e.entry_no) + '" style="padding:4px 0">' + BK.ev.chip(e) + '</div>' : '');
+}
+/** Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first); none when the page has no enReverse */
+function bkDvActions() {
+  return typeof enReverse === 'function'
+    ? [
+        {
+          id: 'reverse',
+          icon: '↩',
+          label: 'Reverse this entry',
+          tid: 'db-reverse',
+          when: function (e) {
+            return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal';
+          },
+          run: function (e) {
+            enReverse(e.entry_id, e.entry_no);
+          }
+        }
+      ]
+    : undefined;
+}
 /** declare the Day book's list once per read: its columns, grouping, five filters (Kind · Tender · Counter · Person · Evidence), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
   var d = BK.dv,
@@ -2755,13 +2810,7 @@ function bkDvMount(el) {
     },
     head: bkDvHead,
     columns: cols,
-    defaultCols: cols
-      .filter(function (x) {
-        return x.pin !== 'end';
-      })
-      .map(function (x) {
-        return x.key;
-      }),
+    defaultCols: bkDvDefaultCols(cols),
     rowTid: function (e) {
       return 'db-entry-' + e.entry_no;
     },
@@ -2775,16 +2824,12 @@ function bkDvMount(el) {
       return 'db-gist-' + e.entry_no;
     },
     next: function (e, ctx) {
-      return bkDvNext(e, currency, ctx.view === 'lines');
+      return bkDvNextCell(e, currency, ctx); /* CMP062 S1: the chip on every posted entry in Lines too, so a no-source entry can take a receipt */
     },
     group: {
       default: 'day',
       tid: 'db',
-      options: [
-        ['day', 'Day'],
-        ['week', 'Week'],
-        ['month', 'Month']
-      ],
+      options: BK_DV_GROUPS,
       by: function (e, mode) {
         var g = bkDvGroupOf(e.posting_date, mode);
         return [g.label, g.key];
@@ -2798,28 +2843,12 @@ function bkDvMount(el) {
       return bkDvText(e, currency);
     },
     searchHint: tx('Search party, bill, amount'),
+    loadAll: { incomplete: bkDvIncomplete, run: bkDvLoadAll },
     sorts: bkDvSorts(),
     csv: function (rows) {
       bkDvDownload(rows);
     },
-    /* Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first) */
-    actions:
-      typeof enReverse === 'function'
-        ? [
-            {
-              id: 'reverse',
-              icon: '↩',
-              label: 'Reverse this entry',
-              tid: 'db-reverse',
-              when: function (e) {
-                return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal';
-              },
-              run: function (e) {
-                enReverse(e.entry_id, e.entry_no);
-              }
-            }
-          ]
-        : undefined,
+    actions: bkDvActions(),
     tids: { expand: 'db-expand-all', collapse: 'db-collapse-all', csv: 'db-csv', count: 'db-count' },
     empty: { title: tx('Nothing in these dates') }
   });
@@ -2848,9 +2877,26 @@ function bkEvidenceIngest(list) {
     BK.ev = CBEvidence.use({
       raw: function (path) {
         return fetch(CFG.API_BASE + path, { cache: 'no-store', headers: CBBooksActing.authHeaders() });
-      }
+      },
+      mayAttach: function () { return bkIsOwner() || bkIsBookkeeper(); } /* the server decides again (POST /api/attachments with entry_id: owner or an edit seat; never a firm) */,
+      attach: bkAttachToEntry,
+      after: function () { bkTab('daybook', true); }
     });
   BK.ev.ingest(list);
+}
+/** S1 (b887): a receipt on a posted entry: the page's one file picker and size/empty check (attach-ui.js), then POST /api/attachments { entry_id } — the server checks the seat, the type by its bytes and the entry; → the answer, or null when the picker was cancelled */
+function bkAttachToEntry(entry) {
+  return cbAttachChoose().then(function (file) {
+    if (!file || !cbAttachAccept(file)) return null;
+    return cbAttachB64(file).then(function (data) {
+      return fetch(CFG.API_BASE + '/api/attachments', { method: 'POST', cache: 'no-store', headers: Object.assign(CBBooksActing.tokenHeader(), { 'Content-Type': 'application/json' }), body: JSON.stringify({ entry_id: entry.entry_id, name: file.name, mime: file.type || 'application/octet-stream', data_base64: data }) }).then(function (r) {
+        return r.json().catch(function (failure) { return bkQuiet('attach-entry', failure, {}); }).then(function (j) {
+          if (!r.ok) throw new Error(j.detail || j.message || j.error || 'API ' + r.status);
+          return j;
+        });
+      });
+    });
+  });
 }
 /**
  * CMP066 (cap-flag.js): the owner's own private bookmarks and notes on this business's entries. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the caller's own organisation.
@@ -2933,6 +2979,47 @@ function bkDvOpenDay(r, q) {
 async function bkDvAppend(r, reply) {
   return Object.assign({}, reply, { entries: (r.entries || []).concat(reply.entries || []), count: (r.entries || []).length + (reply.entries || []).length });
 }
+/** LOAD-ALL: a search and the CSV cover the WHOLE selected range, so every page is read before they run (BK_ALL_PAGES pages at most; a cap or a failed read is said, never hidden) */
+var BK_ALL_PAGES = 100;
+function bkDvIncomplete() {
+  var d = BK.dv;
+  return !!(d && d.r && d.r.next && !d.capped && !d.failed);
+}
+/** '' when every entry of the range is held, else the sentence that goes in the file and on the screen */
+function bkDvPartialNote(d) {
+  if (!d || !d.r || !d.r.next) return '';
+  var held = (d.r.entries || []).length;
+  return txf('NOT COMPLETE: only {held} of {total} entries were loaded, so this list and file leave out the older ones. Narrow the dates to see them all.', { held: held, total: Number(d.r.total || held) });
+}
+function bkDvLoadAll() {
+  var book = BK.dv;
+  if (!book || !bkDvIncomplete()) return Promise.resolve();
+  if (book.allRead) return book.allRead;
+  book.allRead = (async function () {
+    try {
+      for (var pages = 0; book.r.next && pages < BK_ALL_PAGES; pages++) {
+        var reply = await api('booksDaybook', { query: Object.assign({ limit: BK_PAGE, order: 'desc', after: book.r.next }, book.range) });
+        if (BK.dv !== book) return;
+        bkMarksIngest(reply);
+        bkEvidenceIngest(reply.entries);
+        bkFlagsIngest(reply.entries);
+        book.r = await bkDvAppend(book.r, reply);
+      }
+      if (book.r.next) book.capped = true;
+    } catch (failure) {
+      book.failed = true;
+      bkQuiet('dv-load-all', failure);
+    } finally {
+      book.allRead = null;
+      if (BK.dv === book) {
+        var note = bkDvPartialNote(book);
+        if (note && typeof toast === 'function') toast(note);
+        bkPagerPaint('bk_dvpager', 'db', book.r, 'Older', 'newest first', bkDvOlder);
+      }
+    }
+  })();
+  return book.allRead;
+}
 /** "Older": the next page of the Day book, newest first */
 async function bkDvOlder() {
   var d = BK.dv;
@@ -2948,7 +3035,7 @@ async function bkDvOlder() {
     if (d.api) d.api.refresh();
     bkPagerPaint('bk_dvpager', 'db', d.r, 'Older', 'newest first', bkDvOlder);
   } catch (e) {
-    if (typeof toast === 'function') toast(tx('Could not load more'));
+    if (typeof toast === 'function') toast(bkWhy(e));
   } finally {
     d.busy = false;
   }
@@ -3092,7 +3179,7 @@ async function bkLgMore() {
     if (BK.lt.api) BK.lt.api.refresh();
     bkPagerPaint('lg_pager', 'lg', held, 'Next', 'oldest first', bkLgMore);
   } catch (e) {
-    if (typeof toast === 'function') toast(tx('Could not load more'));
+    if (typeof toast === 'function') toast(bkWhy(e));
   } finally {
     BK.lt.busy = false;
   }
@@ -5749,9 +5836,28 @@ function bkReadOnlySeat() {
   var seat = typeof CBBooksActing !== 'undefined' && CBBooksActing.current ? CBBooksActing.current() : null;
   return !!seat && seat.role === 'auditor';
 }
+/** the one read of the signed-in role for the seat tests below ('' when nobody is signed in) */
+function bkSessionRole() { return typeof SESSION !== 'undefined' && SESSION ? SESSION.role : ''; }
 function bkIsOwner() {
-  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity' && !bkReadOnlySeat();
+  return bkSessionRole() === 'entity' && !bkReadOnlySeat();
 } /* the server enforces it; this only decides who is offered the buttons */
+/**
+ * W26: the shop's own Bookkeeper (an in-house seat the owner gave the books to). The SERVER says what the seat may do — GET /bank/statement-files carries may { write, post } (the same tests the writes gate on) —
+ * and bkSeatRead keeps the answer; the page holds no rule of its own. bkIsBookkeeper() is true only for a signed-in shop employee the server lets write; it never makes a seat the owner
+ * (lock, year close, reverse and the rest stay on bkIsOwner). BK_SEAT.post = may record entries (POST /events), so a bank line can be added from the sheet.
+ */
+var BK_SEAT = { write: false, post: false, said: false, writeWhy: '', postWhy: '' }; /* said = the server has answered; the two Why are ITS sentences for a refused write / post (FIN-129: a refused action is greyed WITH them) */
+function bkSeatRead(reply) {
+  var may = (reply && reply.may) || {};
+  BK_SEAT.write = !!(may.write && may.write.may === true);
+  BK_SEAT.post = !!(may.post && may.post.ok === true);
+  BK_SEAT.said = !!(reply && reply.may);
+  BK_SEAT.writeWhy = BK_SEAT.write ? '' : String((may.write && may.write.why) || '');
+  BK_SEAT.postWhy = BK_SEAT.post ? '' : String((may.post && may.post.why) || '');
+}
+function bkIsBookkeeper() {
+  return bkSessionRole() === 'actor' && !bkReadOnlySeat() && BK_SEAT.write;
+}
 var BK_PERIOD_SYM = { open: '○', soft_locked: '🔒', hard_locked: '⛔' };
 /**
  * ⭐ ONE READ of the twelve months: GET /api/books/periods (no fy) answers every month of every year the data holds, with its
@@ -5779,6 +5885,25 @@ async function bkPeriodsLoad() {
   if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();
   return L;
 }
+/** the newest hard-locked month in the periods list the screen already holds, as 'fy|month' ('' when none): only it may be reopened (the server refuses the rest in words) */
+function bkLastHardKey() {
+  var rows = (BK.lk && BK.lk.rows) || {}, best = null;
+  Object.keys(rows).forEach(function (key) {
+    if (rows[key] !== 'hard_locked') return;
+    var parts = key.split('|'), month = Number(parts[1]);
+    if (!best || parts[0] > best[0] || (parts[0] === best[0] && month > best[1])) best = [parts[0], month, key];
+  });
+  return best ? best[2] : '';
+}
+/** the newest closed year in the periods list: a year whose twelve months are all hard-locked ('' when none is known) */
+function bkLastClosedYear() {
+  var rows = (BK.lk && BK.lk.rows) || {}, years = (BK.lk && BK.lk.years) || [], best = '';
+  years.forEach(function (fy) {
+    for (var m = 1; m <= 12; m++) if (rows[fy + '|' + m] !== 'hard_locked') return;
+    if (fy > best) best = fy;
+  });
+  return best;
+}
 /* a select of the financial years for the Month lock and Packs tabs */
 function bkFyPicker(id, tid, sty) {
   return (
@@ -5803,237 +5928,6 @@ function bkFyPick(v) {
   BK.lk.fy = v;
   if (BK.tab === 'lock') bkLockRowsPaint();
   else bkPackCtlPaint();
-}
-/** W15-97: the words of a month's lock history and of the month a Lock waits for are lock-words.js' (the auditor's Months say the same) */
-function bkLockWho(x, st) {
-  return CBLockWords.whoOf(x, st);
-}
-function bkLockWhyWords(x, kind) {
-  return CBLockWords.whyOf(x, kind, bkMonths().map(tx)) || (x && x[kind] && x[kind].why) || '';
-}
-/* the Month lock tab: the year picker and its twelve month rows */
-async function bkLockView(body) {
-  try {
-    await bkPeriodsLoad();
-  } catch (e) {
-    body.innerHTML = bkErr(e);
-    return;
-  }
-  var own = bkIsOwner();
-  body.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:8px;max-width:900px">' +
-    '<label style="max-width:420px">' +
-    tx('Financial year') +
-    bkFyPicker('lk_fy', 'lk_fy', 'width:100%') +
-    '</label>' +
-    '<div id="lk_rows" data-testid="lk_rows"></div>' +
-    '<div id="lk_fx"></div>' /* FX1 (cap-fx.js): the foreign balances of the month to lock next — revalue, then lock */ +
-    '<div id="lk_foot" data-testid="lk_note" style="color:var(--grey);font-size:var(--fs-1)"></div>' +
-    '<div id="lk_out" data-testid="lk_out" style="font-size:var(--fs-1)"></div></div>';
-  bkLockRowsPaint();
-}
-/** what the server says about one month: may it be locked, may it open again, who did what, and the sentence when it may not */
-function bkLockRule(info, state) {
-  var mayLock = !info || !info.lock || info.lock.may,
-    lockWhy = info && info.lock && info.lock.why ? bkLockWhyWords(info, 'lock') : '',
-    openMay = !info || !info.reopen || info.reopen.may !== false;
-  return {
-    may: mayLock,
-    openMay: openMay,
-    why: lockWhy,
-    who: bkLockWho(info, state),
-    blocked: state === 'open' ? !mayLock : state === 'soft_locked' && !openMay,
-    blockWhy: state === 'open' ? lockWhy : bkLockWhyWords(info, 'reopen')
-  };
-}
-/** one month's row of the lock table: its state with who did it, the entries and sales, and the button the SERVER says may be pressed (owner only) with the reason it may not */
-function bkLockRowHTML(item, index, isOwner) {
-  var lock = BK.lk,
-    month = index + 1,
-    state = lock.rows[lock.fy + '|' + month] || 'open',
-    info = (lock.info || {})[lock.fy + '|' + month] || null,
-    rule = bkLockRule(info, state),
-    buttons = bkLockButtonsHTML(isOwner, state, month, rule);
-  return (
-    '<tr data-testid="lk-row-' +
-    month +
-    '"><th scope="row">' +
-    tx(item) +
-    '</th><td data-testid="lk-state-' +
-    month +
-    '" data-state="' +
-    esc(state) +
-    '">' +
-    (BK_PERIOD_SYM[state] || '') +
-    ' ' +
-    esc(CBLockWords.stateWord(state)) +
-    bkLockWhoHTML(month, rule.who) +
-    '</td><td data-testid="lk-figs-' +
-    month +
-    '" class="num lk-ent">' +
-    esc(String((info && info.entries) || 0)) +
-    '</td><td class="num lk-sales">' +
-    (info && info.sales_minor === undefined ? '—' : info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No income'))) + /* STAFF-BOOKS: a seat that may not read figures gets none: a dash, never "No sales" */
-    '</td><td class="lk-act">' +
-    buttons +
-    (buttons ? bkLockWhyHTML(month, state, info, rule.blocked, rule.blockWhy) : '') +
-    '</td></tr>'
-  );
-}
-/** the Lock button of an open month, or Open again + Close for good of a soft-locked one (owner only); a refused one is disabled with the server's sentence */
-function bkLockButtonsHTML(isOwner, st, month, rule) {
-  var b = '',
-    mayLock = rule.may,
-    openMay = rule.openMay,
-    lockWhy = rule.why,
-    blockWhy = rule.blockWhy;
-  if (isOwner && st === 'open')
-    b =
-      '<button data-cbsid="CMP042-B07"' + bkMountAttribute('CMP042') + ' type="button"' + (mayLock ? ' class="supact-pri"' : '') + ' data-testid="lk-lock-' +
-      month +
-      '"' +
-      (mayLock
-        ? " onclick=\"bkLockDo('lock'," + month + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '"'
-        : ' disabled style="opacity:.55;cursor:not-allowed" title="' + esc(tx(lockWhy)) + '"') +
-      '>🔒 ' +
-      tx('Lock') +
-      '</button>';
-  if (isOwner && st === 'soft_locked')
-    b =
-      '<button data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-unlock-' +
-      month +
-      '"' + (openMay ? ' onclick="bkLockReopen(' + month + ')"' : ' disabled style="opacity:.55;cursor:not-allowed" title="' + esc(tx(blockWhy)) + '"') + '>🔓 ' +
-      tx('Open again') +
-      '</button> <button data-cbsid="CMP042-B09"' + bkMountAttribute('CMP042') + ' type="button" data-testid="lk-hard-' +
-      month +
-      '" onclick="bkLockDo(\'hard\',' +
-      month +
-      ')">⛔ ' +
-      tx('Close for good') +
-      '</button>';
-  return b;
-}
-/** who locked or opened the month, and its history (the first row's line, the notes and the full list on a fold) */
-function bkLockWhoHTML(p, who) {
-  return (
-    (who.line || who.note ? '<div class="lk-who" data-testid="lk-who-' + p + '">' + esc([who.line, who.note].filter(Boolean).join('. ')) + '</div>' : '') +
-    (who.all.length > 1 ? '<details class="lk-hist" data-testid="lk-hist-' + p + '"><summary>' + esc(txf('History ({n})', { n: who.all.length })) + '</summary><ul>' + who.all.map(function (words) { return '<li>' + esc(words) + '</li>'; }).join('') + '</ul></details>' : '')
-  );
-}
-/** the line under a refused button: why it is blocked, shortened, with the return still to close when that is the reason */
-function bkLockWhyHTML(p, st, x, blocked, blockWhy) {
-  return (
-    (!blocked ? '' : '<button data-cbsid="SCR013-B02" type="button" class="lk-why" aria-expanded="false" data-testid="lk-why-' + p + '" data-short="' + esc(tx(blockWhy)) + '" data-full="' + esc(tx(blockWhy) + (st === 'open' && x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '" title="' + esc(tx(blockWhy)) + '" onclick="bkLockWhy(this)">' + esc(tx(blockWhy)) + '</button>')
-  );
-}
-/**
- * the twelve months, April to March: state as a word and a symbol, its entries and sales, and the actions the SERVER says it may do (owner only).
- * M157: ONE rule, read from GET /periods - Lock for a finished month, oldest first (else greyed with the server's sentence); the Reason box and the foot
- * follow reopen.may, so the page never promises what the server will refuse.
- */
-function bkLockRowsPaint() {
-  var el = document.getElementById('lk_rows'),
-    L = BK.lk,
-    own = bkIsOwner();
-  if (!el) return;
-  if (typeof fxLockLine === 'function') fxLockLine();
-  var foot = document.getElementById('lk_foot');
-  if (foot) foot.textContent = !own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. Close for good never opens.');
-  var rows = bkMonths()
-    .map(function (item, index) {
-      return bkLockRowHTML(item, index, own);
-    })
-    .join('');
-  el.innerHTML =
-    '<style>@media(max-width:620px){.lk-t thead{display:none}.lk-t,.lk-t tbody{display:block}.lk-t tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}.lk-t td,.lk-t th{padding:0!important}.lk-t .lk-ent{display:none}.lk-t .lk-act{grid-column:1 / -1}.lk-t .lk-sales{text-align:right}}.lk-t button.lk-why{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0!important;font:inherit!important;font-size:var(--fs-1)!important;font-weight:400!important;color:var(--grey)!important;text-align:left;cursor:pointer;display:inline-block;vertical-align:middle;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}@media(max-width:620px){.lk-t button.lk-why{display:block;margin:2px 0 0;max-width:100%}}.lk-t button.lk-why[aria-expanded=true]{white-space:normal;max-width:100%}.lk-who{color:var(--grey);font-size:var(--fs-1);font-weight:400}.lk-hist{font-size:var(--fs-1);color:var(--grey)}.lk-hist summary{cursor:pointer;display:inline-block}.lk-hist ul{margin:2px 0 0;padding-left:16px}.lk-box{max-height:calc(100vh - 405px);min-height:160px;overflow:auto}body:has(#acting-band) .lk-box{max-height:calc(100vh - 465px)}@media(max-width:620px){.lk-box{max-height:calc(100vh - 480px)}}.lk-t th{position:sticky;top:0;background:var(--surface,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
-    '<div class="lk-box" data-testid="lk-box"><table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
-    tx('Month') +
-    '</th><th>' +
-    tx('State') +
-    '</th><th class="num">' +
-    tx('Entries') +
-    '</th><th class="num">' +
-    tx('Income before tax') +
-    '</th><th></th></tr></thead><tbody>' +
-    rows +
-    '</tbody></table></div>';
-}
-/** the reason line opens in place to the full sentence (tap or Enter), shut again on the next press */
-function bkLockWhy(node) {
-  var open = node.getAttribute('aria-expanded') !== 'true';
-  node.setAttribute('aria-expanded', open ? 'true' : 'false');
-  node.textContent = node.getAttribute(open ? 'data-full' : 'data-short');
-}
-/**
- * W15-97 · OPEN AGAIN asks its reason in its own popup, beside the button that sends it (the box used to sit under the twelve rows, apart from the action). The reason is kept in the trail with the name and the day; Cancel sends nothing.
- */
-function bkLockReopen(period) {
-  var monthName = tx(bkMonths()[period - 1] || String(period));
-  /* where-used: out-of-scope the mount is bkDialogMount(6): the host screen's own code plus -U26, so it cannot be one literal */
-  ui.dialog({
-    mount: bkDialogMount(6),
-    pop: 'POP092',
-    titleText: txf('Open {m} again?', { m: monthName + ' ' + String((((BK.lk.info || {})[BK.lk.fy + '|' + period]) || {}).start_date || BK.lk.fy).slice(0, 4) }),
-    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
-    body:
-      '<label>' + tx('Why are you opening it again?') + '<input class="inp" data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' id="lk_why" data-testid="lk_why" maxlength="200" autocomplete="off" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>' +
-      '<div id="lk_whyout" data-testid="lk-whyout" role="alert" style="color:var(--warn-2)"></div>',
-    footerHtml:
-      '<button type="button" data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' + tx('Cancel') + '</button>' +
-      '<button type="button" class="supact-pri" data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' data-testid="lk-reopen-go" onclick="bkLockReopenGo(' + period + ')">' + tx('Open again') + '</button>'
-  });
-}
-function bkLockReopenGo(period) {
-  var reason = String((document.getElementById('lk_why') || {}).value || '').trim(),
-    out = document.getElementById('lk_whyout');
-  if (!reason) {
-    if (out) out.textContent = tx('Say why — the reason is kept');
-    return;
-  }
-  closeModal();
-  return bkLockDo('unlock', period, reason);
-}
-/* lock or unlock one month, asking the server and flipping only that row */
-async function bkLockDo(what, period, reason) {
-  var lockState = BK.lk,
-    fiscalYear = lockState.fy,
-    node = reason || '',
-    out = document.getElementById('lk_out');
-  var monthName = tx(bkMonths()[period - 1] || String(period));
-  if (what === 'unlock' && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
-  /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
-     page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
-  var btn = document.querySelector('[data-testid="lk-' + what + '-' + period + '"]');
-  return CBAction.run(
-    btn,
-    function () {
-      return api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fiscalYear, p: period }, body: { reason: node, hard: what === 'hard' } });
-    },
-    {
-      key: 'lk-' + fiscalYear + '-' + period,
-      out: 'lk_out',
-      failed: tx('Could not change it'),
-      confirm:
-        what === 'hard'
-          ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: fiscalYear })), yes: tx('Close for good') }
-          : { title: txf('Lock {m} {fy}?', { m: monthName, fy: fiscalYear }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }, /* E12: Lock is a commit, so it asks first in the library's confirm */
-      /* after the server answers: flip the one month row, then reload the periods */
-      outcome: function (answer) {
-        var status = answer && answer.period && answer.period.status;
-        if (status) lockState.rows[fiscalYear + '|' + period] = status; /* flip the ROW, never the whole list */
-        if (lockState.fy === fiscalYear) bkLockRowsPaint();
-        bkPeriodsLoad()
-          .then(function () {
-            if (BK.lk.fy === fiscalYear) bkLockRowsPaint();
-          })
-          .catch(function (failure) {
-            bkQuiet('periods-reload', failure);
-          }); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
-        var element = document.getElementById('lk_out');
-        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: fiscalYear, s: status ? CBLockWords.stateWord(status) : tx('Done') });
-      }
-    }
-  );
 }
 /**
  * ⚠️⚠️ A PACK IS ITS FILE (2026-09-30, review M10). Download saved the manifest — a list of names and fingerprints —

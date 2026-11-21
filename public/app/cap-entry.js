@@ -152,9 +152,8 @@ async function enOpen(preset) {
   EN.lines = [];
   EN.pv = null;
   EN.dateRef = null;
-  EN.saved = null;
-  EN.err = null;
-  EN.denied = false;
+  EN.saved = null; EN.err = null;
+  EN.denied = false; EN.deniedWhy = null;
   EN.photo = null;
   EN.ref = (preset && preset.ref) || bkRef();
   EN.pre = (preset && preset.v) || null;
@@ -176,6 +175,7 @@ async function enOpen(preset) {
       }),
       typeof booksDuesLoad === 'function' ? booksDuesLoad(false).catch(function () {}) : null
     ]);
+    enReadDenial(rr[0]);
     EN.picks = (rr[0] && rr[0].picks) || {};
     EN.accounts = (rr[1] && rr[1].accounts) || [];
     /* the events that POST /events can preview and save; the ones with a route of their own (asset, loan …) are not offered on this sheet */
@@ -201,6 +201,12 @@ async function enOpen(preset) {
   enPaint();
 }
 
+/** W25: the server says on the FIRST read whether this seat may post (may.post, the same test POST /events gates on); an acting adviser posts through the actions door, so is not stopped here */
+function enReadDenial(first) {
+  var post = first && first.may && first.may.post;
+  EN.deniedWhy = post && post.ok === false && !enActingAdviser() ? post.why || '' : null;
+  if (EN.deniedWhy !== null) EN.denied = true;
+}
 /** what the opener wants done after a save (R106: Payables reads again), or nothing */
 function enAfterOf(preset) {
   return preset && typeof preset.after === 'function' ? preset.after : null;
@@ -272,7 +278,7 @@ function enPaint() {
   if (EN.denied) {
     body.innerHTML =
       '<div class="en-warn" data-testid="en-denied">' +
-      esc(tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) +
+      esc(EN.deniedWhy ? tx(EN.deniedWhy) : tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) +
       '</div>';
     acts.innerHTML = '<button data-cbsid="CMP005" class="en-btn" onclick="enClose()">' + esc(tx('Close')) + '</button>';
     return;
@@ -826,49 +832,6 @@ function enItemsBody() {
     return { name: String(item.name || '').trim(), qty: Number(item.qty), unit_price: Number(item.unit_price), gst_rate: String(item.gst_rate).trim() === '' ? 0 : Number(item.gst_rate) };
   });
 }
-/* every refusal and every warning carries a button that takes the person to the fix */
-function enRefusalHTML(list, w) {
-  w = w || 'date';
-  return (list || [])
-    .map(function (x, index) {
-      return (
-        '<div class="en-bad" data-testid="en-refusal-' +
-        esc(x.code || index) +
-        '">' +
-        esc(x.message) +
-        '<button data-cbsid="SCR022-B05" type="button" data-testid="en-fix-' +
-        esc(x.code || index) +
-        '" onclick="enFixGo(' +
-        index +
-        ",'" +
-        w +
-        '\')">' +
-        esc((x.fix && x.fix.label) || tx('Change it')) +
-        '</button></div>'
-      );
-    })
-    .join('');
-}
-/** the server's warnings and refusals as a list, each with its fix button */
-function enWarnHTML(list) {
-  return (list || [])
-    .map(function (x, index) {
-      return (
-        '<div class="en-warn" data-testid="en-warning-' +
-        esc(x.code || index) +
-        '">' +
-        esc(x.message) +
-        '<button data-cbsid="SCR022-B06" type="button" data-testid="en-wfix-' +
-        esc(x.code || index) +
-        '" onclick="enFixGo(' +
-        index +
-        ",'warnings')\">" +
-        esc((x.fix && x.fix.label) || tx('Change it')) +
-        '</button></div>'
-      );
-    })
-    .join('');
-}
 /** one journal line of the preview: account, side, amount, and the rule that placed it */
 function enLineHTML(l, c) {
   var rate = l.rate != null && l.rate !== '' ? ' ' + esc(String(l.rate)) + '%' : '';
@@ -942,12 +905,16 @@ async function enSave(btn) {
 /** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */
 async function enSaveWrite() {
   EN.saving = true;
-  var body = enBody(); body.client_ref = EN.ref;
+  var body = enBody();
   if (EN.photo) body.attachment = EN.photo;
   try {
     var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
     EN.saved = reply || {}; EN.saving = false; EN.ref = null;
-    if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
+    if (EN.saved.state === 'waiting_accept' && EN.saved.action_id && !EN.saved.entry_no) {
+      /* SHOPBK-B: the owner asked to OK entries first: the server answered 202 with the held entry, nothing is in the books yet, so the Day book and the opener are not told of an entry */
+      EN.saved.held = true;
+      if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function (failure) { if (typeof cbQuiet === 'function') cbQuiet('entry held: the to-do count was not refreshed', failure); }); /* best effort: the sheet says Sent to the owner either way */
+    } else if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
     EN.saving = false;
@@ -970,8 +937,18 @@ function enSavedTell(saved) {
     if (typeof cblog === 'function') cblog('error', 'entry saved, a painter failed: ' + ((e && e.message) || e));
   }
 }
+/** SHOPBK-B: the screen after a Bookkeeper's Save while the owner OKs entries first: said plainly, with what was sent and its amount (the server's, in its currency); no entry number, because there is none yet */
+function enPaintHeld(body, acts) {
+  var s = EN.saved;
+  body.innerHTML =
+    '<h3 data-testid="en-held"><span class="en-ok">✓</span> ' + esc(tx('Sent to the owner for OK')) + '</h3>' +
+    (s.total_minor != null ? '<div data-testid="en-held-total" class="en-chip">' + esc(bkMoney(s.total_minor, s.currency)) + '</div>' : '') +
+    '<div class="en-why" style="border:0;margin-top:10px">' + esc(tx('Not in the books until the owner accepts.')) + '</div>';
+  acts.innerHTML = '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc(tx('Done')) + '</button>';
+}
 /** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
+  if (EN.saved.held) return enPaintHeld(body, acts);
   if (EN.saved.prepared) return CBBooksActing.paintPrepared(body, acts, EN.saved, tx, esc);
   var s = EN.saved,
     no = s.entry_no || s.no || '';
@@ -998,6 +975,14 @@ function enPaintSaved(body, acts) {
 }
 
 /* ── Reverse this entry: a plain confirm, then the mirror entry (insert-only) ── */
+/** SHOPBK-B: the owner asked to OK entries first, so a Bookkeeper's Reverse answers 202 with the held reversal: nothing is reversed yet, the sheet says it was sent and the Day book is not repainted. true = held (the caller stops) */
+function enReverseHeld(reply, fromSheet) {
+  if (!(reply && reply.state === 'waiting_accept' && reply.action_id && !reply.entry_no)) return false;
+  toast(tx('Sent to the owner for OK'));
+  if (fromSheet) enClose();
+  if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function (failure) { if (typeof cbQuiet === 'function') cbQuiet('reversal held: the to-do count was not refreshed', failure); });
+  return true;
+}
 /**
  * ⭐ THE ONE REVERSE (M29): the confirm asks the REASON (the API wants one with every reversal), posts the mirror entry and tells the caller
  * what came back — `done(r, why)` — so a statement row repaints itself (cap-books.js bkReverseLine) without a Day book read. The answer's
@@ -1025,6 +1010,7 @@ function enReverse(id, no, fromSheet, done) {
         try {
           var reply = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: why } });
           delete EN.rev[id];
+          if (enReverseHeld(reply, fromSheet)) return;
           toast((reply && reply.words) || txf('Reversed — new entry {no}', { no: (reply && (reply.entry_no || reply.no)) || '' }));
           if (fromSheet) enClose();
           if (typeof done === 'function') done(reply, why);

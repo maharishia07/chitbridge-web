@@ -23,7 +23,7 @@
     actionsList: { m: 'GET', p: '/api/books-actions' } /* { actions, total, page, limit }: state · mine · delegated · since · page · limit narrow it */,
     actionsGet: { m: 'GET', p: '/api/books-actions/:id' } /* one action with its steps[] */,
     actionsReview: { m: 'POST', p: '/api/books-actions/:id/review' } /* { store_id, body_hash }: a colleague of the preparer */,
-    actionsReturn: { m: 'POST', p: '/api/books-actions/:id/return' } /* { store_id, body_hash, reason } */,
+    actionsReturn: { m: 'POST', p: '/api/books-actions/:id/return', idem: 'attempt' } /* { store_id, body_hash, reason } */,
     actionsAccept: { m: 'POST', p: '/api/books-actions/:id/accept', idem: 'attempt' } /* the owner only: { store_id, body_hash, total_minor, currency } */
   };
   /* the six books reads an auditor opens. Plain paths on purpose: the endpoint registry already names each one (cap-books.js booksTB · booksPL · booksBS · booksDaybook · booksPeriods, accounts-shell.js booksDues) and
@@ -51,6 +51,27 @@
     PREVIEW_TOTAL_DIFFERS: 'The total changed since it was prepared. Nothing was posted. Open it again.',
     BOOKS_ACTION_NOT_SWITCHED_ON: 'Accountant actions are not switched on yet. Nothing was changed.'
   };
+  /** W19: why a client's books did not open, said by the SERVER'S refusal code (api middleware/books-grant, lib/books-grant WORDS): [what happened, what to do]. A code not listed keeps the server's own words and no next step. */
+  var CLOSED_BOOKS = {
+    BOOKS_GRANT_NOT_ASSIGNED: ['This client is not assigned to you.', 'Take it from Unassigned, or ask the partner.'],
+    BOOKS_GRANT_NONE: ['Your firm has no access to these books.', 'Ask the business owner to give access.'],
+    BOOKS_GRANT_ENDED: ["Your firm's access has ended.", 'Ask the business owner to give it again.'],
+    BOOKS_GRANT_NOT_LIVE: ['Your firm is not connected to this business.', 'Ask the business owner to connect again.'],
+    BOOKS_GRANT_NOT_FOR_YOU: ["Your role cannot open other businesses' books.", 'Ask the partner to change your role.'],
+    GRANT_ROUTE_NOT_LISTED: ['Your role cannot open this part.', 'Ask the partner to change your role.'],
+    GRANT_READ_ONLY: ['Your role can read, not change.', 'Ask the partner to change your role.']
+  };
+  /** closedBooks(code, fallback) → { why, next } for the refusal page: the sentence and what to do, or the server's own sentence alone */
+  function closedBooks(code, fallback) {
+    var row = CLOSED_BOOKS[code];
+    return row ? { why: words(row[0]), next: words(row[1]) } : { why: fallback || '', next: '' };
+  }
+  /** W19: the refusal page of a client's books, drawn by the ONE failed-read frame: why (the server's code), what to do, and the way back to his queue */
+  function closedFrame(host, what, code, fallback) {
+    var said = closedBooks(code, fallback);
+    var queue = root.CBQueueBack ? { href: root.CBQueueBack.href(), label: root.CBQueueBack.label(words) } : null;
+    return root.CBShell.readFailed(host, { what: what, status: 403, detail: said.why, next: said.next, back: [queue, { href: '/network.html', label: words('Back to My network') }] });
+  }
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
@@ -199,5 +220,5 @@
   function stateWords(state) {
     return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, doorsFor: doorsFor, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
+  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, doorsFor: doorsFor, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, closedBooks: closedBooks, closedFrame: closedFrame, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);

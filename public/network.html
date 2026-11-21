@@ -101,7 +101,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: the one list control -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the one kural footer band; CBFrame hands it to the shell -->
 <script src="/engine/money.js"></script>   <!-- CBMoney.decimals: the books view paints a figure in its currency's own decimals -->
-<script src="/app/books-grant-api.js"></script>   <!-- ACC-176: the grant's endpoints, the one caller -->
+<script src="/app/queue-back.js"></script><script src="/app/books-grant-api.js"></script>   <!-- ACC-176: the grant's endpoints, the one caller -->
 <script src="/app/books-grant-words.js"></script>   <!-- ACC-176b: the owner's plain words: routes, the weekly line, what was posted, one row per firm -->
 <script src="/app/books-grant-member.js"></script>   <!-- ACC-176: My books — who can see my books -->
 <script src="/app/lock-words.js"></script><script src="/app/books-acting.js"></script>   <!-- ACC-176b: the one acting context — store, role, headers, banner, clear on a switch -->
@@ -169,8 +169,8 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
     base: API,
     sidebar: true,
     tab: location.hash === '#books' ? 'books' : 'mine',
-    onEnded: function () {
-      CBFrame.ended();
+    onEnded: function (said) {
+      CBFrame.ended(said);
     }
   });
 })();

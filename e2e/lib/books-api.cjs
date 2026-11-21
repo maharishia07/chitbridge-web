@@ -31,7 +31,7 @@ const statement = (partyId, o) => { const s = Object.assign({ currency: 'INR', p
 const followOf = (b) => { const late = Object.keys(b).filter((k) => k !== 'not_due').reduce((s, k) => s + Math.abs(b[k] || 0), 0); return { not_due: Math.abs(b.not_due || 0), d0_30: 0, d31_60: late, d61_90: 0, d90_plus: 0, worst: late ? 'd31_60' : null, no_terms_minor: 0, terms: 'ok' }; };
 /* the Needs-attention counts the api puts on every row and, per side, on the answer (the contract's `needs`): none waiting unless the case names them */
 const noNeeds = () => ({ parties: 0, bills: 0, disputed: 0, query: 0, held: 0, no_tax_invoice: 0, no_terms: 0, overdue: 0, overdue_minor: 0 });
-const dueRow = (o) => { const row = Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) }); if (row.follow_up === undefined) row.follow_up = followOf(row.buckets); if (row.balance_words === undefined) row.balance_words = owesWords(row.balance_minor); if (row.needs === undefined) row.needs = noNeeds(); return row; };
+const dueRow = (o) => { const row = Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0, advance_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) }); if (row.follow_up === undefined) row.follow_up = followOf(row.buckets); if (row.balance_words === undefined) row.balance_words = owesWords(row.balance_minor); if (row.needs === undefined) row.needs = noNeeds(); return row; };
 /** GET /api/books/dues */
 const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', needs: { customer: noNeeds(), supplier: noNeeds() }, parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0), aged_totals: { customer: { not_due: 0, d0_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0, worst: null, no_terms_minor: 0, terms: 'ok', balance_minor: 0 }, supplier: null } }, o || {});
 /** one row of GET /api/books/periods */
@@ -48,11 +48,13 @@ const posted = (o) => Object.assign({ ok: true, entry_id: 'e1', entry_no: 'MJ/26
 /** the `source` of a day book entry or a ledger line (routes/books.js sourceOf): ALL these keys when there is one, null when the entry has no source chit */
 const source = (o) => (o ? Object.assign({ chit_id: null, ref: null, kind: 'bill', counter: null, by: null, count: null, bills: null, how: null, how_ref: null, split: null, doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' }, o) : null);
 /** GET /api/books/ledger/:account */
-const ledger = (code, name, lines, o) => Object.assign({ currency: 'INR', account: { code, name, nature: 'asset' }, party: null, from: '2026-04-01', to: DAY, opening_minor: 0,
+const ledger = (code, name, lines, o) => Object.assign({ months: ledgerMonths(lines, o && o.opening_minor), currency: 'INR', account: { code, name, nature: 'asset' }, party: null, from: '2026-04-01', to: DAY, opening_minor: 0,
   lines: (function () { let run = (o && o.opening_minor) || 0; return (lines || []).map((l) => { run += (l.dr_minor || 0) - (l.cr_minor || 0); return Object.assign({ doc_date: l.date, party_id: null, running_minor: run,
     /* PERF1: a ledger line reads its own entry — entry_id · entry_no · event_type · the reversal pair (the API's keys, null when none) */
     entry_id: l.entry_id || ('e-' + (l.ref || l.date)), entry_no: l.entry_no || l.ref || null, event_type: l.event_type || null,
     reverses_entry_id: null, reversed_by: null, evidence: { doc: null, files: [], count: 0, flag: null }, other: null, party_name: null }, l, { source: source(l.source) }); }); })(), closing_minor: 0 }, o || {});
+/** ACC-381: the ledger answer also carries months[] (the API's keys: month · debit_minor · credit_minor · closing_minor = the running balance at the month's last line), derived from the lines so every stand-in sends it */
+const ledgerMonths = (lines, opening) => { const by = {}; let run = opening || 0; (lines || []).forEach((l) => { run += (l.dr_minor || 0) - (l.cr_minor || 0); const m = String(l.date || l.doc_date || '').slice(0, 7); const row = by[m] || (by[m] = { month: m, debit_minor: 0, credit_minor: 0, closing_minor: 0 }); row.debit_minor += l.dr_minor || 0; row.credit_minor += l.cr_minor || 0; row.closing_minor = run; }); return Object.keys(by).sort().map((m) => by[m]); };
 /** one asset register row (lib/books-assets) */
 const assetRow = (o) => Object.assign({ entity: 'ent-M', asset_id: 'a1', name: 'Asset', asset_class: 'furniture', cost_minor: 0, currency: 'INR', put_to_use: DAY, source_entry_id: 'e1', source_chit_id: null,
   accumulated_minor: 0, last_dep_fy: null, disposed_on: null, disposal_entry_id: null, proceeds_minor: null, created_by: 'u1', wdv_minor: 0 }, o || {});
@@ -62,7 +64,7 @@ const recRow = (o) => Object.assign({ entity: 'ent-M', recurring_id: 'r1', name:
 /** GET /api/books/todo rows always carry items and the action's call */
 const todoRow = (x) => Object.assign({ items: [] }, x, { action: Object.assign({ call: 'GET /api/books/health' }, x.action || {}) });
 /** GET /api/books/events: every event carries preview/post/ledger_group, every field `required` */
-const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { dr: 'Dr the receiver', cr: 'Cr the giver' }, real: { dr: 'Dr what comes in', cr: 'Cr what goes out' }, nominal: { dr: 'Dr expenses and losses', cr: 'Cr incomes and gains' } } }, a, {
+const eventsAnswer = (a) => Object.assign({ may: { post: { ok: true, code: null, why: null } }, pending: [], golden: { personal: { dr: 'Dr the receiver', cr: 'Cr the giver' }, real: { dr: 'Dr what comes in', cr: 'Cr what goes out' }, nominal: { dr: 'Dr expenses and losses', cr: 'Cr incomes and gains' } } }, a, {
   events: (a.events || []).map((e) => Object.assign({ preview: true, post: 'POST /events', ledger_group: null, words: e.kind, icon: 'pen', band: 'adjust' }, e, e.fields ? { fields: e.fields.map((f) => Object.assign({ required: false }, f)) } : {})),
   picks: Object.assign({ mode: [], expense_class: [], income_class: [], blocked_credit: [], debit_reason: [] }, a.picks) });
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */
@@ -71,7 +73,7 @@ const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code 
 const daybook = (entries, o) => Object.assign({ currency: 'INR', country: 'IN', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
 /* 17 Nov: the api now sends no_narration (a person wrote none) and recorded_at on EVERY day-book entry (routes/books.js daybook), and the shop's country on the answer */
-const entry = (e) => Object.assign({ evidence: { doc: null, files: [], count: 0, flag: null }, posted_by: null, made_by: null, may_reverse: false, why: null, no_narration: false, recorded_at: '2026-10-03T05:00:00.000Z', doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
+const entry = (e) => Object.assign({ evidence: { doc: null, files: [], count: 0, flag: null }, posted_by: null, made_by: null, may_reverse: false, why: null, no_narration: false, recorded_at: '2026-10-03T05:00:00.000Z', doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null, fx: null }, l)) });
 /** GET /api/books/returns for a country whose return is not made from these books (India: GSTR-1 / 3B come from the bills, via the rail) - the contract's `GET /api/books/returns #rail` answer, every key */
 const returnsRail = (o) => Object.assign({ form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: "Your GSTR-1 and GSTR-3B are made from your bills, not from these books. Close and pay the month's GST here.", rail: '/api/tax/gstr' }, o || {});
 /** the period answer of POST /periods/:fy/:p/lock|unlock */
@@ -186,3 +188,8 @@ const payAdvice = (payment_id, body, name, o) => {
 /** PATCH /api/books/payments/:id → the row after the merge-patch */
 const payPatched = (payment_id, advice) => ({ ok: true, payment_id, advice: Object.assign({ chit_id: null, state: 'none', shared_at: null }, advice || {}) });
 Object.assign(module.exports, { adviceMay, payAdvice, payPatched });
+
+/** the api's day rule (lib/books-period.js, GOR-12): a books door takes a DAY, YYYY-MM-DD — no time, no zone. null when fine, else the 400 body the real api sends. A stand-in calls this on every date field so an ISO timestamp cannot slip back in. */
+const dayRefusal = (field, value) => (value == null || /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? null
+  : Object.assign(refusal('Send the date only, YYYY-MM-DD, with no time or zone.', 'DATE_INVALID'), { field }));
+Object.assign(module.exports, { dayRefusal });

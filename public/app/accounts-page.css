@@ -145,6 +145,9 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .todo-sym{font-size:18px}
 .todo-n{font-size:15px;font-weight:700;min-width:1.5ch}
 .todo-words{font-size:14px;color:var(--ink);overflow-wrap:anywhere}
+.held-list{display:grid;gap:6px;margin:-4px 0 6px 28px}
+.held-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border:1px solid var(--line,#DDE3EA);border-radius:10px;background:var(--card,#fff);padding:8px 12px;font-size:14px;color:var(--ink)}
+.held-row .held-words{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
 .todo-go{align-self:center;white-space:nowrap}
 .todo-ok{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--green-d);padding:18px 0}
 .todo-ok.off{color:var(--muted-2)}
@@ -393,3 +396,7 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
 }
 /* ACC-176b / W15-71: the acting band over the books page (the same rules as network.html's .bv-band .ba-band): a firm working in a client's books sees whose they are, and the way back */
 #acting-band{margin:0 0 6px}.bv-band{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap;padding:0;min-height:28px}.bv-slot{flex:1 1 0;min-width:0}.bv-ro{white-space:nowrap}.bv-tabrow{gap:6px 8px;padding:0}.bv-totals{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}.bv-facts{display:inline-flex;gap:6px;flex-wrap:wrap}.bv-band .act{min-height:28px;padding-block:0}.bv-ctx{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.bv-ctx .inp{min-height:28px;padding:0 6px;width:140px}.bv-tabrow .act{min-height:28px;padding:0 10px}.bv-months .act{min-height:28px;padding:0 8px;font-size:13px}.bv-tabrow{flex-wrap:wrap}@media (min-width:1100px){.bv-tabrow{flex-wrap:nowrap}}@media (max-width:700px){.bv-tabrow{flex-wrap:wrap}.bv-totals{margin-inline-start:0}.bv-tabrow .act,.bv-band .act{min-height:40px}}.ba-band{position:sticky;top:0;z-index:5;background:var(--ground,#fbf6ec)}.ba-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ba-band .act{min-height:32px;padding-block:2px}
+/* FIN-115: the column map on the Bank screen (cap-bank-map.js), the same card as bank-demo's */
+.bd-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;max-width:720px;margin:10px 0}
+.bd-map-grid label{display:block;font-size:12px;font-weight:600}
+.bd-map-grid select{display:block;width:100%;font:inherit;min-height:44px;margin-top:4px}

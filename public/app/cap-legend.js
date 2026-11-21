@@ -275,7 +275,7 @@ const CAP_CATALOGUE = [
       { n: 'Duty / Break shift', s: 'done' },
       { n: 'Deactivate / reactivate / remove — full binding cleanup', s: 'done' },
       { n: 'Roster tabs + covers badges', s: 'done' },
-      { n: 'CBAssign v2 — who holds each piece of work: Held-by chip, always-on ticks, persistent bulk bar, Undo, one vocabulary; shown on the server verdict (may_assign), the server decides (public/app/assign-bar.js, POST /api/chits/assign-bulk)', s: 'done' },
+      { n: 'CBAssign v2 — who holds each piece of work: Held-by chip, always-on ticks, persistent bulk bar, Undo, one vocabulary; shown on the server verdict (may_assign), the server decides (public/app/assign-bar.js, POST /api/chits/assign-bulk); the Work queue (CBAssign.queue(q)) is the ONE mountable form of it: Mine · Unassigned · Everyone (an employee opens on Mine, the owner on Everyone), Assign to me, ticks cleared after every action; mounted by the books practice and Tasks & Orders, any list may mount it with its rows, noun and door', s: 'done' },
       { n: 'Assign plug-ins — a list whose rows have a holder adopts the ONE assign pattern with a plug name, subject id and noun: books practice (chits), CRM follow-ups (own write route, cap-crm-assign.js), Tasks sheet, the Holds column Hand over all', s: 'done' },
       { n: 'Leave calendar · shift rotation · wage / salary', s: 'backlog' },
       { n: 'Non-human co-assist types (connector / IoT / AI) auth', s: 'backlog' }

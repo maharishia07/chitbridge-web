@@ -15,7 +15,8 @@
      the LIST is CBList; every write goes through CBAction. The screens are app/cap-employees.js; this page is the gate and the frame only.
      Which actions are open is the server's answer (GET /api/people). ?embed=1&view=add|onduty draws the same screens with no frame, for another page
      to open in a dialog (app/embed-host.js) — it tells its host { cb: 'employees', event: 'added' | 'changed' | 'close' }. No HR or payroll here. -->
-<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
+<link rel="stylesheet" href="/app/page-skeleton.css">
+<link rel="stylesheet" href="/app/cap-employees.css">   <!-- the access panel rules, shared with accounts.html -->   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
 <style>
 :root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
@@ -54,15 +55,10 @@ dialog.sheet h2{margin:0 0 4px;font-family:var(--serif);font-size:21px}
 dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:18px;color:inherit}
 .emp-copy{min-height:32px;padding:0 10px;font-size:13px}
 .emp-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.emp-out{min-height:20px;margin:6px 0;font-weight:600;color:var(--green-d,#0D4A2B)}
-.emp-out[data-tone="error"]{color:var(--red-i,#8E3517)}
 .emp-code{margin:10px 0;padding:14px;border:1px solid var(--line,#e6dcc6);border-radius:12px;text-align:center;background:var(--surface,#fffdf8);color:var(--ink,#2a2418)}
 .emp-digits{font-size:40px;font-weight:700;letter-spacing:.12em;line-height:1.2;color:var(--ink,#2a2418)}
 .emp-code-say{margin-top:6px;font-weight:600}
 .emp-acts{display:flex;flex-direction:column;gap:6px}
-.emp-panel,.emp-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#e6dcc6)}
-.emp-form label{font-size:13px;font-weight:600;margin-top:4px}
-.emp-opt{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line,#e6dcc6);border-radius:9px}
 .emp-duty-row{padding:10px 2px;border-bottom:1px solid var(--line,#e6dcc6)}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
@@ -115,8 +111,8 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
       base: api == null ? API : api,
       embed: embed,
       view: view,
-      onEnded: function () {
-        embed ? start(null) : CBFrame.ended();
+      onEnded: function (said) {
+        embed ? start(null) : CBFrame.ended(said);
       }
     });
   }

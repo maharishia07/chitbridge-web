@@ -67,6 +67,7 @@
     today: 'today',
     by: 'by {who}',
     changedNote: 'This entry changed after it was checked. Check it again.',
+    changedBy: 'Changed by {who} just now.',
     questionHead: 'Question',
     threadHead: 'Replies',
     replyOff: 'Replies are closed.',
@@ -214,16 +215,75 @@
       var on = r.waiting_on || (Number(r.message_count) > 0 ? 'auditor' : 'owner');
       return (on === 'owner') === !control.mayCheck(id) ? 'waiting' : 'answered';
   }
+  /** "Changed by <name> just now": on the open sheet's line, else a toast (the name is the server's by_name) */
+  function tellChanged(state, id) {
+    var row = state.rows[String(id)], who = row && row.by_name, out = state.outEl || null;
+    var text = markText(fill(markKit.MARK_WORDS.changedBy, { who: who || markText(markKit.MARK_WORDS.theOther) }));
+    if (out) { out.textContent = text; out.setAttribute('data-tone', 'error'); } else if (root.toast) root.toast(text);
+    state.changed = state.changed || {};
+    state.changed[String(id)] = text; /* the chip keeps the sentence until this seat writes again: a toast alone is gone before the person looks */
+    paint(root.document);
+  }
+  /** a partner's mark can land after this seat's save answer: read the marks again (the same marksRead) and say so when one differs from what this screen shows */
+  function rereadMarks(state, ids) {
+    ids = (ids || []).map(String);
+    var before = {};
+    ids.forEach(function (id) { before[id] = JSON.stringify(state.rows[id] || null); });
+    return loadMarks(state, ids).then(function () {
+      var changed = ids.filter(function (id) { return before[id] !== JSON.stringify(state.rows[id] || null); });
+      if (changed.length) { fire(state); tellChanged(state, changed[0]); }
+      return changed;
+    });
+  }
+  /** the ids whose chips this page draws now (a hidden or absent chip is not re-read) */
+  function shownIds(state) {
+    var ids = [];
+    Array.prototype.forEach.call((markKit.doc.querySelectorAll ? markKit.doc.querySelectorAll('[data-mark]') : []), function (host) {
+      try { var spec = JSON.parse(host.getAttribute('data-mark')); if (spec.adopter === state.cfg.adopter) ids.push(String(spec.id)); } catch (failure) { if (root.cbQuiet) root.cbQuiet('mark:spec', failure); }
+    });
+    return ids;
+  }
+  var watching = false;
+  /** the tab or window comes back: every control re-reads the chips it shows (one trip a 200 ids) */
+  function watchFocus() {
+    if (watching || !root.addEventListener) return;
+    watching = true;
+    var back = function () { if (markKit.doc.hidden) return; controls.forEach(function (c) { var ids = shownIds(c); if (ids.length && c.on) rereadMarks(c, ids); }); };
+    root.addEventListener('focus', back);
+    if (markKit.doc && markKit.doc.addEventListener) markKit.doc.addEventListener('visibilitychange', back);
+  }
+  var WATCH_MS = 20000; /* a light timer while the sheet is open */
+  /** while one record's sheet is open: re-read its mark every WATCH_MS (not while the tab is hidden); returns stop */
+  function watchOne(state, id) {
+    if (!root.setInterval) return function () {};
+    var timer = root.setInterval(function () { if (!markKit.doc.hidden) rereadMarks(state, [String(id)]); }, WATCH_MS);
+    return function () { root.clearInterval(timer); };
+  }
   /** the one write: Checked is one press; a Query needs its words, On hold takes a reason (the server says so too) */
   function setMark(state, id, kind, note, button) {
       var body = { adopter: state.cfg.adopter, subject_id: String(id), kind: SEND[kind] || kind };
       if (note) body.note = note;
       var out = state.outEl || null;
-      var run = root.CBAction && root.CBAction.run;
-      var go = function () { return askMark(state, 'marksSet', { body: body }); };
-      var done = function (v) { merge(state, v, String(id)); paint(root.document); fire(state); return v; };
-      if (!run) return go().then(done);
-      return run(button || null, go, { key: 'mk:' + state.cfg.adopter + ':' + id, busy: markText('Saving…'), out: out, done: markText(markKit.MARK_WORDS.saved), failed: markText(markKit.MARK_WORDS.failed), outcome: done });
+      var runAction = root.CBAction && root.CBAction.run;
+      /* two seats at once: the server keeps the LATER mark, so the screen shows what the server answered (or, on a 409, re-reads it) and says who changed it, never the mark it asked for */
+      var tell = function (id2) { tellChanged(state, id2); };
+      var sendMark = function () {
+        if (state.changed) delete state.changed[String(id)];
+        return askMark(state, 'marksSet', { body: body }).then(null, function (failure) {
+          if (!failure || failure.status !== 409) throw failure;
+          return loadMarks(state, [String(id)]).then(function () { fire(state); tell(id); throw failure; });
+        });
+      };
+      var done = function (v) {
+        merge(state, v, String(id));
+        var got = classOf(state.rows[String(id)]), asked = SEND[kind] || kind;
+        paint(root.document); fire(state);
+        if (got && asked !== 'removed' && (SEND[got] || got) !== asked) tell(id);
+        else rereadMarks(state, [String(id)]); /* the partner's mark can have landed between this seat's save and its answer: the next read says so (Changed by …) */
+        return v;
+      };
+      if (!runAction) return sendMark().then(done);
+      return runAction(button || null, sendMark, { key: 'mk:' + state.cfg.adopter + ':' + id, busy: markText('Saving…'), out: out, done: markText(markKit.MARK_WORDS.saved), failed: markText(markKit.MARK_WORDS.failed), outcome: done });
   }
   /** the open list + checked n of m, ONE read */
   function summaryOf(state) {
@@ -235,11 +295,14 @@
         return state.sum;
       }, function () { state.sum = null; return null; });
   }
+  /** the row's left bar for a turn: waiting for you = the full bar, answered = the quiet one */
+  function markRowClass(turn) { return turn === 'waiting' ? 'mk-wait' : turn === 'answered' ? 'mk-answered' : ''; }
   function useMark(cfg) {
     addCss();
     var state = { cfg: cfg || {}, rows: {}, names: {}, may: null, on: false, sum: null, subs: [], failed: false };
     ensureEP();
     controls.push(state);
+    watchFocus();
     var control = {
       load: function (ids) { return loadMarks(state, ids); },
       ingest: function (list, answer, key) { return ingestMarks(state, list, answer, key); },
@@ -248,10 +311,7 @@
       nameOf: function (id) { return state.names[String(id)] || ''; },
       turn: function (id) { return turnOf(state, control, id); },
       /** the row's left bar: waiting for you = the full bar, answered = the quiet one */
-      rowClass: function (id) {
-        var t = control.turn(id);
-        return t === 'waiting' ? 'mk-wait' : t === 'answered' ? 'mk-answered' : '';
-      },
+      rowClass: function (id) { return markRowClass(control.turn(id)); },
       /** the mark's neutral class for one record, for a filter or a count by the page: { state: 'none'|'clear'|'open'|'hold'|'reject', altered } — the server's words, nothing decided here (A3C) */
       markOf: function (id) {
         var r = state.rows[String(id)];
@@ -261,13 +321,14 @@
         var r = state.rows[String(id)], a = (r && r.actions) || state.may || {};
         return !!(a.set && a.set.ok !== false && a.set.ok != null) || (a.set === true);
       },
-      chip: function (id) {
-        return '<span class="mk-host" data-mark=\'' + esc(JSON.stringify({ adopter: state.cfg.adopter, id: String(id) })) + '\'>' + markKit.chipHTML(state, String(id)) + '</span>';
-      },
+      chip: function (id) { return '<span class="mk-host" data-mark=\'' + esc(JSON.stringify({ adopter: state.cfg.adopter, id: String(id) })) + '\'>' + markKit.chipHTML(state, String(id)) + '</span>'; },
       set: function (id, kind, note, button) { return setMark(state, id, kind, note, button); },
       /** the Query sheet for one record (CMP059) */
       sheet: function (id, o) { return markKit.openSheet(state, control, String(id), o || {}); },
       summary: function () { return summaryOf(state); },
+      /** re-read these ids' marks now, saying "Changed by …" when one differs; watch(id) does it on a timer while a sheet is open, returns stop */
+      reread: function (ids) { return rereadMarks(state, ids); },
+      watch: function (id) { return watchOne(state, id); },
       onChange: function (fn) { state.subs.push(fn); },
       state: function () { return { rows: state.rows, sum: state.sum, may: state.may, failed: state.failed }; },
       destroy: function () { controls = controls.filter(function (x) { return x !== state; }); }

@@ -91,7 +91,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const { ctx, p } = await open(vp);
     await load(p);
     const tag = vp.tag;
-    ok(prefill === null, tag + ': the account has its currency on record, so no currency question (' + prefill + ')');
+    ok(prefill === 'AUD', tag + ': FIN-111 - the file is silent on currency, so the question shows, prefilled with the account value (' + prefill + ')');
     /* M3 · ONE truth in the band */
     const band = (await p.textContent('[data-testid="bank-finish"]')).replace(/\s+/g, ' ');
     ok(/18,280\.75/.test(band) && !/18,280\.75 Dr/.test(band) && /19,963\.00/.test(band), tag + ': the band gives the statement and the books figures, no "Dr" on the statement (' + band.slice(0, 120) + ')');

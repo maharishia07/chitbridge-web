@@ -51,7 +51,7 @@ function standIn() {
   s.assignBulk = (body) => {
     if (s.refuse) return { status: 403, body: { type: 'about:blank', title: 'Not permitted', status: 403, code: 'CHIT_NOT_PERMITTED', detail: REFUSAL, may: false, why: REFUSAL, message: REFUSAL } };
     const skipped = [], previous = []; let assigned = 0;
-    body.subject_ids.forEach((sub) => {
+    (body.subject_ids || (body.chit_ids || []).map((chit) => String(chit).replace(/^h-/, ''))).forEach((sub) => {
       if (!s.jobs.has(sub)) return skipped.push({ subject_id: sub, code: 'JOB_NOT_OPEN', reason: NO_JOB });
       previous.push({ chit_id: 'h-' + sub, subject_id: sub, actor_id: s.holder.has(sub) ? s.holder.get(sub).actor_id : null });
       if (body.target_actor_id === null) s.holder.delete(sub);
@@ -113,6 +113,7 @@ async function tick(page, ids) {
   for (const x of ids) await page.locator('[data-selrow="' + x + '"]').check(); /* always-on ticks: no Select mode */
 }
 async function bulk(page, which) { await page.locator('[data-bulk="' + which + '"]').click(); }
+async function clearTicks(page) { const clear = page.locator('[data-cbl-selclear]'); if (await clear.count()) await clear.click(); } /* W11: the ticks clear after every assign, hand-over or back to pool, so the Clear button is only there while something is ticked */
 /** the popover (ui.dialog): press a person by name; nothing is pre-picked, so one press is the whole answer */
 async function pickAndGo(page, name, note) {
   await page.waitForSelector('[data-as-pick]');
@@ -237,7 +238,7 @@ async function w3Employees(browser, base) {
       const api = standIn();
       const { ctx, page } = await open(browser, base, api, vp, theme, 'owner');
       ok(tag + ' · 1 the list is drawn from the 150 clients', (await rows(page)) > 0, await rows(page));
-      ok(tag + ' · 1 an empty row is the action itself: + Assign to…', /Assign to…/.test(await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip]').first().innerText()), await heldText(page, 1));
+      ok(tag + ' · 1 Held by is plain text, no button on the row (a dash when nobody holds it)', (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip]').count()) === 0 && (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-testid="assign-held"]').first().innerText()).trim() === '—', await heldText(page, 1));
       ok(tag + ' · 1 the quick views Mine · Unassigned · Everyone are on the first paint', /Mine[^]*Unassigned[^]*Everyone/.test(await page.locator('.cbl-views').first().innerText()));
       ok(tag + ' · no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
       await page.screenshot({ path: file('1-list') });
@@ -246,12 +247,12 @@ async function w3Employees(browser, base) {
       const first22 = Array.from({ length: 22 }, (_, i) => id(i + 1));
       ok(tag + ' · 2 no Select mode button and no bar before a tick', (await page.locator('[data-cbl-selmode]').count()) === 0 && (await page.locator('[data-bulk]').count()) === 0);
       await tick(page, first22);
-      ok(tag + ' · 2 the bar offers Assign to…, Hand over, Back to pool (3 buttons, no Open jobs)', (await page.locator('[data-bulk]').count()) === 3, await page.locator('[data-bulk]').allInnerTexts());
+      ok(tag + ' · 2 the bar offers Assign to me, Assign to…, Hand over, Back to pool (4 buttons, no Open jobs; MTX-new-4 put Assign to me first)', (await page.locator('[data-bulk]').count()) === 4, await page.locator('[data-bulk]').allInnerTexts());
       ok(tag + ' · 2 the count is said once: 22 selected', /22 selected/.test(await page.locator('[data-testid^="cbl-selcount-"]').first().innerText()));
       await page.screenshot({ path: file('2-bulk-bar') });
 
       /* 3 ten to Anna */
-      await page.locator('[data-cbl-selclear]').click();
+      await clearTicks(page);
       await tick(page, first22.slice(0, 10));
       await bulk(page, 'assign');
       await page.waitForSelector('[data-as-pick]');
@@ -266,11 +267,11 @@ async function w3Employees(browser, base) {
       const a1 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[0];
       ok(tag + ' · 3 assign-bulk got plug client, role, 10 subject ids and Anna', !!a1 && a1.body.plug === 'client' && a1.body.role === 'adviser' && a1.body.subject_ids.length === 10 && a1.body.target_actor_id === ANNA.actor_id && !('chit_ids' in a1.body), JSON.stringify(a1));
       ok(tag + ' · 3 the line says 10 clients assigned', /10 clients assigned to Anna Lee/.test(await page.locator('[data-testid="assign-result"]').innerText()));
-      ok(tag + ' · 3 the ticks stay after the action and the bar stays for the next group', (await page.locator('[data-bulk]').count()) === 3);
+      ok(tag + ' · 3 the ticks clear after the action (W11) and the bar leaves until the next tick', (await page.locator('[data-bulk]').count()) === 0);
       ok(tag + ' · 3 Held by now shows Anna on a ticked row', /Anna Lee/.test(await heldText(page, 1)), await heldText(page, 1));
 
       /* 4 twelve to Ben: Clear the first group, tick the next */
-      await page.locator('[data-cbl-selclear]').click();
+      await clearTicks(page);
       await tick(page, first22.slice(10));
       await bulk(page, 'assign');
       await pickAndGo(page, BEN.display_name);
@@ -281,7 +282,7 @@ async function w3Employees(browser, base) {
       await page.screenshot({ path: file('4-assigned') });
 
       /* 5 hand one over, with a note */
-      await page.locator('[data-cbl-selclear]').click();
+      await clearTicks(page);
       await tick(page, [id(1)]);
       await bulk(page, 'handover');
       await pickAndGo(page, BEN.display_name, 'Anna is on leave');
@@ -291,18 +292,19 @@ async function w3Employees(browser, base) {
       ok(tag + ' · 5 Held by now shows Ben on that row', /Ben Ortiz/.test(await heldText(page, 1)));
 
       /* 6 one back to the pool */
-      await page.locator('[data-cbl-selclear]').click();
+      await clearTicks(page);
       await tick(page, [id(2)]);
       await bulk(page, 'pool');
       await pause(900);
       const a4 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[3];
       ok(tag + ' · 6 back to pool sends target_actor_id null for that client', !!a4 && a4.body.target_actor_id === null && a4.body.subject_ids.length === 1 && a4.body.subject_ids[0] === id(2), JSON.stringify(a4));
-      ok(tag + ' · 6 Held by is empty again (the chip says + Assign to…)', /Assign to…/.test(await heldText(page, 2)), await heldText(page, 2));
+      ok(tag + ' · 6 Held by is empty again (a dash)', /—/.test(await page.locator('[data-testid="practice-row-' + id(2) + '"] [data-testid="assign-held"]').first().innerText()), await heldText(page, 2));
 
       /* 3b one press on a chip, one on a person; 3c Undo from the previous holders; 3d the A key */
-      await page.locator('[data-cbl-selclear]').click();
+      await clearTicks(page);
       const callsBefore = api.calls.filter((c) => c.path === '/api/chits/assign-bulk').length;
-      await page.locator('[data-testid="practice-row-' + id(23) + '"] [data-as-chip]').first().click();
+      await page.locator('[data-testid="practice-row-' + id(23) + '"]').first().focus();
+      await page.keyboard.press('a');
       await page.waitForSelector('[data-as-pick]');
       ok(tag + ' · 3b the popover for ONE client shows the suggested person first', /Suggested/.test(await page.locator('[data-as-pick]').first().innerText()), await page.locator('[data-as-pick]').first().innerText());
       await pickAndGo(page, ANNA.display_name);
@@ -311,7 +313,7 @@ async function w3Employees(browser, base) {
       await page.locator('[data-testid="assign-undo"]').click();
       await pause(900);
       const undoCall = api.calls.filter((c) => c.path === '/api/chits/assign-bulk').slice(-1)[0];
-      ok(tag + ' · 3c Undo sends the previous holder (the pool, null) for that client', !!undoCall && undoCall.body.target_actor_id === null && undoCall.body.subject_ids[0] === id(23), JSON.stringify(undoCall) + ' | result: ' + (await page.locator('[data-testid="assign-result"]').innerText()));
+      ok(tag + ' · 3c Undo sends the previous holder (the pool, null) for that client', !!undoCall && undoCall.body.target_actor_id === null && ((undoCall.body.chit_ids && undoCall.body.chit_ids[0] === 'h-' + id(23)) || (undoCall.body.subject_ids && undoCall.body.subject_ids[0] === id(23))) /* W12: Undo goes per COPY (chit_ids) */, JSON.stringify(undoCall) + ' | result: ' + (await page.locator('[data-testid="assign-result"]').innerText()));
       await page.locator('[data-testid="practice-row-' + id(4) + '"]').first().focus();
       await page.keyboard.press('a');
       await page.waitForSelector('[data-as-pick]');

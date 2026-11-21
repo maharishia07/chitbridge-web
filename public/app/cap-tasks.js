@@ -279,6 +279,18 @@
   function tkList() {
     return board.rows;
   }
+  /** the What cell: a client's job says its client (W16), anything else its subject, party and how it comes */
+  function whatCell(row) {
+    if (row.client) return root.CBTasksAssign.clientCell(row, T, esc);
+    var howText = howWord(row);
+    return (
+      '<b>' +
+      esc(row.subject || T('Untitled')) +
+      '</b>' +
+      (row.party ? ' <span class="sub">' + esc(row.party) + '</span>' : '') +
+      (howText ? ' <span class="sub" data-testid="tk-how-' + esc(row.chit_id) + '">' + esc(howText) + '</span>' : '')
+    );
+  }
   function cols() {
     return [
       /* the row the brief asks for (§4): 🌐 Online · Delivery / Pick up · customer · ₹ total · asked-for time · address · remark · age · items */
@@ -292,16 +304,7 @@
         value: function (row) {
           return row.subject || '';
         },
-        cell: function (row) {
-          var howText = howWord(row);
-          return (
-            '<b>' +
-            esc(row.subject || T('Untitled')) +
-            '</b>' +
-            (row.party ? ' <span class="sub">' + esc(row.party) + '</span>' : '') +
-            (howText ? ' <span class="sub" data-testid="tk-how-' + esc(row.chit_id) + '">' + esc(howText) + '</span>' : '')
-          );
-        }
+        cell: whatCell,
       },
       {
         key: 'word',
@@ -330,7 +333,7 @@
           return Number(row.total_minor) || 0;
         }
       },
-      { key: 'who', label: T('Held by'), prio: 4, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
+      { key: 'who', label: T('Held by'), prio: 4, w: 150, sort: 'who', hfilter: 'held', cell: whoWord, value: whoWord },
       {
         key: 'for',
         label: T('Asked for'),
@@ -423,6 +426,10 @@
       }
     ];
   }
+  /** the ONE work-queue capability (CBAssign.queue via cap-tasks-assign.js): views, ticks and bar, Held by filter */
+  var tkMade = {};
+  function tkQueue() { tkMade = root.CBTasksAssign.queue(board, reload, closeSheet); return tkMade; }
+  function tkHeldFilter() { return tkMade.filter; }
   function mountList(host) {
     if (!host) return;
     if (board.list) {
@@ -432,11 +439,6 @@
         logFailure('the old list could not be torn down', failure); // it is replaced right below
       }
     }
-    var names = [];
-    board.rows.forEach(function (item) {
-      var name = item.assignee && item.assignee.name;
-      if (name && names.indexOf(name) < 0) names.push(name);
-    });
     var stages = (WF() ? WF().STAGES : ['new', 'accepted', 'delivered', 'closed']).filter(function (item) {
       return board.rows.some(function (row) {
         return row.stage === item;
@@ -457,7 +459,7 @@
       })
     )
       stateOpts.push({ v: 'stuck', label: T('Stuck') });
-    board.list = root.CBList.mount(host, {
+    board.list = root.CBList.mount(host, Object.assign(tkQueue(), {
       key: 'tasks-' + board.view,
       t: T,
       rows: tkList,
@@ -490,29 +492,18 @@
             return value === 'stuck' ? !!row.stuck : row.stage === value;
           }
         },
-        {
-          key: 'assignee',
-          label: T('Held by'),
-          all: T('Anyone'),
-          options: [{ v: 'none', label: T('Unassigned') }].concat(
-            names.map(function (item) {
-              return { v: item, label: item };
-            })
-          ),
-          match: function (row, value) {
-            return value === 'none' ? !(row.assignee && row.assignee.name) && !row.lines_assigned_n : !!(row.assignee && row.assignee.name === value);
-          }
-        }
-      ],
+        tkHeldFilter()
+      ].filter(Boolean),
       search: function (row) {
-        return [row.subject, row.party, row.ref, row.word, row.assignee && row.assignee.name, row.remark, row.address, howWord(row)].join(' ');
+        return [row.subject, row.party, row.client && row.client.name, row.client && row.client.country, row.ref, row.word, row.assignee && row.assignee.name, row.remark, row.address, howWord(row)].join(' ');
       },
       sorts: listSorts(),
       onOpen: function (row) {
+        if (row.client) return root.location.assign(root.CBQueueBack.booksAddress(row.client.entity_id)); /* W20: a client's row opens its books; the comment panel is the small Task link */
         tkOpen(row.chit_id);
       },
       empty: emptyBoard(board.view)
-    });
+    }));
   }
 
   /** a board with nothing on it says what to do next (Fable A12: "No orders here" led nowhere) */

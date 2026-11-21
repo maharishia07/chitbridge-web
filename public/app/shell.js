@@ -653,7 +653,7 @@
     return entry.pillar || PDEFAULT[entry.area] || entry.area;
   }
   function sectionOf(entry) {
-    var pillar = pillarOf(entry),
+    var pillar = root.CBPractice && root.CBPractice.movesToSetup && root.CBPractice.movesToSetup(entry.id) ? 'setup' : pillarOf(entry), /* a practice's People card stands in its Setup (W5) */
       area;
     for (area in PILLARS) if (PILLARS[area].indexOf(pillar) >= 0) return area;
     for (area in FLAT_PILLARS) if (FLAT_PILLARS[area].indexOf(pillar) >= 0) return area;
@@ -1624,16 +1624,16 @@
        what    the thing that could not be read, already in the person's words ("Your practice", "Your client list")
        status  the HTTP status (0 / absent = no answer): 403 says access and uses the server's own sentence (detail); 429, 5xx and no answer say "could not be read, nothing was changed"
        detail  the server's sentence for a 403 (never invented here); anything else is not printed
-       retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; back  { href, label }: the way out
+       retry   a function: draws Try again (CMP009-B01), never on a 403 refusal (asking again does nothing), only 429/5xx/offline; next = what to do about a refusal, in words; back  { href, label } or a list of them: the way out
      A 401 is not a failed read: the caller sends the person to the signed-out window. An empty list is not a failed read: it draws its own empty state. */
   /** the sentence a failed read says: a 403 uses the server's own words (detail), anything else says it could not be read and nothing was changed */
   function readFailedSentence(options, refused) {
     if (refused) return String(options.detail || '').trim() || T('You do not have access to this. Nothing was opened.');
     return T('{what} could not be read. Nothing was changed.').replace('{what}', options.what || T('This page'));
   }
-  /** the way out of a failed read: a link, only when the page gave one */
+  /** the way out of a failed read: a link, only when the page gave one — one way out, or a list of them (W19: back to my queue, back to the client list) */
   function readFailedBack(options) {
-    return options.back && options.back.href ? '<a class="cbsh-rf-back" href="' + esc(options.back.href) + '" data-testid="read-failed-back" style="margin-inline-start:12px">' + esc(options.back.label || T('Back')) + '</a>' : '';
+    return [].concat(options.back || []).filter(function (way) { return way && way.href; }).map(function (way, at) { return '<a class="cbsh-rf-back" href="' + esc(way.href) + '" data-testid="read-failed-back' + (at ? '-' + at : '') + '" style="margin-inline-start:12px">' + esc(way.label || T('Back')) + '</a>'; }).join('');
   }
   function readFailed(host, options) {
     if (!host) return null;
@@ -1644,7 +1644,7 @@
       back = readFailedBack(options);
     host.innerHTML =
       '<div class="cbsh-readfail" data-testid="read-failed" data-status="' + (refused ? '403' : status >= 500 ? '5xx' : status === 429 ? '429' : 'none') + '" role="alert" style="padding:12px 0">' +
-      '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' +
+      '<p style="margin:0 0 10px">' + esc(sentence) + '</p>' + (refused && options.next ? '<p style="margin:0 0 10px" data-testid="read-failed-next">' + esc(options.next) + '</p>' : '') + /* W19: what to do about it, only on a refusal */
       (typeof options.retry === 'function' && !refused ? '<button type="button" class="btn" data-cbsid="CMP009-B01" data-testid="read-failed-retry">' + esc(T('Try again')) + '</button>' : '') + back + '</div>';
     var again = host.querySelector('[data-testid="read-failed-retry"]');
     if (again) again.onclick = options.retry;

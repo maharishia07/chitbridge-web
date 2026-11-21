@@ -120,7 +120,8 @@ function stand() {
     if ((o.hash || 'bank') === 'bank') await pg.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p: pg };
   }
-  const load = async (pg, csv) => { if (await pg.locator('[data-testid="bank-change"]').isVisible() && !(await pg.locator('#bk_preset').isVisible())) await pg.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await pg.selectOption('#bk_preset', 'hdfc'); await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await pg.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); if (await pg.locator('[data-testid="bank-currency"]').count()) { await pg.fill('[data-testid="bank-currency"]', 'INR'); await pg.click('[data-testid="bank-currency-go"]'); } await pg.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); };
+  const hash16 = (t) => require('crypto').createHash('sha256').update(t).digest('hex').slice(0, 16);
+  const load = async (pg, csv) => { if (await pg.locator('[data-testid="bank-change"]').isVisible() && !(await pg.locator('#bk_preset').isVisible())) await pg.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await pg.selectOption('#bk_preset', 'hdfc'); await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await pg.waitForFunction((h) => typeof BKB !== 'undefined' && BKB.file && BKB.file.hash === h, hash16(csv || CSV), { timeout: 10000 }); /* the file is read (its hash is async): until then the PREVIOUS statement's list still shows and the next wait passes on it, before the currency question appears (a race that fails on a slower runner) */ await pg.waitForSelector('[data-testid="bank-currency"], [data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); if (await pg.locator('[data-testid="bank-currency"]').count()) { await pg.fill('[data-testid="bank-currency"]', 'INR'); await pg.click('[data-testid="bank-currency-go"]'); } await pg.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); };
   const st = (pg, s) => pg.locator('[data-testid="bank-list"] [data-status="' + s + '"]').count();
   const rowOf = (i) => '[data-testid="bank-row-s' + i + '"]';
   const openRow = async (pg, i) => { await pg.click(rowOf(i) + ' [data-caret]'); await pg.waitForSelector('[data-testid="bank-next-s' + i + '"]', { timeout: 5000 }); };
@@ -243,9 +244,10 @@ function stand() {
   ({ ctx, p } = await open(S, {}));
   if (await p.locator('[data-testid="bank-change"]').isVisible() && !(await p.locator('#bk_preset').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen */ await p.selectOption('#bk_preset', 'hdfc');
   await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
-  /* l16-bank-9: the account has its currency on record (a known fact), so nothing is asked and the statement is read at once */
-  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
-  ok('B10', (await p.locator('[data-testid="bank-currency"]').count()) === 0, 'B5-05 (changed): the account has its currency on record, so no currency question and the statement is read');
+  /* FIN-111 (B5-05): a file that does not say its currency is asked, prefilled with the account's (one press), never read as the account's unasked */
+  await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 });
+  ok('B10', (await p.inputValue('[data-testid="bank-currency"]')).length === 3, 'FIN-111: the file is silent on currency, so the question shows, prefilled with the account value');
+  await p.click('[data-testid="bank-currency-go"]');
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
   if (!(await p.locator('#bk_acct').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen: open it to pick another account */
   await p.selectOption('#bk_acct', '1501');

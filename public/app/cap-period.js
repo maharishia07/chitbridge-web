@@ -39,7 +39,8 @@ if (typeof EP !== 'undefined') {
     perGstPay: { m: 'POST', p: '/api/books/gst/pay', idem: 'attempt' },
     perReturn: { m: 'GET', p: '/api/books/returns' } /* BAS1: the shop's OWN return (AU BAS · AE VAT201), read from the posted books */,
     perYearStatus: { m: 'GET', p: '/api/books/year/:fy/status' },
-    perYearClose: { m: 'POST', p: '/api/books/year/:fy/close' }
+    perYearClose: { m: 'POST', p: '/api/books/year/:fy/close' },
+    perYearReopen: { m: 'POST', p: '/api/books/year/:fy/reopen' }
   });
 }
 
@@ -147,116 +148,6 @@ function peText(minor) {
 const peMoney = (minor, c) =>
   bkMoney(minor, c); /* c: the answer's currency (BAS1: an AU return is in AUD, an AE one in AED) — the India pages pass none, as before */
 const peHeads = ['cgst', 'sgst', 'igst', 'cess'];
-
-/* ═══ 1 · CLOSING STOCK ═════════════════════════════════════════════════════════════════════════════════════════════════
-   POST /closing-stock { date, value_minor, nrv_minor?, method: 'manual', client_ref } — only the DIFFERENCE from the books posts (the engine reads `book`).
-   The last counts are the stock ledger's own lines (GET /ledger/stock): date · entry · what it changed · stock after. */
-async function peStockView(body) {
-  const own = peOwner();
-  body.innerHTML =
-    (own
-      ? '<div class="pe-card" data-testid="ps-form"><div class="pe-form">' +
-        peField('ps_date', 'Month end', peInput('ps_date', peMonthEnd(1), '', 'date')) +
-        peField('ps_val', 'Stock on hand, at cost', peAmt('ps_val')) +
-        peField('ps_nrv', 'Worth less now? (only if lower)', peAmt('ps_nrv', '', tx('Leave empty if not'))) +
-        '</div><div class="supacts">' +
-        peBtn('ps-save', 'Save closing stock', 'peStockSave(this)') +
-        '</div><div id="ps_out" class="pe-slot"></div></div>'
-      : peNoOwner('Only the owner enters the closing stock')) + '<div id="bkl_stock" data-testid="stock-list"></div>';
-  await peStockList();
-}
-/* the counts the list shows - one array, so a count just saved is added here and painted at once (M173) */
-var PE_STOCK = { lines: [], api: null };
-async function peStockList() {
-  const host = peEl('bkl_stock');
-  if (!host) return;
-  let lines = [];
-  try {
-    const reply = await api('booksLedger', { params: { account: 'stock' }, query: { from: peDaysAgo(400), to: peYmd(new Date()) } });
-    lines = ((reply && reply.lines) || [])
-      .filter((item) => /closing stock/i.test(String(item.what || '')))
-      .map((item, index) => Object.assign({ i: index }, item))
-      .reverse();
-  } catch (e) {
-    if (!(e && e.status === 404)) {
-      host.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
-      return;
-    }
-  }
-  CBList.reset && CBList.reset('stock');
-  PE_STOCK.lines = lines;
-  if (PE_STOCK.api) {
-    try {
-      PE_STOCK.api.destroy();
-    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
-  }
-  PE_STOCK.api = CBList.mount(host, {
-    key: 'stock',
-    t: tx,
-    rows: () => PE_STOCK.lines,
-    id: (l) => String(l.ref) + '#' + l.i,
-    rowTid: (l) => 'stock-' + l.i,
-    columns: [
-      { key: 'date', label: tx('Month end'), prio: 1, sort: 'date', w: 150, html: true, cell: (l) => esc(bkDate(l.date)) },
-      { key: 'entry', label: tx('Entry'), prio: 3, sort: 'entry', w: 150, html: true, cell: (l) => '<span class="mono">' + esc(l.ref || '') + '</span>' },
-      {
-        key: 'change',
-        label: tx('Changed the stock by'),
-        prio: 2,
-        sort: 'change',
-        num: true,
-        w: 200,
-        html: true,
-        cell: (l) => esc(l.dr_minor ? peMoney(l.dr_minor) + ' ' + tx('Dr') : peMoney(l.cr_minor) + ' ' + tx('Cr'))
-      },
-      { key: 'after', label: tx('Stock after'), prio: 4, sort: 'after', num: true, w: 190, html: true, cell: (l) => esc(bkDrCr(l.running_minor)) }
-    ],
-    search: (l) => [l.date, l.ref, l.what].join(' '),
-    sorts: [{ key: 'date', label: tx('Newest first'), cmp: (a, b) => String(b.date).localeCompare(String(a.date)) }],
-    empty: { title: tx('No counts yet') }
-  });
-}
-/** M173: the count just saved goes into the list below at once, from the server's answer (only the difference posted: book_minor is what the ledger held) - no second read */
-function peStockAdd(body, v, r) {
-  const now = body.nrv_minor != null ? Math.min(v, body.nrv_minor) : v,
-    book = Number(r && r.book_minor) || 0,
-    diff = now - book;
-  const i = PE_STOCK.lines.reduce((total, item) => Math.max(total, item.i), -1) + 1;
-  PE_STOCK.lines = [
-    {
-      i,
-      date: body.date,
-      ref: (r && r.entry_no) || '',
-      what: 'Closing stock ' + body.date,
-      dr_minor: diff > 0 ? diff : 0,
-      cr_minor: diff < 0 ? -diff : 0,
-      running_minor: now
-    }
-  ].concat(PE_STOCK.lines);
-  if (PE_STOCK.api) PE_STOCK.api.refresh();
-  else peStockList();
-}
-async function peStockSave(btn) {
-  const date = peVal('ps_date'),
-    v = bkMoneyMinor(peVal('ps_val'));
-  if (!date || isNaN(v)) return peBad('ps_out', tx('Enter the month end and the value of the stock on hand.'));
-  const body = { date, value_minor: v, method: 'manual', client_ref: peRef('stock') };
-  if (peVal('ps_nrv')) {
-    const n = bkMoneyMinor(peVal('ps_nrv'));
-    if (isNaN(n)) return peBad('ps_out', tx('The lower value must be an amount.'));
-    body.nrv_minor = n;
-  }
-  await bkOnce('pe-stock', btn, async () => {
-    try {
-      const reply = await api('perStock', { body });
-      PE.ref.stock = null;
-      peOk('ps_out', reply && reply.entry_no ? esc(txf('Saved · {no}', { no: reply.entry_no })) : esc(tx((reply && reply.why) || 'Saved')));
-      peStockAdd(body, v, reply);
-    } catch (e) {
-      peBad('ps_out', e);
-    }
-  });
-}
 
 /* ═══ 2 · ASSETS & DEPRECIATION ═════════════════════════════════════════════════════════════════════════════════════════
    GET /assets → the register; POST /assets (by hand); POST /assets/:id/dispose; POST /depreciation/run { fy } → one entry, and the basis it used.
@@ -1196,7 +1087,7 @@ async function peReturnCopy(btn) {
 }
 
 /* ═══ 5 · YEAR CLOSE ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, refusals: [{ name, why }], months: [{ period, status }], next } — what a close would say, nothing written
+   GET /year/:fy/status → { fiscal_year, closed, can_close, can_close_if_lodged, reclosing, refusals: [{ name, why }], warnings: [{ name, count, why }], months: [{ period, status }], next } — what a close would say, nothing written
    POST /year/:fy/close { returns_lodged?: true } → { ok, next, locked, opening } · refused (422) with the refusals in plain words */
 async function peYearView(body) {
   let L;
@@ -1276,10 +1167,20 @@ function peYearActionsHtml(yearState) {
       '<button data-cbsid="BKS016-B09" type="button" class="supact-pri" data-testid="py-close"' +
       (yearState.can_close ? '' : ' disabled') +
       ' onclick="peYearClose(this)">' +
-      esc(tx('Close the year')) +
+      esc(tx(yearState.reclosing ? 'Close the year again' : 'Close the year')) + /* ACC-380: reopened, the server says reclosing */
       '</button></div>';
+  html += peYearReopenHtml(yearState);
   if (!yearState.closed && !peOwner()) html += peNote('pe-readonly', 'Only the owner can close the year');
   return html;
+}
+/** Reopen year: offered to the owner, and only on the newest closed year (from the periods list the screen holds); '' otherwise */
+function peYearReopenHtml(yearState) {
+  if (!yearState.closed || !peOwner()) return '';
+  const newest = typeof bkLastClosedYear === 'function' ? bkLastClosedYear() : '', thisYear = yearState.fiscal_year || peVal('py_fy');
+  if (newest && newest !== thisYear) return '';
+  return (
+    '<div class="supacts"><button data-cbsid="BKS016-B12" type="button" data-testid="py-reopen" onclick="peYearReopen(this)" title="' + esc(tx('Only the latest closed year can be reopened, with a reason; it is logged.')) + '">🔓 ' + esc(tx('Reopen year')) + '</button></div>'
+  );
 }
 async function peYearStatus() {
   const fy = peVal('py_fy'),
@@ -1299,7 +1200,7 @@ async function peYearStatus() {
   const months = st.months || [],
     refs = st.refusals || [];
   let h = '<div class="pe-card" data-testid="py-checks">';
-  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed for good', { fy })) + '</div>';
+  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed', { fy })) + '</div>';
   else h += peYearChecksHtml(st, months, refs);
   h += '</div>';
   h += peYearActionsHtml(st);
@@ -1322,13 +1223,37 @@ function peYearLodged(box) {
   const btn = document.querySelector('[data-testid="py-close"]');
   if (btn) btn.disabled = !box.checked;
 }
+/** YEARCLOSE: what waits before a close (the server's warnings[], never a gate) — listed in the dialog so the owner confirms with it in view */
+function peYearWarningsHtml(list) {
+  if (!list || !list.length) return '';
+  return '<div class="pe-note" data-testid="py-warnings"><b>' + esc(tx('Before you close:')) + '</b><ul>' + list.map((w) => '<li>' + esc(w.why) + '</li>').join('') + '</ul>' + esc(tx('You can still close the year.')) + '</div>';
+}
+/** REOPEN YEAR (owner only; the server refuses any year but the newest closed, in words): the reason is asked in the one reason dialog, then the server opens the year and logs it */
+function peYearReopen(btn) {
+  const year = peVal('py_fy');
+  bkReasonDialog({
+    title: txf('Reopen {fy}?', { fy: year }),
+    yes: 'Reopen year',
+    go: (reason) =>
+      bkOnce('pe-year-reopen-' + year, btn, async () => {
+        try {
+          await api('perYearReopen', { params: { fy: year }, body: { reason } });
+          await peYearStatus();
+          peOk('py_out', esc(txf('{fy} is open again · the reason is in the change log', { fy: year })));
+        } catch (e) {
+          peBad('py_out', e);
+        }
+      })
+  });
+}
 function peYearClose(btn) {
   const fy = peVal('py_fy'),
     tick = document.querySelector('[data-testid="py-lodged"]'),
     lodged = !!(tick && tick.checked && PE.year && PE.year.can_close_if_lodged);
+  const again = !!(PE.year && PE.year.reclosing); /* ACC-380: after a reopen the close locks the 12 months and closes the tax periods again */
   confirmAsk(
     tx('Close the year?'),
-    esc(lodged ? txf('{fy} is carried forward and locked for good, with its returns marked as lodged outside ChitBridge. This cannot be undone.', { fy }) : txf('{fy} is carried forward and locked for good. This cannot be undone.', { fy })),
+    esc(again ? txf('{fy} will lock the 12 months again and close the tax periods that were closed before the reopen. A period whose return was lodged stays lodged. You can reopen only this latest year later, with a reason; it is logged.', { fy }) : lodged ? txf('{fy} is carried forward and locked, with its returns marked as lodged outside ChitBridge. You can reopen only this latest year later, with a reason; it is logged.', { fy }) : txf('{fy} is carried forward and locked. You can reopen only this latest year later, with a reason; it is logged.', { fy })) + peYearWarningsHtml(PE.year && PE.year.warnings),
     tx('Close the year'),
     () => {
       bkOnce('pe-year-' + fy, btn, async () => {

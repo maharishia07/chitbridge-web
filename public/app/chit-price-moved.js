@@ -149,7 +149,7 @@
   /** every failed send ends here: the server's "prices have moved" opens the question; any other error says its own words as before. Always null (nothing was sent). */
   function failed(error, sent, fail, resend) {
     if (!isMoved(error)) {
-      fail((error && error.message) || 'Something went wrong — please try again.');
+      fail(friendlyErr(error));
       return null;
     }
     var data = error.data;

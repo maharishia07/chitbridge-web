@@ -53,7 +53,7 @@
             return {};
           })
           .then(function (j) {
-            if (reply.status === 401 && N.o.onEnded) N.o.onEnded();
+            if (reply.status === 401 && N.o.onEnded) N.o.onEnded(j);
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
               e.status = reply.status; e.code = j.code; /* a refusal's code: books-grant-api.js says it in a plain sentence */

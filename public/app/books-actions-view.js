@@ -60,6 +60,19 @@
   function standsWords(row) {
     return stateWords(row) + ' · ' + (row.prepared ? row.prepared.name : '—');
   }
+  /**
+   * the review state in words, wherever the work is shown (Athi 19 Nov: second-person review is optional, always recorded): "Not reviewed" · "Reviewed by <name> · <date>" · "Self-reviewed by <name> · <date>".
+   * The api says it (#1378): review_state not_reviewed | reviewed | self_reviewed, with reviewed_by (the name) and reviewed_at. Words only, decides nothing.
+   */
+  function reviewWords(row) {
+    if (row.review_state !== 'reviewed' && row.review_state !== 'self_reviewed') return words('Not reviewed');
+    return words(row.review_state === 'self_reviewed' ? 'Self-reviewed by' : 'Reviewed by') + ' ' + row.reviewed_by + (row.reviewed_at ? ' · ' + dayWords(row.reviewed_at) : '');
+  }
+  /** the one library status chip (.bp-chip) carrying the review words; a code per place it stands; the tokens are the chip's own, so a page that does not load books-practice.js draws it the same */
+  function reviewChip(row, code) {
+    var done = row.review_state === 'reviewed' || row.review_state === 'self_reviewed';
+    return '<span class="bp-chip" data-cbsid="' + code + '" data-testid="ba-review-' + esc(row.action_id) + '" style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid ' + (done ? 'var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#2a2418)' : 'var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205)') + '">' + esc(reviewWords(row)) + '</span>';
+  }
   function byWords(stamp) {
     return stamp ? stamp.name + (stamp.firm ? ', ' + stamp.firm : '') : '—';
   }
@@ -148,7 +161,8 @@
       col('what', words('What'), 1, 200, kindWords),
       col('total', words('Total'), 1, 140, figure, function (row) { return row.total_minor == null ? 0 : Number(row.total_minor); }),
       col('at', words('When'), 2, 150, function (row) { return dayWords(row.prepared && row.prepared.at); }, function (row) { return (row.prepared && row.prepared.at) || ''; }),
-      col('state', words('Step and who'), 1, 300, standsWords)
+      col('state', words('Step and who'), 1, 300, standsWords),
+      { key: 'review', label: words('Review'), prio: 1, w: 230, html: true, cell: function (row) { return reviewChip(row, 'NET007-B05'); }, value: reviewWords }
     ];
   }
   /** which row buttons a role is offered in a queue: the firm reviews, the owner accepts, both send back; the server still decides */
@@ -192,7 +206,7 @@
     api('actionsGet', { params: { id: row.action_id } }).then(
       function (one) {
         view.o.sheet(
-          '<h2>' + esc(kindWords(one)) + '</h2><div class="bg-form" data-testid="ba-detail"><div class="sub">' + esc(figure(one)) + ' · ' + esc(stateWords(one)) + '</div><ol class="ba-steps">' + (one.steps || []).map(stepWords).join('') + '</ol>' +
+          '<h2>' + esc(kindWords(one)) + '</h2><div class="bg-form" data-testid="ba-detail"><div class="sub">' + esc(figure(one)) + ' · ' + esc(stateWords(one)) + ' · ' + reviewChip(one, 'NET007-B06') + '</div><ol class="ba-steps">' + (one.steps || []).map(stepWords).join('') + '</ol>' +
             '<pre class="ba-body" data-testid="ba-body">' + esc(JSON.stringify(one.body || {}, null, 2)) + '</pre>' +
             '<div class="nw-acts"><button data-cbsid="NET007-B02" type="button" class="act quiet" id="ba_close" data-testid="ba-close">' + esc(words('Close')) + '</button></div></div>'
         );

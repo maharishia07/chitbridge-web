@@ -94,6 +94,7 @@ jobs:
           node tests/crm-consent-holders.test.cjs
           node tests/fin-d7-terms-bank.test.cjs
           node tests/fin116-registration-notice.test.cjs
+          node tests/fin111-statement-currency.test.cjs
           node tests/graph-apifeed.test.cjs
           node tests/index2-draws-manifest.test.cjs
           node tests/ledger-columns.test.cjs
@@ -106,6 +107,8 @@ jobs:
           node e2e/bank-cost-blind.test.cjs
           node e2e/bank-engine199.test.cjs
           node e2e/bank-lock.test.cjs
+          node e2e/outside-state.test.cjs
+          node e2e/network-browse-failed.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
           node e2e/dues-one-sign.test.cjs
@@ -121,6 +124,8 @@ jobs:
           node e2e/screen-reads.cjs
           node e2e/signin-code.test.cjs
           node e2e/tax-dropped-line.test.cjs
+          node e2e/entry-preview-ref.test.cjs
+          node e2e/pay-day.test.cjs
           node e2e/supply-use-idem.test.cjs
           node e2e/lazy-screen-guard.cjs
           npm run check:modal
@@ -334,6 +339,7 @@ jobs:
           node e2e/ui-codes-labs.test.cjs
           node e2e/bank-preview.test.cjs
           node e2e/bank-split.test.cjs
+          node e2e/bank-seat-may.test.cjs
           node e2e/ui-codes-refpages.test.cjs
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs
@@ -397,9 +403,13 @@ jobs:
           node tests/tasks-orders-list.test.cjs
           node tests/wx-bills-cols.test.cjs
           node tests/acc342-todo-no-action.test.cjs
+          node tests/shop-bookkeeper.test.cjs
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
           node tests/till-pay-qr-link.test.cjs
+      # UX-199 (20 Nov): TAG AT BUILD TIME. The identity census as a ratchet: open popups and controls may not rise above e2e/ui-identity.baseline.json (0); a code with no row in the register snapshot is open. No docs checkout needed.
+      - name: UI identity ratchet (every popup and control has its code and a register row; UX-199)
+        run: node e2e/ui-identity-ratchet.cjs
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
         run: node e2e/cmdb-records.cjs
       - name: Every stand-in that answers /api/books or /api/crm holds its answers to the API contract (M43)

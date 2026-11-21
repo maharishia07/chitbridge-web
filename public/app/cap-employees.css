@@ -1,0 +1,6 @@
+/* cap-employees.css — the access panel and its out line: ONE copy, loaded by employees.html and by accounts.html (Delegate work mounts the same panel in place) */
+.emp-out{min-height:20px;margin:6px 0;font-weight:600;color:var(--green-d,#0D4A2B)}
+.emp-out[data-tone="error"]{color:var(--red-i,#8E3517)}
+.emp-panel,.emp-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#e6dcc6)}
+.emp-form label{font-size:13px;font-weight:600;margin-top:4px}
+.emp-opt{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line,#e6dcc6);border-radius:9px}

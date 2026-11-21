@@ -39,20 +39,21 @@
     return first.split(',').map(function (cell) { return cell.replace(/^"|"$/g, '').trim(); }).filter(Boolean);
   }
 
-  function mapCard(text) {
+  /** the column map for a file with a heading we do not know; `readCall` (a page that has no data-act router, the Bank screen) names the function the button calls */
+  function mapCard(text, readCall) {
     var cells = headCells(text);
     if (!cells.length) return '';
     return '<div class="bd-map" data-cbsid="BKS017-M01"><h2>Which column is which?</h2><p class="bd-why">Tell us once and we read the rest of the file. Nothing is guessed.</p><div class="bd-map-grid">' +
       MAP_FIELDS.map(function (field) {
         return '<label>' + esc(field[1]) + '<select class="bd-inp" data-cbsid="BKS017-S07" data-map="' + field[0] + '"><option value="">Not in this file</option>' + cells.map(function (cell) { return '<option value="' + esc(cell) + '">' + esc(cell) + '</option>'; }).join('') + '</select></label>';
-      }).join('') + '</div><button type="button" class="bd-btn bd-go" data-act="readmap" data-cbsid="BKS017-B26">Read the file</button></div>';
+      }).join('') + '</div><button type="button" class="bd-btn bd-go" data-act="readmap"' + (readCall ? ' onclick="' + readCall + '"' : '') + ' data-cbsid="BKS017-B26">Read the file</button></div>';
   }
 
 
   /** the column map's choices as the engine's mapping: { field: 'Heading' } for every field the visitor named */
   function mapping() {
     var named = {};
-    Array.prototype.forEach.call(host.doc.querySelectorAll('select[data-map]'), function (node) {
+    Array.prototype.forEach.call((host ? host.doc : document).querySelectorAll('select[data-map]'), function (node) {
       if (node.value) named[node.getAttribute('data-map')] = node.value;
     });
     return named;
@@ -62,5 +63,5 @@
     host = pageHost;
     return { confirmBody: confirmBody, mapCard: mapCard, mapping: mapping };
   }
-  root.CBBankDemoAsk = { create: create };
+  root.CBBankDemoAsk = { create: create, mapCard: mapCard, mapping: mapping }; /* mapCard and mapping stand alone: the Bank screen (cap-bank-map.js) uses them with no page host */
 })(typeof globalThis !== 'undefined' ? globalThis : this);

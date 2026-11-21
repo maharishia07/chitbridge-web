@@ -4,7 +4,7 @@
  * ui-codes-accounts.test.cjs - the Accounts page wears ITS identity codes (UX-137 stamp 7, screens BKS001, BKS007, BKS014, BKS016, BKS024, BKS025).
  *
  * OWNS      the proof that accounts.html and the scripts only it loads (cap-period, cap-period-accruals, cap-bank, cap-bank-rows, cap-move-in, cap-compare, cap-fx)
- *           carry the 67 data-cbsid codes of their own screens, that a named control wears ITS code (a swap of two codes fails), that no code is
+ *           carry the 72 data-cbsid codes of their own screens, that a named control wears ITS code (a swap of two codes fails), that no code is
  *           written on two element definitions, and that each code is a live row in the register. A builder tag drawn for many callers
  *           (peInput, peSel, peBtn, the menu items, the tabs) is ONE element definition and ONE code.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-accounts.test.cjs   (ACC_ID_MUTATE=swap or remove must fail it)
@@ -17,7 +17,8 @@ const mutate = process.env.ACC_ID_MUTATE || '';
 const PUB = path.join(__dirname, '..', 'public');
 const SET = {
   'accounts.html': 'BKS001-B01 BKS001-B02 BKS001-B03 BKS001-B04 BKS001-B05 BKS001-B06 BKS001-B07',
-  'app/cap-period.js': 'BKS016-B01 BKS016-I01 BKS016-S01 BKS016-B02 BKS016-B03 BKS016-B10 BKS016-B05 BKS016-B06 BKS016-B11 BKS016-B07 BKS016-B08 BKS016-B09 BKS016-I02',
+  'app/books-held-ok.js': 'BKS001-B08 BKS001-B09 BKS001-I01 BKS001-B10 BKS001-B11',
+  'app/cap-period.js': 'BKS016-B01 BKS016-I01 BKS016-S01 BKS016-B02 BKS016-B03 BKS016-B10 BKS016-B05 BKS016-B06 BKS016-B11 BKS016-B07 BKS016-B08 BKS016-B09 BKS016-B12 BKS016-I02',
   'app/cap-period-accruals.js': 'BKS016-B04',
   'app/cap-bank.js': 'BKS014-I01 BKS014-S01 BKS014-B09 BKS014-B26 BKS014-B02 BKS014-B19 BKS014-B01 BKS014-B22 BKS014-B25 BKS014-B24 BKS014-B18 BKS014-B23 BKS014-B21 BKS014-B27 BKS014-B29 BKS014-B28',
   'app/cap-bank-rows.js': 'BKS014-T01 BKS014-B03 BKS014-B04 BKS014-B05 BKS014-B06 BKS014-B07',
@@ -33,7 +34,7 @@ const SET = {
 /** [file, marker the tag carries within 6 lines of its code, the code it must wear] */
 const NEAR = [
   ['accounts.html', 'id="toggleNav"', 'BKS001-B01'], ['accounts.html', 'acc-switch-on', 'BKS001-B07'], ['accounts.html', 'close-first-go', 'BKS001-B06'],
-  ['app/cap-period.js', 'data-testid="py-close"', 'BKS016-B09'], ['app/cap-period.js', 'data-testid="py-lodged"', 'BKS016-I02'], ['app/cap-period.js', 'id="pdp_run"', 'BKS016-B03'],
+  ['app/cap-period.js', 'data-testid="py-close"', 'BKS016-B09'], ['app/cap-period.js', 'data-testid="py-reopen"', 'BKS016-B12'], ['app/cap-period.js', 'data-testid="py-lodged"', 'BKS016-I02'], ['app/cap-period.js', 'id="pdp_run"', 'BKS016-B03'],
   ['app/cap-bank.js', 'data-testid="bank-file"', 'BKS014-I01'], ['app/cap-bank.js', 'bank-brs-download', 'BKS014-B02'], ['app/cap-bank-rows.js', 'id="bk_note"', 'BKS014-T01'], ['app/cap-bank-store.js', 'bank-signoff', 'BKS014-B08'], ['app/cap-bank-statements-add.js', 'data-testid="bank-stmts-file"', 'BKS014-I13'], ['app/cap-bank-statements.js', 'data-testid="bank-stmts-read"', 'BKS014-B42'],
   ['app/cap-move-in.js', 'id="mi-asat"', 'BKS024-I01'], ['app/cap-move-in.js', 'data-testid="mi-again"', 'BKS024-B02'],
   ['app/cap-compare.js', 'data-testid="cmp-pick"', 'BKS007-S01'], ['app/cap-compare.js', 'data-testid="cmp-new"', 'BKS007-B08'], ['app/cap-compare.js', 'id="cmp-label"', 'BKS007-I02'],
@@ -58,7 +59,7 @@ for (const f of Object.keys(SET)) {
 }
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 97, 'the page has 97 coded element definitions: ' + Object.keys(all).length);
+check(Object.keys(all).length === 103, 'the page has 103 coded element definitions: ' + Object.keys(all).length);
 
 for (const [f, marker, code] of NEAR) {
   const lines = src[f].split('\n'), at = lines.findIndex((l) => l.indexOf('data-cbsid="' + code + '"') >= 0);

@@ -41,6 +41,8 @@ const fn = [
   /* the only new stand-ins, none of them numbering: who is billing (a keyed counter, as these cases are: tillId reads cb_till_id),
      the name of the cross-tab lock (a bare Node has no navigator.locks) and the page's swallowed-error log */
   'function personOn(){ return false; }', 'function tillStore(){ return "test"; }', 'function cbQuiet(){}',
+  /* CTR-213: the block of invoice numbers is the cloud host's alone — here the counter is not on the cloud host (HOST is not CloudHost), so every case numbers as it did; the lease itself is proved in the api's ctr-213-till-lease-client test */
+  'var HOST = null, CloudHost = {};',
   'return nextNumber;',
 ].join('\n');
 

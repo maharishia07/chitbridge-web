@@ -112,8 +112,8 @@ async function route(S, r) {
     if (p === '/api/books/payments/preview' && m === 'POST') return J(r, 200, books.payPreview(billsOf(body.party_id), body, nameOf(body.party_id)));
     if (p === '/api/books/payments' && m === 'POST') {
       S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
-      if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));
-      const per = (new Date(body.received_at).getMonth() + 9) % 12 + 1;
+      { const bad = books.dayRefusal('received_at', body.received_at); if (bad) return J(r, 400, bad); } if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));   /* F19: the api refuses an ISO timestamp */
+      const per = (new Date(body.received_at + 'T00:00:00Z').getUTCMonth() + 9) % 12 + 1;
       if (S.locked[per]) return J(r, 409, Object.assign(books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'), { type: 'about:blank', title: 'Conflict', status: 409, detail: 'That month is locked. Open it again (with a reason) to record this.', hint: 'Open the month again, then record this.', request_id: 'req-bw-0001' }));   /* RFC 9457 problem details, as the API's one error shape */
       /* the server keeps a client_ref ONCE (the unique index): a repeat is answered with the payment it already has */
       if (body.client_ref && S.byRef[body.client_ref]) { const was = S.byRef[body.client_ref]; return J(r, 200, { ok: true, payment: { payment_id: was, status: S.payments[was].mode === 'cheque' ? 'cheque_received' : 'recorded', duplicate: true }, posted: { ok: true, duplicate: true, entry_id: 'e-' + was, entry_no: 'PY/2026-27/000001', posting_date: '2026-09-29' } }); }
@@ -694,7 +694,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     await p.fill(DBQ, 'ravi'); await settle();
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.click('[data-testid="db-csv"]')]);
     const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '').split('\r\n').filter(Boolean);
-    ok(csv[0] === 'date,no,kind,party,ref,how,counter,by,dr,cr,gist' && csv.length === 1 + wantRavi.length, 'views: Download CSV — a header and one line per shown row (' + (csv.length - 1) + ' of ' + wantRavi.length + ')');
+    ok(csv[0] === 'date,no,kind,party,ref,how,counter,by,made_by,currency,dr,cr,gist' && csv.length === 1 + wantRavi.length, 'views: Download CSV — a header and one line per shown row (' + (csv.length - 1) + ' of ' + wantRavi.length + ')');
     ok(csv[1].indexOf('2026-07-02,JV/2026-27/000001,Sales,Ravi Stores,C2/26-27/0002,On credit,C2,Athi,3000.00,3000.00,') === 0 && /GST 457\.62/.test(csv[1]), 'views: the CSV line carries date, number, kind, party, ref, how, counter, by, Dr, Cr and the gist');
     await clear();
     await noAccounting(p, 'day book views');

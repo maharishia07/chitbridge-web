@@ -327,9 +327,27 @@
     return { token: sess ? sess.token : null, session: sess, shell: shell, skeleton: skel };
   }
   /** a 401 from the API: the session is no longer good - drop it and show the sign-in window (it is the same window the apps show) */
-  function ended() {
+  /** walk 19 Nov: a refusal that says WHY access went is the sentence the server chose, matched by its CODE (api #1378), never by its words. BOOKS_GRANT_ENDED: books access ended or ran out; ACCOUNT_SWITCHED_OFF: the person was switched off; BOOKS_SIGNOFF_SELF_PREPARED and BOOKS_FOR_READ_ONLY: a refusal the server explains in full. A bare "Sign in to continue." stays generic. Words only, decides nothing. */
+  var SAID_BY_CODE = { BOOKS_GRANT_ENDED: 1, ACCOUNT_SWITCHED_OFF: 1, BOOKS_SIGNOFF_SELF_PREPARED: 1, BOOKS_FOR_READ_ONLY: 1 };
+  function endedWords(status, body) {
+    return (status === 401 || status === 403) && body && SAID_BY_CODE[body.code] === 1 ? String(body.message || body.error || body.detail || '').trim() : '';
+  }
+  /** the reason a page's session ended, kept for the one sign-in window that follows the reload (read once) */
+  function endedNote() {
+    try {
+      var kept = root.sessionStorage.getItem('cb_ended_why') || '';
+      root.sessionStorage.removeItem('cb_ended_why');
+      return kept;
+    } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('frame:ended-note', failure); /* storage blocked: no reason kept, the plain sign-in window follows */
+      return '';
+    }
+  }
+  function ended(reply) {
     try {
       root.localStorage.removeItem('cb_sess');
+      var said = endedWords(401, reply);
+      if (said) root.sessionStorage.setItem('cb_ended_why', said);
     } catch (_) {}
     root.location.reload();
   }
@@ -383,5 +401,5 @@
     }
     return framed;
   }
-  root.CBFrame = { mount: mount, lab: labFrame, session: session, ended: ended, resay: resay };
+  root.CBFrame = { mount: mount, lab: labFrame, session: session, ended: ended, endedWords: endedWords, endedNote: endedNote, resay: resay };
 })(typeof window !== 'undefined' ? window : globalThis);

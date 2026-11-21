@@ -1,5 +1,5 @@
 /* list-ctl-click.js — what a press on a mounted CBList does (the click half of app/list-ctl.js).
- * OWNS      onClick and its steps: a sort heading, a group head, a filter popover and its choices, a view tab, a period chip, a notice, grouping and the view switch, ⚑ needs, expand all,
+ * OWNS    needsToggle · needsNext (Needs you, moved from list-ctl.js 20 Nov: file-size ratchet) · onClick and its steps: a sort heading, a group head, a filter popover and its choices, a view tab, a period chip, a notice, grouping and the view switch, ⚑ needs, expand all,
  *           CSV, clear filters, retry, more, reset columns, select mode and select all, bulk actions, move and widen a column, sort, row actions, the caret and open row; and the small
  *           helpers those steps and the key/change/drag half share (cssId · resize · colByKey · refocusRz).
  * CALLED BY app/list-ctl-wire.js (wire puts onClick on the list's element) and app/list-ctl.js (the file calls CBListParts.click(kit) once, at its end). Loaded BEFORE app/list-ctl-wire.js and app/list-ctl.js by every page that loads the list unit.
@@ -10,7 +10,52 @@
 (function (root) {
   'use strict';
   /* root.CBListParts is created by list-ctl-css.js, which loads first */
-  var closePop, columns, curSort, download, head, matched, minW, needsNext, needsToggle, openRow, paintAll, paintList, paintTitle, paintTools, query, remote, resetLimit, rowById, rowIdOf, safe, saveChoices, selectedRows, shownKeys, sortId, togglePop, toggleRow, viewKeys, viewOn, widthOf; /* what list-ctl.js hands over through bind: its functions and constants this file works with */
+  var closePop, columns, curSort, download, head, matched, minW, needsCount, needsOf, needsOn, needsRows, openRow, paintAll, paintList, paintTitle, paintTools, query, refocusRow, remote, resetLimit, rowById, rowIdOf, safe, saveChoices, selectedRows, shownKeys, sortId, togglePop, toggleRow, viewKeys, viewOn, widthOf; /* what list-ctl.js hands over through bind: its functions and constants this file works with */
+  /** the toggle: on narrows the list to what needs the person and starts the count "0 of n"; off puts the list back */
+  function needsToggle(I) {
+    if (!needsOf(I) || (needsCount(I) === 0 && !needsOn(I))) return;
+    var R = I.r;
+    R.needsOn = !R.needsOn;
+    R.open = {};
+    R.allOpen = false;
+    R.needsAt = 0;
+    R.hl = null;
+    if (R.needsOn) R.needsTotal = needsRows(I).length;
+    resetLimit(I);
+    safe(function () {
+      if (needsOf(I).onToggle) needsOf(I).onToggle(R.needsOn);
+    });
+    paintAll(I);
+  }
+  /** Next ›: the row after the one in hand (or, when that one was cleared and dropped off, the one that took its place) opens, the one before closes */
+  function needsNext(I) {
+    var spec = needsOf(I),
+      R = I.r;
+    var rows = needsRows(I);
+    if (!spec || !rows.length) return;
+    var ids = rows.map(function (row, index) {
+        return rowIdOf(I, row, index);
+      }),
+      at = ids.indexOf(String(R.hl)),
+      pos = at >= 0 ? at + 1 : Math.min(R.needsAt || 0, ids.length - 1);
+    if (pos >= ids.length) pos = ids.length - 1 === at ? at : 0;
+    R.needsAt = pos;
+    var id = ids[pos];
+    R.hl = id;
+    if (spec.onNext) {
+      safe(function () {
+        spec.onNext(rows[pos]);
+      });
+      paintTools(I);
+      return;
+    }
+    R.allOpen = false;
+    R.open = {};
+    R.open[id] = true;
+    paintTools(I);
+    paintList(I);
+    refocusRow(I, id);
+  }
   /** bind: list-ctl.js hands over, once, the names this file works with (the list unit's own functions and constants) */
   function bind(needs) {
     closePop = needs.closePop;
@@ -20,8 +65,11 @@
     head = needs.head;
     matched = needs.matched;
     minW = needs.minW;
-    needsNext = needs.needsNext;
-    needsToggle = needs.needsToggle;
+    needsCount = needs.needsCount;
+    needsOf = needs.needsOf;
+    needsOn = needs.needsOn;
+    needsRows = needs.needsRows;
+    refocusRow = needs.refocusRow;
     openRow = needs.openRow;
     paintAll = needs.paintAll;
     paintList = needs.paintList;
@@ -277,6 +325,10 @@ ctx.o = list.o;
       resetLimit(list);
       if (query(list)) paintTools(list);
       paintAll(list);
+      return true;
+    }
+    if (ctx.b.hasAttribute('data-cbl-emptyact')) {
+      if (list.emptyRun) safe(list.emptyRun); /* H3: the empty state's own one action (the work queue's "Pick up the next one") */
       return true;
     }
     if (ctx.b.hasAttribute('data-cbl-retry')) {

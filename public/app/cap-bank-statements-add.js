@@ -15,7 +15,7 @@ function bkstAddHtml() {
     '<div class="bks-add" data-testid="bank-stmts-add">' +
     peField('bks_acct', 'Bank account', peSel('bks_acct', banks.map((item) => [item.code, item.name]), BKST.pickAcct, ' onchange="BKST.pickAcct=this.value"')) +
     peField('bks_label', 'Label, such as ..1234', '<input data-cbsid="BKS014-I12" class="inp" id="bks_label" data-testid="bank-stmts-label" maxlength="40" autocomplete="off" value="' + bkstE(bkstLabelOf(BKST.pickAcct)) + '">') +
-    peField('bks_file', 'Statement file (CSV or JSON)', '<input data-cbsid="BKS014-I13" class="inp" type="file" id="bks_file" data-testid="bank-stmts-file" accept=".csv,.json,.txt,text/csv,application/json">') +
+    peField('bks_file', 'Statement file (CSV, JSON, OFX, QIF)', '<input data-cbsid="BKS014-I13" class="inp" type="file" id="bks_file" data-testid="bank-stmts-file" accept=".csv,.json,.txt,.ofx,.qfx,.qif,text/csv,application/json">') +
     peBtn('bank-stmts-add-go', 'Add statement', 'bankStmtAdd()') +
     '</div>'
   );

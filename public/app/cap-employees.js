@@ -53,7 +53,7 @@
             return {};
           })
           .then(function (j) {
-            if (reply.status === 401 && E.o.onEnded) E.o.onEnded();
+            if (reply.status === 401 && E.o.onEnded) E.o.onEnded(j);
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
               e.status = reply.status;
@@ -79,7 +79,6 @@
   function ask(c, fn, btn, o) {
     return root.CBAction.run(btn, fn, Object.assign({ confirm: c }, o || {}));
   }
-
   /* ── words ── */
   function sinceWord(iso) {
     if (!iso) return T('Not yet');
@@ -244,6 +243,7 @@
         prio: 2,
         w: 230,
         mono: true,
+        wrap: true /* the whole sign-in name, wrapped, never cut (W10) */,
         cell: function (p) {
           return Copy.signInName(p.user_id) || '—';
         }
@@ -368,10 +368,8 @@
     if (!node) return;
     var add = E.may.add || { ok: false };
     node.innerHTML =
-      '<span class="emp-count" data-testid="emp-count"><b>' +
-      (E.counts.on || 0) +
-      '</b> ' +
-      esc(T('on')) +
+      '<span class="emp-count" data-testid="emp-count">' +
+      Copy.peopleCount(E.counts.on || 0) +
       (E.counts.off ? ' · <b>' + E.counts.off + '</b> ' + esc(T('off')) : '') +
       '</span>' +
       '<span class="emp-add">' +
@@ -496,6 +494,7 @@
   /** after a write: re-read the one list, repaint the sheet on the fresh row, tell the host */
   function changed(id, event) {
     return load().then(function () {
+      if (E.onChanged) return E.onChanged(id); /* Delegate work (cap-employees-give.js): the panel repaints in place, no sheet */
       if (E.list) E.list.refresh();
       paintBar();
       var node = byId(id);
@@ -614,7 +613,7 @@
     var cur = p.access;
     var cs = E.choices
       .map(function (item, index) {
-        var on = item.level === cur.level && item.whole_entity === cur.whole_entity && item.can_see_costs === cur.can_see_costs;
+        var on = item.label === cur.label; /* the server names the preset the three facts and the hat make (lib/access presetFor): the label is the one answer, so Bookkeeper and Regional manager are never both ticked */
         return (
           '<label class="emp-opt"><input data-cbsid="EMP001-I01" type="radio" name="emp_lvl" value="' +
           index +
@@ -641,7 +640,7 @@
         function () {
           return call('PATCH', '/api/actors/' + encodeURIComponent(p.id), {
             access_level: c.level,
-            hat: HAT_OF[c.level] || 'act',
+            hat: c.hat || HAT_OF[c.level] || 'act' /* a pinned seat (Bookkeeper) carries its own hat */,
             whole_entity: c.whole_entity,
             can_see_costs: c.can_see_costs
           });
@@ -735,7 +734,7 @@
   function openAdd() {
     var cs = E.choices
       .map(function (item, index) {
-        return '<option value="' + index + '"' + (item.key === 'counter' ? ' selected' : '') + '>' + esc(item.label) + '</option>';
+        return '<option value="' + index + '"' + (item.key === (E.choices.some(function (c) { return c.key === 'counter'; }) ? 'counter' : (E.choices[0] || {}).key) ? ' selected' : '') /* a shop defaults to Counter staff; a practice (no Counter staff) to its FIRST choice, Accountant / Bookkeeper */ + '>' + esc(item.label) + '</option>';
       })
       .join('');
     sheet(
@@ -768,24 +767,15 @@
         esc(T('Add')) +
         '</button></form>'
     );
-    var typedKey = false,
-      tm = null;
-    $('emp_k').oninput = function () {
-      typedKey = true;
-    };
+    var tm = null,
+      /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
+      keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T);
     $('emp_n').oninput = function () {
       clearTimeout(tm);
       var name = $('emp_n').value.trim();
-      if (typedKey || name.length < 2) return;
+      if (keyWatch.typed() || name.length < 2) return;
       tm = setTimeout(function () {
-        call('POST', '/api/actors/suggest-key', { display_name: name }).then(
-          function (reply) {
-            if (typedKey) return;
-            $('emp_k').value = reply.suggested_key || '';
-            $('emp_kn').textContent = reply.login_format ? T('They sign in as') + ' ' + reply.login_format : '';
-          },
-          function () {}
-        );
+        keyWatch.ask(name, function (reply) { $('emp_k').value = reply.suggested_key || ''; });
       }, 300);
     };
     $('emp_add_go').onclick = function () {
@@ -807,7 +797,7 @@
         phone: $('emp_p').value.trim() || undefined,
         email: $('emp_e').value.trim() || undefined,
         access_level: c.level,
-        hat: HAT_OF[c.level] || 'act',
+        hat: c.hat || HAT_OF[c.level] || 'act' /* a pinned seat (Bookkeeper) carries its own hat */,
         whole_entity: !!c.whole_entity
       };
       root.CBAction.run(
@@ -861,6 +851,7 @@
     return load().then(function () {
       if (E.list) E.list.refresh();
       paintBar();
+      if (E.onAdded) E.onAdded(id); /* Delegate work: the picker behind the sheet gains the new person */
       var p = id ? byId(id) : null;
       sheet(addedHtml(r, p));
       paintCodeBox((p && p.name) || (r.actor && r.actor.display_name) || '', r);
@@ -934,5 +925,5 @@
     start();
     return { reload: reload };
   }
-  root.CBEmployees = { mount: mount, sinceWord: sinceWord };
+  root.CBEmployees = { mount: mount, sinceWord: sinceWord, inPlace: { E: E, load: load, byId: byId, accessPanel: accessPanel, openAdd: openAdd, closeSheet: closeSheet } }; /* the in-place door cap-employees-give.js mounts the SAME access panel through */
 })(typeof window !== 'undefined' ? window : globalThis);

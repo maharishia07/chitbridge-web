@@ -176,13 +176,21 @@ function bankSuggest(list, countryCode) {
 }
 /** licence: the tax id, India's PAN / AU's ACN, the standard licence rows, then the rest (India-only ids dropped elsewhere) */
 function licenceSuggest(list, countryCode, words) {
-  var isIndia = countryCode === 'IN',
-    panRows = list.filter(function (x) {
-      return x[1] === 'pan';
-    }); /* India's second id comes from the one list above, never a second literal */
-  var secondId = isIndia ? panRows : countryCode === 'AU' ? [['ACN', 'acn']] : [];
+  var form = packRegForm(countryCode); /* ACC-363: the pack's registration form (second id, exporter ids), never a country code */
+  var secondId = form.secondIds.map(function (pair) {
+    return (
+      list.filter(function (x) {
+        return x[1] === pair[1];
+      })[0] || pair
+    ); /* the one list's own row when it has one (its label), else the pack's */
+  });
+  var held = ['gstin', 'pan'].concat(
+    form.secondIds.map(function (pair) {
+      return pair[1];
+    })
+  );
   var rest = list.filter(function (x) {
-    return ['gstin', 'pan'].indexOf(x[1]) < 0 && (isIndia || ['iec', 'lut', 'ad_code'].indexOf(x[1]) < 0);
+    return held.indexOf(x[1]) < 0 && (form.extraIds.indexOf(x[1]) >= 0 || ['iec', 'lut', 'ad_code'].indexOf(x[1]) < 0);
   });
   return [[words.gstin, 'gstin']].concat(secondId, LICENCE_ROWS, rest);
 }
@@ -359,9 +367,9 @@ function vaultSectionHTML(sec, i) {
     ')">+ add detail</button></div>'
   );
 }
-/** W19: a row's value hint by tag — India's 15-character GSTIN hint only on an Indian shop */
+/** W19: a row's value hint by tag — the 15-character GSTIN hint only where the pack lists that tag (ACC-363) */
 function vaultRowHint(tag) {
-  return tag === 'gstin' && shopCc() !== 'IN' ? '' : VAULT_HINT[tag] || '';
+  return tag === 'gstin' && packRegForm(shopCc()).hintTags.indexOf(tag) < 0 ? '' : VAULT_HINT[tag] || '';
 }
 /** the name box's placeholder: "detail name — e.g." the section's first suggestion in the shop's own words */
 function vaultNamePlaceholder(type) {

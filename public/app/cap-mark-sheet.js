@@ -48,8 +48,9 @@
     if (record === undefined) return '<span class="mk-none" aria-hidden="true">…</span>';
     if (state.failed && !record) return '<span class="mk-none" role="img" aria-label="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '" title="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '">!</span>';
     var markClass = markKit.classOf(record);
-    if (!record || !markClass) return emptyChip(state, id);
-    return markedChip(state, id, record, markClass);
+    var note = state.changed && state.changed[id] ? ' <span class="mk-changed" data-testid="mk-changed" role="status">' + esc(state.changed[id]) + '</span>' : '';
+    if (!record || !markClass) return emptyChip(state, id) + note;
+    return markedChip(state, id, record, markClass) + note;
   }
   /** no mark yet: a quiet dash for a reader who may not mark, else the ghost buttons (check · ask) */
   function emptyChip(state, id) {
@@ -206,7 +207,8 @@
   function wireSheet(state, control, id, options, dialog) {
     var outEl = dialog.querySelector('[data-testid="mk-out"]'), note = dialog.querySelector('#mk_note');
     state.outEl = outEl;
-    var close = sheetCloser(state, dialog, options), run = { dialog: dialog, close: close, note: note, outEl: outEl, control: control, id: id };
+    var stopWatch = control.watch ? control.watch(id) : function () {}; /* the mark is re-read while the sheet is open */
+    var closeSheet = sheetCloser(state, dialog, options), close = function () { stopWatch(); closeSheet(); }, run = { dialog: dialog, close: close, note: note, outEl: outEl, control: control, id: id };
     if (note) wireNote(dialog, note);
     dialog.addEventListener('click', function (event) { onSheetPress(event, run); });
     dialog.addEventListener('cancel', function (event) { event.preventDefault(); close(); });

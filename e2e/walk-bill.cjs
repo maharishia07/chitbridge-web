@@ -20,7 +20,7 @@ W.run('bill', async (w) => {
   await page.waitForFunction(() => typeof window.modOpen === 'function' && typeof window.parkBill === 'function' && typeof window.dayClose === 'function' && window.CBTax, null, { timeout: 30000 });
   /* the fixture shop and its shelf */
   /* INT7a-GREEN: the walk's one today (lib/today.cjs) is Node's — handed INTO the page as an argument, never named inside it */
-  await page.evaluate((given) => {
+  const setFixture = () => page.evaluate((given) => {
     var api = given.api;
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
     window.ageAllow = async () => true;
@@ -37,6 +37,8 @@ W.run('bill', async (w) => {
               { item_id: 'tea', name: 'Tea', price: 10, unit: 'cup', tax_slab: 'std' }] };
     CART = []; MODE = 'sell'; PARKED = []; try { ls.set(shopLs('cb_till_dayclosed'), 'null'); } catch (_) {}
   }, { api: base, nowIso: TD.nowIso() });
+  /* the till boots on its own clock (refresh() lands S from its own state after our fixture on a slow runner: CI walk 6, 21 Nov, same SHA green once and red once) - set the fixture, let the boot settle, set it again */
+  await setFixture(); await page.waitForLoadState("networkidle").catch(() => {}); await page.waitForTimeout(2500); await setFixture();
   /* a sign-in or pairing sheet over the till would hide the controls - close any dialog that opened by itself */
   await page.evaluate(() => { document.querySelectorAll('dialog[open]').forEach((d) => { try { d.close(); } catch (_) {} }); });
 
