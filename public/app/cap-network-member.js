@@ -799,7 +799,7 @@ function netSendCart(isDraft) {
     subject: subj,
     schema_values: { subject: subj, delivery_by: o.by || '', deliver_to: o.addr || '', note: o.note || '' },
     line_items: picked.map(function (item) {
-      return { particulars: item.name, quantity: +item.qty || 0, price: amt(item), total: (+item.qty || 0) * amt(item) };
+      return { particulars: item.name, quantity: +item.qty || 0, price: amt(item), total: CBMoney.round((+item.qty || 0) * amt(item)) };
     }),
     priority: 'normal',
     onSent: function () {

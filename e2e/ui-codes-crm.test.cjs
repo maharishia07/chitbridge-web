@@ -41,7 +41,7 @@ const NEAR = [
   ['app/cap-crm-calls.js', 'id="crm_call_day"', 'CRM005-I01'],
   ['app/cap-crm-leads.js', 'id="crm_lead_stage"', 'CRM004-S01'], ['app/cap-crm-leads.js', 'crm-lead-import', 'CRM004-B04'],
   ['app/cap-crm-groups-sheet.js', 'id="crm_grp_name"', 'CRM008-I01'], ['app/cap-crm-groups-send.js', 'id="crm_send_text"', 'CRM008-T01'], ['app/cap-crm-groups-window.js', 'crm-sc-copy', 'CRM008-B04'],
-  ['app/cap-marketing.js', 'data-crm="mktpage"', 'MKT003-B01']
+  ['app/cap-marketing.js', 'class="crm-mini" data-crm="', 'MKT003-B01']
 ];
 const read = (f) => {
   let t = fs.readFileSync(path.join(PUB, f), 'utf8').split('\r\n').join('\n');

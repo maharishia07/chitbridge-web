@@ -966,6 +966,7 @@ function payOpen(kind, partyId, pre) {
     nm = typeof pre === 'string' ? pre : '';
   var o = pre && typeof pre === 'object' && ('offer' in pre || 'after' in pre) ? pre : {},
     offer = o.offer && o.offer.valid ? o.offer : null;
+  nm = nm || (typeof o.name === 'string' ? o.name : ''); /* CB Finance hands { name, after }: the row's name AND the list to re-read */
   if (typeof pre === 'string' || o === pre) pre = null;
   PAY = {
     kind: kind,

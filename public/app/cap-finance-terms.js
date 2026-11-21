@@ -347,10 +347,11 @@ function ftUndoFor(list, greyed, partyId) {
     return best < 0 || String(change.at) > String((list[best] || {}).at) ? index : best;
   }, -1);
   return function (change, index) {
+    var side = /^supplier\./.test(String(change.field || '')) ? 'supplier' : 'customer';
     var field = String(change.field || '').replace(/^(customer|supplier)\./, '');
     if (index !== newest || !FT_UNDOABLE[field]) return '';
     var old = change.old == null ? '' : typeof change.old === 'object' ? JSON.stringify(change.old) : String(change.old);
-    return ' <button data-cbsid="FIN004-B02" type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
+    return ' <button data-cbsid="FIN004-B02" type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-side="' + esc(side) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
   };
 }
 /** the standard confirm for a money setting (CBAction asks in the page's own dialog; Cancel sends nothing) */
@@ -359,9 +360,9 @@ function ftMoneyConfirm(title, body, yes) {
 }
 /** Undo: send the newest change's old value back as a new change, then read the terms again */
 function ftUndo(btn) {
-  var undo = { field: btn.dataset.field, old: btn.dataset.old, partyId: btn.dataset.party || null };
+  var undo = { field: btn.dataset.field, old: btn.dataset.old, partyId: btn.dataset.party || null, side: btn.dataset.side === 'supplier' ? 'supplier' : 'customer' };
   if (!undo.field) return;
-  var body = undo.partyId ? { party_id: undo.partyId, side: 'customer' } : {},
+  var body = undo.partyId ? { party_id: undo.partyId, side: undo.side } : {},
     lineId = undo.partyId ? 'ftp_why' : 'ft_why';
   try {
     body[undo.field] = ftUndoVal(undo.field, undo.old);

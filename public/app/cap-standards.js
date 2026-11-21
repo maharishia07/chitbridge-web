@@ -3068,7 +3068,7 @@ function stdWhyHTML(opts) {
 function stdCounts() {
   var n = { live: 0, part: 0, plan: 0 };
   STANDARDS.forEach(function (x) {
-    if (x.k !== 'build-rule') n[x.s]++;
+    if (x.k !== 'build-rule' && n[x.s] !== undefined) n[x.s]++; /* a "not applicable" row is in none of the three figures, never NaN */
   });
   return n;
 }

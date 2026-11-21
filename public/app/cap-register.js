@@ -920,8 +920,14 @@ async function rgSave() {
       return;
     }
     try {
-      var made = await api('regSubjectNew', { body: { type_key: rgVal('rgNewType') || 'other', name: name } });
-      into = made && made.subject_id;
+      /* a register made by an earlier press whose entry then failed is used again, never made twice (EL-13 M6) */
+      var typeKey = rgVal('rgNewType') || 'other';
+      if (RG.madeNew && RG.madeNew.name === name && RG.madeNew.type === typeKey) into = RG.madeNew.id;
+      else {
+        var made = await api('regSubjectNew', { body: { type_key: typeKey, name: name } });
+        into = made && made.subject_id;
+        RG.madeNew = into ? { name: name, type: typeKey, id: into } : null;
+      }
       RG.sel = into;
     } catch (e) {
       toast(rgFail('open the register', e));
@@ -964,6 +970,7 @@ async function rgSave() {
 
   try {
     await api('regEntryAdd', { params: { sid: into }, body: p });
+    RG.madeNew = null;
     RG.adding = false;
     toast(tx('Recorded.'));
     await openRegister(true);

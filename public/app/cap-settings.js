@@ -968,6 +968,11 @@ var CBSettings = (function () {
       return (H.polMay && H.polMay.connectors_in_use) || null;
     }
     function setUse(c, on) {
+      if (pol === null) {
+        /* the list the shop uses was never read: writing now would replace it with this one connector (GF-14 M2 / EL-14 M7) */
+        $('sx_con_out').textContent = T('Could not read which ones you use.');
+        return;
+      }
       var now = inUse().filter(function (x) {
         return x !== c.id;
       });

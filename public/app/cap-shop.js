@@ -751,8 +751,9 @@ async function vaultSaveQuiet() {
   var patch = vaultPatch(UI._vaultBase || [], _vaultSecs());
   if (!patch) return false;
   UI._party = undefined;
+  var sent = JSON.parse(JSON.stringify(_vaultSecs())); /* the copy the patch was built from: what is typed while the save is on its way stays a change for the next save (GF-14 M1 / EL-14 M4) */
   var answer = await api('vaultSave', { body: { version: UI._vaultVersion, patch: patch } });
-  UI._vaultBase = JSON.parse(JSON.stringify(_vaultSecs()));
+  UI._vaultBase = sent;
   UI._vaultVersion = (answer && answer.version) == null ? UI._vaultVersion : String(answer.version);
   if (window.CBOffline) CBOffline.clearDraft('app.vault');
   return true;

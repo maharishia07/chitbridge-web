@@ -346,9 +346,9 @@ function finCols() {
           id +
           "\" onclick=\"event.stopPropagation();payOpen('customer','" +
           id +
-          "'," +
+          "',{name:" +
           esc(JSON.stringify(String(p.name || ''))) +
-          ')">' +
+          ',after:function(){finLoad(true)}})">' +
           esc(tx('Receive')) +
           '</button>' +
           '<button type="button" data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-remind-' +
