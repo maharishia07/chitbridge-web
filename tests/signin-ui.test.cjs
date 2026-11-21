@@ -398,6 +398,30 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.ok(/providerLinkFinish: \{ m: 'POST', p: '\/api\/signin\/provider\/link\/finish'/.test(read('app/accounts-shell.js')), 'the route is in the register of calls');
   });
 
+  await it('N3: the #k= landing goes to the real Settings > Account address (one constant), never to #/settings, and Account spends the code at paint', async () => {
+    const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
+    const app = read('app.html'), shell = read('app/accounts-shell.js'), settings = read('app/cap-settings.js');
+    const home = /account: '([^']+)'/.exec(shell);
+    assert.ok(home && home[1] === '/settings.html#/account', 'CB_HOMES.account is the one address');
+    assert.ok(!/#\/settings/.test(app.slice(app.indexOf('var LANDED_AT_BOOT'), app.indexOf('var LANDED_AT_BOOT') + 1200)), 'the landing no longer sends to #/settings (no such route)');
+    assert.ok(!/#\/settings/.test(settings), 'cap-settings does not name #/settings either');
+    // run the landing's own function: signed in, the person is sent to CB_HOMES.account
+    const fn = /function landedGo\(\) \{[^\n]*\}/.exec(app);
+    assert.ok(fn, 'landedGo exists');
+    const run = (token) => {
+      const sent = { replaced: null, hash: null };
+      const loc = { replace: (u) => { sent.replaced = u; }, set hash(v) { sent.hash = v; } };
+      new Function('SESSION', 'CB_HOMES', 'location', fn[0] + '; landedGo();')({ token }, { account: home[1] }, loc);
+      return sent;
+    };
+    assert.strictEqual(run('t').replaced, '/settings.html#/account', 'signed in: lands on Settings > Account');
+    assert.deepStrictEqual(run('').hash, '#/login', 'signed out: the sign-in');
+    // the account tab reads the code at paint and finishes within its life
+    const at = settings.indexOf("sessionStorage.getItem('cb_connect_code')");
+    assert.ok(at > 0 && settings.indexOf("api('providerLinkFinish'", at) > at, 'account() reads cb_connect_code and calls providerLinkFinish');
+    assert.ok(/'account'/.test(read('settings.html')) || /k: 'account'/.test(read('settings.html')), 'settings.html has the account section');
+  });
+
   console.log('\n' + (pass + fail) + ' checks · ' + pass + ' passed · ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();

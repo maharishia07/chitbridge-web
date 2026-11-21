@@ -42,6 +42,7 @@ var CB_HOMES = {
   profile: '/settings.html#/shop' /* the avatar's own choice for Profile: Settings › Your business (avatar.js, UX-96) */,
   shop: '/settings.html#/shop',
   country: '/settings.html#/country',
+  account: '/settings.html#/account' /* Settings › Account: where a provider's redirect lands the person (app.html landedGo, N3) and the code is spent */,
   settings: '/settings.html' /* CB Settings (SET1): Your shop · Country setup */,
   integrations: '/settings.html#/connectors',
   counters: '/settings.html#/counters',

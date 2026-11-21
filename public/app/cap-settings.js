@@ -2368,7 +2368,7 @@ var CBSettings = (function () {
       if ($('sx_prov_on') && !why)
         $('sx_prov_on').onclick = function () {
           CBAction.run($('sx_prov_on'), function () {
-            return api('providerLinkStart', { body: { provider: 'google', pin: pinOf(), next: '/app.html#/settings' } });
+            return api('providerLinkStart', { body: { provider: 'google', pin: pinOf(), next: '/app.html' } });
           }, {
             key: 'sx-prov-on',
             failed: T('Could not connect it. Check your PIN.'),

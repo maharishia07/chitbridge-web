@@ -30232,10 +30232,12 @@ try {
 } catch (_) {}
 /* ⭐ SSO-1129 H1: what a provider's redirect left in the address (#h= a one-time code · #e= a refusal word · #c= the result of connecting) is taken ONCE here, before the default #/login:
    a code is swapped for the session by the ONE machine (CBSignin.machine → POST /api/signin/provider/handoff, the same body as a code sign-in); a refusal is said on the login screen in words. */
+/* N3: where the provider's redirect goes on from this landing: Settings > Account is a page of its own (CB_HOMES.account, accounts-shell.js), not a route of this one; signed out, the sign-in */
+function landedGo() { if (SESSION.token) location.replace(CB_HOMES.account); else location.hash = '#/login'; }
 var LANDED_AT_BOOT = null;
 try { LANDED_AT_BOOT = window.CBSignin && CBSignin.takeLanded ? CBSignin.takeLanded() : null; } catch (_) {}
-if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'k') { try { if (SESSION.token) sessionStorage.setItem('cb_connect_code', LANDED_AT_BOOT.value); } catch (_) {} location.hash = SESSION.token ? '#/settings' : '#/login'; }
-else if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'c') { try { sessionStorage.setItem('cb_connect_result', LANDED_AT_BOOT.value); } catch (_) {} if (!location.hash) location.hash = SESSION.token ? '#/settings' : '#/login'; }
+if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'k') { try { if (SESSION.token) sessionStorage.setItem('cb_connect_code', LANDED_AT_BOOT.value); } catch (_) {} landedGo(); }
+else if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'c') { try { sessionStorage.setItem('cb_connect_result', LANDED_AT_BOOT.value); } catch (_) {} if (!location.hash) landedGo(); }
 else if (LANDED_AT_BOOT && !SESSION.token) location.hash = '#/login';
 if (!location.hash) location.hash = SESSION.token ? '#/' : '#/login';
 route();
