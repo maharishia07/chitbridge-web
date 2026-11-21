@@ -245,6 +245,32 @@ function trMoneyCell(pick) {
     return '<span class="mono">' + esc(trMoney(pick(row))) + '</span>';
   };
 }
+/** the takings and bills columns of the table */
+function trTakingsCols() {
+  return [
+    {
+      key: 'takings',
+      label: tx('Takings'),
+      prio: 4,
+      w: 130,
+      num: true,
+      html: true,
+      cell: trMoneyCell(function (row) {
+        return row.total_minor;
+      })
+    },
+    {
+      key: 'bills',
+      label: tx('Bills'),
+      prio: 5,
+      w: 80,
+      num: true,
+      cell: function (row) {
+        return row.bills === null ? '—' : String(row.bills);
+      }
+    }
+  ];
+}
 /** the table's columns: period · sales · last year · change · takings · bills · note — the same figures the chart draws */
 function trCols() {
   return [
@@ -296,27 +322,7 @@ function trCols() {
         return '<span data-testid="tr-change-' + esc(row.key) + '">' + esc(trChangeWords(row.change_pct)) + '</span>';
       }
     },
-    {
-      key: 'takings',
-      label: tx('Takings'),
-      prio: 4,
-      w: 130,
-      num: true,
-      html: true,
-      cell: trMoneyCell(function (row) {
-        return row.total_minor;
-      })
-    },
-    {
-      key: 'bills',
-      label: tx('Bills'),
-      prio: 5,
-      w: 80,
-      num: true,
-      cell: function (row) {
-        return row.bills === null ? '—' : String(row.bills);
-      }
-    },
+    ...trTakingsCols(),
     {
       key: 'note',
       label: tx('Note'),

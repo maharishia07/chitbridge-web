@@ -178,6 +178,12 @@ var CBStock = (function () {
     return r.lots.length && r.lots[0].expires_at ? r.lots[0].expires_at : '9999-12-31';
   }
 
+  /** what the list says when the stock could not be read: the shared busy sentence on a 429, else the plain words */
+  function stockError() {
+    /* OPS001 · M-F-07: a busy answer (429) says the shared "try again in n s" sentence, never "could not read" */
+    if (S.err && Number(S.err.status) === 429 && window.CBShell && window.CBShell.busySentence) return { title: window.CBShell.busySentence(S.err.retryAfter) };
+    return { title: translate('Could not read your stock.'), sub: translate('Nothing was changed. Try again in a moment.') };
+  }
   /** the options the stock list is mounted with */
   function opts() {
     return {
@@ -198,11 +204,7 @@ var CBStock = (function () {
       state: function () {
         return S.err ? 'error' : S.rows === null ? 'loading' : null;
       },
-      error: function () {
-        /* OPS001 · M-F-07: a busy answer (429) says the shared "try again in n s" sentence, never "could not read" */
-        if (S.err && Number(S.err.status) === 429 && window.CBShell && window.CBShell.busySentence) return { title: window.CBShell.busySentence(S.err.retryAfter) };
-        return { title: translate('Could not read your stock.'), sub: translate('Nothing was changed. Try again in a moment.') };
-      },
+      error: stockError,
       onRetry: load,
       empty: function () {
         return S.notReady
