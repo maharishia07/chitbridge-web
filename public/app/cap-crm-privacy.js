@@ -208,6 +208,11 @@ function crmConsentHistFailed(hist, e) {
     esc(tx('Try again')) +
     '</button></div>';
 }
+/** A-F-52: the law line is written to the SHOPKEEPER (the server's own sentence speaks to the customer: "You may opt out"), so it says what the shop must do */
+function crmConsentLawLine(law) {
+  if (!law || !law.known) return esc((law && law.note) || '');
+  return '<b>' + esc(law.short || law.law) + '</b> · ' + esc(tx('Send offers only to people who agreed. They may withdraw at any time, and you must stop.'));
+}
 async function crmConsentOpen(p) {
   var hist = document.getElementById('crm_consent_hist'),
     node = document.getElementById('crm_consent_law');
@@ -223,7 +228,7 @@ async function crmConsentOpen(p) {
   hist = document.getElementById('crm_consent_hist');
   node = document.getElementById('crm_consent_law');
   if (!hist) return;
-  if (node && r.law) node.innerHTML = r.law.known ? '<b>' + esc(r.law.short || r.law.law) + '</b> · ' + esc(r.law.consent) : esc(r.law.note || '');
+  if (node && r.law) node.innerHTML = crmConsentLawLine(r.law);
   crmConsentStanding(r);
   var rows = (r.history || []).map(function (item, index) {
     return Object.assign({ _i: index }, item);
