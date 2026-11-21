@@ -400,3 +400,5 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
 .bd-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;max-width:720px;margin:10px 0}
 .bd-map-grid label{display:block;font-size:12px;font-weight:600}
 .bd-map-grid select{display:block;width:100%;font:inherit;min-height:44px;margin-top:4px}
+/* F-54: a short desktop window (1366×768): tighter menu rows so an opened group sits beside the folded ones without the menu scrolling */
+@media (min-width:761px) and (max-height:819px){.nav-btn{height:36px}.nav-grp{margin-top:4px}}
