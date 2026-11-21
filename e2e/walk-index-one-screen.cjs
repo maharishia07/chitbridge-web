@@ -13,7 +13,7 @@ const json = (r, s, o) => C.json(r, s, o);
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else fail++; console.log((c ? '  ok  ' : '  XX  ') + m); };
 const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-const tok = (c) => e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x';
+const tok = (c) => e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x'; /* clock-ok: a token expiry an hour from the real clock, not a business day */
 const SHOP = { token: tok({ identity_id: 'ent-NEW', identity_type: 'entity' }), role: 'entity', name: 'Asha', entity: 'Bluegum Cafe', bridgeId: 'CBNEW00001', country: 'AU', currency: 'AUD' };
 const FIRM = { token: tok({ identity_id: 'ent-FIRM', identity_type: 'entity' }), role: 'entity', name: 'Pat Accountant', entity: 'Blue Gum Books', country: 'AU', currency: 'AUD' };
 const NAMES = ['Eastlake Fresh', 'Harbour Cafe', 'Northside Plumbing', 'Wattle Bakery', 'Coastal Cycles', 'Bayside Books', 'Redgum Timber', 'Lakeview Dental', 'Manly Surf Co', 'Pyrmont Print'];
