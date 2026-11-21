@@ -1,6 +1,6 @@
 {
  "generated_by": "tools/country-samples.cjs",
- "engines": "1.103.0",
+ "engines": "1.104.0",
  "note": "A sample shop per country, simulated (tests/helpers/year-any.js) — never a real shop's figures. Amounts in minor units.",
  "prerequisites": [
   "Country setup done — registered for the tax, the number checks out",
@@ -47,7 +47,7 @@
       {
        "line": "cash_equivalents",
        "label": "Cash and cash equivalents",
-       "amount_minor": 19285717
+       "amount_minor": 42837417
       },
       {
        "line": "short_term_loans_advances",
@@ -67,6 +67,11 @@
        "amount_minor": 35000000
       },
       {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 23551700
+      },
+      {
        "line": "trade_payables",
        "label": "Trade payables",
        "amount_minor": 4543498
@@ -77,8 +82,8 @@
        "amount_minor": 23418338
       }
      ],
-     "total_assets_minor": 62961836,
-     "total_equity_and_liabilities_minor": 62961836,
+     "total_assets_minor": 86513536,
+     "total_equity_and_liabilities_minor": 86513536,
      "balanced": true
     },
     "profit_and_loss": {
@@ -349,7 +354,7 @@
       {
        "line": "cash",
        "label": "Cash and cash equivalents",
-       "amount_minor": 16077110
+       "amount_minor": 17496810
       }
      ],
      "equity_and_liabilities": [
@@ -357,6 +362,11 @@
        "line": "equity",
        "label": "Owner's equity / Share capital",
        "amount_minor": 35000000
+      },
+      {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 1419700
       },
       {
        "line": "trade_payables",
@@ -369,8 +379,8 @@
        "amount_minor": 21785642
       }
      ],
-     "total_assets_minor": 61358982,
-     "total_equity_and_liabilities_minor": 61358982,
+     "total_assets_minor": 62778682,
+     "total_equity_and_liabilities_minor": 62778682,
      "balanced": true
     },
     "profit_and_loss": {
@@ -804,7 +814,7 @@
       {
        "line": "cash",
        "label": "Cash and cash equivalents",
-       "amount_minor": 11192453
+       "amount_minor": 12117453
       },
       {
        "line": "other_current_assets",
@@ -819,6 +829,11 @@
        "amount_minor": 35000000
       },
       {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 925000
+      },
+      {
        "line": "trade_payables",
        "label": "Trade and other payables",
        "amount_minor": 4247025
@@ -829,8 +844,8 @@
        "amount_minor": 20449563
       }
      ],
-     "total_assets_minor": 59696588,
-     "total_equity_and_liabilities_minor": 59696588,
+     "total_assets_minor": 60621588,
+     "total_equity_and_liabilities_minor": 60621588,
      "balanced": true
     },
     "profit_and_loss": {
@@ -1201,7 +1216,7 @@
       {
        "line": "cash",
        "label": "Cash and cash equivalents",
-       "amount_minor": 9967289
+       "amount_minor": 32808689
       }
      ],
      "equity_and_liabilities": [
@@ -1209,6 +1224,11 @@
        "line": "equity",
        "label": "Share capital / Owner's equity",
        "amount_minor": 35000000
+      },
+      {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 22841400
       },
       {
        "line": "trade_payables",
@@ -1221,8 +1241,8 @@
        "amount_minor": 20187259
       }
      ],
-     "total_assets_minor": 59494783,
-     "total_equity_and_liabilities_minor": 59494783,
+     "total_assets_minor": 82336183,
+     "total_equity_and_liabilities_minor": 82336183,
      "balanced": true
     },
     "profit_and_loss": {
@@ -1521,7 +1541,7 @@
       {
        "line": "cash",
        "label": "Cash and cash equivalents",
-       "amount_minor": -2211051
+       "amount_minor": 41782949
       },
       {
        "line": "other_current_assets",
@@ -1536,6 +1556,11 @@
        "amount_minor": 35000000
       },
       {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 43994000
+      },
+      {
        "line": "trade_payables",
        "label": "Trade and other payables",
        "amount_minor": 4461161
@@ -1546,8 +1571,8 @@
        "amount_minor": 10245187
       }
      ],
-     "total_assets_minor": 49706348,
-     "total_equity_and_liabilities_minor": 49706348,
+     "total_assets_minor": 93700348,
+     "total_equity_and_liabilities_minor": 93700348,
      "balanced": true
     },
     "profit_and_loss": {
@@ -2134,7 +2159,7 @@
       {
        "line": "cash",
        "label": "Cash and cash equivalents",
-       "amount_minor": 6390396
+       "amount_minor": 6411496
       }
      ],
      "equity_and_liabilities": [
@@ -2142,6 +2167,11 @@
        "line": "equity",
        "label": "Stockholders' / Owner's equity",
        "amount_minor": 35000000
+      },
+      {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 21100
       },
       {
        "line": "trade_payables",
@@ -2154,8 +2184,8 @@
        "amount_minor": 16187297
       }
      ],
-     "total_assets_minor": 55468411,
-     "total_equity_and_liabilities_minor": 55468411,
+     "total_assets_minor": 55489511,
+     "total_equity_and_liabilities_minor": 55489511,
      "balanced": true
     },
     "profit_and_loss": {
@@ -2286,7 +2316,7 @@
       {
        "line": "cash",
        "label": "Cash and deposits",
-       "amount_minor": 246417
+       "amount_minor": 251537
       },
       {
        "line": "other_current_assets",
@@ -2301,6 +2331,11 @@
        "amount_minor": 350000
       },
       {
+       "line": "borrowings",
+       "label": "Borrowings",
+       "amount_minor": 5120
+      },
+      {
        "line": "trade_payables",
        "label": "Notes and accounts payable - trade",
        "amount_minor": 43765
@@ -2311,8 +2346,8 @@
        "amount_minor": 248488
       }
      ],
-     "total_assets_minor": 642253,
-     "total_equity_and_liabilities_minor": 642253,
+     "total_assets_minor": 647373,
+     "total_equity_and_liabilities_minor": 647373,
      "balanced": true
     },
     "profit_and_loss": {

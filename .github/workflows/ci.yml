@@ -446,6 +446,9 @@ jobs:
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
           node tests/till-pay-qr-link.test.cjs
+          node e2e/leak-1128-samples.test.cjs
+          node tests/shop-zone.test.cjs
+          node tests/testing-page-zone.test.cjs
       # UX-199 (20 Nov): TAG AT BUILD TIME. The identity census as a ratchet: open popups and controls may not rise above e2e/ui-identity.baseline.json (0); a code with no row in the register snapshot is open. No docs checkout needed.
       - name: UI identity ratchet (every popup and control has its code and a register row; UX-199)
         run: node e2e/ui-identity-ratchet.cjs
