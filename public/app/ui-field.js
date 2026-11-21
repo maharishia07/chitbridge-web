@@ -445,6 +445,15 @@ var CBUiField = (function () {
   field.error = showError;
   field.focusFirstError = focusFirstError;
   field.parse = parse;
+  /** WALK S S-F-01: the ONE e-mail check, in words (or '' when it can be an address): one @, something before it, a dotted name after it, no spaces. The server stays the authority. */
+  field.emailWhy = function (text) {
+    var have = String(text == null ? '' : text).trim();
+    if (!have) return '';
+    if (/\s/.test(have)) return 'An email address has no spaces.';
+    if (have.split('@').length !== 2 || !have.split('@')[0]) return '"' + have + '" is not an email address. It looks like name@yourshop.example.';
+    var host = have.split('@')[1];
+    return /^[^.\s][^\s]*\.[^.\s]+$/.test(host) && !/\.\./.test(host) ? '' : '"' + have + '" is not an email address. After the @ it needs a name with a dot, like yourshop.example.';
+  };
   field.marks = marksOf;
   field.ascii = asciiDigits;
   field.plug = function (kind, part) { PLUGS[kind] = part; };
