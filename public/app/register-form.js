@@ -100,7 +100,15 @@ function regLangHTML(code) {
   try {
     own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || '';
   } catch (_) { /* browser feature missing: the default applies */ }
-  return esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+  var label = esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
+  return REG_LANGS_READY.indexOf(code) < 0 ? '<span style="opacity:.6" data-testid="reg-lang-coming-' + esc(code) + '">' + label + ' · ' + esc(tx('coming')) + '</span>' : label;
+}
+/** AE-F-21: the screens are English today; a language the pack lists but the app does not offer yet is shown greyed "coming", never promised (the readiness rule) */
+var REG_LANGS_READY = ['en'];
+/** the pack's languages, the ones the app offers first */
+function regLangsOrdered(list) {
+  var all = (list || []).slice();
+  return all.filter(function (c) { return REG_LANGS_READY.indexOf(c) >= 0; }).concat(all.filter(function (c) { return REG_LANGS_READY.indexOf(c) < 0; }));
 }
 /** how numbers and dates print in the pack's format — the browser's own Intl: one fixed number, today's date (R4: never a hard-coded day) */
 function regFormatSample(locale) {
@@ -149,7 +157,7 @@ function regSpinRows() {
     out.push({
       key: 'language',
       what: tx('Language'),
-      value: (pk.languages || []).slice(0, 2).map(regLangHTML).join(' · '),
+      value: regLangsOrdered(pk.languages).slice(0, 2).map(regLangHTML).join(' · '),
       from: '',
       known: !!(pk.languages && pk.languages.length)
     });

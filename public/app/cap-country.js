@@ -205,6 +205,7 @@ function csuStoredFields(answer, edit) {
   edit.registered = answer.tax && typeof answer.tax.registered === 'boolean' ? answer.tax.registered : null; /* SET-49: unknown stays null, never false */
   edit.number = (answer.tax && answer.tax.number) || '';
   edit.scheme = (answer.tax && answer.tax.scheme) || 'regular';
+  edit.asked = Object.assign({}, answer.asked || {}); /* AE-F-03: the pack's own setup answers (emirate · period · zone · form) */
 }
 /** each stored value's source in words; a value with no source is "not confirmed yet" until the step is done */
 function csuStoredSources(answer, guess, edit) {
@@ -631,6 +632,7 @@ function csuTaxIdWhy(country, number) {
     (WALK-REG R10c — the tax row stays open while it still needs the number), and repaint */
 function csuSet(field, typed) {
   if (!CSU.edit) return;
+  if (/^ask:/.test(field)) return csuSetAsk(field, typed);
   if (field === 'country') csuApplyCountry(String(typed || '').toUpperCase());
   else if (CSU_CLEAN[field]) CSU.edit[field] = CSU_CLEAN[field](typed);
   /* W12: where the value came from, in words a person reads — "you chose", never "typed" */
@@ -667,6 +669,7 @@ function csuOpen(k) {
 function csuAnswered(key) {
   if (CSU.answered[key]) return true;
   if (key === 'supplies') return !!csuStoredSupplies();
+  if (/^ask_/.test(key)) return !!((CSU.edit && CSU.edit.asked) || {})[key.slice(4)];
   return !!(CSU.p && CSU.p.done);
 }
 /**
@@ -933,8 +936,51 @@ function csuRowsHTML(e, sources, fixed) {
     csuTimezoneRow(e, sources) +
     csuTaxRow(e, sources) +
     /* W27(a): the supplies live beside the registration — a tax attribute, not a bill line */
-    csuSuppliesRow(e)
+    csuSuppliesRow(e) +
+    csuAskRows(e)
   );
+}
+/** AE-F-03: the questions the shop's PACK asks at setup (the server's `asks`: emirate · VAT period · designated zone · legal form) — each a row, its words and choices the pack's; none for a pack that asks nothing */
+function csuAskRows(e) {
+  var asks = (CSU.p && CSU.p.asks) || [];
+  if (!asks.length || !CSU.p.country || CSU.p.country.code !== e.country) return '';
+  return asks
+    .map(function (ask) {
+      var current = (e.asked || {})[ask.key] || '',
+        chosen = ask.options.filter(function (o) {
+          return o.value === current;
+        })[0];
+      var options = [{ v: '', t: tx('Pick one'), off: !!current }].concat(
+        ask.options.map(function (o) {
+          return { v: o.value, t: tx(o.label) };
+        })
+      );
+      return csuRow('ask_' + ask.key, tx(ask.label), chosen ? esc(tx(chosen.label)) : '', ask.why ? tx(ask.why) : '', csuSel('cs-ask-' + ask.key, 'ask:' + ask.key, options, current));
+    })
+    .join('');
+}
+/** AE-F-03: one setup answer chosen on screen (a field named ask:<key>) — held, the row closed, repainted */
+function csuSetAsk(field, typed) {
+  var key = field.slice(4);
+  CSU.edit.asked = CSU.edit.asked || {};
+  if (typed) CSU.edit.asked[key] = String(typed);
+  else delete CSU.edit.asked[key];
+  CSU.answered['ask_' + key] = !!typed;
+  CSU.open['ask_' + key] = false;
+  CSU.touched = true;
+  CSU.err = '';
+  CSU.saved = false;
+  renderCountrySetup();
+}
+/** AE-F-03: the body's `particulars`: every question the pack asks, answered or cleared (null) — only when the screen's country is the held one */
+function csuParticulars(e) {
+  var asks = (CSU.p && CSU.p.asks) || [];
+  if (!asks.length || !CSU.p.country || CSU.p.country.code !== e.country) return null;
+  var out = {};
+  asks.forEach(function (ask) {
+    out[ask.key] = (e.asked || {})[ask.key] || null;
+  });
+  return out;
 }
 /** the two doors out of the step: the Country Standard, and "Where ChitBridge is for <country>" (Standards › Country readiness, W28(c)) */
 function csuLinksHTML(e) {
@@ -1044,6 +1090,8 @@ function csuSaveBody(e, confirmed) {
     timezone: e.timezone || null,
     source: CSU.src
   };
+  var particulars = csuParticulars(e);
+  if (particulars) body.particulars = particulars;
   /* SET-86: the server wants the owner's deliberate confirm to take a registered shop off its tax; sent only after the popup said yes */
   if (confirmed === true && csuDeregisters(e)) body.confirm_deregister = true;
   return body;
