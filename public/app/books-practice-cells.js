@@ -110,9 +110,12 @@
     return e ? e.of - e.checked : -1;
   }
   function checkedCell(r) {
-    var e = r.year_end && r.year_end.entries;
-    if (!e && r.checked && r.checked.of > 0) e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
-    return e ? practiceKit.escapeHtml(checkedWords(e)) + (e.capped ? ' <span class="sub">' + practiceKit.escapeHtml(practiceKit.translate('over 5000')) + '</span>' : '') : '—';
+    var e = r.year_end && r.year_end.entries, period = r.year_end && r.year_end.fy != null ? String(r.year_end.fy) : '';
+    if (!e && r.checked && r.checked.of > 0) {
+      e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
+      period = practiceKit.translate('this quarter'); /* L-F-14: the count names its period; the client's own day book counts every entry, so "0 of 4" beside five entries was two counts of different spans, said as one */
+    }
+    return e ? practiceKit.escapeHtml(checkedWords(e)) + (period ? ' <span class="sub" data-testid="pr-checked-period">' + practiceKit.escapeHtml(period) + '</span>' : '') + (e.capped ? ' <span class="sub">' + practiceKit.escapeHtml(practiceKit.translate('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
   /** B7: why a figure is not there, from the server's health.withheld: costs the grant does not show → "costs not shared"; more than one currency → said so; null otherwise (then "—" is no data). Never 0. */

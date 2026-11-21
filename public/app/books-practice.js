@@ -520,7 +520,7 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
+  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft, checkedCell: practiceKit.checkedCell,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
     parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);
