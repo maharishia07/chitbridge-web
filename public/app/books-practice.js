@@ -40,11 +40,25 @@
       return null;
     }
   }
-  function read(left) {
+  /* PRAC150: the list is the server's whole answer (no page words = every client). Should the server ever answer a page (has_more), the rest is read here, page by page at the contract's own maximum,
+     so the list, the tiles' rows and the count never stop at the first page. The next page is asked at the size the server answered (page n+1 of the same limit): a page number only means something at one page size. The count and the tiles are the server's (total, band), never counted from rows. */
+  function readAll() {
+    return read().then(function (answer) { return restOf(answer, Number(answer && answer.page) + 1, Number(answer && answer.limit)); });
+  }
+  function restOf(answer, page, limit) {
+    if (!answer || answer.failed === true || answer.has_more !== true || !Array.isArray(answer.clients) || !(limit >= 1) || page > 50) return answer;
+    return read(undefined, '?page=' + page + '&limit=' + limit).then(function (next) {
+      if (!next || next.failed === true || !Array.isArray(next.clients) || !next.clients.length) return answer;
+      answer.clients = answer.clients.concat(next.clients);
+      answer.has_more = next.has_more === true;
+      return restOf(answer, page + 1, limit);
+    });
+  }
+  function read(left, query) {
     left = left === undefined ? 3 : left;
-    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p, { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
+    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p + (query || ''), { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
       if (r.status === 503 && left > 0) {
-        return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1); });
+        return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1, query); });
       }
       if (r.status === 429 || r.status >= 500) return { failed: true, status: r.status }; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
       if (!r.ok) return null; /* a login that may not read the practice (403) or a server without it: nothing is drawn */
@@ -261,7 +275,7 @@
   function holdersOn() { return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []); }
   /** ASSIGN-1: read the practice again after an assign, so the Held by column shows what the server now holds */
   function reloadAfterAssign() {
-    return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
+    return readAll().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
   }
   /** ASSIGN-W2: the plug, the noun and the row facts of THIS list, read by the chip, the bar, the keys and Undo; "said" is the server's verdict (may_assign) and nothing else */
   function assignOpts() {
@@ -364,7 +378,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(clientCount(practiceKit.practiceState.data)) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +
@@ -500,6 +514,8 @@
     settle(); /* a known shop: the shop Home, as before */
   }
   /** W15: an answer with no client, for a login /me (or the last answer) says is a practice */
+  /** how many clients the firm has: the server's total (a number at least the rows in hand), else the rows */
+  function clientCount(data) { var rows = data.clients.length, total = data && data.total; return typeof total === 'number' && isFinite(total) && total >= rows ? total : rows; }
   function emptyFirm(answer) { return !!answer && !!answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1')); }
   function tick() {
     var tokenNow = token();
@@ -511,7 +527,7 @@
       practiceKit.practiceState.fl = null; practiceKit.practiceState.flReady = false; practiceKit.practiceState.flOff = false; practiceKit.practiceState.flTotal = 0; /* another login: its own flags */
       practiceKit.practiceState.pending = true;
       practiceKit.practiceState.since = Date.now();
-      read().then(function (answer) {
+      readAll().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
         if (emptyFirm(answer)) answer.practice_empty = true; /* W15: a firm's employee who holds no client yet is still on the practice (its own empty screen), never the shop Home */
         if (!answer || !answer.clients || (!answer.clients.length && !answer.practice_empty)) { hint(false); return settle(); }
@@ -537,5 +553,5 @@
   else start();
   root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
+    parts: { clientCount: clientCount, readAll: readAll, bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

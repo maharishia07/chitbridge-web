@@ -291,6 +291,7 @@ jobs:
           node e2e/chart-sample.test.cjs
           node e2e/practice-rep66-pictures.cjs
           node e2e/practice-rep73-fable.cjs
+          node e2e/practice-150.cjs
           node e2e/practice-checked-cell.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
