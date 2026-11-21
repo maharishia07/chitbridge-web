@@ -34,7 +34,8 @@ const box = {
   console, JSON, Date, Intl, Array, Object, Number, String,
   CBSTR: { en: {}, fr: {} }, cbLang: () => lang, CBLocale: { locale: () => lang, number: (x) => String(x) }, bidiWrap: (x) => x,
   UI: { _taxMonth: '2026-11' }, SESSION: { country: 'IN' }, inr: (x) => String(x), _misBack: () => '',
-  esc: (s) => String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';')
+  esc: (s) => String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';'),
+  packRegForm: (cc) => ({ railReturn: cc === 'IN' }) /* ACC-363: misTax asks the pack's one reader (helpers.js packRegForm); India's pack files a rail return */
 };
 vm.createContext(box);
 ['tx', 'txf', 'txn'].forEach((n) => vm.runInContext(fnSrc(shell, n), box));

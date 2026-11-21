@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (100)
+## Capabilities (101)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -25,6 +25,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-attach.js` | — |  |
 | `cap-attention.js` | — |  |
 | `cap-bank-home.js` | — | cap-bank-home.js — the BANK HOME and the way back to it (l16, W15-84; Athi 16 Nov: "you always need to land on one page when you press the bank") |
+| `cap-bank-map.js` | — | cap-bank-map.js — the column map on the Bank screen (FIN-115) |
 | `cap-bank-post.js` | — | cap-bank-post.js — the IN-APP post adapter for public/app/bank-preview.js: one confirmed bank line becomes one POST /events (series MJ) or one POST /p |
 | `cap-bank-rows.js` | — | cap-bank-rows.js — BANK on CB Accounts: the lines of the statement on screen and what a person does with one line (accept · undo · forget · note · rec |
 | `cap-bank-sheet.js` | — | cap-bank-sheet.js — the Bank view's "Add to your books" SHEET (FIN-117): the statement's lines against the books, the questions each line asks, one co |
@@ -64,7 +65,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-definitions.js` | lazy · definitions | DEFINITIONS · the shelf a catalogue takes things off. (lazy capability) |
 | `cap-dispute.js` | lazy · disputes | the DISPUTE capability (the USP), lazy-loaded via ensureCap('dispute') |
 | `cap-employees-copy.js` | — |  |
-| `cap-employees-give.js` | — | public/app/cap-employees-give.js — Accounts > Setup > Delegate work: a person picker over the People access panel, mounted in place ID BKS02 |
+| `cap-employees-give.js` | — | public/app/cap-employees-give.js — Accounts > Setup > Delegate work: a person-or-firm picker over the People access panel, mounted in place ID |
 | `cap-employees.js` | — |  |
 | `cap-entry-preview.js` | — | cap-entry-preview.js — ＋ ENTRY: the preview round trip (ask the server to preview the journal, read its answer, check the date) |
 | `cap-entry.js` | — | cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save |
@@ -261,7 +262,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 84 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 89 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 46 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 15 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 24 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
@@ -308,4 +309,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*219 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*220 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
