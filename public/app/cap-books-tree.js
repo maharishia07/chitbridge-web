@@ -5,12 +5,7 @@
  * CARD      16-finance/cb-finance
  */
 'use strict';
-/** the day before a date (UTC calendar arithmetic on YYYY-MM-DD, no clock) */
-function bkDayBefore(day) {
-  var d = new Date(day + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
+/* bkDayBefore: the one copy is in cap-books.js, which every page that loads this file also loads */
 /** one trial-balance row's two carried totals as one comparable word ("dr/cr", minor units) */
 function bkTotalsWord(row) {
   return String(row.dr_minor || 0) + '/' + String(row.cr_minor || 0);
