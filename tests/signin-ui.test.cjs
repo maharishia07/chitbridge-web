@@ -251,6 +251,41 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.strictEqual(E.soonRow('signin', ['google', 'microsoft']), '');
   });
 
+  await it('SSO-1129 P1a: a provider the api says is live is a REAL button at sign-in and stays GREY at registration; one the api does not list stays grey; a list that is not well formed switches nothing on', () => {
+    const live = E.soonRow('signin', [], ['google']);
+    assert.ok(/data-cbsi="provider" data-provider="google"[^>]*data-testid="signin-google"/.test(live) && !/signin-google-soon/.test(live), 'Google is a live button');
+    assert.ok(/signin-microsoft-soon/.test(live) && /disabled/.test(live), 'Microsoft (not listed) stays grey');
+    const reg = E.soonRow('register', [], ['google', 'microsoft']);
+    assert.ok(/register-google-soon/.test(reg) && !/data-cbsi="provider"/.test(reg), 'registering through a provider is P1b: grey');
+    const m = E.machine({ surface: 'test' }, { post: async () => ({ status: 200, body: {} }), store: store() });
+    m.setLive([{ key: 'google', label: 'Google', live: true }, { key: 'microsoft', label: 'Microsoft' }, { key: 'evil', live: true }, null]);
+    assert.deepStrictEqual(m.state().live, ['google']);
+    m.setLive('nonsense');
+    assert.deepStrictEqual(m.state().live, []);
+    assert.strictEqual(E.providerStart({ apiBase: 'https://api.test', deviceId: 'dev-12345678' }, 'google'), 'https://api.test/api/signin/provider/google/start?device_id=dev-12345678');
+    assert.strictEqual(E.providerStart({ apiBase: 'https://api.test', deviceId: 'dev-12345678' }, 'apple'), '', 'only a provider the window knows');
+    assert.strictEqual(E.providerStart({ apiBase: 'https://api.test', deviceId: null }, 'google'), '', 'no device, no start (the api refuses it first anyway)');
+  });
+
+  await it('SSO-1129 P1a: the hand-off code is swapped for the session by a POST BODY (never a URL): the same session shape as a code sign-in; a refusal is said in words and keeps no session', async () => {
+    const calls = [];
+    const ok = { status: 200, body: { token: token({ identity_id: 'mayur', identity_type: 'entity', display_name: 'Mayur Bhavan', bridge_id: 'B-MAYUR' }), identity: { display_name: 'Mayur Bhavan', user_id: 'mayuri123', identity_type: 'entity', bridge_id: 'B-MAYUR' } } };
+    const st = store();
+    const m = E.machine({ surface: 'test' }, { post: async (path, body) => { calls.push({ path, body }); return body.code === 'good-code' ? ok : { status: 403, body: { code: 'SSO_NOT_LINKED', detail: 'No account here is connected to that sign-in. Sign in with your mobile number or e-mail and the code we send you.' } }; }, store: st });
+    await m.providerHandoff('bad-code');
+    assert.strictEqual(m.state().at, 'out');
+    assert.ok(/code we send you/.test(m.state().why), m.state().why);
+    assert.strictEqual(st.m.size, 0, 'a refusal keeps no session');
+    await m.providerHandoff('good-code');
+    assert.strictEqual(m.state().at, 'in');
+    assert.ok(st.m.size > 0, 'the session is kept the way a code sign-in keeps it');
+    assert.deepStrictEqual(calls.map((c) => c.path), ['/api/signin/provider/handoff', '/api/signin/provider/handoff']);
+    assert.ok(calls.every((c) => Object.keys(c.body).join() === 'code'), 'the code is the only thing sent');
+    const gone = E.machine({ surface: 'test' }, { post: async () => ({ status: 401, body: { code: 'SSO_HANDOFF', detail: 'x' } }), store: store() });
+    await gone.providerHandoff('spent');
+    assert.ok(/already finished|took too long/.test(gone.state().why));
+  });
+
   await it('sessionOf reads a verify answer into the session the apps keep (entity · employee · customer)', () => {
     const e = E.sessionOf({ token: token({ identity_id: 'x', identity_type: 'entity', display_name: 'Shop', bridge_id: 'B1' }), identity: { display_name: 'Shop', user_id: 'shop', identity_type: 'entity', bridge_id: 'B1' } });
     assert.deepStrictEqual([e.role, e.name, e.entity, e.bridgeId, e.person.kind, e.duty], ['entity', 'Shop', 'Shop', 'B1', 'owner', undefined]);
