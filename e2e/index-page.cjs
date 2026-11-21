@@ -217,7 +217,8 @@ async function run() {
     {
       const { ctx } = await profile(390, 844), pg = await open(ctx);
       const sw = await pg.evaluate(() => document.documentElement.scrollWidth);
-      ok(sw === 390, '390 · scrollWidth === 390 (' + sw + ')');
+      const wide = await pg.evaluate(() => [].slice.call(document.querySelectorAll('.cbsh-main *, .ix-row')).filter((x) => { const r = x.getBoundingClientRect(); return r.width > 0 && r.right > 391; }).length);
+      ok(sw === 390 && wide === 0, '390 · scrollWidth === 390 (' + sw + ') and no row or card reaches past the screen (' + wide + ' do)');
       await ctx.close();
     }
 

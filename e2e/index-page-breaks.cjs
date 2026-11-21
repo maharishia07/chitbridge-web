@@ -15,7 +15,7 @@ const BREAKS = [
   ['the showcase shows a not-ready entry as Live (rule a: reads built, not ready)', HOME2, `entry.ready !== false && entry.state === 'built'`, `entry.state === 'built'`],
   ['the page mounts the bar, not Home', IDX, `    host: null,`, `    host: { bar: true },`],
   ['an alert() reaches the page', IDX, `function pairPaint(p){`, `function pairPaint(p){ alert(1);`],
-  ['the page overflows a phone', IDX, `</head>`, `<style>body{min-width:600px}</style></head>`]
+  ['the page overflows a phone', IDX, `</head>`, `<style>.ix-row,.ix-item{min-width:600px !important;width:600px !important}</style></head>`]
 ];
 /* BREAK_ONLY=<text> runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
