@@ -203,11 +203,26 @@ function bkstSummary() {
     kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
   return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept')) + bkstSignedLine();
 }
+/**
+ * FIN-129 (walk 19 Nov W26) · rule 4: a seat the SERVER refuses is shown the action greyed WITH the server's sentence and who can, never a bare gap.
+ * bkbSeatNo(kind): '' when the person may (or the server has not answered yet, or the seat only reads: the auditor's seat draws no write control, W15-71);
+ * kind 'write' = add a statement · match · sign off (the server's may.write), 'post' = add lines to the books (may.post). The page holds no rule of its own.
+ */
+function bkbSeatNo(kind) {
+  if (bkbReadOnly() || bkbActing() || peOwner() || typeof BK_SEAT === 'undefined' || !BK_SEAT.said) return '';
+  if (kind === 'post') return BK_SEAT.write && !BK_SEAT.post ? tx(BK_SEAT.postWhy || 'Only the owner or bookkeeper can record this.') : '';
+  return BK_SEAT.write ? '' : BK_SEAT.writeWhy ? tx(BK_SEAT.writeWhy) + ' ' + tx('Ask the owner or the shop bookkeeper.') : tx('Only the owner or the shop bookkeeper can do this.');
+}
+/** FIN-129: the page button (BKS014-B18, Add to your books) greyed, with the sentence beside it */
+const bkbSeatNoPrimary = (fig) => { const no = BKB.text && typeof bankSheetOpen === 'function' && (!fig || bkbCount('books')) && (bkbSeatNo('write') || bkbSeatNo('post')); return no ? bkbSeatNoButton(no) : ''; };
+const bkbSeatNoButton = (no) => '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open" disabled aria-disabled="true" title="' + bkstE(no) + '">' + bkstE(tx('Add to your books')) + '</button><span class="pe-note" data-testid="bank-sheet-why">' + bkstE(no) + '</span>';
+/** FIN-129: the seat the server refuses sees Add statement greyed, with the server's sentence and who can (BKS014-B41, the same button, no press) */
+const bkstSeatNoHtml = () => '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle-no" disabled aria-disabled="true" title="' + bkstE(bkbSeatNo('write')) + '">' + bkstE(tx('Add statement')) + '</button><span class="pe-note" data-testid="bank-stmts-why">' + bkstE(bkbSeatNo('write')) + '</span>';
 /** the box's one line: its name, what it holds (the gap to fix) and, on the home only, the press that opens Add statement (BKS014-B41) */
 function bkstBarInner(open, ready) {
   return (
     '<b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
-    (ready && bankHomeMayAdd() ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" title="' + bkstE(bkstSummary()) + '" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '')
+    (ready && bankHomeMayAdd() ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" title="' + bkstE(bkstSummary()) + '" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : ready && bkbSeatNo('write') ? bkstSeatNoHtml() : '')
   );
 }
 /** the body of a ready box: the cards and the grid (or All years), the Add form when open, the kept files, the quiet "just read a file" and the note on where statements are kept */

@@ -5847,11 +5847,14 @@ function bkIsOwner() {
  * and bkSeatRead keeps the answer; the page holds no rule of its own. bkIsBookkeeper() is true only for a signed-in shop employee the server lets write; it never makes a seat the owner
  * (lock, year close, reverse and the rest stay on bkIsOwner). BK_SEAT.post = may record entries (POST /events), so a bank line can be added from the sheet.
  */
-var BK_SEAT = { write: false, post: false };
+var BK_SEAT = { write: false, post: false, said: false, writeWhy: '', postWhy: '' }; /* said = the server has answered; the two Why are ITS sentences for a refused write / post (FIN-129: a refused action is greyed WITH them) */
 function bkSeatRead(reply) {
   var may = (reply && reply.may) || {};
   BK_SEAT.write = !!(may.write && may.write.may === true);
   BK_SEAT.post = !!(may.post && may.post.ok === true);
+  BK_SEAT.said = !!(reply && reply.may);
+  BK_SEAT.writeWhy = BK_SEAT.write ? '' : String((may.write && may.write.why) || '');
+  BK_SEAT.postWhy = BK_SEAT.post ? '' : String((may.post && may.post.why) || '');
 }
 function bkIsBookkeeper() {
   return bkSessionRole() === 'actor' && !bkReadOnlySeat() && BK_SEAT.write;
