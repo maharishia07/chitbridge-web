@@ -723,7 +723,10 @@ function todoRow(item, index) {
 async function accTodo(body) {
   const g = ACC.gen;
   try {
-    const reply = await api('booksTodo');
+    const early = ACC.todoEarly; ACC.todoEarly = null; /* the read that left with the health read (start) is used once; Try again reads fresh */
+    const got = early ? await early : null;
+    if (got && got.e) throw got.e;
+    const reply = got ? got.r : await api('booksTodo');
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
@@ -933,6 +936,10 @@ async function start() {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
     /* SPEED (batch 1128): the avatar already read /me for this page; when it has answered, its ledger_on is the answer - no second /me round trip before the ledger read */
     const known = window.CBAvatar && CBAvatar.ledgerOn ? CBAvatar.ledgerOn() : null;
+    /* SPEED (batch 1128, speed2): To do needs nothing from the health answer (it reads only the shop), so when the Ledger is known on and To do is the first view the two reads leave together: one round trip, not two in a row. Failures are kept and shown by accTodo; nothing is read for a shop with the Ledger off. */
+    if (known === true && (hashPageOf() === 'todo' || (!NAV.some((item) => item[0] === hashPageOf()) && CBBooksActing.firstTab() === 'todo'))) {
+      ACC.todoEarly = api('booksTodo').then((r) => ({ r }), (e) => ({ e }));
+    }
     const profile = typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
     if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
