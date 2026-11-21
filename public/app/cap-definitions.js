@@ -307,7 +307,7 @@ function cbDefRegistries() {
   /* CX0: the rate menu and the scheme's word are the shop's PACK's (pack.tax.rates · pack.tax.scheme — GST 10 % in Australia, VAT 5 % in the UAE);
      India's GST_SLAB_RATES only under India's pack or none known */
   var tp = (typeof shopReg === 'function' && shopReg()) || null,
-    tsch = (tp && tp.tax && tp.tax.scheme) || 'GST';
+    tsch = cbDefTaxScheme().word;
   var trates = (tp && tp.tax && tp.tax.rates) || (typeof CBTaxSlab !== 'undefined' && CBTaxSlab.GST_SLAB_RATES) || null;
   out.push({
     key: 'tax',
@@ -1332,12 +1332,12 @@ function cbDefSetReward(id) {
 function cbDefTaxScheme() {
   var pack = (typeof shopReg === 'function' && shopReg()) || null,
     tax = pack && pack.tax ? pack.tax : null;
-  if (!tax) return { word: 'GST', sample: 18, codes: true };
+  tax = tax || {}; /* no pack known: the old shape (word, sample and codes below) */
   var rates = (tax.rates || []).filter(function (r) {
     return typeof r === 'number' && r > 0;
   });
-  var standard = typeof tax.standard_rate === 'number' ? tax.standard_rate : typeof pack.standard_rate === 'number' ? pack.standard_rate : rates[0];
-  return { word: tax.scheme || 'GST', sample: standard == null ? 18 : standard, codes: !!tax.hsn_digits };
+  var standard = typeof tax.standard_rate === 'number' ? tax.standard_rate : pack && typeof pack.standard_rate === 'number' ? pack.standard_rate : rates[0];
+  return { word: tax.scheme || 'GST', sample: standard == null ? 18 : standard, codes: !pack || !!tax.hsn_digits };
 }
 function cbDefSubLabel(kind, sub) {
   if (kind === 'tax') return cbDefTaxScheme().word + ' slab';
