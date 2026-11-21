@@ -1130,6 +1130,7 @@
     '{what} could not be read. Nothing was changed.': 'تعذّرت قراءة {what}. لم يتغيّر شيء.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(حتى الآن)',
+    '(part month)': '(جزء من الشهر)',
     'A month ago': 'قبل شهر',
     'A year ago': 'قبل سنة',
     'Add a statement for this account': 'إضافة كشف لهذا الحساب',

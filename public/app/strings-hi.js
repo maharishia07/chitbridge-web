@@ -1027,6 +1027,7 @@
     '{what} could not be read. Nothing was changed.': '{what} पढ़ा नहीं जा सका। कुछ बदला नहीं गया।',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(अब तक)',
+    '(part month)': '(आंशिक महीना)',
     'A month ago': 'एक महीने पहले',
     'A year ago': 'एक साल पहले',
     'Add a statement for this account': 'इस खाते के लिए विवरण जोड़ें',

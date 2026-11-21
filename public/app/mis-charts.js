@@ -179,7 +179,7 @@
       head: withLast ? [deps.tx('Month'), deps.tx('Sales'), deps.tx('Last year')] : [deps.tx('Month'), deps.tx('Profit')],
       rows: (list || []).map(function (item) {
         var name = monthWords(String(item.from).slice(0, 7), 'long', deps) + (item.running ? ' ' + deps.tx('(so far)') : '');
-        return withLast ? [name, moneyOrDash(item[key], deps), moneyOrDash(item.last_year_minor, deps)] : [name, moneyOrDash(item[key], deps)];
+        return withLast ? [name, moneyOrDash(item[key], deps), moneyOrDash(item.last_year_minor, deps) + (item.last_year_partial ? ' ' + deps.tx('(part month)') : '')] : [name, moneyOrDash(item[key], deps)]; /* YE-F-03: the month the books began in is a part month */
       })
     };
   }

@@ -1026,6 +1026,7 @@
     '{what} could not be read. Nothing was changed.': '{what} n’a pas pu être lu. Rien n’a été modifié.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(jusqu\'ici)',
+    '(part month)': '(mois partiel)',
     'A month ago': 'Il y a un mois',
     'A year ago': 'Il y a un an',
     'Add a statement for this account': 'Ajouter un relevé pour ce compte',

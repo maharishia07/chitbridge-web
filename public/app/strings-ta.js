@@ -1026,6 +1026,7 @@
     '{what} could not be read. Nothing was changed.': '{what} படிக்க முடியவில்லை. எதுவும் மாற்றப்படவில்லை.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(இதுவரை)',
+    '(part month)': '(பகுதி மாதம்)',
     'A month ago': 'ஒரு மாதத்துக்கு முன்',
     'A year ago': 'ஒரு ஆண்டுக்கு முன்',
     'Add a statement for this account': 'இந்தக் கணக்குக்கு ஒரு அறிக்கையைச் சேர்க்கவும்',
