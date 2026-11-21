@@ -15,7 +15,10 @@ const staff = win.CBAssign.queue(Object.assign({ said: false, take: true, everyo
 const partner = win.CBAssign.queue(Object.assign({ said: true, take: false, everyone: true }, base));
 const tasks = win.CBAssign.queue(Object.assign({ said: false, take: true, everyone: false }, base));
 check('staff: the views are Mine and Unassigned, Everyone is not offered', () => assert.deepStrictEqual(staff.views.items.map((v) => v.label), ['Mine', 'Unassigned']));
-check('staff: opens on Mine and the one bulk button is Pick up', () => { assert.deepStrictEqual(staff.preset, { filt: { held: 'mine' } }); assert.deepStrictEqual(staff.bulk.map((b) => b.label), ['Pick up']); });
+check('staff: opens on Mine and the one bulk button is Pick up', () => { assert.deepStrictEqual(staff.preset, { filt: { held: 'mine' } }); assert.strictEqual(staff.bulk[0].label, 'Pick up'); });
 check('the partner: Mine · Unassigned · Everyone, Assign to me first, opens on Everyone', () => { assert.deepStrictEqual(partner.views.items.map((v) => v.label), ['Mine', 'Unassigned', 'Everyone']); assert.strictEqual(partner.bulk[0].label, 'Assign to me'); });
 check('a list that never says staff (Tasks) keeps all three views and Assign to me', () => { assert.strictEqual(tasks.views.items.length, 3); assert.strictEqual(tasks.bulk[0].label, 'Assign to me'); });
+check('staff bar over ticked clients: Pick up · Release · Hand to… (no Assign to…, Hand over, Back to pool)', () => assert.deepStrictEqual(staff.bulk.map((b) => b.label), ['Pick up', 'Release', 'Hand to…']));
+check('the partner keeps the full bar and hands any client to anyone', () => assert.deepStrictEqual(partner.bulk.map((b) => b.label), ['Assign to me', 'Assign to…', 'Hand over', 'Back to pool']));
+check('Release over unassigned rows only says so and sends nothing', () => { win.document = { getElementById: () => null, addEventListener() {} }; const r = staff.bulk[1].run([rows[1]]); assert.strictEqual(r, undefined); });
 console.log(ok + ' checks');

@@ -306,7 +306,13 @@
     var words = holder.id
       ? function (n) { return sayText('{n} {noun} assigned to {who}.', { n: n, noun: nounOf(opts, n), who: name }); }
       : function (n) { return sayText('{n} {noun} back in the pool.', { n: n, noun: nounOf(opts, n) }); };
-    return runCalls(opts, rows, holder.id, holder.note, words);
+    var named = namesOf(opts, rows);
+    return runCalls(opts, rows, holder.id, holder.note, named ? function (n) { return words(n).slice(0, -1) + ': ' + named + '.'; } : words);
+  }
+  /** STAFFPICK: the confirmation names what moved when the list can name its rows (opts.nameOf) and there are at most three */
+  function namesOf(opts, rows) {
+    if (typeof opts.nameOf !== 'function' || rows.length > 3) return '';
+    return rows.map(function (r) { return opts.nameOf(r) || ''; }).filter(Boolean).join(', ');
   }
   function heldOf(opts) { return opts.heldOf || function (r) { return Array.isArray(r.holders) && r.holders.length > 0; }; }
 
@@ -318,6 +324,7 @@
     if (!assignApi.showsTake(opts)) return [];
     assignApi.mount(opts);
     var held = heldOf(opts), take = { id: 'me', label: tr(opts.staff === true ? 'Pick up' : 'Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    if (opts.staff === true) return staffBulk(opts, take, held); /* STAFFPICK: a staff seat's bar is Pick up · Release · Hand to… */
     if (!assignApi.showsBar(opts.said)) return [take];
     return [
       take,
@@ -336,6 +343,21 @@
       } }
     ];
   };
+
+  /** STAFFPICK (Athi 21 Nov): the staff seat's bar over the ticked clients, through the ONE assign-bulk: Pick up (to me) · Release (mine back to the unassigned queue) · Hand to… (a colleague); the server refuses a client someone else holds */
+  function staffBulk(opts, take, held) {
+    return [
+      take,
+      { id: 'release', label: tr('Release'), run: function (rows) {
+        var mine = rows.filter(held);
+        if (!mine.length) return showOutcome('bad', tr('Nothing ticked is yours to release.'), []);
+        return apply(opts, mine, { id: null, note: '' });
+      } },
+      { id: 'handto', label: tr('Hand to…'), run: function (rows) {
+        pick({ title: 'Hand to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
+      } }
+    ];
+  }
 
   /* ── Hand over all (L11): everything one person holds, to another person or back to the pool ───────────── */
   /** the Undo groups of a hand-over-all answer: only chit entries can be put back through assign-bulk; ONE follow-up entry (no undo route yet) means no Undo at all */
