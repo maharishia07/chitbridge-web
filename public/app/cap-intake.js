@@ -382,9 +382,9 @@ async function loadIntake(quiet) {
     _INTAKE.migrated = true;
   } catch (e) {
     // 503 is the migration gate the route declares, not a fault — tell them apart.
-    if (/not migrated|b104|503/i.test((e && e.message) || '')) {
+    if (/not migrated|b104|503/i.test(failWords(e, ''))) {
       _INTAKE.migrated = false;
-    } else _INTAKE.err = (e && e.message) || 'Could not read the intake queue.';
+    } else _INTAKE.err = failWords(e, 'Could not read the intake queue.');
     _INTAKE.list = _INTAKE.list || [];
   }
   _INTAKE.busy = false;
@@ -431,7 +431,7 @@ async function intakeSimulate() {
     if (t) t.value = '';
     await loadIntake(true);
   } catch (e) {
-    toast((e && e.message) || 'Could not record the message', true);
+    toast(failWords(e, 'Could not record the message'), true);
   }
 }
 async function intakeStructure(id) {
@@ -441,7 +441,7 @@ async function intakeStructure(id) {
     var reply = await api('captureStructure', { params: { id: id } });
     _INTAKE.working[id] = { structured: (reply && reply.structured) || null };
   } catch (e) {
-    _INTAKE.working[id] = { err: (e && e.message) || 'AI could not read that message.' };
+    _INTAKE.working[id] = { err: failWords(e, 'AI could not read that message.') };
   }
   paintIntake();
 }
@@ -460,7 +460,7 @@ async function _intakeDismiss(id) {
     await api('captureDismiss', { params: { id: id } });
     await loadIntake(true);
   } catch (e) {
-    toast((e && e.message) || 'Could not dismiss it', true);
+    toast(failWords(e, 'Could not dismiss it'), true);
   }
 }
 /**
@@ -536,7 +536,7 @@ async function intakeRaise(id) {
     await loadIntake(true);
   } catch (e) {
     UI._captureId = null;
-    _INTAKE.working[id] = Object.assign({}, _INTAKE.working[id], { busy: false, err: (e && e.message) || 'Could not raise it as a request.' });
+    _INTAKE.working[id] = Object.assign({}, _INTAKE.working[id], { busy: false, err: failWords(e, 'Could not raise it as a request.') });
     paintIntake();
   }
 }
@@ -640,7 +640,7 @@ async function intakeShowJson(id) {
     try {
       payload = await api('captureRaise', { params: { id: id } });
     } catch (e) {
-      payErr = (e && e.message) || 'could not build the chit payload';
+      payErr = failWords(e, 'could not build the chit payload');
     }
   }
 

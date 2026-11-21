@@ -9,6 +9,7 @@
 <script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
+<script src="/app/cb-words.js"></script>   <!-- failWords · bodyWords: a server answer is painted as its own words, never raw -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Intake inbox</title>
 <style>
@@ -128,7 +129,7 @@ async function doLogin() {
     ME = reply.j.entity || {};
     load();
   } else {
-    loginView((reply.j && reply.j.message) || 'Login failed');
+    loginView((reply.j && bodyWords(reply.j)) || 'Login failed');
     _stage = 'email';
   }
 }
@@ -141,7 +142,7 @@ async function load() {
     return loginView('Session expired');
   }
   if (reply.status === 0) {
-    el('app').innerHTML = '<div class="card"><div class="err">' + esc(reply.j.message) + '</div></div>';
+    el('app').innerHTML = '<div class="card"><div class="err">' + esc(bodyWords(reply.j)) + '</div></div>';
     return;
   }
   var caps = (reply.j && reply.j.captures) || [];
@@ -226,7 +227,7 @@ async function simulate() {
       el('s_text').value = '';
       load();
     } else {
-      el('s_err').textContent = (reply.j && reply.j.message) || 'Failed';
+      el('s_err').textContent = (reply.j && bodyWords(reply.j)) || 'Failed';
     }
     return;
   }
@@ -248,7 +249,7 @@ async function structure(id) {
   if (reply.status === 200 && reply.j && reply.j.structured) {
     if (host) host.innerHTML = draftHtml(reply.j.structured);
   } else {
-    if (host) host.innerHTML = '<div class="err">' + esc((reply.j && reply.j.message) || 'AI structure failed (is AI connected?)') + '</div>';
+    if (host) host.innerHTML = '<div class="err">' + esc((reply.j && bodyWords(reply.j)) || 'AI structure failed (is AI connected?)') + '</div>';
   }
 }
 async function createChit(btn) {
@@ -283,7 +284,7 @@ async function createChit(btn) {
   } else {
     btn.disabled = false;
     btn.textContent = '✓ Create chit on the rail';
-    capEl.querySelector('.cerr').textContent = (send.j && send.j.message) || 'Send failed';
+    capEl.querySelector('.cerr').textContent = bodyWords(send.j, 'Send failed');
   }
 }
 async function dismiss(id) {

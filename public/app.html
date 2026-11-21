@@ -11611,7 +11611,7 @@ function supFindBodyHTML() {
                 ? ' <button data-cbsid="BUS011-B01" type="button" data-testid="enq-ask" onclick="enquiryOpen(\'' +
                   escJs(item.item_id) +
                   "','" +
-                  esc(String(d.name || d.product || 'item').replace(/'/g, '')) +
+                  escJs(d.name || d.product || 'item') +
                   '\')" style="margin-inline-start:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">' +
                   tx('Ask') +
                   '</button>'
@@ -14379,7 +14379,7 @@ function custNamedGroupsHTML(c) {
         ' onchange="custToggleNamedGroup(\'' +
         escJs(c.customer_list_id) +
         "','" +
-        esc(item) +
+        escJs(item) +
         '\',this.checked)" style="margin:0 4px 0 0;vertical-align:middle">' +
         esc(item) +
         '</label>'
@@ -18400,7 +18400,7 @@ function ctOfferField(d) {
             '" onclick="prodOfferExcludeToggle(\'' +
             escJs(pid) +
             "','" +
-            esc(item.id) +
+            escJs(item.id) +
             '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--on-bg);cursor:pointer;padding:0 6px">' +
             (excluded ? esc(tx('include')) : esc(tx('exclude'))) +
             '</button>' +
@@ -20277,7 +20277,7 @@ function prodMediaTab(d, edit) {
   const id = UI.prodSel || d.item_id || d.id || '';
   const list = Array.isArray(d.media) ? d.media : [];
   if (typeof cbMediaGallery === 'function') {
-    const gal = cbMediaGallery(d, { apiBase: CFG.API_BASE || '', itemId: id, onRemove: edit ? "prodMediaRemove('" + esc(id) + "','{id}')" : null });
+    const gal = cbMediaGallery(d, { apiBase: CFG.API_BASE || '', itemId: id, onRemove: edit ? "prodMediaRemove('" + escJs(id) + "','{id}')" : null });
     return (
       `<div class="sec">${tx('Media')}</div>` +
       (gal
@@ -28738,7 +28738,7 @@ function pickBox(o) {
         ' onchange="' +
         esc(o.onToggle) +
         "('" +
-        esc(item.id) +
+        escJs(item.id) +
         '\')">' +
         '<span style="font-size:var(--fs-2);font-weight:' +
         (on ? 600 : 400) +

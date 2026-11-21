@@ -808,7 +808,7 @@ function comboLibraryRowsHTML(filterQ) {
       '<button class="btn sm" onclick="modLabDeleteTemplate(\'' +
       template.id +
       "','" +
-      esc(String(template.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+      escJs(template.name) +
       '\')">✕</button></div></div>'
     );
   };

@@ -307,7 +307,7 @@ function newFolder() {
       loadFolders();
       if (typeof toast === 'function') toast('Folder created.');
     } catch (e) {
-      if (typeof toast === 'function') toast((e && e.message) || 'Create failed');
+      if (typeof toast === 'function') toast(failWords(e, 'Create failed'));
     }
   });
 }
@@ -323,7 +323,7 @@ function renameFolder(id) {
       UI.folders = undefined;
       loadFolders();
     } catch (e) {
-      if (typeof toast === 'function') toast((e && e.message) || 'Rename failed');
+      if (typeof toast === 'function') toast(failWords(e, 'Rename failed'));
     }
   });
 }
@@ -338,7 +338,7 @@ function deleteFolder(id) {
       UI.folders = undefined;
       loadFolders();
     } catch (e) {
-      if (typeof toast === 'function') toast((e && e.message) || 'Delete failed');
+      if (typeof toast === 'function') toast(failWords(e, 'Delete failed'));
     }
   };
   if (typeof confirmAsk === 'function')
@@ -394,7 +394,7 @@ async function _doMove(chitId, folderId) {
       loadList();
     } // refresh Task (moved chit leaves the main list) or the folder view
   } catch (e) {
-    if (typeof toast === 'function') toast((e && e.message) || 'Move failed');
+    if (typeof toast === 'function') toast(failWords(e, 'Move failed'));
   }
 }
 
@@ -529,7 +529,7 @@ async function ruleMove(id, dir) {
     _FLD.rules = null;
     await loadFolderRules();
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not change the order.';
+    _FLD.err = failWords(e, 'Could not change the order.');
     _FLD.busy = false;
     _fldPaint();
   }
@@ -556,7 +556,7 @@ async function loadFolderMetrics() {
       _FLD.metrics = await api('folderMetrics', { params: { id: UI.folderSel } });
     }
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not read the metrics.';
+    _FLD.err = failWords(e, 'Could not read the metrics.');
   }
   _FLD.busy = false;
   _fldPaint();
@@ -586,7 +586,7 @@ async function loadFolderRules() {
     _FLD.rulesNote =
       r && r.migrated === false ? 'Folder rules are not switched on for your shop yet. You can still try a rule; nothing will save.' : null;
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not read the rules.';
+    _FLD.err = failWords(e, 'Could not read the rules.');
     _FLD.rules = [];
   }
   _FLD.busy = false;
@@ -625,7 +625,7 @@ async function loadGroupSum() {
     _FLD.gs = await api('folderGroupSum', { query: { scope: scope, folder_id: fid || undefined, chit_ids: ids ? ids.join(',') : undefined } });
     _FLD.err = null;
   } catch (e) {
-    var m = (e && e.message) || '';
+    var m = failWords(e, '');
     /* ⚠️ NAME THE ACTUAL CAUSE. Unlike the Rules pane there is no older endpoint to fall back to, so a 404 here
        means the API has not shipped this route yet — not that the sum failed or that there is nothing to add up.
        "Could not add it up" would send someone hunting through their data for a problem that is not there. */
@@ -1223,7 +1223,7 @@ async function rulePreview() {
   try {
     _FLD.preview = await api('folderRulePreview', { body: { when: w } });
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not preview.';
+    _FLD.err = failWords(e, 'Could not preview.');
   }
   _FLD.busy = false;
   _fldPaint();
@@ -1247,7 +1247,7 @@ async function ruleSave() {
     await loadFolderRules();
     if (typeof toast === 'function') toast('Rule saved — it files new arrivals from now on');
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not save the rule.';
+    _FLD.err = failWords(e, 'Could not save the rule.');
     _FLD.busy = false;
     _fldPaint();
   }
@@ -1258,7 +1258,7 @@ async function ruleToggle(id, on) {
     _FLD.rules = null;
     await loadFolderRules();
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not change that.';
+    _FLD.err = failWords(e, 'Could not change that.');
     _fldPaint();
   }
 }
@@ -1280,7 +1280,7 @@ async function _ruleDelete(id) {
     _FLD.rules = null;
     await loadFolderRules();
   } catch (e) {
-    _FLD.err = (e && e.message) || 'Could not delete it.';
+    _FLD.err = failWords(e, 'Could not delete it.');
     _fldPaint();
   }
 }
