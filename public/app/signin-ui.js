@@ -102,6 +102,15 @@
     line: 'Use a code instead',
     later: 'Not now',
     /* SSO-1129 P1a: what a provider sign-in that did not finish says (the api's #e= codes and the hand-off's refusals); the fall-back is always the code */
+    /* connect (the #c= word after a signed-in person linked a provider): what Settings says */
+    connect: {
+      linked: 'Connected. You can now sign in with it.',
+      LINK_EXISTS: 'That account is already connected here.',
+      SIGNIN_PROVIDER_NOT_ACCEPTED: 'This business does not accept that way to sign in.',
+      SIGNIN_REFUSED: 'That could not be connected to your account.',
+      SSO_HANDOFF: 'That took too long. Start again.',
+      fallback: 'That did not finish. Nothing was connected.'
+    },
     sso: {
       SSO_STATE: 'That sign-in took too long or was already used. Start again.',
       SSO_MIXUP: 'That sign-in came from a different provider than you started with. Start again.',
@@ -111,6 +120,13 @@
       NO_DEVICE: 'This browser could not be recognised. Reload the page and try again.',
       BAD_NEXT: 'That sign-in could not return to this page. Use your code instead.',
       SSO_HANDOFF: 'That sign-in already finished or took too long. Start again.',
+      SSO_NOT_LINKED: 'No account here is connected to that sign-in. Sign in with your mobile number or e-mail and the code we send you, then connect it under Settings.',
+      SSO_EMAIL_UNVERIFIED: 'The provider has not confirmed that e-mail address, so nobody was signed in. Use your code instead.',
+      SSO_MANY: 'That sign-in is connected to more than one account. Use your mobile number or e-mail and the code we send you.',
+      SIGNIN_PROVIDER_NOT_ACCEPTED: 'This business does not accept that way to sign in. Use your code instead.',
+      SIGNIN_UNAVAILABLE: 'Sign-in could not finish. Start again from the sign-in page.',
+      SIGNIN_REFUSED: 'Sign-in failed. Check your details or ask for a new code.',
+      DEVICE_MISMATCH: 'This browser said two different things. Reload the page and try again.',
       fallback: 'That sign-in did not finish. Use your mobile number or e-mail and the code we send you.'
     }
   };
@@ -123,7 +139,7 @@
     try {
       var where = root.location;
       if (!where || !/(^\/$|\/app\.html$)/.test(where.pathname || '')) return null;
-      var found = /^#(h|e)=([A-Za-z0-9_%.-]{1,200})$/.exec(where.hash || '');
+      var found = /^#(h|e|c)=([A-Za-z0-9_%.-]{1,200})$/.exec(where.hash || '');
       if (!found) return null;
       if (root.history && typeof root.history.replaceState === 'function') root.history.replaceState(null, '', where.pathname + where.search);
       return { kind: found[1], value: decodeURIComponent(found[2]) };
@@ -131,6 +147,16 @@
       return null;
     }
   })();
+
+  /**
+   * H1 (critic 21 Nov): the ONE consumer of what the provider's redirect left. A page that has its own sign-in screen (app.html) calls this at boot, before it picks #/login:
+   * it returns { kind: 'h'|'e'|'c', value } ONCE (then null) and the address is already cleared. 'h' = a one-time code to swap (machine.providerHandoff), 'e' = a refusal word, 'c' = the result of connecting.
+   */
+  function takeLanded() {
+    var landed = LANDED;
+    LANDED = null;
+    return landed;
+  }
 
   /**
    * ⭐ THE METHOD SLOTS (DECISIONS 2026-10-08: every sign-in method lives only in CBSignin). A slot is CONFIG, hidden by default:
@@ -918,7 +944,8 @@
     if (landed) {
       LANDED = null;
       if (landed.kind === 'h') m.providerHandoff(landed.value);
-      else m.refuse(m.words.sso[landed.value] || m.words.sso.fallback);
+      else if (landed.kind === 'e') m.refuse(m.words.sso[landed.value] || m.words.sso.fallback);
+      else LANDED = landed; /* a connect result belongs to Settings, not to a sign-in window */
     }
     return {
       destroy: function () {
@@ -944,6 +971,7 @@
    ⚠️ NOT E.keep: E is the ENGINE (engine/signin.js), whose keep(surface, answer) the counter calls; assigning over it broke every till
    sign-in (14 Oct, till-pin and 10 more walks). [[feedback-namespace-after-assignment]] */
   E.keepSession = keep;
+  E.takeLanded = takeLanded;
   E.jwtClaims = jwtClaims;
   E.transport = httpPost; /* the default transport, for a host that wraps it (the till: "offline" said in words first) */
   E.METHODS = METHODS;

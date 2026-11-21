@@ -362,6 +362,26 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.strictEqual(r.m.state().at, 'setpin'); assert.strictEqual(r.m.state().localPin, true);
   });
 
+  await it('⭐ H1 the landing is taken ONCE by app.html at boot: #h= is cleared from the address, takeLanded returns it a first time and never again; #e= and #c= are kinds of their own; another page path reads nothing', async () => {
+    const load = (pathname, hash) => {
+      let replaced = null;
+      globalThis.location = { pathname, hash, search: '' };
+      globalThis.history = { replaceState: (a, b, url) => { replaced = url; } };
+      for (const key of Object.keys(require.cache)) if (key.endsWith('signin-ui.js')) delete require.cache[key];
+      require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
+      return { lib: globalThis.CBSignin, replaced: () => replaced };
+    };
+    let k = load('/app.html', '#h=one-time-code_123');
+    assert.strictEqual(k.replaced(), '/app.html', 'the address is cleared at once');
+    assert.deepStrictEqual(k.lib.takeLanded(), { kind: 'h', value: 'one-time-code_123' });
+    assert.strictEqual(k.lib.takeLanded(), null, 'a second take finds nothing');
+    k = load('/app.html', '#e=SSO_STATE'); assert.deepStrictEqual(k.lib.takeLanded(), { kind: 'e', value: 'SSO_STATE' });
+    k = load('/app.html', '#c=linked'); assert.deepStrictEqual(k.lib.takeLanded(), { kind: 'c', value: 'linked' });
+    k = load('/somewhere/else.html', '#h=abc'); assert.strictEqual(k.lib.takeLanded(), null, 'only the apps own page reads it');
+    assert.ok(k.lib.WORDS.connect.linked && k.lib.WORDS.sso.SSO_NOT_LINKED && k.lib.WORDS.sso.SIGNIN_UNAVAILABLE, 'the words the api answers with are said');
+    delete globalThis.location; delete globalThis.history;
+  });
+
   console.log('\n' + (pass + fail) + ' checks · ' + pass + ' passed · ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();
