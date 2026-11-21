@@ -47,9 +47,7 @@ const SKIP_FILE = /(\.min\.|^qr\.js$|\.test\.(c?js|mjs)$)/;
 const CODE_FILE = /\.(js|cjs|mjs|html)$/;
 /* a file whose master lives elsewhere: an engine adopted from chitbridge-engines, or a copy vendor-till.cjs writes (judged at its master) */
 const ADOPTED_HEAD = /ADOPTED from chitbridge-engines|GENERATED — DO NOT EDIT\. Written by chitbridge-api\/scripts\/vendor-till\.cjs/;
-/* the till and its parts are vendored byte copies of the api master (scripts/vendor-till.cjs): judged at the master, never here (1128: till-dayrep.js moved out of till.html) */
-const VENDORED_TILL = 'public/till.html', VENDORED_TILL_PARTS = ['public/app/till-dayrep.js'], HEAD_BYTES = 700;
-const isVendoredTill = (relPath) => relPath === VENDORED_TILL || VENDORED_TILL_PARTS.indexOf(relPath) >= 0;
+const VENDORED_TILL = 'public/till.html', HEAD_BYTES = 700, isVendoredTill = (relPath) => relPath === VENDORED_TILL || relPath === 'public/app/till-dayrep.js'; /* the till and its parts: vendored byte copies, judged at the api master (1128) */
 
 /** every code file under one scope entry (a folder walked, or a single file) */
 function walkDir(dir, out) {

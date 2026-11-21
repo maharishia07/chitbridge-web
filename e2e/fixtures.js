@@ -174,9 +174,7 @@ async function mintEntity(page, { role = 'business', email, name, fresh = false,
   await page.getByTestId('onb-continue').click();
   /* ⚠️ reg-name IS THE USER ID FIELD — see uniqueHandle. Filling it with a display name is what broke the
      whole suite: spaces and capitals fail checkRoot, the form refuses, and every spec times out on #/register. */
-  /* A-F-01 (1128): the Business name box is asked first and is required (2+ letters) */
-  await page.getByTestId('reg-shop-name').fill('Walk Shop');
-  await page.getByTestId('reg-name').fill(handle);
+  await page.getByTestId('reg-shop-name').fill('Walk Shop'); await page.getByTestId('reg-name').fill(handle);   // A-F-01 (1128): the Business name is asked first, 2+ letters
   await page.getByTestId('reg-email').fill(email);
   await page.getByTestId('reg-submit').click();                     // → create → verify (OTP) step
   // Verify step: pick a vertical IF offered, enter the dev OTP, submit. Tolerant — the vertical is often already
