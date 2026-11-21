@@ -85,7 +85,7 @@ for (const [f, k, n] of runs) {
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(E2E, f)], {
     encoding: 'utf8', timeout: SLOT_MS[f] || 240000,
-    env: Object.assign({}, process.env, { NODE_PATH: path.join(E2E, 'node_modules') }),
+    env: Object.assign({}, process.env, { NODE_PATH: path.join(E2E, 'node_modules'), NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' --require ' + path.join(E2E, 'lib', 'ready-manifest.cjs')).trim() }), /* 1128 greyready: walks see every Home entry ready (lib/ready-manifest.cjs) */
   });
   const s = ((Date.now() - t0) / 1000).toFixed(0) + 's';
   /* SEC1: exit 78 = the harness SKIPPED itself (a missing secret, said in its output) — counted as SKIP, never PASS, never FAIL */
