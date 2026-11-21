@@ -314,6 +314,16 @@ function cbSlabMenuHTML(menu, opts) {
   return '<div class="slab-menu" data-testid="rate-menu">' + menu.rows.map((row) => slabMenuButton_(row, menu, opts)).join('') + '</div>';
 }
 
+/** the pack's table of supply kinds, or null when its tax section names none */
+function supplyKindTable(pack) {
+  var taxPack = slabTaxPack_(pack);
+  return taxPack && taxPack.supplyKinds && typeof taxPack.supplyKinds === 'object' ? taxPack.supplyKinds : null;
+}
+/** the pack's own question row for a 0% rate (returns first, then its tax section), or null */
+function unknownKindRow(pack) {
+  var taxPack = slabTaxPack_(pack);
+  return (pack && pack.returns && pack.returns.unknownKind) || (taxPack && taxPack.unknownKind) || null;
+}
 /** the pack's supply kinds that sit at rate 0, each as { id, name, short, why } */
 function zeroRateKinds(table) {
   return Object.keys(table)
@@ -335,10 +345,9 @@ function zeroRateKinds(table) {
  * `pick(kindId)` returns the host's onclick (a string); `suggested` is a kind id read from the slab's OWN NAME by the server, shown as a hint on its button (still one tap, never saved by itself).
  */
 function cbKindAskOf(pack) {
-  var taxPack = slabTaxPack_(pack);
-  var table = taxPack && taxPack.supplyKinds && typeof taxPack.supplyKinds === 'object' ? taxPack.supplyKinds : null;
+  var table = supplyKindTable(pack);
   if (!table) return null;
-  var row = (pack && pack.returns && pack.returns.unknownKind) || (taxPack && taxPack.unknownKind) || null;
+  var row = unknownKindRow(pack);
   var kinds = zeroRateKinds(table);
   if (!kinds.length) return null;
   return { ask: (row && row.ask) || slabT_('What kind of sale is this at 0%?'), kinds: kinds };
