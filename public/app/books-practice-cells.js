@@ -17,6 +17,7 @@
   practiceKit.basCell = basCell;
   practiceKit.queriesCell = queriesCell;
   practiceKit.yearLabel = yearLabel;
+  practiceKit.checkedHeader = checkedHeader;
   practiceKit.yendCell = yendCell;
   practiceKit.bankWords = bankWords;
   practiceKit.checkedWords = checkedWords;
@@ -75,6 +76,10 @@
     var row = ((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []).filter(function (r) { return r.year_end; })[0];
     return row ? 'FY' + String(row.year_end.fy).replace(/^dd(dd)/, '$1') : '';
   }
+  /** the Checked column's header: the year when the server gave a year-end count, else the quarter the rows fall back to (said here once, not on every row) */
+  function checkedHeader() {
+    return 'Checked ' + (yearLabel() || practiceKit.translate('this quarter'));
+  }
   /** the year-end cells: the same figures the Complete and Checked tiles count (the server's year_end), never the quarter */
   function yendCell(r) {
     var y = r.year_end;
@@ -132,7 +137,8 @@
     var e = r.year_end && r.year_end.entries, period = r.year_end && r.year_end.fy != null ? String(r.year_end.fy) : '';
     if (!e && r.checked && r.checked.of > 0) {
       e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
-      period = practiceKit.translate('this quarter'); /* L-F-14: the count names its period; the client's own day book counts every entry, so "0 of 4" beside five entries was two counts of different spans, said as one */
+      /* L-F-14: the count names its period; the client's own day book counts every entry, so "0 of 4" beside five entries was two counts of different spans, said as one.
+         The REPEAT RULE (Athi 21 Nov): the quarter is said ONCE, in the column header (checkedHeader), never on every row; a year-end count still names its year on its row */
     }
     return e ? practiceKit.escapeHtml(checkedWords(e)) + (period ? ' <span class="sub" data-testid="pr-checked-period">' + practiceKit.escapeHtml(period) + '</span>' : '') + (e.capped ? ' <span class="sub">' + practiceKit.escapeHtml(practiceKit.translate('over 5000')) + '</span>' : '') : '—';
   }

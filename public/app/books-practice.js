@@ -171,7 +171,7 @@
       num('changed', 'Changed', 130, practiceKit.changedCell, function (r) { return r.changed ? r.changed.n : 0; }, { hfilter: 'changed', cardAct: true /* on a phone card the link is the action line under the fields (the auditor's next step), not one of the capped fields */ }),
       num('bas', 'Due', 120, practiceKit.basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
       num('yend', 'Year end', 230, practiceKit.yendCell, function (r) { return r.year_end ? r.year_end.locked : -1; }, { prio: 1, cl: 2 }),
-      num('checked', 'Checked ' + practiceKit.yearLabel(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
+      num('checked', practiceKit.checkedHeader(), 110, practiceKit.checkedCell, practiceKit.checkedLeft, { prio: 1, dir0: -1 }),
       num('tocheck', 'To check (qtr)', 100, function (r) { return escapeHtml(r.to_check == null ? r.checked.of - r.checked.n : r.to_check); }, function (r) { return r.to_check == null ? r.checked.of - r.checked.n : r.to_check; }, { hfilter: 'checked', prio: 2 }),
       num('unlocked', 'Months not locked', 90, function (r) { return escapeHtml(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return escapeHtml(practiceKit.trend(r)); }, function (r) { return practiceKit.trend(r); }),
@@ -551,7 +551,7 @@
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
   else start();
-  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft, checkedCell: practiceKit.checkedCell,
+  root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft, checkedCell: practiceKit.checkedCell, checkedHeader: practiceKit.checkedHeader,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
     parts: { clientCount: clientCount, readAll: readAll, bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

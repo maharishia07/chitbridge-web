@@ -15,7 +15,9 @@ const audit = (page, hostId) => page.evaluate((hostId) => {
     const cs = getComputedStyle(el), hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim());
     if (/auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1) out.scroll.push(el.tagName + '.' + el.className + ' ' + el.scrollWidth + '>' + el.clientWidth);
     /* T3-P2-CRM: screen-reader-only text (.sr-only, 1 px wide by design) is for the reader, not clipped on the screen */
-    if (host.contains(el) && hasText && !el.classList.contains('sr-only') && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
+    /* YE-F-15 (21 Nov): the top bar's shop name is cut with an ellipsis in a narrow bar, never hidden: the person must see which shop they are in, and the button's aria-label + title carry the whole name */
+    const nameKept = el.matches('[data-testid="shop-name"]') && !!el.closest('button[aria-label]') && el.closest('button').getAttribute('aria-label').indexOf(el.textContent.trim()) >= 0;
+    if (host.contains(el) && hasText && !nameKept && !el.classList.contains('sr-only') && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
     const href = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '');
     if (/app\.html/.test(href)) out.app.push(el.outerHTML.slice(0, 80));
   });
