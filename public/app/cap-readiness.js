@@ -1487,9 +1487,9 @@ async function submitVerify() {
   }
 }
 function gatherReadiness(standard, doc) {
-  var it = ((UI.readiness && UI.readiness.clearances) || []).filter(function (item) {
+  var it = ((UI.laneRd && UI.laneRd.clearances) || (UI.readiness && UI.readiness.clearances) || []).filter(function (item) {
     return item.standard === standard && item.doc === doc;
-  })[0];
+  })[0]; /* EL-13 M4: UI.laneRd is what the lanes set (as _aiDraft reads it); UI.readiness is set by nothing */
   UI.rdGather = { standard: standard, doc: doc, title: (it && it.title) || doc };
   var date = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
   var body =

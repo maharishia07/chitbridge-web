@@ -37,6 +37,8 @@
   'use strict';
 
   function num(v) {
+    /* EL-18 M1: a blank or null amount is NO price, not 0 (Number('') and Number(null) are 0) */
+    if (v == null || (typeof v === 'string' && !v.trim())) return null;
     var n = Number(v);
     return isFinite(n) ? n : null;
   }

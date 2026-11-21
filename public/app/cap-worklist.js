@@ -314,7 +314,7 @@ function wlRow(r, ctx, depth) {
     '<div data-cbsid="RAL002-C01" data-testid="wl-row" data-state="' +
     (done ? 'done' : 'open') +
     '" onclick="wlLine(&quot;' +
-    r.line_id +
+    escJs(r.line_id) +
     '&quot;)"' +
     ' style="padding:9px 16px 9px ' +
     (ind + 13) +
@@ -341,7 +341,7 @@ function wlRow(r, ctx, depth) {
      * make, on every row.
      */
     '<span data-cbsid="RAL002-C02" data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' +
-    r.line_id +
+    escJs(r.line_id) +
     '&quot;)"' +
     ' style="cursor:pointer;font-size:var(--fs-2);padding:2px 9px;border-radius:6px;color:var(--blue-2);background:var(--blue-tint-bg);font-weight:800">⋯</span>' +
     '<span style="color:var(--grey);font-size:var(--fs-2);padding-inline-start:3px">›</span></span></div>' +
@@ -491,7 +491,7 @@ function worklistScreen() {
       '" ' +
       (on ? 'checked' : '') +
       ' onchange="wlThen(&quot;' +
-      k +
+      escJs(k) +
       '&quot;)" style="width:15px;height:15px;accent-color:var(--blue)">' +
       label +
       '</label>'
@@ -1241,7 +1241,7 @@ function wlSecHead(k, name, hint, tone) {
     '<div data-cbsid="RAL002-C08" data-testid="wl-sec-' +
     k +
     '" onclick="wlSec(&quot;' +
-    k +
+    escJs(k) +
     '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;' +
     'padding:11px 2px;border-top:1px solid var(--line)">' +
     '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' +
@@ -1405,7 +1405,7 @@ function wlRaidaRow(e) {
     '</div>' +
     (e.open && !e.inherited
       ? '<span data-cbsid="RAL002-C09" data-testid="wl-raida-close" onclick="wlRaidaClosing(&quot;' +
-        e.raida_id +
+        escJs(e.raida_id) +
         '&quot;)" title="Close this entry"' +
         ' style="flex:none;cursor:pointer;font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:2px 8px">' +
         tx('close') +
@@ -1423,7 +1423,7 @@ function wlRaidaRow(e) {
               '<button data-cbsid="RAL002-B01" type="button" data-testid="wl-raida-disp-' +
               item +
               '" onclick="wlRaidaDisp(&quot;' +
-              item +
+              escJs(item) +
               '&quot;)"' +
               ' title="' +
               esc(RAIDA_ENDINGS[item].hint) +
@@ -1450,7 +1450,7 @@ function wlRaidaRow(e) {
         '"' +
         ' style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:var(--fs-2)">' +
         '<button data-cbsid="RAL002-B02" data-testid="wl-raida-close-go" onclick="wlRaidaClose(&quot;' +
-        e.raida_id +
+        escJs(e.raida_id) +
         '&quot;)"' +
         ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:8px;padding:5px 12px">' +
         tx('Close it') +
@@ -1900,7 +1900,7 @@ function wlLineHTML(loading) {
     tx('Close') +
     '</button>' +
     '<button data-cbsid="RAL002-B05" data-testid="wl-open-order" onclick="wlOpen(&quot;' +
-    r.chit_id +
+    escJs(r.chit_id) +
     '&quot;)">' +
     tx('Open the order') +
     '</button></div>'
@@ -2039,7 +2039,18 @@ function wlCardClose() {
   }
 }
 
+/* GF-16 M7: ONE save at a time. The button stayed live during the await, so a double tap recorded the delivery twice (a second
+   +20 on a line with 20 left shows "20 over"). */
 async function wlActSave(kind) {
+  if (WLL.saving) return;
+  WLL.saving = true;
+  try {
+    await wlActSaveNow(kind);
+  } finally {
+    WLL.saving = false;
+  }
+}
+async function wlActSaveNow(kind) {
   var r = WLL.row;
   if (!r) return;
   var node = function (id) {
@@ -2116,7 +2127,7 @@ async function wlActSave(kind) {
        local edit would leave the headings stating a total that no longer matches what is under them. */
     await wlLoad();
   } catch (e) {
-    toast((e && e.message) || 'Could not record that');
+    toast(typeof failWords === 'function' ? failWords(e, 'Could not record that') : 'Could not record that');
   }
 }
 async function wlSetState(state) {

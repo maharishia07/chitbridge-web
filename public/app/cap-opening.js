@@ -252,6 +252,13 @@ function obRowsOut() {
       one[side === 'cr' ? 'cr_minor' : 'dr_minor'] = bill.minor;
       out.push(one);
     });
+    /* EL-12 M10: the field on the side OPPOSITE a bills ledger's own side stays editable on the page, so what it holds is
+       sent (a customer advance on Debtors) — never typed on screen and silently not posted */
+    if (bills.length && side && row[side === 'cr' ? 'dr' : 'cr']) {
+      var oppLine = { code: row.code };
+      oppLine[side === 'cr' ? 'dr_minor' : 'cr_minor'] = row[side === 'cr' ? 'dr' : 'cr'];
+      out.push(oppLine);
+    }
     if ((row.dr || row.cr) && !bills.length) {
       var ownLine = { code: row.code };
       if (row.dr) ownLine.dr_minor = row.dr;

@@ -1396,6 +1396,19 @@ function netRevertOne(key) {
   }
   if (raw.purpose) n.purpose = raw.purpose.from || ''; // both moved → put both back
 
+  // GF-12 M4: a place-only or order-only change has no `from` visibility. It must NOT fall through to Private
+  // (that silently hid a public store and undid nothing). Put the place back if the plan says what it was; an order
+  // move has no old value here, so say so and leave visibility alone.
+  if (!pl.from && !raw.from) {
+    if (raw.place && raw.place.from) {
+      n.place = raw.place.from;
+      if (typeof toast === 'function') toast('"' + n.name + '" place left as it is on the store');
+      _netMark();
+      _netRerender();
+    } else if (typeof toast === 'function') toast('"' + n.name + '" has no earlier visibility to go back to — nothing changed', true);
+    return;
+  }
+
   var back = NET_PLAT_TO_DESIGN[pl.from] || 'private';
   // A revert cannot break the cascade: if what it sits inside is closed, putting it back to public is not
   // available, and the honest answer is to say which node to revert instead of quietly doing something else.
@@ -4798,7 +4811,7 @@ var NET_PLATFORM = { public: 'public', protected: 'network', private: 'private' 
 function _netPlanSig() {
   return JSON.stringify(
     ((UI.net && UI.net.nodes) || []).map(function (item) {
-      return [item.key, item.name, item.exposure || '', item.parent_key || '', item.owned !== false, item.partner_ref || '', !!item.built];
+      return [item.key, item.name, item.exposure || '', item.parent_key || '', item.owned !== false, item.partner_ref || '', !!item.built, item.purpose || '', item.pos === undefined ? null : item.pos, item.place || null];
     })
   );
 }
