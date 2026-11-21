@@ -2112,6 +2112,13 @@ async function crmAddSearch() {
   }
   crmAddResults();
 }
+/** A-F-33: a typed phone finds the party that holds it however it was spaced ("+61 412 345 678" = "+61412345678"); other text matches as before */
+function crmAddMatches(item, ql) {
+  if ([item.display_name, item.nickname, item.party_no, item.user_id, item.phone, item.email].join(' ').toLowerCase().indexOf(ql) >= 0) return true;
+  var typed = ql.replace(/[^0-9]/g, '');
+  if (typed.length < 7 || /[a-z@]/.test(ql)) return false;
+  return String(item.phone || '').replace(/[^0-9]/g, '').indexOf(typed) >= 0;
+}
 function crmAddResults() {
   var box = document.getElementById('crm_addres');
   if (!box) return;
@@ -2125,7 +2132,7 @@ function crmAddResults() {
   }
   var mine = CRM.rows
     .filter(function (item) {
-      return [item.display_name, item.nickname, item.party_no, item.user_id, item.phone, item.email].join(' ').toLowerCase().indexOf(ql) >= 0;
+      return crmAddMatches(item, ql);
     })
     .slice(0, 4);
   mine.forEach(function (item) {

@@ -7,10 +7,33 @@
 'use strict';
 /* the base's GROUPS (cap-crm-groups.js) and the host's CRM (cap-crm.js) load first; both are read as window.GROUPS / window.CRM, so this file declares no name of theirs */
 /* ═══ THE SHOP WINDOW — pick a template, preview the shop's own page, share the link through the consented channel ═══ */
-var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
+var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false, me: null };
 function crmShopUrl() {
-  var id = SESSION.bridgeId || '';
+  /* the same id Your online shop shows (user id, else bridge id), so the screen offers one link and it is the one that opens */
+  var id = (SHOW.me && (SHOW.me.user_id || SHOW.me.bridge_id)) || SESSION.bridgeId || '';
   return location.origin + '/shop.html?s=' + encodeURIComponent(id);
+}
+/** A-F-60: why the public cannot open the shop yet, in the owner's words ('' = nothing known against it). Same rule as Your online shop (cap-admin.js `live`). */
+function crmShopWhyNot(me) {
+  if (!me) return '';
+  var vis = me.catalogue_visibility || 'private';
+  if (me.business_status === 'closed') return tx('Your shop is closed, so customers see "Shop not found". Open it first.');
+  if (vis === 'private') return tx('Your online shop is private, so customers see "Shop not found". Make it public in Your online shop, with at least one priced item.');
+  if (vis === 'network' && me.network_public_count === 0) return tx('Nothing under you is public yet, so customers see "Shop not found".');
+  return '';
+}
+/** read the shop's own state and say plainly what is missing before the link is shared; the link then shows the id that opens */
+async function crmShopLiveRead() {
+  try {
+    if (typeof meNow !== 'function') return;
+    SHOW.me = await meNow();
+  } catch (e) {
+    return; /* unreadable: say nothing false; the link stays as it was */
+  }
+  var note = document.getElementById('crm_sc_notlive');
+  if (note) note.textContent = crmShopWhyNot(SHOW.me);
+  var url = document.querySelector('[data-testid="crm-sc-url"]');
+  if (url) url.textContent = crmShopUrl();
 }
 /** paint the Shop window screen: template chooser, preview and the share-with-a-party / group controls */
 function crmShowcase(frame) {
@@ -30,6 +53,7 @@ function crmShowcase(frame) {
     '<div class="rsec" style="padding:14px"><div class="sec">' +
     esc(tx('Share')) +
     '</div>' +
+    '<div class="hint" id="crm_sc_notlive" data-testid="crm-sc-notlive" role="status" style="margin:0 0 8px"></div>' +
     '<div class="kv"><b>' +
     esc(tx('Link')) +
     '</b><span class="mono" data-testid="crm-sc-url">' +
@@ -50,6 +74,7 @@ function crmShowcase(frame) {
   if (frame) return;
   if (!window.CRM.loaded) crmLoad(true);
   crmShowcaseLoad();
+  crmShopLiveRead();
 }
 /** read the policy flags (the chosen template) and repaint the chooser; an unreadable answer shows the default */
 async function crmShowcaseLoad() {

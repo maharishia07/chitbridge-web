@@ -99,6 +99,11 @@ jobs:
           node tests/chit-sheet-dispute-opener.test.cjs
           node tests/country-compare.test.cjs
           node tests/crm-consent-holders.test.cjs
+          node tests/crm-send-offline-door.test.cjs
+          node tests/crm-change-line.test.cjs
+          node tests/crm-consent-law-line.test.cjs
+          node tests/crm-add-phone-match.test.cjs
+          node tests/crm-shopwindow-notlive.test.cjs
           node tests/fin-d7-terms-bank.test.cjs
           node tests/fin116-registration-notice.test.cjs
           node tests/fin111-statement-currency.test.cjs
