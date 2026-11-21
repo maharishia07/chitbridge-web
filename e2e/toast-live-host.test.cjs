@@ -24,9 +24,10 @@ function makeDocument() {
   return { body, createElement: makeElement, getElementById: (id) => body.children.find((node) => node.id === id) || null };
 }
 function load(documentStub) {
-  const sandbox = { document: documentStub, esc: String, tx: String, setTimeout: () => 0, clearTimeout: () => {} };
+  const sandbox = { window: {}, document: documentStub, esc: String, tx: String, setTimeout: () => 0, clearTimeout: () => {} };
   vm.createContext(sandbox);
   const source = topLevel('const TOAST_HOST_CSS', ";\n") + topLevel('function toastHost(', '\n}\n') +
+    topLevel('function toastRefusal(', '\n}\n') +
     topLevel('function toast(', '\n}\n') + topLevel('function toastLevel(', '\n}\n');
   vm.runInContext(source + '\nthis.toast = toast;', sandbox);
   return sandbox;

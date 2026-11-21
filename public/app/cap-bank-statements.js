@@ -213,16 +213,17 @@ function bkbSeatNo(kind) {
   if (kind === 'post') return BK_SEAT.write && !BK_SEAT.post ? tx(BK_SEAT.postWhy || 'Only the owner or bookkeeper can record this.') : '';
   return BK_SEAT.write ? '' : BK_SEAT.writeWhy ? tx(BK_SEAT.writeWhy) + ' ' + tx('Ask the owner or the shop bookkeeper.') : tx('Only the owner or the shop bookkeeper can do this.');
 }
-/** FIN-129: the page button (BKS014-B18, Add to your books) greyed, with the sentence beside it */
-const bkbSeatNoPrimary = (fig) => { const no = BKB.text && typeof bankSheetOpen === 'function' && (!fig || bkbCount('books')) && (bkbSeatNo('write') || bkbSeatNo('post')); return no ? bkbSeatNoButton(no) : ''; };
-const bkbSeatNoButton = (no) => '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open" disabled aria-disabled="true" title="' + bkstE(no) + '">' + bkstE(tx('Add to your books')) + '</button><span class="pe-note" data-testid="bank-sheet-why">' + bkstE(no) + '</span>';
-/** FIN-129: the seat the server refuses sees Add statement greyed, with the server's sentence and who can (BKS014-B41, the same button, no press) */
-const bkstSeatNoHtml = () => '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle-no" disabled aria-disabled="true" title="' + bkstE(bkbSeatNo('write')) + '">' + bkstE(tx('Add statement')) + '</button><span class="pe-note" data-testid="bank-stmts-why">' + bkstE(bkbSeatNo('write')) + '</span>';
+/** FIN-129: why the page button (BKS014-B18, Add to your books) is greyed for this seat: the server's sentence, or '' when it is not; cap-bank.js bankPrimaryHtml draws the ONE button in its disabled state */
+const bkbSeatNoPrimary = (fig) => { const no = BKB.text && typeof bankSheetOpen === 'function' && (!fig || bkbCount('books')) && (bkbSeatNo('write') || bkbSeatNo('post')); return no || ''; };
+/** BKS014-B41, the ONE definition of the Statements toggle: live (an onclick, aria-expanded) or, FIN-129, greyed for the seat the server refuses (disabled, the server's sentence as title, no press) */
+const bkstToggleButton = (testid, title, state, label) => '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="' + testid + '" title="' + bkstE(title) + '"' + state + '>' + bkstE(label) + '</button>';
+/** FIN-129: the seat the server refuses sees Add statement greyed, with the server's sentence and who can */
+const bkstSeatNoHtml = () => bkstToggleButton('bank-stmts-toggle-no', bkbSeatNo('write'), ' disabled aria-disabled="true"', tx('Add statement')) + '<span class="pe-note" data-testid="bank-stmts-why">' + bkstE(bkbSeatNo('write')) + '</span>';
 /** the box's one line: its name, what it holds (the gap to fix) and, on the home only, the press that opens Add statement (BKS014-B41) */
 function bkstBarInner(open, ready) {
   return (
     '<b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
-    (ready && bankHomeMayAdd() ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" title="' + bkstE(bkstSummary()) + '" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : ready && bkbSeatNo('write') ? bkstSeatNoHtml() : '')
+    (ready && bankHomeMayAdd() ? bkstToggleButton('bank-stmts-toggle', bkstSummary(), ' onclick="bankStmtToggle()" aria-expanded="' + open + '"', open ? tx('Hide') : tx('Add statement') + ' ▾') : ready && bkbSeatNo('write') ? bkstSeatNoHtml() : '')
   );
 }
 /** the body of a ready box: the cards and the grid (or All years), the Add form when open, the kept files, the quiet "just read a file" and the note on where statements are kept */

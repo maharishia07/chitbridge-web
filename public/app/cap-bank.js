@@ -709,11 +709,15 @@ function bankOpeningHtml() {
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
   if (bkbReadOnly()) return typeof bankStoreSignButton === 'function' ? bankStoreSignButton() : ''; /* the auditor: the sign-off is SAID whenever the month is signed, whatever the difference; no button */
-  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), grey = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
+  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), no = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
-  if (grey || !canAdd || (fig && !bkbCount('books'))) return grey; /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
+  if (no || !canAdd || (fig && !bkbCount('books'))) return no ? bankAddButton(' disabled aria-disabled="true" title="' + bkbE(no) + '"', tx('Add to your books')) + '<span class="pe-note" data-testid="bank-sheet-why">' + bkbE(no) + '</span>' : ''; /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
   const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
-  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books')) + '</button>';
+  return bankAddButton(held + ' onclick="bankAdd()"', bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books'));
+}
+/** BKS014-B18, the ONE definition of the Add to your books button: live (an onclick) or, FIN-129, greyed (disabled, the why beside it) */
+function bankAddButton(state, label) {
+  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + state + '>' + bkbE(label) + '</button>';
 }
 
 /** the statement signed off just before this one (the log's newest period that ended before this one starts): { to, by }, or null when there is none (continuity: the engine's check words a gap or an overlap) */

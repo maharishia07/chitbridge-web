@@ -70,12 +70,11 @@ function errLine(testid, words) {
  *
  * ⚠️ AND IT OFFERS RETRY. A failure with no way out makes the reader reload the whole app, which costs them
  * every bit of unsaved state on the screen. `subject` names what failed; `retry` is a call expression.
+ *
+ * B7 (ERR-13): the register sentence (e.message = the api's detail) AND its next step (e.hint) and the request id, with the error code as data-cb-error-code so the UI CMDB can link the card to its code (ERR-14 part 1); a capability that would not load names itself (e.capability)
  */
 function scrErr(e, subject, retry) {
-  /* B7 (ERR-13): the register sentence (e.message = the api's detail) AND its next step (e.hint) and the request id, with the error code as data-cb-error-code so the UI CMDB can link the card to its code (ERR-14 part 1);
-     a capability that would not load names itself (e.capability) */
-  e = e || {};
-  var name = subject || e.capability || '';
+  e = e || {};  var name = subject || e.capability || '';
   return (
     '<div class="empty" role="alert" data-cbsid="CMP068" data-cb-error-code="' +
     esc(e.code || '') +
