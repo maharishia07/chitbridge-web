@@ -312,7 +312,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `supplier-design.html` | 2 | the paper drawing of the Suppliers order: three steps (items, details, review), mock only, no request leaves the page. |
 | `tasks.html` | 48 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
 | `testing.html` | 9 | the test board: cases, runs and findings in one list, filters and folds; column widths through app/table-resize.js. |
-| `till.html` | 6 | the counter: sign-in · day open · the bill (CBTax · CBOffers · the rewards words) · the slip · the offline queue — ONE master, vendored to the web. |
+| `till.html` | 7 | the counter: sign-in · day open · the bill (CBTax · CBOffers · the rewards words) · the slip · the offline queue — ONE master, vendored to the web. |
 | `ui-standard.html` | 18 | the UI standard page (screen UIS001): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js. |
 | `cmdb/record.html` | 1 | the one page for every CMDB record, drawn from the cloud definition of kind 'cmdb' |
 | `docs/life-of-a-trade.html` | 0 | The Life of a Trade — ChitBridge |
