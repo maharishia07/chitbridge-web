@@ -228,10 +228,10 @@ function bkReasonGo() {
   return BK.reasonGo ? BK.reasonGo(reason) : undefined;
 }
 /** the question a Lock or Close for good asks first (Cancel sends nothing) */
-function bkLockConfirm(what, monthName, fiscalYear) {
+function bkLockConfirm(what, monthName, yearName) {
   return what === 'hard'
-    ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: fiscalYear })), yes: tx('Close for good') }
-    : { title: txf('Lock {m} {fy}?', { m: monthName, fy: fiscalYear }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }; /* E12: Lock is a commit, so it asks first in the library's confirm */
+    ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: yearName })), yes: tx('Close for good') }
+    : { title: txf('Lock {m} {fy}?', { m: monthName, fy: yearName }), body: esc(tx('No entries can be added to it. It opens again with a reason.')), yes: tx('Lock'), danger: false }; /* E12: Lock is a commit, so it asks first in the library's confirm */
 }
 /** the api route a Lock · Close for good · Open again · Reopen month press calls */
 function bkLockRoute(what) {
@@ -251,7 +251,8 @@ async function bkLockDo(what, period, reason) {
     fiscalYear = lockState.fy,
     node = reason || '',
     out = document.getElementById('lk_out');
-  var monthName = tx(bkMonths()[period - 1] || String(period));
+  var monthName = tx(bkMonths()[period - 1] || String(period)),
+    calendarYear = String(((lockState.info || {})[fiscalYear + '|' + period] || {}).start_date || fiscalYear).slice(0, 4); /* C-F-02: the month's own year (Jul 2026), never the financial-year key (2026-27) */
   if ((what === 'unlock' || what === 'reopen') && !node.trim()) return; /* the reason is asked in bkLockReopen, beside the button that sends it */
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
@@ -265,7 +266,7 @@ async function bkLockDo(what, period, reason) {
       key: 'lk-' + fiscalYear + '-' + period,
       out: 'lk_out',
       failed: tx('Could not change it'),
-      confirm: bkLockConfirm(what, monthName, fiscalYear),
+      confirm: bkLockConfirm(what, monthName, calendarYear),
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {
         var status = bkLockStatusOf(what, answer);
@@ -279,7 +280,7 @@ async function bkLockDo(what, period, reason) {
             bkQuiet('periods-reload', failure);
           }); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
         var element = document.getElementById('lk_out');
-        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: fiscalYear, s: status ? CBLockWords.stateWord(status) : tx('Done') });
+        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: calendarYear, s: status ? CBLockWords.stateWord(status) : tx('Done') });
       }
     }
   );
