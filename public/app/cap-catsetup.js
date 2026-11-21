@@ -1013,6 +1013,10 @@ function catsetCard(title, body, actions) {
     '</div>'
   );
 }
+/** AE-F-07: the shop's tax words from its pack (cap-definitions cbDefTaxScheme); the India-shaped words only until that is loaded */
+function catsetScheme() {
+  return typeof cbDefTaxScheme === 'function' ? cbDefTaxScheme() : { word: 'GST', sample: 18, codes: true };
+}
 function catsetBody(k) {
   if (k === 'blueprint') {
     /**
@@ -1235,18 +1239,18 @@ function catsetBody(k) {
       '</summary>' +
       catsetCard(
         'Name a rate, then a product cites it',
-        'A slab is “GST 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names ' +
+        'A slab is “' + catsetScheme().word + ' ' + catsetScheme().sample + '%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names ' +
           'none inherits — first from its category, then from the catalogue default.' +
           '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and ' +
           'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>' +
           '<div class="catset-std">⚠️ <b>A rate is not a decision, and we ship none.</b> Which slab a product ' +
-          'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you ' +
+          (catsetScheme().codes ? 'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you ' : 'attracts is yours to state, within what the tax authority sets. CB carries what you ' ) +
           'declared, who declared it and when — and freezes it onto a chit at the mint.</div>',
         ''
       ) +
       '</details>' +
       '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' +
-      tx('GST slab rates (reference)') +
+      catsetScheme().word + ' ' + tx('slab rates (reference)') +
       '</summary>' +
       catsetRegistry(['tax']) +
       '</details>'
