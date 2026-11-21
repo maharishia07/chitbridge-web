@@ -724,6 +724,11 @@
    * change it. Every outlet reads this: the row's share (M.per), the bar and the pill (M.ev.total), the block and the review (M).
    * A row judged alone cannot know a threshold or a basket offer; a bar summing row deals cannot either. Nothing else evaluates.
    */
+  /* I-F-02: the basis the money uses — the page's option, else the catalogue's own shop.price_includes_tax (the flag the server prices with) */
+  function inclOf_(s) {
+    if (s.opts && s.opts.priceIncludesTax != null) return !!s.opts.priceIncludesTax;
+    return !!(s.cat && s.cat.shop && s.cat.shop.price_includes_tax);
+  }
   function compute(ns) {
     var s = C[ns];
     if (!s || !s.cat) return null;
@@ -740,7 +745,9 @@
         })
         .join(',') +
       '|' +
-      viewerGroups(s.cat).join(',');
+      viewerGroups(s.cat).join(',') +
+      '|' +
+      (inclOf_(s) ? 'incl' : 'excl');
     if (s._M && s._M.key === key) return s._M.M;
     var M = money(EL, {
       offers: offs,
@@ -748,6 +755,7 @@
         now: new Date(),
         currency: currencyOf(ns),
         customer_groups: viewerGroups(s.cat),
+        priceIncludesTax: inclOf_(s) /* I-F-02: the cart's money uses the basis the save uses (the shop's price_includes_tax) */,
         money: function (n) {
           return fmt(ns, n);
         }
@@ -2550,10 +2558,10 @@
    * figure ("no tax slab resolves") rather than carrying a made-up split; the total stays the price, which is right either way.
    */
   function taxOfNet_(net, rate, incl) {
-    if (!incl) return roundMoney_((net * rate) / 100);
     var T = root.CBTax;
-    if (!T || typeof T.splitLineTax !== 'function') return null;
-    var sp = T.splitLineTax({ net: net, rate: rate, priceIncludesTax: true });
+    /* I-F-02: the engine's own split both ways (added on top, or taken out); the bare formula only where the engine is not loaded */
+    if (!T || typeof T.splitLineTax !== 'function') return incl ? null : roundMoney_((net * rate) / 100);
+    var sp = T.splitLineTax({ net: net, rate: rate, priceIncludesTax: !!incl });
     return roundMoney_(Number(sp && sp.tax) || 0);
   }
   function money(nestedLines, o) {

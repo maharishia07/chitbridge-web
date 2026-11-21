@@ -1963,7 +1963,7 @@ function bkDvGist(e) {
     var gst = /^22(0\d|1[0-2])$/.test(String(item.code)),
       key = gst ? 'GST' : String(item.code);
     if (!m[key]) {
-      m[key] = { name: gst ? 'GST' : item.name, amt: 0, cr: 0 };
+      m[key] = { name: gst ? (typeof packWord === 'function' && packWord('taxName')) || 'Tax' : item.name, amt: 0, cr: 0 };
       order.push(key);
     }
     m[key].amt += Number(item.dr_minor || 0) + Number(item.cr_minor || 0);
