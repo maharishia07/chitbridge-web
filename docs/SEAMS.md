@@ -32,7 +32,8 @@ of file each thing is; this says what already does the job.
 | 82 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 81 | `again` | `signin-ui.js` |  |
 | 81 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
-| 78 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 79 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 77 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 77 | `read` | `books-grant-drill.js` |  |
 | 77 | `count` | `money-check.js` | the count /health reads |
 | 76 | `rows` | `cap-settings.js` |  |
@@ -41,7 +42,6 @@ of file each thing is; this says what already does the job.
 | 76 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 75 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 75 | `failed` | `service.js` | what every catch answers: |
-| 74 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 71 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
 | 70 | `pack` | `books-store-packs.js` |  |
 | 70 | `adopt` | `remote-party.js` | local → the input names a business in THIS installation's namespace (or is an e-mail): |
@@ -52,9 +52,9 @@ of file each thing is; this says what already does the job.
 | 67 | `toast` | `cb-words.js` |  |
 | 66 | `open` | `bank-statement-file.js` | The event is written in the same request unless the request is read only (an auditor: |
 | 66 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
+| 64 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 64 | `view` | `country-ready.js` |  |
 | 64 | `shape` | `books-practice.js` | a client's practice row: |
-| 63 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 63 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 62 | `body` | `books-acting.js` | a write's body: |
 | 62 | `view` | `books-payables.js` | group: |
@@ -65,7 +65,7 @@ of file each thing is; this says what already does the job.
 | 59 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 59 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 59 | `live` | `receivables.js` | the allocations that still count: |
-| 57 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
+| 58 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 57 | `holds` | `assign-register.js` | ONE statement; the switch rides in it: |
 | 56 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
 | 55 | `facts` | `bill-steps.js` | MY state_log — |
@@ -194,6 +194,7 @@ of file each thing is; this says what already does the job.
 | 22 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 22 | `fallback` | `locale.browser.js` | XC-1119 (Athi 19 Nov): |
 | 21 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
+| 21 | `shows` | `edition.js` |  |
 | 21 | `actions` | `workflow.js` | actions(chit, me) — |
 | 21 | `parties` | `books-store-parties.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 21 | `close` | `person-session.js` | When device_id is null the jti is looked for under every device (an owner revoking a jti from the list). |
@@ -203,7 +204,6 @@ of file each thing is; this says what already does the job.
 | 20 | `said` | `cap-shop.js` |  |
 | 20 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 20 | `chips` | `country-profiles.js` | words as chips; null when there are none |
-| 20 | `shows` | `edition.js` |  |
 | 20 | `confirm` | `lab-kit.js` | opts: |
 | 20 | `verdict` | `rail-thread.js` |  |
 | 20 | `label` | `bill-privacy.js` | label(step, mine) — |

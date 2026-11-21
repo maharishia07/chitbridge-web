@@ -1,6 +1,6 @@
 {
  "generated_by": "tools/country-samples.cjs",
- "engines": "1.78.0",
+ "engines": "1.103.0",
  "note": "A sample shop per country, simulated (tests/helpers/year-any.js) — never a real shop's figures. Amounts in minor units.",
  "prerequisites": [
   "Country setup done — registered for the tax, the number checks out",
@@ -37,27 +37,27 @@
       {
        "line": "inventories",
        "label": "Inventories",
-       "amount_minor": 35500000
+       "amount_minor": 29800000
       },
       {
        "line": "trade_receivables",
        "label": "Trade receivables",
-       "amount_minor": 11435484
+       "amount_minor": 10325582
       },
       {
        "line": "cash_equivalents",
        "label": "Cash and cash equivalents",
-       "amount_minor": 9603894
+       "amount_minor": 19285717
       },
       {
        "line": "short_term_loans_advances",
        "label": "Short-term loans and advances",
-       "amount_minor": 28
+       "amount_minor": 16
       },
       {
        "line": "other_current_assets",
        "label": "Other current assets",
-       "amount_minor": 1382528
+       "amount_minor": 1030521
       }
      ],
      "equity_and_liabilities": [
@@ -69,16 +69,16 @@
       {
        "line": "trade_payables",
        "label": "Trade payables",
-       "amount_minor": 4988136
+       "amount_minor": 4543498
       },
       {
        "line": "reserves_surplus",
        "label": "Reserves and surplus",
-       "amount_minor": 20453798
+       "amount_minor": 23418338
       }
      ],
-     "total_assets_minor": 60441934,
-     "total_equity_and_liabilities_minor": 60441934,
+     "total_assets_minor": 62961836,
+     "total_equity_and_liabilities_minor": 62961836,
      "balanced": true
     },
     "profit_and_loss": {
@@ -88,7 +88,7 @@
       {
        "line": "revenue_operations",
        "label": "Revenue from operations",
-       "amount_minor": 201833598
+       "amount_minor": 210498138
       }
      ],
      "expenses": [
@@ -100,7 +100,7 @@
       {
        "line": "changes_inventories",
        "label": "Changes in inventories of finished goods, work-in-progress and stock-in-trade",
-       "amount_minor": -15500000
+       "amount_minor": -9800000
       },
       {
        "line": "employee_benefits",
@@ -118,9 +118,9 @@
        "amount_minor": 17818200
       }
      ],
-     "total_income_minor": 201833598,
-     "total_expenses_minor": 181379800,
-     "profit_minor": 20453798
+     "total_income_minor": 210498138,
+     "total_expenses_minor": 187079800,
+     "profit_minor": 23418338
     },
     "basis": "Tally's 28 predefined groups · Schedule III Division I"
    }
@@ -180,7 +180,8 @@
       "refund_minor": 915242,
       "net_minor": -915242,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)"
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
      {
@@ -226,7 +227,8 @@
       "refund_minor": 0,
       "net_minor": 393082,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)"
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
      {
@@ -272,7 +274,8 @@
       "refund_minor": 0,
       "net_minor": 527463,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)"
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
      {
@@ -318,7 +321,8 @@
       "refund_minor": 0,
       "net_minor": 588687,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)"
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      }
     ]
@@ -443,7 +447,7 @@
        {
         "code": "1",
         "label": "Standard rated supplies",
-        "amount_minor": 17497226,
+        "amount_minor": 17538026,
         "tax_minor": 876894
        },
        {
@@ -461,7 +465,7 @@
        {
         "code": "4",
         "label": "Zero-rated supplies",
-        "amount_minor": 18677000,
+        "amount_minor": 18636200,
         "tax_minor": 0
        },
        {
@@ -536,9 +540,10 @@
       "net_minor": -393756,
       "notes": [
        "the whole of Box 1 is reported under the Emirate of the fixed establishment (none was handed in) — the ledgers carry no Emirate (ER Art. 72(2))",
-       "VAT-exclusive, and including zero-rated and exempt purchases (the ledgers hold them under the same accounts); the VAT column is what was posted to Input VAT",
+       "VAT-exclusive, and counting only the purchases and expenses that carried recoverable VAT (a bill with no VAT on it, a bank fee, a zero-rated or exempt purchase is not in Box 9); the VAT column is what was posted to Input VAT",
        "the ledgers hold all recoverable input VAT in one account, so the reverse-charge recovery sits inside Box 9's VAT here; Box 13 is the same either way",
-       "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures"
+       "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures",
+       "This period has exempt sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
      {
@@ -652,9 +657,10 @@
       "net_minor": 185814,
       "notes": [
        "the whole of Box 1 is reported under the Emirate of the fixed establishment (none was handed in) — the ledgers carry no Emirate (ER Art. 72(2))",
-       "VAT-exclusive, and including zero-rated and exempt purchases (the ledgers hold them under the same accounts); the VAT column is what was posted to Input VAT",
+       "VAT-exclusive, and counting only the purchases and expenses that carried recoverable VAT (a bill with no VAT on it, a bank fee, a zero-rated or exempt purchase is not in Box 9); the VAT column is what was posted to Input VAT",
        "the ledgers hold all recoverable input VAT in one account, so the reverse-charge recovery sits inside Box 9's VAT here; Box 13 is the same either way",
-       "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures"
+       "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures",
+       "This period has exempt sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
      {
@@ -768,9 +774,10 @@
       "net_minor": 493357,
       "notes": [
        "the whole of Box 1 is reported under the Emirate of the fixed establishment (none was handed in) — the ledgers carry no Emirate (ER Art. 72(2))",
-       "VAT-exclusive, and including zero-rated and exempt purchases (the ledgers hold them under the same accounts); the VAT column is what was posted to Input VAT",
+       "VAT-exclusive, and counting only the purchases and expenses that carried recoverable VAT (a bill with no VAT on it, a bank fee, a zero-rated or exempt purchase is not in Box 9); the VAT column is what was posted to Input VAT",
        "the ledgers hold all recoverable input VAT in one account, so the reverse-charge recovery sits inside Box 9's VAT here; Box 13 is the same either way",
-       "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures"
+       "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures",
+       "This period has exempt sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      }
     ]

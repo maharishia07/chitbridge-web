@@ -348,14 +348,8 @@
   function staffBulk(opts, take, held) {
     return [
       take,
-      { id: 'release', label: tr('Release'), run: function (rows) {
-        var mine = rows.filter(held);
-        if (!mine.length) return showOutcome('bad', tr('Nothing ticked is yours to release.'), []);
-        return apply(opts, mine, { id: null, note: '' });
-      } },
-      { id: 'handto', label: tr('Hand to…'), run: function (rows) {
-        pick({ title: 'Hand to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
-      } }
+      { id: 'release', label: tr('Release'), run: function (rows) { var mine = rows.filter(held); return mine.length ? apply(opts, mine, { id: null, note: '' }) : showOutcome('bad', tr('Nothing ticked is yours to release.'), []); } },
+      { id: 'handto', label: tr('Hand to…'), run: function (rows) { pick({ title: 'Hand to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); }); } }
     ];
   }
 
