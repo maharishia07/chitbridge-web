@@ -409,16 +409,17 @@
     } else home.dlg.removeAttribute('open');
     adopt(home);
   }
+  /** a press on the signed-out home: a door asks to sign in; a row or a foot word opens that pillar's showcase */
+  function onSignedOutClick(home, target) {
+    var tile = target.closest('.ix-row'), word = target.closest('.ix-fw'), door = target.closest('[data-door]');
+    if (door) return root.dispatchEvent(new root.CustomEvent('cb-home-signin'));
+    if (tile || word) return showcase(home, (tile ? tile.parentNode : word).getAttribute('data-pillar'));
+  }
   /** a press in the host: a row opens or closes, a "sheet" line or a foot word opens the sheet, "+n" opens the Do-first doors */
   function onHostClick(home, event) {
     var target = event.target.closest ? event.target : null;
     if (!target) return;
-    if (home.out) {
-      var tile = target.closest('.ix-row'), word = target.closest('.ix-fw'), door = target.closest('[data-door]');
-      if (door) return root.dispatchEvent(new root.CustomEvent('cb-home-signin'));
-      if (tile || word) return showcase(home, (tile ? tile.parentNode : word).getAttribute('data-pillar'));
-      return;
-    }
+    if (home.out) return onSignedOutClick(home, target);
     var row = target.closest('.ix-row'), sheetLine = target.closest('[data-sheet]'), foot = target.closest('.ix-fw'), more = target.closest('[data-more]');
     if (row && home.list.contains(row)) return open(home, row.getAttribute('aria-expanded') === 'true' ? '' : row.parentNode.getAttribute('data-pillar'));
     if (sheetLine) return sheet(home, sheetLine.getAttribute('data-sheet'));

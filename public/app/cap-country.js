@@ -606,6 +606,16 @@ function csuTaxIdWhy(country, number) {
   }
   return '';
 }
+/** a row after a change: a tax number the checker refuses keeps the tax row open; otherwise the row counts as answered and closes (the tax row only once it has its number) */
+function csuSettleRow(row) {
+  if (CSU.taxErr) {
+    CSU.open.tax = true;
+    CSU.answered.tax = false;
+  } else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) {
+    CSU.answered[row] = true;
+    CSU.open[row] = false;
+  }
+}
 /** one field changed on screen: hold the cleaned value, say "you chose" as its source (W12), mark the step touched (W24), close its row once answered
     (WALK-REG R10c — the tax row stays open while it still needs the number), and repaint */
 function csuSet(field, typed) {
@@ -619,13 +629,7 @@ function csuSet(field, typed) {
   /* R49: a number the checker refuses keeps the row OPEN with the reason on it; any other change to the row re-reads the held number */
   if (row === 'tax') CSU.taxErr = CSU.edit.registered && CSU.edit.number ? csuTaxIdWhy(CSU.edit.country, CSU.edit.number) : '';
   if (field === 'country') CSU.taxErr = '';
-  if (CSU.taxErr) {
-    CSU.open.tax = true;
-    CSU.answered.tax = false;
-  } else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) {
-    CSU.answered[row] = true;
-    CSU.open[row] = false;
-  }
+  csuSettleRow(row);
   CSU.touched = true; /* W24: something moved since the read */
   CSU.err = '';
   CSU.saved = false;
@@ -923,17 +927,17 @@ function csuAskRows(e) {
   var asks = (CSU.p && CSU.p.asks) || [];
   if (!asks.length || !CSU.p.country || CSU.p.country.code !== e.country) return '';
   return asks
-    .map(function (ask) {
-      var current = (e.asked || {})[ask.key] || '',
-        chosen = ask.options.filter(function (o) {
+    .map(function (setupAsk) {
+      var current = (e.asked || {})[setupAsk.key] || '',
+        chosen = setupAsk.options.filter(function (o) {
           return o.value === current;
         })[0];
       var options = [{ v: '', t: tx('Pick one'), off: !!current }].concat(
-        ask.options.map(function (o) {
+        setupAsk.options.map(function (o) {
           return { v: o.value, t: tx(o.label) };
         })
       );
-      return csuRow('ask_' + ask.key, tx(ask.label), chosen ? esc(tx(chosen.label)) : '', ask.why ? tx(ask.why) : '', csuSel('cs-ask-' + ask.key, 'ask:' + ask.key, options, current));
+      return csuRow('ask_' + setupAsk.key, tx(setupAsk.label), chosen ? esc(tx(chosen.label)) : '', setupAsk.why ? tx(setupAsk.why) : '', csuSel('cs-setupAsk-' + setupAsk.key, 'setupAsk:' + setupAsk.key, options, current));
     })
     .join('');
 }

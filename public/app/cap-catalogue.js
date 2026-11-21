@@ -1090,12 +1090,16 @@ var CBCatalogueApp = (function () {
     if (kind) return { gst_rate: rate, tax_kind: kind };
     return Number(rate) !== 0 ? { gst_rate: rate, tax_kind: null } : { gst_rate: rate };
   }
+  /** the pack's own question for a 0% rate (one button per kind), or null when the rate is not 0 or the page has no such question */
+  function kindQuestionFor(rate) {
+    return Number(rate) === 0 && typeof cbKindAskOf === 'function' ? cbKindAskOf(shopReg()) : null;
+  }
   /** a pack rate tapped on an item: the same ask-first and ONE PATCH as a slab, the bare rate (resolve's own rung 1b) */
   function ratePickBare(rate, button, kind) {
     var item = S.sel ? itemOf(S.sel) : null;
     if (!item) return;
     /* SUPPLY KIND: a rate of 0 is not an answer — the pack's own question first (one button per kind, none preselected), then the same ask-first PATCH with the kind beside the rate. A pack that names no 0% kind asks nothing. */
-    var question = Number(rate) === 0 && typeof cbKindAskOf === 'function' ? cbKindAskOf(shopReg()) : null;
+    var question = kindQuestionFor(rate);
     if (question && !kind) return askKind(item, question);
     if (!rateMay().ok) {
       say('cat_sheet_out', rateMay().why, 'warn');
@@ -1103,7 +1107,7 @@ var CBCatalogueApp = (function () {
     }
     kind = kind || '';
     var data = pData(item),
-      words = taxWord() + ' ' + rate + '%' + (kind ? ' (' + kindWord(question || cbKindAskOf(shopReg()), kind) + ')' : '');
+      words = rateWords(rate, kind, question);
     if (Number(data.gst_rate) === rate && (data.tax_kind || '') === kind) {
       say('cat_sheet_out', T('{n} already carries {w}.', { n: pName(data), w: words }), 'ok');
       return;
@@ -1118,20 +1122,29 @@ var CBCatalogueApp = (function () {
         confirm: { title: pName(data) + ': ' + words + '?', body: esc(T('Every new bill carries it.')), yes: T('Set rate'), danger: false },
         out: 'cat_sheet_out',
         busy: T('Saving…'),
+        /** the rate was saved: take the server's item in (or set it here when it sent none), repaint and say so */
         outcome: function (reply) {
-          if (reply && reply.item) {
-            var index = S.items.indexOf(item);
-            if (index >= 0) S.items[index] = reply.item;
-          } else {
-            data.gst_rate = rate;
-            if (Number(rate) !== 0) delete data.tax_kind;
-          }
-          paintTaxRow();
-          if (S.list) S.list.refresh();
-          say('cat_sheet_out', T('{n} now carries {w}.', { n: pName(data), w: words }), 'ok');
+          rateSaved(reply, item, data, rate, words);
         }
       }
     );
+  }
+  /** the tax word, the rate and the kind in words ("GST 18% (goods)") */
+  function rateWords(rate, kind, question) {
+    return taxWord() + ' ' + rate + '%' + (kind ? ' (' + kindWord(question || cbKindAskOf(shopReg()), kind) + ')' : '');
+  }
+  /** a rate saved on an item: the server's item replaces the one on the list (else the rate is set on the copy held here), the tax row repaints, the list refreshes, and it is said */
+  function rateSaved(reply, item, data, rate, words) {
+    if (reply && reply.item) {
+      var index = S.items.indexOf(item);
+      if (index >= 0) S.items[index] = reply.item;
+    } else {
+      data.gst_rate = rate;
+      if (Number(rate) !== 0) delete data.tax_kind;
+    }
+    paintTaxRow();
+    if (S.list) S.list.refresh();
+    say('cat_sheet_out', T('{n} now carries {w}.', { n: pName(data), w: words }), 'ok');
   }
   /** the slabs and categories (core.js's one live-definition loader) and the face, once; a re-read is never needed inside one sheet */
   function readTax() {
@@ -1202,15 +1215,17 @@ var CBCatalogueApp = (function () {
     var data = pData(item);
     /* the code only ever SUGGESTS (critic 12): hsn first, then sac, then the shop's own code — never stamped */
     var menu = cbSlabMenu(cbDefsCached('tax') || [], taxPack(), data.hsn || data.sac || data.code || '');
-    pickHost.innerHTML =
-      !menu.rows.length && packRateMenuHTML()
-        ? packRateMenuHTML()
-        : cbSlabMenuHTML(menu, {
-            cls: 'act quiet',
-            pick: function (slabId) {
-              return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)";
-            }
-          });
+    pickHost.innerHTML = rateMenuHTML(menu);
+  }
+  /** the live slabs as buttons; with none, the pack's own rates */
+  function rateMenuHTML(menu) {
+    if (!menu.rows.length && packRateMenuHTML()) return packRateMenuHTML();
+    return cbSlabMenuHTML(menu, {
+      cls: 'act quiet',
+      pick: function (slabId) {
+        return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)";
+      }
+    });
   }
   /** the merge-patch setOn makes on this item: every key it changed; a key it removed travels as null (RFC 7386) — the api's slabPatchOf, on the client */
   function slabPatch(data, slab) {
