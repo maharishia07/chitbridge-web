@@ -248,7 +248,7 @@ function bkCssLedgersPage() {
     '#bk_lt .tn{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:start;gap:0 6px;width:100%;border:0;background:none;text-align:start;border-radius:8px;padding:6px 8px 6px calc(6px + var(--lvl,0) * 14px);position:relative;color:var(--ink);min-height:34px;font:inherit;font-size:var(--fs-2);cursor:pointer}',
     '#bk_lt .tn:hover{background:var(--panel)}',
     '#bk_lt .tn .tw{width:16px;text-align:center;line-height:1.45}',
-    '#bk_lt .tn .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;padding-top:1px}' /* W15-104: a tree name is ONE line; the full name is the tooltip */,
+    '#bk_lt .tn .nm{min-width:0;overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.35;padding-top:1px}' /* F-58 (21 Nov, replaces W15-104's one-line cut): a name wraps to a second line before it is cut, so 'Business bank account' and 'Card and EFTPOS settlements' read whole; the full name stays the tooltip */,
     '#bk_lt .lt-asof{padding:6px 10px 2px;font-size:var(--fs-1);color:var(--grey)}',
     '#bk_lt .lt-segs{display:flex;gap:4px;padding:2px 8px 6px}',
     '#bk_lt .lt-seg{flex:1 1 0;min-height:32px;border:1px solid var(--line,#d8dee6);background:none;border-radius:8px;font:inherit;font-size:var(--fs-1);color:var(--grey);cursor:pointer;white-space:nowrap}',
