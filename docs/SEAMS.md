@@ -24,7 +24,7 @@ of file each thing is; this says what already does the job.
 | 98 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 97 | `entry` | `books-store.js` |  |
 | 97 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
-| 88 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
+| 89 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 86 | `register` | `regulation.js` | register(pack) → the pack — |
 | 84 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 83 | `catalogue` | `books-manual.js` | GET /events → the grid. |
@@ -120,11 +120,11 @@ of file each thing is; this says what already does the job.
 | 33 | `ensureCap` | `app.html` |  |
 | 33 | `modal` | `app.html` |  |
 | 33 | `call` | `assign-bar.js` |  |
+| 33 | `next` | `cap-stock.js` | the next level: |
 | 33 | `shown` | `country-compare.js` | one side's value for the line: |
 | 33 | `guard` | `amend.js` | would disturb what has gone out. |
 | 33 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
-| 32 | `next` | `cap-stock.js` | the next level: |
 | 32 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 32 | `governance` | `home-facts.js` |  |
 | 32 | `guess` | `move-in.js` | `table` (optional, PR1): |
