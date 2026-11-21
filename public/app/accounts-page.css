@@ -141,10 +141,16 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 /* F-53 (21 Nov): a report fits the screen - only its rows scroll; the head stays on top, the Total row on the bottom (the no-scroll rule, 1366x768 + 390x844) */
 .bk-scroll{overflow:auto;min-height:160px}
 /* the statement tables (TB, P&L, Balance sheet): the page is the screen - the head and the figures bar keep their height, the rows take the rest and scroll; the old calc() max-height left P&L 22 px and the phone 44 px past the screen once the real lead and notes were drawn */
-body:has(.bk-scroll) .main{display:flex;flex-direction:column;overflow:hidden}
-body:has(.bk-scroll) .content{flex:1 1 auto;min-height:0;padding-bottom:8px}
+body:has(.bk-scroll,.ov-pics) .main{display:flex;flex-direction:column;overflow:hidden}
+body:has(.bk-scroll,.ov-pics) .content{flex:1 1 auto;min-height:0;padding-bottom:8px}
 .content>#bk_body:has(>.bk-scroll){flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
-#bk_body>.bk-scroll{flex:1 1 auto}.bk-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}.bk-scroll tfoot td{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line-3)}
+#bk_body>.bk-scroll{flex:1 1 auto}
+/* How we are doing: the headline and tiles keep their height, the pictures take the rest and scroll inside - the page itself never does */
+.content>#bk_body:has(.ov-pics){flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#bk_body .ov,#bk_body #ov_main{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+#bk_body .ov-pics{flex:1 1 auto;min-height:150px;overflow:auto;align-content:start;grid-auto-rows:max-content}
+#bk_body .ov-tiles,#bk_body .ov-head{flex:0 0 auto}
+@media(max-width:620px){#bk_body .ov-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px}#bk_body .ov-tile{padding:4px 8px}#bk_body .ov-head{margin:2px 0 6px;font-size:var(--fs-2)}}.bk-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}.bk-scroll tfoot td{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line-3)}
 
 /* To do — one row a thing that needs doing: symbol · count · sentence · its one button; a phone puts the button under the sentence, full width */
 .todo{display:flex;flex-direction:column;gap:10px;max-width:760px}
