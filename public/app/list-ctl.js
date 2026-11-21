@@ -1457,8 +1457,18 @@ ctx.se = null;
     }
   }
   /** paintToolsBar, step 7 of 7 (part 7, lines 1627-1638 of the one function): runs on, nothing here ends the call */
+  /** WALK S S-F-09: an opened popup (Columns, Filters) never runs below the viewport — its height is cut to the room under its top edge (the list scrolls inside it) */
+  function fitPop(box) {
+    var pop = box.querySelector('.cbl-pop'),
+      view = box.ownerDocument && box.ownerDocument.defaultView;
+    if (!pop || !view || !pop.getBoundingClientRect) return;
+    var rect = pop.getBoundingClientRect(),
+      room = view.innerHeight - rect.top - 8;
+    if (rect.height && rect.bottom > view.innerHeight - 8 && room >= 120) pop.style.maxHeight = room + 'px';
+  }
   function paintToolsBarStep7(list, ctx) {
     ctx.box.innerHTML = ctx.h;
+    fitPop(ctx.box);
     if (ctx.keepId) {
       var back = ctx.box.querySelector('#' + cssId(ctx.keepId));
       if (back) {
