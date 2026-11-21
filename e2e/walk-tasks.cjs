@@ -254,7 +254,7 @@ W.run('tasks', async (w) => {
     S.level = 'viewer'; S.calls = [];
     await openPage(); await openRow('c2');
     const dis = await page.$$eval('#tk_do_accept, #tk_do_reject, #tk_do_complete, #tk_do_cancel, #tk_do_reopen, #tk_ld_l3, #tk_lv_l3', (bs) => bs.map((b) => b.id + (b.disabled ? ':greyed' : ':open')));
-    const why = await txt('[data-testid="tk_do_accept-why"]'), lwhy = await txt('[data-testid="tk-assign-why"]'), chips = await page.locator('#tk_sheet [data-testid="assign-chip"]').count();
+    const why = (await txt('[data-testid="tk_do_accept-why"]')) || (await txt('[data-testid="tk-steps-why"]')) /* L-F-09 (0aa81056): one refusal shared by 3+ steps is said ONCE above them, the greyed buttons keep it as their tooltip */, lwhy = await txt('[data-testid="tk-assign-why"]'), chips = await page.locator('#tk_sheet [data-testid="assign-chip"]').count();
     await page.click('#tk_do_accept', { force: true, timeout: 2000 }).catch(() => {}); await page.waitForTimeout(300);
     S.level = 'editor';
     await closeSheet();
