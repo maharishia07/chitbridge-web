@@ -921,11 +921,11 @@ function peReturnPaint(r) {
     '</div><div id="pr_list" data-testid="pr-list"></div>';
   if ((r.notes || []).length)
     h +=
-      '<div class="pe-card" data-testid="pr-basis"><div class="pe-sub">' +
+      '<details class="pe-card pe-fold" data-testid="pr-basis"><summary class="pe-sub">' +
       esc(tx('How it was read')) +
-      '</div>' +
+      '</summary>' +
       r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
-      '</div>';
+      '</details>';
   host.innerHTML = '<div id="bk_attn_bas"></div>' + h + peReturnCloseSection(r);
   if (typeof CBAttention !== 'undefined' && r.period) CBAttention.mount(document.getElementById('bk_attn_bas'), { from: r.period.start, to: r.period.end }); /* W15-102: the same strip, the return's days */
   peReturnList(r);
@@ -1070,6 +1070,7 @@ function peReturnList(r) {
     id: (b) => String(b.code),
     rowTid: (b) => 'pr-box-' + b.code,
     columns: cols,
+    bottom: 150 /* the notes line and the Close bar sit under the list: the list leaves them their room, so the page ends at the screen */,
     defaultCols: cols.map((x) => x.key) /* a return is read whole: every column shown (CBList's default keeps three); ⚙ still chooses */,
     next: (b) => peReturnLedgers(r, b, two) /* ACC-357: the row opens BELOW: one line per ledger with its amount for the period (a shop may have hundreds of places: the server sends the top ten) */
   });
