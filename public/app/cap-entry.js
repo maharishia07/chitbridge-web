@@ -564,6 +564,10 @@ async function enOwnAdd(k) {
   }
   enPaint();
 }
+/** the paid-by choices when the form carries none: UPI only where the shop's pack has it (F-33) */
+function enPaidByFallback() {
+  return [{ v: 'cash', l: tx('Cash') }, { v: 'bank', l: tx('Bank') }].concat(payHasUpi() ? [{ v: 'upi', l: tx('UPI') }] : [], [{ v: 'cheque', l: tx('Cheque') }]);
+}
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
   var k = f.key,
@@ -611,10 +615,7 @@ function enFieldHTML(f) {
       '</div>'
     );
   if (f.kind === 'paid_by') {
-    var m =
-      f.options && f.options.length
-        ? enOptions(f)
-        : [{ v: 'cash', l: tx('Cash') }, { v: 'bank', l: tx('Bank') }].concat(payHasUpi() ? [{ v: 'upi', l: tx('UPI') }] : [], [{ v: 'cheque', l: tx('Cheque') }]);
+    var m = f.options && f.options.length ? enOptions(f) : enPaidByFallback();
     return (
       wrap(enSelect(tid, m, v, "enSet('paid_by',this.value);enPaintKeep()")) +
       (v === 'cheque'
