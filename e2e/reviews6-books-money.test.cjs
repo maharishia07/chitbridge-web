@@ -7,6 +7,8 @@
  */
 'use strict';
 const vm = require('vm');
+const fs = require('fs');
+const path = require('path');
 const { liftFns } = require('./lib/lift-fn.cjs');
 let fail = 0;
 const t = (name, ok, why) => { console.log((ok ? '  ok  ' : '  FAIL') + ' ' + name + (ok ? '' : ' - ' + why)); if (!ok) fail++; };
@@ -41,6 +43,36 @@ vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMon
   t('null interest is refused', /Type the interest/.test(emi(null) || ''), String(emi(null)));
   t('empty-string interest is refused', /Type the interest/.test(emi('') || ''), String(emi('')));
   t('a typed 0 and a typed 5000 pass', emi(0) === null && emi(500000) === null, emi(0) + '|' + emi(500000));
+  // GF-08 M3 two currencies are never one unbilled sum
+  const cx4 = vm.createContext({});
+  vm.runInContext(liftFns('public/app/cap-crm-record.js', ['crmBillFacts']) + '\nthis.f = { crmBillFacts };', cx4);
+  const ord = (minor, currency) => ({ kind: 'chit', src: 'chit', purpose: 'order', state: { word: 'open' }, amount_minor: minor, currency });
+  const one = cx4.f.crmBillFacts([ord(100000, 'inr'), ord(5000, 'inr')]).unbilled;
+  t('one currency still adds', one.minor === 105000 && one.n === 2, JSON.stringify(one));
+  const two = cx4.f.crmBillFacts([ord(100000, 'inr'), ord(5000, 'usd'), ord(700, 'usd')]).unbilled;
+  t('INR + USD orders give the count alone (minor null)', two.minor === null && two.n === 3, JSON.stringify(two));
+  // GF-07 M14 a null price is no price (static: Number(null) is 0 and 0 is finite)
+  const chit2 = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-chit2.js'), 'utf8');
+  t('cap-chit2 reads a line price with null as NaN, never Number(null)', !/\bp = Number\(l\.price\)/.test(chit2) && /l\.price == null/.test(chit2));
+  // GF-07 M3 a late chit read must not overwrite the chit now on screen
+  const cx5 = vm.createContext({ C2: { id: 'A' }, c2Paint() {}, UI: { actors: [1] }, mapApiMsg: null });
+  const waiting = {};
+  cx5.api = (name, o) => (name === 'chit' ? new Promise((res) => { waiting[o.params.id] = () => res({ id: o.params.id, lines: [] }); }) : Promise.resolve([]));
+  vm.runInContext(liftFns('public/app/cap-chit2.js', ['loadChit2']) + '\nthis.f = { loadChit2 };', cx5);
+  const first = cx5.f.loadChit2(); cx5.C2.id = 'B'; const second = cx5.f.loadChit2();
+  waiting.B(); await second; waiting.A(); await first;
+  t('a late read for chit A does not overwrite chit B', cx5.C2.data && cx5.C2.data.id === 'B', JSON.stringify(cx5.C2.data));
+  // GF-07 M5 the installer makes config.json owner-only before the key is written
+  const cx6 = vm.createContext({ CFG: {}, tx: (x) => x });
+  const conn = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-connector.js'), 'utf8');
+  t('the installer creates config.json mode 600 before the tee that writes the key', /install -m 600 \/dev\/null "\$DIR\/config\.json"[^]*?sudo tee "\$DIR\/config\.json"/.test(conn));
+  t('a failed device read after a reissue no longer drops the new key (shown once)', /devs = null; \/\* the old key is already dead/.test(conn));
+  // GF-07 M13 a double tap on Delivered posts once
+  let posted = 0; const cx7 = vm.createContext({ C2: { id: 'A' }, document: { getElementById: (id) => (id === 'c2dq_L1' ? { value: '5', placeholder: '' } : null) }, toast() {}, MSG: { fail: String }, c2ApplyProgress: () => true, loadChit2: async () => {} });
+  cx7.postDeliverLines = () => { posted++; return new Promise((r) => setTimeout(() => r({}), 10)); };
+  vm.runInContext('var C2_DELIVERING = {};\n' + liftFns('public/app/cap-chit2.js', ['c2Deliver']) + '\nthis.f = { c2Deliver };', cx7);
+  await Promise.all([cx7.f.c2Deliver('L1', 'kg'), cx7.f.c2Deliver('L1', 'kg')]);
+  t('a double tap on Delivered posts once', posted === 1, String(posted));
   process.exit(fail ? 1 : 0);
 })();
 

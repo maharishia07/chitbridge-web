@@ -80,7 +80,8 @@ function crmBillFacts(entries) {
     } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
       un.n++;
       if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the total (an unpriced order, null without the flag, still adds 0)
-      else un.minor += Number(e.amount_minor || 0);
+      else if (un.minor != null) un.minor += Number(e.amount_minor || 0);
+      if (e.currency && un.currency && e.currency !== un.currency) un.minor = null; /* two currencies are never one sum: the count alone is said (GF-08 M3) */
       un.currency = un.currency || e.currency;
     }
   });
