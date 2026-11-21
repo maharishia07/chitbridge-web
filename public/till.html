@@ -20632,7 +20632,7 @@ function lineFaults(rows){
    table here (it held India only; a Dubai shop on a PC set to UTC printed UTC times, 17 Oct audit). A multi-zone country (AU, US) keeps
    CBLocale's answer until the snapshot carries the shop's own zone. */
 function shopTz(){
-  var own = S && S.shop && S.shop.timezone; /* AE-F-05/20: the shop's own IANA zone, from the snapshot (api shop.timezone): an AU shop's state zone, never the PC's */
+  var own = typeof S !== 'undefined' && S && S.shop && S.shop.timezone; /* AE-F-05/20: the shop's own IANA zone, from the snapshot (api shop.timezone): an AU shop's state zone, never the PC's */
   if (own) { try { new Intl.DateTimeFormat('en', { timeZone: own }); /* zone-ok: a probe */ return own; } catch (e) { cbQuiet('shopTz:0', e); } }
   var pack = shopPack(), zones = pack && Array.isArray(pack.timeZones) ? pack.timeZones : null;
   if (zones && zones.length === 1) return zones[0];
