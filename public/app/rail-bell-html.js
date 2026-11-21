@@ -191,13 +191,14 @@
 
   /** the bell button with its count dot, as markup */
   function bellButtonHtml(bell) {
-    var countDot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
+    var shown = bellKit.needs != null ? bellKit.needs : bell.count; /* a page that says what needs you (the One Home's Do-first strip) hands the bell THAT list's size: one answer, never "17" beside "Nothing needs you" */
+    var countDot = shown > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (shown > 99 ? '99+' : shown) + '</span>' : '';
     return (
       '<button type="button" class="cbb-btn" data-cbsid="CMP030-B01"' + bellMount('CMP030') + ' data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
       (bell.open ? 'true' : 'false') +
       '" aria-label="' +
       esc(bellText(bellKit.BELL_WORDS.aria)) +
-      (bell.count ? ' (' + bell.count + ')' : '') +
+      (shown ? ' (' + shown + ')' : '') +
       '">🔔' +
       countDot +
       '</button>'
