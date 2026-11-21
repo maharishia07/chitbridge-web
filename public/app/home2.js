@@ -368,9 +368,9 @@
     if (home.dlg.showModal) home.dlg.showModal();
     else home.dlg.setAttribute('open', '');
   }
-  /** one manifest entry as a showcase line: its name, what it does, and Live or Coming (a built page is live; anything else is grey) */
+  /** one manifest entry as a showcase line: its name, what it does, and Live or Coming (a built, ready page is live; anything else is grey) */
   function showcaseLineHTML(entry) {
-    var live = entry.state === 'built' && !!entry.route;
+    var live = entry.ready !== false && entry.state === 'built' && !!entry.route; /* batch 1126 rule (a): Home reads the manifest's `ready`, a built-but-not-ready page is grey */
     return '<div class="ix-se' + (live ? '' : ' soon') + '" data-testid="ix2-show-' + esc(entry.id) + '"><b>' + esc(sayText(entry.name)) + '</b><i>' + esc(sayText(live ? 'Live' : 'Coming')) +
       '</i><span>' + esc(sayText(entry.what || '')) + '</span></div>';
   }
