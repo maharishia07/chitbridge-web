@@ -48,7 +48,7 @@ function cbDropNote(key, keys) {
 function unwrap(j, _key) {
   if (j == null || typeof j !== 'object' || Array.isArray(j)) return j;
   if ('ok' in j && ('data' in j || 'error' in j)) {
-    if (j.ok === false) throw new Error(j.error || 'Request failed');
+    if (j.ok === false) throw new Error((typeof j.error === 'string' ? j.error : j.error && typeof j.error.message === 'string' && j.error.message) || 'Request failed'); /* reviews11 GF-17: an object error is never printed as [object Object] */
     return j.data;
   }
   /**
@@ -1232,6 +1232,16 @@ var _apiInflight = {};
 
 /** an independent copy, so a joiner can never share mutable state with the caller it joined */
 function _apiCopy(v) {
+  var made = _apiClone(v);
+  if (made !== v && Array.isArray(v) && Array.isArray(made))
+    /* reviews11 GF-17 M5: unwrap() hangs truncated/status_counts/total/next on a list as NON-enumerable properties, which a clone drops */
+    Object.getOwnPropertyNames(v).forEach(function (k) {
+      if (k !== 'length' && !Object.prototype.hasOwnProperty.call(made, k))
+        Object.defineProperty(made, k, { value: _apiClone(v[k]), enumerable: false, configurable: true, writable: true });
+    });
+  return made;
+}
+function _apiClone(v) {
   if (v === null || typeof v !== 'object') return v;
   try {
     if (typeof structuredClone === 'function') return structuredClone(v);
@@ -1253,7 +1263,7 @@ function api(key, opts) {
 
   var dk;
   try {
-    dk = key + '|' + JSON.stringify(o.params || null) + '|' + JSON.stringify(o.query || null);
+    dk = key + '|' + JSON.stringify(o.params || null) + '|' + JSON.stringify(o.query || null) + '|' + JSON.stringify(actingHeaders()); /* reviews11 GF-17 M6: a read for store A never joins one started for store B */
   } catch (_) {
     return apiOnce(key, opts);
   } /* unserialisable options: never guess, just call */
@@ -1378,6 +1388,13 @@ function answerWords(body, status) {
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
 const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}); const actingEp = (ep) => (ep && typeof CBBooksActing !== 'undefined' ? CBBooksActing.guard(ep) : ep); /* the store header never goes outside /api/books*: a call outside it is refused before it is sent */
+function _callClean(v) {
+  try {
+    return JSON.stringify(v, function (k, x) { return /(pass|pin|otp|token|secret|auth|key|card|cvv)/i.test(k) ? '[redacted]' : x; }).slice(0, 1200);
+  } catch (_) {
+    return null;
+  }
+}
 async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
   const ep = actingEp(epOf(key));
   if (!ep) throw new Error('no endpoint ' + key);
@@ -1692,7 +1709,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
             }
           })(),
           at: Date.now(),
-          body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200)
+          body: _callClean(_out === undefined ? null : _out) /* reviews11 GF-17 M7: the answer is redacted like what was sent (a sign-in reply carries the token) */
         });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
         /* ⚠ AND SAY SO. Recording without repainting is what made the spec panel look dead — the rows were

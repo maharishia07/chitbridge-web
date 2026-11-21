@@ -52,8 +52,8 @@
   }
   function del(k) {
     try {
+      delete mem[k]; /* reviews11 GF-20 M7: a copy kept in memory after a failed write must go too, or loadDraft restores a message already sent */
       if (ls) ls.removeItem(k);
-      else delete mem[k];
     } catch (e) {
       delete mem[k];
     }
@@ -225,6 +225,8 @@
     });
     if (keep.length === list.length) return;
     writeQ(keep);
+    if (!cfg.onSwept && ownSwept.length && typeof toast === 'function')
+      toast((typeof tx === 'function' ? tx('Unsent changes older than two days were removed:') : 'Unsent changes older than two days were removed:') + ' ' + ownSwept.length); /* reviews11 GF-20 M8: never silent */
     if (cfg.onSwept) cfg.onSwept({ own: ownSwept, others: others }); // silence is the bug: the page says what was removed (ownSwept: the entries; others: a count only)
   }
   // nothing is replayed while a flush runs, before the session is known or offline; the sweep of old entries runs whenever the session is known

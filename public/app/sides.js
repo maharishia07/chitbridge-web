@@ -165,7 +165,7 @@
           '>' +
           esc(r.detail || '') +
           '</div>';
-      else if (r.fix === 'Finish') act = '<a class="cbsd-fix" href="' + esc(r.href || '#') + '" data-testid="sides-finish">' + esc(W.finish) + '</a>';
+      else if (r.fix === 'Finish') act = '<a class="cbsd-fix" href="' + esc(/^([/](?![/])|#|[a-z0-9_-]+[.]html)/i.test(String(r.href || '')) ? r.href : '#') + '" data-testid="sides-finish">' + esc(W.finish) + '</a>';
       return (
         '<div class="cbsd-ref' +
         (r.s === 'empty' || r.s === 'later' ? ' dash' : '') +

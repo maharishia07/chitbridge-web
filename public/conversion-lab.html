@@ -197,7 +197,15 @@
 <script src="engine/locale.js"></script><script src="app/shop-time.js"></script>
 <script>
 'use strict';
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+/* reviews11 GF-20 N7: ?api= is honoured only for this origin or a local one — a crafted link must not aim the Bearer token at another host */
+var API = (function () {
+  var q = new URLSearchParams(location.search).get('api');
+  try {
+    var u = q && new URL(q, location.href);
+    if (u && (u.origin === location.origin || /^(localhost|127\.0\.0\.1)$/.test(u.hostname))) return q;
+  } catch (_) {}
+  return window.CB_API;
+})();
 
 /* ── the engines, or an honest refusal to draw ─────────────────────────────────────────────────────────────── */
 (function () {

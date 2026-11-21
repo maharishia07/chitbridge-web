@@ -3,7 +3,7 @@
  * ID        SCR045
  * RISK      plain
  * OWNER     cb-ux-locale
- * OWNS      cbLang · CBSTR · tx · txf · txn · bidiWrap · cbIsRawId · rewordPlain · friendlyErr · failWords · bodyWords · toast · toastHost · toastLevel · CBConfirm
+ * OWNS      cbLang · CBSTR · tx · txf · txn · bidiWrap · cbIsRawId · rewordPlain · friendlyErr · failWords · bodyWords · cbApiParam · toast · toastHost · toastLevel · CBConfirm
  * CALLED BY every page that speaks through tx() or toast(): the back-office pages (before app/accounts-shell.js) and the customer pages
  *           (shop · store · network-shop · embed), which load THIS and never accounts-shell.js (CUSTOMER-DELINK, 21 Nov 2026: a customer page loads no back-office code)
  * FLOW      loaded after helpers.js (esc) → the page's own script calls tx / toast / CBConfirm
@@ -168,6 +168,21 @@ function failWords(e, fallback) {
   if (m && (e.code || e.status || e.kind)) return m;
   var plain = m ? rewordPlain(m) : '';
   return plain && plain !== m ? plain : fallback || 'something went wrong';
+}
+/** cbApiParam(raw) → the ?api= value only when it names this site, a local dev host or a sibling host of this site (api.<site>); else ''. reviews11 GF-21/GF-20: a crafted link must not aim a Bearer token at another host */
+function cbApiParam(raw) {
+  try {
+    if (!raw) return '';
+    var u = new URL(raw, location.href),
+      h = u.hostname,
+      mine = location.hostname;
+    if (u.origin === location.origin || h === 'localhost' || h === '127.0.0.1') return raw;
+    var tail = mine.split('.').slice(-2).join('.');
+    if (/^(railway[.]app|vercel[.]app|netlify[.]app|github[.]io|herokuapp[.]com|onrender[.]com|fly[.]dev|pages[.]dev|workers[.]dev|run[.]app)$/.test(tail)) return ''; /* a shared host suffix is not one site */
+    return tail.indexOf('.') > 0 && (h === tail || h.slice(-(tail.length + 1)) === '.' + tail) ? raw : '';
+  } catch (_) {
+    return '';
+  }
 }
 /** bodyWords(body, fallback) → the same words from a raw JSON answer (a page that calls fetch itself): detail, then message, then title, strings only, no markup */
 function bodyWords(body, fallback) {

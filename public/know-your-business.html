@@ -433,9 +433,9 @@ async function runField() {
             '<div class="note">' +
             esc(x.demand || '') +
             '</div>' +
-            (x.source_url
+            (/^https?:\/\//i.test(String(x.source_url || '').trim())
               ? '<a href="' +
-                esc(x.source_url) +
+                esc(String(x.source_url).trim()) + /* reviews11 GF-20 N22: http(s) only — a javascript: link survives esc() and runs on click */
                 '" target="_blank" rel="noopener">source</a> <span class="asof">as of ' +
                 esc(String(x.as_of).slice(0, 10)) +
                 '</span>'

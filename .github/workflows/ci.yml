@@ -151,6 +151,7 @@ jobs:
           node e2e/reviews7-finance-fx-folders.test.cjs
           node e2e/reviews9-screens.test.cjs
           node e2e/reviews10-screens.test.cjs
+          node e2e/reviews11-screens.test.cjs
           node e2e/reviews5-price-typed.test.cjs
           node e2e/reviews5-unsaved-guard.test.cjs
           node e2e/dues-one-sign.test.cjs

@@ -144,7 +144,7 @@ function go() {
     embed = q.get('embed') === '1',
     view = q.get('view') || '',
     openId = q.get('open') || '';
-  CFG.API_BASE = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || CFG.API_BASE;
+  CFG.API_BASE = cbApiParam(q.get('api')) || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || CFG.API_BASE;
   var host = document.getElementById('tk'),
     app = null,
     frame = null;
