@@ -1076,7 +1076,7 @@ var CBCatalogueApp = (function () {
       body = cbKindAskHTML(question, { chosen: data.tax_kind || '', pick: function (id) { return "CBCatalogueApp.ratePickKind('" + id + "')"; }, cls: 'choice', tid: 'cat-kind-ask-body', sid: 'SCR046-B01' });
     /* catalogue.html has no modal(): the question then opens in the sheet's own answer line, the same buttons */
     if (typeof modal === 'function')
-      return modal('<div class="mhd"><div class="t">' + esc(pName(data) + ': ' + taxWord() + ' 0%') + '</div></div><div class="mbody" data-testid="cat-kind-ask">' + body + '</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' + esc(T('Cancel')) + '</button></div>', true, { key: 'cb_mv_catkind', minW: 360, minH: 200 });
+      return modal('<div class="mhd"><div class="t">' + esc(pName(data) + ': ' + taxWord() + ' 0%') + '</div></div><div class="mbody" data-testid="cat-kind-ask">' + body + '</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' + esc(T('Cancel')) + '</button></div>', true, { key: 'cb_mv_catkind', pop: 'POP218', minW: 360, minH: 200 });
     var slot = document.getElementById('cat_sheet_out');
     if (slot) slot.innerHTML = '<div data-testid="cat-kind-ask">' + body + '</div>';
   }
