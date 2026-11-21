@@ -3,6 +3,7 @@
  * CALLED BY public/finance.html (script tag, after cap-finance.js); finLoad and finMount in cap-finance.js call these when they run, so load order is free
  * FLOW      finLoad / finMount → finTabLoader / finTabMounter (the tab's own file) → that tab's load or mount; a late tab first waits for CBLate
  * CARD      16-finance/cb-finance
+ * ID        SCR023
  * OWNER     cb-finance
  * RISK      money
  */

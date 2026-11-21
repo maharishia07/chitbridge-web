@@ -3,6 +3,7 @@
  * CALLED BY accounts.html (script tag, after accounts-shell.js); accTodo and start() in the page's inline script call them when they run, so load order is free
  * FLOW      start() → otherShopTraces / knownLedgerOn → startTodoEarly → ACC.todoEarly; accTodo → addBankTodo
  * CARD      14-accounting/books-ledger
+ * ID        SCR045
  * OWNER     cb-accounting
  * RISK      plain
  */
@@ -22,7 +23,8 @@ function startTodoEarly(known) {
 async function otherShopTraces() {
   try {
     return await CBOnePerson.traces(MINE);
-  } catch (_) {
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('accounts: the other shops on this browser could not be read, none are shown', failure);
     return { others: [] };
   }
 }

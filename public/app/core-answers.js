@@ -3,6 +3,7 @@
  * CALLED BY core.js (unwrap and apiOnce call them when an answer lands, so load order is free); loaded by every page that loads core.js, after it
  * FLOW      api(key) → fetch → unwrap → noteShopZone / keepIncluded → the caller; a refused answer → errorFacts → the error the one card and toast read
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/api-client
+ * ID        LIB004
  * OWNER     cb-ux-locale
  * RISK      plain
  */
@@ -16,7 +17,9 @@ function keepIncluded(j) {
   if (j.included && j.entity && typeof j.entity === 'object') {
     try {
       j.entity.included = j.included;
-    } catch (_) {}
+    } catch (failure) {
+      if (typeof cbQuiet === 'function') cbQuiet('api: the answer is frozen, its included list is not kept on the entity', failure);
+    }
   }
 }
 /** the facts a failed call's error carries: the status, the answer's own body (e.data), how long to wait after a 429 (M-F-07: the body's own, else the Retry-After header), then the register code, hint and request id (B7) */

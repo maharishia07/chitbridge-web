@@ -328,14 +328,15 @@ function cbReadTag() {
   var unicodeExt = (format.match(/-u-.*$/) || [''])[0],
     region = (format.replace(/-u-.*$/, '').match(/-([A-Za-z]{2})(?:-|$)/) || [])[1],
     tries = [region ? lang + '-' + region + unicodeExt : '', lang + unicodeExt, lang];
-  for (var i = 0; i < tries.length; i++) {
-    try {
-      if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */
-    } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a read tag was not supported, the next one is tried', failure); }
-  }
-  return format;
+  return firstSupportedTag(tries) || format;
 }
-function cbInstallReader() { /* puts the reader over CBLocale.date/time/datetime once; false when the engine is absent, already done, or lacks zoned/_d */
+function firstSupportedTag(tries) { /* the first of the tags this browser supports, or '' when none (a tag it throws on is skipped) */
+  for (var i = 0; i < tries.length; i++)
+    try { if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */ } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a read tag was not supported, the next one is tried', failure); }
+  return '';
+}
+/** cbInstallReader() → puts the reader over CBLocale.date/time/datetime once; false when the engine is absent, already done, or lacks zoned/_d */
+function cbInstallReader() {
   var engine = typeof CBLocale !== 'undefined' ? CBLocale : null;
   if (!engine || engine._readerWords || typeof engine.zoned !== 'function' || typeof engine._d !== 'function') return false;
   var shapes = {
@@ -349,9 +350,7 @@ function cbInstallReader() { /* puts the reader over CBLocale.date/time/datetime
       if (!when) return '';
       try {
         return engine.ltr(when[shapes[name][0]](cbReadTag(), engine.zoned(opts || shapes[name][1])));
-      } catch (failure) {
-        if (typeof cbQuiet === 'function') cbQuiet('locale: a moment could not be written in the reader words, shown blank', failure); return '';
-      }
+      } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a moment could not be written in the reader words, shown blank', failure); return ''; }
     };
   });
   engine._readerWords = true;

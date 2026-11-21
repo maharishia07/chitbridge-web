@@ -3197,6 +3197,8 @@ function shopFrame() {
  * had been handed in full). After the code is verified the read goes again WITH the customer's token (_MYTOK, memory only) and the
  * server sends the catalogue. The storefront_access test stays only for an api that predates the cut (no code, no token yet).
  */
+/** a shop that asks for sign-in first: the server said so, or its storefront access is login and this browser holds no token */
+function shopGated(answer) { return (answer.sign_in && answer.sign_in.code === 'sign_in_first') || (!_MYTOK && answer.shop && answer.shop.storefront_access === 'login'); }
 /** paints the catalogue answer: the gate when sign-in comes first, the shop otherwise, and the plain words when there is no public catalogue or nothing published (preview) */
 function shopShowAnswer(res) {
   if (res.status !== 200) {
@@ -3212,12 +3214,8 @@ function shopShowAnswer(res) {
     el('app').innerHTML = '<div class="msg">Nothing is on your online shop yet. Add products in Catalogue and they will show here.</div>';
     return;
   }
-  if ((res.j.sign_in && res.j.sign_in.code === 'sign_in_first') || (!_MYTOK && res.j.shop && res.j.shop.storefront_access === 'login')) renderLoginGate(res.j.shop || {});
-  else {
-    _lg = {};
-    render(res.j);
-    shopScrollRestore(); /* a Back from an item page lands where the list was left */
-  }
+  if (shopGated(res.j)) renderLoginGate(res.j.shop || {});
+  else { _lg = {}; render(res.j); shopScrollRestore(); /* a Back from an item page lands where the list was left */ }
 }
 function shopLoad() {
   /* SEC4: a shopper's own token re-reads a sign-in-first shop. TOUR-FIX1: the OWNER opening their own private shop (Home › Your online shop)
