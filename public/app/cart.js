@@ -2463,11 +2463,16 @@
           var want = item.qty == null ? 1 : item.qty;
           var match = (item.item_id && byId[item.item_id]) || (item.name && byName[String(item.name).trim().toLowerCase()]);
           if (match) {
+            var had = qtyOf(ns, match.item_id);
             put(ns, match.item_id, want);
             // The model may have refused it outright (below a minimum) or landed it on a legal value.
             var got = qtyOf(ns, match.item_id);
             if (got > 0) placed.push({ item_id: match.item_id, name: nameOf(match), qty: got, asked: want });
-            else refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
+            else {
+              refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
+              /* EL-17 F8: a refused channel line must not delete the quantity a person already chose */
+              if (had > 0) put(ns, match.item_id, had);
+            }
             return;
           }
           if (!item.name) {

@@ -125,6 +125,8 @@
   }
   /** has the person left this required field empty (a tick box that must be ticked counts) */
   function isEmpty(field) {
+    /* EL-19 M14: a radio group is answered when ANY radio of its name is ticked */
+    if (field.type === 'radio' && field.name) return !(field.closest('dialog, form') || document).querySelector('input[type=radio][name="' + String(field.name).replace(/["\\]/g, '') + '"]:checked');
     if (field.type === 'checkbox' || field.type === 'radio') return !field.checked;
     return !String(field.value || '').trim();
   }

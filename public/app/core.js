@@ -708,7 +708,12 @@ function cbDefsLive(kind, force) {
 
   _defsReq[kind] = mine
     .then(function (by) {
-      _DEFS[kind] = (by && by[kind]) || [];
+      /* EL-17 F3: a kind queued while an earlier batch was in the air was not in that batch; ask again, never cache empty */
+      if (!by || !Object.prototype.hasOwnProperty.call(by, kind)) {
+        _defsReq[kind] = null;
+        return cbDefsLive(kind);
+      }
+      _DEFS[kind] = by[kind] || [];
       _defsReq[kind] = null;
       return _DEFS[kind];
     })

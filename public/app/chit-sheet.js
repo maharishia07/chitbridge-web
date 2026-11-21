@@ -1291,7 +1291,12 @@
         });
         if (i >= 0) UI.rows[i].state = to;
       } catch (_) {}
-      await read(id);
+      /* GF-22 M6 / EL-22 S6: the step is written; a failed re-read must not say "Could not change it" */
+      try {
+        await read(id);
+      } catch (_) {
+        CS.note = T('Done. The sheet did not refresh — open it again to see it.');
+      }
       /* the Waiting row leaves at once (bkWaitGone — the row flipped, no reload); the Day book's to-do is the server's: read again behind it */
       /* FX-F10W2: a rejection closes the row on the server too ("Rejected — not posted") — so it leaves the list the same way */
       if (now && !stepIn(now, 'open') && typeof root.bkWaitGone === 'function') root.bkWaitGone(id);

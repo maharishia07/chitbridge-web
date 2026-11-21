@@ -51,6 +51,6 @@ async function chitUnpay(id) {
     chitUnpayForget(row);
     if (typeof openChit === 'function') openChit(id, true);
   } catch (e) {
-    toast((e && e.message) || tx('Could not clear'), true);
+    toast(failWords(e, tx('Could not clear')), true);
   }
 }

@@ -157,6 +157,12 @@ async function prodOfferApply(offerId, adding) {
     }
     /* ⭐ ADDING products widens what the offer prices: ask first, showing the reach. Reads above change nothing; the first write is the defSave below. */
     const appliesTo = Object.assign({}, rules.applies_to || {});
+    /* GF-23 M1: no item list means EVERY product; adding to it would narrow the offer to the picked few */
+    if (adding && !(Array.isArray(appliesTo.item_ids) && appliesTo.item_ids.length)) {
+      hideBusy();
+      toast(tx('This offer is not limited to chosen products, so nothing was changed.'), true);
+      return;
+    }
     const next = prodOfferNextIds(appliesTo.item_ids, ids, adding);
     if (!(await prodOfferConfirm({ id: offerId, add: adding, def: offerDef, rules: rules, ids: ids, was: appliesTo.item_ids, next: next }))) return;
     prodOfferSetReach(rules, appliesTo, next);
