@@ -72,6 +72,7 @@ function finLate() {
   return !!FIN_LATE_TABS[finTab()] && !!window.CBLate && !window.CBLate.isReady();
 }
 
+/** the Collections read: handed to the open tab's loader when there is one, else the customers' dues read into FIN (a late answer is dropped) */
 async function finLoad(quiet) {
   if (finLate() && (await finLeftWhileLate())) return; /* no await at all when nothing is late: the tab's load starts in the same tick */
   var tabLoader = finTabLoader();
@@ -124,6 +125,7 @@ function finOff() {
     (owner ? '' : '<p data-testid="fin-off-why">' + esc(tx('Ask the owner to switch it on')) + '</p>') +
     '</div>';
   var switchOn = document.getElementById('fin_on');
+  /** the owner's Turn on button: asks, then switches the Ledger on */
   if (owner)
     switchOn.onclick = function () {
       CBLedger.run(true, {
@@ -319,8 +321,9 @@ function finCols() {
       pin: 'end',
       w: 130,
       html: true,
-      cell: function (p) {
-        var id = esc(p.party_id);
+      /** the row's Receive and Remind buttons; clicking them does not open the row */
+      cell: function (party) {
+        var id = esc(party.party_id);
         return (
           '<span data-cbsid="FIN001-C01" style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-receive-' +
@@ -328,7 +331,7 @@ function finCols() {
           "\" onclick=\"event.stopPropagation();payOpen('customer','" +
           id +
           "'," +
-          esc(JSON.stringify(String(p.name || ''))) +
+          esc(JSON.stringify(String(party.name || ''))) +
           ')">' +
           esc(tx('Receive')) +
           '</button>' +
@@ -345,6 +348,7 @@ function finCols() {
   ];
 }
 
+/** the Collections screen: its frame, the Ledger-off card, or the tab's own mounter when a tab holds the page */
 function finMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -375,6 +379,7 @@ function finMount(frame) {
     defaultCols: ['party', 'due', 'age', 'limit', 'interest', 'last'],
     cardMax: 4,
     fill: false,
+      /** the list header: the title, the age chips and the sentence about unbilled work */
     head: function () {
       var said = finUnbilledWords(FIN.unbilled);
       return {
@@ -413,6 +418,7 @@ function finMount(frame) {
       by: function (p) {
         return p.over_limit ? [tx('Over limit'), 'over'] : [tx('To collect'), 'coll'];
       },
+      /** the footer: how many owe you and what they owe together */
       fig: function (rows) {
         return (
           txn('{count} owes you', '{count} owe you', rows.length) +
@@ -493,6 +499,7 @@ function finRemindQueue(rows) {
   });
   if (FIN.queue.length) finQueueSheet();
 }
+/** the Remind dialog: the customers queued to be asked, each with what they owe and a Remind button, shown as Asked once done */
 function finQueueSheet() {
   var list = FIN.queue || [],
     left = list.filter(function (x) {
