@@ -38,6 +38,8 @@ var EN_ASK = { debit_note: { title: 'Note {amt} against the bill?', body: 'A deb
 var EN_ITEM = { name: 'Item', qty: 'Qty', unit_price: 'Rate difference', gst_rate: 'Tax %' };
 /* a payment mode in words: the pack's raw keys (eft, bpay, payid, eftpos…) never show as typed */
 var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card', eft: 'EFT', bpay: 'BPAY', payid: 'PayID', eftpos: 'EFTPOS', cheque: 'Cheque', transfer: 'Bank transfer', neft: 'NEFT', imps: 'IMPS', rtgs: 'RTGS', paynow: 'PayNow', nets: 'NETS', duitnow: 'DuitNow', fpx: 'FPX', paypay: 'PayPay', ic: 'IC card' };
+/** F-10: a debit note's reasons in words (the api's own keys, books-manual DEBIT_REASONS) */
+var EN_REASON = { rate: 'Rate difference', returned: 'Goods returned', other: 'Other difference' };
 var EN_LABEL = {
   class: 'What for',
   paid_from: 'Paid from',
@@ -461,7 +463,7 @@ function enOptions(f) {
   if (f.options && f.options.length)
     return f.options
       .map(function (item) {
-        return typeof item === 'object' ? item : { v: item, l: tx(EN_MODE[item] || item) };
+        return typeof item === 'object' ? item : { v: item, l: tx((f.key === 'reason' ? EN_REASON : EN_MODE)[item] || item) };
       })
       .map(function (item) {
         return { v: item.v != null ? item.v : item.code, l: item.l || item.label || item.name || item.v };
@@ -564,9 +566,42 @@ async function enOwnAdd(k) {
   }
   enPaint();
 }
+/** F-10: the supplier's open bills — the ONE read the pay popup uses (booksPayPreview's proposal), kept per supplier */
+async function enBillsLoad(partyId) {
+  if (!partyId || (EN.bills || {})[partyId]) return enPaint();
+  EN.bills = EN.bills || {};
+  try {
+    var reply = await api('booksPayPreview', { body: { party_id: partyId, direction: 'out', amount_minor: 1, currency: bkCur(), allocate: 'none' } });
+    EN.bills[partyId] = (reply && reply.proposal) || [];
+  } catch (e) {
+    EN.bills[partyId] = bkQuiet('entry bills', e, []);
+  }
+  enPaint();
+}
+/** F-10: "Which bill" as that supplier's open bills (number, open amount); null while none are known, so the free text stays as the way in */
+function enBillOptions(partyId) {
+  var rows = ((EN.bills || {})[partyId] || []).filter(function (x) {
+    return x.against_ref;
+  });
+  if (!rows.length) return null;
+  return rows.map(function (x) {
+    return { v: x.against_ref, l: bkBillNo(x.bill_no, x.against_ref, x.due_date) + ' · ' + txf('{amt} open', { amt: bkMoney(x.open_minor, bkCur()) }) };
+  });
+}
 /** the paid-by choices when the form carries none: UPI only where the shop's pack has it (F-33) */
 function enPaidByFallback() {
   return [{ v: 'cash', l: tx('Cash') }, { v: 'bank', l: tx('Bank') }].concat(payHasUpi() ? [{ v: 'upi', l: tx('UPI') }] : [], [{ v: 'cheque', l: tx('Cheque') }]);
+}
+/** the select-type fields: a ledger pick, a pick list, the supplier's bills (F-10), a ledger; '' for any other kind */
+function enPickHTML(f, lab, tid, v, on) {
+  var label = function (inner) {
+    return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
+  };
+  if (f.kind === 'pick' && f.pick === 'ledger') return label(enLedgerSelect(tid, v, on, 'Stock & advances', tid));
+  if (f.kind === 'pick') return label(enSelect(tid, enOptions(f), v, on));
+  var bills = f.key === 'against_ref' && f.kind === 'text' && enBillOptions(EN.v.supplier);
+  if (bills) return label(enSelect(tid, bills, v, on));
+  return f.kind === 'ledger' ? label(enLedgerSelect(tid, v, on, undefined, tid)) : '';
 }
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
@@ -579,19 +614,8 @@ function enFieldHTML(f) {
   };
   var on = "enSet('" + esc(k) + "',this.value)";
   if (EN.ev && EN.ev.kind === 'contra' && (k === 'from' || k === 'to')) return enOwnField(k, lab, tid, v, on);
-  if (f.kind === 'pick' && f.pick === 'ledger')
-    return (
-      '<label class="en-f"><span>' +
-      esc(lab) +
-      '</span>' +
-      enLedgerSelect(tid, v, on, 'Stock & advances', tid) +
-      '</label>'
-    );
-  if (f.kind === 'pick') return wrap(enSelect(tid, enOptions(f), v, on));
-  if (f.kind === 'ledger')
-    return (
-      '<label class="en-f"><span>' + esc(lab) + '</span>' + enLedgerSelect(tid, v, on, undefined, tid) + '</label>'
-    );
+  var picked = enPickHTML(f, lab, tid, v, on);
+  if (picked) return picked;
   if (f.kind === 'bank')
     return (
       '<label class="en-f"><span>' +
@@ -663,6 +687,10 @@ function enFormHTML(step) {
 function enSet(k, v) {
   EN.v[k] = v;
   EN.pv = null;
+  if (k === 'supplier') {
+    EN.v.against_ref = '';
+    enBillsLoad(v);
+  }
   var node = document.getElementById('en_next');
   if (node) node.disabled = !enStepReady(EN.step);
 }
