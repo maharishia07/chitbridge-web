@@ -157,6 +157,10 @@ function friendlyErr(e) {
   return e && e.code && e.message ? m : rewordPlain(m);
 }
 
+/** a message as words only: a string with its markup and edge spaces removed, else '' */
+function wordsOnly(text) {
+  return typeof text === 'string' ? text.replace(/<[^>]*>/g, '').trim() : '';
+}
 /**
  * failWords(e, fallback) → the words a screen paints for a failed call: the problem's OWN shopkeeper words (RFC 9457 detail / the error-code
  * register sentence core.js put on e.message) when the error came from the api or our own offline/timeout path (e.code, e.status or e.kind),
@@ -164,7 +168,7 @@ function friendlyErr(e) {
  * the caller still esc()s it. e2e/fail-words.test.cjs. Reviews8 (the ~30 raw e.message sites of cap-flag, cap-folders, cap-intake).
  */
 function failWords(e, fallback) {
-  var m = e && typeof e.message === 'string' ? e.message.replace(/<[^>]*>/g, '').trim() : '';
+  var m = e ? wordsOnly(e.message) : '';
   if (m && (e.code || e.status || e.kind)) return m;
   var plain = m ? rewordPlain(m) : '';
   return plain && plain !== m ? plain : fallback || 'something went wrong';
