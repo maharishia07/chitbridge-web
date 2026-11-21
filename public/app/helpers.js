@@ -563,7 +563,7 @@ function shopZoneInstall() {
   localeEngine.timezone.shopZone = true;
   return true;
 }
-/** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its ownTimezone /me read) call this; a blank zone changes nothing. */
+/** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its own /me read) call this; a blank zone changes nothing. */
 function shopZoneSet(zone) {
   if (zone && typeof window !== 'undefined') window.CB_SHOP_TZ = String(zone);
 }

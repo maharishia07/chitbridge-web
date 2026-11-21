@@ -937,7 +937,7 @@ function csuAskRows(e) {
           return { v: o.value, t: tx(o.label) };
         })
       );
-      return csuRow('ask_' + setupAsk.key, tx(setupAsk.label), chosen ? esc(tx(chosen.label)) : '', setupAsk.why ? tx(setupAsk.why) : '', csuSel('cs-setupAsk-' + setupAsk.key, 'setupAsk:' + setupAsk.key, options, current));
+      return csuRow('ask_' + setupAsk.key, tx(setupAsk.label), chosen ? esc(tx(chosen.label)) : '', setupAsk.why ? tx(setupAsk.why) : '', csuSel('cs-ask-' + setupAsk.key, 'ask:' + setupAsk.key, options, current));
     })
     .join('');
 }

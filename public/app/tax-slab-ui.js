@@ -322,10 +322,10 @@ function cbSlabMenuHTML(menu, opts) {
  * `pick(kindId)` returns the host's onclick (a string); `suggested` is a kind id read from the slab's OWN NAME by the server, shown as a hint on its button (still one tap, never saved by itself).
  */
 function cbKindAskOf(pack) {
-  var tax = slabTaxPack_(pack);
-  var table = tax && tax.supplyKinds && typeof tax.supplyKinds === 'object' ? tax.supplyKinds : null;
+  var taxPack = slabTaxPack_(pack);
+  var table = taxPack && taxPack.supplyKinds && typeof taxPack.supplyKinds === 'object' ? taxPack.supplyKinds : null;
   if (!table) return null;
-  var row = (pack && pack.returns && pack.returns.unknownKind) || (tax && tax.unknownKind) || null;
+  var row = (pack && pack.returns && pack.returns.unknownKind) || (taxPack && taxPack.unknownKind) || null;
   var kinds = Object.keys(table)
     .map(function (id) {
       return table[id];
@@ -339,26 +339,31 @@ function cbKindAskOf(pack) {
   if (!kinds.length) return null;
   return { ask: (row && row.ask) || slabT_('What kind of sale is this at 0%?'), kinds: kinds };
 }
-function cbKindAskHTML(ask, opts) {
+/** one kind's button: the tap that answers the 0% question (✓ when it is the chosen one; a hint when the slab's own name suggested it) */
+function cbKindButtonHTML(kind, opts, chosen, screenId) {
+  var on = chosen === kind.id;
+  var hint = opts.suggested === kind.id && !on ? ' <span class="sub" data-testid="kind-suggested">' + esc(slabT_('from the name')) + '</span>' : '';
+  return (
+    '<button type="button" class="' + esc((opts.cls || 'act quiet') + (on ? ' on' : '')) + '" data-testid="kind-pick-' + esc(kind.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + esc(kind.why) + '" data-cbsid="' + screenId + '"' +
+    ' onclick="' + esc(opts.pick ? opts.pick(kind.id) : '') + '">' + (on ? '✓ ' : '') + esc(kind.short) + '</button>' + hint
+  );
+}
+/** cbKindAskHTML(question, opts) → the 0% question and one button per kind, the chosen one marked, its reason under it */
+function cbKindAskHTML(question, opts) {
   opts = opts || {};
-  if (!ask || !ask.kinds || !ask.kinds.length) return '';
+  if (!question || !question.kinds || !question.kinds.length) return '';
   var chosen = opts.chosen || '';
-  var sid = esc(opts.sid || 'SCR046-B03');
-  var buttons = ask.kinds
+  var screenId = esc(opts.sid || 'SCR046-B03');
+  var buttons = question.kinds
     .map(function (kind) {
-      var on = chosen === kind.id;
-      var hint = opts.suggested === kind.id && !on ? ' <span class="sub" data-testid="kind-suggested">' + esc(slabT_('from the name')) + '</span>' : '';
-      return (
-        '<button type="button" class="' + esc((opts.cls || 'act quiet') + (on ? ' on' : '')) + '" data-testid="kind-pick-' + esc(kind.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + esc(kind.why) + '" data-cbsid="' + sid + '"' +
-        ' onclick="' + esc(opts.pick ? opts.pick(kind.id) : '') + '">' + (on ? '✓ ' : '') + esc(kind.short) + '</button>' + hint
-      );
+      return cbKindButtonHTML(kind, opts, chosen, screenId);
     })
     .join(' ');
-  var picked = ask.kinds.filter(function (kind) {
+  var picked = question.kinds.filter(function (kind) {
     return kind.id === chosen;
   })[0];
   return (
-    '<div class="kind-ask" data-testid="' + esc(opts.tid || 'kind-ask') + '"><div class="sub">' + esc(ask.ask) + '</div><div class="slab-menu">' + buttons + '</div>' +
+    '<div class="kind-ask" data-testid="' + esc(opts.tid || 'kind-ask') + '"><div class="sub">' + esc(question.ask) + '</div><div class="slab-menu">' + buttons + '</div>' +
     (picked && picked.why ? '<div class="sub" data-testid="kind-why">' + esc(picked.why) + '</div>' : '<div class="sub" data-testid="kind-none">' + esc(slabT_('Until you answer, a sale at 0% is not filed under any of them.')) + '</div>') +
     '</div>'
   );
