@@ -141,7 +141,7 @@ function bkbBookActions(mayAct) {
 function bankList() {
   const host = bkbEl('bkl_bank');
   if (!host) return;
-  const mayAct = bkbMayAct();
+  const mayAct = bkbMayAct() && !(typeof bkbSeatNo === 'function' && bkbSeatNo('post')); /* FIN-129: the row's Add missing is left to the page button, greyed there with the server's sentence (bankPrimaryHtml) */
   const askRight = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
   if (BKB.rail && BKB.rail.failed)

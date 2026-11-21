@@ -710,9 +710,9 @@ function bankOpeningHtml() {
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
   if (bkbReadOnly()) return typeof bankStoreSignButton === 'function' ? bankStoreSignButton() : ''; /* the auditor: the sign-off is SAID whenever the month is signed, whatever the difference; no button */
-  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct();
+  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), grey = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
-  if (!canAdd || (fig && !bkbCount('books'))) return '';
+  if (grey || !canAdd || (fig && !bkbCount('books'))) return grey; /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
   const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
   return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books')) + '</button>';
 }
