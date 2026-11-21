@@ -155,7 +155,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   const brs = await p.textContent('[data-testid="bank-brs-card"]'); if (process.env.DEBUG_PE) console.log(brs.slice(0, 700));
   ok(/Balance as per books/.test(brs) && /1,04,476\.40/.test(brs) && /Balance as per bank/.test(brs) && /1,09,016\.40/.test(brs), 'books vs bank: books 1,04,476.40 Dr (the API\'s ledger figure after the new entry) and bank 1,09,016.40 Dr (the statement\'s) :: ' + brs.replace(/ +/g, ' ').replace(/\n/g, ' ').slice(0, 300));
   ok(await p.locator('[data-testid="brs-issued"] .pe-row').count() === 1 && await p.locator('[data-testid="brs-bankcr"] .pe-row').count() === 2 && await p.locator('[data-testid="brs-bankdr"] .pe-row').count() === 1, 'every reconciling item is named: 1 cheque not presented · 2 bank credits not in the books · 1 bank debit');
-  ok(/Difference/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Difference'))), 'the difference is nothing');
+  ok(/Unexplained/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Unexplained'))), 'the unexplained figure is nothing');
   await p.screenshot({ path: path.join(SHOTS, 'bank-brs-laptop.png') });
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await ctx.close();

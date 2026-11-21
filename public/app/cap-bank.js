@@ -913,7 +913,7 @@ function bkbBrsRows(statement) {
         '<div class="pe-row" data-testid="brs-row-' +
         index +
         '"><span>' +
-        bkbE(tx(line.label)) +
+        bkbE(tx(line.label === 'Difference' ? 'Unexplained' : line.label)) + /* C-F-04: the engine's remainder after the timing items is the UNEXPLAINED figure; "Difference" is not used for two figures */
         '</span><span class="mono">' +
         bkbE(bkbFig(Math.abs(line.minor)) + (line.minor < 0 && line.sign === '' ? ' ' + tx('overdrawn') : '')) +
         '</span></div>'
