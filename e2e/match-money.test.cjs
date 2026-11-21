@@ -18,7 +18,7 @@ function fnSource(name) {
   return null;
 }
 const ctx = {
-  esc: (x) => String(x == null ? '' : x), tx: (s) => s, txf: (s, v) => s.replace(/\{(\w+)\}/g, (_m, k) => v[k]),
+  esc: (x) => String(x == null ? '' : x), escJs: (x) => String(x == null ? '' : x), tx: (s) => s, txf: (s, v) => s.replace(/\{(\w+)\}/g, (_m, k) => v[k]),
   myCur: () => 'INR', fmtMoney: (n, _c, empty) => (n == null ? empty : '₹' + Number(n).toFixed(2)), inr: (n) => '₹' + Number(n).toFixed(2)
 };
 vm.createContext(ctx);
