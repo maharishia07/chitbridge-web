@@ -32,9 +32,8 @@ function finOwes(p) {
 function finCollectRows(parties) {
   var out = [];
   (parties || []).forEach(function (item) {
-    var row = item;
-    if (item.side === 'both' && item.sides && item.sides.customer) row = Object.assign({}, item, item.sides.customer, { side: 'customer' });
-    else if (bkDuesSide(item) !== 'rcv') return;
+    var row = bkSideHalf(item, 'customer');
+    if (row === item && bkDuesSide(item) !== 'rcv') return;
     if (finOwes(row)) out.push(row);
   });
   return out;

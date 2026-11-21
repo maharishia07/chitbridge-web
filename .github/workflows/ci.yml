@@ -105,6 +105,8 @@ jobs:
           node tests/crm-add-phone-match.test.cjs
           node tests/crm-shopwindow-notlive.test.cjs
           node tests/fin-d7-terms-bank.test.cjs
+          node tests/fin-collect-sides.test.cjs
+          node tests/fin-pay-sides.test.cjs
           node tests/fin116-registration-notice.test.cjs
           node tests/fin111-statement-currency.test.cjs
           node tests/graph-apifeed.test.cjs

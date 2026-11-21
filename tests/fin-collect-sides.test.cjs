@@ -11,7 +11,11 @@ const from = src.indexOf('function finOwes'), to = src.indexOf("/** FIN-15: the 
 assert(from > 0 && to > from, 'the cut points moved');
 /* bkDuesSide is cap-books.js's: the stand-in is its own rule (side first, else the sign) */
 const sb = { bkDuesSide: (p) => (p.side === 'supplier' ? 'pay' : p.side === 'customer' ? 'rcv' : Number(p.balance_minor) < 0 ? 'pay' : 'rcv') };
+const cb = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-books.js'), 'utf8');
+const h0 = cb.indexOf('function bkSideHalf'), h1 = cb.indexOf('/** a supplier the shop has paid ahead');
+assert(h0 > 0 && h1 > h0, 'bkSideHalf moved');
 vm.createContext(sb);
+vm.runInContext(cb.slice(h0, h1), sb);
 vm.runInContext(src.slice(from, to) + '\nthis.__t = { finCollectRows };', sb);
 const rows = (parties) => sb.__t.finCollectRows(parties);
 let pass = 0;
