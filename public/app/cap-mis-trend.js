@@ -258,6 +258,7 @@ function trCols() {
     {
       key: 'sales',
       label: tx('Sales'),
+      nl: true, /* E-F-10: on a phone card the three figures carry no label of their own — the one key line above the list names them */
       prio: 2,
       w: 130,
       num: true,
@@ -272,6 +273,7 @@ function trCols() {
     {
       key: 'lastyear',
       label: tx('Last year'),
+      nl: true,
       prio: 3,
       w: 130,
       num: true,
@@ -283,6 +285,7 @@ function trCols() {
     {
       key: 'change',
       label: tx('Change'),
+      nl: true,
       prio: 2,
       w: 100,
       num: true,
@@ -350,7 +353,7 @@ function trMount(frame) {
   TR.period = trPeriodOfHash();
   screen.className = 'screen flush';
   screen.innerHTML =
-    '<div id="tr_top" data-testid="tr-top"></div><div id="tr_chart" data-testid="tr-chart-box" style="margin:10px 20px 0"></div><div id="tr_list" data-testid="tr-list" style="flex:1 1 auto;min-height:0"></div>';
+    '<div id="tr_top" data-testid="tr-top"></div><div id="tr_chart" data-testid="tr-chart-box" style="margin:10px 20px 0"></div><style>.tr-key{display:none;margin:6px 20px 0}@media(max-width:700px){.tr-key{display:block}}</style><p class="sub tr-key" data-testid="tr-key">' + esc(tx('On each card: sales · last year · change')) + '</p><div id="tr_list" data-testid="tr-list" style="flex:1 1 auto;min-height:0"></div>';
   TR.api = CBList.mount(document.getElementById('tr_list'), {
     key: 'fin-trend',
     t: tx,

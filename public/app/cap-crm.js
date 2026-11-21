@@ -64,6 +64,7 @@ var CRM = {
   gen: 0,
   loadGen: 0,
   rows: [],
+  total: null,
   byKey: {},
   alerts: {},
   currency: null,
@@ -613,6 +614,7 @@ async function crmLoad(quiet) {
     var rows = ((reply && reply.parties) || (Array.isArray(reply) ? reply : [])).concat(((reply && reply.walk_ins) || []).map(crmWalkInFrom));
     CRM.rows = crmNormalize(rows);
     CRM.alerts = (reply && reply.alerts) || {};
+    CRM.total = reply && reply.total != null ? Number(reply.total) + (reply.walk_ins || []).length : null; /* COUNT-SOURCE: the headline is the server's total (+ the walk-ins listed beside it), never a client-side filter's length */
     CRM.currency = (CRM.rows[0] && CRM.rows[0].currency) || CRM.currency;
     crmMaySet(crmMayOf(reply));
     await crmFuJoin(CRM.rows, reply); /* the server's may/why for this login — the bar's action is painted again from it below */
@@ -655,7 +657,7 @@ function crmNav(active) {
       'parties',
       'Parties',
       'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6',
-      CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + CRM.rows.length + '</span>' : ''
+      CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + (CRM.total != null ? CRM.total : CRM.rows.length) + '</span>' : ''
     ],
     [
       'chits',

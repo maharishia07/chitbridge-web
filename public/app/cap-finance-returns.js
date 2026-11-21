@@ -165,15 +165,34 @@ function frPaint() {
     'fr-none'
   );
 }
+/** what the return says beside its figures (the server's own sentences, never reworded here): the tax the server's check does not reproduce, the e-invoice warning, and the bills reversed after filing (their credit-note rows) → [sentence] */
+function frNotes(cb) {
+  cb = cb || {};
+  var said = [];
+  function add(item) {
+    var t = typeof item === 'string' ? item : item && (item.words || item.says);
+    if (t) said.push(String(t));
+  }
+  (cb.tax_differs || []).forEach(add);
+  if (cb.einvoice) add(cb.einvoice);
+  (cb.reversed || []).forEach(add);
+  return said;
+}
+function frNotesHtml(cb) {
+  var said = frNotes(cb);
+  if (!said.length) return '';
+  return '<ul class="hint" data-testid="fr-notes" style="margin:6px 0 0;padding-left:18px">' + said.slice(0, 5).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + (said.length > 5 ? '<li>' + esc(txf('{n} more in the file', { n: said.length - 5 })) + '</li>' : '') + '</ul>';
+}
 /** one press, one file: the server's JSON saved as gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json (helpers.js gstrDownload) */
 function frGet(form, btn) {
   var node = document.getElementById('fr_month'),
     month = node ? node.value : null;
   if (!month) return;
+  var cb = null;
   return CBAction.run(
     btn,
     function () {
-      return gstrDownload(month, form);
+      return gstrDownload(month, form, function (reply) { cb = reply && reply._cb; });
     },
     {
       key: 'fr-' + form,
@@ -182,7 +201,7 @@ function frGet(form, btn) {
       done: tx('Downloaded'),
       outcome: function (name) {
         var element = document.getElementById('fr_out');
-        if (element) element.textContent = tx('Saved as') + ' ' + name;
+        if (element) element.innerHTML = esc(tx('Saved as') + ' ' + name) + frNotesHtml(cb);
       }
     }
   );

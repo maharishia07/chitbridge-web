@@ -147,7 +147,7 @@ function crmGroupsNameCols() {
       sort: 'name',
       html: true,
       cell: function (group) {
-        return '<b>' + esc(group.name) + '</b> <span class="tag' + (group.kind === 'segment' ? ' seg' : '') + '">' + esc(tx(CRM_KIND_WORD[group.kind])) + '</span>';
+        return '<b>' + esc(group.name) + '</b>' + (group.kind === 'segment' ? '' : ' <span class="tag">' + esc(tx(CRM_KIND_WORD[group.kind])) + '</span>'); /* E-F-10: a segment is the default kind and carries no tag; only a group says so (one tag, never four) */
       },
       value: function (group) {
         return group.name;
