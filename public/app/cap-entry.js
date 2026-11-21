@@ -534,26 +534,40 @@ function enOwnOptions() {
       return { v: /^(cash|bank|upi|card)$/.test(a.role || '') ? a.role : String(a.code), l: a.name };
     });
 }
+/** F-27: the staff ledger field's own inline door — the same POST /accounts, under the advances group (a person's ledger the shop adds as it adds a savings account) */
+var EN_DOOR = {
+  ledger: { hint: 'Name, e.g. Ravi (staff advance)', open: 'Add a staff ledger' },
+  other: { hint: 'Name, e.g. Savings account', open: 'Add a savings account' }
+};
+/** the group the shop's staff ledgers go under: the one the pack files advances in (Loans and advances) */
+function enStaffParent() {
+  var group = (EN.accounts || []).filter(function (a) {
+    return a.is_group && /advances/.test(a.tally_group || '');
+  })[0];
+  return group ? group.code : undefined;
+}
 /** Move money: "Taken from" / "Put into" name the business's own accounts, with the one inline door to add a savings account (the same POST /accounts the chart uses) */
-function enOwnField(k, lab, tid, v, on) {
-  var opened = EN.addOwn === k,
+function enOwnField(k, lab, tid, v, on, select) {
+  var door = EN_DOOR[k] || EN_DOOR.other,
+    opened = EN.addOwn === k,
     box = opened
-      ? '<span class="en-addown" data-testid="en-addown"><input data-cbsid="SCR022-I09" data-testid="en-addown-name" id="en_addown_name" maxlength="60" placeholder="' + esc(tx('Name, e.g. Savings account')) + '" value="' + esc(EN.addOwnName || '') + '" oninput="EN.addOwnName=this.value"> <button data-cbsid="CMP007" type="button" class="en-btn pri" data-testid="en-addown-go" onclick="enOwnAdd(this.dataset.k)" data-k="' + esc(k) + '">' + esc(tx('Add account')) + '</button> <button data-cbsid="CMP003" type="button" class="en-btn" onclick="EN.addOwn=null;enPaint()">' + esc(tx('Cancel')) + '</button></span>' + (EN.addOwnErr ? '<span class="en-bad" role="alert">' + esc(EN.addOwnErr) + '</span>' : '')
-      : '<button data-cbsid="CMP007" type="button" class="en-btn" data-testid="en-addown-open" data-k="' + esc(k) + '" onclick="EN.addOwn=this.dataset.k;EN.addOwnErr=&quot;&quot;;enPaint()">+ ' + esc(tx('Add a savings account')) + '</button>';
-  return '<label class="en-f"><span>' + esc(lab) + '</span>' + enSelect(tid, enOwnOptions(), v, on) + '</label>' + box;
+      ? '<span class="en-addown" data-testid="en-addown"><input data-cbsid="SCR022-I09" data-testid="en-addown-name" id="en_addown_name" maxlength="60" placeholder="' + esc(tx(door.hint)) + '" value="' + esc(EN.addOwnName || '') + '" oninput="EN.addOwnName=this.value"> <button data-cbsid="CMP007" type="button" class="en-btn pri" data-testid="en-addown-go" onclick="enOwnAdd(this.dataset.k)" data-k="' + esc(k) + '">' + esc(tx('Add account')) + '</button> <button data-cbsid="CMP003" type="button" class="en-btn" onclick="EN.addOwn=null;enPaint()">' + esc(tx('Cancel')) + '</button></span>' + (EN.addOwnErr ? '<span class="en-bad" role="alert">' + esc(EN.addOwnErr) + '</span>' : '')
+      : '<button data-cbsid="CMP007" type="button" class="en-btn" data-testid="en-addown-open" data-k="' + esc(k) + '" onclick="EN.addOwn=this.dataset.k;EN.addOwnErr=&quot;&quot;;enPaint()">+ ' + esc(tx(door.open)) + '</button>';
+  return '<label class="en-f"><span>' + esc(lab) + '</span>' + (select || enSelect(tid, enOwnOptions(), v, on)) + '</label>' + box;
 }
 /** add the account under the shop's bank group, read the accounts again, and put it in the field that asked */
 async function enOwnAdd(k) {
   var name = String(EN.addOwnName || '').trim(),
     main = (EN.accounts || []).filter(function (a) {
       return a.role === 'bank';
-    })[0];
+    })[0],
+    parent = k === 'ledger' ? enStaffParent() : main ? main.parent_code : undefined;
   if (!name) {
     EN.addOwnErr = tx('Type a name');
     return enPaint();
   }
   try {
-    var made = await api('booksAccountAdd', { body: { name: name, parent_code: main ? main.parent_code : undefined } });
+    var made = await api('booksAccountAdd', { body: { name: name, parent_code: parent } });
     var again = await api('booksAccounts');
     EN.accounts = (again && again.accounts) || EN.accounts;
     EN.v[k] = String((made && made.account && made.account.code) || '');
@@ -597,7 +611,7 @@ function enPickHTML(f, lab, tid, v, on) {
   var label = function (inner) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
   };
-  if (f.kind === 'pick' && f.pick === 'ledger') return label(enLedgerSelect(tid, v, on, 'Stock & advances', tid));
+  if (f.kind === 'pick' && f.pick === 'ledger') return enOwnField(f.key, lab, tid, v, on, enLedgerSelect(tid, v, on, 'Stock & advances', tid));
   if (f.kind === 'pick') return label(enSelect(tid, enOptions(f), v, on));
   var bills = f.key === 'against_ref' && f.kind === 'text' && enBillOptions(EN.v.supplier);
   if (bills) return label(enSelect(tid, bills, v, on));
