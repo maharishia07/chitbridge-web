@@ -98,6 +98,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(64) + '· ' + d 
   say('Close the day is not greyed offline', r3.closeShown && !r3.closeGrey, 'disabled ' + r3.closeGrey);
   down = false;
   await p.click('[data-testid="till-day-close-do"]');
+  await p.fill('#askinput', '0'); await p.click('#askok'); await p.waitForTimeout(200); await p.click('#askok'); /* B-F-24: the counted cash, then the confirm */
+  await p.waitForTimeout(300);
   const closed = await p.evaluate(() => dayClosedMark());
   say('Close the day closes the agreeing day: 1 bill · ₹90', !!closed && closed.bills === 1 && closed.total === 90, JSON.stringify(closed));
 
