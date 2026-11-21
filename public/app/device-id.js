@@ -147,7 +147,10 @@
       return '';
     }
   }
-  var shop = { mine: sessionShop(read(SESSION_KEY)), stopped: false };
+  /* CUSTOMER-DELINK 2: a customer page (<script src="/app/device-id.js" data-customer-page>) has NO staff session to compare with — it never reads cb_sess, so the shop-switch guard is off there
+     (its own bearer is the customer's, kept apart under cb_cust@<shop>). Staff pages are unchanged. */
+  var CUSTOMER = !!(root.document && root.document.currentScript && root.document.currentScript.hasAttribute('data-customer-page'));
+  var shop = { mine: CUSTOMER ? '' : sessionShop(read(SESSION_KEY)), stopped: false };
 
   /** cover() — the one sentence over the whole page, with Reload (no document, as in a test sandbox: nothing to draw) */
   function cover() {
@@ -194,7 +197,7 @@
   }
   /** refuses(url, init, request) → true when this api write must not go: the page stopped, or it carries the shop cb_sess left */
   function refuses(url, init, request) {
-    if (!isApiWrite(url, init, request)) return false;
+    if (CUSTOMER || !isApiWrite(url, init, request)) return false;
     if (shop.stopped) return true;
     var sent = bearerShop(init, request),
       now = sessionShop(read(SESSION_KEY));
@@ -208,7 +211,7 @@
   /* another tab wrote cb_sess (the event never fires in the tab that wrote): a different shop stops this page */
   if (typeof root.addEventListener === 'function') {
     root.addEventListener('storage', function (event) {
-      if (event.key !== SESSION_KEY) return;
+      if (CUSTOMER || event.key !== SESSION_KEY) return;
       var next = sessionShop(event.newValue);
       if (next && shop.mine && next !== shop.mine) stop();
       else if (next) shop.mine = next;

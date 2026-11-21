@@ -20475,9 +20475,16 @@ function prodShopPreview() {
   var node = document.getElementById('prodShopFrame'),
     h = document.getElementById('prodShopHold');
   if (!node) return;
-  if (!node.getAttribute('src')) node.setAttribute('src', node.getAttribute('data-src') || '');
   node.style.display = '';
   if (h) h.style.display = 'none';
+  if (node.getAttribute('src')) return;
+  /* the preview key is asked afresh at the press (it lives 15 minutes), and the frame opens once it is stored */
+  var open = function () {
+    if (!node.getAttribute('src')) node.setAttribute('src', node.getAttribute('data-src') || '');
+  };
+  var shopId = typeof prodShopHandle === 'function' ? prodShopHandle() : null;
+  if (window.CBPreviewKey && shopId) CBPreviewKey.hand(shopId).then(open, open);
+  else open();
 }
 /** the product's customer page for the owner's preview — the staff side hands the frame its one short-lived key first (CUSTOMER-DELINK) */
 function prodPreviewUrl(shopId, itemId) {
