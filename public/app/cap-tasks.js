@@ -47,6 +47,7 @@
   var CB_WORK_EP = {
     workList: { m: 'GET', p: '/api/work/list', ok: 'y' }, // ?view=&limit=
     workOne: { m: 'GET', p: '/api/work/:id', ok: 'y' },
+    voidOrder: { m: 'PUT', p: '/api/chits/:id/void', ok: 'y' }, // { reason } — the BUYER's Cancel of the order it sent: withdraws its own copy and asks the seller to cancel theirs
     assign: { m: 'PUT', p: '/api/actors/assign/:id', ok: 'y' }, // { action: 'push', target_actor_id } · { action: 'return' }
     people: { m: 'GET', p: '/api/people', ok: 'y' }
     /* railChits (GET /api/facts/rail/chits: stuck + why, the server's overdue test) comes from CB_SHEET_EP — one name, registered once (TO1b) */
@@ -705,13 +706,15 @@
       esc(T('left')) +
       ' ' +
       esc(line.remaining) +
+      (line.theirs > 0 ? ' · <span data-testid="tk-line-theirs-' + lineId + '">' + esc(T(chit.kind === 'order_out' ? 'Seller says' : 'Buyer says')) + ' ' + esc(line.theirs) + ' ' + esc(T('delivered')) + '</span>' : '') +
+      (line.over_theirs > 0 ? ' · <span class="tag red" data-testid="tk-line-over-' + lineId + '">' + esc(line.theirs + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered')) + '</span>' : '') +
       (line.settings && line.settings.due ? ' · ' + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
       (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
       '</div>' +
       '<div class="tk-line-acts">' +
       holderChip(chit, line.actions && line.actions.assign_line, line) +
       actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line, '', '', 'TSK003-B07') +
-      actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08') +
+      actRow('tk_lv_' + lineId, T(chit.kind === 'order_out' ? 'Received' : 'Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08') +
       '</div><div id="tk_lmore_' +
       lineId +
       '"></div></div>'
@@ -844,7 +847,9 @@
     var to =
       (WF() && WF().STEP_TO[action]) || { accept: 'accepted', reject: 'rejected', complete: 'completed', cancel: 'cancelled', reopen: 'in_progress' }[action];
     var needs = (chit.actions && chit.actions[action] && chit.actions[action].needs) || [];
+    var viaVoid = chit.actions && chit.actions[action] && chit.actions[action].via === 'void'; /* the buyer's cancel: the sender's own door, not the received copy's status step */
     var runMove = function (note) {
+      if (viaVoid) return call('voidOrder', { params: { id: chit.chit_id }, body: { reason: note } });
       return call('status', { params: { id: chit.chit_id }, body: Object.assign({ status: to }, note ? { note: note } : {}) });
     };
     var opts = {
@@ -859,7 +864,7 @@
     if (needs.indexOf('reason') >= 0) {
       $('tk_more').innerHTML =
         '<div class="tk-panel"><label class="sub" for="tk_reason">' +
-        esc(T(action === 'reject' ? 'Why is it refused?' : 'Lines are still open — why close it?')) +
+        esc(T(action === 'reject' ? 'Why is it refused?' : viaVoid ? 'Why is it cancelled?' : 'Lines are still open — why close it?')) +
         '</label>' +
         '<input data-cbsid="TSK003-I01" class="inp" id="tk_reason" data-testid="tk-reason" maxlength="500" autocomplete="off">' +
         '<button data-cbsid="TSK003-B11" type="button" class="act" id="tk_reason_go" data-testid="tk-reason-go">' +
@@ -952,23 +957,33 @@
   function deliverPanel(chit, line) {
     var host = $('tk_lmore_' + line.line_id);
     if (!host) return;
+    var buyer = chit.kind === 'order_out'; /* the buyer confirms what CAME IN, offered the seller's claim */
+    var offer = buyer && line.theirs > 0 ? Math.max(0, Math.round((line.theirs - (line.delivered || 0)) * 1000) / 1000) || line.remaining : line.remaining;
+    var asked = false;
     host.innerHTML =
       '<div class="tk-panel"><label class="sub" for="tk_dq">' +
-      esc(T('How much went out?')) +
+      esc(T(buyer ? 'How much came in?' : 'How much went out?')) +
       ' <span class="mono">' +
       esc(line.unit || '') +
       '</span></label>' +
       '<input data-cbsid="TSK003-I02" class="inp mono" id="tk_dq" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
-      esc(line.remaining) +
+      esc(offer) +
       '" autocomplete="off">' +
       '<button data-cbsid="TSK003-B13" type="button" class="act" id="tk_dq_go" data-testid="tk-deliver-go">' +
-      esc(T('Record')) +
+      esc(T(buyer ? 'Received' : 'Record')) +
       '</button></div>';
     $('tk_dq').focus();
     $('tk_dq_go').onclick = function () {
       var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.-]/g, ''));
       if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
+        return;
+      }
+      /* over-delivery is shown, never refused (line-model R13), but it is asked first: nothing is recorded on the first press (B-F-14) */
+      var total = (line.delivered || 0) + typed;
+      if (total > line.qty && !asked) {
+        asked = true;
+        $('tk_out').textContent = total + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered') + '. ' + T('Press again to record it anyway.');
         return;
       }
       tkDeliver(chit, line, typed, $('tk_dq_go'));
