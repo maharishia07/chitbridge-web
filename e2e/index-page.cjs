@@ -280,7 +280,7 @@ async function run() {
       /* FX-F10W: the same counts as Books' To do — each waiting row's `todo`, each kind its own words and door (never "4 waiting for the ledger") */
       ok(!rows.some((r) => r.id === 'ledger-accept' || r.id === 'ledger-supplier'), 'planted · the three waiting rows are ONE row');
       ok(!rows.some((r) => /waiting for the ledger/.test(r.text)), 'planted · no row says "waiting for the ledger"');
-      ok(pr && pr.lvl === 'warn' && /Counter 1 · paired to Mayuri123, not this shop/.test(pr.text) && (pr.fix || '') === '/till.html#shop=ent-idx&as=Mayur%20Bhavan', 'planted · a counter paired to another shop earns an amber row whose button pairs it here (' + (pr && pr.text) + ' → ' + (pr && pr.fix) + ')');
+      ok(!pr && !rows.some((r) => /paired to/.test(r.text)), 'planted · a counter paired to another shop earns no Home row (F-49, Athi 21 Nov: Home shows no pairing state)');
       ok(rows.every((r) => r.fix), 'planted · every alert carries the button that fixes it');
       for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], 'planted 1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
       await pg.screenshot({ path: path.join(SHOTS, 'index-alerts.png') });
