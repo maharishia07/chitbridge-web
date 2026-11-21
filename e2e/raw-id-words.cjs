@@ -1,7 +1,7 @@
 // @type: unit
 /* raw-id-words.cjs — A RAW ID IS NEVER SHOWN WHERE A NAME BELONGS (R123 Pay sheet bill, R109 timeline "by"; UX-118)
  *
- * cbIsRawId (accounts-shell.js, the one test) and bkBillNo (cap-books.js, the bill's number or "Bill of <date>") are taken from the
+ * cbIsRawId (cb-words.js, the one test) and bkBillNo (cap-books.js, the bill's number or "Bill of <date>") are taken from the
  * real sources with the page's formatters stubbed. The two painters that used to print `e.by` / `against_ref` straight are checked
  * by source: they must go through these two. No browser, no server.
  * Run: node e2e/raw-id-words.cjs        (exit 1 on any failure)
@@ -9,7 +9,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8');
-const shell = read('accounts-shell.js'), books = read('cap-books.js'), crm = read('cap-crm-record.js'), bank = read('cap-bank.js') + read('cap-bank-rows.js');
+const shell = read('cb-words.js'), books = read('cap-books.js'), crm = read('cap-crm-record.js'), bank = read('cap-bank.js') + read('cap-bank-rows.js');
 let bad = 0;
 const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(84) + '· ' + (detail || '') + '  ' + (ok ? 'OK' : (bad++, 'FAILED'))); };
 

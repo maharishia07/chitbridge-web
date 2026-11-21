@@ -1564,6 +1564,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/core.js"></script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the 16 themes, ONE list for every page (engines screen v1.15.0) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the avatar, its menu, and the look it owns (theme · font · text size · bold · motion) — one file, every page -->
+<script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell.js"></script>   <!-- tx · txf · friendlyErr · toast · the Ledger's boot endpoints and switch — shared with accounts.html (2026-10-01) -->
 <!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/fmtAt/fmtMoney/deepClone/jwtPayload) -->
 <!-- ⚠️ BEFORE helpers.js, which formats through it. The localisation layer owns every decision that changes
@@ -1573,6 +1574,7 @@ body.lab-only #cbtestpanel{
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the template names the Settings › Policy chooser lists (S2) -->
+<script src="/app/preview-key.js"></script>   <!-- CBPreviewKey: the one-way hand-off the customer shop page reads for the owner preview (CUSTOMER-DELINK) -->
 <script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick: the chooser itself, ONE copy (T3-P2-CRM) — Settings › Policy and CB CRM's Shop window draw it -->
 <script src="/app/cap-rewards.js"></script>   <!-- CBRewardsPane: the points pane, ONE copy (T3-P2-CRM) — the Customers pane here and CB CRM's record paint it -->
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
@@ -20473,16 +20475,28 @@ function prodShopPreview() {
   var node = document.getElementById('prodShopFrame'),
     h = document.getElementById('prodShopHold');
   if (!node) return;
-  if (!node.getAttribute('src')) node.setAttribute('src', node.getAttribute('data-src') || '');
   node.style.display = '';
   if (h) h.style.display = 'none';
+  if (node.getAttribute('src')) return;
+  /* the preview key is asked afresh at the press (it lives 15 minutes), and the frame opens once it is stored */
+  var open = function () {
+    if (!node.getAttribute('src')) node.setAttribute('src', node.getAttribute('data-src') || '');
+  };
+  var shopId = typeof prodShopHandle === 'function' ? prodShopHandle() : null;
+  if (window.CBPreviewKey && shopId) CBPreviewKey.hand(shopId).then(open, open);
+  else open();
+}
+/** the product's customer page for the owner's preview — the staff side hands the frame its one short-lived key first (CUSTOMER-DELINK) */
+function prodPreviewUrl(shopId, itemId) {
+  if (window.CBPreviewKey) CBPreviewKey.hand(shopId);
+  return '/shop.html?s=' + encodeURIComponent(shopId) + '&item=' + encodeURIComponent(itemId) + '&preview=1';
 }
 function prodStorefrontTab(d) {
   const uid = prodShopHandle();
   if (uid === null) return `<div class="sec">${tx('Storefront')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('Loading…')}</div>`;
   const id = UI.prodSel || d.item_id || d.id || '';
   const url = '/shop.html?s=' + encodeURIComponent(uid);
-  const one = url + '&item=' + encodeURIComponent(id) + '&preview=1';
+  const one = prodPreviewUrl(uid, id);
   /* coherence: a "name your price" product on a fixed-price (cart) face cannot be negotiated in the shop — say so here */
   const om = prodOrderSample(d);
   const face = (UI._face && UI._face.shop && UI._face.shop.order_input) || (UI._face && UI._face.order_input) || {};

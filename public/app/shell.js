@@ -195,7 +195,8 @@
   function session(anonymous) {
     try {
       var parsed = anonymous ? null : JSON.parse(lsGet('cb_sess') || 'null'); /* anonymous: a page that reads no stored session */
-      return parsed && parsed.token ? parsed : null;
+      /* CUSTOMER-DELINK: a customer's token in cb_sess is no staff session (CBOnePerson.who is the one reading) */
+      return parsed && parsed.token && (!root.CBOnePerson || root.CBOnePerson.who(parsed)) ? parsed : null;
     } catch (_) {
       return null;
     }

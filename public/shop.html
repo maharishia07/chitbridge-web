@@ -2,10 +2,10 @@
 <html lang="en">
 <!-- OWNS  the Storefront: a shop's public front (its items, the cart, the order) — the shop's own name in its brand row, the frame's bar above.
      CALLED BY a shop's public link (/shop.html?s=…; the manifest storefront card, cap-admin.js's link row, cap-crm-groups.js's share link), network-shop.html (its shop links), and the frames that preview it (app.html's Storefront tab, till.html, app/cap-showcase.js).
-     FLOW  load → shopFrame (CBFrame bar) → the catalogue read → paint → cart → order (POST /api/orders)
+     FLOW  load → shopFrame (CBCustomerBar) → the catalogue read → paint → cart → order (POST /api/orders)
      CARD storefront-and-catalogue/storefront -->
 <head>
-<meta charset="utf-8"><script src="/app/device-id.js"></script>
+<meta charset="utf-8"><script src="/app/device-id.js" data-customer-page></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -86,16 +86,12 @@
 <script src="engine/pricing.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="app/catalogue-lines.js"></script>
-<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
-<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
-<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
-<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
-<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<!-- THE CUSTOMER HEADER (CUSTOMER-DELINK): mark · name · ⌂ the shop's front. No avatar, no staff session, no staff menu. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes (embed ?theme= paints one) -->
 <script src="/app/ui.js"></script>
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field draws every input on this page (label, hint, error, 44 px, --field-edge) -->   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
-<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
-<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
-<script src="app/accounts-shell.js"></script>   <!-- INT6a-LOCALE: the string door (CBSTR · cbLang · tx) — the shop had none, so no language pack could load here -->
+<script src="/app/customer-bar.js"></script>   <!-- CBCustomerBar: the customer header — no staff session, no staff menu (CUSTOMER-DELINK) -->
+<script src="/app/cb-words.js"></script>   <!-- the string door · toast · confirm: the neutral floor; never the back-office shell (CUSTOMER-DELINK) -->
 <script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05); one home since T2-ENGONCE -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="engine/tax.js"></script>     <!-- ⭐ WX-O2C: the one tax split (splitLineTax) — a tax-inclusive shelf's GST comes OUT of the price in the cart, never on top -->
@@ -123,18 +119,26 @@ var API = new URLSearchParams(location.search).get('api') || window.CB_API;
    renderer, same offers, same cart; only the shop header and the rest of the list are left out. Athi, 2026-09-05:
    "not the entire link — how this product will look in front of the user". */
 var _ONLY = (new URLSearchParams(location.search).get('item') || '').trim();
-/* ?preview=1: the OWNER looking at their own shop from the product page. The frame is same-origin with the app, so the
-   session is in localStorage; it goes as a bearer and the API lets the owner through a private gate (preview:true). */
+/* ?preview=1: the OWNER looking at their own shop from the product page. CUSTOMER-DELINK: this page never reads the staff session. The back office
+   hands over ONE short-lived key for THIS shop (app/preview-key.js writes cb_preview@<shop>); only that key goes, as a bearer, on the one catalogue GET. */
 var _PREVIEW = (new URLSearchParams(location.search).get('preview') || '') === '1';
-function _ownerToken() {
-  try {
-    var parsed = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    return (parsed && parsed.token) || null;
-  } catch (e) {
-    return null;
-  }
-}
 var BRIDGE = (new URLSearchParams(location.search).get('s') || new URLSearchParams(location.search).get('bridge') || '').trim();
+function _previewKey() {
+  try {
+    var kept = JSON.parse(localStorage.getItem('cb_preview@' + BRIDGE) || 'null');
+    if (kept && kept.t && kept.exp > Date.now()) return kept.t;
+    if (kept) localStorage.removeItem('cb_preview@' + BRIDGE);
+  } catch (e) {
+    /* an unreadable key is no key */
+  }
+  return null;
+}
+/* the key arrives a moment after the frame opens (the back office asks the api for it): when it is written for THIS shop, read the shop again once, now with it */
+if (_PREVIEW && !_previewKey()) {
+  window.addEventListener('storage', function (event) {
+    if (event.key === 'cb_preview@' + BRIDGE && _previewKey()) location.reload();
+  });
+}
 var _FIN = [];
 var _ord = null;
 var _lg = {};
@@ -573,7 +577,7 @@ if (window.CBOffline) {
     },
     onChange: paintPill
   });
-  CBOffline.registerSW('/cb-sw.js');
+  CBOffline.registerSW('/cb-sw.js?set=customer', '/shop.html'); /* CUSTOMER-DELINK: its own worker, scope and cache — the shop never installs the back office */
 }
 function tlang() {
   var rc = regionCur();
@@ -3124,7 +3128,7 @@ function vizToOrder() {
 }
 /* SHELL-ONE: the one frame, the bar only — ⌂ Home is THIS shop's front (the page without its ?item), the avatar's door is Home's sign-in; the shop's
    own name stays in its brand row below (rule 3: one string once), so the bar names the page */
-/** UX-142: the one shared toast (accounts-shell) says what a share or copy did — the shop drew no message of its own, so a press looked like nothing */
+/** UX-142: the one shared toast (cb-words.js) says what a share or copy did — the shop drew no message of its own, so a press looked like nothing */
 function shopSay(message) {
   if (typeof toast === 'function') toast(message);
 }
@@ -3160,15 +3164,8 @@ function shopFrontHref() {
   return location.pathname + (queryString ? '?' + queryString : '');
 }
 function shopFrame() {
-  if (!window.CBFrame) return;
-  CBFrame.mount({
-    app: 'storefront',
-    bar: true,
-    signin: false,
-    host: el('shell'),
-    homeHref: shopFrontHref(),
-    title: { icon: '◇', name: 'Shop' }
-  }); /* the frame says the title through the catalogue, and again when a pack lands */
+  if (!window.CBCustomerBar) return;
+  CBCustomerBar.mount({ host: el('shell'), screen: 'SHP001', homeHref: shopFrontHref(), title: { icon: '◇', name: 'Shop' } }); /* the frame says the title through the catalogue, and again when a pack lands */
 }
 (function () {
   shopFrame();
@@ -3202,10 +3199,9 @@ function shopFrame() {
  */
 function shopLoad() {
   /* SEC4: a shopper's own token re-reads a sign-in-first shop. TOUR-FIX1: the OWNER opening their own private shop (Home › Your online shop)
-     is not a stranger — a 404 with this browser's own session is asked once more as the owner's preview (the API decides: only THIS shop's
-     owner gets through; anyone else keeps "Shop not found"). One reader for both. */
+     is previewed only through the hand-off key (?preview=1, _previewKey); a missing shop shows the customer "not found", never a second try as the owner. */
   var _cat = function (pv) {
-    var tok = pv && _ownerToken() ? _ownerToken() : _MYTOK;
+    var tok = pv && _previewKey() ? _previewKey() : _MYTOK;
     return fetch(
       API + '/api/catalogue/' + encodeURIComponent(BRIDGE) + (pv ? '?preview=1' : ''),
       tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined
@@ -3216,17 +3212,6 @@ function shopLoad() {
     });
   };
   return _cat(_PREVIEW)
-    .then(function (res) {
-      if (res.status === 404 && !_PREVIEW && _ownerToken())
-        return _cat(true).then(function (reply) {
-          if (reply.status === 200) {
-            _PREVIEW = true;
-            return reply;
-          }
-          return res;
-        });
-      return res;
-    })
     .then(function (res) {
       if (res.status !== 200) {
         /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a

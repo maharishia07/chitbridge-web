@@ -73,7 +73,7 @@ globalThis.EP = {};
 require(path.join(PUB, 'engine', 'tax.js'));
 /* the modules under test, named by path (the knowledge graph's tested-by edge reads these strings): core.js's writers and loaders, the shell's CBAction, the
    helpers' packHasHsn, the one slab UI, the categories' writers, the catalogue primitives and app, the setup */
-for (const f of ['app/core.js', 'app/accounts-shell.js', 'app/helpers.js', 'app/tax-slab-ui.js', 'app/cap-categories.js', 'app/cap-catalogue.js', 'app/cap-catsetup.js'])
+for (const f of ['app/core.js', 'app/cb-words.js', 'app/accounts-shell.js', 'app/helpers.js', 'app/tax-slab-ui.js', 'app/cap-categories.js', 'app/cap-catalogue.js', 'app/cap-catsetup.js'])
   require('vm').runInThisContext(fs.readFileSync(path.join(PUB, f), 'utf8'), { filename: f });
 Object.assign(EP, CB_SHOP_EP, CB_DEFS_EP, CB_CATALOGUE_EP);
 const S = globalThis.CBTaxSlab;

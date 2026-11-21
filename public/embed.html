@@ -2,11 +2,11 @@
 <html lang="en">
 <!-- OWNS  the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows.
      CALLED BY store.html and outside sites that embed a shop (?bridge=).
-     FLOW  load → CBFrame (bar) → the shop's catalogue read → paint
+     FLOW  load → CBCustomerBar → the shop's catalogue read → paint
      CARD storefront-and-catalogue/embed -->
 <head>
 <meta charset="utf-8">
-<script src="/app/device-id.js"></script>
+<script src="/app/device-id.js" data-customer-page></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -47,14 +47,10 @@
 <body>
 <div id="shell" data-testid="embed-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): the bar, even in an embed -->
 <div class="wrap"><div id="app"><div class="empty">Loading catalogue…</div></div></div>
-<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
-<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
-<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
-<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
-<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<!-- THE CUSTOMER HEADER (CUSTOMER-DELINK): mark · name · ⌂ the shop's front. No avatar, no staff session, no staff menu. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes (embed ?theme= paints one) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
-<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
-<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<script src="/app/customer-bar.js"></script>   <!-- CBCustomerBar: the customer header — no staff session, no staff menu (CUSTOMER-DELINK) -->
 <script src="/engine/locale.js"></script>
 <script>
 (function () {
@@ -62,17 +58,10 @@
   var API = Q.get('api') || window.CB_API;
   var BRIDGE = (Q.get('bridge') || Q.get('b') || '').trim();
   var BRAND = Q.get('brand') !== 'off'; // brand shown unless brand=off (whitelabel)
-  /* SHELL-ONE: the frame first; a host site's ?theme=light|dark is the avatar's Cream / Dark, applied as a preview (nothing saved in the visitor's browser) */
-  if (window.CBFrame)
-    CBFrame.mount({
-      app: 'embed',
-      bar: true,
-      signin: false,
-      host: el('shell'),
-      homeHref: location.pathname + location.search,
-      title: { icon: '▦', name: 'Catalogue' }
-    });
-  if ((Q.get('theme') === 'light' || Q.get('theme') === 'dark') && window.CBAvatar) CBAvatar.applyTheme(Q.get('theme') === 'dark' ? 'dark' : 'cream');
+  /* CUSTOMER-DELINK: the bar first; a host site's ?theme=light|dark is the look's Cream / Dark, applied as a preview (nothing saved in the visitor's browser) */
+  if (window.CBCustomerBar)
+    CBCustomerBar.mount({ host: el('shell'), screen: 'EMB001', homeHref: location.pathname + location.search, title: { icon: '▦', name: 'Catalogue' } });
+  if ((Q.get('theme') === 'light' || Q.get('theme') === 'dark') && window.CBCustomerBar) CBCustomerBar.theme(Q.get('theme') === 'dark' ? 'dark' : 'cream');
   var CUR = ''; /* CX0: the shop's currency_code, read from the catalogue; the locale engine draws the symbol */
   function price(v) {
     if (v == null || v === '') return '';
