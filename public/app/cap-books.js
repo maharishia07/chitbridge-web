@@ -1842,6 +1842,7 @@ function bkDaySales(entries, day) {
     if (!text) return;
     if (text.kind === 'day') hasDay = true; /* the counter closed its day — walk-ins are in */
     if (text.kind !== 'day' && text.kind !== 'bill') return; /* sales only: a bill, or a walk-in day */
+    if (e.reversed_by) return; /* a reversed bill is no sale: its mirror row carries no source, so the original must not count either (GF-05 M9) */
     var total =
       text.kind === 'day'
         ? (text.split || []).reduce(function (sum, x) {
@@ -4814,6 +4815,10 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
       out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
     });
     if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + headGroup.name), cells(headGroup));
+  });
+  var known = (heads || []).map(function (headGroup) { return headGroup.code; });
+  (items || []).filter(function (x) { return known.indexOf(x.group ? x.group.code : null) < 0; }).forEach(function (x) { /* a ledger on no listed head still shows: the lines must foot to the total the server carries (GF-05 M5) */
+    out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + '</span>', cells(x));
   });
   return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }].concat(change ? [{ v: '' }, { v: '' }] : []));
 }

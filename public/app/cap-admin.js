@@ -322,11 +322,15 @@ function misTaxSetMonth(m) {
   loadTaxLedger();
 }
 async function loadTaxLedger() {
+  const asked = misTaxMonth();
+  let reply;
   try {
-    UI._taxLedger = await api('taxLedger', { query: { month: misTaxMonth() } });
+    reply = await api('taxLedger', { query: { month: asked } });
   } catch (e) {
-    UI._taxLedger = { error: (e && e.message) || 'Could not read the ledger.' };
+    reply = { error: (e && e.message) || 'Could not read the ledger.' };
   }
+  if (asked !== misTaxMonth()) return; /* the month moved while this read was out: its answer is not the month on the label (GF-03 M3); the newer read paints */
+  UI._taxLedger = reply;
   const node = document.getElementById('misbody');
   if (node && misBand() === 'tax') node.innerHTML = misBandHTML('tax', UI._mis || {});
   const rail = document.getElementById('mis_rail');

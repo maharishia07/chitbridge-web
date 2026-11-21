@@ -163,7 +163,7 @@
   /** why a loan instalment line cannot be posted yet (no loan picked · no interest typed · interest above the payment), or null */
   function loanEmiRefusal(item) {
     if (!item.loanRef) return 'Choose which loan this pays first.';
-    if (!(item.interestMinor >= 0)) return "Type the interest from the lender's statement first.";
+    if (typeof item.interestMinor !== 'number' || !(item.interestMinor >= 0)) return "Type the interest from the lender's statement first.";
     if (lineFigure(item.line || {}) - item.interestMinor < 0) return 'The interest is more than the payment.';
     return null;
   }
