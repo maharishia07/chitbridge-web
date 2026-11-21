@@ -4842,6 +4842,11 @@ function bkFollowWord(code) {
   })[0];
   return match ? tx(match[1]) : '';
 }
+/** J-F-02: a party the server marks 'both' is on each side's list with THAT side's own figures (row.sides.customer / row.sides.supplier — the tile's source); the netted figure can be 0 while one half is 2,000. Any other row, or an older reply with no sides, comes back as it is. Nothing is worked out here. */
+function bkSideHalf(item, who) {
+  if (item.side === 'both' && item.sides && item.sides[who]) return Object.assign({}, item, item.sides[who], { side: who });
+  return item;
+}
 /** a supplier the shop has paid ahead (Dr balance: paid with no bill) is an advance — they owe you; the balance sheet reclassifies it the same way (1700). It is never under To pay. */
 function bkDuesAdvance(p) {
   return bkDuesSide(p) === 'pay' && Number(p.balance_minor) > 0;
@@ -5612,9 +5617,13 @@ function bkNeedOpen(event, pid, kind) {
 }
 /** the rows of the Dues list from the one /dues read the page holds: the parties with a balance, on the page's own side (Receivables also holds the advances paid; Payables holds no one who owes you) */
 function bkDuesRows(onlySide) {
-  var open = ((BK.duesRaw && BK.duesRaw.parties) || []).filter(function (item) {
-    return Number(item.balance_minor);
-  });
+  var open = ((BK.duesRaw && BK.duesRaw.parties) || [])
+    .map(function (item) {
+      return onlySide ? bkSideHalf(item, onlySide === 'rcv' ? 'customer' : 'supplier') : item;
+    })
+    .filter(function (item) {
+      return Number(item.balance_minor);
+    });
   if (onlySide)
     open = open.filter(function (item) {
       return onlySide === 'rcv' ? bkDuesSide(item) === 'rcv' || bkDuesAdvance(item) : bkDuesSide(item) === 'pay' && !bkDuesAdvance(item);
