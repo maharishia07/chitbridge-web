@@ -1095,7 +1095,7 @@ function paintModLab() {
       '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">' +
       '<input class="inp" style="flex:2;min-width:180px;height:40px;font-weight:700" value="' +
       esc(MODLAB.name) +
-      '" placeholder="Combo name — e.g. ‘Tiffin Combo’" onchange="modLabSetName(this.value)">' +
+      '" placeholder="Combo name — e.g. ‘Breakfast combo’" onchange="modLabSetName(this.value)">' +
       '<div class="inp" style="flex:1;min-width:120px;height:40px"><span>₹</span><input type="number" step="0.01" value="' +
       esc(MODLAB.price) +
       '" placeholder="Price" onchange="modLabSetPrice(this.value)"></div>' +

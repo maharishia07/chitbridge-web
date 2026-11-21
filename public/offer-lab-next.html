@@ -11,6 +11,7 @@
 <script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
+<script src="/app/sample-set.js"></script>   <!-- CBSample: the made-up shop's names and menu per country (batch 1128: no India sample on another country's shop) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Offer Lab · ChitBridge</title>
@@ -808,7 +809,7 @@ var GOALS = [
   { id: 'amount', kind: 'line', icon: '₹', n: 'Rupees off', ex: '₹10 off each' },
   { id: 'qty', kind: 'line', icon: '▦', n: 'Cheaper when they buy more', ex: '2+ → 5%, 5+ → 10%' },
   { id: 'free', kind: 'pair', icon: '+', n: 'Something free', ex: 'buy 2, get 1' },
-  { id: 'bundle', kind: 'pair', icon: '▣', n: 'Two things at one price', ex: 'dosa + coffee = ₹80' },
+  { id: 'bundle', kind: 'pair', icon: '▣', n: 'Two things at one price', ex: 'a meal + a drink = ₹80' },
   { id: 'spend', kind: 'bill', icon: '↑', n: 'Reward a big bill', ex: 'over ₹500 → ₹50 back' },
   { id: 'ship', kind: 'bill', icon: '⌁', n: 'Free delivery', ex: 'over ₹300 → free' },
   { id: 'band', kind: 'guard', icon: '⌂', n: 'Refuse very small or big bills', ex: '₹50 to ₹2,000' }
@@ -1445,12 +1446,42 @@ function currencyOfReply(body) {
   var code = String(entity.currency_code || '').toUpperCase();
   return /^[A-Z]{3}$/.test(code) ? code : '';
 }
+var CURRENCY_COUNTRY = { INR: 'IN', AUD: 'AU', AED: 'AE' };
+/** the shop's country from a /api/entities/me reply (its own country, else the one its currency implies), or '' */
+function countryOfReply(body, code) {
+  var entity = (body && body.data) || body || {};
+  entity = entity.entity || entity;
+  var cc = String(entity.country_code || entity.country || '').toUpperCase();
+  return /^[A-Z]{2}$/.test(cc) ? cc : CURRENCY_COUNTRY[code] || '';
+}
+/** a signed-in shop outside India (or with no country) sees ITS country's sample menu and names, never the Chennai one (CBSample is the one list) */
+function useCountrySample(cc) {
+  var set = CBSample.forCountry(cc);
+  if (set.cc === 'IN') return;
+  HOTEL.name = set.hotelName;
+  HOTEL.cats = set.hotelCats;
+  HOTEL.prods = set.hotelProds;
+  HOTEL.cust = set.hotelCust;
+  PHARMA.name = set.pharmaName;
+  PHARMA.cust = set.pharmaCust;
+  if (S && BIZ[S.biz]) {
+    CATS = BIZ[S.biz].cats.map(function (item) {
+      return { id: item[0], name: item[1] };
+    });
+    P = BIZ[S.biz].prods.map(function (item) {
+      return { id: item[0], name: item[1], cat: item[2], price: item[3], cost: item[4], modifiers: Array.isArray(item[5]) ? item[5] : [] };
+    });
+    render();
+  }
+}
 async function loadShopMoney() {
   if (!savedLive()) return;
   try {
     var reply = await fetch(API + '/api/entities/me', { headers: { Authorization: 'Bearer ' + savedToken() } });
     if (!reply.ok) return;
-    var code = currencyOfReply(await reply.json());
+    var body = await reply.json();
+    var code = currencyOfReply(body);
+    useCountrySample(countryOfReply(body, code));
     if (code && code !== shopCurrency) {
       shopCurrency = code;
       var tool = document.getElementById('priceTool');

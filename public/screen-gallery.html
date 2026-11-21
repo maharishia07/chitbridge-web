@@ -92,6 +92,7 @@
   <div class="matrix-wrap"><table class="matrix" id="matrix" data-testid="gal-layouts"></table></div>
 </div>
 
+<script src="/app/sample-set.js"></script>   <!-- CBSample: the sample menu by country (neutral here: the gallery is not a shop) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/screen.js"></script>
 <script>
@@ -111,14 +112,10 @@
     S.theme = localStorage.getItem('cb_gal_theme') || S.theme;
   } catch (_) {}
 
-  var ITEMS = [
-    { name: 'Masala Dosa', price: '₹70.00', unit: 'plate', group: 'Morning' },
-    { name: 'Filter Coffee', price: '₹25.00', unit: 'cup', group: 'Morning' },
-    { name: 'Veg Biryani', price: '₹140.00', unit: 'plate', group: 'Afternoon' },
-    { name: 'Curd Rice', price: '₹70.00', unit: 'plate', group: 'Afternoon' },
-    { name: 'Ven Pongal', price: '₹55.00', unit: 'plate', group: 'Morning' },
-    { name: 'Parotta', price: '₹30.00', unit: 'pc', group: 'Night' }
-  ];
+  /* the gallery is not a shop: the neutral sample menu, prices as plain numbers (no currency sign is told here) */
+  var ITEMS = CBSample.neutral.menu.map(function (item) {
+    return { name: item.name, price: item.price.toFixed(2), unit: item.unit, group: item.group };
+  });
   var GROUPS = [
     { id: 'm', name: 'Morning', from: '06:00', to: '11:30', total: 10, available: 7, on: true },
     { id: 'a', name: 'Afternoon', from: '11:30', to: '15:30', total: 10, available: 10, on: false },

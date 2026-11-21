@@ -150,7 +150,7 @@ async function load() {
     '<div class="card"><b style="font-size:13px">Simulate an inbound message</b> <span class="note">(stands in for a WhatsApp/email arriving)</span>' +
     '<div class="row" style="margin-top:6px"><select data-cbsid="WRK003-S01" id="s_ch" data-testid="cap-channel" style="width:130px" onchange="saveIntake()"><option>whatsapp</option><option>email</option><option>web</option><option>sms</option></select>' +
     '<input data-cbsid="WRK003-I03" id="s_from" data-testid="cap-from" placeholder="from (phone / email)" style="flex:1;min-width:140px" oninput="saveIntake()"></div>' +
-    '<label>Message</label><textarea data-cbsid="WRK003-T01" id="s_text" data-testid="cap-text" placeholder="e.g. Hi, need 40 drums of white primer and 12 tins of hardener, deliver to Chennai next week" oninput="saveIntake()"></textarea>' +
+    '<label>Message</label><textarea data-cbsid="WRK003-T01" id="s_text" data-testid="cap-text" placeholder="e.g. Hi, need 40 drums of white primer and 12 tins of hardener, deliver to our shop next week" oninput="saveIntake()"></textarea>' +
     '<div class="row" style="margin-top:8px"><button data-cbsid="WRK003-B02" class="pri" data-testid="cap-simulate" onclick="simulate()">Add to inbox</button><span id="s_err" class="err"></span></div></div>';
   var list = caps.length ? caps.map(capCard).join('') : '<div class="card"><div class="empty">No pending captures. Simulate one above.</div></div>';
   el('app').innerHTML = mig + sim + '<div id="caps">' + list + '</div>';
