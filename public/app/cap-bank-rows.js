@@ -168,7 +168,7 @@ function bankList() {
 const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|payment_made|cheque_dishonoured)$/.test(r.sugg.event.type));
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */
-function bankAccept(line, quiet) {
+function bankAccept(line, quiet, deferPaint) {
   if (
     !bkbStep({
       act: 'accept',
@@ -181,8 +181,10 @@ function bankAccept(line, quiet) {
     return;
   const chit = (line.chits || [])[0];
   if (chit && chit.party && chit.party.id) bkbLearn(line.stmt, { party: chit.party.id, party_name: chit.party.name });
-  bankExplain();
-  bankPaint();
+  if (!deferPaint) {
+    bankExplain();
+    bankPaint();
+  } /* deferPaint: the caller accepts many lines, then explains and paints ONCE */
   if (!quiet) toast(tx('Accepted. Undo keeps your notes.'));
 }
 function bankUndo(line) {

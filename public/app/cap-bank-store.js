@@ -20,7 +20,7 @@ if (typeof EP !== 'undefined') {
 }
 
 /** where the marks are kept: mode 'server' (shared record) · 'device' (the record is not set up yet) · 'error' (could not reach it); the rest is what the log said */
-var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', blind: false, signing: false };
+var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', blind: false, signing: false, held: null };
 const bankStoreState_SHOWN = 4;
 /** a string made safe to put into the panel */
 const bksE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
@@ -82,11 +82,26 @@ function bankStoreMark(action) {
   if (action.ref) mark.ref = String(action.ref);
   return mark;
 }
-/** one step → one mark, sent in the order made; a failure is said on the line and the device copy stays */
+/** one step → one mark, sent in the order made; a failure is said on the line and the device copy stays. Inside bankStoreBatch the mark is held and sent with the others. */
 function bankStoreAppend(action) {
   if (bankStoreState.mode === 'device') return;
+  if (bankStoreState.held) return void bankStoreState.held.push(action);
+  bankStoreSend([action]);
+}
+/** SPEED (1129): many steps, ONE request (the api takes up to 200 marks in one insert); run `fn`, then send what it held, in the order made */
+function bankStoreBatch(fn) {
+  bankStoreState.held = [];
+  try {
+    fn();
+  } finally {
+    const held = bankStoreState.held;
+    bankStoreState.held = null;
+    for (let from = 0; from < held.length; from += 200) bankStoreSend(held.slice(from, from + 200));
+  }
+}
+function bankStoreSend(actions) {
   const acct = bankStoreState.view.stmtAcct || bankStoreState.view.acct /* B5-07: the account the statement was read for, never the dropdown's */,
-    body = { account: acct, file_hash: (bankStoreState.view.file && bankStoreState.view.file.hash) || undefined, marks: [bankStoreMark(action)] };
+    body = { account: acct, file_hash: (bankStoreState.view.file && bankStoreState.view.file.hash) || undefined, marks: actions.map(bankStoreMark) };
   bankStoreState.chain = bankStoreState.chain
     .then(() => api('booksBankMarks', { body }))
     .then(() => {
