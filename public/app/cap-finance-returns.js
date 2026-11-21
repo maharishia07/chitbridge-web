@@ -51,21 +51,21 @@ function frRetry() {
   frLoad();
 }
 
-/** the last twelve calendar months, newest first, from the shop's day — value YYYY-MM, label in the reader's month words */
+/** the running month and the eleven before it, newest first, from the shop's day — value YYYY-MM, label in the reader's month words (IN-F-08: the month in progress can be asked for, marked as running) */
 function frMonths() {
   var t = bkToday(),
     y = Number(t.slice(0, 4)),
     m = Number(t.slice(5, 7)),
     names = monthNames('short'),
     out = [];
-  for (var index = 1; index <= 12; index++) {
+  for (var index = 0; index < 12; index++) {
     var mm = m - index,
       yy = y;
     while (mm < 1) {
       mm += 12;
       yy -= 1;
     }
-    out.push({ v: yy + '-' + String(mm).padStart(2, '0'), label: names[mm - 1] + ' ' + yy });
+    out.push({ v: yy + '-' + String(mm).padStart(2, '0'), label: names[mm - 1] + ' ' + yy + (index === 0 ? ' · ' + tx('running') : '') });
   }
   return out;
 }
@@ -121,7 +121,7 @@ function frPaint() {
         '</p>' +
         '<label style="display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600">' +
         esc(tx('Month')) +
-        '<select data-cbsid="FIN007-S01" class="inp" id="fr_month" data-testid="fr-month">' +
+        '<select data-cbsid="FIN007-S01" class="inp" id="fr_month" data-testid="fr-month" onchange="frShow()">' +
         months
           .map(function (x) {
             return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>';
@@ -134,12 +134,14 @@ function frPaint() {
         '<button data-cbsid="FIN007-B02" type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' +
         esc(tx('GSTR-3B file')) +
         '</button></div>' +
+        '<div id="fr_view" data-testid="fr-view" role="status"></div>' +
         '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>' +
         '<p class="hint" data-testid="fr-prepared">' +
         esc(tx('Prepared, not filed.')) +
         '</p>',
       'fr-gstr'
     );
+    frShow(); /* IN-F-08: the running month's GST is on the screen as it opens */
     return;
   }
   if (pk && pk.returns && pk.returns.id) {
@@ -164,6 +166,58 @@ function frPaint() {
       '</p>',
     'fr-none'
   );
+}
+/**
+ * IN-F-08 (walk IN 21 Nov): THIS MONTH'S GST BY HEAD, ON SCREEN, with the set-off preview — read only. Every figure is the server's (GET /api/tax/gstr?form=gstr3b: tax on sales, credit from purchases and
+ * _cb.setoff, the engine's own CBPosting.gstSetOff in s.49 order); nothing is summed here. It posts nothing: the GST close stays closed until the month has ended.
+ */
+function frViewHTML(reply) {
+  var sup = ((reply || {}).sup_details || {}).osup_det || {},
+    credit = ((reply || {}).itc_elg || {}).itc_net || {},
+    off = ((reply || {})._cb || {}).setoff;
+  if (!off) return '<p class="hint" data-testid="fr-view-none">' + esc(tx('The set-off could not be worked out for this month.')) + '</p>';
+  var heads = [
+    { name: 'CGST', out: sup.camt, inp: credit.camt, pay: off.payable.cgst, keep: off.carried.cgst },
+    { name: 'SGST', out: sup.samt, inp: credit.samt, pay: off.payable.sgst, keep: off.carried.sgst },
+    { name: 'IGST', out: sup.iamt, inp: credit.iamt, pay: off.payable.igst, keep: off.carried.igst }
+  ];
+  var cell = function (v) {
+    return '<td style="text-align:end">' + esc(fmtMoney(v || 0)) + '</td>';
+  };
+  var rows = heads
+    .map(function (h) {
+      return '<tr data-testid="fr-view-' + h.name.toLowerCase() + '"><th scope="row" style="text-align:start">' + esc(h.name) + '</th>' + cell(h.out) + cell(h.inp) + cell(h.pay) + cell(h.keep) + '</tr>';
+    })
+    .join('');
+  var used = (off.utilised || [])
+    .map(function (u) {
+      return esc(txf('{from} credit {amount} set against {against}', { from: String(u.from).toUpperCase(), amount: fmtMoney(u.amount), against: String(u.against).toUpperCase() }));
+    })
+    .join(' · ');
+  return (
+    '<table class="tbl" data-testid="fr-view-table" style="width:100%;margin-top:10px"><thead><tr><th style="text-align:start">' + esc(tx('Tax')) + '</th><th style="text-align:end">' + esc(tx('On your sales')) +
+    '</th><th style="text-align:end">' + esc(tx('Credit from purchases')) + '</th><th style="text-align:end">' + esc(tx('To pay now')) + '</th><th style="text-align:end">' + esc(tx('Credit kept')) + '</th></tr></thead><tbody>' +
+    rows + '</tbody></table>' +
+    (used ? '<p class="hint" data-testid="fr-view-setoff">' + used + '</p>' : '') +
+    '<p class="hint" data-testid="fr-view-note">' + esc(tx('A preview from your bills of the month, IGST credit first, then CGST, then SGST. Nothing is posted; the GST close opens when the month has ended.')) + '</p>'
+  );
+}
+/** the month chosen, on screen: the server's GSTR-3B read, painted by frViewHTML (a late answer for another month is dropped) */
+async function frShow() {
+  var select = document.getElementById('fr_month'),
+    box = document.getElementById('fr_view');
+  if (!select || !box) return;
+  var month = select.value,
+    seen = (FR.viewGen = (FR.viewGen || 0) + 1);
+  box.innerHTML = '<div class="hint">' + esc(tx('Loading…')) + '</div>';
+  try {
+    var reply = await api('taxGstr', { query: { month: month, form: 'gstr3b' } });
+    if (seen !== FR.viewGen) return;
+    box.innerHTML = frViewHTML(reply);
+  } catch (e) {
+    if (seen !== FR.viewGen) return;
+    box.innerHTML = '<p class="hint" data-testid="fr-view-failed">' + esc(tx('Could not read this month.')) + '</p>';
+  }
 }
 /** one press, one file: the server's JSON saved as gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json (helpers.js gstrDownload) */
 function frGet(form, btn) {
