@@ -69,7 +69,7 @@ const KNOWN = {
  */
 function failLines(out) {
   const lines = out.trim().split('\n'), tail = lines.slice(-12);
-  const red = lines.filter((l) => /\bFAIL(ED)?\b|✗/.test(l)).slice(0, 15);
+  const red = lines.filter((l) => /\bFAIL(ED)?\b|✗|^\s*XX\s/.test(l)).slice(0, 15);
   const pad = (ls) => ls.map((l) => '       ' + l).join('\n');
   return (red.length ? '       -- failing lines (' + red.length + ') --\n' + pad(red) + '\n       -- last lines --\n' : '') + pad(tail);
 }

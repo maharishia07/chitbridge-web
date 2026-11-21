@@ -87,9 +87,9 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
           { asset_class: 'computers', count: 1, cost_minor: 5000000, accumulated_minor: 0, wdv_minor: 5000000, ledger_cost_minor: 4900000, ledger_accumulated_minor: 0, ledger_wdv_minor: 4900000, agrees: false }] });
       if (p === '/api/books/assets' && m === 'POST') {
         if (S.assetRefuse) return J(r, 400, { error: 'How was it paid? cash, bank, upi or card — or name the supplier it is owed to.' });
-        S.assets.push({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, put_to_use: body.date, accumulated_minor: 0, wdv_minor: body.cost_minor, disposed_on: null }); return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0010', asset: books.assetRow({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, wdv_minor: body.cost_minor }) }));
+        S.assets.push({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, put_to_use: body.date, accumulated_minor: 0, wdv_minor: body.cost_minor, disposed_on: null }); return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0010', asset: books.assetPosted({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, wdv_minor: body.cost_minor }) }));
       }
-      if (/^\/api\/books\/assets\/[^/]+\/dispose$/.test(p)) { S.assets[0].disposed_on = body.date; S.assets[0].wdv_minor = 0; return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0011', asset: books.assetRow({ asset_id: 'a1', disposed_on: body.date }) })); }
+      if (/^\/api\/books\/assets\/[^/]+\/dispose$/.test(p)) { S.assets[0].disposed_on = body.date; S.assets[0].wdv_minor = 0; return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0011', asset: books.assetPosted({ asset_id: 'a1', disposed_on: body.date }) })); }
       if (p === '/api/books/depreciation/run') {
         if (S.depRefuse) return J(r, 409, { error: 'Depreciation for ' + body.fy + ' runs at the year end (2027-03-31) or after — the year has not ended.' });
         return J(r, 200, { ok: true, fy: body.fy, entity_basis: 'proprietor', basis_assumed: true, basis_rule: 'it_act_wdv', entity_note: 'The entity type is not set for this shop yet, so depreciation was worked as a proprietor (Income-tax Act written-down value).',
