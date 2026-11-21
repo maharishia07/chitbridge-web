@@ -267,6 +267,7 @@ jobs:
           node e2e/ctr-12-refused-key-reenrols.test.cjs
           node tests/grey-setup.test.cjs
           node e2e/ctr-13-hour-group-wording.test.cjs
+          node e2e/till-walkaa-1129.test.cjs
           node e2e/ctr-146-counter-name.test.cjs
           node e2e/ord-41-attach-ui-wired.test.cjs
           node e2e/ord-43-unresolved-order-ref.test.cjs
