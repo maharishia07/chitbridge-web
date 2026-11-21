@@ -122,7 +122,7 @@
     (onlyId ? root.Promise.resolve() : practiceFirst()).then(function () {
       var lazy = !onlyId && isFirm() && !!root.IntersectionObserver;
       ctx.shown().forEach(function (card) {
-        if (!card || card.state !== 'built' || !card.facts || (onlyId && card.id !== onlyId)) return;
+        if (!card || card.state !== 'built' || card.ready === false || !card.facts || (onlyId && card.id !== onlyId)) return;
         var spot = ctx.$('[data-testid="shell-facts-' + card.id + '"]');
         if (!spot) return;
         if (lazy)
