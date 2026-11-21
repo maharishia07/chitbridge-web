@@ -3,6 +3,8 @@
  * NET-13 owner sees the network storefront status line (cap-admin.js) · NET-44 a remote supplier's refusal is said in the server's words (app.html supEmptyAllWords)
  * NET-45 a failed catalogue fetch is tried once more and the reason logged (app.html supCatalogueFetch) · UX-123 message times show in the shop's zone (helpers.js shopDateTime)
  * CTR-79 the kitchen surface is gated by tillOpt().kot (till.html kotOn).
+ * CARD      12-suppliers-and-procurement/supplier-acceptance-readiness
+ * CARD      12-suppliers-and-procurement/supplier-list
  * Run: node tests/chunk0-web-proofs2.test.cjs
  */
 'use strict';

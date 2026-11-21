@@ -3,6 +3,7 @@
  * NET-18 uploads run one after another (attach-ui.js) · NET-20 no window.confirm fallback (cap-network.js) · NET-24 no FX table (shop.html)
  * OPS-52 ruleMove places against the full list (cap-folders.js) · OPS-53 empty requirement list = no usable list (app.html supRequiredScope)
  * OPS-54 a standard is met when any one of its documents is met (same function).
+ * CARD      12-suppliers-and-procurement/supplier-acceptance-readiness
  * Source-reading + function extraction, no browser. Run: node tests/chunk0-proofs.test.cjs
  */
 'use strict';
