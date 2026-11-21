@@ -236,18 +236,15 @@
     var named = names.filter(function (n, i) { return n && names.indexOf(n) === i; });
     return named.length ? [sayText('Was held by {names}.', { names: named.join(', ') })] : [];
   }
-  /** the one outcome line of a run: some done and one refused · refused · or all done with the skipped named */
-  function sayRunOutcome(sum, opts, rows, wordsFor) {
+  function sayRunOutcome(sum, opts, rows, wordsFor) { /* the one outcome line of a run: some done and one refused · refused · or all done with the skipped named */
     if (sum.refused && sum.done) showOutcome('bad', sayText('{n} {noun} assigned, {m} refused.', { n: sum.done, noun: nounOf(opts, sum.done), m: Math.max(rows.length - sum.done - sum.skipped.length, 0) }), [sum.refused].concat(skipLines(sum.skipped)), sum.undo); /* the part that went through keeps its Undo and its count; the refusal is the reason */
     else if (sum.refused) showOutcome('bad', sum.refused, []);
     else showOutcome(sum.skipped.length && !sum.done ? 'bad' : 'good', wordsFor(sum.done), skipLines(sum.skipped).concat(replacedLine(sum.before)), sum.undo);
   }
-  /** after the calls: say the outcome (good · bad), clear the ticks, keep the last run's reload, then reload the list */
-  function finishRun(sum, opts, rows, wordsFor) {
+  function finishRun(sum, opts, rows, wordsFor) { /* after the calls: say the outcome (good · bad), clear the ticks, keep the last run's reload, then reload the list */
     sayRunOutcome(sum, opts, rows, wordsFor);
     if (opts.listKey && root.CBList && root.CBList.reset) root.CBList.reset(opts.listKey, true); /* W11: the ticks go after every assign; the search and filters stay */
-    if (last) last.reload = opts.reload;
-    return opts.reload ? opts.reload() : null;
+    if (last) last.reload = opts.reload; return opts.reload ? opts.reload() : null;
   }
   /** one call per role (the api takes one role per call); counts, skip sentences and previous holders are added; the first refusal stops the run and its sentence is shown */
   function runCalls(opts, rows, target, note, wordsFor) {
@@ -255,16 +252,13 @@
     return byRole(rows, opts.roleOf).reduce(function (chain, group) {
       return chain.then(function () {
         if (sum.refused) return null;
-        var body = { plug: opts.plug, role: group.role, subject_ids: group.rows.map(function (r) { return opts.subjectOf(r); }), target_actor_id: target };
-        if (note) body.note = note;
+        var body = { plug: opts.plug, role: group.role, subject_ids: group.rows.map(function (r) { return opts.subjectOf(r); }), target_actor_id: target }; if (note) body.note = note;
         /* opts.write: a plug whose rows are not chits (CRM follow-ups) is written by its own route; it answers like assign-bulk: { ok, sentence?, assigned, skipped, previous[{subject_id, actor_id}] } */
         return (opts.write ? opts.write(body.subject_ids, target, note) : call('POST', ASSIGN_PATH, body)).then(function (r) {
           if (opts.write) r = { ok: r.ok !== false, body: { assigned: r.assigned, skipped: r.skipped, previous: r.previous, detail: r.sentence } };
           if (!r.ok) { sum.refused = refusalOf(r); return null; }
-          sum.done += Number(r.body.assigned) || 0;
-          sum.skipped = sum.skipped.concat(r.body.skipped || []);
-          sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous, opts.write));
-          (r.body.previous || []).forEach(function (p) { if (p.actor_id && p.actor_id !== target) sum.before.push(nameById[p.actor_id] || ''); });
+          sum.done += Number(r.body.assigned) || 0; sum.skipped = sum.skipped.concat(r.body.skipped || []);
+          sum.undo = sum.undo.concat(undoOf(opts.plug, group.role, r.body.previous, opts.write)); (r.body.previous || []).forEach(function (p) { if (p.actor_id && p.actor_id !== target) sum.before.push(nameById[p.actor_id] || ''); });
         });
       });
     }, root.Promise.resolve()).then(function () { return finishRun(sum, opts, rows, wordsFor); });

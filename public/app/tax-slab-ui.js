@@ -386,3 +386,7 @@ function cbcatTaxChipWords(t) {
   if (t.rate === null || t.rate === undefined) return t.name || '?';
   return ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' ' + t.rate + '%';
 }
+/** the pack's own question for a 0% rate (one button per kind), or null when the rate is not 0 or the page has no such question */
+function cbKindQuestionFor(rate) {
+  return Number(rate) === 0 && typeof cbKindAskOf === 'function' ? cbKindAskOf(shopReg()) : null;
+}
