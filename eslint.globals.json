@@ -49,6 +49,7 @@
 },
 "files":{
  "public/app/accounts-shell.js":["public/accounts.html","public/app.html","public/authority-forms.html","public/catalogue.html","public/chart-sample.html","public/crm.html","public/employees.html","public/finance.html","public/know-your-business.html","public/network.html","public/operations.html","public/settings.html","public/shop.html","public/store.html","public/tasks.html","public/ui-standard.html"],
+ "public/app/accounts-start.js":["public/accounts.html"],
  "public/app/assets.js":["public/app.html"],
  "public/app/attach-ui.js":["public/accounts.html","public/app.html","public/crm.html","public/finance.html"],
  "public/app/avatar.js":["public/accounts.html","public/app.html","public/authority-forms.html","public/bank-demo.html","public/catalogue.html","public/chart-sample.html","public/conversion-lab.html","public/country-lab.html","public/crm.html","public/embed.html","public/employees.html","public/finance.html","public/know-your-business.html","public/list-lab.html","public/network-design.html","public/network-shop.html","public/network.html","public/offer-lab-next.html","public/operations.html","public/product-lab.html","public/promo.html","public/settings.html","public/shell-lab.html","public/shop.html","public/signin-lab.html","public/standards.html","public/store.html","public/tasks.html","public/testing.html","public/till.html","public/ui-standard.html"],

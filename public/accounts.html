@@ -80,7 +80,7 @@ function go() {
 <script src="/app/books-grant-api.js"></script><script src="/app/books-grant-words.js"></script><script src="/app/books-grant-member.js"></script><script src="/app/books-acting.js"></script><script src="/app/books-actions-view.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>
+<script src="/app/accounts-shell.js"></script><script src="/app/accounts-start.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
@@ -728,11 +728,6 @@ function todoRow(item, index) {
     ${todoButton(item, index, notChecked)}
   </div>`;
 }
-/** addBankTodo(list) → adds the bank row to the To do list once (kept out of accTodo so that stays short) */
-function addBankTodo(list) {
-  const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
-  if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
-}
 /** accTodo(body) → paints the To do list from the books' todo read, or the failure card with Try again */
 async function accTodo(body) {
   const g = ACC.gen;
@@ -914,24 +909,6 @@ function paintFrame() {
   chrome(v0);
   if (v0 !== 'ledgers')
     $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
-}
-/** startTodoEarly(known) → SPEED (batch 1128, speed2): when the Ledger is known on and To do is the first view, the To do read leaves with the health read */
-function startTodoEarly(known) {
-  if (known === true && (hashPageOf() === 'todo' || (!NAV.some((item) => item[0] === hashPageOf()) && CBBooksActing.firstTab() === 'todo'))) {
-    ACC.todoEarly = api('booksTodo').then((r) => ({ r }), (e) => ({ e }));
-  }
-}
-/** otherShopTraces() → the other shops' fingerprints this browser holds; none when the read fails */
-async function otherShopTraces() {
-  try {
-    return await CBOnePerson.traces(MINE);
-  } catch (_) {
-    return { others: [] };
-  }
-}
-/** knownLedgerOn() → whether the avatar already read the Ledger switch for this page (true · false), or null when it has not */
-function knownLedgerOn() {
-  return window.CBAvatar && CBAvatar.ledgerOn ? CBAvatar.ledgerOn() : null;
 }
 async function start() {
   SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
