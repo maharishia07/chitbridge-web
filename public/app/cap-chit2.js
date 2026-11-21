@@ -140,6 +140,21 @@ function c2Back() {
    opens as an overlay, so there is no in-place expansion left to toggle. Leaving a dead toggle behind would
    invite the next person to reach for it. */
 
+/** the roster the Assign dropdown needs, read here when no modal has filled UI.actors yet */
+async function c2LoadRoster() {
+  /* ⚠️ LOAD THE ROSTER OURSELVES. `UI.actors` is only populated by the assign/bulk-assign modals in app.html, so
+     arriving here directly left the Assign dropdown EMPTY — no error, just a select with nothing in it and no
+     way to guess why. Anything this screen needs, this screen fetches. */
+  if ((UI.actors || []).length) return;
+  try {
+    var reply = await api('actors');
+    UI.actors = (reply || []).map(function (x) {
+      return typeof mapApiActor === 'function' ? mapApiActor(x) : x;
+    });
+  } catch (e) {
+    UI.actors = [];
+  }
+}
 async function loadChit2() {
   var asked = C2.id; /* the chit this read is for: an answer for another chit is never kept (GF-07 M3) */
   C2.busy = true;
@@ -160,19 +175,7 @@ async function loadChit2() {
       return typeof mapApiMsg === 'function' ? mapApiMsg(item) : item;
     });
     C2.err = null;
-    /* ⚠️ LOAD THE ROSTER OURSELVES. `UI.actors` is only populated by the assign/bulk-assign modals in app.html, so
-       arriving here directly left the Assign dropdown EMPTY — no error, just a select with nothing in it and no
-       way to guess why. Anything this screen needs, this screen fetches. */
-    if (!(UI.actors || []).length) {
-      try {
-        var reply = await api('actors');
-        UI.actors = (reply || []).map(function (x) {
-          return typeof mapApiActor === 'function' ? mapApiActor(x) : x;
-        });
-      } catch (e) {
-        UI.actors = [];
-      }
-    }
+    await c2LoadRoster();
   } catch (e) {
     if (asked !== C2.id) return;
     C2.err = (e && e.message) || 'Could not open this chit.';
@@ -1016,12 +1019,15 @@ function c2ApplyProgress(r) {
 }
 
 var C2_DELIVERING = {}; /* a delivery is ADDITIVE: a double tap would record it twice, so one press per line at a time (GF-07 M13) */
+/** the quantity of a delivery line: what is typed, else the pending quantity the empty box shows (WX-P2P-19: Delivered records what it shows, never "How many?" over a 2) */
+function c2DeliverQuantity(lineId, back) {
+  var box = document.getElementById('c2dq_' + lineId);
+  var typed = box ? box.value.trim() : '';
+  return Number(typed || (!back && box && /^\d+(\.\d+)?$/.test(box.placeholder) ? box.placeholder : ''));
+}
 async function c2Deliver(line_id, unit, back) {
   if (C2_DELIVERING[line_id]) return;
-  var el = document.getElementById('c2dq_' + line_id);
-  /* WX-P2P-19: the empty box SHOWS the pending quantity (its placeholder) — Delivered records what it shows, never "How many?" over a 2 */
-  var typed = el ? el.value.trim() : '';
-  var q = Number(typed || (!back && el && /^\d+(\.\d+)?$/.test(el.placeholder) ? el.placeholder : ''));
+  var q = c2DeliverQuantity(line_id, back);
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
   C2_DELIVERING[line_id] = true;
