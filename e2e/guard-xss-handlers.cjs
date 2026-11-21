@@ -25,6 +25,17 @@ const allowLeft = /^(till\.html|app\.html|lab[\\/]combo-mode\.js)$/;
 const leaks = walk(root).filter((f) => /\.(html|js)$/.test(f) && !allowLeft.test(path.relative(root, f)))
   .flatMap((f) => { const src = fs.readFileSync(f, 'utf8'); const out = []; let m; while ((m = inHandlerArg.exec(src))) out.push(path.relative(root, f) + ':' + (src.slice(0, m.index).split('\n').length)); return out; });
 t('no esc( inside a quoted JS argument of an inline handler (use escJs)', leaks.length === 0, leaks.slice(0, 8).join(', ') + (leaks.length > 8 ? ' … ' + leaks.length : ''));
+/* reviews7: the regex above needs "(" or "," before the quote; the scan below rebuilds the handler from the concatenation and finds EVERY form
+   (ontoggle="X[\'' + esc(k) …, ="_ARMED=\'rm:' + esc(id) …, template literals). */
+const { scanHandlerEsc } = require('./lib/handler-esc-scan.cjs');
+const leaks2 = walk(root).filter((f) => /\.(html|js)$/.test(f) && !allowLeft.test(path.relative(root, f)))
+  .flatMap((f) => scanHandlerEsc(fs.readFileSync(f, 'utf8')).map((h) => path.relative(root, f) + ':' + h.line));
+t('no esc( inside a single-quoted JS string of ANY inline handler, any concatenation form (use escJs)', leaks2.length === 0, leaks2.slice(0, 8).join(', ') + (leaks2.length > 8 ? ' … ' + leaks2.length : ''));
+const forms = [
+  "' ontoggle=\"S[\\'' + esc(k) + '\\']=1\"'", "'<b onclick=\"go(\\'' + esc(k) + '\\')\">'", "' onclick=\"A=\\'rm:' + esc(k) + '\\'\"'",
+  "`<b onclick=\"go('${esc(k)}')\">`", "'<b onclick=\"go(\\'' + escJs(k) + '\\')\">'"
+];
+t('the scan finds the four unsafe forms and passes the escJs one', forms.map((s) => scanHandlerEsc(s).length).join('') === '11110', forms.map((s) => scanHandlerEsc(s).length).join(''));
 const escJs = new Function(fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function esc\(v\)[\s\S]*?\n\}/)[0] + fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function escJs\(v\)[\s\S]*?\n\}/)[0] + '; return escJs;')();
 const attr = escJs(payload);
 const decoded = attr.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');

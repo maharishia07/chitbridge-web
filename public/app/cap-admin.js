@@ -7652,7 +7652,7 @@ function netCatBrandHTML(c, stores) {
       ? '<details data-testid="netc-shared"' +
         (_NETC_SHOW[key] || nOut || nAt || (c.missing || []).length ? ' open' : '') +
         ' ontoggle="_NETC_SHOW[\'' +
-        esc(key) +
+        escJs(key) +
         '\']=this.open" style="margin-top:8px"><summary data-testid="netc-shared-open" style="cursor:pointer;font-size:var(--fs-2)">' +
         esc(tx('With your stores') + ' (' + (c.published || []).length + ') — ' + tx('tick to withdraw')) +
         '</summary>' +
@@ -7993,7 +7993,7 @@ function netMembersHTML(list) {
             : '<button data-cbsid="CMP008" data-testid="netm-remove-' +
               index +
               '" onclick="_NETO_ARMED=\'rm:' +
-              esc(item.edge_id) +
+              escJs(item.edge_id) +
               '\';loadSettings()">' +
               tx('Remove') +
               '</button>';
