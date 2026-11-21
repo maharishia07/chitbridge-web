@@ -307,7 +307,7 @@ function route(S, r) {
           await p.goto(base + '/');
           await settle(p);
           let factText = '';
-          if (vp.w < 700) { await p.click('[data-testid="shell-nav-more"]').catch(() => {}); await p.click('[data-testid="shell-row-labs"]').catch(() => {}); }   /* a phone: More, then the Labs row */
+          await p.click('[data-testid="ix2-foot-labs"]').catch(() => {}); await p.waitForTimeout(300);   /* 1128: the one Home keeps the Lab cards behind the Labs foot word at every width (More and shell-nav are hidden under .ix-on) */
           if (!st.signedOut) {
             /* N18: a card's facts come from its manifest `facts` URL; the Labs have no facts read yet (named in the N18 PR), so the spot is empty by design */
             factText = (await p.textContent('[data-testid="' + lab.fact + '"]').catch(() => '')) || '';
