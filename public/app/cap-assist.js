@@ -88,12 +88,20 @@
   function readOnly() {
     return !!(A.may && A.may.ok === false && !A.may.unknown);
   }
+  /** the line that says the answer came from Assist (empty when the person wrote it) */
+  function draftedNote() {
+    return A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('Assist drafted this. Read it before you accept.')) + '</div>' : '';
+  }
+  /** the review heading: refine a saved answer, or read what Assist drafted */
+  function reviewTitleWords() {
+    return A.qa && A.qa.id ? 'Refine this answer' : 'What Assist drafted';
+  }
   function reviewHTML() {
     var q = A.qa || {};
     if (readOnly()) return '<div class="sub" data-testid="ca-readonly">' + esc(A.may.say || A.may.why || '') + '</div>';
     return (
       '<div class="tk-h">' +
-      esc(T(A.qa && A.qa.id ? 'Refine this answer' : 'What Assist drafted')) +
+      esc(T(reviewTitleWords())) +
       '</div>' +
       '<label class="sub" for="ca_q">' +
       esc(T('Question')) +
@@ -108,7 +116,7 @@
       '</label><textarea data-cbsid="TSK007-T01" class="inp" id="ca_a" data-testid="ca-a" rows="4" maxlength="4000">' +
       esc(q.a || '') +
       '</textarea>' +
-      (A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('Assist drafted this. Read it before you accept.')) + '</div>' : '') +
+      draftedNote() +
       '<label class="sub" for="ca_c">' +
       esc(T('Where it shows (screens, or * for everywhere)')) +
       '</label><input data-cbsid="TSK007-I02" class="inp" id="ca_c" data-testid="ca-c" autocomplete="off" value="' +
@@ -167,6 +175,7 @@
         onFail: function (w, e) {
           $('ca_out').textContent = e && e.status === 503 ? T('Assist is not connected on this server. Write the answer yourself.') : w;
         },
+        /** the draft arrived: fill the review with it, or say that Assist could not draft */
         outcome: function (r) {
           var text = r && (r.draft || (r.data && r.data.draft));
           if (!text) {

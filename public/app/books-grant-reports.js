@@ -44,13 +44,23 @@
     { k: 'bas', label: 'Tax return', ep: 'readReturns', day: 'on', rows: basRows, cols: [['code', 'Box'], ['label', 'What'], ['amount_minor', 'Amount', grantKit.MONEY], ['tax_minor', 'Tax', grantKit.MONEY]], facts: [['net_minor', 'To pay or refund']] }
   ];
 
+  /** a month's profit as the server sent it; when it sent none, the sales when there were any (else nothing) */
+  function monthProfit(p) {
+    if (p.profit_minor !== undefined && p.profit_minor !== null) return p.profit_minor;
+    return Number(p.sales_minor) > 0 ? p.sales_minor : null;
+  }
+  /** who locked the month and when, who opened it again and why: one line each, the server's trail */
+  function lockNoteHtml(who) {
+    var lines = (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []);
+    return lines.map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('');
+  }
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
   function monthRows(answer) {
     var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
     return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
-      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: root.CBLockWords ? root.CBLockWords.stateWord(p.status) : grantKit.words(p.status), profit_minor: p.profit_minor !== undefined && p.profit_minor !== null ? p.profit_minor : Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
+      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: root.CBLockWords ? root.CBLockWords.stateWord(p.status) : grantKit.words(p.status), profit_minor: monthProfit(p), lock_note: lockNoteHtml(who) });
     });
   }
   /** YE-F-11: the return's boxes that carry a figure, as the server sent them (nothing added up here) */

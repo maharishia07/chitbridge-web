@@ -91,6 +91,13 @@
     if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.none), sym: '○' };
     return { key: 'nodoc', rank: 2, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.nodoc), sym: '○' };
   }
+  /** the look of the chip: the state's own, but a "no source" chip says what to do (the chip's word only; stateOf for filter, sort and count stays No source) */
+  function chipLook(control, record) {
+    var look = stateOf(record);
+    if (look.key !== 'nodoc') return look;
+    var mayAttach = control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach();
+    return { key: look.key, tone: look.tone, sym: look.sym, word: evidenceText(mayAttach ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) };
+  }
 
   function useEvidence(cfg) {
     addCss();
@@ -107,8 +114,7 @@
         var record = entry && entry.evidence;
         if (!record || !entry.entry_id) return '';
         if (!seen[String(entry.entry_id)]) control.ingest([entry]);
-        var look = stateOf(record);
-        if (look.key === 'nodoc') look = { key: look.key, tone: look.tone, sym: look.sym, word: evidenceText(control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach() ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) }; /* the chip's word only; stateOf (filter, sort, count) stays No source */
+        var look = chipLook(control, record);
         return (
           '<button type="button" class="ev ev-' + look.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + look.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '"' + (look.tone === 'quiet' ? ' title="' + esc(look.word) + '" aria-label="' + esc(look.word) + '"' : '') + '>' +
           '<span aria-hidden="true">' + look.sym + '</span>' + (look.tone === 'quiet' ? '' : ' ' + esc(look.word)) + '</button>' /* a REPEATED state (no file / no source) is a mark, its word in the title and for a screen reader: 50 rows said 'Attach receipt' 50 times; the Needs-attention chips say it once with the count */

@@ -132,7 +132,11 @@
     if ((key === 'sales_minor' || key === 'profit_minor') && nothing) return grantKit.words('No income');
     if ((key === 'dr_minor' || key === 'cr_minor') && (nothing || String(value) === '0')) return '';
     if (/^age_/.test(key)) return agedMoney(key, value);
-    return minorWords(row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(value))) : value);
+    return minorWords(owedValue(row, key, value));
+  }
+  /** a supplier's balance is what is owed, so no minus; every other value as it came */
+  function owedValue(row, key, value) {
+    return row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(value))) : value;
   }
   /** an aged bucket: an empty one is blank, as the leaders print it (W21); one never read is a dash */
   function agedMoney(key, value) {

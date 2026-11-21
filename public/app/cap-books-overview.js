@@ -83,6 +83,10 @@ function ovTile(tid, label, minor, note, href) {
 function ovChange(fig) {
   return fig && fig.change_bp != null ? bkPct(fig.change_bp, true) + ' ' + esc(tx('on last year')) : '';
 }
+/** the cash tile is a wide words tile only when the server sent words and no series for a chart */
+function ovCashWide(cash) {
+  return !!(cash && cash.words && !(cash.series && cash.series.length));
+}
 /** the headline tiles (sales · income · profit · to collect · to pay · cash): a figure the server did not send has no tile */
 function ovTiles(answer) {
   var salesFig = answer.sales || {},
@@ -94,7 +98,7 @@ function ovTiles(answer) {
     answer.to_collect ? ovTile('collect', 'To collect', answer.to_collect.minor, '', '#dues') : '',
     answer.to_pay ? ovTile('pay', 'To pay', answer.to_pay.minor, '', '#dues') : ''
   ];
-  if (cash && cash.words && !(cash.series && cash.series.length)) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(MC.cashWords(cash, ovDeps())) + '</span></a>');
+  if (ovCashWide(cash)) tiles.push('<a class="ov-tile ov-wide" href="/finance.html#/cash" data-cbsid="' + OV_CODES.cash + '" data-testid="ov-cash"><span class="ov-l">' + esc(tx('Cash ahead, 30 days')) + '</span><span class="ov-n">' + esc(MC.cashWords(cash, ovDeps())) + '</span></a>');
   return '<div class="ov-tiles">' + tiles.join('') + '</div>';
 }
 /** the words deps the adapters (app/mis-charts.js) take: the one text, money and date makers of this page */
