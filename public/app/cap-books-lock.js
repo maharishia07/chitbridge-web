@@ -53,6 +53,7 @@ function bkLockRule(info, state) {
 /** a month's income cell: a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
 function bkLockSalesWord(info) {
   if (info && info.sales_minor === undefined) return '—';
+  if (info && info.profit_minor !== undefined && info.profit_minor !== null) return bkMoney(info.profit_minor); /* C-F-01: the P&L's income less expenses before tax, a loss month reads its loss */
   return info && info.sales_minor ? bkMoney(info.sales_minor) : esc(tx('No income'));
 }
 /** one month's row of the lock table: its state with who did it, the entries and sales, and the button the SERVER says may be pressed (owner only) with the reason it may not */
