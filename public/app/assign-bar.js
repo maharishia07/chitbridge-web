@@ -54,13 +54,14 @@
   assignApi.hasHolders = function (rows) { return (rows || []).some(function (r) { return Array.isArray(r.holders); }); };
 
   /* ── the one vocabulary, quick views and the filter by person (L12) ───────────────────────── */
-  /** Mine · Unassigned · Everyone: three views over the one `held` filter (list-ctl `views`, merge on) */
-  assignApi.quickViews = function () {
-    return { merge: true, tid: 'assign-views', items: [
+  /** Mine · Unassigned · Everyone: three views over the one `held` filter (list-ctl `views`, merge on). STAFFPICK (Athi 21 Nov): a seat that sees only its own and the unassigned (`staff`) is offered Mine and Unassigned, never Everyone (the server sends no other rows) */
+  assignApi.quickViews = function (staff) {
+    var items = [
       { key: 'held-mine', label: tr('Mine'), filt: { held: 'mine' } },
-      { key: 'held-none', label: tr('Unassigned'), filt: { held: 'none' } },
-      { key: 'held-all', label: tr('Everyone'), filt: {} }
-    ] };
+      { key: 'held-none', label: tr('Unassigned'), filt: { held: 'none' } }
+    ];
+    if (!staff) items.push({ key: 'held-all', label: tr('Everyone'), filt: {} });
+    return { merge: true, tid: 'assign-views', items: items };
   };
   /** the `held` filter: Unassigned · Mine · each person who holds something in these rows (the server's holder ids), so "what does Ben hold?" can be asked */
   assignApi.heldFilter = function (rows) {
@@ -271,7 +272,7 @@
   }
   /**
    * CBAssign.queue(q) → the options a list merges into its CBList.mount: THE WORK-QUEUE CAPABILITY (Athi 19 Nov: "the capability, so we can use it anywhere"). q = the assign options (plug · noun · nounMany · subjectOf · roleOf · said · reload · write? · heldOf? · flag?)
-   * + { key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
+   * + { staff: true when this seat sees only its own and the unassigned (Mine · Unassigned, the take button reads Pick up) · key: the list's key (its ticks are cleared after every assign, hand-over or back to pool: W11), rows (each with `holders`), everyone: the server's verdict that this seat sees every row (the owner, a manager) }.
    * → { views (Mine · Unassigned · Everyone), bulk (Assign to me · Assign to… · Hand over · Back to pool), bulkAlways, preset (the opening view: Mine for a seat that holds work or may not assign, Everyone otherwise), filter (the Held by filter, list shape) }; {} when no row carries holders.
    * Nothing here names a trade: the noun, the door (plug / write) and the rows come from the screen. */
   assignApi.queue = function (q) {
@@ -279,7 +280,7 @@
     if (!assignApi.hasHolders(rows)) return {};
     var holds = !!me && rows.some(function (r) { return held.match(r, 'mine'); });
     var opts = Object.assign({ listKey: q.key }, q);
-    return { views: assignApi.quickViews(), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsTake(q), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
+    return { views: assignApi.quickViews(q.staff === true), bulk: assignApi.bulk(opts), bulkAlways: assignApi.showsTake(q), preset: { filt: me && (holds || !q.everyone) ? { held: 'mine' } : {} },
       emptyFor: function (state) { return queueEmpty(opts, rows, state); },
       filter: { key: 'held', label: tr('Held by'), all: tr('Anyone'), options: held.options.map(function (o) { return { v: o[0], label: tr(o[1]) }; }), match: held.match } };
   };
@@ -305,7 +306,13 @@
     var words = holder.id
       ? function (n) { return sayText('{n} {noun} assigned to {who}.', { n: n, noun: nounOf(opts, n), who: name }); }
       : function (n) { return sayText('{n} {noun} back in the pool.', { n: n, noun: nounOf(opts, n) }); };
-    return runCalls(opts, rows, holder.id, holder.note, words);
+    var named = namesOf(opts, rows);
+    return runCalls(opts, rows, holder.id, holder.note, named ? function (n) { return words(n).slice(0, -1) + ': ' + named + '.'; } : words);
+  }
+  /** STAFFPICK: the confirmation names what moved when the list can name its rows (opts.nameOf) and there are at most three */
+  function namesOf(opts, rows) {
+    if (typeof opts.nameOf !== 'function' || rows.length > 3) return '';
+    return rows.map(function (r) { return opts.nameOf(r) || ''; }).filter(Boolean).join(', ');
   }
   function heldOf(opts) { return opts.heldOf || function (r) { return Array.isArray(r.holders) && r.holders.length > 0; }; }
 
@@ -316,7 +323,8 @@
   assignApi.bulk = function (opts) {
     if (!assignApi.showsTake(opts)) return [];
     assignApi.mount(opts);
-    var held = heldOf(opts), take = { id: 'me', label: tr('Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    var held = heldOf(opts), take = { id: 'me', label: tr(opts.staff === true ? 'Pick up' : 'Assign to me'), run: function (rows) { takeFor(opts, rows); } };
+    if (opts.staff === true) return staffBulk(opts, take, held); /* STAFFPICK: a staff seat's bar is Pick up · Release · Hand to… */
     if (!assignApi.showsBar(opts.said)) return [take];
     return [
       take,
@@ -335,6 +343,21 @@
       } }
     ];
   };
+
+  /** STAFFPICK (Athi 21 Nov): the staff seat's bar over the ticked clients, through the ONE assign-bulk: Pick up (to me) · Release (mine back to the unassigned queue) · Hand to… (a colleague); the server refuses a client someone else holds */
+  function staffBulk(opts, take, held) {
+    return [
+      take,
+      { id: 'release', label: tr('Release'), run: function (rows) {
+        var mine = rows.filter(held);
+        if (!mine.length) return showOutcome('bad', tr('Nothing ticked is yours to release.'), []);
+        return apply(opts, mine, { id: null, note: '' });
+      } },
+      { id: 'handto', label: tr('Hand to…'), run: function (rows) {
+        pick({ title: 'Hand to…', held: rows.some(held), flag: opts.flag }, function (holder) { apply(opts, rows, holder); });
+      } }
+    ];
+  }
 
   /* ── Hand over all (L11): everything one person holds, to another person or back to the pool ───────────── */
   /** the Undo groups of a hand-over-all answer: only chit entries can be put back through assign-bulk; ONE follow-up entry (no undo route yet) means no Undo at all */
