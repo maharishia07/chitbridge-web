@@ -22,6 +22,7 @@
  *   vendor/fixtures  measure.cjs VENDOR_DIR (node_modules, vendor, fixtures, build output) and *.min.*
  *   copies           measure.cjs ADOPTED_HEAD in the first 700 bytes (an engines copy: api lib/*, web public/*), and by path web public/engine/*
  *                    and public/till.html: judged at the master (chitbridge-engines src/, api tools/tally-connector/till.html)
+ *   web masters      api tools/tally-connector/{cb-words,strings-hi,strings-ar}.js: byte copies of web public/app/, judged at the web master (measure.cjs isWebMasteredInApi)
  *   generated        web public/app/screens.js, assets.js, strings-*.js, judged at the generator in the docs repo
  * CUSTOMER-FACING (computed): web = the 19 pages of e2e/proof/pages.json and every file they load by <script src> (HTML comments stripped) ·
  *   api = routes/, lib/ and tools/tally-connector, minus routes/testing.js, scripts and tests · engines = all of src/.
@@ -31,7 +32,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR } = require('./measure.cjs');
+const { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, isWebMasteredInApi } = require('./measure.cjs');
 
 const STAMP_FILE = 'filesize.stamp';
 const BASELINE_FILE = 'filesize.baseline.json';
@@ -43,7 +44,7 @@ const GENERATED = /^public\/(app\/(screens|assets|strings-[^/]*)\.js|engine\/.*|
 /** is this tracked path not counted (not code, vendor or fixture, minified, generated)? */
 function isExcluded(rel) {
   const folders = rel.split('/').slice(0, -1);
-  return !COUNTED.test(rel) || /\.min\.[a-z]+$/.test(rel) || GENERATED.test(rel) || folders.some((part) => VENDOR_DIR.test(part));
+  return !COUNTED.test(rel) || /\.min\.[a-z]+$/.test(rel) || GENERATED.test(rel) || isWebMasteredInApi(rel) || folders.some((part) => VENDOR_DIR.test(part));
 }
 
 /** the number of lines in a text: a final line without a newline still counts */

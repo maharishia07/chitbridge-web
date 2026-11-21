@@ -49,6 +49,9 @@ const CODE_FILE = /\.(js|cjs|mjs|html)$/;
 const ADOPTED_HEAD = /ADOPTED from chitbridge-engines|GENERATED — DO NOT EDIT\. Written by chitbridge-api\/scripts\/vendor-till\.cjs/;
 const VENDORED_TILL = 'public/till.html', HEAD_BYTES = 700, isVendoredTill = (relPath) => relPath === VENDORED_TILL || relPath === 'public/app/till-dayrep.js'; /* the till and its parts: vendored byte copies, judged at the api master (1128) */
 
+/* api kit byte copies whose MASTER is in the web (public/app/): written by chitbridge-api/scripts/vendor-till.cjs WEB_VOICE_KIT, judged at the web master, never in the api (tillLocale 1128) */
+const isWebMasteredInApi = (relPath) => /^tools\/tally-connector\/(cb-words|strings-hi|strings-ar)\.js$/.test(relPath);
+
 /** every code file under one scope entry (a folder walked, or a single file) */
 function walkDir(dir, out) {
   let entries;
@@ -178,6 +181,7 @@ function inScope(repo, relPath, text) {
   )
     return false;
   if (repo === 'web' && isVendoredTill(relPath)) return false;
+  if (repo === 'api' && isWebMasteredInApi(relPath)) return false;
   return !isNotOwnText(relPath, text);
 }
 
@@ -766,4 +770,4 @@ function fileFacts(file) {
   return factsFromText(file.rel, fs.readFileSync(file.abs, 'utf8'));
 }
 
-module.exports = { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, collect, inScope, chunks, parse, factsFromText, fileFacts };
+module.exports = { isWebMasteredInApi, ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, collect, inScope, chunks, parse, factsFromText, fileFacts };
