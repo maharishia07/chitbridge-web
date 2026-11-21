@@ -110,8 +110,8 @@
         var look = stateOf(record);
         if (look.key === 'nodoc') look = { key: look.key, tone: look.tone, sym: look.sym, word: evidenceText(control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach() ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) }; /* the chip's word only; stateOf (filter, sort, count) stays No source */
         return (
-          '<button type="button" class="ev ev-' + look.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + look.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '">' +
-          '<span aria-hidden="true">' + look.sym + '</span> ' + esc(look.word) + '</button>'
+          '<button type="button" class="ev ev-' + look.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + look.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '"' + (look.tone === 'quiet' ? ' title="' + esc(look.word) + '" aria-label="' + esc(look.word) + '"' : '') + '>' +
+          '<span aria-hidden="true">' + look.sym + '</span>' + (look.tone === 'quiet' ? '' : ' ' + esc(look.word)) + '</button>' /* a REPEATED state (no file / no source) is a mark, its word in the title and for a screen reader: 50 rows said 'Attach receipt' 50 times; the Needs-attention chips say it once with the count */
         );
       },
       sheet: function (entry, o) {

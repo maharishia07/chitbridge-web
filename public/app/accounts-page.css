@@ -439,3 +439,5 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
   #bk_body [data-testid="pr-close-card"] .supacts{margin:0}
   #bk_body .pe-fold{max-width:none;padding:6px 14px;margin:6px 0 0;gap:4px}#bk_body .pe-fold>summary{cursor:pointer}
 }
+/* the repeat rule (Athi 21 Nov): an action that is the same on every row shows on the row you point at or tab into, not 40 times down the page (Dues: Receive and Remind x40). Opacity, not display: a keyboard still reaches it and the row does not jump. A touch screen has no pointing, so it keeps them. */
+@media (hover:hover){.cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-pay-"],.cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-remind-"]{opacity:0}}
