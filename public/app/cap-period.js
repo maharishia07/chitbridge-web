@@ -27,6 +27,7 @@ if (typeof EP !== 'undefined') {
     perAssetAdd: { m: 'POST', p: '/api/books/assets' },
     perAssetSell: { m: 'POST', p: '/api/books/assets/:id/dispose' },
     perDepRun: { m: 'POST', p: '/api/books/depreciation/run' },
+    perDepSchedule: { m: 'GET', p: '/api/books/depreciation/schedule' },
     perRecList: { m: 'GET', p: '/api/books/recurring' },
     perRecAdd: { m: 'POST', p: '/api/books/recurring' },
     perRecPatch: { m: 'PATCH', p: '/api/books/recurring/:id' },
@@ -185,6 +186,15 @@ async function peAssetsView(body) {
     '<div id="pa_form" class="pe-slot"></div><div id="pa_out" class="pe-slot"></div><div id="bkl_assets" data-testid="assets-list"></div>';
   await peAssetsList();
 }
+/** the method and the rate in words, as the server gave them (the pack's, never worked out here): "Income-tax WDV · 40% a year · life 3 years" */
+function peTerms(a) {
+  const parts = [];
+  const how = PE_BASIS[a.method] || (a.method ? String(a.method).replace(/_/g, ' ') : '');
+  if (how) parts.push(tx(how));
+  if (a.rate_pct != null) parts.push(txf('{r}% a year', { r: a.rate_pct }));
+  if (a.life_years != null) parts.push(txf('life {n} years', { n: a.life_years }));
+  return parts.join(' · ');
+}
 async function peAssetsList() {
   const host = peEl('bkl_assets');
   if (!host) return;
@@ -227,7 +237,10 @@ async function peAssetsList() {
       },
       { key: 'class', label: tx('Kind'), prio: 4, sort: 'class', w: 170, html: true, cell: (a) => esc(tx(PE_CLASS_WORD[a.asset_class] || a.asset_class)) },
       { key: 'cost', label: tx('Cost'), prio: 3, sort: 'cost', num: true, w: 150, html: true, cell: (a) => esc(peMoney(a.cost_minor)) },
-      { key: 'use', label: tx('Put to use'), prio: 5, sort: 'use', w: 140, html: true, cell: (a) => esc(bkDate(a.put_to_use)) },
+      { key: 'bought', label: tx('Bought'), prio: 5, sort: 'bought', w: 130, html: true, cell: (a) => esc(bkDate(a.purchased_on || a.put_to_use)) },
+      { key: 'use', label: tx('Put to use'), prio: 6, sort: 'use', w: 130, html: true, cell: (a) => esc(bkDate(a.put_to_use)) },
+      { key: 'how', label: tx('Method and rate'), prio: 4, w: 210, html: true, cell: (a) => esc(peTerms(a)) },
+      { key: 'acc', label: tx('Depreciation so far'), prio: 5, sort: 'acc', num: true, w: 170, html: true, cell: (a) => esc(peMoney(a.accumulated_minor)) },
       { key: 'wdv', label: tx('Written-down value'), prio: 2, sort: 'wdv', num: true, w: 190, html: true, cell: (a) => esc(peMoney(a.wdv_minor)) }
     ],
     search: (a) => [a.name, a.asset_class, PE_CLASS_WORD[a.asset_class]].join(' '),
@@ -236,6 +249,8 @@ async function peAssetsList() {
       { key: 'cost', label: tx('Cost'), cmp: (a, b) => a.cost_minor - b.cost_minor },
       { key: 'wdv', label: tx('Written-down value'), cmp: (a, b) => a.wdv_minor - b.wdv_minor },
       { key: 'use', label: tx('Put to use'), cmp: (a, b) => String(a.put_to_use).localeCompare(String(b.put_to_use)) },
+      { key: 'bought', label: tx('Bought'), cmp: (a, b) => String(a.purchased_on || a.put_to_use).localeCompare(String(b.purchased_on || b.put_to_use)) },
+      { key: 'acc', label: tx('Depreciation so far'), cmp: (a, b) => a.accumulated_minor - b.accumulated_minor },
       { key: 'class', label: tx('Kind'), cmp: (a, b) => String(a.asset_class).localeCompare(String(b.asset_class)) }
     ],
     actions: [{ id: 'dispose', icon: '↗', label: 'Sold or scrapped', tid: 'pa-dispose', when: (a) => !a.disposed_on, run: (a) => peSellForm(a.asset_id) }],
@@ -252,6 +267,24 @@ function peAssetForm() {
     peField('pa_date', 'Bought on', peInput('pa_date', peYmd(new Date()), '', 'date')) +
     peField('pa_use', 'Put to use on (if later)', peInput('pa_use', '', '', 'date')) +
     peField('pa_how', 'Paid from', peSel('pa_how', peModeList(), 'bank')) +
+    peField(
+      'pa_prior',
+      'Did you own it before the books began?',
+      peSel(
+        'pa_prior',
+        [
+          ['no', 'No, I bought it now'],
+          ['yes', 'Yes, it is an existing asset']
+        ],
+        'no'
+      )
+    ) +
+    peField('pa_acc', 'Depreciation so far (existing asset only)', peAmt('pa_acc')) +
+    '<div class="pe-note" data-testid="pa-prior-note">' + esc(tx('An existing asset goes in here only. Do not enter the same asset again in Opening balances, or it is counted twice.')) + '</div>' +
+    peField('pa_rate', 'Tax on the price, % (empty if none)', peInput('pa_rate', '', '', 'number')) +
+    peField('pa_inc', 'Does the price include the tax?', peSel('pa_inc', [['no', 'No, tax is on top'], ['yes', 'Yes, tax is inside']], 'no')) +
+    peField('pa_theirs', 'Supplier tax number (when there is tax)', peInput('pa_theirs', '')) +
+    peField('pa_mine', 'Your tax number (when there is tax)', peInput('pa_mine', '')) +
     '</div><div class="supacts">' +
     peBtn('pa-save', 'Add asset', 'peAssetSave(this)') +
     peBtn('pa-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
@@ -262,6 +295,22 @@ async function peAssetSave(btn) {
   if (!peVal('pa_name') || isNaN(cost)) return peBad('pa_fout', tx('Name the asset and say what it cost.'));
   const body = { name: peVal('pa_name'), class: peVal('pa_class'), cost_minor: cost, date: peVal('pa_date'), how: peVal('pa_how'), client_ref: PE.ref.asset };
   if (peVal('pa_use')) body.put_to_use = peVal('pa_use');
+  if (peVal('pa_prior') === 'yes') {
+    /* an asset owned before the books began: one opening entry on the server — no bank, no tax */
+    const so = peVal('pa_acc') ? bkMoneyMinor(peVal('pa_acc')) : 0;
+    if (isNaN(so)) return peBad('pa_fout', tx('Depreciation so far must be an amount.'));
+    Object.assign(body, { existing: true, accumulated_minor: so });
+    delete body.how;
+  } else if (peVal('pa_rate')) {
+    /* tax on the price: the same bill the expense door sends, so the server claims the tax like any purchase (cost = the taxable part) */
+    body.bill = {
+      supplier_gstin: peVal('pa_theirs'),
+      my_gstin: peVal('pa_mine'),
+      price_includes_tax: peVal('pa_inc') === 'yes',
+      lines: [{ name: peVal('pa_name'), qty: 1, unit_price: cost / Math.pow(10, bkDec()), gst_rate: Number(peVal('pa_rate')) }]
+    };
+    delete body.cost_minor;
+  }
   await bkOnce('pe-asset', btn, async () => {
     try {
       const reply = await api('perAssetAdd', { body });
@@ -330,7 +379,10 @@ async function peDepForm() {
         ' onchange="peDepLabel()"'
       )
     ) +
-    '</div><div class="supacts"><button data-cbsid="BKS016-B03" type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
+    peField('pdp_through', 'Up to (empty = the year end)', peInput('pdp_through', '', '', 'date')) +
+    '</div><div class="supacts">' +
+    peBtn('pdp-preview', 'See it first', 'peDepPreview()', '') +
+    '<button data-cbsid="BKS016-B03" type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
     peBtn('pdp-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
     '</div><div id="pdp_out" class="pe-slot"></div></div>';
   peDepLabel();
@@ -339,12 +391,34 @@ function peDepLabel() {
   const node = peEl('pdp_run');
   if (node) node.textContent = txf('Run depreciation for {fy}', { fy: peVal('pdp_fy') });
 }
+/** the schedule to a day, posting nothing: per asset its rate, the charge so far, what is already posted, what is due */
+async function peDepPreview() {
+  const fy = peVal('pdp_fy'),
+    through = peVal('pdp_through');
+  try {
+    const r = (await api('perDepSchedule', { query: through ? { fy, through } : { fy } })) || {};
+    const rows = (r.assets || [])
+      .map(
+        (a) =>
+          '<div class="pe-row"><span>' + esc(a.name) + '</span><span class="mono">' + esc(a.rate_pct == null ? '' : a.rate_pct + '%') + '</span><span class="mono">' +
+          esc(peMoney(a.ytd_minor, r.currency)) + '</span><span class="mono">' + esc(peMoney(a.due_minor, r.currency)) + '</span></div>'
+      )
+      .join('');
+    peEl('pdp_out').innerHTML =
+      '<div class="pe-basis" data-testid="pdp-preview-head">' + esc(txf('Depreciation of {fy} up to {d} — nothing is posted yet', { fy, d: bkDate(r.through) })) + '</div>' +
+      '<div class="pe-rows" data-testid="pdp-preview">' + (rows || '<div class="pe-note">' + esc(tx('No asset in use yet')) + '</div>') + '</div>' +
+      '<div class="pe-note" data-testid="pdp-preview-total">' + esc(txf('To post now: {m}', { m: peMoney(r.total_due_minor, r.currency) })) + '</div>';
+  } catch (e) {
+    peBad('pdp_out', e);
+  }
+}
 async function peDepRun(btn) {
-  const fy = peVal('pdp_fy');
+  const fy = peVal('pdp_fy'),
+    through = peVal('pdp_through');
   await bkOnce('pe-dep', btn, async () => {
     try {
-      const r = (await api('perDepRun', { body: { fy, client_ref: peRef('dep' + fy) } })) || {};
-      PE.ref['dep' + fy] = null;
+      const r = (await api('perDepRun', { body: Object.assign({ fy, client_ref: peRef('dep' + fy + (through || '')) }, through ? { through } : {}) })) || {};
+      PE.ref['dep' + fy + (through || '')] = null;
       const basis = (PE_ENTITY[r.entity_basis] || r.entity_basis || '') + ': ' + tx(PE_BASIS[r.basis_rule] || 'as set for this shop');
       let h = '<div class="pe-basis" data-testid="pdp-basis">' + esc(txf('Basis used — {b}', { b: basis })) + '</div>';
       if (r.entity_note) h += '<div class="pe-warn" data-testid="pdp-note">⚠ ' + esc(r.entity_note) + '</div>';
