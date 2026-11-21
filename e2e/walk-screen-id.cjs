@@ -71,7 +71,16 @@ const walk = async (w) => {
   };
 
   /* ── 1 · every small app: the chip, in its header, with the code of the screen on show ── */
-  for (const [url, code, name] of APPS) {
+  /* CUSTOMER-DELINK (1128): the customer pages wear CBCustomerBar, not the staff frame: no staff avatar, no screen-code chip (a customer never sees a back-office code). The screen's code lives on the bar's one control, the Home link (mount <code>-U90), so the register still finds it. */
+  const CUSTOMER = ['SHP001', 'NSH001', 'STR001', 'EMB001', 'PRM001'];
+  for (const [url, code, name] of APPS.filter((a) => CUSTOMER.indexOf(a[1]) >= 0)) {
+    await w.step('A-' + code, name + ' (' + url + ') -> the customer bar: no screen-code chip, the Home link carries the mount ' + code + '-U90', async () => {
+      await page.goto(base + url); await page.waitForSelector('[data-testid="shell-header"]', { timeout: 20000 }); await page.waitForTimeout(300);
+      const r = await page.evaluate(() => { const h = document.querySelector('[data-testid="shell-home"]'); return { chip: document.querySelectorAll('[data-testid="screen-id"]').length, mount: h ? h.getAttribute('data-cbmount') : null, staff: document.querySelectorAll('.cbsh-hdr,[data-testid="avatar"]').length }; });
+      return { ok: r.chip === 0 && r.mount === code + '-U90' && r.staff === 0, saw: 'chips ' + r.chip + ' · home link mount ' + r.mount + ' · staff frame ' + r.staff };
+    });
+  }
+  for (const [url, code, name] of APPS.filter((a) => CUSTOMER.indexOf(a[1]) < 0)) {
     await w.step('A-' + code, name + ' (' + url + ') -> the header chip reads "' + code + '"', async () => {
       await open(url);
       const c = await chipCode(), t = await chipText(), inHeader = await page.evaluate(() => !!document.querySelector('[data-testid="screen-id"]').closest('header,.cbsh-hdr,.who'));

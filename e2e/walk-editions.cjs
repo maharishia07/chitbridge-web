@@ -41,15 +41,17 @@ const walk = async (w) => {
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); if (!localStorage.getItem('cb_theme')) localStorage.setItem('cb_theme', 'cream'); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
   const home = async (q) => { await page.goto(base + '/' + (q || '')); await page.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 }); await page.evaluate(() => window.SHELL && window.SHELL.ready); await page.waitForTimeout(400); };
   const drawn = () => page.$$eval('[data-testid^="shell-card-"],[data-testid^="shell-chip-"]', (es) => es.map((e) => e.getAttribute('data-testid').replace(/^shell-(card|chip)-/, '')));
-  const navs = () => page.$$eval('.cbsh-nv', (bs) => bs.filter((b) => !b.hidden && b.offsetParent).map((b) => b.getAttribute('data-go')));
+  /* the one Home (21 Nov fold of index2; .ix-on hides the area nav): the menu is the pillar rows then the foot words (Labs · Standards · Setup) that are drawn */
+  const navs = () => page.$$eval('.ix-item[data-pillar],.ix-fw[data-pillar]', (bs) => bs.filter((b) => !b.hidden && b.offsetParent).map((b) => b.getAttribute('data-pillar')));
+  const FOOT = ['labs', 'standards', 'setup'];
   const links = () => page.$$eval('a[href],[data-href]', (as) => as.filter((a) => a.offsetParent !== null || a.closest('details')).map((a) => a.getAttribute('href') || a.getAttribute('data-href')));
   const opens = async (hrefs) => { const bad = []; for (const h of [...new Set(hrefs)].filter((h) => /^\//.test(h))) { const r = await page.request.get(base + h.split('#')[0].split('?')[0]); if (r.status() !== 200) bad.push(h + ' ' + r.status()); } return bad; };
 
   await home();
-  await w.step('E1', 'Full Home -> all seven areas in the menu; every card is a door that opens, none into app.html', async () => {
+  await w.step('E1', 'Full Home -> every pillar row and the Labs · Standards · Setup foot words drawn; every card is a door that opens, none into app.html', async () => {
     const n = await navs(), cards = await page.$$eval('.cbsh-box', (as) => as.map((a) => a.getAttribute('href'))), chip = await page.locator('[data-testid="shell-edition-chip"]').count();
     const bad = await opens(cards);
-    return { ok: n.length === 7 && !chip && cards.length > 10 && !bad.length && !cards.some((h) => /app\.html/.test(h)), saw: n.join(' ') + ' · ' + cards.length + ' cards' + (bad.length ? ' · BROKEN ' + bad.join() : ' all open') + ' · chip ' + chip };
+    return { ok: n.length >= 7 && FOOT.every((f) => n.indexOf(f) >= 0) && !chip && cards.length > 10 && !bad.length && !cards.some((h) => /app\.html/.test(h)), saw: n.join(' ') + ' · ' + cards.length + ' cards' + (bad.length ? ' · BROKEN ' + bad.join() : ' all open') + ' · chip ' + chip };
   });
 
   await home('?edition=auditor');
@@ -57,9 +59,10 @@ const walk = async (w) => {
     const ids = await drawn(), n = await navs();
     const chip = await page.locator('[data-testid="shell-edition-chip"]').innerText().catch(() => '');
     const line = await page.locator('[data-testid="shell-edition-line"]').innerText().catch(() => '');
-    const want = AUD.filter((id) => MAN.entries.some((e) => e.id === id));
+    const inFoot = new Set([].concat(...MAN.home2.foundation.map((g) => g.ids))), want = AUD.filter((id) => MAN.entries.some((e) => e.id === id) && !inFoot.has(id)); /* the foundation's cards live detached until a foot word opens its sheet */
+    const footWant = MAN.home2.foundation.filter((g) => g.ids.some((id) => AUD.indexOf(id) >= 0)).map((g) => g.id), footMiss = footWant.filter((f) => n.indexOf(f) < 0);
     const extra = ids.filter((id) => AUD.indexOf(id) < 0), missing = want.filter((id) => ids.indexOf(id) < 0);
-    return { ok: chip === 'Auditor view' && /auditor/i.test(line) && !extra.length && !missing.length && n.indexOf('labs') < 0, saw: 'chip "' + chip + '" · drawn ' + ids.join(',') + (extra.length ? ' · EXTRA ' + extra.join() : '') + (missing.length ? ' · MISSING ' + missing.join() : '') + ' · menu ' + n.join(' ') };
+    return { ok: chip === 'Auditor view' && /auditor/i.test(line) && !extra.length && !missing.length && !footMiss.length && n.indexOf('labs') < 0, saw: 'chip "' + chip + '" · drawn ' + ids.join(',') + (extra.length ? ' · EXTRA ' + extra.join() : '') + (missing.length ? ' · MISSING ' + missing.join() : '') + ' · menu ' + n.join(' ') };
   });
   await w.step('E3', 'Auditor Home -> no link opens an app the edition leaves out (cards, chips, rail, alerts, roadmap); every door shown opens', async () => {
     const hs = await links();
@@ -92,7 +95,7 @@ const walk = async (w) => {
     await Promise.all([page.waitForNavigation({ timeout: 10000 }).catch(() => null), page.click('[data-testid="edition-full"]')]);
     await page.waitForSelector('[data-testid="cbshell"]'); await page.evaluate(() => window.SHELL && window.SHELL.ready); await page.waitForTimeout(500);
     const b = { saved: await page.evaluate(() => localStorage.getItem('cb_edition')), chip: await page.locator('[data-testid="shell-edition-chip"]').count(), n: (await navs()).length };
-    return { ok: a.saved === 'auditor' && a.chip === 1 && a.sent && b.saved === 'full' && !b.chip && b.n === 7, saw: 'auditor: saved ' + a.saved + ', chip ' + a.chip + ', sent ' + a.sent + ' · full: saved ' + b.saved + ', chip ' + b.chip + ', ' + b.n + ' areas' };
+    return { ok: a.saved === 'auditor' && a.chip === 1 && a.sent && b.saved === 'full' && !b.chip && b.n >= 7, saw: 'auditor: saved ' + a.saved + ', chip ' + a.chip + ', sent ' + a.sent + ' · full: saved ' + b.saved + ', chip ' + b.chip + ', ' + b.n + ' areas' };
   });
 
   /* E7: rule 13 — the auditor's Home in two themes and two widths */

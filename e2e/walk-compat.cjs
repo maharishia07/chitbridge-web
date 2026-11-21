@@ -52,6 +52,7 @@ W.run('compat', async (w) => {
 
   await w.step('C1', 'Home -> Compatibility is a built card that opens the Standards page on the Compared with tab (Works with beside it), with no invented figure', async () => {
     await page.goto(base + '/'); await page.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 }); await page.waitForTimeout(600);
+    await page.click('[data-testid="ix2-foot-labs"]'); await page.waitForSelector('[data-testid="shell-card-compatibility"]', { timeout: 8000 });   /* 1128: the one Home keeps the Labs cards in the sheet its foot word opens, not on the page */
     const href = await page.getAttribute('[data-testid="shell-card-compatibility"]', 'href').catch(() => null);
     const facts = await page.locator('[data-testid="shell-facts-compatibility"]').innerText().catch(() => 'missing');
     const chip = await page.locator('[data-testid="shell-chip-compatibility"]').count();

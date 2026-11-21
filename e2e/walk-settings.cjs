@@ -92,7 +92,7 @@ const walk = async (w) => {
     const words = async (cc) => {
       ME.country = cc; ME.country_code = cc;
       await page.goto(base + '/settings.html?cc=' + cc + '#/shop'); await page.waitForSelector('[data-testid="vault-only-identity"]', { timeout: 20000 }); await page.waitForTimeout(300);   /* a fresh load: a same-hash goto keeps the page */
-      return page.evaluate(() => ({ lic: (document.querySelector('label.fl') || {}).textContent || '', why: '' /* WALK-REG 2026-10-16: shop-why removed by decision */,
+      return page.evaluate(() => ({ lic: ([...document.querySelectorAll('label.fl')].map((l) => l.textContent || '').find((t) => /^(ABN|TRN|GSTIN|PIN)/.test(t.trim())) || '').trim() /* 1128 A-F-01: the first label is now "Business name"; the tax id label is the one that follows */, why: '' /* WALK-REG 2026-10-16: shop-why removed by decision */,
         sug: [...document.querySelectorAll('#vsug_identity option')].map((o) => o.value).join(',') }));
     };
     const au = await words('AU'), ae = await words('AE'), ind = await words('IN');
