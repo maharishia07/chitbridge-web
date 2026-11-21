@@ -25,16 +25,47 @@ const pass = (what) => { ok++; console.log('  ok  ' + what); };
   assert.strictEqual(win.CBPracticeKit.mineLine(), '');
   pass('a seat that does not know who it is gets no line');
 }
-// 2. the picker
+// 2. the picker (ACC-383): people, the firms that hold a books grant, and the empty state with "Add a person"
+const GIVE_SRC = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-employees-give.js'), 'utf8').replace(/\}\)\(typeof window[^\n]*$/, '})(window);');
+const mountGive = (people, o, may) => {
+  const els = {}, host = { innerHTML: '' };
+  const node = (id) => els[id] || (els[id] = { textContent: '', innerHTML: '' });
+  const added = [];
+  const E = { people, may };
+  const win = { esc, tx: (s) => s, shopDay: (v) => 'day ' + v, document: { getElementById: node },
+    CBBooksGrantMember: { roleWords: (p) => (p === 'adviser' ? 'Accountant: acts for you' : 'Auditor: reads only') },
+    CBEmployees: { inPlace: { E, load: () => Promise.resolve(), byId: (id) => people.filter((p) => p.id === id)[0] || null, accessPanel: () => {}, openAdd: () => added.push('add') } } };
+  new Function('window', GIVE_SRC)(win);
+  return win.CBEmployees.mountAccess(host, o).then(() => ({ body: node('emp_give_body').innerHTML, node, added, E }));
+};
 {
   const person = { id: 'p1', name: 'Priya', state: 'on', access: { label: 'Can view' } };
-  const host = { innerHTML: '' }, els = {};
-  const win = { esc, tx: (s) => s, document: { getElementById: (id) => els[id] || (els[id] = { textContent: '' }) }, CBEmployees: { inPlace: { E: { people: [person, { id: 'p2', name: 'Off', state: 'off', access: { label: 'x' } }] }, load: () => Promise.resolve(), byId: (id) => (id === 'p1' ? person : null), accessPanel: () => {} } } };
-  new Function('window', fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-employees-give.js'), 'utf8').replace(/\}\)\(typeof window[^\n]*$/, '})(window);'))(win);
-  win.CBEmployees.mountAccess(host, { token: 't' }).then(() => {
-    assert(/Who gets the work\?/.test(host.innerHTML) && /Priya/.test(host.innerHTML) && !/>Off ·/.test(host.innerHTML), host.innerHTML);
-    assert(/data-cbsid="BKS027-S01"/.test(host.innerHTML));
+  const off = { id: 'p2', name: 'Off', state: 'off', access: { label: 'x' } };
+  const given = { given: [
+    { state: 'live', grantee_entity: 'f1', grantee_name: 'Bayside', preset: 'adviser', expires_at: '2027-01-01' },
+    { state: 'live', grantee_entity: 'f1', grantee_name: 'Bayside', preset: 'adviser', expires_at: '2027-01-01' },
+    { state: 'live', grantee_entity: 'f2', grantee_name: 'Coastal', preset: 'auditor' },
+    { state: 'revoked', grantee_entity: 'f3', grantee_name: 'Gone', preset: 'auditor' }] };
+  Promise.all([
+    mountGive([person, off], { token: 't', grants: () => Promise.resolve(given), openAccess: () => {} }, { add: { ok: true } }),
+    mountGive([], { token: 't', grants: () => Promise.resolve(given) }, { add: { ok: true } }),
+    mountGive([], { token: 't', grants: () => Promise.reject(new Error('x')) }, { add: { ok: false, why: 'Only the owner adds people.' } }),
+    mountGive([person], { token: 't' }, { add: { ok: true } })
+  ]).then(([withBoth, noStaff, failed, noGrants]) => {
+    assert(/Who gets the work\?/.test(withBoth.body) && /Priya/.test(withBoth.body) && !/>Off ·/.test(withBoth.body), withBoth.body);
+    assert(/data-cbsid="BKS027-S01"/.test(withBoth.body));
     pass('the picker lists the people who are on, with their register code');
+    assert((withBoth.body.match(/value="firm:/g) || []).length === 2 && /Bayside · Accountant: acts for you/.test(withBoth.body) && /Coastal · Auditor: reads only/.test(withBoth.body) && !/Gone/.test(withBoth.body), withBoth.body);
+    pass('the firms with a LIVE books grant are choices, once each, ended ones are not');
+    assert(/emp-give-none/.test(noStaff.body) && /No one is on your team yet\./.test(noStaff.body) && /data-testid="emp-give-add"/.test(noStaff.body) && /data-cbsid="EMP001-B02"/.test(noStaff.body), noStaff.body);
+    noStaff.node('emp_give_add').onclick();
+    assert.deepStrictEqual(noStaff.added, ['add']);
+    assert(/value="firm:f1"/.test(noStaff.body), 'a shop with no staff still offers its firms');
+    pass('no staff: the empty state says so, "Add a person" opens the one Add form, the firms stay choices');
+    assert(/emp-give-firms-failed/.test(failed.body) && !/value="firm:/.test(failed.body) && /Only the owner adds people\./.test(failed.body) && !/emp-give-add"/.test(failed.body), failed.body);
+    pass('a grants list that cannot be read is said, and a seat that may not add is told why');
+    assert(!/emp-give-firms-failed|optgroup label="Firms/.test(noGrants.body));
+    pass('a page with no grants list asks for none');
     console.log(ok + ' passed');
   }).catch((e) => { console.error('FAIL ' + e.message); process.exit(1); });
 }

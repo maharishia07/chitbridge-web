@@ -466,5 +466,9 @@
       return { reload: reload };
     });
   }
-  root.CBBooksGrantMember = { mount: mount };
+  /** the role of one grant in the words the list says it (Accountant: acts for you · Auditor: reads only): ONE spelling, read by Delegate work too */
+  function roleWords(preset) {
+    return words(ROLE[preset] || ROLE.auditor);
+  }
+  root.CBBooksGrantMember = { mount: mount, roleWords: roleWords };
 })(typeof window !== 'undefined' ? window : globalThis);

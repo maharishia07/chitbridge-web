@@ -851,6 +851,7 @@
     return load().then(function () {
       if (E.list) E.list.refresh();
       paintBar();
+      if (E.onAdded) E.onAdded(id); /* Delegate work: the picker behind the sheet gains the new person */
       var p = id ? byId(id) : null;
       sheet(addedHtml(r, p));
       paintCodeBox((p && p.name) || (r.actor && r.actor.display_name) || '', r);
@@ -924,5 +925,5 @@
     start();
     return { reload: reload };
   }
-  root.CBEmployees = { mount: mount, sinceWord: sinceWord, inPlace: { E: E, load: load, byId: byId, accessPanel: accessPanel } }; /* the in-place door cap-employees-give.js mounts the SAME access panel through */
+  root.CBEmployees = { mount: mount, sinceWord: sinceWord, inPlace: { E: E, load: load, byId: byId, accessPanel: accessPanel, openAdd: openAdd, closeSheet: closeSheet } }; /* the in-place door cap-employees-give.js mounts the SAME access panel through */
 })(typeof window !== 'undefined' ? window : globalThis);
