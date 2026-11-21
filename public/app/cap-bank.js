@@ -143,6 +143,7 @@ const bkbReadOnly = () => typeof bkReadOnlySeat === 'function' && bkReadOnlySeat
 function bkbActRefusal() {
   return bkbActing() && !CBBooksActing.posts() ? tx('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.') : '';
 }
+/** one gated action on the bank page: refused with the sentence when the account is not bound or the act is blocked, else carried out */
 function bkbStep(action) {
   if (!bkbBound()) return false;
   if (bkbActRefusal()) {
@@ -189,9 +190,9 @@ async function bkbHash(text) {
       .map((item) => item.toString(16).padStart(2, '0'))
       .join('');
   } catch (_) {
-    let h = 5381;
-    for (let index = 0; index < text.length; index++) h = ((h << 5) + h + text.charCodeAt(index)) | 0;
-    return ('00000000' + (h >>> 0).toString(16)).slice(-8).repeat(8);
+    let hash = 5381;
+    for (let index = 0; index < text.length; index++) hash = ((hash << 5) + hash + text.charCodeAt(index)) | 0;
+    return ('00000000' + (hash >>> 0).toString(16)).slice(-8).repeat(8);
   }
 }
 
@@ -200,6 +201,7 @@ function bkbPresets() {
   const pack = typeof CBRegulation !== 'undefined' && bkbCountry() ? CBRegulation.resolve({ country: bkbCountry() }) : null;
   return (pack && pack.bank && pack.bank.presets) || {};
 }
+/** the Bank page: the bank ledgers are read, then the form (account, which bank, statement file) and the Statements box are drawn; a sentence when there is no bank ledger */
 async function bankView(body) {
   let accts = [];
   try {
@@ -263,6 +265,7 @@ function bankRestore() {
   return true;
 }
 
+/** a statement file chosen: read as text, then handed to bankTake with its name */
 async function bankPick(input) {
   const file = input.files && input.files[0];
   if (!file) return;
@@ -383,6 +386,7 @@ async function bankLoansAndLodged() {
   const [loans, lodged] = await Promise.all([api('booksLoans').catch((failure) => bkQuiet('bank-loans', failure)), api('booksGstLodged').catch((failure) => bkQuiet('bank-lodged', failure))]);
   return { loans: (loans && loans.loans) || [], lodged: ((lodged && lodged.periods) || []).map((one) => ({ period: one.period, net_minor: one.net_minor })) };
 }
+/** the Read button: the loans and the GST lodged read for the rail, the statement matched to the ledger, the result painted */
 async function bankRun() {
   if (!bkbBound()) return;
   const res = bkbEl('bk_res');
@@ -527,12 +531,12 @@ function bankExplain() {
 const bkbAcctName = () => ((BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {}).name || '';
 /** the Bank Reconciliation Statement: the books' balance is the API's ledger closing figure; the bank's is the statement's (or typed); the engine states the difference */
 function bankBrs() {
-  const P = BKB.parsed,
-    last = P.lines[P.lines.length - 1] || {};
-  let bank = P.closing_minor != null ? P.closing_minor : last.balance_minor != null ? last.balance_minor : null;
+  const parsed = BKB.parsed,
+    last = parsed.lines[parsed.lines.length - 1] || {};
+  let bank = parsed.closing_minor != null ? parsed.closing_minor : last.balance_minor != null ? last.balance_minor : null;
   if (bank == null && BKB.bal !== '') {
-    const m = bkToMinor(BKB.bal);
-    if (!isNaN(m)) bank = m;
+    const typedMinor = bkToMinor(BKB.bal);
+    if (!isNaN(typedMinor)) bank = typedMinor;
   }
   BKB.bankKnown = bank != null;
   if (bank == null) {
@@ -626,20 +630,21 @@ document.addEventListener('click', (event) => {
   }
 });
 
+/** the result of the last read: warnings, the opening check, the tabs and the lines or the BRS under them */
 function bankPaint() {
   const res = bkbEl('bk_res');
   if (!res) return;
-  const P = BKB.parsed;
-  if (!P) {
+  const parsed = BKB.parsed;
+  if (!parsed) {
     res.innerHTML = '';
     bankLayout(false, false);
     return;
   }
   /* the engine's note that a bank's format is not confirmed is for its builders: the shop is told what to do about it */
-  const ws = (P.warnings || []).map((item) =>
+  const warnings = (parsed.warnings || []).map((item) =>
     /verify against a real file/i.test(item) ? tx('Check the lines against your statement — this bank format is not confirmed yet.') : item
   );
-  const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
+  const warn = warnings.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(warnings.slice(0, 3).join(' · ')) + (warnings.length > 3 ? ' …' : '') + '</div>' : '';
   const lines = BKB.tab !== 'brs';
   res.innerHTML =
     warn +
@@ -694,6 +699,7 @@ function bankChangeOpen() {
   const button = document.querySelector('[data-testid="bank-change"]');
   if (button && !document.querySelector('.pe-bank.bk-open')) bankChange(button);
 }
+/** the red check when the statement opens at a different balance than the books held the day before, else nothing */
 function bankOpeningHtml() {
   const facts = bankOpeningFacts();
   if (!facts) return '';
@@ -742,6 +748,7 @@ const bkbWrongAccountButton = (testid, label) =>
 function bankFinish() {
   return bankBandCore() + (typeof bkshLockNotice === 'function' ? bkshLockNotice() : ''); /* W15-85: a locked month is said under the band, before any work */
 }
+/** the finishing band under the lines: the closing balance, what is left to do, and the actions that are allowed now */
 function bankBandCore() {
   const figures = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(figures) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
@@ -754,21 +761,21 @@ function bankBandCore() {
       '<span class="bk-bal-quick" data-testid="bank-bal-quick">' + peAmt('bk_bal_q', BKB.bal) + ' ' + peBtn('bank-bal-quick-go', 'Show the difference', "BKB.bal=peVal('bk_bal_q');bankBrs();bankPaint()") + '</span>' +
       acts + '</div>'
     );
-  const P = BKB.parsed,
+  const parsed = BKB.parsed,
     code = bkCur();
   return CBBankBand.html({
     tid: 'bank-finish',
     account: bkbAcctName() || BKB.stmtAcct,
-    from: P.from, to: P.to, count: P.lines.length, currency: code,
+    from: parsed.from, to: parsed.to, count: parsed.lines.length, currency: code,
     change: typeof BKST !== 'undefined' && BKST.mode === 'server' ? '' /* the trail's Back (cap-bank-home.js) is the way to the files and the other statements */ : '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
     rightAct: bkbReadOnly() ? '' : bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
     actions: acts,
     right: CBBankBand.rightAccount({
-      parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
+      parsed: parsed, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
       booksOpening_minor: BKB.ledgerRaw ? BKB.ledgerRaw.opening_minor : null, accountNumber: bkbHeldNumber(), previous: bkbPreviousStatement()
     }),
     statement: figures.statement, books: figures.books, difference: figures.gap, differenceWords: figures.dir,
-    toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: P.lines.length,
+    toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: parsed.lines.length,
     unexplained: figures.unexplained && /[1-9]/.test(figures.unexplained) ? figures.unexplained : '', nil: figures.nil
   });
 }
@@ -791,6 +798,7 @@ function bkbHeldNumber() {
   const held = bkbDetails();
   return held.last4 ? '****' + held.last4 : '';
 }
+/** the dialog that holds this account's bank, branch and last four digits */
 function bankDetailsOpen() {
   const held = bkbDetails(),
     words = bkbBranchWords();
@@ -805,6 +813,7 @@ function bankDetailsOpen() {
     footerHtml: '<button data-cbsid="BKS014-B29" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B28" type="button" class="pri" data-testid="bank-details-save" onclick="bankDetailsSave()">' + bkbE(tx('Save')) + '</button>'
   });
 }
+/** the details dialog's Save: each field trimmed, a refusal in words, else stored for the account */
 function bankDetailsSave() {
   const bank = String(peVal('bk_dbank') || '').trim(),
     branch = String(peVal('bk_dbranch') || '').trim(),
@@ -876,13 +885,13 @@ if (typeof BK !== 'undefined')
 /** BR1 · the Accounts Home to-do row for the bank: the count of lines that need a person, from the last statement read ON THIS DEVICE (the statement never
  *  reaches the server, so the server's To-do cannot count it). Drawn by the Home's own todoRow — the same look, the same words. null when nothing waits. */
 function bankTodoItem() {
-  const t = bkbLoad('todo', null),
-    n = (t && Number(t.n)) || 0;
-  if (!n) return null;
+  const todoMark = bkbLoad('todo', null),
+    needing = (todoMark && Number(todoMark.n)) || 0;
+  if (!needing) return null;
   return {
     kind: 'bank',
-    count: n,
-    words: txn('bank line needs you — from the last statement read on this device', 'bank lines need you — from the last statement read on this device', n),
+    count: needing,
+    words: txn('bank line needs you — from the last statement read on this device', 'bank lines need you — from the last statement read on this device', needing),
     action: { screen: 'bank', label: tx('Open Bank') }
   };
 }
@@ -944,6 +953,7 @@ function bkbBrsGate(statement) {
   }
   return statement.ok ? '' : '<div class="pe-bad" data-testid="bank-brs-bad">' + bkbE(statement.why) + '</div>';
 }
+/** the Bank Reconciliation Statement tab: its gate sentence, or the statement drawn from the engine */
 function bankBrsPaint() {
   const host = bkbEl('bk_brs');
   if (!host) return;
