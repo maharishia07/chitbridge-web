@@ -4446,14 +4446,34 @@ function bkTbRowHTML(x, reply, compare, currency, asOf) {
     '</tr>'
   );
 }
+/** Show: the typed day goes into the ONE state (BK.tbDay) BEFORE the tab repaints, because bkTab replaces the box and bkTB would otherwise find no box and fall back to today */
+function bkTbShow() {
+  var typed = (document.getElementById('tb_asof') || {}).value;
+  if (typed) BK.tbDay = typed;
+  bkTab('tb');
+}
+/** the day before an ISO day (the year end that precedes a year start) */
+function bkDayBefore(iso) {
+  var d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+/** quick picks: the opening and closing days of the shop's own year (the pack's FY, bkFyFrom), so a year-end or opening trial balance is one tap */
+function bkTbPick(which) {
+  BK.tbDay = which === 'prior-end' ? bkDayBefore(bkFyFrom()) : bkFyFrom();
+  bkTab('tb');
+}
+function bkTbPicksHTML() {
+  return '<button class="btn sm" data-testid="tb-pick-prior-end" onclick="bkTbPick(\'prior-end\')">' + tx('End of last year') + '</button><button class="btn sm" data-testid="tb-pick-year-start" onclick="bkTbPick(\'year-start\')">' + tx('Start of this year') + '</button>';
+}
 /** the bar over the trial balance: the date, Show, and the chip that says whether debits equal credits */
 function bkTbBarHTML(asOf, ok) {
   return (
     '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
     asOf +
-    '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
+    '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTbShow()">' +
     tx('Show') +
-    '</button>' +
+    '</button>' + bkTbPicksHTML() +
     '<span class="optchip" data-testid="tb-balanced" style="margin-inline-start:auto;' +
     (ok ? 'color:var(--ok-2);border-color:var(--ok-2)' : 'color:var(--warn-2);border-color:var(--warn-2)') +
     '">' +
