@@ -188,3 +188,8 @@ const payAdvice = (payment_id, body, name, o) => {
 /** PATCH /api/books/payments/:id → the row after the merge-patch */
 const payPatched = (payment_id, advice) => ({ ok: true, payment_id, advice: Object.assign({ chit_id: null, state: 'none', shared_at: null }, advice || {}) });
 Object.assign(module.exports, { adviceMay, payAdvice, payPatched });
+
+/** the api's day rule (lib/books-period.js, GOR-12): a books door takes a DAY, YYYY-MM-DD — no time, no zone. null when fine, else the 400 body the real api sends. A stand-in calls this on every date field so an ISO timestamp cannot slip back in. */
+const dayRefusal = (field, value) => (value == null || /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? null
+  : Object.assign(refusal('Send the date only, YYYY-MM-DD, with no time or zone.', 'DATE_INVALID'), { field }));
+Object.assign(module.exports, { dayRefusal });
