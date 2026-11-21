@@ -290,6 +290,15 @@ function peAssetForm() {
     peBtn('pa-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
     '</div><div id="pa_fout" class="pe-slot"></div></div>';
 }
+/** the question Add asset asks first: what it is, what it cost, the day and where the money came from (the sheet's own words, nothing added up here) */
+function peAssetAsk(body, paidBox) {
+  const from = paidBox && paidBox.selectedOptions && paidBox.selectedOptions[0] ? paidBox.selectedOptions[0].text : body.how;
+  return {
+    title: txf('Add {name}?', { name: body.name }),
+    body: esc(txf('It cost {amt}, bought {date}, paid from {from}. It goes into the books now.', { amt: bkMoney(body.cost_minor), date: body.date, from })),
+    yes: tx('Add asset')
+  };
+}
 async function peAssetSave(btn) {
   const cost = bkMoneyMinor(peVal('pa_cost'));
   if (!peVal('pa_name') || isNaN(cost)) return peBad('pa_fout', tx('Name the asset and say what it cost.'));
@@ -311,6 +320,7 @@ async function peAssetSave(btn) {
     };
     delete body.cost_minor;
   }
+  if (!(await CBAction.ask(peAssetAsk(body, peEl('pa_how'))))) return; /* C-F-12: a posting asks first, as Month lock and the debit note do; Cancel sends nothing */
   await bkOnce('pe-asset', btn, async () => {
     try {
       const reply = await api('perAssetAdd', { body });

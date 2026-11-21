@@ -184,12 +184,12 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     await shot(p, 'assets', 'laptop');
     await p.click('[data-testid="pa-add-open"]');
     await p.fill('#pa_name', 'Billing computer'); await p.selectOption('#pa_class', 'computers'); await p.fill('#pa_cost', '55,000'); await p.selectOption('#pa_how', 'bank');
-    await p.click('[data-testid="pa-save"]'); await p.waitForSelector('[data-testid="pe-ok"]', { timeout: 5000 });
+    await p.click('[data-testid="pa-save"]'); await p.click('[data-testid="confirm-ok"]'); /* C-F-12: Add asset asks first */ await p.waitForSelector('[data-testid="pe-ok"]', { timeout: 5000 });
     const ab = posts(S, /\/assets$/)[0].body;
     ok(ab.name === 'Billing computer' && ab.class === 'computers' && ab.cost_minor === 5500000 && ab.how === 'bank' && /^web-/.test(ab.client_ref), 'add by hand: POST /assets {name, class, cost_minor 5500000, how bank, client_ref}');
     ok(/MJ\/26-27\/0010/.test(await p.textContent('[data-testid="pe-ok"]')), 'the entry number is the API\'s');
     S.assetRefuse = true; await p.click('[data-testid="pa-add-open"]'); await p.fill('#pa_name', 'X'); await p.fill('#pa_cost', '10');
-    await p.click('[data-testid="pa-save"]'); await p.waitForSelector('#pa_fout [data-testid="pe-refused"]', { timeout: 5000 });
+    await p.click('[data-testid="pa-save"]'); await p.click('[data-testid="confirm-ok"]'); /* C-F-12: Add asset asks first */ await p.waitForSelector('#pa_fout [data-testid="pe-refused"]', { timeout: 5000 });
     ok(/How was it paid/.test(await p.textContent('#pa_fout')), 'a refusal is the server\'s sentence, shown where it happened');
     await p.click('[data-testid="pa-cancel"]');
     await p.click('[data-testid="asset-a1"] [data-caret]'); await p.click('[data-testid="pa-dispose"]');
