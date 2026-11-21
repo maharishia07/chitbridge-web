@@ -2553,10 +2553,10 @@
    * figure ("no tax slab resolves") rather than carrying a made-up split; the total stays the price, which is right either way.
    */
   function taxOfNet_(net, rate, incl) {
-    if (!incl) return roundMoney_((net * rate) / 100);
     var T = root.CBTax;
-    if (!T || typeof T.splitLineTax !== 'function') return null;
-    var sp = T.splitLineTax({ net: net, rate: rate, priceIncludesTax: true });
+    /* I-F-02: the engine's own split both ways (added on top, or taken out); the bare formula only where the engine is not loaded */
+    if (!T || typeof T.splitLineTax !== 'function') return incl ? null : roundMoney_((net * rate) / 100);
+    var sp = T.splitLineTax({ net: net, rate: rate, priceIncludesTax: !!incl });
     return roundMoney_(Number(sp && sp.tax) || 0);
   }
   function money(nestedLines, o) {
