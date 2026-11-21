@@ -1202,7 +1202,7 @@ function ago(iso) {
   if (s < 90) return 'just now';
   if (s < 5400) return Math.round(s / 60) + ' min ago';
   if (s < 172800) return Math.round(s / 3600) + ' h ago';
-  return new Date(iso).toLocaleDateString();
+  return shopDateTime(iso, { day: 'numeric', month: 'short', year: 'numeric' }); /* E-F-06: the shop's zone */
 }
 
 async function call(path, opts) {
@@ -2054,7 +2054,7 @@ function tally() {
       ? '<b>' +
         (Number(lr.total) || 0) +
         '</b> ran in the last run · ' +
-        esc(new Date(lr.finished).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) +
+        esc(shopDateTime(lr.finished, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) +
         (lr.testers ? ' · ' + esc(lr.testers) : '')
       : PVIEW
         ? 'No run in this project'
@@ -2874,7 +2874,7 @@ async function paintReport() {
     '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">supersedes ' +
     esc(r.supersedes) +
     ' \u00b7 generated ' +
-    new Date(r.generated_at).toLocaleString() +
+    shopDateTime(r.generated_at, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) +
     ' \u00b7 scope: ' +
     esc(r.scope) +
     '</div>' +
@@ -2932,7 +2932,7 @@ async function paintReport() {
         esc(b.tested_by || '\u2014') +
         '</dd>' +
         '<dt>Period</dt><dd>' +
-        (b.period ? new Date(b.period.from).toLocaleString() + ' \u2014 ' + new Date(b.period.to).toLocaleString() : 'nothing recorded yet') +
+        (b.period ? shopDateTime(b.period.from, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' \u2014 ' + shopDateTime(b.period.to, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'nothing recorded yet') +
         '</dd>' +
         '<dt>Sittings</dt><dd>' +
         b.runs +
@@ -2998,7 +2998,7 @@ async function paintReport() {
                 (entry.blocked || '\u2014') +
                 '</td>' +
                 '<td>' +
-                (entry.last_at ? new Date(entry.last_at).toLocaleString() : '\u2014') +
+                (entry.last_at ? shopDateTime(entry.last_at, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '\u2014') +
                 '</td></tr>'
               );
             })
@@ -3237,7 +3237,7 @@ async function paintReport() {
                 '</span> <span class="dim">' +
                 esc(x.tester_name || '') +
                 ' \u00b7 ' +
-                new Date(x.at).toLocaleString() +
+                shopDateTime(x.at, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) +
                 '</span>' +
                 (x.note ? '<div style="margin-top:3px">' + esc(x.note) + '</div>' : '') +
                 (x.evidence ? '<div class="sub">' + esc(x.evidence) + '</div>' : '') +
@@ -3559,7 +3559,7 @@ function chartTrend(runs) {
         (h + 12) +
         '" font-size="9" fill="var(--grey-2)" ' +
         'text-anchor="middle">' +
-        esc(new Date(item.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) +
+        esc(shopDateTime(item.at, { month: 'short', day: 'numeric' })) +
         '</text>';
     }
   });
@@ -5855,7 +5855,7 @@ async function caseHistory(k) {
           esc(x.run_kind) +
           (x.layer ? ' · ' + esc(x.layer) : '') +
           ' · ' +
-          new Date(x.at).toLocaleString() +
+          shopDateTime(x.at, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) +
           (x.run_label ? ' · ' + esc(x.run_label) : '') +
           (x.note ? ' — ' + esc(x.note) : '') +
           (x.case_version ? ' <i>(case v' + x.case_version + ')</i>' : '') +
