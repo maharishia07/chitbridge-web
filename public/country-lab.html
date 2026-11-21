@@ -1626,7 +1626,7 @@ repaint();
       var cc = String(entity.country_code || entity.country || '').toUpperCase();
       if (!/^[A-Z]{2}$/.test(cc) || cc === LAB.from) return;
       LAB.from = cc;
-      LAB.to = ['AU', 'AE', 'IN'].filter(function (other) { return other !== cc; })[0];
+      LAB.to = CBRegulation.list().map(function (item) { return item.id; }).filter(function (other) { return other !== cc; })[0];
       repaint();
     })
     .catch(function (failure) { if (window.cbQuiet) window.cbQuiet('country-lab:shop-country', failure); });

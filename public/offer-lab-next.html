@@ -1446,18 +1446,17 @@ function currencyOfReply(body) {
   var code = String(entity.currency_code || '').toUpperCase();
   return /^[A-Z]{3}$/.test(code) ? code : '';
 }
-var CURRENCY_COUNTRY = { INR: 'IN', AUD: 'AU', AED: 'AE' };
 /** the shop's country from a /api/entities/me reply (its own country, else the one its currency implies), or '' */
 function countryOfReply(body, code) {
   var entity = (body && body.data) || body || {};
   entity = entity.entity || entity;
   var cc = String(entity.country_code || entity.country || '').toUpperCase();
-  return /^[A-Z]{2}$/.test(cc) ? cc : CURRENCY_COUNTRY[code] || '';
+  return /^[A-Z]{2}$/.test(cc) ? cc : CBSample.countryOfCurrency(code);
 }
 /** a signed-in shop outside India (or with no country) sees ITS country's sample menu and names, never the Chennai one (CBSample is the one list) */
 function useCountrySample(cc) {
   var set = CBSample.forCountry(cc);
-  if (set.cc === 'IN') return;
+  if (CBSample.isHome(set)) return;
   HOTEL.name = set.hotelName;
   HOTEL.cats = set.hotelCats;
   HOTEL.prods = set.hotelProds;
