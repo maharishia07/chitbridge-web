@@ -23,13 +23,15 @@
  *   Year end, recorded after it and dated inside the period: E1 E5 = 2 · dated after it: E7 = 1 · the range read for "dated after" = 1 Jul 2026 .. 1 Jul 2027
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
-let failures = 0;
-const check = (ok, msg) => { console.log((ok ? '  ok ' : '  FAIL ') + msg); if (!ok) failures++; };
+const { loadShopTime } = require('./lib/lift-fn.cjs');
+let failures = 0, checks = 0;
+const check = (ok, msg) => { checks++; console.log((ok ? '  ok ' : '  FAIL ') + msg); if (!ok) failures++; };
 const pub = (...p) => fs.readFileSync(path.join(__dirname, '..', 'public', ...p), 'utf8');
 const box = { URLSearchParams, setTimeout, console, Intl };
 box.window = box; box.globalThis = box; box.CB_SHOP_TZ = 'Australia/Sydney';
 vm.createContext(box);
 vm.runInContext(pub('engine', 'money.js'), box);
+loadShopTime(box); /* the one formatter: the shop's zone for the recorded day */
 vm.runInContext(pub('app', 'books-grant-filters.js'), box);
 const F = box.CBBooksGrantFilters;
 const rows = [
@@ -114,5 +116,5 @@ delete box.CBLocale; box.CB_SHOP_TZ = 'Australia/Sydney';
 const src = pub('app', 'books-grant-filters.js');
 check(!/'Sat'|"Sat"/.test(src), 'no second weekend definition: Sat and Sun appear only in the ISO_DOW name table and the [6, 7] fallback (no quoted day names)');
 check(!/fetch\(|XMLHttpRequest|\.range\s*=/.test(src), 'the filters file reads and compares only: no call out, no write to the period');
-console.log(failures ? '\nFAILED ' + failures : '\nall passed');
+console.log(checks + ' checks' + (failures ? ', FAILED ' + failures : ''));
 process.exit(failures ? 1 : 0);

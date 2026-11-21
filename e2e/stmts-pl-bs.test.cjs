@@ -24,11 +24,12 @@ const cx = vm.createContext({
   document: { getElementById: () => null },
   api: async () => reply
 });
-vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkPlQuery', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkBsSide', 'bkBS', 'bkBsLeadHTML', 'bkBsRange', 'bkBsBalancedChip', 'bkBsHasChange', 'bkBsWas', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB', 'bkTbRowHTML', 'bkTbBarHTML', 'bkTbTotalRowHTML']) +
+vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkPlQuery', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkBsSide', 'bkBS', 'bkBsLeadHTML', 'bkBsRange', 'bkBsBalancedChip', 'bkBsHasChange', 'bkBsWas', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB', 'bkTbRowHTML', 'bkTbBarHTML', 'bkTbTotalRowHTML', 'bkRefused', 'bkTbPicksHTML']) +
   '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.bkTB=bkTB;this.BK={tbDay:""};this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
 
 let bad = 0;
-const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
+let n = 0;
+const ok = (c, m) => { n++; console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
 const body = () => ({ innerHTML: '' });
 const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) < h.indexOf(b);
 
@@ -131,5 +132,6 @@ const at = (h, a, b) => h.indexOf(a) >= 0 && h.indexOf(b) >= 0 && h.indexOf(a) <
   reply = Object.assign({}, reply, { compare: null, rows: reply.rows.map((x) => ({ code: x.code, name: x.name, dr_minor: x.dr_minor, cr_minor: x.cr_minor, net_minor: x.net_minor })) });
   b = body(); await cx.bkTB(b); h = b.innerHTML;
   ok((h.match(/<th[ >]/g) || []).length === 4 && !h.includes('tb-over-note') && !h.includes('BKS004-P02'), 'the first year (compare null): the four columns it had, no note, no dots');
+  console.log(n + ' checks' + (bad ? ', ' + bad + ' FAILED' : ''));
   process.exitCode = bad ? 1 : 0;
 })();

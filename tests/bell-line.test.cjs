@@ -4,10 +4,14 @@
  * Run: node tests/bell-line.test.cjs
  */
 'use strict';
-const fs = require('fs'), path = require('path'), assert = require('assert');
+const fs = require('fs'), path = require('path'), real = require('assert');
+let checks = 0;
+const assert = Object.assign((...a) => { checks++; return real(...a); }, { strictEqual: (...a) => { checks++; return real.strictEqual(...a); } });
 process.env.TZ = 'Asia/Kolkata';
 globalThis.window = globalThis;
 globalThis.document = { createElement: () => ({ setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { appendChild() {} }, addEventListener() {} };
+globalThis.CB_SHOP_TZ = 'Asia/Kolkata'; /* the one formatter writes the SHOP's zone (date-zone design), not the process's */
+require('vm').runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shop-time.js'), 'utf8'));
 require('vm').runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'helpers.js'), 'utf8'));   /* T2-WEBPRIMS: the page's one esc · fmtMoney */
 for (const part of ['rail-bell-html.js', 'rail-bell-rows.js', 'rail-bell.js']) eval(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'));
 const L = globalThis.CBBell.line;
@@ -28,4 +32,4 @@ assert.strictEqual(m.subj, 'Client One · SV/1 · memo', 'an entry note still na
 const q = L({ action: 'mark_query', mark_client: 'Client One', mark_client_id: 'cid', mark_entry: { entry_id: 'e1', entry_no: 'PY/1', posting_date: '2026-07-27' }, created_at: '2026-10-09T10:25:00Z' });
 assert.strictEqual(q.mark.client, 'Client One'); assert.strictEqual(q.mark.clientId, 'cid'); assert.strictEqual(q.mark.id, 'e1');
 assert.strictEqual(L({ action: 'mark_query', mark_entry: { entry_id: 'e1', entry_no: 'PY/1' }, created_at: '2026-10-09T10:25:00Z' }).mark.client, '');
-console.log('bell-line: all ok');
+console.log(checks + ' checks');
