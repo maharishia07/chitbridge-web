@@ -926,7 +926,7 @@ function peReturnPaint(r) {
     '</div>' +
     peReturnClaimBand(r) +
     '<div class="pe-note" data-testid="pr-prepared">' +
-    esc(r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal })) +
+    esc(peReturnStage(r).lodge ? r.prepared + ' — ' + txf('lodge it in the {who} portal ({portal})', { who: r.authority, portal: r.portal }) : peReturnStage(r).word) +
     '</div>' +
     '</div><div id="pr_list" data-testid="pr-list"></div>';
   if ((r.notes || []).length)
@@ -979,6 +979,15 @@ function peReturnClaimMark(r, b) {
 }
 /* PAST-YEARS: each return period carries its state from the server (set_off · months_locked · year_closed · declared_lodged · open): said in the shop's words, never the code */
 const PE_RET_STATE = { set_off: 'closed', months_locked: 'closed', year_closed: 'closed with the year', declared_lodged: 'lodged, as you said' };
+/** YE-F-06: the ONE stage word of a return, from the state the server gives the period (declared_lodged · else prepared): the note under the total and the copied figures say the same thing */
+function peReturnStage(r) {
+  const cur = (r.periods || []).find((item) => r.period && item.period === r.period.period);
+  if (cur && cur.state === 'declared_lodged') {
+    const word = tx(PE_RET_STATE.declared_lodged);
+    return { word: word.charAt(0).toUpperCase() + word.slice(1), lodge: false };
+  }
+  return { word: r.prepared, lodge: true };
+}
 const peRetStateWord = (state) => (PE_RET_STATE[state] ? ' · ' + tx(PE_RET_STATE[state]) : '');
 /** a period closed with its year, or whose months are locked, is READ ONLY: the sentence says why (the server refuses a write all the same) */
 const PE_RET_READ_ONLY = {
@@ -1138,7 +1147,7 @@ function peReturnBlock(r) {
     );
   });
   lines.push((r.net_minor < 0 ? tx('Refund due') : tx('To pay')) + '\t' + bkMinorText(Math.abs(r.net_minor || 0), c));
-  lines.push(r.prepared + ' · ChitBridge');
+  lines.push(peReturnStage(r).word + ' · ChitBridge');
   return lines.join('\n');
 }
 async function peReturnCopy(btn) {
@@ -1267,6 +1276,16 @@ function peYearActionsHtml(yearState) {
   if (!yearState.closed && !peOwner()) html += peNote('pe-readonly', 'Only the owner can close the year');
   return html;
 }
+/** YE-F-06: what the closed year shows as evidence — when and by whom, the returns declared lodged outside ChitBridge, the profit carried (the server's closed_with; a line it did not send is not drawn) */
+function peYearClosedEvidence(st) {
+  const w = st.closed_with;
+  if (!w) return '';
+  const lines = [];
+  if (w.at) lines.push(w.by_name ? txf('Closed on {day} by {name}', { day: bkDate(String(w.at).slice(0, 10)), name: w.by_name }) : txf('Closed on {day}', { day: bkDate(String(w.at).slice(0, 10)) }));
+  if (w.how === 'declared_lodged') lines.push(tx('Returns lodged outside ChitBridge, as you said'));
+  if (w.profit_minor != null) lines.push(txf('Profit carried forward: {money}', { money: peMoney(w.profit_minor, w.currency) }));
+  return lines.map((line, index) => '<div class="pe-note" data-testid="py-closed-' + index + '">' + esc(line) + '</div>').join('');
+}
 /** Reopen year: offered to the owner, and only on the newest closed year (from the periods list the screen holds); '' otherwise */
 function peYearReopenHtml(yearState) {
   if (!yearState.closed || !peOwner()) return '';
@@ -1294,7 +1313,7 @@ async function peYearStatus() {
   const months = st.months || [],
     refs = st.refusals || [];
   let h = '<div class="pe-card" data-testid="py-checks">';
-  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed', { fy })) + '</div>';
+  if (st.closed) h += '<div class="pe-ok" data-testid="py-closed">✓ ' + esc(txf('{fy} is closed', { fy })) + '</div>' + peYearClosedEvidence(st);
   else h += peYearChecksHtml(st, months, refs);
   h += '</div>';
   h += peYearActionsHtml(st);
