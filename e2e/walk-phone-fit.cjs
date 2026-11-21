@@ -1,5 +1,5 @@
 /* walk-phone-fit.cjs — UX-101 remainder: phone fit, measured at 390x844 and 1366x768 (2026-11-12)
- *   Home (signed out)  : the phone bar is FIVE tabs, each >= 44 px tall and wide (the old "7 tabs ~55 px" finding is gone since HOME-PHONE-BAR)
+ *   Home (signed out)  : the showcase doors are each >= 44 px tall and wide, no tab bar (the five-tab bar is the signed-in Home's: tests/home-phone-bar.test.cjs)
  *   network-design     : the 300 px list used to push the design pane off a phone; list now stacks, nothing past the right edge
  *   conversion-lab     : the Lines grid fits (no sideways scroll); the price / rate tables keep their own scroll by design
  *   list-lab           : the prototype strip wraps on a phone, every switch is on screen
@@ -37,8 +37,10 @@ const pastEdge = () => [...document.querySelectorAll('body *')].filter((e) => {
   try {
     let p = await open(390, 844, '/');
     const tabs = await p.evaluate(() => [...document.querySelectorAll('.cbsh-nav button, .cbsh-nav a')].filter((e) => e.getBoundingClientRect().width > 0).map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-    say('Home phone: five tabs', tabs.length === 5, tabs.length + ' tabs');
-    say('Home phone: every tab at least 44 x 44', tabs.every((t) => t[0] >= 44 && t[1] >= 44), JSON.stringify(tabs[0]));
+    /* ONE HOME (1126): signed out, Home is the showcase (hero + the Sign in door) and draws no tab bar; the five-tab bar is the signed-in Home's (tests/home-phone-bar.test.cjs) */
+    const doors = await p.evaluate(() => [...document.querySelectorAll('[data-testid="ix2-door-signin"]')].filter((e) => e.getBoundingClientRect().width > 0).map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+    say('Home phone (signed out): no tab bar, the showcase Sign in door is drawn', tabs.length === 0 && doors.length >= 1, tabs.length + ' tabs · ' + doors.length + ' doors');
+    say('Home phone (signed out): the Sign in door at least 44 x 44', doors.length > 0 && doors.every((t) => t[0] >= 44 && t[1] >= 44), JSON.stringify(doors[0]));
     say('Home phone: page does not scroll sideways', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '');
     await p.screenshot({ path: path.join(SH, 'ux101-home-390.png') });
 
