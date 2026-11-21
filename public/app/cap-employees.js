@@ -89,7 +89,7 @@
     if (days === 1) return T('Yesterday');
     if (days < 30) return days + ' ' + T('days ago');
     try {
-      return new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      return shopDay(iso);
     } catch (_) {
       return iso.slice(0, 10);
     }
@@ -534,7 +534,7 @@
   function codeGivenNote(given) {
     if (!given || !given.at) return '';
     var when = new Date(given.at);
-    var at = isNaN(when) ? '' : when.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    var at = isNaN(when) ? '' : shopDateTime(when, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     return '<span class="sub" data-testid="emp-code-given">' + esc(T('Code given') + (given.by ? ' ' + T('by') + ' ' + given.by : '') + (at ? ' ' + T('at') + ' ' + at : '')) + '</span>';
   }
   /** a refusal the person reads: the server's own words even on a 503 that carries a code; anything else keeps CBAction's sentence */

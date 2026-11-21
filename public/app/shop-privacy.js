@@ -45,7 +45,7 @@
   var day = function (iso) {
     if (!iso) return '';
     var date = new Date(iso);
-    return isNaN(date) ? '' : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return isNaN(date) ? '' : shopDay(iso);
   };
   var BTN =
     'border:1px solid var(--accent,#3F66A6);border-radius:9px;padding:7px 12px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;font-size:13px;cursor:pointer';

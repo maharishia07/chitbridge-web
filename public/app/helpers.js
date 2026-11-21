@@ -494,6 +494,29 @@ function shopDateTime(ts, opts) {
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
 }
 /**
+ * WALK-E E-F-06 (21 Nov): THE SHOP'S CLOCK IS THE SHOP'S ZONE ON EVERY SCREEN. CBLocale (adopted engine) defaults to the DEVICE zone, so an AU shop
+ * read on a laptop in India showed "Today 02:14 pm" at 19:44 Sydney. One rule here, not one per screen: with no zone chosen by the person (cb_tz) the
+ * shop's own zone (window.CB_SHOP_TZ, from the one /me read: avatar.js, app.html sessionFromMe) answers CBLocale.timezone(), so CBLocale.time / datetime /
+ * date and shopDateTime all agree. The person's explicit choice still wins; no shop zone stated -> the device, as before (nothing is guessed).
+ */
+function shopZoneInstall() {
+  var L = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!L || typeof L.timezone !== 'function' || L.timezone.shopZone) return false;
+  var own = L.timezone;
+  L.timezone = function () {
+    var chosen = '';
+    try { chosen = localStorage.getItem('cb_tz') || ''; } catch (e) { chosen = ''; }
+    var shop = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '';
+    if (!chosen && shop) {
+      try { new Intl.DateTimeFormat('en', { timeZone: shop }); return shop; } catch (e) { /* unknown zone: fall through to the device */ }
+    }
+    return own.call(L);
+  };
+  L.timezone.shopZone = true;
+  return true;
+}
+shopZoneInstall();
+/**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
  * A bare day (YYYY-MM-DD) is a calendar day, read in UTC so no zone moves it; a moment goes through shopDateTime with the year. Unreadable -> the dash.
  */

@@ -7205,7 +7205,7 @@ function netoReload() {
 function _netWhen(iso) {
   if (!iso) return '';
   try {
-    return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return shopDateTime(iso, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); /* E-F-06: the shop's zone */
   } catch (_) {
     return String(iso).slice(0, 16);
   }
