@@ -54,6 +54,7 @@ const EXCEPTIONS = {
    Platform). Each is a read-only summary or an input grid inside a screen, not yet declared as a CBList. */
 const DEBT = {
   'app/cap-catalogue.js::_cfRun': 'the product import preview (In your file · What to do with it · Why): a one-off check list in a form (moved out of app.html by T3-CATALOGUE, acc8d951)',
+  'app/till-dayrep.js::dayRepTable': 'the till day report (moved out of till.html in 1128): a read-only document-like table per section (issued by rate, tenders, counted cash)',
   'app.html::prodBomTab': 'a product\'s bill of materials (components, qty): a small table in the product detail',
   'app.html::prodInvoiceTab': 'a product\'s invoice-line sheet (Description · HSN · Qty · Rate · Discount): a document-like table in the product detail',
   'app.html::prodHistoryTab': 'a product\'s version history (Version · From · What changed · Who) in the product detail',
