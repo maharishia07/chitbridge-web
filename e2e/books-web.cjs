@@ -112,8 +112,7 @@ async function route(S, r) {
     if (p === '/api/books/payments/preview' && m === 'POST') return J(r, 200, books.payPreview(billsOf(body.party_id), body, nameOf(body.party_id)));
     if (p === '/api/books/payments' && m === 'POST') {
       S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
-      { const bad = books.dayRefusal('received_at', body.received_at); if (bad) return J(r, 400, bad); }   /* the real api's day rule: an ISO timestamp is refused (F19) */
-      if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));
+      { const bad = books.dayRefusal('received_at', body.received_at); if (bad) return J(r, 400, bad); } if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));   /* F19: the api refuses an ISO timestamp */
       const per = (new Date(body.received_at + 'T00:00:00Z').getUTCMonth() + 9) % 12 + 1;
       if (S.locked[per]) return J(r, 409, Object.assign(books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'), { type: 'about:blank', title: 'Conflict', status: 409, detail: 'That month is locked. Open it again (with a reason) to record this.', hint: 'Open the month again, then record this.', request_id: 'req-bw-0001' }));   /* RFC 9457 problem details, as the API's one error shape */
       /* the server keeps a client_ref ONCE (the unique index): a repeat is answered with the payment it already has */
