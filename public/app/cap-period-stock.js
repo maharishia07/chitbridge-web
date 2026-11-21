@@ -1,5 +1,5 @@
 /* app/cap-period-stock.js — CB ACCOUNTS › Month & year end › Closing stock. Split out of cap-period.js (file-size ratchet, 20 Nov), code moved verbatim.
- * OWNS      the Closing stock tab: peStockView · peStockList · peStockAdd · peStockSave
+ * OWNS      the Closing stock tab: peStockView · peStockList · peStockAdd · peStockSave; and peAssetAsk (the Add asset question, moved here for the size ratchet)
  * CALLED BY public/accounts.html (script tag, after cap-period.js); BK.views closingstock opens peStockView
  * FLOW      Closing stock tab → peStockView → peStockList (the server's lines) → peStockAdd → peStockSave (POST /closing-stock) → the list paints again
  * CARD      14-accounting/periods-month-lock-year-close
@@ -117,4 +117,12 @@ async function peStockSave(btn) {
     }
   });
 }
-
+/** the question Add asset asks first: what it is, what it cost, the day and where the money came from (the sheet's own words, nothing added up here) */
+function peAssetAsk(body, paidBox) {
+  const from = paidBox && paidBox.selectedOptions && paidBox.selectedOptions[0] ? paidBox.selectedOptions[0].text : body.how;
+  return {
+    title: txf('Add {name}?', { name: body.name }),
+    body: esc(txf('It cost {amt}, bought {date}, paid from {from}. It goes into the books now.', { amt: bkMoney(body.cost_minor), date: body.date, from })),
+    yes: tx('Add asset')
+  };
+}

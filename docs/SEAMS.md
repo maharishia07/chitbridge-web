@@ -141,6 +141,7 @@ of file each thing is; this says what already does the job.
 | 29 | `model` | `chit-sheet.js` |  |
 | 29 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 29 | `allowed` | `trips.js` | let _idsFrom = null, |
+| 28 | `bkMoney` | `cap-books.js` |  |
 | 28 | `bkDate` | `cap-books.js` |  |
 | 28 | `step` | `cart.js` |  |
 | 28 | `reason` | `lab-kit.js` | W9: |
@@ -148,7 +149,6 @@ of file each thing is; this says what already does the job.
 | 28 | `chart` | `fx-rates.js` |  |
 | 28 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 28 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
-| 27 | `bkMoney` | `cap-books.js` |  |
 | 27 | `head` | `list-ctl.js` |  |
 | 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
