@@ -629,18 +629,12 @@
       }
     );
   }
-  /** L-F-06: a total is always the amount WITH tax in it, so say so beside it: "incl. VAT 5.24", the tax word from the country pack (packWord taxName), the figure as the chit states it (tax_minor); nothing when the chit states no tax */
-  function taxWord(chit) {
-    if (chit.tax_minor == null) return '';
-    var word = (typeof root.packWord === 'function' && root.packWord('taxName')) || T('tax');
-    return T('incl.') + ' ' + word + ' ' + moneyWord(chit.tax_minor, chit.currency, false);
-  }
   function headLine(chit) {
     var bits = [];
     if (chit.party) bits.push(esc(chit.party));
     var total = moneyWord(chit.total_minor, chit.currency, chit.cost_hidden);
     if (total) bits.push('<span class="mono">' + esc(total) + '</span>');
-    var taxLine = taxWord(chit);
+    var taxLine = root.CBTasksAssign.taxWord(chit, T, moneyWord);
     if (total && taxLine) bits.push('<span class="sub mono" data-testid="tk-tax">' + esc(taxLine) + '</span>');
     bits.push(esc(ageWord(chit.age_days)));
     var howText = howWord(chit);
@@ -677,17 +671,6 @@
   /** F-43: the counter is opened AT the order (the till reads ?bill= once, goes to Sell and puts the order on the bill), not at whatever mode it last held */
   function tkBillAddress(chit) {
     return '/till.html' + (chit && chit.chit_id ? '?bill=' + encodeURIComponent(chit.chit_id) : '');
-  }
-  /** the small line under a line's name: delivered and left, what the other side says, an over-delivery, the due day and the task note */
-  function lineSubHTML(chit, line, lineId) {
-    /* L-F-10: nothing is delivered on a task (a credit note, a to-do): no Delivered / left counts, no Deliver button */
-    return (
-      (chit.kind === 'task' ? '' : esc(T('Delivered')) + ' ' + esc(line.delivered) + ' · ' + esc(T('left')) + ' ' + esc(line.remaining)) +
-      (line.theirs > 0 ? ' · <span data-testid="tk-line-theirs-' + lineId + '">' + esc(T(chit.kind === 'order_out' ? 'Seller says' : 'Buyer says')) + ' ' + esc(line.theirs) + ' ' + esc(T('delivered')) + '</span>' : '') +
-      (line.over_theirs > 0 ? ' · <span class="tag red" data-testid="tk-line-over-' + lineId + '">' + esc(line.theirs + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered')) + '</span>' : '') +
-      (line.settings && line.settings.due ? (chit.kind === 'task' ? '' : ' · ') + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
-      (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '')
-    );
   }
   /** the Deliver (or, for the buyer, Received) button of a line; a task has none */
   function lineDeliverHTML(chit, line, lineId) {
@@ -727,7 +710,7 @@
       (price ? '<span class="sub mono">' + esc(price) + '</span>' : '') +
       '</div>' +
       '<div class="tk-line-sub sub">' +
-      lineSubHTML(chit, line, lineId) +
+      root.CBTasksAssign.lineSubHTML(chit, line, lineId, T, esc) +
       '</div>' +
       '<div class="tk-line-acts">' +
       holderChip(chit, line.actions && line.actions.assign_line, line) +
