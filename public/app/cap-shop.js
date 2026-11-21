@@ -826,8 +826,16 @@ function shopFieldsHTML(e, licLabel) {
    * read-only, which says the same thing by being true.
    */
 }
+/** A-F-18: the shop's name, the one that prints on every bill and heads every page (the same fact Print setup's Business name writes) */
+function shopNameHTML(e) {
+  return (
+    '<label class="fl" for="pf_shopname">' + tx('Business name') + '</label>' +
+    '<input data-cbsid="ACC002-I15" class="inp" id="pf_shopname" data-testid="shop-name" maxlength="255" value="' + esc(e.display_name || '') + '">'
+  );
+}
 /** the fields PATCH /entities/profile takes from this card — cap-admin's PROF_FIELDS.profile IS this list */
 var SHOP_FIELDS = [
+  ['pf_shopname', 'display_name'] /* A-F-18: the one shop name (CB Settings › Your shop only; the workshop's IAM card has its own pf_name) */,
   ['pf_gstn', 'gstn'],
   ['pf_addr', 'address']
 ];
@@ -867,6 +875,7 @@ var CBShop = (function () {
   function shopCardHTML(e) {
     var who = SESSION && SESSION.actorId;
     return (
+      shopNameHTML(e || {}) +
       shopFieldsHTML(e || {}, shopLicLabel()) +
       '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>' +
       (who
