@@ -4,7 +4,7 @@
     "money": "1.96.0",
     "tax-packs": "1.86.0",
     "tax-slab": "1.103.0",
-    "tax": "1.103.0",
+    "tax": "1.104.0",
     "pricing": "1.99.0",
     "offers": "1.96.0",
     "variant": "1.99.0",
@@ -52,7 +52,7 @@
     "chart": "1.102.0",
     "accounts-packs": "1.79.0",
     "posting-voucher": "1.98.0",
-    "posting": "1.103.0",
+    "posting": "1.104.0",
     "bank-files": "1.99.0",
     "tax-export": "1.99.0",
     "reg-in-bank": "1.99.0"
@@ -231,7 +231,7 @@
     "chart": "773addbd1d30077c569572b410c9aefb708ce0e2d1e2e83dc383ae4abffe20b4",
     "accounts-packs": "08ee7a753735b46bd480582cf2035e88f4f676f0442ddf585c279616a9c3775a",
     "posting-voucher": "968a8885ddd0246ffe5460945570febc7f04ebf00fd3ad3e1c2442698a129578",
-    "posting": "5faaa0d700cc83efc4b2b91405bbe96057d8665891525bc8ed68a9a8eff08676",
+    "posting": "dc0f9d187afa11c04d9d742b361379e41477c994666728c388a77b56ebefe0e9",
     "bank-files": "1da255b51273f56b4470d5eb620f1168d79137ef2d5dbb2ad056b1908f40d977",
     "pack-kit": "be0232520192a235624d0d056be699dac2db4394f5eb0686f6e3a812a557c522",
     "reg-in-bank": "c388d77f0d28f176c01d42168aca2678213e32d6770873e61b61b0bd91f7f8f8",
@@ -249,6 +249,6 @@
     "tax-packs": "060e6c5883026c040b0e0d8fc979ae2563f5b992f01946b02e941acbc221bb80",
     "tax-slab": "377c5b263f26ff7d393f5de5f8f7ec44687848aea2e7efc70aa820ccf93ded4f",
     "tax-export": "7883098c12bfcb9587df4130d4a92b676f36ab3f72943d0fdb030ed5f56b68ee",
-    "tax": "5ec19c97055048e6cefa6ff7be3914d7e4c474213fe237cfd8619697e10acaed"
+    "tax": "e985a7abd7814cf463c5fc9cbf2b910cb4e13c8eac33f5f7cb808aa951e942ef"
   }
 }

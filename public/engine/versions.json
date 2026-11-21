@@ -26,7 +26,7 @@
     "orderhub": "1.5.0",
     "orders": "1.5.0",
     "posting-voucher": "1.98.0",
-    "posting": "1.103.0",
+    "posting": "1.104.0",
     "pricing": "1.99.0",
     "profilemap": "1.5.0",
     "qr": "unversioned",
@@ -43,5 +43,5 @@
     "variant": "1.99.0",
     "verdict": "1.5.0"
   },
-  "page": "2026-11-27.batch1127"
+  "page": "2026-11-28.batch1128"
 }
