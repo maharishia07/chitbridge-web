@@ -629,11 +629,19 @@
       }
     );
   }
+  /** L-F-06: a total is always the amount WITH tax in it, so say so beside it: "incl. VAT 5.24", the tax word from the country pack (packWord taxName), the figure as the chit states it (tax_minor); nothing when the chit states no tax */
+  function taxWord(chit) {
+    if (chit.tax_minor == null) return '';
+    var word = (typeof root.packWord === 'function' && root.packWord('taxName')) || T('tax');
+    return T('incl.') + ' ' + word + ' ' + moneyWord(chit.tax_minor, chit.currency, false);
+  }
   function headLine(chit) {
     var bits = [];
     if (chit.party) bits.push(esc(chit.party));
     var total = moneyWord(chit.total_minor, chit.currency, chit.cost_hidden);
     if (total) bits.push('<span class="mono">' + esc(total) + '</span>');
+    var taxLine = taxWord(chit);
+    if (total && taxLine) bits.push('<span class="sub mono" data-testid="tk-tax">' + esc(taxLine) + '</span>');
     bits.push(esc(ageWord(chit.age_days)));
     var howText = howWord(chit);
     if (howText) bits.push(esc(howText));
@@ -1119,5 +1127,5 @@
     return { reload: reload, show: show, open: tkOpen, close: closeSheet };
   }
   /* actRow is shared (T3-DISPUTES-ASSIST): CBDispute (cap-dispute.js) draws Raise / Resolve the same way — shown always, greyed WITH the server's sentence */
-  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow };
+  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow, headLine: headLine };
 })(typeof window !== 'undefined' ? window : globalThis);
