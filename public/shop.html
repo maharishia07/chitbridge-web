@@ -119,18 +119,20 @@ var API = new URLSearchParams(location.search).get('api') || window.CB_API;
    renderer, same offers, same cart; only the shop header and the rest of the list are left out. Athi, 2026-09-05:
    "not the entire link — how this product will look in front of the user". */
 var _ONLY = (new URLSearchParams(location.search).get('item') || '').trim();
-/* ?preview=1: the OWNER looking at their own shop from the product page. The frame is same-origin with the app, so the
-   session is in localStorage; it goes as a bearer and the API lets the owner through a private gate (preview:true). */
+/* ?preview=1: the OWNER looking at their own shop from the product page. CUSTOMER-DELINK: this page never reads the staff session. The back office
+   hands over ONE short-lived key for THIS shop (app/preview-key.js writes cb_preview@<shop>); only that key goes, as a bearer, on the one catalogue GET. */
 var _PREVIEW = (new URLSearchParams(location.search).get('preview') || '') === '1';
-function _ownerToken() {
-  try {
-    var parsed = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    return (parsed && parsed.token) || null;
-  } catch (e) {
-    return null;
-  }
-}
 var BRIDGE = (new URLSearchParams(location.search).get('s') || new URLSearchParams(location.search).get('bridge') || '').trim();
+function _previewKey() {
+  try {
+    var kept = JSON.parse(localStorage.getItem('cb_preview@' + BRIDGE) || 'null');
+    if (kept && kept.t && kept.exp > Date.now()) return kept.t;
+    if (kept) localStorage.removeItem('cb_preview@' + BRIDGE);
+  } catch (e) {
+    /* an unreadable key is no key */
+  }
+  return null;
+}
 var _FIN = [];
 var _ord = null;
 var _lg = {};
@@ -3191,10 +3193,9 @@ function shopFrame() {
  */
 function shopLoad() {
   /* SEC4: a shopper's own token re-reads a sign-in-first shop. TOUR-FIX1: the OWNER opening their own private shop (Home › Your online shop)
-     is not a stranger — a 404 with this browser's own session is asked once more as the owner's preview (the API decides: only THIS shop's
-     owner gets through; anyone else keeps "Shop not found"). One reader for both. */
+     is previewed only through the hand-off key (?preview=1, _previewKey); a missing shop shows the customer "not found", never a second try as the owner. */
   var _cat = function (pv) {
-    var tok = pv && _ownerToken() ? _ownerToken() : _MYTOK;
+    var tok = pv && _previewKey() ? _previewKey() : _MYTOK;
     return fetch(
       API + '/api/catalogue/' + encodeURIComponent(BRIDGE) + (pv ? '?preview=1' : ''),
       tok ? { headers: { Authorization: 'Bearer ' + tok } } : undefined
@@ -3205,17 +3206,6 @@ function shopLoad() {
     });
   };
   return _cat(_PREVIEW)
-    .then(function (res) {
-      if (res.status === 404 && !_PREVIEW && _ownerToken())
-        return _cat(true).then(function (reply) {
-          if (reply.status === 200) {
-            _PREVIEW = true;
-            return reply;
-          }
-          return res;
-        });
-      return res;
-    })
     .then(function (res) {
       if (res.status !== 200) {
         /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a

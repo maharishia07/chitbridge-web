@@ -3,9 +3,9 @@
  * CALLED BY ci.yml (the Guards step)
  * CARD      10-online-shop-and-storefront-orders/functions/the-online-shop-public-page
  * Athi: "our customer app should not open backoffice app at all … completely delinked".
- *  A · each customer page (shop · store · network-shop · embed) loads ONLY the scripts on ALLOW below (a new script must be named here, i.e. judged neutral);
+ *  A · each customer page (shop · store · network-shop · embed · promo) loads ONLY the scripts on ALLOW below (a new script must be named here, i.e. judged neutral);
  *  B · neither the page nor any script it loads names a back-office page (app · accounts · finance · crm · catalogue · settings · employees · operations · tasks · till · network · books …);
- *  C · none reads the staff session (cb_sess) — except the one documented owner preview (shop.html _ownerToken, an explicit ?preview=1);
+ *  C · none reads the staff session (cb_sess), no exception for the owner preview: that goes through the one-way hand-off key cb_preview@<shop> (app/preview-key.js writes it, shop.html reads only it);
  *  D · the service worker the shop registers is the customer set, with its own cache and a shop fallback;
  *  E · the reverse door: CBOnePerson.who() treats a customer token (even stored in cb_sess) as no one, the sign-in window refuses to keep one, the api fails closed (auth.js).
  * Run: node e2e/customer-delink.cjs */
@@ -14,7 +14,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..'), read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok = (m) => console.log('  ok  ' + m);
 
-const CUSTOMER_PAGES = ['public/shop.html', 'public/store.html', 'public/network-shop.html', 'public/embed.html'];
+const CUSTOMER_PAGES = ['public/shop.html', 'public/store.html', 'public/network-shop.html', 'public/embed.html', 'public/promo.html'];
 /* neutral = no staff session, no staff endpoint map, no staff page name (avatar.js carries the staff menu; screen-id.js lists every staff page: neither is loaded) */
 const ALLOW = new Set(['app/device-id.js', 'config.js', 'app/helpers.js', 'cb-offline.js', 'engine/offers.js', 'engine/pricing.js', 'app/catalogue-lines.js', 'engine/screen.js',
   'app/ui.js', 'app/ui-field.js', 'app/customer-bar.js', 'app/cb-words.js', 'engine/locale.js', 'engine/money.js', 'engine/tax.js',
@@ -37,11 +37,33 @@ CUSTOMER_PAGES.forEach((page) => {
   [page].concat(srcs.map((s) => 'public/' + s).filter((f) => fs.existsSync(path.join(root, f)))).forEach((f) => {
     strip(read(f)).split('\n').forEach((line, i) => {
       if (OFFICE_PAGE.test(line)) bad(f + ':' + (i + 1) + ' (from ' + page + ') names a back-office page: ' + line.trim().slice(0, 110));
-      if (/cb_sess/.test(line) && f !== 'public/app/device-id.js' /* SEC-85: compares shop ids across tabs, grants nothing */ && !(f === 'public/shop.html' && /_ownerToken|parsed = JSON\.parse\(localStorage\.getItem\('cb_sess'\)/.test(line))) bad(f + ':' + (i + 1) + ' (from ' + page + ') reads the staff session: ' + line.trim().slice(0, 110));
+      if (/cb_sess/.test(line) && f !== 'public/app/device-id.js' /* SEC-85: compares shop ids across tabs, grants nothing */) bad(f + ':' + (i + 1) + ' (from ' + page + ') reads the staff session: ' + line.trim().slice(0, 110));
     });
   });
   if (!fail) ok(page + ': ' + srcs.length + ' scripts, all neutral; no back-office page, no staff session');
 });
+
+/* C2 · the owner preview, through the hand-off key only */
+{
+  const keys = {}, store = { getItem: (k) => (k in keys ? keys[k] : null), setItem: (k, v) => { keys[k] = String(v); }, removeItem: (k) => { delete keys[k]; } };
+  const w = { localStorage: store }; vm.runInNewContext(read('public/app/preview-key.js'), w, { filename: 'preview-key.js' });
+  w.CBPreviewKey.hand('shopA') === false ? ok('no staff session: no key is written') : bad('a key was written with no staff session');
+  store.setItem('cb_sess', JSON.stringify({ token: 'T-OWNER' }));
+  w.CBPreviewKey.hand('shopA') === true && JSON.parse(keys['cb_preview@shopA']).t === 'T-OWNER' ? ok('the staff side writes cb_preview@<shop> from the staff session') : bad('hand() did not write cb_preview@shopA');
+  const exp = JSON.parse(keys['cb_preview@shopA']).exp - Date.now(); exp > 0 && exp <= 15 * 60 * 1000 ? ok('the key is short-lived (15 min)') : bad('the key lifetime is wrong: ' + exp);
+  const fnSrc = (read('public/shop.html').match(/function _previewKey\(\) \{[\s\S]*?\n\}\n/) || [])[0];
+  if (!fnSrc) bad('shop.html has no _previewKey()');
+  else {
+    const read1 = (bridge, st) => vm.runInNewContext(fnSrc + '_previewKey()', { BRIDGE: bridge, localStorage: st, Date });
+    read1('shopA', store) === 'T-OWNER' ? ok('shop.html reads the key for its own shop') : bad('shop.html did not read the preview key');
+    read1('shopB', store) === null ? ok('a key for one shop opens no other shop') : bad('a key for shopA was read for shopB');
+    keys['cb_preview@shopA'] = JSON.stringify({ t: 'T-OWNER', exp: Date.now() - 1 });
+    read1('shopA', store) === null && !('cb_preview@shopA' in keys) ? ok('an expired key is no key and is dropped') : bad('an expired key was used');
+    const onlyKey = { getItem: (k) => (k === 'cb_sess' ? '{"token":"T-STAFF"}' : null), removeItem() {} };
+    read1('shopA', onlyKey) === null ? ok('the staff session alone opens no preview') : bad('shop.html fell back to the staff session');
+  }
+  /_ownerToken/.test(read('public/shop.html')) ? bad('shop.html still has _ownerToken') : ok('shop.html has no _ownerToken and no silent owner retry on a 404');
+}
 
 /* D · the worker */
 const shop = read('public/shop.html'), sw = read('public/cb-sw.js');
