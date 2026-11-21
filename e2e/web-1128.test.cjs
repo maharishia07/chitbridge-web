@@ -11,7 +11,8 @@ const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf
 /* COUNT-SOURCE: the practice head, and the CRM nav, read the server's total; finance group heads say what the filter is */
 assert.ok(/escapeHtml\(clientCount\(practiceKit\.practiceState\.data\)\)/.test(src('app/books-practice.js')) && /function clientCount\(data\) \{.*data && data\.total/.test(src('app/books-practice.js')), 'practice head reads data.total ?? clients.length (through clientCount, the batch 1127 helper)');
 assert.ok(/CRM\.total != null \? CRM\.total : CRM\.rows\.length/.test(src('app/cap-crm.js')), 'CRM nav reads the server total');
-assert.ok(/CRM\.total = reply && reply\.total != null/.test(src('app/cap-crm.js')));
+assert.ok(/CRM\.total = crmTotalOf\(reply\)/.test(src('app/cap-crm.js')) || /crmKeepHeadlines/.test(src('app/cap-crm.js')));
+assert.ok(/return reply && reply\.total != null/.test(src('app/cap-crm.js')), 'the headline total is the server total (+ walk-ins), read in crmTotalOf');
 assert.ok(!/txn\('\{count\} part(y|ies)'.*rows\.length\) \+/.test(src('app/cap-finance.js').split('\n').join(' ').replace(/\s+/g, ' ')) , 'finance heads are "N owe you", not "N parties"');
 assert.ok(src('app/cap-finance.js').includes("txn('{count} owes you', '{count} owe you', rows.length)"));
 

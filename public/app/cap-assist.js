@@ -88,10 +88,6 @@
   function readOnly() {
     return !!(A.may && A.may.ok === false && !A.may.unknown);
   }
-  /** the line that says the answer came from Assist (empty when the person wrote it) */
-  function draftedNote() {
-    return A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('Assist drafted this. Read it before you accept.')) + '</div>' : '';
-  }
   /** the review heading: refine a saved answer, or read what Assist drafted */
   function reviewTitleWords() {
     return A.qa && A.qa.id ? 'Refine this answer' : 'What Assist drafted';
@@ -129,6 +125,10 @@
       '</button></div></div>' +
       '<div id="ca_out" class="tk-out" role="status" data-testid="ca-out"></div>'
     );
+  }
+  /** the line that says the answer came from Assist (empty when the person wrote it) */
+  function draftedNote() {
+    return A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('Assist drafted this. Read it before you accept.')) + '</div>' : '';
   }
   function paintReview() {
     var box = $('ca_review');
