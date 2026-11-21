@@ -38,7 +38,7 @@ function page() {
   return { doc, host, make, body };
 }
 function run(p, steps) {
-  const ctx = { document: p.doc, UI: {}, mvModal() {}, modalStamp() {}, ccCartRelease() {}, minimiseCompose() {}, console };
+  const ctx = { document: p.doc, UI: {}, mvModal() {}, modalStamp() {}, modalDialogOpen() {}, ccCartRelease() {}, minimiseCompose() {}, console };
   vm.createContext(ctx);
   vm.runInContext(code + '\n;this.modal = modal; this.closeModal = closeModal; this.modalBackdrop = modalBackdrop;', ctx);
   steps(ctx);
