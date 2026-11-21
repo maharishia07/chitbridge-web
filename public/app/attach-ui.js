@@ -576,18 +576,15 @@ async function cbAttachOpen(id) {
     }
 
     var renderable = /^image\/(png|jpe?g|gif|webp|bmp)$/.test(mime) || mime === 'application/pdf';
-    if (renderable) {
-      /* ⚠️ THE AWAIT ABOVE HAS ALREADY SPENT THE USER GESTURE, so window.open may be blocked. When it is, fall
-         back to a download rather than doing nothing — a control that appears to be broken is worse than one
-         that does the less convenient thing. */
-      var w = window.open(url, '_blank', 'noopener');
-      if (w) return;
-    }
     var node = document.createElement('a');
     node.href = url;
-    node.download = ''; // the server's Content-Disposition filename does not survive a blob URL; the
-    // browser falls back to a generic name, which is the accepted cost of auth'd bytes
     node.rel = 'noopener';
+    if (renderable) {
+      /* an image or a PDF opens in a new tab through an anchor with rel=noopener: window.open(..., 'noopener') always answers null, so the old "if it opened, stop" never held and every file was ALSO downloaded. The anchor has no download attribute: a file is saved only when it cannot be shown (below). */
+      node.target = '_blank';
+    } else {
+      node.download = ''; // asked for: a type the browser cannot show is saved; the server's Content-Disposition filename does not survive a blob URL, the browser falls back to a generic name, which is the accepted cost of auth'd bytes
+    }
     (document.body || document.documentElement).appendChild(node);
     node.click();
     try {
