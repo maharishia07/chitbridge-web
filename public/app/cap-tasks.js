@@ -678,6 +678,21 @@
   function tkBillAddress(chit) {
     return '/till.html' + (chit && chit.chit_id ? '?bill=' + encodeURIComponent(chit.chit_id) : '');
   }
+  /** the small line under a line's name: delivered and left, what the other side says, an over-delivery, the due day and the task note */
+  function lineSubHTML(chit, line, lineId) {
+    /* L-F-10: nothing is delivered on a task (a credit note, a to-do): no Delivered / left counts, no Deliver button */
+    return (
+      (chit.kind === 'task' ? '' : esc(T('Delivered')) + ' ' + esc(line.delivered) + ' · ' + esc(T('left')) + ' ' + esc(line.remaining)) +
+      (line.theirs > 0 ? ' · <span data-testid="tk-line-theirs-' + lineId + '">' + esc(T(chit.kind === 'order_out' ? 'Seller says' : 'Buyer says')) + ' ' + esc(line.theirs) + ' ' + esc(T('delivered')) + '</span>' : '') +
+      (line.over_theirs > 0 ? ' · <span class="tag red" data-testid="tk-line-over-' + lineId + '">' + esc(line.theirs + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered')) + '</span>' : '') +
+      (line.settings && line.settings.due ? (chit.kind === 'task' ? '' : ' · ') + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
+      (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '')
+    );
+  }
+  /** the Deliver (or, for the buyer, Received) button of a line; a task has none */
+  function lineDeliverHTML(chit, line, lineId) {
+    return (chit.kind === 'task' ? '' : actRow('tk_lv_' + lineId, T(chit.kind === 'order_out' ? 'Received' : 'Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08'));
+  }
   function lineHTML(line, chit) {
     var assignment = line.assignment || {},
       lineState = (line.settings && line.settings.state) || 'open',
@@ -712,17 +727,12 @@
       (price ? '<span class="sub mono">' + esc(price) + '</span>' : '') +
       '</div>' +
       '<div class="tk-line-sub sub">' +
-      /* L-F-10: nothing is delivered on a task (a credit note, a to-do): no Delivered / left counts, no Deliver button */
-      (chit.kind === 'task' ? '' : esc(T('Delivered')) + ' ' + esc(line.delivered) + ' · ' + esc(T('left')) + ' ' + esc(line.remaining)) +
-      (line.theirs > 0 ? ' · <span data-testid="tk-line-theirs-' + lineId + '">' + esc(T(chit.kind === 'order_out' ? 'Seller says' : 'Buyer says')) + ' ' + esc(line.theirs) + ' ' + esc(T('delivered')) + '</span>' : '') +
-      (line.over_theirs > 0 ? ' · <span class="tag red" data-testid="tk-line-over-' + lineId + '">' + esc(line.theirs + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered')) + '</span>' : '') +
-      (line.settings && line.settings.due ? (chit.kind === 'task' ? '' : ' · ') + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
-      (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
+      lineSubHTML(chit, line, lineId) +
       '</div>' +
       '<div class="tk-line-acts">' +
       holderChip(chit, line.actions && line.actions.assign_line, line) +
       actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line, '', '', 'TSK003-B07') +
-      (chit.kind === 'task' ? '' : actRow('tk_lv_' + lineId, T(chit.kind === 'order_out' ? 'Received' : 'Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08')) +
+      lineDeliverHTML(chit, line, lineId) +
       '</div><div id="tk_lmore_' +
       lineId +
       '"></div></div>'
@@ -739,6 +749,15 @@
     });
     return top;
   }
+  /** the step buttons in order (Accept → Bill it → Delivered), joined; a refusal sentence said once above them is left off the buttons */
+  function stepButtonsHTML(chit, acts, repeated) {
+    var steps = STEPS.map(function (item) {
+      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09', !!repeated && acts[item] && acts[item].ok === false && sayOf(acts[item]) === repeated);
+    });
+    steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
+    steps = steps.join('');
+    return steps;
+  }
   function paintSheet(chit) {
     var acts = chit.actions || {};
     var keep = $('tk_out') ? $('tk_out').textContent : '';
@@ -749,11 +768,7 @@
     } /* the rail's stuck mark rides the list row; the sheet paints it */
     /* L-F-09: one refusal sentence on three or more steps is said ONCE above them (greyed buttons keep it as their tooltip), never five times in a column */
     var repeated = repeatedWhy(acts);
-    var steps = STEPS.map(function (item) {
-      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09', !!repeated && acts[item] && acts[item].ok === false && sayOf(acts[item]) === repeated);
-    });
-    steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
-    steps = steps.join('');
+    var steps = stepButtonsHTML(chit, acts, repeated);
     sheet(
       '<h2 data-testid="tk-subject">' +
         esc(chit.subject || T('Order')) +
