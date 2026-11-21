@@ -3,7 +3,7 @@
  *
  * OWNS      hatAssignable (may this person hold a task) · jobAssignable (may this person hold a job chit) · actorHatFields (the hat and both flags of one mapped actor) · assignSlotHTML (the result-line slot of the assign bar, or '')
  * CALLED BY public/app.html (script tag in the first script line; mapApiActor, the assign pickers) · public/app/cap-admin.js · cap-workforce.js · cap-connector.js (hatAssignable)
- * FLOW      GET /api/actors row → actorHatFields(row) → { hat, assignable, jobAssignable } on the mapped actor → hatAssignable(actor) / jobAssignable(actor) answer from it
+ * FLOW      GET /api/actors row → actorHatFields(row) → { hat, access_level, assignable, jobAssignable } on the mapped actor → hatAssignable(actor) / jobAssignable(actor) answer from it
  * CARD      01-rail-core-the-chit/assign
  * OWNER     cb-people
  * RISK      plain
@@ -14,7 +14,7 @@
 /* eslint-disable no-unused-vars */
 function hatAssignable(person) {
   if (person && typeof person === 'object' && typeof person.assignable === 'boolean') return person.assignable;
-  return accessLevelOf(person && typeof person === 'object' ? person.hat : person) === 'editor';
+  return accessLevelOf(person) === 'editor';
 }
 /** may this person hold a JOB chit (a client of the firm)? the server's answer; a read-only seat may */
 function jobAssignable(person) {
@@ -28,6 +28,7 @@ function assignSlotHTML() {
 function actorHatFields(row) {
   return {
     hat: row.hat || 'act',
+    access_level: row.access_level || undefined, /* WALK-N N-F-16: the stored level, so a screen words the hat from the actor's REAL role (hat alone defaults to editor) */
     assignable: typeof row.assignable === 'boolean' ? row.assignable : undefined,
     jobAssignable: row.job_assignable === true
   };
