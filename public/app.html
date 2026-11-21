@@ -7329,7 +7329,7 @@ function navFolders(track, fs) {
   const rows = fs
     .map(
       (item) =>
-        `<button data-cbsid="APP001-B24" class="${UI.folderSel === item.folder_id ? 'on' : ''}" data-testid="nav-folder-${esc(item.folder_id)}" onclick="navToFolder('${esc(item.folder_id)}')" style="padding-inline-start:30px;font-size:var(--fs-2)"><span class="ic" style="font-size:var(--fs-2)">📁</span>${esc(item.name)}${item.count ? `<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${item.count}</span>` : ''}</button>`
+        `<button data-cbsid="APP001-B24" class="${UI.folderSel === item.folder_id ? 'on' : ''}" data-testid="nav-folder-${esc(item.folder_id)}" data-fid="${esc(item.folder_id)}" onclick="navToFolder(this.dataset.fid)" style="padding-inline-start:30px;font-size:var(--fs-2)"><span class="ic" style="font-size:var(--fs-2)">📁</span>${esc(item.name)}${item.count ? `<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${item.count}</span>` : ''}</button>`
     )
     .join('');
   /* The "＋ New folder" row that used to live here has moved onto the track button itself — see menuBtn. It was
@@ -15878,7 +15878,7 @@ function supDetailHTML() {
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
     const chip =
       supFactsHTML(x.facts) +
-      `<div style="padding:2px 0 0"><div data-cbsid="BUS009-C04" data-testid="sup-chip" onclick="viewSupplierPassport('${escJs(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g, '')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad ? 'var(--gold-line)' : 'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad ? 'var(--gold-soft)' : 'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">` +
+      `<div style="padding:2px 0 0"><div data-cbsid="BUS009-C04" data-testid="sup-chip" data-bid="${esc(x.bridge_id)}" data-nm="${esc(String(supName(x)))}" onclick="viewSupplierPassport(this.dataset.bid,this.dataset.nm)" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad ? 'var(--gold-line)' : 'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad ? 'var(--gold-soft)' : 'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">` +
       `<span style="font-size:var(--fs-1);color:${bad ? 'var(--warn-2)' : 'var(--ok-2)'};font-weight:700">${warnTxt}</span>` +
       `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
@@ -16722,8 +16722,8 @@ function prodCategoriseAsk() {
       return `<div class="bulkrow" data-testid="bulk-catg-${esc(item.id)}">
       <span class="bn">${esc(item.name)}</span>
       <span class="bh">${n ? `${n} of ${ids.length} already` : ''}</span>
-      <button data-cbsid="CAT001-B10" type="button" class="badd" onclick="prodBulkToggle('${esc(item.id)}','add',this)">+ Attach</button>
-      <button data-cbsid="CAT001-B11" type="button" class="brem" ${n ? '' : 'disabled'} onclick="prodBulkToggle('${esc(item.id)}','remove',this)">− Remove</button>
+      <button data-cbsid="CAT001-B10" type="button" class="badd" data-pid="${esc(item.id)}" onclick="prodBulkToggle(this.dataset.pid,'add',this)">+ Attach</button>
+      <button data-cbsid="CAT001-B11" type="button" class="brem" ${n ? '' : 'disabled'} data-pid="${esc(item.id)}" onclick="prodBulkToggle(this.dataset.pid,'remove',this)">− Remove</button>
     </div>`;
     })
     .join('');
@@ -17096,7 +17096,7 @@ function prodCatgStripHTML(ctx) {
      setting a second, different selected style here is how the two drift apart — this one said blue-on-tint while
      the class said white-on-accent, so the same chip looked like two different controls on two screens. */
   const chip = (v, label, count, on) => `<button data-cbsid="CAT001-B16" type="button" class="cbpick-chip${on ? ' on' : ''}" data-testid="cat-catgfilter"
-      onclick="${ctx && ctx.onPick ? ctx.onPick(v) : `prodCatgFilter('${esc(v)}')`}">${esc(label)}${count == null ? '' : ` <span class="cbpick-chipn">${count}</span>`}</button>`;
+      data-catg="${esc(v)}" onclick="${ctx && ctx.onPick ? ctx.onPick(v) : 'prodCatgFilter(this.dataset.catg)'}">${esc(label)}${count == null ? '' : ` <span class="cbpick-chipn">${count}</span>`}</button>`;
   return (
     `<div class="cbpick-catgs" style="margin-top:8px">` +
     chip('', 'All', null, !g) +
