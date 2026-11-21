@@ -134,6 +134,7 @@ var CB_SETTINGS_EP = {
   /* SSO-1129 connect (SEC-112 P1a): a signed-in person links Google to their own account; re-proof (the PIN) rides in each write */
   providerLinks: { m: 'GET', p: '/api/signin/provider/links', ok: 'y' }, // { links:[{ link_id, provider, email, email_verified, linked_at, last_used_at }], providers:[{ key, label, live, accepted }] }
   providerLinkStart: { m: 'POST', p: '/api/signin/provider/link/start', ok: '✓' }, // { provider, pin, next } -> { url } the address that starts the provider round trip
+  providerLinkFinish: { m: 'POST', p: '/api/signin/provider/link/finish', ok: '✓' }, // { code } the one-time #k= code -> { ok, linked }; only the session that started the link can spend it
   providerUnlink: { m: 'DELETE', p: '/api/signin/provider/links/:link_id', ok: '✓' }, // { pin }
   sessionRevoke: { m: 'POST', p: '/api/signin/sessions/revoke', ok: '✓' } // { jti } my own (the owner: anyone's) · { device_id } the owner removes a device
 };

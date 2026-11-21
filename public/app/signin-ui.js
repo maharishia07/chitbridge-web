@@ -108,6 +108,8 @@
       LINK_EXISTS: 'That account is already connected here.',
       SIGNIN_PROVIDER_NOT_ACCEPTED: 'This business does not accept that way to sign in.',
       SIGNIN_REFUSED: 'That could not be connected to your account.',
+      SIGNIN_UNAVAILABLE: 'Connecting could not finish. Try again in a moment.',
+      LINK_CONFIRM_FAILED: 'That connection could not be confirmed. Start again from Settings.',
       SSO_HANDOFF: 'That took too long. Start again.',
       fallback: 'That did not finish. Nothing was connected.'
     },
@@ -139,7 +141,7 @@
     try {
       var where = root.location;
       if (!where || !/(^\/$|\/app\.html$)/.test(where.pathname || '')) return null;
-      var found = /^#(h|e|c)=([A-Za-z0-9_%.-]{1,200})$/.exec(where.hash || '');
+      var found = /^#(h|e|c|k)=([A-Za-z0-9_%.-]{1,200})$/.exec(where.hash || '');
       if (!found) return null;
       if (root.history && typeof root.history.replaceState === 'function') root.history.replaceState(null, '', where.pathname + where.search);
       return { kind: found[1], value: decodeURIComponent(found[2]) };
@@ -150,7 +152,7 @@
 
   /**
    * H1 (critic 21 Nov): the ONE consumer of what the provider's redirect left. A page that has its own sign-in screen (app.html) calls this at boot, before it picks #/login:
-   * it returns { kind: 'h'|'e'|'c', value } ONCE (then null) and the address is already cleared. 'h' = a one-time code to swap (machine.providerHandoff), 'e' = a refusal word, 'c' = the result of connecting.
+   * it returns { kind: 'h'|'e'|'c'|'k', value } ONCE (then null) and the address is already cleared. 'h' = a one-time code to swap (machine.providerHandoff), 'e' = a refusal word, 'c' = the result of connecting, 'k' = a one-time confirm code the signed-in session spends (POST /provider/link/finish).
    */
   function takeLanded() {
     var landed = LANDED;

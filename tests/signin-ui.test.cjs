@@ -382,6 +382,22 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     delete globalThis.location; delete globalThis.history;
   });
 
+  await it('N1/N2 round 2: #k= is a landing of its own (the confirm code), app.html keeps it for Settings, Settings spends it with the session, and a person with no PIN gets Connect greyed with Set a PIN first', async () => {
+    globalThis.location = { pathname: '/app.html', hash: '#k=confirm-code_123', search: '' };
+    globalThis.history = { replaceState: () => {} };
+    for (const key of Object.keys(require.cache)) if (key.endsWith('signin-ui.js')) delete require.cache[key];
+    require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
+    assert.deepStrictEqual(globalThis.CBSignin.takeLanded(), { kind: 'k', value: 'confirm-code_123' });
+    assert.ok(globalThis.CBSignin.WORDS.connect.LINK_CONFIRM_FAILED && globalThis.CBSignin.WORDS.connect.SIGNIN_UNAVAILABLE, 'the two new refusals have words');
+    delete globalThis.location; delete globalThis.history;
+    const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
+    assert.ok(/kind === 'k'[^\n]*cb_connect_code/.test(read('app.html')), 'app.html keeps the code for Settings');
+    const settings = read('app/cap-settings.js');
+    assert.ok(/row\.reproof === 'code'\) return T\('Set a PIN first\.'\)/.test(settings), 'no PIN: greyed with the way out');
+    assert.ok(/api\('providerLinkFinish', \{ body: \{ code: code \} \}\)/.test(settings), 'the session spends the code');
+    assert.ok(/providerLinkFinish: \{ m: 'POST', p: '\/api\/signin\/provider\/link\/finish'/.test(read('app/accounts-shell.js')), 'the route is in the register of calls');
+  });
+
   console.log('\n' + (pass + fail) + ' checks · ' + pass + ' passed · ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();

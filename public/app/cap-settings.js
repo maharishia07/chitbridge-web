@@ -2339,7 +2339,7 @@ var CBSettings = (function () {
         r = d.r || {},
         link = (r.links || []).filter(function (item) { return item.provider === 'google'; })[0] || null,
         host = (r.providers || []).filter(function (item) { return item.key === 'google'; })[0] || null;
-      return { link: link, host: host, state: d.state };
+      return { link: link, host: host, state: d.state, reproof: r.reproof };
     }
     function provWhy(row) {
       if (row.state === 'loading') return T('Checking.');
@@ -2347,6 +2347,8 @@ var CBSettings = (function () {
       if (!row.host) return T('Google sign-in is being switched on.');
       if (row.host.live !== true) return T('Google sign-in is being switched on.');
       if (row.host.accepted !== true && !row.link) return T('This business does not accept Google sign-in.');
+      /* N1 (critic round 2): the api says which re-proof this person can give; a person with no PIN has none to type here, so both buttons are shown greyed with the way out */
+      if (row.reproof === 'code') return T('Set a PIN first.');
       return '';
     }
     function paintProvBar() {
@@ -2404,6 +2406,22 @@ var CBSettings = (function () {
       var word = null;
       try { word = sessionStorage.getItem('cb_connect_result'); sessionStorage.removeItem('cb_connect_result'); } catch (_) {}
       if (word && window.CBSignin) $('sx_prov_out').textContent = T(CBSignin.WORDS.connect[word] || CBSignin.WORDS.connect.fallback);
+      /* N2: the provider's redirect left a one-time confirm code (#k=); ONLY this session, which started the link, can turn it into a link (the callback alone wrote nothing) */
+      var code = null;
+      try { code = sessionStorage.getItem('cb_connect_code'); sessionStorage.removeItem('cb_connect_code'); } catch (_) {}
+      if (code) {
+        $('sx_prov_out').textContent = T('Connecting.');
+        api('providerLinkFinish', { body: { code: code } }).then(
+          function () {
+            $('sx_prov_out').textContent = T(CBSignin.WORDS.connect.linked);
+            readProv();
+          },
+          function (e) {
+            var said = e && e.status >= 400 && e.status < 500 && e.message && !/^API \d/.test(e.message) ? e.message : CBSignin.WORDS.connect.fallback;
+            $('sx_prov_out').textContent = T(said);
+          }
+        );
+      }
     });
     readSes().then(readDev);
 
