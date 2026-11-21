@@ -305,10 +305,7 @@
     return list;
   }
   /** the supplier name a waiting bill shows: the typed one for a missing supplier, the rail seller's own name (or a dash), else none */
-  function waitName(w, add, rail) {
-    if (add && w.name) return String(w.name);
-    return rail ? String((w.supplier && w.supplier.name) || '') || '-' : null;
-  }
+  function waitName(w, add, rail) { return add && w.name ? String(w.name) : rail ? String((w.supplier && w.supplier.name) || '') || '-' : null; }
   /**
    * ⭐ F10 · STD1: WHAT THE SERVER SAID ABOUT THIS BILL — the chit read's own `books_wait` (todo · name · why · candidates), painted, never
    * re-derived and never looked up in a list the page happens to hold: the popup says the same on Books, Home, CRM or Finance. A bill the
@@ -1354,18 +1351,11 @@
   /** the Add supplier step: a rail seller is listed by their own key and the bill posted, a typed name through the Suppliers page's own add */
   function addSupplierFor(view, id) {
     var nm = serverSaid(view).name, addIt = serverSaid(view).rail ? root.bkAddSellerAndPost : root.bkAddSupplier; /* AE-F-19: a rail seller is listed by their own key and posted */
-    if (typeof addIt !== 'function') {
-      CS.note = T('Add them on the Suppliers page.');
-      return paint();
-    }
+    if (typeof addIt !== 'function') { CS.note = T('Add them on the Suppliers page.'); return paint(); }
     CS.busy = true;
     paint();
     return addIt(serverSaid(view).rail ? id : nm)
-      .then(function (said) {
-        CS.busy = false;
-        CS.note = said || null;
-        return read(id);
-      })
+      .then(function (said) { CS.busy = false; CS.note = said || null; return read(id); })
       .catch(fixFailed);
   }
   function act(k) {

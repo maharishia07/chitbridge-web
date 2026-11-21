@@ -49,6 +49,7 @@
 },
 "files":{
  "public/app/accounts-shell.js":["public/accounts.html","public/app.html","public/authority-forms.html","public/catalogue.html","public/chart-sample.html","public/crm.html","public/employees.html","public/finance.html","public/know-your-business.html","public/network.html","public/operations.html","public/settings.html","public/shop.html","public/store.html","public/tasks.html","public/ui-standard.html"],
+ "public/app/accounts-start.js":["public/accounts.html"],
  "public/app/assets.js":["public/app.html"],
  "public/app/attach-ui.js":["public/accounts.html","public/app.html","public/crm.html","public/finance.html"],
  "public/app/avatar.js":["public/accounts.html","public/app.html","public/authority-forms.html","public/bank-demo.html","public/catalogue.html","public/chart-sample.html","public/conversion-lab.html","public/country-lab.html","public/crm.html","public/embed.html","public/employees.html","public/finance.html","public/know-your-business.html","public/list-lab.html","public/network-design.html","public/network-shop.html","public/network.html","public/offer-lab-next.html","public/operations.html","public/product-lab.html","public/promo.html","public/settings.html","public/shell-lab.html","public/shop.html","public/signin-lab.html","public/standards.html","public/store.html","public/tasks.html","public/testing.html","public/till.html","public/ui-standard.html"],
@@ -138,6 +139,7 @@
  "public/app/cap-finance-cheques.js":["public/finance.html"],
  "public/app/cap-finance-pay.js":["public/finance.html"],
  "public/app/cap-finance-returns.js":["public/finance.html"],
+ "public/app/cap-finance-tabs.js":["public/finance.html"],
  "public/app/cap-finance-terms.js":["public/finance.html"],
  "public/app/cap-finance.js":["public/finance.html"],
  "public/app/cap-flag.js":["public/accounts.html","public/network.html"],
@@ -193,6 +195,7 @@
  "public/app/chit-sheet.js":["public/accounts.html","public/app.html","public/crm.html","public/finance.html","public/tasks.html"],
  "public/app/chit-unpay.js":["public/app.html"],
  "public/app/core.js":["public/accounts.html","public/app.html","public/catalogue.html","public/crm.html","public/finance.html","public/operations.html","public/settings.html","public/tasks.html"],
+ "public/app/core-answers.js":["public/accounts.html","public/app.html","public/catalogue.html","public/crm.html","public/finance.html","public/operations.html","public/settings.html","public/tasks.html"],
  "public/app/country-compare.js":["public/country-lab.html"],
  "public/app/country-profiles.js":["public/country-lab.html"],
  "public/app/country-ready.js":["public/country-lab.html","public/standards.html"],

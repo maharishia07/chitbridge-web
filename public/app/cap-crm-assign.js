@@ -1,5 +1,5 @@
 /* cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body).
- * OWNS      the token's claims (crmTokenClaims) · who sees the Unassigned bucket (crmSeesUnassigned) · the Show filter's choices (crmScopeOptions) · the follow-up's holder on CBAssign (crmAssignOpts · crmFuWrite · crmFuHolders; ASSIGN-W3 L6, replaces the leaver-only Assign button); moved out of cap-crm.js (2026-11-18, size ratchet; behaviour unchanged)
+ * OWNS      the token's claims (crmTokenClaims) · who sees the Unassigned bucket (crmSeesUnassigned) · the Parties headline (crmKeepHeadlines · crmTotalOf · crmPartyCount, moved from cap-crm.js, file-size ratchet 28 Nov) · the Show filter's choices (crmScopeOptions) · the follow-up's holder on CBAssign (crmAssignOpts · crmFuWrite · crmFuHolders; ASSIGN-W3 L6, replaces the leaver-only Assign button); moved out of cap-crm.js (2026-11-18, size ratchet; behaviour unchanged)
  * CALLED BY crm.html (<script src>, after cap-crm.js) · cap-crm.js (crmHat · crmFollowups filters · the Held-by column and bar)
  * FLOW      crmFollowups → crmScopeOptions(def) → crmSeesUnassigned() ← CRM.may.assign (the server's verdict on every CRM read); crmTokenClaims reads the token's access LEVEL only (cap-crm.js crmHat), never the hat
  * CARD      11-crm-and-marketing/crm-followups
@@ -86,4 +86,17 @@ function crmFuWhoFill() {
       list.filter(function (p) { return !p.me && String(p.id) !== meId; }).map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + (p.holds != null ? ' · ' + p.holds : '') + '</option>'; }).join('');
     if (mine) select.options[0].textContent = tx('Me') + ' · ' + mine.name;
   }, function () { /* the sheet keeps the list it came with */ });
+}
+/** the alert counts and the headline total of an answer; COUNT-SOURCE: the headline is the server's total (+ the walk-ins listed beside it), never a client-side filter's length */
+function crmKeepHeadlines(reply) {
+  CRM.alerts = (reply && reply.alerts) || {};
+  CRM.total = crmTotalOf(reply);
+}
+/** the Parties headline: the server's total plus the walk-ins listed beside it, or null when the server sent none */
+function crmTotalOf(reply) {
+  return reply && reply.total != null ? Number(reply.total) + (reply.walk_ins || []).length : null;
+}
+/** the number on the Parties tab: the server's total, else the rows held here */
+function crmPartyCount() {
+  return CRM.total != null ? CRM.total : CRM.rows.length;
 }

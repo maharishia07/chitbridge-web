@@ -18,7 +18,7 @@ const busy = draw({ what: 'Accounts', status: 429, retryAfter: 7 });
 assert(busy.includes('Too many requests') && busy.includes('7 s') && !busy.includes('could not be read'), 'a 429 names the wait: ' + busy);
 assert(draw({ what: 'Accounts', status: 429 }).includes('try again in a moment'), 'a 429 without a wait still says it is busy');
 assert(draw({ what: 'Accounts', status: 500 }).includes('could not be read'), 'a 5xx is still a failed read');
-assert(/retryAfter = Math\.ceil\(.*retry_after_seconds.*Retry-After/.test(read('public/app/core.js')), 'core.js: the one api client puts retryAfter on the error (body, else the header)');
+assert(/retryAfter = Math\.ceil\(.*retry_after_seconds.*Retry-After/.test(read('public/app/core-answers.js')), 'core-answers.js (errorFacts, called by core.js apiOnce): the one api client puts retryAfter on the error (body, else the header)');
 assert(read('public/accounts.html').includes('retryAfter: failure && failure.retryAfter'), 'the Accounts card passes it');
 
 /* M-F-08 */

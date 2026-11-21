@@ -1013,10 +1013,7 @@ function catsetCard(title, body, actions) {
     '</div>'
   );
 }
-/** the end of the sentence on which slab a product attracts: per code where the pack has codes (India's), else the shop's own statement within what the tax authority sets */
-function catsetAttractsWords() {
-  return catsetScheme().codes ? 'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you ' : 'attracts is yours to state, within what the tax authority sets. CB carries what you ';
-}
+function catsetAttractsWords() { return catsetScheme().codes ? 'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you ' : 'attracts is yours to state, within what the tax authority sets. CB carries what you '; } /* the end of the sentence on which slab a product attracts: per code where the pack has codes (India's), else the shop's own statement within what the tax authority sets */
 /** AE-F-07: the shop's tax words from its pack (cap-definitions cbDefTaxScheme); the India-shaped words only until that is loaded */
 function catsetScheme() {
   return typeof cbDefTaxScheme === 'function' ? cbDefTaxScheme() : { word: 'GST', sample: 18, codes: true };
@@ -1245,8 +1242,7 @@ function catsetBody(k) {
         'Name a rate, then a product cites it',
         'A slab is “' + catsetScheme().word + ' ' + catsetScheme().sample + '%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names ' +
           'none inherits — first from its category, then from the catalogue default.' +
-          '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and ' +
-          'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>' +
+          '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and ' + 'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>' +
           '<div class="catset-std">⚠️ <b>A rate is not a decision, and we ship none.</b> Which slab a product ' +
           catsetAttractsWords() +
           'declared, who declared it and when — and freezes it onto a chit at the mint.</div>',

@@ -334,7 +334,7 @@ function go() {
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) — nothing of it is drawn here -->
-<script src="/app/core.js"></script>
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
 <script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP, CB_MIS_EP);</script>   <!-- CB_SHOP_EP (T3-P1-MONEY): `me` — the shop's country for Returns, the read Home and Settings make · CB_MIS_EP (T3-P4-ACCOUNT): the rail measured, GET /api/folders/mis — the Reports tab's one read -->
@@ -363,7 +363,7 @@ function go() {
 <script src="/engine/signin.js"></script>
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) -->
 <script src="/app/cap-finance.js"></script>
-<script src="/app/cap-finance-terms.js"></script>   <!-- Terms tab (F2): shop default + per-party override -->
+<script src="/app/cap-finance-tabs.js"></script><script src="/app/cap-finance-terms.js"></script>   <!-- Terms tab (F2): shop default + per-party override -->
 <script type="cb-late" data-late-group="tabs" src="/app/cap-finance-pay.js"></script>   <!-- Payables tab (F4): what we owe, aged, MSME day 45, the early-pay offer; Pay is payOpen -->
 <script type="cb-late" data-late-group="tabs" src="/app/cap-finance-cash.js"></script>   <!-- Cash tab (F3): the 7/30-day cash position, the shortfall sentence; every figure the server's -->
 <script type="cb-late" data-late-group="tabs" src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->

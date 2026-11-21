@@ -439,13 +439,8 @@ function c2PaneMsg(d) {
 /** the offer a recorded line carried, as the cart's row reads it ({ unit, off, label, promise, parts }), or null when the line had none */
 function recordedDeal(l, unit, off) {
   if (unit == null) return null;
-  return {
-    unit: unit,
-    off: off,
-    label: (l.offer && l.offer.label) || 'offer',
-    promise: (l.offer && l.offer.promise) || null,
-    parts: l.offer && Array.isArray(l.offer.parts) ? l.offer.parts : null
-  };
+  var offer = l.offer;
+  return { unit: unit, off: off, label: (offer && offer.label) || 'offer', promise: (offer && offer.promise) || null, parts: offer && Array.isArray(offer.parts) ? offer.parts : null };
 }
 function c2PaneOrd(d) {
   var lines = d.live_set || [];

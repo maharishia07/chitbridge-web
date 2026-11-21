@@ -602,19 +602,6 @@ function crmRolesList(r) {
     });
   return [];
 }
-/** the alert counts and the headline total of an answer; COUNT-SOURCE: the headline is the server's total (+ the walk-ins listed beside it), never a client-side filter's length */
-function crmKeepHeadlines(reply) {
-  CRM.alerts = (reply && reply.alerts) || {};
-  CRM.total = crmTotalOf(reply);
-}
-/** the Parties headline: the server's total plus the walk-ins listed beside it, or null when the server sent none */
-function crmTotalOf(reply) {
-  return reply && reply.total != null ? Number(reply.total) + (reply.walk_ins || []).length : null;
-}
-/** the number on the Parties tab: the server's total, else the rows held here */
-function crmPartyCount() {
-  return CRM.total != null ? CRM.total : CRM.rows.length;
-}
 async function crmLoad(quiet) {
   var g = ++CRM.loadGen;
   if (!quiet || !CRM.loaded) {

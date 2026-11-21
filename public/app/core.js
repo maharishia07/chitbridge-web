@@ -12,18 +12,6 @@ function fill(path, params) {
   return path.replace(/:(\w+)/g, (_, k) => encodeURIComponent((params && params[k]) ?? ''));
 }
 
-/** the shop's own time zone from the /me answer, handed to the one owner of window.CB_SHOP_TZ (shopZoneSet) */
-function noteShopZone(j, key) {
-  if (key === 'me' && j.entity.timezone && typeof shopZoneSet === 'function') shopZoneSet(j.entity.timezone);
-}
-/** the answer's `included` rides on the flattened entity (a frozen entity just keeps going without it) */
-function keepIncluded(j) {
-  if (j.included && j.entity && typeof j.entity === 'object') {
-    try {
-      j.entity.included = j.included;
-    } catch (_) {}
-  }
-}
 // Single response envelope. Accepts a real {ok,data,error} envelope, or normalises the legacy
 // wrappers ({chits,…}, {entity}, {messages,…}, …) so feature code uses `data` directly.
 /**
@@ -1387,13 +1375,6 @@ function answerWords(body, status) {
   var rate = typeof window !== 'undefined' && typeof window.cbRateWords === 'function' ? window.cbRateWords(answer, status) : ''; /* the sentence is read by shell.js, loaded on every shelled page (call time) */
   if (rate) return rate;
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
-}
-/** the facts a failed call's error carries: the status, the answer's own body (e.data), how long to wait after a 429 (M-F-07: the body's own, else the Retry-After header), then the register code, hint and request id (B7) */
-function errorFacts(er, res, j, requestId) {
-  er.status = res.status;
-  er.data = j;
-  er.retryAfter = Math.ceil(Number(j && j.params && j.params.retry_after_seconds) || Number(res.headers && res.headers.get && res.headers.get('Retry-After')) || 0);
-  refusalFacts(er, j, requestId);
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
 const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}); const actingEp = (ep) => (ep && typeof CBBooksActing !== 'undefined' ? CBBooksActing.guard(ep) : ep); /* the store header never goes outside /api/books*: a call outside it is refused before it is sent */

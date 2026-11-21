@@ -14,7 +14,7 @@ const read = (f) => fs.readFileSync(path.join(APP, f), 'utf8');
 let fail = 0;
 const ok = (n, c) => { if (!c) fail++; console.log((c ? '   ok   ' : '   FAIL ') + n); };
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-ok('cap-categories: the slab badge uses the pack word', /packWord\('taxName'\)/.test(read('cap-categories.js')) && !/'GST '\s*\+\s*t\.rate/.test(read('cap-categories.js')));
+ok('cap-categories: the slab badge uses the pack word (cbcatTaxChipWords, now in tax-slab-ui.js)', /packWord\('taxName'\)/.test(read('tax-slab-ui.js')) && !/'GST '\s*\+\s*t\.rate/.test(read('cap-categories.js')) && /cbcatTaxChipWords\(t\)/.test(read('cap-categories.js')));
 ok('cap-chit2: a line with no tax name falls back to the pack word, not GST', !/tax_name \|\| 'GST'/.test(read('cap-chit2.js')) && /tax_name \|\| \(\(typeof packWord/.test(read('cap-chit2.js')));
 const cs = code(read('cap-catsetup.js'));
 ok('cap-catsetup: the slab sentence and the reference heading say the pack word', !/“GST 18%”/.test(cs) && !/tx\('GST slab rates/.test(cs) && (/\{tax\} slab rates \(reference\)/.test(cs) || /catsetScheme\(\)\.word \+ ' ' \+ tx\('slab rates \(reference\)'\)/.test(cs))); /* batch 1128: the merged screen takes the word from catsetScheme() (the pack scheme): one helper */

@@ -337,15 +337,9 @@ function cbReadTag() {
     tries = [region ? lang + '-' + region + unicodeExt : '', lang + unicodeExt, lang];
   return firstSupportedTag(tries) || format;
 }
-/** the first of the tags this browser supports, or '' when none (a tag it throws on is skipped) */
-function firstSupportedTag(tries) {
-  for (var i = 0; i < tries.length; i++) {
-    try {
-      if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */
-    } catch (failure) {
-      if (typeof cbQuiet === 'function') cbQuiet('locale: a read tag was not supported, the next one is tried', failure);
-    }
-  }
+function firstSupportedTag(tries) { /* the first of the tags this browser supports, or '' when none (a tag it throws on is skipped) */
+  for (var i = 0; i < tries.length; i++)
+    try { if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */ } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a read tag was not supported, the next one is tried', failure); }
   return '';
 }
 /** cbInstallReader() → puts the reader over CBLocale.date/time/datetime once; false when the engine is absent, already done, or lacks zoned/_d */
@@ -363,10 +357,7 @@ function cbInstallReader() {
       if (!when) return '';
       try {
         return engine.ltr(when[shapes[name][0]](cbReadTag(), engine.zoned(opts || shapes[name][1])));
-      } catch (failure) {
-        if (typeof cbQuiet === 'function') cbQuiet('locale: a moment could not be written in the reader words, shown blank', failure);
-        return '';
-      }
+      } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a moment could not be written in the reader words, shown blank', failure); return ''; }
     };
   });
   engine._readerWords = true;
@@ -374,9 +365,7 @@ function cbInstallReader() {
 }
 try {
   cbInstallReader();
-} catch (failure) {
-  if (typeof cbQuiet === 'function') cbQuiet('locale: the reader words were not installed, the engine keeps its own', failure);
-}
+} catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: the reader words were not installed, the engine keeps its own', failure); }
 /* R5: connector/device health — ONE source (colour · dot · signal), was duplicated across cap-connector + cap-workforce. */
 function healthColor(h) {
   return { live: 'var(--ok-3)', slow: 'var(--warn-2)', offline: 'var(--disp)' }[h] || 'var(--grey-4)';
@@ -656,9 +645,8 @@ function gstrDownload(month, form, onReply) {
 }
 /** ⭐ WALK M M-F-03/M-F-08: is this login VIEW-ONLY (level viewer, not the owner)? The ONE reading of the claim — Accounts greys its menu with it, Returns greys its file buttons; a firm seat is decided by its grant (accounts.html adds that). The api refuses a viewer the money in words (books money gate); this only greys what would be refused */
 function viewOnlyLogin() {
-  var who = typeof SESSION !== 'undefined' ? SESSION : null,
-    claims = (who && jwtPayload(who.token)) || {};
-  return !!who && who.role !== 'entity' && String(claims.access_level || claims.level || '') === 'viewer';
+  var claims = (typeof SESSION !== 'undefined' && SESSION && jwtPayload(SESSION.token)) || {};
+  return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role !== 'entity' && String(claims.access_level || claims.level || '') === 'viewer';
 }
 /** the reason a view-only login is shown beside a greyed money door (one sentence for Accounts and Returns) */
 function viewOnlyMoneyWhy() {

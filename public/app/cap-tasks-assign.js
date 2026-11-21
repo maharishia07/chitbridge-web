@@ -1,7 +1,7 @@
 /* cap-tasks-assign.js — Tasks & Orders: the board's rows on the ONE work-queue capability (CBAssign.queue, app/assign-bar.js): Mine · Unassigned · Everyone, ticks with Assign to me / Assign to…, the Held by filter.
  * ID        TSK001
  * OWNER     cb-ux-locale
- * OWNS      the client cell of a client's job (clientCell · dueWord · roleWord, moved from cap-tasks.js 20 Nov: file-size ratchet) and only what is the board's own: a row's assignee as CBAssign's `holders`, and the door (plug 'task', the chit id). Every view, filter, tick, bar and clear-after-assign is CBAssign.queue's
+ * OWNS      the client cell of a client's job (clientCell · dueWord · roleWord) and two sentence builders (taxWord · lineSubHTML), all moved from cap-tasks.js (file-size ratchet, 20 and 28 Nov) and only what is the board's own: a row's assignee as CBAssign's `holders`, and the door (plug 'task', the chit id). Every view, filter, tick, bar and clear-after-assign is CBAssign.queue's
  * FLOW      cap-tasks.js mountList → CBTasksAssign.queue(board, reload, beforePick) → CBAssign.queue → { views, bulk, bulkAlways, preset, filter } merged into the CBList mount
  * CARD      01-rail-core-the-chit/assign
  * RISK      plain
@@ -49,5 +49,22 @@
   function roleWord(role) {
     return role === 'adviser' ? 'Adviser service' : role === 'auditor' ? 'Audit' : role;
   }
-  root.CBTasksAssign = { holdersOf: holdersOf, queue: queue, clientCell: clientCell };
+  /** L-F-06: a total is always the amount WITH tax in it, so say so beside it: "incl. VAT 5.24", the tax word from the country pack (packWord taxName), the figure as the chit states it (tax_minor); nothing when the chit states no tax */
+  function taxWord(chit, sayWord, moneyWord) {
+    if (chit.tax_minor == null) return '';
+    var word = (typeof root.packWord === 'function' && root.packWord('taxName')) || sayWord('tax');
+    return sayWord('incl.') + ' ' + word + ' ' + moneyWord(chit.tax_minor, chit.currency, false);
+  }
+  /** the small line under a line's name: delivered and left, what the other side says, an over-delivery, the due day and the task note */
+  function lineSubHTML(chit, line, lineId, sayWord, escText) {
+    /* L-F-10: nothing is delivered on a task (a credit note, a to-do): no Delivered / left counts, no Deliver button */
+    return (
+      (chit.kind === 'task' ? '' : escText(sayWord('Delivered')) + ' ' + escText(line.delivered) + ' · ' + escText(sayWord('left')) + ' ' + escText(line.remaining)) +
+      (line.theirs > 0 ? ' · <span data-testid="tk-line-theirs-' + lineId + '">' + escText(sayWord(chit.kind === 'order_out' ? 'Seller says' : 'Buyer says')) + ' ' + escText(line.theirs) + ' ' + escText(sayWord('delivered')) + '</span>' : '') +
+      (line.over_theirs > 0 ? ' · <span class="tag red" data-testid="tk-line-over-' + lineId + '">' + escText(line.theirs + ' ' + sayWord('against') + ' ' + line.qty + ' ' + sayWord('ordered')) + '</span>' : '') +
+      (line.settings && line.settings.due ? (chit.kind === 'task' ? '' : ' · ') + escText(sayWord('due')) + ' ' + escText(line.settings.due) : '') +
+      (line.settings && line.settings.task ? ' · ' + escText(line.settings.task) : '')
+    );
+  }
+  root.CBTasksAssign = { holdersOf: holdersOf, queue: queue, clientCell: clientCell, taxWord: taxWord, lineSubHTML: lineSubHTML };
 })(typeof window !== 'undefined' ? window : globalThis);

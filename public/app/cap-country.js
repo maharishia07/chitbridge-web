@@ -608,13 +608,8 @@ function csuTaxIdWhy(country, number) {
 }
 /** a row after a change: a tax number the checker refuses keeps the tax row open; otherwise the row counts as answered and closes (the tax row only once it has its number) */
 function csuSettleRow(row) {
-  if (CSU.taxErr) {
-    CSU.open.tax = true;
-    CSU.answered.tax = false;
-  } else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) {
-    CSU.answered[row] = true;
-    CSU.open[row] = false;
-  }
+  if (CSU.taxErr) { CSU.open.tax = true; CSU.answered.tax = false; }
+  else if (row !== 'tax' || !CSU.edit.registered || CSU.edit.number) { CSU.answered[row] = true; CSU.open[row] = false; }
 }
 /** one field changed on screen: hold the cleaned value, say "you chose" as its source (W12), mark the step touched (W24), close its row once answered
     (WALK-REG R10c — the tax row stays open while it still needs the number), and repaint */
