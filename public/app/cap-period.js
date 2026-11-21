@@ -1122,12 +1122,12 @@ function peYearFix(x) {
 /** F-16: the server's year-close sentence for the owner — dates as dates (bkDate), "still open: 2026-07" as month words, the raw period keys in [brackets] dropped */
 function peYearWhy(text) {
   const words = String(text == null ? '' : text)
-    .replace(/s*[d{4}-[A-Za-z0-9]+]/g, '')
-    .replace(/d{4}-d{2}-d{2}/g, (iso) => bkDate(iso));
+    .replace(/\s*\[\d{4}-[A-Za-z0-9]+\]/g, '')
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, (iso) => bkDate(iso));
   const at = words.indexOf('still open:');
   if (at < 0) return words;
   const names = monthNames('short');
-  return words.slice(0, at) + words.slice(at).replace(/(d{4})-(0[1-9]|1[0-2])/g, (_, year, month) => names[Number(month) - 1] + ' ' + year);
+  return words.slice(0, at) + words.slice(at).replace(/\b(\d{4})-(0[1-9]|1[0-2])\b/g, (_, year, month) => names[Number(month) - 1] + ' ' + year);
 }
 /** the checks of a year still open: every month locked, then each thing the server says stands in the way (each with the tab that fixes it), or that nothing else does */
 function peYearChecksHtml(year, months, refs) {
