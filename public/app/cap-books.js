@@ -429,7 +429,7 @@ function bkErr(e) {
 var BK_READ_WORDS = "Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.";
 function bkRefused(e, what) {
   if (!e || e.status !== 403) return bkErr(e);
-  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)));
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)) + ' ' + esc(tx('A job title is only a name. To read the books, the owner picks the Bookkeeper seat for you under People.'))); /* AG-F-06: a person called Bookkeeper by job title alone has no seat; the answer says what to ask for */
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */

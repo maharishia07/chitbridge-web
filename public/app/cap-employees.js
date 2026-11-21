@@ -755,7 +755,7 @@
         cs +
         '</select>' +
         '<label for="emp_r">' +
-        esc(T('Job')) +
+        esc(T('Job title (a name only, grants nothing)')) +
         '</label><input data-cbsid="EMP001-I05" class="inp" id="emp_r" data-testid="emp-add-role" autocomplete="off">' +
         '<label for="emp_p">' +
         esc(T('Phone')) +
