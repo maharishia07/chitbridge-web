@@ -57,11 +57,11 @@
   function load() {
     var who = call('assistWhoami').then(
       function (reply) {
-        return (reply && reply.actions && reply.actions.publish) || { ok: false, say: T('Could not check who may publish. Try again.') };
+        return (reply && reply.actions && reply.actions.publish) || { ok: false, unknown: true, say: T('Could not check who may publish. Try again.') };
       },
       function (e) {
         say('error', 'Assist: who may publish could not be read — ' + ((e && e.message) || e));
-        return { ok: false, say: T('Could not check who may publish. Try again.') };
+        return { ok: false, unknown: true, say: T('Could not check who may publish. Try again.') };
       }
     );
     return Promise.all([who, call('assistQuestions')]).then(function (reply) {
@@ -84,8 +84,13 @@
   }
 
   /* ── the review box: question → ✨ Draft → Accept (publish) · Reject (discard) ── */
+  /* L-F-16: a person the server says may not publish (not the help desk) is shown the answers, not a whole editor with one greyed button: one line says why */
+  function readOnly() {
+    return !!(A.may && A.may.ok === false && !A.may.unknown);
+  }
   function reviewHTML() {
     var q = A.qa || {};
+    if (readOnly()) return '<div class="sub" data-testid="ca-readonly">' + esc(A.may.say || A.may.why || '') + '</div>';
     return (
       '<div class="tk-h">' +
       esc(T(A.qa && A.qa.id ? 'Refine this answer' : 'What Assist drafted')) +
@@ -122,6 +127,7 @@
     if (!box) return;
     var keep = $('ca_out') ? $('ca_out').textContent : '';
     box.innerHTML = reviewHTML();
+    if (readOnly()) return;
     $('ca_out').textContent = keep;
     $('ca_draft').onclick = function () {
       draft($('ca_draft'));
@@ -333,6 +339,7 @@
   }
   root.CBAssistReview = {
     mount: mount,
+    reviewHTML: reviewHTML,
     reload: function () {
       return A.el ? mount(A.el) : Promise.resolve();
     }
