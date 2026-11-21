@@ -103,6 +103,10 @@
       var value = said ? NaN : reader.minor(typed, currency);
       return said || !(value >= 0) ? { why: said || sentence } : { value: value };
     }
+    return plainInterestMinor(typed, currency, sentence);
+  }
+  /** the page without the money reader: digits with thousands commas and an optional decimal part, through CBMoney.toMinor */
+  function plainInterestMinor(typed, currency, sentence) {
     if (!/^(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.test(typed)) return { why: sentence };
     var unit = root.CBMoney, minor = unit && unit.toMinor ? unit.toMinor(+typed.replace(/,/g, ''), currency) : null;
     return minor === null ? { why: sentence } : { value: minor };
@@ -111,6 +115,13 @@
   function panelBoxesHtml(ctx, item, result) {
     var kind = result ? '' : ctx.kindBox(item);
     return result || item.needs === 'which_liability' ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
+  }
+  /** the explicit press "use this for N similar": the answer just given goes to the same-words lines of the same direction that still wait, and the count is said */
+  function useSimilar(cfg, offers, key) {
+    var answers = offers[key], others = answers ? sameAccountLines(cfg, key) : [];
+    delete offers[key];
+    others.forEach(function (other) { cfg.controller().resolveLine(other.key, answers); });
+    return { ok: true, said: 'Applied to ' + others.length + ' similar ' + (others.length === 1 ? 'line' : 'lines') + '.' };
   }
   /** what the buttons that answer the controller do, by data-act (they give the controller's answer, or { ok, why } when it refuses) */
   function answerActions(cfg, chosenFor, taxWordOf, offers) {
@@ -122,13 +133,6 @@
         said = cfg.controller().resolveLine(key, answers);
       if (said && said.ok !== false) offers[key] = answers; /* only this line is answered; the look-alikes of the same direction are OFFERED, one press, with their count */
       return said;
-    }
-    /** the explicit press "use this for N similar": the answer just given goes to the same-words lines of the same direction that still wait, and the count is said */
-    function useSimilar(key) {
-      var answers = offers[key], others = answers ? sameAccountLines(cfg, key) : [];
-      delete offers[key];
-      others.forEach(function (other) { cfg.controller().resolveLine(other.key, answers); });
-      return { ok: true, said: 'Applied to ' + others.length + ' similar ' + (others.length === 1 ? 'line' : 'lines') + '.' };
     }
     /** FIN-116: the tax kind for a line the bank's words proposed: its own class (the proposal's, never a literal) with the chosen kind, through resolve() */
     function useTax(key) {
@@ -143,7 +147,7 @@
       meant: function (key, target) { return cfg.controller().editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') }); },
       resolve: function (key) { return cfg.controller().resolveLine(key); },
       useacct: useAccount,
-      similar: useSimilar,
+      similar: function (key) { return useSimilar(cfg, offers, key); },
       taxuse: useTax,
       interest: function (key) { return useInterest(cfg, chosenFor, key); },
       liability: function (key, target) { return useLiability(cfg, key, target); },

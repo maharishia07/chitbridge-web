@@ -230,12 +230,12 @@
         others = otherNeeds(item, tag, escapeHtml);
       return entryNote(item) + asked + (others ? ' ' + others : '') + reasonBox(item, asked) + sayBox(item);
     }
-    /** the engine's own reason for a proposal as one sentence ("narration says \"X\" — card takings paid to the bank" is the engine's; a line it could not read says what to do) */
-    function sentenceOf(item) {
-      if (!item.what && /^no rule matched$/i.test(item.why || '')) return 'Nothing here says who or what this is.';
-      return String(item.why || '').replace(/^narration says "[^"]*" — /i, 'Looks like ');
-    }
-    Object.assign(ctx, { sayBox, lineNote, sentenceOf });
+    Object.assign(ctx, { sayBox, lineNote, sentenceOf: lineSentenceOf });
+  }
+  /** the engine's own reason for a proposal as one sentence ("narration says \"X\" — card takings paid to the bank" is the engine's; a line it could not read says what to do) */
+  function lineSentenceOf(item) {
+    if (!item.what && /^no rule matched$/i.test(item.why || '')) return 'Nothing here says who or what this is.';
+    return String(item.why || '').replace(/^narration says "[^"]*" — /i, 'Looks like ');
   }
   /** a new party, and the account a line nothing explained is given; each function lands on the one shared `ctx` */
   function addParties(ctx) {
