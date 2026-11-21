@@ -85,6 +85,10 @@ function crmSendRefusedHtml(refused) {
     '</div>'
   );
 }
+/** where WhatsApp is connected: the Channels page in Settings (the same door Offers sent offers) */
+function crmChannelsHref() {
+  return typeof CB_HOMES !== 'undefined' && CB_HOMES.integrations ? CB_HOMES.integrations : '/settings.html#/connectors';
+}
 /** show a dry run's answer: the count in the shop's words, who is left out, and the Send button's state */
 function crmSendDryShown(reply, node, goButton) {
   var words = crmReachWords({ may: reply.may, not: reply.refused_n, refused_by: reply.refused_by });
@@ -94,6 +98,8 @@ function crmSendDryShown(reply, node, goButton) {
     goButton.disabled = !(reply.may > 0) || !!offline;
     goButton.title = offline || (reply.may > 0 ? '' : tx('Nobody may be sent this'));
     goButton.textContent = reply.may > 0 ? txf('Send to {n}', { n: reply.may }) : tx('Send');
+    /* A-F-57: say it where the owner is looking, with the door to connect, not only in Offers sent afterwards */
+    if (offline) node.innerHTML += '<div class="hint" data-testid="crm-send-offline">' + esc(offline) + ' <a href="' + esc(crmChannelsHref()) + '">' + esc(tx('Open Channels')) + '</a></div>';
   }
 }
 /** the dry run: ask the server who may be sent this message and show the count before anything is sent */
@@ -117,8 +123,9 @@ function crmSendCheck(btn) {
       onFail: function (words, e) {
         node.textContent = crmSendWords(e);
       },
-      outcome: function (reply) {
+      outcome: async function (reply) {
         SEND.dry = reply;
+        await outsideLoad(); /* A-F-57: the read of the outside services is finished before the Send button is judged (it raced the dry run, so Send was freed while WhatsApp was not connected) */
         crmSendDryShown(reply, node, goButton);
       }
     }
