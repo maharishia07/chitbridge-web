@@ -698,12 +698,14 @@ function cbDefRuleFields(kind, sub) {
    *                   old rate with nothing on screen to say why.
    */
   if (kind === 'tax') {
+    /* AE-F-07: the pack decides which fields a slab has — a VAT shop has no cess and no HSN list */
+    var scheme = cbDefTaxScheme();
     return [
-      { k: 'rate', label: 'Rate', ph: '18', num: true, pct: true },
-      { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
-      { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
+      { k: 'rate', label: 'Rate', ph: String(scheme.sample), num: true, pct: true },
+      scheme.codes && { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
+      scheme.codes && { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
       { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD', date: true } /* a real date control (Athi, 2026-09-05: "date picker is not there") */
-    ];
+    ].filter(Boolean);
   }
   if (kind === 'pricing') {
     /* the names the engine reads (pricing.js copyOf): amount · tiers · min · max */
@@ -1322,7 +1324,23 @@ function cbDefSetReward(id) {
  * headed "KIND", above a field headed "PERCENT OFF" — the screen was reading its own source code out loud. The
  * labels already existed one function away and were already published on the Registries screen.
  */
+/**
+ * AE-F-07: the shop's tax slab in the shop PACK's words — { word: 'VAT', sample: 5, codes: false } — never India's. word = the pack's scheme (pack.tax.scheme);
+ * sample = its standard rate (pack.tax.standard_rate), else the first rate above 0; codes = whether the pack's slabs carry an HSN list and a cess
+ * (only a pack that names hsn_digits does: India's); no pack known → the old India-shaped form, as before.
+ */
+function cbDefTaxScheme() {
+  var pack = (typeof shopReg === 'function' && shopReg()) || null,
+    tax = pack && pack.tax ? pack.tax : null;
+  if (!tax) return { word: 'GST', sample: 18, codes: true };
+  var rates = (tax.rates || []).filter(function (r) {
+    return typeof r === 'number' && r > 0;
+  });
+  var standard = typeof tax.standard_rate === 'number' ? tax.standard_rate : typeof pack.standard_rate === 'number' ? pack.standard_rate : rates[0];
+  return { word: tax.scheme || 'GST', sample: standard == null ? 18 : standard, codes: !!tax.hsn_digits };
+}
 function cbDefSubLabel(kind, sub) {
+  if (kind === 'tax') return cbDefTaxScheme().word + ' slab';
   if (kind === 'offer') return cbDefOfferLabel(sub);
   if (kind === 'pricing') return cbDefPricingLabel(sub);
   if (kind === 'ordermodel' && typeof CBCart !== 'undefined' && CBCart.models && CBCart.models[sub]) return CBCart.models[sub].label || sub;
@@ -1565,7 +1583,7 @@ function cbDefFormHTML() {
           : /* ⚠️ The NAME is what a product cites and what a chit freezes, so it must read as a rate
                            to someone who never opens this form. "GST 18%", not "standard". */
             f.kind === 'tax'
-            ? 'GST 18%'
+            ? cbDefTaxScheme().word + ' ' + cbDefTaxScheme().sample + '%'
             : 'Spices') +
     '"' +
     ' oninput="cbDefSetField(\'name\',this.value)">' +

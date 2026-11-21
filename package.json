@@ -20,7 +20,7 @@
     "check:quoteattempt": "node e2e/quote-attempt-key.test.cjs",
     "check:gststill": "node e2e/pe-gst-still.test.cjs",
     "check:taxpick": "node tests/country-tax-pick.test.cjs",
-    "check:aesetup": "node tests/ae-f03-setup-asks.test.cjs && node tests/ae-f21-language-coming.test.cjs",
+    "check:aesetup": "node tests/ae-f03-setup-asks.test.cjs && node tests/ae-f21-language-coming.test.cjs && node tests/ae-f07-slab-pack-words.test.cjs",
     "check:countrysave": "node tests/startfix-country-save-once.test.cjs",
     "check:signin": "node tests/signin-ui.test.cjs",
     "check:homebar": "node tests/home-phone-bar.test.cjs",
