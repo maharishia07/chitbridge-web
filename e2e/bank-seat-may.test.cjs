@@ -18,7 +18,7 @@ const box = { tx: (s) => s, state: { owner: false, acting: false, readOnly: fals
 box.peOwner = () => box.state.owner; box.bkbActing = () => box.state.acting; box.bkbReadOnly = () => box.state.readOnly;
 vm.createContext(box);
 vm.runInContext(lift(books, 'var BK_SEAT =', 'function bkIsBookkeeper'), box);
-vm.runInContext(lift(bank, 'function bkbSeatNo(kind)', 'const bkstSeatNoHtml'), box);
+vm.runInContext(lift(bank, 'function bkbSeatUnasked()', 'const bkstSeatNoHtml'), box);
 const seat = (w, p) => { box.state = { owner: false, acting: false, readOnly: false }; box.bkSeatRead({ may: { write: w, post: p } }); };
 const YES_W = { may: true, code: null, why: null }, YES_P = { ok: true, code: null, why: null };
 const NO_P = { ok: false, code: 'OWNER_ONLY', why: 'Only the owner or bookkeeper can record this.' };

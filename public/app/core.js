@@ -1356,6 +1356,10 @@ function errWords(value) {
   if (typeof value !== 'object') return String(value);
   return errWords(value.detail) || errWords(value.message) || errWords(value.title) || errWords(value.error) || '';
 }
+/** offlineWords(ep) → the sentence for a call that could not reach the api: a read says what is still shown, a write says the typed work is kept */
+function offlineWords(ep) {
+  return ep.m === 'GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved.";
+}
 /** refusalFacts(err, body, requestId, kind?) → err; B7 (ERR-13): the api's problem body carries `code`, `hint` and `request_id`; they ride on the error (err.code, err.hint, err.requestId, err.kind = 'network' | 'timeout')
    so ONE card (helpers.js scrErr) and ONE toast (accounts-shell.js toast) show the register sentence AND its next step. The last one is also kept for the toast, which only receives words. */
 function refusalFacts(err, body, requestId, kind) {
@@ -1473,12 +1477,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
         return { queued: true, offline: true };
       }
       cblog('error', ep.m + ' ' + key + ' → network unreachable [' + _rid + ']');
-      throw refusalFacts(
-        new Error(ep.m === 'GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved."),
-        null,
-        _rid,
-        'network'
-      );
+      throw refusalFacts(new Error(offlineWords(ep)), null, _rid, 'network');
     }
     if (!res.ok) {
       /**

@@ -203,15 +203,23 @@ function bkstSummary() {
     kept = BKST.last ? bkstMonth(BKST.last) + ' ✓ · ' : '';
   return kept + (gaps ? txf('{n} missing', { n: gaps }) : tx('Every month is kept')) + bkstSignedLine();
 }
+/** bkbSeatUnasked() → true when no refusal can be said: a read-only or acting seat, the owner, or the server has not answered the seat question yet */
+function bkbSeatUnasked() {
+  return bkbReadOnly() || bkbActing() || peOwner() || typeof BK_SEAT === 'undefined' || !BK_SEAT.said;
+}
 /**
  * FIN-129 (walk 19 Nov W26) · rule 4: a seat the SERVER refuses is shown the action greyed WITH the server's sentence and who can, never a bare gap.
  * bkbSeatNo(kind): '' when the person may (or the server has not answered yet, or the seat only reads: the auditor's seat draws no write control, W15-71);
  * kind 'write' = add a statement · match · sign off (the server's may.write), 'post' = add lines to the books (may.post). The page holds no rule of its own.
  */
 function bkbSeatNo(kind) {
-  if (bkbReadOnly() || bkbActing() || peOwner() || typeof BK_SEAT === 'undefined' || !BK_SEAT.said) return '';
+  if (bkbSeatUnasked()) return '';
   if (kind === 'post') return BK_SEAT.write && !BK_SEAT.post ? tx(BK_SEAT.postWhy || 'Only the owner or bookkeeper can record this.') : '';
-  return BK_SEAT.write ? '' : BK_SEAT.writeWhy ? tx(BK_SEAT.writeWhy) + ' ' + tx('Ask the owner or the shop bookkeeper.') : tx('Only the owner or the shop bookkeeper can do this.');
+  return BK_SEAT.write ? '' : bkbSeatNoWrite();
+}
+/** bkbSeatNoWrite() → the server's sentence for a seat that may not write (and who can), or the plain one when it gave none */
+function bkbSeatNoWrite() {
+  return BK_SEAT.writeWhy ? tx(BK_SEAT.writeWhy) + ' ' + tx('Ask the owner or the shop bookkeeper.') : tx('Only the owner or the shop bookkeeper can do this.');
 }
 /** FIN-129: why the page button (BKS014-B18, Add to your books) is greyed for this seat: the server's sentence, or '' when it is not; cap-bank.js bankPrimaryHtml draws the ONE button in its disabled state */
 const bkbSeatNoPrimary = (fig) => { const no = BKB.text && typeof bankSheetOpen === 'function' && (!fig || bkbCount('books')) && (bkbSeatNo('write') || bkbSeatNo('post')); return no || ''; };

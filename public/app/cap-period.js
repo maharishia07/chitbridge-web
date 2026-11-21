@@ -1169,12 +1169,18 @@ function peYearActionsHtml(yearState) {
       ' onclick="peYearClose(this)">' +
       esc(tx(yearState.reclosing ? 'Close the year again' : 'Close the year')) + /* ACC-380: reopened, the server says reclosing */
       '</button></div>';
-  const newest = typeof bkLastClosedYear === 'function' ? bkLastClosedYear() : '', thisYear = yearState.fiscal_year || peVal('py_fy');
-  if (yearState.closed && peOwner() && (!newest || newest === thisYear)) /* Reopen year only on the newest closed year (from the periods list the screen holds) */
-    html +=
-      '<div class="supacts"><button data-cbsid="BKS016-B12" type="button" data-testid="py-reopen" onclick="peYearReopen(this)" title="' + esc(tx('Only the latest closed year can be reopened, with a reason; it is logged.')) + '">🔓 ' + esc(tx('Reopen year')) + '</button></div>';
+  html += peYearReopenHtml(yearState);
   if (!yearState.closed && !peOwner()) html += peNote('pe-readonly', 'Only the owner can close the year');
   return html;
+}
+/** Reopen year: offered to the owner, and only on the newest closed year (from the periods list the screen holds); '' otherwise */
+function peYearReopenHtml(yearState) {
+  if (!yearState.closed || !peOwner()) return '';
+  const newest = typeof bkLastClosedYear === 'function' ? bkLastClosedYear() : '', thisYear = yearState.fiscal_year || peVal('py_fy');
+  if (newest && newest !== thisYear) return '';
+  return (
+    '<div class="supacts"><button data-cbsid="BKS016-B12" type="button" data-testid="py-reopen" onclick="peYearReopen(this)" title="' + esc(tx('Only the latest closed year can be reopened, with a reason; it is logged.')) + '">🔓 ' + esc(tx('Reopen year')) + '</button></div>'
+  );
 }
 async function peYearStatus() {
   const fy = peVal('py_fy'),

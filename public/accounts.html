@@ -451,11 +451,12 @@ function accessView(host) {
     ownStore: CBBooksActing.ownStore(SESS.token, tx('Your books')),
     sheet: (html) => modal(html, false, { pop: 'POP047' }),
     closeSheet: closeModal,
+    /** mountList(node, cfg) → the shared list mounted on node; a list already on that key is destroyed first */
     mountList: (node, cfg) => {
       if (listKeys[cfg.key]) {
         try {
           listKeys[cfg.key].destroy();
-        } catch (_) { /* best effort: a list already gone */ }
+        } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('accounts: a list already gone', failure); }
       }
       CBList.reset && CBList.reset(cfg.key);
       cfg.t = tx;
@@ -544,6 +545,7 @@ function accBillCols() {
     }
   ];
 }
+/** accBillNext(c) → the next step of one bill row: who accepted it and what is left to do */
 function accBillNext(c) {
   const b = c.bill || {};
   /* who accepted: the person's NAME (the field the other rows show), never their user id — the id is the last resort */
@@ -572,6 +574,7 @@ function accBillNext(c) {
 function billChitList(rows) {
   return Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
 }
+/** accBillsFromBooks(folder, list) → the books' own dues beside the chit rows, so the Bills list shows both sides */
 async function accBillsFromBooks(folder, list) {
   const supplierSide = folder.code === 'B-2100',
     owed = await api('booksDues', { query: { side: supplierSide ? 'supplier' : 'customer' } }).catch((failure) => {
@@ -698,6 +701,7 @@ function todoRow(item, index) {
     ${todoButton(item, index, notChecked)}
   </div>`;
 }
+/** accTodo(body) → paints the To do list from the books' todo read, or the failure card with Try again */
 async function accTodo(body) {
   const g = ACC.gen;
   try {
@@ -740,6 +744,7 @@ function card(html, bad) {
   $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`;
   $('summary').textContent = '';
 }
+/** signedOut(why) → forgets the session and shows the sign-in with the reason */
 function signedOut(why) {
   SESS = null;
   MINE = null;

@@ -711,9 +711,14 @@ function bankPrimaryHtml(fig) {
   if (bkbReadOnly()) return typeof bankStoreSignButton === 'function' ? bankStoreSignButton() : ''; /* the auditor: the sign-off is SAID whenever the month is signed, whatever the difference; no button */
   const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), no = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
-  if (no || !canAdd || (fig && !bkbCount('books'))) return no ? bankAddButton(' disabled aria-disabled="true" title="' + bkbE(no) + '"', tx('Add to your books')) + '<span class="pe-note" data-testid="bank-sheet-why">' + bkbE(no) + '</span>' : ''; /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
+  if (no || !canAdd || (fig && !bkbCount('books'))) return bankPrimaryGreyed(no); /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
   const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
   return bankAddButton(held + ' onclick="bankAdd()"', bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books'));
+}
+/** FIN-129: the greyed button with the server's sentence beside it, or nothing when the seat is not refused (no = '') */
+function bankPrimaryGreyed(no) {
+  if (!no) return '';
+  return bankAddButton(' disabled aria-disabled="true" title="' + bkbE(no) + '"', tx('Add to your books')) + '<span class="pe-note" data-testid="bank-sheet-why">' + bkbE(no) + '</span>';
 }
 /** BKS014-B18, the ONE definition of the Add to your books button: live (an onclick) or, FIN-129, greyed (disabled, the why beside it) */
 function bankAddButton(state, label) {

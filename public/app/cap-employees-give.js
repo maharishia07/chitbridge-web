@@ -33,12 +33,33 @@
       (state.o.openAccess ? '<p><button data-cbsid="BKS027-B01" type="button" class="act quiet" id="emp_give_firm_go" data-testid="emp-give-firm-go">' + root.esc(words('Change or end this access')) + '</button></p>' : '');
     if (el('emp_give_firm_go')) el('emp_give_firm_go').onclick = state.o.openAccess;
   }
-  /** the picker, then (for the chosen person) the panel; `keep` carries the "Saved." line across the repaint after a write */
-  function paint(id, keep) {
-    var people = state.people.filter(function (p) { return p.state !== 'off'; });
-    var opts = people
+  /** pickerNotesHtml(opts, mayAdd) → under the picker: no team yet, the firms read failed, and Add a person or why it is not offered */
+  function pickerNotesHtml(opts, mayAdd) {
+    return (
+      (opts ? '' : '<p class="sub" data-testid="emp-give-none">' + root.esc(words('No one is on your team yet.')) + '</p>') +
+      (state.firmsFailed ? '<p class="sub" data-testid="emp-give-firms-failed">' + root.esc(words("Couldn't read the firms with access to your books.")) + '</p>' : '') +
+      (mayAdd ? '<p><button data-cbsid="EMP001-B02" type="button" class="act quiet" id="emp_give_add" data-testid="emp-give-add">＋ ' + root.esc(words('Add a person')) + '</button></p>'
+        : '<p class="sub" data-testid="emp-give-add-why">' + root.esc((state.may.add && state.may.add.why) || '') + '</p>')
+    );
+  }
+  /** peopleOptions(id) → the <option>s of the people still on the team, the one with this id selected */
+  function peopleOptions(id) {
+    return state.people
+      .filter(function (p) { return p.state !== 'off'; })
       .map(function (p) { return '<option value="' + root.esc(p.id) + '"' + (p.id === id ? ' selected' : '') + '>' + root.esc(p.name) + ' · ' + root.esc(p.access.label) + '</option>'; })
       .join('');
+  }
+  /** chooseWho(value, firms) → a person opens the access panel, a firm its panel, the empty choice clears the panel */
+  function chooseWho(value, firms) {
+    var node = inPlace.byId(value);
+    el('emp_out').textContent = '';
+    if (node) inPlace.accessPanel(node);
+    else if (value.indexOf('firm:') === 0) firmPanel(firms.filter(function (f) { return 'firm:' + f.id === value; })[0]);
+    else el('emp_more').innerHTML = '';
+  }
+  /** the picker, then (for the chosen person) the panel; `keep` carries the "Saved." line across the repaint after a write */
+  function paint(id, keep) {
+    var opts = peopleOptions(id);
     var firms = state.firms || [];
     var firmOpts = firms.map(function (f) { return '<option value="firm:' + root.esc(f.id) + '">' + root.esc(f.name) + ' · ' + root.esc(f.role) + '</option>'; }).join('');
     var mayAdd = !(state.may && state.may.add && state.may.add.ok === false);
@@ -46,20 +67,11 @@
       '<div class="emp-give" data-testid="emp-give" style="max-width:560px"><label class="sub" for="emp_give_who">' + root.esc(words('Who gets the work?')) + '</label>' +
       '<select data-cbsid="BKS027-S01" id="emp_give_who" class="inp" data-testid="emp-give-who"><option value="">' + root.esc(words('Choose a person or a firm')) + '</option>' +
       (opts ? '<optgroup label="' + root.esc(words('Your people')) + '">' + opts + '</optgroup>' : '') + (firmOpts ? '<optgroup label="' + root.esc(words('Firms with access to your books')) + '">' + firmOpts + '</optgroup>' : '') + '</select>' +
-      (opts ? '' : '<p class="sub" data-testid="emp-give-none">' + root.esc(words('No one is on your team yet.')) + '</p>') +
-      (state.firmsFailed ? '<p class="sub" data-testid="emp-give-firms-failed">' + root.esc(words("Couldn't read the firms with access to your books.")) + '</p>' : '') +
-      (mayAdd ? '<p><button data-cbsid="EMP001-B02" type="button" class="act quiet" id="emp_give_add" data-testid="emp-give-add">＋ ' + root.esc(words('Add a person')) + '</button></p>'
-        : '<p class="sub" data-testid="emp-give-add-why">' + root.esc((state.may.add && state.may.add.why) || '') + '</p>') +
+      pickerNotesHtml(opts, mayAdd) +
       '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div><div id="emp_more"></div></div>';
     if (keep) el('emp_out').textContent = keep;
     if (el('emp_give_add')) el('emp_give_add').onclick = function () { inPlace.openAdd(); };
-    el('emp_give_who').onchange = function () {
-      var value = this.value, node = inPlace.byId(value);
-      el('emp_out').textContent = '';
-      if (node) inPlace.accessPanel(node);
-      else if (value.indexOf('firm:') === 0) firmPanel(firms.filter(function (f) { return 'firm:' + f.id === value; })[0]);
-      else el('emp_more').innerHTML = '';
-    };
+    el('emp_give_who').onchange = function () { chooseWho(this.value, firms); };
     if (id && inPlace.byId(id)) inPlace.accessPanel(inPlace.byId(id));
   }
   /** the people (the People list's own read) and the firms (the grants list's own read), together; a grants read that fails is said, never shown as "no firms" */
