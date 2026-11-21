@@ -402,6 +402,8 @@ jobs:
           node tests/walki-tax-word.test.cjs
           node tests/walki-slip-address.test.cjs
           node tests/walki-zone-grey.test.cjs
+          node e2e/till2-combo-sample.test.cjs
+          node e2e/till2-pack-tax-word.test.cjs
           node tests/ctry-72-no-country-refusal.test.cjs
           node tests/country-literals.test.cjs
           node tests/proof-nightly.test.cjs

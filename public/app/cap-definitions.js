@@ -135,12 +135,15 @@ var CBDEF_AUTHORABLE = {
     title: 'Tax slabs',
     one: 'tax slab',
     home: { nav: 'catsetup', sec: 'tax', label: 'Open Catalogue setup →' },
-    blurb:
-      'A named rate — “GST 18%” — that a product cites instead of repeating the number. ⚠️ A ' +
+    get blurb() {   /* read when drawn, so the tax word is the shop's country's once it is known */
+      return (
+      'A named rate — “' + ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' 18%” — that a product cites instead of repeating the number. ⚠️ A ' +
       'product with no slab inherits: first from its category, then from the catalogue default. ' +
       'Blank means INHERIT, never nil-rated. Authored under <b>' +
       tx('Catalogue setup') +
       '</b>.'
+      );
+    }
   },
   pricing: {
     icon: '💱',
@@ -159,11 +162,14 @@ var CBDEF_AUTHORABLE = {
     icon: '📋',
     title: 'Required certificates',
     one: 'requirement',
-    blurb:
-      'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a GST ' +
+    get blurb() {   /* read when drawn, so the tax word is the shop's country's once it is known */
+      return (
+      'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a ' + ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') + ' ' +
       'registration. Declare it once and every supplier is measured against your list instead of ' +
       'against every standard in the system. ⚠️ It scopes what you are shown; it cannot waive a ' +
       'rule the destination or the product imposes.'
+      );
+    }
   }
 };
 /**

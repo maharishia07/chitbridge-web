@@ -1482,6 +1482,7 @@ async function loadShopMoney() {
     var body = await reply.json();
     var code = currencyOfReply(body);
     useCountrySample(countryOfReply(body, code));
+    comboSampleCountry(countryOfReply(body, code));   /* the Combo Lab's worked example by the shop's country */
     if (code && code !== shopCurrency) {
       shopCurrency = code;
       var tool = document.getElementById('priceTool');

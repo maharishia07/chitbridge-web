@@ -209,56 +209,26 @@ function modLabSetGroups(newGroups) {
  *     into a genuinely NEW product — the standalone-combo path "Apply to a product ▸" was never able to
  *     offer, because that path only ever edits a product that already exists.
  */
+var COMBO_SAMPLE_CC = '';   /* the shop's country, told by the Offer Lab once it has read the shop (comboSampleCountry); '' = the neutral sample, never a country's */
+function comboSampleCountry(cc) { COMBO_SAMPLE_CC = String(cc || '').toUpperCase(); }
+/** the worked three-section example, built from CBSample.forCountry (the ONE sample source): the first two plates are the mains, the first two cups the drinks, the next two items the extras */
 function comboExampleFresh() {
-  if (otherShopMoney()) return comboExampleNeutral();
+  var set = CBSample.forCountry(COMBO_SAMPLE_CC), menu = set.menu;
+  var pick = function (unit, n, skip) { return menu.filter(function (m) { return m.unit === unit && skip.indexOf(m.name) < 0; }).slice(0, n); };
+  var mains = pick('plate', 3, []), drinks = pick('cup', 3, []), used = mains.concat(drinks).map(function (m) { return m.name; });
+  var extras = menu.filter(function (m) { return used.indexOf(m.name) < 0; }).slice(0, 2);
+  var free = function (m) { return { name: m.name, price: 0 }; };
   return {
-    name: 'Tiffin Combo',
-    price: 110,
+    name: set.comboName,
+    price: (mains[0] ? mains[0].price : 0) + (drinks[0] ? drinks[0].price : 0),
     groups: [
-      {
-        name: 'Choose the main',
-        required: true,
-        max: 1,
-        options: [
-          { name: 'Masala Dosa', price: 0 },
-          { name: 'Idli (2 pc)', price: 0 },
-          { name: 'Ven Pongal', price: 0 }
-        ]
-      },
-      {
-        name: 'Choose a drink',
-        required: true,
-        max: 1,
-        options: [
-          { name: 'Filter Coffee', price: 0 },
-          { name: 'Tea', price: 0 },
-          { name: 'Buttermilk', price: 0 }
-        ]
-      },
-      {
-        name: 'Add extras',
-        required: false,
-        max: 2,
-        options: [
-          { name: 'Extra sambar', price: 20 },
-          { name: 'Extra chutney', price: 15 }
-        ]
-      }
+      { name: 'Choose the main', required: true, max: 1, options: mains.map(free) },
+      { name: 'Choose a drink', required: true, max: 1, options: drinks.map(free) },
+      { name: 'Add extras', required: false, max: 2, options: extras.map(function (m) { return { name: 'Extra ' + m.name.toLowerCase(), price: m.price }; }) }
     ]
   };
 }
-/** WALK-H H-F-02: no India sample on a non-India shop — a trade-neutral combo (main + drink + extras), prices in the shop's own units */
-function comboExampleNeutral() {
-  return {
-    name: 'Lunch combo',
-    price: 12,
-    groups: [
-      { name: 'Choose the main', required: true, max: 1, options: [{ name: 'Main 1', price: 0 }, { name: 'Main 2', price: 0 }, { name: 'Main 3', price: 0 }] },
-      { name: 'Choose a drink', required: true, max: 1, options: [{ name: 'Drink 1', price: 0 }, { name: 'Drink 2', price: 0 }] },
-      { name: 'Add extras', required: false, max: 2, options: [{ name: 'Extra 1', price: 1 }, { name: 'Extra 2', price: 2 }] }
-    ]
-  };
-}
+
 function modLabBuildFresh() {
   MODLAB.building = true;
   MODLAB.savingAs = false;
