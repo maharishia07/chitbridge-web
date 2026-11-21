@@ -17,7 +17,7 @@ const cx = vm.createContext({
   bkStRow: (cls, label, cells) => '<tr>' + label + (cells || []).map((c) => '[' + c.v + ']').join('') + '</tr>',
   bkFig: (m) => String(m), bkChange: () => '', bkPct: () => '', bkDrillLink: (code, name) => name
 });
-vm.runInContext(liftFns('public/app/cap-books.js', ['bkDaySales', 'bkBsSide']) + '\nthis.f = { bkDaySales, bkBsSide };', cx);
+vm.runInContext(liftFns('public/app/cap-books.js', ['bkDayEntryTotal', 'bkDayAddTender', 'bkDaySales', 'bkBsSide']) + '\nthis.f = { bkDaySales, bkBsSide };', cx);
 const bill = (id, rev) => ({ posting_date: '2026-11-20', entry_id: id, reversed_by: rev || null, source: { kind: 'bill', counter: 'C2', how: 'cash' }, lines: [{ dr_minor: 118000 }] });
 const live = cx.f.bkDaySales([bill(1), bill(2)], '2026-11-20');
 t('two live bills count 2', live.counters[0].bills === 2 && live.counters[0].amount_minor === 236000, JSON.stringify(live));
@@ -30,7 +30,7 @@ t('with no heads at all every line shows', cx.f.bkBsSide('Assets', [{ code: '1',
 const cx2 = vm.createContext({ UI: { _taxMonth: '2026-10' }, document: { getElementById: () => null }, misBand: () => 'x', MIS_BANDS: [], esc: String });
 const slow = {};
 cx2.api = (name, o) => new Promise((res) => { slow[o.query.month] = () => res({ month: o.query.month }); });
-vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMonth', 'loadTaxLedger']) + '\nthis.f = { misTaxSetMonth };', cx2);
+vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMonth', 'misTaxRead', 'loadTaxLedger']) + '\nthis.f = { misTaxSetMonth };', cx2);
 (async () => {
   cx2.f.misTaxSetMonth('2026-10'); cx2.f.misTaxSetMonth('2026-09');
   slow['2026-09'](); await new Promise((r) => setTimeout(r, 5));
@@ -45,7 +45,7 @@ vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMon
   t('a typed 0 and a typed 5000 pass', emi(0) === null && emi(500000) === null, emi(0) + '|' + emi(500000));
   // GF-08 M3 two currencies are never one unbilled sum
   const cx4 = vm.createContext({});
-  vm.runInContext(liftFns('public/app/cap-crm-record.js', ['crmBillFacts']) + '\nthis.f = { crmBillFacts };', cx4);
+  vm.runInContext(liftFns('public/app/cap-crm-record.js', ['crmCountUnbilled', 'crmBillFacts']) + '\nthis.f = { crmBillFacts };', cx4);
   const ord = (minor, currency) => ({ kind: 'chit', src: 'chit', purpose: 'order', state: { word: 'open' }, amount_minor: minor, currency });
   const one = cx4.f.crmBillFacts([ord(100000, 'inr'), ord(5000, 'inr')]).unbilled;
   t('one currency still adds', one.minor === 105000 && one.n === 2, JSON.stringify(one));
@@ -66,11 +66,11 @@ vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMon
   const cx6 = vm.createContext({ CFG: {}, tx: (x) => x });
   const conn = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-connector.js'), 'utf8');
   t('the installer creates config.json mode 600 before the tee that writes the key', /install -m 600 \/dev\/null "\$DIR\/config\.json"[^]*?sudo tee "\$DIR\/config\.json"/.test(conn));
-  t('a failed device read after a reissue no longer drops the new key (shown once)', /devs = null; \/\* the old key is already dead/.test(conn));
+  t('a failed device read after a reissue no longer drops the new key (shown once)', /catch \(failure\) \{[^}]*return null;/.test(conn) && /the old key is already dead/.test(conn) && /mode === 'package' \? 'The installer could not be built/.test(conn));
   // GF-07 M13 a double tap on Delivered posts once
   let posted = 0; const cx7 = vm.createContext({ C2: { id: 'A' }, document: { getElementById: (id) => (id === 'c2dq_L1' ? { value: '5', placeholder: '' } : null) }, toast() {}, MSG: { fail: String }, c2ApplyProgress: () => true, loadChit2: async () => {} });
   cx7.postDeliverLines = () => { posted++; return new Promise((r) => setTimeout(() => r({}), 10)); };
-  vm.runInContext('var C2_DELIVERING = {};\n' + liftFns('public/app/cap-chit2.js', ['c2Deliver']) + '\nthis.f = { c2Deliver };', cx7);
+  vm.runInContext('var C2_DELIVERING = {};\n' + liftFns('public/app/cap-chit2.js', ['c2DeliverQuantity', 'c2Deliver']) + '\nthis.f = { c2Deliver };', cx7);
   await Promise.all([cx7.f.c2Deliver('L1', 'kg'), cx7.f.c2Deliver('L1', 'kg')]);
   t('a double tap on Delivered posts once', posted === 1, String(posted));
   process.exit(fail ? 1 : 0);

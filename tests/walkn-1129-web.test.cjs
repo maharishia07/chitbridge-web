@@ -16,7 +16,7 @@ assert(/_catFailed = true;/.test(app) && /UI\._catState = \(STORE\.catalogue \|\
 assert(app.includes("'No items yet — a chit needs at least one line item. <a") && app.includes('Add a product in Catalogue &rarr;'), 'the empty words carry the add action');
 
 /* N-F-02 */
-assert(/key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin\(\)/.test(app) && /aria-disabled="true" data-ready="no" title="\$\{esc\(why\)\}"/.test(app), 'nav Compose is greyed with the reason for a view-only login');
+assert(/key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin\(\)/.test(app) && /aria-disabled="true" data-ready="no" title="\$\{esc\(reason\)\}"/.test(app), 'nav Compose is greyed with the reason for a view-only login');
 assert(/async function compose\(prefill\) \{\s*\/\*[^\n]*\*\/\s*if \(typeof viewOnlyLogin === 'function' && viewOnlyLogin\(\)\) return toast\(composeViewOnlyWhy\(\)\);/.test(app), 'compose() does not open for a view-only login');
 
 /* N-F-16: run the real actor-hat.js with the real accessLevelOf */

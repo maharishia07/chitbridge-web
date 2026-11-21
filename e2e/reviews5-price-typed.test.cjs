@@ -23,7 +23,7 @@ const cx = vm.createContext({
   CBUiMoney: reader, T: (s) => s, cur: () => 'EUR', el: () => box,
   cbHasPrice: (v) => v != null, cbAmount: (v) => (v && v.amount != null ? v.amount : v)
 });
-vm.runInContext(liftFns('public/app/cap-catalogue.js', ['priceTyped', 'readPrice'], '  ') + '\nthis.f = { priceTyped, readPrice };', cx);
+vm.runInContext(liftFns('public/app/cap-catalogue.js', ['priceFromReader', 'priceTyped', 'readPrice'], '  ') + '\nthis.f = { priceFromReader, priceTyped, readPrice };', cx);
 const f = cx.f;
 
 t('"12,50" is 12.50 in a comma-decimal shop (not 1250)', f.priceTyped('12,50').value === 12.5, JSON.stringify(f.priceTyped('12,50')));

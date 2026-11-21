@@ -12,7 +12,7 @@ let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m); if (!c) bad++; };
 const grab = (name) => { const i = words.indexOf('function ' + name + '('); let d = 0, j = words.indexOf('{', i); for (; j < words.length; j++) { if (words[j] === '{') d++; else if (words[j] === '}' && !--d) break; } return words.slice(i, j + 1); };
 const w = {}; vm.createContext(w);
-vm.runInContext(['rewordPlain', 'failWords', 'bodyWords'].map(grab).join('\n') + '\nthis.f = failWords; this.b = bodyWords;', w);
+vm.runInContext(['rewordPlain', 'wordsOnly', 'failWords', 'bodyWords'].map(grab).join('\n') + '\nthis.f = failWords; this.b = bodyWords;', w);
 const mk = (message, extra) => Object.assign(new Error(message), extra || {});
 ok(w.f(mk('Cannot read properties of undefined (reading x)'), 'Could not save.') === 'Could not save.', 'a raw TypeError message becomes the screen fallback');
 ok(w.f(mk('The folder name is already used.', { status: 409, code: 'FOLDER_NAME_TAKEN' }), 'Could not save.') === 'The folder name is already used.', "the api's own words (code + status) are kept");
