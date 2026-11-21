@@ -371,6 +371,92 @@ function _cfPick(input) {
 function _cfBody(text) {
   return UI._cfXlsx ? { xlsx: UI._cfXlsx } : { csv: text };
 }
+// How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
+// control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
+// someone could change.
+var _CF_HOW = {
+  exact: ['✓', 'var(--ok-2)', 'matches your catalogue'],
+  synonym: ['✓', 'var(--ok-2)', 'recognised under another name'],
+  contains: ['?', 'var(--warn-2)', 'probably this — confirm'],
+  fuzzy: ['?', 'var(--warn-2)', 'guessed — confirm this'],
+  ambiguous: ['?', 'var(--warn-2)', 'could be more than one thing'],
+  'not-accepted': ['—', 'var(--grey-2)', 'your catalogue does not use this'],
+  unmatched: ['—', 'var(--grey-2)', 'not recognised'],
+  conflict: ['!', 'var(--warn-2)', 'another column matched this better'],
+  blocked: ['⨯', 'var(--disp)', 'a file may not set this'],
+  empty: ['—', 'var(--grey-2)', 'this column has no heading']
+};
+/** one row of the column table: what the file calls it, how it was read, the choice offered and why */
+function _cfMappingRowHtml(item, index, accepted) {
+    var h = _CF_HOW[item.how] || ['?', 'var(--grey-2)', item.how];
+    var control;
+    if (item.how === 'blocked' || item.how === 'empty') {
+      control = '<span style="font-size:var(--fs-1);color:' + h[1] + '">not importable</span>';
+    } else {
+      var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
+      accepted.forEach(function (f) {
+        var sel = item.canonical === f ? ' selected' : '';
+        opts.push('<option value="map:' + esc(f) + '"' + sel + '>Use as ' + esc(f) + '</option>');
+      });
+      // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
+      // that grows a second column meaning the same thing.
+      if (!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
+      control =
+        '<select data-cbsid="CTG003-S01" data-cfcol="' +
+        esc(item.incoming || '') +
+        '" data-testid="cf-decide-' +
+        index +
+        '" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">' +
+        opts.join('') +
+        '</select>';
+    }
+    return (
+      '<tr>' +
+      '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">' +
+      esc(item.incoming || '(blank)') +
+      '</td>' +
+      '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:' +
+      h[1] +
+      ';font-weight:700;text-align:center">' +
+      h[0] +
+      '</td>' +
+      '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">' +
+      control +
+      '</td>' +
+      '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">' +
+      esc(item.conflict || item.why || h[2]) +
+      '</td>' +
+      '</tr>'
+    );
+}
+/** the first 25 row issues as a list, each in the colour of its severity, and how many more there are ('' when there are none) */
+function _cfIssuesHtml(issueList) {
+  var issues = (issueList || [])
+    .slice(0, 25)
+    .map(function (item) {
+      var lineColor = item.severity === 'error' ? 'var(--disp)' : item.severity === 'info' ? 'var(--grey-2)' : 'var(--warn-2)';
+      return '<li style="color:' + lineColor + '">line ' + item.row + ' · <b>' + esc(item.column) + '</b> — ' + esc(item.message) + '</li>';
+    })
+    .join('');
+  if (!issues) return '';
+  return (
+    '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' +
+    tx('Rows') +
+    '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">' +
+    issues +
+    '</ul>' +
+    ((issueList || []).length > 25 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + ((issueList || []).length - 25) + ' more.</div>' : '')
+  );
+}
+/** the Import button is enabled only when the file itself is sound. Row errors are not a warning to click past: the server refuses them too, and offering the button anyway teaches people to ignore it */
+function _cfImportButtonState(blocking, takeGood) {
+  var node = document.getElementById('cf_import');
+  if (!node) return;
+  var stopped = blocking && !takeGood;
+  node.disabled = stopped;
+  node.style.opacity = stopped ? '.5' : '1';
+  node.title = stopped ? 'Fix the row problems first' : takeGood ? 'Import the good rows; the problem rows are listed' : 'Apply these choices to your catalogue';
+}
 async function _cfRun(btn) {
   var text = (document.getElementById('cf_text') || {}).value || '';
   var out = document.getElementById('cf_out');
@@ -389,64 +475,10 @@ async function _cfRun(btn) {
     var r = res.report;
     UI._cf = { csv: text, xlsx: UI._cfXlsx || null, accepted: res.accepted || [], optional: res.optional || [], report: r };
 
-    // How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
-    // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
-    // someone could change.
-    var HOW = {
-      exact: ['✓', 'var(--ok-2)', 'matches your catalogue'],
-      synonym: ['✓', 'var(--ok-2)', 'recognised under another name'],
-      contains: ['?', 'var(--warn-2)', 'probably this — confirm'],
-      fuzzy: ['?', 'var(--warn-2)', 'guessed — confirm this'],
-      ambiguous: ['?', 'var(--warn-2)', 'could be more than one thing'],
-      'not-accepted': ['—', 'var(--grey-2)', 'your catalogue does not use this'],
-      unmatched: ['—', 'var(--grey-2)', 'not recognised'],
-      conflict: ['!', 'var(--warn-2)', 'another column matched this better'],
-      blocked: ['⨯', 'var(--disp)', 'a file may not set this'],
-      empty: ['—', 'var(--grey-2)', 'this column has no heading']
-    };
     var accepted = res.accepted || [];
     var rowsHtml = (r.mapping || [])
       .map(function (item, index) {
-        var h = HOW[item.how] || ['?', 'var(--grey-2)', item.how];
-        var control;
-        if (item.how === 'blocked' || item.how === 'empty') {
-          control = '<span style="font-size:var(--fs-1);color:' + h[1] + '">not importable</span>';
-        } else {
-          var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
-          accepted.forEach(function (f) {
-            var sel = item.canonical === f ? ' selected' : '';
-            opts.push('<option value="map:' + esc(f) + '"' + sel + '>Use as ' + esc(f) + '</option>');
-          });
-          // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
-          // that grows a second column meaning the same thing.
-          if (!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
-          control =
-            '<select data-cbsid="CTG003-S01" data-cfcol="' +
-            esc(item.incoming || '') +
-            '" data-testid="cf-decide-' +
-            index +
-            '" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">' +
-            opts.join('') +
-            '</select>';
-        }
-        return (
-          '<tr>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">' +
-          esc(item.incoming || '(blank)') +
-          '</td>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:' +
-          h[1] +
-          ';font-weight:700;text-align:center">' +
-          h[0] +
-          '</td>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">' +
-          control +
-          '</td>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">' +
-          esc(item.conflict || item.why || h[2]) +
-          '</td>' +
-          '</tr>'
-        );
+        return _cfMappingRowHtml(item, index, accepted);
       })
       .join('');
 
@@ -467,14 +499,6 @@ async function _cfRun(btn) {
         : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
           tx('Check the choices below, then import') +
           '</span>';
-    var issues = (r.issues || [])
-      .slice(0, 25)
-      .map(function (item) {
-        var c = item.severity === 'error' ? 'var(--disp)' : item.severity === 'info' ? 'var(--grey-2)' : 'var(--warn-2)';
-        return '<li style="color:' + c + '">line ' + item.row + ' · <b>' + esc(item.column) + '</b> — ' + esc(item.message) + '</li>';
-      })
-      .join('');
-
     out.innerHTML =
       badge +
       '<div style="font-size:var(--fs-2);margin:9px 0 6px">' +
@@ -508,31 +532,14 @@ async function _cfRun(btn) {
             .join('') +
           '</ul>'
         : '') +
-      (issues
-        ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' +
-          tx('Rows') +
-          '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">' +
-          issues +
-          '</ul>' +
-          ((r.issues || []).length > 25
-            ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + ((r.issues || []).length - 25) + ' more.</div>'
-            : '')
-        : '') +
+      _cfIssuesHtml(r.issues) +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' +
       txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
         import: '<b>' + tx('Import') + '</b>'
       }) +
       '</div>';
 
-    // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
-    // the server refuses them too, and offering the button anyway teaches people to ignore it.
-    var node = document.getElementById('cf_import');
-    if (node) {
-      var stopped = blocking && !takeGood;
-      node.disabled = stopped;
-      node.style.opacity = stopped ? '.5' : '1';
-      node.title = stopped ? 'Fix the row problems first' : takeGood ? 'Import the good rows; the problem rows are listed' : 'Apply these choices to your catalogue';
-    }
+    _cfImportButtonState(blocking, takeGood);
   } catch (e) {
     out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">' + esc((e && e.message) || 'Could not read the file.') + '</div>';
   } finally {
@@ -584,12 +591,12 @@ function _cfImport(btn) {
 }
 /** S2-F-02: the rows an import left out, each with its line, field and reason, and the button for the file to fix and send again (the answer's rejects / rejects_csv) */
 function _cfRejectsHtml(reply) {
-  var bad = reply.rejects || [];
-  if (!bad.length) return '';
+  var rejected = reply.rejects || [];
+  if (!rejected.length) return '';
   return (
-    '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--disp);margin:12px 0 4px">' + bad.length + ' row(s) not imported</div>' +
+    '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--disp);margin:12px 0 4px">' + rejected.length + ' row(s) not imported</div>' +
     '<ul data-testid="cf-rejects" style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">' +
-    bad.slice(0, 40).map(function (item) {
+    rejected.slice(0, 40).map(function (item) {
       return '<li style="color:var(--disp)">line ' + item.line + ' · <b>' + esc(item.field) + '</b> — ' + esc(item.message) + '</li>';
     }).join('') +
     '</ul><button id="cf_rejects_dl" data-testid="cf-rejects-download" type="button" class="act quiet" style="margin-top:8px">Download the rows to fix</button>'
@@ -605,6 +612,24 @@ function _cfDownloadRejects(text) {
   node.click();
   node.remove();
   setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+/** the import's answer line by line (the first 40, each in the colour of its outcome) and how many more there are */
+function _cfOutcomeHtml(outcome) {
+  var rows = outcome
+    .slice(0, 40)
+    .map(function (item) {
+      var lineColor = item.action === 'failed' ? 'var(--disp)' : 'var(--ink)';
+      return (
+        '<li style="color:' + lineColor + '">line ' + item.line + ' · ' + esc(item.name || '') + ' — ' + esc(item.action) + (item.message ? ': ' + esc(item.message) : '') + '</li>'
+      );
+    })
+    .join('');
+  return (
+    '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">' +
+    rows +
+    '</ul>' +
+    (outcome.length > 40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + (outcome.length - 40) + ' more.</div>' : '')
+  );
 }
 async function _cfImportRun(btn, decisions, out) {
   var was = btn.textContent;
@@ -623,29 +648,7 @@ async function _cfImportRun(btn, decisions, out) {
           reply.created_columns.map(esc).join(', ') +
           '. The next template you download will include them.</div>'
         : '') +
-      '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">' +
-      (reply.outcome || [])
-        .slice(0, 40)
-        .map(function (item) {
-          var c = item.action === 'failed' ? 'var(--disp)' : 'var(--ink)';
-          return (
-            '<li style="color:' +
-            c +
-            '">line ' +
-            item.line +
-            ' · ' +
-            esc(item.name || '') +
-            ' — ' +
-            esc(item.action) +
-            (item.message ? ': ' + esc(item.message) : '') +
-            '</li>'
-          );
-        })
-        .join('') +
-      '</ul>' +
-      ((reply.outcome || []).length > 40
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + ((reply.outcome || []).length - 40) + ' more.</div>'
-        : '') +
+      _cfOutcomeHtml(reply.outcome || []) +
       _cfRejectsHtml(reply);
     var again = document.getElementById('cf_rejects_dl');
     if (again) again.onclick = function () { _cfDownloadRejects(reply.rejects_csv); };
@@ -1361,7 +1364,7 @@ var CBCatalogueApp = (function () {
    * P-F-05: the item form asks for the tax rate (the pack's word: GST), so no new item is saved with no answer. Blank = the shop's default (a registered shop: the pack's rate, shown as the
    * placeholder; an unregistered one: zero, the api says so on the bill); a typed 0 is GST-free and asks WHY from the pack's own supply kinds. Shown only where the pack has a tax scheme.
    */
-  function gstFieldHTML(d) {
+  function gstFieldHTML(itemData) {
     var pack = taxPack();
     if (!pack || !pack.scheme) return '';
     var fallback = defaultRate(),
@@ -1381,6 +1384,12 @@ var CBCatalogueApp = (function () {
     var row = id && pack.supplyKinds && pack.supplyKinds[id];
     return id ? (row && row.name) || id : '';
   }
+  /** the pack's supply-kind id that the typed field names (its id or its name, any case), or undefined */
+  function supplyKindIdOf(pack, kindField) {
+    var said = String((kindField && kindField.value) || '').trim().toLowerCase(),
+      ids = Object.keys((pack && pack.supplyKinds) || {});
+    return ids.filter(function (one) { return one.toLowerCase() === said || kindName(pack, one).toLowerCase() === said; })[0];
+  }
   /** the GST field → the item: a typed rate is written (a zero only with its reason: refused in words here, before the api is asked); blank leaves the shop's default to the api */
   function readGst(next) {
     var rate = el('ct_gst'),
@@ -1391,10 +1400,7 @@ var CBCatalogueApp = (function () {
     if (!isFinite(+typed) || +typed < 0) return T('Enter the tax rate as a number, like 10.');
     next.gst_rate = +typed;
     if (+typed !== 0) return '';
-    var pack = taxPack(),
-      said = String((kind && kind.value) || '').trim().toLowerCase(),
-      ids = Object.keys((pack && pack.supplyKinds) || {}),
-      id = ids.filter(function (one) { return one.toLowerCase() === said || kindName(pack, one).toLowerCase() === said; })[0];
+    var id = supplyKindIdOf(taxPack(), kind);
     if (!id) return T('A zero rate needs its reason: pick one from the list.');
     next.tax_kind = id;
     return '';
@@ -1427,32 +1433,32 @@ var CBCatalogueApp = (function () {
     readDeclared(next);
     return next;
   }
-  /** the price field, only when it is enabled: empty → no price; the same amount → the stored {amount,currency} kept (no diff); else a bare number the server stamps */
+  /** a typed price read by the shop's money reader: {value} in whole units, or {why} (its own refusal, else the sentence) */
+  function priceFromReader(reader, typed, sentence) {
+    var said = reader.refusal(typed, cur()),
+      minor = said ? NaN : reader.minor(typed, cur());
+    if (said || !(minor >= 0)) return { why: said || sentence };
+    return { value: minor / Math.pow(10, reader.decimals(cur())) };
+  }
   /** reviews5 EL-06 M3: a typed price through the shop's money reader (its decimal mark: "12,50" is 12.50 where the comma is the mark, never 1250), refused in words when it is not a number or is below zero; {value} is the whole-unit number the server stamps, {why} the sentence */
   function priceTyped(text) {
     var typed = String(text == null ? '' : text).trim(),
       reader = typeof CBUiMoney !== 'undefined' ? CBUiMoney : null,
-      sentence = T('Type the price as a number, like 250.00.'),
-      said,
-      minor;
-    if (reader && reader.minor && reader.refusal) {
-      said = reader.refusal(typed, cur());
-      minor = said ? NaN : reader.minor(typed, cur());
-      if (said || !(minor >= 0)) return { why: said || sentence };
-      return { value: minor / Math.pow(10, reader.decimals(cur())) };
-    }
+      sentence = T('Type the price as a number, like 250.00.');
+    if (reader && reader.minor && reader.refusal) return priceFromReader(reader, typed, sentence);
     if (!/^(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.test(typed)) return { why: sentence };
     return { value: Number(typed.replace(/,/g, '')) };
   }
+  /** the price field, only when it is enabled: empty → no price; the same amount → the stored {amount,currency} kept (no diff); else a bare number the server stamps */
   function readPrice(next, orig) {
     var node = el('ct_price');
     if (!node || node.disabled) return;
     var typed = String(node.value || '').trim(),
-      had = cbHasPrice(orig.price) ? cbAmount(orig.price) : null,
+      savedAmount = cbHasPrice(orig.price) ? cbAmount(orig.price) : null,
       read = typed === '' ? null : priceTyped(typed);
     if (typed === '') delete next.price;
     else if (read.why) next.price = orig.price; /* never cleared by a typo: save() refuses in words before this is sent */
-    else if (had !== null && read.value === had) next.price = orig.price;
+    else if (savedAmount !== null && read.value === savedAmount) next.price = orig.price;
     else next.price = read.value; /* as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
   }
   /** the declared columns' inputs: an empty one removes the key, a number column parses, the rest is text */
