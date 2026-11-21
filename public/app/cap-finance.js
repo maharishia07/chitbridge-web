@@ -66,7 +66,18 @@ async function finDuesRead() {
   return dues;
 }
 
+/* SPEED (batch 1128): the tabs other than Collect have their code in type="cb-late" tags (finance.html); until it has run they wait, then run exactly as before */
+var FIN_LATE_TABS = { terms: 0, cash: 1, repeat: 1, pay: 1, cheques: 1, returns: 1, reports: 1 };
+function finLate() {
+  return !!FIN_LATE_TABS[finTab()] && !!window.CBLate && !window.CBLate.isReady();
+}
+
 async function finLoad(quiet) {
+  if (finLate()) {
+    var tab = finTab();
+    await window.CBLate.ready();
+    if (finTab() !== tab) return;
+  }
   if (finTab() === 'terms') return ftLoad(quiet); /* the Terms tab (cap-finance-terms.js) */
   if (finTab() === 'cash') return fcLoad(quiet); /* the Cash tab (cap-finance-cash.js, F3) */
   if (finTab() === 'repeat') return rpLoad(quiet); /* the Repeat supply tab (cap-repeat.js, RI1) */
@@ -346,6 +357,12 @@ function finCols() {
 function finMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
+  if (finLate()) {
+    var late = finTab();
+    return window.CBLate.ready().then(function () {
+      if (finTab() === late) finMount(frame);
+    });
+  }
   if (finTab() === 'terms') return ftMount(frame); /* the Terms tab (cap-finance-terms.js) */
   if (finTab() === 'cash') return fcMount(frame); /* the Cash tab (cap-finance-cash.js, F3) */
   if (finTab() === 'repeat') return rpMount(frame); /* the Repeat supply tab (cap-repeat.js, RI1) */

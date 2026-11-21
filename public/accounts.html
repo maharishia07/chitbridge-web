@@ -87,7 +87,8 @@ function go() {
 <script src="/app/helpers.js"></script><script src="/app/day-book-kind.js"></script>
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: the list control — every list here is mounted on it (a page declares columns, grouping, filters; the unit draws) -->
 <script src="/app/list-legacy.js"></script>   <!-- the Ledgers TREE's search box (listCtl*) — not a column list; goes when the tree has its own search -->
-<script src="/engine/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
+<script src="/app/late-scripts.js"></script>   <!-- CBLate: the tags written type="cb-late" below load AFTER the page is usable, in this order; a screen that needs them waits on CBLate.ready() (batch 1128 fixSpeed) -->
+<script type="cb-late" data-late-group="tax" src="/engine/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
@@ -105,29 +106,29 @@ function go() {
 <script src="/app/cap-mark-sheet.js"></script><script src="/app/cap-mark.js"></script>   <!-- CMP058 the marker chip · CMP059 the Query sheet (ACC-358): the auditor's marks on the Day book -->
 <script src="/app/cap-evidence.js"></script>   <!-- CMP062 the Evidence chip · CMP063 the Evidence sheet: the source document and its files behind each Day book row -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — Send on rail / Share off rail, the server's may painted -->
-<script src="/engine/chart.js"></script><script src="/engine/accounts-packs.js"></script><script src="/engine/posting-voucher.js"></script><script src="/engine/posting.js"></script><script src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
-<script src="/engine/bank-json.js"></script><script src="/engine/bank-brs.js"></script><script src="/engine/bank-files.js"></script><script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
+<script type="cb-late" data-late-group="engines" src="/engine/chart.js"></script><script type="cb-late" data-late-group="engines" src="/engine/accounts-packs.js"></script><script type="cb-late" data-late-group="engines" src="/engine/posting-voucher.js"></script><script type="cb-late" data-late-group="engines" src="/engine/posting.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
+<script type="cb-late" data-late-group="engines" src="/engine/bank-json.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-brs.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-files.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/books-held-ok.js"></script><script src="/app/cap-entry.js"></script><script src="/app/cap-entry-preview.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
-<script src="/app/cap-period.js"></script><script src="/app/cap-period-stock.js"></script><script src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
-<script src="/app/bank-demo-ask.js"></script><script src="/app/cap-bank.js"></script><script src="/app/cap-bank-map.js"></script><script src="/app/cap-bank-rows.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
-<script src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
-<script src="/app/cap-bank-statements.js"></script><script src="/app/cap-bank-statements-add.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
-<script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
-<script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
-<script src="/engine/bank-statement-check.js"></script><script src="/app/bank-preview-check.js"></script><script src="/app/bank-preview-line.js"></script><script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
-<script src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
-<script src="/app/bank-lock.js"></script>   <!-- CBBankLock: a line in a locked month, said first; the two ways on -->
-<script src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
-<script src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
-<script src="/app/bank-preview-ui-parts.js"></script><script src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
-<script src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
-<script src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
-<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
-<script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
-<script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
-<script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script><script src="/app/mis-charts.js"></script><script src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
-<script src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
-<script src="/app/cap-employees-copy.js"></script><script src="/app/cap-employees.js"></script><script src="/app/cap-employees-give.js"></script><script src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
+<script type="cb-late" data-late-group="period" src="/app/cap-period.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-stock.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-demo-ask.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-map.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-rows.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-statements.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-statements-add.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
+<script type="cb-late" data-late-group="bank" src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
+<script type="cb-late" data-late-group="bank" src="/engine/bank-statement-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-line.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script type="cb-late" data-late-group="bank" src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-lock.js"></script>   <!-- CBBankLock: a line in a locked month, said first; the two ways on -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-preview-ui-parts.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
+<script type="cb-late" data-late-group="bank" src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
+<script type="cb-late" data-late-group="movein" src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
+<script type="cb-late" data-late-group="movein" src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
+<script type="cb-late" data-late-group="overview" src="/engine/chart-draw.js"></script><script type="cb-late" data-late-group="overview" src="/engine/chart-draw-status.js"></script><script type="cb-late" data-late-group="overview" src="/engine/chart-draw-rows.js"></script><script type="cb-late" data-late-group="overview" src="/app/mis-charts.js"></script><script type="cb-late" data-late-group="overview" src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
+<script type="cb-late" data-late-group="compare" src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
+<script type="cb-late" data-late-group="people" src="/app/cap-employees-copy.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-employees.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-employees-give.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
 <script src="/app/one-person.js"></script>
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
@@ -439,6 +440,17 @@ BK.views = {
   delegate: (b) => CBEmployees.mountAccess(b, { token: SESS.token, base: CFG.API_BASE, onEnded: () => location.reload(), grants: () => CBBooksGrantApi.run(grantCall(), 'grantsList'), openAccess: () => show('access') }), /* ACC-383: people AND the firms that hold a books grant, one picker */
   access: (b) => accessView(b) /* ACC-384: the member's grants screen mounted here, in place (books-grant-member.js, the same component the Network page mounts) */
 };
+/* SPEED (batch 1128): the views whose code loads late (type="cb-late" tags above — period, bank, opening, move in, compare, rates, delegate, overview)
+   wait for CBLate.ready() while their "Reading…" shows, then run exactly as before; a tap on another view meanwhile is not overwritten */
+['overview', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose', 'bank', 'movein', 'compare', 'rates', 'delegate'].forEach((name) => {
+  const paint = BK.views[name];
+  BK.views[name] = (body) => {
+    if (!window.CBLate || CBLate.isReady()) return paint(body);
+    CBLate.ready().then(() => {
+      if (BK.tab === name && body.isConnected) paint(body);
+    });
+  };
+});
 /** the one api call of the grant screens on this page: token + base, no acting header (the grants are the shop's own) */
 function grantCall() {
   return CBBooksActing.grantCall(CFG.API_BASE, SESS.token);
@@ -919,7 +931,9 @@ async function start() {
   if (t.others.length) return closeFirst(t);
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
-    const profile = await readProfile();
+    /* SPEED (batch 1128): the avatar already read /me for this page; when it has answered, its ledger_on is the answer - no second /me round trip before the ledger read */
+    const known = window.CBAvatar && CBAvatar.ledgerOn ? CBAvatar.ledgerOn() : null;
+    const profile = typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
     if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
     noteHealth(reply);

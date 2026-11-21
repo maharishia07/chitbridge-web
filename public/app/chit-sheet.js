@@ -1141,6 +1141,8 @@
   /** open(id, { act }) — R106: a row's own button opens the sheet AT that action (the Waiting row's Reject asks its reason here, the one Reject door) */
   async function open(id, opts) {
     if (!id) return;
+    /* SPEED (batch 1128): a page that loads engine/tax.js late (CBLate) has it (and the tab code the sheet opens) before the sheet reads a frozen invoice through CBTax.moneyOf */
+    if (root.CBLate && !root.CBLate.isReady()) await root.CBLate.ready();
     var dialog = ensureDlg();
     CS.mode = 'dialog';
     CS.el = dialog;
