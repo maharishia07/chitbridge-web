@@ -304,6 +304,7 @@
   }
   /* Do first: the needs-you count as the biggest digit, then up to 3 doors (verb + count + door); nothing = one quiet line; a shop with nothing started = its first steps */
   function doFirst(home) {
+    if (!home.df) return; /* the host was replaced (a signed-out row over Home, ?cleaned=1): nothing to paint into */
     var allCards = pillarCards(home), doors = doorsOf(home, allCards);
     var started = allCards.some(function (card) { return rank(card) < 2; }), firstRun = home.shell.manifest && allCards.length > 0 && !started && !doors.length;
     home.host.classList.toggle('first', firstRun);
