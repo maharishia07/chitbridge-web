@@ -461,6 +461,8 @@ jobs:
         env:
           B: ${{ github.head_ref || github.ref_name }}
         run: |
+          # the batch branches are named per repo (batch/web-<date> here, batch/api-<date> there): the twin of batch/web-X is batch/api-X
+          case "$B" in batch/web-*) B="batch/api-${B#batch/web-}";; esac
           if [ -n "$B" ] && git ls-remote --exit-code --heads https://github.com/maharishia07/chitbridge-api "$B" >/dev/null 2>&1; then
             echo "ref=$B" >> "$GITHUB_OUTPUT"; else echo "ref=main" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v4
