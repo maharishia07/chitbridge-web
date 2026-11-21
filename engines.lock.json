@@ -4,7 +4,7 @@
     "money": "1.96.0",
     "tax-packs": "1.86.0",
     "tax-slab": "1.103.0",
-    "tax": "1.104.0",
+    "tax": "1.105.0",
     "pricing": "1.99.0",
     "offers": "1.96.0",
     "variant": "1.99.0",
@@ -249,6 +249,6 @@
     "tax-packs": "060e6c5883026c040b0e0d8fc979ae2563f5b992f01946b02e941acbc221bb80",
     "tax-slab": "377c5b263f26ff7d393f5de5f8f7ec44687848aea2e7efc70aa820ccf93ded4f",
     "tax-export": "7883098c12bfcb9587df4130d4a92b676f36ab3f72943d0fdb030ed5f56b68ee",
-    "tax": "e985a7abd7814cf463c5fc9cbf2b910cb4e13c8eac33f5f7cb808aa951e942ef"
+    "tax": "f11a9558975e43127b506fe7fe7fbd04f5ec297d382c173606e90735a6e4dbcd"
   }
 }
