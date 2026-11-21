@@ -1016,7 +1016,7 @@ function peReturnCloseCard(r) {
     '</div>' +
     '<div class="supacts">' +
     (greyWhy
-      ? '<button data-cbsid="BKS016-B05" type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
+      ? '<button data-cbsid="BKS016-B13" type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
         esc(greyWhy) +
         '">' +
         esc(txf('Close {period}', { period: period.label })) +
