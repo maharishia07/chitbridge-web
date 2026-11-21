@@ -846,7 +846,7 @@ function _groupSumPane() {
                     '<span style="width:130px;text-align:end">' +
                     (s.value == null
                       ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>'
-                      : esc((s.currency || '') + ' ' + s.value)) +
+                      : fmtMoney(s.value, s.currency)) +
                     '</span>' +
                     '<span style="width:74px"></span></div>'
                   );
@@ -962,7 +962,7 @@ function _groupSumPane() {
               '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' +
               esc(x.currency) +
               '</b> ' +
-              esc(String(x.total)) +
+              fmtMoney(x.total, x.currency) +
               ' <span style="color:var(--grey)">· ' +
               x.chits +
               ' chit' +
@@ -1100,7 +1100,7 @@ function _folderMetricsPane() {
             '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' +
             esc(item.currency) +
             '</b> ' +
-            esc(String(item.total)) +
+            fmtMoney(item.total, item.currency) +
             ' <span style="color:var(--grey)">· ' +
             item.chits +
             ' chit' +
@@ -1196,7 +1196,11 @@ function _draftWhen() {
   if (!d.term || !String(d.val).trim()) return null;
   var t = d.term,
     v = String(d.val).trim();
-  if (t === 'min_amount' || t === 'max_amount' || t === 'older_than_days') w[t] = Number(v);
+  if (t === 'min_amount' || t === 'max_amount' || t === 'older_than_days') {
+    var n = Number(v.replace(/[,\s]/g, '')); /* reviews7 EL-10 M7: 1,00,000 is a number; a word is not one, never NaN -> null on the wire */
+    if (!isFinite(n)) return null;
+    w[t] = n;
+  }
   else if (t === 'has_dispute' || t === 'unread') w[t] = v === 'true' || v === '1' || v === 'yes';
   else w[t] = v;
   return w;

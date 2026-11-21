@@ -572,7 +572,10 @@ function finQueueSheet() {
 function finRemindOne(i, btn) {
   var x = (FIN.queue || [])[i];
   if (!x) return;
-  x.done = true;
   FIN.back = finQueueSheet; /* the sheet returns when this party's message is closed */
-  return bkRemind(x.id, btn);
+  /* reviews7 EL-10 M3: Asked only once the message really opened; a refused open leaves the party to remind */
+  return Promise.resolve(bkRemind(x.id, btn)).then(function (r) {
+    if (r && r.ok) x.done = true; /* CBAction.run answers { ok } */
+    return r;
+  });
 }
