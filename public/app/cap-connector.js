@@ -711,6 +711,23 @@ async function acReissueSendCode() {
     if (node) node.textContent = (e && e.message) || 'Could not send the code.';
   }
 }
+/** the gateway's connected devices for the installer; null when they cannot be read (the old key is already dead: the new one is shown once, never lost with the closed sheet — GF-07 M4 / EL-07 M2) */
+async function acReissueDevices(actorId) {
+  try {
+    var r = await api('connectorConns', { params: { actorId: actorId } });
+    return (Array.isArray(r) ? r : (r && r.connections) || []) /* ⚠️ collapsed to the array — see acLoadDevices */
+      .filter(function (item) {
+        return item.enabled !== false;
+      })
+      .map(function (item) {
+        var cf = item.conn_config || {};
+        return { bridge_id: item.bridge_id, ref: item.ref, folder: cf.folder || null, classes: cf.classes || null };
+      });
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('connector: the devices were not read, the key is shown instead', failure);
+    return null;
+  }
+}
 async function acReissueSubmit() {
   var g = UI.acReissue || {},
     id = g.id,
@@ -735,22 +752,7 @@ async function acReissueSubmit() {
       return;
     }
     closeModal();
-    var devs = null;
-    if (mode === 'package') {
-      try {
-        var r = await api('connectorConns', { params: { actorId: id } });
-        devs = (Array.isArray(r) ? r : (r && r.connections) || []) /* ⚠️ collapsed to the array — see acLoadDevices */
-          .filter(function (item) {
-            return item.enabled !== false;
-          })
-          .map(function (item) {
-            var cf = item.conn_config || {};
-            return { bridge_id: item.bridge_id, ref: item.ref, folder: cf.folder || null, classes: cf.classes || null };
-          });
-      } catch (_) {
-        devs = null; /* the old key is already dead: the new one is shown once, never lost with the closed sheet (GF-07 M4 / EL-07 M2) */
-      }
-    }
+    var devs = mode === 'package' ? await acReissueDevices(id) : null;
     if (devs) {
       _download(
         'chitbridge-install.sh',
