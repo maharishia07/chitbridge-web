@@ -3417,8 +3417,8 @@
            first backwards is wrong by exactly the tax on every line; the second decides which head the credit sits
            under, and it is left blank rather than guessed. -->
       <select id="rcv_incl" class="wide" data-testid="rcv-incl" onchange="RCV.tax_inclusive=(this.value==='in'); paintReceive()" data-cbsid="CTR002-S04">
-        <option value="ex">Their rates are before GST (usual)</option>
-        <option value="in">Their rates already include GST</option>
+        <option value="ex">Their rates are before tax (usual)</option>
+        <option value="in">Their rates already include tax</option>
       </select>
       <input id="rcv_vstate" placeholder="Their state code (33, 29…) — for CGST/SGST vs IGST" autocomplete="off"
              data-testid="rcv-vstate" oninput="RCV.vendor_state=this.value.trim(); paintReceive()" data-cbsid="CTR002-I10">
@@ -7367,7 +7367,7 @@ function paintStatus(){
   /* ⚠️ THE ABSENCE OF TAX IS ALSO AN ANSWER, and it should not look like a fault. A shop that charges no GST is told why, once,
      rather than left wondering where the tax column went. */
   var tx0 = shopTax();
-  if (S && !tx0.charges) note = (tx0.reg === 'composition' ? 'Composition dealer — no GST on a bill, and the slip says so.'
+  if (S && !tx0.charges) note = (tx0.reg === 'composition' ? 'Composition dealer — no ' + schemeWord() + ' on a bill, and the slip says so.'
       : (!tx0.gstin ? 'No ' + taxIdLabel() + ' on this shop, so no ' + schemeWord() + ' is charged or shown (Settings → Profile).'
                     : 'This shop is registered as ' + esc(tx0.reg) + ', so no ' + schemeWord() + ' is charged.'))
     /* ⚠️ THE SAME WORDS WHEREVER IT APPEARS. An unregistered shop took a different branch and got the short form, "1 bill(s)
@@ -8905,7 +8905,7 @@ async function retainAtClose(){
 function gstAsked(){ try { return ls.get(shopLs('cb_till_gst_answer'), ''); } catch (_) { return ''; } }
 function gstNotRegistered(){
   try { ls.set(shopLs('cb_till_gst_answer'), 'not_registered'); } catch (e) { cbQuiet('gstNotRegistered:1', e); }
-  toastLine('Noted — this shop is not registered for GST. It will not be asked again.');
+  toastLine('Noted — this shop is not registered for ' + schemeWord() + '. It will not be asked again.');
   try { paintMenu(); } catch (e) { cbQuiet('gstNotRegistered:2', e); }
 }
 /** ⭐ the one place these are edited is the shop's profile, in ChitBridge — and the mark says it leaves (§2) */
@@ -18987,7 +18987,7 @@ async function billWarnFix(which){
   if (billWarnDoor(which)) return;
   var st = which === 'state', cl = st ? shopStateClash() : null, un = st ? [] : unratedNames();
   var msg = st ? (cl ? cl.words + '\n\n' + cl.fix : 'The shop’s details agree now.')
-               : (un.length ? un.join(', ') + '\n\nNo GST is charged on ' + (un.length === 1 ? 'it' : 'them')
+               : (un.length ? un.join(', ') + '\n\nNo ' + schemeWord() + ' is charged on ' + (un.length === 1 ? 'it' : 'them')
                               + ', and the slip will not say TAX INVOICE.' : 'Every item has a tax rate now.');
   var go = await sure(msg, st ? 'Open the shop’s details' : 'Open the catalogue', st ? 'GSTIN state ≠ address' : 'No tax rate', 'Close');
   /* the state half opens Settings › Your shop (SET1); the rate half still opens the workshop's catalogue until CAT1 builds catalogue.html */
@@ -19160,13 +19160,13 @@ function health(){
   if (tx.charges) {
     if (!(S.slabs || []).length)
       add('bad', 'No tax slabs reached this counter',
-        'You charge GST, but no rate came down with the shop — so every line would be billed with no tax at all.',
+        'You charge ' + schemeWord() + ', but no rate came down with the shop — so every line would be billed with no tax at all.',
         'Check ChitBridge → Catalogue setup → Tax, then press ↻ here.');
     else {
       var noRate = items.filter(function(i){ return rateOf(i) == null; });
       if (noRate.length)
         add('bad', noRate.length + ' of ' + items.length + ' products have no tax rate',
-          'Those lines would go onto a tax invoice with no GST on them. It is usually a slab that was never set on the product, or one whose name was typed differently.',
+          'Those lines would go onto a tax invoice with no ' + schemeWord() + ' on them. It is usually a slab that was never set on the product, or one whose name was typed differently.',
           'Open each in ChitBridge → Catalogue and set its tax slab.', noRate.slice(0, 5).map(function(i){ return i.name; }));
     }
   }
@@ -19205,8 +19205,8 @@ function health(){
   add('note', ((S.policy && S.policy.price_includes_tax) === 'no')
       ? 'Shelf prices are quoted WITHOUT tax' : 'Shelf prices already include tax',
     ((S.policy && S.policy.price_includes_tax) === 'no')
-      ? 'The counter will ADD GST on top of the price you set. A customer pays more than the shelf says.'
-      : 'The counter splits the GST OUT of the price you set. A customer pays exactly what the shelf says.',
+      ? 'The counter will ADD ' + schemeWord() + ' on top of the price you set. A customer pays more than the shelf says.'
+      : 'The counter splits the ' + schemeWord() + ' OUT of the price you set. A customer pays exactly what the shelf says.',
     'Change it in ChitBridge → Settings if that is the wrong way round.');
 
   /* ── the other silent faults ── */
@@ -22715,8 +22715,8 @@ function dayCloseHTML(d){
     + solid + t('TAKEN', money(d.total), true) + solid
     + (d.taxed ? dash + '<div style="font-weight:700">Tax</div>'
         + Object.keys(d.rate).sort(function(a,b){ return Number(a)-Number(b); }).map(function(r){
-            return t('GST ' + r + '% on ' + money(d.rate[r].base), money(d.rate[r].tax)); }).join('')
-        + t('Taxable', money(d.taxable)) + t('GST total', money(d.tax)) : '')
+            return t(schemeWord() + ' ' + r + '% on ' + money(d.rate[r].base), money(d.rate[r].tax)); }).join('')
+        + t('Taxable', money(d.taxable)) + t(schemeWord() + ' total', money(d.tax)) : '')
     + dash + '<div style="font-weight:700">How it was paid</div>'
     + (Object.keys(d.modes).length ? Object.keys(d.modes).map(function(k){ return t(esc(k), money(d.modes[k])); }).join('') : '<div>nothing taken</div>')
     + ((d.unasked || 0) > 0
@@ -23515,7 +23515,7 @@ function paintReceive(){
          claimed against. Hidden entirely for a shop that charges no GST: it would have nothing to claim. */
       + (shopTax().charges
           ? '<input data-cbsid="CTR007-I04" class="gstin" type="number" min="0" max="100" step="0.5" inputmode="decimal" placeholder="' + esc(schemeWord()) + '%"'
-            + ' value="' + (l.gst_rate == null ? '' : l.gst_rate) + '" title="the GST rate on their invoice"'
+            + ' value="' + (l.gst_rate == null ? '' : l.gst_rate) + '" title="the ' + schemeWord() + ' rate on their invoice"'
             + ' data-testid="rcv-gst-' + n + '" onchange="rcvSet(' + n + ',\'gst\',this.value)">'
           : '')
       + (d && !ok ? '<select data-testid="rcv-reason-' + n + '" onchange="rcvSet(' + n + ',\'reason\',this.value)" data-cbsid="CTR007-S01">'
@@ -23667,7 +23667,7 @@ function paintRcvSum(){
   var bc = rcvBillCheck(RCV.bill_total, tx.taxable, tx.tax, (RCV.bill_no || '').trim());
   var taxLine = '';
   if (shopTax().charges && tx.tax > 0) {
-    taxLine = '<div style="margin-top:4px">GST paid <b data-testid="rcv-tax">' + money(tx.tax) + '</b>'
+    taxLine = '<div style="margin-top:4px">' + schemeWord() + ' paid <b data-testid="rcv-tax">' + money(tx.tax) + '</b>'
       + (tx.heads.length ? ' · ' + tx.heads.map(function(h){ return h.name + ' ' + h.rate + '% ' + money(h.amount); }).join(' + ')
                          : ' · <b style="color:var(--warn)">not split — the supplier\'s state is not known</b>')
       + ' <span class="u">· to set against what you collect, not part of the cost</span></div>';
