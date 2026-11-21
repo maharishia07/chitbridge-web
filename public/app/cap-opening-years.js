@@ -19,13 +19,13 @@ function obYearsHtml() {
         var prev = index ? years[index - 1] : null;
         var line = '';
         if (prev && prev.refusal) line = '<span class="ob-bad">' + esc(prev.refusal) + '</span>';
-        else if (prev && prev.matches === true) line = '<span class="ob-ok" data-testid="ob-match">' + esc(tx("matches last year's closing balance sheet")) + ' ✓</span>';
+        else if (prev && prev.matches === true) line = '<span class="ob-ok" data-testid="ob-match">' + esc(tx("matches what last year carried out")) + ' ✓</span>';
         else if (prev && prev.matches === false)
-          line = '<span class="ob-bad">' + esc(txf("Opening {a} vs last year's closing {b}: {gap} apart", { a: bkMoney(prev.next_opening_minor, currency), b: bkMoney(prev.closing_minor, currency), gap: bkMoney(prev.apart_minor, currency) })) + '</span>';
+          line = '<span class="ob-bad">' + esc(txf("Opening {a} vs what last year carried out {b}: {gap} apart", { a: bkMoney(prev.next_opening_minor, currency), b: bkMoney(prev.closing_minor, currency), gap: bkMoney(prev.apart_minor, currency) })) + '</span>';
         else if (!prev) line = '<span style="color:var(--grey)">' + esc(tx('Typed in by you')) + '</span>';
         return (
           '<div class="ob-year" data-testid="ob-year"><b>' + esc(year.fiscal_year) + '</b> · ' + esc(tx('opening')) + ' ' + esc(bkMoney(year.opening_minor, currency)) +
-          (year.closing_minor != null ? ' · ' + esc(tx('closing')) + ' ' + esc(bkMoney(year.closing_minor, currency)) : '') + '<br>' + line + '</div>'
+          (year.closing_minor != null ? ' · ' + esc(tx(year.next ? 'carried out (debit side)' : 'so far (debit side)')) + ' ' + /* YE-F-12: the figure is the carry's debit side, not the balance sheet's total (GST paid is not netted): named so, and a running year says so far */ esc(bkMoney(year.closing_minor, currency)) : '') + '<br>' + line + '</div>'
         );
       })
       .join('') +

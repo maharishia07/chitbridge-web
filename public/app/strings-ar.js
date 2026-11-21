@@ -1130,6 +1130,10 @@
     '{what} could not be read. Nothing was changed.': 'تعذّرت قراءة {what}. لم يتغيّر شيء.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(حتى الآن)',
+    'matches what last year carried out': 'تطابق ما رحّلته السنة الماضية',
+    'Opening {a} vs what last year carried out {b}: {gap} apart': 'الافتتاحي {a} مقابل ما رحّلته السنة الماضية {b}: الفرق {gap}',
+    'carried out (debit side)': 'المُرحَّل (جانب المدين)',
+    'so far (debit side)': 'حتى الآن (جانب المدين)',
     'Tax return': 'إقرار ضريبي',
     'Box': 'الصندوق',
     'What': 'ماذا',

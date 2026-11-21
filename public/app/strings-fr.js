@@ -1026,6 +1026,10 @@
     '{what} could not be read. Nothing was changed.': '{what} n’a pas pu être lu. Rien n’a été modifié.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(jusqu\'ici)',
+    'matches what last year carried out': 'correspond à ce que l'an dernier a reporté',
+    'Opening {a} vs what last year carried out {b}: {gap} apart': 'Ouverture {a} contre ce que l'an dernier a reporté {b} : écart de {gap}',
+    'carried out (debit side)': 'reporté (côté débit)',
+    'so far (debit side)': 'à ce jour (côté débit)',
     'Tax return': 'Déclaration fiscale',
     'Box': 'Case',
     'What': 'Quoi',

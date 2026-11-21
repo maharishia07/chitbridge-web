@@ -1026,6 +1026,10 @@
     '{what} could not be read. Nothing was changed.': '{what} படிக்க முடியவில்லை. எதுவும் மாற்றப்படவில்லை.',
     /* MACHINE-WRITTEN (hygbl, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: the new tx() words of the 17 Nov Books/MIS/Bank files; needs a native read before a customer sees them */
     '(so far)': '(இதுவரை)',
+    'matches what last year carried out': 'கடந்த ஆண்டு கொண்டுசென்றதுடன் பொருந்துகிறது',
+    'Opening {a} vs what last year carried out {b}: {gap} apart': 'தொடக்கம் {a} எதிர் கடந்த ஆண்டு கொண்டுசென்றது {b}: {gap} வேறுபாடு',
+    'carried out (debit side)': 'கொண்டுசென்றது (பற்று பக்கம்)',
+    'so far (debit side)': 'இதுவரை (பற்று பக்கம்)',
     'Tax return': 'வரி ரிட்டர்ன்',
     'Box': 'பெட்டி',
     'What': 'என்ன',
