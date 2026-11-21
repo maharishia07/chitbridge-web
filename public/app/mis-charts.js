@@ -26,7 +26,8 @@
 
   function monthWords(key, form, deps) {
     var parts = /^(\d{4})-(\d{2})$/.exec(key);
-    return parts ? deps.date(Date.UTC(+parts[1], +parts[2] - 1, 15), { month: form, year: form === 'long' ? 'numeric' : '2-digit' }) : key;
+    var words = parts ? deps.date(Date.UTC(+parts[1], +parts[2] - 1, 15), { month: form, year: form === 'long' ? 'numeric' : '2-digit' }) : key;
+    return form === 'long' ? words : words.replace(/^(Jun)e\b|^(Jul)y\b|^(Sep)t\b/, '$1$2$3'); /* YE-F-13: an English short month is three letters on every tick (en-AU gives June · July · Sept beside Jan · Mar) */
   }
   function fiscalWords(year, deps) {
     return /^\d{4}-\d{2}$/.test(year) ? deps.tx('FY') + ' ' + year : year;

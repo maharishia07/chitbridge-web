@@ -180,7 +180,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Income before tax') +
+    tx('Income, tax out') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';

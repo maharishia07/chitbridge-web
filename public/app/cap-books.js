@@ -4810,7 +4810,7 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
   var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="' + (change ? 5 : 3) + '"></td></tr>');
   (heads || []).forEach(function (headGroup) {
     var mine = (items || []).filter(function (x) { return (x.group ? x.group.code : null) === headGroup.code; });
-    var same = !headGroup.name || String(headGroup.name).toLowerCase() === String(title).toLowerCase(); /* a group named like its section (Equity under Equity) is said once */
+    var same = !headGroup.name || String(headGroup.name).toLowerCase() === String(title).toLowerCase() || (mine.length === 1 && String(mine[0].code) === String(headGroup.code)); /* a group named like its section (Equity under Equity), or a head that is one ledger (the GST net payable) is said once: no 'Total GST collected' over a net figure (YE-F-13) */
     if (!same) out += bkStRow('bk-grp', esc(headGroup.name), []).replace('</tr>', '<td colspan="' + (change ? 5 : 3) + '"></td></tr>');
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
