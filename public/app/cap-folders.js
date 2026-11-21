@@ -1197,9 +1197,9 @@ function _draftWhen() {
   var t = d.term,
     v = String(d.val).trim();
   if (t === 'min_amount' || t === 'max_amount' || t === 'older_than_days') {
-    var n = Number(v.replace(/[,\s]/g, '')); /* reviews7 EL-10 M7: 1,00,000 is a number; a word is not one, never NaN -> null on the wire */
-    if (!isFinite(n)) return null;
-    w[t] = n;
+    var amount = Number(v.replace(/[,\s]/g, '')); /* reviews7 EL-10 M7: 1,00,000 is a number; a word is not one, never NaN -> null on the wire */
+    if (!isFinite(amount)) return null;
+    w[t] = amount;
   }
   else if (t === 'has_dispute' || t === 'unread') w[t] = v === 'true' || v === '1' || v === 'yes';
   else w[t] = v;
