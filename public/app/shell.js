@@ -368,9 +368,8 @@
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
-    '@container (max-width:359px){.cbsh-who b{display:none}}',
-    /* the name has no room beside the controls, so a keyboard user who lands on the shop button is told it in a caption under the bar (the same words the aria-label says); it is the button's own name, drawn only while the ring is on it */
-    '@container (max-width:359px){.cbsh-who{position:relative}.cbsh-who:focus-visible b{display:block;position:absolute;top:calc(100% + 4px);left:0;z-index:40;width:max-content;max-width:calc(100cqw - 16px);white-space:normal;overflow:visible;padding:6px 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);color:var(--sh-ink);box-shadow:0 8px 18px var(--sh-shadow)}}',
+    /* YE-F-15 (21 Nov): the person must always see which shop they are in — a narrow bar (a pane beside the sidebar) keeps the name, cut with an ellipsis (the button's title and aria-label carry the whole name); it is never hidden */
+    '@container (max-width:359px){.cbsh-hdr .cbsh-who{min-width:96px}.cbsh-who b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
     '.cbsh-hdr .cbsh-who,.cbsh-hdr .cbsh-swb,.cbsh-hdr .cbsid,.cbsh-hdr .cbb-btn,.cbsh-hdr .cbav-btn,.cbsh-hdr .cbav-signin{min-height:44px;min-width:44px}' /* one level more specific: the bell's and the chip's own stylesheets load after this one */ /* a phone: ⌂ alone (aria-label keeps the word) */,
     '.cbsh-swb .sn{display:none}' /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */,
