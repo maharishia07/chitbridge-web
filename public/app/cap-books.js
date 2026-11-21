@@ -2041,7 +2041,7 @@ function bkDvGroupOf(date, mode) {
 /** one CSV cell: a cell that starts like a formula is quoted as text (a plain number, negative too, stays a number), a cell with a comma, quote or line break is wrapped (the one reader: Day book and the bank's BRS) */
 function bkCsvCell(v) {
   var text = String(v == null ? '' : v);
-  if (/^[=+\-@]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = "'" + text;
+  if (/^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = "'" + text;
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 /** hand a CSV text to the person as a file (BOM first so a spreadsheet reads the rupee sign) — the one saver */
@@ -2081,8 +2081,8 @@ function bkDvCsv(list, c) {
       s.by || '',
       e.made_by || '',
       String(c || '').toUpperCase(),
-      '#' + amt(bkDvTotal(e)),
-      '#' + amt(cr),
+      { money: amt(bkDvTotal(e)) },
+      { money: amt(cr) },
       bkDvGist(e)
         .map(function (x) {
           return x.name + ' ' + amt(x.amt);
@@ -2095,7 +2095,7 @@ function bkDvCsv(list, c) {
       .map(function (item, index) {
         return item
           .map(function (text) {
-            return index && typeof text === 'string' && text.charAt(0) === '#' ? text.slice(1) : cell(text);
+            return index && text && typeof text === 'object' ? text.money : cell(text); /* a money cell is a typed wrapper, never an in-band '#': a party named "#1 Traders, Pune" stays one quoted cell */
           })
           .join(',');
       })
@@ -3799,11 +3799,7 @@ function bkLgCsv(rows, c) {
     amt = function (m) {
       return (Number(m || 0) / pow).toFixed(bkDec(c));
     };
-  var cell = function (v) {
-    var text = String(v == null ? '' : v);
-    if (/^[=+\-@]/.test(text)) text = "'" + text;
-    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
-  };
+  var cell = bkCsvCell; /* the one CSV cell writer (formula guard, quoting) */
   var out = [['date', 'details', 'party', 'entry_no', 'dr', 'cr', 'balance', 'balance_side']];
   rows.forEach(function (item) {
     var s = item.source || {},
@@ -4657,7 +4653,7 @@ function bkChange(minor, over, c, code, side) {
 /** the one line under the P&L that says what is highlighted, from the server's rule */
 function bkOverNote(rule, c, code, tid) {
   if (!rule || rule.pct_bp == null || rule.min_minor == null) return '';
-  return '<div class="bk-over-note" data-cbsid="' + (code || 'BKS005-P01') + '" data-testid="' + (tid || 'pl-over-note') + '">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
+  return '<div class="bk-over-note" data-cbsid="' + (code || 'BKS005-P01') + '" data-testid="' + (tid || 'pl-over-note') + '">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + (bkDec(c) ? bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') : bkMoney(rule.min_minor, c)) + ' ' + tx('or more')) + '</div>';
 }
 /** the P&L: a head's ledgers, then its subtotal (every head gets one), each line with last year · change · % of income */
 function bkPlGroups(lines, currency, compare, from, to) {

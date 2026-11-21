@@ -144,6 +144,7 @@ jobs:
           node e2e/network-browse-failed.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
+          node e2e/reviews5-csv-overnote.test.cjs
           node e2e/dues-one-sign.test.cjs
           node e2e/list-total-pinned.test.cjs
           node e2e/polish-r-locale.test.cjs
