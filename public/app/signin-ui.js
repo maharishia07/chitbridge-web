@@ -115,6 +115,37 @@
     sso: { label: 'Use company account' },
     passkey: { label: 'Use your passkey' }
   };
+  /**
+   * ⭐ SSO-1129 — THE "BEING SWITCHED ON" ROW (Athi 21 Nov: "SSO is integrated but not visible at registration / sign-in"). The api has the provider start and
+   * callback (SEC-112 P0, GET /api/signin/provider/:key/start|callback) but NOT yet the door that turns the callback's one-time code into a session
+   * (P1a route 4) nor register-through-provider (P1b), so a live "Continue with Google" would end in a dead page. Until those ship, each provider is
+   * SHOWN, greyed, with its sentence (grey-what-is-not-ready): Google and Microsoft only — Apple, SSO and passkey are not built and stay hidden.
+   * A host that switches a slot on (methods.google + onMethod) gets the real button instead; this row skips that provider. Back office and the
+   * customer app stay delinked: the row is drawn for a person's sign-in or registration, never for the till or a shop's customer.
+   * soonRow(intent) → html. intent 'signin' | 'register'. One component: the registration form calls the same function.
+   */
+  var SOON = {
+    signin: { google: ['Continue with Google', 'Google sign-in is being switched on.'], microsoft: ['Continue with Microsoft', 'Microsoft sign-in is being switched on.'] },
+    register: { google: ['Sign up with Google', 'Google sign-up is being switched on.'], microsoft: ['Sign up with Microsoft', 'Microsoft sign-up is being switched on.'] }
+  };
+  var SOON_ID = { signin: { google: 'SCR054-B11', microsoft: 'SCR054-B12' }, register: { google: 'SCR053-B03', microsoft: 'SCR053-B04' } };
+  function soonRow(intent, skip) {
+    var kind = SOON[intent] ? intent : 'signin';
+    addCss(); /* the registration page draws this without ever mounting the window */
+    var skipped = skip || [];
+    var rows = Object.keys(SOON[kind])
+      .filter(function (key) {
+        return skipped.indexOf(key) < 0;
+      })
+      .map(function (key) {
+        var words = SOON[kind][key];
+        return (
+          '<button data-cbsid="' + SOON_ID[kind][key] + '" type="button" class="cbsi-m cbsi-soon" disabled aria-disabled="true" data-testid="' + kind + '-' + key + '-soon" title="' + words[1] + '">' +
+          words[0] + '</button><p class="cbsi-said" data-testid="' + kind + '-' + key + '-why">' + words[1] + '</p>'
+        );
+      });
+    return rows.length ? '<div class="cbsi-soonrow" data-testid="' + kind + '-sso-soon">' + rows.join('') + '</div>' : '';
+  }
   function methodsOn(c) {
     var on = (c && c.methods) || {};
     return typeof (c && c.onMethod) === 'function'
@@ -595,6 +626,7 @@
     '.cbsi .cbsi-go,.cbsi .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--green,#16693F);background:var(--green,#16693F);color:var(--on-green,var(--card,#fff));font:inherit;font-size:15px;font-weight:700;cursor:pointer;width:100%}' +
     '.cbsi .cbsi-go[disabled]{opacity:.6;cursor:default}' +
     '.cbsi .cbsi-m{background:var(--card,#fff);color:var(--ink,#1D1B16);border-color:var(--line,#DDD6C6)}' +
+    '.cbsi .cbsi-m[disabled]{opacity:.55;cursor:not-allowed}.cbsi-soonrow{display:flex;flex-direction:column;gap:6px;margin-top:10px}.cbsi-soonrow .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#1D1B16);font:inherit;font-size:15px;font-weight:600}.cbsi-soonrow .cbsi-said{margin:0 0 4px}' +
     '.cbsi .cbsi-ln{display:inline-block;background:none;border:0;padding:6px 0;color:var(--blue-i,var(--blue-d,#174A87));text-decoration:underline;text-underline-offset:3px;font:inherit;font-size:13.5px;cursor:pointer;text-align:start;min-height:40px}' +
     '.cbsi .cbsi-why{margin:0;padding:10px 13px;border-radius:10px;background:var(--red-t,#FBEAE3);border:1px solid var(--red-b,#E7B9A8);color:var(--red-i,#8E3517);font-size:13.5px}' +
     '.cbsi .cbsi-said{margin:0;font-size:13.5px;color:var(--muted,var(--grey,#5E594D))}' +
@@ -633,6 +665,7 @@
           );
         })
         .join('');
+      if (c.need !== 'customer' && c.surface !== 'till' && c.surface !== 'shop') slots += soonRow('signin', m.methods());
       h =
         '<h2>' +
         esc(W.title) +
@@ -832,6 +865,7 @@
   E.jwtClaims = jwtClaims;
   E.transport = httpPost; /* the default transport, for a host that wraps it (the till: "offline" said in words first) */
   E.METHODS = METHODS;
+  E.soonRow = soonRow;
   E.WORDS = WORDS;
   if (typeof module !== 'undefined' && module.exports) module.exports = E;
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);

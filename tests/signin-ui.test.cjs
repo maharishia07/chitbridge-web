@@ -238,6 +238,19 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.deepStrictEqual(E.machine({ methods: { google: true, sso: true }, onMethod: () => {} }).methods(), ['google', 'sso']);
   });
 
+  await it('SSO-1129: Google and Microsoft show GREYED with their sentence at sign-in and registration (not built whole = not live), none for the till or a customer, a live slot is not doubled', () => {
+    const sign = E.soonRow('signin'), reg = E.soonRow('register');
+    for (const key of ['google', 'microsoft']) {
+      assert.ok(new RegExp('data-testid="signin-' + key + '-soon"[^>]*disabled aria-disabled="true"').test(sign) || new RegExp('disabled aria-disabled="true"[^>]*data-testid="signin-' + key + '-soon"').test(sign), key + ' sign-in button is disabled');
+      assert.ok(sign.includes('data-testid="signin-' + key + '-why"') && reg.includes('data-testid="register-' + key + '-why"'), key + ' says why, at both doors');
+    }
+    assert.ok(sign.includes('Google sign-in is being switched on.') && reg.includes('Google sign-up is being switched on.'));
+    assert.ok(!/apple|passkey/i.test(sign + reg), 'what is not built at all is not promised');
+    assert.ok(!/onclick|href=/.test(sign + reg), 'a greyed button goes nowhere');
+    assert.ok(!E.soonRow('signin', ['google']).includes('signin-google-soon') && E.soonRow('signin', ['google']).includes('signin-microsoft-soon'), 'a provider the host switched on live is not shown twice');
+    assert.strictEqual(E.soonRow('signin', ['google', 'microsoft']), '');
+  });
+
   await it('sessionOf reads a verify answer into the session the apps keep (entity · employee · customer)', () => {
     const e = E.sessionOf({ token: token({ identity_id: 'x', identity_type: 'entity', display_name: 'Shop', bridge_id: 'B1' }), identity: { display_name: 'Shop', user_id: 'shop', identity_type: 'entity', bridge_id: 'B1' } });
     assert.deepStrictEqual([e.role, e.name, e.entity, e.bridgeId, e.person.kind, e.duty], ['entity', 'Shop', 'Shop', 'B1', 'owner', undefined]);
