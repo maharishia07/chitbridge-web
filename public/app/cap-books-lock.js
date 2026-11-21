@@ -44,6 +44,7 @@ function bkLockRule(info, state) {
   return {
     may: mayLock,
     openMay: openMay,
+    byYear: !!(info && info.reopen && info.reopen.by_year), /* YE-F-05: locked by the year close — it opens with the year, so no Reopen month */
     why: lockWhy,
     who: bkLockWho(info, state),
     blocked: state === 'open' ? !mayLock : state === 'soft_locked' && !openMay,
@@ -136,7 +137,7 @@ function bkLockButtonsHTML(isOwner, state, month, rule) {
   if (!isOwner) return '';
   if (state === 'open') return bkLockOpenButton(month, rule);
   if (state === 'soft_locked') return bkLockSoftButtons(month, rule);
-  if (state === 'hard_locked' && rule.lastHard !== false) return bkLockHardButton(month);
+  if (state === 'hard_locked' && rule.lastHard !== false && !rule.byYear) return bkLockHardButton(month);
   return '';
 }
 /** who locked or opened the month, and its history (the first row's line, the notes and the full list on a fold) */
@@ -179,7 +180,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Income before tax') +
+    tx('Income, tax out') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';

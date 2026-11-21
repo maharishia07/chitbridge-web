@@ -43,7 +43,8 @@
   /** a group key (trade_debtors, gst_and_statutory) as words */
   function groupWords(key) {
     var tax = (typeof root.packWord === 'function' && root.packWord('taxName')) || '';
-    var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : part; }).join(' ');
+    var ACRONYMS = ['gst', 'vat', 'tds', 'tcs', 'payg', 'abn', 'bas']; /* YE-F-13: a tax name is capitals whichever country's page this is (the client's, not the firm's) */
+    var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : ACRONYMS.indexOf(part) >= 0 ? part.toUpperCase() : part; }).join(' ');
     return grantKit.words(text.charAt(0).toUpperCase() + text.slice(1));
   }
   /** the JET rules an entry trips (the filters file's riskOf, read with the period and currency on screen) */

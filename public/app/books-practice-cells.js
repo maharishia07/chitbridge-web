@@ -50,7 +50,15 @@
     var v = r.health.sales_trend_pct;
     return v == null ? '—' : (v > 0.5 ? '▲ ' : v < -0.5 ? '▼ ' : '► ') + (v > 0 ? '+' : '') + Math.round(v) + '%';
   }
+  /** YE-F-07: the server's bas.overdue ({ n, form, label, due, days_late }) in words, the oldest named; '' when none */
+  function basOverdueWords(r) {
+    var o = r.bas && r.bas.overdue;
+    if (!o) return '';
+    return practiceKit.translate('overdue') + ': ' + (o.label || o.form) + ' · ' + practiceKit.translate('due') + ' ' + practiceKit.dayWords(o.due) + (o.n > 1 ? ' (+' + (o.n - 1) + ')' : '');
+  }
   function basCell(r) {
+    var late = basOverdueWords(r);
+    if (late) return '<span style="color:var(--red-i)" data-testid="bas-overdue-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(late) + '</span>';
     if (!r.bas.due_date) return '—';
     return practiceKit.escapeHtml(r.bas.form || '') + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(r.bas.due_date)) + (r.bas.due_in_days != null && r.bas.due_in_days <= 30 ? ' <span class="sub">(' + practiceKit.escapeHtml(r.bas.due_in_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days')) + ')</span>' : '');
   }
@@ -81,7 +89,7 @@
   /** Athi 21 Nov (no repeats): the stage is a FILTER CHIP with its count (the band's tiles), so the row says only what stands in its way; the stage word stays in the row's title and its opened sheet. Blank when nothing does. */
   function stageLine(r, figures) {
     var word = practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))), why = blockerWords(r).replace(/^ · /, '');
-    return '<span class="bp-yend" data-cbsid="HOM001-P16" data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '" title="' + word + (figures ? ' · ' + practiceKit.escapeHtml(figures) : '') + '">' + why + '</span>';
+    return '<span class="bp-yend" data-cbsid="HOM001-P16" data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '" title="' + word + (figures ? ' · ' + practiceKit.escapeHtml(figures) : '') + '">' + '<b class="bp-stage" data-testid="practice-stage-word-' + practiceKit.escapeHtml(r.entity_id) + '">' + word + (why ? ' · ' : '') + '</b>' + why + '</span>'; /* YE-F-15: on a phone card the stage word shows (the filter chip is not on the card); a table row keeps its chip and shows only what stands in the way */
   }
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {

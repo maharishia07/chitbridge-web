@@ -118,6 +118,16 @@ jobs:
           node tests/acct-c-f06-debit-note-fix.test.cjs
           node tests/acct-c-f03-bank-summary.test.cjs
           node tests/acct-c-f04-bank-difference.test.cjs
+          node tests/ye-f15-card-stage.test.cjs
+          node tests/ye-f13-one-name.test.cjs
+          node tests/ye-f12-opening-years-words.test.cjs
+          node tests/ye-f11-firm-return-tab.test.cjs
+          node tests/ye-f07-overdue-words.test.cjs
+          node tests/ye-f08-year-warnings.test.cjs
+          node tests/ye-f06-stage-evidence.test.cjs
+          node tests/ye-f05-no-reopen-by-year.test.cjs
+          node tests/ye-f04-carried-words.test.cjs
+          node tests/ye-f03-last-year-part.test.cjs
           node tests/acct-c-f12-asset-ask.test.cjs
           node tests/product-lab-rows.test.cjs
           node tests/shop-attempt-key.test.cjs
@@ -281,6 +291,7 @@ jobs:
           node e2e/chart-sample.test.cjs
           node e2e/practice-rep66-pictures.cjs
           node e2e/practice-rep73-fable.cjs
+          node e2e/practice-150.cjs
           node e2e/practice-checked-cell.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)

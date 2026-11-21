@@ -39,7 +39,9 @@
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', grantKit.MONEY], ['prior_year_minor', 'Last year', grantKit.MONEY], ['change_minor', 'Change', grantKit.MONEY], ['change_bp', '%', grantKit.PCT]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return bookOrder(a.entries || [], grantKit.viewState.since).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e), risk_list: grantKit.riskWords(Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e)) /* the same row the filters judge (the amount is the debits) */ /* JET: the rules this entry trips (books-grant-filters.js riskOf), one definition each */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', grantKit.MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark'], ['risk', 'Risk', 'risk'], ['flag', 'Saved', 'flag']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', more: { control: '1' } /* FC-M10: the server also answers the trial-balance control */, rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', grantKit.MONEY], ['age_d0_30', '1–30', grantKit.MONEY], ['age_d31_60', '31–60', grantKit.MONEY], ['age_d61_90', '61–90', grantKit.MONEY], ['age_d90_plus', '90+', grantKit.MONEY], ['balance_minor', 'Total', grantKit.MONEY]], facts: [], panels: true },
-    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['profit_minor', 'Income before tax', grantKit.MONEY]], facts: [] }
+    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['profit_minor', 'Income, tax out', grantKit.MONEY]], facts: [] },
+    /* YE-F-11: the client's tax return (BAS · VAT return), read from its posted books through GET /returns — a grant read; the box rows and the server's net, the stage in the header line (the server's one stage word) */
+    { k: 'bas', label: 'Tax return', ep: 'readReturns', day: 'on', rows: basRows, cols: [['code', 'Box'], ['label', 'What'], ['amount_minor', 'Amount', grantKit.MONEY], ['tax_minor', 'Tax', grantKit.MONEY]], facts: [['net_minor', 'To pay or refund']] }
   ];
 
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
@@ -50,6 +52,16 @@
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
       return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: root.CBLockWords ? root.CBLockWords.stateWord(p.status) : grantKit.words(p.status), profit_minor: p.profit_minor !== undefined && p.profit_minor !== null ? p.profit_minor : Number(p.sales_minor) > 0 ? p.sales_minor : null, lock_note: (who.all.length > 1 ? who.all : who.line ? [who.line] : []).concat(who.note ? [who.note] : []).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') });
     });
+  }
+  /** YE-F-11: the return's boxes that carry a figure, as the server sent them (nothing added up here) */
+  function basRows(answer) {
+    return ((answer && answer.boxes) || []).filter(function (b) { return b.amount_minor != null || b.tax_minor != null; });
+  }
+  /** YE-F-11: the return's header tag: the period and its due day, then the server's stage (lodged as declared · overdue · closed · prepared) */
+  function basLine(answer) {
+    if (!answer || !answer.period) return '';
+    var text = [answer.period.label || answer.period.period, answer.period.due ? grantKit.words('due') + ' ' + root.shopDay(answer.period.due) : '', answer.stage ? grantKit.words(answer.stage.words) : ''].filter(Boolean).join(' · ');
+    return '<span class="tag" data-testid="bv-return">' + esc(text) + '</span>';
   }
   /** W20: the balance sheet's profit line is the profit of the period it is read at: "Profit 1 Jul 2025 – 30 Jun 2026", not a bare "Profit for the year" (api fy_from and the as-at day) */
   function profitRow(row, a) {
@@ -83,6 +95,7 @@
   function periodQuery(report, period) {
     if (!period || !period.from || !report.day) return {};
     if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
+    if (report.day === 'on') return { on: period.to }; /* the return: the period that holds the end of the period asked */
     return { from: period.from, to: period.to }; /* p&l, day book: for the period */
   }
   /** a day typed: that one day, in the shape the read takes */
@@ -133,6 +146,7 @@
   /** a heading naming the date the figures stand at */
   function asAt(report) {
     var answer = grantKit.viewState.answer || {}, running = runningYear(report, answer);
+    if (report.k === 'bas') return basLine(answer);
     if (report.k === 'pl' && answer.from && answer.to && !grantKit.viewState.day) return forTag(answer);
     var date = asAtDay(answer);
     return date && ['tb', 'pl', 'bs', 'dues'].indexOf(report.k) >= 0 ? asAtTag(date, running) : '';

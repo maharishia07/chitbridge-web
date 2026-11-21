@@ -40,11 +40,25 @@
       return null;
     }
   }
-  function read(left) {
+  /* PRAC150: the list is the server's whole answer (no page words = every client). Should the server ever answer a page (has_more), the rest is read here, page by page at the contract's own maximum,
+     so the list, the tiles' rows and the count never stop at the first page. The next page is asked at the size the server answered (page n+1 of the same limit): a page number only means something at one page size. The count and the tiles are the server's (total, band), never counted from rows. */
+  function readAll() {
+    return read().then(function (answer) { return restOf(answer, Number(answer && answer.page) + 1, Number(answer && answer.limit)); });
+  }
+  function restOf(answer, page, limit) {
+    if (!answer || answer.failed === true || answer.has_more !== true || !Array.isArray(answer.clients) || !(limit >= 1) || page > 50) return answer;
+    return read(undefined, '?page=' + page + '&limit=' + limit).then(function (next) {
+      if (!next || next.failed === true || !Array.isArray(next.clients) || !next.clients.length) return answer;
+      answer.clients = answer.clients.concat(next.clients);
+      answer.has_more = next.has_more === true;
+      return restOf(answer, page + 1, limit);
+    });
+  }
+  function read(left, query) {
     left = left === undefined ? 3 : left;
-    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p, { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
+    return root.fetch(base() + PRACTICE_ENDPOINT.practice.p + (query || ''), { method: PRACTICE_ENDPOINT.practice.m, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
       if (r.status === 503 && left > 0) {
-        return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1); });
+        return new Promise(function (go) { root.setTimeout(go, Math.min(10, Number(r.headers.get('Retry-After')) || 2) * 1000); }).then(function () { return read(left - 1, query); });
       }
       if (r.status === 429 || r.status >= 500) return { failed: true, status: r.status }; /* l16 W5: rate-limited or failing is NOT "no practice": the caller must not decide "a shop" from it */
       if (!r.ok) return null; /* a login that may not read the practice (403) or a server without it: nothing is drawn */
@@ -209,7 +223,7 @@
       filterOf('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
       filterOf('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
       filterOf('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
-      filterOf('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
+      filterOf('bas', 'Return due', [['overdue', 'Overdue'], ['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'overdue' ? !!r.bas.overdue : v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
       filterOf('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
       filterOf('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
       filterOf('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
@@ -261,7 +275,7 @@
   function holdersOn() { return !!root.CBAssign && root.CBAssign.hasHolders((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []); }
   /** ASSIGN-1: read the practice again after an assign, so the Held by column shows what the server now holds */
   function reloadAfterAssign() {
-    return read().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
+    return readAll().then(function (answer) { if (answer && !answer.failed) { practiceKit.practiceState.data = answer; practiceKit.practiceState.keepList = true; draw(); } });
   }
   /** ASSIGN-W2: the plug, the noun and the row facts of THIS list, read by the chip, the bar, the keys and Undo; "said" is the server's verdict (may_assign) and nothing else */
   function assignOpts() {
@@ -327,7 +341,7 @@
       '#bp_practice{margin:0 0 16px}#bp_practice h2{margin:0 0 6px;font-size:18px}.bp-band{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}' +
       '.bp-tile{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-height:44px}' +
       '.bp-tile b{font-size:20px;line-height:1.1}@media(max-width:700px){.bp-band{grid-template-columns:repeat(3,1fr);gap:6px}.bp-tile{padding:6px 8px;min-height:44px}.bp-tile b{font-size:18px}.bp-tile span{font-size:12px;line-height:1.15}}.bp-bands{display:flex;gap:6px;margin:4px 0}.bp-bandtab{border:1px solid var(--line,#DDD6C6);border-radius:999px;padding:4px 12px;background:var(--card,#fff);color:inherit;font:inherit;font-size:13px;cursor:pointer;min-height:32px}.bp-bandtab.on{background:var(--card,#fff);color:var(--ink,#1d1b16);border-color:var(--ink,#1d1b16);font-weight:600;box-shadow:inset 0 -3px 0 var(--ink,#1d1b16)}.bp-note{margin:2px 0}.bp-link{color:inherit;font-weight:600;text-decoration:underline}.bp-tile span{font-size:13px}.bp-tile i{font-style:normal;font-size:12px;color:var(--muted,#5a5646)}' +
-      '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
+      '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-stage{display:none}@media(max-width:700px){.bp-stage{display:inline;font-weight:600}}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '@media(min-width:701px){.cbl .cbl-row.bp-r>.cbl-cell,.cbl .cbl-row.bp-r>.cbl-lead{padding-block:2px}}' +
       '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
       '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;min-width:0}.bp-fig>b,.bp-fig>a{min-width:0;overflow-wrap:anywhere}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
@@ -364,7 +378,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.practiceState.data.clients.length) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(clientCount(practiceKit.practiceState.data)) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +
@@ -500,6 +514,8 @@
     settle(); /* a known shop: the shop Home, as before */
   }
   /** W15: an answer with no client, for a login /me (or the last answer) says is a practice */
+  /** how many clients the firm has: the server's total (a number at least the rows in hand), else the rows */
+  function clientCount(data) { var rows = data.clients.length, total = data && data.total; return typeof total === 'number' && isFinite(total) && total >= rows ? total : rows; }
   function emptyFirm(answer) { return !!answer && !!answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1')); }
   function tick() {
     var tokenNow = token();
@@ -511,7 +527,7 @@
       practiceKit.practiceState.fl = null; practiceKit.practiceState.flReady = false; practiceKit.practiceState.flOff = false; practiceKit.practiceState.flTotal = 0; /* another login: its own flags */
       practiceKit.practiceState.pending = true;
       practiceKit.practiceState.since = Date.now();
-      read().then(function (answer) {
+      readAll().then(function (answer) {
         if (answer && answer.failed === true) return failedRead(answer.status);
         if (emptyFirm(answer)) answer.practice_empty = true; /* W15: a firm's employee who holds no client yet is still on the practice (its own empty screen), never the shop Home */
         if (!answer || !answer.clients || (!answer.clients.length && !answer.practice_empty)) { hint(false); return settle(); }
@@ -537,5 +553,5 @@
   else start();
   root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
+    parts: { clientCount: clientCount, readAll: readAll, bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

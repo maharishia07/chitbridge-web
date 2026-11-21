@@ -53,7 +53,7 @@ const report = (k) => kit.REPORTS.filter((r) => r.k === k)[0];
 
 t('the view exposes mount and duesVoice only', () => assert.deepStrictEqual(Object.keys(world.CBBooksGrantView).sort(), ['duesVoice', 'mount']));
 t('six reads, each with its endpoint and columns', () => {
-  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'tb,pl,bs,daybook,dues,periods');
+  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'tb,pl,bs,daybook,dues,periods,bas');
   kit.REPORTS.forEach((r) => assert.ok(r.ep && r.cols.length, r.k));
 });
 t('queryOf: as at the end of the period for tb, from-to for the p&l, one day for both ends of the day book', () => {
