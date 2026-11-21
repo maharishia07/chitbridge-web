@@ -249,7 +249,7 @@
   }
 
   /* ── an action drawn the one way: shown always; greyed with the server's sentence when it may not (as cap-employees) ── */
-  function actRow(id, label, verdict, extra, className, stampCode) {
+  function actRow(id, label, verdict, extra, className, stampCode, hideWhy) {
     var ok = !verdict || verdict.ok !== false;
     return (
       '<div class="tk-act' +
@@ -270,7 +270,7 @@
       '">' +
       esc(label) +
       '</button>' +
-      (ok ? extra || '' : '<span class="why" data-testid="' + id + '-why">' + esc(sayOf(verdict)) + '</span>') +
+      (ok ? extra || '' : hideWhy ? '' : '<span class="why" data-testid="' + id + '-why">' + esc(sayOf(verdict)) + '</span>') +
       '</div>'
     );
   }
@@ -688,7 +688,7 @@
       '" data-testid="tk-line-state-' +
       lineId +
       '">' +
-      esc(T(done ? 'Done' : line.remaining > 0 ? 'Open' : 'Delivered')) +
+      esc(T(done ? 'Done' : line.remaining > 0 || chit.kind === 'task' ? 'Open' : 'Delivered')) +
       '</span>' +
       '<span class="sub" data-testid="tk-line-who-' +
       lineId +
@@ -698,24 +698,30 @@
       (price ? '<span class="sub mono">' + esc(price) + '</span>' : '') +
       '</div>' +
       '<div class="tk-line-sub sub">' +
-      esc(T('Delivered')) +
-      ' ' +
-      esc(line.delivered) +
-      ' · ' +
-      esc(T('left')) +
-      ' ' +
-      esc(line.remaining) +
-      (line.settings && line.settings.due ? ' · ' + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
+      /* L-F-10: nothing is delivered on a task (a credit note, a to-do): no Delivered / left counts, no Deliver button */
+      (chit.kind === 'task' ? '' : esc(T('Delivered')) + ' ' + esc(line.delivered) + ' · ' + esc(T('left')) + ' ' + esc(line.remaining)) +
+      (line.settings && line.settings.due ? (chit.kind === 'task' ? '' : ' · ') + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
       (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
       '</div>' +
       '<div class="tk-line-acts">' +
       holderChip(chit, line.actions && line.actions.assign_line, line) +
       actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line, '', '', 'TSK003-B07') +
-      actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08') +
+      (chit.kind === 'task' ? '' : actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08')) +
       '</div><div id="tk_lmore_' +
       lineId +
       '"></div></div>'
     );
+  }
+  /** the one refusal sentence that three or more of the step buttons share ('' when none does) */
+  function repeatedWhy(acts) {
+    var seen = {}, top = '';
+    STEPS.forEach(function (item) {
+      if (!acts[item] || acts[item].ok !== false) return;
+      var said = sayOf(acts[item]);
+      seen[said] = (seen[said] || 0) + 1;
+      if (seen[said] >= 3) top = said;
+    });
+    return top;
   }
   function paintSheet(chit) {
     var acts = chit.actions || {};
@@ -725,8 +731,10 @@
       chit.stuck = !!node.stuck;
       chit.stuck_why = node.stuck_why || null;
     } /* the rail's stuck mark rides the list row; the sheet paints it */
+    /* L-F-09: one refusal sentence on three or more steps is said ONCE above them (greyed buttons keep it as their tooltip), never five times in a column */
+    var repeated = repeatedWhy(acts);
     var steps = STEPS.map(function (item) {
-      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09');
+      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09', !!repeated && acts[item] && acts[item].ok === false && sayOf(acts[item]) === repeated);
     });
     steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
     steps = steps.join('');
@@ -745,7 +753,9 @@
         '</div>' +
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Next step')) +
-        '</div><div class="tk-steps" data-testid="tk-steps">' +
+        '</div>' +
+        (repeated ? '<div class="sub" data-testid="tk-steps-why">' + esc(repeated) + '</div>' : '') +
+        '<div class="tk-steps" data-testid="tk-steps">' +
         steps +
         '</div><div id="tk_more"></div></div>' +
         '<div class="tk-block"><div class="tk-h">' +
@@ -1099,5 +1109,5 @@
     return { reload: reload, show: show, open: tkOpen, close: closeSheet };
   }
   /* actRow is shared (T3-DISPUTES-ASSIST): CBDispute (cap-dispute.js) draws Raise / Resolve the same way — shown always, greyed WITH the server's sentence */
-  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow };
+  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow, repeatedWhy: repeatedWhy, lineHTML: lineHTML };
 })(typeof window !== 'undefined' ? window : globalThis);
