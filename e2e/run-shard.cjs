@@ -59,7 +59,7 @@ const SKIP = {
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
 /* a file that needs more than the 240 s slot, with its reason (ms): the fault probe looks at ~1,200 screens (470 s on a SIT box, 18 Nov) */
-const SLOT_MS = { 'walk-probe-faults.cjs': 900000 };
+const SLOT_MS = { 'walk-probe-faults.cjs': 900000, 'labs-flow.cjs': 480000 /* 3 Labs x 4 states + the index x 4 with real ready (1128): 240 s ran out at offer out-1280 on CI */ };
 const KNOWN = {
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
