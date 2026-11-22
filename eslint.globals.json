@@ -200,6 +200,7 @@
  "public/app/catalogue-starter-categories.js":["public/app.html"],
  "public/app/chart-sample.js":["public/chart-sample.html"],
  "public/app/chit-price-moved.js":["public/app.html"],
+ "public/app/chit-sheet-sample.js":["public/accounts.html","public/app.html","public/crm.html","public/finance.html","public/tasks.html"],
  "public/app/chit-sheet.js":["public/accounts.html","public/app.html","public/crm.html","public/finance.html","public/tasks.html"],
  "public/app/chit-unpay.js":["public/app.html"],
  "public/app/core.js":["public/accounts.html","public/app.html","public/catalogue.html","public/crm.html","public/finance.html","public/operations.html","public/settings.html","public/tasks.html"],

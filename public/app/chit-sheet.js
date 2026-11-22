@@ -965,52 +965,6 @@
   function sampleBannerHTML() {
     return CS.sample ? '<div class="cs-sample" data-testid="cs-sample">' + esc(T('Sample — not a real bill')) + '</div>' : '';
   }
-  function sampleRead() {
-    var fivePercent = { taxable: 1076, cgst: 26.9, sgst: 26.9, tax: 53.8 };
-    return {
-      header: {
-        chit_id: 'sample',
-        purpose: 'order',
-        current_status: 'pending',
-        created_at: '2026-10-12T09:10:00Z',
-        manual_subject: 'SO-1',
-        all_recipients: [{ role: 'sender', display_name: 'Meena', entity_id: 'sample-meena' }],
-        summary_json: {
-          total_value: 1129.8,
-          order_details: {
-            channel: 'online',
-            fulfilment: 'pickup',
-            address: 'Pick up at the shop',
-            requested_delivery: { date: '12 Oct' },
-            remark: 'Ring first'
-          },
-          money: {
-            total: 1129.8,
-            taxable: 1076,
-            tax: 53.8,
-            cgst: 26.9,
-            sgst: 26.9,
-            supply: 'intra',
-            by_rate: { 5: fivePercent },
-            lines: [
-              { total: 525, tax: 25, discount: 0 },
-              { total: 604.8, tax: 28.8, discount: 64 }
-            ]
-          }
-        }
-      },
-      detail: {
-        line_items: [
-          { particulars: 'Rice', quantity: 5, unit: 'kg', price: 100 },
-          { particulars: 'Groundnut oil', quantity: 2, unit: 'L', price: 320, offers: [{ label: 'Festival 10% off', off: 64 }] }
-        ]
-      },
-      state_log: [
-        { action: 'created', created_at: '2026-10-12T09:10:00Z', by_name: 'Meena' },
-        { action: 'delivered', created_at: '2026-10-12T09:10:05Z', by_name: 'ChitBridge' }
-      ]
-    };
-  }
   function ensureCSS() {
     if (document.getElementById('cs-css')) return;
     var node = document.createElement('style');
@@ -1099,7 +1053,7 @@
   }
 
   async function read(id) {
-    var r = CS.sample ? sampleRead() : await api('chit', { params: { id: id } });
+    var r = CS.sample ? root.CBChitSheetSample.read() : await api('chit', { params: { id: id } });
     if (CS.id !== id) return;
     CS.chit = r;
     CS.view = model(r);
@@ -1478,7 +1432,7 @@
     retry: retry,
     placeFor: placeFor,
     sample: function () {
-      return model(sampleRead());
+      return model(root.CBChitSheetSample.read());
     },
     place: function () {
       return CS.place;
