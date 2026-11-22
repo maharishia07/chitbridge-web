@@ -109,6 +109,8 @@ function collect() {
   const declared = new Set();
   const optional = new Set();          /* asked for with typeof — absence is expected, not a fault */
   const calls = new Map();             // name → [{file, line}]
+  /* app/till-slip.js and app/till-dayrep.js are classic scripts that share till.html's scope (vendored from the api till master, 1128-1129): what the page declares exists for them. Declarations only; the page's own calls are not scanned. */
+  fs.readFileSync(path.join(WEB, 'till.html'), 'utf8').split('\n').forEach((line) => { const d = DECL.exec(line); if (d) declared.add(d[1]); });
   for (const rel of FILES) {
     const lines = decomment(fs.readFileSync(path.join(WEB, rel), 'utf8')).split('\n');
     for (let i = 0; i < lines.length; i++) {

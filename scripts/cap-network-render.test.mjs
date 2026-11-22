@@ -131,6 +131,10 @@ createContext(ctx);
    the cart bar throws mid-paint — which the old null-returning DOM stub hid, because paintBar never ran. */
 /* the page loads app/helpers.js first: the ONE esc and escJs (no private copy here) */
 runInContext(read('public/app/helpers.js'), ctx, { filename: 'helpers.js' });
+ctx.window = ctx; /* money.js publishes CBMoney only where a window exists */
+runInContext(read('public/engine/money.js'), ctx, { filename: 'money.js' });
+ctx.window = undefined;
+/* the page loads engine/money.js before the capabilities: the member half rounds the line total with CBMoney (money lane, 1129) */
 runInContext(read('public/engine/locale.js'), ctx, { filename: 'locale.js' });
 runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' });
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });

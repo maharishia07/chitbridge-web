@@ -872,9 +872,13 @@ var CBShop = (function () {
   function card(title, body, tid) {
     return '<section class="shop-card" data-testid="' + tid + '" style="' + _CARD + '"><h2 class="shop-h">' + esc0(title) + '</h2>' + body + '</section>';
   }
+  /** is the person at the screen an actor (a seat that may not write)? the ONE read of SESSION.actorId in this file */
+  function isActorSeat() {
+    return typeof SESSION !== 'undefined' && !!(SESSION && SESSION.actorId);
+  }
   /** the Business section: the same inputs the workshop's Profile paints (shopFieldsHTML), one Save (M64) */
   function shopCardHTML(e) {
-    var actorId = SESSION && SESSION.actorId;
+    var actorId = isActorSeat();
     return (
       shopNameHTML(e || {}) +
       shopFieldsHTML(e || {}, shopLicLabel()) +
@@ -886,7 +890,7 @@ var CBShop = (function () {
   }
   /** a person who may not write (an actor) sees the shop's fields greyed, read-only, with the sentence under the Business card (LENS2 1129: they could type and nothing saved) */
   function greyForActor(node) {
-    if (!(SESSION && SESSION.actorId) || !node) return;
+    if (!isActorSeat() || !node) return;
     var why = tx('Only the owner can change these.');
     Array.prototype.forEach.call(node.querySelectorAll('input, select, textarea, button.act'), function (el) {
       el.disabled = true;
@@ -926,7 +930,7 @@ var CBShop = (function () {
   var autosave = { timer: null, saving: false, again: false, dirty: [] };
   function onChange(event) {
     var target = event.target;
-    if (!target || !target.closest || (SESSION && SESSION.actorId)) return;
+    if (!target || !target.closest || isActorSeat()) return;
     var shopField = SHOP_FIELDS.some(function (pair) {
       return pair[0] === target.id;
     });

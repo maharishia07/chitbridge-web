@@ -70,7 +70,7 @@ const settle = () => new Promise((r) => setTimeout(r, 5));
   ok(/below zero/.test(cell('qty', 'r2')) && /tag red/.test(cell('qty', 'r2')) && /stock-below-r2/.test(cell('qty', 'r2')), 'a negative quantity is said in words: "below zero", red, with its own testid');
   ok(/none left/.test(cell('qty', 'r3')) && /tag amber/.test(cell('qty', 'r3')), 'zero is "none left", amber');
   ok(/12\.5/.test(cell('qty', 'r1')) && /kg/.test(cell('qty', 'r1')) && !/tag/.test(cell('qty', 'r1')), 'a healthy quantity is the number and its unit with no warning tag');
-  ok(/Item r4/.test(cell('name', 'r4')), 'a product with no name is "Item <id>", not a blank row');
+  ok(/No name yet \(r4\)/.test(cell("name", "r4")), "a product with no name says so and keeps its id: No name yet (<id>), not a blank row (BG-F-08)");
   ok(/&lt;img/.test(cell('name', 'r5')) && !/<img/.test(cell('name', 'r5')), 'a product name with markup is escaped');
   ok(/not kept by batch/.test(cell('lots', 'r3')), 'no batches: "not kept by batch", not "0 batches"');
   ok(/1 batch(?!es)/.test(cell('lots', 'r1')) && !/1 batches/.test(cell('lots', 'r1')), 'one batch is singular');

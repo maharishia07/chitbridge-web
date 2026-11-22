@@ -25056,7 +25056,7 @@ async function loadList(silent) {
           UI.state = _pick;
           UI.sel = null;
           UI.detail = null;
-          renderApp();
+          bgRenderApp(); /* a loader never repaints over an open modal */
           return loadList(true);
         }
         paintRowsOnly();

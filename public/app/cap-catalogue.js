@@ -1364,7 +1364,7 @@ var CBCatalogueApp = (function () {
    * P-F-05: the item form asks for the tax rate (the pack's word: GST), so no new item is saved with no answer. Blank = the shop's default (a registered shop: the pack's rate, shown as the
    * placeholder; an unregistered one: zero, the api says so on the bill); a typed 0 is GST-free and asks WHY from the pack's own supply kinds. Shown only where the pack has a tax scheme.
    */
-  function gstFieldHTML(itemData) {
+  function gstFieldHTML(d) {
     var pack = taxPack();
     if (!pack || !pack.scheme) return '';
     var fallback = defaultRate(),
