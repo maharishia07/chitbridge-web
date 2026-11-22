@@ -128,6 +128,7 @@ function bankStoreBody() {
     opening_minor: Number(ledger.opening_minor) || 0,
     closing_bank_minor: worked.bank_balance_minor,
     closing_books_minor: worked.book_balance_minor,
+    exceptions_minor: Number(worked.computed_bank_minor) - Number(worked.book_balance_minor), /* BA-F-07: the net of the listed items, so the server can add the figures up itself and decide "tied" */
     difference_minor: worked.difference_minor,
     currency: String(ledger.currency || bkCur() || '').toUpperCase(),
     file_hash: bankStoreState.view.file && bankStoreState.view.file.hash
