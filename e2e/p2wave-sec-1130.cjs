@@ -33,4 +33,31 @@ t('shop.html: an https link, a site path and an inline png still show', ['https:
 /* the third-party script carries the registry's hash, the same one app.html pins */
 const qr = (html) => (html.match(/<script[^>]*qrcode\.min\.js[^>]*>/) || [''])[0];
 t('shop.html: the qrcode script has integrity + crossorigin, equal to app.html', /integrity="sha512-[^"]+"/.test(qr(shop)) && /crossorigin="anonymous"/.test(qr(shop)) && (qr(shop).match(/integrity="[^"]+"/) || [])[0] === (qr(read('app.html')).match(/integrity="[^"]+"/) || [])[0]);
-process.exit(fail ? 1 : 0);
+/* the minted connection key is forgotten: after a minute, and when the page is left */
+{
+  const admin = read('app/cap-admin.js');
+  const m = /^function intKeyForget\(\) \{[\s\S]*?\n\}\n/m.exec(admin);
+  t('cap-admin.js: intKeyForget exists', !!m);
+  const box = { innerHTML: '<b>KEY</b>' };
+  const run = new Function('document', 'clearTimeout', 'var _KEY_SHOWN = "SECRET-KEY-HTML", _KEY_TIMER = 7;' + (m ? m[0] : '') + 'intKeyForget(); return { shown: _KEY_SHOWN };');
+  const res = run({ getElementById: () => box }, () => {});
+  t('cap-admin.js: intKeyForget empties the held key and the screen', res.shown === '' && box.innerHTML === '', JSON.stringify(res));
+  t('cap-admin.js: minting arms the one-minute forget and the page leave clears it', /_KEY_TIMER = setTimeout\(intKeyForget, 60000\)/.test(admin) && /addEventListener\('pagehide', intKeyForget\)/.test(admin));
+}
+/* the service worker: run the real file in a vm with a fake self and caches; an api GET on the same origin is never answered through the cache, a no-store reply is never stored */
+(async () => {
+  const vm = require('vm');
+  const listeners = {}, puts = [];
+  const caches = { open: async () => ({ put: async (req, res) => { puts.push(new URL(req.url).pathname); }, addAll: async () => {} }), match: async () => undefined, keys: async () => [], delete: async () => true };
+  const sandbox = { self: { location: { href: 'https://shop.example/cb-sw.js', origin: 'https://shop.example' }, addEventListener: (n, f) => { listeners[n] = f; }, skipWaiting() {}, clients: { claim() {} } }, caches, URL, Response: { error: () => 'err' }, Promise, console };
+  sandbox.fetch = async (req) => ({ ok: true, type: 'basic', headers: { get: (h) => (/api/.test(req.url) ? 'private, no-store' : /secret-static/.test(req.url) ? 'no-store' : '') }, clone() { return this; } });
+  vm.runInNewContext(fs.readFileSync(path.join(pub, 'cb-sw.js'), 'utf8'), sandbox);
+  const ask = (u, headers) => { let answered = false; listeners.fetch({ request: { method: 'GET', url: 'https://shop.example' + u, mode: 'cors', headers: { has: (h) => !!(headers || {})[h] } }, respondWith: (p) => { answered = true; p.catch(() => {}); } }); return answered; };
+  t('cb-sw.js: a same-origin /api/ GET is not answered through the cache', ask('/api/products') === false);
+  t('cb-sw.js: a request carrying Authorization is not answered through the cache', ask('/data/x.json', { Authorization: 1 }) === false);
+  t('cb-sw.js: a static file still is (the shell opens offline)', ask('/app/core.js') === true);
+  await new Promise((r) => setTimeout(r, 20));
+  ask('/secret-static.js'); await new Promise((r) => setTimeout(r, 20));
+  t('cb-sw.js: a no-store reply is never put in the cache; a plain static one is', !puts.includes('/secret-static.js') && puts.includes('/app/core.js'), JSON.stringify(puts));
+  process.exit(fail ? 1 : 0);
+})();
