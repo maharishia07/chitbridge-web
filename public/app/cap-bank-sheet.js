@@ -229,7 +229,7 @@ function bkshPaint() {
   if (model.refusal) bkshSay(model.refusal, false);
   if (addButton) {
     addButton.disabled = !ready || BKSH.posting;
-    addButton.textContent = ready ? (BKSH.ctl.only() ? tx('Add this line to your books') : txf('Add these {n} ready lines', { n: ready })) : tx('Nothing ready to add');
+    addButton.textContent = ready ? (BKSH.ctl.only() || ready === 1 ? tx('Add this line to your books') : txf('Add these {n} ready lines', { n: ready })) : tx('Nothing ready to add');
   }
 }
 /** the question the Add press asks first: how many entries, how much, which dates, how many new parties, how many still need you (the engine's own carried totals) */

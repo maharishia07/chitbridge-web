@@ -589,6 +589,8 @@ const bkbRowGroup = (item) => {
   return one && one.state === 'in_books' ? 'matched' : group;
 };
 const bkbCount = (key) => BKB.rows.filter((item) => bkbRowGroup(item) === key).length;
+/** AD-F-02: the lines READY to add (the sheet controller's own count, the one the sheet's button reads): the Add button counts these, never the lines still to go; before the controller is there, the lines to go */
+const bkbReadyCount = () => (typeof bkshCounts === 'function' && typeof BKSH !== 'undefined' && BKSH.ctl && BKSH.key === bkshKey() ? bkshCounts().ready : bkbCount('books'));
 /** a signed period at nil: "Sign off again" lives in More on a phone, where the band has no room for the button (the band shows it from 760 px up) */
 function bankMoreSignAgain() {
   const fig = bankFigures();
@@ -723,8 +725,10 @@ function bankPrimaryHtml(fig) {
   const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), no = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (no || !canAdd || (fig && !bkbCount('books'))) return bankPrimaryGreyed(no); /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
-  const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
-  return bankAddButton(held + ' onclick="bankAdd()"', bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books'));
+  const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '',
+    ready = bkbReadyCount();
+  if (!ready) return bankPrimaryGreyed(tx('No line is ready to add yet: answer the lines that need you first.')); /* AD-F-02: greyed with a sentence, never an Add that promises lines that are not ready */
+  return bankAddButton(held + ' onclick="bankAdd()"', txn('Add {count} line to your books', 'Add {count} lines to your books', ready));
 }
 /** FIN-129: the greyed button with the server's sentence beside it, or nothing when the seat is not refused (no = '') */
 function bankPrimaryGreyed(no) {

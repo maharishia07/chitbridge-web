@@ -126,11 +126,11 @@ const SESSION = () => {
     ok(/Could not change it/.test(failTxt) && !/TypeError|undefined|status/.test(failTxt), 'B · a 500 is said as "Could not change it" — no error text reaches the person (' + failTxt.trim() + ')');
     ok(await p.locator('[data-testid="lk-lock-' + nxt + '"]').isEnabled(), 'B · after a failure the button is pressable again');
 
-    /* ── C · Close for good (IRREVERSIBLE): asks first; Cancel sends nothing; a double press asks ONCE; Yes sends ONCE ── */
+    /* ── C · Close month (IRREVERSIBLE): asks first; Cancel sends nothing; a double press asks ONCE; Yes sends ONCE ── */
     const h0 = count(/\/lock$/);
     await p.click('[data-testid="lk-hard-' + mo + '"]');
     await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 5000 }).catch(() => {});
-    ok(await p.locator('[data-testid="confirm-ok"]').count() === 1 && /never open again/.test(await p.textContent('[data-testid="confirm"]').catch(() => '') || await p.evaluate(() => document.body.innerText)), 'C · Close for good opens the page\'s own dialog first, saying it never opens again');
+    ok(await p.locator('[data-testid="confirm-ok"]').count() === 1 && /will be closed/.test(await p.textContent('[data-testid="confirm"]').catch(() => '') || await p.evaluate(() => document.body.innerText)), 'C · Close month opens the page\'s own dialog first, saying it never opens again');
     await settle(300);
     ok(count(/\/lock$/) - h0 === 0, 'C · nothing is sent while the question is open');
     await p.click('[data-testid="confirm-cancel"]');
@@ -143,11 +143,11 @@ const SESSION = () => {
     if (await p.locator('[data-testid="confirm-ok"]').count() === 0) { await p.click('[data-testid="lk-hard-' + mo + '"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); }
     await p.click('[data-testid="confirm-ok"]');
     await p.evaluate((n) => { bkLockDo('hard', +n); }, mo);   /* a second press while the first is out */
-    await p.waitForFunction((n) => /Closed for good/.test((document.querySelector('[data-testid="lk-state-' + n + '"]') || {}).textContent || ''), mo, { timeout: 10000 }).catch(() => {});
+    await p.waitForFunction((n) => /Closed/.test((document.querySelector('[data-testid="lk-state-' + n + '"]') || {}).textContent || ''), mo, { timeout: 10000 }).catch(() => {});
     await settle();
     const hard = writes.filter((w) => /\/lock$/.test(w.p)).slice(h0);
     ok(hard.length === 1 && hard[0].body.hard === true, 'C · Yes → ONE POST …/lock {hard:true}, a press while it was out sent nothing (' + hard.length + ')');
-    ok(/Closed for good/.test(await p.textContent('[data-testid="lk-state-' + mo + '"]')) && await p.locator('[data-testid="lk-hard-' + mo + '"]').count() === 0 && await p.locator('[data-testid="confirm-ok"]').count() === 0, 'C · the outcome: the row says Closed for good and offers nothing more; no dialog left open');
+    ok(/Closed/.test(await p.textContent('[data-testid="lk-state-' + mo + '"]')) && await p.locator('[data-testid="lk-hard-' + mo + '"]').count() === 0 && await p.locator('[data-testid="confirm-ok"]').count() === 0, 'C · the outcome: the row says Closed and offers nothing more; no dialog left open');
 
     ok(...C.finish());
     ok(errs.length === 0, 'no page error and no browser dialog (confirm/alert) the whole run' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
