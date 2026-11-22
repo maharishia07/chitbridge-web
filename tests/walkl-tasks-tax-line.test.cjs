@@ -8,6 +8,7 @@ const sandbox = { console, esc: (s) => String(s == null ? '' : s), tx: (s) => s,
 const cx = vm.createContext(sandbox); cx.window = cx; cx.globalThis = cx;
 cx.CBAssign = { slotHTML: () => '', queue: () => ({ views: [], filter: {} }) };
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-assign.js', 'utf8'), cx);
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-words.js', 'utf8'), cx); /* the row wording, loaded before cap-tasks.js as tasks.html does */
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks.js', 'utf8'), cx);
 const head = cx.CBTasks.headLine;
 const chit = { party: 'Acme', total_minor: 40000, tax_minor: 1905, currency: 'AED', age_days: 0 };

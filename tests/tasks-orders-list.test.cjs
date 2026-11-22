@@ -26,6 +26,7 @@ const cx = vm.createContext(sandbox);
 cx.window = cx; cx.globalThis = cx;
 cx.CBAssign = { slotHTML: () => '', queue: (cfg) => ({ views: [], key: cfg.key, filter: { key: 'assignee', match: (row, v) => v === 'none' ? !row.holders.length : row.holders.some((h) => h.name === v) } }) }; /* the shared queue is its own test; here only the board's own part runs */
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-assign.js', 'utf8'), cx); /* tasks.html loads it before cap-tasks.js */
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-words.js', 'utf8'), cx); /* the row wording, loaded before cap-tasks.js as tasks.html does */
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks.js', 'utf8'), cx);
 const T = cx.CBTasks;
 
