@@ -1661,6 +1661,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/chit-price-moved.js"></script>   <!-- a draft sent after its prices moved: the question (CTR-245) -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
+<script src="/app/modal-dialog.js"></script><script src="/app/chit-pay.js"></script><script src="/app/compose-catalogue-fill.js"></script>   <!-- the dialog pattern · Mark paid · the compose product picker fill -->
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script>
 /* =========================================================================
@@ -8266,42 +8267,6 @@ async function compose(prefill) {
   // Now that the modal is OPEN, fetch YOUR products and fill the picker in place (non-supplier only). Keeps any cached
   // list on failure; only shows the error state if we had nothing. ccRenderCatPick is a no-op if the modal was closed.
   if (!UI._supplier) await composeFillCatalogue();
-}
-/** compose, once its modal is open: fetch YOUR products (never for a supplier's own catalogue) and fill the picker in place. Keeps any cached list on failure; the error state only when there was nothing. ccRenderCatPick is a no-op if the modal was closed. */
-async function composeFillCatalogue() {
-  try {
-    /* ⭐ Through the SHARED loader — the mapping below moved into ensureCatalogue() so the worklist picker
-       and compose fill STORE.catalogue the same way. Two mappings of one record is how the same product
-       obeyed different rules on different screens, which the note below records happening once already. */
-    await ensureCatalogue(true);
-    /**
-     * ⚠️⚠️ CARRY THE WHOLE RECORD. THIS LINE USED TO ENUMERATE THREE FIELDS AND THROW THE REST AWAY.
-     *
-     * Athi, 2026-08-15: *"product should be able to carry million parameters if required, what we have is
-     * sample"*. He is right, and the backend already agrees — `item_data` is jsonb and stores whatever is put
-     * in it. Measured with a real Pochampally silk record: 16 fields in (sku, gtin, hsn, gi_certificate,
-     * handloom_mark, tier pricing, incoterm, lead_time_days, moq, care, notes_for_buyer, nested origin and
-     * attributes) and THREE fields out. Everything a trade document actually needs was discarded here, before
-     * any screen could see it.
-     *
-     * ⚠️ AND IT SILENTLY DISABLED THE ORDER MODELS. `order:{model:'pack',step:6}` died on this line, so a
-     * product sold in sixes became a loose count in compose — while Suppliers and Network, which pass the
-     * catalogue payload through untouched, enforced it correctly. The same product obeying two different rules
-     * depending on which screen you opened.
-     *
-     * The rule now: SPREAD, never enumerate. `particulars` is added as the display alias the flat shape uses;
-     * nothing is removed. A field added to the catalogue next month arrives here without anyone editing this.
-     */
-    /* ⚠️ The map that stood here is now inside ensureCatalogue(), called above. It is deliberately NOT left
-       duplicated here: two mappings of one record is precisely how the quantity models died on this line
-       once before, with Suppliers and Network enforcing a rule compose had quietly dropped. */
-    /* WALK-N N-F-01: an EMPTY catalogue is "No items yet" with the add action, not a fault; the error words only when the read FAILED */
-    UI._catState = (STORE.catalogue || []).length || !_catFailed ? 'ready' : 'error';
-  } catch (e) {
-    UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
-  }
-  ccCartSync(); // the products just arrived — point the cart at them before painting it
-  ccRenderCatPick();
 }
 /**
  * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -22541,107 +22506,6 @@ function chitPaymentCell(c, cell, quoted) {
   return cell(tx('Payment'), nestedVal);
 }
 /* CX0: payHasUpi · payModeOpts live in app/helpers.js (every page's) — UPI is offered only where the shop's pack carries it */
-/* PAY-FIX H2: one key per OPEN of the sheet — a retry of this press repeats it (the books answer 'Already recorded'), a second press on the same chit mints a new one */
-let PAY_PRESS_REF = null;
-function chitMarkPaid(id, amount) {
-  PAY_PRESS_REF = 'press-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
-    <select data-cbsid="DTL001-S01" class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
-    <input data-cbsid="DTL001-I01" class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
-    <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc(typeof CBLocale !== 'undefined' && CBLocale.symbol && moneyCode() ? CBLocale.symbol(moneyCode()) : '')}</b><input data-cbsid="DTL001-I02" class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount || ''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
-    <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${esc(tx('Cancel'))}</button><button data-cbsid="DTL001-B03" class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit(this.dataset.xa)" data-xa="${esc(id)}">${esc(tx('Record'))}</button></div>`);
-}
-/** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
-function readPayForm() {
-  const field = (fieldId) => (document.getElementById(fieldId) || {}).value;
-  return { method: field('pay_method') || (payHasUpi() ? 'upi' : 'cash'), ref: field('pay_ref') || '', amount: parseFloat(field('pay_amount')) };
-}
-/** keep the recorded payment on the open row (and its header copy), so the sheet shows it without a re-read */
-function keepPaymentOnRow(id, payment) {
-  const row = UI.rows && UI.rows.find((x) => x.id === id);
-  if (!row) return;
-  row.business_json = Object.assign({}, row.business_json || {}, { payment });
-  if (row.header) row.header.business_json = Object.assign({}, row.header.business_json || {}, { payment });
-}
-/** what a Mark-paid press sends: the form as read when Record was pressed (kept across the books' question) and the codes the owner confirmed */
-function chitPayBody(form, acknowledge) {
-  /* reviews6 EL-01 M1: the amount crosses in MINOR units, a whole number (CBMoney.toMinor, the shop's currency) — never the typed decimal as a float */
-  const minor = isFinite(form.amount) && typeof CBMoney !== 'undefined' ? CBMoney.toMinor(form.amount, moneyCode()) : null;
-  const body = { method: form.method, ref: form.ref || undefined, amount_minor: minor > 0 ? minor : undefined, client_ref: PAY_PRESS_REF || undefined };
-  if (acknowledge && acknowledge.length) body.acknowledge = acknowledge;
-  return body;
-}
-async function chitPaySubmit(id, form, acknowledge) {
-  form = form || readPayForm();
-  try {
-    const reply = await api('chitPay', { params: { id }, body: chitPayBody(form, acknowledge) });
-    closeModal();
-    toast(reply && reply.replayed ? tx('Already recorded') : tx('Payment recorded ✓'));
-    keepPaymentOnRow(id, reply.payment);
-    if (typeof openChit === 'function') openChit(id, true);
-  } catch (e) {
-    if (!chitPayAsk(id, form, e)) toast((e && e.message) || tx('Could not record'), true);
-  }
-}
-/**
- * FIN-53 (Athi, 2026-10-29): the books' one question on a Mark-paid — 409 ALREADY_PAID with `warnings` ("More than is owed" · "Already
- * paid?") — is a deliberate confirm that names the amount over (the server's over_words; the web composes no money words), never a toast
- * that asks. Yes re-sends the SAME press with every warning's code acknowledged; the books keep the rest as an advance. → true when asked.
- */
-function chitPayAsk(id, form, e) {
-  const warnings = e && e.status === 409 && e.data && Array.isArray(e.data.warnings) ? e.data.warnings : [];
-  if (!warnings.length) return false;
-  const over = warnings.find((warning) => warning.over_words);
-  closeModal();
-  confirmAsk(
-    e.data.error || tx('Already paid?'),
-    '<p>' + esc(warnings.map((warning) => warning.words).join(' ')) + '</p>',
-    over ? tx('Keep {amount} as an advance').replace('{amount}', over.over_words) : tx('Record it again'),
-    /* the Yes carries the figure the person SAW ({ code, over_minor }): a stale one (a colleague recorded in between) is asked again by the server */
-    () => chitPaySubmit(id, form, warnings.map((warning) => (warning.over_minor != null ? { code: String(warning.code), over_minor: warning.over_minor } : String(warning.code))))
-  );
-  return true;
-}
-/** the QR for a walk-in customer: the seller's own UPI id (the profile map / Business identity row upi_id) */
-async function chitShowQr(id, amount) {
-  /* the cached party may predate the id (a sync landed after the screen opened) — read once more when it has none */
-  let upi = UI._party && UI._party.upi_id;
-  if (!upi) {
-    try {
-      const reply = await api('profileGet');
-      UI._party = (reply && reply.invoice_party) || {};
-      upi = UI._party.upi_id;
-    } catch (_) {}
-  }
-  if (!upi) {
-    modal(
-      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP203' }
-    );
-    return;
-  }
-  const link =
-    'upi://pay?pa=' +
-    encodeURIComponent(upi) +
-    '&pn=' +
-    encodeURIComponent(String(SESSION.name || '').slice(0, 60)) +
-    (amount ? '&am=' + encodeURIComponent(String(CBMoney.round(amount))) : '') +
-    '&cu=' +
-    encodeURIComponent(moneyCode() || '') +
-    '&tn=' +
-    encodeURIComponent('CB-' + String(id).slice(0, 8));
-  let img = '';
-  try {
-    if (typeof qrcode === 'function') {
-      const qr = qrcode(0, 'M');
-      qr.addData(link);
-      qr.make();
-      img = qr.createImgTag(5, 8).replace('<img ', '<img data-testid="chit-upi-qr" alt="UPI QR" ');
-    }
-  } catch (_) {}
-  modal(
-    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP204' }
-  );
-}
 function toggleListHelp() {
   UI.listHelp = !UI.listHelp;
   paintMain();
@@ -23263,57 +23127,6 @@ function modal(html, wide, opt) {
   modalStamp(node, opt && opt.pop);
   modalDialogOpen(node);
 }
-/**
- * THE DIALOG PATTERN (WAI-ARIA APG, Dialog (Modal); WCAG 4.1.2, 2.4.3): modal() paints role=dialog + aria-modal; this gives the dialog its NAME (the
- * title in .mhd .t, else the first heading, else the word "Dialog"), moves the keyboard in (the first control other than the corner X, else the dialog
- * itself) unless the caller already put focus inside, and modalTrapKey keeps Tab and Shift-Tab inside. Esc and the return of focus are closeModal's.
- * Every shop dialog opens through modal(), so this is the one place; there is no second dialog.
- */
-const MODAL_FOCUSABLE = 'a[href],button,input,select,textarea,summary,[tabindex]';
-function modalFocusables(box) {
-  return [].slice.call(box.querySelectorAll(MODAL_FOCUSABLE)).filter(function (el) {
-    return !el.disabled && !el.hidden && el.getAttribute('tabindex') !== '-1' && el.type !== 'hidden';
-  });
-}
-function modalDialogOpen(host) {
-  const box = host.querySelector('.modal');
-  if (!box) return;
-  const title = host.querySelector('.mhd .t') || host.querySelector('h1,h2,h3');
-  if (title) {
-    if (!title.id) title.id = 'modal-title';
-    box.setAttribute('aria-labelledby', title.id);
-  } else box.setAttribute('aria-label', tx('Dialog'));
-  if (box.contains(document.activeElement)) return;
-  const first = modalFocusables(box).filter(function (el) { return !el.classList.contains('mx'); })[0];
-  (first || box).focus();
-}
-/* Tab and Shift-Tab wrap inside the open dialog; a minimised compose (host hidden) is not a dialog on screen */
-function modalTrapKey(e) {
-  if (e.key !== 'Tab') return;
-  const host = document.getElementById('modalhost');
-  const box = host && host.style.display !== 'none' ? host.querySelector('.modal') : null;
-  if (!box) return;
-  const list = modalFocusables(box);
-  const active = document.activeElement;
-  if (!list.length) {
-    e.preventDefault();
-    box.focus();
-    return;
-  }
-  const first = list[0];
-  const last = list[list.length - 1];
-  if (!box.contains(active) || active === box) {
-    e.preventDefault();
-    (e.shiftKey ? last : first).focus();
-  } else if (e.shiftKey && active === first) {
-    e.preventDefault();
-    last.focus();
-  } else if (!e.shiftKey && active === last) {
-    e.preventDefault();
-    first.focus();
-  }
-}
-document.addEventListener('keydown', modalTrapKey);
 function modalBackdrop() {
   if (UI._composeModal) {
     minimiseCompose();
