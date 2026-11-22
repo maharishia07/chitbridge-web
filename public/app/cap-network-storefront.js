@@ -8,32 +8,6 @@
  * RISK      plain
  */
 'use strict';
-/** one visibility choice as a pressable row (kept for the visibility control that moved to the node: this panel only reports it, see _storefrontView) */
-function _storefrontExposureOption(node, choice, label, hint) {
-  var on = (node.exposure || 'private') === choice;
-  return (
-    '<div data-cbsid="BUS004-C29" onclick="netSetExposure(\'' +
-    escJs(node.key) +
-    "','" +
-    escJs(choice) +
-    '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' +
-    (on ? 'var(--ok-2)' : 'var(--line)') +
-    ';border-radius:9px;background:' +
-    (on ? 'var(--ok-tint)' : 'var(--card)') +
-    ';color:' +
-    (on ? 'var(--on-card)' : 'var(--on-card)') +
-    ';margin-top:6px">' +
-    '<b style="font-size:var(--fs-2);color:' +
-    (on ? 'var(--ok-2)' : 'var(--ink-2)') +
-    '">' +
-    (on ? '● ' : '○ ') +
-    label +
-    '</b>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
-    hint +
-    '</div></div>'
-  );
-}
 /** the "who sees it" note: this panel only REPORTS the visibility; the one control sits at the top of the node (_netVisibilityBlock) */
 function _storefrontView(node) {
   // Visibility MOVED to the node itself (_netVisibilityBlock). Two controls for one value is how a person sets it

@@ -21,7 +21,9 @@ t('every page that calls cbApiParam loads cb-words.js', noLoad.length === 0, noL
 t('cbApiParam is used by ' + users.length + ' files', users.length >= 15, String(users.length));
 
 const words = fs.readFileSync(path.join(root, 'app', 'cb-words.js'), 'utf8');
-const fn = words.match(/function cbApiParam\(raw\) \{[\s\S]*?\n\}/);
+/* cbApiParam is split into named steps (cbOwnApiOrigin, cbApiParamAllowed): the test takes all three top-level functions */
+const parts = ['cbOwnApiOrigin', 'cbApiParamAllowed', 'cbApiParam'].map((name) => words.match(new RegExp('function ' + name + '\\(\\w*\\) \\{[\\s\\S]*?\\n\\}')));
+const fn = parts.every(Boolean) ? [parts.map((p) => p[0]).join('\n')] : null;
 t('cbApiParam found in cb-words.js', !!fn);
 if (fn) {
   const mk = (host, api) => { const c = vm.createContext({ URL, console: { warn() {} }, window: { CB_API: api }, location: { href: 'https://' + host + '/p.html', origin: 'https://' + host, hostname: host } }); vm.runInContext(fn[0] + '\nthis.P = cbApiParam;', c); return c.P; };
