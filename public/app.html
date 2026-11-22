@@ -23258,7 +23258,7 @@ function modal(html, wide, opt) {
   rememberModalOpener(node);
   UI._composeModal = false;
   node.style.display = '';
-  node.innerHTML = `<div data-cbsid="APP001-C18" class="mover" onclick="modalBackdrop()"><div data-cbsid="APP001-C19" class="modal${wide ? ' wide' : ''}" role="dialog" aria-modal="true" tabindex="-1" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
+  node.innerHTML = `<div data-cbsid="APP001-C18" class="mover" onclick="modalBackdrop()"><div data-cbsid="APP001-C19" data-pop="host" class="modal${wide ? ' wide' : ''}" role="dialog" aria-modal="true" tabindex="-1" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
   mvModal(node, wide, opt);
   modalStamp(node, opt && opt.pop);
   modalDialogOpen(node);
