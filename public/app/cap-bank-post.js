@@ -130,7 +130,7 @@
    */
   function adapter(deps) {
     var made = {}; /* new party (name|kind) → id made in this run, so two lines naming one payee make it once */
-    return async function post(item) {
+    async function post(item) {
       var refused = ownerRefusal(deps.who) || refusalOf(item.event && item.event.type);
       if (refused) return { ok: false, why: refused };
       try {
@@ -138,7 +138,30 @@
       } catch (failure) {
         return { ok: false, why: (failure && failure.message) || 'Could not add this entry.' };
       }
+    }
+    /** a plain entry for a party the books know (or none): the lines POST /events/batch takes; a new party, a payment and a loan instalment keep their own doors, one at a time */
+    post.batchable = function (item) {
+      var type = item.event && item.event.type;
+      return !ownerRefusal(deps.who) && !refusalOf(type) && type !== 'loan_repaid' && !PAYMENT_DIRECTION[type] && !(item.party && item.party.status === 'new');
     };
+    /** the plain-entry lines in ONE call: a reply per line in order (same shape as post), or null when the call cannot be used so the caller posts them one by one (an owner-approval shop answers 409; every line has its client_ref, so a repeat posts nothing twice) */
+    post.many = async function (items) {
+      var bodies = items.map(function (item) {
+        return bodyOf(item, item.party && item.party.status === 'existing' ? item.party.id : null, deps.modeOf);
+      });
+      var out;
+      try {
+        out = await deps.api('booksEventsBatch', { body: { events: bodies } });
+      } catch (failure) {
+        return null;
+      }
+      var results = out && out.results;
+      if (!Array.isArray(results) || results.length !== items.length) return null;
+      return results.map(function (one) {
+        return one && one.ok === true ? { ok: true, duplicate: !!one.duplicate, entry_no: one.entry_no || one.no || null, posting_date: one.posting_date || null } : { ok: false, why: (one && one.detail) || 'Could not add this entry.' };
+      });
+    };
+    return post;
   }
   /** a party the books already know: the engine's proposal names it by id in event.party when the line carries no party record (a taught rule or a name found in the narration) */
   function namedPartyId(event) {

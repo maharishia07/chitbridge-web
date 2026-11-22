@@ -25,6 +25,7 @@ if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
+    booksEventsBatch: { m: 'POST', p: '/api/books/events/batch' } /* the bank Add's plain-entry lines, many to a call (each keeps its client_ref) */,
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
     booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
   });

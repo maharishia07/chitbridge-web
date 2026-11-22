@@ -29,6 +29,7 @@
     dateText = Line.dateText,
     lineOf_ = Line.lineOf;
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
+  var BATCH_MAX = 100; /* lines per POST /events/batch (the server's own ceiling) */
   var MATCH_WINDOW_DAYS = 3;
 
   /* ── the controller's steps, each on its own: they take the options and the one state object `preview`, so create() only joins them ── */
@@ -235,11 +236,19 @@
       ].filter(Boolean)
     };
   }
+  /** the line as the adapter takes it: the item with what the owner ticked, typed and picked for it */
+  function itemForPost_(preview, item) {
+    return Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] });
+  }
+  /** the adapter's reply as the preview keeps it */
+  function resultOf_(reply) {
+    return reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+  }
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
     try {
-      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] }));
-      preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+      var reply = await opts.post(itemForPost_(preview, item));
+      preview.results[item.key] = resultOf_(reply);
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
     }
@@ -260,14 +269,41 @@
       return twin ? Object.assign({}, item, { twin: true }) : item;
     });
   }
+  /** one call for a run of plain-entry lines: the adapter's replies in order, or null when the call could not be used (the caller then goes line by line) */
+  async function postMany_(opts, preview, run) {
+    try {
+      var replies = await opts.post.many(run.map(function (item) { return itemForPost_(preview, item); }));
+      return Array.isArray(replies) && replies.length === run.length ? replies : null;
+    } catch (failure) {
+      return null;
+    }
+  }
   /** post every ready line in order, tell the page after each (onLine(item, result)), then read the books again so the preview is the truth */
   async function postReady(opts, preview, onLine) {
     var owed = root.CBBankPreviewCheck ? root.CBBankPreviewCheck.pendingCodes(preview.check) : [];
     if (owed.length) return { tried: 0, added: 0, failed: 0, blocked: 'Answer the questions about this statement first.' };
     var todo = markTwins_(readyItems(preview));
-    for (var position = 0; position < todo.length; position++) {
+    var batch = !!(opts.post && typeof opts.post.many === 'function' && typeof opts.post.batchable === 'function'); /* the adapter can send plain-entry lines many to a call (POST /events/batch) */
+    var position = 0;
+    while (position < todo.length) {
+      var run = [];
+      while (batch && position + run.length < todo.length && run.length < BATCH_MAX && opts.post.batchable(todo[position + run.length])) run.push(todo[position + run.length]);
+      if (run.length > 1) {
+        var replies = await postMany_(opts, preview, run);
+        if (replies) {
+          run.forEach(function (item, at) {
+            preview.results[item.key] = resultOf_(replies[at]);
+            if (onLine) onLine(item, preview.results[item.key]);
+          });
+          position += run.length;
+          continue;
+        }
+        batch = false; /* the door said no (an owner-approval shop, an old server, a lost answer): one line at a time from here; a client_ref makes a repeat safe */
+        continue;
+      }
       await postOne(opts, preview, todo[position]);
       if (onLine) onLine(todo[position], preview.results[todo[position].key]);
+      position++;
     }
     projectAgain(opts, preview);
     var failed = todo.filter(function (item) {
