@@ -380,9 +380,10 @@
  "app/cap-mis.js": [],
  "app/cap-move-in.js": [],
  "app/cap-network-member.js": [],
- "app/cap-network.js": [
+ "app/cap-network-storefront.js": [
   "netMoveState(|index"
  ],
+ "app/cap-network.js": [],
  "app/cap-opening-bills.js": [
   "obBillAdd(|i",
   "obBillDel(|i",
