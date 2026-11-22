@@ -124,7 +124,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
       return { pageScroll: document.documentElement.scrollHeight - innerHeight, mainScroll: main.scrollHeight - main.clientHeight, listH: list ? Math.round(list.getBoundingClientRect().height) : 0, bottom: list ? Math.round(list.getBoundingClientRect().bottom) : 0, vh: innerHeight, above, sticky: list ? getComputedStyle(list.querySelector('.cbl-hdr')).position : '' };
     });
     ok(m.pageScroll <= 1 && m.mainScroll <= 1, tag + ': the page does not scroll (page +' + m.pageScroll + ', main +' + m.mainScroll + ')');
-    ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 240), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
+    ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 230 /* was 240: AD-F-02's greyed sentence under the primary takes a line on a phone; 238 px measured */), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
     /* CHANGED ON PURPOSE (W15-18): the band now carries Wrong account? Change as well as the file line's Load another statement, the primary and More: four, not three (still 17 before FIN-27) */
     /* CHANGED ON PURPOSE (W15-84): a statement's lines wear the trail's Back (← Bank); where the Statements box is not ready the picker's Load another statement stays beside it: five, not four */
     ok(m.above <= 5, tag + ': ' + m.above + ' controls above the list besides its own toolbar and its chips (was 17 in all)');
