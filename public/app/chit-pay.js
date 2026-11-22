@@ -75,7 +75,9 @@ async function chitShowQr(id, amount) {
       const reply = await api('profileGet');
       UI._party = (reply && reply.invoice_party) || {};
       upi = UI._party.upi_id;
-    } catch (_) {}
+    } catch (failure) {
+      console.warn('CHIT-PAY-QR-01 the UPI id could not be read; the sheet says none is on record', (failure && failure.message) || failure);
+    }
   }
   if (!upi) {
     modal(
@@ -101,7 +103,9 @@ async function chitShowQr(id, amount) {
       qr.make();
       img = qr.createImgTag(5, 8).replace('<img ', '<img data-testid="chit-upi-qr" alt="UPI QR" ');
     }
-  } catch (_) {}
+  } catch (failure) {
+    console.warn('CHIT-PAY-QR-02 the UPI QR could not be drawn; the sheet shows the link without it', (failure && failure.message) || failure);
+  }
   modal(
     `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP204' }
   );
