@@ -14,6 +14,7 @@ const cx = vm.createContext({
 });
 cx.window = cx;
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-move-in.js', 'utf8'), cx);
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-move-in-skipped.js', 'utf8'), cx); /* the skipped-rows capability, loaded beside it */
 const run = (code) => vm.runInContext(code, cx);
 
 run("miFresh(); MIV.f.csv = 'a,b'; MIV.f.country = 'IN'; MIV.f.kind = 'open_bills'; MIV.f.side = 'supplier'; MIV.f.as_at = '2026-04-01';");

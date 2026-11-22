@@ -160,6 +160,7 @@
  "public/app/cap-mis-pictures.js":["public/finance.html"],
  "public/app/cap-mis-trend.js":["public/finance.html"],
  "public/app/cap-mis.js":["public/finance.html"],
+ "public/app/cap-move-in-skipped.js":["public/accounts.html"],
  "public/app/cap-move-in.js":["public/accounts.html"],
  "public/app/cap-network-member.js":"*",
  "public/app/cap-network-storefront.js":"*",
