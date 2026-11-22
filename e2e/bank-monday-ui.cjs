@@ -149,8 +149,8 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), tag + ': the Statement view does not scroll sideways');
     await p.click('[data-testid="bank-tab-lines"]'); await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]');
     /* M2 · the Add sheet is a wide sheet; a press outside keeps the answers */
-    console.log('DBGB', await p.evaluate(() => JSON.stringify({ ctl: !!(window.BKSH && BKSH.ctl), key: window.BKSH && BKSH.key, want: bkshKey(), ready: BKSH.ctl && BKSH.ctl.readyCount(), counts: BKSH.ctl && bkshCounts(), books: bkbCount('books'), btn: document.querySelector('[data-testid="bank-sheet-open"]').outerHTML.slice(0,300), why: (document.querySelector('[data-testid="bank-sheet-why"]')||{}).textContent })));
-    await p.click('[data-testid="bank-sheet-open"]');
+    /* AD-F-02 (1129): the primary is GREYED while no line is ready (the sentence says answer the lines first), so the sheet opens from a line's ＋ Add missing, which calls this one function */
+    await p.evaluate(() => bankAdd());
     await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
     await p.waitForTimeout(300);
     const sh = await p.evaluate(() => {
