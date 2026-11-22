@@ -586,12 +586,11 @@ function accBillNext(c) {
     '</div>'
   );
 }
-/** E19: the books' Dues beside the open bill chits - a party the books owe (or are owed) that holds no open chit is a row of its own ("In your books"); nothing is added up from chits */
 /** the open bill chits of a folder read (api() may collapse {chits:[…]} to the array) */
 function billChitList(rows) {
   return Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
 }
-/** accBillsFromBooks(folder, list) → the books' own dues beside the chit rows, so the Bills list shows both sides */
+/** accBillsFromBooks(folder, list) → E19: the books' own dues beside the chit rows, so the Bills list shows both sides - a party the books owe (or are owed) that holds no open chit is a row of its own ("In your books"); nothing is added up from chits */
 async function accBillsFromBooks(folder, list) {
   const supplierSide = folder.code === 'B-2100',
     owed = await api('booksDues', { query: { side: supplierSide ? 'supplier' : 'customer' } }).catch((failure) => {
@@ -623,8 +622,7 @@ async function accBills(body) {
     }
     if (!sys.some((item) => item.code === ACC.billTab)) ACC.billTab = sys[0].code;
     const loadSide = async (folder) => {
-      const rows = await api('folderChits', { params: { id: folder.folder_id }, query: { state: 'open' } });
-      /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
+      const rows = await api('folderChits', { params: { id: folder.folder_id }, query: { state: 'open' } }); /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
       const list = billChitList(rows);
       /* E19 (decided by practice: Xero's Bills to pay reads the payables ledger): the figure and the rows come from the BOOKS, the one GET /dues Dues paints (nothing is added up from chits).
          A party with an open bill CHIT keeps its chit rows (pay, open the chit); a party the books owe or are owed that holds no open chit is a row of its own ("In your books"), so a loader's or a move-in's bills show here as they do in Dues. */
