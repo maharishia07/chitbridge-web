@@ -146,6 +146,7 @@
  "public/app/cap-finance-terms.js":["public/finance.html"],
  "public/app/cap-finance.js":["public/finance.html"],
  "public/app/cap-flag.js":["public/accounts.html","public/network.html"],
+ "public/app/cap-folders-metrics.js":["public/accounts.html","public/crm.html","public/finance.html"],
  "public/app/cap-folders.js":["public/accounts.html","public/crm.html","public/finance.html"],
  "public/app/cap-fx.js":["public/accounts.html"],
  "public/app/cap-iddocs.js":"*",
