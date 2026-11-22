@@ -2219,7 +2219,7 @@ window.CBSCREENS = {
 "_mtxCell":{"code":"POP004","file":"cap-readiness.js","ambiguous":false},
 "_netConfirmNarrow":{"code":"POP005","file":"cap-network.js","ambiguous":false},
 "acHowItWorks":{"code":"POP006","file":"cap-connector.js","ambiguous":false},
-"acReissueGate":{"code":"POP007","file":"cap-connector.js","ambiguous":false},
+"acReissueGate":{"code":"POP007","file":"cap-connector-reissue.js","ambiguous":false},
 "acTypeInfo":{"code":"POP008","file":"cap-workforce.js","ambiguous":false},
 "actorCleanupModal":{"code":"POP009","file":"app.html","ambiguous":false},
 "actorInviteModal":{"code":"POP010","file":"app.html","ambiguous":false},
