@@ -7,8 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script><script src="/app/api-base.js"></script>
-<script src="/app/cb-words.js"></script> <!-- cbApiParam: a ?api= link never re-points the token -->   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script><script src="/app/cb-words.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address · cbApiParam: a ?api= link never re-points the token -->
 <script src="/engine/units.js"></script>   <!-- CBUnits: the GST unit codes (UQC) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -115,6 +114,7 @@ tr.has .ul.got{opacity:1}
 <script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/product-lab-rows.js"></script>   <!-- CBProductLabRows: one row per product, units as choices, the UQC, why Next is grey (CAT-218) -->
+<script src="/app/product-lab-steps.js"></script>   <!-- paintSteps: the two-step strip (Choose, Price & shelf) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
 <link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
@@ -362,40 +362,6 @@ function paintPills() {
   each('#units .pill', function (node) {
     node.classList.toggle('on', !OFFUNITS[node.getAttribute('data-unit')]);
   });
-}
-function paintSteps() {
-  var n = nPicked();
-  var names = [
-    ['Choose', n ? n + ' chosen from ' + LIST.label : 'what this shop sells'],
-    ['Price & shelf', n ? 'set what you charge' : 'after you have chosen']
-  ];
-  /* ⚠️ step 2 is not reachable by clicking it with nothing chosen — a step that opens empty is a dead end */
-  document.getElementById('steps').innerHTML = names
-    .map(function (x, index) {
-      var at = index + 1,
-        on = STEP === at,
-        done = STEP > at;
-      return (
-        '<button data-cbsid="PLB001-B01" class="stp ' +
-        (on ? 'on' : done ? 'done' : '') +
-        '" data-testid="pl-step-' +
-        at +
-        '"' +
-        (at === 2 && !n ? ' disabled' : '') +
-        ' onclick="goStep(' +
-        at +
-        ')">' +
-        '<span class="n">' +
-        at +
-        '</span><span><span class="t">' +
-        esc(x[0]) +
-        '</span>' +
-        '<span class="v">' +
-        esc(x[1]) +
-        '</span></span></button>'
-      );
-    })
-    .join('');
 }
 function goStep(n) {
   if (n === 2 && !nPicked()) return;
