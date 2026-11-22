@@ -190,7 +190,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const closed = await p.evaluate(() => !document.getElementById('acc_sheet').open);
     if (vp.width > 700) ok(closed, tag + ': a press outside closes the sheet');
     if (closed) {
-      await p.click('[data-testid="bank-sheet-open"]');
+      await p.evaluate(() => bankAdd()); /* AD-F-02: greyed at 0 ready, as above */
       await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
       const after = await p.evaluate(() => BKSH.ctl.readyCount());
       ok(after === before.ready, tag + ': reopened, the answers are still there (ready ' + before.ready + ' then ' + after + ')');
@@ -208,7 +208,8 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(await w.p.locator('[data-testid="bank-sheet-open"]').isDisabled(), 'wrong account: Add is held until the question is answered');
     await w.p.screenshot({ path: path.join(ASHOTS, 'bank-laptop-wrong-account.png') });
     await w.p.click('[data-testid="bank-opening-go"]');
-    ok(await w.p.locator('[data-testid="bank-sheet-open"]').isEnabled() && await w.p.locator('[data-testid="bank-opening-check"]').count() === 0, 'wrong account: "It is right, go on" lifts the hold');
+    /* AD-F-02: with no line ready the primary stays greyed, with ITS sentence; the hold is lifted when that sentence is no longer the opening question */
+    ok(!/Answer the question above first/.test(await w.p.locator('[data-testid="bank-sheet-open"]').getAttribute('title') || '') && await w.p.locator('[data-testid="bank-opening-check"]').count() === 0, 'wrong account: "It is right, go on" lifts the hold');
     await w.ctx.close();
     globalThis.__opening = null;
   }
