@@ -4827,15 +4827,7 @@ function savedLive() {
     return false;
   }
 }
-/** P2WAVE-SEC L-sec-web-screens-24#L51: who the Lab is signed in as (the person's own id, else the shop's), the same ids the app stamps its queue with (SEC-140); '' when nobody is */
-function labOwner() {
-  try {
-    var held = JSON.parse(localStorage.getItem('cb_sess') || 'null') || {};
-    return String(held.actorId || held.entityId || '');
-  } catch (_) {
-    return '';
-  }
-}
+function labOwner() { try { var held = JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}; return String(held.actorId || held.entityId || ''); } catch (_) { return ''; } } /* L-sec-web-screens-24#L51: who the Lab is signed in as, the ids the app stamps its queue with (SEC-140); '' when nobody is */
 function savedToken() {
   try {
     return (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;
@@ -4954,9 +4946,7 @@ async function apiFetch(method, url, body, queueKind) {
 /** ⭐ replays queued writes IN ORDER; a real refusal (4xx) is dropped rather than retried for ever — the same
  * offer would only be refused again, and a queue that never empties is a queue nobody trusts */
 async function labDrainOutbox() {
-  var rows = (await LabDB.queueAll()).filter(function (item) {
-    return labOwner() && item.owner === labOwner(); /* another person's (or an unstamped) queued write is never sent under this person's token */
-  });
+  var rows = (await LabDB.queueAll()).filter(function (item) { return labOwner() && item.owner === labOwner(); }); /* another person's (or an unstamped) queued write is never sent under this person's token */
   for (var index = 0; index < rows.length; index++) {
     var row = rows[index];
     try {
@@ -4976,15 +4966,10 @@ async function labDrainOutbox() {
 }
 function labPaintQueue() {
   LabDB.queueAll().then(function (all) {
-    var rows = all.filter(function (item) {
-      return labOwner() && item.owner === labOwner();
-    });
+    var rows = all.filter(function (item) { return labOwner() && item.owner === labOwner(); });
     var node = document.getElementById('labqueue');
     if (!node) return;
-    if (!rows.length) {
-      node.hidden = true;
-      return;
-    }
+    if (!rows.length) return void (node.hidden = true);
     node.hidden = false;
     node.textContent = rows.length + ' change' + (rows.length > 1 ? 's' : '') + ' waiting to sync — will send once the line is back.';
   });
@@ -5181,23 +5166,15 @@ function importField(row, names) {
 function importSpreadsheet(input) {
   var file = input && input.files && input.files[0];
   if (!file) return;
-  /* P2WAVE-SEC L-sec-web-screens-24#L45: a price list is a few hundred kilobytes; a file past 5 MB is refused in words before the parser (SheetJS 0.18.5 is vendored: its parse of a hostile workbook is bounded this way until the vendored copy is replaced) */
-  if (file.size > 5 * 1024 * 1024) {
-    toastSay('That file is larger than 5 MB. Send just the sheet with the price list on it.');
-    return;
-  }
+  if (file.size > 5 * 1024 * 1024) return toastSay('That file is larger than 5 MB. Send just the sheet with the price list on it.'); /* L-sec-web-screens-24#L45: a price list is a few hundred kilobytes; bounded before the vendored SheetJS 0.18.5 parses it */
   var reader = new FileReader();
   reader.onload = function (e) {
     try {
       var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       var sheet = wb.Sheets[wb.SheetNames[0]];
       var list = XLSX.utils.sheet_to_json(sheet, { defval: null });
-      if (list.length > 20000) {
-        toastSay('That file has ' + list.length + ' rows; Offer Lab reads up to 20,000. Split it and send the part you want to price.');
-        return;
-      }
-      if (!list.length) {
-        toastSay('That file has no rows Offer Lab can read.');
+      if (!list.length || list.length > 20000) {
+        toastSay(list.length ? 'That file has ' + list.length + ' rows; Offer Lab reads up to 20,000. Split it and send the part you want to price.' : 'That file has no rows Offer Lab can read.');
         return;
       }
       var count = 0,
