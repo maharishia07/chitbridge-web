@@ -84,6 +84,7 @@ const toHex = (rgb) => { const m = String(rgb).match(/\d+/g); return m ? '#' + m
     }, { sh, theme });
     await p.screenshot({ path: path.join(shots, sh.country + '-' + v.w + '-' + theme + '.png') });
 
+    if (sh.country === 'IN') console.log('DBG', JSON.stringify({warn:r.warn, slipBuyer:r.slipBuyer, rule:r.rule, seen:r.seen}));
     if (sh.country === 'IN') {
       say(tag + ' buyer GSTIN', !r.warn && r.slipBuyer, 'no buyer warning; the buyer\'s GSTIN on the paper (r.46(d))');
       say(tag + ' counts', r.count === '1,00,000', 'count reads ' + r.count);

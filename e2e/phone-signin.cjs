@@ -175,7 +175,7 @@ async function walk(b, WEB, tag, dev, reg, opts) {
     /* the keyboard is up: the same dialog in what is left of the screen */
     await p.setViewportSize({ width: 390, height: 844 - KEYBOARD });
     await p.waitForTimeout(200);
-    res.fitWhoKb = await dialogFits(p);
+    res.fitWhoKb = await dialogFits(p); console.log('DBG', JSON.stringify(res.fitWhoKb), await p.evaluate(() => { const d=document.querySelector('#usigndlg'); return d.innerText.replace(/s+/g,' ').slice(0,400) + ' H=' + d.scrollHeight + ' CH=' + d.clientHeight + ' VH=' + innerHeight + ' btnbottom=' + Array.from(d.querySelectorAll('button')).map(b=>b.dataset.testid+':'+Math.round(b.getBoundingClientRect().bottom)).join(','); }));
     res.shots.push(await shot('03-keyboard'));
   }
   await tap('[data-testid="signin-id"]');
