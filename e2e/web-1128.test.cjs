@@ -40,7 +40,7 @@ const si = src('app/signin-ui.js'); assert.ok(si.includes("PIN_ALREADY_SET") && 
 
 /* India returns: the _cb notes (tax_differs, einvoice, reversed credit-note rows) reach the GSTR screen as the server's own sentences */
 const rcx = vm.createContext({});
-vm.runInContext(liftFns('public/app/cap-finance-returns.js', ['frNotes']) + '\nthis.f = frNotes;', rcx);
+vm.runInContext(liftFns('public/app/cap-finance-returns.js', ['frReasonOf', 'frTaxDiffers', 'frNotes']) + '\nthis.f = frNotes;', rcx);
 const said = rcx.f({ tax_differs: [{ words: 'Bill 7 differs' }], einvoice: { words: 'E-invoicing warning' }, reversed: [{ credit_note: true, words: 'Bill 3 carried as a credit note' }, { words: '' }] });
 assert.strictEqual(JSON.stringify(said), JSON.stringify(['Bill 7 differs', 'E-invoicing warning', 'Bill 3 carried as a credit note']));
 assert.strictEqual(rcx.f(null).length, 0);

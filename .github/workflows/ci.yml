@@ -398,6 +398,7 @@ jobs:
           node e2e/web02b-fixes.test.cjs
           node e2e/bank-split.test.cjs
           node e2e/bank-seat-may.test.cjs
+          node e2e/be-1129.test.cjs
           node e2e/ui-codes-refpages.test.cjs
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs
