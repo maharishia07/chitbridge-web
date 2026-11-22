@@ -21,6 +21,7 @@
     '.cbcb-mark{width:28px;height:28px;border-radius:8px;background:var(--green,#16693F);color:var(--on-ok,white);display:grid;place-items:center;font-size:13px;font-weight:700;flex:0 0 auto}' +
     '.cbcb-title{display:inline-flex;align-items:center;gap:7px;min-width:0;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.cbcb-grow{flex:1}' +
+    '.cbcb-hdr .cbsh-tohome{display:inline-flex;align-items:center;gap:5px;min-height:44px;min-width:44px;padding:0 10px;border:1px solid var(--line,#DDD6C6);border-radius:8px;background:var(--card,#fff);color:var(--ink,#1D1B16);font-size:13px;font-weight:600;text-decoration:none;justify-content:center}' +
     '.cbcb-skip{position:absolute;inset-inline-start:8px;top:-60px;z-index:2000;padding:10px 16px;border-radius:8px;background:var(--ink,#1D1B16);color:var(--card,#fff);font-weight:700;text-decoration:none}.cbcb-skip:focus{top:8px}' +
     '@media(max-width:700px){.cbcb-bar{height:52px;padding:0 13px}.cbcb-title{font-size:13px}}';
   /** the words go through the string door when the page loaded it (cb-words.js), English otherwise */
@@ -60,9 +61,14 @@
     if (!title) return '';
     return '<span class="cbcb-title" data-testid="shell-title"><span aria-hidden="true">' + root.esc(title.icon || '') + '</span><span class="tw">' + root.esc(sayWords(title.name || '')) + '</span></span>';
   }
+  var drawn = null; /* the last mount's options: a language pack lands after the first paint and the bar says its words again */
+  function sayAgain() {
+    if (drawn) mount(drawn);
+  }
   /** mount({ host, screen: 'SHP001', title: { icon, name }, homeHref }) → the header element */
   function mount(opts) {
     if (!doc || !opts || !opts.host) return null;
+    drawn = opts;
     addCss();
     opts.host.innerHTML =
       '<header class="cbcb-hdr" data-testid="shell-header"><div class="cbcb-bar" data-testid="shell-bar">' +
@@ -91,5 +97,11 @@
     node.setAttribute('data-theme', key);
     return true;
   }
+  /* a pack calls renderApp() on the way out (locale.js pack): a page with its own renderApp keeps it, the bar redraws beside it */
+  var pageRenderApp = root.renderApp;
+  root.renderApp = function () {
+    if (typeof pageRenderApp === 'function') pageRenderApp.apply(this, arguments);
+    sayAgain();
+  };
   root.CBCustomerBar = { mount: mount, theme: theme };
 })(window);

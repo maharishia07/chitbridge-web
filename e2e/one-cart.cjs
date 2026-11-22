@@ -33,7 +33,8 @@ for (const rel of files) {
     if (mc > okc && rel !== "shop.html") { console.log('  ✗ ' + rel + ' calls CBCart.money( outside the cart / the Compose cart — a screen that shows an issued chit reads it (CBSheet.moneyFor)'); bad++; }
     /* the MARKUP of the row (">Total incl. tax<"), not the words — the Legend and the docs may name it */
     if (/>\s*Total incl\. tax\s*</.test(s)) { console.log('  ✗ ' + rel + ' renders its own "Total incl. tax" — the cart owns that row (CBCart.moneyRowsHTML)'); bad++; }
-    if (/\bbyRate\s*\[/.test(s) && !/CBCart\.money\(/.test(s)) { console.log('  ✗ ' + rel + ' builds a per-rate tax table of its own — call CBCart.money'); bad++; }
+    /* app/till-dayrep.js (vendored from the api till master, 1128): the day report ADDS UP each bill's issued by_rate, it never prices a basket */
+    if (/\bbyRate\s*\[/.test(s) && !/CBCart\.money\(/.test(s) && rel !== 'app/till-dayrep.js') { console.log('  ✗ ' + rel + ' builds a per-rate tax table of its own — call CBCart.money'); bad++; }
   }
   /* a screen that reads the cart's bare total must also ask it for the money rows — a bare Total beside offers and tax is the
      Suppliers-review defect of 2026-09-05 ("₹400" while the storefront basket said "₹378 incl. tax") */

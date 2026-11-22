@@ -85,7 +85,7 @@ function frameRows() {
   const hdr = q('[data-testid="shell-header"]'); if (hdr && !hdr.id) hdr.id = '__tourframe';
   const shellTexts = Array.from(document.querySelectorAll('[data-testid="shell-header"] *')).map((e) => (e.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 28)).filter(Boolean);
   return {
-    shell: n('[data-testid="shell-header"]'), home: !!q('[data-testid="shell-home"]') || !!q('[data-testid="shell-nav-home"]'),
+    customer: !!q('.cbcb-hdr'), shell: n('[data-testid="shell-header"]'), home: !!q('[data-testid="shell-home"]') || !!q('[data-testid="shell-nav-home"]'),
     avatar: n('[data-testid="shell-avatar"] .cbav-btn, [data-testid="shell-avatar"] [data-testid="signin-door"]'), avatars: n('.cbav-btn, [data-testid="signin-door"]'),
     chip: !!q('[data-testid="screen-id"][data-cbsid]'), font: getComputedStyle(document.body).fontFamily, own: own.trim(), signin: n('[data-testid="signin-door"]'),
     shellTexts, sw: document.documentElement.scrollWidth, iw: innerWidth, appLinks: Array.from(document.querySelectorAll('a[href*="app.html"]')).length
@@ -120,8 +120,9 @@ function frameRows() {
       if (key === 'index') indexFont = r.font;
       ok(r.shell === 1, tag + ' draws the shared shell header once (' + r.shell + ')');
       ok(r.home, tag + ' has ⌂ Home in the frame' + (key === 'index' ? ' (the rail)' : ''));
-      ok(r.avatar === 1 && r.avatars === 1, tag + ' has the ONE avatar, in the frame (' + r.avatar + ' in the frame, ' + r.avatars + ' on the page)');
-      ok(r.chip, tag + ' shows its screen chip');
+      /* CUSTOMER-DELINK (Athi 21 Nov): a customer page wears the customer bar (CBCustomerBar): no staff avatar, no screen chip, no staff menu — the walk asks it for exactly that */
+      if (r.customer) ok(r.avatars === 0, tag + ' (customer bar) has no staff avatar (' + r.avatars + ' on the page)');
+      else { ok(r.avatar === 1 && r.avatars === 1, tag + ' has the ONE avatar, in the frame (' + r.avatar + ' in the frame, ' + r.avatars + ' on the page)'); ok(r.chip, tag + ' shows its screen chip'); }
       ok(indexFont && r.font === indexFont, tag + ' body font = Home\'s (' + r.font + ')');
       const own = ownHeaderInSource(pg);
       ok(!r.own && !own, tag + ' draws no header of its own' + (r.own ? ' — ' + r.own : '') + (own ? ' — in the source: ' + own : ''));
@@ -151,7 +152,8 @@ function frameRows() {
       const out = await open(false, 1366);
       await out.page.goto(web.url(pg.url)); await out.page.waitForTimeout(1000);
       const s = await out.page.evaluate(frameRows);
-      ok(s.shell === 1 && s.signin >= 1 && s.avatars === 1, tag + ' signed out: the frame draws and the avatar is the Sign in door (' + s.signin + ')');
+      if (s.customer) ok(s.shell === 1 && s.avatars === 0, tag + ' signed out (customer bar): the bar draws, no staff door (' + s.avatars + ')');
+      else ok(s.shell === 1 && s.signin >= 1 && s.avatars === 1, tag + ' signed out: the frame draws and the avatar is the Sign in door (' + s.signin + ')');
       ok(out.errs.length === 0, tag + ' signed out: no script error' + (out.errs.length ? ' — ' + out.errs[0] : ''));
       await out.ctx.close();
     }

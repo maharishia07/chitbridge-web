@@ -12,6 +12,7 @@
 'use strict';
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
+const CBSample = require('../public/app/sample-set.js'); /* the same neutral sample the page reads (node side: module.exports) */
 const ROOT = path.join(__dirname, '..', 'public');
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css' };
 let bad = 0;

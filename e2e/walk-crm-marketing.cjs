@@ -110,7 +110,7 @@ const walk = async (w) => {
     const okCounts = want.segments.concat(want.groups).every((s) => got[s.key] === String(s.count));
     const kinds = await txt('[data-testid="crm-grp-name-regular"]'), active = await page.locator('[data-testid="crm-nav-groups"][aria-current="page"]').count();
     const reads = S.calls.filter((c) => /GET \/api\/crm\/segments/.test(c)).length;
-    return { ok: okCounts && /Regular/.test(kinds) && /Segment/.test(kinds) && active === 1 && reads >= 1, saw: Object.keys(got).map((k) => k + '=' + got[k]).join(' ') + ' · reads ' + reads };
+    return { ok: okCounts && /Regular/.test(kinds) && !/Segment/.test(kinds) /* E-F-10 (1128): a segment is the default kind and carries no tag; only a named group says its kind */ && active === 1 && reads >= 1, saw: Object.keys(got).map((k) => k + '=' + got[k]).join(' ') + ' · reads ' + reads };
   });
   await w.step('G2', 'Groups -> ▸ Workshops: the mini-card names its member (a link to the record), says who may be sent offers, and the offers only for them', async () => {
     await openRow('crm-grp-group_Workshops');

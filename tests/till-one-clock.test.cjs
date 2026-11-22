@@ -13,7 +13,7 @@ function liftFn(name) {
   return rest.slice(0, rest.indexOf('\n}\n') + 2);
 }
 const cx = vm.createContext({ console, Intl, Date, shopPack: () => ({ timeZones: ['Asia/Dubai'] }), docCountry: () => 'AE', cbQuiet() {}, esc: (s) => s, S: { at: 0 } });
-vm.runInContext(['shopTz', 'tzOpt', 'shopFmt', 'dayInZone', 'shopDayOf', 'clock12', 'draftWhen'].map(liftFn).join('\n'), cx);
+vm.runInContext(['shopOwnTz', 'shopTz', 'tzOpt', 'shopFmt', 'dayInZone', 'shopDayOf', 'clock12', 'draftWhen'].map(liftFn).join('\n'), cx);
 const now = Date.now();
 const dubai = new Date(now).toLocaleTimeString('en-US', { timeZone: 'Asia/Dubai', hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
 const device = new Date(now).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();

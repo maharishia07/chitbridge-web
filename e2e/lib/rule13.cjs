@@ -15,7 +15,9 @@ const audit = (page, hostId) => page.evaluate((hostId) => {
     const cs = getComputedStyle(el), hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim());
     if (/auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1) out.scroll.push(el.tagName + '.' + el.className + ' ' + el.scrollWidth + '>' + el.clientWidth);
     /* T3-P2-CRM: screen-reader-only text (.sr-only, 1 px wide by design) is for the reader, not clipped on the screen */
-    if (host.contains(el) && hasText && !el.classList.contains('sr-only') && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
+    /* YE-F-15 (21 Nov): the top bar's shop name is cut with an ellipsis in a narrow bar, never hidden: the person must see which shop they are in, and the button's aria-label + title carry the whole name */
+    const nameKept = el.matches('[data-testid="shop-name"]') && !!el.closest('button[aria-label]') && el.closest('button').getAttribute('aria-label').indexOf(el.textContent.trim()) >= 0;
+    if (host.contains(el) && hasText && !nameKept && !el.classList.contains('sr-only') && (cs.textOverflow === 'ellipsis' || /hidden|clip/.test(cs.overflowX)) && el.scrollWidth > el.clientWidth + 1) out.clip.push(el.textContent.trim().slice(0, 40));
     const href = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '');
     if (/app\.html/.test(href)) out.app.push(el.outerHTML.slice(0, 80));
   });
@@ -42,13 +44,21 @@ const audit = (page, hostId) => page.evaluate((hostId) => {
 }, hostId);
 
 /** page: the walk's own unless another context's page is given (the spin matrix opens one per place) · restore: an async function that brings the screen back after each theme/width change (the workshop repaints over a window) */
+/** paint a theme on the page: the staff pages through CBAvatar; the customer shop (CUSTOMER-DELINK: no avatar) through CBCustomerBar.theme, after clearing the last theme's inline tokens; no t = the page's own look back */
+async function setTheme(page, t) {
+  await page.evaluate((key) => {
+    if (window.CBAvatar) return CBAvatar.applyTheme(key || CBAvatar.themeKey());
+    document.documentElement.removeAttribute('style');
+    return CBCustomerBar.theme(key || 'cream');
+  }, t || null);
+}
 async function rule13(w, id, label, hostId, page, restore) {
   page = page || w.page;
   for (const theme of ['cream', 'dark']) {
     for (const width of [1366, 390]) {
       await page.setViewportSize({ width, height: width > 500 ? 900 : 844 });
       await w.step(id + '·' + theme + '·' + width, label + ' · ' + theme + ' · ' + width + ' px -> AA contrast, no clipping, no inner sideways scroll, nothing over a control, no app.html link, copy in budget', async () => {
-        await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme); await page.waitForTimeout(150);
+        await setTheme(page, theme); await page.waitForTimeout(150);
         if (restore) await restore();   /* a workshop screen (a window, a pane) is repainted away by a theme change: the caller puts it back before it is measured */
         const pairs = await page.evaluate(measure), bad = pairs.filter((x) => !x.grad && x.ratio < x.need), a = await audit(page, hostId);
         const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), a.clip.map((x) => 'clipped "' + x + '"'), a.scroll.map((x) => 'scroll ' + x),
@@ -57,8 +67,8 @@ async function rule13(w, id, label, hostId, page, restore) {
       });
     }
   }
-  await page.evaluate(() => { CBAvatar.applyTheme(CBAvatar.themeKey()); }).catch(() => {});
+  await setTheme(page).catch(() => {});
   await page.setViewportSize({ width: 1366, height: 900 });
 }
 
-module.exports = { rule13, audit };
+module.exports = { rule13, audit, setTheme };

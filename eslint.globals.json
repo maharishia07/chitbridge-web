@@ -257,6 +257,7 @@
  "public/app/test-menu-tree.js":["public/testing.html"],
  "public/app/test-verdict.js":["public/testing.html"],
  "public/app/their-bill.js":["public/till.html"],
+ "public/app/till-dayrep.js":["public/till.html"],
  "public/app/ui-field.js":["public/accounts.html","public/app.html","public/catalogue.html","public/crm.html","public/employees.html","public/finance.html","public/settings.html","public/shop.html","public/tasks.html"],
  "public/app/ui-money.js":["public/accounts.html","public/crm.html","public/finance.html","public/tasks.html"],
  "public/app/ui-select.js":["public/network.html","public/product-lab.html"],

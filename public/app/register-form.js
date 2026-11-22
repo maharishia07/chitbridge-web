@@ -101,7 +101,7 @@ function regLangHTML(code) {
     own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || '';
   } catch (_) { /* browser feature missing: the default applies */ }
   var label = esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
-  return REG_LANGS_READY.indexOf(code) < 0 ? '<span style="opacity:.6" data-testid="reg-lang-coming-' + esc(code) + '">' + label + ' · ' + esc(tx('coming')) + '</span>' : label;
+  return REG_LANGS_READY.indexOf(code) < 0 ? '<span style="color:var(--grey)" data-testid="reg-lang-coming-' + esc(code) + '">' + label + ' · ' + esc(tx('coming')) + '</span>' : label;
 }
 /** AE-F-21: the screens are English today; a language the pack lists but the app does not offer yet is shown greyed "coming", never promised (the readiness rule) */
 var REG_LANGS_READY = ['en'];

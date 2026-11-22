@@ -96,7 +96,7 @@ const SG = '33333333-3333-4333-8333-333333333333';
   console.log('\n── a receipt WITHOUT their bill stays a goods receipt ───────────');
   await p.evaluate(async () => {
     rcvClear(); RCV.vendor = 'Lakshmi Agencies'; document.getElementById('rcv_vendor').value = RCV.vendor; rcvVendorPick();
-    rcvAdd({ item_id: 'i2', name: 'Dal 1kg', unit: 'piece', price: 120 }, 5); await rcvConfirm();
+    rcvAdd({ item_id: 'i2', name: 'Dal 1kg', unit: 'piece', price: 120 }, 5); RCV.lines[0].rate = 120; /* 1128 (RAIL cost): a line with no cost asks 'What did it cost you?' before it saves, so the walk states the rate */ await rcvConfirm();
   });
   const plain = await p.evaluate(() => ({ books: !!document.querySelector('#slipbox [data-testid="rcv-slip-books"]'), chit: window.__q.filter((c) => c.purpose === 'receipt').pop() }));
   say('no bill no. / total → the slip says nothing about the books', plain.books === false, String(plain.books));
@@ -113,6 +113,7 @@ const SG = '33333333-3333-4333-8333-333333333333';
     rcvAdd(pill, 2, { batch: 'ac2431' });                           /* the first batch again, as the scanner may type it */
     const rows = document.querySelectorAll('#rcv_lines [data-testid^="rcv-line-"]').length;
     const lines = RCV.lines.map((l) => [l.counted, l.lot && l.lot.batch, l.lot && l.lot.expiry]);
+    RCV.lines.forEach((l) => { l.rate = 10; });   /* the cost is stated (1128: a line with no cost asks for it) */
     await rcvConfirm();
     const chit = window.__q.filter((c) => c.purpose === 'receipt').pop();
     return { rows, lines, items: chit ? chit.line_items.map((x) => [x.quantity, x.item_data && x.item_data.lot]) : null };

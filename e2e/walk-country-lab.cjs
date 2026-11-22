@@ -18,7 +18,7 @@
  *   C4  (#4) the cart never cuts: beside the outcome it stacks as cards, every item name and supply kind is shown whole, no scroll bar inside the panel
  *   C5  (#5) one plain line per cell (<= 20 words visible), the legal detail and its citation behind a closed "why" fold (DL Art. 45 is in the fold only)
  *   C6  (#6) a reserved right gutter: the table ends before the window's edge; nothing fixed overlaps the "what it means" column
- *   C7  (#7) India's supply kinds say "India: each item's own GST rate decides."
+ *   C7  (#7) India's supply kinds list the pack's three 0% kinds: Nil-rated, Exempt, Non-GST
  *   C8  (#8) AU -> AU: sixteen rows are the same, collapsed under "16 rows are the same"; show opens them; IN -> AU folds only the voucher row
  *   L8  at 390 px (Cream): no sideways scroll, the rows read one under the other, the bills stack, the cart lines are cards with nothing cut
  *   C9  at 390 px (Dark): AA everywhere, no sideways scroll, the TO cell still carries its rule
@@ -123,11 +123,11 @@ const walk = async (w) => {
     await page.fill('[data-testid="cl-id-to"]', '100 0000 0000 0003');
     const trn = await text(page, '[data-testid="cl-idres-to"]');
     const notes = await text(page, '[data-testid="cl-notes-to"]');
-    /* the rice line names gst_free (Australia's word); the UAE pack has standard · zero_rated · exempt */
+    /* the rice line names gst_free (Australia's word); the UAE pack has standard · zero_rated · exempt. 1128: the lab sends a kind only to a pack that knows it (country-lab.html:1262), so AE says no note instead of refusing it */
     await page.selectOption('[data-testid="cl-kind-1"]', 'zero_rated'); await page.waitForTimeout(100);
     const notes2 = await text(page, '[data-testid="cl-notes-to"]');
     const ok = /GST/.test(sch) && /VAT/.test(sch) && /BAS/.test(ret) && /VAT201/.test(ret) && /boxes/.test(ret) && /ABN/.test(tid) && /TRN/.test(tid) && /no check digit/.test(tid)
-      && /valid TRN/.test(trn) && /not a supply kind this pack knows/.test(notes) && /Zero-rated/.test(notes2) && /simplified invoice/.test(inv) && /English accepted/.test(inv);
+      && /valid TRN/.test(trn) && /the engine added no note/.test(notes) && /Zero-rated/.test(notes2) && /simplified invoice/.test(inv) && /English accepted/.test(inv);
     return { ok, saw: trn + ' · ' + notes.slice(0, 60) + '… · then: ' + notes2.slice(0, 40) + '…' };
   });
 
@@ -237,7 +237,8 @@ const walk = async (w) => {
 
   await w.step('C7', '(#7) India\'s supply kinds say "India: each item\'s own GST rate decides."', async () => {
     const t = await text(page, '[data-testid="cl-row-kinds"] td.v.from');
-    const ok = t === 'India: each item\'s own GST rate decides.' || t === 'India: each item’s own GST rate decides.';
+    /* engines 1.105+ (1128): India's pack names its three 0% kinds (nil-rated, exempt, non-GST), so the row lists them; the "each item's own rate decides" sentence is for a pack with no kinds */
+    const ok = /Nil-rated 0%/.test(t) && /Exempt 0%/.test(t) && /Non-GST 0%/.test(t);
     return { ok, saw: '"' + t + '"' };
   });
 

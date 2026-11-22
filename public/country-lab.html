@@ -1259,8 +1259,8 @@ function billUnder(p) {
   }
   var lines = LAB.lines.map(function (item, index) {
     var line = { id: index, name: item.name, qty: item.qty, unit_price: item.price };
-    if (item.kind) line.supply_kind = item.kind;
-    if (!(p.tax && p.tax.supplyKinds) || !item.kind) line.rate = item.rate;
+    if (item.kind && p.tax && p.tax.supplyKinds && p.tax.supplyKinds[item.kind]) line.supply_kind = item.kind; /* a kind goes only to a pack that knows it (India has had nil/exempt/non-GST since engines 1.105, AU's gst_free was refused there) */
+    else line.rate = item.rate;
     return line;
   });
   try {

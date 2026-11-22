@@ -146,7 +146,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
     await dayClose();
     var before = { title: document.getElementById('sliptitle').textContent, state: (document.querySelector('[data-testid="till-day-state"]') || {}).textContent,
                    closeBtn: !document.getElementById('slipdayclose').hidden, printBtn: document.getElementById('slipprint').textContent };
-    dayCloseDo();
+    var closing = dayCloseDo(); /* B-F-24: it asks for the counted cash, then confirms: answer both */
+    var nap = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    await nap(100); document.getElementById('askinput').value = '0'; document.getElementById('askok').click(); await nap(100); document.getElementById('askok').click(); await closing;
     var after = { title: document.getElementById('sliptitle').textContent, state: (document.querySelector('[data-testid="till-day-state"]') || {}).textContent,
                   closeBtn: !document.getElementById('slipdayclose').hidden, mark: !!dayClosedMark() };
     await dayClose();

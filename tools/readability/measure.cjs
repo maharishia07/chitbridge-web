@@ -47,8 +47,8 @@ const SKIP_FILE = /(\.min\.|^qr\.js$|\.test\.(c?js|mjs)$)/;
 const CODE_FILE = /\.(js|cjs|mjs|html)$/;
 /* a file whose master lives elsewhere: an engine adopted from chitbridge-engines, or a copy vendor-till.cjs writes (judged at its master) */
 const ADOPTED_HEAD = /ADOPTED from chitbridge-engines|GENERATED — DO NOT EDIT\. Written by chitbridge-api\/scripts\/vendor-till\.cjs/;
-const VENDORED_TILL = 'public/till.html', HEAD_BYTES = 700;
-
+const VENDORED_TILL = 'public/till.html', HEAD_BYTES = 700, isVendoredTill = (relPath) => relPath === VENDORED_TILL || relPath === 'public/app/till-dayrep.js'; /* the till and its parts: vendored byte copies, judged at the api master (1128) */
+const isWebMasteredInApi = (relPath) => /^tools\/tally-connector\/(cb-words|strings-hi|strings-ar)\.js$/.test(relPath);
 /** every code file under one scope entry (a folder walked, or a single file) */
 function walkDir(dir, out) {
   let entries;
@@ -177,7 +177,7 @@ function inScope(repo, relPath, text) {
       .some((part) => SKIP_DIR.test(part))
   )
     return false;
-  if (repo === 'web' && relPath === VENDORED_TILL) return false;
+  if ((repo === 'web' && isVendoredTill(relPath)) || (repo === 'api' && isWebMasteredInApi(relPath))) return false;
   return !isNotOwnText(relPath, text);
 }
 
@@ -194,7 +194,7 @@ function collect(repo, root) {
     skipped = { adopted: 0, vendoredTill: 0 };
   for (const absPath of found.files) {
     const relPath = path.relative(root, absPath).replace(/\\/g, '/');
-    if (repo === 'web' && relPath === VENDORED_TILL) {
+    if (repo === 'web' && isVendoredTill(relPath)) {
       skipped.vendoredTill++;
       continue;
     }
@@ -766,4 +766,4 @@ function fileFacts(file) {
   return factsFromText(file.rel, fs.readFileSync(file.abs, 'utf8'));
 }
 
-module.exports = { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, collect, inScope, chunks, parse, factsFromText, fileFacts };
+module.exports = { isWebMasteredInApi, ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, collect, inScope, chunks, parse, factsFromText, fileFacts };

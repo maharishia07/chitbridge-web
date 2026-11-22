@@ -239,6 +239,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     await p.click('[data-testid="pr-save"]'); await p.waitForSelector('[data-testid="pe-ok"]');
     const rb = posts(S, /\/recurring$/)[0].body;
     ok(rb.name === 'Electricity' && rb.event.kind === 'expense' && rb.event.amount_minor === 420000 && rb.event.class === 'electricity' && rb.frequency === 'monthly' && !('date' in rb.event), 'POST /recurring { name, event {kind, class, amount_minor 420000, paid_from}, frequency, next_on }');
+    await p.waitForSelector('[data-testid="rec-r3"]', { timeout: 8000 }).catch(() => {}); /* the list repaints after the save; a second Add pressed before that lost its form (red in the CI shard, green alone: probe run 44942356457 family) */
     S.recRefuse = true; await p.click('[data-testid="pr-add-open"]'); await p.fill('#pr_name', 'Bad'); await p.selectOption('#pr_kind', 'expense');
     await p.click('[data-testid="pr-save"]'); await p.waitForSelector('#pr_fout [data-testid="pe-refused"]');
     ok(/first one due/.test(await p.textContent('#pr_fout')), 'a refusal is the server\'s sentence');

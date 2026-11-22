@@ -26,7 +26,8 @@ t('sorts by entries still to check: 5% of a big book (950 left) is above 50% of 
 });
 t('L-F-14: the quarter fallback names its period, so "0 of 4" is not read against a day book of every entry', () => {
   const cell = P.checkedCell({ year_end: null, checked: { n: 0, of: 4 } });
-  assert.ok(cell.includes('0% · 0 of 4') && cell.includes('pr-checked-period') && cell.includes('this quarter'), cell);
+  assert.ok(cell.includes('0% · 0 of 4') && !cell.includes('pr-checked-period'), cell);   /* REPEAT RULE: the quarter is said once, in the header */
+  assert.ok(/this quarter$/.test(P.checkedHeader()) || /^Checked FY/.test(P.checkedHeader()), P.checkedHeader());
   assert.ok(P.checkedCell({ year_end: { fy: '2025-26', entries: { checked: 3, of: 8 } } }).includes('2025-26'), 'the year-end count names its year');
 });
 process.exit(bad ? 1 : 0);

@@ -41,6 +41,8 @@ const sb = {
 sb.window = sb; sb.globalThis = sb;
 const ctx = vm.createContext(sb);
 vm.runInContext(fs.readFileSync(path.join(W, 'engine', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+/* 1128: app.html loads app/shop-time.js right after engine/locale.js; cap-admin's time zone note reads CBShopTime.sample, so the sandbox loads it too */
+vm.runInContext(fs.readFileSync(path.join(W, 'app', 'shop-time.js'), 'utf8'), ctx, { filename: 'shop-time.js' });
 Object.assign(sb, {
   esc: (x) => String(x == null ? '' : x), tx: (x) => x,
   txf: (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => v[k]),

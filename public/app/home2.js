@@ -291,7 +291,7 @@
   function firstRunHTML(home) {
     var steps = [['shop', 'Add your business'], ['catalogue', 'Add what you sell'], ['till', 'Make the first bill']].map(function (step, index) {
       var entry = (home.manifest.entries || []).filter(function (candidate) { return candidate.id === step[0]; })[0];
-      return entry && entry.route ? '<a href="' + esc(home.shell.route ? home.shell.route(entry) : entry.route) + '" data-testid="ix2-step-' + step[0] + '"><i>' + (index + 1) + '</i>' + esc(sayText(step[1])) + '</a>' : '';
+      return entry && entry.route ? '<a href="' + esc(home.shell.route ? home.shell.route(entry) : entry.route) + '" data-cbsid="HOM001-B23" data-testid="ix2-step-' + step[0] + '"><i>' + (index + 1) + '</i>' + esc(sayText(step[1])) + '</a>' : '';
     });
     return '<span class="df-t">' + esc(sayText('Start here')) + '</span><span class="df-i">' + steps.join('') + '</span>';
   }

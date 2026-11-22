@@ -263,11 +263,11 @@ function route(S, r) {
 
   const LABS = [
     /* N18: the index is the shell's Home — a Lab is a manifest card (shell-card-<id>) with its facts spot (shell-facts-<id>) */
-    { key: 'product', title: 'Product Lab', tile: 'shell-card-product-lab', fact: 'shell-facts-product-lab', href: 'product-lab.html' },
-    { key: 'offer', title: 'Offer Lab', tile: 'shell-card-offer-lab', fact: 'shell-facts-offer-lab', href: 'offer-lab-next.html' },
+    { key: 'product', id: 'product-lab', title: 'Product Lab', tile: 'shell-card-product-lab', fact: 'shell-facts-product-lab', href: 'product-lab.html' },
+    { key: 'offer', id: 'offer-lab', title: 'Offer Lab', tile: 'shell-card-offer-lab', fact: 'shell-facts-offer-lab', href: 'offer-lab-next.html' },
     /* T2-LABS: the tile still links combo-lab.html, which forwards to the Offer Lab's combo mode — the page the person lands on */
-    { key: 'combo', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'offer-lab-next.html?mode=combo' },
-  ];
+    { key: 'combo', id: 'combo-lab', title: 'Combo Lab', tile: 'shell-card-combo-lab', fact: 'shell-facts-combo-lab', href: 'offer-lab-next.html?mode=combo' },
+  ]; const { parkedLab } = require('./lib/labs-ready.cjs').labsReady(PUB);   /* labsGrey 1128: a ready:false Lab = grey card + sentence, parked */
   const VIEWPORTS = [{ w: 1280, label: '1280' }, { w: 390, label: '390' }];
   const STATES = [{ signedOut: false, label: 'in' }, { signedOut: true, label: 'out' }];
 
@@ -281,13 +281,12 @@ function route(S, r) {
       const label = vp.label + 'px-' + st.label;
       await p.goto(base + '/');
       await settle(p);
-      if (vp.w < 700) { await p.click('[data-testid="shell-nav-more"]').catch(() => {}); await p.click('[data-testid="shell-row-labs"]').catch(() => {}); }   /* a phone: More, then the Labs row */
-      const tax = await p.locator('[data-testid="shell-chip-rail-lab"]').first();
-      const taxTag = await tax.evaluate((el) => el.tagName).catch(() => '?');
-      const taxHref = await tax.getAttribute('href').catch(() => null);
-      const taxText = (await tax.locator('.tag').textContent().catch(() => '')) || '';
+      await p.click('[data-testid="ix2-foot-labs"]').catch(() => {}); await p.waitForTimeout(300);   /* 1128: the one Home keeps Labs behind its foot word: the sheet holds the chip (signed out: the showcase line, "Coming") */
+      const tax = await p.locator(st.signedOut ? '[data-testid="ix2-show-rail-lab"]' : '[data-testid="shell-chip-rail-lab"]').first();
+      const taxTag = await tax.evaluate((el) => el.tagName).catch(() => '?'), taxHref = await tax.getAttribute('href').catch(() => null);
+      const taxText = (st.signedOut ? await tax.locator('i').textContent().catch(() => '') : await tax.locator('.tag').textContent().catch(() => '')) || '';
       ok('index', taxTag !== 'A' && !taxHref, 'Dispute Lab chip is not a link (' + label + ')', 'tagName=' + taxTag + ' href=' + taxHref);
-      ok('index', /^later$/.test(taxText.trim()), 'Dispute Lab chip names its state, "later" (' + label + ')', 'got "' + taxText.trim() + '"');
+      ok('index', st.signedOut ? /^coming$/i.test(taxText.trim()) : /^later$/.test(taxText.trim()), 'Dispute Lab chip names its state, "' + (st.signedOut ? 'Coming' : 'later') + '" (' + label + ')', 'got "' + taxText.trim() + '"');
       const sw = await scrollWidthOk(p, vp.w);
       ok('index', sw, 'no horizontal scroll (' + label + ')', 'document.scrollWidth exceeded ' + vp.w);
       await p.screenshot({ path: path.join(SHOTS, 'labs-flow-index-' + label + '.png'), fullPage: true });
@@ -308,7 +307,7 @@ function route(S, r) {
           await p.goto(base + '/');
           await settle(p);
           let factText = '';
-          if (vp.w < 700) { await p.click('[data-testid="shell-nav-more"]').catch(() => {}); await p.click('[data-testid="shell-row-labs"]').catch(() => {}); }   /* a phone: More, then the Labs row */
+          await p.click('[data-testid="ix2-foot-labs"]').catch(() => {}); await p.waitForTimeout(300);   /* 1128: the one Home keeps the Lab cards behind the Labs foot word at every width (More and shell-nav are hidden under .ix-on) */
           if (!st.signedOut) {
             /* N18: a card's facts come from its manifest `facts` URL; the Labs have no facts read yet (named in the N18 PR), so the spot is empty by design */
             factText = (await p.textContent('[data-testid="' + lab.fact + '"]').catch(() => '')) || '';
@@ -317,8 +316,9 @@ function route(S, r) {
             factText = (await p.textContent('[data-testid="' + lab.fact + '"]').catch(() => '')) || '';
             ok(lab.key, factText.trim() === '', 'signed out: no fact leaks onto the card (' + state + ')', 'card showed "' + factText + '" with nobody signed in');
           }
-          const shotIdx = 'labs-flow-' + lab.key + '-index-' + state + '.png';
-          await p.screenshot({ path: path.join(SHOTS, shotIdx), fullPage: true });
+          await p.screenshot({ path: path.join(SHOTS, 'labs-flow-' + lab.key + '-index-' + state + '.png'), fullPage: true });
+
+          if (await parkedLab(p, lab, st, state, ok, row)) { reportHealth(lab.key, state, h, state); await h.ctx.close(); continue; }
 
           await Promise.all([
             p.waitForLoadState('load').catch(() => {}),

@@ -30,6 +30,7 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
 
  await p.goto(base+'/app.html#/register');
  await p.waitForSelector('[data-testid="reg-name"]',{timeout:15000});
+ await p.fill('[data-testid="reg-shop-name"]','Mayur Bhavan');
  await p.fill('[data-testid="reg-name"]','mayurbhavan');
  await p.fill('[data-testid="reg-email"]','shop@example.in');
  await p.click('[data-testid="reg-submit"]');

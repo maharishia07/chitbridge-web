@@ -129,7 +129,7 @@ W.run('reports-trend', async (w) => {
     return { ok: !!teaser && teaser.svg && teaser.words === '↑ +12% vs last year' && teaser.href === '/finance.html#/reports/trend/week' && teaser.h <= 24, saw: JSON.stringify(teaser) };
   });
   await w.step('T13', 'the teaser opens Reports › Trend on Weeks', async () => {
-    await page.click('[data-testid="shell-fact-trend"]'); await page.waitForSelector('[data-testid="tr-chart"]', { timeout: 15000 }).catch(() => {});
+    /* 1128 one Home (index2 folded in): the More-page card that holds the teaser is hidden (.ix-on), so the teaser is read, and its own address (data-href) is what a press goes to */ const to = await page.getAttribute('[data-testid="shell-fact-trend"]', 'data-href'); await page.goto(base + to); await page.waitForSelector('[data-testid="tr-chart"]', { timeout: 15000 }).catch(() => {});
     const pressed = await page.locator('[data-testid="tr-tab-week"][aria-pressed="true"]').count();
     return { ok: /\/finance\.html#\/reports\/trend\/week$/.test(page.url()) && pressed === 1 && (await bars()) === 52, saw: page.url().replace(base, '') + '; Weeks pressed ' + pressed };
   });

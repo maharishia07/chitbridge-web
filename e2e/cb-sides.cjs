@@ -48,8 +48,10 @@ const SIDES = {
     who: [{ name: 'Asha Stores', role: 'customer' }, { name: 'Pooja Mart', role: 'customer' }, { name: 'Fresh Farm', role: 'supplier' }, { name: 'Veg Hub', role: 'supplier' }] }
 };
 /* rows drawn: placeholders ('empty') excluded. lean 2+... counted from the plant itself so the spec follows the plant, not a guess */
-const count = (gs) => gs.reduce((a, g) => a + g.rows.filter((r) => r.s !== 'empty').length, 0);
-const NL = count(SIDES.lean), NR = count(SIDES.use);
+const drawn = (gs) => gs.reduce((a, g) => a + g.rows.filter((r) => r.s !== 'empty').length, 0);
+/* WALK S S-F-02: the COUNT is rows with something real behind them - a 'later' row (no data source yet) is drawn, with its "not yet", but not counted */
+const count = (gs) => gs.reduce((a, g) => a + g.rows.filter((r) => r.s !== 'empty' && r.s !== 'later').length, 0);
+const NL = count(SIDES.lean), NR = count(SIDES.use), DL = drawn(SIDES.lean);
 
 async function run() {
   const { chromium } = require('@playwright/test');
@@ -109,8 +111,8 @@ async function run() {
       ok(/We lean on/.test(await T(pg, '[data-testid="sides-left"] h3')), '1600 · titles are the plain words, not Upstream / Dependents');
       const arrows = await pg.evaluate(() => [document.querySelector('[data-testid="sides-left"] .cbsd-arr').textContent, document.querySelector('[data-testid="sides-right"] .cbsd-arr').textContent]);
       ok(arrows[0] === '→' && arrows[1] === '←', '1600 · blue → in, green ← out');
-      ok(await T(pg, '[data-testid="sides-left"] [data-testid="sides-count"]') === String(NL), '1600 · the left count is the rows drawn: ' + NL);
-      ok(await pg.locator('[data-testid="sides-left"] [data-testid="sides-row"]').count() === NL, '1600 · and the left panel draws exactly that many rows');
+      ok(await T(pg, '[data-testid="sides-left"] [data-testid="sides-count"]') === String(NL), '1600 · the left count is the rows with something real behind them: ' + NL);
+      ok(await pg.locator('[data-testid="sides-left"] [data-testid="sides-row"]').count() === DL, '1600 · and the left panel draws every row but the placeholders: ' + DL);
       /* "not yet" is an honest dashed row */
       const nyet = pg.locator('[data-testid="sides-left"] [data-testid="sides-row"][data-id="jurisdiction"]');
       ok(await nyet.getAttribute('data-s') === 'later' && /not yet/.test(await nyet.innerText()) && /dash/.test(await nyet.getAttribute('class')), '1600 · a source with no data is a dashed row that says "not yet"');
@@ -127,7 +129,7 @@ async function run() {
       ok(await pg.locator('[data-testid="sides-left"] [data-testid="sides-review"]').count() === 1, '1600 · only the drifted row carries Review (the current ones do not)');
       /* trade proof → Finish (the right drawer; opening it closes the left) */
       await pg.click('[data-testid="sides-open-r"]');
-      ok(await T(pg, '[data-testid="sides-right"] [data-testid="sides-count"]') === String(NR), '1600 · the right count is the rows drawn: ' + NR);
+      ok(await T(pg, '[data-testid="sides-right"] [data-testid="sides-count"]') === String(NR), '1600 · the right count is the rows with something real behind them: ' + NR);
       ok(!/0/.test(await T(pg, '[data-testid="sides-right"] [data-testid="sides-row"][data-id="filings"]')), '1600 · filings carry no number (not a fake 0)');
       ok(/3 of 4 shown/.test(await T(pg, '[data-testid="sides-right"] [data-id="proof"]')), '1600 · trade proof reads "3 of 4 shown" (the rail\'s own Trade-ready)');
       ok(await pg.getAttribute('[data-testid="sides-finish"]', 'href') === '/know-your-business.html', '1600 · Finish goes where the server says');

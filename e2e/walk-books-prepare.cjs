@@ -37,7 +37,7 @@ W.run('books-prepare', async (w) => {
   const L = (code, dr, cr) => ({ code, ledger: NAME[code], dr_minor: dr, cr_minor: cr, type: 'nominal', rule: dr ? 'Dr expenses and losses' : 'Cr incomes and gains' });
   const preview = (b) => {
     const lines = (b.lines || []).map((l) => L(l.code, l.dr_minor || 0, l.cr_minor || 0)), dr = lines.reduce((s, l) => s + l.dr_minor, 0), cr = lines.reduce((s, l) => s + l.cr_minor, 0);
-    return { ok: dr === cr && dr > 0, kind: 'journal', voucher: { series: 'MJ', type: 'Journal' }, date: b.date || TODAY, lines, balanced: dr === cr, totals: { dr_minor: dr, cr_minor: cr }, credit: null, bill: null, flags: [], refusals: [], code: null, duplicate: null };
+    return { ok: dr === cr && dr > 0, kind: 'journal', voucher: { series: 'MJ', type: 'Journal' }, date: b.date || TODAY, lines, balanced: dr === cr, totals: { dr_minor: dr, cr_minor: cr }, credit: null, bill: null, flags: [], refusals: [], code: null, needs: null, duplicate: null };
   };
   const stamp = () => ({ identity_id: OWN, name: 'Me Myself', firm: 'Kumar and Co', role: 'preparer', at: DAY(0), reason: null });
   /** POST /api/books-actions as api PR #1313 takes it: store_id, kind, body, client_ref, working_month; the journal's date and the reference are required */

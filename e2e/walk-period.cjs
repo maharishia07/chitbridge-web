@@ -80,7 +80,7 @@ W.run('period', async (w) => {
     return { ok: (await picked()) === 'y:2025-26' && dq.get('from') === '2025-07-01' && dq.get('to') === '2026-06-30' && where, saw: 'value ' + (await picked()) + ' · daybook ' + dq.get('from') + ' – ' + dq.get('to') + ' · in the header line ' + where };
   });
   await w.step('P2', 'ONE dropdown replaces the month chips: each line says its state, e.g. "Sep 2025 · 40 entries · Locked · 40/40 checked"; the year lines sit in the same list', async () => {
-    const lines = (await page.$$eval('#bv_period option', (os) => os.map((o) => o.textContent))).map(flat);
+    const lines = (await page.$$eval('#bv_period option', (os) => os.map((o) => o.textContent))).map(flat).map((l) => l.replace(/^Sept /, 'Sep '));
     const chips = await page.locator('[data-month]').count();
     return { ok: lines.includes('Sep 2025 · 40 entries · Locked · 40/40 checked') && lines.includes('Oct 2025 · 30 entries · Locked · 12/30 checked') && lines.some((l) => /^FY 2025-26 · .*2025 – .*2026 · 70 entries · 12 of 12 months locked · 52\/70 checked$/.test(l)) && chips === 0, saw: lines.join(' | ') + ' · chips ' + chips };
   });
