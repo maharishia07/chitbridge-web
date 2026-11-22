@@ -122,6 +122,19 @@ t('storefront-design.html: no real-looking Indian mobile number in the mock', !/
   const bobCache = await bob.api.labUseCache('Bob', 'offline'); const aliceCache = await alice.api.labUseCache('Alice', 'offline');
   t('offer-lab-next.html: the cached catalogue shows for the person it was cached for, not the next one', bobCache === false && bob.applied.length === 0 && aliceCache === true && alice.applied.length === 1);
 })();
+/* the offer lab's spreadsheet import is bounded before and after the parse */
+{
+  const lab = read('offer-lab-next.html');
+  const m = /^function importSpreadsheet\(input\) \{[\s\S]*?\n\}\n/m.exec(lab);
+  t('offer-lab-next.html: importSpreadsheet is found', !!m);
+  const said = [];
+  let reads = 0;
+  const FileReader = function () { this.readAsArrayBuffer = () => { reads++; }; };
+  const run = new Function('FileReader', 'toastSay', 'XLSX', m[0] + '; return importSpreadsheet;')(FileReader, (x) => said.push(x), {});
+  run({ files: [{ size: 6 * 1024 * 1024, name: 'big.xlsx' }] });
+  t('offer-lab-next.html: a 6 MB workbook is refused in words and never read', said.length === 1 && /larger than 5 MB/.test(said[0]) && reads === 0, JSON.stringify(said));
+  t('offer-lab-next.html: the row ceiling is in the parse path', /list\.length > 20000/.test(m[0]));
+}
 /* the service worker: run the real file in a vm with a fake self and caches; an api GET on the same origin is never answered through the cache, a no-store reply is never stored */
 (async () => {
   const vm = require('vm');

@@ -5181,12 +5181,21 @@ function importField(row, names) {
 function importSpreadsheet(input) {
   var file = input && input.files && input.files[0];
   if (!file) return;
+  /* P2WAVE-SEC L-sec-web-screens-24#L45: a price list is a few hundred kilobytes; a file past 5 MB is refused in words before the parser (SheetJS 0.18.5 is vendored: its parse of a hostile workbook is bounded this way until the vendored copy is replaced) */
+  if (file.size > 5 * 1024 * 1024) {
+    toastSay('That file is larger than 5 MB. Send just the sheet with the price list on it.');
+    return;
+  }
   var reader = new FileReader();
   reader.onload = function (e) {
     try {
       var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       var sheet = wb.Sheets[wb.SheetNames[0]];
       var list = XLSX.utils.sheet_to_json(sheet, { defval: null });
+      if (list.length > 20000) {
+        toastSay('That file has ' + list.length + ' rows; Offer Lab reads up to 20,000. Split it and send the part you want to price.');
+        return;
+      }
       if (!list.length) {
         toastSay('That file has no rows Offer Lab can read.');
         return;
