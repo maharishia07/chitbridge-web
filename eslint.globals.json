@@ -94,6 +94,7 @@
  "public/app/cap-bank-home.js":["public/accounts.html"],
  "public/app/cap-bank-post.js":["public/accounts.html"],
  "public/app/cap-bank-rows.js":["public/accounts.html"],
+ "public/app/cap-bank-sheet-lock.js":["public/accounts.html"],
  "public/app/cap-bank-sheet.js":["public/accounts.html"],
  "public/app/cap-bank-statements-add.js":["public/accounts.html"],
  "public/app/cap-bank-statements.js":["public/accounts.html"],

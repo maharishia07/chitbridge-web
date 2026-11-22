@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (102)
+## Capabilities (103)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -28,6 +28,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-bank-map.js` | — | cap-bank-map.js — the column map on the Bank screen (FIN-115) |
 | `cap-bank-post.js` | — | cap-bank-post.js — the IN-APP post adapter for public/app/bank-preview.js: one confirmed bank line becomes one POST /events (series MJ) or one POST /p |
 | `cap-bank-rows.js` | — | cap-bank-rows.js — BANK on CB Accounts: the lines of the statement on screen and what a person does with one line (accept · undo · forget · note · rec |
+| `cap-bank-sheet-lock.js` | — | the Bank view's LOCKED MONTH capability: the notice under the band for each locked month, Post in the next open month, Reopen with a reason. Split out |
 | `cap-bank-sheet.js` | — | cap-bank-sheet.js — the Bank view's "Add to your books" SHEET (FIN-117): the statement's lines against the books, the questions each line asks, one co |
 | `cap-bank-statements-add.js` | — | cap-bank-statements-add.js — the STATEMENTS BOX of the Bank view: Add statement (the form, the checks, the keep) |
 | `cap-bank-statements.js` | — | cap-bank-statements.js — the STATEMENTS BOX of the Bank view (l16, W15-51; api: POST/GET /api/books/bank/statement-files, b872) |
@@ -275,7 +276,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 96 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 97 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 53 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 17 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 25 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
@@ -322,4 +323,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*233 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*234 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

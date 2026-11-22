@@ -177,7 +177,7 @@ ok('"Keep them out" takes it back');
   ok('the line is found by its own client_ref, never by date (the posted row names posting_date 1 Oct, the line is 15 Sep)');
   /* W15-85b · the band's buttons by seat: Reopen is the owner's alone; "Post in <month> instead" is the owner's and the accountant's where the grant lets her post */
   {
-    const vm = require('vm'), src = require('fs').readFileSync(pub('app/cap-bank-sheet.js'), 'utf8');
+    const vm = require('vm'), src = require('fs').readFileSync(pub('app/cap-bank-sheet-lock.js'), 'utf8');
     const at = src.indexOf('function bkshLockNotice()'), body = src.slice(at, src.indexOf('\n}\n', at) + 3);
     const group = { key: '2026-09', label: 'September 2026', name: 'September', may: true, next: { name: 'October', date: '2026-10-01' }, moved: false, count: 1, by: null, at: null };
     const seat = (signed) => {
