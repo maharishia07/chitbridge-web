@@ -405,6 +405,7 @@ function miFile(input) {
   MIV.pre = null;
   MIV.dec = {};
   MIV.plan = null;
+  miDropRead();
   MIV.err = '';
   var reader = new FileReader();
   if (/\.xlsx$/i.test(file.name)) {
@@ -430,13 +431,20 @@ function miRefresh() {
     MIV.st.paintFoot();
   }
 }
+/** a read still in flight answers a form that has changed: its answer is dropped, and the form is not left busy */
+function miDropRead() {
+  MIV.gen++;
+  MIV.busy = false;
+}
 function miSet(field, value) {
   MIV.f[field] = String(value || '');
   if (field !== 'as_at') {
     MIV.pre = null;
     MIV.dec = {};
-    MIV.plan = null;
   }
+  /* any change drops the preview and any read still in flight: Import never sends a date or file nobody previewed (EL-11 M10/M11) */
+  MIV.plan = null;
+  miDropRead();
   MIV.err = '';
   MIV.refused = null;
   miRefresh();

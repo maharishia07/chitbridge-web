@@ -59,7 +59,7 @@ async function obEnsureParties() {
     OPENING.parties = (reply && reply.parties) || [];
   } catch (failure) {
     if (typeof cbQuiet === 'function') cbQuiet('opening:parties', failure);
-    OPENING.parties = [];
+    OPENING.parties = null; /* not an empty list: a failed read is asked again on the next open, never latched as "no parties" (EL-12 M12) */
   }
 }
 function obBillAdd(i) {

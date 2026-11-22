@@ -180,11 +180,13 @@ function mktSentRefresh() {
 /** read one page of the offers' receipts (the server pages and filters: total · page · limit) */
 async function mktSentLoad() {
   SENT.state = 'loading';
+  var generation = (SENT.gen = (SENT.gen || 0) + 1); /* the latest ask wins: a slow older page never overwrites a newer one (EL-11 M5) */
   mktSentRefresh();
   try {
     var query = { purpose: 'marketing', page: SENT.page, limit: SENT.limit };
     if (SENT.status) query.status = SENT.status;
     var reply = await api('mktSent', { query: query });
+    if (generation !== SENT.gen) return;
     SENT.rows = reply.outbound || [];
     SENT.total = Number(reply.total) || SENT.rows.length;
     SENT.limit = Number(reply.limit) || SENT.limit;
@@ -192,14 +194,15 @@ async function mktSentLoad() {
     SENT.state = 'ready';
     SENT.err = null;
   } catch (error) {
+    if (generation !== SENT.gen) return;
     SENT.state = 'error';
     SENT.err = error;
   }
   mktSentRefresh();
 }
 /** one pager button (the unit's `foot`): the page it goes to, disabled at the ends */
-function mktPageBtn(label, to, disabled, testId) {
-  return '<button data-cbsid="MKT003-B01" type="button" class="crm-mini" data-crm="mktpage" data-v="' + to + '"' + (disabled ? ' disabled' : '') + ' data-testid="' + testId + '">' + esc(label) + '</button> ';
+function mktPageBtn(label, to, disabled, testId, action) {
+  return '<button data-cbsid="MKT003-B01" type="button" class="crm-mini" data-crm="' + (action || 'mktpage') + '" data-v="' + to + '"' + (disabled ? ' disabled' : '') + ' data-testid="' + testId + '">' + esc(label) + '</button> ';
 }
 /** the pager under the rows: the server's total · page · limit, two buttons */
 function mktSentFoot() {
@@ -209,6 +212,18 @@ function mktSentFoot() {
     '<span data-testid="mkt-sent-page">' + esc(txf('Page {p} of {n}', { p: SENT.page, n: pages })) + '</span> ' +
     mktPageBtn('‹ ' + tx('Previous'), SENT.page - 1, SENT.page <= 1, 'mkt-sent-prev') +
     mktPageBtn(tx('Next') + ' ›', SENT.page + 1, SENT.page >= pages, 'mkt-sent-next')
+  );
+}
+/** the pager under Who came back: the server's total · page · limit (EL-11 M4: customers past the first page were unreachable) */
+function mktCameFoot() {
+  var total = (CAME.data && CAME.data.total) || 0,
+    limit = Number(CAME.data && CAME.data.limit) || CAME.limit,
+    pages = Math.max(1, Math.ceil(total / limit));
+  if (CAME.state !== 'ready' || pages <= 1) return '';
+  return (
+    '<span data-testid="mkt-came-page">' + esc(txf('Page {p} of {n}', { p: CAME.page, n: pages })) + '</span> ' +
+    mktPageBtn('‹ ' + tx('Previous'), CAME.page - 1, CAME.page <= 1, 'mkt-came-prev', 'mktcamepage') +
+    mktPageBtn(tx('Next') + ' ›', CAME.page + 1, CAME.page >= pages, 'mkt-came-next', 'mktcamepage')
   );
 }
 /** the Result filter: the choice goes to the server (?status=), the list filters nothing itself */
@@ -297,12 +312,16 @@ var CAME = { data: null, state: 'loading', err: null, page: 1, limit: 50, api: n
 /** read the server's answer (one GET) and repaint the figures and the list */
 async function mktResultsLoad() {
   CAME.state = CAME.data ? 'ready' : 'loading';
+  var generation = (CAME.gen = (CAME.gen || 0) + 1);
   mktResultsRefresh();
   try {
-    CAME.data = await api('mktCameBack', { query: { page: CAME.page, limit: CAME.limit } });
+    var answer = await api('mktCameBack', { query: { page: CAME.page, limit: CAME.limit } });
+    if (generation !== CAME.gen) return;
+    CAME.data = answer;
     CAME.state = 'ready';
     CAME.err = null;
   } catch (error) {
+    if (generation !== CAME.gen) return;
     CAME.state = CAME.data ? 'ready' : 'error';
     CAME.err = error;
   }
@@ -440,7 +459,8 @@ function mktCameOptions() {
       total: function () {
         return (CAME.data && CAME.data.total) || 0;
       },
-      onQuery: mktResultsLoad
+      onQuery: mktResultsLoad,
+      foot: mktCameFoot
     }
   };
 }
@@ -464,6 +484,11 @@ function crmMarketingClick(action, node) {
   if (action === 'mktpage') {
     SENT.page = Math.max(1, Number(node.getAttribute('data-v')) || 1);
     mktSentLoad();
+    return true;
+  }
+  if (action === 'mktcamepage') {
+    CAME.page = Math.max(1, Number(node.getAttribute('data-v')) || 1);
+    mktResultsLoad();
     return true;
   }
   if (action === 'mktwinback') {

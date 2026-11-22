@@ -742,8 +742,8 @@ function vaultSay(words) {
 function vaultSaveFailed(failure, errorBox) {
   if (!errorBox) return;
   if (failure && failure.status === 409)
-    errorBox.innerHTML = vaultConflictHTML((failure.data && failure.data.message) || failure.message || tx('Changed since you opened it — reload?'));
-  else errorBox.textContent = (failure && failure.message) || tx('Could not save the vault');
+    errorBox.innerHTML = vaultConflictHTML(failWords(failure, tx('Changed since you opened it — reload?'))); /* EL-14 M9: failWords, never a raw message */
+  else errorBox.textContent = failWords(failure, tx('Could not save the vault'));
 }
 /** WALK-REG 2026-10-16 R19: the autosave's vault write — the same merge-patch as saveVaultUI, but NOTHING repaints (the person is mid-form) and no toast;
     the base and version move to what was just saved so the next change patches from here. → true saved · false nothing moved; a refusal throws */
@@ -751,8 +751,9 @@ async function vaultSaveQuiet() {
   var patch = vaultPatch(UI._vaultBase || [], _vaultSecs());
   if (!patch) return false;
   UI._party = undefined;
+  var sent = JSON.parse(JSON.stringify(_vaultSecs())); /* the copy the patch was built from: what is typed while the save is on its way stays a change for the next save (GF-14 M1 / EL-14 M4) */
   var answer = await api('vaultSave', { body: { version: UI._vaultVersion, patch: patch } });
-  UI._vaultBase = JSON.parse(JSON.stringify(_vaultSecs()));
+  UI._vaultBase = sent;
   UI._vaultVersion = (answer && answer.version) == null ? UI._vaultVersion : String(answer.version);
   if (window.CBOffline) CBOffline.clearDraft('app.vault');
   return true;

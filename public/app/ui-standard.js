@@ -853,7 +853,7 @@ var CBUiStandard = (function () {
   }
   /** the words of the label tied to a control: aria-labelledby first, then a label element; empty when it has none */
   function labelText(node) {
-    var ids = (node.getAttribute('aria-labelledby') || '').split(/s+/).filter(Boolean);
+    var ids = (node.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean);
     var spoken = ids.map(function (id) { var target = document.getElementById(id); return target ? target.textContent : ''; }).join(' ').trim();
     if (spoken || !node.labels) return spoken;
     return [].map.call(node.labels, function (label) { return label.textContent; }).join(' ').trim();

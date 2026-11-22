@@ -176,6 +176,7 @@ function pcRead(generation, key, name, query, paint) {
       if (generation !== PICS.gen) return;
       if (typeof cblog === 'function') cblog('error', 'pictures ' + key + ': ' + ((error && error.message) || error));
       pcFail(key, error);
+      if (key === 'owed') pcFail('owe', error); /* one dues read feeds both cards: both say it failed (EL-11 M1) */
     }
   );
 }
@@ -183,8 +184,9 @@ function pcRead(generation, key, name, query, paint) {
 function pcLoad() {
   var generation = ++PICS.gen;
   PICS.sales = {};
+  var asked = PICS.period; /* the period this read was ASKED for: an answer lands under it, not under whichever tab is open when it arrives (EL-11 M2) */
   var tasks = [
-    pcRead(generation, 'sales', 'tillTrend', { compare: '1', period: PICS.period }, function (answer) { PICS.sales[PICS.period] = answer; pcSales(answer); }),
+    pcRead(generation, 'sales', 'tillTrend', { compare: '1', period: asked }, function (answer) { PICS.sales[asked] = answer; if (PICS.period === asked) pcSales(answer); }),
     pcRead(generation, 'cash', 'booksCashflow', { days: '30' }, function (answer) { PICS.cash = answer; pcCash(answer); }),
     pcRead(generation, 'pl', 'booksPL', { preset: 'ytd' }, function (answer) { PICS.pl = answer; pcPl(answer); })
   ];

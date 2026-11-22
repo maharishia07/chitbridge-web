@@ -1174,6 +1174,8 @@ document.addEventListener('fullscreenchange', function(){
   setTimeout(function(){ paint(false); }, 60);
 });
 document.addEventListener('keydown', function(e){
+  /* EL-20 M1: typing in a box (caption, pairing code) is never a show shortcut */
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '') || (e.target && e.target.isContentEditable)) return;
   if (e.key === ' ') { setPlaying(!PLAYING); e.preventDefault(); }
   if (e.key === 'ArrowRight') step(1);
   if (e.key === 'ArrowLeft') step(-1);

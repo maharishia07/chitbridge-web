@@ -151,6 +151,10 @@ jobs:
           node e2e/reviews5-csv-overnote.test.cjs
           node e2e/reviews6-books-money.test.cjs
           node e2e/reviews7-finance-fx-folders.test.cjs
+          node e2e/reviews9-screens.test.cjs
+          node e2e/reviews10-screens.test.cjs
+          node e2e/reviews11-screens.test.cjs
+          node e2e/reviews12-screens.test.cjs
           node e2e/reviews5-price-typed.test.cjs
           node e2e/reviews5-unsaved-guard.test.cjs
           node e2e/dues-one-sign.test.cjs
@@ -501,6 +505,8 @@ jobs:
         run: node e2e/contract.cjs
       - name: lens-sec 1129 · a dispute party name cannot leave its onclick string
         run: node e2e/lenssec-dispute-name.test.cjs
+      - name: No page reads ?api= except through cbApiParam; evil origin refused (SEC-FIX 1129)
+        run: node e2e/guard-api-param.cjs
       - name: No NEW raw colour in a page or app file (ratchet; e2e/token-guard.baseline.json)
         run: node e2e/token-guard.cjs
       - name: The process map names files and functions that exist (PM1; docs/process/flows.json)

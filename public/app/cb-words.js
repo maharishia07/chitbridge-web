@@ -3,7 +3,7 @@
  * ID        SCR045
  * RISK      plain
  * OWNER     cb-ux-locale
- * OWNS      cbLang · CBSTR · tx · txf · txn · bidiWrap · cbIsRawId · rewordPlain · friendlyErr · failWords · bodyWords · toast · toastHost · toastLevel · CBConfirm
+ * OWNS      cbLang · CBSTR · tx · txf · txn · bidiWrap · cbIsRawId · rewordPlain · friendlyErr · failWords · bodyWords · cbApiParam · toast · toastHost · toastLevel · CBConfirm
  * CALLED BY every page that speaks through tx() or toast(): the back-office pages (before app/accounts-shell.js) and the customer pages
  *           (shop · store · network-shop · embed), which load THIS and never accounts-shell.js (CUSTOMER-DELINK, 21 Nov 2026: a customer page loads no back-office code)
  * FLOW      loaded after helpers.js (esc) → the page's own script calls tx / toast / CBConfirm
@@ -172,6 +172,23 @@ function failWords(e, fallback) {
   if (m && (e.code || e.status || e.kind)) return m;
   var plain = m ? rewordPlain(m) : '';
   return plain && plain !== m ? plain : fallback || 'something went wrong';
+}
+/** cbApiParam(raw) → the ?api= value only when it names this site, this deployment's own api (window.CB_API) or localhost on a localhost page; else '' with a console note. SEC-FIX GF-21/GF-20: a crafted link must not aim a Bearer token at another host */
+function cbApiParam(raw) {
+  try {
+    if (!raw) return '';
+    var u = new URL(raw, location.href),
+      h = u.hostname,
+      mine = location.hostname;
+    var local = /^(localhost|127[.]0[.]0[.]1)$/,
+      known = '';
+    try { known = window.CB_API ? new URL(window.CB_API, location.href).origin : ''; } catch (_) { known = ''; } /* the deployment's own api (config.js) */
+    if (/^https?:$/.test(u.protocol) && (u.origin === location.origin || (known && u.origin === known) || (local.test(h) && local.test(mine)))) return raw; /* localhost only from a localhost page */
+    if (typeof console !== 'undefined' && console.warn) console.warn('?api= ignored: not this deployment’s api'); /* never used, never sent a token */
+    return '';
+  } catch (_) {
+    return '';
+  }
 }
 /** bodyWords(body, fallback) → the same words from a raw JSON answer (a page that calls fetch itself): detail, then message, then title, strings only, no markup */
 function bodyWords(body, fallback) {

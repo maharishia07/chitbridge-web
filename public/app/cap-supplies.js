@@ -312,7 +312,7 @@ function supAddLine() {
 }
 
 /** read the line editor back — shared, so the two submits cannot disagree about what an empty line is */
-function supReadLines() {
+function supReadLines(all) {
   var lines = {},
     box = document.getElementById('sup_lines');
   (box ? box.querySelectorAll('input[data-l]') : []).forEach(function (item) {
@@ -325,6 +325,7 @@ function supReadLines() {
       return lines[item];
     })
     .filter(function (item) {
+      if (all) return (item.name || '').trim() || (item.qty || '') !== '' || (item.cost || '') !== '';
       return (item.name || '').trim() && Number(item.qty) > 0;
     });
 }
@@ -353,6 +354,15 @@ async function supBuy() {
   }
   if (!body.lines.length) {
     toast(tx('Add at least one line with a quantity'));
+    return;
+  }
+  /* EL-15 S3/S1: a line the person started (a name, a quantity or a cost) that would not be sent stops the save with its own
+     sentence — never dropped under "Recorded"; a negative cost would lower the spend of a purchase */
+  var skipped = supReadLines(true).filter(function (item) {
+    return !((item.name || '').trim() && Number(item.qty) > 0) || ((item.cost || '') !== '' && !(Number(item.cost) >= 0));
+  });
+  if (skipped.length) {
+    toast(tx('A line has no name, no quantity or a bad cost — fix it or clear it first'));
     return;
   }
   try {

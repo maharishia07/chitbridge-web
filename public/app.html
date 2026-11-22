@@ -15019,7 +15019,7 @@ function supOrderLine(item) {
     item_id: item.item_id || undefined,
     sku: item.code || undefined,
     price: list,
-    total: (+item.qty || 0) * list,
+    total: CBMoney.round((+item.qty || 0) * list),
     comment: item.comment || ''
   };
 }

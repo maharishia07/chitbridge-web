@@ -234,7 +234,7 @@
       if (reply.status === 201) {
         return load(a === 'consent' ? 'Noted.' : 'Recorded. The shop will answer.');
       }
-      msg((reply.j && (reply.j.why || reply.j.message)) || 'Could not save that. Try again.');
+      msg(typeof bodyWords === 'function' ? bodyWords(reply.j, 'Could not save that. Try again.') : 'Could not save that. Try again.'); /* reviews11 GF-19: the problem's own words, never raw markup or a stack */
     }).catch(function () {
       S.busy = false;
       msg('Network problem. Try again.');
@@ -245,7 +245,7 @@
     o.host.innerHTML = o.sheet(head('Your privacy') + '<div class="meta" data-testid="shop-priv-loading">Loading…</div>');
     return req('GET', '/api/privacy/me')
       .then(function (reply) {
-        if (reply.status !== 200) return paintErr((reply.j && reply.j.message) || 'Could not read your privacy page.');
+        if (reply.status !== 200) return paintErr(typeof bodyWords === 'function' ? bodyWords(reply.j, 'Could not read your privacy page.') : 'Could not read your privacy page.');
         S.d = reply.j;
         paint();
         if (note) {

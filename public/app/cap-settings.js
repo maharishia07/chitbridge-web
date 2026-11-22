@@ -279,14 +279,17 @@ var CBSettings = (function () {
   function load(key, name, opts, paint) {
     H.data[key] = { state: 'loading', rows: [] };
     paint();
+    var gen = H.gen; /* GF-14 M3: a reply for a section the person has left is dropped — mount() bumps H.gen */
     return (typeof name === 'function' ? name() : api(name, opts || {})).then(
       function (reply) {
+        if (gen !== H.gen) return reply;
         H.data[key] = { state: 'ok', r: reply || {} };
         paint();
         return reply;
       },
       function (e) {
         if (typeof cblog === 'function') cblog('error', 'settings ' + key + ': ' + ((e && e.message) || e));
+        if (gen !== H.gen) return;
         H.data[key] = { state: 'error', err: e };
         paint();
       }
@@ -968,6 +971,11 @@ var CBSettings = (function () {
       return (H.polMay && H.polMay.connectors_in_use) || null;
     }
     function setUse(c, on) {
+      if (pol === null) {
+        /* the list the shop uses was never read: writing now would replace it with this one connector (GF-14 M2 / EL-14 M7) */
+        $('sx_con_out').textContent = T('Could not read which ones you use.');
+        return;
+      }
       var now = inUse().filter(function (x) {
         return x !== c.id;
       });
@@ -1669,7 +1677,14 @@ var CBSettings = (function () {
       /** the server's flags after a save become the list's own and the session's, then the list repaints from them */
       onSaved: function (saved) {
         var policyData = H.data.pol;
-        if (policyData && policyData.r && saved && saved.flags) policyData.r.flags = saved.flags;
+        if (policyData && policyData.r && saved && saved.flags) {
+          policyData.r.flags = saved.flags;
+          /* EL-14 M8: a flag just saved IS answered — else the row kept saying "Not answered yet" beside "Saved" until a reload */
+          policyData.r.asked = Object.assign({}, policyData.r.asked || {});
+          Object.keys(saved.flags).forEach(function (k) {
+            policyData.r.asked[k] = true;
+          });
+        }
         if (typeof SESSION !== 'undefined' && saved && saved.flags) SESSION.policy_flags = saved.flags;
         if (pl) pl.refresh();
       }
@@ -2444,6 +2459,7 @@ var CBSettings = (function () {
     });
     H.lists = [];
     H.data = {};
+    H.gen = (H.gen || 0) + 1;
     H.host = host;
     H.sec = sec;
     (PAINT[sec] || counters)();

@@ -658,7 +658,17 @@
    */
   function billRow(chit) {
     if (chit.kind !== 'order_in') return '';
-    var verdict = chit.billed ? { ok: false, say: T('Already billed') } : chit.stage === 'closed' ? { ok: false, say: T('This order is closed') } : { ok: true };
+    var acts = chit.actions || {};
+    /* EL-15 T1: the server's verdict governs when it sends one; an order still waiting to be accepted is not billable */
+    var verdict = chit.billed
+      ? { ok: false, say: T('Already billed') }
+      : chit.stage === 'closed'
+        ? { ok: false, say: T('This order is closed') }
+        : acts.bill && acts.bill.ok === false
+          ? acts.bill
+          : acts.accept && acts.accept.ok !== false
+            ? { ok: false, say: T('Accept the order first') }
+            : { ok: true };
     return actRow('tk_do_bill', T('Bill it'), verdict, board.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', verdict.ok ? '' : 'quiet', 'TSK003-B05');
   }
   function tkBill(chit) {

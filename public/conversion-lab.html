@@ -7,7 +7,8 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>
+<script src="/app/cb-words.js"></script> <!-- cbApiParam: a ?api= link never re-points the token -->   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Conversion Lab · ChitBridge</title>
@@ -197,7 +198,8 @@
 <script src="engine/locale.js"></script><script src="app/shop-time.js"></script>
 <script>
 'use strict';
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+/* reviews11 GF-20 N7: ?api= is honoured only for this origin or a local one — a crafted link must not aim the Bearer token at another host */
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API;
 
 /* ── the engines, or an honest refusal to draw ─────────────────────────────────────────────────────────────── */
 (function () {

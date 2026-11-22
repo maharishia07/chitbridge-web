@@ -286,7 +286,9 @@ function _aiPdf() {
 async function rdLoadDeclaration() {
   try {
     UI.profile = await api('profileGet');
+    UI.profileUnread = false;
   } catch (e) {
+    UI.profileUnread = true; /* saveLane must not PUT this empty stand-in over the real profile (EL-13 M1) */
     UI.profile = { trade_mode: 'domestic', markets: [], sectors: [], adopted: [] };
   }
   // fold the explorer: restore the entity's SAVED lane (sector · destination) so it opens to their real trade
@@ -357,6 +359,7 @@ function saveLane() {
   try {
     localStorage.setItem('cb_rd_lane', JSON.stringify({ vert: vert, dest: dest, origin: origin }));
   } catch (_) { /* storage blocked or full: the page works without it */ }
+  if (UI.profileUnread) return; /* the saved profile was never read: writing now would replace its standards and sectors with nothing */
   try {
     api('profilePut', {
       body: {
@@ -1484,9 +1487,9 @@ async function submitVerify() {
   }
 }
 function gatherReadiness(standard, doc) {
-  var it = ((UI.readiness && UI.readiness.clearances) || []).filter(function (item) {
+  var it = ((UI.laneRd && UI.laneRd.clearances) || (UI.readiness && UI.readiness.clearances) || []).filter(function (item) {
     return item.standard === standard && item.doc === doc;
-  })[0];
+  })[0]; /* EL-13 M4: UI.laneRd is what the lanes set (as _aiDraft reads it); UI.readiness is set by nothing */
   UI.rdGather = { standard: standard, doc: doc, title: (it && it.title) || doc };
   var date = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
   var body =
@@ -1524,17 +1527,19 @@ async function submitGather() {
     });
     var chitId = reply && reply.chit_id;
     // 2 · attach the document to that chit (best-effort — a reference-only clearance is still valid)
+    var attached = false;
     if (chitId && file && typeof attUpload === 'function') {
       try {
         await attUpload(chitId, file);
-      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+        attached = true;
+      } catch (_) { /* the clearance is still recorded by its reference; the toast below says the document did not go (EL-13 M3) */ }
     }
     // 3 · record the clearance, pointing at its evidence chit
     await api('readinessGather', {
       body: { standard_key: g.standard, doc_key: g.doc, evidence_ref: chitId || ref || 'recorded', valid_until: valid, status: 'gathered' }
     });
     if (typeof closeModal === 'function') closeModal();
-    if (typeof toast === 'function') toast(file ? 'Clearance recorded — document on the rail ✓' : 'Clearance recorded ✓');
+    if (typeof toast === 'function') toast(attached ? 'Clearance recorded — document on the rail ✓' : file ? 'Clearance recorded, but the document did not go. Attach it again from the clearance.' : 'Clearance recorded ✓');
     UI.laneMatrix = undefined;
     UI.laneRd = undefined;
     loadLanes();

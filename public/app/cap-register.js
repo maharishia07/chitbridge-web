@@ -172,6 +172,9 @@ async function openRegister(force) {
     );
     await rgLoad(force);
   }
+  /* EL-13 M8: a second open while the first read is out returns from rgLoad at once with no report yet; painting then read
+     RG.report.full on null. The read that is out paints when it lands. */
+  if (!RG.report && !RG.err) return;
   rgPaint();
 }
 
@@ -325,9 +328,12 @@ function rgHeat(entries) {
   var grid = {},
     anyResidual = false;
   rated.forEach(function (e) {
-    var nestedL = e.residual_likelihood || e.likelihood,
-      s = e.residual_severity || e.severity;
-    if (e.residual_likelihood || e.residual_severity) anyResidual = true;
+    /* EL-13 M9: residual counts only when BOTH are rated, the same rule as the table's Residual column (else the map shows a
+       lower score than the row the table calls "—") */
+    var hasRes = e.residual_likelihood && e.residual_severity;
+    var nestedL = hasRes ? e.residual_likelihood : e.likelihood,
+      s = hasRes ? e.residual_severity : e.severity;
+    if (hasRes) anyResidual = true;
     grid[nestedL + ':' + s] = (grid[nestedL + ':' + s] || 0) + 1;
   });
   var rows = '';
@@ -920,8 +926,14 @@ async function rgSave() {
       return;
     }
     try {
-      var made = await api('regSubjectNew', { body: { type_key: rgVal('rgNewType') || 'other', name: name } });
-      into = made && made.subject_id;
+      /* a register made by an earlier press whose entry then failed is used again, never made twice (EL-13 M6) */
+      var typeKey = rgVal('rgNewType') || 'other';
+      if (RG.madeNew && RG.madeNew.name === name && RG.madeNew.type === typeKey) into = RG.madeNew.id;
+      else {
+        var made = await api('regSubjectNew', { body: { type_key: typeKey, name: name } });
+        into = made && made.subject_id;
+        RG.madeNew = into ? { name: name, type: typeKey, id: into } : null;
+      }
       RG.sel = into;
     } catch (e) {
       toast(rgFail('open the register', e));
@@ -964,6 +976,7 @@ async function rgSave() {
 
   try {
     await api('regEntryAdd', { params: { sid: into }, body: p });
+    RG.madeNew = null;
     RG.adding = false;
     toast(tx('Recorded.'));
     await openRegister(true);

@@ -640,7 +640,7 @@
       tier = null,
       why;
     if (typeof CBPricing !== 'undefined' && dataOf(r).pricing_kind) {
-      var tp = CBPricing.unitPrice(dataOf(r), Number(r.qty) || 1, list);
+      var tp = CBPricing.unitPrice(dataOf(r), Number(r.qty) || Number((s.sel || {})[r.item_id]) || 1, list) /* reviews11 GF-17 M4: the tier is read at the quantity in the cart, rows carry no qty */;
       base = tp.amount;
       tier = tp.tier || null;
       why = tp.why;
@@ -689,7 +689,7 @@
     if (!partial && !offered && amount > 0) {
       try {
         var M = compute(ns);
-        if (M && M.ev && M.ev.total != null) amount = roundMoney_(Number(M.ev.total));
+        if (M && M.ev && M.ev.total != null) amount = roundMoney_(Number(M.grand != null ? M.grand : M.ev.total)); /* reviews11 GF-17 M2: the figure the block prints (after tax), not the pre-tax one */
       } catch (e) {}
     }
     // `offered` lets a screen say WHOSE number this is. A total that mixes an asking price and an offer without
@@ -939,8 +939,8 @@
     var s = C[ns];
     if (!s) return [];
     var all = rowsOf(s.cat),
-      seen = {},
-      label = {},
+      seen = Object.create(null) /* reviews11 GF-17 M9: a category called "constructor" is a key, not a function */,
+      label = Object.create(null),
       order = [],
       none = 0;
     for (var index = 0; index < all.length; index++) {
@@ -1196,7 +1196,7 @@
       });
     ids.forEach(function (id) {
       if (allIn) delete s.sel[id];
-      else if (!s.sel[id]) s.sel[id] = 1;
+      else if (!s.sel[id]) put(ns, id, 1); /* reviews11 GF-17 M3: through the one quantity gate (a pack or a range never gets an illegal 1) */
     });
     touched(ns);
   }
@@ -2452,8 +2452,8 @@
         var all = rowsOf(s.cat).filter(function (item) {
           return item.type === 'line';
         });
-        var byId = {},
-          byName = {};
+        var byId = Object.create(null),
+          byName = Object.create(null);
         all.forEach(function (item) {
           byId[item.item_id] = item;
           byName[String(nameOf(item)).trim().toLowerCase()] = item;
@@ -2463,11 +2463,16 @@
           var want = item.qty == null ? 1 : item.qty;
           var match = (item.item_id && byId[item.item_id]) || (item.name && byName[String(item.name).trim().toLowerCase()]);
           if (match) {
+            var had = qtyOf(ns, match.item_id);
             put(ns, match.item_id, want);
             // The model may have refused it outright (below a minimum) or landed it on a legal value.
             var got = qtyOf(ns, match.item_id);
             if (got > 0) placed.push({ item_id: match.item_id, name: nameOf(match), qty: got, asked: want });
-            else refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
+            else {
+              refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
+              /* EL-17 F8: a refused channel line must not delete the quantity a person already chose */
+              if (had > 0) put(ns, match.item_id, had);
+            }
             return;
           }
           if (!item.name) {
@@ -2741,7 +2746,7 @@
        lines under Flat 10% printed three rows; Amazon prints one promotion line. Line-scope adjustments are summed by offer
        (offer_id, else label) with the item count; cart-scope ones keep their own row and say their scope. */
     var grouped = [],
-      byOffer = {};
+      byOffer = Object.create(null);
     (ev.adjustments || []).forEach(function (item) {
       if (item.scope !== 'line') {
         grouped.push({ label: item.label || item.kind, scope: item.scope, amount: Math.abs(Number(item.amount) || 0), n: 0, offer_id: item.offer_id || null });

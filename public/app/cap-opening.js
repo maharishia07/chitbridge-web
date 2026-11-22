@@ -252,6 +252,13 @@ function obRowsOut() {
       one[side === 'cr' ? 'cr_minor' : 'dr_minor'] = bill.minor;
       out.push(one);
     });
+    /* EL-12 M10: the field on the side OPPOSITE a bills ledger's own side stays editable on the page, so what it holds is
+       sent (a customer advance on Debtors) — never typed on screen and silently not posted */
+    if (bills.length && side && row[side === 'cr' ? 'dr' : 'cr']) {
+      var oppLine = { code: row.code };
+      oppLine[side === 'cr' ? 'dr_minor' : 'cr_minor'] = row[side === 'cr' ? 'dr' : 'cr'];
+      out.push(oppLine);
+    }
     if ((row.dr || row.cr) && !bills.length) {
       var ownLine = { code: row.code };
       if (row.dr) ownLine.dr_minor = row.dr;
@@ -396,7 +403,16 @@ function obBalance(i) {
 
 /* ── save ── */
 /** a change to what is saved asks why first, in the popup the bank page's Reopen and Month lock's Open again use (POP092, this screen's mount); the reason is kept with the change */
+/** a bill with something typed but no party or no amount is never sent: Save says so instead of leaving it out (EL-12 M9 / GF-12 M12) */
+function obHalfBills() {
+  return OPENING.rows.some(function (row) {
+    return row.bills.some(function (bill) {
+      return (bill.party_id || bill.minor || bill.ref || bill.date || bill.due) && !(bill.party_id && bill.minor);
+    });
+  });
+}
 function obSave() {
+  if (obHalfBills()) return toast(tx('A bill needs a party and an amount. Fill it in or remove it.'), true);
   if (OPENING.mode !== 'replace') return obSaveGo();
   OPENING.reason = '';
   /* where-used: out-of-scope the mount is bkDialogMount(5): the host screen's own code plus -U25, so it cannot be one literal */

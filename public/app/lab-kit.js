@@ -339,7 +339,7 @@
     var icon = opts.icon && BADGE_ICONS[opts.icon];
     if (icon)
       return '<span class="lk-bd lk-bd-ic" data-cbsid="CMP061-D01" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + icon + '"/></svg></span>';
-    var letters = String(opts.name || '?').trim().split(/s+/).slice(0, 2).map(function (word) { return word.charAt(0); }).join('').toUpperCase();
+    var letters = String(opts.name || '?').trim().split(/\s+/).slice(0, 2).map(function (word) { return word.charAt(0); }).join('').toUpperCase();
     return '<span class="lk-bd lk-bd-' + tintOf(opts.name) + '" data-cbsid="CMP061-D01" aria-hidden="true">' + escapeText(letters) + '</span>';
   }
   /* ── CMP060 FIGURE CARD: a label, one big figure and (optional) a progress line. The figure arrives as text the caller made with the ONE money formatter (its currency in it, CUR-1);

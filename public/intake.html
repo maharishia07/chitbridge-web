@@ -51,7 +51,7 @@
 <script src="cb-offline.js"></script>
 <script>
 /* CALLED BY public/app/helpers.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs] */
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API;
 var TOK = null,
   ME = null;
 function paintPill(s) {

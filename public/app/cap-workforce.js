@@ -549,7 +549,7 @@ async function awFinish() {
      * deploy and migration — which is always non-zero here, because Athi runs migrations by hand.
      */
     var _lvl = d.aw_hat || 'editor';
-    var _hatCompat = { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'act';
+    var _hatCompat = { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'view_only';
     try {
       var reply = await api('addActor', { body: { display_name: name, actor_key: key, access_level: _lvl, hat: _hatCompat } });
       var lf = (reply && (reply.login_format || (reply.actor && reply.actor.login_format))) || (typeof coId === 'function' ? coId(key) : key);
@@ -1243,7 +1243,7 @@ function _acTierSummary(x) {
     '</div></div>' +
     '</div>' +
     '<button data-cbsid="BUS005-B13" class="composebtn pri" style="width:100%;padding:13px;font-size:var(--fs-3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\'' +
-    x.id +
+    escJs(x.id) +
     '\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the ' +
     esc(reg.label || '') +
     ' cockpit <span style="opacity:.85"><span class=arw>→</span></span></button>' +
@@ -1563,7 +1563,7 @@ async function saveActor(id) {
    * and migration is always non-zero here, because migrations are run by hand.
    */
   const _lvl = val('ac_ehat') || undefined;
-  const _hatCompat = _lvl ? { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'act' : undefined;
+  const _hatCompat = _lvl ? { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'view_only' : undefined;
   const _whole = (function () {
     const el = document.getElementById('ac_ewhole');
     return el ? !!el.checked : undefined;
