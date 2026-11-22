@@ -18,7 +18,7 @@ const ROOT = path.join(__dirname, '..');
 /* ⚠️ this package is "type": "module", so require() of these browser files yields no exports — they attach to window, as in a page */
 globalThis.window = globalThis;
 require(path.join(ROOT, 'public', 'engine', 'signin.js'));
-require(path.join(ROOT, 'public', 'app', 'signin-provider.js')); /* the window's other halves load first, as on every page */
+require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js')); /* the window's other halves load first, as on every page */
 require(path.join(ROOT, 'public', 'app', 'signin-session.js'));
 require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
 const E = globalThis.CBSignin;
@@ -370,7 +370,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
       globalThis.location = { pathname, hash, search: '' };
       globalThis.history = { replaceState: (a, b, url) => { replaced = url; } };
       for (const key of Object.keys(require.cache)) if (/signin-(ui|provider)\.js$/.test(key)) delete require.cache[key];
-      require(path.join(ROOT, 'public', 'app', 'signin-provider.js'));
+      require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js'));
       require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
       return { lib: globalThis.CBSignin, replaced: () => replaced };
     };
@@ -389,7 +389,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     globalThis.location = { pathname: '/app.html', hash: '#k=confirm-code_123', search: '' };
     globalThis.history = { replaceState: () => {} };
     for (const key of Object.keys(require.cache)) if (/signin-(ui|provider)\.js$/.test(key)) delete require.cache[key];
-    require(path.join(ROOT, 'public', 'app', 'signin-provider.js'));
+    require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js'));
     require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
     assert.deepStrictEqual(globalThis.CBSignin.takeLanded(), { kind: 'k', value: 'confirm-code_123' });
     assert.ok(globalThis.CBSignin.WORDS.connect.LINK_CONFIRM_FAILED && globalThis.CBSignin.WORDS.connect.SIGNIN_UNAVAILABLE, 'the two new refusals have words');
