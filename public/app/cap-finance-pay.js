@@ -37,6 +37,11 @@ var FP_BUCKETS = [
 ];
 var FP_GROUPS = { overdue: 'Overdue', msme: 'MSME at risk', week: 'Due this week', later: 'Later' };
 
+/** the two totals of a Payables read: To pay (payables) and the api's own supplier balance (BF-F-01: + = a supplier credit; worded by bkDuesWords, the same sentence Unpaid bills reads) */
+function fpKeepTotals(reply) {
+  FP.total = reply && reply.payables ? reply.payables.total_minor : null;
+  FP.books = reply ? Number(reply.total_minor) || 0 : 0;
+}
 /** the Payables read: the suppliers' payable rows kept in FP (a late answer is dropped; Ledger-off and not-allowed are said in the page's words) */
 async function fpLoad(quiet) {
   var generation = ++FP.gen;
@@ -53,8 +58,7 @@ async function fpLoad(quiet) {
       SESSION.currency = reply.currency; /* the ledger's currency reaches Pay (finance.html sets none) */
     FP.rows = ((reply && reply.parties) || []).filter(fpKeeps);
     FP.held = {}; /* the held bills are read again when a row opens: the hold may have moved */
-    FP.total = reply && reply.payables ? reply.payables.total_minor : null;
-    FP.books = reply ? Number(reply.total_minor) || 0 : 0; /* BF-F-01: the api's own supplier balance (+ = a supplier credit); worded by bkDuesWords, the same sentence Unpaid bills reads */
+    fpKeepTotals(reply);
     FP.state = 'ready';
   } catch (e) {
     if (generation !== FP.gen) return;
@@ -255,6 +259,10 @@ function fpNext(party) {
     '</div>'
   );
 }
+/** the empty list's words: no supplier is owed, and the supplier credit the books hold when there is one */
+function fpEmptyWords() {
+  return { title: tx('You owe no supplier'), sub: FP.books > 0 ? bkDuesWords('supplier', FP.books, FP.cur) + '.' : '' };
+}
 function fpHead() {
   var chips = [];
   if (FP.state === 'ready' && FP.total != null) chips.push({ tid: 'fp-total', text: tx('To pay') + ' ' + bkMoney(FP.total, FP.cur) });
@@ -297,9 +305,7 @@ function fpMount(frame) {
       return { title: tx('Could not read what you owe.'), sub: tx('Nothing was lost. Try again.') };
     },
     onRetry: fpRetry,
-    empty: function () {
-      return { title: tx('You owe no supplier'), sub: FP.books > 0 ? bkDuesWords('supplier', FP.books, FP.cur) + '.' : '' };
-    },
+    empty: fpEmptyWords,
     group: {
       default: 'risk',
       order: ['overdue', 'msme', 'week', 'later'],

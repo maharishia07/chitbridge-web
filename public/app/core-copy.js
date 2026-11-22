@@ -9,32 +9,39 @@
  */
 'use strict';
 /** an independent copy, so a joiner can never share mutable state with the caller it joined */
-function _apiCopy(v) {
-  var made = _apiClone(v);
-  if (made !== v && Array.isArray(v) && Array.isArray(made))
+function _apiCopy(answer) {
+  var made = _apiClone(answer);
+  if (made !== answer && Array.isArray(answer) && Array.isArray(made))
     /* reviews11 GF-17 M5: unwrap() hangs truncated/status_counts/total/next on a list as NON-enumerable properties, which a clone drops */
-    Object.getOwnPropertyNames(v).forEach(function (k) {
-      if (k !== 'length' && !Object.prototype.hasOwnProperty.call(made, k))
-        Object.defineProperty(made, k, { value: _apiClone(v[k]), enumerable: false, configurable: true, writable: true });
+    Object.getOwnPropertyNames(answer).forEach(function (field) {
+      if (field !== 'length' && !Object.prototype.hasOwnProperty.call(made, field))
+        Object.defineProperty(made, field, { value: _apiClone(answer[field]), enumerable: false, configurable: true, writable: true });
     });
   return made;
 }
-function _apiClone(v) {
-  if (v === null || typeof v !== 'object') return v;
+/** a structured copy of an answer; one that cannot be cloned is handed back as it is (said in the dev console record, the call itself never fails) */
+function _apiClone(answer) {
+  if (answer === null || typeof answer !== 'object') return answer;
   try {
-    if (typeof structuredClone === 'function') return structuredClone(v);
-  } catch (_) {}
+    if (typeof structuredClone === 'function') return structuredClone(answer);
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('api copy: structuredClone refused the answer, the JSON copy is tried', failure);
+  }
   try {
-    return JSON.parse(JSON.stringify(v));
-  } catch (_) {}
+    return JSON.parse(JSON.stringify(answer));
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('api copy: the answer cannot be cloned, the original is handed back and never shared by the dedupe', failure);
+  }
   /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
      again — said here because a silent share is exactly what this guard exists to prevent */
-  return v;
+  return answer;
 }
-function _callClean(v) {
+/** the call log's body: the answer as text, secrets redacted, cut at 1200 characters; null when it cannot be written as text */
+function _callClean(answer) {
   try {
-    return JSON.stringify(v, function (k, x) { return /(pass|pin|otp|token|secret|auth|key|card|cvv)/i.test(k) ? '[redacted]' : x; }).slice(0, 1200);
-  } catch (_) {
+    return JSON.stringify(answer, function (field, value) { return /(pass|pin|otp|token|secret|auth|key|card|cvv)/i.test(field) ? '[redacted]' : value; }).slice(0, 1200);
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('call log: the answer could not be written as text, the log keeps no body', failure);
     return null;
   }
 }

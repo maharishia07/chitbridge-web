@@ -1,8 +1,11 @@
 /* app/chit-sheet-sample.js — THE CHIT SHEET'S SAMPLE capability (design track): the detail drawn from fixed figures so the whole look can be walked before it is wired. Split out of chit-sheet.js, code moved verbatim.
+ * ID        DTL001
+ * OWNER     cb-rail
+ * RISK      plain
  * OWNS      CBChitSheetSample.read (the sample chit read: header, detail, state log) · the figures are typed here, never worked out; nothing is saved
  * CALLED BY public/chit-sheet.js (open('sample') and ?cs=sample); loaded BEFORE it by accounts.html, app.html, crm.html, finance.html and tasks.html
  * FLOW      openChitSheet('sample') → CBChitSheetSample.read() → model() (chit-sheet.js) → the same paint as a real chit
- * CARD      12-ux-locale
+ * CARD      01-rail-core-the-chit/chit-sheet
  */
 (function (root) {
   'use strict';

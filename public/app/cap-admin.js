@@ -7809,63 +7809,79 @@ async function netoWithdraw(id) {
  * removed); joined = an existing business that asked or was invited (can be removed).
  */
 var _NET_STATE = { active: 'in the network', suspended: 'paused', requested: 'waiting' };
+/** the buttons of one member row waiting on a request: Approve and Decline when the store asked, Cancel invitation when we invited */
+function netMemberRequestButtons(item, index) {
+  if (item.asked_by !== 'store')
+    return (
+      '<button data-cbsid="BUS004-B36" data-testid="netm-cancel-' +
+      index +
+      "\" onclick=\"netmAct('netDecline','" +
+      escJs(item.edge_id) +
+      '\')">' +
+      tx('Cancel invitation') +
+      '</button>'
+    );
+  return (
+    '<button data-cbsid="BUS004-B34" class="pri" data-testid="netm-approve-' +
+    index +
+    "\" onclick=\"netmAct('netApprove','" +
+    escJs(item.edge_id) +
+    '\')">' +
+    tx('Approve') +
+    '</button>' +
+    '<button data-cbsid="BUS004-B35" data-testid="netm-decline-' +
+    index +
+    "\" onclick=\"netmAct('netDecline','" +
+    escJs(item.edge_id) +
+    '\')">' +
+    tx('Decline') +
+    '</button>'
+  );
+}
+/** the Remove button of a joined member: the first press arms it, the armed one says what it costs and disconnects */
+function netMemberRemoveButton(item, index) {
+  if (_NETO_ARMED === 'rm:' + item.edge_id)
+    return (
+      '<button data-cbsid="BUS004-B38" class="warn" data-testid="netm-remove-' +
+      index +
+      "\" onclick=\"netmAct('netDisconnect','" +
+      escJs(item.edge_id) +
+      '\')">' +
+      tx('Remove — their counters stop selling your products') +
+      '</button>'
+    );
+  return (
+    '<button data-cbsid="CMP008" data-testid="netm-remove-' +
+    index +
+    '" onclick="_NETO_ARMED=\'rm:' +
+    escJs(item.edge_id) +
+    '\';loadSettings()">' +
+    tx('Remove') +
+    '</button>'
+  );
+}
+/** the buttons of one member row, by where the edge stands (requested · paused · joined and active · built and active) */
+function netMemberButtons(item, index) {
+  if (item.state === 'requested') return netMemberRequestButtons(item, index);
+  if (item.state === 'suspended' && item.edge_id)
+    return (
+      '<button data-cbsid="BUS004-B37" class="pri" data-testid="netm-resume-' +
+      index +
+      "\" onclick=\"netmAct('netResume','" +
+      escJs(item.edge_id) +
+      '\')">' +
+      tx('Resume') +
+      '</button>'
+    );
+  if (item.state === 'active' && item.via === 'joined') return netMemberRemoveButton(item, index);
+  if (item.state === 'active' && item.edge_id)
+    return '<button data-cbsid="BUS004-B39" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + escJs(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+  return '';
+}
 function netMembersHTML(list) {
   var rows = list
     .map(function (item, index) {
-      var btns = '';
-      if (item.state === 'requested' && item.asked_by === 'store')
-        btns =
-          '<button data-cbsid="BUS004-B34" class="pri" data-testid="netm-approve-' +
-          index +
-          "\" onclick=\"netmAct('netApprove','" +
-          escJs(item.edge_id) +
-          '\')">' +
-          tx('Approve') +
-          '</button>' +
-          '<button data-cbsid="BUS004-B35" data-testid="netm-decline-' +
-          index +
-          "\" onclick=\"netmAct('netDecline','" +
-          escJs(item.edge_id) +
-          '\')">' +
-          tx('Decline') +
-          '</button>';
-      else if (item.state === 'requested')
-        btns =
-          '<button data-cbsid="BUS004-B36" data-testid="netm-cancel-' +
-          index +
-          "\" onclick=\"netmAct('netDecline','" +
-          escJs(item.edge_id) +
-          '\')">' +
-          tx('Cancel invitation') +
-          '</button>';
-      else if (item.state === 'suspended' && item.edge_id)
-        btns =
-          '<button data-cbsid="BUS004-B37" class="pri" data-testid="netm-resume-' +
-          index +
-          "\" onclick=\"netmAct('netResume','" +
-          escJs(item.edge_id) +
-          '\')">' +
-          tx('Resume') +
-          '</button>';
-      else if (item.state === 'active' && item.via === 'joined')
-        btns =
-          _NETO_ARMED === 'rm:' + item.edge_id
-            ? '<button data-cbsid="BUS004-B38" class="warn" data-testid="netm-remove-' +
-              index +
-              "\" onclick=\"netmAct('netDisconnect','" +
-              escJs(item.edge_id) +
-              '\')">' +
-              tx('Remove — their counters stop selling your products') +
-              '</button>'
-            : '<button data-cbsid="CMP008" data-testid="netm-remove-' +
-              index +
-              '" onclick="_NETO_ARMED=\'rm:' +
-              escJs(item.edge_id) +
-              '\';loadSettings()">' +
-              tx('Remove') +
-              '</button>';
-      else if (item.state === 'active' && item.edge_id)
-        btns = '<button data-cbsid="BUS004-B39" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + escJs(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+      var btns = netMemberButtons(item, index);
       var words =
         item.state === 'requested'
           ? item.asked_by === 'store'

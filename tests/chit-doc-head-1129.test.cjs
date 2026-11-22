@@ -48,7 +48,7 @@ assert.strictEqual(CBDocHead.html(S.model(sheetOf('order'))), '', 'an order is n
 assert.strictEqual(CBDocHead.html(S.model(Object.assign(sheetOf('invoice'), { doc: 'invoice' }))).length > 0, true, 'a bill I sent is drawn too (both seats)');
 
 /* the head is in the sheet's paint and in design 1's Content tab, and no country literal is in the painter */
-assert(sheetSrc.includes("pageNoteHTML() + (root.CBDocHead ? root.CBDocHead.html(m) : '')"), 'the popup paints the head');
+assert(sheetSrc.includes('pageNoteHTML() + docHeadHTML(m)') && sheetSrc.includes("return root.CBDocHead ? root.CBDocHead.html(m) : '';"), 'the popup paints the head');
 assert(!/'(AE|IN|AU)'|UAE|TRN|GSTIN/.test(headSrc.slice(headSrc.indexOf('(function'))), 'no country literal in the document head code');
 const TAGS = '<script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>';
 assert(['accounts', 'app', 'crm', 'finance', 'tasks'].every((page) => fs.readFileSync(path.join(__dirname, '..', 'public', page + '.html'), 'utf8').includes(TAGS)), 'every page that loads the sheet loads the head first, on the same script line');
@@ -64,7 +64,7 @@ function fnSource(name) {
 globalThis.SESSION = { entity: 'me' };
 globalThis.chitUnpaidWord = () => 'Unpaid';
 globalThis.payHasUpi = () => false;
-eval(['chitPurposeOf', 'chitStatusWord', 'chitNoPayWhy', 'chitMarkPaidButton', 'chitIsNote', 'chitNoteWord', 'chitPaymentCell', 'chitDocHead'].map(fnSource).join('\n') + '\nglobalThis.chitPaymentCell = chitPaymentCell; globalThis.chitDocHead = chitDocHead;');
+eval(['chitPurposeOf', 'chitStatusWord', 'chitNoPayWhy', 'chitMarkPaidButton', 'chitIsNote', 'chitNoteWord', 'chitPaymentCellHidden', 'chitPaymentCell', 'chitDocHead'].map(fnSource).join('\n') + '\nglobalThis.chitPaymentCell = chitPaymentCell; globalThis.chitDocHead = chitDocHead;');
 const cell = (label, value) => label + ':' + value;
 const strip = (kind, header) => ({ id: 'c1', kind, header: Object.assign({ sender_entity_id: 'them', current_status: 'pending' }, header || {}) });
 assert(/chit-mark-paid/.test(chitPaymentCell(strip('invoice'), cell, 100)), 'an invoice keeps Mark paid');

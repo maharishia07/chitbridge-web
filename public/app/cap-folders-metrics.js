@@ -3,6 +3,7 @@
  * CALLED BY cap-folders.js (the Folders screen paints _folderMetricsPane on its Metrics tab; loadFolderMetrics there fills _FLD.metrics); loaded by accounts, crm and finance beside it, and by ensureCap('folders') through CAP_WITH in app.html
  * FLOW      loadFolderMetrics (cap-folders.js) → _FLD.metrics → _folderMetricsPane → _mBox tiles + _reconStrip
  * CARD      01-rail-core-the-chit/user-folders-and-auto-file-rules
+ * ID        SCR004
  * OWNER     cb-rail
  * RISK      plain
  */
@@ -101,72 +102,89 @@ function _reconStrip() {
     '</div>'
   );
 }
-/** the Metrics tab body: this folder's clock, disputes and other measures, or a spinner while they load */
-function _folderMetricsPane() {
-  if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> measuring…</div>';
-  var m = _FLD.metrics;
-  if (!m) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">No metrics yet</div>';
-  var c = m.clock || {},
-    d = m.disputes || {},
-    mo = m.money || {};
-  var dash = function (v, suffix) {
-    return v === null || v === undefined ? '—' : v + (suffix || '');
-  };
-
-  var money = (mo.by_currency || []).length
-    ? (mo.by_currency || [])
-        .map(function (item) {
-          return (
-            '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' +
-            esc(item.currency) +
-            '</b> ' +
-            fmtMoney(item.total, item.currency) +
-            ' <span style="color:var(--grey)">· ' +
-            item.chits +
-            ' chit' +
-            (item.chits === 1 ? '' : 's') +
-            '</span></span>'
-          );
-        })
-        .join('')
-    : '<span style="font-size:var(--fs-2);color:var(--grey)">no agreed value</span>';
-  /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
-  var moneyNote =
-    (mo.mixed
+/** a measure or a dash: a missing figure is "nothing to measure", never zero */
+function _metricOrDash(value, suffix) {
+  return value === null || value === undefined ? '—' : value + (suffix || '');
+}
+/** the money by currency, one chip each ("no agreed value" when there is none) */
+function _folderMoneyChipsHtml(moneyBlock) {
+  if (!(moneyBlock.by_currency || []).length) return '<span style="font-size:var(--fs-2);color:var(--grey)">no agreed value</span>';
+  return moneyBlock.by_currency
+    .map(function (item) {
+      return (
+        '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' +
+        esc(item.currency) +
+        '</b> ' +
+        fmtMoney(item.total, item.currency) +
+        ' <span style="color:var(--grey)">· ' +
+        item.chits +
+        ' chit' +
+        (item.chits === 1 ? '' : 's') +
+        '</span></span>'
+      );
+    })
+    .join('');
+}
+/* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
+function _folderMoneyNoteHtml(moneyBlock) {
+  return (
+    (moneyBlock.mixed
       ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' +
         txf('⚠️ More than one currency — these are {not} added together. A single total across currencies is a number that means nothing.', {
           not: '<b>' + tx('not') + '</b>'
         }) +
         '</div>'
       : '') +
-    ((mo.excluded || {}).awaiting_agreement
+    ((moneyBlock.excluded || {}).awaiting_agreement
       ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
-        mo.excluded.awaiting_agreement +
+        moneyBlock.excluded.awaiting_agreement +
         ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>'
-      : '');
-
+      : '')
+  );
+}
+/** the first row of tiles: the counts (how many, unread, overdue, the oldest) */
+function _folderCountTilesHtml(metrics) {
+  var clock = metrics.clock || {};
   return (
-    '<div style="padding:14px 18px">' +
-    _reconStrip() +
     '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
-    _mBox(_FLD.recon ? 'On this track' : 'In this folder', m.count, (m.open || 0) + ' open · ' + (m.closed || 0) + ' closed') +
-    _mBox('Unread', m.unread, m.unread ? 'nobody has opened these' : 'all seen', m.unread ? 'warn' : null) +
-    _mBox('Overdue', m.overdue, txf('open for {days}+ days', { days: m.overdue_days }), m.overdue ? 'bad' : null) +
-    _mBox('Oldest', dash(c.oldest_age_days, 'd'), 'the one nobody is working', c.oldest_age_days > (m.overdue_days || 7) * 3 ? 'warn' : null) +
-    '</div>' +
+    _mBox(_FLD.recon ? 'On this track' : 'In this folder', metrics.count, (metrics.open || 0) + ' open · ' + (metrics.closed || 0) + ' closed') +
+    _mBox('Unread', metrics.unread, metrics.unread ? 'nobody has opened these' : 'all seen', metrics.unread ? 'warn' : null) +
+    _mBox('Overdue', metrics.overdue, txf('open for {days}+ days', { days: metrics.overdue_days }), metrics.overdue ? 'bad' : null) +
+    _mBox('Oldest', _metricOrDash(clock.oldest_age_days, 'd'), 'the one nobody is working', clock.oldest_age_days > (metrics.overdue_days || 7) * 3 ? 'warn' : null) +
+    '</div>'
+  );
+}
+/** the second row of tiles: the clock and the disputes */
+function _folderClockTilesHtml(metrics) {
+  var clock = metrics.clock || {},
+    disputes = metrics.disputes || {};
+  return (
     /* ⚠️ RESPONSE and RESOLUTION side by side, never merged. Together they show "we answer fast and finish never",
        which is the commonest way a team looks fine and is not. */
     '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:9px">' +
-    _mBox('Typical age', dash(c.median_age_days, 'd'), 'median, not average') +
-    _mBox('First touch', dash(c.median_first_touch_days, 'd'), 'time to being read') +
-    _mBox('To close', dash(c.median_to_close_days, 'd'), 'time to finished') +
-    _mBox('Disputed', dash(d.rate_pct, '%'), (d.open || 0) + ' open now', d.open ? 'bad' : null) +
-    '</div>' +
+    _mBox('Typical age', _metricOrDash(clock.median_age_days, 'd'), 'median, not average') +
+    _mBox('First touch', _metricOrDash(clock.median_first_touch_days, 'd'), 'time to being read') +
+    _mBox('To close', _metricOrDash(clock.median_to_close_days, 'd'), 'time to finished') +
+    _mBox('Disputed', _metricOrDash(disputes.rate_pct, '%'), (disputes.open || 0) + ' open now', disputes.open ? 'bad' : null) +
+    '</div>'
+  );
+}
+/** the Metrics tab body: this folder's clock, disputes and other measures, or a spinner while they load */
+function _folderMetricsPane() {
+  if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> measuring…</div>';
+  var metrics = _FLD.metrics;
+  if (!metrics) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">No metrics yet</div>';
+  var moneyBlock = metrics.money || {};
+  return (
+    '<div style="padding:14px 18px">' +
+    _reconStrip() +
+    _folderCountTilesHtml(metrics) +
+    _folderClockTilesHtml(metrics) +
     '<div style="margin-top:14px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' +
     tx('Value') +
     '</div>' +
-    money +
-    moneyNote +
+    _folderMoneyChipsHtml(moneyBlock) +
+    _folderMoneyNoteHtml(moneyBlock) +
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:14px;line-height:1.5">A dash means <b>nothing to measure</b>, which is not the same as zero. ' +
     '' +

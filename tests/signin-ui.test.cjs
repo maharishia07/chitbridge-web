@@ -397,7 +397,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
     assert.ok(/kind === 'k'[^\n]*cb_connect_code/.test(read('app.html')), 'app.html keeps the code for Settings');
     const settings = read('app/cap-settings-provider.js');
-    assert.ok(/row\.reproof === 'code'\) return T\('Set a PIN first\.'\)/.test(settings), 'no PIN: greyed with the way out');
+    assert.ok(/row\.reproof === 'code'\) return inWords\('Set a PIN first\.'\)/.test(settings), 'no PIN: greyed with the way out');
     assert.ok(/api\('providerLinkFinish', \{ body: \{ code: code \} \}\)/.test(settings), 'the session spends the code');
     assert.ok(/providerLinkFinish: \{ m: 'POST', p: '\/api\/signin\/provider\/link\/finish'/.test(read('app/accounts-shell.js')), 'the route is in the register of calls');
   });
@@ -421,7 +421,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.strictEqual(run('t').replaced, '/settings.html#/account', 'signed in: lands on Settings > Account');
     assert.deepStrictEqual(run('').hash, '#/login', 'signed out: the sign-in');
     // the account tab reads the code at paint and finishes within its life
-    const at = settings.indexOf("sessionStorage.getItem('cb_connect_code')");
+    const at = settings.indexOf("takeStored('cb_connect_code')");
     assert.ok(at > 0 && settings.indexOf("api('providerLinkFinish'", at) > at, 'account() reads cb_connect_code and calls providerLinkFinish');
     assert.ok(/'account'/.test(read('settings.html')) || /k: 'account'/.test(read('settings.html')), 'settings.html has the account section');
   });

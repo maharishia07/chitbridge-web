@@ -41,7 +41,7 @@ const t = (name, ok, why) => { console.log((ok ? '  ok  ' : '  FAIL') + ' ' + na
 
   // M8 Metrics value through the one money renderer
   const c3 = vm.createContext({ _FLD: { busy: false, metrics: { clock: {}, disputes: {}, money: { by_currency: [{ currency: 'INR', total: 1234.5, chits: 2 }] } } }, esc: String, _reconStrip: () => '', txf: (s) => s, nm: String, bkDate: String, _mBox: (a, b, c) => String(a) + String(b) + String(c), tx: (s) => s, fmtMoney: (a, c) => '[M ' + a + ' ' + c + ']' });
-  vm.runInContext(liftFns('public/app/cap-folders-metrics.js', ['_folderMetricsPane']) + '\nthis.f = { _folderMetricsPane };', c3);
+  vm.runInContext(liftFns('public/app/cap-folders-metrics.js', ['_metricOrDash', '_folderMoneyChipsHtml', '_folderMoneyNoteHtml', '_folderCountTilesHtml', '_folderClockTilesHtml', '_folderMetricsPane']) + '\nthis.f = { _folderMetricsPane };', c3);
   let html = '';
   try { html = c3.f._folderMetricsPane(); } catch (e) { html = 'THROW ' + e.message; }
   t('Metrics value goes through fmtMoney', html.includes('[M 1234.5 INR]'), html.slice(0, 200));

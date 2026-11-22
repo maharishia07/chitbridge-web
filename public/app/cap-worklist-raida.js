@@ -3,6 +3,7 @@
  * CALLED BY cap-worklist.js (wlLineHTML calls wlRaidaSec; the card buttons call the wlRaida* handlers); loaded with it by ensureCap('worklist') through CAP_WITH in app.html
  * FLOW      wlLine opens a card → wlRaidaLoad (the line's entries) → wlRaidaSec (the section) → wlRaidaRow per entry → wlRaidaOpen / wlRaidaClose write through the api
  * CARD      05-orders-and-workflow/worklist
+ * ID        RAL002
  * OWNER     cb-orders
  * RISK      plain
  */
@@ -121,13 +122,86 @@ async function wlRaidaClose(rid) {
   }
 }
 
+/** the ways an entry can end, as buttons (the chosen one marked), for the closing form */
+function wlRaidaEndingButtonsHtml() {
+  return Object.keys(RAIDA_ENDINGS)
+    .map(function (ending) {
+      var chosen = (WLL.raidaDisp || 'resolved') === ending;
+      return (
+        '<button data-cbsid="RAL002-B01" type="button" data-testid="wl-raida-disp-' +
+        ending +
+        '" onclick="wlRaidaDisp(&quot;' +
+        escJs(ending) +
+        '&quot;)"' +
+        ' title="' +
+        esc(RAIDA_ENDINGS[ending].hint) +
+        '" aria-pressed="' +
+        (chosen ? 'true' : 'false') +
+        '"' +
+        ' style="cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' +
+        (chosen ? 800 : 500) +
+        ';' +
+        'border:' +
+        (chosen ? '2px solid var(--blue)' : '1px solid var(--line)') +
+        ';border-radius:8px;' +
+        'padding:3px 8px;background:' +
+        (chosen ? 'var(--blue-tint-bg)' : 'var(--card)') +
+        ';color:var(--on-card)">' +
+        esc(tx(RAIDA_ENDINGS[ending].label)) +
+        '</button>'
+      );
+    })
+    .join('');
+}
+/** the form under an entry that is being closed: how it ended, what happened, and the Close it button */
+function wlRaidaClosingFormHtml(raidaId) {
+  return (
+    '<div style="padding:0 0 9px 30px">' +
+    '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' +
+    wlRaidaEndingButtonsHtml() +
+    '</div><div style="display:flex;gap:7px">' +
+    '<input data-cbsid="RAL002-I05" id="wl_raida_why" data-testid="wl-raida-why" placeholder="' +
+    esc(tx('What happened? (optional)')) +
+    '"' +
+    ' style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:var(--fs-2)">' +
+    '<button data-cbsid="RAL002-B02" data-testid="wl-raida-close-go" onclick="wlRaidaClose(&quot;' +
+    escJs(raidaId) +
+    '&quot;)"' +
+    ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:8px;padding:5px 12px">' +
+    tx('Close it') +
+    '</button></div></div>'
+  );
+}
+/** what follows an entry's kind: where it came from, who shared it and wrote it, and how it ended */
+function wlRaidaMetaHtml(entry) {
+  return (
+    /* ⚠️ An INHERITED entry is the same entry read from a line that does not own it — say so, and do not offer
+       to close it from here. Closing an order-level fact from one line would surprise every other line. */
+    (entry.inherited ? ' · <span title="Recorded against the whole order">' + tx('from the order') + '</span>' : '') +
+    (entry.visibility === 'shared' ? ' · <span style="color:var(--blue-2)">' + tx('shared') + '</span>' : '') +
+    (entry.by ? ' · ' + esc(entry.by) : '') +
+    (entry.open ? '' : ' · ' + esc(tx((RAIDA_ENDINGS[entry.disposition] || { label: 'closed' }).label)) + (entry.closed_note ? ' — ' + esc(entry.closed_note) : ''))
+  );
+}
+/** the "close" link of an open entry this line owns ('' for a closed or inherited one) */
+function wlRaidaCloseLinkHtml(entry) {
+  if (!entry.open || entry.inherited) return '';
+  return (
+    '<span data-cbsid="RAL002-C09" data-testid="wl-raida-close" onclick="wlRaidaClosing(&quot;' +
+    escJs(entry.raida_id) +
+    '&quot;)" title="Close this entry"' +
+    ' style="flex:none;cursor:pointer;font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:2px 8px">' +
+    tx('close') +
+    '</span>'
+  );
+}
 /** One entry. */
 function wlRaidaRow(e) {
   var k = WLRK[e.kind] || { icon: '•', label: e.kind };
-  var dim = e.open ? '' : ';opacity:.55';
+  var fade = e.open ? '' : ';opacity:.55';
   return (
     '<div data-testid="wl-raida-row" style="display:flex;gap:9px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)' +
-    dim +
+    fade +
     '">' +
     '<span style="flex:none;font-size:var(--fs-2)" title="' +
     esc(k.hint || '') +
@@ -142,67 +216,13 @@ function wlRaidaRow(e) {
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
     esc(k.label) +
-    /* ⚠️ An INHERITED entry is the same entry read from a line that does not own it — say so, and do not offer
-       to close it from here. Closing an order-level fact from one line would surprise every other line. */
-    (e.inherited ? ' · <span title="Recorded against the whole order">' + tx('from the order') + '</span>' : '') +
-    (e.visibility === 'shared' ? ' · <span style="color:var(--blue-2)">' + tx('shared') + '</span>' : '') +
-    (e.by ? ' · ' + esc(e.by) : '') +
-    (e.open ? '' : ' · ' + esc(tx((RAIDA_ENDINGS[e.disposition] || { label: 'closed' }).label)) + (e.closed_note ? ' — ' + esc(e.closed_note) : '')) +
+    wlRaidaMetaHtml(e) +
     '</div>' +
     '</div>' +
-    (e.open && !e.inherited
-      ? '<span data-cbsid="RAL002-C09" data-testid="wl-raida-close" onclick="wlRaidaClosing(&quot;' +
-        escJs(e.raida_id) +
-        '&quot;)" title="Close this entry"' +
-        ' style="flex:none;cursor:pointer;font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:2px 8px">' +
-        tx('close') +
-        '</span>'
-      : '') +
+    wlRaidaCloseLinkHtml(e) +
     '</div>' +
     /* The field appears under the entry it closes, so there is never a question about which one is ending. */
-    (WLL.raidaClosing === e.raida_id
-      ? '<div style="padding:0 0 9px 30px">' +
-        '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">' +
-        Object.keys(RAIDA_ENDINGS)
-          .map(function (item) {
-            var on = (WLL.raidaDisp || 'resolved') === item;
-            return (
-              '<button data-cbsid="RAL002-B01" type="button" data-testid="wl-raida-disp-' +
-              item +
-              '" onclick="wlRaidaDisp(&quot;' +
-              escJs(item) +
-              '&quot;)"' +
-              ' title="' +
-              esc(RAIDA_ENDINGS[item].hint) +
-              '" aria-pressed="' +
-              (on ? 'true' : 'false') +
-              '"' +
-              ' style="cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' +
-              (on ? 800 : 500) +
-              ';' +
-              'border:' +
-              (on ? '2px solid var(--blue)' : '1px solid var(--line)') +
-              ';border-radius:8px;' +
-              'padding:3px 8px;background:' +
-              (on ? 'var(--blue-tint-bg)' : 'var(--card)') +
-              ';color:var(--on-card)">' +
-              esc(tx(RAIDA_ENDINGS[item].label)) +
-              '</button>'
-            );
-          })
-          .join('') +
-        '</div><div style="display:flex;gap:7px">' +
-        '<input data-cbsid="RAL002-I05" id="wl_raida_why" data-testid="wl-raida-why" placeholder="' +
-        esc(tx('What happened? (optional)')) +
-        '"' +
-        ' style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:var(--fs-2)">' +
-        '<button data-cbsid="RAL002-B02" data-testid="wl-raida-close-go" onclick="wlRaidaClose(&quot;' +
-        escJs(e.raida_id) +
-        '&quot;)"' +
-        ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:8px;padding:5px 12px">' +
-        tx('Close it') +
-        '</button></div></div>'
-      : '')
+    (WLL.raidaClosing === e.raida_id ? wlRaidaClosingFormHtml(e.raida_id) : '')
   );
 }
 

@@ -493,7 +493,7 @@ function c2PaneOrd(d) {
     var l = e.live || e.original || {};
     var id = String(e.line_id || l.line_id || l.item_id || 'ln' + index);
     var q = Number(l.quantity != null ? l.quantity : l.qty) || 0,
-      p = l.price == null || l.price === '' ? NaN : Number(l.price), /* a missing price is no price, never 0 (then a negative deal price, GF-07 M14) */
+      p = c2RecordedPrice(l),
       off =
         l.offer && l.offer.line_off != null
           ? Number(l.offer.line_off)
@@ -869,6 +869,10 @@ function c2ApplyProgress(r) {
   return true;
 }
 
+/** the price a chit line recorded: a missing price is no price (NaN), never 0 (then a negative deal price, GF-07 M14) */
+function c2RecordedPrice(line) {
+  return line.price == null || line.price === '' ? NaN : Number(line.price);
+}
 var C2_DELIVERING = {}; /* a delivery is ADDITIVE: a double tap would record it twice, so one press per line at a time (GF-07 M13) */
 /** the quantity of a delivery line: what is typed, else the pending quantity the empty box shows (WX-P2P-19: Delivered records what it shows, never "How many?" over a 2) */
 function c2DeliverQuantity(lineId, back) {

@@ -42,14 +42,14 @@ t('the thread count says waiting unless All is shown', has('app/cap-messages.js'
 // EL-12 M10: opposite side figure on a bills ledger is sent
 {
   const ctx = vm.createContext({ OPENING: { rows: [{ code: 'DEBT', role: 'debtors', dr: null, cr: 20000, bills: [{ party_id: 'p1', minor: 50000, ref: 'INV-1' }] }] } });
-  vm.runInContext(liftFns('public/app/cap-opening.js', ['obSide', 'obHasBills', 'obRowsOut']) + '\nthis.f = { obRowsOut };', ctx);
+  vm.runInContext(liftFns('public/app/cap-opening.js', ['obSide', 'obHasBills', 'obOppositeLine', 'obRowsOut']) + '\nthis.f = { obRowsOut };', ctx);
   const out = ctx.f.obRowsOut();
   t('a Cr advance on a Debtors bills ledger is sent', out.some((x) => x.cr_minor === 20000 && !x.party_id), JSON.stringify(out));
   t('the bills are still sent', out.some((x) => x.dr_minor === 50000 && x.party_id === 'p1'), JSON.stringify(out));
 }
 
 // GF-12 M4 / M5: network plan
-t('a place-only or order-only revert never falls through to Private', has('app/cap-network.js', 'if (!pl.from && !raw.from) {'), 'no guard');
+t('a place-only or order-only revert never falls through to Private', has('app/cap-network.js', 'if (!pl.from && !raw.from) return _netRevertPlaceOnly(n, raw);'), 'no guard');
 t('the plan signature carries purpose, pos and place', has('app/cap-network.js', "item.purpose || '', item.pos === undefined ? null : item.pos, item.place || null]"), 'sig');
 
 // EL-13 M8 / M9 / M4: register + readiness
@@ -58,8 +58,8 @@ t('the heat map uses residual only when both are rated', has('app/cap-register.j
 t('gatherReadiness reads UI.laneRd first', has('app/cap-readiness.js', 'var it = ((UI.laneRd && UI.laneRd.clearances) || (UI.readiness && UI.readiness.clearances)'), 'laneRd');
 
 // GF-14 M3 / EL-14 M8 / M9: settings + vault
-t('a settings reply for a section left is dropped', has('app/cap-settings.js', 'if (gen !== H.gen) return reply;') && has('app/cap-settings.js', 'H.gen = (H.gen || 0) + 1;'), 'no gen');
-t('a saved flag is marked answered', has('app/cap-settings.js', 'policyData.r.asked[k] = true;'), 'asked');
+t('a settings reply for a section left is dropped', has('app/cap-settings.js', 'if (generation !== H.gen) return reply;') && has('app/cap-settings.js', 'H.gen = (H.gen || 0) + 1;'), 'no gen');
+t('a saved flag is marked answered', has('app/cap-settings.js', 'policyRead.asked[flagName] = true;'), 'asked');
 t('the vault failure line uses failWords', has('app/cap-shop.js', "errorBox.textContent = failWords(failure, tx('Could not save the vault'))"), 'raw message');
 
 // EL-15 S3 / T1: purchase lines + Bill it

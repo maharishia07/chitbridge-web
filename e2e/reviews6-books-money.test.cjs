@@ -53,7 +53,7 @@ vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMon
   t('INR + USD orders give the count alone (minor null)', two.minor === null && two.n === 3, JSON.stringify(two));
   // GF-07 M14 a null price is no price (static: Number(null) is 0 and 0 is finite)
   const chit2 = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-chit2.js'), 'utf8');
-  t('cap-chit2 reads a line price with null as NaN, never Number(null)', !/\bp = Number\(l\.price\)/.test(chit2) && /l\.price == null/.test(chit2));
+  t('cap-chit2 reads a line price with null as NaN, never Number(null)', !/\bp = Number\(l\.price\)/.test(chit2) && /\.price == null/.test(chit2));
   // GF-07 M3 a late chit read must not overwrite the chit now on screen
   const cx5 = vm.createContext({ C2: { id: 'A' }, c2Paint() {}, UI: { actors: [1] }, mapApiMsg: null });
   const waiting = {};

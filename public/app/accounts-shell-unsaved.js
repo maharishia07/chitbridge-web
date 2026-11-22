@@ -2,7 +2,10 @@
  * OWNS      CBUnsaved (form · reset · leave · isDirty · domDirty)
  * CALLED BY every page that loads accounts-shell.js (script tag, right before it); cap-country.js, cap-print.js, sheet-dialog.js and the Settings screens call it at run time; it asks through CBConfirm and tx / esc, which are there by then
  * FLOW      a screen: CBUnsaved.form({ dirty, save }) → the router: CBUnsaved.leave(go) → nothing moved → go() · moved → CBConfirm Save then go / Discard / Stay · beforeunload while dirty
- * CARD      12-ux-locale
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/design-system
+ * ID        CMP069
+ * OWNER     cb-ux-locale
+ * RISK      plain
  */
 'use strict';
 /**

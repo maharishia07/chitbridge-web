@@ -2,6 +2,8 @@
  * OWNS      the co-assist draft affordance of the readiness screens: RD_SKILL (which standard has which skill), the lane's query (_laneVert · _laneOrigin · _laneQuery), aiSuggestStandards · aiSuggestPartner · aiDraftReadiness · aiDraftCommerce, the draft panel (_aiDraft · _aiCopy · _aiAccept · _aiPdf); invoked, never autonomous: the person reviews and confirms
  * CALLED BY cap-readiness.js (the buttons it draws call these by name), loaded first through CAP_WITH.readiness (app.html); everything is read when called
  * FLOW      a button ──▶ aiDraftReadiness(standard, doc, skill) ──▶ _aiDraft ──▶ api aiDraft (accounts-shell CB_ASSIST_EP) ──▶ the panel ──▶ _aiAccept (the person confirms) | _aiCopy | _aiPdf
+ * ID        SCR033
+ * OWNER     cb-compliance
  * CARD      21-compliance-attestation-and-trade/trade-readiness-lanes-instruments-journey-track
  * RISK      plain (a draft only; the person decides)
  */

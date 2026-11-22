@@ -9,19 +9,19 @@
 (function (root) {
   'use strict';
   /** the words of one account's line (plain text, escaped by the caller) */
-  function wordsOf(line, o) {
-    var say = o.tx, fill = o.txf;
-    if (line.state === 'not_shared') return say('Bank agreement is not shared with you');
-    if (line.state === 'never') return say('No bank sign-off yet');
-    if (line.state === 'none_by_date') return say('No sign-off on or before this date');
-    var cur = line.currency, sign = fill('Signed off to {d}', { d: o.day(line.period_to) }) + ' · ' + say('Statement') + ' ' + o.money(line.statement_minor, cur);
-    if (line.state === 'earlier') return sign + ' · ' + say('no difference shown for this date');
+  function wordsOf(line, options) {
+    var translate = options.tx, fill = options.txf;
+    if (line.state === 'not_shared') return translate('Bank agreement is not shared with you');
+    if (line.state === 'never') return translate('No bank sign-off yet');
+    if (line.state === 'none_by_date') return translate('No sign-off on or before this date');
+    var currency = line.currency, sign = fill('Signed off to {d}', { d: options.day(line.period_to) }) + ' · ' + translate('Statement') + ' ' + options.money(line.statement_minor, currency);
+    if (line.state === 'earlier') return sign + ' · ' + translate('no difference shown for this date');
     /* BD-F-03: a sign-off saved before BA-F-07 can say "tied" over figures that do not meet; the api's apart_minor is named in words, never "nothing unexplained" over it */
     /* only the api's own 'reconciled' may read clean: a state this file does not know says so, never "nothing unexplained" */
-    if (line.state !== 'unexplained' && line.state !== 'reconciled') return say('Bank agreement is not known for this account');
-    var rest = line.state === 'unexplained' ? fill('unexplained {a}', { a: o.money(line.unexplained_minor, cur) })
-      : line.apart_minor ? fill('books {b} when signed, {a} apart', { b: o.money(line.books_signed_minor, cur), a: o.money(line.apart_minor, cur) }) : say('nothing unexplained');
-    return sign + ' · ' + rest + (line.moved_minor ? ' · ' + fill('books now differ from the figure signed by {a}', { a: o.money(line.moved_minor, cur) }) : '');
+    if (line.state !== 'unexplained' && line.state !== 'reconciled') return translate('Bank agreement is not known for this account');
+    var rest = line.state === 'unexplained' ? fill('unexplained {a}', { a: options.money(line.unexplained_minor, currency) })
+      : line.apart_minor ? fill('books {b} when signed, {a} apart', { b: options.money(line.books_signed_minor, currency), a: options.money(line.apart_minor, currency) }) : translate('nothing unexplained');
+    return sign + ' · ' + rest + (line.moved_minor ? ' · ' + fill('books now differ from the figure signed by {a}', { a: options.money(line.moved_minor, currency) }) : '');
   }
   function html(bank, options) {
     var lines = (bank || []).filter(Boolean);

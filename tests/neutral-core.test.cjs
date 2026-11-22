@@ -73,7 +73,7 @@ for (const screen of Object.keys(screens)) {
 }
 
 /* N1 (app.html, shop.html): the pay field, the UPI links and the currency list state no India */
-const appSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+const appSource = ['app.html', 'app/chit-pay.js'].map((file) => fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8')).join('\n'); /* the UPI link lives in app/chit-pay.js since the web split */
 const shopSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'shop.html'), 'utf8');
 ok(!appSource.includes('&cu=INR') && appSource.replace(/\s+/g, '').includes("'&cu='+encodeURIComponent(moneyCode()||'')"), 'N1: the UPI link carries the shop money, not a typed INR');
 ok(!shopSource.includes('&cu=INR') && shopSource.includes('_SHOPDATA.shop.currency_code'), 'N1: the storefront UPI link carries the shop money, not a typed INR');

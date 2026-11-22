@@ -139,12 +139,10 @@
   function isContinuous(unit) {
     return CONTINUOUS_KINDS.indexOf(kindOf(unit)) >= 0;
   }
-  /** ⚠️ discrete only when the unit is KNOWN to be countable — never by absence of information */
-  function isDiscrete(unit) {
+  /** ⚠️ discrete only when the unit is KNOWN to be countable — never by absence of information */  function isDiscrete(unit) {
     var k = kindOf(unit);
     return !!k && CONTINUOUS_KINDS.indexOf(k) < 0;
   }
-
   /**
    * ── ⭐⭐ THE MARGIN: 1.010 IS ONE ──────────────────────────────────────────────────────────────────────────
    *
@@ -162,7 +160,6 @@
    * can delete a line is the bug this whole change exists to end.
    */
   var QTY_TOL = 0.01;
-
   /**
    * ── ⭐⭐⭐ ONE PLACE: THE UNITS THIS ENTITY USES, AND WHAT EACH OF THEM ALLOWS ─────────────────
    *
@@ -229,7 +226,6 @@
       floor: isFinite(floor) && floor > 0 ? floor : 0
     };
   }
-
   /** the margin, applied only where the entity said it may be */
   function snapWhole(n, unit, shop) {
     var r = unitRule(unit, shop);
@@ -627,6 +623,13 @@
     s.deals[key] = out;
     return out;
   }
+  /** the quantity a row is priced at: its own, else what the cart holds for it (rows carry no qty), else 1 — GF-17 M4: the tier is read at the quantity in the cart */
+  function pricingQty(s, r) { return Number(r.qty) || Number((s.sel || {})[r.item_id]) || 1; }
+  /** a channel line the catalogue refused: its refusal entry, with the quantity the person already chose put back (EL-17 F8: a refused line must not delete it) */
+  function refusedLine(ns, match, want, hadBefore) {
+    if (hadBefore > 0) put(ns, match.item_id, hadBefore);
+    return { name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' };
+  }
   function unitPrice(ns, r, nestedOpt) {
     var s = C[ns] || {},
       o = declOf(ns, r);
@@ -640,7 +643,7 @@
       tier = null,
       why;
     if (typeof CBPricing !== 'undefined' && dataOf(r).pricing_kind) {
-      var tp = CBPricing.unitPrice(dataOf(r), Number(r.qty) || Number((s.sel || {})[r.item_id]) || 1, list) /* reviews11 GF-17 M4: the tier is read at the quantity in the cart, rows carry no qty */;
+      var tp = CBPricing.unitPrice(dataOf(r), pricingQty(s, r), list);
       base = tp.amount;
       tier = tp.tier || null;
       why = tp.why;
@@ -2461,14 +2464,11 @@
           var want = item.qty == null ? 1 : item.qty;
           var match = (item.item_id && byId[item.item_id]) || (item.name && byName[String(item.name).trim().toLowerCase()]);
           if (match) {
-            var had = qtyOf(ns, match.item_id); put(ns, match.item_id, want);
+            var hadBefore = qtyOf(ns, match.item_id); put(ns, match.item_id, want);
             // The model may have refused it outright (below a minimum) or landed it on a legal value.
             var got = qtyOf(ns, match.item_id);
             if (got > 0) placed.push({ item_id: match.item_id, name: nameOf(match), qty: got, asked: want });
-            else {
-              refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
-              if (had > 0) put(ns, match.item_id, had); /* EL-17 F8: a refused channel line must not delete the quantity a person already chose */
-            }
+            else refused.push(refusedLine(ns, match, want, hadBefore));
             return;
           }
           if (!item.name) {

@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html (script tag, before cap-bank.js); cap-bank.js (the band's details button) and cap-bank-sheet.js (bkbHeldNumber) call it at run time; its functions are global
  * FLOW      the band's Bank details button → bankDetailsOpen → bankDetailsSave → bkbSave (cap-bank.js) → bkshPrime (the statement is checked again with the number)
  * CARD      16-finance/bank-reconciliation-and-bank-rail
+ * ID        BKS014
+ * OWNER     cb-finance
+ * RISK      personal-data
  */
 'use strict';
 /**

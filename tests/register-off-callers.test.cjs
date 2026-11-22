@@ -46,10 +46,13 @@ function page(fail) {
 
   /* the callers that read a form: each save function catches through rgFail (a bare MSG.fail in cap-register.js would be a bare error) */
   ok(!/toast\(MSG\.fail\(/.test(SRC), 'no register caller toasts a bare MSG.fail');
-  for (const [fn, call] of [['rgSave', 'regSubjectNew'], ['rgSave', 'regEntryAdd'], ['rgSaveOnChit', 'regChitAdd'], ['rgEditSave', 'regEntryRevise'], ['rgCloseSave', 'regEntryClose']]) {
+  for (const [fn, call] of [['rgSave', 'regEntryAdd'], ['rgSaveOnChit', 'regChitAdd'], ['rgEditSave', 'regEntryRevise'], ['rgCloseSave', 'regEntryClose']]) {
     const body = grab(SRC, fn);
     ok(body.includes("api('" + call + "'") && /catch \(e\) \{[^}]*rgFail\(/.test(body.slice(body.indexOf("api('" + call + "'"))), fn + ': ' + call + ' fails through rgFail');
   }
+  /* the register is opened by rgNewRegisterId (the call) inside rgSave's try, whose catch tells the person through rgFail */
+  const saveBody = grab(SRC, 'rgSave');
+  ok(grab(SRC, 'rgNewRegisterId').includes("api('regSubjectNew'") && /rgNewRegisterId\(/.test(saveBody) && /catch \(e\) \{[^}]*rgFail\(/.test(saveBody.slice(saveBody.indexOf('rgNewRegisterId('))), 'rgSave: regSubjectNew fails through rgFail');
   const used = [...SRC.matchAll(/api\('(raidaReport|reg[A-Za-z]+)'/g)].map((m) => m[1]);
   ok(new Set(used).size === 10, 'cap-register.js calls the ten register endpoints, all covered above (' + [...new Set(used)].join(', ') + ')');
   console.log(n + ' checks, all ok');

@@ -1,5 +1,8 @@
 /* app/compose-catalogue-fill.js - COMPOSE, ONCE ITS MODAL IS OPEN: fill the product picker in place.
  *
+ * ID        RAL001
+ * OWNER     cb-rail
+ * RISK      plain
  * OWNS      composeFillCatalogue() - reads YOUR products through ensureCatalogue (never a supplier's own catalogue), sets UI._catState, re-points the cart and repaints the picker.
  * CALLED BY public/app.html compose() (after the modal is open).
  * FLOW      ensureCatalogue(true) -> ready, or error only when the read failed and nothing is cached -> ccCartSync() -> ccRenderCatPick().

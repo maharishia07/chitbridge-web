@@ -3,6 +3,7 @@
  * CALLED BY the wizard markup in app.html (onclick="_cfPick/_cfRun/_cfImport"); loaded by the pages that load cap-catalogue.js, before it
  * FLOW      _cfPick (file → text) → _cfRun (server dry run → mapping + issues) → _cfImport → _cfImportRun (rows in, rejects listed with a download)
  * CARD      06-catalogue-pim/items
+ * ID        CAT001
  * OWNER     cb-catalogue
  * RISK      plain
  */
@@ -52,45 +53,41 @@ var _CF_HOW = {
   blocked: ['⨯', 'var(--disp)', 'a file may not set this'],
   empty: ['—', 'var(--grey-2)', 'this column has no heading']
 };
+/** the choice offered for one file column: "not importable" for a blocked or empty one, else the dropdown (leave out · use as a known field · add as a new column) */
+function _cfDecisionControlHtml(item, index, accepted, color) {
+  if (item.how === 'blocked' || item.how === 'empty') return '<span style="font-size:var(--fs-1);color:' + color + '">not importable</span>';
+  var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
+  accepted.forEach(function (f) {
+    var sel = item.canonical === f ? ' selected' : '';
+    opts.push('<option value="map:' + esc(f) + '"' + sel + '>Use as ' + esc(f) + '</option>');
+  });
+  // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
+  // that grows a second column meaning the same thing.
+  if (!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
+  return (
+    '<select data-cbsid="CTG003-S01" data-cfcol="' + esc(item.incoming || '') + '" data-testid="cf-decide-' + index +
+    '" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">' + opts.join('') + '</select>'
+  );
+}
 /** one row of the column table: what the file calls it, how it was read, the choice offered and why */
 function _cfMappingRowHtml(item, index, accepted) {
-    var h = _CF_HOW[item.how] || ['?', 'var(--grey-2)', item.how];
-    var control;
-    if (item.how === 'blocked' || item.how === 'empty') {
-      control = '<span style="font-size:var(--fs-1);color:' + h[1] + '">not importable</span>';
-    } else {
-      var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
-      accepted.forEach(function (f) {
-        var sel = item.canonical === f ? ' selected' : '';
-        opts.push('<option value="map:' + esc(f) + '"' + sel + '>Use as ' + esc(f) + '</option>');
-      });
-      // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
-      // that grows a second column meaning the same thing.
-      if (!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
-      control =
-        '<select data-cbsid="CTG003-S01" data-cfcol="' +
-        esc(item.incoming || '') +
-        '" data-testid="cf-decide-' +
-        index +
-        '" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">' +
-        opts.join('') +
-        '</select>';
-    }
+    var reading = _CF_HOW[item.how] || ['?', 'var(--grey-2)', item.how];
+    var control = _cfDecisionControlHtml(item, index, accepted, reading[1]);
     return (
       '<tr>' +
       '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">' +
       esc(item.incoming || '(blank)') +
       '</td>' +
       '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:' +
-      h[1] +
+      reading[1] +
       ';font-weight:700;text-align:center">' +
-      h[0] +
+      reading[0] +
       '</td>' +
       '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">' +
       control +
       '</td>' +
       '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">' +
-      esc(item.conflict || item.why || h[2]) +
+      esc(item.conflict || item.why || reading[2]) +
       '</td>' +
       '</tr>'
     );
@@ -123,6 +120,82 @@ function _cfImportButtonState(blocking, takeGood) {
   node.style.opacity = stopped ? '.5' : '1';
   node.title = stopped ? 'Fix the row problems first' : takeGood ? 'Import the good rows; the problem rows are listed' : 'Apply these choices to your catalogue';
 }
+/** the verdict badge above the column table: row problems (and whether the good rows can still go in), every column placed, or check the choices */
+function _cfBadgeHtml(report, summary, takeGood) {
+  var blocking = (summary.errors || 0) > 0;
+  if (blocking) {
+    return (
+      '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
+      summary.errors +
+      (takeGood
+        ? ' row problem(s) — the other ' + summary.importable + ' row(s) can still go in; the problem rows come back listed</span>'
+        : ' row problem(s) — fix the file first</span>')
+    );
+  }
+  if (report.ready) {
+    return '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Every column is placed') + '</span>';
+  }
+  return '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Check the choices below, then import') + '</span>';
+}
+/** the column table: one row per file column (what the file calls it, how it was read, the choice, why) */
+function _cfColumnTableHtml(mapping, accepted) {
+  var rowsHtml = (mapping || [])
+    .map(function (item, index) {
+      return _cfMappingRowHtml(item, index, accepted);
+    })
+    .join('');
+  return (
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>' +
+    ['In your file', '', 'What to do with it', 'Why']
+      .map(function (item) {
+        return (
+          '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">' + item + '</th>'
+        );
+      })
+      .join('') +
+    '</tr></thead><tbody>' +
+    rowsHtml +
+    '</tbody></table></div>'
+  );
+}
+/** the report's notes as a list ('' when there are none) */
+function _cfNotesHtml(notes) {
+  if (!(notes || []).length) return '';
+  return (
+    '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">' +
+    notes
+      .map(function (item) {
+        return '<li>' + esc(item) + '</li>';
+      })
+      .join('') +
+    '</ul>'
+  );
+}
+/** the dry run's whole answer on screen: the badge, the counts, the column table, the notes, the row issues and the "nothing changed" line */
+function _cfPreflightHtml(report, accepted, takeGood) {
+  var summary = report.summary || {};
+  return (
+    _cfBadgeHtml(report, summary, takeGood) +
+    '<div style="font-size:var(--fs-2);margin:9px 0 6px">' +
+    summary.rows +
+    ' row(s) read · <b>' +
+    summary.importable +
+    '</b> would import · ' +
+    summary.errors +
+    ' error(s) · ' +
+    summary.warnings +
+    ' warning(s)</div>' +
+    _cfColumnTableHtml(report.mapping, accepted) +
+    _cfNotesHtml(report.notes) +
+    _cfIssuesHtml(report.issues) +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' +
+    txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
+      import: '<b>' + tx('Import') + '</b>'
+    }) +
+    '</div>'
+  );
+}
+/** the Check button: read the file or rows typed, run the dry run and show the column table; a failure is shown in words and the button is freed */
 async function _cfRun(btn) {
   var text = (document.getElementById('cf_text') || {}).value || '';
   var out = document.getElementById('cf_out');
@@ -131,89 +204,38 @@ async function _cfRun(btn) {
     out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Add file or rows</div>';
     return;
   }
-  var was = btn ? btn.textContent : null;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = 'Reading…';
-  }
+  var labelBefore = _cfButtonBusy(btn, 'Reading…');
   try {
-    var res = await api('prodPreflight', { body: _cfBody(text) });
-    var r = res.report;
-    UI._cf = { csv: text, xlsx: UI._cfXlsx || null, accepted: res.accepted || [], optional: res.optional || [], report: r };
-
-    var accepted = res.accepted || [];
-    var rowsHtml = (r.mapping || [])
-      .map(function (item, index) {
-        return _cfMappingRowHtml(item, index, accepted);
-      })
-      .join('');
-
-    var s = r.summary || {};
-    var blocking = (s.errors || 0) > 0;
-    var takeGood = blocking && (s.importable || 0) > 0; // S2-F-02: the good rows can go in; the bad ones come back listed, with a file to fix
-    UI._cf.skipBad = takeGood;
-    var badge = blocking
-      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
-        s.errors +
-        (takeGood
-          ? ' row problem(s) — the other ' + s.importable + ' row(s) can still go in; the problem rows come back listed</span>'
-          : ' row problem(s) — fix the file first</span>')
-      : r.ready
-        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
-          tx('Every column is placed') +
-          '</span>'
-        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
-          tx('Check the choices below, then import') +
-          '</span>';
-    out.innerHTML =
-      badge +
-      '<div style="font-size:var(--fs-2);margin:9px 0 6px">' +
-      s.rows +
-      ' row(s) read · <b>' +
-      s.importable +
-      '</b> would import · ' +
-      s.errors +
-      ' error(s) · ' +
-      s.warnings +
-      ' warning(s)</div>' +
-      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>' +
-      ['In your file', '', 'What to do with it', 'Why']
-        .map(function (item) {
-          return (
-            '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">' +
-            item +
-            '</th>'
-          );
-        })
-        .join('') +
-      '</tr></thead><tbody>' +
-      rowsHtml +
-      '</tbody></table></div>' +
-      ((r.notes || []).length
-        ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">' +
-          r.notes
-            .map(function (item) {
-              return '<li>' + esc(item) + '</li>';
-            })
-            .join('') +
-          '</ul>'
-        : '') +
-      _cfIssuesHtml(r.issues) +
-      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' +
-      txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
-        import: '<b>' + tx('Import') + '</b>'
-      }) +
-      '</div>';
-
-    _cfImportButtonState(blocking, takeGood);
+    await _cfPreflightShow(text, out);
   } catch (e) {
     out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">' + esc((e && e.message) || 'Could not read the file.') + '</div>';
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = was;
+      btn.textContent = labelBefore;
     }
   }
+}
+/** the button says what it is doing and cannot be pressed twice; returns the label it had (null when there is no button) */
+function _cfButtonBusy(btn, words) {
+  var labelBefore = btn ? btn.textContent : null;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = words;
+  }
+  return labelBefore;
+}
+/** the dry run: ask the server, keep its answer on UI._cf for the import, draw it, and set the Import button (S2-F-02: the good rows can go in when only some rows are bad) */
+async function _cfPreflightShow(text, out) {
+  var res = await api('prodPreflight', { body: _cfBody(text) });
+  var report = res.report;
+  UI._cf = { csv: text, xlsx: UI._cfXlsx || null, accepted: res.accepted || [], optional: res.optional || [], report: report };
+  var summary = report.summary || {};
+  var blocking = (summary.errors || 0) > 0;
+  var takeGood = blocking && (summary.importable || 0) > 0; // the good rows can go in; the bad ones come back listed, with a file to fix
+  UI._cf.skipBad = takeGood;
+  out.innerHTML = _cfPreflightHtml(report, res.accepted || [], takeGood);
+  _cfImportButtonState(blocking, takeGood);
 }
 /**
  * _cfImport — apply the per-column choices.
@@ -297,35 +319,45 @@ function _cfOutcomeHtml(outcome) {
     (outcome.length > 40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + (outcome.length - 40) + ' more.</div>' : '')
   );
 }
+/** the import's whole answer on screen: the message, any columns it created, the outcome per line and the rejects */
+function _cfImportedHtml(reply) {
+  return (
+    '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">' +
+    esc(reply.message || 'Imported') +
+    '</div>' +
+    ((reply.created_columns || []).length
+      ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: ' +
+        reply.created_columns.map(esc).join(', ') +
+        '. The next template you download will include them.</div>'
+      : '') +
+    _cfOutcomeHtml(reply.outcome || []) +
+    _cfRejectsHtml(reply)
+  );
+}
+/** after an import: the workshop's list and the small app's list and live shelf re-read (each only where the page has it) */
+function _cfTellCatalogueChanged() {
+  if (typeof loadProducts === 'function') loadProducts(); /* the workshop's list */
+  if (typeof CBCatalogueApp !== 'undefined' && CBCatalogueApp.changed) CBCatalogueApp.changed(); /* the small app's list and the live shelf */
+}
+/** send the confirmed import (the same file the dry run read, with the chosen decisions) and show what came of it; a failure says nothing was changed */
 async function _cfImportRun(btn, decisions, out) {
-  var was = btn.textContent;
+  var labelBefore = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Importing…';
   try {
     var reply = await api('prodImport', {
       body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true }, UI._cf.skipBad ? { skip_bad_rows: true } : {})
     }); /* the SAME file the preflight read */
-    out.innerHTML =
-      '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">' +
-      esc(reply.message || 'Imported') +
-      '</div>' +
-      ((reply.created_columns || []).length
-        ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: ' +
-          reply.created_columns.map(esc).join(', ') +
-          '. The next template you download will include them.</div>'
-        : '') +
-      _cfOutcomeHtml(reply.outcome || []) +
-      _cfRejectsHtml(reply);
+    out.innerHTML = _cfImportedHtml(reply);
     var again = document.getElementById('cf_rejects_dl');
     if (again) again.onclick = function () { _cfDownloadRejects(reply.rejects_csv); };
     btn.disabled = true;
     btn.style.opacity = '.5';
-    if (typeof loadProducts === 'function') loadProducts(); /* the workshop's list */
-    if (typeof CBCatalogueApp !== 'undefined' && CBCatalogueApp.changed) CBCatalogueApp.changed(); /* the small app's list and the live shelf */
+    _cfTellCatalogueChanged();
   } catch (e) {
     out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">' + esc((e && e.message) || 'Could not import.') + ' Nothing was changed.</div>';
     btn.disabled = false;
   } finally {
-    btn.textContent = was;
+    btn.textContent = labelBefore;
   }
 }

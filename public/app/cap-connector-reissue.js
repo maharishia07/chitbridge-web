@@ -3,8 +3,9 @@
  * CALLED BY cap-connector.js (acCreatePackage and the cockpit buttons call acReissueGate); loaded with it by ensureCap('connector') through CAP_WITH in app.html, so it is there before the cockpit paints
  * FLOW      acReissueGate (dialog) → acReissueSendCode (code to the account email) → acReissueDevices → acReissueSubmit (api connectorReissueCode / connectorRegen)
  * CARD      28-platform-and-operations/connector-cockpit
+ * ID        DTL003
  * OWNER     cb-connect
- * RISK      plain
+ * RISK      security
  */
 'use strict';
 // ── Reissue step-up (destructive): re-type the gateway name (the QUESTION) + a one-time code emailed to the ENTITY
@@ -59,8 +60,8 @@ async function acReissueSendCode() {
 /** the gateway's connected devices for the installer; null when they cannot be read (the old key is already dead: the new one is shown once, never lost with the closed sheet — GF-07 M4 / EL-07 M2) */
 async function acReissueDevices(actorId) {
   try {
-    var r = await api('connectorConns', { params: { actorId: actorId } });
-    return (Array.isArray(r) ? r : (r && r.connections) || []) /* ⚠️ collapsed to the array — see acLoadDevices */
+    var reply = await api('connectorConns', { params: { actorId: actorId } });
+    return (Array.isArray(reply) ? reply : (reply && reply.connections) || []) /* ⚠️ collapsed to the array — see acLoadDevices */
       .filter(function (item) {
         return item.enabled !== false;
       })
@@ -73,52 +74,60 @@ async function acReissueDevices(actorId) {
     return null;
   }
 }
+/** what is wrong with the typed step-up ('' when nothing): the gateway name first, then the 6-digit code */
+function acReissueFormProblem(name, oneTimeCode) {
+  if (!name) return 'Type the gateway name.';
+  if (!/^[0-9]{6}$/.test(oneTimeCode)) return 'Enter the 6-digit code.';
+  return '';
+}
+/** hand over the fresh key: inside a downloaded installer (package mode, devices read), else shown once for the person to copy */
+async function acReissueDeliver(key, actorId, mode) {
+  var devices = mode === 'package' ? await acReissueDevices(actorId) : null;
+  if (devices) {
+    _download(
+      'chitbridge-install.sh',
+      _buildInstaller({
+        endpoint: CFG.API_BASE /* HX1: the api this app talks to */,
+        key: key,
+        heartbeat_sec: 60,
+        spool_dir: '/opt/chitbridge/spool',
+        devices: devices
+      })
+    );
+    UI.acFreshKey = null;
+    if (typeof paintAcDetail === 'function') paintAcDetail(); // key is INSIDE the installer — never shown raw
+    if (typeof toast === 'function') toast('Key reissued — installer downloaded (key is inside it). Reflash the Pi: sudo bash chitbridge-install.sh');
+  } else {
+    UI.acFreshKey = key;
+    UI.acProvOpen = true;
+    if (typeof paintAcDetail === 'function') paintAcDetail(); // direct-device path: the raw key IS the deliverable, shown once
+    if (typeof toast === 'function') toast(mode === 'package' ? 'The installer could not be built. The old key is dead: copy the new one now.' : 'New ActorKey issued — copy it now.');
+  }
+}
+/** the trimmed text typed in one field of the step-up dialog ('' when the field is not there) */
+function acReissueTyped(fieldId) {
+  return ((document.getElementById(fieldId) || {}).value || '').trim();
+}
+/** the line under the step-up dialog's fields (nothing when the dialog is closed) */
+function acReissueSay(words) {
+  var message = document.getElementById('rg_msg');
+  if (message) message.textContent = words;
+}
+/** the step-up's Confirm: check what was typed, ask the api for a fresh key, then hand it over (installer or copy-once) */
 async function acReissueSubmit() {
-  var g = UI.acReissue || {},
-    id = g.id,
-    mode = g.mode;
-  var name = ((document.getElementById('rg_name') || {}).value || '').trim(),
-    node = ((document.getElementById('rg_otp') || {}).value || '').trim();
-  var m = document.getElementById('rg_msg');
-  if (!name) {
-    if (m) m.textContent = 'Type the gateway name.';
-    return;
-  }
-  if (!/^[0-9]{6}$/.test(node)) {
-    if (m) m.textContent = 'Enter the 6-digit code.';
-    return;
-  }
-  if (m) m.textContent = 'Verifying…';
+  var gate = UI.acReissue || {};
+  var name = acReissueTyped('rg_name'),
+    oneTimeCode = acReissueTyped('rg_otp');
+  var problem = acReissueFormProblem(name, oneTimeCode);
+  if (problem) return acReissueSay(problem);
+  acReissueSay('Verifying…');
   try {
-    var reply = await api('connectorRegen', { params: { actorId: id }, body: { name: name, otp: node } });
+    var reply = await api('connectorRegen', { params: { actorId: gate.id }, body: { name: name, otp: oneTimeCode } });
     var key = reply && reply.provision_key;
-    if (!key) {
-      if (m) m.textContent = 'No key issued.';
-      return;
-    }
+    if (!key) return acReissueSay('No key issued.');
     closeModal();
-    var devs = mode === 'package' ? await acReissueDevices(id) : null;
-    if (devs) {
-      _download(
-        'chitbridge-install.sh',
-        _buildInstaller({
-          endpoint: CFG.API_BASE /* HX1: the api this app talks to */,
-          key: key,
-          heartbeat_sec: 60,
-          spool_dir: '/opt/chitbridge/spool',
-          devices: devs
-        })
-      );
-      UI.acFreshKey = null;
-      if (typeof paintAcDetail === 'function') paintAcDetail(); // key is INSIDE the installer — never shown raw
-      if (typeof toast === 'function') toast('Key reissued — installer downloaded (key is inside it). Reflash the Pi: sudo bash chitbridge-install.sh');
-    } else {
-      UI.acFreshKey = key;
-      UI.acProvOpen = true;
-      if (typeof paintAcDetail === 'function') paintAcDetail(); // direct-device path: the raw key IS the deliverable, shown once
-      if (typeof toast === 'function') toast(mode === 'package' ? 'The installer could not be built. The old key is dead: copy the new one now.' : 'New ActorKey issued — copy it now.');
-    }
+    await acReissueDeliver(key, gate.id, gate.mode);
   } catch (e) {
-    if (m) m.textContent = (e && e.message) || 'Reissue failed.';
+    acReissueSay((e && e.message) || 'Reissue failed.');
   }
 }

@@ -22,5 +22,5 @@ ok(/1?2 row\(s\) not imported/.test(html) || /2 row\(s\) not imported/.test(html
 ok(/line 3 · <b>price<\/b> — &quot;abc&quot; is not a number/.test(html), 'a row shows its line, field and reason (escaped)');
 ok(/line 7 · <b>name<\/b> — no product name &lt;b&gt;/.test(html), 'a second row, and a server string is escaped');
 ok(/data-testid="cf-rejects-download"/.test(html), 'the download button is offered');
-ok(/var takeGood = blocking && \(s\.importable \|\| 0\) > 0/.test(src) && /skip_bad_rows: true/.test(src), 'Import stays on when some rows are good, and asks for skip_bad_rows');
+ok(/var takeGood = blocking && \((?:s|summary)\.importable \|\| 0\) > 0/.test(src) && /skip_bad_rows: true/.test(src), 'Import stays on when some rows are good, and asks for skip_bad_rows');
 console.log('\n' + n + ' passed');

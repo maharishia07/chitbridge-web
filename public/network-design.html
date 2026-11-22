@@ -519,7 +519,7 @@ function paint() {
 /** read the shop's country from /api/entities/me and give the sample stores THAT country's currency (CBSample, the one list); signed out or no country = bare amounts */
 function sampleMoneyFromShop() {
   var tok = null;
-  try { tok = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null; } catch (_) { tok = null; }
+  try { tok = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null; } catch (failure) { tok = null; if (typeof cbQuiet === 'function') cbQuiet('network design: the saved sign-in could not be read, the sample stays money-less', failure); }
   var api = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API; /* SEC 1129: a foreign ?api= is ignored */
   if (!tok || !api || typeof CBSample === 'undefined') return;
   fetch(api + '/api/entities/me', { headers: { Authorization: 'Bearer ' + tok } }).then(function (reply) { return reply.ok ? reply.json() : null; }).then(function (body) {
@@ -531,7 +531,7 @@ function sampleMoneyFromShop() {
     SAMPLE_CCY = ccy;
     Object.keys(CATS).forEach(function (key) { CATS[key].shop.currency_code = ccy; });
     armCart();
-  }).catch(function () { /* the sample stays money-less */ });
+  }).catch(function (failure) { /* the sample stays money-less */ if (typeof cbQuiet === 'function') cbQuiet('network design: the shop country was not read, the sample stays money-less', failure); });
 }
 
 armCart();

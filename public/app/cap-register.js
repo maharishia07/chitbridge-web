@@ -898,6 +898,15 @@ function rgVal(id) {
   return el ? String(el.value || '').trim() : '';
 }
 
+/** the id of the register the form names: one made by an earlier press whose entry then failed is used again, never made twice (EL-13 M6); else it is made now */
+async function rgNewRegisterId(name) {
+  var typeKey = rgVal('rgNewType') || 'other';
+  if (RG.madeNew && RG.madeNew.name === name && RG.madeNew.type === typeKey) return RG.madeNew.id;
+  var made = await api('regSubjectNew', { body: { type_key: typeKey, name: name } });
+  var subjectId = made && made.subject_id;
+  RG.madeNew = subjectId ? { name: name, type: typeKey, id: subjectId } : null;
+  return subjectId;
+}
 /**
  * ⭐⭐ ONE SAVE, WHICH OPENS THE REGISTER IF THE FORM ASKED FOR ONE. Two round trips only when a register is
  * genuinely being created; otherwise one. The register-then-entry split used to be two screens and a refusal
@@ -926,14 +935,7 @@ async function rgSave() {
       return;
     }
     try {
-      /* a register made by an earlier press whose entry then failed is used again, never made twice (EL-13 M6) */
-      var typeKey = rgVal('rgNewType') || 'other';
-      if (RG.madeNew && RG.madeNew.name === name && RG.madeNew.type === typeKey) into = RG.madeNew.id;
-      else {
-        var made = await api('regSubjectNew', { body: { type_key: typeKey, name: name } });
-        into = made && made.subject_id;
-        RG.madeNew = into ? { name: name, type: typeKey, id: into } : null;
-      }
+      into = await rgNewRegisterId(name);
       RG.sel = into;
     } catch (e) {
       toast(rgFail('open the register', e));

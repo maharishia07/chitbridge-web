@@ -35,7 +35,7 @@ assert(/if \(!undo\) toast\._t = setTimeout/.test(toast), 'only a plain notice f
 
 /* 4 · a small fake page: modal() open, focus, trap */
 const app = read('public/app.html') + '\n' + read('public/app/modal-dialog.js'); /* the dialog pattern lives in app/modal-dialog.js */
-const code = ['modal', 'modalFocusables', 'modalDialogOpen', 'modalTrapKey'].map((f) => cut(app, f)).join('\n') + "\nconst MODAL_FOCUSABLE = 'a[href],button,input,select,textarea,summary,[tabindex]';";
+const code = ['modal', 'modalFocusables', 'modalDialogOpen', 'modalTabTarget', 'modalTrapKey'].map((f) => cut(app, f)).join('\n') + "\nconst MODAL_FOCUSABLE = 'a[href],button,input,select,textarea,summary,[tabindex]';";
 let page;
 function el(name, cls) { return { name, attrs: {}, getAttribute(k) { return this.attrs[k] == null ? null : this.attrs[k]; }, setAttribute(k, v) { this.attrs[k] = v; }, classList: { contains: (c) => (cls || '') === c }, focus() { page.active = this; }, type: 'button' }; }
 function open(withTitle) {

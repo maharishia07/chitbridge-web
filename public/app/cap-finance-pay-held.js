@@ -3,6 +3,9 @@
  * CALLED BY public/finance.html (script tag, before cap-finance-pay.js, same late group); cap-finance-pay.js (the supplier row's detail) calls it at run time; its functions are global
  * FLOW      a supplier row opens → fpHeldHTML → fpHeldRead (POST /payments/preview, read only) → fpHeldRow → fpRelease · fpBillActs → fpHold / fpNoteDiff (＋ Entry, cap-entry.js enOpen)
  * CARD      16-finance/cb-finance
+ * ID        FIN002
+ * OWNER     cb-finance
+ * RISK      money
  */
 'use strict';
 /** one bill's two doors (R106): Hold this bill · Note a difference (a rate difference, goods sent back) — each asks first (fpHold, fpNoteDiff) */

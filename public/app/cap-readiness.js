@@ -1262,6 +1262,17 @@ function gatherReadiness(standard, doc) {
     '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🛡️ Gather clearance — ' + esc(UI.rdGather.title) + '</div></div>' + body);
 }
+/** puts the chosen document on the evidence chit; true when it went. The clearance is still recorded by its reference when it did not; the toast says the document did not go (EL-13 M3) */
+async function gatherAttach(chitId, file) {
+  if (!(chitId && file && typeof attUpload === 'function')) return false;
+  try {
+    await attUpload(chitId, file);
+    return true;
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('readiness:gather-attach', failure);
+    return false;
+  }
+}
 async function submitGather() {
   var g = UI.rdGather || {};
   if (!g.standard) return;
@@ -1284,13 +1295,7 @@ async function submitGather() {
     });
     var chitId = reply && reply.chit_id;
     // 2 · attach the document to that chit (best-effort — a reference-only clearance is still valid)
-    var attached = false;
-    if (chitId && file && typeof attUpload === 'function') {
-      try {
-        await attUpload(chitId, file);
-        attached = true;
-      } catch (_) { /* the clearance is still recorded by its reference; the toast below says the document did not go (EL-13 M3) */ }
-    }
+    var attached = await gatherAttach(chitId, file);
     // 3 · record the clearance, pointing at its evidence chit
     await api('readinessGather', {
       body: { standard_key: g.standard, doc_key: g.doc, evidence_ref: chitId || ref || 'recorded', valid_until: valid, status: 'gathered' }

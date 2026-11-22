@@ -14,6 +14,10 @@ function fill(path, params) {
 
 // Single response envelope. Accepts a real {ok,data,error} envelope, or normalises the legacy
 // wrappers ({chits,…}, {entity}, {messages,…}, …) so feature code uses `data` directly.
+/** the words of an error the api answered: a plain string, or the message of a problem object; '' when it has neither */
+function apiErrorWords(j) {
+  return (typeof j.error === 'string' ? j.error : j.error && typeof j.error.message === 'string' && j.error.message) || '';
+}
 /**
  * ── ⭐⭐⭐ THE DOOR NOW SAYS WHAT IT REFUSED ────────────────────────────────────────────────────────────────
  *
@@ -48,7 +52,7 @@ function cbDropNote(key, keys) {
 function unwrap(j, _key) {
   if (j == null || typeof j !== 'object' || Array.isArray(j)) return j;
   if ('ok' in j && ('data' in j || 'error' in j)) {
-    if (j.ok === false) throw new Error((typeof j.error === 'string' ? j.error : j.error && typeof j.error.message === 'string' && j.error.message) || 'Request failed'); /* reviews11 GF-17: an object error is never printed as [object Object] */
+    if (j.ok === false) throw new Error(apiErrorWords(j) || 'Request failed'); /* reviews11 GF-17: an object error is never printed as [object Object] */
     return j.data;
   }
   /**
@@ -161,12 +165,7 @@ function unwrap(j, _key) {
         'may_answer',
         'why',
         'capped',
-        'cap_note',
-        'message',
-        'added',
-        'declared',
-        'warnings',
-        'skipped'
+        'cap_note', 'message', 'added', 'declared', 'warnings', 'skipped'
       ]; /* message · added · declared · warnings · skipped — CR-1 (22 Nov): POST /api/products/bulk answers { message, added, items[], declared[], warnings[], skipped[] } (skipped = codes the shop already held, BK-11); the connector reads it raw, a screen that calls it through api() now keeps all five. */ /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
       for (const mk of SIBS)
         if (mk in j) {

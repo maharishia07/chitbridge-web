@@ -31,9 +31,7 @@
     dateText = Line.dateText,
     lineOf_ = Line.lineOf;
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
-  var BATCH_MAX = 100; /* lines per POST /events/batch (the server's own ceiling) */
-  var MATCH_WINDOW_DAYS = 3;
-
+  var BATCH_MAX = 100, MATCH_WINDOW_DAYS = 3; /* BATCH_MAX: lines per POST /events/batch (the server's own ceiling) */
   /* ── the controller's steps, each on its own: they take the options and the one state object `preview`, so create() only joins them ── */
   /** the words for why the page cannot work yet (the engine did not load); null when it can */
   function engineRefusal(opts) {
@@ -238,8 +236,25 @@
       var replies = await opts.post.many(run.map(function (item) { return itemForPost_(preview, item); }));
       return Array.isArray(replies) && replies.length === run.length ? replies : null;
     } catch (failure) {
+      if (typeof root.cbQuiet === 'function') root.cbQuiet('bank-preview: the many-lines call could not be used, the lines go one at a time', failure);
       return null;
     }
+  }
+  /** the run of plain-entry lines from this position that one call may carry (empty when the adapter cannot batch) */
+  function runFrom_(opts, todo, position, batch) {
+    var batchRun = [];
+    while (batch && position + batchRun.length < todo.length && batchRun.length < BATCH_MAX && opts.post.batchable(todo[position + batchRun.length])) batchRun.push(todo[position + batchRun.length]);
+    return batchRun;
+  }
+  /** post a run in one call and tell the page after each line; false when the door could not take the run (the caller then goes line by line) */
+  async function postRun_(opts, preview, batchRun, onLine) {
+    var replies = await postMany_(opts, preview, batchRun);
+    if (!replies) return false;
+    batchRun.forEach(function (item, at) {
+      preview.results[item.key] = resultOf_(replies[at]);
+      if (onLine) onLine(item, preview.results[item.key]);
+    });
+    return true;
   }
   /** post every ready line in order, tell the page after each (onLine(item, result)), then read the books again so the preview is the truth */
   async function postReady(opts, preview, onLine) {
@@ -249,19 +264,10 @@
     var batch = !!(opts.post && typeof opts.post.many === 'function' && typeof opts.post.batchable === 'function'); /* the adapter can send plain-entry lines many to a call (POST /events/batch) */
     var position = 0;
     while (position < todo.length) {
-      var run = [];
-      while (batch && position + run.length < todo.length && run.length < BATCH_MAX && opts.post.batchable(todo[position + run.length])) run.push(todo[position + run.length]);
-      if (run.length > 1) {
-        var replies = await postMany_(opts, preview, run);
-        if (replies) {
-          run.forEach(function (item, at) {
-            preview.results[item.key] = resultOf_(replies[at]);
-            if (onLine) onLine(item, preview.results[item.key]);
-          });
-          position += run.length;
-          continue;
-        }
-        batch = false; /* the door said no (an owner-approval shop, an old server, a lost answer): one line at a time from here; a client_ref makes a repeat safe */
+      var batchRun = runFrom_(opts, todo, position, batch);
+      if (batchRun.length > 1) {
+        if (await postRun_(opts, preview, batchRun, onLine)) position += batchRun.length;
+        else batch = false; /* the door said no (an owner-approval shop, an old server, a lost answer): one line at a time from here; a client_ref makes a repeat safe */
         continue;
       }
       await postOne(opts, preview, todo[position]);
@@ -456,7 +462,6 @@
       }
     });
   }
-
   /**
    * l16-bank-rules (R69): what the PACK's words say a line is, in ONE sentence the owner's sheet and the demo both print: an own-account transfer, tax paid to the tax office, card takings paid in.
    * null when the words say nothing. It carries no figure and no account; the entry (when the engine composed one) is printed beside it by each page from the engine's own legs.

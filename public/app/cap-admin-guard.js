@@ -2,7 +2,10 @@
  * OWNS      the snapshot of what is on screen (profSnapshot), which sections differ from it (profDirtySections), the three-outcome prompt (profGuard) and what each outcome does (profGuardDo, profSaveSections)
  * CALLED BY public/app/cap-admin.js (profileScreen, setGuard, setSnapshot: the maps PROF_FIELDS and SET_FIELDS and _profSnap stay there), loaded first through CAP_WITH.admin (app.html)
  * FLOW      a screen asks profGuard(go, map, names) before it navigates ──▶ nothing dirty: go() ──▶ else the prompt ──▶ profGuardDo(stay | discard | save) ──▶ saveProfile / saveSettings / saveAutoAssign
+ * ID        ACC002
+ * OWNER     cb-settings
  * CARD      28-platform-and-operations/settings
+ * RISK      plain
  * Host globals: UI · PROF_FIELDS · _profSnap · tx · esc · modal · closeModal · toast · saveProfile · saveSettings · saveAutoAssign (all read when called, not when loaded).
  */
 /** Re-read every profile field currently on screen. Called after each paint. */
@@ -121,7 +124,7 @@ async function profSaveSections(map, secs) {
 /** ⭐ EVERY OUTCOME CONFIRMS ITSELF. Athi: *"a confirmation message for both save and cancel."* Silence after
  *  discarding is indistinguishable from silence after saving, and the difference is the person's work. */
 async function profGuardDo(which) {
-  var go = UI._profGo;
+  var goOn = UI._profGo;
   UI._profGo = null;
   if (typeof closeModal === 'function') closeModal();
   if (which === 'stay') {
@@ -142,5 +145,5 @@ async function profGuardDo(which) {
     profSnapshot(map); // whatever is on screen becomes the new baseline
     toast(tx('Changes discarded.'));
   }
-  if (typeof go === 'function') go();
+  if (typeof goOn === 'function') goOn();
 }

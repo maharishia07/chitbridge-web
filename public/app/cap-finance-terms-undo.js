@@ -3,6 +3,9 @@
  * CALLED BY public/finance.html (script tag, before cap-finance-terms.js); cap-finance-terms.js (ftShopPaint, ftOpen, the saves) calls it at run time; its functions and FT_UNDOABLE are global
  * FLOW      the Changes list → ftUndoFor (the Undo button on the newest change) → ftUndo → CBAction.run (ftMoneyConfirm asks first) → POST booksTermsSet → ftLoad (cap-finance-terms.js) → ftSay
  * CARD      16-finance/cb-finance
+ * ID        FIN004
+ * OWNER     cb-finance
+ * RISK      money
  */
 'use strict';
 /* ── the Changes list: Undo puts the newest change back (a new change, so it is in the list too) ── */

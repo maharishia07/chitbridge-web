@@ -16,7 +16,7 @@ const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf
 const has = (f, text) => src(f).includes(text);
 
 t('EL-17 F3: a kind missing from the batch is asked again', has('app/core.js', 'Object.prototype.hasOwnProperty.call(by, kind)') && has('app/core.js', 'return cbDefsLive(kind);'), 'core');
-t('EL-17 F8: a refused channel line puts back the earlier quantity', has('app/cart.js', 'if (had > 0) put(ns, match.item_id, had);'), 'cart');
+t('EL-17 F8: a refused channel line puts back the earlier quantity', has('app/cart.js', 'if (hadBefore > 0) put(ns, match.item_id, hadBefore);'), 'cart');
 t('GF-23 M1: adding to an all-products offer is refused', has('app/offer-add-confirm.js', 'if (adding && !(Array.isArray(appliesTo.item_ids) && appliesTo.item_ids.length))'), 'offer');
 t('GF-22 M6: the re-read after a good write has its own try', /try \{\s*await read\(id\);\s*\} catch/.test(src('app/chit-sheet.js')), 'sheet');
 t('Clear payment words its failure', has('app/chit-unpay.js', 'failWords(e, tx(') && !has('app/chit-unpay.js', 'toast((e && e.message)'), 'unpay');

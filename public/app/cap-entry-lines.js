@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html and public/finance.html (script tag, before cap-entry.js); cap-entry.js (enFormHTML, the journal step) calls it at run time; its functions are global
  * FLOW      the Journal step → enLinesHTML → enLine / enLineAdd / enLineDel (EN.lines) → enPaint (cap-entry.js) → the server's preview says whether it balances
  * CARD      16-finance/cb-finance
+ * ID        SCR022
+ * OWNER     cb-accounting
+ * RISK      money
  */
 'use strict';
 /* ── the journal's own lines (the CA's door): ledger · Dr/Cr · amount. The server says whether they balance. ── */

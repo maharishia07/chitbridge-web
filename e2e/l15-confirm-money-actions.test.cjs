@@ -36,7 +36,7 @@ sb.CBAction = { ask: null };
 vm.createContext(sb);
 vm.runInContext(liftFns('public/app/accounts-shell.js', ['actAsk'], '  ') + '\nthis.CBAction = { ask: actAsk };', sb);
 vm.runInContext(liftFns('public/app/chit-unpay.js', ['chitUnpayPay', 'chitUnpayCode', 'chitUnpayRefusal', 'chitUnpayWords', 'chitUnpay']), sb);
-vm.runInContext(liftFns('public/app/offer-add-confirm.js', ['prodOfferAskWords', 'prodOfferAllWords', 'prodOfferNextIds', 'prodOfferToAll', 'prodOfferMoved', 'prodOfferConfirm', 'prodOfferRead', 'prodOfferSetReach', 'prodOfferNetworkWas', 'prodOfferDoneWords', 'prodOfferAfterSave', 'prodOfferApply']), sb);
+vm.runInContext(liftFns('public/app/offer-add-confirm.js', ['prodOfferAskWords', 'prodOfferAllWords', 'prodOfferNextIds', 'prodOfferToAll', 'prodOfferMoved', 'prodOfferBusyWords', 'prodOfferRefusal', 'prodOfferConfirm', 'prodOfferRead', 'prodOfferSetReach', 'prodOfferNetworkWas', 'prodOfferDoneWords', 'prodOfferAfterSave', 'prodOfferApply']), sb);
 const writes = (n) => calls.filter((c) => c.name === n).length;
 const tick = () => new Promise((r) => setImmediate(r));
 

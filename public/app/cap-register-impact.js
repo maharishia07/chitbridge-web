@@ -2,6 +2,8 @@
  * OWNS      IMPACT, what this breaks or what broke it: rgWalkPick · rgWalkLoad · rgWalkDir · rgWalkFrom · rgWalkLabel · rgGraph · rgDangling · rgImpact (the view and its origin box)
  * CALLED BY cap-register.js (rgPaint draws rgImpact for the Impact tab; the Impact button calls rgWalk*), loaded first through CAP_WITH.register (app.html); reads RG and the rg* helpers of cap-register.js when called
  * FLOW      Impact tab ──▶ rgImpact ──▶ rgWalkPick (the origin) ──▶ rgWalkLoad (the walk) ──▶ rgGraph (forwards or backwards) · rgDangling (a dependency with no target is listed, never dropped)
+ * ID        SCR007
+ * OWNER     cb-rail
  * CARD      03-disputes-service-and-register/raida-register-and-report
  * RISK      plain
  */

@@ -3,6 +3,7 @@
  * CALLED BY cap-move-in.js (miDoneHTML draws the mi_skipped box, miImport paints it; the Download and Start again buttons call miDownload / miAgain); loaded beside it by accounts.html (the movein late group)
  * FLOW      miImport → miDoneHTML → miPaintSkipped(rows) → CBList over miSkippedColumns · Download → miDownload (a .csv of the skipped rows) · Start again → miAgain
  * CARD      14-accounting/move-in-from-xero-quickbooks
+ * ID        BKS024
  * OWNER     cb-accounting
  * RISK      plain
  */

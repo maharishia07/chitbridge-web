@@ -124,10 +124,6 @@
  "app/cap-move-in.js": {
   "field": 1
  },
- "app/cap-network-storefront.js": {
-  "n.key": 18,
-  "val": 1
- },
  "app/cap-network.js": {
   "item.key": 3,
   "k": 3,

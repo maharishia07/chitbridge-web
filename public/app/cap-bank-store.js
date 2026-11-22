@@ -102,6 +102,7 @@ function bankStoreBatch(fn) {
     for (let from = 0; from < held.length; from += 200) bankStoreSend(held.slice(from, from + 200));
   }
 }
+/** send these steps as marks in ONE request, chained after the one before so the order made is the order kept; a failure is said on the line and the device copy stays */
 function bankStoreSend(actions) {
   const acct = bankStoreState.view.stmtAcct || bankStoreState.view.acct /* B5-07: the account the statement was read for, never the dropdown's */,
     body = { account: acct, file_hash: (bankStoreState.view.file && bankStoreState.view.file.hash) || undefined, marks: actions.map(bankStoreMark) };

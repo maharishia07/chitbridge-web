@@ -3,6 +3,7 @@
  * CALLED BY cap-crm-record.js (crmRecordClick opens it from the record's Log button and reads LOG for the kind, direction and follow-up toggles); loaded by crm.html before it
  * FLOW      crmLogOpen(p) → the sheet → the person fills it → crmLogSave → api (a timeline entry, optionally a follow-up) → the record repaints
  * CARD      11-crm-and-marketing/crm-record
+ * ID        CRM006
  * OWNER     cb-crm
  * RISK      plain
  */

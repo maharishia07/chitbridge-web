@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html (script tag, before cap-opening.js) · public/app.html (CAP_WITH books: opening-saved); cap-opening.js calls obShowSaved at run time; its functions are global
  * FLOW      obView (cap-opening.js) → obShowSaved → obEnsureParties (cap-opening-bills.js) → the saved rows + obYearsHtml (cap-opening-years.js)
  * CARD      14-accounting/README
+ * ID        BKS022
+ * OWNER     cb-accounting
+ * RISK      money
  */
 'use strict';
 /* ── what is saved ── */

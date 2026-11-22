@@ -3,7 +3,7 @@
 const assert = require('assert'); const fs = require('fs'); const path = require('path'); const vm = require('vm');
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
 const grab = (name) => { const m = html.match(new RegExp('^function ' + name + '[(][^]*?^}', 'm')); assert.ok(m, name + ' not found'); return m[0]; };
-const names = ['chitUnpaidWord', 'chitStatusWord', 'chitNoPayWhy', 'chitMarkPaidButton', 'chitIsNote', 'chitNoteWord', 'chitPaymentCell'];
+const names = ['chitPurposeOf', 'chitUnpaidWord', 'chitStatusWord', 'chitNoPayWhy', 'chitMarkPaidButton', 'chitIsNote', 'chitNoteWord', 'chitPaymentCellHidden', 'chitPaymentCell'];
 const sb = { tx: (s) => s, esc: (s) => String(s), payHasUpi: () => false, SESSION: null, CBSheet: { isDead: () => false }, typeof: undefined };
 vm.createContext(sb); vm.runInContext(names.map(grab).join('\n') + '\nthis.cell=(l,v)=>l+"|"+v;this.pc=chitPaymentCell;', sb);
 let fail = 0; const ok = (n, f) => { try { f(); console.log('  ok ' + n); } catch (e) { fail++; console.log('  FAIL ' + n + '\n      ' + String(e.message).slice(0, 200)); } };

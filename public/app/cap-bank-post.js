@@ -153,6 +153,7 @@
       try {
         out = await deps.api('booksEventsBatch', { body: { events: bodies } });
       } catch (failure) {
+        if (typeof cbQuiet === 'function') cbQuiet('bank-post: the many-entries call could not be used, the lines go one at a time', failure);
         return null;
       }
       var results = out && out.results;

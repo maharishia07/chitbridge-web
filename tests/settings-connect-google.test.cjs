@@ -19,14 +19,14 @@ const check = (what, fn) => {
   try { fn(); pass++; console.log('  ok   ' + what); } catch (failure) { fail++; console.log('  FAIL ' + what + '\n       ' + String(failure && failure.message).split('\n')[0]); }
 };
 const settings = read('public/app/cap-settings-provider.js');
-const start = settings.indexOf('function provRow()');
-const end = settings.indexOf('function readProv()');
+const start = settings.indexOf('function provRow(');
+const end = settings.indexOf('function readProv(');
 assert.ok(start > 0 && end > start, 'the connect row is in cap-settings-provider.js');
 const row = settings.slice(start, end + 400);
 const shell = read('public/app/accounts-shell.js');
 
 check('the row shows which Google account is connected (its e-mail), not a subject or issuer', () => {
-  assert.ok(/row\.link\.email/.test(row) && /T\('Connected'\)/.test(row) && /T\('Not connected'\)/.test(row));
+  assert.ok(/row\.link\.email/.test(row) && /inWords\('Connected'\)/.test(row) && /inWords\('Not connected'\)/.test(row));
   assert.ok(!/\.subject|\.issuer|subject_alt/.test(row), 'the row never reads a subject or issuer');
 });
 check('Connect and Disconnect are library buttons with control ids, and the PIN box has its id', () => {
@@ -39,12 +39,12 @@ check('both carry the PIN in the body (the api re-proves it) and run through CBA
 });
 check('greyed with a sentence in every state that cannot work (not on, not accepted, no PIN, loading, error)', () => {
   for (const words of ['Google sign-in is being switched on.', 'This business does not accept Google sign-in.', 'Set a PIN first.', 'Checking.', 'Could not read this. Try again.']) {
-    assert.ok(row.includes("T('" + words + "')"), words);
+    assert.ok(row.includes("inWords('" + words + "')"), words);
   }
   assert.ok(/row\.host\.live !== true/.test(row) && /row\.reproof === 'code'/.test(row));
 });
 check('Disconnect asks first, in words, with a danger yes', () => {
-  assert.ok(/confirm: \{ title: T\('Disconnect Google\?'\)/.test(row) && /danger: true/.test(row));
+  assert.ok(/confirm: \{ title: inWords\('Disconnect Google\?'\)/.test(row) && /danger: true/.test(row));
 });
 check('the page only follows the address the api gives; it writes no link itself', () => {
   assert.ok(/window\.location\.assign\(url\)/.test(row));

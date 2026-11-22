@@ -1374,6 +1374,30 @@ function netDelete(key) {
    server's plan carries `from`, so the revert target is known exactly rather than guessed. */
 var NET_PLAT_TO_DESIGN = { public: 'public', network: 'protected', private: 'private' };
 
+/** GF-12 M4: a place-only or order-only change has no `from` visibility. It must NOT fall through to Private (that silently hid a public store and undid nothing). Put the place back if the plan says what it was; an order move has no old value here, so say so and leave visibility alone. */
+function _netRevertPlaceOnly(n, raw) {
+  if (raw.place && raw.place.from) {
+    n.place = raw.place.from;
+    if (typeof toast === 'function') toast('"' + n.name + '" place left as it is on the store');
+    _netMark();
+    _netRerender();
+  } else if (typeof toast === 'function') toast('"' + n.name + '" has no earlier visibility to go back to — nothing changed', true);
+}
+/** a revert the closed parent does not allow: say which node to revert first, change nothing */
+function _netRevertBlocked(n, back) {
+  var p = _netNode(n.parent_key);
+  if (typeof toast === 'function')
+    toast(
+      '"' +
+        n.name +
+        '" cannot go back to ' +
+        _netLab(back) +
+        ' while ' +
+        (p && !p.root ? '"' + p.name + '"' : 'the network') +
+        ' is closed — revert that first.',
+      true
+    );
+}
 function netRevertOne(key) {
   var n = _netNode(key);
   if (!n) return;
@@ -1396,38 +1420,13 @@ function netRevertOne(key) {
   }
   if (raw.purpose) n.purpose = raw.purpose.from || ''; // both moved → put both back
 
-  // GF-12 M4: a place-only or order-only change has no `from` visibility. It must NOT fall through to Private
-  // (that silently hid a public store and undid nothing). Put the place back if the plan says what it was; an order
-  // move has no old value here, so say so and leave visibility alone.
-  if (!pl.from && !raw.from) {
-    if (raw.place && raw.place.from) {
-      n.place = raw.place.from;
-      if (typeof toast === 'function') toast('"' + n.name + '" place left as it is on the store');
-      _netMark();
-      _netRerender();
-    } else if (typeof toast === 'function') toast('"' + n.name + '" has no earlier visibility to go back to — nothing changed', true);
-    return;
-  }
+  if (!pl.from && !raw.from) return _netRevertPlaceOnly(n, raw);
 
   var back = NET_PLAT_TO_DESIGN[pl.from] || 'private';
   // A revert cannot break the cascade: if what it sits inside is closed, putting it back to public is not
   // available, and the honest answer is to say which node to revert instead of quietly doing something else.
   var ceil = _netCeilingFor(n);
-  if (NET_RANK[back] > NET_RANK[ceil]) {
-    var p = _netNode(n.parent_key);
-    if (typeof toast === 'function')
-      toast(
-        '"' +
-          n.name +
-          '" cannot go back to ' +
-          _netLab(back) +
-          ' while ' +
-          (p && !p.root ? '"' + p.name + '"' : 'the network') +
-          ' is closed — revert that first.',
-        true
-      );
-    return;
-  }
+  if (NET_RANK[back] > NET_RANK[ceil]) return _netRevertBlocked(n, back);
   n.exposure = back;
   if (typeof toast === 'function') toast('"' + n.name + '" left as ' + _netLab(back));
   _netMark();

@@ -1,5 +1,8 @@
 /* app/chit-pay.js - MARK A CHIT PAID: the sheet, the press, the books' question, and the UPI QR for a walk-in customer.
  *
+ * ID        DTL001
+ * OWNER     cb-finance
+ * RISK      money
  * OWNS      chitMarkPaid(id, amount) · readPayForm · keepPaymentOnRow · chitPayBody · chitPaySubmit · chitPayAsk · chitShowQr(id, amount) · PAY_PRESS_REF (one key per open of the sheet).
  * CALLED BY public/app.html chitPaymentCell / chitMarkPaidButton (the Mark paid button's onclick) and the chit sheet's QR button.
  * FLOW      Mark paid -> sheet (method, reference, amount) -> POST chitPay (amount in minor units) -> 409 ALREADY_PAID warnings -> chitPayAsk confirms -> same press re-sent with the codes acknowledged.
@@ -66,47 +69,58 @@ function chitPayAsk(id, form, e) {
   );
   return true;
 }
-/** the QR for a walk-in customer: the seller's own UPI id (the profile map / Business identity row upi_id) */
-async function chitShowQr(id, amount) {
-  /* the cached party may predate the id (a sync landed after the screen opened) — read once more when it has none */
-  let upi = UI._party && UI._party.upi_id;
-  if (!upi) {
+/** the seller's UPI id: the cached party's, else one more read of the profile (a sync may have landed after the screen opened); '' when none */
+async function sellerUpiId() {
+  let upiId = UI._party && UI._party.upi_id;
+  if (!upiId) {
     try {
       const reply = await api('profileGet');
       UI._party = (reply && reply.invoice_party) || {};
-      upi = UI._party.upi_id;
+      upiId = UI._party.upi_id;
     } catch (failure) {
       console.warn('CHIT-PAY-QR-01 the UPI id could not be read; the sheet says none is on record', (failure && failure.message) || failure);
     }
   }
-  if (!upi) {
-    modal(
-      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP203' }
-    );
-    return;
-  }
-  const link =
+  return upiId;
+}
+/** the upi://pay link for one chit: payee, shop name, amount (when given), currency, and the chit's short reference */
+function upiPayLink(upiId, id, amount) {
+  return (
     'upi://pay?pa=' +
-    encodeURIComponent(upi) +
+    encodeURIComponent(upiId) +
     '&pn=' +
     encodeURIComponent(String(SESSION.name || '').slice(0, 60)) +
     (amount ? '&am=' + encodeURIComponent(String(CBMoney.round(amount))) : '') +
     '&cu=' +
     encodeURIComponent(moneyCode() || '') +
     '&tn=' +
-    encodeURIComponent('CB-' + String(id).slice(0, 8));
-  let img = '';
+    encodeURIComponent('CB-' + String(id).slice(0, 8))
+  );
+}
+/** the QR image tag for a link, '' when the library is not loaded or the draw fails (the sheet then says so in words) */
+function upiQrImage(link) {
   try {
-    if (typeof qrcode === 'function') {
-      const qr = qrcode(0, 'M');
-      qr.addData(link);
-      qr.make();
-      img = qr.createImgTag(5, 8).replace('<img ', '<img data-testid="chit-upi-qr" alt="UPI QR" ');
-    }
+    if (typeof qrcode !== 'function') return '';
+    const code = qrcode(0, 'M');
+    code.addData(link);
+    code.make();
+    return code.createImgTag(5, 8).replace('<img ', '<img data-testid="chit-upi-qr" alt="UPI QR" ');
   } catch (failure) {
     console.warn('CHIT-PAY-QR-02 the UPI QR could not be drawn; the sheet shows the link without it', (failure && failure.message) || failure);
+    return '';
   }
+}
+/** the QR for a walk-in customer: the seller's own UPI id (the profile map / Business identity row upi_id) */
+async function chitShowQr(id, amount) {
+  const upiId = await sellerUpiId();
+  if (!upiId) {
+    modal(
+      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP203' }
+    );
+    return;
+  }
+  const qrImage = upiQrImage(upiPayLink(upiId, id, amount));
   modal(
-    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP204' }
+    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upiId)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${qrImage || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP204' }
   );
 }

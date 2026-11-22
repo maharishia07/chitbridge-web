@@ -1042,13 +1042,13 @@ var CBCatalogueApp = (function () {
    * P-F-05: the item form asks for the tax rate (the pack's word: GST), so no new item is saved with no answer. Blank = the shop's default (a registered shop: the pack's rate, shown as the
    * placeholder; an unregistered one: zero, the api says so on the bill); a typed 0 is GST-free and asks WHY from the pack's own supply kinds. Shown only where the pack has a tax scheme.
    */
-  function gstFieldHTML(d) {
+  function gstFieldHTML(draft) {
     var pack = taxPack();
     if (!pack || !pack.scheme) return '';
     var fallback = defaultRate(),
       kinds = (pack.supplyKinds && Object.keys(pack.supplyKinds)) || [],
-      saidKind = d.tax_kind || d.supply_kind || '',
-      shown = d.gst_rate === undefined || d.gst_rate === null ? '' : String(d.gst_rate);
+      saidKind = draft.tax_kind || draft.supply_kind || '',
+      shown = draft.gst_rate === undefined || draft.gst_rate === null ? '' : String(draft.gst_rate);
     return (
       '<div class="cat-two"><div>' +
       ctField('gst', esc(pack.scheme) + ' %', shown, 'inputmode="decimal" autocomplete="off" placeholder="' + esc(fallback === null ? T('rate') : String(fallback) + ' (' + T('the shop default') + ')') + '"') +

@@ -123,7 +123,7 @@
   function stepSaid(step, row) {
     return step === 'complete' && row.kind !== 'task' ? stepLabel(step, row) + '.' : T(STEP_SAID[step]);
   }
-  var W = root.CBTasksWords.make(T), ageWord = W.ageWord, howWord = W.howWord, forWord = W.forWord, wordCell = W.wordCell, whoWord = W.whoWord, linesWord = W.linesWord; /* the row wording moved to cap-tasks-words.js (file-size ratchet, batch 1129) */
+  var taskWords = root.CBTasksWords.make(T), ageWord = taskWords.ageWord, howWord = taskWords.howWord, forWord = taskWords.forWord, wordCell = taskWords.wordCell, whoWord = taskWords.whoWord, linesWord = taskWords.linesWord; /* the row wording moved to cap-tasks-words.js (file-size ratchet, batch 1129) */
   function sayOf(value) {
     return value ? value.say || value.why || '' : '';
   }
@@ -599,6 +599,15 @@
       html += '<div class="tk-stuck" data-testid="tk-stuck-why"><span class="tag red">' + esc(T('Stuck')) + '</span> ' + esc(chit.stuck_why || '') + '</div>';
     return html;
   }
+  /** may this order be billed now, and if not the sentence why: EL-15 T1, the server's verdict governs when it sends one; an order still waiting to be accepted is not billable */
+  function billVerdict(chit) {
+    var acts = chit.actions || {};
+    if (chit.billed) return { ok: false, say: T('Already billed') };
+    if (chit.stage === 'closed') return { ok: false, say: T('This order is closed') };
+    if (acts.bill && acts.bill.ok === false) return acts.bill;
+    if (acts.accept && acts.accept.ok !== false) return { ok: false, say: T('Accept the order first') };
+    return { ok: true };
+  }
   /**
    * Bill it (O2C step 5 · invoice): an order in becomes the counter bill on the TILL — invoice number and tax frozen by the till's one bill path
    * (orderToBill), never a second bill path here. In a frame on the till: the host hears { event: 'bill', chit_id } and bills it. Standalone: the
@@ -606,17 +615,7 @@
    */
   function billRow(chit) {
     if (chit.kind !== 'order_in') return '';
-    var acts = chit.actions || {};
-    /* EL-15 T1: the server's verdict governs when it sends one; an order still waiting to be accepted is not billable */
-    var verdict = chit.billed
-      ? { ok: false, say: T('Already billed') }
-      : chit.stage === 'closed'
-        ? { ok: false, say: T('This order is closed') }
-        : acts.bill && acts.bill.ok === false
-          ? acts.bill
-          : acts.accept && acts.accept.ok !== false
-            ? { ok: false, say: T('Accept the order first') }
-            : { ok: true };
+    var verdict = billVerdict(chit);
     return actRow('tk_do_bill', T('Bill it'), verdict, board.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', verdict.ok ? '' : 'quiet', 'TSK003-B05');
   }
   function tkBill(chit) {
@@ -933,28 +932,29 @@
       }
     );
   }
+  /** the small panel under a line that asks how much came in (buyer) or went out (seller), with the quantity offered and a button that records it */
   function deliverPanel(chit, line) {
     var host = $('tk_lmore_' + line.line_id);
     if (!host) return;
     var buyer = chit.kind === 'order_out'; /* the buyer confirms what CAME IN, offered the seller's claim */
     var offer = buyer && line.theirs > 0 ? Math.max(0, Math.round((line.theirs - (line.delivered || 0)) * 1000) / 1000) || line.remaining : line.remaining;
     var asked = false;
-    var qid = 'tk_dq_' + line.line_id; /* one id per line: two open panels never share a field (LENS2 1129) */
+    var qtyFieldId = 'tk_dq_' + line.line_id; /* one id per line: two open panels never share a field (LENS2 1129) */
     host.innerHTML =
-      '<div class="tk-panel"><label class="sub" for="' + qid + '">' +
+      '<div class="tk-panel"><label class="sub" for="' + qtyFieldId + '">' +
       esc(T(buyer ? 'How much came in?' : 'How much went out?')) +
       ' <span class="mono">' +
       esc(line.unit || '') +
       '</span></label>' +
-      '<input data-cbsid="TSK003-I02" class="inp mono" id="' + qid + '" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
+      '<input data-cbsid="TSK003-I02" class="inp mono" id="' + qtyFieldId + '" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
       esc(offer) +
       '" autocomplete="off">' +
-      '<button data-cbsid="TSK003-B13" type="button" class="act" id="' + qid + '_go" data-testid="tk-deliver-go">' +
+      '<button data-cbsid="TSK003-B13" type="button" class="act" id="' + qtyFieldId + '_go" data-testid="tk-deliver-go">' +
       esc(T(buyer ? 'Received' : 'Record')) +
       '</button></div>';
-    $(qid).focus();
-    $(qid + '_go').onclick = function () {
-      var typed = parseFloat(String($(qid).value).replace(/[^0-9.-]/g, ''));
+    $(qtyFieldId).focus();
+    $(qtyFieldId + '_go').onclick = function () {
+      var typed = parseFloat(String($(qtyFieldId).value).replace(/[^0-9.-]/g, ''));
       if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
         return;
@@ -966,7 +966,7 @@
         $('tk_out').textContent = total + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered') + '. ' + T('Press again to record it anyway.');
         return;
       }
-      tkDeliver(chit, line, typed, $(qid + '_go'));
+      tkDeliver(chit, line, typed, $(qtyFieldId + '_go'));
     };
   }
   /** what went out on a line: POST /chits/:id/deliver-lines (lib/deliverline — events, never a stored total) */

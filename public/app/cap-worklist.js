@@ -1802,42 +1802,58 @@ async function wlActSave(kind) {
     WLL.saving = false;
   }
 }
+/** the trimmed text typed in one field of the cost / delivery card ('' when the field is not there) */
+function wlActFieldText(fieldId) {
+  var field = document.getElementById(fieldId);
+  return field ? String(field.value).trim() : '';
+}
+/** the cost row typed on the card, or the sentence that says what is missing: { row } | { refusal } */
+function wlActCostRow(lineId) {
+  var row = { line_id: lineId, kind: 'add' };
+  row.particulars = wlActFieldText('wl_what');
+  row.quantity = wlActFieldText('wl_cqty') === '' ? 0 : Number(wlActFieldText('wl_cqty'));
+  row.unit = wlActFieldText('wl_cunit') || null;
+  row.amount = wlActFieldText('wl_amt') === '' ? null : Number(wlActFieldText('wl_amt'));
+  /* ⭐ The reference is what turns a typed name into a catalogue fact. Only set when the person actually
+     picked one — a hand-typed 'brake shoe' must not claim to be a catalogue row. */
+  /* ⚠️ No catalogue reference on a HAND-TYPED cost, and that is correct: this form is for the things that
+     are not in the catalogue — a call-out, a one-off charge, labour. Anything that IS in the catalogue is
+     added through the picker above, which carries the item id itself. */
+  if (!row.particulars) return { refusal: 'Say what the cost was for' };
+  if (!row.quantity && !row.amount) return { refusal: 'Give a quantity or an amount' };
+  return { row: row };
+}
+/** the delivery row typed on the card, or the sentence that says what is missing: { row } | { refusal } */
+function wlActDeliveryRow(line) {
+  var row = { line_id: line.line_id };
+  row.quantity = Number(wlActFieldText('wl_qty'));
+  row.unit = line.unit || null;
+  row.reference = wlActFieldText('wl_ref') || null;
+  if (!isFinite(row.quantity) || row.quantity === 0) return { refusal: 'A delivery needs a quantity' };
+  return { row: row };
+}
+/** after a cost is added the card stays open for the next one: its fields are cleared and the delivery progress the server just wrote is applied */
+function wlActAfterCost(reply) {
+  ['wl_what', 'wl_cqty', 'wl_cunit', 'wl_amt'].forEach(function (fieldId) {
+    var field = document.getElementById(fieldId);
+    if (field) field.value = '';
+  });
+  var material = document.getElementById('wl_mat');
+  if (material) material.value = '';
+  /* The event the server just wrote — apply it so the list below updates without a full worklist reload. */
+  if (reply && reply.progress && WLL.det) {
+    WLL.det.line_delivery = reply.progress;
+  }
+}
 async function wlActSaveNow(kind) {
   var r = WLL.row;
   if (!r) return;
-  var node = function (id) {
-    var e = document.getElementById(id);
-    return e ? String(e.value).trim() : '';
-  };
-  var row = { line_id: r.line_id };
-  if (kind === 'cost') {
-    row.kind = 'add';
-    row.particulars = node('wl_what');
-    row.quantity = node('wl_cqty') === '' ? 0 : Number(node('wl_cqty'));
-    row.unit = node('wl_cunit') || null;
-    row.amount = node('wl_amt') === '' ? null : Number(node('wl_amt'));
-    /* ⭐ The reference is what turns a typed name into a catalogue fact. Only set when the person actually
-       picked one — a hand-typed 'brake shoe' must not claim to be a catalogue row. */
-    /* ⚠️ No catalogue reference on a HAND-TYPED cost, and that is correct: this form is for the things that
-       are not in the catalogue — a call-out, a one-off charge, labour. Anything that IS in the catalogue is
-       added through the picker above, which carries the item id itself. */
-    if (!row.particulars) {
-      toast('Say what the cost was for');
-      return;
-    }
-    if (!row.quantity && !row.amount) {
-      toast('Give a quantity or an amount');
-      return;
-    }
-  } else {
-    row.quantity = Number(node('wl_qty'));
-    row.unit = r.unit || null;
-    row.reference = node('wl_ref') || null;
-    if (!isFinite(row.quantity) || row.quantity === 0) {
-      toast('A delivery needs a quantity');
-      return;
-    }
+  var typed = kind === 'cost' ? wlActCostRow(r.line_id) : wlActDeliveryRow(r);
+  if (typed.refusal) {
+    toast(typed.refusal);
+    return;
   }
+  var row = typed.row;
   try {
     var _res = await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: [row] } });
     toast(kind === 'cost' ? 'Added to the line' : 'Delivery recorded');
@@ -1852,16 +1868,7 @@ async function wlActSaveNow(kind) {
      * pre-filled amount is how the second item silently inherits the first one's price.
      */
     if (kind === 'cost') {
-      ['wl_what', 'wl_cqty', 'wl_cunit', 'wl_amt'].forEach(function (id) {
-        var e = document.getElementById(id);
-        if (e) e.value = '';
-      });
-      var ms = document.getElementById('wl_mat');
-      if (ms) ms.value = '';
-      /* The event the server just wrote — apply it so the list below updates without a full worklist reload. */
-      if (_res && _res.progress && WLL.det) {
-        WLL.det.line_delivery = _res.progress;
-      }
+      wlActAfterCost(_res);
       /**
        * ⚠️⚠️ DO NOT CALL wlLoad() HERE. It repaints `mainbody` — twice — and the overlay lives inside it, so
        * refreshing the list behind the card CLOSES the card. That is the identical fault that made "add a

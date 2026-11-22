@@ -292,6 +292,16 @@ function bkshBankEnd(line) {
     end = bkbModeOf(bkshBook().accts, code) || code;
   return (+line.debit_minor || 0) > 0 ? { paid_from: end, from: end } : { into: end, to: end };
 }
+/** a line that posted keeps the answer it was taught as a rule, and records which rule decided it */
+function bkshKeepTaught(items, results) {
+  BKSH.ruleOf = BKSH.ruleOf || {};
+  const taught = (BKSH.ctl && BKSH.ctl.view().taught) || {};
+  items.forEach((item) => {
+    if (!(results[item.key] && results[item.key].ok)) return;
+    if (taught[item.key]) bkbKeepRule(taught[item.key]); /* the line posted, so the answer is remembered: the next one like it is proposed from the rule */
+    if (item.rule === 'learned' && item.learned_id) BKSH.ruleOf[item.key] = item.learned_id; /* the audit: this line was decided by a rule */
+  });
+}
 /**
  * BNK-new-10: the lines the owner just added from the sheet were CONFIRMED by the owner (the press named what it reached), so each is accepted as it comes back matched: the accept mark names the entry
  * it made, and the bank log no longer lists it as posted-not-accepted. The refs added in this sheet session are remembered here; nothing is accepted that the sheet did not post.
@@ -305,13 +315,7 @@ function bkshNoteAdded() {
     if (item.moveTo && results[item.key] && results[item.key].ok && results[item.key].entry_no) BKSH.movedAdded[item.key] = results[item.key].entry_no; /* posted in the next open month: its own accept mark names it below */
   });
   bkshBook().postedLocal = bkshBook().postedLocal || {};
-  BKSH.ruleOf = BKSH.ruleOf || {};
-  const taught = (BKSH.ctl && BKSH.ctl.view().taught) || {};
-  items.forEach((item) => {
-    if (!(results[item.key] && results[item.key].ok)) return;
-    if (taught[item.key]) bkbKeepRule(taught[item.key]); /* the line posted, so the answer is remembered: the next one like it is proposed from the rule */
-    if (item.rule === 'learned' && item.learned_id) BKSH.ruleOf[item.key] = item.learned_id; /* the audit: this line was decided by a rule */
-  });
+  bkshKeepTaught(items, results);
   Object.keys(results).forEach((ref) => {
     if (results[ref] && results[ref].ok) {
       BKSH.added[ref] = true;

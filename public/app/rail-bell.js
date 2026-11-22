@@ -289,8 +289,7 @@
     bellKit.doc.addEventListener('keydown', onKey);
     var apiObj = {
       el: el,
-      refresh: read,
-      repaint: paint,
+      refresh: read, repaint: paint,
       count: function () {
         return bell.count;
       },

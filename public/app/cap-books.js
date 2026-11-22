@@ -976,6 +976,10 @@ function statementHTML(r, partyId) {
    duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
    the outcome come from the server; this unit paints them. */
 var PAY = null;
+/** the name for the sheet title: the row's own string when it handed one, else the { name } of a prefill object, else "" (CB Finance hands { name, after }: the row's name AND the list to re-read) */
+function payNameOf(rowName, prefill) {
+  return rowName || (typeof prefill.name === 'string' ? prefill.name : '');
+}
 /**
  * The third argument (every other door calls payOpen(kind, partyId) as before) is ONE of:
  *   a name (string) — the Dues / CB Finance row's own name, for pages that load no party lists (WX-O2C);
@@ -990,11 +994,10 @@ function payOpen(kind, partyId, pre) {
   /* ⚠️ WX-P2P-10 + WX-O2C (2026-10-13, the real stack): on CB Accounts / Receivables / CB Finance (no supplier / customer list loaded) the sheet
      opened as "Pay ·" / "Receive · " — no name until the preview answered. The row that opened it holds the name: BK.dues (the one dues read), or
      the name the Dues / Finance row hands (a string). A prefill object (bank rec) still carries its own name; the preview's party.name wins later. */
-  var d = (BK.dues && BK.dues[partyId]) || {},
-    nm = typeof pre === 'string' ? pre : '';
+  var d = (BK.dues && BK.dues[partyId]) || {}, nm = typeof pre === 'string' ? pre : '';
   var o = pre && typeof pre === 'object' && ('offer' in pre || 'after' in pre) ? pre : {},
     offer = o.offer && o.offer.valid ? o.offer : null;
-  nm = nm || (typeof o.name === 'string' ? o.name : ''); /* CB Finance hands { name, after }: the row's name AND the list to re-read */
+  nm = payNameOf(nm, o);
   if (typeof pre === 'string' || o === pre) pre = null;
   PAY = {
     kind: kind,

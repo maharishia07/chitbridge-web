@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html (script tag, before cap-bank-sheet.js); cap-bank-sheet.js and cap-bank.js call it at run time (bkshLockNotice, bkshReadMonths); its functions are global
  * FLOW      bankSheetOpen (cap-bank-sheet.js) → bkshReadMonths → bkshLockNotice (the band's notice) → bkshReopen / bkshLockMove → bkshLockRepaint
  * CARD      16-finance/bank-reconciliation-and-bank-rail
+ * ID        BKS015
+ * OWNER     cb-finance
+ * RISK      money
  */
 'use strict';
 /* ── W15-85 · A LOCKED MONTH, SAID BEFORE ANY WORK ─────────────────────────────────────────────────────────────────────────────────

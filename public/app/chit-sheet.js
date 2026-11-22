@@ -830,7 +830,7 @@
       '</span> <span class="cs-step" data-testid="cs-step">' +
       esc(T(STEP[m.status] || statusWord(m.status))) +
       '</span></div>' +
-      pageNoteHTML() + (root.CBDocHead ? root.CBDocHead.html(m) : '') + /* AU-F-11: the document head, app/chit-doc-head.js */
+      pageNoteHTML() + docHeadHTML(m) + /* AU-F-11: the document head, app/chit-doc-head.js */
       orderHTML(m) +
       linesHTML(m) +
       (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstBlockHTML(m)) +
@@ -1052,6 +1052,18 @@
     }
   }
 
+  /** AU-F-11: the document head block (app/chit-doc-head.js), '' on a page that does not load it */
+  function docHeadHTML(m) {
+    return root.CBDocHead ? root.CBDocHead.html(m) : '';
+  }
+  /** after a step is written: read the chit again; a failed re-read says so on the sheet rather than "Could not change it" (GF-22 M6 / EL-22 S6) */
+  async function rereadAfterStep(id) {
+    try {
+      await read(id);
+    } catch (_) {
+      CS.note = T('Done. The sheet did not refresh — open it again to see it.');
+    }
+  }
   async function read(id) {
     var r = CS.sample ? root.CBChitSheetSample.read() : await api('chit', { params: { id: id } });
     if (CS.id !== id) return;
@@ -1245,12 +1257,7 @@
         });
         if (i >= 0) UI.rows[i].state = to;
       } catch (_) {}
-      /* GF-22 M6 / EL-22 S6: the step is written; a failed re-read must not say "Could not change it" */
-      try {
-        await read(id);
-      } catch (_) {
-        CS.note = T('Done. The sheet did not refresh — open it again to see it.');
-      }
+      await rereadAfterStep(id); /* GF-22 M6 / EL-22 S6: the step is written; a failed re-read must not say "Could not change it" */
       /* the Waiting row leaves at once (bkWaitGone — the row flipped, no reload); the Day book's to-do is the server's: read again behind it */
       /* FX-F10W2: a rejection closes the row on the server too ("Rejected — not posted") — so it leaves the list the same way */
       if (now && !stepIn(now, 'open') && typeof root.bkWaitGone === 'function') root.bkWaitGone(id);

@@ -293,8 +293,7 @@ function messagesScreen() {
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
             (function () {
               var nestedN = item.msgs.length;
-              /* EL-11 M15: the inbox returns unread-or-kept only, so it is "waiting" unless the list shows All */
-              return nestedN > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + nestedN + (RPL.all ? ' msgs' : ' waiting') + '</span>' : '';
+              return nestedN > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + nestedN + (RPL.all ? ' msgs' : ' waiting') + '</span>' : ''; /* EL-11 M15: the inbox returns unread-or-kept only, so it is "waiting" unless the list shows All */
             })() +
             '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' +
             esc(msgWhen(m.created_at)) +

@@ -158,6 +158,10 @@ jobs:
           node e2e/reviews12-screens.test.cjs
           node e2e/reviews5-price-typed.test.cjs
           node e2e/reviews5-unsaved-guard.test.cjs
+          node e2e/cap-admin-guard-minimums.test.cjs
+          node e2e/cap-register-impact-minimums.test.cjs
+          node e2e/cap-readiness-ai-minimums.test.cjs
+          node e2e/cap-traceability-minimums.test.cjs
           node e2e/dues-one-sign.test.cjs
           node e2e/list-total-pinned.test.cjs
           node e2e/polish-r-locale.test.cjs
@@ -457,6 +461,11 @@ jobs:
           node e2e/books-parts.test.cjs
           node e2e/assign-bar.test.cjs
           node tests/chit-pay-ask.test.cjs
+          node tests/chit-pay-qr.test.cjs
+          node tests/cap-chit2-reprice.test.cjs
+          node tests/compose-catalogue-fill.test.cjs
+          node tests/cap-connector-reissue.test.cjs
+          node tests/cap-worklist-card.test.cjs
           node tests/chit-sheet-captured.test.cjs
           node tests/cur1-money-reader.test.cjs
           node tests/chit-sheet-lines.test.cjs

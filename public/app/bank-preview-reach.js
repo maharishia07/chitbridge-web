@@ -3,6 +3,9 @@
  * CALLED BY public/app/bank-preview.js (the one controller; node: required when the global is absent) · e2e/bank-preview.test.cjs through it. Loaded BEFORE bank-preview.js by public/accounts.html and public/bank-demo.html.
  * FLOW      preview.items + preview.projection.totals/counts → reachOf → confirmWords → the popup (CBLabKit.confirm); nothing is worked out here: every figure is the engine's, carried
  * CARD      16-finance/bank-reconciliation-and-bank-rail
+ * ID        BKS014
+ * OWNER     cb-finance
+ * RISK      money
  * Split out of bank-preview.js (websplit 1129): behaviour unchanged, the same functions.
  */
 (function (root) {

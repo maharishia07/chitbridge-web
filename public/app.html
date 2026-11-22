@@ -22492,13 +22492,17 @@ function chitNoteWord(c, pay) {
   const word = String(chitStatusWord(c) || '').replace(/_/g, ' ').trim();
   return word ? word.charAt(0).toUpperCase() + word.slice(1) : 'Open';
 }
-function chitPaymentCell(c, cell, quoted) {
+/** true when this chit's payment cell is not drawn at all: the buyer's copy of an order, or a credit / debit note */
+function chitPaymentCellHidden(c) {
   /* ⚠️ THE SELLER'S CELL ONLY (Athi, 2026-09-05, from Chola Auto Care's Order tab: "they cannot make the payment settings").
      The party who SENT the order is the buyer: no Mark paid, no QR of their own — the seller records the payment on the
      seller's copy. A buyer's view of paying (the seller's QR) is a separate thing, not this cell. */
   const h = (c && c.header) || c || {};
-  if (h.sender_entity_id && typeof SESSION !== 'undefined' && SESSION && SESSION.entity && h.sender_entity_id === SESSION.entity) return '';
-  if (/^(credit_note|debit_note)$/.test(chitPurposeOf(c))) return ''; /* AU-F-11: a credit note is money owed back, not a bill to be paid: no Unpaid, no Mark paid, no QR */
+  if (h.sender_entity_id && typeof SESSION !== 'undefined' && SESSION && SESSION.entity && h.sender_entity_id === SESSION.entity) return true;
+  return /^(credit_note|debit_note)$/.test(chitPurposeOf(c)); /* AU-F-11: a credit note is money owed back, not a bill to be paid: no Unpaid, no Mark paid, no QR */
+}
+function chitPaymentCell(c, cell, quoted) {
+  if (chitPaymentCellHidden(c)) return '';
   const bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
   const pay = bj.payment || null;
   if (chitIsNote(c)) return cell(tx('Settlement'), `<span data-testid="chit-note-status" style="color:var(--grey)">${esc(tx(chitNoteWord(c, pay)))}</span>`); /* WALK-X X-F-12: a credit or debit note is not a debt: no Unpaid, no Mark paid */
@@ -24719,6 +24723,23 @@ function paintRowsKeepScroll() {
   });
   pgPaintTotal();
 }
+/** keep the rollup answer (per-state counts, the open disputes) on the page state, stamped with when it came */
+function keepRollupReply(reply) {
+  UI._rollupAt = Date.now();
+  UI.rollup = (reply && reply.groups) || [];
+  UI.disputeOpen = (reply && reply.dispute_open) || 0;
+}
+/** WALK-X X-F-03: once per session the inbox opens on the tab that holds the work (a tab the person then picks is theirs); true when it switched tab and the list must be read again */
+function openTabWithWork() {
+  const pick = UI._tabAutoDone ? null : firstTabWithWork(rollupBuckets(), UI.state);
+  UI._tabAutoDone = true;
+  if (!pick || UI.search) return false;
+  UI.state = pick;
+  UI.sel = null;
+  UI.detail = null;
+  bgRenderApp(); /* a loader never repaints over an open modal */
+  return true;
+}
 async function loadList(silent) {
   // silent = a background auto-refresh: NEVER show the loading spinner/skeleton, don't touch the detail pane — just
   // fetch and patch the rows in place. The spinner shows only on the FIRST / manual load (silent falsy).
@@ -24859,19 +24880,9 @@ async function loadList(silent) {
     if (_rollupP) {
       try {
         const rl = await _rollupP;
-        UI._rollupAt = Date.now();
-        UI.rollup = (rl && rl.groups) || [];
-        UI.disputeOpen = (rl && rl.dispute_open) || 0;
+        keepRollupReply(rl);
         if (_left()) return;
-        const _pick = UI._tabAutoDone ? null : firstTabWithWork(rollupBuckets(), UI.state);
-        UI._tabAutoDone = true; /* WALK-X X-F-03: once per session — the inbox opens on the tab that holds the work; a tab the user then picks is theirs */
-        if (_pick && !UI.search) {
-          UI.state = _pick;
-          UI.sel = null;
-          UI.detail = null;
-          bgRenderApp(); /* a loader never repaints over an open modal */
-          return loadList(true);
-        }
+        if (openTabWithWork()) return loadList(true);
         paintRowsOnly();
       } catch (_) {
         UI.rollup = [];
@@ -25666,30 +25677,36 @@ function chitDocHead(c) {
 function chitPurposeOf(c) {
   return String((c && (c.kind || c.purpose)) || (c && c.header && c.header.purpose) || '');
 }
+/** a credit note's refund line, read from what the chit stored (business_json.refund.total); '' when it holds none */
+function frozenRefundHTML(c, totalTid) {
+  const refundTotal = ((c.business_json || (c.header && c.header.business_json) || {}).refund || {}).total;
+  if (typeof refundTotal !== 'number') return '';
+  return `<div class="ir" data-testid="chit-money-refund" style="margin:8px 12px 10px"><span class="nm">${tx('Refund')}</span><span class="qt" data-testid="${totalTid || 'chit-total'}">${fmtMoney(refundTotal, c.currency)}</span></div>`;
+}
+/** what the money block says when the chit holds no frozen figures: hidden, not billed yet, a receipt, a refund, not issued, or the older-bill / error words */
+function frozenMoneyAbsentHTML(c, totalTid) {
+  /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
+  if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
+  /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
+  if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
+  /* BG-F-06: a credit note and a goods receipt are not issued bills: the api sends them with no frozen invoice and no summary money, so the red "No issued figures" and a header "AED 0.00" told the owner a 233.33 return was nothing. A credit note READS the refund it stored (business_json.refund.total); a receipt carries quantities, its lines hold the prices. Never worked out here. */
+  if (c.kind === 'receipt') return `<div class="ir" data-testid="chit-money-receipt" style="margin:8px 12px 10px;color:var(--grey)">${tx('A goods receipt has no bill total.')}</div>`;
+  const refundLine = c.kind === 'credit_note' ? frozenRefundHTML(c, totalTid) : '';
+  if (refundLine) return refundLine;
+  const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
+  if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
+  const older =
+    !!c.issued_at &&
+    new Date(c.issued_at) <
+      new Date(ONE_COMPUTATION_SINCE); /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
+  return older
+    ? `<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
+    : `<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
+}
 function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   const FM = frozenMoney(c);
-  if (!FM) {
-    /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
-    if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
-    /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
-    if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
-    /* BG-F-06: a credit note and a goods receipt are not issued bills: the api sends them with no frozen invoice and no summary money, so the red "No issued figures" and a header "AED 0.00" told the owner a 233.33 return was nothing. A credit note READS the refund it stored (business_json.refund.total); a receipt carries quantities, its lines hold the prices. Never worked out here. */
-    if (c.kind === 'receipt') return `<div class="ir" data-testid="chit-money-receipt" style="margin:8px 12px 10px;color:var(--grey)">${tx('A goods receipt has no bill total.')}</div>`;
-    if (c.kind === 'credit_note') {
-      const rf = ((c.business_json || (c.header && c.header.business_json) || {}).refund || {}).total;
-      if (typeof rf === 'number') return `<div class="ir" data-testid="chit-money-refund" style="margin:8px 12px 10px"><span class="nm">${tx('Refund')}</span><span class="qt" data-testid="${totalTid || 'chit-total'}">${fmtMoney(rf, c.currency)}</span></div>`;
-    }
-    const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
-    if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
-    const older =
-      !!c.issued_at &&
-      new Date(c.issued_at) <
-        new Date(ONE_COMPUTATION_SINCE); /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
-    return older
-      ? `<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
-      : `<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
-  }
-  const html = CBSheet.moneyBlockHTML({ money: FM, cur: c.currency, bj: c.business_json || (c.header && c.header.business_json) || {} }, totalTid);
+  if (!FM) return frozenMoneyAbsentHTML(c, totalTid);
+  const html =CBSheet.moneyBlockHTML({ money: FM, cur: c.currency, bj: c.business_json || (c.header && c.header.business_json) || {} }, totalTid);
   return wrapTid ? `<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>` : html;
 }
 /** the parts of GET /chits/:id that ride onto the open chit unchanged: delivery, assignment, cost-blind flag, unconfirmed change, billed flag */
@@ -26950,12 +26967,16 @@ function _aiRunPdf() {
     } catch (_) {}
   }, 350);
 }
+/** true when the rail is not empty: rows are on screen, or work waits on another tab (X-F-03) */
+function railHasChitsOrWork() {
+  return (UI.rows && UI.rows.length) || (hasRollup() && ['open', 'act', 'close'].some((tab) => rollupBuckets()[tab].c > 0));
+}
 function detailInner() {
   const c = UI.detail;
   /* ⭐ THE SECOND BRANCH IS THE FIRST SCREEN ANYONE EVER SEES — an account with no chits at all. It named
      Compose in bold prose and then made them go find it. Now it offers it. */
   if (!c)
-    return (UI.rows && UI.rows.length) || (hasRollup() && ['open', 'act', 'close'].some((tab) => rollupBuckets()[tab].c > 0)) /* X-F-03: work waits on another tab — the rail is not empty */
+    return railHasChitsOrWork()
       ? emptyState('🧾', tx('Select a chit'), tx('Pick one from the list to see its content, status and summary.'))
       : emptyState('🚃', tx('Your bogie is empty'), tx('Nothing on your rail yet.'), { label: tx('Compose'), onclick: 'compose()' });
   const back = '';
@@ -30185,9 +30206,9 @@ if (!location.hash) location.hash = SESSION.token ? '#/' : '#/login';
 route();
 if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'h') {
   (function () {
-    var m = CBSignin.machine({ apiBase: CFG.API_BASE, onIn: function (s) { setSession({ token: s.token, role: s.role, name: s.name, entity: s.entity, bridgeId: s.bridgeId, duty: s.duty }); } });
-    m.providerHandoff(LANDED_AT_BOOT.value).then(function () {
-      var S = m.state();
+    var signinMachine = CBSignin.machine({ apiBase: CFG.API_BASE, onIn: function (s) { setSession({ token: s.token, role: s.role, name: s.name, entity: s.entity, bridgeId: s.bridgeId, duty: s.duty }); } });
+    signinMachine.providerHandoff(LANDED_AT_BOOT.value).then(function () {
+      var S = signinMachine.state();
       if (S.at === 'in') return go('#/app');
       if (S.at === 'setpin') { setSession({ token: S.token || '', role: 'actor' }); LOGIN.step = 'setpin'; LOGIN.kind = 'actor'; return go('#/login'); }
       LOGIN.err = S.why || CBSignin.WORDS.sso.fallback;

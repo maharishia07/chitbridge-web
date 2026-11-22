@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html, crm.html, finance.html, tasks.html (script tag right after cap-books.js; the Dues list calls it at run time) · app.html CAP_WITH books: books-needs; its functions are global
  * FLOW      the Dues read (BK.duesRaw.needs) → bkNeedsHead (the header line, each chip a filter) → bkNeedFilters (CBList) → a row's bkNeedChips → bkNeedOpen → the party on its Needs you tab
  * CARD      16-finance/cb-finance
+ * ID        BKS010
+ * OWNER     cb-finance
+ * RISK      plain
  */
 'use strict';
 /**

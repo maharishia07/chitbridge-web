@@ -1276,8 +1276,7 @@
     function reopenShopTile() {
       if (mode !== 'home' || !S.manifest || !shopIdOf()) return;
       greyedEntries(el, S.manifest).forEach(function (entry) {
-        var tile = el.querySelector('.cbsh-box.off[data-id="' + String(entry.id).replace(/[^A-Za-z0-9_-]/g, '') + '"]');
-          if (tile) tile.outerHTML = card(entry); /* reviews11 GF-19: a tile redrawn meanwhile no longer aborts the rest */
+        var tile = el.querySelector('.cbsh-box.off[data-id="' + String(entry.id).replace(/[^A-Za-z0-9_-]/g, '') + '"]'); if (tile) tile.outerHTML = card(entry); /* reviews11 GF-19: a tile redrawn meanwhile no longer aborts the rest */
         facts.read(entry.id);
       });
     }
@@ -1439,8 +1438,7 @@
       if (!element) return;
       e.preventDefault();
       e.stopPropagation();
-      var go = String(element.getAttribute('data-href') || '');
-      if (/^([/](?![/])|#|[a-z0-9_-]+[.]html)/i.test(go)) root.location.href = go; /* reviews11 GF-21 shell: a path of this site only — never a javascript: or foreign link from a fact line */
+      var go = String(element.getAttribute('data-href') || ''); if (/^([/](?![/])|#|[a-z0-9_-]+[.]html)/i.test(go)) root.location.href = go; /* reviews11 GF-21 shell: a path of this site only — never a javascript: or foreign link from a fact line */
     });
     var scrim = $('.cbsh-scrim');
     if (scrim)

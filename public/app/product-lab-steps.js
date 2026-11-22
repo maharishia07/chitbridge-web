@@ -4,6 +4,9 @@
  * CALLED BY public/product-lab.html paint() and the step moves; it reads the page's STEP, LIST, nPicked() and calls goStep(n).
  * FLOW      paint() -> paintSteps() -> #steps innerHTML; a click calls goStep(n).
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/product-lab
+ * ID        PLB001
+ * OWNER     cb-ux-locale
+ * RISK      plain
  */
 function paintSteps() {
   var n = nPicked();

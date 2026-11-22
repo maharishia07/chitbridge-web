@@ -104,7 +104,7 @@ const has = (f, text) => src(f).includes(text);
 
   // GF-14 M1 / M2, EL-14 M2
   t('the vault base is the copy that was sent', has('app/cap-shop.js', 'UI._vaultBase = sent;'), 'base is the model at response time');
-  t('connectors_in_use is not written from an unread list', has('app/cap-settings.js', 'if (pol === null) {'), 'writes from []');
+  t('connectors_in_use is not written from an unread list', has('app/cap-settings.js', 'if (pol !== null) return false;'), 'writes from []');
   const cs = vm.createContext({ STANDARDS: [{ s: 'live' }, { s: 'np' }, { s: 'part' }, { s: 'live', k: 'build-rule' }] });
   vm.runInContext(liftFns('public/app/cap-standards.js', ['stdCounts']) + '\nthis.f = { stdCounts };', cs);
   const counts = cs.f.stdCounts();

@@ -3,6 +3,9 @@
  * CALLED BY public/accounts.html (script tag, before cap-period.js, same late group); cap-period.js peYearStatus calls it at run time; its functions are global
  * FLOW      peYearStatus (cap-period.js) → peYearChecksHtml (→ peYearFix, peYearWhy, peYearWarnLines) → peYearActionsHtml (→ peYearReopenHtml) · closed: peYearClosedEvidence
  * CARD      14-accounting/README
+ * ID        BKS020
+ * OWNER     cb-accounting
+ * RISK      money
  */
 'use strict';
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
