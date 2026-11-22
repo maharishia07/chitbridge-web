@@ -192,20 +192,24 @@
     var kind = SOON[intent] ? intent : 'signin';
     addCss(); /* the registration page draws this without ever mounting the window */
     var skipped = skip || [];
-    var rows = Object.keys(SOON[kind])
+    var real = [], grey = [];
+    Object.keys(SOON[kind])
       .filter(function (key) {
         return skipped.indexOf(key) < 0;
       })
-      .map(function (key) {
+      .forEach(function (key) {
         var words = SOON[kind][key];
         if (kind === 'signin' && (live || []).indexOf(key) >= 0)
-          return '<button data-cbsid="' + SOON_ID[kind][key] + '" type="button" class="cbsi-m" data-cbsi="provider" data-provider="' + key + '" data-testid="signin-' + key + '">' + words[0] + '</button>';
-        return (
-          '<button data-cbsid="' + SOON_ID[kind][key] + '" type="button" class="cbsi-m cbsi-soon" disabled aria-disabled="true" data-testid="' + kind + '-' + key + '-soon" title="' + words[1] + '">' +
-          words[0] + '</button><p class="cbsi-said" data-testid="' + kind + '-' + key + '-why">' + words[1] + '</p>'
-        );
+          real.push('<button data-cbsid="' + SOON_ID[kind][key] + '" type="button" class="cbsi-m" data-cbsi="provider" data-provider="' + key + '" data-testid="signin-' + key + '">' + words[0] + '</button>');
+        else
+          grey.push(
+            '<button data-cbsid="' + SOON_ID[kind][key] + '" type="button" class="cbsi-m cbsi-soon" disabled aria-disabled="true" data-testid="' + kind + '-' + key + '-soon" title="' + words[1] + '">' +
+              words[0] + '</button><p class="cbsi-said" data-testid="' + kind + '-' + key + '-why">' + words[1] + '</p>'
+          );
       });
-    return rows.length ? '<div class="cbsi-soonrow" data-testid="' + kind + '-sso-soon">' + rows.join('') + '</div>' : '';
+    /* 1129 (390x844 scrolled 36 px): the greyed doors fold into ONE line, as the leaders do (More ways to sign in); a live provider stays a visible button */
+    var more = grey.length ? '<details class="cbsi-more" data-testid="' + kind + '-more"><summary>More ways to ' + (kind === 'register' ? 'sign up' : 'sign in') + '</summary>' + grey.join('') + '</details>' : '';
+    return real.length + grey.length ? '<div class="cbsi-soonrow" data-testid="' + kind + '-sso-soon">' + real.join('') + more + '</div>' : '';
   }
   function methodsOn(c) {
     var on = (c && c.methods) || {};
@@ -708,7 +712,7 @@
     '.cbsi .cbsi-go,.cbsi .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--green,#16693F);background:var(--green,#16693F);color:var(--on-green,var(--card,#fff));font:inherit;font-size:15px;font-weight:700;cursor:pointer;width:100%}' +
     '.cbsi .cbsi-go[disabled]{opacity:.6;cursor:default}' +
     '.cbsi .cbsi-m{background:var(--card,#fff);color:var(--ink,#1D1B16);border-color:var(--line,#DDD6C6)}' +
-    '.cbsi .cbsi-m[disabled]{opacity:.55;cursor:not-allowed}.cbsi-soonrow{display:flex;flex-direction:column;gap:6px;margin-top:10px}.cbsi-soonrow .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#1D1B16);font:inherit;font-size:15px;font-weight:600}.cbsi-soonrow .cbsi-said{margin:0 0 4px}' +
+    '.cbsi .cbsi-m[disabled]{opacity:.55;cursor:not-allowed}.cbsi-soonrow{display:flex;flex-direction:column;gap:6px;margin-top:10px}.cbsi-soonrow .cbsi-m{height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);color:var(--ink,#1D1B16);font:inherit;font-size:15px;font-weight:600}.cbsi-soonrow .cbsi-said{margin:0 0 4px}.cbsi-more>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:13.5px;color:var(--muted,var(--grey,#5E594D));text-decoration:underline;text-underline-offset:3px}.cbsi-more[open]>summary{margin-bottom:6px}.cbsi-more .cbsi-m{width:100%;margin-bottom:4px}' +
     '.cbsi .cbsi-ln{display:inline-block;background:none;border:0;padding:6px 0;color:var(--blue-i,var(--blue-d,#174A87));text-decoration:underline;text-underline-offset:3px;font:inherit;font-size:13.5px;cursor:pointer;text-align:start;min-height:40px}' +
     '.cbsi .cbsi-why{margin:0;padding:10px 13px;border-radius:10px;background:var(--red-t,#FBEAE3);border:1px solid var(--red-b,#E7B9A8);color:var(--red-i,#8E3517);font-size:13.5px}' +
     '.cbsi .cbsi-said{margin:0;font-size:13.5px;color:var(--muted,var(--grey,#5E594D))}' +
