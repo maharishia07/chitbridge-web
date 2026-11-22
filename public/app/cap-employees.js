@@ -768,13 +768,8 @@
         esc(T('Add')) +
         '</button></form>'
     );
-    var tm = null,
-      /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
-      keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T);
-    /* the picked label says in one line what it can do (the server's own why: lib/access PRESETS); the label also carries its hat, so label and access agree */
-    var showWhy = function () { var pick = E.choices[+$('emp_l').value] || {}; $('emp_lw').textContent = pick.why || ''; };
-    $('emp_l').onchange = showWhy;
-    showWhy();
+    var tm = null, keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T); /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
+    Copy.watchLevel($('emp_l'), $('emp_lw'), E.choices); /* the picked label says in one line what it can do (the server's own why: lib/access PRESETS) */
     $('emp_n').oninput = function () {
       clearTimeout(tm);
       var name = $('emp_n').value.trim();

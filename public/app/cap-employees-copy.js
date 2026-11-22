@@ -1,7 +1,8 @@
 /**
- * cap-employees-copy.js — Employees: the sign-in name, whole, with its Copy control.
+ * cap-employees-copy.js — Employees: the sign-in name, whole, with its Copy control, and the add form's two field watchers (the key, the level's one-line why).
  *
  * OWNS      signInName (the name AS TYPED at the sign-in screen, never cut) · nameWithCopy (the name and its Copy control, code EMP001-B14) · wireCopy (Copy: the whole name to the clipboard, said on the button); moved out of cap-employees.js (2026-11-17, size ratchet; behaviour unchanged)
+ *           watchLevel (the picked access label says in one line what it can do: the server's own why, lib/access PRESETS)
  * CALLED BY public/employees.html (<script src>, before cap-employees.js) · app/cap-employees.js (the list's sign-in column, the person's sheet, the added-person note)
  * FLOW      nameWithCopy(userId, testid, cls) draws the name and the button → the host calls wireCopy() once the HTML is in the page → a press copies and says Copied on the button itself
  * CARD      17-people-employees-hr-and-payroll/pin-otp-first-sign-in
@@ -80,5 +81,14 @@
     };
     return { typed: function () { return typedKey; }, ask: askSuggest };
   }
-  root.CBEmployeesCopy = { watchKey: watchKey, signInName: signInName, nameWithCopy: nameWithCopy, peopleCount: peopleCount, wireCopy: wireCopy };
+  /** the picked label says in one line what it can do (choices[i].why, the server's own words); the label also carries its hat, so label and access agree */
+  function watchLevel(select, line, choices) {
+    var show = function () {
+      var pick = choices[+select.value] || {};
+      line.textContent = pick.why || '';
+    };
+    select.onchange = show;
+    show();
+  }
+  root.CBEmployeesCopy = { watchLevel: watchLevel, watchKey: watchKey, signInName: signInName, nameWithCopy: nameWithCopy, peopleCount: peopleCount, wireCopy: wireCopy };
 })(typeof window !== 'undefined' ? window : this);

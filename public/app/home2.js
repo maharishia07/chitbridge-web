@@ -82,8 +82,7 @@
     var fact = factOf(pick), figure = figureOf(fact, pick);
     return { n: figure.n, w: figure.w, full: fact, tone: needs.length ? 'dn' : '', amber: needs.length, trend: trendOf(panel) };
   }
-  /** the sales change against last year, as the Till card's teaser says it ("↑ +12% vs last year") split for a closed row: the arrow and percent shown, "vs last year" in the title and the spoken label; null when the server sent none.
-   * Leader practice (Shopify, Stripe, Xero home): the change rides the headline sales figure as a small delta, never a card of its own that a closed row hides. */
+  /** the sales change against last year, as the Till card's teaser says it ("↑ +12% vs last year") split for a closed row: the arrow and percent shown, "vs last year" in the title and the spoken label; null when the server sent none. Leader practice (Shopify, Stripe, Xero home): the change rides the headline sales figure as a small delta, never a card of its own that a closed row hides. */
   function trendOf(panel) {
     var node = panel.querySelector('[data-testid="shell-fact-trend"]'), words = node ? (node.textContent || '').replace(/\s+/g, ' ').trim() : '';
     var parts = /^(\S+\s*\S*%)\s+(.+)$/.exec(words);
