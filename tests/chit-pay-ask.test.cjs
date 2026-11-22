@@ -6,7 +6,7 @@
  */
 'use strict';
 const fs = require('fs'), path = require('path'), assert = require('assert');
-const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+const src = ['app.html', 'app/chit-pay.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8')).join('\n'); /* chitPaySubmit and chitPayAsk live in app/chit-pay.js */
 /** one top-level function of app.html by name (its text up to the next top-level function or doc comment) */
 function fnSource(name) {
   const at = src.indexOf('\n' + (name === 'chitPaySubmit' ? 'async ' : '') + 'function ' + name + '(');

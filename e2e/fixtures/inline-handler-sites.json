@@ -59,8 +59,6 @@
   "clearFolder(|${esc(_tname.slice(2))}",
   "clearMsgLog(|${tx('Clear')}",
   "click|${click}",
-  "closeModal(|${esc(tx('Cancel'))}",
-  "closeModal(|${esc(tx('Close'))}",
   "closeModal(|${html}",
   "closeModal(|${tx('Cancel')}",
   "closeModal(|${tx('Got it')}",
@@ -470,6 +468,10 @@
  "app/cb-words.js": [],
  "app/chart-sample.js": [],
  "app/chit-doc-head.js": [],
+ "app/chit-pay.js": [
+  "closeModal(|${esc(tx('Cancel'))}",
+  "closeModal(|${esc(tx('Close'))}"
+ ],
  "app/chit-price-moved.js": [],
  "app/chit-sheet.js": [],
  "app/chit-unpay.js": [],
