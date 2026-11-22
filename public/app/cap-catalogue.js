@@ -599,7 +599,7 @@ function _cfRejectsHtml(reply) {
     rejected.slice(0, 40).map(function (item) {
       return '<li style="color:var(--disp)">line ' + item.line + ' · <b>' + esc(item.field) + '</b> — ' + esc(item.message) + '</li>';
     }).join('') +
-    '</ul><button id="cf_rejects_dl" data-testid="cf-rejects-download" type="button" class="act quiet" style="margin-top:8px">Download the rows to fix</button>'
+    '</ul><button id="cf_rejects_dl" data-cbsid="CTG003-B04" data-testid="cf-rejects-download" type="button" class="act quiet" style="margin-top:8px">Download the rows to fix</button>'
   );
 }
 /** the rejected rows as a .csv the person fixes and imports again (BOM: Excel keeps accents without it) */
