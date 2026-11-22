@@ -11,8 +11,8 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-shop.js'), 'utf8');
-const lift = (name) => { const m = src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n')); if (!m) throw new Error(name + ' not found in cap-shop.js'); return m[0]; };
+const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-shop-patch.js'), 'utf8');
+const lift = (name) => { const m = src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n')); if (!m) throw new Error(name + ' not found in cap-shop-patch.js'); return m[0]; };
 const ctx = { UI: {}, console };
 vm.createContext(ctx);
 vm.runInContext(['vaultUniqueKey', 'vaultKeys', 'vaultRowBody', 'vaultRowSame', 'vaultNewSectionPatch', 'vaultRowsPatch', 'vaultPatch'] /* vaultPatch was split into these two (MNT) */.map(lift).join('\n'), ctx);

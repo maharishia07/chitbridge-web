@@ -1564,7 +1564,7 @@ body.lab-only #cbtestpanel{
 
 <!-- module 1 of the app split: the shared client (api + envelope + auth/status branching) -->
 <script src="/cb-offline.js"></script>
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the 16 themes, ONE list for every page (engines screen v1.15.0) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the avatar, its menu, and the look it owns (theme · font · text size · bold · motion) — one file, every page -->
 <script src="/app/cb-words.js"></script>
@@ -6204,8 +6204,8 @@ const CAP_WITH = {
   worklist: ['worklist-raida'],
   folders: ['folders-metrics'],
   books: ['opening', 'opening-years', 'opening-bills', 'books-lock', 'books-tree', 'books-cheques', 'books-waiting-cells', 'books-waiting-view', 'books-party'] /* the Opening balances page (cap-opening.js) loads before the Ledger screens that open it */,
-  admin: ['shop', 'settings', 'mis'],
-  country: ['shop']
+  admin: ['shop', 'settings', 'mis', 'admin-guard'],
+  country: ['shop'], shop: ['shop-patch'], readiness: ['readiness-ai'], register: ['register-impact'], settings: ['settings-provider', 'settings-guide']
 }; /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */ /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */ /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name) {
   if (CAP_LOADED[name]) return Promise.resolve();

@@ -12,6 +12,7 @@
 const fs = require('fs'), path = require('path');
 const PUB = path.join(__dirname, '..', 'public', 'app');
 const COUNTS = { 'cap-testing': 143, 'cap-catsetup': 54, 'cap-register': 44, 'cap-workforce': 53, 'cap-worklist': 24, 'cap-definitions': 29, 'cap-readiness': 21, 'cap-supplies': 20, 'cap-flag': 14, 'cap-bank': 16, 'cap-network-member': 11, 'cap-mark-sheet': 9, 'cap-traceability': 8, 'bank-preview-ui-parts': 28 };
+const SPLIT = { 'cap-register': ['cap-register-impact'], 'cap-readiness': ['cap-readiness-ai'] };
 const regPath = [process.env.UIID_REG, path.join(__dirname, '..', '..', 'chitbridge-docs', 'SCREENS.json'), 'C:/dev/SCREENS.json'].filter(Boolean).filter((p) => fs.existsSync(p))[0];
 const reg = regPath ? JSON.parse(fs.readFileSync(regPath, 'utf8')).screens : {};
 const live = {}, retired = {};
@@ -19,7 +20,7 @@ Object.keys(reg).forEach((k) => { (reg[k].retired ? retired : live)[reg[k].code]
 let fails = 0, pending = 0;
 const ok = (c, m) => { if (c) console.log('  ok ' + m); else { fails++; console.log('  FAIL ' + m); } };
 Object.keys(COUNTS).forEach((f) => {
-  const src = fs.readFileSync(path.join(PUB, f + '.js'), 'utf8');
+  const src = [f].concat(SPLIT[f] || []).map((n) => fs.readFileSync(path.join(PUB, n + '.js'), 'utf8')).join('\n'); /* a capability split by job counts its halves together (web split 1129) */
   const codes = [...src.matchAll(/data-cbsid=\\?["']([A-Z]{3}[0-9]{3}(?:-[A-Z][0-9]{2})?)\\?["']/g)].map((m) => m[1]);
   ok(codes.length >= COUNTS[f], f + '.js carries ' + codes.length + ' codes (at least ' + COUNTS[f] + ')');
   codes.forEach((c) => {

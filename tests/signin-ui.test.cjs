@@ -392,7 +392,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     delete globalThis.location; delete globalThis.history;
     const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
     assert.ok(/kind === 'k'[^\n]*cb_connect_code/.test(read('app.html')), 'app.html keeps the code for Settings');
-    const settings = read('app/cap-settings.js');
+    const settings = read('app/cap-settings-provider.js');
     assert.ok(/row\.reproof === 'code'\) return T\('Set a PIN first\.'\)/.test(settings), 'no PIN: greyed with the way out');
     assert.ok(/api\('providerLinkFinish', \{ body: \{ code: code \} \}\)/.test(settings), 'the session spends the code');
     assert.ok(/providerLinkFinish: \{ m: 'POST', p: '\/api\/signin\/provider\/link\/finish'/.test(read('app/accounts-shell.js')), 'the route is in the register of calls');
@@ -400,7 +400,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
 
   await it('N3: the #k= landing goes to the real Settings > Account address (one constant), never to #/settings, and Account spends the code at paint', async () => {
     const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
-    const app = read('app.html'), shell = read('app/accounts-shell.js'), settings = read('app/cap-settings.js');
+    const app = read('app.html'), shell = read('app/accounts-shell.js'), settings = read('app/cap-settings.js') + read('app/cap-settings-provider.js');
     const home = /account: '([^']+)'/.exec(shell);
     assert.ok(home && home[1] === '/settings.html#/account', 'CB_HOMES.account is the one address');
     assert.ok(!/#\/settings/.test(app.slice(app.indexOf('var LANDED_AT_BOOT'), app.indexOf('var LANDED_AT_BOOT') + 1200)), 'the landing no longer sends to #/settings (no such route)');

@@ -6,7 +6,7 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
 const HTML = fs.readFileSync(__dirname + '/../public/app.html', 'utf8');
-const SRC = fs.readFileSync(__dirname + '/../public/app/cap-register.js', 'utf8');
+const SRC = ['cap-register.js', 'cap-register-impact.js'].map((n) => fs.readFileSync(__dirname + '/../public/app/' + n, 'utf8')).join('\n'); /* the Impact view is its own file (web split 1129) */
 const grab = (text, name) => {
   const at = text.search(new RegExp('^(async )?function ' + name + '[(]', 'm'));
   if (at < 0) throw new Error('no ' + name);

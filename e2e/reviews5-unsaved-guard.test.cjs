@@ -19,7 +19,7 @@ async function run(saveResult) {
     PROF_FIELDS: { a: [] }, closeModal() {}, tx: (s) => s, toast: (s) => toasts.push(s),
     profDirtySections: () => ['a'], profSnapshot() {}, saveProfile: async () => saveResult, saveSettings: async () => saveResult, saveAutoAssign: async () => saveResult
   });
-  vm.runInContext(liftFns('public/app/cap-admin.js', ['profSaveSections', 'profGuardDo']) + '\nthis.f = profGuardDo;', cx);
+  vm.runInContext(liftFns('public/app/cap-admin-guard.js', ['profSaveSections', 'profGuardDo']) + '\nthis.f = profGuardDo;', cx);
   await cx.f('save');
   return { toasts, went };
 }

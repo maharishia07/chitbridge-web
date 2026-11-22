@@ -109,7 +109,7 @@ function go() {
   if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED();
 }
 </script>
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>   <!-- api() + the registry: every read and write of this page goes through it (the round-trip budget reads the registry) -->
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>   <!-- api() + the registry: every read and write of this page goes through it (the round-trip budget reads the registry) -->
 <script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction (M64) · tx · toast · CBConfirm · CB_SHEET_EP (status: the ONE status writer's route) -->
 <script src="/engine/money.js"></script>

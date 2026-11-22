@@ -83,9 +83,9 @@ const CODES = [
   ["app/cap-register.js","SCR007-B10","button","onclick=\"rgCloseSave"],
   ["app/cap-register.js","SCR007-C02","div","onclick=\"closeModal"],
   ["app/cap-register.js","SCR007-B11","button","onclick=\"rgSubjectClose"],
-  ["app/cap-register.js","SCR007-B12","button","onclick=\"rgWalkDir"],
-  ["app/cap-register.js","SCR007-B13","button","onclick=\"rgWalkDir"],
-  ["app/cap-register.js","SCR007-B14","button","onclick=\"rgWalkFrom"],
+  ["app/cap-register-impact.js","SCR007-B12","button","onclick=\"rgWalkDir"],
+  ["app/cap-register-impact.js","SCR007-B13","button","onclick=\"rgWalkDir"],
+  ["app/cap-register-impact.js","SCR007-B14","button","onclick=\"rgWalkFrom"],
   ["app/cap-supplies.js","SCR009-B01","button","onclick=\"supAddModal"],
   ["app/cap-supplies.js","SCR009-B02","button","onclick=\"supBuyModal"],
   ["app/cap-supplies.js","SCR009-B03","button","onclick=\"supUseModal"],
@@ -178,7 +178,7 @@ const CODES = [
   ["app/cap-network-member.js","SCR031-C05","div","onclick=\"netBrowse"],
   ["app/cap-network-member.js","SCR031-I05","input","oninput=\"netAvailSearch"]
 ];
-const COUNTS = {"app/cap-chit2.js":27,"app/cap-register.js":40,"app/cap-supplies.js":16,"app/cap-workforce.js":40,"app/cap-adopt.js":5,"app/cap-worklist.js":17,"app/cap-worklist-raida.js":5,"app/cap-network-member.js":11};
+const COUNTS = {"app/cap-chit2.js":27,"app/cap-register.js":37,"app/cap-register-impact.js":3,"app/cap-supplies.js":16,"app/cap-workforce.js":40,"app/cap-adopt.js":5,"app/cap-worklist.js":17,"app/cap-worklist-raida.js":5,"app/cap-network-member.js":11};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */

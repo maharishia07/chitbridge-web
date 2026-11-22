@@ -1240,30 +1240,6 @@ function cbVisitTick(nav) {
  */
 var _apiInflight = {};
 
-/** an independent copy, so a joiner can never share mutable state with the caller it joined */
-function _apiCopy(v) {
-  var made = _apiClone(v);
-  if (made !== v && Array.isArray(v) && Array.isArray(made))
-    /* reviews11 GF-17 M5: unwrap() hangs truncated/status_counts/total/next on a list as NON-enumerable properties, which a clone drops */
-    Object.getOwnPropertyNames(v).forEach(function (k) {
-      if (k !== 'length' && !Object.prototype.hasOwnProperty.call(made, k))
-        Object.defineProperty(made, k, { value: _apiClone(v[k]), enumerable: false, configurable: true, writable: true });
-    });
-  return made;
-}
-function _apiClone(v) {
-  if (v === null || typeof v !== 'object') return v;
-  try {
-    if (typeof structuredClone === 'function') return structuredClone(v);
-  } catch (_) {}
-  try {
-    return JSON.parse(JSON.stringify(v));
-  } catch (_) {}
-  /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
-     again — said here because a silent share is exactly what this guard exists to prevent */
-  return v;
-}
-
 function api(key, opts) {
   var o = opts || {};
   var ep = epOf(key);
@@ -1398,13 +1374,6 @@ function answerWords(body, status) {
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
 const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}); const actingEp = (ep) => (ep && typeof CBBooksActing !== 'undefined' ? CBBooksActing.guard(ep) : ep); /* the store header never goes outside /api/books*: a call outside it is refused before it is sent */
-function _callClean(v) {
-  try {
-    return JSON.stringify(v, function (k, x) { return /(pass|pin|otp|token|secret|auth|key|card|cvv)/i.test(k) ? '[redacted]' : x; }).slice(0, 1200);
-  } catch (_) {
-    return null;
-  }
-}
 async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
   const ep = actingEp(epOf(key));
   if (!ep) throw new Error('no endpoint ' + key);

@@ -1,5 +1,5 @@
 /**
- * tests/settings-connect-google.test.cjs — SSO-1130: the Settings › Sign-in "Connect Google" row (public/app/cap-settings.js, provRow..readProv) and its three api doors
+ * tests/settings-connect-google.test.cjs — SSO-1130: the Settings › Sign-in "Connect Google" row (public/app/cap-settings-provider.js, provRow..readProv) and its three api doors
  * (public/app/accounts-shell.js), read as source, no browser (the row's closures are not exported).
  *   · the row says WHICH Google account is connected (the e-mail the api returns), never a subject or issuer
  *   · Connect and Disconnect each carry the person's PIN (the api re-proves it) and each has its control id (ACC002-B62 / B63) and the PIN box (ACC002-I31)
@@ -18,10 +18,10 @@ let pass = 0, fail = 0;
 const check = (what, fn) => {
   try { fn(); pass++; console.log('  ok   ' + what); } catch (failure) { fail++; console.log('  FAIL ' + what + '\n       ' + String(failure && failure.message).split('\n')[0]); }
 };
-const settings = read('public/app/cap-settings.js');
+const settings = read('public/app/cap-settings-provider.js');
 const start = settings.indexOf('function provRow()');
 const end = settings.indexOf('function readProv()');
-assert.ok(start > 0 && end > start, 'the connect row is in cap-settings.js');
+assert.ok(start > 0 && end > start, 'the connect row is in cap-settings-provider.js');
 const row = settings.slice(start, end + 400);
 const shell = read('public/app/accounts-shell.js');
 

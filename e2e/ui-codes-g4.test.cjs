@@ -27,9 +27,9 @@ const CODES = [
   ["app/cap-traceability.js","INS003-I04","input","oninput=\"UI"],
   ["app/cap-traceability.js","INS003-B03","button","onclick=\"runTraceByBatch"],
   ["app/cap-traceability.js","INS003-C01","div","onclick=\"UI"],
-  ["app/cap-readiness.js","SCR033-B01","button","onclick=\"_aiAccept"],
-  ["app/cap-readiness.js","SCR033-B02","button","onclick=\"_aiPdf"],
-  ["app/cap-readiness.js","SCR033-B03","button","onclick=\"_aiCopy"],
+  ["app/cap-readiness-ai.js","SCR033-B01","button","onclick=\"_aiAccept"],
+  ["app/cap-readiness-ai.js","SCR033-B02","button","onclick=\"_aiPdf"],
+  ["app/cap-readiness-ai.js","SCR033-B03","button","onclick=\"_aiCopy"],
   ["app/cap-readiness.js","SCR033-B04","button","onclick=\"aiSuggestPartner"],
   ["app/cap-readiness.js","SCR033-C01","span","onclick=\"event"],
   ["app/cap-readiness.js","SCR033-C02","div","onclick=\"_rdSelect"],
@@ -137,7 +137,7 @@ const MOUNTS = [
   ['app/cap-catsetup.js', 'CAT004-U09', 'date', null, 'CAT004-I14'],
   ['app/cap-catsetup.js', 'CAT004-U10', 'date', null, 'CAT004-I15']
 ];
-const COUNTS = {"app/cap-traceability.js":8,"app/cap-readiness.js":18,"app/cap-definitions.js":24,"app/cap-catsetup.js":49};
+const COUNTS = {"app/cap-traceability.js":8,"app/cap-readiness.js":15,"app/cap-readiness-ai.js":3,"app/cap-definitions.js":24,"app/cap-catsetup.js":49};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */
