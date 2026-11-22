@@ -20,8 +20,7 @@ Object.keys(reg).forEach((k) => { (reg[k].retired ? retired : live)[reg[k].code]
 let fails = 0, pending = 0;
 const ok = (c, m) => { if (c) console.log('  ok ' + m); else { fails++; console.log('  FAIL ' + m); } };
 Object.keys(COUNTS).forEach((f) => {
-  const src = [f].concat(SPLIT[f] || []).map((n) => fs.readFileSync(path.join(PUB, n + '.js'), 'utf8')).join('
-'); /* a capability split by job counts its halves together (web split 1129) */
+  const src = [f].concat(SPLIT[f] || []).map((n) => fs.readFileSync(path.join(PUB, n + '.js'), 'utf8')).join('\n'); /* a capability split by job counts its halves together (web split 1129) */
   const codes = [...src.matchAll(/data-cbsid=\\?["']([A-Z]{3}[0-9]{3}(?:-[A-Z][0-9]{2})?)\\?["']/g)].map((m) => m[1]);
   ok(codes.length >= COUNTS[f], f + '.js carries ' + codes.length + ' codes (at least ' + COUNTS[f] + ')');
   codes.forEach((c) => {

@@ -12,7 +12,7 @@
  */
 const fs = require('fs'), path = require('path');
 const PUB = path.join(__dirname, '..', 'public');
-const SKIP = new Set(['app.html', 'app/cap-legend.js', 'app/cap-standards.js', 'app/assets.js', 'app/test-menu-tree.js', 'app/cap-intake.js', 'app/cap-register.js', 'app/cap-worklist.js', 'cart-design.html', 'supplier-design.html', 'embed.html', 'intake.html', 'app/cap-testing.js', 'testing.html', 'design-mock.html', 'till.html']);
+const SKIP = new Set(['app.html', 'app/cap-legend.js', 'app/cap-standards.js', 'app/assets.js', 'app/test-menu-tree.js', 'app/cap-intake.js', 'app/cap-register.js', 'app/cap-register-impact.js', 'app/cap-worklist.js', 'cart-design.html', 'supplier-design.html', 'embed.html', 'intake.html', 'app/cap-testing.js', 'testing.html', 'design-mock.html', 'till.html']);
 const BAD = [
   [/\(b\d{3}\)/, 'a build code in brackets'],
   [/migration b\d{2,3}/i, 'a migration name'],
