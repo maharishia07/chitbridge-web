@@ -123,6 +123,7 @@ jobs:
           node tests/acct-c-f02-lock-month.test.cjs
           node tests/acct-c-f06-debit-note-fix.test.cjs
           node tests/acct-c-f03-bank-summary.test.cjs
+          node tests/bank-add-one-mark-request.test.cjs
           node tests/acct-c-f04-bank-difference.test.cjs
           node tests/ye-f15-card-stage.test.cjs
           node tests/ye-f13-one-name.test.cjs

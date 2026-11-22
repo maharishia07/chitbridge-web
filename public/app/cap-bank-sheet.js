@@ -330,10 +330,12 @@ function bkshAcceptAdded() {
     parsed = bkshBook().parsed;
   if (!parsed || !Object.keys(added).length) return;
   const refs = bkshPairing(parsed.lines).line_refs || [];
-  (bkshBook().rows || []).forEach((row) => {
-    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(bkshHowRule(row, refs[row.i]), true);
-    else if (added[refs[row.i]] && BKSH.movedAdded && BKSH.movedAdded[refs[row.i]]) bankAccept(bkshHowRule(Object.assign({}, row, { chits: [], books: [{ entry_no: BKSH.movedAdded[refs[row.i]] }] }), refs[row.i]), true); /* W15-85: the same mark as a normal add (line key to the entry), though the entry sits in the next month */
-  });
+  bankStoreBatch(() => (bkshBook().rows || []).forEach((row) => {
+    if (added[refs[row.i]] && (row.status === 'matched' || row.status === 'settled')) bankAccept(bkshHowRule(row, refs[row.i]), true, true);
+    else if (added[refs[row.i]] && BKSH.movedAdded && BKSH.movedAdded[refs[row.i]]) bankAccept(bkshHowRule(Object.assign({}, row, { chits: [], books: [{ entry_no: BKSH.movedAdded[refs[row.i]] }] }), refs[row.i]), true, true); /* W15-85: the same mark as a normal add (line key to the entry), though the entry sits in the next month */
+  }));
+  bankExplain();
+  bankPaint(); /* SPEED (1129): ONE request for every accept mark, ONE explain and repaint — not one of each per line */
   BKSH.added = {};
   BKSH.movedAdded = {};
   BKSH.ruleOf = {};
