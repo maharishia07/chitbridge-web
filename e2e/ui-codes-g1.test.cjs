@@ -401,8 +401,7 @@ let failures = 0;
 const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) failures++; };
 const appSrc = read();
 /* websplit D moved the Mark paid sheet (DTL001-S01, I01, B03 and I02) into app/chit-pay.js: the codes are read from both files, the ORDER proof stays on app.html's own codes */
-const src = appSrc + '
-' + fs.readFileSync(path.join(PUB, 'app', 'chit-pay.js'), 'utf8').split('\\"').join('"');
+const src = appSrc + '\n' + fs.readFileSync(path.join(PUB, 'app', 'chit-pay.js'), 'utf8').split('\\"').join('"');
 
 /** the open tag around a code: from the '<' before it to the first '>' after it (the strings hold no '>' inside a tag here) */
 function tagAround(code) {
