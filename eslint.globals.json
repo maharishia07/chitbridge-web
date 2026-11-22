@@ -136,6 +136,7 @@
  "public/app/cap-employees-copy.js":["public/employees.html"],
  "public/app/cap-employees.js":["public/employees.html"],
  "public/app/cap-entry-preview.js":["public/accounts.html","public/finance.html"],
+ "public/app/cap-entry-lines.js":["public/accounts.html","public/finance.html"],
  "public/app/cap-entry.js":["public/accounts.html","public/finance.html"],
  "public/app/cap-evidence.js":["public/accounts.html","public/network.html"],
  "public/app/cap-finance-cash.js":["public/finance.html"],
