@@ -20,7 +20,7 @@ const has = (f, text) => src(f).includes(text);
 
 // GF-17 M5: the clone of a list keeps the non-enumerable siblings unwrap() hung on it
 const ctx = vm.createContext({ Object, Array, JSON, structuredClone });
-vm.runInContext(liftFns('public/app/core.js', ['_apiCopy', '_apiClone']) + '\nthis.f = { _apiCopy };', ctx);
+vm.runInContext(liftFns('public/app/core-copy.js', ['_apiCopy', '_apiClone']) + '\nthis.f = { _apiCopy };', ctx);
 const list = [{ a: 1 }];
 Object.defineProperty(list, 'truncated', { value: true, enumerable: false, configurable: true, writable: true });
 const copy = ctx.f._apiCopy(list);
@@ -29,7 +29,7 @@ t('a joined read keeps .truncated', copy.truncated === true && copy !== list && 
 // GF-17 M6 / M7 / error object
 t('the in-flight key includes the acting-store headers', /JSON\.stringify\(actingHeaders\(\)\)/.test(src('app/core.js')), 'key');
 const ctx2 = vm.createContext({ JSON });
-vm.runInContext(liftFns('public/app/core.js', ['_callClean']) + '\nthis.f = { _callClean };', ctx2);
+vm.runInContext(liftFns('public/app/core-copy.js', ['_callClean']) + '\nthis.f = { _callClean };', ctx2);
 const logged = ctx2.f._callClean({ token: 'abc.def', name: 'x' });
 t('the call log redacts a token in the answer', logged.indexOf('abc.def') < 0 && logged.indexOf('x') > 0, logged);
 t('an object error is not printed as [object Object]', has('app/core.js', "typeof j.error === 'string' ? j.error : j.error && typeof j.error.message === 'string'"), 'unwrap');
