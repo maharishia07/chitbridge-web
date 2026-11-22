@@ -97,6 +97,8 @@ t('shop.html: the qrcode script has integrity + crossorigin, equal to app.html',
   const said = new Function('console', m[0] + '; return hostFailed(new Error("QuotaExceededError: idb cb-till-pins"), "The PIN could not be kept.");')({ error: (...a) => seen.push(a.join(' ')) });
   t('signin-ui.js: the person gets our sentence, the developer gets the log', said === 'The PIN could not be kept.' && seen.length === 1 && /QuotaExceededError/.test(seen[0]));
 }
+/* the public static mock carries no real-looking phone number */
+t('storefront-design.html: no real-looking Indian mobile number in the mock', !/(^|[^0-9])(\+91[ -]?)?[6-9][0-9]{4}[ -]?[0-9]{5}([^0-9]|$)/.test(read('storefront-design.html').split('9876543210').join('')));
 /* the service worker: run the real file in a vm with a fake self and caches; an api GET on the same origin is never answered through the cache, a no-store reply is never stored */
 (async () => {
   const vm = require('vm');

@@ -107,7 +107,7 @@ var SHOP = {
   bid: 'CBVVGJCXHU',
   city: 'Coimbatore',
   hours: '9am – 7pm, closed Sunday',
-  phone: '+91 98403 48857',
+  phone: '+91 00000 00000',
   terms: 'Delivery within 20 km. Payment on delivery.'
 };
 var CAT = {
@@ -425,7 +425,7 @@ paint();
   ok('review is reachable', blockedBecause() === null);
   go(3);
   ok('★ no contact, no code sent', blockedBecause() === 'Enter a phone or email.');
-  S.contact = '9840348857';
+  S.contact = '0000000000';
   sendCode();
   ok('★ once the code is sent, it is required', blockedBecause() === 'Enter the 6-digit code.');
   S.otp = '123456';
