@@ -30,7 +30,8 @@
     if (!row.requested_for) return '';
     try {
       return (root.CBLocale && root.CBLocale.date(row.requested_for, { day: 'numeric', month: 'short' })) || String(row.requested_for).slice(0, 10);
-    } catch (_) {
+    } catch (failure) {
+      console.warn('TASK-WORD-FOR-01 the asked-for time could not be formatted; the raw day is shown', (failure && failure.message) || failure);
       return String(row.requested_for).slice(0, 10);
     }
   }
