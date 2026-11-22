@@ -290,13 +290,15 @@
   "bkLockReopen(|month",
   "bkLockReopen(|tx('Reopen month')"
  ],
+ "app/cap-books-needs.js": [
+  "bkNeedsHeadPress(|kind"
+ ],
  "app/cap-books-overview.js": [],
  "app/cap-books-party.js": [],
  "app/cap-books-tree.js": [],
  "app/cap-books-waiting-cells.js": [],
  "app/cap-books-waiting-view.js": [],
  "app/cap-books.js": [
-  "bkNeedsHeadPress(|kind",
   "bkPbPress(|(off ? ' disabled' : '')",
   "bkPbPress(|esc(txn('{count} bill in order', '{count} bills in order', Number(counts.in_order)))",
   "|o.step",
@@ -313,9 +315,10 @@
   "catsetPlanOpen(|tx('Plan several')",
   "catsetRecheckSet(|value"
  ],
- "app/cap-chit2.js": [
+ "app/cap-chit2-reprice.js": [
   "c2RepriceApply(|will.length"
  ],
+ "app/cap-chit2.js": [],
  "app/cap-cmdb.js": [],
  "app/cap-compare.js": [],
  "app/cap-connector.js": [],
@@ -398,10 +401,12 @@
  ],
  "app/cap-period-accruals.js": [],
  "app/cap-period-stock.js": [],
- "app/cap-period.js": [
+ "app/cap-period-year.js": [
   "peYearReopen(|esc(tx('Only the latest closed year can be reopened, with a reason; it is logged.'))",
   "peYearReopen(|esc(tx('Reopen year'))",
-  "show(|f.tab",
+  "show(|f.tab"
+ ],
+ "app/cap-period.js": [
   "show(|w.fix.tab",
   "|fn"
  ],
