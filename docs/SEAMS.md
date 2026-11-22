@@ -35,9 +35,9 @@ of file each thing is; this says what already does the job.
 | 82 | `again` | `signin-ui.js` |  |
 | 82 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 81 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
-| 80 | `rows` | `cap-settings.js` |  |
 | 80 | `pack` | `books-store-packs.js` |  |
 | 79 | `read` | `books-grant-drill.js` |  |
+| 79 | `rows` | `cap-settings.js` |  |
 | 79 | `count` | `money-check.js` | the count /health reads |
 | 78 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 77 | `record` | `access-events.js` |  |
@@ -169,6 +169,7 @@ of file each thing is; this says what already does the job.
 | 26 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
 | 26 | `match` | `itemmatch.js` | actually state. |
 | 25 | `side` | `books-grant-reports.js` |  |
+| 25 | `more` | `lab-kit.js` | idKey: |
 | 25 | `check` | `network-app.js` |  |
 | 25 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 25 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
@@ -177,7 +178,6 @@ of file each thing is; this says what already does the job.
 | 25 | `move` | `rail.js` | Order = the order the server refused in: |
 | 25 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 24 | `done` | `attach-ui.js` |  |
-| 24 | `more` | `lab-kit.js` | idKey: |
 | 24 | `post` | `books-manual.js` | POST /events — |
 | 24 | `update` | `folder-rules.js` |  |
 | 24 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |

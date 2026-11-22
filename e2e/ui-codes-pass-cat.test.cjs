@@ -116,7 +116,7 @@ for (const file of Object.keys(srcOf)) {
   check(found === pins.length, file + '.js: ' + found + ' of ' + pins.length + ' codes sit in their own tag');
 }
 const own = (file, re) => (srcOf[file].match(re) || []).length;
-check(own('cap-catalogue', /data-cbsid="CTG001-[A-Z][0-9]{2}"/g) === 9 && own('cap-catalogue', /data-cbsid="CTG003-[A-Z][0-9]{2}"/g) === 6, 'cap-catalogue.js: 9 Items and 6 Import codes (the Categories ones are the 5 CTG002 beside them)');
+check(own('cap-catalogue', /data-cbsid="CTG001-[A-Z][0-9]{2}"/g) === 9 && own('cap-catalogue', /data-cbsid="CTG003-[A-Z][0-9]{2}"/g) === 7, 'cap-catalogue.js: 9 Items and 7 Import codes (CTG003-B04, the rejects download, ux1129) (the Categories ones are the 5 CTG002 beside them)');
 check(own('cap-entry', /data-cbsid="SCR022-B[0-9]{2}"|data-cbsid="SCR022-[ISBT][0-9]{2}"/g) === 19, 'cap-entry.js: 19 Entry codes of SCR022 (none of BKS002)');
 check(srcOf['cap-entry'].indexOf('BKS002') < 0, 'cap-entry.js: no leftover BKS002 code');
 check(own('cap-folders', /data-cbsid="SCR004-[A-Z][0-9]{2}"/g) === 19, 'cap-folders.js: 19 Folders codes of SCR004');
