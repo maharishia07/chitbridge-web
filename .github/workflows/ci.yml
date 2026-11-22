@@ -394,6 +394,7 @@ jobs:
           node e2e/ui-codes-pass-cat.test.cjs
           node e2e/ui-codes-labs.test.cjs
           node e2e/bank-preview.test.cjs
+          node e2e/bank-add-batch.test.cjs
           node e2e/bank-ui-answers.test.cjs
           node e2e/web02-fixes.test.cjs
           node e2e/web02b-fixes.test.cjs
