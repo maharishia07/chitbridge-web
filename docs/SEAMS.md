@@ -41,9 +41,9 @@ of file each thing is; this says what already does the job.
 | 40 | `money` | `cart.js` |  |
 | 39 | `modal` | `app.html` |  |
 | 38 | `ensureCap` | `app.html` |  |
+| 38 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
 | 38 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
 | 37 | `note` | `device-id.js` | note(where, problem) — |
-| 37 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 36 | `names` | `shortcuts.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |

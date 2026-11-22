@@ -243,11 +243,8 @@ function render() {
       return (
         '<div data-cbsid="DOC001-C01" class="formcard' +
         (SEL === item.key ? ' on' : '') +
-        '" role="button" tabindex="0" aria-pressed="' +
-        (SEL === item.key ? 'true' : 'false') +
-        '" data-key="' +
-        esc(item.key) +
-        '"><div class="t">' +
+        '" role="button" tabindex="0" aria-pressed="' + (SEL === item.key ? 'true' : 'false') + '" data-key="' +
+        esc(item.key) + '"><div class="t">' +
         esc(item.title) +
         '</div><div class="a">' +
         esc(item.authority || '') +
@@ -268,22 +265,13 @@ function render() {
       if (SEL) resolve();
     };
 }
-/* WCAG 2.1.1 (L-ux-web-screens-27#L41): a form card is a button: Tab reaches it, Enter or Space picks it. One delegated listener reads the key from
-   data-key, so no key is ever built into an inline handler. */
-function cardOf(ev) {
-  return ev.target && ev.target.closest ? ev.target.closest('.formcard[data-key]') : null;
-}
-document.addEventListener('click', function (ev) {
-  var card = cardOf(ev);
-  if (card) pick(card.getAttribute('data-key'));
-});
+/* WCAG 2.1.1 (L-ux-web-screens-27#L41): a form card is a button: Tab reaches it, Enter or Space picks it; one delegated listener reads data-key, so no key is built into an inline handler. */
+const cardOf = (ev) => (ev.target && ev.target.closest ? ev.target.closest('.formcard[data-key]') : null);
+document.addEventListener('click', function (ev) { var card = cardOf(ev); if (card) pick(card.getAttribute('data-key')); });
 document.addEventListener('keydown', function (ev) {
-  var card = cardOf(ev);
+  var card = cardOf(ev), on;
   if (!card || (ev.key !== 'Enter' && ev.key !== ' ')) return;
-  ev.preventDefault();
-  pick(card.getAttribute('data-key'));
-  var on = document.querySelector('.formcard.on');
-  if (on) on.focus();
+  ev.preventDefault(); pick(card.getAttribute('data-key')); on = document.querySelector('.formcard.on'); if (on) on.focus();
 });
 function pick(k) {
   SEL = k;
