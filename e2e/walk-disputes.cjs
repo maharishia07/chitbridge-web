@@ -46,7 +46,7 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
       await w.step('X2', 'Real api: Assist reads the answers and whoami; the shop is not a help desk, so Accept is greyed WITH the server\'s sentence', async () => {
         await open('assist');
         const cnt = await txt('[data-testid="ca-count"]'), dis = await page.$eval('#ca_accept', (b) => b.disabled).catch(() => null), why = await txt('[data-testid="ca_accept-why"]');
-        return { ok: /answers? live/.test(cnt) && dis === true && /help desk/.test(why) && !w.errs.length, saw: '"' + cnt + '" · accept ' + (dis ? 'greyed: "' + why + '"' : 'OPEN') };
+        return { ok: /answers? live/.test(cnt) && dis === true && /help desk/.test(why) && !w.errs.length, saw: '"' + cnt + '" · accept ' + (dis ? 'not offered: "' + why + '"' : 'OPEN') };
       });
     } finally { await api.stop(); }
     return;
@@ -261,8 +261,8 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
   /* ── CB Assist ── */
   await open('assist');
   await w.step('A1', 'Sidebar -> Assist: "2 answers live", the review box, the answers in a CBList; this shop is not a help desk, so Accept is shown greyed WITH the server\'s sentence', async () => {
-    const cnt = await txt('[data-testid="ca-count"]'), n = await page.locator('[data-testid^="ca-row-"]').count(), dis = await greyed('ca_accept'), why = await txt('[data-testid="ca_accept-why"]'), lit = await page.$eval('[data-testid="skel-nav-assist"]', (b) => b.classList.contains('active'));
-    return { ok: /2\s*answers live/.test(cnt) && n === 2 && dis === true && /Only a help desk/.test(why) && lit, saw: '"' + cnt + '" · ' + n + ' rows · accept ' + (dis ? 'greyed: "' + why + '"' : 'OPEN') };
+    const cnt = await txt('[data-testid="ca-count"]'), n = await page.locator('[data-testid^="ca-row-"]').count(), dis = (await page.locator('#ca_accept').count()) === 0, why = await txt('[data-testid="ca-readonly"]'), lit = await page.$eval('[data-testid="skel-nav-assist"]', (b) => b.classList.contains('active'));
+    return { ok: /2\s*answers live/.test(cnt) && n === 2 && dis === true && /Only a help desk/.test(why) && lit, saw: '"' + cnt + '" · ' + n + ' rows · accept ' + (dis ? 'not offered: "' + why + '"' : 'OPEN') };
   });
   S.helpdesk = true; await open('assist');
   await w.step('A2', 'As the help desk: a question -> ✨ Draft -> ONE POST /governance/ai-draft { skill_id: assist-ask, context.question } -> the answer box holds the draft, marked "Assist drafted this"', async () => {

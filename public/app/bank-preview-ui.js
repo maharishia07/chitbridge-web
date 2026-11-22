@@ -6,7 +6,7 @@
  * CALLED BY public/app/bank-demo.js (the demo page) · public/app/cap-bank-sheet.js (the in-app Bank view)
  * FLOW      mount({ host, controller, currency, country, say, changed }) → paint(model, results) → a click or change on host → the controller's answer method → say(words) if refused → changed()
  * CARD      16-finance/bank-reconciliation-and-bank-rail
- * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account · BKS017-B09 yes, this is right
+ * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account (and use it for the similar lines, same words same direction, on press) · BKS017-B09 yes, this is right
  *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-B19 what this line is (one step) · BKS017-S10 which account that answer names · BKS017-I02 new party name · BKS017-S04 new party kind
  *           BKS017-S11 which loan a repayment pays · BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
  * ⭐ Written for pages with no inline script (the demo's CSP): everything is data-act on a button, one delegated listener on the host.
@@ -18,10 +18,11 @@
   var NOT_INCOME_OR_EXPENSE = parts.NOT_INCOME_OR_EXPENSE;
   /** the painter for one mount: it reads its currency and country once, so no tax name or money unit is written here */
   function painter(cfg) {
-    var ctx = { cfg: cfg, says: {}, opened: {}, groups: {}, shown: '', escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
+    var ctx = { cfg: cfg, says: {}, offers: {}, opened: {}, groups: {}, shown: '', escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
     ctx.amountText = cfg.amountText || function (value) { return preview.moneyText(value, cfg.currency); }; /* a host may draw money its own way (the in-app Bank sheet: the page's symbol form, as the band) */
     ctx.tag = function (kind, words) { return '<span class="bd-tag bd-' + kind + '">' + ctx.escapeHtml(words) + '</span>'; };
     ctx.dataKey = function (item) { return ' data-key="' + ctx.escapeHtml(item.key) + '"'; };
+    ctx.similarFor = function (key) { return sameAccountLines(cfg, key); };
     parts.build(ctx);
     return {
       says: ctx.says,
@@ -69,13 +70,12 @@
       mine = items.filter(function (item) { return item.key === key; })[0];
     return mine ? items.filter(function (item) { return item.key !== key && waiting(item) && narrationWords(item) === narrationWords(mine); }) : [];
   }
-  /** the other lines with the same words, still waiting for an account */
+  /** the way money moves on a line: 'out' for a payment (debit), 'in' for a receipt */
+  function sideOf(item) { return item.line && item.line.debit_minor > 0 ? 'out' : 'in'; }
+  /** the other lines with the same words AND the same direction, still waiting for an account (a payment is never a look-alike of a receipt) */
   function sameAccountLines(cfg, key) {
-    return similarLines(cfg, key, function (item) { return item.state === 'needs_you' && !item.entry; });
-  }
-  /** the other lines with the same words that now wait on the same tax-invoice question */
-  function sameHeldLines(cfg, key) {
-    return similarLines(cfg, key, function (item) { return item.needs === 'tax_invoice'; });
+    var mine = cfg.controller().view().items.filter(function (item) { return item.key === key; })[0];
+    return similarLines(cfg, key, function (item) { return item.state === 'needs_you' && !item.entry && mine && sideOf(item) === sideOf(mine); });
   }
   /** BANK-new-15: the owner says which tax the payment settles. The one the engine books on its single tax head (whatIsThis tax_payment.head) is the engine's existing answer; any other is said plainly to be added as an entry, never posted on the wrong head */
   function useLiability(cfg, key, target) {
@@ -89,25 +89,49 @@
   function useInterest(cfg, chosenFor, key) {
     var loan = chosenFor('loanfield', key);
     if (cfg.controller().loans().length) { if (!loan) return { ok: false, line: true, why: 'Choose which loan this pays.' }; cfg.controller().loan(key, loan); }
-    var typed = String(chosenFor('interestfield', key) || '').replace(/[,s]/g, ''),
-      unit = root.CBMoney;
-    if (typed && !(+typed >= 0)) return { ok: false, line: true, why: 'Type the interest as a number, like 250.00.' };
-    return cfg.controller().interest(key, typed && unit && unit.toMinor ? unit.toMinor(+typed, cfg.currency) : '');
+    var typed = String(chosenFor('interestfield', key) || '').trim();
+    if (!typed) return cfg.controller().interest(key, '');
+    var minor = interestMinor(typed, cfg.currency);
+    if (minor.why) return { ok: false, line: true, why: minor.why };
+    return cfg.controller().interest(key, minor.value);
+  }
+  /** the interest as typed -> minor units through the ONE money reader (CBUiMoney, the shop's locale marks: "250,50" is 250.50 where the comma is the decimal mark). A page without the reader (the no-login demo, point-decimal) takes digits with one point, or thousands commas in their place, and refuses anything else, never a guess */
+  function interestMinor(typed, currency) {
+    var reader = root.CBUiMoney, sentence = 'Type the interest as a number, like 250.00.';
+    if (reader && reader.minor && reader.refusal) {
+      var said = reader.refusal(typed, currency);
+      var value = said ? NaN : reader.minor(typed, currency);
+      return said || !(value >= 0) ? { why: said || sentence } : { value: value };
+    }
+    return plainInterestMinor(typed, currency, sentence);
+  }
+  /** the page without the money reader: digits with thousands commas and an optional decimal part, through CBMoney.toMinor */
+  function plainInterestMinor(typed, currency, sentence) {
+    if (!/^(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.test(typed)) return { why: sentence };
+    var unit = root.CBMoney, minor = unit && unit.toMinor ? unit.toMinor(+typed.replace(/,/g, ''), currency) : null;
+    return minor === null ? { why: sentence } : { value: minor };
   }
   /** the answer boxes under an open row's sentence: the kind box, then the party and account boxes once a kind is opened, and why the line could not be resolved */
   function panelBoxesHtml(ctx, item, result) {
     var kind = result ? '' : ctx.kindBox(item);
     return result || item.needs === 'which_liability' ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
   }
+  /** the explicit press "use this for N similar": the answer just given goes to the same-words lines of the same direction that still wait, and the count is said */
+  function useSimilar(cfg, offers, key) {
+    var answers = offers[key], others = answers ? sameAccountLines(cfg, key) : [];
+    delete offers[key];
+    others.forEach(function (other) { cfg.controller().resolveLine(other.key, answers); });
+    return { ok: true, said: 'Applied to ' + others.length + ' similar ' + (others.length === 1 ? 'line' : 'lines') + '.' };
+  }
   /** what the buttons that answer the controller do, by data-act (they give the controller's answer, or { ok, why } when it refuses) */
-  function answerActions(cfg, chosenFor, taxWordOf) {
+  function answerActions(cfg, chosenFor, taxWordOf, offers) {
     /** the owner picked an account and a tax kind for a line nothing explained; "not income or expense" is no account here (B5-04) */
     function useAccount(key) {
       var account = chosenFor('acct', key);
       if (account === NOT_INCOME_OR_EXPENSE) return { ok: false, line: true, why: 'A tax payment, a loan, drawings or a transfer between your own accounts is not an expense or income, so it is added as its own entry.' };
       var answers = { account: account, tax_kind: chosenFor('taxkind', key) },
         said = cfg.controller().resolveLine(key, answers);
-      if (said && said.ok !== false) sameAccountLines(cfg, key).forEach(function (other) { cfg.controller().resolveLine(other.key, answers); }); /* the same words, the same answer: asked once */
+      if (said && said.ok !== false) offers[key] = answers; /* only this line is answered; the look-alikes of the same direction are OFFERED, one press, with their count */
       return said;
     }
     /** FIN-116: the tax kind for a line the bank's words proposed: its own class (the proposal's, never a literal) with the chosen kind, through resolve() */
@@ -123,12 +147,13 @@
       meant: function (key, target) { return cfg.controller().editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') }); },
       resolve: function (key) { return cfg.controller().resolveLine(key); },
       useacct: useAccount,
+      similar: function (key) { return useSimilar(cfg, offers, key); },
       taxuse: useTax,
       interest: function (key) { return useInterest(cfg, chosenFor, key); },
       liability: function (key, target) { return useLiability(cfg, key, target); },
       tick: function (key) { return cfg.controller().tick(key); },
       feetax: function (key, target) { return cfg.controller().feeTax(key, target.getAttribute('data-v')); },
-      inv: function (key, target) { var said = cfg.controller().invoice(key, target.getAttribute('data-v')); sameAccountLines(cfg, key).concat(sameHeldLines(cfg, key)).forEach(function (other) { cfg.controller().invoice(other.key, target.getAttribute('data-v')); }); return said; },
+      inv: function (key, target) { return cfg.controller().invoice(key, target.getAttribute('data-v')); }, /* a tax invoice is per supply: the answer is this line's alone (DEC-267) */
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
       notmatch: function (key) { return cfg.controller().notMatch(key); },
       entry: function (key) { return cfg.entry ? cfg.entry(key) : { ok: false, why: 'This starts after an update.' }; },
@@ -164,7 +189,7 @@
   }
   /** what each button does, by its data-act (the answers the controller gives, or { ok, why } when it refuses) */
   function actionsOf(cfg, chosenFor, taxWordOf, says, opened, state) {
-    return Object.assign(answerActions(cfg, chosenFor, taxWordOf), screenActions(cfg, chosenFor, says, opened, state));
+    return Object.assign(answerActions(cfg, chosenFor, taxWordOf, state.offers), screenActions(cfg, chosenFor, says, opened, state));
   }
   /** the owner chose which of their accounts this statement is for */
   function pickAccount(cfg, field) {
@@ -177,7 +202,7 @@
       paintLines.says[key] = said.why; /* the message stays ON THE LINE with its one step, never at the top of the sheet */
       cfg.say('');
     } else if (said && said.ok === false) cfg.say(said.why);
-    else cfg.say('');
+    else cfg.say(said && said.said ? said.said : ''); /* a good answer may say one plain line (how many similar lines it reached) */
   }
   /** the click handler of the host: the button's action, then what to say and what to repaint */
   function clickHandler(cfg, paintLines, ACTIONS) {
@@ -197,7 +222,9 @@
   }
   /** the new party's name or kind was edited on a line: the controller gets the change, a refusal is said */
   function editPartyFrom(cfg, field, action, key) {
-    var party = cfg.controller().view().items.filter(function (one) { return one.key === key; })[0].party;
+    var found = cfg.controller().view().items.filter(function (one) { return one.key === key; })[0],
+      party = found && found.party;
+    if (!party) return; /* the line is gone or has no new party (a repaint beat the edit): nothing to edit */
     var said = cfg.controller().editParty(key, { name: action === 'pname' ? field.value : party.name, kind: action === 'pkind' ? field.value : party.kind });
     if (!said.ok) cfg.say(said.why);
     cfg.changed();

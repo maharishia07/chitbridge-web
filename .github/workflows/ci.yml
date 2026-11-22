@@ -99,14 +99,40 @@ jobs:
           node tests/chit-sheet-dispute-opener.test.cjs
           node tests/country-compare.test.cjs
           node tests/crm-consent-holders.test.cjs
+          node tests/crm-send-offline-door.test.cjs
+          node tests/crm-change-line.test.cjs
+          node tests/crm-consent-law-line.test.cjs
+          node tests/crm-add-phone-match.test.cjs
+          node tests/crm-shopwindow-notlive.test.cjs
           node tests/fin-d7-terms-bank.test.cjs
+          node tests/fin-collect-sides.test.cjs
+          node tests/fin-pay-sides.test.cjs
           node tests/fin116-registration-notice.test.cjs
           node tests/fin111-statement-currency.test.cjs
           node tests/graph-apifeed.test.cjs
-          node tests/index2-draws-manifest.test.cjs
+          node tests/grey-ready.test.cjs
+          node tests/walkm-f07-f08-busy-and-grey.test.cjs
+          node tests/inbooks-1128-web.test.cjs
+          node tests/home-draws-manifest.test.cjs
           node tests/ledger-columns.test.cjs
           node tests/list-count-total.test.cjs
           node tests/lock-words-shop-day.test.cjs
+          node tests/acct-c-f01-lock-income.test.cjs
+          node tests/acct-c-f02-lock-month.test.cjs
+          node tests/acct-c-f06-debit-note-fix.test.cjs
+          node tests/acct-c-f03-bank-summary.test.cjs
+          node tests/acct-c-f04-bank-difference.test.cjs
+          node tests/ye-f15-card-stage.test.cjs
+          node tests/ye-f13-one-name.test.cjs
+          node tests/ye-f12-opening-years-words.test.cjs
+          node tests/ye-f11-firm-return-tab.test.cjs
+          node tests/ye-f07-overdue-words.test.cjs
+          node tests/ye-f08-year-warnings.test.cjs
+          node tests/ye-f06-stage-evidence.test.cjs
+          node tests/ye-f05-no-reopen-by-year.test.cjs
+          node tests/ye-f04-carried-words.test.cjs
+          node tests/ye-f03-last-year-part.test.cjs
+          node tests/acct-c-f12-asset-ask.test.cjs
           node tests/product-lab-rows.test.cjs
           node tests/shop-attempt-key.test.cjs
           node tests/trace-entries.test.cjs
@@ -116,6 +142,8 @@ jobs:
           node e2e/bank-lock.test.cjs
           node e2e/outside-state.test.cjs
           node e2e/network-browse-failed.test.cjs
+          node e2e/cap-network-theme.test.cjs
+          node e2e/lab-pages-static.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
           node e2e/dues-one-sign.test.cjs
@@ -231,6 +259,7 @@ jobs:
           node e2e/net-41-supplier-add-confirm.test.cjs
           # CTR/ORD proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real till and cart code; each is red when its cited line is mutated
           node e2e/ctr-12-refused-key-reenrols.test.cjs
+          node tests/grey-setup.test.cjs
           node e2e/ctr-13-hour-group-wording.test.cjs
           node e2e/ctr-146-counter-name.test.cjs
           node e2e/ord-41-attach-ui-wired.test.cjs
@@ -241,6 +270,7 @@ jobs:
           node e2e/stmts-pl-bs.test.cjs
           node e2e/crm-26-sheet-reads-invoice.test.cjs
           node e2e/crm-30-31-sum-scope.test.cjs
+          node e2e/web-1128.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
@@ -268,6 +298,7 @@ jobs:
           node e2e/chart-sample.test.cjs
           node e2e/practice-rep66-pictures.cjs
           node e2e/practice-rep73-fable.cjs
+          node e2e/practice-150.cjs
           node e2e/practice-checked-cell.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
@@ -280,6 +311,7 @@ jobs:
           node e2e/gov-zone-first.test.cjs
           node e2e/icon-map-guard.cjs
           node e2e/index-not-app.cjs
+          node e2e/customer-delink.cjs
           node e2e/iot-agent-retry.test.cjs
           node e2e/offer-live-confirm.test.cjs
           node e2e/combo-lab-direct.test.cjs
@@ -329,6 +361,14 @@ jobs:
           node e2e/ui-field-g4.test.cjs
           node e2e/ui-field-dense.test.cjs
           node e2e/ui-field-w3.test.cjs
+          node e2e/startfix-signup-shopname.test.cjs
+          node e2e/walks-register-email-code.test.cjs
+          node e2e/walks-bell-popup-inside.test.cjs
+          node e2e/walks-sides-count.test.cjs
+          node e2e/walks-home-not-started-group.test.cjs
+          node e2e/walks-p3-testids.test.cjs
+          node tests/startfix-country-save-once.test.cjs
+          node tests/startfix-shop-name-box.test.cjs
           node e2e/ui-codes-w2-net.test.cjs
           node e2e/ui-codes-g5.test.cjs
           node e2e/ui-codes-intake.test.cjs
@@ -345,6 +385,9 @@ jobs:
           node e2e/ui-codes-pass-cat.test.cjs
           node e2e/ui-codes-labs.test.cjs
           node e2e/bank-preview.test.cjs
+          node e2e/bank-ui-answers.test.cjs
+          node e2e/web02-fixes.test.cjs
+          node e2e/web02b-fixes.test.cjs
           node e2e/bank-split.test.cjs
           node e2e/bank-seat-may.test.cjs
           node e2e/ui-codes-refpages.test.cjs
@@ -363,10 +406,21 @@ jobs:
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
           node tests/avatar-hydrate.test.cjs
+          node tests/locale-reader.test.cjs
+          node tests/tasks-sheet-words.test.cjs
+          node tests/assist-owner-readonly.test.cjs
+          node tests/till-one-clock.test.cjs
+          node tests/year-close-corptax-grey.test.cjs
           node tests/dead-code-sweep.test.cjs
           node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
+          node tests/walki-sell-preview.test.cjs
+          node tests/walki-tax-word.test.cjs
+          node tests/walki-slip-address.test.cjs
+          node tests/walki-zone-grey.test.cjs
+          node e2e/till2-combo-sample.test.cjs
+          node e2e/till2-pack-tax-word.test.cjs
           node tests/ctry-72-no-country-refusal.test.cjs
           node tests/country-literals.test.cjs
           node tests/proof-nightly.test.cjs
@@ -411,12 +465,17 @@ jobs:
           node tests/t3a-money.test.cjs
           node tests/tasks-orders-list.test.cjs
           node tests/tasks-bill-it-address.test.cjs
+          node tests/walkl-tasks-tax-line.test.cjs
           node tests/wx-bills-cols.test.cjs
           node tests/acc342-todo-no-action.test.cjs
           node tests/shop-bookkeeper.test.cjs
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
           node tests/till-pay-qr-link.test.cjs
+          node e2e/leak-1128-samples.test.cjs
+          node tests/shop-zone.test.cjs
+          node tests/testing-page-zone.test.cjs
+          node tests/fin-collect-sides.test.cjs
       # UX-199 (20 Nov): TAG AT BUILD TIME. The identity census as a ratchet: open popups and controls may not rise above e2e/ui-identity.baseline.json (0); a code with no row in the register snapshot is open. No docs checkout needed.
       - name: UI identity ratchet (every popup and control has its code and a register row; UX-199)
         run: node e2e/ui-identity-ratchet.cjs

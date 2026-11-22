@@ -42,7 +42,9 @@ const unloaded = Object.entries(frameApps).filter(([, f]) => {
   return i < 0 || i > j;
 }).map(([a]) => a);
 ok('every one of those pages loads app/screen-id.js before its frame' + (unloaded.length ? ': ' + unloaded.join(' · ') : ''), unloaded.length === 0);
-const declaredApps = ID.DECLARED.apps.map((a) => a.app).filter((a) => !frameApps[a]);
+/* CUSTOMER-DELINK (21 Nov): a customer page mounts CBCustomerBar (its screen code, no staff frame) - that is its frame */
+const customerBar = (page) => { try { return rd('public' + page).includes('CBCustomerBar.mount('); } catch (e) { return false; } };
+const declaredApps = ID.DECLARED.apps.filter((a) => !frameApps[a.app] && !customerBar(a.page)).map((a) => a.app);
 ok('no declared app is a page that no longer mounts a frame' + (declaredApps.length ? ': ' + declaredApps.join(' · ') : ''), declaredApps.length === 0);
 
 /* ── 2 · every section of every frame has its own code ── */
@@ -104,5 +106,5 @@ const SL = require('../tools/screen-list.cjs').load();
 const multi = SL.rows.filter((x) => x.kind === 'sheet').filter((x) => new Set(SL.opens.filter((o) => o.to === x.code).map((o) => o.page)).size >= 2);
 ok('the list shows each sheet opened from two or more pages as ONE screen (' + multi.map((x) => x.code).join(' · ') + ')', multi.length >= 3);
 
-console.log('\n' + pass + ' passed, ' + fails.length + ' failed');
+console.log('\n' + pass + ' passed, ' + fails.length + ' failed · ' + (pass + fails.length) + ' checks');
 process.exit(fails.length ? 1 : 0);

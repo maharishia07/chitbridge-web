@@ -55,7 +55,7 @@
   function dateText(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
     if (!m) return '';
-    var month = new Date(Date.UTC(+m[1], +m[2] - 1, 1)).toLocaleDateString('en-AU', { month: 'short', timeZone: 'UTC' });
+    var month = CBShopTime.day(m[1] + '-' + m[2], { month: 'short', year: undefined });
     return Number(m[3]) + ' ' + month + ' ' + m[1];
   }
 

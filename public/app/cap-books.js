@@ -248,7 +248,7 @@ function bkCssLedgersPage() {
     '#bk_lt .tn{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:start;gap:0 6px;width:100%;border:0;background:none;text-align:start;border-radius:8px;padding:6px 8px 6px calc(6px + var(--lvl,0) * 14px);position:relative;color:var(--ink);min-height:34px;font:inherit;font-size:var(--fs-2);cursor:pointer}',
     '#bk_lt .tn:hover{background:var(--panel)}',
     '#bk_lt .tn .tw{width:16px;text-align:center;line-height:1.45}',
-    '#bk_lt .tn .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;padding-top:1px}' /* W15-104: a tree name is ONE line; the full name is the tooltip */,
+    '#bk_lt .tn .nm{min-width:0;overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.35;padding-top:1px}' /* F-58 (21 Nov, replaces W15-104's one-line cut): a name wraps to a second line before it is cut, so 'Business bank account' and 'Card and EFTPOS settlements' read whole; the full name stays the tooltip */,
     '#bk_lt .lt-asof{padding:6px 10px 2px;font-size:var(--fs-1);color:var(--grey)}',
     '#bk_lt .lt-segs{display:flex;gap:4px;padding:2px 8px 6px}',
     '#bk_lt .lt-seg{flex:1 1 0;min-height:32px;border:1px solid var(--line,#d8dee6);background:none;border-radius:8px;font:inherit;font-size:var(--fs-1);color:var(--grey);cursor:pointer;white-space:nowrap}',
@@ -367,10 +367,7 @@ function bkDate(d) {
 /** the SHOP's day — the browser's local calendar day (F3b, 2026-10-13: toISOString() is the UTC day, which for an Indian shop between midnight and
  *  05:30 is YESTERDAY — the entry date, the dues as-of and the Cash tab's Today tag were all a day behind every early morning). Same day as crmLocalISO / peYmd. */
 function bkToday() {
-  var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '', date = new Date(), two = function (n) { return (n < 10 ? '0' : '') + n; };
-  try { if (zone) return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); } /* the shop zone (entity.timezone → CB_SHOP_TZ); en-CA prints YYYY-MM-DD */
-  catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('bkToday:zone', failure); } /* an unknown zone falls through to the browser day */
-  return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate());
+  return CBShopTime.today(); /* the shop's day in the shop's zone (entity.timezone → CB_SHOP_TZ), YYYY-MM-DD; the one maker is shop-time.js */
 }
 /* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
 var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };
@@ -1801,9 +1798,9 @@ function bkRangeHTML(id, again) {
   );
 }
 /* a report table from its head cells, row HTML and optional foot */
-function bkTable(head, rows, foot) {
+function bkTable(head, rows, foot, extraClass) {
   return (
-    '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
+    '<div class="bk-scroll"><table class="bktab' + (extraClass ? ' ' + extraClass : '') + '" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
     head
       .map(function (item) {
         return '<th' + (item.num ? ' class="num"' : '') + '>' + item.t + '</th>';
@@ -1813,7 +1810,7 @@ function bkTable(head, rows, foot) {
     rows +
     '</tbody>' +
     (foot ? '<tfoot>' + foot + '</tfoot>' : '') +
-    '</table>'
+    '</table></div>' /* F-53: only the rows scroll, the head and Total stay (accounts-page.css .bk-scroll) */
   );
 }
 /** a money figure the server holds in MAJOR units (a chit's frozen total) — through the same formatter the chit sheet uses */
@@ -1966,7 +1963,7 @@ function bkDvGist(e) {
     var gst = /^22(0\d|1[0-2])$/.test(String(item.code)),
       key = gst ? 'GST' : String(item.code);
     if (!m[key]) {
-      m[key] = { name: gst ? 'GST' : item.name, amt: 0, cr: 0 };
+      m[key] = { name: gst ? (typeof packWord === 'function' && packWord('taxName')) || 'Tax' : item.name, amt: 0, cr: 0 };
       order.push(key);
     }
     m[key].amt += Number(item.dr_minor || 0) + Number(item.cr_minor || 0);
@@ -3122,7 +3119,7 @@ var BK_LT_OWE = { current_liabilities: 1, trade_creditors: 1, sundry_creditors: 
 function bkLtPackGroup(code) {
   var pack = shopReg();
   if (!pack) return null;
-  var rec = [pack.ledgers, pack.expense_classes, pack.income_classes].reduce(function (found, list) {
+  var rec = [pack.ledgers, pack.expense_classes, pack.income_classes, pack.retired].reduce(function (found, list) { /* F-66: a retired code (wages 5100 → 6015) still resolves, under the pack's opex line */
     return found || (list || []).filter(function (x) {
       return String(x.code) === String(code);
     })[0];
@@ -3744,6 +3741,7 @@ function bkLgHead() {
   if (ledgerReply) {
     var figures = bkLgFigs(ledgerReply, currency, selection);
     head.chips.push({ tid: 'lg-sum', text: figures.text });
+    if (ledgerReply.carried) head.chips.push({ tid: 'lg-carried', text: bkCarriedWords(ledgerReply.carried, currency) }); /* YE-F-04 */
     var agreedUpTo = ownsParty ? bkAgreedTo(ledgerReply) || bkAgreedTo(BK.dues && BK.dues[selection.party]) : '';
     if (agreedUpTo) head.chips.push({ tid: 'lg-agreed', text: tx('✓ Agreed up to') + ' ' + bkDate(agreedUpTo) });
     if (figures.check && !figures.check.agree) {
@@ -4440,23 +4438,43 @@ function bkTbRowHTML(x, reply, compare, currency, asOf) {
     esc(x.code) +
     '</td><td>' +
     bkDrillLink(x.code, x.name, 'tb', reply.fy_from || bkFyFrom(), asOf, 'tb', tx('Trial balance')) +
-    '</td><td class="num">' +
+    '</td><td class="num" data-l="' + esc(tx('Dr')) + '">' +
     (x.dr_minor ? esc(bkMoney(x.dr_minor, currency)) : '') +
-    '</td><td class="num">' +
+    '</td><td class="num" data-l="' + esc(tx('Cr')) + '">' +
     (x.cr_minor ? esc(bkMoney(x.cr_minor, currency)) : '') +
     '</td>' +
     (compare ? '<td class="num" data-testid="tb-prior">' + (x.prior_net_minor == null ? bkFig(null, currency) : esc(bkDrCr(x.prior_net_minor, currency))) + '</td><td class="num">' + bkChange(changed.change_minor, x.change_over, currency, 'BKS004-P02', changed.side) + '</td><td class="num">' + bkPct(changed.change_bp, true) + '</td>' : '') +
     '</tr>'
   );
 }
+/** Show: the typed day goes into the ONE state (BK.tbDay) BEFORE the tab repaints, because bkTab replaces the box and bkTB would otherwise find no box and fall back to today */
+function bkTbShow() {
+  var typed = (document.getElementById('tb_asof') || {}).value;
+  if (typed) BK.tbDay = typed;
+  bkTab('tb');
+}
+/** the day before an ISO day (the year end that precedes a year start) */
+function bkDayBefore(iso) {
+  var d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+/** quick picks: the opening and closing days of the shop's own year (the pack's FY, bkFyFrom), so a year-end or opening trial balance is one tap */
+function bkTbPick(which) {
+  BK.tbDay = which === 'prior-end' ? bkDayBefore(bkFyFrom()) : bkFyFrom();
+  bkTab('tb');
+}
+function bkTbPicksHTML() {
+  return '<button class="btn sm" data-cbsid="CMP042-B26"' + bkMountAttribute('CMP042') + ' data-testid="tb-pick-prior-end" onclick="bkTbPick(\'prior-end\')">' + tx('End of last year') + '</button><button class="btn sm" data-cbsid="CMP042-B27"' + bkMountAttribute('CMP042') + ' data-testid="tb-pick-year-start" onclick="bkTbPick(\'year-start\')">' + tx('Start of this year') + '</button>';
+}
 /** the bar over the trial balance: the date, Show, and the chip that says whether debits equal credits */
 function bkTbBarHTML(asOf, ok) {
   return (
     '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
     asOf +
-    '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
+    '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTbShow()">' +
     tx('Show') +
-    '</button>' +
+    '</button>' + bkTbPicksHTML() +
     '<span class="optchip" data-testid="tb-balanced" style="margin-inline-start:auto;' +
     (ok ? 'color:var(--ok-2);border-color:var(--ok-2)' : 'color:var(--warn-2);border-color:var(--warn-2)') +
     '">' +
@@ -4496,8 +4514,8 @@ async function bkTB(body) {
       (window.CBBankTbLine && reply.bank ? CBBankTbLine.html(reply.bank, bkTbBankOptions(reply, asOf)) : '') +
       bkTable(
         [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }].concat(comparison ? [{ t: tx('Last year'), num: 1 }, { t: tx('Change'), num: 1 }, { t: '%', num: 1 }] : []),
-        rows,
-        bkTbTotalRowHTML(reply, currency, comparison)
+        rows, bkTbTotalRowHTML(reply, currency, comparison),
+        'bk-tbm'
       ) +
       (comparison ? bkOverNote(reply.over_rule, currency, 'BKS004-P03', 'tb-over-note') : ''); /* the note sits UNDER the list: the first data row stays where it was */
     if (window.CBBankTbLine && reply.bank) CBBankTbLine.wire(body, reply.bank, bkTbBankOptions(reply, asOf));
@@ -4538,6 +4556,13 @@ function bkSpan(from, to) {
 function bkFig(minor, c) {
   return minor == null ? '<span style="color:var(--grey)">—</span>' : esc(bkMoney(minor, c));
 }
+/** YE-F-04: what the retained-earnings opening IS, in words — the server's `carried` (computed roll, no entry); '' when it sent none */
+function bkCarriedWords(carried, currency) {
+  if (!carried || !carried.computed) return '';
+  var words = txf('Opening rolled forward from {year}: its profit and the earlier retained earnings (computed, not an entry)', { year: carried.from_year });
+  if (carried.year_closed === false) words += ' · ' + txf('{year} is not closed yet', { year: carried.from_year });
+  return words + ' · ' + bkDrCr(-Number(carried.retained_minor || 0), currency);
+}
 /** a ledger's name as a button that opens its entries BELOW the line (the server's page of ten), "Open all" going on to the Ledgers page and Back returning here; every line of every statement, one pattern */
 function bkDrillLink(code, name, tid, from, to, tab, label) {
   if (!code) return esc(name);
@@ -4567,9 +4592,11 @@ async function bkDrillToggle(btn, code, from, to, fromTab, label) {
     var ledgerReply = await api('booksLedger', { params: { account: code }, query: { from: from, to: to, limit: 10, order: 'desc' } });
     var currency = ledgerReply.currency,
       lines = ledgerReply.lines || [],
-      total = ledgerReply.total != null ? ledgerReply.total : lines.length;
+      total = ledgerReply.total != null ? ledgerReply.total : lines.length,
+      carriedWords = bkCarriedWords(ledgerReply.carried, currency);
     td.innerHTML =
       '<div style="padding:4px 0 8px 16px;font-size:var(--fs-1)" data-testid="drill-' + esc(code) + '">' +
+      (carriedWords ? '<div data-testid="drill-carried-' + esc(code) + '">' + esc(carriedWords) + '</div>' : '') +
       (lines.length
         ? lines
             .map(function (l) {
@@ -4746,14 +4773,14 @@ async function bkPL(body) {
       bkStmtCss() +
       bkPeriodBar({ tid: 'pl', aria: 'Period', opts: opts, cur: BK_PL.preset, pick: 'bkPlPick', step: 'bkPlStep', custom: custom, canNext: period.can_next, dates: dates, extra: cmpSel, range: range }) +
       lead +
-      '<table class="bk-st" data-testid="pl-table">' + head + '<tbody>' +
+      '<div class="bk-scroll"><table class="bk-st" data-testid="pl-table">' + head + '<tbody>' +
       bkStRow('bk-sec', esc(tx('Income')), []).replace('</tr>', '<td colspan="' + (comparison ? 5 : 2) + '"></td></tr>') +
       bkPlGroups(by.income, currency, comparison, reply.from, reply.to) +
       bkPlSectionTotal(reply, comparison, currency, 'income', tx('Total income')) +
       bkStRow('bk-sec', esc(tx('Expenses')), []).replace('</tr>', '<td colspan="' + (comparison ? 5 : 2) + '"></td></tr>') +
       bkPlGroups(by.expense, currency, comparison, reply.from, reply.to) +
       bkPlSectionTotal(reply, comparison, currency, 'expense', tx('Total expenses')) +
-      '</tbody></table>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
+      '</tbody></table></div>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
   } catch (e) {
     body.innerHTML = bkRefused(e, 'Profit and loss');
   }
@@ -4783,7 +4810,7 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
   var out = bkStRow('bk-sec', esc(title), []).replace('</tr>', '<td colspan="' + (change ? 5 : 3) + '"></td></tr>');
   (heads || []).forEach(function (headGroup) {
     var mine = (items || []).filter(function (x) { return (x.group ? x.group.code : null) === headGroup.code; });
-    var same = !headGroup.name || String(headGroup.name).toLowerCase() === String(title).toLowerCase(); /* a group named like its section (Equity under Equity) is said once */
+    var same = !headGroup.name || String(headGroup.name).toLowerCase() === String(title).toLowerCase() || (mine.length === 1 && String(mine[0].code) === String(headGroup.code)); /* a group named like its section (Equity under Equity), or a head that is one ledger (the GST net payable) is said once: no 'Total GST collected' over a net figure (YE-F-13) */
     if (!same) out += bkStRow('bk-grp', esc(headGroup.name), []).replace('</tr>', '<td colspan="' + (change ? 5 : 3) + '"></td></tr>');
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
@@ -4842,12 +4869,12 @@ async function bkBS(body) {
       bkPeriodBar({ tid: 'bs', aria: 'As at', opts: opts, cur: BK_BS.kind, pick: 'bkBsPick', step: 'bkBsStep', custom: custom, canNext: asAt.can_next, dates: dates, range: bkBsRange(reply, comparison),
         extra: bkBsBalancedChip(ok, reply) }) +
       lead +
-      '<table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
+      '<div class="bk-scroll"><table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
       bkBsSide(tx('Assets'), reply.assets, groups.assets, currency, reply.total_assets_minor, wasOf('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change) +
       bkBsSide(tx('Liabilities'), reply.liabilities, groups.liabilities, currency, reply.total_liabilities_minor, wasOf('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change) +
       bkBsSide(tx('Equity'), reply.equity, groups.equity, currency, reply.total_equity_minor, wasOf('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change) +
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, currency), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
-      '</tbody></table>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
+      '</tbody></table></div>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {
     body.innerHTML = bkRefused(e, 'Balance sheet');
   }
@@ -4872,6 +4899,11 @@ function bkFollowWord(code) {
     return item[0] === code;
   })[0];
   return match ? tx(match[1]) : '';
+}
+/** J-F-02: a party the server marks 'both' is on each side's list with THAT side's own figures (row.sides.customer / row.sides.supplier — the tile's source); the netted figure can be 0 while one half is 2,000. Any other row, or an older reply with no sides, comes back as it is. Nothing is worked out here. */
+function bkSideHalf(item, who) {
+  if (item.side === 'both' && item.sides && item.sides[who]) return Object.assign({}, item, item.sides[who], { side: who });
+  return item;
 }
 /** a supplier the shop has paid ahead (Dr balance: paid with no bill) is an advance — they owe you; the balance sheet reclassifies it the same way (1700). It is never under To pay. */
 function bkDuesAdvance(p) {
@@ -5643,9 +5675,13 @@ function bkNeedOpen(event, pid, kind) {
 }
 /** the rows of the Dues list from the one /dues read the page holds: the parties with a balance, on the page's own side (Receivables also holds the advances paid; Payables holds no one who owes you) */
 function bkDuesRows(onlySide) {
-  var open = ((BK.duesRaw && BK.duesRaw.parties) || []).filter(function (item) {
-    return Number(item.balance_minor);
-  });
+  var open = ((BK.duesRaw && BK.duesRaw.parties) || [])
+    .map(function (item) {
+      return onlySide ? bkSideHalf(item, onlySide === 'rcv' ? 'customer' : 'supplier') : item;
+    })
+    .filter(function (item) {
+      return Number(item.balance_minor);
+    });
   if (onlySide)
     open = open.filter(function (item) {
       return onlySide === 'rcv' ? bkDuesSide(item) === 'rcv' || bkDuesAdvance(item) : bkDuesSide(item) === 'pay' && !bkDuesAdvance(item);

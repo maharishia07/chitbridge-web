@@ -1,10 +1,10 @@
 'use strict';
-/* index2 draws every manifest entry (Athi 18 Nov): each entry id sits in exactly one home2 group (six pillars + the foot's Labs · Standards · Setup),
-   the six pillars are the decided six in order, and index2 is a layout over the SAME frame and facts (no second fetch path). Run: node tests/index2-draws-manifest.test.cjs */
+/* the one Home draws every manifest entry (Athi 18 Nov): each entry id sits in exactly one home2 group (six pillars + the foot's Labs · Standards · Setup),
+   the six pillars are the decided six in order, and index2 is a layout over the SAME frame and facts (no second fetch path). Run: node tests/home-draws-manifest.test.cjs */
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const root = path.join(__dirname, '..');
 const man = JSON.parse(fs.readFileSync(path.join(root, 'public/app/manifest.json'), 'utf8'));
-const html = fs.readFileSync(path.join(root, 'index2.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(root, 'public/app/home2.js'), 'utf8');
 const h2 = man.home2, groups = h2.pillars.concat(h2.foundation);
 assert.deepStrictEqual(h2.pillars.map((g) => g.id), ['sell', 'customers', 'buy', 'money', 'people', 'trade'], 'exactly the six pillars, in order');

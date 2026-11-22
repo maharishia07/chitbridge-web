@@ -84,16 +84,27 @@ function enBody() {
   return b;
 }
 /** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */
-function enWords(list, code, dateStep) {
+function enWords(list, code, dateStep, needs) {
   return (list || []).map(function (item, index) {
-    var c = index === 0 && code ? code : null,
+    var firstCode = index === 0 && code ? code : null,
       msg = typeof item === 'object' && item ? item.message : item;
     return {
-      code: c || (typeof item === 'object' && item && item.code) || 'R' + index,
+      code: firstCode || (typeof item === 'object' && item && item.code) || 'R' + index,
       message: String(msg),
-      fix: c === 'PERIOD_LOCKED' ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' } : { label: tx('Change it'), step: enSteps()[1] }
+      fix:
+        firstCode === 'PERIOD_LOCKED'
+          ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' }
+          : index === 0 && needs && enFieldStep(needs)
+            ? { label: tx('Add it'), step: enFieldStep(needs), focus: needs } /* C-F-06: the server names the box it lacks; the button goes to that box */
+            : { label: tx('Change it'), step: enSteps()[1] }
     };
   });
+}
+/** the step a field of the open event sits on (0 when this event has no such field) */
+function enFieldStep(key) {
+  for (var step = 1; step <= 4; step++)
+    if (enFields(step).some(function (item) { return item.key === key; })) return step;
+  return 0;
 }
 /** the preview answer reduced to what the sheet compares and saves against */
 function enSeen(reply) {
@@ -105,7 +116,7 @@ function enSeen(reply) {
     lines: (reply.lines || []).map(function (item) {
       return Object.assign({}, item, { name: item.ledger || item.name });
     }),
-    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(reply.refusals) : reply.refusals, reply.code),
+    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(reply.refusals) : reply.refusals, reply.code, null, reply.needs),
     warnings: enWords(reply.flags || reply.warnings, null).map(function (item, index) {
       return Object.assign(item, { code: 'FLAG' + index });
     })

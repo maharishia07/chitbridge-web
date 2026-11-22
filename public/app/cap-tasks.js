@@ -78,6 +78,8 @@
       if (set) for (var name in set) if (!EP[name]) EP[name] = set[name];
     });
     /* ＋ New task sends through the chit send, under app.html's name for it (one name per endpoint — as rail-advice.js registers it) */
+    /* the buyer's Cancel of the order it sent: app.html's voidChit (PUT /api/chits/:id/void, { reason }) — one name, as createChit */
+    if (!EP.voidChit) EP.voidChit = { m: 'PUT', p: '/api/chits/:id/void', ok: '✓' };
     if (!EP.createChit) EP.createChit = { m: 'POST', p: '/api/chits/send', ok: '✓' };
     return true;
   }
@@ -249,7 +251,7 @@
   }
 
   /* ── an action drawn the one way: shown always; greyed with the server's sentence when it may not (as cap-employees) ── */
-  function actRow(id, label, verdict, extra, className, stampCode) {
+  function actRow(id, label, verdict, extra, className, stampCode, hideWhy) {
     var ok = !verdict || verdict.ok !== false;
     return (
       '<div class="tk-act' +
@@ -270,7 +272,7 @@
       '">' +
       esc(label) +
       '</button>' +
-      (ok ? extra || '' : '<span class="why" data-testid="' + id + '-why">' + esc(sayOf(verdict)) + '</span>') +
+      (ok ? extra || '' : hideWhy ? '' : '<span class="why" data-testid="' + id + '-why">' + esc(sayOf(verdict)) + '</span>') +
       '</div>'
     );
   }
@@ -632,6 +634,8 @@
     if (chit.party) bits.push(esc(chit.party));
     var total = moneyWord(chit.total_minor, chit.currency, chit.cost_hidden);
     if (total) bits.push('<span class="mono">' + esc(total) + '</span>');
+    var taxLine = root.CBTasksAssign.taxWord(chit, T, moneyWord);
+    if (total && taxLine) bits.push('<span class="sub mono" data-testid="tk-tax">' + esc(taxLine) + '</span>');
     bits.push(esc(ageWord(chit.age_days)));
     var howText = howWord(chit);
     if (howText) bits.push(esc(howText));
@@ -668,6 +672,10 @@
   function tkBillAddress(chit) {
     return '/till.html' + (chit && chit.chit_id ? '?bill=' + encodeURIComponent(chit.chit_id) : '');
   }
+  /** the Deliver (or, for the buyer, Received) button of a line; a task has none */
+  function lineDeliverHTML(chit, line, lineId) {
+    return (chit.kind === 'task' ? '' : actRow('tk_lv_' + lineId, T(chit.kind === 'order_out' ? 'Received' : 'Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08'));
+  }
   function lineHTML(line, chit) {
     var assignment = line.assignment || {},
       lineState = (line.settings && line.settings.state) || 'open',
@@ -692,7 +700,7 @@
       '" data-testid="tk-line-state-' +
       lineId +
       '">' +
-      esc(T(done ? 'Done' : line.remaining > 0 ? 'Open' : 'Delivered')) +
+      esc(T(done ? 'Done' : line.remaining > 0 || chit.kind === 'task' ? 'Open' : 'Delivered')) +
       '</span>' +
       '<span class="sub" data-testid="tk-line-who-' +
       lineId +
@@ -702,24 +710,36 @@
       (price ? '<span class="sub mono">' + esc(price) + '</span>' : '') +
       '</div>' +
       '<div class="tk-line-sub sub">' +
-      esc(T('Delivered')) +
-      ' ' +
-      esc(line.delivered) +
-      ' · ' +
-      esc(T('left')) +
-      ' ' +
-      esc(line.remaining) +
-      (line.settings && line.settings.due ? ' · ' + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
-      (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
+      root.CBTasksAssign.lineSubHTML(chit, line, lineId, T, esc) +
       '</div>' +
       '<div class="tk-line-acts">' +
       holderChip(chit, line.actions && line.actions.assign_line, line) +
       actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line, '', '', 'TSK003-B07') +
-      actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08') +
+      lineDeliverHTML(chit, line, lineId) +
       '</div><div id="tk_lmore_' +
       lineId +
       '"></div></div>'
     );
+  }
+  /** the one refusal sentence that three or more of the step buttons share ('' when none does) */
+  function repeatedWhy(acts) {
+    var seen = {}, top = '';
+    STEPS.forEach(function (item) {
+      if (!acts[item] || acts[item].ok !== false) return;
+      var said = sayOf(acts[item]);
+      seen[said] = (seen[said] || 0) + 1;
+      if (seen[said] >= 3) top = said;
+    });
+    return top;
+  }
+  /** the step buttons in order (Accept → Bill it → Delivered), joined; a refusal sentence said once above them is left off the buttons */
+  function stepButtonsHTML(chit, acts, repeated) {
+    var steps = STEPS.map(function (item) {
+      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09', !!repeated && acts[item] && acts[item].ok === false && sayOf(acts[item]) === repeated);
+    });
+    steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
+    steps = steps.join('');
+    return steps;
   }
   function paintSheet(chit) {
     var acts = chit.actions || {};
@@ -729,11 +749,9 @@
       chit.stuck = !!node.stuck;
       chit.stuck_why = node.stuck_why || null;
     } /* the rail's stuck mark rides the list row; the sheet paints it */
-    var steps = STEPS.map(function (item) {
-      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09');
-    });
-    steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
-    steps = steps.join('');
+    /* L-F-09: one refusal sentence on three or more steps is said ONCE above them (greyed buttons keep it as their tooltip), never five times in a column */
+    var repeated = repeatedWhy(acts);
+    var steps = stepButtonsHTML(chit, acts, repeated);
     sheet(
       '<h2 data-testid="tk-subject">' +
         esc(chit.subject || T('Order')) +
@@ -749,7 +767,9 @@
         '</div>' +
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Next step')) +
-        '</div><div class="tk-steps" data-testid="tk-steps">' +
+        '</div>' +
+        (repeated ? '<div class="sub" data-testid="tk-steps-why">' + esc(repeated) + '</div>' : '') +
+        '<div class="tk-steps" data-testid="tk-steps">' +
         steps +
         '</div><div id="tk_more"></div></div>' +
         '<div class="tk-block"><div class="tk-h">' +
@@ -848,7 +868,9 @@
     var to =
       (WF() && WF().STEP_TO[action]) || { accept: 'accepted', reject: 'rejected', complete: 'completed', cancel: 'cancelled', reopen: 'in_progress' }[action];
     var needs = (chit.actions && chit.actions[action] && chit.actions[action].needs) || [];
+    var viaVoid = chit.actions && chit.actions[action] && chit.actions[action].via === 'void'; /* the buyer's cancel: the sender's own door, not the received copy's status step */
     var runMove = function (note) {
+      if (viaVoid) return call('voidChit', { params: { id: chit.chit_id }, body: { reason: note } });
       return call('status', { params: { id: chit.chit_id }, body: Object.assign({ status: to }, note ? { note: note } : {}) });
     };
     var opts = {
@@ -863,7 +885,7 @@
     if (needs.indexOf('reason') >= 0) {
       $('tk_more').innerHTML =
         '<div class="tk-panel"><label class="sub" for="tk_reason">' +
-        esc(T(action === 'reject' ? 'Why is it refused?' : 'Lines are still open — why close it?')) +
+        esc(T(action === 'reject' ? 'Why is it refused?' : viaVoid ? 'Why is it cancelled?' : 'Lines are still open — why close it?')) +
         '</label>' +
         '<input data-cbsid="TSK003-I01" class="inp" id="tk_reason" data-testid="tk-reason" maxlength="500" autocomplete="off">' +
         '<button data-cbsid="TSK003-B11" type="button" class="act" id="tk_reason_go" data-testid="tk-reason-go">' +
@@ -956,23 +978,33 @@
   function deliverPanel(chit, line) {
     var host = $('tk_lmore_' + line.line_id);
     if (!host) return;
+    var buyer = chit.kind === 'order_out'; /* the buyer confirms what CAME IN, offered the seller's claim */
+    var offer = buyer && line.theirs > 0 ? Math.max(0, Math.round((line.theirs - (line.delivered || 0)) * 1000) / 1000) || line.remaining : line.remaining;
+    var asked = false;
     host.innerHTML =
       '<div class="tk-panel"><label class="sub" for="tk_dq">' +
-      esc(T('How much went out?')) +
+      esc(T(buyer ? 'How much came in?' : 'How much went out?')) +
       ' <span class="mono">' +
       esc(line.unit || '') +
       '</span></label>' +
       '<input data-cbsid="TSK003-I02" class="inp mono" id="tk_dq" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
-      esc(line.remaining) +
+      esc(offer) +
       '" autocomplete="off">' +
       '<button data-cbsid="TSK003-B13" type="button" class="act" id="tk_dq_go" data-testid="tk-deliver-go">' +
-      esc(T('Record')) +
+      esc(T(buyer ? 'Received' : 'Record')) +
       '</button></div>';
     $('tk_dq').focus();
     $('tk_dq_go').onclick = function () {
       var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.-]/g, ''));
       if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
+        return;
+      }
+      /* over-delivery is shown, never refused (line-model R13), but it is asked first: nothing is recorded on the first press (B-F-14) */
+      var total = (line.delivered || 0) + typed;
+      if (total > line.qty && !asked) {
+        asked = true;
+        $('tk_out').textContent = total + ' ' + T('against') + ' ' + line.qty + ' ' + T('ordered') + '. ' + T('Press again to record it anyway.');
         return;
       }
       tkDeliver(chit, line, typed, $('tk_dq_go'));
@@ -1103,5 +1135,5 @@
     return { reload: reload, show: show, open: tkOpen, close: closeSheet };
   }
   /* actRow is shared (T3-DISPUTES-ASSIST): CBDispute (cap-dispute.js) draws Raise / Resolve the same way — shown always, greyed WITH the server's sentence */
-  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow };
+  root.CBTasks = { mount: mount, VIEWS: VIEWS, EP: CB_WORK_EP, actRow: actRow, headLine: headLine, repeatedWhy: repeatedWhy, lineHTML: lineHTML };
 })(typeof window !== 'undefined' ? window : globalThis);

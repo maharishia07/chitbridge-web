@@ -124,6 +124,22 @@ function crmMarkHidden(entry, wire) {
   if ((entry.src === 'chit' || entry.src === 'ledger') && figure == null && wire.cost_hidden) entry.amount_hidden = true;
   return entry;
 }
+/** A-F-36: a change row in the owner's words and money: "credit_limit_minor" is "Credit limit" in the shop's money, "tax_id:ABN" is "ABN" (never a field name or cents) */
+function crmChangeLine(e, word) {
+  var field = String(e.field || ''),
+    label,
+    show = function (v) {
+      return v == null ? '—' : v;
+    };
+  if (field === 'credit_limit_minor') {
+    label = tx('Credit limit');
+    show = function (v) {
+      return v == null ? '—' : bkMoney(Number(v), (window.CRM && window.CRM.currency) || undefined);
+    };
+  } else if (field.indexOf('tax_id:') === 0) label = field.slice(7).toUpperCase();
+  else label = word(field);
+  return label + (e.old != null || e.new != null ? ': ' + show(e.old) + ' → ' + show(e.new) : '');
+}
 function crmEntryFrom(e, i) {
   if (e && e.line != null && e.id != null) return e; // already the page's grammar (the design stand-in's) — accepted as is
   var at = e.at || '',
@@ -176,7 +192,7 @@ function crmEntryFrom(e, i) {
     o.kind = 'followup';
     o.line = tx('Done') + ' · ' + (e.what || '');
   } else if (k === 'change') {
-    o.line = word(e.field) + (e.old != null || e.new != null ? ': ' + (e.old == null ? '—' : e.old) + ' → ' + (e.new == null ? '—' : e.new) : '');
+    o.line = crmChangeLine(e, word);
     o.by = crmWho(e.by); /* R109: a change row never says who by a shop id */
   }
   /* a stage move: who · when · from → to (the server's memberships row; the words are the Leads module's CRM_STAGE) */

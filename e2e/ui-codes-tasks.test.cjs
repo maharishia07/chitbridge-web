@@ -57,7 +57,7 @@ for (const f of FILES) {
 const dup = Object.keys(all).filter((c) => all[c].length > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
 check(Object.keys(all).length === 58, 'the page has 58 tagged elements, counted by code: ' + Object.keys(all).length);
-check(src['cap-tasks.js'].indexOf('function actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'actRow takes the stamp code as its 6th parameter');
+check(src['cap-tasks.js'].indexOf('function actRow(id, label, verdict, extra, className, stampCode') >= 0, 'actRow takes the stamp code as its 6th parameter (a later one, hideWhy, may follow)');
 check(src['cap-dispute.js'].indexOf('root.CBTasks.actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'the dispute wrapper hands the code on');
 
 /** actRow itself: drawn with stubs, the code is on the button and the rest of the button is what it was */

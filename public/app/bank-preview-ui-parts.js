@@ -173,7 +173,7 @@
       return (
         '<span class="bd-ask">' + escapeHtml(preview.sentenceOf('which_liability') || 'Which tax does this payment settle?') + '</span> ' +
         options.map(function (one) {
-          return '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="liability"' + dataKey(item) + ' data-id="' + escapeHtml(one.id) + '" data-words="' + escapeHtml(one.words) + '">' + escapeHtml(one.words) + '</button>';
+          return '<button data-cbsid="BKS017-B32" type="button" class="bd-btn" data-act="liability"' + dataKey(item) + ' data-id="' + escapeHtml(one.id) + '" data-words="' + escapeHtml(one.words) + '">' + escapeHtml(one.words) + '</button>';
         }).join(' ')
       );
     }
@@ -205,9 +205,15 @@
       if (!words) return '';
       return '<span class="bd-say" role="status" data-testid="bd-line-say" data-line-say="' + escapeHtml(item.key) + '">' + escapeHtml(words) + ' <button data-cbsid="BKS017-B18" type="button" class="bd-btn bd-go" data-act="entry"' + dataKey(item) + '>' + escapeHtml(cfg.entryWords || 'Add it as an entry') + '</button></span>';
     }
+    /** after an account was chosen for a line: the same-words lines of the same direction still waiting, and the ONE press that gives them the same answer (never silent) */
+    function similarBox(item) {
+      var count = ctx.offers && ctx.offers[item.key] && ctx.similarFor ? ctx.similarFor(item.key).length : 0;
+      if (!count) return '';
+      return '<span class="bd-ask">' + count + (count === 1 ? ' other line says' : ' other lines say') + ' the same, the same way round.</span> <button data-cbsid="BKS017-B08" type="button" class="bd-btn" data-act="similar"' + dataKey(item) + '>Use this for ' + count + ' similar</button>';
+    }
     function lineNote(item, result) {
       var moved = item.moveTo && !result && root.CBBankLock ? tag('plain', 'Posts ' + root.CBBankLock.dayText(item.moveTo.next.date) + ' · ' + item.moveTo.name + ' locked') : ''; /* W15-85 */
-      return moved + lineNoteCore(item, result);
+      return moved + lineNoteCore(item, result) + (result ? '' : similarBox(item));
     }
     /** the reason a line the rules could not place gives, when nothing else was asked of the person: the engine's words, or what to do */
     function reasonBox(item, asked) {
@@ -224,12 +230,12 @@
         others = otherNeeds(item, tag, escapeHtml);
       return entryNote(item) + asked + (others ? ' ' + others : '') + reasonBox(item, asked) + sayBox(item);
     }
-    /** the engine's own reason for a proposal as one sentence ("narration says \"X\" — card takings paid to the bank" is the engine's; a line it could not read says what to do) */
-    function sentenceOf(item) {
-      if (!item.what && /^no rule matched$/i.test(item.why || '')) return 'Nothing here says who or what this is.';
-      return String(item.why || '').replace(/^narration says "[^"]*" — /i, 'Looks like ');
-    }
-    Object.assign(ctx, { sayBox, lineNote, sentenceOf });
+    Object.assign(ctx, { sayBox, lineNote, sentenceOf: lineSentenceOf });
+  }
+  /** the engine's own reason for a proposal as one sentence ("narration says \"X\" — card takings paid to the bank" is the engine's; a line it could not read says what to do) */
+  function lineSentenceOf(item) {
+    if (!item.what && /^no rule matched$/i.test(item.why || '')) return 'Nothing here says who or what this is.';
+    return String(item.why || '').replace(/^narration says "[^"]*" — /i, 'Looks like ');
   }
   /** a new party, and the account a line nothing explained is given; each function lands on the one shared `ctx` */
   function addParties(ctx) {
@@ -315,7 +321,7 @@
       if (!listed) return '';
       var key = escapeHtml(item.key),
         choices = kindChoices(item, listed, key);
-      if (choices.length && !ctx.opened[item.key]) choices.push('<span class="bd-choice"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="more" data-key="' + key + '">Someone or something else</button></span>');
+      if (choices.length && !ctx.opened[item.key]) choices.push('<span class="bd-choice"><button data-cbsid="BKS017-B33" type="button" class="bd-btn" data-act="more" data-key="' + key + '">Someone or something else</button></span>');
       return choices.length ? '<span class="bd-party"><span class="bd-ask">What is this?</span><span class="bd-choices">' + choices.join('') + '</span></span>' : '';
     }
     Object.assign(ctx, { kindBox });
@@ -348,7 +354,7 @@
     /** the Answer / Details / Close button of a row; none while the host answers ONE line */
     function toggleHtml(item, open, waiting) {
       if (cfg.only && cfg.only()) return '';
-      return ' <button data-cbsid="BKS017-B19" type="button" class="bd-btn bd-open" data-act="open" data-key="' + escapeHtml(item.key) + '" aria-expanded="' + open + '">' + (open ? 'Close' : waiting ? 'Answer' : 'Details') + '</button>';
+      return ' <button data-cbsid="BKS017-B34" type="button" class="bd-btn bd-open" data-act="open" data-key="' + escapeHtml(item.key) + '" aria-expanded="' + open + '">' + (open ? 'Close' : waiting ? 'Answer' : 'Details') + '</button>';
     }
     /** the one-line hint under a closed row whose words the pack already read */
     function hintHtml(item, open, result) {
@@ -404,7 +410,7 @@
       function fold(list, name, words) {
         if (!list.length) return '';
         var shown = ctx.groups[name] || list.some(function (item) { return item.key === openKey; });
-        return '<tr class="bd-group"><td colspan="5"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="group" data-g="' + name + '" aria-expanded="' + !!shown + '">' + escapeHtml(words + ' · ' + list.length + (list.length === 1 ? ' line' : ' lines')) + '</button></td></tr>' +
+        return '<tr class="bd-group"><td colspan="5"><button data-cbsid="BKS017-B35" type="button" class="bd-btn" data-act="group" data-g="' + name + '" aria-expanded="' + !!shown + '">' + escapeHtml(words + ' · ' + list.length + (list.length === 1 ? ' line' : ' lines')) + '</button></td></tr>' +
           (shown ? list.map(function (item) { return lineRow(item, results, openKey); }).join('') : '');
       }
       return [waiting, done].map(function (list) { return list.map(function (item) { return lineRow(item, results, openKey); }).join(''); }).join('') + fold(ready, 'ready', 'Ready to add') + fold(booked, 'booked', 'Already in your books');

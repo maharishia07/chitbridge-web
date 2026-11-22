@@ -109,6 +109,17 @@
   function throughCatalogue(word) {
     return typeof root.tx === 'function' ? root.tx(word) : word;
   }
+  /* WALK S S-F-02 / COUNT-SOURCE: the count is rows with something real behind them. "Empty" ("Nobody yet") and "later" ("not yet", no data source) are placeholders, not links — a brand-new shop reads 0, not 5 and 3. */
+  function rowsOf(groups) {
+    return (groups || []).reduce(function (total, item) {
+      return (
+        total +
+        (item.rows || []).filter(function (entry) {
+          return entry.s !== 'empty' && entry.s !== 'later';
+        }).length
+      );
+    }, 0);
+  }
   function mount(slots, o) {
     o = o || {};
     addCss();
@@ -132,16 +143,6 @@
     bL.setAttribute('data-testid', 'sides-open-l');
     bR.setAttribute('data-testid', 'sides-open-r');
 
-    function rowsOf(groups) {
-      return (groups || []).reduce(function (total, item) {
-        return (
-          total +
-          (item.rows || []).filter(function (entry) {
-            return entry.s !== 'empty';
-          }).length
-        );
-      }, 0);
-    }
     function refRow(r, side) {
       var key = side + ':' + r.id,
         shown = !!S.review[key];
@@ -336,5 +337,5 @@
     return { refresh: refresh, close: close, ready: refresh() };
   }
 
-  root.CBSides = { mount: mount, WORDS: W };
+  root.CBSides = { mount: mount, WORDS: W, countOf: rowsOf };
 })(typeof window !== 'undefined' ? window : this);

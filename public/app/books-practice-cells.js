@@ -12,10 +12,12 @@
   'use strict';
   var practiceKit = (root.CBPracticeKit = root.CBPracticeKit || {});
   practiceKit.statusCell = statusCell;
+  practiceKit.statusWhy = statusWhy;
   practiceKit.trend = trend;
   practiceKit.basCell = basCell;
   practiceKit.queriesCell = queriesCell;
   practiceKit.yearLabel = yearLabel;
+  practiceKit.checkedHeader = checkedHeader;
   practiceKit.yendCell = yendCell;
   practiceKit.bankWords = bankWords;
   practiceKit.checkedWords = checkedWords;
@@ -35,6 +37,11 @@
     var why = practiceKit.bandNow() !== 'pipeline' && r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + practiceKit.escapeHtml(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
     return '<span class="tag ' + (practiceKit.STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(r.health.words)) + '</span>' + why;
   }
+  /** the Status column once the list is grouped by health (the group heading says Needs help · Watch · Doing well, so the row never repeats it): only what the heading cannot say, the pack sentence or the reasons; blank otherwise */
+  function statusWhy(r) {
+    if (r.pack_missing) return '<span class="tag warn" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(r.pack_missing) + '</span>';
+    return r.health.reasons && r.health.reasons.length ? '<span class="sub" data-testid="practice-status-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
+  }
   /** the server's grant.read_only: an auditor's seat can look, never write. The one library chip (.bp-chip), a code per place it stands; nothing is drawn when the grant is not read-only. */
   function readOnlyChip(r, code, testid) {
     if (!r.grant || r.grant.read_only !== true) return '';
@@ -44,7 +51,15 @@
     var v = r.health.sales_trend_pct;
     return v == null ? '—' : (v > 0.5 ? '▲ ' : v < -0.5 ? '▼ ' : '► ') + (v > 0 ? '+' : '') + Math.round(v) + '%';
   }
+  /** YE-F-07: the server's bas.overdue ({ n, form, label, due, days_late }) in words, the oldest named; '' when none */
+  function basOverdueWords(r) {
+    var o = r.bas && r.bas.overdue;
+    if (!o) return '';
+    return practiceKit.translate('overdue') + ': ' + (o.label || o.form) + ' · ' + practiceKit.translate('due') + ' ' + practiceKit.dayWords(o.due) + (o.n > 1 ? ' (+' + (o.n - 1) + ')' : '');
+  }
   function basCell(r) {
+    var late = basOverdueWords(r);
+    if (late) return '<span style="color:var(--red-i)" data-testid="bas-overdue-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(late) + '</span>';
     if (!r.bas.due_date) return '—';
     return practiceKit.escapeHtml(r.bas.form || '') + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(r.bas.due_date)) + (r.bas.due_in_days != null && r.bas.due_in_days <= 30 ? ' <span class="sub">(' + practiceKit.escapeHtml(r.bas.due_in_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days')) + ')</span>' : '');
   }
@@ -61,16 +76,25 @@
     var row = ((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []).filter(function (r) { return r.year_end; })[0];
     return row ? 'FY' + String(row.year_end.fy).replace(/^dd(dd)/, '$1') : '';
   }
+  /** the Checked column's header: the year when the server gave a year-end count, else the quarter the rows fall back to (said here once, not on every row) */
+  function checkedHeader() {
+    return 'Checked ' + (yearLabel() || practiceKit.translate('this quarter'));
+  }
   /** the year-end cells: the same figures the Complete and Checked tiles count (the server's year_end), never the quarter */
   function yendCell(r) {
     var y = r.year_end;
     /* fix1117 F4: an older seed or a client with no year-end answer still reads: the stage when there is one, else the bank's own words (F2), never a bare dash */
     if (!y && !r.stage) return r.bank && r.bank.state === 'unexplained' ? practiceKit.escapeHtml(bankWords(r)) : '—';
     if (y && y.first_year) return practiceKit.escapeHtml(practiceKit.translate('First year'));
-    if (!y) return '<span class="bp-yend" data-cbsid="HOM001-P16"><b data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>';
+    if (!y) return stageLine(r, '');
     var figures = practiceKit.escapeHtml(y.locked) + '/' + practiceKit.escapeHtml(y.of) + ' ' + practiceKit.escapeHtml(practiceKit.translate('locked')) + ' · ' + (y.bank_to_end ? practiceKit.escapeHtml(practiceKit.translate('bank to')) + ' ' + practiceKit.escapeHtml(shortDay(y.end)) : practiceKit.escapeHtml(bankWords(r)));
     /* F4 (17 Nov): ONE line per client, the stage and the one blocker; the figures sit in the title and one press away on the sheet (no second statement of the blocker, so the row is not two lines) */
-    return r.stage ? '<span class="bp-yend" data-cbsid="HOM001-P16" title="' + practiceKit.escapeHtml(figures.replace(/<[^>]*>/g, '')) + '"><b data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))) + '</b>' + blockerWords(r) + '</span>' : figures;
+    return r.stage ? stageLine(r, figures.replace(/<[^>]*>/g, '')) : figures;
+  }
+  /** Athi 21 Nov (no repeats): the stage is a FILTER CHIP with its count (the band's tiles), so the row says only what stands in its way; the stage word stays in the row's title and its opened sheet. Blank when nothing does. */
+  function stageLine(r, figures) {
+    var word = practiceKit.escapeHtml(practiceKit.translate(practiceKit.stageWord(r.stage))), why = blockerWords(r).replace(/^ · /, '');
+    return '<span class="bp-yend" data-cbsid="HOM001-P16" data-testid="practice-stage-' + practiceKit.escapeHtml(r.entity_id) + '" title="' + word + (figures ? ' · ' + practiceKit.escapeHtml(figures) : '') + '">' + '<b class="bp-stage" data-testid="practice-stage-word-' + practiceKit.escapeHtml(r.entity_id) + '">' + word + (why ? ' · ' : '') + '</b>' + why + '</span>'; /* YE-F-15: on a phone card the stage word shows (the filter chip is not on the card); a table row keeps its chip and shows only what stands in the way */
   }
   /** B1: what stands between the row and its next stage, in words, from the server's stage_blocker (never decided here): "· 3 months not locked" · "· no bank statement signed" · "· not checked" · "· 1 query open" */
   function blockerWords(r) {
@@ -95,7 +119,7 @@
     return b.reconciled_to ? practiceKit.translate('Signed off to {d}').replace('{d}', practiceKit.dayWords(b.reconciled_to)) : practiceKit.translate('bank not to year end');
   }
   function shortDay(iso) {
-    try { return new Date(String(iso).slice(0, 10) + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return practiceKit.dayWords(iso); }
+    try { return CBShopTime.day(String(iso).slice(0, 10), { year: undefined }); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:shortday', failure); return practiceKit.dayWords(iso); }
   }
   /** W3 (Athi, 16 Nov): the Checked cell says the share WITH the counts, so a big book's 50% pending is not read like a small one's; the share rounds DOWN and is never 100% unless every entry is checked */
   function checkedWords(e) {
@@ -110,9 +134,13 @@
     return e ? e.of - e.checked : -1;
   }
   function checkedCell(r) {
-    var e = r.year_end && r.year_end.entries;
-    if (!e && r.checked && r.checked.of > 0) e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
-    return e ? practiceKit.escapeHtml(checkedWords(e)) + (e.capped ? ' <span class="sub">' + practiceKit.escapeHtml(practiceKit.translate('over 5000')) + '</span>' : '') : '—';
+    var e = r.year_end && r.year_end.entries, period = r.year_end && r.year_end.fy != null ? String(r.year_end.fy) : '';
+    if (!e && r.checked && r.checked.of > 0) {
+      e = { checked: r.checked.n, of: r.checked.of }; /* fix1117 F4: no year-end answer, the quarter's own count */
+      /* L-F-14: the count names its period; the client's own day book counts every entry, so "0 of 4" beside five entries was two counts of different spans, said as one.
+         The REPEAT RULE (Athi 21 Nov): the quarter is said ONCE, in the column header (checkedHeader), never on every row; a year-end count still names its year on its row */
+    }
+    return e ? practiceKit.escapeHtml(checkedWords(e)) + (period ? ' <span class="sub" data-testid="pr-checked-period">' + practiceKit.escapeHtml(period) + '</span>' : '') + (e.capped ? ' <span class="sub">' + practiceKit.escapeHtml(practiceKit.translate('over 5000')) + '</span>' : '') : '—';
   }
   /** what a client row opens to: the health figures read from the client's own books, each with its words; a figure the server holds back says so */
   /** B7: why a figure is not there, from the server's health.withheld: costs the grant does not show → "costs not shared"; more than one currency → said so; null otherwise (then "—" is no data). Never 0. */

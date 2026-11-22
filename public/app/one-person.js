@@ -91,14 +91,16 @@
 
   /** who a stored session is — { ent: the shop, uid: the person (uk()'s suffix), name } — or null when it is no
    *  one: missing, unreadable, or expired (an expired session is signed out, as restoreSession treats it) */
-  function who(s) {
-    if (!s || !s.token) return null;
-    var p = jwt(s.token);
-    if (!p) return null;
-    if (p.exp && p.exp * 1000 < Date.now()) return null;
-    var ent = p.parent_entity_id || p.identity_id;
-    if (!ent) return null;
-    return { ent: String(ent), uid: String(p.identity_id || ent), name: String(s.entity || p.parent_entity_name || s.name || p.display_name || '') };
+  function who(held) {
+    if (!held || !held.token) return null;
+    var claims = jwt(held.token);
+    if (!claims) return null;
+    /* CUSTOMER-DELINK: a customer's token is never a person of the apps — it lives in sessionStorage cb_cust@<shop>; one found in cb_sess is no one */
+    if (held.role === 'customer' || claims.identity_type === 'customer') return null;
+    if (claims.exp && claims.exp * 1000 < Date.now()) return null;
+    var shop = claims.parent_entity_id || claims.identity_id;
+    if (!shop) return null;
+    return { ent: String(shop), uid: String(claims.identity_id || shop), name: String(held.entity || claims.parent_entity_name || held.name || claims.display_name || '') };
   }
   function stored() {
     return who(json(SESS));

@@ -433,6 +433,12 @@ function c2PaneMsg(d) {
 }
 
 /* ── THEM · the order ──────────────────────────────────────────────────────────────────────────────────────── */
+/** the offer a recorded line carried, as the cart's row reads it ({ unit, off, label, promise, parts }), or null when the line had none */
+function recordedDeal(l, unit, off) {
+  if (unit == null) return null;
+  var offer = l.offer;
+  return { unit: unit, off: off, label: (offer && offer.label) || 'offer', promise: (offer && offer.promise) || null, parts: offer && Array.isArray(offer.parts) ? offer.parts : null };
+}
 function c2PaneOrd(d) {
   var lines = d.live_set || [];
   var asg = d.line_assignment || {};
@@ -493,18 +499,9 @@ function c2PaneOrd(d) {
       price: isFinite(p) ? p : null,
       code: l.sku || l.code || null,
       hsn: l.hsn || null,
-      deal_recorded:
-        unit != null
-          ? {
-              unit: unit,
-              off: off,
-              label: (l.offer && l.offer.label) || 'offer',
-              promise: (l.offer && l.offer.promise) || null,
-              parts: l.offer && Array.isArray(l.offer.parts) ? l.offer.parts : null
-            }
-          : null
+      deal_recorded: recordedDeal(l, unit, off)
     };
-    var tax = l.gst_rate != null ? { rate: Number(l.gst_rate), name: l.tax_name || 'GST' } : null;
+    var tax = l.gst_rate != null ? { rate: Number(l.gst_rate), name: l.tax_name || ((typeof packWord === 'function' && packWord('taxName')) || 'Tax') } : null;
     items.push({ item_id: id, item_data: nestedD, tax: tax, _e: e, _i: index, _l: l });
     if (!e.removed) recLines.push(l);
   });

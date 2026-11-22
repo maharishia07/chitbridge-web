@@ -260,6 +260,10 @@
     return [
       '.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{content:"✓";background:var(--cl-blue);border-color:var(--cl-blue)}.cbl input[data-col]:disabled{opacity:.5}}',
       '@media (forced-colors: active){.cbl input[data-selrow]::before,.cbl input[data-col]::before{forced-color-adjust:none;background:Canvas;color:Canvas;border-color:ButtonText}.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{background:Highlight;color:HighlightText;border-color:Highlight}}',
+      /* the Held-by chip (assign-bar.js heldCell): initials in a pill; the unassigned ghost is empty until the row is hovered or focused (faintly there where there is no hover: a tap target); its "+" is drawn here, never typed in the cell */
+      '.cbl .as-held{min-width:32px;min-height:32px;padding:0 8px;border:1px solid var(--cl-line,#DDD6C6);border-radius:999px;background:var(--cl-card,#fff);color:inherit;font:inherit;font-weight:600;cursor:pointer}',
+      '.cbl .as-ghost{width:32px;padding:0;border-color:transparent;background:transparent;opacity:0}.cbl .as-ghost::before{content:"+"}',
+      '.cbl [data-row]:hover .as-ghost,.cbl .as-ghost:focus,.cbl .as-ghost:focus-visible{opacity:1;border:1px dashed var(--cl-line,#DDD6C6)}@media(hover:none){.cbl .as-ghost{opacity:.4}}',
       '.cbl .cbl-viewpop{display:flex;flex-direction:column;gap:8px;align-items:stretch}.cbl .cbl-viewpop .cbl-seg{align-self:flex-start}.cbl .cbl-viewpop .cbl-ico{justify-content:flex-start}.cbl .cbl-viewpop .cbl-w{display:inline}'
     ];
   }

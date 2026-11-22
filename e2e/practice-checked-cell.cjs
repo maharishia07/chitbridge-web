@@ -4,7 +4,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const root = { Promise, tx: (s) => s, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, querySelector: () => null, getElementById: () => null }, location: { hostname: 'x' } };
-for (const part of ['books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), { window: root, globalThis: root, setInterval() {}, setTimeout() {} }, {});
+for (const part of ['books-practice-band.js', 'books-practice-cells.js', 'books-practice.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', part), 'utf8'), { window: root, globalThis: root, esc: (s) => String(s), setInterval() {}, setTimeout() {} }, {});
 const P = root.CBPractice;
 let bad = 0;
 const t = (n, f) => { try { f(); console.log('  ok  ', n); } catch (e) { bad++; console.log('  FAIL', n, '\n      ', e.message); } };
@@ -23,5 +23,11 @@ t('sorts by entries still to check: 5% of a big book (950 left) is above 50% of 
   const r = (c, o) => ({ year_end: { entries: { checked: c, of: o } } });
   assert.ok(P.checkedLeft(r(50, 1000)) > P.checkedLeft(r(5, 10)));
   assert.strictEqual(P.checkedLeft({ year_end: null }), -1);
+});
+t('L-F-14: the quarter fallback names its period, so "0 of 4" is not read against a day book of every entry', () => {
+  const cell = P.checkedCell({ year_end: null, checked: { n: 0, of: 4 } });
+  assert.ok(cell.includes('0% · 0 of 4') && !cell.includes('pr-checked-period'), cell);   /* REPEAT RULE: the quarter is said once, in the header */
+  assert.ok(/this quarter$/.test(P.checkedHeader()) || /^Checked FY/.test(P.checkedHeader()), P.checkedHeader());
+  assert.ok(P.checkedCell({ year_end: { fy: '2025-26', entries: { checked: 3, of: 8 } } }).includes('2025-26'), 'the year-end count names its year');
 });
 process.exit(bad ? 1 : 0);

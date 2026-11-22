@@ -274,7 +274,7 @@ function bkshEntryPreset(item, key) {
   if (typeof bankEntryPreset === 'function') return bankEntryPreset(item, bkshBook());
   const line = item.line || {},
     minor = line.debit_minor || line.credit_minor || 0;
-  return { v: Object.assign({ date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, bkshBankEnd(line)), ref: item.ref || 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
+  return { v: Object.assign({ date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + bkDate(line.date) + ': ' + String(line.narration || '').slice(0, 120) }, bkshBankEnd(line)), ref: item.ref || 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
 }
 /** the one step on a line the sheet cannot finish (a tax payment, a loan, a transfer): the ＋ Entry opens for that line, the sheet stays kept behind it. The entry is pre-filled by bankEntryPreset when the bank-match build provides it; else the date, amount and words of the line */
 function bkshEntry(key) {

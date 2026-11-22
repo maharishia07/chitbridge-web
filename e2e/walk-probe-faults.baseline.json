@@ -1,5 +1,5 @@
 {
- "_": "base faults of the fault probe (e2e/walk-probe-faults.cjs): a fault not listed here fails the walk. May only shrink. All four are the fixture api answering an object/nothing where the page expects a list or its lab data: they vanish with PROBE_FALLBACK=array (three of four) and are identical on main b47ce394 (probe 17 Nov).",
+ "_": "base faults of the fault probe (e2e/walk-probe-faults.cjs): a fault not listed here fails the walk. May only shrink. All four (first four) are the fixture api answering an object/nothing where the page expects a list or its lab data: they vanish with PROBE_FALLBACK=array (three of four) and are identical on main b47ce394 (probe 17 Nov). 1128: promo.html readShop throws Error(\"no key\") on purpose when the screen is not paired and the caller (the refresh press) shows \"Could not reach ChitBridge\"; the file is the till-master copy (api master, cb-counter), so the throw is baselined here and the master can turn it into a plain branch.",
  "faults": [
   {
    "key": "console|product-lab.html|Cannot read properties of undefined (reading '#')",
@@ -24,6 +24,12 @@
    "kind": "swallowed",
    "file": "cap-categories.js",
    "msg": "(UI.prods || []).forEach is not a function"
+  },
+  {
+   "key": "swallowed|promo.html|no key",
+   "kind": "swallowed",
+   "file": "promo.html",
+   "msg": "no key"
   }
  ]
 }

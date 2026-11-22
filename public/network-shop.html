@@ -2,11 +2,11 @@
 <html lang="en">
 <!-- OWNS  a network member's shop front: the brand's catalogue as this shop sells it (?bridge=).
      CALLED BY store.html, network.html and a member's public link.
-     FLOW  load → CBFrame (bar) → the member's catalogue read → paint → to the cart
+     FLOW  load → CBCustomerBar → the member's catalogue read → paint → to the cart
      CARD network-and-trade/network-shop -->
 <head>
 <meta charset="utf-8">
-<script src="/app/device-id.js"></script>
+<script src="/app/device-id.js" data-customer-page></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,25 +46,14 @@
 <body>
 <div id="shell" data-testid="nshop-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE) -->
 <div class="wrap" id="app"><div class="msg">Loading…</div></div>
-<!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
-<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
-<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
-<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
-<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<!-- THE CUSTOMER HEADER (CUSTOMER-DELINK): mark · name · ⌂ the shop's front. No avatar, no staff session, no staff menu. -->
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes (embed ?theme= paints one) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
-<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
-<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<script src="/app/customer-bar.js"></script>   <!-- CBCustomerBar: the customer header — no staff session, no staff menu (CUSTOMER-DELINK) -->
 <script>
-/* SHELL-ONE: the bar — ⌂ Home is this network's front; the avatar's door is Home's sign-in */
-if (window.CBFrame)
-  CBFrame.mount({
-    app: 'network-shop',
-    bar: true,
-    signin: false,
-    host: document.getElementById('shell'),
-    homeHref: location.pathname + location.search,
-    title: { icon: '◇', name: 'Network shop' }
-  });
+/* the bar — ⌂ Home is this network's front (CUSTOMER-DELINK: no staff session, no staff menu) */
+if (window.CBCustomerBar)
+  CBCustomerBar.mount({ host: document.getElementById('shell'), screen: 'NSH001', homeHref: location.pathname + location.search, title: { icon: '◇', name: 'Network shop' } });
 </script>
 <script>
 /**

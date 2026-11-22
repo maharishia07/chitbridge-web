@@ -81,9 +81,9 @@ W.run('finance', async (w) => {
     const r = await txt('[data-testid="fin-row-pa"]');
     return { ok: /1,?20,?000/.test(r) && /1,?00,?000/.test(r) && /1,?500/.test(r), saw: r.slice(0, 160) };
   });
-  await w.step('F4', 'Collections -> Sri Hardware carries "Over limit" and sits in the Over limit group, first; the group head counts 1 party in words', async () => {
+  await w.step('F4', 'Collections -> Sri Hardware carries "Over limit" and sits in the Over limit group, first; the group head counts "1 owes you" in words (E-F-10, cb67636c: the count says who owes, not "party")', async () => {
     const r = await txt('[data-testid="fin-row-pa"]'), head = await txt('[data-testid="fin-group-over"]'), others = await txt('[data-testid="fin-group-coll"]');
-    return { ok: /Over limit/.test(r) && /1 party/.test(head) && /they owe you/.test(head) && /2 parties/.test(others), saw: 'row: ' + /Over limit/.test(r) + ' | head "' + head.slice(0, 70) + '" | other group "' + others.slice(0, 70) + '"' };
+    return { ok: /Over limit/.test(r) && /1 owes you/.test(head) && /they owe you/.test(head) && /2 owe you/.test(others), saw: 'row: ' + /Over limit/.test(r) + ' | head "' + head.slice(0, 70) + '" | other group "' + others.slice(0, 70) + '"' };
   });
   await w.step('F5', 'Collections -> Kumar Traders (no terms set anywhere) says "Not set" for limit and interest - never a zero or a guessed rate', async () => {
     const r = await txt('[data-testid="fin-row-pc"]'), hasInterest = await page.locator('[data-testid="fin-row-pc"] [data-b="interest"]').count();

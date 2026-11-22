@@ -91,5 +91,18 @@ console.log('overview adapters (months · profit · weekdays)');
   check(w[0].value === 500 && w[0].line === 400 && w[0].label === '2026-10-26:short' && w[1].value === null && w[1].line === null, 'weekday bars: this week solid, same weekday last year the line, a day with no figure null');
   check(MC.weekdayTable(days, deps).rows.length === 2 && D.bars(w, { id: 'w', tid: 'w' }).indexOf('w-bar-2026-10-26') > 0, 'weekday table has one row a day and the bars draw');
 }
+
+console.log('cash words: money from balance_minor, never read out of the words');
+{
+  const d = Object.assign({}, deps, { date: (t) => 'D' + new Date(t).getUTCDate() });
+  const whole = { words: 'You stay above zero for the next 30 days. Lowest AUD 63,024 on 21 Nov 2026.', lowest: { balance_minor: 6302400, date: '2026-11-21' }, shortfall: null };
+  const cents = { words: 'Lowest AUD 28,511.05 on 21 Nov 2026.', lowest: { balance_minor: 2851105, date: '2026-11-21' }, shortfall: null };
+  check(MC.cashWords(whole, d).indexOf('AUD 63024.00') > 0, 'a whole-dollar balance (6302400) shows 63024.00, not 630.24');
+  check(MC.cashWords(cents, d).indexOf('AUD 28511.05') > 0, 'a cents balance shows its cents');
+  check(MC.cashWords({ words: 'On 18 Oct you will be AUD 12,400 short.', shortfall: { date: '2026-10-18' }, lowest: { balance_minor: -1240000, date: '2026-10-18' } }, d) === 'On 18 Oct you will be AUD 12,400 short.', 'a shortfall keeps the server words verbatim');
+  check(MC.cashWords(null, d) === '', 'no answer, no words');
+  const src = ['app/mis-charts.js', 'app/cap-books-overview.js', 'app/cap-mis-pictures.js'].map(read).join('\n');
+  check(!/replace\(new RegExp\([^)]*cur/.test(src) && !/ovMoneyWords/.test(src), 'GUARD: no page re-reads a money amount out of api words (a regex built on the currency code)');
+}
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
 process.exit(failures ? 1 : 0);

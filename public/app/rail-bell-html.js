@@ -76,7 +76,7 @@
     } catch (_) {
       try {
         var date = new Date(createdAt);
-        return isNaN(date) ? String(createdAt).replace('T', ' ').slice(0, 16) : date.toLocaleString(undefined, shape);
+        return isNaN(date) ? String(createdAt).replace('T', ' ').slice(0, 16) : root.CBShopTime.datetime(createdAt, shape);
       } catch (_2) {
         return String(createdAt).slice(0, 16);
       }
@@ -160,6 +160,7 @@
     '@media (max-width:620px){.cbb-btn{min-width:28px;padding:2px 4px}}' /* a phone header holds the page action, the bell, Home and the avatar on one line */ +
     '.cbb-dot{position:absolute;top:-6px;inset-inline-end:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--disp,#8E3517);color:var(--on-accent,#fff);font-size:var(--fs-1,12px);font-weight:800;line-height:18px;text-align:center;padding:0 4px;box-sizing:border-box}' +
     '.cbb-panel{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:60;width:min(360px,92vw);max-height:70vh;overflow:auto;border:1px solid var(--line,#DDD6C6);border-radius:12px;background:var(--card,#fff);color:var(--ink,#1D1B16);box-shadow:0 8px 24px var(--shadow,rgba(0,0,0,.14));font-size:var(--fs-2,14px);text-align:start}' +
+    '@media (max-width:620px){.cbb-panel{position:fixed;top:auto;inset-inline:8px;width:auto;max-width:none}}' /* WALK S S-F-08: on a phone the panel is anchored to the screen edges (top stays where the bell leaves it), so it never leaves the viewport */ +
     '.cbb-hd{padding:10px 12px;font-weight:800;border-bottom:1px solid var(--line,#DDD6C6)}' +
     '.cbb-sec{padding:8px 12px 3px;font-size:var(--fs-1,12px);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey,#5E594D)}' +
     '.cbb-row{display:flex;gap:9px;padding:8px 12px;border:0;border-bottom:1px solid var(--line,#DDD6C6);cursor:pointer;background:none;width:100%;text-align:start;font:inherit;color:inherit}' +

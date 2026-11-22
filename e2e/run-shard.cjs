@@ -59,7 +59,7 @@ const SKIP = {
   'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
 /* a file that needs more than the 240 s slot, with its reason (ms): the fault probe looks at ~1,200 screens (470 s on a SIT box, 18 Nov) */
-const SLOT_MS = { 'walk-probe-faults.cjs': 900000 };
+const SLOT_MS = { 'walk-probe-faults.cjs': 900000, 'labs-flow.cjs': 480000 /* 3 Labs x 4 states + the index x 4 with real ready (1128): 240 s ran out at offer out-1280 on CI */ };
 const KNOWN = {
   'walk-home.cjs': 'UI9 round: L-Home-390 the kural band overlaps its own lines; L-CRM-957/1366/1568 the header-filter rail overlaps the column heads (UI9-crm itself is green since W1)',
 };
@@ -77,6 +77,8 @@ const mine = REP_N ? Object.keys(REPEAT).filter((f) => files.includes(f)) : file
 console.log(REP_N ? ('repeat ×' + REP_N + ' · ' + mine.join(' · '))
   : ('shard ' + shard + '/' + of + ' · ' + mine.length + ' of ' + files.length + ' files'));
 let failed = 0, known = 0;
+/* labsGrey 1128: a walk that checks the REAL ready flags (the three Labs are ready:false, grey) opts out of lib/ready-manifest.cjs, as that file's header allows */
+const REAL_READY = new Set(['labs-flow.cjs']);
 const runs = [];
 for (const f of mine) for (let k = 1, n = REP_N || (REPEAT[f] ? REPEAT[f][0] : 1); k <= n; k++) runs.push([f, k, n]);
 for (const [f, k, n] of runs) {
@@ -85,7 +87,7 @@ for (const [f, k, n] of runs) {
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(E2E, f)], {
     encoding: 'utf8', timeout: SLOT_MS[f] || 240000,
-    env: Object.assign({}, process.env, { NODE_PATH: path.join(E2E, 'node_modules') }),
+    env: Object.assign({}, process.env, REAL_READY.has(f) ? { CB_REAL_READY: '1' } : {}, { NODE_PATH: path.join(E2E, 'node_modules'), NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' --require ' + path.join(E2E, 'lib', 'ready-manifest.cjs')).trim() }), /* 1128 greyready: walks see every Home entry ready (lib/ready-manifest.cjs) */
   });
   const s = ((Date.now() - t0) / 1000).toFixed(0) + 's';
   /* SEC1: exit 78 = the harness SKIPPED itself (a missing secret, said in its output) — counted as SKIP, never PASS, never FAIL */

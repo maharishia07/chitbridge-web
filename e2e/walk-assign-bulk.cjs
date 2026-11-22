@@ -121,6 +121,8 @@ async function pickAndGo(page, name, note) {
   await page.locator('[data-as-pick]', { hasText: name }).first().click();
 }
 const heldText = (page, n) => page.locator('[data-testid="practice-row-' + id(n) + '"]').innerText();
+/** the row repaints after the write's answer lands (probe run 44942713569: read at once it still showed the old holder under load): wait up to 6 s for the initials before judging */
+const heldHas = async (page, n, re) => { for (let k = 0; k < 24; k++) { if (re.test(await heldText(page, n))) return true; await new Promise((r) => setTimeout(r, 250)); } return false; };
 const sleep = pause;
 
 /* ── ASSIGN-W3: CRM follow-ups and Employees on the same CBAssign (1366, light) ─────────────────────────────────────────────────────────────────────────── */
@@ -238,7 +240,7 @@ async function w3Employees(browser, base) {
       const api = standIn();
       const { ctx, page } = await open(browser, base, api, vp, theme, 'owner');
       ok(tag + ' · 1 the list is drawn from the 150 clients', (await rows(page)) > 0, await rows(page));
-      ok(tag + ' · 1 Held by is plain text, no button on the row (a dash when nobody holds it)', (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip]').count()) === 0 && (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-testid="assign-held"]').first().innerText()).trim() === '—', await heldText(page, 1));
+      ok(tag + ' · 1 Held by: an unassigned row shows nothing, only a ghost control', (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip].as-ghost').count()) === 1 && (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-testid="assign-held"]').first().innerText()).trim() === '', await heldText(page, 1));
       ok(tag + ' · 1 the quick views Mine · Unassigned · Everyone are on the first paint', /Mine[^]*Unassigned[^]*Everyone/.test(await page.locator('.cbl-views').first().innerText()));
       ok(tag + ' · no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
       await page.screenshot({ path: file('1-list') });
@@ -268,7 +270,7 @@ async function w3Employees(browser, base) {
       ok(tag + ' · 3 assign-bulk got plug client, role, 10 subject ids and Anna', !!a1 && a1.body.plug === 'client' && a1.body.role === 'adviser' && a1.body.subject_ids.length === 10 && a1.body.target_actor_id === ANNA.actor_id && !('chit_ids' in a1.body), JSON.stringify(a1));
       ok(tag + ' · 3 the line says 10 clients assigned', /10 clients assigned to Anna Lee/.test(await page.locator('[data-testid="assign-result"]').innerText()));
       ok(tag + ' · 3 the ticks clear after the action (W11) and the bar leaves until the next tick', (await page.locator('[data-bulk]').count()) === 0);
-      ok(tag + ' · 3 Held by now shows Anna on a ticked row', /Anna Lee/.test(await heldText(page, 1)), await heldText(page, 1));
+      ok(tag + ' · 3 Held by now shows Anna on a ticked row', await heldHas(page, 1, /\bAL\b/), await heldText(page, 1));
 
       /* 4 twelve to Ben: Clear the first group, tick the next */
       await clearTicks(page);
@@ -289,7 +291,7 @@ async function w3Employees(browser, base) {
       await pause(900);
       const a3 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[2];
       ok(tag + ' · 5 hand over: one client, Ben, with the note', !!a3 && a3.body.subject_ids.length === 1 && a3.body.target_actor_id === BEN.actor_id && a3.body.note === 'Anna is on leave', JSON.stringify(a3));
-      ok(tag + ' · 5 Held by now shows Ben on that row', /Ben Ortiz/.test(await heldText(page, 1)));
+      ok(tag + ' · 5 Held by now shows Ben on that row', await heldHas(page, 1, /\bBO\b/));
 
       /* 6 one back to the pool */
       await clearTicks(page);
@@ -298,7 +300,7 @@ async function w3Employees(browser, base) {
       await pause(900);
       const a4 = api.calls.filter((c) => c.path === '/api/chits/assign-bulk')[3];
       ok(tag + ' · 6 back to pool sends target_actor_id null for that client', !!a4 && a4.body.target_actor_id === null && a4.body.subject_ids.length === 1 && a4.body.subject_ids[0] === id(2), JSON.stringify(a4));
-      ok(tag + ' · 6 Held by is empty again (a dash)', /—/.test(await page.locator('[data-testid="practice-row-' + id(2) + '"] [data-testid="assign-held"]').first().innerText()), await heldText(page, 2));
+      ok(tag + ' · 6 Held by is empty again (nothing shown)', (await page.locator('[data-testid="practice-row-' + id(2) + '"] [data-testid="assign-held"]').first().innerText()).trim() === '', await heldText(page, 2));
 
       /* 3b one press on a chip, one on a person; 3c Undo from the previous holders; 3d the A key */
       await clearTicks(page);

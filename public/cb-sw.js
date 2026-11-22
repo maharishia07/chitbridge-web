@@ -14,13 +14,18 @@
  * FLOW      install -> network-first fetch -> cache answers only when the network fails; non-GET never touched
  * CARD      28-platform-and-operations/offline
  */
-const CB_SW_VERSION = 'v5';
-const SHELL = 'cb-shell-' + CB_SW_VERSION; // same-origin app shell + static JS
+const CB_SW_VERSION = 'v6';
+// CUSTOMER-DELINK (21 Nov 2026): the shop registers THIS file as /cb-sw.js?set=customer with scope /shop.html. That worker has its own cache, its own
+// pre-cache (customer pages only) and falls back to the shop, never to app.html — a customer's phone never stores or opens the back office.
+const CUSTOMER_SET = new URL(self.location.href).searchParams.get('set') === 'customer';
+const SHELL = (CUSTOMER_SET ? 'cb-shop-' : 'cb-shell-') + CB_SW_VERSION; // same-origin app shell + static JS
 const EXT = 'cb-ext-' + CB_SW_VERSION; // cross-origin static (fonts)
-const KEEP = [SHELL, EXT];
+const KEEP = ['cb-shell-' + CB_SW_VERSION, 'cb-shop-' + CB_SW_VERSION, EXT];
+const NAV_FALLBACK = CUSTOMER_SET ? '/shop.html' : '/app.html';
 
 // app shell + all lazily-injected cap modules (they are NOT <script> tags, so precache them explicitly)
-const PRECACHE = [
+const CUSTOMER_PRECACHE = ['/shop.html', '/embed.html', '/store.html', '/network-shop.html', '/cb-offline.js', '/app/helpers.js', '/app/cb-words.js', '/app/customer-bar.js'];
+const OFFICE_PRECACHE = [
   '/app.html',
   '/app/core.js',
   '/app/helpers.js',
@@ -38,6 +43,8 @@ const PRECACHE = [
   '/shop.html',
   '/embed.html'
 ];
+
+const PRECACHE = CUSTOMER_SET ? CUSTOMER_PRECACHE : OFFICE_PRECACHE;
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -74,7 +81,7 @@ function networkFirst(req) {
     .catch(() =>
       caches.match(req).then((reply) => {
         if (reply) return reply;
-        if (req.mode === 'navigate') return caches.match('/app.html'); // last-resort shell so a navigation still opens
+        if (req.mode === 'navigate') return caches.match(NAV_FALLBACK); // last-resort shell so a navigation still opens (the shop for a customer, never the back office)
         return Response.error();
       })
     );

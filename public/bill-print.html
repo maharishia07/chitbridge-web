@@ -94,8 +94,9 @@
 
 <div class="slip" id="slip"></div>
 
+<script src="/app/sample-set.js"></script>   <!-- CBSample: the sample shop's address line by country (batch 1128: never Chennai on another country's slip) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
-<script src="/engine/locale.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
 <script src="/engine/money.js"></script>   <!-- CBMoney: assertSameCurrency (CUR-1) and decimals — the sample builder refuses a mixed bill with its words -->
 <script src="/engine/tax.js"></script>      <!-- CBTax.determine then moneyOf: the ONE place the sample bill's tax is worked out (R12: never halved here; see sampleBill) · CBRegulation: the pack's tenders -->
 <script src="/engine/docnumber.js"></script> <!-- CBDoc: the bill number as the till writes it, by the shop's country (R49) -->
@@ -104,9 +105,9 @@
 /* ── the bill, as data. The till will hand the same shape to this template. ─────────────────────────────────── */
 var SHOP = {
   name: 'CHIT AND BRIDGE STORES',
-  line1: '14, Poonamallee High Road',
-  line2: 'Chennai 600 126 · Tamil Nadu',
-  phone: '044 2259 2632',
+  line1: '1 Sample Street',
+  line2: CBSample.forCountry('').place /* a preview's message swaps in the shop's country (onPreviewMessage); until then the neutral line */,
+  phone: '000 000 0000',
   gstin: '33AABCK1234F1Z6' /* used only on a tax invoice / bill of supply */,
   tax_id_word: 'GSTIN' /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
 };
@@ -115,7 +116,7 @@ var BILL = {
   no: 'C1/26-27/0041',
   at: new Date(),
   till: 'Counter 1',
-  by: 'Ravi',
+  by: 'Sample cashier',
   customer: { name: 'Walk-in', phone: '' },
   lines: [
     { name: 'Grapes', hsn: '0806', qty: 2, unit: 'kg', price: 200, rate: 0 },
@@ -166,6 +167,7 @@ function onPreviewMessage(event) {
   var message = event.data;
   if (!message || !message.cb_preview) return;
   signature = message;
+  SHOP.line2 = CBSample.forCountry(message.country).place; /* the sample address by the shop's country: India's own line only for an India shop */
   BILL.currency = message.currency || null; /* CTRY-72: a message with tax but no money leaves the money unknown, never the rupee */
   /* R47: a taxed sample line keeps its own rate when the pack's menu has it (India's 5 %), else takes the pack's standard rate (AU 10 %, AE 5 %) */
   var menu = message.tax && message.tax.rates ? message.tax.rates.map(Number) : null;

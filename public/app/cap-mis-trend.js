@@ -245,54 +245,9 @@ function trMoneyCell(pick) {
     return '<span class="mono">' + esc(trMoney(pick(row))) + '</span>';
   };
 }
-/** the table's columns: period · sales · last year · change · takings · bills · note — the same figures the chart draws */
-function trCols() {
+/** the takings and bills columns of the table */
+function trTakingsCols() {
   return [
-    {
-      key: 'period',
-      label: tx('Period'),
-      prio: 1,
-      w: 150,
-      cell: function (row) {
-        return row.words.title;
-      }
-    },
-    {
-      key: 'sales',
-      label: tx('Sales'),
-      prio: 2,
-      w: 130,
-      num: true,
-      html: true,
-      cell: trMoneyCell(function (row) {
-        return row.gross_minor;
-      }),
-      value: function (row) {
-        return row.gross_minor;
-      }
-    },
-    {
-      key: 'lastyear',
-      label: tx('Last year'),
-      prio: 3,
-      w: 130,
-      num: true,
-      html: true,
-      cell: trMoneyCell(function (row) {
-        return row.last_year && row.last_year.gross_minor;
-      })
-    },
-    {
-      key: 'change',
-      label: tx('Change'),
-      prio: 2,
-      w: 100,
-      num: true,
-      html: true,
-      cell: function (row) {
-        return '<span data-testid="tr-change-' + esc(row.key) + '">' + esc(trChangeWords(row.change_pct)) + '</span>';
-      }
-    },
     {
       key: 'takings',
       label: tx('Takings'),
@@ -313,7 +268,61 @@ function trCols() {
       cell: function (row) {
         return row.bills === null ? '—' : String(row.bills);
       }
+    }
+  ];
+}
+/** the table's columns: period · sales · last year · change · takings · bills · note — the same figures the chart draws */
+function trCols() {
+  return [
+    {
+      key: 'period',
+      label: tx('Period'),
+      prio: 1,
+      w: 150,
+      cell: function (row) {
+        return row.words.title;
+      }
     },
+    {
+      key: 'sales',
+      label: tx('Sales'),
+      nl: true, /* E-F-10: on a phone card the three figures carry no label of their own — the one key line above the list names them */
+      prio: 2,
+      w: 130,
+      num: true,
+      html: true,
+      cell: trMoneyCell(function (row) {
+        return row.gross_minor;
+      }),
+      value: function (row) {
+        return row.gross_minor;
+      }
+    },
+    {
+      key: 'lastyear',
+      label: tx('Last year'),
+      nl: true,
+      prio: 3,
+      w: 130,
+      num: true,
+      html: true,
+      cell: trMoneyCell(function (row) {
+        return row.last_year && row.last_year.gross_minor;
+      })
+    },
+    {
+      key: 'change',
+      label: tx('Change'),
+      nl: true,
+      prio: 2,
+      w: 100,
+      num: true,
+      html: true,
+      cell: function (row) {
+        return '<span data-testid="tr-change-' + esc(row.key) + '">' + esc(trChangeWords(row.change_pct)) + '</span>';
+      }
+    },
+    ...trTakingsCols(),
     {
       key: 'note',
       label: tx('Note'),
@@ -352,7 +361,7 @@ function trMount(frame) {
   TR.period = trPeriodOfHash();
   screen.className = 'screen flush';
   screen.innerHTML =
-    '<div id="tr_top" data-testid="tr-top"></div><div id="tr_chart" data-testid="tr-chart-box" style="margin:10px 20px 0"></div><div id="tr_list" data-testid="tr-list" style="flex:1 1 auto;min-height:0"></div>';
+    '<div id="tr_top" data-testid="tr-top"></div><div id="tr_chart" data-testid="tr-chart-box" style="margin:10px 20px 0"></div><style>.tr-key{display:none;margin:6px 20px 0}@media(max-width:700px){.tr-key{display:block}}</style><p class="sub tr-key" data-testid="tr-key">' + esc(tx('On each card: sales · last year · change')) + '</p><div id="tr_list" data-testid="tr-list" style="flex:1 1 auto;min-height:0"></div>';
   TR.api = CBList.mount(document.getElementById('tr_list'), {
     key: 'fin-trend',
     t: tx,

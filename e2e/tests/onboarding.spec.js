@@ -26,6 +26,7 @@ test.describe('Module · Onboarding / Mint', () => {
 
     await test.step('Register — name + email', async () => {
       await expect(page.getByTestId('reg-name')).toBeVisible();
+      await page.getByTestId('reg-shop-name').fill('Walk Shop');
       await page.getByTestId('reg-name').fill(name);
       await page.getByTestId('reg-email').fill(email);
       await page.getByTestId('reg-submit').click();

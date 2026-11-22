@@ -34,6 +34,7 @@
   var TILE = {
     books_in: ['Books in', { stage: 'books_in' }], complete: ['Complete', { stage: 'complete' }], checked: ['Checked', { stage: 'checked' }], ready: ['Ready to file', { stage: 'ready' }], lodged: ["Filed (owner's word)", { stage: 'lodged' }],
     return_due_30: ['Due in 30 days', { bas: 'soon' }],
+    return_overdue: ['Return overdue', { bas: 'overdue' }], /* YE-F-07: due day passed and not closed in the books */
     changed: ['Clients with changes since I checked', { changed: 'yes' }], /* rank 10: the server's count of clients with entries posted since THIS person said checked; the tile only filters, never re-sorts */
     queries_on_us: ['Queries on us', { queries: 'us' }], queries_over_14: ['Waiting over 14 days', { queries: 'over14' }], bank_unexplained: ['Bank not explained', { bank: 'unexplained' }], to_check: ['Clients with entries to check (quarter)', { checked: 'behind' }], months_unlocked: ['Clients with months to lock', { unlocked: 'yes' }],
     cash_low: ['Cash running low', { advice: 'cash_low' }], sales_down: ['Sales down', { advice: 'sales_down' }], loss: ['Making a loss', { advice: 'loss' }], late_debtors: ['Late debtors', { advice: 'late_debtors' }]
@@ -139,7 +140,7 @@
     if (!year || month < 0) return null;
     for (var i = 0; i < y.of; i++) {
       var d = new Date(Date.UTC(year, month + i, 1));
-      out.push({ label: new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' }).format(d), state: i < y.locked ? 'locked' : 'open' });
+      out.push({ label: CBShopTime.month(d.getUTCMonth(), 'short'), state: i < y.locked ? 'locked' : 'open' });
     }
     return out;
   }

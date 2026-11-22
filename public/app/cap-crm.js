@@ -64,6 +64,7 @@ var CRM = {
   gen: 0,
   loadGen: 0,
   rows: [],
+  total: null,
   byKey: {},
   alerts: {},
   currency: null,
@@ -612,7 +613,7 @@ async function crmLoad(quiet) {
     if (g !== CRM.loadGen) return;
     var rows = ((reply && reply.parties) || (Array.isArray(reply) ? reply : [])).concat(((reply && reply.walk_ins) || []).map(crmWalkInFrom));
     CRM.rows = crmNormalize(rows);
-    CRM.alerts = (reply && reply.alerts) || {};
+    crmKeepHeadlines(reply);
     CRM.currency = (CRM.rows[0] && CRM.rows[0].currency) || CRM.currency;
     crmMaySet(crmMayOf(reply));
     await crmFuJoin(CRM.rows, reply); /* the server's may/why for this login — the bar's action is painted again from it below */
@@ -655,7 +656,7 @@ function crmNav(active) {
       'parties',
       'Parties',
       'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6',
-      CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + CRM.rows.length + '</span>' : ''
+      CRM.loaded ? '<span class="n quiet" data-testid="crm-nav-n-parties">' + crmPartyCount() + '</span>' : ''
     ],
     [
       'chits',
@@ -2112,6 +2113,13 @@ async function crmAddSearch() {
   }
   crmAddResults();
 }
+/** A-F-33: a typed phone finds the party that holds it however it was spaced ("+61 412 345 678" = "+61412345678"); other text matches as before */
+function crmAddMatches(item, ql) {
+  if ([item.display_name, item.nickname, item.party_no, item.user_id, item.phone, item.email].join(' ').toLowerCase().indexOf(ql) >= 0) return true;
+  var typed = ql.replace(/[^0-9]/g, '');
+  if (typed.length < 7 || /[a-z@]/.test(ql)) return false;
+  return String(item.phone || '').replace(/[^0-9]/g, '').indexOf(typed) >= 0;
+}
 function crmAddResults() {
   var box = document.getElementById('crm_addres');
   if (!box) return;
@@ -2125,7 +2133,7 @@ function crmAddResults() {
   }
   var mine = CRM.rows
     .filter(function (item) {
-      return [item.display_name, item.nickname, item.party_no, item.user_id, item.phone, item.email].join(' ').toLowerCase().indexOf(ql) >= 0;
+      return crmAddMatches(item, ql);
     })
     .slice(0, 4);
   mine.forEach(function (item) {

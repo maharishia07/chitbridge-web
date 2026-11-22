@@ -165,7 +165,8 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++
     };
     ctx2.fetch = () => (abort ? Promise.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })) : Promise.resolve({ status: reply.status, ok: false, headers: { get: () => null }, clone() { return this; }, json: async () => reply.body }));
     vm.createContext(ctx2);
-    vm.runInContext(src.slice(i, b) + '\nthis.apiOnce = apiOnce; this.serverErrorWords = serverErrorWords;', ctx2);
+    const answers = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'core-answers.js'), 'utf8'); /* errorFacts lives in core-answers.js */
+    vm.runInContext(src.slice(i, b) + answers.slice(answers.indexOf('function errorFacts(')) + '\nthis.apiOnce = apiOnce; this.serverErrorWords = serverErrorWords;', ctx2);
     const say = async (key) => { try { await ctx2.apiOnce(key, { body: { v: 1 } }); return ''; } catch (e) { return e.message; } };
     reply = { status: 503, body: {} };
     const words = await say('pay');

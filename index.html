@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
- OWNS      the site home page: the Home alerts and the rail widget; CBShell (public/app/shell.js) draws the header and the cards from public/app/manifest.json
- CALLED BY the browser at / (the repo-root index.html is the site root); e2e/index-page.cjs (reads it and drives it at 1366 and 390)
- FLOW      loads device-id, config and helpers, CBShell.mount draws the shell, then this page paints the alerts and the rail from one budgeted read each
+ OWNS      the site home page, ONE Home (UX-127; the old long Home and index2 were folded in, 21 Nov 2026): six pillar rows or tiles + Labs · Standards · Setup, in-page, no page scroll at 1366x768 or 390x844; the Home alerts and Your work reads
+ CALLED BY the browser at / (the repo-root index.html is the site root); e2e/index-page.cjs and e2e/walk-index-one-screen.cjs drive it at 1366 and 390
+ FLOW      CBShell.mount draws the frame and reads the facts; home2.js moves the cards into their pillar row (manifest.json home2); signed out it draws the showcase tiles
  CARD      26-reporting-mis-and-bi/home-facts
 -->
 <html lang="en" data-tokens="list">
@@ -13,17 +13,10 @@
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ChitBridge</title>
-<!-- ⭐ THE INDEX PAGE IS THE SHELL'S HOME (plan row N18, 2026-10-08; FIT §D Q1 · Q3 · Q5 · Q10). CBShell (public/app/shell.js) draws
-     the header, the five areas and the kural; every card is a row of public/app/manifest.json — this page writes no card by hand.
-     What this page owns is the HOME area: the alerts (one browser, one shop · the ledger's waiting posts · a counter paired to
-     another shop) and "The rail" widget. Every figure is the server's, one budgeted read each (I19); a read that does not exist yet
-     paints nothing — never a made-up number. e2e/index-page.cjs proves it at 1366 and 390.
-     The earlier design (docs/design/index-page/cb-index.md) is superseded by the shell (designs-inbox/cb-shell-2026-10-07). -->
+<link rel="preload" href="/app/manifest.json" as="fetch" crossorigin="anonymous">   <!-- home30: the cards' manifest downloads with the page, not after the scripts below -->
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/cb-fonts.css">
-<link rel="preload" href="/app/manifest.json" as="fetch" crossorigin="anonymous">   <!-- home30: the cards' manifest downloads with the page, not after the scripts below -->
-<!-- home30 · overlap for the batch merge: next/assignw2-web adds a modal-host.js script tag to this file; keep it with the other app scripts above the inline script. Nothing here needs it. -->
 <style>
 /* tokens — docs/design/SYSTEM.md §2, copied, never restyled */
 :root{
@@ -35,9 +28,7 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
 }
-body{margin:0;background:var(--page);color:var(--ink);font-size:calc(16px * var(--k,1)); /* the text size the person chose (avatar menu › Large sets --k) — the page body must follow it, as accounts and list-lab do */font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
-
-/* ── anything wrong, before anything else (the shell's alerts slot; only a failing thing earns a row) ── */
+body{margin:0;background:var(--page);color:var(--ink);font-size:calc(16px * var(--k,1));font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
 .al{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-size:13.5px}
 .al .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--card);flex:0 0 auto}
 .al b{font-weight:700}
@@ -48,34 +39,6 @@ body{margin:0;background:var(--page);color:var(--ink);font-size:calc(16px * var(
 .al.warn{background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i)}
 .al.warn .ic{background:var(--amber-i)}
 
-/* ── the rail: suppliers · the flows · customers (designs-inbox/cb-shell-2026-10-07, the Home widget) ── */
-.rail{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;position:relative;overflow:hidden;margin-bottom:16px}
-.rail::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--green-b),var(--green),var(--green-b))}
-.railtop{display:flex;align-items:baseline;gap:11px;margin-bottom:13px}
-.railtop h3{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800;margin:0}
-.railtop a{margin-left:auto;font-weight:600;color:var(--green-d);text-decoration:none}
-.track{display:flex;align-items:center;position:relative}
-.track::before{content:"";position:absolute;left:7%;right:7%;top:50%;height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 7px,transparent 7px 13px)}
-.node,.pip{text-decoration:none;color:inherit}a.node:hover .n,a.pip:hover{text-decoration:underline}
-.node{position:relative;background:var(--card);padding:0 14px;text-align:center;flex:0 0 auto}
-.node .n{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:21px;font-weight:700;line-height:1.1}
-.node .k{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
-.rail .track{justify-content:space-between}.node.hot .n{color:var(--green-d)}   /* Your work: five figures across the box; a figure waiting on you in the accent */
-.flow{position:relative;flex:1;display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
-.pip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
-.pip.in{border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)}
-.pip.out{border-color:var(--green-b);background:var(--green-t);color:var(--green-d)}
-.pip.stuck{border-color:var(--amber-b);background:var(--amber-t);color:var(--amber-i)}
-@media(max-width:700px){
-  .al{flex-wrap:wrap} .al .fix{margin-left:33px}
-  .rail{padding:12px 14px 14px}
-  .track{display:grid;grid-template-columns:1fr 1fr;row-gap:8px;column-gap:6px;align-items:center}
-  .track::before{display:none}
-  .node{padding:0}
-}
-
-/* ── home30: the first 30 seconds. While the practice read is out (html.bp-hold, set by books-practice.js) or the cards are not drawn yet, Home shows the SHAPE of the page (HOM001-P15), never a bare word.
-   Shapes only: it says neither "firm" nor "shop" (the server's answer decides that); the practice's own "Loading" line is hidden under it. ── */
 .hk{display:none;margin:0 0 16px;overflow:hidden;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px)}
 html.bp-hold .hk,.hk:has(+ [data-testid="shell-areas"]:empty){display:block}
 html.bp-hold:has(#bp_failed) .hk,html.bp-hold:has(#bp_practice) .hk{display:none}
@@ -88,11 +51,105 @@ html.bp-hold [data-testid="practice-loading"]{display:none}
 @keyframes hkp{0%,100%{opacity:.55}50%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.hk i{animation:none}}
 @media(max-width:700px){.hk .s i{flex:1;width:auto}.hk .p i{width:72px}.hk .r i:nth-child(n+5){display:none}}
+/* ── the one Home (was index2): the crisp Home. The frame is a fixed full-screen column; this page makes its middle fit (no page scroll; only an open row scrolls inside itself). ── */
+.ix-on .cbsh-nav,.ix-on .cbsh-more,.ix-on .cbsh-ph,.ix-on .cbsh-cap,.ix-on .cbsh-needs,.ix-on #railbox{display:none!important}
+.ix-on .cbsh-main{overflow:hidden;display:flex;flex-direction:column;scroll-behavior:auto}
+.ix-on .cbsh-inner{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:8px 14px 6px;max-width:1100px;width:100%;margin:0 auto}
+.ix-on .cbsh-areas,.ix-on .cbsh-sec.home,.ix-on .cbsh-home{display:flex!important;flex-direction:column;flex:1 1 auto;min-height:0;margin:0}
+.ix-on .cbsh-needs{margin:0 0 6px;font-size:13px;flex:none}
+.ix-on .cbsh-alerts{flex:none;display:flex;flex-direction:column;gap:6px;margin:0 0 6px}.ix-on .cbsh-alerts:empty{display:none}
+.ix-on .al{padding:6px 12px;font-size:13px}.ix-on .al .fix{height:30px}
+.ix-on #railbox{flex:none}
+.ix{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:6px}
+.ix-item{display:flex;flex-direction:column;min-height:0;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ix-item[hidden]{display:none}
+.ix-item.open{flex:1 1 auto;border-color:var(--green)}
+.cbsh .ix-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;cursor:pointer;flex:none;width:100%;border-radius:12px}
+.cbsh .ix-row:hover{background:var(--panel)}.cbsh .ix-row:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.ix-g{width:30px;height:30px;border-radius:9px;background:var(--panel);display:grid;place-items:center;font-size:15px;color:var(--muted);flex:none}
+.ix-n{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.015em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ix-v{display:flex;align-items:baseline;gap:5px;min-width:0;max-width:46%;font-size:13px;color:var(--muted);white-space:nowrap}
+.ix-v b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;color:var(--ink)}
+.ix-v span{overflow:hidden;text-overflow:ellipsis}
+.ix-v.dn b,.ix-v.dn span{color:var(--amber-i)}.ix-v.q b{color:var(--muted);font-weight:600}
+.ix-c{flex:none;color:var(--faint);font-size:15px;transition:transform .15s}.ix-item.open .ix-c{transform:rotate(180deg)}
+.ix-item.base{background:none;border-color:var(--line-soft)}.ix-item.base .ix-row{min-height:36px}.ix-item.base .ix-g{width:24px;height:24px;font-size:13px;background:none}
+.ix-item.base .ix-n{font-family:inherit;font-size:14px;font-weight:700}.ix-item.base .ix-v b{font-size:15px}
+.ix-panel{flex:1 1 auto;min-height:0;overflow:hidden;padding:2px 10px 8px;display:flex;flex-direction:column;gap:4px;align-content:start}
+.ix-panel[hidden]{display:none}
+.ix-panel .cbsh-box,.ix-panel .cbsh-sc{height:auto!important;padding:4px 10px;border-radius:9px;display:flex;align-items:center;gap:8px;min-width:0;flex:none;min-height:36px;border-color:var(--line-soft)}
+.ix-panel [hidden]{display:none!important}
+.ix-panel .cbsh-box h4{font-size:14px;line-height:24px;padding:0;flex:none;max-width:45%}
+.ix-panel .cbsh-box .g{width:22px;height:22px;font-size:12px;margin:0;float:none;flex:none}
+.ix-panel .cbsh-box .what,.ix-panel .cbsh-box .more,.ix-panel .cbsh-box .more-n,.ix-panel .cbsh-box .st,.ix-panel .cbsh-box .arw{display:none!important}
+.ix-panel .cbsh-box .facts{height:auto;margin:0;padding:0;border:0;flex:1;min-width:0}.ix-panel .cbsh-box .facts>.f~.f{display:none}
+.ix-panel .cbsh-box .facts>.f{font-family:inherit;font-size:13px;color:var(--muted)}.ix-panel .cbsh-box .facts>.f.dn{color:var(--amber-i);font-weight:600}
+.ix-panel .cbsh-sc{border:1px dashed var(--line);font-size:13px}
+.cbsh .ix-panel .ix-ln{all:unset;box-sizing:border-box;flex:none;min-height:34px;padding:0 10px;display:flex;align-items:center;font-size:13px;color:var(--green-d);font-weight:600;cursor:pointer}
+.ix-panel .ix-ln[hidden]{display:none}.ix-panel .ix-fold{color:var(--muted);font-weight:500}
+.ix-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:6px}
+.df{flex:none;display:flex;align-items:center;gap:8px 12px;min-height:56px;padding:6px 14px;margin:0 0 8px;background:var(--amber-t);border:1px solid var(--amber-b);border-radius:12px;color:var(--amber-i)}
+.df-n{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;line-height:1}
+.df-t{font-weight:800;font-size:14px;white-space:nowrap}.df-t.q{font-weight:600;color:var(--muted)}
+.df-i{display:flex;flex-wrap:wrap;gap:4px 8px;flex:1;min-width:0}
+.df-i a{color:inherit;text-decoration:none;background:var(--card);border:1px solid var(--amber-b);border-radius:999px;padding:0 11px;min-height:32px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.df-i a i{font-style:normal;font-weight:800;margin-right:6px}
+.ix.first .df{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}.ix.first .df-i a{border-color:var(--green-b)}
+.ix.first .ix-item{opacity:.82}
+.cbsh .ix-more{all:unset;cursor:pointer;font-weight:700;font-size:13px;padding:0 10px;min-height:32px;display:inline-flex;align-items:center}
+.ix-a{flex:none;min-width:22px;height:22px;border-radius:11px;background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i);font-size:12px;display:grid;place-items:center;padding:0 5px}.ix-a[hidden]{display:none}
+.ix-foot{flex:none;display:flex;align-items:center;gap:6px;margin-top:6px;min-height:36px;flex-wrap:nowrap}
+.cbsh .ix-fw{all:unset;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);padding:0 10px;min-height:36px;display:inline-flex;align-items:center;border-radius:9px}.cbsh .ix-fw:hover{background:var(--panel)}.cbsh .ix-fw[hidden]{display:none}
+.ix-fs{margin-left:auto;display:flex}.ix-fs .cbsh-tools{display:flex!important;position:static;margin:0;gap:6px}
+.ix-sheet{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--page);color:var(--ink);width:min(560px,94vw);max-height:80vh;overflow:hidden}
+.ix-sheet::backdrop{background:color-mix(in srgb,var(--ink) 32%,transparent)}.ix-sheet[open]{display:flex;flex-direction:column}
+.ix-sh-h{display:flex;align-items:center;padding:8px 8px 8px 16px;border-bottom:1px solid var(--line-soft);flex:none}.ix-sh-h b{flex:1;font-family:'Bricolage Grotesque',sans-serif;font-size:17px}
+.ix-sheet .ix-x{all:unset;cursor:pointer;min-width:44px;min-height:44px;display:grid;place-items:center;font-size:16px}
+.ix-sh-b{overflow:auto;padding:8px;min-height:0}.ix-sh-b .ix-panel{overflow:visible;padding:0}.ix-dl{display:flex;flex-direction:column;gap:6px}.ix-dl a{color:var(--ink);padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;background:var(--card)}
+.ix-panel .cbsh-box h4{font-size:15px;line-height:24px;padding-right:18px}
+.ix-panel .cbsh-box .g{width:24px;height:24px;font-size:13px;margin:0 8px 0 0}
+.ix-panel .cbsh-box .what{display:none}
+.ix-panel .cbsh-box .facts{height:auto;margin-top:4px;padding-top:4px;flex-wrap:wrap}
+.ix-panel .cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}
+.ix-panel .cbsh-box .more-n{display:none}
+.ix-panel .cbsh-sc{border:1px dashed var(--line);font-size:13px}
+@media(max-width:700px){
+  .ix-on .cbsh-inner{padding:6px 10px 4px}
+  .ix-foot{flex-wrap:wrap}  .df{min-height:52px;padding:6px 10px}.df-n{font-size:24px}
+  .ix{gap:4px}.ix-row{min-height:52px;gap:10px;padding:0 10px}.ix-n{font-size:16px}.ix-v{max-width:50%}
+  .ix-panel{padding:2px 8px 6px}.ix-fw{padding:0 6px}
+  .df-i{flex-wrap:wrap}.df-i a{flex:0 1 auto;min-width:0;white-space:normal;line-height:1.2;padding-top:4px;padding-bottom:4px}   /* a longer word (another language) wraps inside its door; it is never cut */
+  .ix-n{white-space:normal;line-height:1.15;text-overflow:clip}
+  .ix-panel .cbsh-box .facts>.f:has(+.more-n),.ix-panel .cbsh-box .facts>.f:first-child:not(:only-child){display:block!important}   /* the phone shell hides the first fact for its own .more list, which a row never draws: show the first fact */.ix-fs .cbsh-tools button{font-size:11px}
+  .al{flex-wrap:wrap} .al .fix{margin-left:33px}
+}
+/* ── signed out: the showcase (hero, six tiles, the foot) - everything the product does, ready ones live, the rest grey, no page scroll ── */
+.ix.out .ix-hero{flex:none;display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:8px 14px;margin:0 0 6px;background:var(--green-t);border:1px solid var(--green-b);border-radius:12px;color:var(--green-d)}
+.ix.out .ix-hero>b{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:800;flex:1 1 auto}
+.ix-hd{display:flex;gap:8px;flex-wrap:wrap}
+.cbsh .ix-door{all:unset;box-sizing:border-box;cursor:pointer;min-height:40px;padding:0 16px;display:inline-flex;align-items:center;border-radius:10px;border:1px solid var(--green);background:var(--card);color:var(--green-d);font-weight:700;font-size:14px}
+.cbsh .ix-door.pri{background:var(--green);color:var(--card)}.cbsh .ix-door:focus-visible{outline:2px solid var(--blue);outline-offset:2px}@media(max-width:700px){.cbsh .ix-door{min-height:44px;min-width:44px}} /* TAP RULE: 44 px on a phone */
+.cbsh .ix-door[disabled]{cursor:default;border-style:dashed;border-color:var(--line);background:none;color:var(--muted)}
+.ix.out .ix-list{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:8px;flex:0 0 auto}
+.ix.out .ix-item .ix-row{flex-wrap:wrap;align-content:center;min-height:76px;gap:2px 10px;padding:8px 14px}
+.ix.out .ix-n{flex:1 1 calc(100% - 50px)}
+.ix.out .ix-l{flex:1 1 100%;font-size:13px;color:var(--muted);padding-left:42px;margin-top:-6px}
+.ix.out .ix-c,.ix.out .ix-v{display:none}
+.ix-sp{margin:0 0 8px;color:var(--muted);font-size:14px}.ix-sc{display:flex;flex-direction:column;gap:6px}
+.ix-se{display:grid;grid-template-columns:1fr auto;gap:0 10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.ix-se b{font-size:14px}.ix-se i{font-style:normal;font-size:12px;font-weight:700;color:var(--green-d);background:var(--green-t);border:1px solid var(--green-b);border-radius:999px;padding:1px 9px;align-self:start}
+.ix-se span{grid-column:1/3;font-size:13px;color:var(--muted)}
+.ix-se.soon{border-style:dashed;background:none}.ix-se.soon b{color:var(--muted)}.ix-se.soon i{color:var(--muted);background:none;border-color:var(--line)}
+@media(max-width:700px){.ix.out .ix-list{grid-template-columns:1fr 1fr}.ix.out .ix-item .ix-row{min-height:78px;padding:6px 8px;gap:2px 6px}.ix.out .ix-l{padding-left:0;margin-top:0;flex-basis:100%;font-size:12px}.ix.out .ix-n{font-size:15px}.ix.out .ix-hero{padding:6px 10px}.ix.out .ix-hero>b{font-size:15px}}
+/* a firm's Home is its client list (Fable review §3, "Firm vs shop"): no Do first, no pillar rows - the list fills the page and scrolls inside itself; the foot stays (its Setup) */
+html.bp-firm .df,html.bp-firm .ix-list,html.bp-firm .ix-fw[data-pillar="labs"]{display:none}
+html.bp-firm.ix-on .cbsh-areas,html.bp-firm .ix{flex:none}
+html.ix-on #bp_practice{flex:1 1 auto;min-height:0;overflow:auto;margin:0 0 6px}
 </style>
+
 </head>
 <body>
 <div id="shell"></div>
-
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar — signed out it is the Sign in door; the shell mounts it -->
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
@@ -100,17 +157,20 @@ html.bp-hold [data-testid="practice-loading"]{display:none}
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: one browser, one shop -->
 <script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->
 <script src="/app/sides.js"></script>      <!-- CBSides: the two reference panels; the shell mounts them -->
+<script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction + CBConfirm: the bell's Clear all is a write, asked first -->
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>   <!-- CBBell (R06): the shell mounts it in its bell slot — the dot + the list, from the push stream -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the shell words a fact line's money and time ("₹420", "09:33") — the server only sends the numbers -->
+<script src="/app/shop-time.js"></script>   <!-- CBShopTime: the one date/time reader (shop zone, UI-language words) -->
 <script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script>   <!-- CBDraw (RPT2): the Till card's sparkline — the teaser into Reports › Trend -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): which entries this showing draws (?edition=auditor · the avatar's Edition choice); it hides, never grants -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
-<script src="/app/books-grant-api.js"></script><script src="/app/books-clients-door.js"></script><script src="/app/books-acting.js"></script><!-- A3P: the one builder of a client's addresses (the year-end sheet links on Home) --><script src="/app/books-practice-band.js"></script><script src="/app/books-practice-cells.js"></script><script src="/app/ui.js"></script><script src="/app/modal-host.js"></script><!-- ASSIGN-W2: ui.dialog + its popup shell, so the person popover opens in place on Home --><script src="/app/assign-bar.js"></script><script src="/app/books-practice-mine.js"></script><script src="/app/books-practice.js"></script>   <!-- ACC-176b: the firm's "Your clients" card on Home (it was only in app.html, which Home is not) -->
-<script src="/app/home2.js"></script><script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>     <!-- CBShell: the frame — header · five areas · kural -->
+<script src="/app/books-grant-api.js"></script><script src="/app/books-clients-door.js"></script><script src="/app/books-acting.js"></script><!-- A3P: the one builder of a client's addresses (the year-end sheet links on Home) --><script src="/app/books-practice-band.js"></script><script src="/app/books-practice-cells.js"></script><script src="/app/ui.js"></script><script src="/app/modal-host.js"></script><!-- ASSIGN-W2 (548d7a01): ui.dialog + its popup shell, so Assign to... opens its people list in place on the firm Home; the One Home fold (da838fd7) dropped both tags and the list said "cannot open on this page" --><script src="/app/assign-bar.js"></script><script src="/app/books-practice.js"></script>   <!-- ACC-176b: the firm's "Your clients" card on Home (it was only in app.html, which Home is not) -->
+<script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>     <script src="/app/home2.js"></script>   <!-- CBHome2: the accordion layout (signed in) and the showcase tiles (signed out) -->
 <script>
 'use strict';
+document.documentElement.classList.add('ix-on');   /* index2: its layout rules apply from the first paint, signed in or not */
 /* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). A failed read
    leaves its row out — never an error string (rule 4). */
 
@@ -123,7 +183,6 @@ function session(){
     return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
   }catch(_){ return null; }
 }
-if (window.CBHome2) CBHome2.gate();   /* a viewer who chose the new Home goes there (their own preference, localStorage) */
 var SESS = session();
 var MINE = SESS ? CBOnePerson.who(SESS) : null;
 /* every repaint starts a new generation; a read that lands for an older one paints nothing */
@@ -148,22 +207,25 @@ function mountShell(){
   /* Home's slot: the "Your work" widget (signed in) */
   var home = SHELL.slots.home;
   if (home) {
-    home.innerHTML = '<div id="railbox"></div>' + CBHome2.switchHTML('classic'); CBHome2.wireSwitch(home);   /* index2: the viewer's own switch to the crisp Home */
+    home.innerHTML = '<div id="ix2"></div>';
+    SHELL.ready.then(function(){ CBHome2.mount(SHELL, document.getElementById('ix2'), { out: !SESS }); });
     SHELL.ready.then(function(){ if (ALERTS.length) alertsPaint(); });   /* the edition is known once the manifest is in (rows written straight into the slot — close-first, signed-out — are left alone) */
     /* walk 2026-10-17 (Athi): the roadmap is our own self-declaration — it is no longer drawn on Home; roadmap.js is retired (RETIRED.md); the comparison lives in Standards › Compared with */
   }
   /* home30: the shape of the page while the answers are out (see .hk above); register rows HOM001-P15 (frame) and HOM001-P16 (each block). CSS shows and hides it, so it needs no timer. */
   var areas = SESS && document.querySelector('[data-testid="shell-areas"]');
   if (areas && !document.querySelector('[data-testid="home-skeleton"]')) {
+    document.documentElement.classList.add('ix-on');
     var hk = document.createElement('div');
     hk.className = 'hk'; hk.setAttribute('data-testid', 'home-skeleton'); hk.setAttribute('data-cbsid', 'HOM001-P15');
     hk.setAttribute('role', 'status'); hk.setAttribute('aria-busy', 'true'); hk.setAttribute('aria-label', typeof tx === 'function' ? tx('Loading') : 'Loading');
     var blk = function (c) { return '<i class="' + c + '" data-cbsid="HOM001-P16"></i>'; };
-    hk.innerHTML = blk('t') + '<div class="p">' + blk('') + blk('') + blk('') + '</div><div class="s">' + blk('') + blk('') + '</div><div class="r">' + blk('') + blk('') + blk('') + blk('') + blk('') + blk('') + '</div>';
+    hk.innerHTML = blk('t') + '<div class="s">' + blk('') + blk('') + '</div><div class="r">' + blk('') + blk('') + blk('') + blk('') + blk('') + blk('') + '</div>';
     areas.parentNode.insertBefore(hk, areas);
   }
   return SHELL;
 }
+window.addEventListener('cb-home-signin', function(){ signinOpen(); });   /* the hero's Sign in door: the one window above */
 function signinOpen(){
   var i = document.querySelector('[data-testid="shell-signin"] [data-testid="signin-id"]');
   if (i) { try { i.scrollIntoView({ block: 'center' }); } catch (_) {} i.focus(); }
@@ -239,23 +301,9 @@ function booksAlert(){
    Open target come from the manifest's `rail` (null = not drawn): GET /api/work/facts → figures { orders_new, orders_in, orders_out, tasks, tasks_mine, done }
    (lib/work-rows.facts — the workflow engine's verdicts; a figure the server cannot compute is LEFT OUT, never 0). Each number opens its folder. ── */
 function railPaint(r){
-  var host = document.getElementById('railbox'); if (!host) return;
-  var m = SHELL.manifest(), rail = (m && m.rail) || {}, fig = (r && r.figures) || {};
-  if (!r || r.truncated || !Object.keys(fig).length) { host.innerHTML = ''; return; }
-  var base = rail.route ? String(rail.route).split(/[?#]/)[0] : '';
-  var node = function (tid, n, view, word, tone) {
-    var inner = '<b class="n" data-testid="' + tid + '">' + (n == null ? '–' : n) + '</b><span class="k">' + word + '</span>';
-    return base && view ? '<a class="node' + (tone ? ' ' + tone : '') + '" data-testid="' + tid + '-open" href="' + esc(base) + '?view=' + view + '">' + inner + '</a>' : '<span class="node">' + inner + '</span>';
-  };
-  host.innerHTML = '<div class="rail" data-testid="rail"><div class="railtop"><h3>Your work</h3>'
-    + (rail.route ? '<a href="' + esc(rail.route) + '" data-testid="rail-open">Open ›</a>' : '') + '</div>'
-    + '<div class="track">'
-    + node('work-new', n1(fig.orders_new), 'orders_in', 'New orders', fig.orders_new ? 'hot' : '')
-    + node('work-in', n1(fig.orders_in), 'orders_in', 'Orders in')
-    + node('work-out', n1(fig.orders_out), 'orders_out', 'Orders out')
-    + node('work-mine', n1(fig.tasks_mine), 'tasks', 'Tasks for you', fig.tasks_mine ? 'hot' : '')
-    + node('work-done', n1(fig.done), 'done', 'Done')
-    + '</div></div>';
+  /* Your work is read once (the shell's one ask) and drawn by CBHome2 as doors in the Do-first row: a figure of zero is never drawn */
+  if (!r || r.truncated || !Object.keys(r.figures || {}).length) r = null;
+  CBHome2.setWork(r);
 }
 function railRead(){
   var g = GEN;
@@ -280,13 +328,8 @@ function facts(){
 /* a counter in this browser paired to ANOTHER shop earns a row (amber); paired here, or not paired, is nothing wrong.
    Read from the counter's own keys, never written; the counter's own sign-in switches it. */
 function pairPaint(p){
-  if (!MINE) return;
-  if (p && p.paired && p.ent !== MINE.ent)
-    /* SET-WALK1 · W6: the button PAIRS IT HERE — the counter opens for this shop (the address shape cap-settings ctrOpenTill uses: #shop=<ent>&as=<name>)
-       and re-pairs on its own sign-in; Home never writes the counter's keys (one-person.js: read-only by design) */
-    alert_('till-paired', 'warn', '▤', p.counter + ' · paired to ' + CBOnePerson.shopName(p) + ', not this shop', '', 'Pair here',
-      '/till.html#shop=' + encodeURIComponent(MINE.ent || '') + '&as=' + encodeURIComponent(MINE.name || ''), true);
-  else alertDrop('till-paired');
+  /* F-49 (21 Nov, Athi): Home shows NO pairing strip or state. A counter paired to another shop is not Home's business: the Counter door opens the signed-in shop's own counter; pairing lives in Settings > Counters. */
+  alertDrop('till-paired');
 }
 
 /* another shop still here (an app tab, its unsent drafts) → the facts wait; one row each, one button each */

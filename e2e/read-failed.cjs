@@ -6,7 +6,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shell.js'), 'utf8');
-const from = src.indexOf('  /** the sentence a failed read says'), to = src.indexOf('  root.CBShell = {');
+const from = src.indexOf('  /** the ONE sentence for a 429'), to = src.indexOf('  root.CBShell = {');
 assert(from > 0 && to > from, 'readFailed is in shell.js');
 const T = (s) => s;
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -17,7 +17,7 @@ const ok = (name, cond) => { assert(cond, name); n += 1; console.log('  ok ' + n
 const RAW = /Server error|Too many requests|Failed to fetch|Forbidden|Check the connection|Not in a network yet|undefined|\[object/i;
 const retry = () => {};
 [
-  ['429', { status: 429 }], ['500 with an HTML body', { status: 500, detail: '<html>Internal Server Error</html>' }], ['offline (fetch rejected)', { status: 0, detail: 'Failed to fetch' }],
+  ['500 with an HTML body', { status: 500, detail: '<html>Internal Server Error</html>' }], ['offline (fetch rejected)', { status: 0, detail: 'Failed to fetch' }],
   ['503', { status: 503 }]
 ].forEach(([name, o]) => {
   const h = host(); readFailed(h, Object.assign({ what: 'Your client list', retry }, o));

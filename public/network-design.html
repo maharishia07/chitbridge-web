@@ -58,7 +58,7 @@ function labPaint() {
         ? '<span class="s" style="font-size:12px;color:var(--grey)">your store</span>'
         : '<input data-cbsid="NLB001-I02" value="' +
           esc(item.ref) +
-          '" placeholder="their handle, e.g. ravi.timbers" oninput="LAB[' +
+          '" placeholder="their handle, e.g. shop.handle" oninput="LAB[' +
           index +
           '].ref=this.value" data-testid="lab-ref-' +
           index +
@@ -141,7 +141,7 @@ function labCheck() {
 document.addEventListener('DOMContentLoaded', labPaint);
 </script>
 <script src="app/catalogue-lines.js"></script>
-<script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
+<script src="engine/locale.js"></script><script src="app/shop-time.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
 <script src="app/cart.js"></script>
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
@@ -264,10 +264,10 @@ document.addEventListener('DOMContentLoaded', labPaint);
 /* The network, in the operator's own arrangement (sort_order), then by name. Distances are from ME. */
 var ME = 'n0';
 var STORES = [
-  { id: 'n0', name: 'Alpha Timers · North', bid: 'CBNORTH01', city: 'Coimbatore', km: 0, purpose: 'Head office & main store' },
-  { id: 'n1', name: 'Alpha Timers · Erode', bid: 'CBERODE22', city: 'Erode', km: 92, purpose: 'Regional depot' },
-  { id: 'n2', name: 'Alpha Timers · Salem', bid: 'CBSALEM33', city: 'Salem', km: 161, purpose: 'Overflow / seasonal stock' },
-  { id: 'n3', name: 'Model Yard (all 6 order models)', bid: 'CBMODELS1', city: 'Chennai', km: 507, purpose: 'one item per order model' }
+  { id: 'n0', name: 'Alpha Timers · North', bid: 'CBNORTH01', city: 'City A', km: 0, purpose: 'Head office & main store' },
+  { id: 'n1', name: 'Alpha Timers · East', bid: 'CBERODE22', city: 'City B', km: 92, purpose: 'Regional depot' },
+  { id: 'n2', name: 'Alpha Timers · South', bid: 'CBSALEM33', city: 'City C', km: 161, purpose: 'Overflow / seasonal stock' },
+  { id: 'n3', name: 'Model Yard (all 6 order models)', bid: 'CBMODELS1', city: 'City D', km: 507, purpose: 'one item per order model' }
 ];
 
 /* ⚠️ `avail` is what the store REPORTED, with WHEN. No avail at all = never reported ≠ zero. */

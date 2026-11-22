@@ -22,7 +22,7 @@ const J = (r, status, body) => r.fulfill({ status, contentType: 'application/jso
 const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'web-api.contract.json'), 'utf8')).routes;
-const SHOP = '11111111-1111-4111-8111-111111111111', CUST = '22222222-2222-4222-8222-222222222222';
+const ME = 'ent-walk' /* the signed-in entity (lib/walk.cjs token identity_id): since 1128 the sheet decides "I sent it" by id when both are known (chitIsSelf), so a sent invoice names it, not the agreements' SHOP */, SHOP = '11111111-1111-4111-8111-111111111111', CUST = '22222222-2222-4222-8222-222222222222';
 const TODAY = TD.TODAY;
 const plus = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
@@ -111,8 +111,8 @@ W.run('repeat-supply', async (w) => {
       const id = decodeURIComponent(ch[1]);
       const a = Object.values(S.ag).find((x) => x.chit_id === id);
       if (a) return J(r0, 200, chitOf(a, LINES));
-      if (id === 'inv-1') return J(r0, 200, { header: { chit_id: 'inv-1', purpose: 'invoice', sender_entity_id: SHOP, sender_entity_display_name: 'Fixture Shop', current_status: 'accepted', manual_subject: 'INV-0042', created_at: '2026-10-01T06:00:00Z',
-        all_recipients: [{ entity_id: SHOP, role: 'sender', display_name: 'Fixture Shop' }, { entity_id: CUST, role: 'to', display_name: 'Ravi Stores' }],
+      if (id === 'inv-1') return J(r0, 200, { header: { chit_id: 'inv-1', purpose: 'invoice', sender_entity_id: ME, sender_entity_display_name: 'Fixture Shop', current_status: 'accepted', manual_subject: 'INV-0042', created_at: '2026-10-01T06:00:00Z',
+        all_recipients: [{ entity_id: ME, role: 'sender', display_name: 'Fixture Shop' }, { entity_id: CUST, role: 'to', display_name: 'Ravi Stores' }],
         business_json: { currency: 'INR' }, summary_json: { currency_code: 'INR', purpose: 'invoice', line_item_count: 1, total_value: 1000, money: { gross: 1000, savings: 0, net: 1000, tax: 180, total: 1180, currency_code: 'INR' } } },
         detail: { line_items: LINES }, state_log: [], participants: [], attachments: [], amendments: [], amendments_migrated: true, actions: {} });
       return J(r0, 404, { error: 'Not found' });

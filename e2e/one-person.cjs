@@ -161,11 +161,10 @@ function route(S, r) {
   await pairTo('ent-B', 'Tally Test');
   await t3.waitForTimeout(600);
   ok(await t3.locator('[data-testid="till-paired"]').count() === 0, '4 · paired here → still no row (repainted from the counter\'s keys, no reload)');
-  await pairTo('ent-C', 'Mayuri123');
-  await t3.waitForFunction(() => /Mayuri123/.test((document.querySelector('[data-testid="till-paired"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
-  const amber = await t3.evaluate(() => { const e = document.querySelector('[data-testid="till-paired"]'); return e ? { t: e.textContent.replace(/\s+/g, ' ').trim(), warn: e.classList.contains('warn'), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') } : {}; });
-  ok(/Counter 1 · paired to Mayuri123, not this shop/.test(amber.t || '') && amber.warn, '4 · paired elsewhere → an amber row "' + amber.t + '"');
-  ok((amber.fix || '').indexOf('/till.html#shop=ent-B&as=Tally') === 0 && await t3.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', '4 · its button PAIRS the counter to this shop (SET-WALK1 W6: /till.html#shop=<ent>&as=<name>) and the Till card opens the counter');
+  await pairTo('ent-C', 'Mayuri123');   /* F-49 (Athi 21 Nov): a counter paired to ANOTHER shop earns NO row on Home - the Counter door opens THIS shop's own counter */
+  await t3.waitForTimeout(800);
+  const pt = await t3.innerText('body'); ok(await t3.locator('[data-testid="till-paired"]').count() === 0 && !/paired to|Pair here/.test(pt), '4 · paired to ANOTHER shop (device A, signed in to B) → Home has no pairing text at all (F-49)');
+  ok(await t3.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', '4 · the Counter door is the plain till address: it opens for the signed-in shop');
   await t3.screenshot({ path: path.join(__dirname, 'shots', 'one-person-index-amber.png') }).catch(() => {});
   await t2.evaluate(() => ['cb_till_shop@abc1', 'cb_till_shopname@abc1', 'cb_till_key', 'cb_till_lastslot'].forEach((k) => localStorage.removeItem(k)));
   await t3.waitForFunction(() => !document.querySelector('[data-testid="till-paired"]'), null, { timeout: 5000 }).catch(() => {});
@@ -186,7 +185,7 @@ function route(S, r) {
 
   /* ── 6 · sign out in tab 2 → the others follow; a late read paints nothing ───────────────────────────────── */
   S.slowProducts = 1500;
-  await t3.reload(); await t3.waitForSelector('[data-testid="till-paired"]', { timeout: 15000 }).catch(() => {});
+  await t3.reload(); await t3.waitForTimeout(1500);
   await signOutVia(t2);
   await t4.waitForSelector('[data-testid="signed-out-why"]', { timeout: 8000 }).catch(() => {});
   ok(/Signed out — you signed out in another tab\./.test(await t4.textContent('[data-testid="signed-out-why"]').catch(() => '')), '6 · sign out in tab 2 → the co-assist\'s tab signs out and says why');
@@ -241,7 +240,7 @@ function route(S, r) {
   await t6.waitForSelector('[data-testid="close-first"]', { timeout: 10000 }).catch(() => {});
   ok(/This browser still holds Alpha Timers: an app tab open\. Close it first\./.test(await t6.textContent('[data-slot="alerts"]')), '9 · the index with A\'s app tab open → the close-first row');
   ok(await t6.locator('#f_cat .f').count() === 0, '9 · and no facts while it is there');
-  ok(await t6.locator('[data-testid="till-paired"]').count() === 1, '9 · the Till tile still says what the counter is paired to');
+  ok(await t6.locator('[data-testid="till-paired"]').count() === 0, '9 · Home says nothing about what the counter is paired to (F-49)');
   await t6.screenshot({ path: path.join(__dirname, 'shots', 'one-person-index-close.png') }).catch(() => {});
   await t6.click('[data-testid="close-first-go"]');
   await t6.waitForFunction(() => /7/.test((document.getElementById('f_cat') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});

@@ -28,7 +28,7 @@ function serve(api) {
     const url = q.url.split('?')[0];
     if (url.startsWith('/api/')) { r.writeHead(404, { 'content-type': 'application/json' }); return r.end('{"error":"not found"}'); }
     const rel = decodeURIComponent(url).replace(/^\/+/, '');
-    const rootPage = !rel ? 'index.html' : (rel === 'index.html' || rel === 'index2.html') ? rel : null; /* the repo-root pages (Home, Home 2) deploy at / and /index2.html; the rest is public/ */
+    const rootPage = !rel ? 'index.html' : rel === 'index.html' ? rel : null; /* the repo-root pages (Home, Home 2) deploy at / and /index2.html; the rest is public/ */
     const f = rootPage ? path.join(ROOT, rootPage) : path.join(PUB, rel);
     if ((!f.startsWith(PUB) && !rootPage) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
     r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream', 'cache-control': 'no-store' });

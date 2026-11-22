@@ -61,7 +61,7 @@ const KIND = Object.fromEntries(EVENTS.map((e) => [e.kind, e.voucher]));
 /* the stand-in IS the engine: it composes the journal from what it is sent, as POST /api/books/preview answers it */
 function compose(b, S) {
   const k = b.event, a = b.amount_minor || 0;
-  const out = { ok: false, kind: k, voucher: null, date: b.date || TODAY, lines: [], balanced: false, totals: { dr_minor: 0, cr_minor: 0 }, credit: null, bill: null, flags: [], refusals: [], code: null, duplicate: null };
+  const out = { ok: false, kind: k, voucher: null, date: b.date || TODAY, lines: [], balanced: false, totals: { dr_minor: 0, cr_minor: 0 }, credit: null, bill: null, flags: [], refusals: [], code: null, needs: null, duplicate: null };
   if (k !== 'journal' && !a) { out.refusals.push('How much was it?'); return out; }
   if (locked(b.date)) { out.refusals.push('This month is locked. Open it again (with a reason), or pick another date.'); out.code = 'PERIOD_LOCKED'; return out; }
   let lines;

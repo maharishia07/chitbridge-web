@@ -530,6 +530,7 @@
           try {
             if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null });
           } catch (_) {}
+          if (e.timezone && typeof shopZoneSet === 'function') shopZoneSet(e.timezone); /* E-F-06: the shop's own zone for every clock (helpers.js shopZoneInstall reads it) */
           announceShop(e);
         })
         .catch(function () {});
@@ -975,10 +976,14 @@
     paint();
   }
 
+  /** THE ONE LIST of what belongs to the person who was signed in and leaves with them: the session and the look they chose that no push has landed yet (the next person's sign-in would push it to THEIR profile). The per-person nav memory (cb_nav, cb_nav@...) goes by its pattern below. */
+  var PERSON_KEYS = ['cb_sess', PEND];
   /** the session and the per-person nav memory go; every other tab hears cb_sess go. → true when they went. A browser that refuses the delete is SAID (SEC-131), never swallowed: the person would be "signed out" and still signed in. */
   function forget() {
     try {
-      root.localStorage.removeItem('cb_sess');
+      PERSON_KEYS.forEach(function (item) {
+        root.localStorage.removeItem(item);
+      });
       Object.keys(root.localStorage)
         .filter(function (item) {
           return /^cb_nav(@|$)/.test(item);

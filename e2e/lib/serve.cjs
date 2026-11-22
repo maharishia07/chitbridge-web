@@ -9,8 +9,8 @@ exports.serve = function (root) {
   const srv = http.createServer((q, r) => {
     const p = decodeURIComponent(q.url.split('?')[0]);
     /* SHELL-ONE: Home is the repo-root index.html (as it deploys); on the public/ root '/' and '/index.html' serve it, so a tour of every page starts at Home */
-    const home = root === exports.PUBLIC && (p === '/' || p === '/index.html' || p === '/index2.html');
-    const f = home ? path.join(root, '..', p === '/index2.html' ? 'index2.html' : 'index.html') : path.join(root, p === '/' ? 'index.html' : p);
+    const home = root === exports.PUBLIC && (p === '/' || p === '/index.html');
+    const f = home ? path.join(root, '..', 'index.html') : path.join(root, p === '/' ? 'index.html' : p);
     if (!home && !f.startsWith(root)) { r.statusCode = 403; return r.end('no'); }
     fs.readFile(f, (e, d) => {
       if (e) { r.statusCode = 404; return r.end('not found'); }

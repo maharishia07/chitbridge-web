@@ -78,15 +78,17 @@ function go() {
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/books-grant-api.js"></script><script src="/app/books-grant-words.js"></script><script src="/app/books-grant-member.js"></script><script src="/app/books-acting.js"></script><script src="/app/books-actions-view.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
-<script src="/app/core.js"></script>
-<script src="/app/accounts-shell.js"></script>
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
+<script src="/app/cb-words.js"></script>
+<script src="/app/accounts-shell.js"></script><script src="/app/accounts-start.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
 <script src="/engine/money.js"></script>
-<script src="/engine/locale.js"></script>
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
 <script src="/app/helpers.js"></script><script src="/app/day-book-kind.js"></script>
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: the list control — every list here is mounted on it (a page declares columns, grouping, filters; the unit draws) -->
 <script src="/app/list-legacy.js"></script>   <!-- the Ledgers TREE's search box (listCtl*) — not a column list; goes when the tree has its own search -->
-<script src="/engine/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
+<script src="/app/late-scripts.js"></script>   <!-- CBLate: the tags written type="cb-late" below load AFTER the page is usable, in this order; a screen that needs them waits on CBLate.ready() (batch 1128 fixSpeed) -->
+<script type="cb-late" data-late-group="tax" src="/engine/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
@@ -104,29 +106,29 @@ function go() {
 <script src="/app/cap-mark-sheet.js"></script><script src="/app/cap-mark.js"></script>   <!-- CMP058 the marker chip · CMP059 the Query sheet (ACC-358): the auditor's marks on the Day book -->
 <script src="/app/cap-evidence.js"></script>   <!-- CMP062 the Evidence chip · CMP063 the Evidence sheet: the source document and its files behind each Day book row -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — Send on rail / Share off rail, the server's may painted -->
-<script src="/engine/chart.js"></script><script src="/engine/accounts-packs.js"></script><script src="/engine/posting-voucher.js"></script><script src="/engine/posting.js"></script><script src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
-<script src="/engine/bank-json.js"></script><script src="/engine/bank-brs.js"></script><script src="/engine/bank-files.js"></script><script src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
+<script type="cb-late" data-late-group="engines" src="/engine/chart.js"></script><script type="cb-late" data-late-group="engines" src="/engine/accounts-packs.js"></script><script type="cb-late" data-late-group="engines" src="/engine/posting-voucher.js"></script><script type="cb-late" data-late-group="engines" src="/engine/posting.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
+<script type="cb-late" data-late-group="engines" src="/engine/bank-json.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-brs.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-files.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
 <script src="/app/books-held-ok.js"></script><script src="/app/cap-entry.js"></script><script src="/app/cap-entry-preview.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
-<script src="/app/cap-period.js"></script><script src="/app/cap-period-stock.js"></script><script src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
-<script src="/app/bank-demo-ask.js"></script><script src="/app/cap-bank.js"></script><script src="/app/cap-bank-map.js"></script><script src="/app/cap-bank-rows.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
-<script src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
-<script src="/app/cap-bank-statements.js"></script><script src="/app/cap-bank-statements-add.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
-<script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
-<script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
-<script src="/engine/bank-statement-check.js"></script><script src="/app/bank-preview-check.js"></script><script src="/app/bank-preview-line.js"></script><script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
-<script src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
-<script src="/app/bank-lock.js"></script>   <!-- CBBankLock: a line in a locked month, said first; the two ways on -->
-<script src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
-<script src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
-<script src="/app/bank-preview-ui-parts.js"></script><script src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
-<script src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
-<script src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
-<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
-<script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
-<script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
-<script src="/engine/chart-draw.js"></script><script src="/engine/chart-draw-status.js"></script><script src="/engine/chart-draw-rows.js"></script><script src="/app/mis-charts.js"></script><script src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
-<script src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
-<script src="/app/cap-employees-copy.js"></script><script src="/app/cap-employees.js"></script><script src="/app/cap-employees-give.js"></script><script src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
+<script type="cb-late" data-late-group="period" src="/app/cap-period.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-stock.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-demo-ask.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-map.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-rows.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-statements.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-statements-add.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
+<script type="cb-late" data-late-group="bank" src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
+<script type="cb-late" data-late-group="bank" src="/engine/bank-statement-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-line.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script type="cb-late" data-late-group="bank" src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-lock.js"></script>   <!-- CBBankLock: a line in a locked month, said first; the two ways on -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-preview-ui-parts.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
+<script type="cb-late" data-late-group="bank" src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
+<script type="cb-late" data-late-group="movein" src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
+<script type="cb-late" data-late-group="movein" src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
+<script type="cb-late" data-late-group="overview" src="/engine/chart-draw.js"></script><script type="cb-late" data-late-group="overview" src="/engine/chart-draw-status.js"></script><script type="cb-late" data-late-group="overview" src="/engine/chart-draw-rows.js"></script><script type="cb-late" data-late-group="overview" src="/app/mis-charts.js"></script><script type="cb-late" data-late-group="overview" src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
+<script type="cb-late" data-late-group="compare" src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
+<script type="cb-late" data-late-group="people" src="/app/cap-employees-copy.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-employees.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-employees-give.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->
 <script src="/app/one-person.js"></script>
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
 <script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
@@ -264,11 +266,18 @@ function navPaint(active) {
     return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
   }).join('');
 }
+/* M-F-08 (WALK M): a view-only login is refused the ledger's money (api: the books money gate) and the owner's two doors; those entries are GREYED with the reason (one readiness state: grey, say why), never drawn as if they opened */
+const VIEW_ONLY_SHUT = { overview: 'money', daybook: 'money', ledgers: 'money', tb: 'money', pl: 'money', bs: 'money', receivables: 'money', payables: 'money', dues: 'money', bills: 'money', cheques: 'money', gstclose: 'money', delegate: 'owner', access: 'owner' };
+const viewOnlySeat = () => {
+  if (window.CBBooksActing && CBBooksActing.current()) return false; /* a firm seat is decided by its grant, not the login's level */
+  return viewOnlyLogin(); /* helpers.js: the one reading of the login's level */
+};
+const shutWhy = (id) => (!viewOnlySeat() || !VIEW_ONLY_SHUT[id] ? '' : VIEW_ONLY_SHUT[id] === 'owner' ? tx('Only the owner can open this.') : viewOnlyMoneyWhy());
 function navItems(items, active) {
   return items
     .map(
       ([id, label, d]) =>
-        `<button data-cbsid="BKS001-B03" type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(tx(label))}"${id === active ? ' aria-current="page"' : ''}>
+        `<button data-cbsid="BKS001-B03" type="button" class="nav-btn${id === active ? ' active' : ''}${shutWhy(id) ? ' nav-grey' : ''}"${shutWhy(id) ? ` aria-disabled="true" data-ready="no" title="${esc(shutWhy(id))}" style="opacity:.55;cursor:not-allowed"` : ''} data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(tx(label))}"${id === active ? ' aria-current="page"' : ''}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(tx(label))}</span></button>`
     )
     .join('');
@@ -286,6 +295,7 @@ $('nav').addEventListener('click', (e) => {
     return;
   }
   const b = e.target.closest('.nav-btn');
+  if (b && b.getAttribute('aria-disabled') === 'true') return; /* M-F-08: greyed, the reason is on the entry */
   if (b) show(b.dataset.view);
 });
 $('toggleNav').addEventListener('click', () => {
@@ -438,6 +448,17 @@ BK.views = {
   delegate: (b) => CBEmployees.mountAccess(b, { token: SESS.token, base: CFG.API_BASE, onEnded: () => location.reload(), grants: () => CBBooksGrantApi.run(grantCall(), 'grantsList'), openAccess: () => show('access') }), /* ACC-383: people AND the firms that hold a books grant, one picker */
   access: (b) => accessView(b) /* ACC-384: the member's grants screen mounted here, in place (books-grant-member.js, the same component the Network page mounts) */
 };
+/* SPEED (batch 1128): the views whose code loads late (type="cb-late" tags above — period, bank, opening, move in, compare, rates, delegate, overview)
+   wait for CBLate.ready() while their "Reading…" shows, then run exactly as before; a tap on another view meanwhile is not overwritten */
+['overview', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose', 'bank', 'movein', 'compare', 'rates', 'delegate'].forEach((name) => {
+  const paint = BK.views[name];
+  BK.views[name] = (body) => {
+    if (!window.CBLate || CBLate.isReady()) return paint(body);
+    CBLate.ready().then(() => {
+      if (BK.tab === name && body.isConnected) paint(body);
+    });
+  };
+});
 /** the one api call of the grant screens on this page: token + base, no acting header (the grants are the shop's own) */
 function grantCall() {
   return CBBooksActing.grantCall(CFG.API_BASE, SESS.token);
@@ -677,12 +698,18 @@ const TODO_SCREEN = {
   bank: 'bank'
 };
 /* an item the server could not check (503 · not migrated yet) is not a task: it says so, and its button waits */
-const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || it.migrated === false || it.available === false);
+const todoOff = (item) => item && (item.status === 503 || item.not_migrated === true || item.migrated === false || item.available === false);
+/** todoGo(i) → opens the screen the i-th To do row names; a row with no known screen says it starts after an update */
 function todoGo(i) {
-  const it = ACC.todo && ACC.todo[i];
-  if (!it) return;
-  const tab = TODO_SCREEN[(it.action || {}).screen];
-  if (tab) show(tab);
+  const todoItem = ACC.todo && ACC.todo[i];
+  if (!todoItem) return;
+  const screen = (todoItem.action || {}).screen;
+  if (screen === 'catalogue') {
+    navTo('catalogue'); /* supply kind: the 0% slabs and products that wait for their kind are answered in the catalogue, one tap each */
+    return;
+  }
+  const targetTab = TODO_SCREEN[screen];
+  if (targetTab) show(targetTab);
   else toast(tx('This starts after an update'));
 }
 /* the row's one button — only when the server named an action; a row with none (bills not in the books) is a count and a sentence, no dead button */
@@ -705,12 +732,14 @@ function todoRow(item, index) {
 async function accTodo(body) {
   const g = ACC.gen;
   try {
-    const reply = await api('booksTodo');
+    const early = ACC.todoEarly; ACC.todoEarly = null; /* the read that left with the health read (start) is used once; Try again reads fresh */
+    const earlyRead = early ? await early : null;
+    if (earlyRead && earlyRead.e) throw earlyRead.e;
+    const reply = earlyRead ? earlyRead.r : await api('booksTodo');
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
-    if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
+    addBankTodo(list);
     ACC.todo = list;
     body.innerHTML = list.length
       ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
@@ -822,7 +851,7 @@ function offCard() {
 }
 function failedCard(failure) {
   card('<div id="retry" data-testid="acc-failed"></div>', true);
-  CBShell.readFailed($('retry'), { what: tx('Accounts'), status: failure && failure.status, detail: failure && failure.status === 403 && failure.data ? failure.data.detail || failure.data.message : '', retry: () => start() });
+  CBShell.readFailed($('retry'), { what: tx('Accounts'), status: failure && failure.status, retryAfter: failure && failure.retryAfter, detail: failure && failure.status === 403 && failure.data ? failure.data.detail || failure.data.message : '', retry: () => start() });
 }
 /* ⭐ CS1: the country decides whether books may open here — a country with no pack (or no country, or the setup still to do) is SAID in the
    server's own sentence (engines regulation.status, 422 with a code), never the quiet 404 and never India's rules by default. The one button
@@ -903,17 +932,15 @@ async function start() {
   const g = ++ACC.gen;
   paintFrame();
   /* ⭐ ONE BROWSER, ONE SHOP: nothing is read until this browser holds no other shop's fingerprint */
-  let t;
-  try {
-    t = await CBOnePerson.traces(MINE);
-  } catch (_) {
-    t = { others: [] };
-  }
+  const t = await otherShopTraces();
   if (g !== ACC.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
-    const profile = await readProfile();
+    /* SPEED (batch 1128): the avatar already read /me for this page; when it has answered, its ledger_on is the answer - no second /me round trip before the ledger read */
+    const known = knownLedgerOn();
+    startTodoEarly(known);
+    const profile = typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
     if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
     noteHealth(reply);

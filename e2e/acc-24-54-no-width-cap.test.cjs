@@ -17,7 +17,8 @@ const path = require('path');
 
 const VIEW_W = 1920;
 let bad = 0;
-const ok = (c, m, why) => { console.log((c ? '  ok   ' : '  FAIL ') + m + (!c && why ? '\n          ' + why : '')); if (!c) bad++; };
+let total = 0;
+const ok = (c, m, why) => { total++; console.log((c ? '  ok   ' : '  FAIL ') + m + (!c && why ? '\n          ' + why : '')); if (!c) bad++; };
 
 /** every <style> block of the page, and its own sheet linked from /app/ ((?:accounts|crm)-page.css), in page order */
 const styleOf = (file) => {
@@ -64,7 +65,7 @@ const decl = (body, prop) => [...body.matchAll(new RegExp('(?:^|[;{\\s])' + prop
 const px = (v) => { const m = /^([\d.]+)px$/.exec(v); return m ? Number(m[1]) : null; };
 
 const CHAIN = /^(body|html|\.main|\.content|\.screen|#bk_body|\.wrap|\.app|main|\.page)$/;
-for (const [file, tag, expectContent] of [['accounts.html', 'ACC-24', /\.content\{padding:24px 40px 120px/], ['crm.html', 'ACC-54', /\.content\{padding:20px 24px 120px/]]) {
+for (const [file, tag, expectContent] of [['accounts.html', 'ACC-24', /\.content\{padding:24px 40px 24px;display:flex;flex-direction:column/], ['crm.html', 'ACC-54', /\.content\{padding:20px 24px 120px/]]) {
   const raw = fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '..', 'public', 'app', file.replace('.html', '-page.css')), 'utf8');
   const rules = rulesAt(styleOf(file));
   ok(rules.length > 40, tag + ' ' + file + ': the page CSS is read (' + rules.length + ' rules apply at ' + VIEW_W + ')');
@@ -87,4 +88,5 @@ for (const [file, tag, expectContent] of [['accounts.html', 'ACC-24', /\.content
   ok(sideways.length === 0, tag + ' ' + file + ': no overflow-x scroll on the layout chain (the page does not scroll sideways)', sideways.map((r) => r.sel + ' ' + r.body).join(' | '));
   if (file === 'accounts.html') ok(rules.some((r) => /#bk_body table/.test(r.sel) && decl(r.body, 'max-width').includes('100%')), tag + ' accounts.html: tables sit under max-width:100%');
 }
+console.log(total + " checks" + (bad ? ", " + bad + " FAILED" : ""));
 process.exitCode = bad ? 1 : 0;

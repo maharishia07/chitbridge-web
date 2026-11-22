@@ -37,7 +37,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   p.on('pageerror', (e) => console.log('PAGEERROR ' + e.message.slice(0, 300)));
   await load(p);
   let bd = await band(p);
-  ok(/Statement\s*18,280\.75/.test(bd) && /Your books\s*19,963\.00/.test(bd) && /Difference\s*1,682\.25/.test(bd) && !/A\$/.test(bd), 'ITEM 5: the band reads plain figures, statement 18,280.75, books 19,963.00, difference 1,682.25, no A$ (' + bd.slice(0, 160) + ')');
+  ok(/Statement\s*18,280\.75/.test(bd) && /Your books\s*19,963\.00/.test(bd) && /Difference\s*1,682\.25/.test(bd) && /Your books show 1,682\.25 more/.test(bd) && !/A\$/.test(bd), 'ITEM 5: the band reads plain figures, statement 18,280.75, books 19,963.00, difference 1,682.25, no A$ (' + bd.slice(0, 160) + ')');
   ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the account has its currency on record, so no currency question');
   /* CHANGED ON PURPOSE (W15-18, W15-20): the currency is said once in the band, large (IAS 1 para 51); Load another statement is the band's secondary button */
   const head = flat(await p.textContent('[data-testid="bank-finish"]'));

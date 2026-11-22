@@ -16,7 +16,7 @@ const mutate = process.env.W2FIN_MUTATE || '';
 const KIND = { button: 'B', input: 'I', select: 'S', textarea: 'T' };
 /** file -> [the attribute text the control is found by, the tag it is, the code its own tag must wear] */
 const WANT = {
-  'app/accounts-shell.js': [['data-use="', 'button', 'SCR045-B01'], ['id="undoBtn"', 'button', 'SCR045-B02'], ['data-testid="confirm-ok"', 'button', 'SCR045-B03']],
+  'app/accounts-shell.js': [['data-use="', 'button', 'SCR045-B01']], 'app/cb-words.js': [['id="undoBtn"', 'button', 'SCR045-B02'], ['data-testid="confirm-ok"', 'button', 'SCR045-B03']],
   'app/tax-slab-ui.js': [['data-testid="catg-slab"', 'select', 'SCR046-S01'], ["opts.onclick || ''", 'button', 'SCR046-B01'], ['data-testid="rate-pick-', 'button', 'SCR046-B02']],
   'bill-print.html': [['id="w"', 'select', 'SCR047-S01'], ['id="kind"', 'select', 'SCR047-S02'], ['onclick="window.print()"', 'button', 'SCR047-B01']]
 };

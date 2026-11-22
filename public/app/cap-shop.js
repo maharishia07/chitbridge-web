@@ -801,13 +801,13 @@ function shopFieldsHTML(e, licLabel) {
     ' <span title="' +
     esc(tx('Your business registration')) +
     '" style="color:var(--grey);font-weight:400;cursor:help">ⓘ</span></label>' +
-    '<input data-cbsid="ACC002-I04" class="inp" id="pf_gstn" value="' +
+    '<input data-cbsid="ACC002-I04" data-testid="pf-tax-id" class="inp" id="pf_gstn" value="' +
     esc(e.gstn || '') +
     '">' +
     '<label class="fl" for="pf_addr">' +
     tx('Address') +
     '</label>' +
-    '<input data-cbsid="ACC002-I05" class="inp" id="pf_addr" value="' +
+    '<input data-cbsid="ACC002-I05" data-testid="pf-address" class="inp" id="pf_addr" value="' +
     esc(e.address || '') +
     '">'
   );
@@ -826,8 +826,16 @@ function shopFieldsHTML(e, licLabel) {
    * read-only, which says the same thing by being true.
    */
 }
+/** A-F-18: the shop's name, the one that prints on every bill and heads every page (the same fact Print setup's Business name writes) */
+function shopNameHTML(e) {
+  return (
+    '<label class="fl" for="pf_shopname">' + tx('Business name') + '</label>' +
+    '<input data-cbsid="ACC002-I15" class="inp" id="pf_shopname" data-testid="shop-name" maxlength="255" value="' + esc(e.display_name || '') + '">'
+  );
+}
 /** the fields PATCH /entities/profile takes from this card — cap-admin's PROF_FIELDS.profile IS this list */
 var SHOP_FIELDS = [
+  ['pf_shopname', 'display_name'] /* A-F-18: the one shop name (CB Settings › Your shop only; the workshop's IAM card has its own pf_name) */,
   ['pf_gstn', 'gstn'],
   ['pf_addr', 'address']
 ];
@@ -865,11 +873,12 @@ var CBShop = (function () {
   }
   /** the Business section: the same inputs the workshop's Profile paints (shopFieldsHTML), one Save (M64) */
   function shopCardHTML(e) {
-    var who = SESSION && SESSION.actorId;
+    var actorId = SESSION && SESSION.actorId;
     return (
+      shopNameHTML(e || {}) +
       shopFieldsHTML(e || {}, shopLicLabel()) +
       '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>' +
-      (who
+      (actorId
         ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
         : '<button data-cbsid="ACC002-B09" type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>')
     );

@@ -304,6 +304,8 @@
     list.push('page');
     return list;
   }
+  /** the supplier name a waiting bill shows: the typed one for a missing supplier, the rail seller's own name (or a dash), else none */
+  function waitName(w, add, rail) { return add && w.name ? String(w.name) : rail ? String((w.supplier && w.supplier.name) || '') || '-' : null; }
   /**
    * ⭐ F10 · STD1: WHAT THE SERVER SAID ABOUT THIS BILL — the chit read's own `books_wait` (todo · name · why · candidates), painted, never
    * re-derived and never looked up in a list the page happens to hold: the popup says the same on Books, Home, CRM or Finance. A bill the
@@ -314,11 +316,12 @@
   function serverSaid(m) {
     var w = m && m.billRx ? m.wait : null;
     if (!w || !w.todo || w.todo === 'accept') return null;
-    var add = w.todo === 'add_supplier';
+    var add = w.todo === 'add_supplier', rail = w.wait === 'supplier' && !add; /* AE-F-19: a rail seller is listed by their own key (for_bill), never a typed name */
     return {
       why: String(w.why || ''),
       todo: w.todo,
-      name: add && w.name ? String(w.name) : null,
+      rail: rail,
+      name: waitName(w, add, rail),
       cands: add && Array.isArray(w.candidates) ? w.candidates.slice(0, 3) : []
     };
   }
@@ -919,7 +922,7 @@
             '"><span class="ic" aria-hidden="true">' +
             ACT[item][0] +
             '</span><span>' +
-            esc(T(ACT[item][1])) +
+            esc(item === 'supplier' && serverSaid(view) && serverSaid(view).rail ? tf('Add {name} as supplier and post', { name: serverSaid(view).name }) : T(ACT[item][1])) +
             '</span></button>'
           );
         })
@@ -1137,9 +1140,18 @@
       console.error('chit sheet: Back could not step the history —', (e && e.message) || e);
     }
   }
+  /** opens the sheet's dialog the way its place asks: beside the page in a pane, modal otherwise, else the plain open attribute */
+  function showDialog(dialog) {
+    if (dialog.open) return;
+    if (CS.place === 'pane' && dialog.show) dialog.show();
+    else if (dialog.showModal) dialog.showModal();
+    else dialog.setAttribute('open', '');
+  }
   /** open(id, { act }) — R106: a row's own button opens the sheet AT that action (the Waiting row's Reject asks its reason here, the one Reject door) */
   async function open(id, opts) {
     if (!id) return;
+    /* SPEED (batch 1128): a page that loads engine/tax.js late (CBLate) has it (and the tab code the sheet opens) before the sheet reads a frozen invoice through CBTax.moneyOf */
+    if (root.CBLate && !root.CBLate.isReady()) await root.CBLate.ready();
     var dialog = ensureDlg();
     CS.mode = 'dialog';
     CS.el = dialog;
@@ -1147,11 +1159,7 @@
     seat(dialog, placeFor(root.innerWidth || 0, !!paneSlot()));
     paint();
     lock(CS.place !== 'pane');
-    if (!dialog.open) {
-      if (CS.place === 'pane' && dialog.show) dialog.show();
-      else if (dialog.showModal) dialog.showModal();
-      else dialog.setAttribute('open', '');
-    }
+    showDialog(dialog);
     if (CS.place === 'page') pushPageState();
     try {
       await read(id);
@@ -1340,6 +1348,16 @@
     paint();
   }
 
+  /** the Add supplier step: a rail seller is listed by their own key and the bill posted, a typed name through the Suppliers page's own add */
+  function addSupplierFor(view, id) {
+    var nm = serverSaid(view).name, addIt = serverSaid(view).rail ? root.bkAddSellerAndPost : root.bkAddSupplier; /* AE-F-19: a rail seller is listed by their own key and posted */
+    if (typeof addIt !== 'function') { CS.note = T('Add them on the Suppliers page.'); return paint(); }
+    CS.busy = true;
+    paint();
+    return addIt(serverSaid(view).rail ? id : nm)
+      .then(function (said) { CS.busy = false; CS.note = said || null; return read(id); })
+      .catch(fixFailed);
+  }
   function act(k) {
     var m = CS.view,
       id = CS.id;
@@ -1356,23 +1374,7 @@
       if (node) node.focus();
       return;
     }
-    if (k === 'supplier') {
-      var nm = serverSaid(m).name;
-      if (typeof root.bkAddSupplier !== 'function') {
-        CS.note = T('Add them on the Suppliers page.');
-        return paint();
-      }
-      CS.busy = true;
-      paint();
-      return root
-        .bkAddSupplier(nm)
-        .then(function (said) {
-          CS.busy = false;
-          CS.note = said || null;
-          return read(id);
-        })
-        .catch(fixFailed);
-    }
+    if (k === 'supplier') return addSupplierFor(m, id);
     /* a bill received asks what the goods are for BEFORE the acceptance it decides (the same choice Goods in shows) — a task just moves */
     if (k === 'accept') {
       if (m.billRx && !m.captured) {

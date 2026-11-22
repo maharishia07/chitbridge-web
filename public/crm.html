@@ -67,11 +67,12 @@ function go() {
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
-<script src="/app/core.js"></script>
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
+<script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_POLICY_EP, { me: CB_SHOP_EP.me });</script>   <!-- CB_POLICY_EP (T3-P2-CRM): the Shop window reads and writes the policy flag showcase_template -->
 <script src="/engine/money.js"></script>
-<script src="/engine/locale.js"></script>
+<script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
 <script src="/app/helpers.js"></script><script src="/app/day-book-kind.js"></script>
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>   <!-- CBList: every list here is a mount on it -->
 <script src="/engine/tax.js"></script>
@@ -105,6 +106,7 @@ function go() {
 <script src="/app/cap-crm-chits.js"></script>   <!-- the chits behind Home's rail: In · Out · Stuck -->
 <script src="/app/cap-rewards.js"></script>   <!-- CBRewardsPane (T3-P2-CRM): the points pane the record paints — ONE copy with the workshop's Customers pane -->
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the registered shop-window templates (S2) -->
+<script src="/app/preview-key.js"></script>   <!-- CBPreviewKey: the one-way hand-off the customer shop page reads for the owner preview (CUSTOMER-DELINK) -->
 <script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick (T3-P2-CRM): the chooser + the live preview of the shop's own page — ONE copy with the workshop's Settings › Policy -->
 <script src="/app/cap-crm-groups.js"></script><script src="/app/cap-crm-groups-sheet.js"></script><script src="/app/cap-crm-groups-send.js"></script><script src="/app/cap-crm-groups-window.js"></script>   <!-- T3-P2-CRM: Groups & segments (#/groups) and the Shop window (#/showcase); the group sheet, the Send sheet and the Shop window are its three parts (MNT-59) -->
 <script src="/app/cap-marketing.js"></script>   <!-- MKT: the Marketing face (?app=marketing) - Offers sent (#/sent) and Who came back (#/results) -->

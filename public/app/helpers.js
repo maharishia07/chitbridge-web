@@ -312,6 +312,53 @@ function nm(v, fb) {
 function fmtAt(ts) {
   return CBLocale.time(ts);
 }
+/**
+ * ONE READER FOR EVERY DATE AND TIME (walks I-F-14, L-F-01, 21 Nov): a UAE shop's format tag is ar-AE, so CBLocale.date/time put "21 نوفمبر 2026" and "01:42 م" inside
+ * English sentences, two scripts on one line. The rule: the WORDS (month, weekday, am/pm) are the language the person chose (CBLocale.lang()), the order, numerals and
+ * clock come from the format tag's region, the zone is CBLocale.zoned() (the chosen zone). en + ar-AE reads through "en-AE" ("21 Nov 2026", "1:42 pm");
+ * a person whose language IS the format's language gets the engine's own tag untouched. Never a mix inside one sentence.
+ * The engine file is adopted (DO NOT EDIT), so the one reader is installed over CBLocale.date/time/datetime here, once; every call site is covered.
+ */
+function cbReadTag() {
+  var engine = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!engine || typeof engine.tag !== 'function') return '';
+  var format = engine.tag(),
+    lang = typeof engine.lang === 'function' ? String(engine.lang() || '') : '';
+  if (!lang || lang.split('-')[0].toLowerCase() === format.split('-')[0].toLowerCase()) return format;
+  var unicodeExt = (format.match(/-u-.*$/) || [''])[0],
+    region = (format.replace(/-u-.*$/, '').match(/-([A-Za-z]{2})(?:-|$)/) || [])[1],
+    tries = [region ? lang + '-' + region + unicodeExt : '', lang + unicodeExt, lang];
+  return firstSupportedTag(tries) || format;
+}
+function firstSupportedTag(tries) { /* the first of the tags this browser supports, or '' when none (a tag it throws on is skipped) */
+  for (var i = 0; i < tries.length; i++)
+    try { if (tries[i] && Intl.DateTimeFormat.supportedLocalesOf([tries[i]]).length) return tries[i]; /* zone-ok: a locale support check, formats nothing */ } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a read tag was not supported, the next one is tried', failure); }
+  return '';
+}
+/** cbInstallReader() → puts the reader over CBLocale.date/time/datetime once; false when the engine is absent, already done, or lacks zoned/_d */
+function cbInstallReader() {
+  var engine = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!engine || engine._readerWords || typeof engine.zoned !== 'function' || typeof engine._d !== 'function') return false;
+  var shapes = {
+    time: ['toLocaleTimeString', { hour: '2-digit', minute: '2-digit' }],
+    date: ['toLocaleDateString', { day: '2-digit', month: 'short', year: 'numeric' }],
+    datetime: ['toLocaleString', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }]
+  };
+  Object.keys(shapes).forEach(function (name) {
+    engine[name] = function (ts, opts) {
+      var when = engine._d(ts);
+      if (!when) return '';
+      try {
+        return engine.ltr(when[shapes[name][0]](cbReadTag(), engine.zoned(opts || shapes[name][1])));
+      } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: a moment could not be written in the reader words, shown blank', failure); return ''; }
+    };
+  });
+  engine._readerWords = true;
+  return true;
+}
+try {
+  cbInstallReader();
+} catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: the reader words were not installed, the engine keeps its own', failure); }
 /* R5: connector/device health — ONE source (colour · dot · signal), was duplicated across cap-connector + cap-workforce. */
 function healthColor(h) {
   return { live: 'var(--ok-3)', slow: 'var(--warn-2)', offline: 'var(--disp)' }[h] || 'var(--grey-4)';
@@ -481,18 +528,35 @@ function plainStatuses(text) {
  * The shop's zone is the entity's own (/me timezone -> window.CB_SHOP_TZ); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
  */
 function shopDateTime(ts, opts) {
-  var base = opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
-  var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : ''; /* set by the app from /me (SESSION.timezone) */
-  if (zone) {
-    try {
-      new Intl.DateTimeFormat('en', { timeZone: zone });
-      base = Object.assign({}, base, { timeZone: zone });
-    } catch (e) {
-      if (typeof console !== 'undefined') console.warn('shopDateTime: unknown shop time zone', zone);
-    }
-  }
-  return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
+  return typeof CBShopTime !== 'undefined' ? CBShopTime.datetime(ts, opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : String(ts || '').replace('T', ' ').slice(0, 16); /* the one formatter: shop-time.js (shop zone, UI language, country order) */
 }
+/**
+ * WALK-E E-F-06 (21 Nov): THE SHOP'S CLOCK IS THE SHOP'S ZONE ON EVERY SCREEN. CBLocale (adopted engine) defaults to the DEVICE zone, so an AU shop
+ * read on a laptop in India showed "Today 02:14 pm" at 19:44 Sydney. One rule here, not one per screen: with no zone chosen by the person (cb_tz) the
+ * shop's own zone (window.CB_SHOP_TZ, from the one /me read: avatar.js, app.html sessionFromMe) answers CBLocale.timezone(), so CBLocale.time / datetime /
+ * date and shopDateTime all agree. The person's explicit choice still wins; no shop zone stated -> the device, as before (nothing is guessed).
+ */
+function shopZoneInstall() {
+  var localeEngine = typeof CBLocale !== 'undefined' ? CBLocale : null;
+  if (!localeEngine || typeof localeEngine.timezone !== 'function' || localeEngine.timezone.shopZone) return false;
+  var ownTimezone = localeEngine.timezone;
+  localeEngine.timezone = function () {
+    var chosen = '';
+    try { chosen = localStorage.getItem('cb_tz') || ''; } catch (failure) { chosen = ''; if (typeof cbQuiet === 'function') cbQuiet('locale: the chosen time zone could not be read, the shop zone is used', failure); }
+    var shop = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : '';
+    if (!chosen && shop) {
+      try { new Intl.DateTimeFormat('en', { timeZone: shop }); return shop; /* zone-ok: a zone validity check, formats nothing */ } catch (failure) { if (typeof cbQuiet === 'function') cbQuiet('locale: the shop time zone is unknown, the device zone is used', failure); }
+    }
+    return ownTimezone.call(localeEngine);
+  };
+  localeEngine.timezone.shopZone = true;
+  return true;
+}
+/** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its own /me read) call this; a blank zone changes nothing. */
+function shopZoneSet(zone) {
+  if (zone && typeof window !== 'undefined') window.CB_SHOP_TZ = String(zone);
+}
+shopZoneInstall();
 /**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
  * A bare day (YYYY-MM-DD) is a calendar day, read in UTC so no zone moves it; a moment goes through shopDateTime with the year. Unreadable -> the dash.
@@ -548,28 +612,16 @@ function fmtMoneyWhole(amount, code, empty) {
 /* month WORDS in the screen's language (WALK-REG R49, 16 Oct: a UAE shop read Arabic months on an English screen) — the ORDER of a date is the
    country's; the WORD is the reader's. One helper: Country setup, Books, Returns, Register all read it. */
 function monthNames(form) {
-  var out = [],
-    tag = 'en';
-  try {
-    tag = (window.CBLocale && CBLocale.lang && CBLocale.lang()) || 'en';
-  } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure); /* the language reader is missing: English words, still correct */
-  }
-  for (var index = 0; index < 12; index++) {
-    try {
-      out.push(new Intl.DateTimeFormat(tag, { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }).format(Date.UTC(2000, index, 15, 12)));
-    } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('helpers:monthNames', failure);
-      out.push(CBLocale.date(Date.UTC(2000, index, 15, 12), { month: form === 'long' ? 'long' : 'short', timeZone: 'UTC' }));
-    }
-  }
+  var out = [];
+  for (var index = 0; index < 12; index++) out.push(CBShopTime.month(index, form));
   return out;
 }
 /* ⭐ T3-P1-MONEY: THE ONE GSTR DOWNLOAD — the offline-tool JSON GET /api/tax/gstr builds (tax-lines gstr1 · gstr3b, the one builder), saved as a file
    named gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json. The workshop's Tax band (cap-admin.js misTaxExport) and CB Finance › Returns (cap-finance-returns.js)
    both call this; neither builds a second. → Promise<filename>; a failure rejects with api()'s error — the caller says its own sentence. */
-function gstrDownload(month, form) {
+function gstrDownload(month, form, onReply) {
   return api('taxGstr', { query: { month: month, form: form } }).then(function (reply) {
+    if (typeof onReply === 'function') onReply(reply); /* the screen reads the return's _cb notes from the same answer — never a second request */
     var name = form + '-' + month + '.json',
       url = URL.createObjectURL(new Blob([JSON.stringify(reply, null, 2)], { type: 'application/json' }));
     var node = document.createElement('a');
@@ -583,6 +635,16 @@ function gstrDownload(month, form) {
     }, 60000);
     return name;
   });
+}
+/** ⭐ WALK M M-F-03/M-F-08: is this login VIEW-ONLY (level viewer, not the owner)? The ONE reading of the claim — Accounts greys its menu with it, Returns greys its file buttons; a firm seat is decided by its grant (accounts.html adds that). The api refuses a viewer the money in words (books money gate); this only greys what would be refused */
+function viewOnlyLogin() {
+  var login = typeof SESSION !== 'undefined' && SESSION ? SESSION : null;
+  var claims = (login && jwtPayload(login.token)) || {};
+  return !!login && login.role !== 'entity' && String(claims.access_level || claims.level || '') === 'viewer';
+}
+/** the reason a view-only login is shown beside a greyed money door (one sentence for Accounts and Returns) */
+function viewOnlyMoneyWhy() {
+  return tx("Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.");
 }
 function jwtPayload(t) {
   try {
