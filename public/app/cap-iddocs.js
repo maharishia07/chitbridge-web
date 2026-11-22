@@ -205,7 +205,7 @@ var CBIdDocs = (function () {
     var btn = o.noButton
       ? ''
       : '<button data-cbsid="SCR005-B01" class="composebtn" style="margin-top:6px" onclick="CBIdDocs.save(' +
-        (o.subject ? Q + escJs(o.subject) + Q : 'null') +
+        (o.subject ? Q + esc(o.subject) + Q : 'null') +
         ')">' +
         (self ? 'Submit for verification' : 'Save documents') +
         '</button>';

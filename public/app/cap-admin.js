@@ -69,7 +69,7 @@ function pfExposureDefaultsHTML(e) {
         '"' +
         (cur[x[0]] ? ' checked' : '') +
         ' onchange="pfExposureSet(\'' +
-        escJs(x[0]) +
+        x[0] +
         '\', this.checked)">' +
         esc(tx(x[1])) +
         '</label>'
@@ -193,7 +193,7 @@ function misScreen() {
       '" data-testid="mis-band-' +
       item.key +
       '" onclick="misSetBand(\'' +
-      escJs(item.key) +
+      item.key +
       '\')">' +
       '<div class="main2"><div class="l1"><span class="code">' +
       esc(item.name) +
@@ -211,7 +211,7 @@ function misScreen() {
     );
   }).join('');
   var seg = function (p, l) {
-    return '<button data-cbsid="INS001-B01" class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + escJs(p) + '\')">' + l + '</button>';
+    return '<button data-cbsid="INS001-B01" class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>';
   };
   /* The period bar sits ABOVE the split because it reframes all four bands at once; anything scoped to one band
      lives inside that band. Same rule that puts the Suppliers tabs above its list. */
@@ -465,11 +465,11 @@ function misTax() {
     ) +
     '<div class="misbar" style="margin-bottom:8px"><span class="seg">' +
     '<button data-cbsid="INS001-B03" onclick="misTaxSetMonth(\'' +
-    escJs(prev) +
+    prev +
     '\')">‹</button><button data-cbsid="INS001-B04" class="on">' +
     esc(m) +
     '</button><button data-cbsid="INS001-B05" onclick="misTaxSetMonth(\'' +
-    escJs(next) +
+    next +
     '\')">›</button></span>' +
     '<span class="misbar-r" style="font-size:var(--fs-1);color:var(--grey)">' +
     esc((L.gstin ? 'GSTIN ' + L.gstin : tx('no GSTIN on the profile')) + ' · ' + L.registration) +
@@ -1340,7 +1340,7 @@ async function _loadMIS() {
           '" data-testid="mis-band-' +
           item.key +
           '" onclick="misSetBand(\'' +
-          escJs(item.key) +
+          item.key +
           '\')">' +
           '<div class="main2"><div class="l1"><span class="code">' +
           esc(item.name) +
@@ -4657,7 +4657,7 @@ function govLayersBlock() {
       '<button data-cbsid="ACC002-B37" class="govgrp-h" data-testid="gov-grp-' +
       key +
       '" onclick="govToggleGrp(\'' +
-      escJs(key) +
+      key +
       '\')" aria-expanded="' +
       open +
       '">' +
@@ -4875,7 +4875,7 @@ function settingsScreen() {
         '" data-testid="set-sec-' +
         item.key +
         '" onclick="setSetSec(\'' +
-        escJs(item.key) +
+        item.key +
         '\')">' +
         '<div class="main2"><div class="l1"><span class="code">' +
         esc(item.name) +
@@ -4890,7 +4890,7 @@ function settingsScreen() {
             '" data-testid="int-tab-' +
             entry.key +
             '" onclick="intSetTab(\'' +
-            escJs(entry.key) +
+            entry.key +
             '\')">' +
             '<div class="main2"><div class="l1"><span class="code">' +
             esc(tx(entry.n)) +
@@ -7268,7 +7268,7 @@ function netOffersHTML() {
         '" data-testid="neto-policy-' +
         k +
         '" onclick="netoPolicy(\'' +
-        escJs(k) +
+        k +
         '\')"' +
         ' title="' +
         esc(hint) +
@@ -8742,7 +8742,7 @@ function bizChoice(group, val, cur, rows) {
         '"' +
         (on ? ' checked' : '') +
         ' onchange="bizPick(\'' +
-        escJs(group) +
+        group +
         '\', this.value)" style="margin-top:3px;flex:none">' +
         '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' +
         esc(tx(item[1])) +
@@ -9080,7 +9080,7 @@ function workRoutingHTML() {
       '" ' +
       'style="min-width:132px;padding:4px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)" ' +
       'onchange="workRoutingSet(\'' +
-      escJs(kind) +
+      kind +
       "','" +
       field +
       '\',this.value)">' +

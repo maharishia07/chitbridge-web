@@ -2211,7 +2211,7 @@ function testReqHTML() {
           '<button data-cbsid="SCR010-B15" data-testid="reqf-' +
           x[0] +
           '" onclick="testReqFilter(\'' +
-          escJs(x[0]) +
+          x[0] +
           '\')" ' +
           'style="' +
           TEST_CHIP +
@@ -2662,7 +2662,7 @@ function testIncHTML() {
           '<button data-cbsid="SCR010-B19" data-testid="incf-' +
           x[0] +
           '" onclick="testIncFilter(\'' +
-          escJs(x[0]) +
+          x[0] +
           '\')" ' +
           'style="' +
           TEST_CHIP +
@@ -2721,7 +2721,7 @@ function testIncHTML() {
           title +
           '" ' +
           'onclick="testIncSet(\'' +
-          escJs(item.definition_id) +
+          item.definition_id +
           "','" +
           state +
           '\')" style="' +
@@ -2752,7 +2752,7 @@ function testIncHTML() {
       if (item.state === 'raised' || item.state === 'investigating') {
         acts +=
           '<select data-cbsid="SCR010-S03" onchange="testIncSev(\'' +
-          escJs(item.definition_id) +
+          item.definition_id +
           '\', this.value)" ' +
           'title="Re-grade it" style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid ' +
           'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">' +
@@ -4072,7 +4072,7 @@ function testTechHTML() {
         /* ⭐ the definition rides on the chip that offers it — see the cut list, rule 3 */
         return (
           '<button data-cbsid="SCR010-B22" onclick="testTech(\'' +
-          escJs(x[0]) +
+          x[0] +
           '\')" ' +
           'title="' +
           esc((TEST_TECH_EG[x[0]] || {}).what || '') +
@@ -4101,7 +4101,7 @@ function testTechHTML() {
   h +=
     '<div style="margin-top:8px">' +
     '<button data-cbsid="SCR010-B23" data-testid="tech-try" onclick="testTechTry(\'' +
-    escJs(t.kind) +
+    t.kind +
     '\')" ' +
     'title="Fill every box on this tab with a worked example from this product" ' +
     'style="' +
@@ -4508,7 +4508,7 @@ function testCaseFormHTML() {
     if (!here) return '';
     return (
       '<div style="margin:2px 0 9px"><button data-cbsid="SCR010-B27" onclick="testCaseFor(\'' +
-      escJs(here) +
+      here +
       "', '" +
       testJs(codeName ? codeName(here) : '') +
       '\')" ' +
@@ -4537,7 +4537,7 @@ function testCaseFormHTML() {
         '<button data-cbsid="SCR010-B28" data-testid="wkind-' +
         item +
         '" onclick="testWriteKind(\'' +
-        escJs(item) +
+        item +
         '\')" ' +
         'title="' +
         esc(WKIND[item].says) +
@@ -5082,7 +5082,7 @@ function testScrHTML() {
       return (
         '<tr style="border-top:1px solid var(--line,#e7e3d8)">' +
         '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code onclick="testScrOpen(\'' +
-        escJs(x.code) +
+        x.code +
         '\')" title="Show the cases on this screen" style="font-family:\'Space Mono\',' +
         'ui-monospace,monospace;cursor:pointer;text-decoration:underline;text-underline-offset:2px">' +
         esc(x.code) +
@@ -5103,7 +5103,7 @@ function testScrHTML() {
         num(x.req, 'var(--grey-2,#545A61)') +
         /* ⭐ the door is ON THE ROW: the screen is named right there, so nothing has to be chosen twice */
         '<td style="padding:4px 6px;text-align:end"><button data-cbsid="SCR010-B35" onclick="testCaseFor(\'' +
-        escJs(x.code) +
+        x.code +
         "', " +
         JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;') +
         ')" title="Create a case, an incident or a requirement on this screen" style="font:inherit;font-size:var(--fs-1);' +
@@ -5556,7 +5556,7 @@ function testCaseListHTML(code) {
       ['all', 'All', all.length]
     ]
       .map(function (x) {
-        return '<button data-cbsid="SCR010-B38" onclick="testCaseFilter(\'' + escJs(x[0]) + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+        return '<button data-cbsid="SCR010-B38" onclick="testCaseFilter(\'' + x[0] + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       })
       .join('') +
     (shutAll.length
@@ -6634,7 +6634,7 @@ function testBehindHTML(code) {
             /* ⭐ THE NUMBER IS THE TAB, big, above the word — a count you can press, which is what was asked */
             return (
               '<button data-cbsid="SCR010-B50" onclick="testCovSetTab(\'' +
-              escJs(item[0]) +
+              item[0] +
               '\')" style="font:inherit;cursor:pointer;' +
               'border:1px solid ' +
               (on ? item[2] : 'var(--line,#e7e3d8)') +
@@ -8300,7 +8300,7 @@ function testScrRaisedHTML(code, kind) {
        "On demand" is about the reader's attention, not about the network. */
     (shut
       ? ' · <button data-cbsid="SCR010-B60" onclick="testScrShutToggle(\'' +
-        escJs(kind) +
+        kind +
         '\')" style="font:inherit;' +
         'font-size:var(--fs-1);border:0;background:none;padding:0;cursor:pointer;color:var(--grey-2);' +
         'text-decoration:underline;text-underline-offset:2px">' +
@@ -8505,7 +8505,7 @@ function screenCasesPaint() {
   var seg = function (id, label, n) {
     return (
       '<button data-cbsid="SCR010-B61" onclick="testArea(\'' +
-      escJs(id) +
+      id +
       '\')" style="' +
       tab +
       (area === id ? on : off) +
@@ -9292,7 +9292,7 @@ function testWorkHTML() {
       id +
       '" ' +
       'onclick="testWorkFilter(\'' +
-      escJs(id) +
+      id +
       '\')" style="' +
       chip +
       (f === id ? TEST_CHIP_ON : TEST_CHIP_OFF) +
@@ -9425,7 +9425,7 @@ function testWorkRowHTML(x) {
   if (x.inc && (x.status === 'failed' || x.status === 'todo')) {
     acts +=
       '<select data-cbsid="SCR010-S09" onchange="testIncSev(\'' +
-      escJs(id) +
+      id +
       '\', this.value)" title="Re-grade it" ' +
       'style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid var(--grey-4,#646A72);' +
       'border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">' +
@@ -9577,7 +9577,7 @@ function testHandHTML() {
       ['all', 'All', pool.length]
     ]
       .map(function (x) {
-        return '<button data-cbsid="SCR010-B66" onclick="testHandFilter(\'' + escJs(x[0]) + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+        return '<button data-cbsid="SCR010-B66" onclick="testHandFilter(\'' + x[0] + '\')" style="' + chip + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       })
       .join('') +
     '<span style="display:inline-block;width:14px"></span>' +
@@ -9586,7 +9586,7 @@ function testHandHTML() {
       ['mine', 'Mine', all.filter(mine).length]
     ]
       .map(function (x) {
-        return '<button data-cbsid="SCR010-B67" onclick="testFindSetWho(\'' + escJs(x[0]) + '\')" style="' + chip + (who === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+        return '<button data-cbsid="SCR010-B67" onclick="testFindSetWho(\'' + x[0] + '\')" style="' + chip + (who === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       })
       .join('') +
     '</div>';
@@ -9726,7 +9726,7 @@ function testHandHTML() {
             shut
             ? '<button data-cbsid="SCR010-B72" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
               'padding:2px 9px" onclick="testFindClose(\'' +
-              escJs(x.kind) +
+              x.kind +
               "','" +
               testJs(String(x.id || '')) +
               "','" +
@@ -9760,7 +9760,7 @@ function testHandHTML() {
                   '\')">Mark it fixed</button>'
                 : '<button data-cbsid="CMP005" data-cbmount="SCR010-U105" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
                   'onclick="testFindClose(\'' +
-                  escJs(x.kind) +
+                  x.kind +
                   "','" +
                   testJs(String(x.id || '')) +
                   "','" +

@@ -874,7 +874,7 @@ function _rdHeader() {
   var tb = function (k, lbl) {
     return (
       '<div data-cbsid="SCR033-C03" onclick="UI.rdTab=\'' +
-      escJs(k) +
+      k +
       "';if(typeof renderApp==='function')renderApp()\" style=\"padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border-bottom:2px solid " +
       (tab === k ? 'var(--blue)' : 'transparent') +
       ';color:' +
@@ -1275,7 +1275,7 @@ function _rdComDetail(g) {
   var draftBtn =
     m.ai && m.ai.skill
       ? '<button data-cbsid="SCR033-B10" onclick="aiDraftCommerce(\'' +
-        escJs(m.ai.skill) +
+        m.ai.skill +
         "','" +
         escJs(g.label) +
         '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +

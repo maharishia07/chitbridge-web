@@ -914,7 +914,7 @@
             '<button data-cbsid="SCR050-B04" type="button" class="cs-act" data-testid="cs-act-' +
             item +
             '" onclick="CBSheet.act(\'' +
-            escJs(item) +
+            item +
             '\')"' +
             (CS.busy || refused ? ' disabled' : '') +
             ' title="' +

@@ -52,7 +52,7 @@ function partyTaxRowHTML(kind, partyId, t, i) {
     '" aria-label="' +
     esc(tx('Tax id')) +
     '" style="width:100%" oninput="partyDupCheck(\'' +
-    escJs(kind) +
+    kind +
     "','" +
     escJs(partyId) +
     '\')"></div>'
@@ -118,7 +118,7 @@ function partyEditOpen(kind, partyId) {
         .join('') +
       '</div>' +
       '<button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' +
-      escJs(kind) +
+      kind +
       "','" +
       escJs(partyId) +
       '\')">+ ' +
@@ -141,7 +141,7 @@ function partyEditOpen(kind, partyId) {
       '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="CMP001-B01"' + bkMountAttribute('CMP001') + ' class="pri" data-testid="pe_save" onclick="partyEditSave(\'' +
-      escJs(kind) +
+      kind +
       "','" +
       escJs(partyId) +
       '\')">' +

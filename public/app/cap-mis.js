@@ -276,7 +276,7 @@ function fmPaintTop() {
       '" data-testid="fm-period-' +
       p +
       '" onclick="fmSetPeriod(\'' +
-      escJs(p) +
+      p +
       '\')">' +
       esc(words) +
       '</button>'

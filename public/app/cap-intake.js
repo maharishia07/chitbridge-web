@@ -687,7 +687,7 @@ function _jsonBlock(title, obj) {
     esc(title) +
     '</span>' +
     '<span data-cbsid="WRK003-C02" onclick="_copyJson(\'' +
-    escJs(id) +
+    id +
     '\')" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer">copy</span>' +
     '</div>' +
     '<pre id="' +

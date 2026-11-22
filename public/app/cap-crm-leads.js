@@ -655,7 +655,7 @@ function crmImportStep(stepKey) {
         '<select data-cbsid="CRM004-S02" class="inp" data-testid="crm-import-map-' +
         key +
         '" onchange="crmImportMap(\'' +
-        escJs(key) +
+        key +
         '\', this.value)"><option value="">' +
         esc(tx('Not in the file')) +
         '</option>' +

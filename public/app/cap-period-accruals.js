@@ -41,7 +41,7 @@ async function peAccrualsView(body) {
           '" aria-pressed="' +
           (PE.tab === item[0]) +
           '" onclick="peAccrTab(\'' +
-          escJs(item[0]) +
+          item[0] +
           '\')">' +
           esc(tx(item[1])) +
           '</button>'

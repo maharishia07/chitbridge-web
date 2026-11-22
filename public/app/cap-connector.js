@@ -302,7 +302,7 @@ function piCockpit(x) {
       '<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ ' +
       esc(UI.acConnsErr) +
       ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadDevices(\'' +
-      escJs(x.id) +
+      x.id +
       '\')">' +
       tx('Retry') +
       '</button></div>';
@@ -330,7 +330,7 @@ function piCockpit(x) {
           '</div>' +
           _sig(item.enabled === false ? 'silent' : item.signal) +
           '<button data-cbsid="SCR002-B04" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="acToggleDevice(\'' +
-          escJs(x.id) +
+          x.id +
           "'," +
           item.connection_id +
           ',' +
@@ -345,7 +345,7 @@ function piCockpit(x) {
   // reissues the key, so any device already running this gateway goes silent until reflashed. The confirm gates it too.
   var installerBtn = iot
     ? '<button data-cbsid="SCR002-B05" class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acCreatePackage(\'' +
-      escJs(x.id) +
+      x.id +
       '\')">' +
       tx('📦 Get the Pi installer') +
       '</button><div style="font-size:var(--fs-1);color:var(--warn-2);text-align:center;margin-bottom:8px;line-height:1.45">' +
@@ -357,7 +357,7 @@ function piCockpit(x) {
   // ERP has no installer; its one-tap live-run is a sample document through the real process-then-forget cycle.
   var erpTestBtn = !iot
     ? '<button data-cbsid="SCR002-B06" class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acErpTest(\'' +
-      escJs(x.id) +
+      x.id +
       '\')">' +
       tx('📄 Send a test document') +
       '</button><div style="font-size:var(--fs-1);color:var(--grey);text-align:center;margin-bottom:8px;line-height:1.45">' +
@@ -508,7 +508,7 @@ function _addDeviceForm(x, iot) {
     '<label class="fl">CC <span style="font-weight:400;color:var(--grey)">(optional — another entity id who also co-holds the proof)</span></label><input data-cbsid="SCR002-I08" class="inp" id="ad_cp" placeholder="another entity id" style="width:100%">' +
     '<div class="err" id="ad_err" style="margin-top:6px"></div>' +
     '<div style="display:flex;gap:8px;margin-top:10px"><button data-cbsid="CMP007" class="composebtn pri" onclick="acAddDevice(\'' +
-    escJs(x.id) +
+    x.id +
     "'," +
     (iot ? 'true' : 'false') +
     ')">' +

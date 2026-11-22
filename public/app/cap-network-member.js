@@ -221,7 +221,7 @@ function _netAvailBody() {
       var open = one || UI._avOpen === item.key;
       var head =
         '<div data-cbsid="SCR031-C01" onclick="netAvailToggle(\'' +
-        escJs(item.key) +
+        item.key +
         '\')" style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;' +
         'padding:11px 2px;border-bottom:1px solid var(--line);background:' +
         (open ? 'transparent' : 'var(--card)') +

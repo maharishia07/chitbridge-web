@@ -2415,7 +2415,7 @@ function blueprintSettingsHTML() {
         var wp = WORK_PATTERNS[id];
         return (
           '<button data-cbsid="ACC002-B61" class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\'' +
-          escJs(id) +
+          id +
           '\')"><span style="font-size:var(--fs-4)">' +
           wp.icon +
           '</span><span style="flex:1"><b>' +
@@ -3365,7 +3365,7 @@ function renderAssist(ans) {
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre ? 'Tell me your business and I will be honest about whether this fits.' : 'Describe what you are trying to do.'}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin-bottom:10px">${ans || ''}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${_assistLoading && !sugg.length ? '<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>' : sugg.map((e) => `<button data-cbsid="PNL001-B02" data-testid="assist-suggest-${e.id}" onclick="assistPick('${escJs(e.id)}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join('')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${_assistLoading && !sugg.length ? '<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>' : sugg.map((e) => `<button data-cbsid="PNL001-B02" data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join('')}</div>
       <div style="display:flex;gap:7px"><input data-cbsid="PNL001-I01" id="assist_in" data-testid="assist-input" placeholder="${pre ? 'e.g. I run a timber yard…' : 'e.g. how do I assign a task?'}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-cbsid="PNL001-B03" data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">${tx('Ask')}</button></div>
       ${pre ? '' : '<div style="margin-top:9px;text-align:center"><button data-cbsid="PNL001-B04" data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
     </div>
@@ -3697,7 +3697,7 @@ function renderMsgConsole() {
     .slice(-200)
     .reverse();
   const chip = (k, lbl) =>
-    `<button data-cbsid="WRK001-B01" onclick="setLogFilter('${escJs(k)}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter === k ? 'var(--accent)' : 'var(--card)'};color:${_logFilter === k ? 'var(--on-accent)' : 'var(--ink)'};cursor:pointer">${lbl}</button>`;
+    `<button data-cbsid="WRK001-B01" onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter === k ? 'var(--accent)' : 'var(--card)'};color:${_logFilter === k ? 'var(--on-accent)' : 'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML = `<div data-cbsid="WRK001-C06" class="notifover" onclick="closeMsgConsole()"><div data-cbsid="WRK001-C07" class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
     <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all', 'All')}${chip('info', 'Info')}${chip('warn', 'Warning')}${chip('error', 'Critical')}${chip('debug', 'Requests')}<button data-cbsid="CMP014" onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
@@ -4291,11 +4291,11 @@ function renderWelcome() {
     const list = ONB.role ? ONB_BP[ONB.role] : [];
     body = `
       <div class="welsec"><div class="welh2">${tx('I am here to…')}</div>
-        <div class="welgrid">${roles.map((item) => `<div data-cbsid="APP001-C01" class="welrole ${ONB.role === item[0] ? 'sel' : ''}" data-testid="onb-role-${item[0]}" onclick="pickRole('${escJs(item[0])}')"><div class="ci">${item[1]}</div><div class="cn">${item[2]}</div><div class="cd">${item[3]}</div></div>`).join('')}</div></div>
+        <div class="welgrid">${roles.map((item) => `<div data-cbsid="APP001-C01" class="welrole ${ONB.role === item[0] ? 'sel' : ''}" data-testid="onb-role-${item[0]}" onclick="pickRole('${item[0]}')"><div class="ci">${item[1]}</div><div class="cn">${item[2]}</div><div class="cd">${item[3]}</div></div>`).join('')}</div></div>
       ${
         ONB.role
           ? `<div class="welsec"><div class="welh2">${tx('Choose your vertical')}</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
-        <div class="welgrid">${list.map((item) => `<div data-cbsid="APP001-C02" class="welbp ${ONB.bp === item.k ? 'sel' : ''}" data-testid="onb-bp-${item.k}" onclick="pickBP('${escJs(item.k)}')"><div class="cn">${item.n}</div><div class="bt">${item.t}</div><div class="cd">${item.d}</div></div>`).join('')}</div></div>`
+        <div class="welgrid">${list.map((item) => `<div data-cbsid="APP001-C02" class="welbp ${ONB.bp === item.k ? 'sel' : ''}" data-testid="onb-bp-${item.k}" onclick="pickBP('${item.k}')"><div class="cn">${item.n}</div><div class="bt">${item.t}</div><div class="cd">${item.d}</div></div>`).join('')}</div></div>`
           : ''
       }
       <div class="welbtns"><button data-cbsid="CMP006" data-cbmount="APP001-U106" class="btn ghost" onclick="setWStep('intro')"><span class=arw>←</span> back</button><button data-cbsid="APP001-B04" class="btn" ${ONB.bp ? '' : 'disabled'} data-testid="onb-continue" onclick="welToRegister()">Continue to register <span class=arw>→</span></button></div>`;
@@ -6847,7 +6847,7 @@ function menuBody(M, role) {
       '<div data-cbsid="APP001-C11" class="grp" data-testid="grp-' +
       item[0].toLowerCase() +
       '" onclick="toggleNavGroup(\'' +
-      escJs(item[0]) +
+      item[0] +
       '\')"' +
       ' style="cursor:pointer;display:flex;align-items:center;gap:5px" title="' +
       (shut ? 'Show' : 'Hide') +
@@ -7317,9 +7317,9 @@ function menuBtn(x) {
   /* ⚠️ 26×26 MINIMUM. This rendered 19×17 — the smallest control in the rail, and it sits directly on top of the
      row that navigates, so a miss does not do nothing: it takes you somewhere. A control whose failure mode is
      "the wrong thing happened" needs more room than one whose failure mode is "nothing happened". */
-  const plus = `<span data-cbsid="APP001-C12" data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${escJs(key)}')" title="New folder in ${label}" style="margin-inline-start:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:var(--fs-2);font-weight:700">＋</span>`;
+  const plus = `<span data-cbsid="APP001-C12" data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-inline-start:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:var(--fs-2);font-weight:700">＋</span>`;
   const chev = fs.length
-    ? `<span data-cbsid="APP001-C13" data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${escJs(key)}')" title="${open ? 'Collapse' : 'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open ? '▾' : '<span class=arw>▸</span>'}</span>`
+    ? `<span data-cbsid="APP001-C13" data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open ? 'Collapse' : 'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open ? '▾' : '<span class=arw>▸</span>'}</span>`
     : '';
   const btn = `<button data-cbsid="APP001-B23" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${plus}${chev}</button>`;
   return open ? btn + navFolders(key, fs) : btn;
@@ -7880,7 +7880,7 @@ function cfField(f) {
   const req = f.required ? ' <span style="color:var(--disp)">*</span>' : '';
   const ph = f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : '';
   const v = esc(ccField(f.field_key));
-  const wire = ` value="${v}" oninput="ccSetField('${escJs(f.field_key)}', this.value)"`;
+  const wire = ` value="${v}" oninput="ccSetField('${f.field_key}', this.value)"`;
   const inp =
     f.field_type === 'date'
       ? `<input data-cbsid="RAL001-I07" class="inp" type="date" id="${id}" data-testid="chit-field-${f.field_key}"${wire}>`
@@ -9835,7 +9835,7 @@ function assistPage(key) {
         `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(item.title)}</div>${item.rows.map((entry, index) => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${index ? 'border-top:0.5px solid #F0ECE2' : ''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(entry[0])}</span><span style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">${esc(entry[1])}</span></div>`).join('')}</div>`
     )
     .join('');
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key === 'order' ? 'Order' : 'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input data-cbsid="PNL001-I05" class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button data-cbsid="PNL001-B08" style="${_BTN}" onclick="mAskFree('${escJs(key)}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:var(--fs-2);color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key === 'order' ? 'Order' : 'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input data-cbsid="PNL001-I05" class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button data-cbsid="PNL001-B08" style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:var(--fs-2);color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal() {
   const ent = (typeof SESSION !== 'undefined' && SESSION.entity) || '';
@@ -10249,7 +10249,7 @@ function supportBoxesFor(desk) {
         '<button data-cbsid="APP001-B26" data-testid="support-box-' +
         id +
         '" onclick="supportForm(\'' +
-        escJs(id) +
+        id +
         '\')" ' +
         'style="text-align:start;border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:var(--r-md);' +
         'padding:13px;cursor:pointer;display:block;width:100%">' +
@@ -10618,10 +10618,10 @@ function actorCleanupModal(action, name, parts) {
 /* ---------------- shared screen helpers ---------------- */
 function scr(title, id, helpKey) {
   const q = helpKey
-    ? `<button data-cbsid="CMP016" data-testid="icon-help-${helpKey}" onclick="openAssist('${escJs(helpKey)}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`
+    ? `<button data-cbsid="CMP016" data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`
     : '';
   const hint = helpKey
-    ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">${txf('Explore {q} to know more about this screen.', { q: '<b data-cbsid="APP001-C14" onclick="openAssist(\'' + escJs(helpKey) + '\')" style="cursor:pointer;color:var(--blue)">?</b>' })}</div>`
+    ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">${txf('Explore {q} to know more about this screen.', { q: '<b data-cbsid="APP001-C14" onclick="openAssist(\'' + helpKey + '\')" style="cursor:pointer;color:var(--blue)">?</b>' })}</div>`
     : '';
   return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px 14px var(--scroll-tail);max-width:640px;margin:0 auto"><div class="sec" style="font-size:var(--fs-3);margin-bottom:${helpKey ? '3px' : '10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
@@ -11072,7 +11072,7 @@ function supKindTabsHTML() {
     const on = supKind() === k,
       n = supKindCount(k);
     return (
-      `<button data-cbsid="BUS002-B08" class="${on ? 'on' : ''}" data-testid="${tid}" onclick="setSupKind('${escJs(k)}')">${icon} ${tx(label)}` +
+      `<button data-cbsid="BUS002-B08" class="${on ? 'on' : ''}" data-testid="${tid}" onclick="setSupKind('${k}')">${icon} ${tx(label)}` +
       (n ? ` <span style="font-weight:400">${n}</span>` : '') +
       `</button>`
     );
@@ -12694,7 +12694,7 @@ function platTabsHTML() {
         item[0] +
         '" ' +
         'onclick="setPlatTab(\'' +
-        escJs(item[0]) +
+        item[0] +
         '\')">' +
         esc(tx(item[1])) +
         '</button>'
@@ -14333,7 +14333,7 @@ function custDetailHTML() {
           'Group',
           custSeg(c.segment) +
             ' <select data-cbsid="BUS010-S01" class="inp" data-testid="cust-group" style="width:auto;display:inline-block;margin-left:8px;padding:3px 6px" onchange="custSetGroup(\'' +
-            escJs(c.customer_list_id) +
+            c.customer_list_id +
             '\',this.value)">' +
             [
               ['new', 'New'],
@@ -15129,7 +15129,7 @@ function supEdit(id) {
             '<button data-cbsid="BUS009-B02" data-testid="sup-kind-' +
             item +
             '" onclick="setSupplierKind(\'' +
-            escJs(id) +
+            id +
             "','" +
             item +
             '\')" style="flex:1;border:1px solid ' +
@@ -15161,7 +15161,7 @@ function supEdit(id) {
       tx('Preferred') +
       '</label>' +
       '<div><button data-cbsid="BUS009-B03" onclick="toggleSupPref(\'' +
-      escJs(id) +
+      id +
       '\')" style="border:1px solid var(--line);border-radius:9px;background:' +
       (x.preferred ? 'var(--blue)' : 'var(--card)') +
       ';color:' +
@@ -15173,7 +15173,7 @@ function supEdit(id) {
       '<div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="CMP001" class="pri" data-testid="sup-save" onclick="saveSupplier(\'' +
-      escJs(id) +
+      id +
       '\')">' +
       tx('Save') +
       '</button></div>'
@@ -17024,7 +17024,7 @@ function prodAvailChipsHTML() {
       v +
       '"' +
       ' onclick="prodAvailFilter(\'' +
-      escJs(v) +
+      v +
       '\')" aria-pressed="' +
       (on ? 'true' : 'false') +
       '"' +
@@ -17358,7 +17358,7 @@ function prodRowHTML(p, ctx) {
     testid: () => 'cat-product-' + id,
     rowClass: () => 'cbclick' + (!ctx && id === UI.prodSel ? ' sel' : '') + (ticked ? ' picked' : ''),
     rowAttrs: () =>
-      `onclick="${ctx ? (ctx.onToggle ? ctx.onToggle(id) : '') : picking ? `prodTogglePick('${escJs(id)}')` : `selectProduct('${escJs(id)}')`}"${st !== 'available' ? ' style="opacity:.7"' : ''}`,
+      `onclick="${ctx ? (ctx.onToggle ? ctx.onToggle(id) : '') : picking ? `prodTogglePick('${id}')` : `selectProduct('${id}')`}"${st !== 'available' ? ' style="opacity:.7"' : ''}`,
     lead: picking
       ? () => `<span class="cbx ${ticked ? 'on' : ''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked ? '✓' : ''}</span>`
       : undefined,
@@ -19222,12 +19222,12 @@ async function prodAllFields(id) {
       tx('Close') +
       '</button>' +
       '<button data-cbsid="CAT005-B01" class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' +
-      escJs(id) +
+      id +
       '\')">' +
       tx('Set status') +
       '</button>' +
       '<button data-cbsid="CMP012" class="btn pri" style="flex:1" onclick="closeModal();selectProduct(\'' +
-      escJs(id) +
+      id +
       "');setProdMode('edit')\">" +
       tx('✎ Edit') +
       '</button></div>',
@@ -19247,7 +19247,7 @@ function prodStatusPick(id) {
       '<button data-cbsid="CAT005-B02" class="btn" style="width:100%;margin-bottom:7px;text-align:start;' +
       (on ? 'border-color:var(--blue);font-weight:700' : '') +
       '" onclick="prodSetStatus(\'' +
-      escJs(id) +
+      id +
       "','" +
       v +
       '\')">' +
@@ -19373,7 +19373,7 @@ function prodAvailBlock(d, id) {
           <option value="erp">from the ERP</option>
           <option value="iot">from a sensor</option>
         </select>
-        <button data-cbsid="CAT005-B03" class="pri" onclick="saveAvail('${escJs(id)}')" style="padding:7px 13px">${tx('Report it')}</button>
+        <button data-cbsid="CAT005-B03" class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
       </div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">Stamped with the time you report
         it. A connector can write this far more often than a person — the number is only as good as its date.</div>
@@ -19473,7 +19473,7 @@ function prodTabBar() {
   return (
     `<div class="dtabs" data-testid="prod-tabs" data-layout="${page ? 'page' : 'tabs'}">` +
     PROD_TABS.map(function (item) {
-      return `<button data-cbsid="CAT005-B04" type="button" data-testid="prod-tab-${item[0]}" class="${prodTab() === item[0] ? 'on' : ''}" onclick="setProdTab('${escJs(item[0])}')">${tx(item[1])}</button>`;
+      return `<button data-cbsid="CAT005-B04" type="button" data-testid="prod-tab-${item[0]}" class="${prodTab() === item[0] ? 'on' : ''}" onclick="setProdTab('${item[0]}')">${tx(item[1])}</button>`;
     }).join('') +
     (prodLayout() === 'page'
       ? `<button data-cbsid="CAT005-B05" type="button" data-testid="prod-rows-pick" title="${esc(tx('Which rows this business shows'))}" style="margin-inline-start:auto;opacity:.7" onclick="prodRowsPick()">⚙ ${tx('Rows')}</button>`
@@ -19768,7 +19768,7 @@ function prodSectionHTML(k, d, id, editing) {
       return editing
         ? `<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`
         : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}` +
-            `<div style="padding:9px 12px"><button data-cbsid="CAT005-B07" class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${escJs(id)}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
+            `<div style="padding:9px 12px"><button data-cbsid="CAT005-B07" class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
             `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">${tx('synonyms, status, and anything imported')}</span></div>`;
     case 'categories':
       return editing ? ctCategoryField(d) : prodCatgViewHTML(d);
@@ -19833,7 +19833,7 @@ function ptabWrap(k, html) {
     UI._prodOpen = UI._prodOpen || {};
     const open = edit || ((UI._prodOpen[pid] || prodTab()) === k && !!UI._prodOpen[pid]);
     return (
-      `<details class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}"${open ? ' open' : ''}${edit ? '' : ` ontoggle="prodSheetToggle(this,'${escJs(k)}')"`}>` +
+      `<details class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}"${open ? ' open' : ''}${edit ? '' : ` ontoggle="prodSheetToggle(this,'${k}')"`}>` +
       `<summary class="ptab-row"><span class="ptab-l">${tx(nestedT)}</span><span class="ptab-o" data-testid="prod-outcome-${k}">${edit ? grey(tx('editing below')) : prodOutcomeHTML(k, d) || ''}</span><span class="ptab-c" aria-hidden="true">›</span></summary>` +
       `<div class="ptab-b">${html}</div></details>`
     );
@@ -20313,7 +20313,7 @@ function prodMediaTab(d, edit) {
       (edit
         ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${escJs(id)}', this.files)">` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures up to 8 MB each; the first is the cover the storefront shows. Saved at once — not with this form.')}</div>` +
-          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${escJs(id)}')">${tx('Add video')}</button></div>` +
+          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>`
         : '')
     );
@@ -20437,7 +20437,7 @@ function prodExposureHTML(d) {
         label,
         why
       ]) => /* CX4 (C2): the HSN switch only under a pack with India's HSN rule */ `<label data-testid="prod-expose-${k}" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);cursor:pointer">
-      <input data-cbsid="CAT005-I15" type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k] ? 'checked' : ''} onchange="prodExposureSet('${escJs(k)}', this.checked)">
+      <input data-cbsid="CAT005-I15" type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k] ? 'checked' : ''} onchange="prodExposureSet('${k}', this.checked)">
       <span style="flex:1"><b style="font-size:var(--fs-2)">${esc(tx(label))}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(tx(why))}</span></span>
       <span style="font-size:var(--fs-1);color:var(--grey)">${k in own ? esc(tx('this item')) : esc(tx('default'))}</span></label>`
     )
@@ -20665,7 +20665,7 @@ function prodIdentifiersTab(d, edit) {
         })
       );
       return (
-        `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span data-cbsid="CAT005-C09" class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${escJs(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
+        `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span data-cbsid="CAT005-C09" class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
         (edit && xi >= 0
           ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${escJs(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
           : '') +
@@ -20682,7 +20682,7 @@ function prodIdentifiersTab(d, edit) {
       <input data-cbsid="CAT005-I17" class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
       <input data-cbsid="CAT005-I18" class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
       <select data-cbsid="CAT005-S05" class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
-      <button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${escJs(id)}')">${tx('Add id')}</button></div>
+      <button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
       <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting any of these ids lands on this product.')}</div>`
     : '';
   return `<div class="sec">${tx('Identifiers')}</div>` + table + add + prodBarcodeTab(d);
@@ -21000,7 +21000,7 @@ function prodInvoiceTab(d) {
     : [[txf('{s} {r}%', { s: m.scheme, r: String(it.GstRt || 0) }), it.IgstAmt || it.CgstAmt || 0]];
   const cess = Number(it.CesAmt || 0);
   const sw = (k, label) =>
-    `<button data-cbsid="CAT005-B13" class="composebtn${pos === k ? ' on' : ''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${escJs(k)}')" style="${pos === k ? 'font-weight:700;border-color:var(--blue)' : ''}">${esc(label)}</button>`;
+    `<button data-cbsid="CAT005-B13" class="composebtn${pos === k ? ' on' : ''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos === k ? 'font-weight:700;border-color:var(--blue)' : ''}">${esc(label)}</button>`;
   const today = CBLocale.date(new Date());
   const gross = Number(m.line.unit_price || 0) * Number(m.om.qty || 1);
   const rows = [[tx('Gross'), gross]]
@@ -21136,7 +21136,7 @@ function prodLifecycleTab(d, id) {
   return (
     `<div class="sec">${tx('Lifecycle')}</div>` +
     `<table class="cbcat-sheet" data-testid="prod-lifecycle" style="margin:0 12px"><tbody>` +
-    `<tr><td>${tx('Status')}</td><td><b data-testid="prod-lifecycle-status">${esc((rows.find((item) => item[0] === st) || [st, st])[1])}</b> <span style="color:var(--grey)">${esc((rows.find((item) => item[0] === st) || [])[2] || '')}</span>${d.redundant_by ? ' · ' + esc(tx('replaced by') + ' ' + String(d.redundant_by)) : ''}</td><td><button data-cbsid="CAT005-B21" class="composebtn" data-testid="prod-lifecycle-status-pick" onclick="prodStatusPick('${escJs(id)}')">${tx('Change')}</button></td></tr>` +
+    `<tr><td>${tx('Status')}</td><td><b data-testid="prod-lifecycle-status">${esc((rows.find((item) => item[0] === st) || [st, st])[1])}</b> <span style="color:var(--grey)">${esc((rows.find((item) => item[0] === st) || [])[2] || '')}</span>${d.redundant_by ? ' · ' + esc(tx('replaced by') + ' ' + String(d.redundant_by)) : ''}</td><td><button data-cbsid="CAT005-B21" class="composebtn" data-testid="prod-lifecycle-status-pick" onclick="prodStatusPick('${esc(id)}')">${tx('Change')}</button></td></tr>` +
     `<tr><td>${tx('Since')}</td><td>${first ? esc(fmtDateTime(first.valid_from)) : grey(tx('reading…'))}</td><td></td></tr>` +
     `<tr><td>${tx('Last change')}</td><td>${last ? esc(fmtDateTime(last.valid_from)) + ' · ' + esc(prodWhoName(last)) : grey(tx('reading…'))}</td><td></td></tr>` +
     `</tbody></table>` +
@@ -21381,7 +21381,7 @@ function prodPricingHTML(d) {
       ? `<div data-testid="prod-pricing-resolved"><b>${esc(CBPricing.describe(row))}</b></div>`
       : `<div data-testid="prod-pricing-resolved"><b>${esc(tx('List price'))}</b> ${grey(esc(tx('— no structure cited')))}</div>` +
         (defs.length
-          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select data-cbsid="CAT005-S07" class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button data-cbsid="CAT005-B15" class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${escJs(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
+          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select data-cbsid="CAT005-S07" class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button data-cbsid="CAT005-B15" class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
           : '');
   /* the outcome: the bands at this product's list price, and the unit price at the sample quantity */
   const bands = CBPricing.bands(row, list);
@@ -21829,7 +21829,7 @@ function prodDetailHTML() {
      photographed. A perfectly tokenised value, still wrong, because the token was used in the wrong ROLE.
      Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
   const seg = (m, l) =>
-    `<button data-cbsid="CAT005-B17" onclick="setProdMode('${escJs(m)}')" style="border:0;background:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
+    `<button data-cbsid="CAT005-B17" onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const head = `<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price">${(() => {
     /* the same price column as the lists (Athi, 2026-09-06: the header said ₹101 while the list said ₹90.90) */ try {
       const x = prodDeals(d, prodId(p));
@@ -21852,7 +21852,7 @@ function prodDetailHTML() {
       prodRowsVisible()
         .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, true)))
         .join('') + `<div class="err" id="ct_err" style="margin-top:8px"></div>`;
-    bar = `<button data-cbsid="CMP001" class="pri" data-testid="cat-save" onclick="saveProduct('${escJs(id)}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setProdMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setProdMode('view')">${tx('Cancel')}</button>`;
   } else {
     /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
@@ -21861,7 +21861,7 @@ function prodDetailHTML() {
     body = prodRowsVisible()
       .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, false)))
       .join('');
-    bar = `<button data-cbsid="CMP012" class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${escJs(id)}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${escJs(id)}')">${tx('Delete')}</button>`;
+    bar = `<button data-cbsid="CMP012" class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
      stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
@@ -22287,7 +22287,7 @@ function taskPanel() {
   const stTabs =
     ['drafts', 'trash', 'archive', 'order'].indexOf(UI.folder) >= 0 || UI.search || advActive()
       ? ''
-      : `<div class="statetabs">${['open', 'act', 'close'].map((item) => `<button data-cbsid="RAL002-B11" class="${UI.state === item ? 'on ' + item : ''}" onclick="setState('${escJs(item)}')">${UI.selectMode && !isCust ? `<span data-cbsid="RAL002-C10" class="cbx ${UI.aggStates.has(item) ? 'on' : ''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${escJs(item)}')">${UI.aggStates.has(item) ? '✓' : ''}</span>` : ''}${cap(item)} <span class="n">${stCount(item)}</span></button>`).join('')}</div>`;
+      : `<div class="statetabs">${['open', 'act', 'close'].map((item) => `<button data-cbsid="RAL002-B11" class="${UI.state === item ? 'on ' + item : ''}" onclick="setState('${item}')">${UI.selectMode && !isCust ? `<span data-cbsid="RAL002-C10" class="cbx ${UI.aggStates.has(item) ? 'on' : ''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${item}')">${UI.aggStates.has(item) ? '✓' : ''}</span>` : ''}${cap(item)} <span class="n">${stCount(item)}</span></button>`).join('')}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
   const tools = isCust
     ? ''
@@ -22368,7 +22368,7 @@ function taskPanel() {
             : `<span data-testid="crumb-track">${_tname}</span>`
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
-      ${_fsel ? `<span data-cbsid="RAL002-C23" data-testid="folder-rename" onclick="renameFolder('${escJs(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${escJs(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
+      ${_fsel ? `<span data-cbsid="RAL002-C23" data-testid="folder-rename" onclick="renameFolder('${escJs(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
       ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
@@ -22531,7 +22531,7 @@ function chitMarkPaid(id, amount) {
     <select data-cbsid="DTL001-S01" class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input data-cbsid="DTL001-I01" class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
     <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc(typeof CBLocale !== 'undefined' && CBLocale.symbol && moneyCode() ? CBLocale.symbol(moneyCode()) : '')}</b><input data-cbsid="DTL001-I02" class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount || ''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
-    <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${esc(tx('Cancel'))}</button><button data-cbsid="DTL001-B03" class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${escJs(id)}')">${esc(tx('Record'))}</button></div>`);
+    <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${esc(tx('Cancel'))}</button><button data-cbsid="DTL001-B03" class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
 /** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
 function readPayForm() {
@@ -23332,7 +23332,7 @@ function quickStatus() {
   )
     .map(
       ([v, l]) =>
-        `<div data-cbsid="RAL002-C25" class="optrow" data-v="${v}" onclick="pickStatus('${escJs(v)}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`
+        `<div data-cbsid="RAL002-C25" class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`
     )
     .join('');
   modal(
@@ -23438,7 +23438,7 @@ function pickChitStatus(id) {
   const opts = statusOptsFor([c])
     .map(
       ([v, l]) =>
-        `<div data-cbsid="DTL001-C01" class="optrow ${c.state === v ? 'sel' : ''}" data-v="${v}" onclick="pickStatus('${escJs(v)}')"><span class="rdo"></span><div class="oc"><div class="on">${l}${c.state === v ? ' · current' : ''}</div></div></div>`
+        `<div data-cbsid="DTL001-C01" class="optrow ${c.state === v ? 'sel' : ''}" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}${c.state === v ? ' · current' : ''}</div></div></div>`
     )
     .join('');
   modal(
@@ -24458,7 +24458,7 @@ function pgFooter(id) {
     return (
       capLine +
       '<div class="listend"><button data-cbsid="RAL002-B16" class="composebtn" onclick="pgNext(\'' +
-      escJs(id) +
+      id +
       '\')">' +
       tx('↓ Load more') +
       '</button>' +
@@ -24733,7 +24733,7 @@ function advChips() {
   if (a.dispute) list.push(['dispute', '⚠ dispute']);
   return list
     .map(function (x) {
-      return '<span class="advchip">' + esc(x[1]) + '<b data-cbsid="RAL002-C27" onclick="event.stopPropagation();delAdv(\'' + escJs(x[0]) + '\')">✕</b></span>';
+      return '<span class="advchip">' + esc(x[1]) + '<b data-cbsid="RAL002-C27" onclick="event.stopPropagation();delAdv(\'' + x[0] + '\')">✕</b></span>';
     })
     .join('');
 }
@@ -26805,7 +26805,7 @@ function askAiOrderDoc() {
     .map(function (item) {
       return (
         '<button data-cbsid="DTL001-B06" onclick="_aiOrderDoc(\'' +
-        escJs(item[0]) +
+        item[0] +
         "','" +
         item[1] +
         '\')" style="display:block;width:100%;text-align:start;font-size:var(--fs-2);font-weight:600;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer;color:var(--on-card)">✨ ' +
@@ -27210,7 +27210,7 @@ function detailInner() {
   ]);
   return `<div class="dh"><button data-cbsid="DTL001-B31" class="dback" onclick="backToList()">‹ Back to list</button><button data-cbsid="DTL001-B32" class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button data-cbsid="DTL001-B33" class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
-   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${escJs(k)}')">${l}</button>`).join('')}</div>
+   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
    <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button data-cbsid="DTL001-B35" class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**
@@ -27244,7 +27244,7 @@ function answerPublish(id) {
       '<div style="display:flex;gap:8px;margin-top:11px"><button data-cbsid="CMP003" class="composebtn" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="DTL001-B36" class="composebtn" style="background:var(--blue);color:var(--on-accent)" onclick="doAnswerPublish(\'' +
-      escJs(id) +
+      id +
       '\')">🧠 Answer &amp; publish</button></div>' +
       '</div>'
   );
@@ -27859,7 +27859,7 @@ function openMsgCenter() {
     })
     .filter(Boolean)
     .reverse();
-  host.innerHTML = `<div data-cbsid="WRK001-C08" class="notifover" onclick="closeMsgCenter()"><div data-cbsid="WRK001-C09" class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">${tx('💬 Messages')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button data-cbsid="WRK001-B02" class="msglink" style="width:100%" onclick="openRaidReport()">${tx('📊 RAID report — governance overview')}</button></div>${items.length ? items.map((x) => `<div data-cbsid="WRK001-C10" class="notifrow" style="cursor:pointer" onclick="openFromCenter('${escJs(x.id)}')"><span class="ni">${x.unread ? '🔵' : '💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread ? ` <span class="unreadtag">${x.unread} new</span>` : ''}</div><div class="ns">${x.last ? (x.last.scope === 'external' ? '↔ ' : '🔒 ') + (x.last.body.length > 44 ? x.last.body.slice(0, 44) + '…' : x.last.body) : ''}</div></div></div>`).join('') : '<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button data-cbsid="WRK001-B03" class="${SESSION.msgTypes !== 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('lean')">${tx('Lean')}</button><button data-cbsid="WRK001-B04" class="${SESSION.msgTypes === 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('gov')">${tx('Governance (RAID)')}</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
+  host.innerHTML = `<div data-cbsid="WRK001-C08" class="notifover" onclick="closeMsgCenter()"><div data-cbsid="WRK001-C09" class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">${tx('💬 Messages')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button data-cbsid="WRK001-B02" class="msglink" style="width:100%" onclick="openRaidReport()">${tx('📊 RAID report — governance overview')}</button></div>${items.length ? items.map((x) => `<div data-cbsid="WRK001-C10" class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread ? '🔵' : '💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread ? ` <span class="unreadtag">${x.unread} new</span>` : ''}</div><div class="ns">${x.last ? (x.last.scope === 'external' ? '↔ ' : '🔒 ') + (x.last.body.length > 44 ? x.last.body.slice(0, 44) + '…' : x.last.body) : ''}</div></div></div>`).join('') : '<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button data-cbsid="WRK001-B03" class="${SESSION.msgTypes !== 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('lean')">${tx('Lean')}</button><button data-cbsid="WRK001-B04" class="${SESSION.msgTypes === 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('gov')">${tx('Governance (RAID)')}</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
 }
 function closeMsgCenter() {
   UI.msgcOpen = false;
@@ -28389,7 +28389,7 @@ function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};
   MODALS.repri = { id, pri: c.pri || 'normal', reason: '' };
   modal(
-    `<div class="mhd"><div class="t">Priority — ${c.code || 'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri ? '<div class="custreq">⚑ Customer flagged this as priority.</div>' : ''}<div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button data-cbsid="DTL001-B46" class="pri-${item} ${MODALS.repri.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickRepri('${escJs(item)}')">${PRI[item].label}</button>`).join('')}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea data-cbsid="DTL001-T03" id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="DTL001-B47" class="pri" id="repriok" ${MODALS.repri.pri === 'urgent' ? 'disabled' : ''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`
+    `<div class="mhd"><div class="t">Priority — ${c.code || 'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri ? '<div class="custreq">⚑ Customer flagged this as priority.</div>' : ''}<div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button data-cbsid="DTL001-B46" class="pri-${item} ${MODALS.repri.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickRepri('${item}')">${PRI[item].label}</button>`).join('')}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea data-cbsid="DTL001-T03" id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="DTL001-B47" class="pri" id="repriok" ${MODALS.repri.pri === 'urgent' ? 'disabled' : ''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`
   );
 }
 function pickRepri(p) {
@@ -28610,7 +28610,7 @@ function modeRibbon() {
   const stageBtns = Object.entries(STAGES)
     .map(([k, s]) => {
       const usable = s.mock || !!s.base;
-      return `<button data-cbsid="APP001-B45" class="${CFG.STAGE === k ? 'on' : ''}"${usable ? '' : ' disabled title="API base not set"'} onclick="setStage('${escJs(k)}')">${s.label}</button>`;
+      return `<button data-cbsid="APP001-B45" class="${CFG.STAGE === k ? 'on' : ''}"${usable ? '' : ' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
     })
     .join('');
   /* data-dev-only: this strip is build chrome (API URL with its port, stage switches), never the product's copy —
@@ -29162,7 +29162,7 @@ async function attResolveSrc(a) {
 /* ⭐ attGlyph and fmtSize LIVED HERE, byte-for-byte copies of `cbAttachIcon` / `cbAttachSize` in app/attach-ui.js
    (loaded above) — one mapping, every screen (CU1, 2026-10-13). Its map keeps 'text' → 📄: a .txt is the customer's own words. */
 function attTile(a, group, i) {
-  return `<div data-cbsid="DTL001-C02" class="attTile" onclick="openLightbox('${escJs(group)}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${cbAttachIcon(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t || 'file').toUpperCase())}${a.size ? ' · ' + cbAttachSize(a.size) : ''}</div></div>`;
+  return `<div data-cbsid="DTL001-C02" class="attTile" onclick="openLightbox('${group}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${cbAttachIcon(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t || 'file').toUpperCase())}${a.size ? ' · ' + cbAttachSize(a.size) : ''}</div></div>`;
 }
 function attTileGrid(atts, group) {
   return `<div class="attGrid">${atts.map((item, index) => attTile(item, group, index)).join('')}</div>`;
@@ -29988,7 +29988,7 @@ function amendPaint() {
        identical empty line and mean opposite things — the second leaves a customer expecting a delivery. */
     return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
       <div style="font-size:var(--fs-2);color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
-      ${AMD_REASONS.map((item) => `<button data-cbsid="DTL001-B55" class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:var(--fs-3)" onclick="amendSave(null,'${escJs(item[0])}')">${esc(item[1])}</button>`).join('')}
+      ${AMD_REASONS.map((item) => `<button data-cbsid="DTL001-B55" class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:var(--fs-3)" onclick="amendSave(null,'${item[0]}')">${esc(item[1])}</button>`).join('')}
       <button data-cbsid="DTL001-B60" class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`, false, { pop: 'POP015' });
   }
 

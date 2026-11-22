@@ -148,7 +148,7 @@ function trTab(pair) {
     '" data-testid="tr-tab-' +
     pair[0] +
     '" onclick="trSetPeriod(\'' +
-    escJs(pair[0]) +
+    pair[0] +
     '\')">' +
     esc(tx(pair[1])) +
     '</button>'

@@ -568,14 +568,14 @@ function partyBooksHTML(kind, partyId, row, moneyOnly) {
       ? ''
       : '<div class="supacts" style="display:flex;gap:7px;padding:9px 13px;flex-wrap:wrap">' +
         '<button data-cbsid="CMP012-B01"' + bkMountAttribute('CMP012') + ' data-testid="party-edit" onclick="partyEditOpen(\'' +
-        escJs(kind) +
+        kind +
         "','" +
         escJs(partyId) +
         '\')">' +
         tx('Edit') +
         '</button>' +
         '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="party-pay" onclick="payOpen(\'' +
-        escJs(kind) +
+        kind +
         "','" +
         escJs(partyId) +
         '\')">' +
@@ -1688,7 +1688,7 @@ function ledgerScreen() {
         '" data-testid="bk-tab-' +
         item[0] +
         '" onclick="bkTab(\'' +
-        escJs(item[0]) +
+        item[0] +
         '\')"><div class="main2"><div class="l1"><span class="code">' +
         item[1] +
         ' ' +
@@ -5047,7 +5047,7 @@ function bkDuesActs(p) {
     '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="dues-pay-' +
     id +
     '" onclick="event.stopPropagation();payOpen(\'' +
-    escJs(kind) +
+    kind +
     "','" +
     id +
     "'," +
@@ -5059,7 +5059,7 @@ function bkDuesActs(p) {
       ? '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="dues-remind-' +
         id +
         '" onclick="event.stopPropagation();bkRemind(\'' +
-        escJs(id) +
+        id +
         '\',this)">' +
         esc(tx('Remind')) +
         '</button>'
@@ -5630,7 +5630,7 @@ function bkNeedFilters() {
 }
 /** one chip of the header line: pressed when the list is narrowed to that reason */
 function bkNeedsChip(kind, text, pressed) {
-  return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + '" data-testid="needs-head-' + kind + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + escJs(kind) + '\')">' + text + '</button>';
+  return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + '" data-testid="needs-head-' + kind + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
 }
 /** the chips of the header line, the server's counts only: parties that need you, then each reason with its count (overdue says the amount) */
 function bkNeedsChips(sum, side, currency, pressed) {
@@ -6037,7 +6037,7 @@ async function bkPacks(body) {
             : '<div class="supacts" style="margin:0"><button data-cbsid="CMP042-B10"' + bkMountAttribute('CMP042') + ' data-testid="pack-ack-' +
               id +
               '" onclick="bkPackAck(\'' +
-              escJs(id) +
+              id +
               '\')">' +
               tx('We have it') +
               '</button></div>';
@@ -6047,7 +6047,7 @@ async function bkPacks(body) {
             : '<div class="supacts" style="margin:0"><button data-cbsid="CMP042-B11"' + bkMountAttribute('CMP042') + ' data-testid="pack-get-' +
               id +
               '" onclick="bkPackGet(\'' +
-              escJs(id) +
+              id +
               '\')">' +
               tx('Download') +
               '</button></div>';
@@ -6291,7 +6291,7 @@ function bkChequeStepsHTML(c) {
               '-' +
               id +
               '" onclick="bkChequeStep(\'' +
-              escJs(id) +
+              id +
               "','" +
               item +
               '\')">' +

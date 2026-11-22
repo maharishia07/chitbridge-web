@@ -97,7 +97,7 @@ function rgTabs() {
           (RG.view === item[0] ? 'on' : '') +
           '"' +
           ' onclick="rgGo(&quot;' +
-          escJs(item[0]) +
+          item[0] +
           '&quot;)">' +
           item[1] +
           '</button>'
@@ -1210,12 +1210,12 @@ function rgEditPaint(id) {
     esc(tx('due')) +
     '">' +
     '<button data-cbsid="SCR007-B09" class="btn" data-testid="raida-edit-save" onclick="rgEditSave(&quot;' +
-    escJs(id) +
+    id +
     '&quot;)">' +
     tx('Save change') +
     '</button>' +
     '<button data-cbsid="CMP003" class="btn ghost" onclick="rgEditAsk(&quot;' +
-    escJs(id) +
+    id +
     '&quot;)">' +
     tx('Cancel') +
     '</button>' +
@@ -1309,12 +1309,12 @@ function rgClosePaint(id) {
     '">' +
     '<button data-cbsid="SCR007-B10" class="btn" data-testid="raida-close-save"' +
     ' onclick="rgCloseSave(&quot;' +
-    escJs(id) +
+    id +
     '&quot;)">' +
     tx('End it') +
     '</button>' +
     '<button data-cbsid="CMP003" class="btn ghost" onclick="rgCloseAsk(&quot;' +
-    escJs(id) +
+    id +
     '&quot;)">' +
     tx('Cancel') +
     '</button>' +
@@ -1730,7 +1730,7 @@ function rgImpact() {
               (RG.walkFrom === item.id ? 'on' : '') +
               '"' +
               ' onclick="rgWalkFrom(&quot;' +
-              escJs(item.id) +
+              item.id +
               '&quot;)">' +
               esc(item.label) +
               '</button>'

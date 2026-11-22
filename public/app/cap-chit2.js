@@ -1150,7 +1150,7 @@ function c2WorkTabs() {
         var on = (C2.work || 'line') === item[0];
         return (
           '<span data-cbsid="DTL006-C05" onclick="c2WorkView(&quot;' +
-          escJs(item[0]) +
+          item[0] +
           '&quot;)" data-testid="work-' +
           item[0] +
           '" style="cursor:pointer;font-size:var(--fs-2);' +
@@ -2132,7 +2132,7 @@ function chit2Screen() {
         '<button data-cbsid="DTL006-B08" data-testid="c2-side-' +
         item +
         '" onclick="c2Side(\'' +
-        escJs(item) +
+        item +
         '\')" style="flex:1;border:1px solid ' +
         (on ? 'var(--accent)' : 'var(--line)') +
         ';background:' +
@@ -2159,7 +2159,7 @@ function chit2Screen() {
         '<button data-cbsid="DTL006-B09" data-testid="c2-tab-' +
         item[0] +
         '" onclick="c2Tab(\'' +
-        escJs(item[0]) +
+        item[0] +
         '\')" style="flex:1;background:none;border:0;border-bottom:2px solid ' +
         (on ? 'var(--ink,#1c1a17)' : 'transparent') +
         ';font:inherit;font-size:var(--fs-2);color:' +
@@ -2241,7 +2241,7 @@ function chit2Screen() {
     (C2.side === 'us'
       ? '<div style="padding:6px 16px 0;text-align:center">' +
         '<span data-cbsid="DTL006-C08" data-testid="c2-service-clock" onclick="openServiceClock(\'' +
-        escJs(C2.id) +
+        C2.id +
         '\')"' +
         ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">⏱ Service clock &amp; SLA</span></div>'
       : '') +

@@ -390,7 +390,7 @@ function coassistsScreen() {
   const _title = _tf !== 'all' && _treg ? (_treg.icon ? _treg.icon + ' ' : '') + esc(_shortLbl) + ' · co-assists' : '🧑‍🤝‍🧑 Co-assists';
   const _typeInfoBtn =
     _tf !== 'all' && (window.AC_TYPE_HOW || {})[_tf]
-      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo('${escJs(_tf)}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
+      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
       : '';
   const list = `<div class="list">
     <div class="lh">
@@ -398,14 +398,14 @@ function coassistsScreen() {
       <div style="display:flex;gap:7px"><input data-cbsid="BUS005-I01" class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button data-cbsid="BUS005-B08" class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input data-cbsid="BUS005-I02" placeholder="Search name, role, key" value="${esc(UI.acQ || '')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active', 'inactive', 'all'].map((item) => `<button data-cbsid="BUS005-B09" onclick="setAcFlt('${escJs(item)}')" style="border:0;background:${acFlt() === item ? 'var(--blue)' : 'var(--card)'};color:${acFlt() === item ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${item}</button>`).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active', 'inactive', 'all'].map((item) => `<button data-cbsid="BUS005-B09" onclick="setAcFlt('${item}')" style="border:0;background:${acFlt() === item ? 'var(--blue)' : 'var(--card)'};color:${acFlt() === item ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${item}</button>`).join('')}</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all']
           .concat(Object.keys(window.ACTOR_TYPES || {}))
           .map((item) => {
             var reg = (window.ACTOR_TYPES || {})[item] || {};
             var on = (UI.acTypeF || 'all') === item;
             var lbl = item === 'all' ? 'All' : (reg.icon ? reg.icon + ' ' : '') + (reg.label || item).split(/[ /]/)[0];
-            return `<button data-cbsid="BUS005-B10" onclick="setAcTypeF('${escJs(item)}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';font-weight:400;cursor:not-allowed;outline:1px dashed var(--grey);outline-offset:-3px' : ''}"${reg.comingSoon ? ' aria-disabled="true"' : ''}>${lbl}</button>`;
+            return `<button data-cbsid="BUS005-B10" onclick="setAcTypeF('${item}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';font-weight:400;cursor:not-allowed;outline:1px dashed var(--grey);outline-offset:-3px' : ''}"${reg.comingSoon ? ' aria-disabled="true"' : ''}>${lbl}</button>`;
           })
           .join('')}</span>
         <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span>${acSortSelect()}</div>
@@ -770,7 +770,7 @@ function awRender() {
             '<div data-cbsid="BUS005-C02" data-testid="coassist-type-' +
             item[0] +
             '" onclick="awPick(\'' +
-            escJs(item[0]) +
+            item[0] +
             '\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;' +
             (nestedRdy ? '' : 'opacity:.72') +
             '"><div style="font-size:var(--fs-5)">' +
@@ -1047,7 +1047,7 @@ function _iotRowHTML(x) {
     ';border-color:transparent">' +
     (iot ? '🛰️ IoT' : '🔌 ERP') +
     '</span>';
-  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${escJs(x.id)}')">
+  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago ? ' · ' + esc(ago) : ''}</span></div>
       <div class="l2">📍 ${esc(info.site || x.site || 'no site')} · <b>${cnt}</b> ${iot ? (cnt === 1 ? 'device' : 'devices') : cnt === 1 ? 'endpoint' : 'endpoints'}</div></div>
@@ -1069,7 +1069,7 @@ function acRowHTML(x) {
         (coversNames.length ? '🤝 Covers for <b style="color:var(--ink);font-weight:600">' + coversNames.join(', ') + '</b>' : '') +
         '</div>'
       : '';
-  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${escJs(x.id)}')">
+  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift === 'on_shift' ? 'var(--ok-3)' : x.shift === 'on_break' ? 'var(--warn-2)' : 'var(--grey-2)'}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x)}</span>${x.pinSet ? '' : x.invite ? '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>' : ''}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max || '∞'}</span></div>
       <div class="l2">${esc(x.role || '—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status !== 'active' ? '<span class="optchip off">' + esc(x.status) + '</span>' : ''}${x.shift !== 'on_shift' && x.returnDate ? ' · returns ' + acDate(x.returnDate) : ''}</div>${coverLines}</div>
@@ -1243,7 +1243,7 @@ function _acTierSummary(x) {
     '</div></div>' +
     '</div>' +
     '<button data-cbsid="BUS005-B13" class="composebtn pri" style="width:100%;padding:13px;font-size:var(--fs-3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\'' +
-    escJs(x.id) +
+    x.id +
     '\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the ' +
     esc(reg.label || '') +
     ' cockpit <span style="opacity:.85"><span class=arw>→</span></span></button>' +
@@ -1262,7 +1262,7 @@ function _acTierLoader(x) {
       ? '<div style="color:var(--disp);margin-top:12px;font-size:var(--fs-2)">' +
         esc(UI.acManageErr) +
         ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acOpenManage(\'' +
-        escJs(x.id) +
+        x.id +
         '\')">' +
         tx('Retry') +
         '</button></div>'
@@ -1285,7 +1285,7 @@ function acDetailHTML() {
   /* ⚠️ `--ink` IS TEXT, NOT A SURFACE — same bug as the catalogue View/Edit segment. In dark it inverts to
      near-white and the selected segment becomes white-on-white (1.21:1). Selected = --accent + --on-accent. */
   const seg = (m, l) =>
-    `<button data-cbsid="BUS005-B16" onclick="setAcMode('${escJs(m)}')" style="border:0;background:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
+    `<button data-cbsid="BUS005-B16" onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.acMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle = `<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view', 'View')}${seg('edit', 'Edit')}</div>`;
   const head = `<div class="dh">${back}<div class="dt">${esc(x.name)} <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span></div><div class="ds">${esc(x.role || '—')} · <span class="mono">${acLogin(x)}</span></div>${toggle}</div>`;
   let body, bar;
@@ -1335,7 +1335,7 @@ function acDetailHTML() {
        "already loaded" flag would show Ravi's record under Priya's name. That is the worst possible failure
        for this particular screen. */
     acLoadDocs(x.id);
-    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor('${escJs(x.id)}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor('${x.id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
   } else {
     const pct = x.max ? Math.min(100, Math.round((x.load / x.max) * 100)) : 0;
     const kv = (l, v) =>
@@ -1455,14 +1455,14 @@ function acDetailHTML() {
       bar =
         (x.type === 'human'
           ? x.pinSet
-            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin('${escJs(x.id)}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
+            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
             : isConn
               ? ''
-              : `<button data-cbsid="BUS005-B18" onclick="acReinvite('${escJs(x.id)}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
+              : `<button data-cbsid="BUS005-B18" onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
           : '') +
-        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus('${escJs(x.id)}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
+        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
     } else {
-      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus('${escJs(x.id)}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus('${escJs(x.id)}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
+      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
     }
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;

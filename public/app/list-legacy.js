@@ -297,7 +297,7 @@ function lazyBar(id) {
     left <= 0
       ? '<div class="listend">' + s.total + ' total · end of list</div>'
       : '<div class="listend"><button data-cbsid="SCR041-B01" class="composebtn" onclick="lazyReveal(\'' +
-        escJs(id) +
+        id +
         '\')">↓ Show ' +
         Math.min(s.chunk, left) +
         ' more</button> <span style="color:var(--grey)">' +
@@ -329,7 +329,7 @@ function lazyReveal(id) {
   } else
     sent.innerHTML =
       '<div class="listend"><button data-cbsid="SCR041-B02" class="composebtn" onclick="lazyReveal(\'' +
-      escJs(id) +
+      id +
       '\')">↓ Show ' +
       Math.min(s.chunk, left) +
       ' more</button> <span style="color:var(--grey)">' +

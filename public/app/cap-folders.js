@@ -213,12 +213,12 @@ function _folderView() {
     tab(!arch, 'Current', 'setFolderArch(false)') +
     tab(arch, 'Archive', 'setFolderArch(true)') +
     '<span data-cbsid="SCR004-C04" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\'' +
-    escJs(UI.folderSel) +
+    UI.folderSel +
     '\')">' +
     tx('Rename') +
     '</span>' +
     '<span data-cbsid="CMP011" style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-inline-start:14px" onclick="deleteFolder(\'' +
-    escJs(UI.folderSel) +
+    UI.folderSel +
     '\')">' +
     tx('Delete') +
     '</span></div>' +
@@ -290,7 +290,7 @@ function _ftab(k, label) {
     '<span data-cbsid="SCR004-C07" data-testid="folder-tab-' +
     k +
     '" onclick="setFolderTab(\'' +
-    escJs(k) +
+    k +
     '\')" style="cursor:pointer;font-size:var(--fs-2);font-weight:700;padding:5px 13px;border-radius:16px;' +
     (on ? 'background:var(--chrome);color:var(--chrome-on)' : 'border:1px solid var(--line);color:var(--grey-2)') +
     '">' +

@@ -337,7 +337,7 @@ function finCols() {
           '<button type="button" data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-remind-' +
           id +
           '" onclick="event.stopPropagation();bkRemind(\'' +
-          escJs(id) +
+          id +
           '\',this)">' +
           esc(tx('Remind')) +
           '</button></span>'

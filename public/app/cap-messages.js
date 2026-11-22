@@ -247,7 +247,7 @@ function messagesScreen() {
             (isNew ? 'background:var(--blue-tint-bg);' : '') +
             ';color:var(--on-card)">' +
             '<div data-cbsid="WRK001-C01" onclick="msgOpen(&quot;' +
-            escJs(item.key) +
+            item.key +
             '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">' +
             '<span style="width:8px;flex:none">' +
             (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue-2);color:var(--on-accent)"></span>' : '') +
@@ -294,7 +294,7 @@ function messagesScreen() {
             '</div>' +
             '</div>' +
             '<span data-cbsid="WRK001-C02" data-testid="msg-keep" onclick="msgKeep(&quot;' +
-            escJs(item.key) +
+            item.key +
             '&quot;,event)" title="' +
             (item.kept ? 'Kept here — click to release' : 'Keep this conversation in the tab') +
             '"' +
@@ -389,7 +389,7 @@ function messagesScreen() {
           '<span data-cbsid="WRK001-C05" data-testid="msg-track-' +
           (item || 'all') +
           '" onclick="rplTrack(&quot;' +
-          escJs(item) +
+          item +
           '&quot;)"' +
           ' title="' +
           esc(item ? RPLTRACK[item].hint : 'every conversation') +

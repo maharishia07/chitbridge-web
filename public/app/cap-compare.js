@@ -199,7 +199,7 @@ function cmpPaintCompare() {
         '" aria-pressed="' +
         (item === CMP.part) +
         '" onclick="cmpPart(\'' +
-        escJs(item) +
+        item +
         '\')" style="cursor:pointer' +
         (item === CMP.part ? ';border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)' : '') +
         '">' +
@@ -554,7 +554,7 @@ function cmpLoadSel(id, k, list, cur) {
     '" data-testid="' +
     id +
     '" onchange="cmpLoadSet(\'' +
-    escJs(k) +
+    k +
     '\', this.value)" style="min-width:0;max-width:100%">' +
     list
       .map(function (item) {
@@ -589,7 +589,7 @@ function cmpLoadRender(k) {
         '" value="' +
         esc(L[key]) +
         '" onchange="cmpLoadSet(\'' +
-        escJs(key) +
+        key +
         '\', this.value)" style="width:auto;max-width:100%">'
       );
     };
