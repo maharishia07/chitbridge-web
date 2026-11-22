@@ -247,6 +247,8 @@
  "public/app/shortcuts.js":"*",
  "public/app/showcase-templates.js":["public/app.html","public/crm.html","public/shop.html"],
  "public/app/sides.js":["public/shell-lab.html"],
+ "public/app/signin-provider.js":["public/accounts.html","public/authority-forms.html","public/catalogue.html","public/crm.html","public/employees.html","public/finance.html","public/know-your-business.html","public/network.html","public/operations.html","public/settings.html","public/signin-lab.html","public/tasks.html","public/till.html"],
+ "public/app/signin-session.js":["public/accounts.html","public/authority-forms.html","public/catalogue.html","public/crm.html","public/employees.html","public/finance.html","public/know-your-business.html","public/network.html","public/operations.html","public/settings.html","public/signin-lab.html","public/tasks.html","public/till.html"],
  "public/app/signin-ui.js":["public/accounts.html","public/authority-forms.html","public/catalogue.html","public/crm.html","public/employees.html","public/finance.html","public/know-your-business.html","public/network.html","public/operations.html","public/settings.html","public/signin-lab.html","public/tasks.html","public/till.html"],
  "public/app/std-build-view.js":["public/standards.html"],
  "public/app/step-flow.js":["public/accounts.html","public/app.html","public/crm.html","public/finance.html","public/shop.html"],

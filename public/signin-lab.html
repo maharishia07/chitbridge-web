@@ -100,7 +100,7 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
 </div>
 <div class="toast" id="toast" hidden></div>
 <script src="/engine/signin.js"></script>     <!-- CBSignin: the RULES (engines signin v1.30) -->
-<script src="/app/signin-ui.js"></script>     <!-- CBSignin.mount: THE ONE WINDOW — exactly what index · CB Accounts · CB CRM mount -->
+<script src="/app/signin-provider.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>     <!-- CBSignin.mount: THE ONE WINDOW — exactly what index · CB Accounts · CB CRM mount -->
 <script src="/engine/rail.js"></script>       <!-- CBRail (R01): the actions and their refusal words, by access level -->
 <script>
 (function () {

@@ -57,7 +57,7 @@ check('the three doors are declared once, with the right method and path', () =>
   assert.ok(/providerUnlink: \{ m: 'DELETE', p: '\/api\/signin\/provider\/links\/:link_id'/.test(shell));
 });
 check('every result word the api can answer has a sentence in the sign-in window', () => {
-  const ui = read('public/app/signin-ui.js');
+  const ui = read('public/app/signin-provider.js'); /* the provider words moved out of signin-ui.js (1129 split) */
   for (const code of ['LINK_EXISTS', 'SIGNIN_REFUSED', 'SIGNIN_UNAVAILABLE', 'LINK_CONFIRM_FAILED', 'SIGNIN_PROVIDER_NOT_ACCEPTED']) assert.ok(new RegExp(code + ':').test(ui), code);
   assert.ok(/linked: 'Connected\./.test(ui));
 });
