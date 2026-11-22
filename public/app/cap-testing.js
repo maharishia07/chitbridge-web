@@ -2721,7 +2721,7 @@ function testIncHTML() {
           title +
           '" ' +
           'onclick="testIncSet(\'' +
-          item.definition_id +
+          escJs(item.definition_id) +
           "','" +
           state +
           '\')" style="' +

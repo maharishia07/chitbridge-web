@@ -2441,7 +2441,7 @@ function paintPriceOvCats() {
   if (OVL.pickMode === 'cat') {
     el.innerHTML = cats
       .map(function (item) {
-        return '<button data-cbsid="OLB001-B16" class="ovlchip" onclick="overlayPick(\'' + item.id + '\')">' + esc(item.name) + ' (' + item.n + ')</button>';
+        return '<button data-cbsid="OLB001-B16" class="ovlchip" onclick="overlayPick(\'' + escJs(item.id) + '\')">' + esc(item.name) + ' (' + item.n + ')</button>';
       })
       .join('');
     return;
@@ -2461,7 +2461,7 @@ function paintPriceOvCats() {
           '<button data-cbsid="OLB001-B18" class="ovlchip' +
           (OVL.cat === item.id ? ' on' : '') +
           '" onclick="priceOvCat(\'' +
-          item.id +
+          escJs(item.id) +
           '\')">' +
           esc(item.name) +
           ' (' +
@@ -2514,7 +2514,7 @@ function paintPriceOvBody() {
         esc(catName(OVL.cat)) +
         ' category automatically — including anything added to it later?</span>' +
         '<button data-cbsid="OLB001-B20" class="btn sm" onclick="overlayApplyWholeCategory(\'' +
-        OVL.cat +
+        escJs(OVL.cat) +
         '\')">Use all of ' +
         esc(catName(OVL.cat)) +
         '</button></div>'
@@ -2546,7 +2546,7 @@ function paintPriceOvBody() {
                 '<tr class="ovlpickrow' +
                 (hit ? ' ovlinother' : '') +
                 '" style="cursor:pointer" onclick="overlayApplyToggle(\'' +
-                item.id +
+                escJs(item.id) +
                 '\')">' +
                 '<td style="width:30px"><span class="cbx' +
                 (checked ? ' on' : '') +
@@ -2588,7 +2588,7 @@ function paintPriceOvBody() {
           .map(function (item) {
             return (
               '<tr class="ovlpickrow" style="cursor:pointer" onclick="overlayPick(\'' +
-              item.id +
+              escJs(item.id) +
               '\')">' +
               '<td class="ovlname">' +
               esc(item.name) +

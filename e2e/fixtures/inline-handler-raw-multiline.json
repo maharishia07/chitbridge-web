@@ -164,8 +164,8 @@
  },
  "app/cap-testing.js": {
   "x[0]": 6,
-  "item.definition_id": 2,
   "state": 1,
+  "item.definition_id": 1,
   "t.kind": 1,
   "here": 1,
   "item": 1,
@@ -242,8 +242,7 @@
  "offer-lab-next.html": {
   "item.p.id": 1,
   "key": 2,
-  "item.id": 17,
-  "OVL.cat": 1,
+  "item.id": 13,
   "k": 1,
   "item[0]": 1,
   "(fn === 'setCat' ? 'cat' : 'item')": 1,
@@ -269,9 +268,9 @@
   "item.id": 1
  },
  "testing.html": {
-  "key": 2,
+  "key": 1,
   "state": 1,
-  "item": 3,
+  "item": 1,
   "c.k": 1,
   "item.k": 1
  }

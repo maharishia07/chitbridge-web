@@ -84,7 +84,7 @@
 <script src="cb-offline.js"></script>
 <script src="engine/offers.js"></script>
 <script src="engine/pricing.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="app/catalogue-lines.js"></script>
 <!-- THE CUSTOMER HEADER (CUSTOMER-DELINK): mark · name · ⌂ the shop's front. No avatar, no staff session, no staff menu. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes (embed ?theme= paints one) -->
@@ -779,12 +779,12 @@ function finishCard(it, cur, idx, vizEnabled) {
   var applied = [];
   if ((it.tools || []).length) applied.push(t('applied') + ' ' + esc(it.tools.join(', ')));
   if (it.coats) applied.push(esc(it.coats));
-  var photo =
-    it.photo || it._photo
-      ? '<span style="width:34px;height:34px;border-radius:6px;flex:none;background:#f4f6f8 center/cover no-repeat;background-image:url(' +
-        (it.photo || it._photo) +
-        ')"></span>'
-      : '';
+  /* P2WAVE-SEC EL-web-screens-21#L40 · L-sec-web-screens-21#L41: the photo link came from the shop's own finish data and went raw into a style attribute on this PUBLIC page.
+     Only an https link, a same-site path or an inline png/jpeg/webp/gif passes, and only when it holds no quote, bracket, space or backslash (nothing can end the url() or the attribute); the rest shows no photo. */
+  var photoLink = String(it.photo || it._photo || '');
+  var photo = /^(https:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp|gif);base64,)[^\s"'()<>\\;]*$/i.test(photoLink)
+    ? '<span style="width:34px;height:34px;border-radius:6px;flex:none;background:#f4f6f8 center/cover no-repeat;background-image:url(' + esc(photoLink) + ')"></span>'
+    : '';
   return (
     '<div class="card">' +
     '<div style="display:flex;align-items:center;gap:8px">' +

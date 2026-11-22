@@ -3910,10 +3910,10 @@ function matrixHTML() {
       '<tr class="arow' +
       (mopen ? ' open' : '') +
       '" onclick="foldSection(\'mtx:' +
-      item +
+      escJs(item) +
       '\')"' +
       ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'){foldSection(\'mtx:' +
-      item +
+      escJs(item) +
       '\');}">' +
       '<td class="areacell"><span class="caret">' +
       (mopen ? '\u25be' : '\u25b8') +
@@ -4388,7 +4388,7 @@ function treeNode(depth, glyph, label, count, tail, note, open, key) {
     (leaf ? ' tleaf' : '') +
     (open ? ' open' : '') +
     '"' +
-    (key ? ' onclick="foldSection(\'' + key + '\')"' : '') +
+    (key ? ' onclick="foldSection(\'' + escJs(key) + '\')"' : '') +
     ' style="padding-inline-start:' +
     pad +
     'px">' +

@@ -1,0 +1,36 @@
+// e2e/p2wave-sec-1130.cjs — the P2 security rows of the 1130 wave on the web side. Offline, node only, no browser.
+// OWNS      EL-web-screens-24#L64 · L-sec-web-screens-24#L27 (offer-lab category and item ids go through escJs) · EL-web-screens-22#L45 · L-sec-web-screens-22#L28 (testing.html fold keys)
+//           · GF-web-screens-15#L52 (cap-testing definition id) · EL-web-screens-21#L40 · L-sec-web-screens-21#L41 (shop.html photo link) · EL-web-screens-21#L60 · L-sec-web-screens-21#L64 (the cdnjs script carries its hash)
+// CALLED BY CI (web offline step)
+// FLOW      the real source text → the scan or the builder run with a hostile value → what a browser would read
+// CARD      18-identity-sign-in-and-access/access-levels
+// Run: node e2e/p2wave-sec-1130.cjs
+'use strict';
+const fs = require('fs'), path = require('path');
+const pub = path.join(__dirname, '..', 'public');
+let fail = 0;
+const t = (name, ok, why) => { console.log((ok ? '  ok  ' : '  FAIL') + ' ' + name + (ok ? '' : ' — ' + (why || ''))); if (!ok) fail++; };
+const read = (rel) => fs.readFileSync(path.join(pub, rel), 'utf8').replace(/\r\n/g, '\n');
+const { scanHandlerEsc } = require('./lib/handler-esc-scan.cjs');
+const rawCount = (rel, expr) => scanHandlerEsc(read(rel), { raw: true }).filter((h) => h.expr.replace(/\s+/g, ' ') === expr).length;
+
+/* the offer lab: a category id is catalogue data (a shop types it), so it never goes raw into a handler string; item ids went the same way */
+t('offer-lab-next.html: no raw OVL.cat in a handler string (the category the page filters by)', rawCount('offer-lab-next.html', 'OVL.cat') === 0, 'raw OVL.cat sites: ' + rawCount('offer-lab-next.html', 'OVL.cat'));
+t('offer-lab-next.html: the overlay category and pick handlers carry escJs(item.id) (at most 13 raw item.id left, all offer ids the server mints)', rawCount('offer-lab-next.html', 'item.id') <= 13, 'raw item.id sites: ' + rawCount('offer-lab-next.html', 'item.id'));
+/* the testing page: the fold key is a menu or directory name */
+t('testing.html: the tree fold key and the matrix row item go through escJs', rawCount('testing.html', 'key') <= 1 && rawCount('testing.html', 'item') <= 1, 'key ' + rawCount('testing.html', 'key') + ' item ' + rawCount('testing.html', 'item'));
+t('cap-testing.js: the include-toggle definition id goes through escJs', rawCount('app/cap-testing.js', 'item.definition_id') <= 1, 'raw sites: ' + rawCount('app/cap-testing.js', 'item.definition_id'));
+
+/* the shop window photo: cut the three statements out of shop.html and run them with hostile links */
+const shop = read('shop.html');
+const start = shop.indexOf('var photoLink = '), end = shop.indexOf("    : '';", start) + "    : '';".length;
+t('shop.html: the photo statements are found', start > 0 && end > start);
+const esc = new Function(fs.readFileSync(path.join(pub, 'app', 'helpers.js'), 'utf8').match(/function esc\(v\)[\s\S]*?\n\}/)[0] + '; return esc;')();
+const photoOf = new Function('it', 'esc', shop.slice(start, end) + '; return photo;');
+const hostile = ['x);background-image:url(//evil/steal', 'https://cdn.example/a.png"><img src=x onerror=__pwn=1>', "https://cdn.example/a.png');x:('", 'javascript:alert(1)', '//evil.example/a.png', 'https://cdn.example/a b.png', 'data:text/html;base64,PHNjcmlwdD4='];
+t('shop.html: no hostile photo link yields a photo span', hostile.every((u) => photoOf({ photo: u }, esc) === ''), hostile.map((u) => photoOf({ photo: u }, esc)).join(' | '));
+t('shop.html: an https link, a site path and an inline png still show', ['https://cdn.example/a/b.png?x=1', '/img/a.png', 'data:image/png;base64,iVBORw0KGgo='].every((u) => photoOf({ _photo: u }, esc).indexOf('url(' + u + ')') > 0));
+/* the third-party script carries the registry's hash, the same one app.html pins */
+const qr = (html) => (html.match(/<script[^>]*qrcode\.min\.js[^>]*>/) || [''])[0];
+t('shop.html: the qrcode script has integrity + crossorigin, equal to app.html', /integrity="sha512-[^"]+"/.test(qr(shop)) && /crossorigin="anonymous"/.test(qr(shop)) && (qr(shop).match(/integrity="[^"]+"/) || [])[0] === (qr(read('app.html')).match(/integrity="[^"]+"/) || [])[0]);
+process.exit(fail ? 1 : 0);
