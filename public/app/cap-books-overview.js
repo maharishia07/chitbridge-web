@@ -92,7 +92,7 @@ function ovTiles(answer) {
   var salesFig = answer.sales || {},
     cash = answer.cash;
   var tiles = [
-    ovTile('sales', 'Sales, tax in', salesFig.minor, ovChange(salesFig) + (salesFig.partial ? ' · ' + esc(tx('books began part-way')) : ''), '#daybook'),
+    ovTile('sales', bkSoldLabel(answer.period), salesFig.minor, esc(tx('tax in')) + (ovChange(salesFig) ? ' · ' + ovChange(salesFig) : '') + (salesFig.partial ? ' · ' + esc(tx('books began part-way')) : ''), '#daybook'),
     answer.income ? ovTile('income', 'Income, tax out', answer.income.minor, ovChange(answer.income), '#pl') : '',
     answer.profit ? ovTile('profit', 'Profit', answer.profit.minor, ovChange(answer.profit), '#pl') : '',
     answer.to_collect ? ovTile('collect', 'To collect', answer.to_collect.minor, '', '#dues') : '',
