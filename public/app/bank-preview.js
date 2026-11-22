@@ -2,7 +2,7 @@
  * OWNS      the flow of reading a statement on the device, putting each line against the books, showing the books AS THEY WILL READ once the ready lines are in
  *           (nothing saved), the confirm popup that says what the press will reach, and posting the confirmed lines ONE AT A TIME through an INJECTED post adapter.
  *           The demo page (public/bank-demo.html) and the app (public/app/cap-bank-post.js) differ ONLY in that adapter.
- * SPLIT     a line's words and its shape (STATE_WORDS · NEEDS_WORDS · moneyText · dateText · lineOf) are app/bank-preview-line.js, loaded before this file (shrink W2, 2026-11-17).
+ * SPLIT     a line's words and its shape (STATE_WORDS · NEEDS_WORDS · moneyText · dateText · lineOf) are app/bank-preview-line.js, loaded before this file (shrink W2, 2026-11-17); what a press reaches and the popup words are app/bank-preview-reach.js, also loaded before it.
  * CALLED BY public/app/bank-demo.js (the no-login showcase) · later the Bank view (cap-bank.js) through one call-in.
  * FLOW      create(opts) → load(text) → recon.parse · recon.match · recon.suggest → project.project() → view() → confirmText() → CBLabKit.confirm → postReady(onLine) → read again
  * CARD      16-finance/bank-reconciliation-and-bank-rail   (requirement: docs 16-finance/BANK-TO-BOOKS-REQUIREMENT.md, "Critic 14 Nov")
@@ -22,6 +22,8 @@
 (function (root) {
   'use strict';
   var Line = root.CBBankPreviewLine || (typeof require === 'function' ? require('./bank-preview-line.js') : null); /* loaded first: app/bank-preview-line.js — a line's words and its shape */
+  var Reach = root.CBBankPreviewReach || (typeof require === 'function' ? require('./bank-preview-reach.js') : null); /* loaded first: app/bank-preview-reach.js — what a press reaches, the popup's words */
+  var readyItems = Reach.readyItems, reachOf = Reach.reachOf, confirmWords = Reach.confirmWords;
   var STATE_WORDS = Line.STATE_WORDS,
     NEEDS_WORDS = Line.NEEDS_WORDS,
     minorOf = Line.minorOf,
@@ -196,56 +198,6 @@
       return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
-  }
-  /** the lines a press would post: ready, and not already added in this session */
-  function readyItems(preview) {
-    return preview.items.filter(function (item) {
-      return (!preview.only || item.key === preview.only) && item.ready && !(preview.results[item.key] && preview.results[item.key].ok);
-    });
-  }
-  /** how many NEW parties the press would make: one per distinct name and kind among the ready lines (two lines naming one payee make it once) */
-  function newPartyCount(preview) {
-    var seen = {};
-    readyItems(preview).forEach(function (item) {
-      if (item.party && item.party.status === 'new') seen[String(item.party.name).toLowerCase() + '|' + item.party.kind] = 1;
-    });
-    return Object.keys(seen).length;
-  }
-  /** what the press reaches when ONE line is answered: that line's own carried figures (its amount and its tax record), not the statement's totals */
-  function oneLineReach(preview, item) {
-    var line = item ? item.line : {};
-    return { currency: preview.projection.currency, count: item ? 1 : 0, in: line.credit_minor || 0, out: line.debit_minor || 0, tax: item && item.tax ? item.tax.tax_minor : 0, from: line.date || null, to: line.date || null, needs_you: 0, closed: 0, newParties: newPartyCount(preview), single: true };
-  }
-  /** what the press reaches: the engine's carried totals of the READY lines, the lines a closed month holds back, the lines that still need a person; null when the engine sent none */
-  function reachOf(preview) {
-    var totals = preview.projection && preview.projection.totals,
-      counts = preview.projection && preview.projection.counts;
-    if (!totals || !counts) return null;
-    var held = preview.items.filter(function (item) {
-      return item.closed;
-    }).length;
-    if (preview.only) return oneLineReach(preview, readyItems(preview)[0]);
-    return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: Math.max(0, counts.needs_you - held), closed: held, newParties: newPartyCount(preview) };
-  }
-  /** the popup: count · in · out · date range · currency · new parties · how many still need you */
-  function confirmWords(reach, amountText) {
-    var amountOf = function (value) {
-      return amountText ? amountText(value) : moneyText(value, reach.currency); /* a host draws money its own way (the in-app Bank page: plain figures, the currency said once) */
-    };
-    var parties = reach.newParties ? reach.newParties + (reach.newParties === 1 ? ' new party' : ' new parties') + ' made first' : null;
-    var held = reach.closed ? ' ' + reach.closed + ' in a closed month are held back.' : '';
-    return {
-      title: 'Add ' + reach.count + (reach.count === 1 ? ' entry' : ' entries') + ' to your books?',
-      lines: [
-        'Money in: ' + amountOf(reach.in),
-        'Money out: ' + amountOf(reach.out),
-        minorOf(reach.tax) ? 'Tax inside these entries: ' + amountOf(reach.tax) : null, /* the engine's carried total of each ready line's own tax record (B5-03: the tax is on the popup too) */
-        'Dated: ' + dateText(reach.from) + (reach.to && reach.to !== reach.from ? ' to ' + dateText(reach.to) : ''),
-        'Currency: ' + reach.currency,
-        parties,
-        reach.single ? null : reach.needs_you + ' still need you; they are left out for now.' + held
-      ].filter(Boolean)
-    };
   }
   /** the line as the adapter takes it: the item with what the owner ticked, typed and picked for it */
   function itemForPost_(preview, item) {

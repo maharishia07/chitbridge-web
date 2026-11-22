@@ -63,6 +63,7 @@
  "public/app/bank-lock.js":["public/accounts.html"],
  "public/app/bank-preview-check.js":["public/accounts.html"],
  "public/app/bank-preview-line.js":["public/accounts.html","public/bank-demo.html"],
+ "public/app/bank-preview-reach.js":["public/accounts.html","public/bank-demo.html"],
  "public/app/bank-preview-ui-parts.js":["public/accounts.html","public/bank-demo.html"],
  "public/app/bank-preview-ui.js":["public/accounts.html","public/bank-demo.html"],
  "public/app/bank-preview.js":["public/accounts.html","public/bank-demo.html"],
