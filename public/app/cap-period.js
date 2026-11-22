@@ -939,7 +939,7 @@ function peReturnPaint(r) {
 }
 /** W15-91: the credit claimed with no tax invoice — the server carried it (the Day book's own flag over this period); the words are CBEvidence's, "See them" opens the Day book on the same days, Evidence = No tax invoice. The return's figures and the lodging are not touched. */
 function peReturnClaim(r) {
-  return typeof CBEvidence !== 'undefined' && CBEvidence.claimWarning ? CBEvidence.claimWarning(r.unsupported_input, (minor) => peMoney(minor, r.currency)) : null;
+  return typeof CBEvidence !== 'undefined' && CBEvidence.claimWarning ? CBEvidence.claimWarning(r.unsupported_input, (minor) => peMoney(minor, r.currency)) : null; /* AC-F-04: the box is named "Box 13", the figure is the server's (never above the box) */
 }
 /** the claim band under the return total: what the shop may claim back, in the server's words, with its risk mark when the server raised one */
 function peReturnClaimBand(answer) {
@@ -1055,7 +1055,9 @@ function peReturnList(r) {
       label: tx('Amount'),
       prio: 1,
       num: true,
-      w: 150,
+      money: true /* AC-F-03: a figure of the return is never cut: the money column keeps its floor, the squeeze never goes below it */,
+      minw: 190,
+      w: 190,
       html: true,
       tid: (b) => 'pr-amt-' + b.code,
       cell: (b) => (b.amount_minor == null ? peRetDash() : esc(peMoney(b.amount_minor, c)))
@@ -1067,7 +1069,9 @@ function peReturnList(r) {
       label: peTaxWord(),
       prio: 1,
       num: true,
-      w: 150,
+      money: true,
+      minw: 190,
+      w: 190,
       html: true,
       tid: (b) => 'pr-tax-' + b.code,
       cell: (b) => (b.tax_minor == null ? peRetDash() : esc(peMoney(b.tax_minor, c)))
