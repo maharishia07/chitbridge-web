@@ -249,7 +249,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
     const row = leadRow(L, l), stage = row.lead.stage;
     row.lead = Object.assign({}, row.lead, { moves: STAGES.filter((g) => g !== stage), may: L.migrated ? { ok: true } : { ok: false, why: NOT_READY } });
     /* contact_prefs: a lead has no consent rows yet — the same answer the record builder gives (crm-api prefsBefore: service allowed, offers need consent) */
-    return J(r, 200, Object.assign(row, { may: crmApi.mayOf(r), merged_from: null, relationship: null, points: null, migrated: true, unbilled: row.unbilled || { n: 0, minor: 0, currency: null }, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
+    return J(r, 200, Object.assign(row, { may: crmApi.mayOf(r), merged_from: null, relationship: null, points: null, migrated: true, unbilled: row.unbilled || { n: 0, minor: 0, currency: null }, bills: row.bills || { n: 0, last_at: null }, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     const done = u.searchParams.get('done') === '1';
