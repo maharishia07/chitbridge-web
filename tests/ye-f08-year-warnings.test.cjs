@@ -3,7 +3,7 @@
  * OWNS the offline guard of peYearWarnLines and its call in peYearChecksHtml (public/app/cap-period.js).   CARD 14-accounting */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
-const text = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-period.js'), 'utf8').split('\r\n').join('\n');
+const text = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-period-year.js'), 'utf8').split('\r\n').join('\n');
 const pick = (name) => { const at = text.indexOf('function ' + name + '('); return text.slice(at, text.indexOf('\n}\n', at) + 2); };
 const ctx = { tx: (s) => s, txf: (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]), esc: (s) => String(s), bkDate: (d) => d.split('-').reverse().join('/'), monthNames: () => [], peYearFix: () => null };
 vm.createContext(ctx);
