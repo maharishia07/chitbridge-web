@@ -16,7 +16,7 @@ kit.needs = 0; assert.strictEqual(dot(17), undefined, 'Nothing needs you (0): no
 kit.needs = 3; assert.strictEqual(dot(17), '3', 'three doors: the dot says 3');
 assert(/aria-label="[^"]*\(3\)"/.test(kit.bellButtonHtml({ count: 17, open: false })), 'the spoken label carries the same 3');
 const home = read('public/app/home2.js'), bell = read('public/app/rail-bell.js');
-assert(/CBBell\.setNeeds\(doors\.length\)/.test(home), 'doFirst hands the bell the size of the list it just painted');
+assert(/CBBell\.setNeeds\(needsCount\(doors\)\)/.test(home), 'doFirst hands the bell the count of things on the list it just painted (things, not doors)');
 assert(/setNeeds: setNeeds/.test(bell), 'CBBell exports setNeeds');
 
 /* 2 · the header name */

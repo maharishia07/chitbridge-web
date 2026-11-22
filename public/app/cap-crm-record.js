@@ -74,8 +74,8 @@ function crmCountUnbilled(un, e) {
   if (e.currency && un.currency && e.currency !== un.currency) un.minor = null; /* two currencies are never one sum: the count alone is said (GF-08 M3) */
   un.currency = un.currency || e.currency;
 }
-/** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
-function crmBillFacts(entries) {
+/** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22). The bill COUNT and the last bill date come from the server when the record sends them (`bills` = { n, last_at } on GET /api/crm/parties/:id, the whole history, LV-17): a page of the timeline is only the newest 100 entries and would undercount a busy party. Without it (an older api), the entries decide as before. */
+function crmBillFacts(entries, serverBills) {
   var chitBills = 0,
     ledBills = 0,
     lastBill = '',
@@ -87,6 +87,7 @@ function crmBillFacts(entries) {
       if (!lastBill || e.at > lastBill) lastBill = e.at;
     } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) crmCountUnbilled(un, e);
   });
+  if (serverBills && serverBills.n != null) return { bills: Number(serverBills.n) || 0, lastBill: serverBills.last_at || '', unbilled: un };
   return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, unbilled: un };
 }
 var CRM_CHAN = { chitbridge: 'ChitBridge', email: 'E-mail', phone: 'Phone', sms: 'SMS', whatsapp: 'WhatsApp' };
@@ -932,7 +933,7 @@ function crmKV(l, v) {
   return v == null || v === '' ? '' : '<div class="kv"><b>' + esc(tx(l)) + '</b><span>' + v + '</span></div>';
 }
 function crmRecordPaint(p, rec) {
-  var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) });
+  var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head, rec.bills) });
   R.unbilled = R.billFacts.unbilled;
   var node = document.getElementById('screen'),
     c = rec.contacts || {},
@@ -1245,7 +1246,7 @@ function crmLedgerRepaint(pid) {
       crmRailChip(R) +
       (crmIsLead(R) && !Number(p.balance_minor || 0)
         ? ''
-        : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }))) +
+        : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head, rec.bills) }))) +
       crmSegChip(R) +
       crmStageChip(R.lead);
   var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]');
