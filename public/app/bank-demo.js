@@ -359,7 +359,7 @@
         var model = controller.view(),
           counts = countsOf(model);
         var recon = model.projection && model.projection.brs;
-        added = { count: said.added, balance: recon ? amountWithCurrency(recon.closing_books_before) : '', open: counts.need + counts.wait };
+        added = { count: said.added, balance: recon ? amountWithCurrency(recon.closing_books_before) : '', open: counts.need + counts.wait, failed: said.failed || 0 };
         setMessage(said.failed ? plural(said.failed, 'line was', 'lines were') + ' not added.' : plural(said.added, 'entry', 'entries') + ' added to the sample books.', !said.failed);
         view = counts.need + counts.wait ? 'lines' : 'brs';
         paint();

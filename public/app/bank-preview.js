@@ -72,6 +72,15 @@
   }
   /** the proposal for one line the books lack: what suggest() says, or, once the owner has answered the line, what CBBankEntry.resolve() composes from the answer (the same path, one taught rule) */
   function proposalFor(opts, preview, line, ref) {
+    return lockHold_(proposalCore_(opts, preview, line, ref), line, opts, preview);
+  }
+  /** a line in a closed month is held on the PROPOSAL (the one `needs` code the engine already turns into a blocker), so the engine's own totals, counts and closing balance leave it out: the popup's money is what will post, never the lines the lock refuses (unless the owner chose the next open month for it) */
+  function lockHold_(proposal, line, opts, preview) {
+    var locked = proposal && opts.lockedMonth ? opts.lockedMonth(line.date) : null;
+    if (!locked || (locked.next && preview.moved && preview.moved[locked.key])) return proposal;
+    return Object.assign({}, proposal, { needs: 'closed_month' });
+  }
+  function proposalCore_(opts, preview, line, ref) {
     /* the person's tick (B5-01) and word on the tax invoice (B5-03) for THIS line ride into the same engine call */
     var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref], fee_tax: preview.feeTax[ref], interest_minor: preview.interest[ref] }),
       asked = preview.resolved[ref],
@@ -213,7 +222,7 @@
       return item.closed;
     }).length;
     if (preview.only) return oneLineReach(preview, readyItems(preview)[0]);
-    return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: counts.needs_you, closed: held, newParties: newPartyCount(preview) };
+    return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: Math.max(0, counts.needs_you - held), closed: held, newParties: newPartyCount(preview) };
   }
   /** the popup: count · in · out · date range · currency · new parties · how many still need you */
   function confirmWords(reach, amountText) {

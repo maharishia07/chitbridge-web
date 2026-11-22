@@ -12,9 +12,12 @@
   var host = null /* the page's own functions (el, amountText, standing, countsOf …), given by create() */;
   function successCard(added) {
     if (!added) return '';
+    /* a failed Add is said first and "every line is in the books" is never said over it (the failed lines are not in the books) */
+    var rest = added.failed ? ' ' + esc(host.plural(added.failed, 'line was', 'lines were')) + ' not added.' + (added.open ? ' ' + esc(host.plural(added.open, 'line still needs', 'lines still need')) + ' you.' : '')
+      : added.open ? ' ' + esc(host.plural(added.open, 'line still needs', 'lines still need')) + ' you, and those are the only lines not in the books.' : ' Every statement line is in the books.';
     return (
-      '<div class="bd-card" data-testid="bd-added"><div class="bd-mark" aria-hidden="true">✓</div><h2>' + esc(host.plural(added.count, 'line', 'lines') + ' added to the demo books') + '</h2>' +
-      '<p>The bank account now reads <b>' + esc(added.balance) + '</b>.' + (added.open ? ' ' + esc(host.plural(added.open, 'line still needs', 'lines still need')) + ' you, and those are the only lines not in the books.' : ' Every statement line is in the books.') + '</p>' +
+      '<div class="bd-card" data-testid="bd-added"' + (added.failed ? ' data-failed="' + esc(String(added.failed)) + '"' : '') + '><div class="bd-mark" aria-hidden="true">' + (added.failed ? '!' : '✓') + '</div><h2>' + esc(host.plural(added.count, 'line', 'lines') + ' added to the demo books') + '</h2>' +
+      '<p>The bank account now reads <b>' + esc(added.balance) + '</b>.' + rest + '</p>' +
       '<div class="bd-card-acts"><button type="button" class="bd-btn bd-go" data-act="view" data-v="brs" data-cbsid="BKS017-B15">See the bank reconciliation</button>' +
       (added.open ? '<button type="button" class="bd-btn" data-act="firstneed" data-cbsid="BKS017-B16">Deal with the ' + added.open + '</button>' : '') + '</div>' +
       '<p class="bd-why">Demo: nothing was saved. Start again to run it again.</p></div>'

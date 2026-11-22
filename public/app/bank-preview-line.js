@@ -20,6 +20,7 @@
     refused: 'The books refused this entry',
     bank_leg_mismatch: "Entry does not match the bank line's amount",
     tax_kind: 'Tax needed',
+    closed_month: 'Month closed',
     not_here: 'Not added from a bank line yet: record it in Books, then load the statement again',
     balance_break: 'Balance does not follow',
     which_liability: 'Which tax is this?',
