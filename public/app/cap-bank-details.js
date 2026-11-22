@@ -5,7 +5,6 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
-}
 /**
  * W15-24 · the BANK DETAILS of a bank account: bank, branch code and the LAST FOUR of the account number. Asked once, optional ("not given" stays unknown, never defaulted), and matched against a file that carries a number.
  * Only the last four are kept, never the full number: that is all the match needs, and it is the form Australian banks themselves show (the Consumer Data Right banking standard's maskedNumber).
@@ -57,10 +56,3 @@ function bankDetailsSave() {
   bankPaint();
   toast(tx('Bank details kept.'));
 }
-const BKB_BRS_ITEMS = [
-  ['Cheques issued, not yet presented', 'issued_not_presented'],
-  ['Cheques deposited, not yet credited', 'deposited_not_credited'],
-  ['Credits by the bank not in your books', 'bank_credits_not_in_books'],
-  ['Debits by the bank not in your books', 'bank_debits_not_in_books']
-];
-/** the BRS as a CSV: its lines as the engine worked them, then each named reconciling item (amounts as plain decimals) */

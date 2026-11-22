@@ -787,6 +787,14 @@ function bankBandCore() {
     toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: parsed.lines.length,
     unexplained: figures.unexplained && /[1-9]/.test(figures.unexplained) ? figures.unexplained : '', nil: figures.nil
   });
+}
+const BKB_BRS_ITEMS = [
+  ['Cheques issued, not yet presented', 'issued_not_presented'],
+  ['Cheques deposited, not yet credited', 'deposited_not_credited'],
+  ['Credits by the bank not in your books', 'bank_credits_not_in_books'],
+  ['Debits by the bank not in your books', 'bank_debits_not_in_books']
+];
+/** the BRS as a CSV: its lines as the engine worked them, then each named reconciling item (amounts as plain decimals) */
 function bankBrsCsv(worked) {
   const currencyCode = bkCur();
   const rows = [[tx('Bank reconciliation statement as at'), worked.asOf], [tx('Currency'), currencyCode || '']].concat(worked.rows.map((x) => [tx(x.label), bkMinorText(x.minor, currencyCode)]));
