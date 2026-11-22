@@ -89,7 +89,7 @@ for (const f of files) {
     const isArg = !!(match && span && match.index >= span.from && match.index <= span.to);
     /* ⭐ esc() INSIDE A data-* ATTRIBUTE IS AN ARGUMENT TOO: the handler reads it back with this.dataset (the XSS-safe form that replaced an esc() inside onclick); an attribute is not on screen */
     const dataAt = match ? l.lastIndexOf(' data-', match.index) : -1;
-    const inData = dataAt >= 0 && /^ data-[a-z-]+="\$\{$/.test(l.slice(dataAt, match.index));
+    const inData = dataAt >= 0 && /^ data-[a-z-]+="(?:\$\{|' \+ )$/.test(l.slice(dataAt, match.index));
     const leak = (LABEL.test(l) || ESCAPED.test(l)) && !FALLBACK.test(l) && !isArg && !inData;
     (leak ? displayed : logic).push(entry);
   });
