@@ -107,12 +107,12 @@ async function bkWaitingView(body) {
     body.innerHTML = bkErr(e);
   }
 }
-/* ask the server to retry every waiting item, then report how many cleared */
-async function bkWaitingRetry(button) {
+/* ask the server to retry every waiting item, then report how many cleared; forward = the owner's press (a day close or bank sign-off held for a LOCKED month posts into the next open month) */
+async function bkWaitingRetry(button, forward) {
   await bkOnce('retry', button || document.querySelector('[data-testid="wait-retry"]'), async function () {
     var before = (BK.waiting || []).length;
     try {
-      await api('booksRetry', { body: {} });
+      await api('booksRetry', { body: forward ? { forward: true } : {} });
       var body = document.getElementById('bk_body');
       if (body && BK.tab === 'waiting') await bkWaitingView(body);
       var left = (BK.waiting || []).length,
