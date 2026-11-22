@@ -125,6 +125,8 @@ else {
 }
 /* the apps' sign-in window, driven for real: a customer's verify answer is refused and kept nowhere; an owner's is kept in cb_sess; the shop page's own (need 'customer') in cb_cust@<shop> */
 globalThis.CBSignin = require(path.join(root, 'public/engine/signin.js'));
+require(path.join(root, 'public/app/signin-more-ways.js'));
+require(path.join(root, 'public/app/signin-session.js'));
 const SIGNIN = require(path.join(root, 'public/app/signin-ui.js'));
 const answerOf = (type) => ({ status: 200, body: { token: tok({ identity_type: type }), identity: { identity_type: type, display_name: 'N' } } });
 async function signInAs(need, type) {
