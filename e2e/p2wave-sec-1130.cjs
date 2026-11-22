@@ -44,6 +44,50 @@ t('shop.html: the qrcode script has integrity + crossorigin, equal to app.html',
   t('cap-admin.js: intKeyForget empties the held key and the screen', res.shown === '' && box.innerHTML === '', JSON.stringify(res));
   t('cap-admin.js: minting arms the one-minute forget and the page leave clears it', /_KEY_TIMER = setTimeout\(intKeyForget, 60000\)/.test(admin) && /addEventListener\('pagehide', intKeyForget\)/.test(admin));
 }
+/* the public legend: a stranger reads no open security gap and no test code */
+{
+  const legend = read('app/cap-legend.js');
+  const post = /const SEC_POSTURE = \[[\s\S]*?\n\];/.exec(legend);
+  const fn = /function _secTabHtml\(\) \{[\s\S]*?\n\}\n/.exec(legend);
+  t('cap-legend.js: the security tab and its posture list are found', !!post && !!fn);
+  const make = (session) => new Function('esc', 'tx', 'SESSION', post[0] + fn[0] + '; return _secTabHtml();')(esc, (x) => x, session);
+  const anon = make(null), signed = make({ token: 'x' });
+  t('cap-legend.js: signed out, no "Raise it" gap line (the certificate gap is not printed)', !/Raise it/.test(anon) && !/cert NOT verified/.test(anon));
+  t('cap-legend.js: signed in, the gap lines are there', /Raise it/.test(signed) && /cert NOT verified/.test(signed));
+  t('cap-legend.js: no fixed test code in the sign-in capability text', !/123456/.test(legend));
+}
+/* offline drafts: the real cb-offline.js in a vm over one shared localStorage; a draft is read back only by who saved it */
+{
+  const vm = require('vm');
+  const store = {};
+  const localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
+  const page = (entity) => {
+    const sb = { localStorage, navigator: { onLine: true }, setTimeout, clearTimeout, console, document: undefined, addEventListener() {}, Date, JSON, Math, Promise };
+    sb.window = sb; vm.createContext(sb); vm.runInContext(read('cb-offline.js'), sb);
+    sb.CBOffline.configure(entity === undefined ? {} : { entity: () => entity });
+    return sb.CBOffline;
+  };
+  page('alice').saveDraft('af.form1', { name: 'Alice private' });
+  t('cb-offline.js: the person who saved a draft reads it back', JSON.stringify(page('alice').loadDraft('af.form1')) === '{"name":"Alice private"}');
+  t('cb-offline.js: another person signed in on the same browser does not', page('bob').loadDraft('af.form1') === null && page('bob').draftAge('af.form1') === null);
+  t('cb-offline.js: a page that stamps nothing does not read a stamped draft either', page().loadDraft('af.form1') === null);
+  store['cb.draft.old'] = JSON.stringify({ at: Date.now(), data: { legacy: 1 } });
+  t('cb-offline.js: a draft saved before the stamp existed still reads (the one-person gate owns that case)', JSON.stringify(page('bob').loadDraft('old')) === '{"legacy":1}');
+  const sources = ['intake.html', 'know-your-business.html', 'authority-forms.html'].map((f) => read(f));
+  t('intake, know-your-business and authority-forms stamp their queued writes with the signed-in id', sources.every((x) => /CBOffline\.configure\(\{[\s\S]*?entity: function \(\) \{[\s\S]*?CBFrame\.session\(\)/.test(x)));
+}
+/* sign-out forgets the kept bank statement text (the avatar's one forget()), and keeps the marks and rules */
+{
+  const avatar = read('app/avatar.js');
+  const m = /function forget\(\) \{[\s\S]*?\n  \}\n/.exec(avatar);
+  t('avatar.js: forget() is found', !!m);
+  const store = { cb_sess: '1', 'cb_bankrec:shop1:stmt:acct1': '{"text":"FULL STATEMENT"}', 'cb_bankrec:shop1:marks:acct1': '{}', 'cb_bankrec:shop1:rules': '[]', 'cb_nav@u': 'x' };
+  Object.defineProperty(store, 'removeItem', { value: (k) => { delete store[k]; }, enumerable: false });
+  const root = { localStorage: store };
+  const run = new Function('root', 'PERSON_KEYS', 'console', m[0] + '; return forget();');
+  const ok = run(root, ['cb_sess'], console);
+  t('avatar.js: sign-out removes the statement text and the nav memory, keeps marks and rules', ok === true && !('cb_bankrec:shop1:stmt:acct1' in store) && !('cb_nav@u' in store) && 'cb_bankrec:shop1:marks:acct1' in store && 'cb_bankrec:shop1:rules' in store, JSON.stringify(Object.keys(store)));
+}
 /* the service worker: run the real file in a vm with a fake self and caches; an api GET on the same origin is never answered through the cache, a no-store reply is never stored */
 (async () => {
   const vm = require('vm');

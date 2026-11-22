@@ -82,26 +82,32 @@
   }
 
   // ── drafts ──
+  /* P2WAVE-SEC L-sec-web-screens-20#L56: a draft is stamped with who saved it (as a queued write is, SEC-140) and only that person reads it back. An unstamped draft (saved before this) is read as before;
+     a draft stamped for someone else is not handed to the person signed in now, whatever page they are on. */
+  function draftOf(key) {
+    var r = get(DKP + key);
+    if (!r) return null;
+    var parsed;
+    try {
+      parsed = JSON.parse(r);
+    } catch (e) {
+      return null;
+    }
+    var signedIn = signedInId();
+    if (parsed && parsed.entity && (signedIn === null || signedIn !== parsed.entity)) return null;
+    return parsed;
+  }
   function saveDraft(key, data) {
-    set(DKP + key, JSON.stringify({ at: Date.now(), data: data }));
+    var who = signedInId();
+    set(DKP + key, JSON.stringify({ at: Date.now(), data: data, entity: who || undefined }));
   }
   function loadDraft(key) {
-    var r = get(DKP + key);
-    if (!r) return null;
-    try {
-      return JSON.parse(r).data;
-    } catch (e) {
-      return null;
-    }
+    var held = draftOf(key);
+    return held ? held.data : null;
   }
   function draftAge(key) {
-    var r = get(DKP + key);
-    if (!r) return null;
-    try {
-      return Date.now() - JSON.parse(r).at;
-    } catch (e) {
-      return null;
-    }
+    var held = draftOf(key);
+    return held ? Date.now() - held.at : null;
   }
   function clearDraft(key) {
     del(DKP + key);

@@ -455,6 +455,11 @@ if (window.CBOffline) {
     token: function () {
       return TOK;
     },
+    /* P2WAVE-SEC EL-web-screens-20#L72 · L-sec-web-screens-20#L47: stamp every queued write with who queued it (SEC-140), as app.html does, so an unstamped entry never replays under the next person who signs in */
+    entity: function () {
+      var held = window.CBFrame && CBFrame.session ? CBFrame.session() : null;
+      return held ? held.actorId || held.entityId || '' : '';
+    },
     onChange: paintPill
   });
   CBOffline.registerSW();
