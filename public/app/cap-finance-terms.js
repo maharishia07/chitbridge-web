@@ -46,7 +46,9 @@ var FIN_TABS = {
   reports: 'reports'
 }; /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) · repeat: RI1 (cap-repeat.js) · cheques · returns: T3-P1-MONEY (cap-finance-cheques.js · cap-finance-returns.js) */
 function finTab() {
-  return FIN_TABS[(location.hash || '').replace(/^#\/?/, '').split(/[/?&]/)[0]] || 'collect';
+  var word = (location.hash || '').replace(/^#\/?/, '').split(/[/?&]/)[0];
+  if (!word || word === 'collections') return 'collect';
+  return FIN_TABS[word] || 'unknown'; /* BF-F-07: an address that names no tab is said so (finUnknownMount), never opened as Collections */
 }
 function ftNav() {
   var t = finTab();

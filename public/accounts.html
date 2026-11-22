@@ -606,12 +606,12 @@ async function accBillsFromBooks(folder, list) {
     haveChit = new Set(list.map((c) => String(c.counterparty_name || '').trim().toLowerCase())),
     bookRows = dueParties
       .filter((p) => !haveChit.has(String(p.name || '').trim().toLowerCase()))
-      .map((p) => ({ chit_id: 'books-' + p.party_id, books: true, counterparty_name: p.name, currency: owed.currency, value: Math.abs(Number(p.balance_minor)) / Math.pow(10, bkDec(owed.currency)), created_at: p.oldest_due, bill: { label: tx('In your books') } })),
+      .map((p) => ({ chit_id: 'books-' + p.party_id, books: true, counterparty_name: p.name, currency: owed.currency, value: Math.abs(Number(p.balance_minor)) / Math.pow(10, bkDec(owed.currency)), created_at: p.oldest_due, bill: { label: supplierSide && Number(p.balance_minor) > 0 ? tx('Supplier credit in your books') : !supplierSide && Number(p.balance_minor) < 0 ? tx('Customer credit in your books') : tx('In your books') } })),
     rowsAll = list.concat(bookRows),
-    booksSide = !list.length && dueParties.length ? { n: dueParties.length, minor: Math.abs(Number(owed.total_minor) || 0), cur: owed.currency, supplier: supplierSide } : null,
-    booksLine = dueParties.length
-      ? '<p data-testid="bills-books-total" style="margin:8px 0;color:var(--muted)">' + esc(bkMoney(Math.abs(Number(owed.total_minor) || 0), owed.currency) + ' ' + (supplierSide ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + dueParties.length + ')') + '</p>'
-      : '';
+    /* BF-F-01: the sentence is the api's total_minor read by its sign (bkDuesWords, the one wording Payables shares) - never abs() */
+    booksWords = dueParties.length ? bkDuesWords(supplierSide ? 'supplier' : 'customer', owed.total_minor, owed.currency) : '',
+    booksSide = !list.length && booksWords ? { n: dueParties.length, words: booksWords, supplier: supplierSide, credit: supplierSide ? Number(owed.total_minor) > 0 : Number(owed.total_minor) < 0 } : null,
+    booksLine = booksWords ? '<p data-testid="bills-books-total" style="margin:8px 0;color:var(--muted)">' + esc(booksWords + ' (' + dueParties.length + ')') + '</p>' : '';
   return { rowsAll, booksSide, booksLine };
 }
 async function accBills(body) {
@@ -668,7 +668,7 @@ async function accBills(body) {
       ],
       next: accBillNext,
       empty: booksSide
-        ? { title: tx('No bill chits are open'), sub: ' ' + bkMoney(booksSide.minor, booksSide.cur) + ' ' + (booksSide.supplier ? tx('is owed to suppliers in your books') : tx('is owed to you in your books')) + ' (' + booksSide.n + '). ' + tx('See') + ' ' + tx(booksSide.supplier ? 'Payables' : 'Receivables') + '.' }
+        ? { title: tx('No bill chits are open'), sub: ' ' + booksSide.words + ' (' + booksSide.n + '). ' + tx('See') + ' ' + tx(booksSide.supplier ? 'Payables' : 'Receivables') + '.' }
         : { title: tx('Nothing open') }
     });
   } catch (e) {

@@ -26,7 +26,7 @@ if (typeof EP !== 'undefined') {
   });
 }
 
-var FP = { gen: 0, rows: [], cur: null, total: null, state: 'loading', api: null, held: {}, note: '' };
+var FP = { gen: 0, rows: [], cur: null, total: null, books: 0, state: 'loading', api: null, held: {}, note: '' };
 var FP_HELD_WORD = 'Held — in dispute with you'; /* the books' word for a held bill (api routes/books.js STATUS_WORDS) — the dispute answer says it; the held list paints the same */
 var FP_OWNER_ONLY = 'Only the owner may see what you owe.';
 var FP_BUCKETS = [
@@ -54,6 +54,7 @@ async function fpLoad(quiet) {
     FP.rows = ((reply && reply.parties) || []).filter(fpKeeps);
     FP.held = {}; /* the held bills are read again when a row opens: the hold may have moved */
     FP.total = reply && reply.payables ? reply.payables.total_minor : null;
+    FP.books = reply ? Number(reply.total_minor) || 0 : 0; /* BF-F-01: the api's own supplier balance (+ = a supplier credit); worded by bkDuesWords, the same sentence Unpaid bills reads */
     FP.state = 'ready';
   } catch (e) {
     if (generation !== FP.gen) return;
@@ -420,6 +421,7 @@ function fpAfterNote() {
 function fpHead() {
   var chips = [];
   if (FP.state === 'ready' && FP.total != null) chips.push({ tid: 'fp-total', text: tx('To pay') + ' ' + bkMoney(FP.total, FP.cur) });
+  if (FP.state === 'ready' && FP.books > 0) chips.push({ tid: 'fp-credit', text: bkDuesWords('supplier', FP.books, FP.cur) });
   return { title: tx('Payables'), chips: chips };
 }
 /** the Payables screen: its frame and the list of suppliers with what is payable to each */
@@ -458,7 +460,9 @@ function fpMount(frame) {
       return { title: tx('Could not read what you owe.'), sub: tx('Nothing was lost. Try again.') };
     },
     onRetry: fpRetry,
-    empty: { title: tx('You owe no supplier') },
+    empty: function () {
+      return { title: tx('You owe no supplier'), sub: FP.books > 0 ? bkDuesWords('supplier', FP.books, FP.cur) + '.' : '' };
+    },
     group: {
       default: 'risk',
       order: ['overdue', 'msme', 'week', 'later'],
