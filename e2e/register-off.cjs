@@ -18,7 +18,8 @@
 // MIN could-not-read-words
 // MIN string-layer
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-worklist.js'), 'utf8'); // public/app/cap-worklist.js
+const SRC = ['cap-worklist.js', 'cap-worklist-raida.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8')).join('
+'); // public/app/cap-worklist.js + cap-worklist-raida.js (wlRaidaLoad, wlRaidaSec)
 const HTML = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8'); // registerOffWords lives beside MSG in app.html
 const grab = (name, text) => {
   text = text || SRC;
