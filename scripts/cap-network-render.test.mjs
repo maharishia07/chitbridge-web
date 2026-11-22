@@ -155,6 +155,7 @@ runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-
  */
 runInContext(read('public/app/cart.js'), ctx, { filename: 'cart.js' });
 runInContext(read('public/app/cap-network.js'), ctx, { filename: 'cap-network.js' });
+runInContext(read('public/app/cap-network-storefront.js'), ctx, { filename: 'cap-network-storefront.js' }); /* the storefront panel (1129 capability split), loaded with it */
 runInContext(read('public/app/cap-network-member.js'), ctx, { filename: 'cap-network-member.js' });   // the member half (P2 split) — loaded with it by ensureCap
 
 console.log('\ncap-network · the browse screen renders');

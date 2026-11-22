@@ -1,5 +1,5 @@
 'use strict';
-/* tests/catalogue-import-rejects.test.cjs — AN IMPORT TAKES THE GOOD ROWS AND LISTS THE BAD ONES, WITH A DOWNLOAD (WALK S2 S2-F-02, public/app/cap-catalogue.js).
+/* tests/catalogue-import-rejects.test.cjs — AN IMPORT TAKES THE GOOD ROWS AND LISTS THE BAD ONES, WITH A DOWNLOAD (WALK S2 S2-F-02, public/app/cap-catalogue-import.js).
  * UNIT      CAT003 import (catalogue pane)
  * OWNS      _cfRejectsHtml: each rejected row on its own line as "line N · field — reason", escaped; no rejects = no block; the download button is there only with rejects.
  *           The preflight keeps Import on when some rows are good (takeGood) and asks the api for skip_bad_rows; checked in the source text.
@@ -9,7 +9,7 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 let n = 0;
 const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
-const src = fs.readFileSync(__dirname + '/../public/app/cap-catalogue.js', 'utf8').replace(/\r\n/g, '\n');
+const src = fs.readFileSync(__dirname + '/../public/app/cap-catalogue-import.js', 'utf8').replace(/\r\n/g, '\n');
 const start = src.indexOf('function _cfRejectsHtml');
 const end = src.indexOf('/** the rejected rows as a .csv');
 assert(start > 0 && end > start, 'the function is where the test looks');

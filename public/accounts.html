@@ -86,7 +86,7 @@ function go() {
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
-<script src="/app/cap-folders.js"></script>
+<script src="/app/cap-folders-metrics.js"></script><script src="/app/cap-folders.js"></script>
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the money field reads its marks and number reader from it -->
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
 <script src="/app/bank-tb-line.js"></script><script src="/app/tb-change.js"></script>
@@ -119,7 +119,7 @@ function go() {
 <script type="cb-late" data-late-group="bank" src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
 <script type="cb-late" data-late-group="bank" src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script type="cb-late" data-late-group="movein" src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
-<script type="cb-late" data-late-group="movein" src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
+<script type="cb-late" data-late-group="movein" src="/app/cap-move-in-skipped.js"></script><script type="cb-late" data-late-group="movein" src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
 <script type="cb-late" data-late-group="overview" src="/engine/chart-draw.js"></script><script type="cb-late" data-late-group="overview" src="/engine/chart-draw-status.js"></script><script type="cb-late" data-late-group="overview" src="/engine/chart-draw-rows.js"></script><script type="cb-late" data-late-group="overview" src="/app/mis-charts.js"></script><script type="cb-late" data-late-group="overview" src="/app/cap-books-overview.js"></script>   <!-- How we are doing (REP-26): the owner's overview, one read -->
 <script type="cb-late" data-late-group="compare" src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
 <script type="cb-late" data-late-group="people" src="/app/cap-employees-copy.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-employees.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-employees-give.js"></script><script type="cb-late" data-late-group="people" src="/app/cap-fx.js"></script>   <!-- Rates (FX1): exchange rates (CBList), add / import through CBAction; Month lock's foreign balances line -->

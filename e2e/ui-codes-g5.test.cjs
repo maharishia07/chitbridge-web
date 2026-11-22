@@ -156,11 +156,11 @@ const CODES = [
   ["app/cap-worklist.js","RAL002-C06","span","onclick=\"wlAll"],
   ["app/cap-worklist.js","RAL002-C07","div","onclick=\"wlToggle"],
   ["app/cap-worklist.js","RAL002-C08","div","onclick=\"wlSec"],
-  ["app/cap-worklist.js","RAL002-C09","span","onclick=\"wlRaidaClosing"],
-  ["app/cap-worklist.js","RAL002-B01","button","onclick=\"wlRaidaDisp"],
-  ["app/cap-worklist.js","RAL002-I05","input"," id=\"wl_raida_why"],
-  ["app/cap-worklist.js","RAL002-B02","button","onclick=\"wlRaidaClose"],
-  ["app/cap-worklist.js","RAL002-B03","button","onclick=\"wlRaidaOpen"],
+  ["app/cap-worklist-raida.js","RAL002-C09","span","onclick=\"wlRaidaClosing"],
+  ["app/cap-worklist-raida.js","RAL002-B01","button","onclick=\"wlRaidaDisp"],
+  ["app/cap-worklist-raida.js","RAL002-I05","input"," id=\"wl_raida_why"],
+  ["app/cap-worklist-raida.js","RAL002-B02","button","onclick=\"wlRaidaClose"],
+  ["app/cap-worklist-raida.js","RAL002-B03","button","onclick=\"wlRaidaOpen"],
   ["app/cap-worklist.js","RAL002-S01","select"," id=\"wl_who"],
   ["app/cap-worklist.js","RAL002-I06","input"," id=\"wl_due"],
   ["app/cap-worklist.js","RAL002-B04","button","onclick=\"wlSetState"],
@@ -178,7 +178,7 @@ const CODES = [
   ["app/cap-network-member.js","SCR031-C05","div","onclick=\"netBrowse"],
   ["app/cap-network-member.js","SCR031-I05","input","oninput=\"netAvailSearch"]
 ];
-const COUNTS = {"app/cap-chit2.js":27,"app/cap-register.js":40,"app/cap-supplies.js":16,"app/cap-workforce.js":40,"app/cap-adopt.js":5,"app/cap-worklist.js":22,"app/cap-network-member.js":11};
+const COUNTS = {"app/cap-chit2.js":27,"app/cap-register.js":40,"app/cap-supplies.js":16,"app/cap-workforce.js":40,"app/cap-adopt.js":5,"app/cap-worklist.js":17,"app/cap-worklist-raida.js":5,"app/cap-network-member.js":11};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */

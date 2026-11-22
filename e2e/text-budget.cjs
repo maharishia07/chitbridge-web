@@ -100,7 +100,7 @@ function classify(s) {
 const MANUAL = [
   'cap-legend.js',      /* the capability map — it exists to explain */
   'cap-readiness.js',   /* what a standard demands, and why */
-  'cap-network.js',     /* a design tool: you reason inside it, you do not run your day in it */
+  'cap-network.js', 'cap-network-storefront.js',     /* a design tool: you reason inside it, you do not run your day in it */
   'cap-help.js',        /* the help itself */
   'cap-assist.js',      /* the assistant's own copy */
 ];

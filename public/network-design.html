@@ -74,78 +74,13 @@ function labAdd(own) {
   LAB.push({ name: '', owned: own, ref: '' });
   labPaint();
 }
-function labCheck() {
-  var out = document.getElementById('labOut'),
-    btn = document.getElementById('labGo');
-  var q = new URLSearchParams(location.search),
-    tok = '';
-  try {
-    var parsed = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    tok = (parsed && parsed.token) || '';
-  } catch (_) {}
-  if (!tok) {
-    out.innerHTML = '<div class="says bad">Sign in to the app first — the check runs on the server. Nothing is made either way.</div>';
-    return;
-  }
-  var api = cbApiParam(q.get('api')) || window.CB_API;
-  var nodes = [{ key: 'r', name: 'Sample', root: true, owned: true, parent_key: null, holds: [] }].concat(
-    LAB.map(function (item, index) {
-      return { key: 'n' + index, name: item.name, owned: item.owned, partner_ref: item.ref, parent_key: 'r', holds: ['catalogue'] };
-    })
-  );
-  btn.disabled = true;
-  out.innerHTML = '<div class="s" style="color:var(--grey)">Checking…</div>';
-  fetch(api + '/api/network-design/validate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-    body: JSON.stringify({ sample: true, draft: { nodes: nodes } })
-  })
-    .then(function (reply) {
-      return reply.json().then(function (j) {
-        if (!reply.ok) throw new Error(j.message || 'No answer');
-        return j;
-      });
-    })
-    .then(function (reply) {
-      out.innerHTML =
-        '<div class="says ' +
-        (reply.ok ? 'good' : 'bad') +
-        '" data-testid="lab-says">' +
-        esc(reply.says) +
-        '</div>' +
-        (reply.breaks && reply.breaks.length
-          ? '<ul>' +
-            reply.breaks
-              .map(function (item) {
-                return '<li><b>' + esc(item.name) + '</b> — ' + esc(item.reason) + '</li>';
-              })
-              .join('') +
-            '</ul>'
-          : '') +
-        (reply.would && reply.would.create.length
-          ? '<div class="s" style="font-size:12.5px;color:var(--grey)">Would make: ' +
-            reply.would.create
-              .map(function (item) {
-                return esc(item.handle);
-              })
-              .join(', ') +
-            '</div>'
-          : '');
-    })
-    .catch(function (e) {
-      out.innerHTML = '<div class="says bad">' + esc(e.message || 'Could not check — try again.') + '</div>';
-    })
-    .then(function () {
-      btn.disabled = false;
-    });
-}
 document.addEventListener('DOMContentLoaded', labPaint);
 </script>
 <script src="app/catalogue-lines.js"></script>
 <script src="/app/sample-set.js"></script>   <!-- CBSample: the ONE list of made-up shop data per country -->
 <script src="engine/locale.js"></script><script src="app/shop-time.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
-<script src="app/cart.js"></script>
+<script src="app/cart.js"></script><script src="/app/network-lab-check.js"></script>
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->

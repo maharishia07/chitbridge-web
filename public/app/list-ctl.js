@@ -2612,9 +2612,7 @@ ctx.pin = cols.filter(function (item) {
     });
   }
   function selectedRows(I) {
-    var ids = I.r.sel;
-    /* EL-18 M5: a ticked row the search or filter now hides is NOT acted on — the bar says "Approve (n)" over the rows in view */
-    var shown = matched(I).rows;
+    var ids = I.r.sel, shown = matched(I).rows; /* EL-18 M5: a ticked row the search or filter now hides is NOT acted on — the bar says "Approve (n)" over the rows in view */
     return allRows(I).filter(function (item, index) {
       return ids[rowIdOf(I, item, index)] && shown.indexOf(item) >= 0;
     });

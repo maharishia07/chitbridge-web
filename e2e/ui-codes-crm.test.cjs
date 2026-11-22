@@ -18,7 +18,8 @@ const PUB = path.join(__dirname, '..', 'public');
 const SET = {
   'crm.html': 'CRM001-B01 CRM001-B02',
   'app/cap-crm.js': 'CRM001-B03 CRM001-B04 CRM001-B05 CRM001-B06 CRM001-I01 CRM001-B08 CRM001-B09 CRM001-B10 CRM001-B11 CRM001-I02 CRM001-I03 CRM001-I04 CRM001-B12 CRM001-S01 CRM001-B13',
-  'app/cap-crm-record.js': 'CRM006-B01 CRM006-B02 CRM006-B03 CRM006-B04 CRM006-B08 CRM006-B05 CRM006-B06 CRM006-B09 CRM006-B10 CRM006-B11 CRM006-B12 CRM006-B13 CRM006-B14 CRM006-B15 CRM006-B16 CRM006-B17 CRM006-B18 CRM006-C01 CRM006-B20 CRM006-T01 CRM006-I01 CRM006-I02 CRM006-I03 CRM006-B21',
+  'app/cap-crm-record.js': 'CRM006-B01 CRM006-B02 CRM006-B03 CRM006-B04 CRM006-B08 CRM006-B05 CRM006-B06 CRM006-B09 CRM006-B10 CRM006-B11 CRM006-B12 CRM006-B13 CRM006-B14 CRM006-B15 CRM006-B16 CRM006-B17 CRM006-B18 CRM006-C01',
+  'app/cap-crm-record-log.js': 'CRM006-B20 CRM006-T01 CRM006-I01 CRM006-I02 CRM006-I03 CRM006-B21',
   'app/cap-crm-timeline.js': 'CRM006-B19',
   'app/cap-crm-privacy.js': 'CRM010-B01 CRM010-B02 CRM010-I03 CRM010-B08 CRM010-B09',
   'app/cap-crm-privacy-register.js': 'CRM010-B03 CRM010-B04 CRM010-B05 CRM010-I01 CRM010-S01 CRM010-I02 CRM010-B06 CRM010-S02 CRM010-T01 CRM010-B07',
@@ -35,7 +36,7 @@ const NEAR = [
   ['crm.html', 'id="toggleNav"', 'CRM001-B01'], ['crm.html', 'close-first-go', 'CRM001-B02'],
   ['app/cap-crm.js', 'data-testid="crm-add"', 'CRM001-B04'], ['app/cap-crm.js', 'data-testid="crm-fu-add"', 'CRM001-B05'], ['app/cap-crm.js', 'id="crm_addq"', 'CRM001-I01'],
   ['app/cap-crm.js', 'crm-add-role-customer', 'CRM001-B08'], ['app/cap-crm.js', 'id="crm_fu_who"', 'CRM001-S01'],
-  ['app/cap-crm-record.js', 'crm-more-remove', 'CRM006-B04'], ['app/cap-crm-record.js', 'crm-act-more', 'CRM006-B17'], ['app/cap-crm-record.js', 'id="crm_log_body"', 'CRM006-T01'],
+  ['app/cap-crm-record.js', 'crm-more-remove', 'CRM006-B04'], ['app/cap-crm-record.js', 'crm-act-more', 'CRM006-B17'], ['app/cap-crm-record-log.js', 'id="crm_log_body"', 'CRM006-T01'],
   ['app/cap-crm-record.js', 'crm-ledger-on', 'CRM006-B18'], ['app/cap-crm-record.js', 'crm-terms-go', 'CRM006-C01'],
   ['app/cap-crm-privacy-register.js', 'id="crm_prv_who"', 'CRM010-I01'], ['app/cap-crm-privacy-register.js', 'id="crm_prv_out"', 'CRM010-S02'], ['app/cap-crm-privacy-register.js', 'crm-prv-prev', 'CRM010-B04'],
   ['app/cap-crm-calls.js', 'id="crm_call_day"', 'CRM005-I01'],

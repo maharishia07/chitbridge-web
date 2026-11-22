@@ -61,7 +61,7 @@ function selfTests(world) {
     made.family['cap-folders.js'] = base;
     made.family['cap-folders-rules.js'] = world.family['cap-folders.js'].match(/^function ruleDraftCancel[^]*?^\}\n/m)[0];
     PAGES.forEach((page) => { made.pages[page] = swap(made.pages[page], '<script src="/app/cap-folders.js"></script>', '<script src="/app/cap-folders.js"></script>\n<script src="/app/cap-folders-rules.js"></script>'); });
-    made.app = swap(made.app, 'const CAP_WITH = {', "const CAP_WITH = {\n  folders: ['folders-rules'],").replace(/(const CB_BUILD =\s*')[^']+/, '$12099-01-01a');
+    made.app = swap(made.app, "folders: ['folders-metrics']", "folders: ['folders-metrics', 'folders-rules']").replace(/(const CB_BUILD =\s*')[^']+/, '$12099-01-01a');
     made.sw = swap(made.sw, "'/app/cap-folders.js',", "'/app/cap-folders.js',\n  '/app/cap-folders-rules.js',").replace(/CB_SW_VERSION = '[^']+'/, "CB_SW_VERSION = 'v9'");
     return made;
   };
@@ -69,7 +69,7 @@ function selfTests(world) {
   red('a name defined in two files', (made) => { made.family['cap-folders-x.js'] = 'function loadFolders() {}\n'; }, /name loadFolders .*exactly one/);
   red('PRECACHE URL dropped', (made) => { made.sw = swap(made.sw, "'/app/cap-folders.js',", ''); }, /PRECACHE must list/);
   tests.push({ why: 'the simulated split is green', mutate: (made) => { Object.assign(made, split(made)); }, pattern: null });
-  red('CAP_WITH.folders dropped on a split', (made) => { split(made); made.app = swap(made.app, "folders: ['folders-rules'],", ''); }, /CAP_WITH\.folders must name folders-rules/);
+  red('CAP_WITH.folders dropped on a split', (made) => { split(made); made.app = swap(made.app, "folders: ['folders-metrics', 'folders-rules']", "folders: ['folders-metrics']"); }, /CAP_WITH\.folders must name folders-rules/);
   red('a part tag removed on a split page', (made) => { split(made); made.pages['finance.html'] = swap(made.pages['finance.html'], '<script src="/app/cap-folders-rules.js"></script>', ''); }, /finance\.html must carry the tag for cap-folders-rules/);
   red('CB_BUILD not bumped on a split', (made) => { split(made); made.app = made.app.replace(/(const CB_BUILD =\s*')[^']+/, '$1' + snapshot.cbBuild); }, /CB_BUILD is still/);
   red('CB_SW_VERSION not bumped on a split', (made) => { split(made); made.sw = made.sw.replace(/CB_SW_VERSION = '[^']+'/, "CB_SW_VERSION = '" + snapshot.swVersion + "'"); }, /CB_SW_VERSION is still/);

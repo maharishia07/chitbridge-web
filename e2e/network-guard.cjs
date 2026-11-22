@@ -9,7 +9,7 @@ const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok = (m) => console.log('  ok  ' + m);
 
 const design = read('public/app/cap-network.js'), member = read('public/app/cap-network-member.js'), app = read('public/app.html');
-const page = read('public/network.html'), na = read('public/app/network-app.js'), lab = read('public/network-design.html');
+const page = read('public/network.html'), na = read('public/app/network-app.js'), lab = read('public/network-design.html') + read('public/app/network-lab-check.js') /* labCheck moved there (1129 split) */;
 const man = JSON.parse(read('public/app/manifest.json')), kur = JSON.parse(read('public/app/kurals.json'));
 
 /* the split: no function is defined in both halves */
