@@ -73,6 +73,7 @@ const sandbox = {
 };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(W, 'app', 'core-copy.js'), 'utf8'), ctx, { filename: 'core-copy.js' }); /* _apiCopy / _callClean moved out of core.js (web split 1129); the pages load it after core.js, call time makes the order free */
 vm.runInContext(fs.readFileSync(path.join(W, 'app', 'core.js'), 'utf8'), ctx, { filename: 'core.js' });
 
 let pass = 0, fail = 0;

@@ -176,7 +176,7 @@ const CODES = [
   ['app/cap-network.js', 'BUS004-B19', 'button', 'onclick="netCapYes'],
   ['app/cap-network.js', 'BUS004-C52', 'span', 'onclick="netCapNo']
 ];
-const COUNTS = { 'app/cap-iddocs.js': 3, 'app/cap-messages.js': 6, 'app/cap-service.js': 15, 'app/cap-network.js': 132 };
+const COUNTS = { 'app/cap-iddocs.js': 3, 'app/cap-messages.js': 6, 'app/cap-service.js': 15, 'app/cap-network.js': 112, 'app/cap-network-storefront.js': 20 };
 
 const read = (f) => {
   let t = fs.readFileSync(path.join(PUB, f), 'utf8').split('\r\n').join('\n');

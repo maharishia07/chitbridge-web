@@ -18,7 +18,7 @@ const a = names(design), b = names(member);
 const both = [...b].filter((n) => a.has(n));
 if (both.length) bad('defined in both cap-network.js and cap-network-member.js: ' + both.join(', ')); else ok('split by job — ' + a.size + ' design functions, ' + b.size + ' member functions, none twice');
 if (!b.has('_netMemberScreen') || !b.has('netBrowse') || !b.has('netAvailSearch')) bad('the member half must hold _netMemberScreen · netBrowse · netAvailSearch');
-if (!/CAP_WITH\s*=\s*\{\s*network:\s*\['network-member'\]/.test(app)) bad('app.html must load network-member with network (CAP_WITH)'); else ok('app.html loads both halves');
+if (!/CAP_WITH\s*=\s*\{\s*network:\s*\['network-member'(, 'network-storefront')?]/.test(app)) bad('app.html must load network-member with network (CAP_WITH)'); else ok('app.html loads both halves');
 
 /* the frame */
 ['/engine/screen.js', '/app/avatar.js', '/app/page-frame.js', '/app/shell.js', '/app/list-ctl.js', '/app/kural.js', '/app/network-app.js'].forEach((s) => { if (page.indexOf('src="' + s + '"') < 0) bad('network.html must load ' + s); });

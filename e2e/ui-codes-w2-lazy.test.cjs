@@ -12,7 +12,7 @@
 const fs = require('fs'), path = require('path');
 const PUB = path.join(__dirname, '..', 'public', 'app');
 const COUNTS = { 'cap-testing': 143, 'cap-catsetup': 54, 'cap-register': 44, 'cap-workforce': 53, 'cap-worklist': 24, 'cap-definitions': 29, 'cap-readiness': 21, 'cap-supplies': 20, 'cap-flag': 14, 'cap-bank': 14, 'cap-bank-details': 2, 'cap-network-member': 11, 'cap-mark-sheet': 9, 'cap-traceability': 8, 'bank-preview-ui-parts': 28 };
-const SPLIT = { 'cap-register': ['cap-register-impact'], 'cap-readiness': ['cap-readiness-ai'] };
+const SPLIT = { 'cap-register': ['cap-register-impact'], 'cap-readiness': ['cap-readiness-ai'], 'cap-worklist': ['cap-worklist-raida'] };
 const regPath = [process.env.UIID_REG, path.join(__dirname, '..', '..', 'chitbridge-docs', 'SCREENS.json'), 'C:/dev/SCREENS.json'].filter(Boolean).filter((p) => fs.existsSync(p))[0];
 const reg = regPath ? JSON.parse(fs.readFileSync(regPath, 'utf8')).screens : {};
 const live = {}, retired = {};

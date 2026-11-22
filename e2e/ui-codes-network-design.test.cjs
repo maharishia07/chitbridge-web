@@ -86,7 +86,8 @@ const tok = (name) => (src.match(new RegExp('--' + name + ':(#[0-9a-fA-F]{6})'))
   check(!!fg && contrast(fg, bg) >= 4.5, 'AA contrast 4.5:1 for ' + what + ' (--' + name + ' ' + fg + ' on ' + bg + ' = ' + (fg ? contrast(fg, bg).toFixed(2) : 'n/a') + ')');
 });
 check(contrast('#ffffff', tok('blue')) >= 4.5, 'AA contrast 4.5:1 for white on the blue buttons and the current step');
-check(src.indexOf("Could not check") > 0 && /catch[(]function [(]e[)]/.test(src), 'a check that could not reach the server says so in words on the page (Could not check - try again), not silence');
+const labCheck = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'network-lab-check.js'), 'utf8'); /* the check call moved out of the page (websplit C) */
+check((src + labCheck).indexOf("Could not check") > 0 && /catch[(]function [(]e[)]/.test(src + labCheck), 'a check that could not reach the server says so in words on the page (Could not check - try again), not silence');
 
 /** the register */
 let reg = null;

@@ -64,7 +64,7 @@ vm.runInContext(liftFns('public/app/cap-admin.js', ['misTaxMonth', 'misTaxSetMon
   t('a late read for chit A does not overwrite chit B', cx5.C2.data && cx5.C2.data.id === 'B', JSON.stringify(cx5.C2.data));
   // GF-07 M5 the installer makes config.json owner-only before the key is written
   const cx6 = vm.createContext({ CFG: {}, tx: (x) => x });
-  const conn = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-connector.js'), 'utf8');
+  const conn = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-connector.js'), 'utf8') + fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-connector-reissue.js'), 'utf8'); /* the reissue half moved out (websplit C) */
   t('the installer creates config.json mode 600 before the tee that writes the key', /install -m 600 \/dev\/null "\$DIR\/config\.json"[^]*?sudo tee "\$DIR\/config\.json"/.test(conn));
   t('a failed device read after a reissue no longer drops the new key (shown once)', /catch \(failure\) \{[^}]*return null;/.test(conn) && /the old key is already dead/.test(conn) && /mode === 'package' \? 'The installer could not be built/.test(conn));
   // GF-07 M13 a double tap on Delivered posts once
