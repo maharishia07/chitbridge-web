@@ -23,6 +23,7 @@ const PARTS = [
   { file: 'public/app/cap-books-waiting-cells.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-waiting-view.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-party.js', parent: 'public/app/cap-books.js' },
+  { file: 'public/app/cap-books-needs.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-period-stock.js', parent: 'public/app/cap-period.js' },
   { file: 'public/app/cap-period-accruals.js', parent: 'public/app/cap-period.js' }
 ];
