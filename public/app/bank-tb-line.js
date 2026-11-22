@@ -16,7 +16,9 @@
     if (line.state === 'none_by_date') return say('No sign-off on or before this date');
     var cur = line.currency, sign = fill('Signed off to {d}', { d: o.day(line.period_to) }) + ' · ' + say('Statement') + ' ' + o.money(line.statement_minor, cur);
     if (line.state === 'earlier') return sign + ' · ' + say('no difference shown for this date');
-    var rest = line.state === 'unexplained' ? fill('unexplained {a}', { a: o.money(line.unexplained_minor, cur) }) : say('nothing unexplained');
+    /* BD-F-03: a sign-off saved before BA-F-07 can say "tied" over figures that do not meet; the api's apart_minor is named in words, never "nothing unexplained" over it */
+    var rest = line.state === 'unexplained' ? fill('unexplained {a}', { a: o.money(line.unexplained_minor, cur) })
+      : line.apart_minor ? fill('books {b} when signed, {a} apart', { b: o.money(line.books_signed_minor, cur), a: o.money(line.apart_minor, cur) }) : say('nothing unexplained');
     return sign + ' · ' + rest + (line.moved_minor ? ' · ' + fill('books now differ from the figure signed by {a}', { a: o.money(line.moved_minor, cur) }) : '');
   }
   function html(bank, options) {
