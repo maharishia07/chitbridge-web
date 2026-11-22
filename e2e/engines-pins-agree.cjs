@@ -18,9 +18,7 @@ const fs = require('fs'), path = require('path');
 
 /* ⭐ the ONE known difference, by name, with why. The check fails when a pair differs and is not here, AND when a pair listed here
    agrees again (a stale exception hides the next drift). Move the api in its own round, then delete the line. */
-const KNOWN = {
-  screen: 'web 1.15.0 carries the theme library (additive, v1.13–1.15); the api\'s lib/screen-kit.js is still 1.5.0 — an api round moves it',
-};
+const KNOWN = {}; /* screen: web and api both pin 1.110.0 since batch 1129 (red1129), the exception is gone */
 
 const WEB = path.join(__dirname, '..');
 const API = process.env.CB_API_REPO || path.join(WEB, '..', 'chitbridge-api');
