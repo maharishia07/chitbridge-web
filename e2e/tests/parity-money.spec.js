@@ -52,7 +52,7 @@ test('[PAR-02] one money block on every surface — same text, same pixels', asy
     const row = page.getByTestId('cbcat-row-' + itemId); await row.waitFor({ timeout: 40000 });
     await row.locator('[data-testid="cart-add"]').first().click(); await page.waitForTimeout(150);
     await row.locator('[data-testid="cart-add"]').first().click(); await page.waitForTimeout(500);
-    const block = page.getByTestId('sb-money'); await block.waitFor({ timeout: 20000 });
+    const block = page.locator('#sb_foot').getByTestId('cbcart-money'); /* 22 Nov (CR-1): the foot's wrapper testid `sb-money` is composed in cart.js reviewHTML (totalTestid minus -total, plus -money) and only on the no-offer path, so no scan or grep sees it; the money block's own root `cbcart-money` inside the foot is the literal the app emits on the offer path too */ await block.waitFor({ timeout: 20000 });
     blocks.recordSale = await rowsOf(block);
     await page.evaluate(() => { try { closeModal(); } catch (_) {} });
   });

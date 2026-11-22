@@ -161,8 +161,13 @@ function unwrap(j, _key) {
         'may_answer',
         'why',
         'capped',
-        'cap_note'
-      ]; /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
+        'cap_note',
+        'message',
+        'added',
+        'declared',
+        'warnings',
+        'skipped'
+      ]; /* message · added · declared · warnings · skipped — CR-1 (22 Nov): POST /api/products/bulk answers { message, added, items[], declared[], warnings[], skipped[] } (skipped = codes the shop already held, BK-11); the connector reads it raw, a screen that calls it through api() now keeps all five. */ /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
       for (const mk of SIBS)
         if (mk in j) {
           try {
