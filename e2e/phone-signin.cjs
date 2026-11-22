@@ -175,7 +175,7 @@ async function walk(b, WEB, tag, dev, reg, opts) {
     /* the keyboard is up: the same dialog in what is left of the screen */
     await p.setViewportSize({ width: 390, height: 844 - KEYBOARD });
     await p.waitForTimeout(200);
-    res.fitWhoKb = await dialogFits(p); console.log('DBG', JSON.stringify(res.fitWhoKb), await p.evaluate(() => { const d=document.querySelector('#usigndlg'); return d.innerText.replace(/s+/g,' ').slice(0,400) + ' H=' + d.scrollHeight + ' CH=' + d.clientHeight + ' VH=' + innerHeight + ' btnbottom=' + Array.from(d.querySelectorAll('button')).map(b=>b.dataset.testid+':'+Math.round(b.getBoundingClientRect().bottom)).join(','); }));
+    res.fitWhoKb = await dialogFits(p); console.log('DBG', JSON.stringify(res.fitWhoKb), await p.evaluate(() => { const d=document.querySelector('#usigndlg'); return 'VH='+innerHeight+' sh='+d.scrollHeight+' ch='+d.clientHeight+' :: '+Array.from(d.querySlectorAll ? [] : d.querySelectorAll('*')).filter(e=>e.children.length===0||/^(BUTTON|INPUT|P|Hd|LABEL)$/.test(e.tagName)).map(e=>e.tagName+'#'+(e.dataset.testid||e.id||'')+'['+Math.round(e.getBoundingClientRect().top)+'-'+Math.round(e.getBoundingClientRect().bottom)+']'+(e.children.length?'':(e.textContent||'').trim().slice(0,25))).join(' | '); }));
     res.shots.push(await shot('03-keyboard'));
   }
   await tap('[data-testid="signin-id"]');
