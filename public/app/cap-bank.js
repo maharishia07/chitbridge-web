@@ -359,7 +359,7 @@ function bankFileAccountNote() {
 async function bankLedger() {
   const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: BKB.from, to: BKB.to } });
   BKB.ledgerRaw = reply || {};
-  return ((reply && reply.lines) || []).map((item, index) => ({
+  return bksLiveLines(reply && reply.lines).map((item, index) => ({
     id: String(item.ref) + '#' + index,
     date: item.date,
     dr_minor: Number(item.dr_minor) || 0,

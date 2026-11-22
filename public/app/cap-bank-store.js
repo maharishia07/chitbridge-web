@@ -32,6 +32,9 @@ const bksCostBlindSay = () => tx('Your access does not include costs, so the ban
 /** why a bank read failed, in words: the cost-blind sentence, else the server's own message */
 const bksWhy = (failure) => (bksCostBlind(failure) ? bksCostBlindSay() : (failure && failure.message) || '');
 
+/** BE-F-04: the ledger lines the matcher may offer a statement line. An entry the books reversed and the reversal that undid it net to nothing, so both leave the list and the live re-post alone is matched (Accept, never Add); the pair stays in the ledger itself. */
+const bksLiveLines = (lines) => (lines || []).filter((item) => !item.reversed_by && !item.reverses_entry_id);
+
 /** the log's marks, oldest first, through the engine's own step; a mark the engine refuses is skipped, never invented */
 function bankStoreReplay(marks) {
   let state = {};

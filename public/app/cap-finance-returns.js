@@ -232,7 +232,59 @@ async function frShow() {
     box.innerHTML = '<p class="hint" data-testid="fr-view-failed">' + esc(tx('Could not read this month.')) + '</p>';
   }
 }
-/** what the return says beside its figures (the server's own sentences, never reworded here): the tax the server's check does not reproduce, the e-invoice warning, and the bills reversed after filing (their credit-note rows) → [sentence] */
+/** BE-F-03: the plain reason a figure differs, from what the server's check names (place_of_supply · supply → place; cgst · sgst · igst · cess → split; every other figure → value) */
+function frReasonOf(what) {
+  var key = String(what || '');
+  if (/^(place_of_supply|supply)$/.test(key)) return 'place';
+  if (/^(cgst|sgst|igst|cess|csamt)$/.test(key)) return 'split';
+  return 'value';
+}
+/** BE-F-03: the bills the server's check disagrees with, ONE line per reason (never one long line per bill): the reason, how many, which bills (the first four). A bill's own number is read off the server's sentence ("Bill C1/…:"). Items with no named differences pass through as the server's own words. */
+function frTaxDiffers(items) {
+  var order = ['place', 'split', 'value'],
+    group = { place: [], split: [], value: [] },
+    plain = [];
+  (items || []).forEach(function (item) {
+    var diffs = item && item.differences;
+    if (!diffs || !diffs.length) {
+      var t = typeof item === 'string' ? item : item && (item.words || item.says);
+      if (t) plain.push(String(t));
+      return;
+    }
+    var named = /^Bill (.+?):/.exec(String(item.words || '')),
+      label = named ? named[1] : tx('a bill'),
+      seen = {};
+    diffs.forEach(function (d) {
+      var reason = frReasonOf(d && d.what);
+      if (!seen[reason]) {
+        seen[reason] = true;
+        group[reason].push(label);
+      }
+    });
+  });
+  var words = {
+    place: 'State of supply (inside or outside your state) differs from the server check ({n}): {bills}.',
+    split: 'The CGST, SGST and IGST split differs from the server check ({n}): {bills}.',
+    value: 'The taxable value or total differs from the server check ({n}): {bills}.'
+  };
+  var lines = order
+    .filter(function (reason) { return group[reason].length; })
+    .map(function (reason) {
+      var bills = group[reason];
+      return txf(words[reason], { n: bills.length, bills: bills.slice(0, 4).join(', ') + (bills.length > 4 ? txf(' and {m} more', { m: bills.length - 4 }) : '') });
+    });
+  if (lines.length) lines.push(tx('The file carries the figures as issued. Look at these bills before you file.'));
+  return plain.concat(lines);
+}
+/** BE-F-03: the period totals the file holds, read from the download's own _cb (summary for GSTR-1, net for GSTR-3B), never summed here → '' when the file carries none */
+function frTotalsHtml(cb) {
+  cb = cb || {};
+  var text = '';
+  if (cb.summary) text = txf('Invoices {i} · Credit notes {n} · Taxable value {taxable} · Tax {tax}', { i: cb.summary.invoices, n: cb.summary.notes, taxable: fmtMoney(cb.summary.taxable || 0), tax: fmtMoney(cb.summary.tax || 0) });
+  else if (cb.net && cb.net.total != null) text = txf('Net tax in this file {tax}', { tax: fmtMoney(cb.net.total) });
+  return text ? '<p data-testid="fr-totals" style="margin:6px 0 0">' + esc(text) + '</p>' : '';
+}
+/** what the return says beside its figures: the tax the server's check does not reproduce (one line per reason, frTaxDiffers), the e-invoice warning, and the bills reversed after filing (their credit-note rows, the server's own sentences) → [sentence] */
 function frNotes(cb) {
   cb = cb || {};
   var said = [];
@@ -240,7 +292,7 @@ function frNotes(cb) {
     var t = typeof item === 'string' ? item : item && (item.words || item.says);
     if (t) said.push(String(t));
   }
-  (cb.tax_differs || []).forEach(addNote);
+  frTaxDiffers(cb.tax_differs).forEach(function (line) { said.push(line); });
   if (cb.einvoice) addNote(cb.einvoice);
   (cb.reversed || []).forEach(addNote);
   return said;
@@ -268,7 +320,7 @@ function frGet(form, btn) {
       done: tx('Downloaded'),
       outcome: function (name) {
         var element = document.getElementById('fr_out');
-        if (element) element.innerHTML = esc(tx('Saved as') + ' ' + name) + frNotesHtml(cb);
+        if (element) element.innerHTML = esc(tx('Saved as') + ' ' + name) + frTotalsHtml(cb) + frNotesHtml(cb);
       }
     }
   );
