@@ -279,6 +279,7 @@ jobs:
           node e2e/web-1128.test.cjs
           node e2e/grey-au-1129.test.cjs
           node e2e/arabic-catalogue.test.cjs
+          node e2e/bg-1129.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
           # ACC proofs (2026-11-14, P2 PROOF pass): CSS / vm-sandbox checks on the real Accounts and CRM pages; each is red when its cited line is mutated
