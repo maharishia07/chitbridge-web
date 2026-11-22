@@ -967,7 +967,7 @@ function c2Rollup(entries, asg, prog) {
 function c2RollupText(entries, asg, prog) {
   var r = c2Rollup(entries, asg, prog);
   var bits = [r.lines + ' line' + (r.lines === 1 ? '' : 's')];
-  if (r.qtyLeft) bits.push(r.qtyLeft + ' left');
+  if (r.qtyLeft) bits.push(esc(r.qtyLeft) + ' left');
   else if (r.mixed) bits.push('mixed units');
   if (r.done) bits.push(r.done + ' done');
   var text = bits.join(' · ');

@@ -1,0 +1,278 @@
+{
+ "app/attach-ui.js": {
+  "arg": 1
+ },
+ "app/cap-admin.js": {
+  "x[0]": 1,
+  "item.key": 3,
+  "p": 1,
+  "prev": 1,
+  "next": 1,
+  "key": 1,
+  "entry.key": 1,
+  "k": 1,
+  "(optIn ? '' : 'out')": 1,
+  "(optIn ? 'in' : '')": 1,
+  "group": 1,
+  "kind": 1,
+  "field": 1,
+  "(state === 'approved' ? 'pending' : 'approved')": 1
+ },
+ "app/cap-attention.js": {
+  "item[0]": 1
+ },
+ "app/cap-books-needs.js": {
+  "kind": 2
+ },
+ "app/cap-books-party.js": {
+  "kind": 3
+ },
+ "app/cap-books.js": {
+  "kind": 3,
+  "item[0]": 1,
+  "id": 5,
+  "item": 1
+ },
+ "app/cap-categories.js": {
+  "key": 1
+ },
+ "app/cap-catsetup.js": {
+  "(d.status === 'live' ? 'draft' : 'live')": 1,
+  "kind": 2,
+  "value": 1,
+  "item[0]": 1,
+  "key": 6,
+  "item.key": 1
+ },
+ "app/cap-chit2.js": {
+  "e.line_id": 6,
+  "item[0]": 2,
+  "line_id": 2,
+  "item": 1,
+  "C2.id": 1
+ },
+ "app/cap-compare.js": {
+  "item": 1,
+  "k": 1,
+  "key": 1
+ },
+ "app/cap-connector.js": {
+  "x.id": 5
+ },
+ "app/cap-country.js": {
+  "key": 1,
+  "k": 1
+ },
+ "app/cap-crm-leads.js": {
+  "key": 1
+ },
+ "app/cap-definitions.js": {
+  "x.k": 5,
+  "(live ? 'draft' : 'live')": 1,
+  "mkey": 1,
+  "A.home.nav": 1,
+  "(A.home.sec || '')": 1,
+  "kind": 1
+ },
+ "app/cap-dispute.js": {
+  "chitId": 3,
+  "disputeId": 4,
+  "item.entity_id": 1,
+  "encodeURIComponent(item.display_name || 'party').replace(/'/": 1,
+  "chit.id": 2,
+  "dispute.dispute_id": 2,
+  "id": 1,
+  "(partyId || '')": 1
+ },
+ "app/cap-entry-preview.js": {
+  "w": 1
+ },
+ "app/cap-entry.js": {
+  "key": 1
+ },
+ "app/cap-finance.js": {
+  "id": 1
+ },
+ "app/cap-folders.js": {
+  "UI.folderSel": 2,
+  "item.chit_id": 1,
+  "k": 1,
+  "chitId": 2,
+  "item.folder_id": 1
+ },
+ "app/cap-intake.js": {
+  "id": 1
+ },
+ "app/cap-match.js": {
+  "key": 1
+ },
+ "app/cap-messages.js": {
+  "item.key": 2,
+  "item.chit_id": 2,
+  "item.line_id": 1,
+  "item": 1
+ },
+ "app/cap-mis-pictures.js": {
+  "pair[0]": 1
+ },
+ "app/cap-mis-trend.js": {
+  "pair[0]": 1
+ },
+ "app/cap-mis.js": {
+  "p": 1
+ },
+ "app/cap-move-in.js": {
+  "field": 1
+ },
+ "app/cap-network-storefront.js": {
+  "n.key": 18,
+  "val": 1
+ },
+ "app/cap-network.js": {
+  "item.key": 3,
+  "k": 3,
+  "n.key": 90,
+  "item.k": 4,
+  "val": 1
+ },
+ "app/cap-period-accruals.js": {
+  "item[0]": 1
+ },
+ "app/cap-period-year.js": {
+  "f.tab": 1
+ },
+ "app/cap-period.js": {
+  "w.fix.tab": 1
+ },
+ "app/cap-readiness.js": {
+  "idType": 1,
+  "skill": 1,
+  "k": 1,
+  "m.ai.skill": 1
+ },
+ "app/cap-register-impact.js": {
+  "item.id": 1
+ },
+ "app/cap-register.js": {
+  "item[0]": 1,
+  "e.chit_id": 1,
+  "e.raida_id": 2,
+  "id": 4
+ },
+ "app/cap-repeat.js": {
+  "verb": 2
+ },
+ "app/cap-testing.js": {
+  "x[0]": 6,
+  "item.definition_id": 2,
+  "state": 1,
+  "t.kind": 1,
+  "here": 1,
+  "item": 1,
+  "x.code": 2,
+  "item[0]": 1,
+  "kind": 1,
+  "nestedArea": 1,
+  "id": 3,
+  "x.kind": 2,
+  "status": 1
+ },
+ "app/cap-workforce.js": {
+  "item": 2,
+  "item[0]": 1,
+  "x.id": 1,
+  "m": 1
+ },
+ "app/chit-sheet.js": {
+  "item": 1
+ },
+ "app/list-legacy.js": {
+  "id": 2
+ },
+ "app.html": {
+  "id": 10,
+  "k": 2,
+  "item[0]": 4,
+  "f.field_key": 1,
+  "helpKey": 2,
+  "x.supplier_list_id": 2,
+  "r.sup.supplier_list_id": 1,
+  "r.supplier_list_id": 2,
+  "c.customer_list_id": 1,
+  "item": 1,
+  "v": 3,
+  "m": 1,
+  "x.chit": 1,
+  "x[0]": 1,
+  "c.id": 5,
+  "item[1]": 1
+ },
+ "authority-forms.html": {
+  "inst.form_id": 2,
+  "SEL": 1
+ },
+ "conversion-lab.html": {
+  "what": 4,
+  "field": 2
+ },
+ "country-lab.html": {
+  "key": 1,
+  "side": 1
+ },
+ "design-mock.html": {
+  "k": 1,
+  "item.key": 1,
+  "item[0]": 1
+ },
+ "intake.html": {
+  "c.id": 2
+ },
+ "know-your-business.html": {
+  "k": 1
+ },
+ "lab/combo-mode.js": {
+  "template.id": 4,
+  "product.id": 1,
+  "entry.id": 1,
+  "MODLAB.templateId": 1
+ },
+ "network-design.html": {
+  "item.id": 1
+ },
+ "offer-lab-next.html": {
+  "item.p.id": 1,
+  "key": 2,
+  "item.id": 17,
+  "OVL.cat": 1,
+  "k": 1,
+  "item[0]": 1,
+  "(fn === 'setCat' ? 'cat' : 'item')": 1,
+  "fn": 1,
+  "p.id": 1,
+  "step[1]": 1
+ },
+ "product-lab.html": {
+  "item": 1,
+  "item[0]": 1
+ },
+ "screen-gallery.html": {
+  "item": 1
+ },
+ "shop.html": {
+  "item.region_code": 1,
+  "v": 1
+ },
+ "store.html": {
+  "item.product_id": 1
+ },
+ "supplier-design.html": {
+  "item.id": 1
+ },
+ "testing.html": {
+  "key": 2,
+  "state": 1,
+  "item": 3,
+  "c.k": 1,
+  "item.k": 1
+ }
+}

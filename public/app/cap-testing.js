@@ -5491,7 +5491,7 @@ function testCaseDetailHTML(c) {
         ? '<button data-cbsid="SCR010-B37" class="btn" style="display:inline-block;width:auto;margin-top:4px;' +
           'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' +
           "'" +
-          esc(x.evidence_id) +
+          escJs(x.evidence_id) +
           "'" +
           ')">\u1f5bc\ufe0f Screenshot</button>'
         : '<div style="' + pad + ';color:var(--grey-4,#646A72)">No screenshot was attached to this one.</div>') +

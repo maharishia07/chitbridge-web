@@ -44,14 +44,13 @@ function simulate(src, start, d) {
       if (src[i] !== '+') break;
       i++; while (/\s/.test(src[i])) i++;
       if (src[i] === d) { i++; inStr = true; continue; }
-      const e = readExpr(src, i); push(); out.push({ expr: e.text, pos: i }); i = e.end;
-      while (i < src.length && /\s/.test(src[i])) i++;
-      if (src[i] === '+') {
-        i++; while (/\s/.test(src[i])) i++;
-        if (src[i] === d) { i++; inStr = true; continue; }
-        const e2 = readExpr(src, i); out.push({ expr: e2.text, pos: i }); i = e2.end; continue;
+      /* a string of the OTHER quote kind ( + "','" + ) is literal text of the handler too: keep it so the handler's own quotes stay counted (the P1 form: viewSupplierPassport(escJs(a) + "','" + raw)) */
+      if (src[i] === "'" || src[i] === '"') {
+        const q = src[i]; let j = i + 1, lt = '';
+        while (j < src.length && src[j] !== q) { if (src[j] === '\\') j++; lt += src[j]; j++; }
+        push(); out.push({ lit: lt }); i = j + 1; continue;
       }
-      break;
+      const e = readExpr(src, i); push(); out.push({ expr: e.text, pos: i }); i = e.end;
     }
   }
   push();
@@ -59,7 +58,9 @@ function simulate(src, start, d) {
 }
 
 /** every inline on*= handler in src with an esc( inside a single-quoted JS string of the handler: [{ line, expr }] */
-function scanHandlerEsc(src) {
+const SAFE_WRAPPER = /^(?:escJs|testJs|cbAttachSafe)\(/; /* escJs (helpers.js) and testJs (cap-testing.js) JS-escape; cbAttachSafe keeps [A-Za-z0-9_.:-] only */
+function scanHandlerEsc(src, opts) {
+  const raw = !!(opts && opts.raw); /* raw: EVERY expression that is not escJs(...) inside a quoted JS string of a handler, one hit each (the P1 class: item.key, supName(x).replace(...)); default: esc( only, one per handler */
   const found = [];
   const re = /\bon[a-z]+=(\\?)"/g;
   let m;
@@ -74,14 +75,16 @@ function scanHandlerEsc(src) {
     if (!d) continue;
     const { out } = simulate(src, m.index + m[0].length, d);
     let inQ = false, hit = null;
+    const line = src.slice(0, m.index).split('\n').length;
     for (const p of out) {
       if (p.lit !== undefined) {
         /* the handler's own JS quote is ' or the entity &quot; / &#39; (the browser decodes it before the JS runs) */
         const lit = p.lit.replace(/&quot;|&#34;|&#39;|&apos;/g, "'");
         for (let k = 0; k < lit.length; k++) { const c = lit[k]; if (c === '\\') { k++; continue; } if (c === "'") inQ = !inQ; }
-      } else if (inQ && /^esc\(/.test(p.expr)) hit = p;
+      } else if (inQ && raw && !SAFE_WRAPPER.test(p.expr)) found.push({ line, expr: p.expr, at: p.pos });
+      else if (inQ && !raw && /^esc\(/.test(p.expr)) hit = p;
     }
-    if (hit) found.push({ line: src.slice(0, m.index).split('\n').length, expr: hit.expr, at: hit.pos });
+    if (hit) found.push({ line, expr: hit.expr, at: hit.pos });
   }
   return found;
 }
