@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.99.0 · bank-project · sha256 de173a3dce423148181e854cabf65c692c61ff65b620c8e7fa23fc7fedc1ad5d — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.110.0 · bank-project · sha256 1f89bc1dda1414952cb6fff6b2ef843778f7498c6d2c353ab8d4baf9dadcd24c — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-project.js: THE BANK LEDGER AND THE RECONCILIATION AS THEY WILL READ ONCE THE PROPOSED ENTRIES ARE POSTED. PURE: no I/O, no clock, nothing saved.
  * OWNS project (the preview: bank ledger after posting, the BRS, each line's state) · refsOf / fingerprintOf / readRef (the idempotency key of a statement line) · partyKeyOf.
@@ -216,6 +216,7 @@
     if (!res.entry.balanced) codes.push('unbalanced');
     if (res.refused) codes.push('refused');
     if (bankLegOf_(res.entry, bankAccount) !== signedOf_(line)) codes.push('bank_leg_mismatch');
+    if (res.rule_flag) codes.push('rule_check'); /* a taught rule that does not fully fit the line (amount, part of the phrase, a tax office): only the person's answer on the line clears it, never a tick */
     if (!READY_BASES_[res.basis] && !res.confirmed) codes.push('needs_tick');
     if (near && near.length) codes.push('may_be_in_books');
     return codes;
@@ -242,6 +243,8 @@
     view.basis = res.basis || null;
     view.confirmed = !!res.confirmed;
     view.rule = res.rule || null;
+    view.rule_flag = res.rule_flag || null;
+    view.learned_id = res.learned_id || null;
     view.why = res.why || null;
     view.entry = res.entry || null;
     view.tax = res.tax || null;

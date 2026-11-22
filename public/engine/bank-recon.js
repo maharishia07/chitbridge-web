@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.109.0 · bank-recon · sha256 fc2f0870de035d2973cfa9a706a2fad476289b9c297a2fe58687e3a8df0f2247 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.110.0 · bank-recon · sha256 d94a687e6d57769eb71afc9d39572de9f879c34ba30cf9f5e4f5c7b448121d04 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -1067,7 +1067,9 @@
    * B5-01: a PARTY is tried before the words ("SMITH LEGAL PROFESSIONAL FEE" is a payment to Smith, not a bank charge); a proposal that only the words made is never ready on its own (see basisOf_).
    */
   function ruleSuggestion_(situation) {
-    return learnedSuggestion_(situation) || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation)) || notAPartySuggestion_(situation);
+    var taught = learnedSuggestion_(situation);
+    if (taught && taught.rule_flag) taught = openItemSuggestion_(situation) || taught; /* a taught rule that only part-fits never outranks an exact open-item match */
+    return taught || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation)) || notAPartySuggestion_(situation);
   }
   /**
    * l16-bank-rules: a narration the pack's own words call a tax-office payment or a card settlement is no supplier or customer: it is PROPOSED as that answer of bank-entry.whatIsThis (tax paid against the tax head, card takings into the card account),
@@ -1086,7 +1088,21 @@
     var learnedEvent = learnedRule.event
       ? JSON.parse(JSON.stringify(learnedRule.event))
       : { type: situation.out ? 'payment_made' : 'payment_received', mode: 'bank', party: learnedRule.party };
-    return situation.base(learnedEvent, 'learned', 'medium', learnedReason_(learnedRule), { source: learnedRule.source || null, learned_id: learnedRule.id || null });
+    var flag = ruleFlagOf_(learnedRule, situation);
+    return situation.base(learnedEvent, 'learned', flag ? 'low' : 'medium', learnedReason_(learnedRule) + (flag ? ' — but ' + flag : ''), { source: learnedRule.source || null, learned_id: learnedRule.id || null, rule_flag: flag });
+  }
+  /**
+   * bank rules slice 1: why a taught rule may NOT be trusted for THIS line, in words, or null. A flagged proposal can never be ready (bank-project blocker 'rule_check'), a tick does not clear it:
+   * a payment the pack's words call a tax-office payment always asks (one tax office takes several taxes through one payee) · an account-coded rule needs the line's whole cleaned phrase, as taught · and the amount it was taught at.
+   * A rule that names a party is a payment to that party at any amount.
+   */
+  function ruleFlagOf_(learnedRule, situation) {
+    var not = bankEntry_().notAParty(situation.text, { rules: situation.rules, out: situation.out, has: hasWord_ });
+    if ((not && not.kind === 'tax_payment') || (learnedRule.event && learnedRule.event.type === 'tax_payment')) return 'a payment to the tax office is always asked, whatever was taught';
+    if (!learnedRule.event || learnedRule.party || learnedRule.has.indexOf('@') >= 0) return null;
+    if (learnedRule.phrase && phraseOf_(situation.line.narration) !== learnedRule.phrase) return 'only part of this line is what you taught';
+    if (learnedRule.amount_minor != null && learnedRule.amount_minor !== situation.minor) return 'the amount is not the one you taught it at';
+    return null;
   }
   /** why a taught rule is offered: the words it matched, who it was said to be, and the day it was taught */
   function learnedReason_(learnedRule) {
@@ -1242,6 +1258,7 @@
       res.source = extra.source;
       res.learned_id = extra.learned_id;
     }
+    if (extra && extra.rule_flag) res.rule_flag = extra.rule_flag; /* a taught rule that does not fully fit: the screen says why, bank-project holds the line (blocker rule_check) */
     if (extra && extra.needs) {
       res.needs = extra.needs;
       res.entry = null;
@@ -1801,6 +1818,16 @@
     var words = String(text).toUpperCase().split(/\s+/).filter(Boolean);
     return !words.length || words.every(function (w) { return w.length < 3 || GENERIC_WORDS_.indexOf(w) >= 0; });
   }
+  /** the line's whole cleaned phrase: its words in order, upper case, with digits and references left out; the bank's own filler stays (it is part of what the person confirmed) */
+  function phraseOf_(narration) {
+    return String(narration || '')
+      .toUpperCase()
+      .split(/[^A-Z0-9&]+/)
+      .filter(function (item) {
+        return item && !/[0-9]/.test(item);
+      })
+      .join(' ');
+  }
   function learnedFor_(line, rules, out) {
     if (!rules || !rules.length) return null;
     var lower = String(line.narration || '').toLowerCase(),
@@ -1846,16 +1873,19 @@
     if (money.debit > 0 === money.credit > 0) return { ok: false, why: 'a statement line has money going one way' };
     if (!e.party && !e.event) return { ok: false, why: 'nothing to learn — no party and no entry were confirmed' };
     var bankRules = bankOf_(taught),
-      text = tokenOf_(statementLine.narration, bankRules ? bankRules.pack : null);
+      token = tokenOf_(statementLine.narration, bankRules ? bankRules.pack : null),
+      text = e.party || (token && token.indexOf('@') >= 0) ? token : phraseOf_(statementLine.narration); /* an account-coded answer is keyed on the whole cleaned phrase ("ACCOUNT FEE"), never on two words of it */
     if (!text) return { ok: false, why: 'the narration has no word that names who paid' };
-    if (tooCommon_(text)) return { ok: false, why: 'a rule on "' + text.toLowerCase() + '" alone would match unrelated lines — add the payer name or handle, then teach it again' };
-    return { ok: true, rule: learnedRuleOf_(statementLine, e, taught, text, SIDE_(money.debit)) };
+    if (!(text === phraseOf_(statementLine.narration) && !e.party) && tooCommon_(text)) return { ok: false, why: 'a rule on "' + text.toLowerCase() + '" alone would match unrelated lines — add the payer name or handle, then teach it again' };
+    return { ok: true, rule: learnedRuleOf_(statementLine, e, taught, text, SIDE_(money.debit), money.debit > 0 ? money.debit : money.credit) };
   }
   /** the rule a confirmed explanation becomes: the words to look for, the side, who or what it was, and where it came from (the line's date and first 60 characters, when and by whom) */
-  function learnedRuleOf_(statementLine, e, taught, text, side) {
+  function learnedRuleOf_(statementLine, e, taught, text, side, amountMinor) {
     return {
       id: side + ':' + text.replace(/\s+/g, '_'),
       has: text,
+      phrase: phraseOf_(statementLine.narration),
+      amount_minor: amountMinor,
       side: side,
       party: e.party || null,
       party_name: e.party_name || null,
