@@ -1647,7 +1647,7 @@ body.lab-only #cbtestpanel{
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
 <script src="/engine/tax.js"></script>   <!-- the adopted BUNDLE: reg-* packs + regulation + tax-packs + tax-slab (CBTaxSlab) + tax (CBTax), one file (T2-ENGONCE) -->
 <script src="/app/tax-slab-ui.js"></script>   <!-- cbSlabOptionsHTML · cbcatSlabPickHTML · the rate chip and the ask-once menu: ONE copy for app.html, catalogue.html and the counter (F5 W1a) -->
-<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
+<script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
@@ -22511,6 +22511,7 @@ function chitPaymentCell(c, cell, quoted) {
      seller's copy. A buyer's view of paying (the seller's QR) is a separate thing, not this cell. */
   const h = (c && c.header) || c || {};
   if (h.sender_entity_id && typeof SESSION !== 'undefined' && SESSION && SESSION.entity && h.sender_entity_id === SESSION.entity) return '';
+  if (/^(credit_note|debit_note)$/.test(chitPurposeOf(c))) return ''; /* AU-F-11: a credit note is money owed back, not a bill to be paid: no Unpaid, no Mark paid, no QR */
   const bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
   const pay = bj.payment || null;
   const nestedVal = pay
@@ -25759,6 +25760,15 @@ function frozenMoney(c) {
    2026-10-02 11:14 IST) a bill could be issued without stored figures; such a bill says so, plainly, as a KNOWN error — no number.
    A bill issued after it with no figures is a real fault and shows the red error. */
 const ONE_COMPUTATION_SINCE = '2026-10-02T05:44:00Z';
+/** AU-F-11: the document's own head (title, supplier name · tax number · address, date, number; on a credit note the invoice and the reason) on a rail invoice or note, from the ONE painter, app/chit-doc-head.js */
+function chitDocHead(c) {
+  const bj = c.business_json || (c.header && c.header.business_json) || {};
+  return window.CBDocHead ? CBDocHead.html({ purpose: chitPurposeOf(c), bj, no: bj.bill_no || bj.printed_as || '' }) : '';
+}
+/** the chit's purpose, whichever shape carries it: design 1's `kind`, a raw chit's `purpose`, a header's */
+function chitPurposeOf(c) {
+  return String((c && (c.kind || c.purpose)) || (c && c.header && c.header.purpose) || '');
+}
 function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   const FM = frozenMoney(c);
   if (!FM) {
@@ -27083,7 +27093,7 @@ function detailInner() {
   if (UI.dtab === 'input' && !inputHTML) UI.dtab = 'content';
   if (UI.dtab === 'input') body = inputHTML;
   if (UI.dtab === 'content')
-    body = `<div class="itab">${items}${frozenMoneyHTML(c, 'chit-money', 'chit-total')}</div>
+    body = `<div class="itab">${chitDocHead(c)}${items}${frozenMoneyHTML(c, 'chit-money', 'chit-total')}</div>
      ${quotesHost(c)}${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if (UI.dtab === 'messages') body = messagesTab(c);
   if (UI.dtab === 'status') body = booksBlockHTML(c) + statusTabHtml(c);
