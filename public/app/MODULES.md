@@ -15,10 +15,11 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (111)
+## Capabilities (125)
 
 | file | loading · nav key | what it is |
 |---|---|---|
+| `cap-admin-guard.js` | — | public/app/cap-admin-guard.js — Profile and Settings: the unsaved-changes guard ("Not saved": Stay here · Discard · Save and continue). Split out of c |
 | `cap-admin.js` | lazy · mis, profile, settings, assistreview | the "admin" capability (progressively loaded on demand) |
 | `cap-adopt.js` | lazy · on demand | TAKING A SUPPLIER'S DELIVERY INTO YOUR OWN CATALOGUE |
 | `cap-assist.js` | — |  |
@@ -44,6 +45,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-books-waiting-cells.js` | — | CB ACCOUNTS: the cells of the Waiting grid (what is stuck, why, and the one fix per row). Split out of cap-books.js, code moved verbatim; nothing is a |
 | `cap-books-waiting-view.js` | — | CB ACCOUNTS: the Waiting tab and the Accounts tab. Split out of cap-books.js, code moved verbatim; nothing is added up here — every figure is the serv |
 | `cap-books.js` | lazy · ledger | cap-books.js — THE LEDGER: parties, statements, payments, day book, trial balance, P&L, balance sheet, dues, month |
+| `cap-catalogue-import.js` | eager | the catalogue FILE IMPORT: pick a file, check it (the dry run), import the good rows, download the rejects. Split out of cap-catalogue.js (file-size r |
 | `cap-catalogue.js` | eager | THE CATALOGUE'S PRIMITIVES, ONE COPY, and the catalogue as a small app (T3-CATALOGUE, 2026-10-14) |
 | `cap-categories.js` | lazy · categories |  |
 | `cap-catsetup.js` | lazy · catsetup |  |
@@ -51,6 +53,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
 | `cap-cmdb.js` | lazy · on demand |  |
 | `cap-compare.js` | — | cap-compare.js — PARALLEL RUN (PR1, 2026-10-13): CB Accounts › Books › Parallel run. An auditor keeps the shop's books in Tally (IN) or Xero / QuickBo |
+| `cap-connector-reissue.js` | — | the connector REISSUE step-up: re-type the gateway name + a one-time code emailed to the entity, then a fresh package or key. Split out of cap-connect |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-assign.js` | — | cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body) |
@@ -63,6 +66,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file) |
 | `cap-crm-privacy-register.js` | — | cap-crm-privacy-register.js — CB CRM: the shop's PRIVACY REQUESTS register (#/privacy): the list, Log a request, Answer a request |
 | `cap-crm-privacy.js` | — | cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy) |
+| `cap-crm-record-log.js` | — | the LOG SHEET on a party's record: a call, a visit, a WhatsApp or a note, with the follow-up it may leave. Split out of cap-crm-record.js (file-size r |
 | `cap-crm-record.js` | — | cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit |
 | `cap-crm-timeline.js` | — | cap-crm-timeline.js — CB CRM: a party's whole history, answered 50 at a time by the server (the record's Timeline tab) |
 | `cap-crm.js` | — | cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares |
@@ -85,6 +89,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
 | `cap-flag.js` | — |  |
+| `cap-folders-metrics.js` | — | the METRICS pane of a folder: the clock, the disputes, the money by currency and the reconciliation strip. Split out of cap-folders.js (file-size ratc |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
 | `cap-fx.js` | — | cap-fx.js — FOREIGN CURRENCY (FX1, 2026-10-14): CB Accounts › Setup › Rates, and Month lock's "Foreign balances" line |
 | `cap-iddocs.js` | lazy · on demand |  |
@@ -98,8 +103,10 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-mis-pictures.js` | — | CB FINANCE › REPORTS › PICTURES: the owner's MIS charts on one screen (MISCH, 2026-11-17) |
 | `cap-mis-trend.js` | — | CB FINANCE › REPORTS › TREND: sales by week, month, quarter and year, each beside the same period last year (RPT2, 2026-10-17) |
 | `cap-mis.js` | — | CB FINANCE › REPORTS: the rail measured, by the server, as one list (T3-P4-ACCOUNT, 2026-10-14) |
+| `cap-move-in-skipped.js` | — | Move in's SKIPPED ROWS: the list of rows the import held or skipped (with the reason), its download as a file, and the start-again door. Split out of |
 | `cap-move-in.js` | — | cap-move-in.js — MOVE IN FROM XERO / QUICKBOOKS (IM1, 2026-10-12): CB Accounts › Setup › Move in. One entry for the five exports a practice |
 | `cap-network-member.js` | — |  |
+| `cap-network-storefront.js` | — | the STOREFRONT panel of a network node: what the node's online shop shows and how it is set. Split out of cap-network.js (file-size ratchet, batch 112 |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-opening-bills.js` | — | cap-opening-bills.js — the BILL ROWS under a Customers or Suppliers ledger on the Opening balances grid (party · bill no · bill date · due · amount) a |
 | `cap-opening-saved.js` | — | OPENING BALANCES, the SAVED VIEW capability: who entered it, when and from where, every line the server kept, and the year strip under it. Split out o |
@@ -111,12 +118,17 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
 | `cap-print.js` | — | PRINT SETUP: what prints on the bill, set ONCE and previewed LIVE (SET-WALK1 · W27 / W27b, 2026-10-15) |
 | `cap-quotes.js` | lazy · on demand | QUOTES: the rounds of a chit that is a quotation (RAIL-117). ONE painter, mounted wherever a chit is shown |
+| `cap-readiness-ai.js` | — | Trade readiness: the AI co-assist, split out of cap-readiness.js (web split 1129), code moved verbatim |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
+| `cap-register-impact.js` | — | THE REGISTER, Impact view: the graph walked from one entry, split out of cap-register.js (web split 1129), code moved verbatim |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
 | `cap-rewards.js` | eager | cap-rewards.js — (global CBRewardsPane, NOT CBRewards: that name is the vendored engine /engine/rewards.js, CRM-255) THE REWARDS PANE, ONE COPY (T3-P2 |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
+| `cap-settings-guide.js` | — | public/app/cap-settings-guide.js — CB Settings › Connectors: the "Get it" column (Download · Guide) and the Guide row action (WALK-REG R32). Split out |
+| `cap-settings-provider.js` | — | public/app/cap-settings-provider.js — CB Settings › Account: "Sign in with Google", the Connect and Disconnect row (SSO-1129, SEC-112 P1a). Split out |
 | `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
+| `cap-shop-patch.js` | — | the vault's merge-patch, split out of cap-shop.js (web split 1129), code moved verbatim |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
 | `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
 | `cap-standards-build.js` | — |  |
@@ -125,13 +137,15 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
 | `cap-tasks-assign.js` | — | cap-tasks-assign.js — Tasks & Orders: the board's rows on the ONE work-queue capability (CBAssign.queue, app/assign-bar.js): Mine · Unassigned · Every |
+| `cap-tasks-words.js` | — | Tasks & Orders: the WORDS a board row and a sheet say (age, channel, delivery, asked-for day, stage marks, who holds it, how many lines). Split out of |
 | `cap-tasks.js` | — |  |
 | `cap-testing.js` | lazy · on demand |  |
 | `cap-traceability.js` | lazy · traceability | TRACEABILITY capability (lazy via ensureCap('traceability')) |
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
+| `cap-worklist-raida.js` | — | the RAIDA register on a work line (risks · actions · issues · decisions · assumptions): load, open, close, the rows and the section. Split out of cap- |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (134)
+## Shared (143)
 
 | file | loading | what it is |
 |---|---|---|
@@ -185,11 +199,14 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cb-words.js` | eager |  |
 | `chart-sample.js` | — | the REP-36 theme sample page (public/chart-sample.html): the shared chart helper in each of the 16 themes, contrast measured |
 | `chit-doc-head.js` | eager |  |
+| `chit-pay.js` | eager | MARK A CHIT PAID: the sheet, the press, the books' question, and the UPI QR for a walk-in customer |
 | `chit-price-moved.js` | eager | A DRAFT SENT LONG AFTER IT WAS PRICED: SAY WHICH LINES MOVED AND LET THE PERSON DECIDE (CTR-245, CTR-212 S4, web half) |
 | `chit-sheet-sample.js` | eager | THE CHIT SHEET'S SAMPLE capability (design track): the detail drawn from fixed figures so the whole look can be walked before it is wired. Split out o |
 | `chit-sheet.js` | eager |  |
 | `chit-unpay.js` | eager |  |
+| `compose-catalogue-fill.js` | eager | COMPOSE, ONCE ITS MODAL IS OPEN: fill the product picker in place |
 | `core-answers.js` | eager | small readers of an api answer, split out of core.js (file-size ratchet, batch 1128), code moved verbatim |
+| `core-copy.js` | eager | copies and redaction for core.js's api client, split out of core.js (web split 1129), code moved verbatim |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
 | `country-compare.js` | — |  |
 | `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax I |
@@ -199,7 +216,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `device-id.js` | eager | device-id.js — CBDevice: THIS BROWSER'S DEVICE ID, AND X-Device-Id ON EVERY CALL TO THE API (K-SEC PR A, 2026-10-21) |
 | `edition.js` | — | · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions |
 | `embed-host.js` | — | .html); CBEmbed.open is called in till.html only (Add a person: grep -n 'CBEmbed\.open' public) |
-| `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
+| `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split). Classic script, shared global scope. Loaded by /app.html AFTER core.js and BEFORE the ma |
 | `home2.js` | — | home2.js — CBHome2: the one-page Home (index.html, UX-127, Athi 18 and 21 Nov 2026). The old long Home is gone: one Home, no switch |
 | `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
 | `kural.js` | — |  |
@@ -212,9 +229,11 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `list-legacy.js` | eager | public/app/list-legacy.js — the legacy list names (listCtl search, filter, sort, count; lazyWrap) kept until the lists move onto CBList |
 | `lock-words.js` | — |  |
 | `mis-charts.js` | — | the owner's MIS pictures: the data ADAPTERS from the server's answers to CBDraw's shapes (MISCH, 2026-11-17) |
+| `modal-dialog.js` | eager | THE DIALOG PATTERN for every shop popup: a name, focus in, Tab kept inside |
 | `modal-host.js` | — |  |
 | `network-app.js` | — |  |
 | `network-books.js` | — |  |
+| `network-lab-check.js` | — | the Network Lab's CHECK: post the sketch to the server's validate and show what would break or be made. Split out of network-design.html (file-size ra |
 | `offer-add-confirm.js` | eager |  |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
@@ -224,6 +243,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `preview-key.js` | eager |  |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `product-lab-rows.js` | — |  |
+| `product-lab-steps.js` | — | PRODUCT LAB'S STEP STRIP: Choose, then Price & shelf |
+| `promo-keys.js` | — | THE SHOP SCREEN'S KEYBOARD: the shortcuts of the promo show |
 | `queue-back.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
 | `rail-bell-html.js` | — |  |
@@ -245,6 +266,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `shortcuts.js` | — |  |
 | `showcase-templates.js` | eager |  |
 | `sides.js` | — |  |
+| `signin-more-ways.js` | eager | signin-more-ways.js — OTHER WAYS TO SIGN IN: the provider doors (Google, Microsoft) of the one sign-in window |
+| `signin-session.js` | eager | signin-session.js — THE SESSION A SIGN-IN LEAVES: reading a verify answer into the apps' session, and keeping it |
 | `signin-ui.js` | eager | signin-ui.js — CBSignin.mount: THE ONE SIGN-IN WINDOW, for every app (M14, DECISIONS 2026-10-08) |
 | `std-build-view.js` | — |  |
 | `step-flow.js` | eager | .html): accounts, app, crm, finance, shop. CBSteps.create is called in app.html (3 sites), |
@@ -287,51 +310,51 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 105 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
-| `app.html` | 55 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
-| `authority-forms.html` | 18 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
+| `accounts.html` | 110 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `app.html` | 62 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
+| `authority-forms.html` | 20 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 26 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
 | `bill-print.html` | 3 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |
 | `cart-design.html` | 3 | the paper drawing of the Compose (author a chit) cart: four steps, mock only, no request leaves the page. |
-| `catalogue.html` | 30 | the Catalogue page: the shop's products as it keeps them (one CBList), their offers and slabs attached with the downstream result shown beside. |
+| `catalogue.html` | 34 | the Catalogue page: the shop's products as it keeps them (one CBList), their offers and slabs attached with the downstream result shown beside. |
 | `chart-sample.html` | 20 | the REP-36 theme sample: each kind of the shared chart helper (column with previous, sparkline, status bar, month strip) drawn in every one of the 16 themes with its cont |
 | `combo-lab.html` | 0 | the old Combo Lab address: it only forwards to offer-lab-next.html?mode=combo (T2-LABS), the page that wears the Finance frame. |
 | `conversion-lab.html` | 12 | the Conversion lab: a quantity valued, or a priced basket converted, by the real engine (engine/convert.js · CBConvert, with CBMoney and CBUnits) on a bare page, so a con |
 | `country-lab.html` | 17 | the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines. |
-| `crm.html` | 69 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
+| `crm.html` | 74 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
 | `design-mock.html` | 2 | a paper prototype of the network store page: no API, no build |
 | `embed.html` | 7 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
-| `employees.html` | 30 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
-| `finance.html` | 66 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
+| `employees.html` | 32 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
+| `finance.html` | 70 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
 | `intake.html` | 4 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
 | `iot-howitworks.html` | 0 | the how-IoT-works showcase page: a standalone explainer with no data |
-| `know-your-business.html` | 18 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
+| `know-your-business.html` | 20 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
 | `lifecycle-test.html` | 2 | the IoT lifecycle live check: register, connect a device, ingest, verify. |
 | `list-lab.html` | 15 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
-| `network-design.html` | 14 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
+| `network-design.html` | 15 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 6 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 51 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 53 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 18 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
-| `operations.html` | 27 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
-| `product-lab.html` | 14 | the Product Lab: adopt a ready-made list, one row per product with its units as choices (each with its GST unit code), then price and shelf. |
-| `promo.html` | 4 | the shop screen (a second screen / TV): the shop's offers as a carousel drawn on one canvas, the same drawing saved as a PNG |
+| `operations.html` | 30 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
+| `product-lab.html` | 15 | the Product Lab: adopt a ready-made list, one row per product with its units as choices (each with its GST unit code), then price and shelf. |
+| `promo.html` | 5 | the shop screen (a second screen / TV): the shop's offers as a carousel drawn on one canvas, the same drawing saved as a PNG |
 | `screen-gallery.html` | 2 | the Screen Library: every entry of every screen registry drawn on one page |
-| `settings.html` | 31 | the CB Settings page: Business · Counters & keys · Connectors · Policy & Localisation · Plan & usage · Standards. |
+| `settings.html` | 37 | the CB Settings page: Business · Counters & keys · Connectors · Policy & Localisation · Plan & usage · Standards. |
 | `shell-lab.html` | 13 | the Shell Lab: the shell (app/shell.js · CBShell) on a page, the pass mark e2e/shell.cjs measures; ?harness=1 is the bare gallery. |
 | `shop.html` | 7 | the Storefront: a shop's public front (its items, the cart, the order) — the shop's own name in its brand row, the frame's bar above. |
-| `signin-lab.html` | 13 | the Sign-in Lab: the sign-in window on a practice shop, roles and access, and the Roadmap tab (every manifest entry by state, with its fits line). |
+| `signin-lab.html` | 15 | the Sign-in Lab: the sign-in window on a practice shop, roles and access, and the Roadmap tab (every manifest entry by state, with its fits line). |
 | `standards.html` | 24 | the Standards page: the register (cap-standards.js), Works with (compat.json), Compared with (compare.json), the country matrix — one CBList. |
 | `store.html` | 7 | the network Store page: a network's shops and their catalogues as one storefront (?net=). |
 | `storefront-design.html` | 2 | the paper drawing of the Storefront order: four steps (items, delivery, review, who you are), mock only, no request leaves the page. |
 | `supplier-design.html` | 2 | the paper drawing of the Suppliers order: three steps (items, details, review), mock only, no request leaves the page. |
-| `tasks.html` | 53 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
+| `tasks.html` | 57 | the Tasks page: the rail's task list as its own page (the Task table of app.html, one CBList), a row opens the chit. |
 | `testing.html` | 11 | the test board: cases, runs and findings in one list, filters and folds; column widths through app/table-resize.js. |
-| `till.html` | 8 | the counter: sign-in · day open · the bill (CBTax · CBOffers · the rewards words) · the slip · the offline queue — ONE master, vendored to the web. |
+| `till.html` | 10 | the counter: sign-in · day open · the bill (CBTax · CBOffers · the rewards words) · the slip · the offline queue — ONE master, vendored to the web. |
 | `ui-standard.html` | 20 | the UI standard page (screen UIS001): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js. |
 | `cmdb/record.html` | 2 | the one page for every CMDB record, drawn from the cloud definition of kind 'cmdb' |
 | `docs/life-of-a-trade.html` | 0 | The Life of a Trade — ChitBridge |
 
 ---
 
-*245 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*268 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
