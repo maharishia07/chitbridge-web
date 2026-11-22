@@ -28,7 +28,7 @@ function party(p, rec) {
   const roles = rolesOf(p.roles), r = rec || {}, cu = r.customer || {}, su = r.supplier || {};
   const gst = (p.tax_ids || []).filter((t) => t.scheme === 'GSTIN')[0];
   const o = {
-    party_id: p.party_id, display_name: p.display_name, user_id: p.user_id, bridge_id: p.bridge_id, email: p.email || null, phone: p.phone || null, otp_contact: null, gstn: null, city: p.city || null, status: 'active',
+    party_id: p.party_id, display_name: p.display_name, user_id: p.user_id, bridge_id: p.bridge_id, email: p.email || null, phone: p.phone || null, gstn: null, city: p.city || null, status: 'active',
     kind: p.kind, on_chitbridge: !!p.on_chitbridge, may_trade: p.on_chitbridge ? { ok: true } : { ok: false, why: p.why_not || 'local' },
     roles, party_no: p.party_no || null, last_activity: p.last_at || null,
   };
@@ -136,6 +136,7 @@ function record(rows, id, rec, fus, now) {
     points: pts ? { programme: pts.programme || 'Rewards', points: pts.balance != null ? pts.balance : pts.points, worth: 0 } : null,
     migrated: true,
     unbilled: row.unbilled || { n: 0, minor: 0, currency: null }, /* CRM-32: the record carries the server's "not billed yet" figure too (the contract lists it, batch 1126) */
+    bills: row.bills || { n: 0, last_at: null }, /* LV-17: the party record carries the bills count and the last bill's day (the contract lists it) */
     contact_prefs: prefsBefore(),
     followups: (fus || []).filter((f) => f.party_id === id && !f.done_at).map((f) => followupOne(f, now)),
     may: mayOf(null),   /* W2-CRM: the record carries the server's may/why; a handler overrides it with the request's */

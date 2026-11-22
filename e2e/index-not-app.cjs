@@ -24,6 +24,7 @@ const ALLOW = [
   { file: 'public/till.html',           re: /\(window\.CB_WEB \|\| 'https:\/\/chitbridge-web\.vercel\.app'\) \+ '\/app\.html'\)/, round: 'SET2', app: 'settings', what: 'cbHome()\'s own literal' },
   { file: 'public/till.html',           re: /window\.open\(cbHome\(\) \+ '#\/app', '_blank', 'noopener'\)/, round: 'SET2', app: 'settings', what: 'whoseShopFix: pair this PC to the right counter (Counters & keys)' },
   { file: 'public/till.html',           re: /cbHome\(\) \+ '#\/app\/catalogue'/,               round: 'CAT1', app: 'catalogue', what: 'billWarnFix: an item\'s tax rate (the state half opens Settings › Your shop since SET1)' },
+  { file: 'public/app/cap-settings.js', re: /providerLinkStart[^\n]*next: '\/app\.html'/, round: 'SSO1', app: 'settings', what: 'Link a sign-in provider: the landing is read once by app.html at boot (SSO P1a critic H1); the return door moves with it' },
 ];
 
 /* ── the pages a customer reaches from Home: index.html + every manifest route / via + the pages those link to ── */

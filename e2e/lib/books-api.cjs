@@ -86,7 +86,7 @@ Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, asset
 /** one post waiting for the owner (lib/books-hooks waitingRow) */
 /* STD1: `todo` (accept · add_supplier · record) and `name` are the row's DATA (the books parked them) — the harness says them; never read from `reason` */
 /* R106: `short` = { theirs_minor, ours_minor, short_minor } (integers) when their bill is above the count, else null (FIELDS waiting[].short) */
-const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', todo: 'record', name: null, short: null, candidates: [], source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
+const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', todo: 'record', name: null, short: null, candidates: [], wait: 'acceptance', source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
 /** GET /api/books/trial-balance */
 const trialBalance = (rows, o) => { const r = (rows || []).map((x) => Object.assign({ group: 'group' }, x)); const dr = r.reduce((t, x) => t + (x.dr_minor || 0), 0), cr = r.reduce((t, x) => t + (x.cr_minor || 0), 0);
   return Object.assign({ currency: 'INR', asOf: DAY, rows: r, total_dr_minor: dr, total_cr_minor: cr, balanced: dr === cr }, o || {}); };

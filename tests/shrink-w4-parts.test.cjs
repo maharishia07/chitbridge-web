@@ -23,7 +23,7 @@ function stage(tx) {
   const calls = [], toasts = [], asks = [];
   let accept = true;
   const sandbox = {
-    api: async (name, o) => { calls.push({ name, o }); return name === 'defGet' ? { definition: { current_version: 1, sub_kind: 'percent_off', name: 'Diwali' }, versions: [{ version: 1, rules: { kind: 'percent_off', value: 10 } }] } : {}; },
+    api: async (name, o) => { calls.push({ name, o }); return name === 'defGet' ? { definition: { current_version: 1, sub_kind: 'percent_off', name: 'Diwali' }, versions: [{ version: 1, rules: { kind: 'percent_off', value: 10, applies_to: { item_ids: ['p1'] } } }] } : {}; },
     toast: (m) => toasts.push(m), tx, txn: (one, many, n) => tx(n === 1 ? one : many).replace('{count}', n), esc: (s) => String(s),
     fmtMoney: (n, code) => (code || '') + ' ' + n, showBusy() {}, hideBusy() {}, closeModal() {}, loadCatalogue: async () => {}, openChit() {},
     prodOfferTerms: () => '10% off', prodOfferWindow: () => 'no end date', MSG: { fail: () => 'fail' }, _DEFS: {}, CBDEF: null,

@@ -23,6 +23,9 @@ const helpers = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'hel
 const m = helpers.match(/function esc\([\s\S]*?\n\}\n/);
 assert(m, 'helpers.js has esc');
 (0, eval)(m[0] + ';globalThis.esc = esc;');
+const mj = helpers.match(/function escJs\([\s\S]*?\n\}\n/);
+assert(mj, 'helpers.js has escJs');
+(0, eval)(mj[0] + ';globalThis.escJs = escJs;');
 globalThis.tx = (s) => s;
 globalThis.txf = (s, v) => globalThis.tx(s).replace(/\{(\w+)\}/g, (w, k) => (v && k in v ? String(v[k]) : w));
 globalThis.inr = (n) => String(n);

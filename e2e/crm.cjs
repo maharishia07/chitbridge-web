@@ -67,7 +67,7 @@ async function route(S, r) {
   /* ── the CRM, answered as chitbridge-api answers it (e2e/lib/crm-api.cjs builds the shapes from the golden seed; the contract holds them) ── */
   /* L1 leads, answered as the API answers them (S.leads: the lead rows; S.leadsOff: b297 not run yet) */
   if (p === '/api/crm/parties' && m === 'GET' && u.searchParams.get('view') === 'leads') {
-    const L = (S.leads || []).map((q2) => ({ party_id: q2.party_id, display_name: q2.display_name, user_id: '~mayur.cus-' + q2.party_id.slice(-4), bridge_id: null, email: null, phone: q2.phone || null, otp_contact: q2.phone || null, gstn: null, status: 'active',
+    const L = (S.leads || []).map((q2) => ({ party_id: q2.party_id, display_name: q2.display_name, user_id: '~mayur.cus-' + q2.party_id.slice(-4), bridge_id: null, email: null, phone: q2.phone || null, gstn: null, status: 'active',
       city: null, kind: 'local', on_chitbridge: false, may_trade: { ok: false, why: 'local' }, roles: { customer: true, supplier: false }, party_no: q2.party_no || null, last_activity: null,
       customer: { list_id: 'cl-' + q2.party_id, segment: 'new', segment_override: null, txn_count: 0, last_txn_at: null, groups: [], customer_type: 'entity', added_via: 'lead' },
       lead: { stage: q2.stage || 'lead', since: '2026-10-09T09:00:00.000Z' }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } }, dues: null,

@@ -19,10 +19,10 @@ const ok = (name, cond, info) => { if (cond) { pass++; console.log('   ok   ' + 
 
 const calls = [], asks = [], toasts = [];
 let focused = 0;
-const offer = { definition: { current_version: 1, sub_kind: 'percent_off', name: 'Diwali 10' }, versions: [{ version: 1, rules: { kind: 'percent_off', value: 10 } }] };
+const offer = { definition: { current_version: 1, sub_kind: 'percent_off', name: 'Diwali 10' }, versions: [{ version: 1, rules: { kind: 'percent_off', value: 10, applies_to: { item_ids: ['p1'] } } }] }; /* reviews12 GF-23: an offer for EVERY product refuses an add, so the offer here names one product */
 const sb = {
   api: async (name, o) => { calls.push({ name, o }); return name === 'defGet' ? JSON.parse(JSON.stringify(offer)) : {}; },
-  toast(m) { toasts.push(m); }, tx: (s) => s, txn: (one, many, n) => (n === 1 ? one : many).replace('{count}', n), esc: (s) => String(s),
+  toast(m) { toasts.push(m); }, failWords: (e, fallback) => fallback || 'something went wrong', tx: (s) => s, txn: (one, many, n) => (n === 1 ? one : many).replace('{count}', n), esc: (s) => String(s),
   fmtMoney: (n, code) => (n == null ? '-' : (code || '') + ' ' + n), showBusy() {}, hideBusy() {}, closeModal() {}, loadCatalogue: async () => {},
   prodOfferTerms: () => '10% off', prodOfferWindow: () => 'no end date', MSG: { fail: () => 'fail' },
   openChit() {}, _DEFS: {}, CBDEF: null,
@@ -86,7 +86,7 @@ const tick = () => new Promise((r) => setImmediate(r));
 
   /* (b1) the offer moved while the question was up: nothing is saved */
   asks.length = 0; calls.length = 0; toasts.length = 0;
-  sb.UI.prodPicked = new Set(['p1', 'p2']); offer.versions[0].rules.applies_to = {};
+  sb.UI.prodPicked = new Set(['p1', 'p2']); offer.versions[0].rules.applies_to = { item_ids: ['p1'] };
   const go5 = sb.prodOfferApply('o1', true); await tick(); await tick();
   offer.definition.current_version = 2; asks[0][3](); await go5;
   ok('version moved while confirming: no defSave and the words say so', writes('defSave') === 0 && toasts.some((m) => /changed while you were confirming/.test(m)), toasts.join('|') + ' saves ' + writes('defSave'));

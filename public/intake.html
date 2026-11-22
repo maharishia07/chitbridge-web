@@ -108,8 +108,7 @@ function loginView(msg) {
 }
 /** the sentence a refused call gives (the RFC 9457 problem body: detail, else message, else title), or the fallback — never silence */
 function problemWords(reply, fallback) {
-  var j = (reply && reply.j) || {};
-  return String(j.detail || j.message || j.title || fallback);
+  return bodyWords((reply && reply.j) || {}, fallback); /* cb-words.js: the answer's own words (detail, message, title), tags stripped, never a raw .message */
 }
 /** the line under the form: the form (and what was typed) stays where it is */
 function loginSay(words) {

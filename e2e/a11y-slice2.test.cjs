@@ -44,7 +44,7 @@ ok(/<div class="tabs" role="group" aria-label="Views">/.test(read('public/signin
 
 const screen = read('public/engine/screen.js');
 const themeVar = (theme, name) => {
-  const at = screen.indexOf('\n  ' + theme + ':');
+  const at = screen.lastIndexOf('\n    ' + theme + ':'); /* the engine's themes table sits one level in since the engines adoption */
   const m = screen.slice(at, at + 4000).match(new RegExp("'" + name + "':\\s*'(#[0-9A-Fa-f]{6})'"));
   return m && m[1];
 };

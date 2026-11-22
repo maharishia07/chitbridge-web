@@ -7244,10 +7244,10 @@ function t(key, english) {
 
 /* txn() — a sentence whose wording depends on a COUNT — lives in app/accounts-shell.js, next to tx() and txf() (every CB page counts) */
 
-/** the greyed Compose of a view-only login: it stays on the rail with the reason as its title and label */
-function composeViewOnlyBtn(key, on, ic, label) {
+/** the greyed Compose of a view-only login: it stays on the rail with the reason as its title and label. These are the attributes of the ONE rail button (data-cbsid APP001-B22, drawn once in the rail's generic line), not a second element definition */
+function composeViewOnlyAttrs(label) {
   const reason = composeViewOnlyWhy();
-  return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}" aria-disabled="true" data-ready="no" title="${esc(reason)}" aria-label="${esc(label + ' — ' + reason)}" style="opacity:.5;cursor:not-allowed"><span class="ic">${ic}</span>${label}</button>`;
+  return ` aria-disabled="true" data-ready="no" title="${esc(reason)}" aria-label="${esc(label + ' — ' + reason)}" style="opacity:.5;cursor:not-allowed"`;
 }
 /** the Messages rail item with its unread badge (the server's real reply count) */
 function messagesBtn(key, on, ic, label, click) {
@@ -7271,9 +7271,7 @@ function menuBtn(x) {
   /* ⚠️ Two entries are ACTS, not destinations — they open something rather than navigating, so they cannot
      go through navTo. A third would want a registry; two do not. */
   /* WALK-N N-F-02: a VIEW-ONLY login cannot send (the api refuses it): Compose stays on the rail, greyed, with the reason (helpers.js viewOnlyLogin - the one reading of the login's level) */
-  if (key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin()) {
-    return composeViewOnlyBtn(key, on, ic, label);
-  }
+  const greyCompose = key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin(); /* the same one button, greyed (its state attributes below) */
   const click = key === 'compose' ? `compose()` : key === 'selfbill' ? `selfBillOpen()` : key === 'counter' ? `counterOpen()` : `navTo('${key}')`;
   /**
    * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
@@ -7295,7 +7293,7 @@ function menuBtn(x) {
   if (key === 'bills') return `<a class="navlink" href="/accounts.html#bills" data-testid="nav-bills"><span class="ic">${ic}</span>${tx('Bills')} ↗</a>`;
   if (key === 'ledger') return `<a class="navlink" href="/accounts.html" data-testid="nav-ledger"><span class="ic">${ic}</span>${tx('Accounts')} ↗</a>`;
   if (key !== 'task' && key !== 'order')
-    return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
+    return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}"${greyCompose ? composeViewOnlyAttrs(label) : ` onclick="${click}"`}><span class="ic">${ic}</span>${label}</button>`;
   const fs = (UI.folders || []).filter((item) => (item.scope || 'task') === key);
   const open = trackIsOpen(key);
   /* The chevron only appears when there is something to collapse — a disclosure control for nothing is noise. */

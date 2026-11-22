@@ -25,6 +25,7 @@ ctx.window = ctx;
 ctx.tx = (english) => english; /* the string door (accounts-shell.js tx) is loaded by the page; English passes through, which is what this file reads */
 vm.createContext(ctx);
 vm.runInContext(read('app/helpers.js'), ctx);    /* T2-WEBPRIMS: esc · fmtMoney - the ONE copy, loaded by the page before its own script */
+vm.runInContext(read('app/cb-words.js'), ctx);   /* shop.html loads it before its script: failWords, cbApiParam (a foreign ?api= is ignored) */
 vm.runInContext(read('app/workflow.js'), ctx);   /* the page loads it before its own script (CBWorkflow.stageOf → the status words) */
 vm.runInContext(script, ctx);
 const run = (src) => vm.runInContext(src, ctx);

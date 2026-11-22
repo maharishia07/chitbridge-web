@@ -64,7 +64,7 @@ function fnSource(name) {
 globalThis.SESSION = { entity: 'me' };
 globalThis.chitUnpaidWord = () => 'Unpaid';
 globalThis.payHasUpi = () => false;
-eval(['chitPurposeOf', 'chitStatusWord', 'chitNoPayWhy', 'chitMarkPaidButton', 'chitPaymentCell', 'chitDocHead'].map(fnSource).join('\n') + '\nglobalThis.chitPaymentCell = chitPaymentCell; globalThis.chitDocHead = chitDocHead;');
+eval(['chitPurposeOf', 'chitStatusWord', 'chitNoPayWhy', 'chitMarkPaidButton', 'chitIsNote', 'chitNoteWord', 'chitPaymentCell', 'chitDocHead'].map(fnSource).join('\n') + '\nglobalThis.chitPaymentCell = chitPaymentCell; globalThis.chitDocHead = chitDocHead;');
 const cell = (label, value) => label + ':' + value;
 const strip = (kind, header) => ({ id: 'c1', kind, header: Object.assign({ sender_entity_id: 'them', current_status: 'pending' }, header || {}) });
 assert(/chit-mark-paid/.test(chitPaymentCell(strip('invoice'), cell, 100)), 'an invoice keeps Mark paid');

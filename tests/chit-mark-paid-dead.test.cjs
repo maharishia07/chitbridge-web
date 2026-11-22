@@ -35,7 +35,7 @@ for (const where of ['row', 'header', 'top']) {
 }
 for (const st of ['pending', 'delivered', 'read', 'accepted', 'in_progress', 'partial', 'completed', '']) {
   const html = chitMarkPaidButton(bill(st, 'row'), 100);
-  assert(/onclick="chitMarkPaid\('c1', 100\)"/.test(html) && !/aria-disabled|title=/.test(html), "'" + st + "': an open bill keeps the live button");
+  assert(/onclick="chitMarkPaid\(this\.dataset\.xa, 100\)"/.test(html) && /data-xa="c1"/.test(html) && !/aria-disabled|title=/.test(html), "'" + st + "': an open bill keeps the live button");
 }
 /* the set is the sheet's one list, the server's two ends */
 assert.deepStrictEqual(['cancelled', 'rejected', 'completed', 'pending'].map((s) => globalThis.CBSheet.isDead(s)), [true, true, false, false]);
@@ -57,5 +57,5 @@ for (const st of ['cancelled', 'rejected']) {
   const html = c2SpendHTML({}, { current_status: st, summary_json: {} }, null);
   assert(handed._status === st && /aria-disabled="true"/.test(html) && !/onclick=/.test(html), 'design 2 ' + st + ': Mark paid disabled');
 }
-assert(/onclick="chitMarkPaid\('c1', 100\)"/.test(c2SpendHTML({}, { current_status: 'pending', summary_json: {} }, null)), 'design 2 open bill: live');
+assert(/onclick="chitMarkPaid\(this\.dataset\.xa, 100\)"/.test(c2SpendHTML({}, { current_status: 'pending', summary_json: {} }, null)), 'design 2 open bill: live');
 console.log('chit-mark-paid-dead: ok');

@@ -141,7 +141,7 @@ const errBody = (msg, code) => ({ code, error: msg, message: msg });
 /** a lead as GET /parties?view=leads sends it: a MINTED party (kind local — with a bridge_id, as the mint gives one) on the customer list, added_via lead */
 function leadRow(L, l) {
   const stage = l.txn > 0 ? 'customer' : l.stage;
-  return { party_id: l.party_id, display_name: l.name, user_id: '~mayur.cus-' + String(l.n).padStart(4, '0'), bridge_id: 'CBL' + String(l.n).padStart(7, '0'), email: null, phone: l.phone, otp_contact: l.phone, gstn: null, city: null, status: 'active',
+  return { party_id: l.party_id, display_name: l.name, user_id: '~mayur.cus-' + String(l.n).padStart(4, '0'), bridge_id: 'CBL' + String(l.n).padStart(7, '0'), email: null, phone: l.phone, gstn: null, city: null, status: 'active',
     kind: 'local', on_chitbridge: false, may_trade: { ok: false, why: 'local' }, roles: { customer: true, supplier: false }, party_no: l.party_no, last_activity: l.last_at || null,
     customer: { list_id: 'cl-' + l.party_id, segment: 'new', segment_override: null, txn_count: l.txn, last_txn_at: l.txn ? l.last_txn_at : null, groups: [], customer_type: 'entity', added_via: 'lead' },
     lead: { stage, since: l.since }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } },

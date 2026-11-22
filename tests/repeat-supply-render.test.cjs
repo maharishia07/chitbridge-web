@@ -7,7 +7,7 @@ const fs = require('fs'), vm = require('vm'), assert = require('assert');
 let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
 
 const cx = vm.createContext({
-  console, EP: {}, tx: (s) => s, esc: (s) => String(s == null ? '' : s),
+  console, EP: {}, tx: (s) => s, esc: (s) => String(s == null ? '' : s), escJs: (s) => String(s == null ? '' : s),
   document: { getElementById: () => null, querySelector: () => null }, fmtMoney: (minor, cur) => cur + ' ' + minor
 });
 cx.window = cx;
