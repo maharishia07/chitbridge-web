@@ -17,7 +17,7 @@ const fs = require('fs'),
   cp = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
-const code = read('public/app/cap-network.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+const code = (read('public/app/cap-network.js') + read('public/app/cap-network-storefront.js')).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const run = (script) => cp.spawnSync(process.execPath, [path.join(root, 'e2e', script)], { encoding: 'utf8', timeout: 120000 });
 let bad = 0;
 const ok = (cond, what) => {
