@@ -491,7 +491,7 @@ function worklistScreen() {
       '" ' +
       (on ? 'checked' : '') +
       ' onchange="wlThen(&quot;' +
-      k +
+      escJs(k) +
       '&quot;)" style="width:15px;height:15px;accent-color:var(--blue)">' +
       label +
       '</label>'
@@ -1241,7 +1241,7 @@ function wlSecHead(k, name, hint, tone) {
     '<div data-cbsid="RAL002-C08" data-testid="wl-sec-' +
     k +
     '" onclick="wlSec(&quot;' +
-    k +
+    escJs(k) +
     '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;' +
     'padding:11px 2px;border-top:1px solid var(--line)">' +
     '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' +
@@ -1423,7 +1423,7 @@ function wlRaidaRow(e) {
               '<button data-cbsid="RAL002-B01" type="button" data-testid="wl-raida-disp-' +
               item +
               '" onclick="wlRaidaDisp(&quot;' +
-              item +
+              escJs(item) +
               '&quot;)"' +
               ' title="' +
               esc(RAIDA_ENDINGS[item].hint) +

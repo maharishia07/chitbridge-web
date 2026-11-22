@@ -1109,7 +1109,7 @@ function cbDefPickHTML(x, v) {
       esc(x.k) +
       '"' +
       ' onchange="cbDefSetRule(\'' +
-      x.k +
+      escJs(x.k) +
       '\',this.value)">' +
       x.pick
         .map(function (item) {
@@ -1140,7 +1140,7 @@ function cbDefPickHTML(x, v) {
     esc(x.k) +
     '"' +
     ' onchange="cbDefSetRule(\'' +
-    x.k +
+    escJs(x.k) +
     '\',this.value)">' +
     '<option value="">— everything —</option>' +
     list
@@ -1456,7 +1456,7 @@ function cbDefNoteFieldHTML(form) {
 function cbDefFieldHTML(x, v) {
   var id = 'cbdef-rule-' + esc(String(x.k).replace(/\./g, '-'));
   var set = function (expr) {
-    return ' oninput="cbDefSetRule(\'' + x.k + "'," + expr + ');cbDefPaintPreview()"';
+    return ' oninput="cbDefSetRule(\'' + escJs(x.k) + "'," + expr + ');cbDefPaintPreview()"';
   };
   if (x.check) {
     return (
@@ -1465,7 +1465,7 @@ function cbDefFieldHTML(x, v) {
       '"' +
       (v ? ' checked' : '') +
       ' onchange="cbDefSetCheck(\'' +
-      x.k +
+      escJs(x.k) +
       '\',this.checked)"><span>' +
       esc(x.label) +
       '</span></label>'
@@ -1476,7 +1476,7 @@ function cbDefFieldHTML(x, v) {
       '<select data-cbsid="SCR003-S05" class="inp" data-testid="' +
       id +
       '" onchange="cbDefSetRule(\'' +
-      x.k +
+      escJs(x.k) +
       '\',this.value);cbDefPaintPreview()">' +
       x.sel
         .map(function (item) {
@@ -2458,7 +2458,7 @@ function cbDefMineHTML() {
         kind +
         '"' +
         ' onclick="cbDefToggle(\'' +
-        mkey +
+        escJs(mkey) +
         '\')">' +
         '<span class="cbdef-ico">' +
         A.icon +
@@ -2477,13 +2477,13 @@ function cbDefMineHTML() {
           ? '<button data-cbsid="SCR003-B03" class="cbdef-new" data-testid="cbdef-home-' +
             kind +
             '" onclick="event.stopPropagation();cbDefGoHome(\'' +
-            A.home.nav +
+            escJs(A.home.nav) +
             "','" +
             (A.home.sec || '') +
             '\')">' +
             esc(A.home.label) +
             '</button>'
-          : '<button data-cbsid="SCR003-B04" class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>') +
+          : '<button data-cbsid="SCR003-B04" class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + escJs(kind) + '\')">+ New</button>') +
         '<span class="cbdef-caret">' +
         (mopen ? '▾' : '<span class=arw>▸</span>') +
         '</span>' +

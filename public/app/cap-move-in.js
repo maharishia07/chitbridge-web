@@ -194,7 +194,7 @@ function miSel(id, field, opts, selected) {
     '" data-testid="' +
     id +
     '" onchange="miSet(\'' +
-    field +
+    escJs(field) +
     '\', this.value)">' +
     opts
       .map(function (item) {

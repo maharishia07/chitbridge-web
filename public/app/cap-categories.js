@@ -1200,7 +1200,7 @@ function cbcatEditTabsHTML(cid) {
       '" data-testid="catg-etab-' +
       key +
       '" onclick="cbcatEditTab(\'' +
-      key +
+      escJs(key) +
       '\')">' +
       label +
       '</button>'

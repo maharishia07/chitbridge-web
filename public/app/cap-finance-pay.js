@@ -260,10 +260,10 @@ function fpBillActs(party, item) {
     ref = esc(item.ref);
   return (
     '<div class="fp-acts" data-b="acts" style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px">' +
-    '<button data-cbsid="FIN002-B01" type="button" class="cbl-tbtn" data-testid="fp-hold-' + ref + '" onclick="event.stopPropagation();fpHold(\'' + pid + "','" + ref + '\',this)">' +
+    '<button data-cbsid="FIN002-B01" type="button" class="cbl-tbtn" data-testid="fp-hold-' + ref + '" onclick="event.stopPropagation();fpHold(\'' + escJs(party.party_id) + "','" + escJs(item.ref) + '\',this)">' +
     esc(tx('Hold this bill')) +
     '</button>' +
-    '<button data-cbsid="FIN002-B02" type="button" class="cbl-tbtn" data-testid="fp-note-' + ref + '" onclick="event.stopPropagation();fpNoteDiff(\'' + pid + "','" + ref + '\')">' +
+    '<button data-cbsid="FIN002-B02" type="button" class="cbl-tbtn" data-testid="fp-note-' + ref + '" onclick="event.stopPropagation();fpNoteDiff(\'' + escJs(party.party_id) + "','" + escJs(item.ref) + '\')">' +
     esc(tx('Note a difference')) +
     '</button></div>'
   );
@@ -285,13 +285,13 @@ function fpHeldHTML(party, sectionHTML, lineHTML) {
   if (held.error) return sectionHTML('Held') + '<div data-testid="fp-held-' + pid + '" style="' + grey + '">' + esc(held.error) + '</div>';
   var rows = held.bills
     .map(function (item) {
-      return fpHeldRow(pid, item, lineHTML);
+      return fpHeldRow(pid, item, lineHTML, party.party_id);
     })
     .join('');
   return sectionHTML('Held') + '<div data-testid="fp-held-' + pid + '">' + (rows || '<div style="' + grey + '">' + esc(tx('Nothing is held')) + '</div>') + '</div>';
 }
 /** one held bill: its number (else its due day), the open figure, the books' word, Release */
-function fpHeldRow(pid, item, lineHTML) {
+function fpHeldRow(pid, item, lineHTML, rawPid) {
   var ref = esc(item.against_ref);
   return (
     CBList.nextRow([
@@ -299,7 +299,7 @@ function fpHeldRow(pid, item, lineHTML) {
       '<span class="due give">' + esc(bkMoney(item.open_minor, FP.cur)) + '</span>'
     ]) +
     lineHTML('held', tx(FP_HELD_WORD)) +
-    '<div class="fp-acts" data-b="acts" style="padding:2px 0 6px"><button data-cbsid="FIN002-B03" type="button" class="cbl-tbtn" data-testid="fp-release-' + ref + '" onclick="event.stopPropagation();fpRelease(\'' + pid + "','" + ref + '\',this)">' +
+    '<div class="fp-acts" data-b="acts" style="padding:2px 0 6px"><button data-cbsid="FIN002-B03" type="button" class="cbl-tbtn" data-testid="fp-release-' + ref + '" onclick="event.stopPropagation();fpRelease(\'' + escJs(rawPid) + "','" + escJs(item.against_ref) + '\',this)">' +
     esc(tx('Release')) +
     '</button></div>'
   );

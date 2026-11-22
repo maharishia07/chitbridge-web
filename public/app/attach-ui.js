@@ -225,7 +225,7 @@ function cbAttachButton(ctx) {
   return (
     '<button data-cbsid="SCR040-B01" type="button" class="btn" data-testid="cb-attach-btn"' +
     ' onclick="cbAttachPick(\'' +
-    arg +
+    escJs(arg) +
     '\')"' +
     ' title="' +
     esc(ctx.title || 'Attach a file (max 6 MB)') +

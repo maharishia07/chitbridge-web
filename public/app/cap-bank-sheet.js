@@ -441,9 +441,9 @@ function bkshLockNotice() {
     mayPost = owner || signedIn.role === 'bookkeeper' || (signedIn.role === 'adviser' && !!signedIn.posts);
   return bkshLockGroups()
     .map((group, at) => {
-      const reopen = owner && group.may ? '<button data-cbsid="BKS014-B60" type="button" class="act" data-testid="bank-lock-reopen-' + at + '" onclick="bkshReopen(\'' + group.key + '\')">' + bkbE(txf('Reopen {month}', { month: group.name })) + '</button>' : '',
-        move = mayPost && group.next && !group.moved ? '<button data-cbsid="BKS014-B61" type="button" class="act" data-testid="bank-lock-move-' + at + '" onclick="bkshLockMove(\'' + group.key + '\', true)">' + bkbE(txf('Post in {month} instead', { month: group.next.name })) + '</button>' : '',
-        back = mayPost && group.moved ? '<button data-cbsid="BKS014-B62" type="button" class="act" data-testid="bank-lock-undo-' + at + '" onclick="bkshLockMove(\'' + group.key + '\', false)">' + bkbE(tx('Keep them out')) + '</button>' : '';
+      const reopen = owner && group.may ? '<button data-cbsid="BKS014-B60" type="button" class="act" data-testid="bank-lock-reopen-' + at + '" onclick="bkshReopen(\'' + escJs(group.key) + '\')">' + bkbE(txf('Reopen {month}', { month: group.name })) + '</button>' : '',
+        move = mayPost && group.next && !group.moved ? '<button data-cbsid="BKS014-B61" type="button" class="act" data-testid="bank-lock-move-' + at + '" onclick="bkshLockMove(\'' + escJs(group.key) + '\', true)">' + bkbE(txf('Post in {month} instead', { month: group.next.name })) + '</button>' : '',
+        back = mayPost && group.moved ? '<button data-cbsid="BKS014-B62" type="button" class="act" data-testid="bank-lock-undo-' + at + '" onclick="bkshLockMove(\'' + escJs(group.key) + '\', false)">' + bkbE(tx('Keep them out')) + '</button>' : '';
       return '<div class="bk-lock" role="status" data-testid="bank-lock-' + at + '"><span class="bk-lock-w">' + bkbE(group.moved ? CBBankLock.movedWords(group) : CBBankLock.noticeWords(group)) + '</span>' + reopen + move + back + '</div>';
     })
     .join('');
@@ -470,7 +470,7 @@ function bkshReopen(key) {
     mount: 'BKS014-U05', pop: 'POP092', titleText: txf('Reopen {month}?', { month: group.label }),
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body: peField('bk_lkwhy', 'Reason', peInput('bk_lkwhy', '', tx('Needed to open a month again'), 'text', ' maxlength="200" autocomplete="off"')) + '<div id="bk_lkout" class="pe-slot" role="alert"></div>',
-    footerHtml: '<button data-cbsid="BKS014-B63" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B64" type="button" class="pri" data-testid="bank-lock-reopen-go" onclick="bkshReopenGo(\'' + key + '\')">' + bkbE(tx('Reopen')) + '</button>'
+    footerHtml: '<button data-cbsid="BKS014-B63" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B64" type="button" class="pri" data-testid="bank-lock-reopen-go" onclick="bkshReopenGo(\'' + escJs(key) + '\')">' + bkbE(tx('Reopen')) + '</button>'
   });
 }
 /** the Reopen press: the reason typed, the month opened again through the api, the sheet read again */

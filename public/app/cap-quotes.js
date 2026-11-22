@@ -249,7 +249,7 @@
       .catch(function (e) {
         if (root.console) console.warn('quotes: could not read the rounds', e && e.message);
         if (STATE[id] && el.isConnected)
-          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + root.esc(id) + '\')" data-cbsid="CMP009">' + root.esc(translate('Try again')) + '</button></div>';
+          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + root.escJs(id) + '\')" data-cbsid="CMP009">' + root.esc(translate('Try again')) + '</button></div>';
         return null;
       });
   }
