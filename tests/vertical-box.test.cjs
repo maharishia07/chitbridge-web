@@ -8,7 +8,8 @@ const read = (f) => fs.readFileSync(__dirname + '/../public/' + f, 'utf8');
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
 
 /* ── CMP-1 · the readiness screens ── */
-const rd = read('app/cap-readiness.js');
+const rd = read('app/cap-readiness.js') + '
+' + read('app/cap-readiness-ai.js'); /* the lane query lives with the AI co-assist half (web split 1129) */
 ok(!/\|\|\s*'paint'|vertical:\s*'paint'|\|\|\s*'IN'\b|origin:\s*'IN'/.test(code(rd)), "CMP-1: cap-readiness.js has no 'paint' or 'IN' fallback left");
 ok(!/vertical=paint|origin=IN/.test(read('know-your-business.html')), 'CMP-1: know-your-business asks /api/kyb/position with no paint / IN');
 const lift = (name) => { const at = rd.indexOf('function ' + name + '('); return rd.slice(at, rd.indexOf('\n}', at) + 2); };

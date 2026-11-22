@@ -62,7 +62,7 @@ t('privacy sheet words through bodyWords', (src('app/shop-privacy.js').match(/bo
 t('no split(/s+/) left', !/split\(\/s\+\//.test(src('app/ui-standard.js')) && !/split\(\/s\+\//.test(src('app/lab-kit.js')), 'regex');
 
 // GF-20 M7 / M8: offline
-t('del() clears the memory copy first', has('cb-offline.js', 'delete mem[k]; /* reviews11'), 'del');
+t('del() clears the memory copy first', has('cb-offline.js', 'delete mem[k]; if (ls) ls.removeItem(k); /* reviews11'), 'del');
 t('a swept unsent change is announced when the page has no onSwept', has('cb-offline.js', '!cfg.onSwept && ownSwept.length'), 'sweep');
 
 process.exit(fail ? 1 : 0);

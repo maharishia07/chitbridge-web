@@ -196,7 +196,7 @@ const CODES = [
   ["app/cap-match.js","BUS003-T01","textarea"," id=\"match_reason"],
   ["app/cap-match.js","BUS003-B05","button","onclick=\"matchDisputeSend"]
 ];
-const COUNTS = {"app/cap-admin.js":129,"app/cap-cmdb.js":5,"app/cap-connector.js":21,"app/cap-intake.js":13,"app/cap-legend.js":1,"app/cap-match.js":7};
+const COUNTS = {"app/cap-admin.js":126,"app/cap-admin-guard.js":3,"app/cap-cmdb.js":5,"app/cap-connector.js":21,"app/cap-intake.js":13,"app/cap-legend.js":1,"app/cap-match.js":7};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */
