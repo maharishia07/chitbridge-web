@@ -15,6 +15,7 @@
     tax_invoice: 'Tax invoice needed',
     fee_tax: 'Tax on the fee needed',
     needs_tick: 'Needs your tick',
+    rule_check: 'Your rule does not fully fit this line',
     may_be_in_books: 'May already be in your books',
     unbalanced: 'Entry does not balance',
     refused: 'The books refused this entry',

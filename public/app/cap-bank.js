@@ -122,7 +122,7 @@ function bankAcctPick(code, loading) {
   const moved = BKB.stmtAcct && BKB.stmtAcct !== code;
   BKB.acct = code;
   if (!moved) return;
-  Object.assign(BKB, { text: null, stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], teach: null, bal: '' });
+  Object.assign(BKB, { text: null, stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], bal: '' });
   const file = bkbEl('bk_file'),
     res = bkbEl('bk_res'),
     out = bkbEl('bk_out');
@@ -164,10 +164,15 @@ function bkbStep(action) {
 function bkbLearn(line, x) {
   if (bkbNoCountryWords()) return;
   const r = CBBankRecon.learn(line, x, { at: new Date().toISOString(), by: bkbBy(), country: bkbCountry() });
-  if (!r.ok) return;
+  if (r.ok) bkbKeepRule(r.rule);
+}
+/** keep one rule on this device (the newest wins for the same id): the one writer, whether the engine's learn() or the sheet's answer (resolve().taught) made it */
+function bkbKeepRule(rule) {
+  if (!rule || !rule.id || bkbNoCountryWords()) return;
+  const stamped = Object.assign({}, rule, { source: Object.assign({}, rule.source, { at: (rule.source && rule.source.at) || new Date().toISOString(), by: (rule.source && rule.source.by) || bkbBy() }) });
   BKB.rules = bkbRules()
-    .filter((y) => y.id !== r.rule.id)
-    .concat([r.rule]);
+    .filter((y) => y.id !== stamped.id)
+    .concat([stamped]);
   bkbSave('rules', BKB.rules);
 }
 const bkbIsBank = (a, groupCode) => !a.is_group && (a.role === 'bank' || (groupCode != null && a.parent_code === groupCode));
@@ -875,10 +880,6 @@ function bankAdd(row) {
 if (typeof BK !== 'undefined')
   BK.onEntrySaved = () => {
     if (BK.tab === 'bank' && BKB.parsed) {
-      if (BKB.teach) {
-        bkbLearn(BKB.teach.line, BKB.teach.x);
-        BKB.teach = null;
-      }
       bankRun().catch(() => {});
     }
   };
