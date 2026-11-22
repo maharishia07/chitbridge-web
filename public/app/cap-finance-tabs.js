@@ -23,7 +23,8 @@ function finTabLoader() {
     pay: function (quiet) { return fpLoad(quiet); }, /* the Payables tab (cap-finance-pay.js, F4) */
     cheques: function (quiet) { return fqLoad(quiet); }, /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
     returns: function (quiet) { return frLoad(quiet); }, /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
-    reports: function (quiet) { return fmLoad(quiet); } /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
+    reports: function (quiet) { return fmLoad(quiet); }, /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
+    unknown: function () { return undefined; } /* BF-F-07: no read for an address that names no tab */
   };
   return loaders[finTab()] || null;
 }
@@ -34,6 +35,14 @@ function finMountWhenReady(frame) {
     if (finTab() === late) finMount(frame);
   });
 }
+/** BF-F-07: an address that names no Finance tab shows the library's empty state ("not found") with a way back to Finance - never Collections by default */
+function finUnknownMount() {
+  var node = document.getElementById('screen');
+  if (!node) return;
+  ftNav();
+  node.className = 'screen flush';
+  node.innerHTML = emptyState('🧭', tx('This page was not found'), esc(tx('The address does not match a Finance page. Nothing was changed.')), { label: tx('Open Finance'), onclick: "location.hash='#/collections'" });
+}
 /** the mounter of the open tab when it is a tab of its own file (looked up when called), else null: the dues tab mounts here */
 function finTabMounter() {
   var mounters = {
@@ -43,7 +52,8 @@ function finTabMounter() {
     pay: function (frame) { return fpMount(frame); }, /* the Payables tab (cap-finance-pay.js, F4) */
     cheques: function (frame) { return fqMount(frame); }, /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
     returns: function (frame) { return frMount(frame); }, /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
-    reports: function (frame) { return fmMount(frame); } /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
+    reports: function (frame) { return fmMount(frame); }, /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
+    unknown: function () { return finUnknownMount(); } /* BF-F-07 */
   };
   return mounters[finTab()] || null;
 }

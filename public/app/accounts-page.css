@@ -195,7 +195,8 @@ body:has(.bk-scroll,.ov-pics) .content{flex:1 1 auto;min-height:0;padding-bottom
 .pe-rows{display:flex;flex-direction:column}
 .pe-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line-2);font-size:14px}
 .pe-row span:first-child{min-width:0;overflow-wrap:anywhere}
-.pe-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:18px;font-weight:700;padding-top:6px}
+.pe-total{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;font-size:18px;font-weight:700;padding-top:6px}
+.pe-total .pe-risk{flex:1 1 100%;min-width:0;white-space:normal;overflow-wrap:anywhere}/* BF-F-03: the risk sentence takes its own line and wraps - never runs past the edge at 390 */
 .pe-basis{font-weight:700;font-size:14px}
 .pe-check{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:14px}
 .pe-check.ok>span:first-child{color:var(--green-d)}.pe-check.bad>span:first-child{color:var(--red-i)}.pe-check.warn>span:first-child{color:var(--amber-i)}

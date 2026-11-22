@@ -298,6 +298,16 @@ function bkMoney(minor, c) {
     return n.toFixed(bkDec(c));
   }
 }
+/** BF-F-01: ONE wording of what the api's dues balance says, for Unpaid bills and Payables alike. The api's sign: + they owe you, - you owe them. Read, never recomputed:
+ *  a supplier balance that is + is a supplier credit (paid ahead), never "owed to suppliers"; a customer balance that is - is a customer credit. */
+function bkDuesWords(side, minor, c) {
+  var n = Number(minor) || 0,
+    money = bkMoney(Math.abs(n), c),
+    supplier = side === 'supplier';
+  if (!n) return '';
+  if (supplier) return money + ' ' + (n < 0 ? tx('is owed to suppliers in your books') : tx('is a supplier credit (paid ahead) in your books'));
+  return money + ' ' + (n > 0 ? tx('is owed to you in your books') : tx('is a customer credit (paid ahead) in your books'));
+}
 /** a foreign line's figure: "AUD 350.00 @ 54.60" — the code and the number (no second symbol), the rate with at least 2 places (more if it has them), in the reader's number marks */
 function bkFxText(fx) {
   var places = bkDec(fx.currency);

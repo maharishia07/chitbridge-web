@@ -368,6 +368,8 @@
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
+    /* BF-F-02 (22 Nov): on a phone the decorative ▣ mark gives its room to the shop's name (aria-hidden; the name says which shop) - the name showed "cbt-…" in 42 of the 88 px it needs */
+    '.cbsh-bar:has(.cbsh-who) .cbsh-mark{display:none}.cbsh-who{gap:4px}',
     /* YE-F-15 (21 Nov): the person must always see which shop they are in — a narrow bar (a pane beside the sidebar) keeps the name, cut with an ellipsis (the button's title and aria-label carry the whole name); it is never hidden */
     '@container (max-width:359px){.cbsh-hdr .cbsh-who{min-width:96px}.cbsh-who b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
