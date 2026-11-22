@@ -939,8 +939,7 @@
     var s = C[ns];
     if (!s) return [];
     var all = rowsOf(s.cat),
-      seen = Object.create(null) /* reviews11 GF-17 M9: a category called "constructor" is a key, not a function */,
-      label = Object.create(null),
+      seen = Object.create(null) /* reviews11 GF-17 M9: a category called "constructor" is a key, not a function */, label = Object.create(null),
       order = [],
       none = 0;
     for (var index = 0; index < all.length; index++) {
@@ -2452,8 +2451,7 @@
         var all = rowsOf(s.cat).filter(function (item) {
           return item.type === 'line';
         });
-        var byId = Object.create(null),
-          byName = Object.create(null);
+        var byId = Object.create(null), byName = Object.create(null);
         all.forEach(function (item) {
           byId[item.item_id] = item;
           byName[String(nameOf(item)).trim().toLowerCase()] = item;
@@ -2463,15 +2461,13 @@
           var want = item.qty == null ? 1 : item.qty;
           var match = (item.item_id && byId[item.item_id]) || (item.name && byName[String(item.name).trim().toLowerCase()]);
           if (match) {
-            var had = qtyOf(ns, match.item_id);
-            put(ns, match.item_id, want);
+            var had = qtyOf(ns, match.item_id); put(ns, match.item_id, want);
             // The model may have refused it outright (below a minimum) or landed it on a legal value.
             var got = qtyOf(ns, match.item_id);
             if (got > 0) placed.push({ item_id: match.item_id, name: nameOf(match), qty: got, asked: want });
             else {
               refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
-              /* EL-17 F8: a refused channel line must not delete the quantity a person already chose */
-              if (had > 0) put(ns, match.item_id, had);
+              if (had > 0) put(ns, match.item_id, had); /* EL-17 F8: a refused channel line must not delete the quantity a person already chose */
             }
             return;
           }
@@ -2745,8 +2741,7 @@
     /* ⭐ ONE ROW PER OFFER, NOT PER LINE (Athi, 2026-09-06: "group the offer amount together, so we get one offer outcome"). Three
        lines under Flat 10% printed three rows; Amazon prints one promotion line. Line-scope adjustments are summed by offer
        (offer_id, else label) with the item count; cart-scope ones keep their own row and say their scope. */
-    var grouped = [],
-      byOffer = Object.create(null);
+    var grouped = [], byOffer = Object.create(null);
     (ev.adjustments || []).forEach(function (item) {
       if (item.scope !== 'line') {
         grouped.push({ label: item.label || item.kind, scope: item.scope, amount: Math.abs(Number(item.amount) || 0), n: 0, offer_id: item.offer_id || null });
