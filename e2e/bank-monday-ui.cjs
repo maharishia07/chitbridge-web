@@ -216,4 +216,5 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
   ok(...C.finish());
   console.log('\n  bank-monday-ui: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.log('  XX  the harness stopped: ' + e.message + (globalThis.__threw && globalThis.__threw.length ? ' | page errors: ' + globalThis.__threw.slice(0, 3).join(' ; ') : '')); process.exit(1); });
+})().catch((e) => { console.log('  XX  the harness stopped: ' + e.message.slice(0,200) + ' STACK ' + String(e.stack).split('
+').filter(l=>/bank-monday-ui/.test(l)).join(' ') + (globalThis.__threw && globalThis.__threw.length ? ' | page errors: ' + globalThis.__threw.slice(0, 3).join(' ; ') : '')); process.exit(1); });
