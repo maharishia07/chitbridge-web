@@ -137,11 +137,11 @@ async function route(S, r) {
     if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
       { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
-    if (p === '/api/books/dues') return J(r, 200, books.dues([
+    if (p === '/api/books/dues') return J(r, 200, books.dues(((S.sideFilter && u.searchParams.get('side')) ? (rows) => rows.filter((x) => x.side === u.searchParams.get('side')) : (rows) => rows)([
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
-      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }], { asOf: TODAY }));
+      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }]), { asOf: TODAY }));
     if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
@@ -559,6 +559,21 @@ async function route(S, r) {
     await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
     ok(await p.evaluate(() => typeof openChitSheet === 'function' && !!document.getElementById('chitsheet') && document.getElementById('chitsheet').open) && ctx.pages().length === tabs0, 'a bill opens the chit sheet in Accounts (openChitSheet is defined here), not a new tab');
     await p.keyboard.press('Escape');
+    /* BD-F-02: nothing is open on the Received side, 300000 paise is owed on the Issued side (the books' Dues): a fresh visit opens the side that has something, never "Nothing open" over a Dues figure */
+    S.sideFilter = true;
+    S.bills['a0000000-0000-5000-8000-000000002100'] = [];
+    S.bills['a0000000-0000-5000-8000-000000001300'] = [];
+    S.folders[1].total = 2;
+    await p.reload();
+    await p.waitForSelector('[data-testid="acc-nav-bills"]');
+    await nav(p, 'bills');
+    await p.waitForSelector('[data-testid="bills-list"]');
+    ok(await p.locator('[data-testid="bills-tab-B-1300"]').getAttribute('aria-pressed') === 'true', 'BD-F-02: Received is empty and Issued is owed, so Issued is the side the screen opens on');
+    ok(await p.locator('[data-testid^="bill-books-"]').count() === 2 && !/Nothing open/.test(await p.textContent('[data-testid="bills-list"]')), 'BD-F-02: the two parties Dues lists as owing the shop are rows, not "Nothing open"');
+    await p.click('[data-testid="bills-tab-B-2100"]');
+    await p.waitForSelector('[data-testid="bills-list"]');
+    ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'BD-F-02: a tab the owner picks stays, even when empty');
+    S.sideFilter = false;
 
     /* ── 4 · THE AVATAR MENU, HOME ── */
     await p.click('[data-testid="avatar"]');

@@ -2,7 +2,7 @@
 'use strict';
 /* rank9.cjs — RANK 9: the bank agreement under the trial balance (one shared function, bank-tb-line.js). The api's `bank` block is stood in here; the words, the codes, the link and the no-block case are proved at 1366 and 390. */
 const LINE = {
-  reconciled: { account_id: 'acc-1500', code: '1500', name: 'Bank', currency: 'AUD', state: 'reconciled', period_to: '2026-06-30', statement_minor: 20336000, books_signed_minor: 20286000, unexplained_minor: 0, books_now_minor: 20286000, moved_minor: 0, signed_at: '2026-07-02 09:00:00+00' },
+  reconciled: { account_id: 'acc-1500', code: '1500', name: 'Bank', currency: 'AUD', state: 'reconciled', period_to: '2026-06-30', statement_minor: 20336000, books_signed_minor: 20286000, unexplained_minor: 0, apart_minor: 50000, books_now_minor: 20286000, moved_minor: 0, signed_at: '2026-07-02 09:00:00+00' },
   unexplained: { account_id: 'acc-1500', code: '1500', name: 'Bank', currency: 'AUD', state: 'unexplained', period_to: '2026-06-30', statement_minor: 20336000, books_signed_minor: 20286000, unexplained_minor: 50000, books_now_minor: 20286000, moved_minor: 0, signed_at: null },
   moved: { account_id: 'acc-1500', code: '1500', name: 'Bank', currency: 'AUD', state: 'reconciled', period_to: '2026-06-30', statement_minor: 20336000, books_signed_minor: 20286000, unexplained_minor: 0, books_now_minor: 20296000, moved_minor: 10000, signed_at: null },
   earlier: { account_id: 'acc-1500', code: '1500', name: 'Bank', currency: 'AUD', state: 'earlier', period_to: '2026-05-31', statement_minor: 15000000, books_signed_minor: null, unexplained_minor: null, books_now_minor: null, moved_minor: null, signed_at: null },
@@ -82,7 +82,7 @@ const refused = (r, code, words) => json(r, 403, { code, error: words, message: 
     {
       const { ctx, p, threw } = await open('owner', '#/tb', '[data-testid="tb-balanced"]', { width, tb: [LINE.reconciled] });
       const t = await line(p);
-      ok(/Signed off to 30 June? 2026/.test(t) && /Statement A[$]203,360[.]00/.test(t) && /nothing unexplained/.test(t) && !/differ|Difference/.test(t), width + ' · P9.1b reconciled with a timing item (statement differs from books, nothing unexplained): ' + t);
+      ok(/Signed off to 30 June? 2026/.test(t) && /Statement A[$]203,360[.]00/.test(t) && /books A[$]202,860[.]00 when signed, A[$]500[.]00 apart/.test(t) && !/nothing unexplained|Difference/.test(t), width + ' · P9.1b reconciled with a timing item (statement differs from books): the gap is named, never "nothing unexplained" over it (BD-F-03): ' + t);
       ok(await p.locator('[data-testid="bv-tb-bank-open-acc-1500"]').count() === 1 && await p.locator('[data-cbsid="BKS004-P01"]').count() === 1, width + ' · the note and its Open Bank button carry their register codes');
       ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), width + ' · no horizontal page scroll');
       await p.screenshot({ path: path.join(SHOTS, 'rank9-reconciled-' + width + '.png') });

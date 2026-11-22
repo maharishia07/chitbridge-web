@@ -211,7 +211,7 @@ const TITLES = { ledgers: 'Ledgers', todo: 'To do' }; /* the Ledgers view keeps 
 const $ = (id) => document.getElementById(id);
 /* SHELL-ONE: the shop · Home · avatar are the frame's (CBShell in #shell) — never moved into a list's title row any more; the frame stays on every view */
 let FRAME = null;
-const ACC = { billTab: 'B-2100', gen: 0 };
+const ACC = { billTab: 'B-2100', billPicked: false, gen: 0 };
 let SESS = null,
   MINE = null,
   ON = false;
@@ -423,6 +423,7 @@ BK.onLedger = (sel) => {
 BK.noticeTarget = {
   accept: () => {
     ACC.billTab = 'B-2100';
+    ACC.billPicked = true; /* the notice names the Received side */
     show('bills');
   } /* bills to accept: the Received bills, where they are accepted */,
   supplier: () => {
@@ -498,6 +499,7 @@ $('content').addEventListener('click', (e) => {
   const node = e.target.closest('.tab');
   if (node) {
     ACC.billTab = node.dataset.code;
+    ACC.billPicked = true; /* an owner's own pick is kept, even an empty side */
     bkTab('bills', true);
   }
 });
@@ -626,13 +628,27 @@ async function accBills(body) {
       return;
     }
     if (!sys.some((item) => item.code === ACC.billTab)) ACC.billTab = sys[0].code;
-    const cur = sys.find((item) => item.code === ACC.billTab);
-    const rows = await api('folderChits', { params: { id: cur.folder_id }, query: { state: 'open' } });
-    /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
-    const list = billChitList(rows);
-    /* E19 (decided by practice: Xero's Bills to pay reads the payables ledger): the figure and the rows come from the BOOKS, the one GET /dues Dues paints (nothing is added up from chits).
-       A party with an open bill CHIT keeps its chit rows (pay, open the chit); a party the books owe or are owed that holds no open chit is a row of its own ("In your books"), so a loader's or a move-in's bills show here as they do in Dues. */
-    const { rowsAll, booksSide, booksLine } = await accBillsFromBooks(cur, list);
+    const loadSide = async (folder) => {
+      const rows = await api('folderChits', { params: { id: folder.folder_id }, query: { state: 'open' } });
+      /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
+      const list = billChitList(rows);
+      /* E19 (decided by practice: Xero's Bills to pay reads the payables ledger): the figure and the rows come from the BOOKS, the one GET /dues Dues paints (nothing is added up from chits).
+         A party with an open bill CHIT keeps its chit rows (pay, open the chit); a party the books owe or are owed that holds no open chit is a row of its own ("In your books"), so a loader's or a move-in's bills show here as they do in Dues. */
+      return accBillsFromBooks(folder, list);
+    };
+    let cur = sys.find((item) => item.code === ACC.billTab);
+    let side = await loadSide(cur);
+    /* BD-F-02: the screen opened on Received (nothing open) beside an Issued tab and a Dues screen that owe 116.00. Until the owner picks a tab, open on the side that has something open. */
+    const other = sys.find((item) => item.code !== cur.code);
+    if (!ACC.billPicked && !side.rowsAll.length && other) {
+      const otherSide = await loadSide(other);
+      if (otherSide.rowsAll.length) {
+        cur = other;
+        side = otherSide;
+        ACC.billTab = other.code;
+      }
+    }
+    const { rowsAll, booksSide, booksLine } = side;
     const word = (f) => (f.code === 'B-2100' ? 'Received' : 'Issued');
     const tabs =
       '<div class="tabs" role="group">' +

@@ -73,6 +73,8 @@ function bkstPeriodEnd() {
 function bkstRestWords(row, cur) {
   if (row.stale) return txf('the books have changed since: now {a}', { a: bkMoney(row.books_now_minor, cur) });
   if (row.unexplained_minor) return txf('unexplained {a}', { a: bkMoney(row.unexplained_minor, cur) });
+  /* BD-F-03: the api carries how far the stored statement and books figures are apart; a sign-off saved before BA-F-07 can say "tied" over a gap, so the gap is named, never "nothing unexplained" */
+  if (row.apart_minor) return txf('books {b} when signed, {a} apart', { b: bkMoney(row.books_signed_minor, cur), a: bkMoney(row.apart_minor, cur) });
   return tx('nothing unexplained');
 }
 /** the bank balance at the period end, READ from the sign-off the api chose (GET /bank/statement-files asOf → signed_as_at: the ONE rule, the newest period end on or before the day; no choosing, no sum here).
