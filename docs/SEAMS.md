@@ -10,56 +10,56 @@ of file each thing is; this says what already does the job.
 | used by | name | defined in | what it is for |
 |---|---|---|---|
 | 144 | `item` | `bank-band.js` |  |
-| 119 | `list` | `cap-flag.js` |  |
+| 120 | `list` | `cap-flag.js` |  |
 | 100 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 90 | `again` | `signin-ui.js` |  |
 | 89 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
-| 84 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 85 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 81 | `read` | `books-grant-drill.js` |  |
 | 81 | `rows` | `cap-settings.js` |  |
 | 80 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
-| 80 | `read` | `books-grant-drill.js` |  |
 | 78 | `toast` | `cb-words.js` |  |
 | 71 | `host` | `chit-sheet.js` |  |
-| 65 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
+| 66 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
+| 65 | `body` | `books-acting.js` | a write's body: |
 | 65 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
-| 64 | `body` | `books-acting.js` | a write's body: |
 | 64 | `view` | `country-ready.js` |  |
+| 58 | `lines` | `cart.js` |  |
 | 57 | `sheet` | `cap-employees.js` |  |
-| 57 | `lines` | `cart.js` |  |
 | 53 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 52 | `closeModal` | `app.html` |  |
 | 49 | `open` | `cap-attention.js` | a count pressed: |
 | 48 | `shell` | `pick.js` |  |
 | 46 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 46 | `sentence` | `one-person.js` |  |
-| 45 | `load` | `books-grant-view.js` |  |
+| 45 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
+| 44 | `load` | `books-grant-view.js` |  |
 | 44 | `order` | `cap-iddocs.js` | var LIST = null; |
-| 44 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 42 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 41 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 41 | `opts` | `books-grant-filters.js` |  |
 | 40 | `money` | `cart.js` |  |
 | 39 | `modal` | `app.html` |  |
+| 39 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
 | 38 | `ensureCap` | `app.html` |  |
-| 38 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
 | 38 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
 | 37 | `note` | `device-id.js` | note(where, problem) — |
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 36 | `names` | `shortcuts.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
+| 34 | `reason` | `lab-kit.js` | W9: |
 | 33 | `next` | `cap-stock.js` | the next level: |
-| 33 | `reason` | `lab-kit.js` | W9: |
 | 32 | `form` | `accounts-shell-unsaved.js` |  |
 | 31 | `bkMoney` | `cap-books.js` |  |
+| 31 | `model` | `chit-sheet.js` |  |
 | 31 | `control` | `period-pick.js` | the control: |
 | 31 | `chip` | `screen-id.js` | var S = { app: |
 | 30 | `options` | `bank-lines.js` | cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: |
 | 30 | `bkDate` | `cap-books.js` |  |
-| 30 | `model` | `chit-sheet.js` |  |
+| 30 | `field` | `ui-field.js` | the part: |
 | 29 | `card` | `cap-shop.js` |  |
 | 29 | `head` | `list-ctl.js` |  |
 | 29 | `panel` | `sides.js` |  |
-| 29 | `field` | `ui-field.js` | the part: |
 | 28 | `step` | `cart.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
 | 27 | `figures` | `bank-demo.js` |  |
@@ -73,19 +73,20 @@ of file each thing is; this says what already does the job.
 | 25 | `more` | `lab-kit.js` | idKey: |
 | 25 | `dialog` | `ui.js` | ui.dialog({ mount, title · titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bod |
 | 24 | `done` | `attach-ui.js` |  |
+| 23 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
 | 23 | `account` | `cap-settings.js` |  |
 | 23 | `said` | `cap-shop.js` |  |
 | 23 | `later` | `home2.js` | adopt once on the next frame, however many changes ask for it |
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
 | 22 | `held` | `books-grant-api.js` |  |
 | 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
-| 22 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
 | 22 | `send` | `cap-quotes.js` |  |
 | 22 | `moment` | `shop-time.js` |  |
 | 22 | `actions` | `workflow.js` | actions(chit, me) — |
 | 21 | `resolve` | `api-base.js` | env = { host, stored, cbApi, remove } (all optional; the page's own values are read when absent). |
 | 21 | `show` | `books-grant-drill.js` |  |
 | 21 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
+| 21 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 21 | `shows` | `edition.js` |  |
 | 21 | `fmtMoney` | `helpers.js` |  |
 | 21 | `confirm` | `lab-kit.js` | opts: |
@@ -93,7 +94,6 @@ of file each thing is; this says what already does the job.
 | 20 | `pick` | `assign-bar.js` | open the person popover (ui.dialog, the library popup) → done({ id·null, note }) on a press; nothing when it i |
 | 20 | `press` | `attach-ui.js` |  |
 | 20 | `cols` | `cap-catalogue.js` |  |
-| 20 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 20 | `verdict` | `rail-thread.js` |  |
 | 20 | `closed` | `sheet-keys.js` | the sheet went away: |
 | 19 | `close` | `avatar.js` |  |
@@ -105,8 +105,10 @@ of file each thing is; this says what already does the job.
 | 18 | `confirmAsk` | `app.html` | In-app confirm (replaces browser confirm()). |
 | 18 | `start` | `app.html` |  |
 | 18 | `guard` | `books-acting.js` | a call outside /api/books* is refused here, before it is sent, while the page acts for a store |
+| 18 | `refusal` | `books-grant-drill.js` |  |
 | 18 | `band` | `books-grant-view.js` | the band: |
 | 18 | `needs` | `cap-attention.js` | the server's count of what wants the owner over the range (no tax invoice, or an open query) — |
+| 18 | `message` | `cap-print.js` | the one message: |
 | 18 | `failed` | `chit-price-moved.js` | every failed send ends here: |
 | 18 | `today` | `kural.js` |  |
 | 18 | `evidence` | `test-menu-tree.js` | something; nobody has yet written what it should do. |
@@ -114,9 +116,7 @@ of file each thing is; this says what already does the job.
 | 17 | `html` | `bank-band.js` | f.toGo · f.inBooks · f.total lines · f.unexplained (text shown only when it is not nil) · f.nil · f.tid (prefi |
 | 17 | `reload` | `books-actions-view.js` |  |
 | 17 | `tabs` | `books-actions-view.js` |  |
-| 17 | `refusal` | `books-grant-drill.js` |  |
 | 17 | `bkCur` | `cap-books.js` | the ledger's currency and its decimals: |
-| 17 | `message` | `cap-print.js` | the one message: |
 | 17 | `offers` | `network-app.js` |  |
 | 17 | `hand` | `preview-key.js` | hand(shopId) → Promise<true> once a key is stored (the api's preview-only token), Promise<false> otherwise (no |
 | 17 | `opened` | `sheet-keys.js` | the host's content went from empty to a sheet: |
@@ -147,8 +147,9 @@ of file each thing is; this says what already does the job.
 | 12 | `route` | `app.html` | window.addEventListener('hashchange', route); |
 | 12 | `onClick` | `assign-bar.js` |  |
 | 12 | `current` | `books-acting.js` |  |
+| 12 | `carry` | `books-grant-filters.js` | the filter words already in the address, as '&dbf_..=..' to append to the client's address (so the address the |
 | 12 | `post` | `cap-bank-post.js` | var made = {}; /* new party (name·kind) → id made in this run, so two lines naming one payee make it once |
-| 12 | `make` | `cap-settings-guide.js` | Host globals: |
+| 12 | `make` | `cap-settings-guide.js` | hands the parent its two pieces, bound to the parent's words (T) and may-to-reason (grey) functions |
 | 12 | `render` | `cap-traceability.js` | var seen = {}; |
 | 12 | `seat` | `chit-sheet.js` | seat the dialog where its place wants it: |
 | 12 | `part` | `country-compare.js` | value); flags: |
@@ -159,7 +160,6 @@ of file each thing is; this says what already does the job.
 | 11 | `addCss` | `avatar.js` | the two preferences every page honours, written once here so no page re-declares them |
 | 11 | `create` | `bank-demo-ask.js` | create(host) → { confirmBody, mapCard, mapping }: |
 | 11 | `nameOf` | `bank-demo.js` | an account's words from the pack (ledgers, expense and income classes); the role spelled out when the pack doe |
-| 11 | `carry` | `books-grant-filters.js` | the filter words already in the address, as '&dbf_..=..' to append to the client's address (so the address the |
 | 11 | `phone` | `books-grant-view.js` | a phone (the header's 700 px rule) holds the screen pick as ONE select, not seven buttons |
 | 11 | `tell` | `books-grant-view.js` | l16 R4-2b: |
 | 11 | `posted` | `books-grant-words.js` | what the firm posted for the owner, one row per action: |
@@ -173,6 +173,7 @@ of file each thing is; this says what already does the job.
 | 10 | `wire` | `avatar.js` | var wired = false; |
 | 10 | `build` | `bank-preview-ui-parts.js` | put every painter of a statement line on the one shared `ctx` (the order matters: |
 | 10 | `fill` | `books-acting.js` | one sentence out of the catalogue with its {holes} filled |
+| 10 | `draft` | `cap-assist.js` | CBA step 1 · draft: |
 | 10 | `bkMountAttribute` | `cap-books.js` |  |
 | 10 | `failWords` | `cap-dispute.js` |  |
 | 10 | `ftNav` | `cap-finance-terms.js` |  |
@@ -184,9 +185,10 @@ of file each thing is; this says what already does the job.
 | 9 | `leave` | `accounts-shell-unsaved.js` | nothing moved → goOn(); something moved → ask (Save or Discard when a form can save, Discard or Stay when none |
 | 9 | `draw` | `books-clients-door.js` |  |
 | 9 | `visible` | `books-grant-api.js` | the clients to list: |
-| 9 | `draft` | `cap-assist.js` | CBA step 1 · draft: |
+| 9 | `translate` | `books-practice.js` | var PRACTICE_ENDPOINT = { practice: |
 | 9 | `bkPartyLabel` | `cap-books.js` | A ROW NAMES ITS PARTY (Athi, 2026-10-02): |
 | 9 | `crmBar` | `cap-crm.js` |  |
+| 9 | `plan` | `cap-settings.js` |  |
 | 9 | `onChange` | `cap-shop.js` | var autosave = { timer: |
 | 9 | `touched` | `cart.js` |  |
 | 9 | `lock` | `chit-sheet.js` | the page behind does not scroll while the sheet is open — |
@@ -203,9 +205,7 @@ of file each thing is; this says what already does the job.
 | 8 | `onKey` | `assign-bar.js` | function notShortcut(ev, key) { return ev.defaultPrevented ·· ev.ctrlKey ·· ev.metaKey ·· ev.altKey ·· (key != |
 | 8 | `finish` | `attach-ui.js` | var done = false; |
 | 8 | `headers` | `books-acting.js` | the headers of a request into the store's books: |
-| 8 | `translate` | `books-practice.js` | var PRACTICE_ENDPOINT = { practice: |
 | 8 | `hint` | `books-practice.js` |  |
 | 8 | `walk` | `cap-books-tree.js` | write one tree node and, when it is open, its children |
 | 8 | `crmEdit` | `cap-crm.js` |  |
 | 8 | `crmPlural` | `cap-crm.js` |  |
-| 8 | `peBad` | `cap-period.js` |  |
