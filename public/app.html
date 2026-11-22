@@ -26228,6 +26228,11 @@ function rtMountAll(scope) {
     }
   });
 }
+/** a detail tab's label: the word before the count is translated, the (count) after it stays as it is */
+function dtabLabel(l) {
+  const at = l.indexOf(' (');
+  return at > 0 ? tx(l.slice(0, at)) + l.slice(at) : tx(l);
+}
 function backToList() {
   UI.mdetail = false;
   const node = document.getElementById('panel');
@@ -27306,7 +27311,7 @@ function detailInner() {
   ]);
   return `<div class="dh"><button data-cbsid="DTL001-B31" class="dback" onclick="backToList()">‹ Back to list</button><button data-cbsid="DTL001-B32" class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${c.amt ? chitMoney(c.amt, c) : '—'} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button data-cbsid="DTL001-B33" class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority(this.dataset.xa)" data-xa="${esc(c.id)}" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
-   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${tx(l.split(' (')[0])}${l.indexOf(' (') > 0 ? ' (' + l.split(' (')[1] : ''}</button>`).join('')}</div>
+   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${dtabLabel(l)}</button>`).join('')}</div>
    <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button data-cbsid="DTL001-B35" class="pri" data-xa="' + esc(c.id) + '" onclick="answerPublish(this.dataset.xa)">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**
