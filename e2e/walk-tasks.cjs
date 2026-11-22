@@ -181,13 +181,13 @@ W.run('tasks', async (w) => {
     return { ok: /Stuck/.test(why) && /waited 3 days/.test(why) && /Mint Street/.test(addr) && bill === true && /Already billed/.test(bwhy) && done === 'Delivered',
       saw: '"' + why.slice(0, 60) + '" · ' + addr + ' · Bill it ' + (bill ? 'greyed: "' + bwhy + '"' : 'OPEN') + ' · last step "' + done + '"' };
   });
-  await w.step('T4', 'Click SO-1 -> the sheet: the word New, Meena and the amount, Pick up, Accept and Reject open, Bill it open (on the till), Handed over for a pick-up, Reopen greyed WITH the server\'s sentence, two lines with their state and holder, the thread', async () => {
+  await w.step('T4', 'Click SO-1 -> the sheet: the word New, Meena and the amount, Pick up, Accept and Reject open, Bill it greyed "Accept the order first" (on the till), Handed over for a pick-up, Reopen greyed WITH the server\'s sentence, two lines with their state and holder, the thread', async () => {
     await openRow('c1');
     const subj = await txt('[data-testid="tk-subject"]'), head = await txt('[data-testid="tk-head"]');
     const dis = { accept: await greyed('tk_do_accept'), reject: await greyed('tk_do_reject'), reopen: await greyed('tk_do_reopen'), bill: await greyed('tk_do_bill') };
     const why = await txt('[data-testid="tk_do_reopen-why"]'), done = await txt('#tk_do_complete'), steps = await txt('[data-testid="tk-steps"]');
     const l1 = await txt('[data-testid="tk-line-state-l1"]'), l2who = await txt('[data-testid="tk-line-who-l2"]'), thread = await page.locator('[data-testid="tk-thread"] textarea, [data-testid="tk-thread"] [data-rt-act="text"]').count();
-    return { ok: /SO-1/.test(subj) && /Meena/.test(head) && /1,200\.50|1200\.50/.test(head) && /Pick up/.test(head) && dis.accept === false && dis.reject === false && dis.bill === false && /on the till/.test(steps) && done === 'Handed over'
+    return { ok: /SO-1/.test(subj) && /Meena/.test(head) && /1,200\.50|1200\.50/.test(head) && /Pick up/.test(head) && dis.accept === false && dis.reject === false && dis.bill === true && /Accept the order first/.test(await txt('[data-testid="tk_do_bill-why"]')) && /on the till/.test(steps) && done === 'Handed over'
         && dis.reopen === true && /cannot move/.test(why) && /Open/.test(l1) && /Asha/.test(l2who) && thread >= 1,
       saw: subj + ' · ' + head.slice(0, 70) + ' | accept ' + (dis.accept ? 'greyed' : 'open') + ', bill ' + (dis.bill ? 'greyed' : 'open') + ', last step "' + done + '", reopen ' + (dis.reopen ? 'greyed: "' + why.slice(0, 40) + '"' : 'OPEN') + ' | line 1 ' + l1 + ', line 2 held by ' + l2who + ' | composer ' + thread };
   });
