@@ -21,7 +21,7 @@ t('GF-23 M1: adding to an all-products offer is refused', has('app/offer-add-con
 t('GF-22 M6: the re-read after a good write has its own try', /try \{\s*await read\(id\);\s*\} catch/.test(src('app/chit-sheet.js')), 'sheet');
 t('Clear payment words its failure', has('app/chit-unpay.js', 'failWords(e, tx(') && !has('app/chit-unpay.js', 'toast((e && e.message)'), 'unpay');
 t('EL-19 M14: a radio group counts as answered by any ticked radio', has('app/sheet-dialog.js', ':checked'), 'dialog');
-t('EL-20 M1: promo shortcuts ignore typing', has('promo.html', 'isContentEditable)) return;'), 'promo');
+t('EL-20 M1: promo shortcuts ignore typing', has('promo.html', 'if (typingInBox(e)) return;') && has('promo.html', 'e.target.isContentEditable'), 'promo');
 
 // behaviour of the F3 retry, lifted logic: late kind is not in `by`
 const vm = require('vm');
