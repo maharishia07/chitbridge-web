@@ -11,6 +11,7 @@ const vm = require('vm');
 const { liftFns } = require('./lib/lift-fn.cjs');
 const FILE = 'public/app/cap-books.js';
 const src = fs.readFileSync(path.join(__dirname, '..', FILE), 'utf8');
+const needSrc = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-books-needs.js'), 'utf8'); /* BK_NEED lives in the Who-needs-you part */
 const varText = (name) => { const a = src.indexOf('var ' + name + ' = '), b = src.indexOf('\n];\n', a); return src.slice(a, b + 3); };
 
 const money = (n, c) => 'M' + n;
@@ -26,7 +27,7 @@ const cx = vm.createContext({
 let ALLOCS = [];
 cx.BK = { dues: {}, stmt: {}, owed: {}, mk: null };
 const BK = cx.BK;
-vm.runInContext(varText('BK_FOLLOW') + '\n' + src.match(/^var BK_STANDING = .*;$/m)[0] + '\n' + varText('BK_PB_TABS') + '\n' + src.match(/^var BK_NEED = \{[\s\S]*?\n\};$/m)[0] + '\n' + src.match(/^var BK_NEED_ORDER = .*;$/m)[0] + '\nvar BK_PB_LIMIT = 25;\n' + liftFns(FILE, ['bkFollowWord', 'bkDuesAge', 'bkDuesNext', 'bkBillStanding', 'bkBillFlags', 'bkOwedFlags', 'bkPartyBillsHTML', 'bkPbStripHTML', 'bkPbTableHTML', 'bkPbPagerHTML', 'bkPbOf', 'bkPbRead', 'bkPbRequest', 'bkPbIngestMarks', 'bkSetTermsLink', 'bkBillStatus', 'bkNeedAction', 'bkTodoCounts', 'payHeldBills']) +
+vm.runInContext(varText('BK_FOLLOW') + '\n' + src.match(/^var BK_STANDING = .*;$/m)[0] + '\n' + varText('BK_PB_TABS') + '\n' + needSrc.match(/^var BK_NEED = \{[\s\S]*?\n\};$/m)[0] + '\n' + needSrc.match(/^var BK_NEED_ORDER = .*;$/m)[0] + '\nvar BK_PB_LIMIT = 25;\n' + liftFns(FILE, ['bkFollowWord', 'bkDuesAge', 'bkDuesNext', 'bkBillStanding', 'bkBillFlags', 'bkOwedFlags', 'bkPartyBillsHTML', 'bkPbStripHTML', 'bkPbTableHTML', 'bkPbPagerHTML', 'bkPbOf', 'bkPbRead', 'bkPbRequest', 'bkPbIngestMarks', 'bkSetTermsLink', 'bkBillStatus', 'bkNeedAction', 'bkTodoCounts', 'payHeldBills']) +
   '\nthis.f = { bkFollowWord, bkDuesAge, bkDuesNext, bkBillStanding, bkBillFlags, bkOwedFlags, bkPartyBillsHTML, bkTodoCounts, payHeldBills, BK_FOLLOW, bkBillStatus };', cx);
 const f = cx.f;
 let bad = 0;
