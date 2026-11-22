@@ -144,6 +144,7 @@
  "public/app/cap-finance-pay.js":["public/finance.html"],
  "public/app/cap-finance-returns.js":["public/finance.html"],
  "public/app/cap-finance-tabs.js":["public/finance.html"],
+ "public/app/cap-finance-terms-undo.js":["public/finance.html"],
  "public/app/cap-finance-terms.js":["public/finance.html"],
  "public/app/cap-finance.js":["public/finance.html"],
  "public/app/cap-flag.js":["public/accounts.html","public/network.html"],
