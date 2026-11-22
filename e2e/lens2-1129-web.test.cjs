@@ -22,7 +22,7 @@ const ok = (name) => { pass++; console.log('  ok   ' + name); };
       document: { getElementById: (id) => els[id] || null },
       fetch: async (url) => { calls.push(url); const r = replies.shift(); return { status: r.status, json: async () => r.body }; }
     };
-    sb.window = sb; vm.createContext(sb); vm.runInContext(code, sb);
+    sb.window = sb; vm.createContext(sb);  vm.runInContext(require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'app', 'cb-words.js'), 'utf8'), sb); /* the page loads cb-words.js first (failWords · bodyWords · cbApiParam) */ vm.runInContext(code, sb);
     await sb.doLogin();
     return { els, calls, stage: vm.runInContext('_stage', sb) };
   };
@@ -46,7 +46,7 @@ const ok = (name) => { pass++; console.log('  ok   ' + name); };
 
   const shop = fs.readFileSync(path.join(root, 'app', 'cap-shop.js'), 'utf8');
   const g = shop.match(/function greyForActor\(node\) \{([\s\S]*?)\n  \}/);
-  assert.ok(g && /actorId/.test(g[1]) && /\.disabled = true/.test(g[1]) && /Only the owner can change these/.test(g[1]), 'greyForActor disables with the sentence');
+  assert.ok(g && /isActorSeat()/.test(g[1]) && /\.disabled = true/.test(g[1]) && /Only the owner can change these/.test(g[1]), 'greyForActor disables with the sentence');
   assert.ok(/greyForActor\(node\);/.test(shop) && /greyForActor\(document\.getElementById\('vaulthost'\)\)/.test(shop), 'the Business card and the identity box are both greyed');
   ok('a non-owner sees the Business fields greyed with the sentence');
   console.log('lens2-1129-web: ' + pass + ' passed, 0 failed');

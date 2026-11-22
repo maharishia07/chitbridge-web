@@ -13,7 +13,7 @@ const { liftFns } = require('./lib/lift-fn.cjs');
 function till(pack, scheme) {
   const sandbox = { shopPack: () => pack, schemeWord: () => scheme, rmoney: (x) => Math.round(x * 100) / 100, esc: (x) => String(x), cbQuiet() {}, creditNoteTitle: () => 'CREDIT NOTE' };
   vm.createContext(sandbox);
-  vm.runInContext(liftFns('public/till.html', ['noRateWord', 'unratedBaseOf', 'unratedApart', 'creditNoteTitleLines', 'slipTitleHTML']) + '\nthis.f = { noRateWord, unratedBaseOf, unratedApart, creditNoteTitleLines, slipTitleHTML };', sandbox);
+  vm.runInContext(liftFns('public/till.html', ['noRateWord', 'unratedBaseOf', 'unratedApart', 'creditNoteTitleLines']) + liftFns('public/app/till-slip.js', ['slipTitleHTML']) + '\nthis.f = { noRateWord, unratedBaseOf, unratedApart, creditNoteTitleLines, slipTitleHTML };', sandbox);
   return sandbox.f;
 }
 let bad = 0;

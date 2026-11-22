@@ -585,7 +585,7 @@ function paint() {
 function sampleMoneyFromShop() {
   var tok = null;
   try { tok = (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null; } catch (_) { tok = null; }
-  var api = new URLSearchParams(location.search).get('api') || window.CB_API;
+  var api = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API; /* SEC 1129: a foreign ?api= is ignored */
   if (!tok || !api || typeof CBSample === 'undefined') return;
   fetch(api + '/api/entities/me', { headers: { Authorization: 'Bearer ' + tok } }).then(function (reply) { return reply.ok ? reply.json() : null; }).then(function (body) {
     var entity = (body && body.data) || body || {};

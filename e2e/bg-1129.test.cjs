@@ -17,7 +17,7 @@ const ar = rd('app/strings-ar.js');
 
 const app = rd('app.html');
 ok(/:root\[dir=rtl\] \.appwrap\.m \.menu\{transform:translateX\(100%\)\}/.test(app), 'RTL: the closed drawer slides out to the right, not onto the bill');
-ok(app.includes("tx(l.split(' (')[0])"), 'the bill tabs say their name through tx');
+ok(app.includes("tx(l.slice(0, at)) + l.slice(at)") && /dtabLabel\(/.test(app), 'the bill tabs say their name through tx (dtabLabel: the word translated, the count kept)'); /* fold1129 71f2f201 */
 ok(app.includes("c.kind === 'receipt'") && app.includes("c.kind === 'credit_note'"), 'a credit note / goods receipt has its own money line, not the red "No issued figures"');
 ok(app.includes("${c.amt ? chitMoney(c.amt, c) : '—'}"), 'the bill header says — for no total, never AED 0.00');
 
