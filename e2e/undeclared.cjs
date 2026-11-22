@@ -55,11 +55,11 @@ const SHARED = (function () {
     var out = new Set();
     /* ⚠ s, not s — the backslash was eaten writing this file, so the pattern read "functions" and
        matched nothing. Which is why SESSION and MSG were still reported when app.html declares both. */
-    (src.match(/(?:var|let|const|function)s+([A-Z][A-Z0-9_]{1,})/g) || [])
+    (src.match(/(?:var|let|const|function)\s+([A-Z][A-Z0-9_]{1,})/g) || [])
       /* ⚠ the THIRD backslash eaten in this one file: /.*s/ greedily ate "const" and left " MSG" with a
          leading space, so the shared name never matched. Split on whitespace instead of trimming with a
          regex — there is nothing to get wrong. */
-      .forEach(function (d) { out.add(d.trim().split(/s+/).pop()); });
+      .forEach(function (d) { out.add(d.trim().split(/\s+/).pop()); });
     return out;
   } catch (_) { return new Set(); }
 })();
