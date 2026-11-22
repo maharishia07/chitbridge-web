@@ -282,7 +282,7 @@
     addCss(); /* the warning band is painted by a page that has not opened the chip yet */
     var text = evidenceText(u.count === 1 ? EVIDENCE_WORDS.claimOne : EVIDENCE_WORDS.claimMany)
       .replace('{amount}', money(u.tax_minor))
-      .replace('{box}', u.box ? u.box : evidenceText(EVIDENCE_WORDS.claimBox))
+      .replace('{box}', u.box ? (/^[0-9]+$/.test(String(u.box)) ? evidenceText('Box {n}').replace('{n}', u.box) : u.box) : evidenceText(EVIDENCE_WORDS.claimBox)) /* BG-F-03: a bare 13 read as 20.00 out of 13; a number is a box */
       .replace('{n}', String(u.count));
     return { text: text, see: evidenceText(EVIDENCE_WORDS.claimSee) };
   }

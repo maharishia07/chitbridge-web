@@ -1282,6 +1282,9 @@
   .appwrap.m .shell{grid-template-columns:1fr;position:relative;overflow:hidden}
   .appwrap.m .menu{position:absolute;top:52px;bottom:0;inset-inline-start:0;width:230px;z-index:80;transform:translateX(-100%);transition:.25s}
   .appwrap.m .menu.open{transform:translateX(0)}
+  /* BG-F-10: the closed drawer sits at inset-inline-start; in RTL that is the right edge, and -100% pulled it ONTO the screen over the bill title. Out of the screen on its own side. */
+  :root[dir=rtl] .appwrap.m .menu{transform:translateX(100%)}
+  :root[dir=rtl] .appwrap.m .menu.open{transform:translateX(0)}
   .appwrap.m .panel{grid-template-columns:1fr;grid-template-rows:1fr}
   .appwrap.m .divider{display:none}
   .appwrap.m .detail{display:none;border-inline-start:0}
@@ -25770,6 +25773,12 @@ function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
     if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
     /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
     if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
+    /* BG-F-06: a credit note and a goods receipt are not issued bills: the api sends them with no frozen invoice and no summary money, so the red "No issued figures" and a header "AED 0.00" told the owner a 233.33 return was nothing. A credit note READS the refund it stored (business_json.refund.total); a receipt carries quantities, its lines hold the prices. Never worked out here. */
+    if (c.kind === 'receipt') return `<div class="ir" data-testid="chit-money-receipt" style="margin:8px 12px 10px;color:var(--grey)">${tx('A goods receipt has no bill total.')}</div>`;
+    if (c.kind === 'credit_note') {
+      const rf = ((c.business_json || (c.header && c.header.business_json) || {}).refund || {}).total;
+      if (typeof rf === 'number') return `<div class="ir" data-testid="chit-money-refund" style="margin:8px 12px 10px"><span class="nm">${tx('Refund')}</span><span class="qt" data-testid="${totalTid || 'chit-total'}">${fmtMoney(rf, c.currency)}</span></div>`;
+    }
     const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
     if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
     const older =
@@ -27208,9 +27217,9 @@ function detailInner() {
     ['summary', 'Summary'],
     ['messages', '💬 Messages' + (msgCount(c) ? ' (' + msgCount(c) + ')' : '')]
   ]);
-  return `<div class="dh"><button data-cbsid="DTL001-B31" class="dback" onclick="backToList()">‹ Back to list</button><button data-cbsid="DTL001-B32" class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
+  return `<div class="dh"><button data-cbsid="DTL001-B31" class="dback" onclick="backToList()">‹ Back to list</button><button data-cbsid="DTL001-B32" class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${c.amt ? chitMoney(c.amt, c) : '—'} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button data-cbsid="DTL001-B33" class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
-   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
+   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${tx(l.split(' (')[0])}${l.indexOf(' (') > 0 ? ' (' + l.split(' (')[1] : ''}</button>`).join('')}</div>
    <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button data-cbsid="DTL001-B35" class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**
