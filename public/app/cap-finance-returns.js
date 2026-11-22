@@ -212,7 +212,7 @@ function frViewHTML(reply) {
     '</th><th style="text-align:end">' + esc(tx('Credit from purchases')) + '</th><th style="text-align:end">' + esc(tx('To pay now')) + '</th><th style="text-align:end">' + esc(tx('Credit kept')) + '</th></tr></thead><tbody>' +
     rows + '</tbody></table>' +
     (used ? '<p class="hint" data-testid="fr-view-setoff">' + used + '</p>' : '') +
-    '<p class="hint" data-testid="fr-view-note">' + esc(tx('A preview from your bills of the month, IGST credit first, then CGST, then SGST. Nothing is posted; the GST close opens when the month has ended.')) + '</p>'
+    '<p class="hint" data-testid="fr-view-note">' + esc(txf('A preview from your bills of the month, credit used in this order: {order}. Nothing is posted; the tax close opens when the month has ended.', { order: [heads[2], heads[0], heads[1]].map(function (h) { return h.name; }).join(', ') })) + '</p>'
   );
 }
 /** the month chosen, on screen: the server's GSTR-3B read, painted by frViewHTML (a late answer for another month is dropped) */
