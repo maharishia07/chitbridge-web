@@ -20,7 +20,7 @@ const CUSTOMER_PAGES = ['public/shop.html', 'public/store.html', 'public/network
 /* neutral = no staff session, no staff endpoint map, no staff page name (avatar.js carries the staff menu; screen-id.js lists every staff page: neither is loaded) */
 const ALLOW = new Set(['app/device-id.js', 'app/api-base.js' /* judged 22 Nov (ci1129): the ONE reader of the api address (fixApiBase); reads no session or token, only the dev-host override key, and production ignores it */, 'app/shop-time.js' /* judged 21 Nov: the one date formatter, no session, no api, no storage */, 'config.js', 'app/helpers.js', 'cb-offline.js', 'engine/offers.js', 'engine/pricing.js', 'app/catalogue-lines.js', 'engine/screen.js',
   'app/ui.js', 'app/ui-field.js', 'app/customer-bar.js', 'app/cb-words.js', 'engine/locale.js', 'engine/money.js', 'engine/tax.js',
-  'app/shop-privacy.js', 'app/cart.js', 'app/kbd-press.js', 'app/step-flow.js', 'app/sheet-keys.js', 'app/workflow.js', 'app/showcase-templates.js', 'app/promo-keys.js' /* judged neutral 22 Nov (websplit D): promo's show keys only */]);
+  'app/shop-privacy.js', 'app/cart.js', 'app/kbd-press.js', 'app/step-flow.js', 'app/sheet-keys.js', 'app/workflow.js', 'app/showcase-templates.js']);
 const OFFICE_PAGE = /(?:^|[^\w-])(?:app|accounts|finance|crm|catalogue|settings|employees|operations|tasks|till|network|know-your-business|authority-forms|intake|bill-print)\.html/;
 const nl = (s) => s.replace(/[^\n]/g, '');
 const strip = (s) => s.replace(/<!--[\s\S]*?-->/g, nl).replace(/\/\*[\s\S]*?\*\//g, nl).replace(/^[ \t]*\/\/.*$/gm, '').replace(/[ \t]\/\/[ \t].*$/gm, '');
