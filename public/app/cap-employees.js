@@ -754,6 +754,7 @@
         '</label><select data-cbsid="EMP001-S02" class="inp" id="emp_l" data-testid="emp-add-level">' +
         cs +
         '</select>' +
+        '<div class="sub" id="emp_lw" data-testid="emp-add-levelwhy" aria-live="polite"></div>' +
         '<label for="emp_r">' +
         esc(T('Job title (a name only, grants nothing)')) +
         '</label><input data-cbsid="EMP001-I05" class="inp" id="emp_r" data-testid="emp-add-role" autocomplete="off">' +
@@ -770,6 +771,10 @@
     var tm = null,
       /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
       keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T);
+    /* the picked label says in one line what it can do (the server's own why: lib/access PRESETS); the label also carries its hat, so label and access agree */
+    var showWhy = function () { var pick = E.choices[+$('emp_l').value] || {}; $('emp_lw').textContent = pick.why || ''; };
+    $('emp_l').onchange = showWhy;
+    showWhy();
     $('emp_n').oninput = function () {
       clearTimeout(tm);
       var name = $('emp_n').value.trim();
