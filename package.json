@@ -22,7 +22,7 @@
     "check:taxpick": "node tests/country-tax-pick.test.cjs",
     "check:aesetup": "node tests/ae-f03-setup-asks.test.cjs && node tests/ae-f21-language-coming.test.cjs && node tests/ae-f07-slab-pack-words.test.cjs",
     "check:countrysave": "node tests/startfix-country-save-once.test.cjs",
-    "check:signin": "node tests/signin-ui.test.cjs",
+    "check:signin": "node tests/signin-ui.test.cjs && node tests/settings-connect-google.test.cjs",
     "check:homebar": "node tests/home-phone-bar.test.cjs",
     "check:homebits": "node tests/home-bits-1129.test.cjs",
     "check:lvux": "node tests/lvux-1129.test.cjs",
