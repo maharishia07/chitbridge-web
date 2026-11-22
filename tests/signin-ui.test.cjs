@@ -369,7 +369,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
       let replaced = null;
       globalThis.location = { pathname, hash, search: '' };
       globalThis.history = { replaceState: (a, b, url) => { replaced = url; } };
-      for (const key of Object.keys(require.cache)) if (/signin-(ui|provider)\.js$/.test(key)) delete require.cache[key];
+      for (const key of Object.keys(require.cache)) if (/signin-(ui|more-ways)\.js$/.test(key)) delete require.cache[key];
       require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js'));
       require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
       return { lib: globalThis.CBSignin, replaced: () => replaced };
@@ -388,7 +388,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
   await it('N1/N2 round 2: #k= is a landing of its own (the confirm code), app.html keeps it for Settings, Settings spends it with the session, and a person with no PIN gets Connect greyed with Set a PIN first', async () => {
     globalThis.location = { pathname: '/app.html', hash: '#k=confirm-code_123', search: '' };
     globalThis.history = { replaceState: () => {} };
-    for (const key of Object.keys(require.cache)) if (/signin-(ui|provider)\.js$/.test(key)) delete require.cache[key];
+    for (const key of Object.keys(require.cache)) if (/signin-(ui|more-ways)\.js$/.test(key)) delete require.cache[key];
     require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js'));
     require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
     assert.deepStrictEqual(globalThis.CBSignin.takeLanded(), { kind: 'k', value: 'confirm-code_123' });
