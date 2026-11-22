@@ -260,10 +260,10 @@ function fpBillActs(party, item) {
     ref = esc(item.ref);
   return (
     '<div class="fp-acts" data-b="acts" style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px">' +
-    '<button data-cbsid="FIN002-B01" type="button" class="cbl-tbtn" data-testid="fp-hold-' + ref + '" onclick="event.stopPropagation();fpHold(\'' + pid + "','" + ref + '\',this)">' +
+    '<button data-cbsid="FIN002-B01" type="button" class="cbl-tbtn" data-testid="fp-hold-' + ref + '" data-pid="' + pid + '" data-ref="' + ref + '" onclick="event.stopPropagation();fpHold(this.dataset.pid,this.dataset.ref,this)">' +
     esc(tx('Hold this bill')) +
     '</button>' +
-    '<button data-cbsid="FIN002-B02" type="button" class="cbl-tbtn" data-testid="fp-note-' + ref + '" onclick="event.stopPropagation();fpNoteDiff(\'' + pid + "','" + ref + '\')">' +
+    '<button data-cbsid="FIN002-B02" type="button" class="cbl-tbtn" data-testid="fp-note-' + ref + '" data-pid="' + pid + '" data-ref="' + ref + '" onclick="event.stopPropagation();fpNoteDiff(this.dataset.pid,this.dataset.ref)">' +
     esc(tx('Note a difference')) +
     '</button></div>'
   );
@@ -299,7 +299,7 @@ function fpHeldRow(pid, item, lineHTML) {
       '<span class="due give">' + esc(bkMoney(item.open_minor, FP.cur)) + '</span>'
     ]) +
     lineHTML('held', tx(FP_HELD_WORD)) +
-    '<div class="fp-acts" data-b="acts" style="padding:2px 0 6px"><button data-cbsid="FIN002-B03" type="button" class="cbl-tbtn" data-testid="fp-release-' + ref + '" onclick="event.stopPropagation();fpRelease(\'' + pid + "','" + ref + '\',this)">' +
+    '<div class="fp-acts" data-b="acts" style="padding:2px 0 6px"><button data-cbsid="FIN002-B03" type="button" class="cbl-tbtn" data-testid="fp-release-' + ref + '" data-pid="' + pid + '" data-ref="' + ref + '" onclick="event.stopPropagation();fpRelease(this.dataset.pid,this.dataset.ref,this)">' +
     esc(tx('Release')) +
     '</button></div>'
   );

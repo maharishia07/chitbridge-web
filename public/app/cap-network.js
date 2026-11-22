@@ -3852,10 +3852,10 @@ function _storefrontConfig(n) {
           index +
           ',this.value)" placeholder="state name" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' +
           (index > 0
-            ? '<span data-cbsid="BUS004-C34" onclick="netMoveState(\'' + n.key + "'," + index + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>'
+            ? '<span data-cbsid="BUS004-C34" data-sk="' + esc(n.key) + '" onclick="netMoveState(this.dataset.sk,' + index + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>'
             : '<span style="display:inline-block;width:14px"></span>') +
           (!last
-            ? '<span data-cbsid="BUS004-C35" onclick="netMoveState(\'' + n.key + "'," + index + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>'
+            ? '<span data-cbsid="BUS004-C35" data-sk="' + esc(n.key) + '" onclick="netMoveState(this.dataset.sk,' + index + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>'
             : '<span style="display:inline-block;width:14px"></span>') +
           '<span data-cbsid="BUS004-C36" onclick="netDelState(\'' +
           n.key +
