@@ -30,6 +30,7 @@
   .note{ font-size:11px; color:var(--grey); } .err{ color:var(--bad); font-size:12px; margin-top:6px; }
   .formcard{ border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:8px; cursor:pointer; background:var(--card,#fff); }
   .formcard:hover{ border-color:var(--blue); } .formcard.on{ border-color:var(--blue); background:#f4f7fc; }
+  .formcard:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
   .formcard .t{ font-weight:700; font-size:13.5px; } .formcard .a{ font-size:11px; color:var(--grey); }
   .fld{ display:grid; grid-template-columns:1fr; gap:3px; padding:9px 0; border-top:1px solid var(--line); }
   .fld .lb{ font-size:11px; font-weight:700; color:var(--grey); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
@@ -242,9 +243,11 @@ function render() {
       return (
         '<div data-cbsid="DOC001-C01" class="formcard' +
         (SEL === item.key ? ' on' : '') +
-        '" onclick="pick(\'' +
-        item.key +
-        '\')"><div class="t">' +
+        '" role="button" tabindex="0" aria-pressed="' +
+        (SEL === item.key ? 'true' : 'false') +
+        '" data-key="' +
+        esc(item.key) +
+        '"><div class="t">' +
         esc(item.title) +
         '</div><div class="a">' +
         esc(item.authority || '') +
@@ -265,6 +268,23 @@ function render() {
       if (SEL) resolve();
     };
 }
+/* WCAG 2.1.1 (L-ux-web-screens-27#L41): a form card is a button: Tab reaches it, Enter or Space picks it. One delegated listener reads the key from
+   data-key, so no key is ever built into an inline handler. */
+function cardOf(ev) {
+  return ev.target && ev.target.closest ? ev.target.closest('.formcard[data-key]') : null;
+}
+document.addEventListener('click', function (ev) {
+  var card = cardOf(ev);
+  if (card) pick(card.getAttribute('data-key'));
+});
+document.addEventListener('keydown', function (ev) {
+  var card = cardOf(ev);
+  if (!card || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+  ev.preventDefault();
+  pick(card.getAttribute('data-key'));
+  var on = document.querySelector('.formcard.on');
+  if (on) on.focus();
+});
 function pick(k) {
   SEL = k;
   ISSUED = null;

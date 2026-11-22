@@ -11303,11 +11303,11 @@ function supInfoCardHTML(x) {
     '\')">' +
     tx('✎ Edit') +
     '</button>' +
-    '<button data-cbsid="BUS002-B09" data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\'' +
-    escJs(x.bridge_id) +
-    "','" +
-    String(supName(x)).replace(/[\\']/g, '') +
-    '\')">Passport <span class=arw>→</span></button>' +
+    '<button data-cbsid="BUS002-B09" data-testid="sup-passport" data-bid="' +
+    esc(x.bridge_id) +
+    '" data-nm="' +
+    esc(String(supName(x))) +
+    '" onclick="event.stopPropagation();viewSupplierPassport(this.dataset.bid,this.dataset.nm)">Passport <span class=arw>→</span></button>' +
     '<button data-cbsid="CMP008" data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\'' +
     x.supplier_list_id +
     '\')" style="margin-inline-start:auto;color:var(--disp)">' +

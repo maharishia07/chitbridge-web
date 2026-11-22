@@ -104,6 +104,14 @@ const PAGES = [
         const opts = await p.$$eval('#ctx option', (o) => o.map((x) => x.textContent.trim()));
         ok(kind === 'SELECT' && !/chit ID|chit id/i.test(await p.locator('#app').innerText()), 'documents @' + w + ' · K3 · "Draw from an order" is a pick list, not a typed chit id');
         ok(opts.length === 3 && /Order from athi.*athi.*90/.test(opts[1]) && /PO 14.*Agro Mills/.test(opts[2]) && !opts.some((x) => /Hello/.test(x)), 'documents @' + w + ' · K3 · it lists the shop\'s own recent orders, newest first, with who and how much (' + opts.join(' | ') + ')');
+        /* L-ux-web-screens-27#L41 (WCAG 2.1.1): the form cards are reached by Tab and picked by Enter or Space, with no mouse */
+        await p.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
+        let tabs = 0; while (tabs++ < 12 && !(await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('formcard')))) await p.keyboard.press('Tab');
+        ok(await p.evaluate(() => !!document.activeElement && document.activeElement.classList.contains('formcard') && document.activeElement.getAttribute('role') === 'button'), 'documents @' + w + ' · WCAG 2.1.1 · Tab reaches the first form card');
+        await p.keyboard.press('Enter'); await p.waitForSelector('#work .fld', { timeout: 8000 });
+        ok(await p.evaluate(() => document.querySelectorAll('.formcard.on').length === 1 && document.activeElement.classList.contains('formcard')), 'documents @' + w + ' · WCAG 2.1.1 · Enter picks the card and focus stays on it');
+        await p.keyboard.press(' '); await p.waitForSelector('#work .fld', { timeout: 8000 });
+        ok(await p.evaluate(() => document.querySelectorAll('.formcard.on').length === 1), 'documents @' + w + ' · WCAG 2.1.1 · Space picks the card too');
         await p.click('.formcard'); await p.waitForSelector('#work .fld', { timeout: 8000 });
         await p.selectOption('#ctx', 'ch-in-1'); await p.waitForTimeout(500);
         ok(posted.some((x) => x && x.context_ref === 'ch-in-1'), 'documents @' + w + ' · K3 · picking an order fills the form from it (context_ref sent)');
