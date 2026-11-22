@@ -86,7 +86,7 @@ assert.strictEqual(JSON.stringify(told[0]), JSON.stringify(['k', { name: 'New', 
 ok('a real party edit still reaches the controller');
 
 /* 5 · inputMoved against the recorded choice */
-const shell = src('app/accounts-shell.js'), box = { IGNORED_TYPES: ['button', 'submit'] };
+const shell = src('app/accounts-shell.js') + '\n' + src('app/accounts-shell-unsaved.js'), box = { IGNORED_TYPES: ['button', 'submit'] };
 vm.createContext(box);
 vm.runInContext(grab(shell, 'function selectBase') + '\n' + grab(shell, 'function selectRemember') + '\n' + grab(shell, 'function inputMoved'), box);
 const select = (count, index) => ({ tagName: 'SELECT', type: 'select-one', multiple: false, disabled: false, hasAttribute: () => false, options: Array.from({ length: count }, () => ({ defaultSelected: false, selected: false })), selectedIndex: index });

@@ -1568,7 +1568,7 @@ body.lab-only #cbtestpanel{
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the 16 themes, ONE list for every page (engines screen v1.15.0) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the avatar, its menu, and the look it owns (theme · font · text size · bold · motion) — one file, every page -->
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>   <!-- tx · txf · friendlyErr · toast · the Ledger's boot endpoints and switch — shared with accounts.html (2026-10-01) -->
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>   <!-- tx · txf · friendlyErr · toast · the Ledger's boot endpoints and switch — shared with accounts.html (2026-10-01) -->
 <!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/fmtAt/fmtMoney/deepClone/jwtPayload) -->
 <!-- ⚠️ BEFORE helpers.js, which formats through it. The localisation layer owns every decision that changes
      across a border: language, direction, numerals, numbers, money, dates, times and SORT ORDER. -->
