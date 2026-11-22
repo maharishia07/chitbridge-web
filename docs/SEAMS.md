@@ -57,10 +57,10 @@ of file each thing is; this says what already does the job.
 | 30 | `bkDate` | `cap-books.js` |  |
 | 30 | `model` | `chit-sheet.js` |  |
 | 29 | `card` | `cap-shop.js` |  |
-| 29 | `step` | `cart.js` |  |
 | 29 | `head` | `list-ctl.js` |  |
 | 29 | `panel` | `sides.js` |  |
 | 29 | `field` | `ui-field.js` | the part: |
+| 28 | `step` | `cart.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
 | 27 | `figures` | `bank-demo.js` |  |
 | 27 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
@@ -78,13 +78,13 @@ of file each thing is; this says what already does the job.
 | 23 | `later` | `home2.js` | adopt once on the next frame, however many changes ask for it |
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
 | 22 | `held` | `books-grant-api.js` |  |
-| 22 | `show` | `books-grant-drill.js` |  |
 | 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 22 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
 | 22 | `send` | `cap-quotes.js` |  |
 | 22 | `moment` | `shop-time.js` |  |
 | 22 | `actions` | `workflow.js` | actions(chit, me) — |
 | 21 | `resolve` | `api-base.js` | env = { host, stored, cbApi, remove } (all optional; the page's own values are read when absent). |
+| 21 | `show` | `books-grant-drill.js` |  |
 | 21 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 21 | `shows` | `edition.js` |  |
 | 21 | `fmtMoney` | `helpers.js` |  |
@@ -120,12 +120,12 @@ of file each thing is; this says what already does the job.
 | 17 | `offers` | `network-app.js` |  |
 | 17 | `hand` | `preview-key.js` | hand(shopId) → Promise<true> once a key is stored (the api's preview-only token), Promise<false> otherwise (no |
 | 17 | `opened` | `sheet-keys.js` | the host's content went from empty to a sheet: |
-| 16 | `save` | `app.html` |  |
 | 16 | `session` | `assign-bar.js` |  |
 | 16 | `tick` | `books-clients-door.js` | one beat: |
 | 16 | `total` | `cart.js` |  |
 | 16 | `refused` | `ui-money.js` |  |
 | 16 | `select` | `ui-select.js` | the part: |
+| 15 | `save` | `app.html` |  |
 | 15 | `safe` | `books-held-ok.js` | text made safe for the page, through the page's own escaper |
 | 15 | `when` | `cap-mark.js` | the one date-time stamp is CBThread.when (rail-thread.js loads first on both pages that load this file) |
 | 15 | `choice` | `ui.js` | ui.choice({ mount, key, label, value, items: |

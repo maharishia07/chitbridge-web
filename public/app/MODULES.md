@@ -145,7 +145,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-worklist-raida.js` | — | the RAIDA register on a work line (risks · actions · issues · decisions · assumptions): load, open, close, the rows and the section. Split out of cap- |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (143)
+## Shared (142)
 
 | file | loading | what it is |
 |---|---|---|
@@ -244,7 +244,6 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `product-lab-rows.js` | — |  |
 | `product-lab-steps.js` | — | PRODUCT LAB'S STEP STRIP: Choose, then Price & shelf |
-| `promo-keys.js` | — | THE SHOP SCREEN'S KEYBOARD: the shortcuts of the promo show |
 | `queue-back.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
 | `rail-bell-html.js` | — |  |
@@ -338,7 +337,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 30 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |
 | `product-lab.html` | 15 | the Product Lab: adopt a ready-made list, one row per product with its units as choices (each with its GST unit code), then price and shelf. |
-| `promo.html` | 5 | the shop screen (a second screen / TV): the shop's offers as a carousel drawn on one canvas, the same drawing saved as a PNG |
+| `promo.html` | 4 | the shop screen (a second screen / TV): the shop's offers as a carousel drawn on one canvas, the same drawing saved as a PNG |
 | `screen-gallery.html` | 2 | the Screen Library: every entry of every screen registry drawn on one page |
 | `settings.html` | 37 | the CB Settings page: Business · Counters & keys · Connectors · Policy & Localisation · Plan & usage · Standards. |
 | `shell-lab.html` | 13 | the Shell Lab: the shell (app/shell.js · CBShell) on a page, the pass mark e2e/shell.cjs measures; ?harness=1 is the bare gallery. |
@@ -357,4 +356,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*268 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*267 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
