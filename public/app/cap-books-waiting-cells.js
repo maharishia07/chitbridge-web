@@ -340,7 +340,7 @@ function bkWaitAcceptShort(index, button) {
   return CBAction.run(
     button,
     function () {
-      return api('status', { params: { id: row.chit_id }, body: { status: 'accepted' } });
+      return api('status', { params: { id: row.chit_id }, body: { status: 'accepted', counted_minor: short.ours_minor } }); /* REV5 EL-04 M11: the figure the owner SAW; the api answers 409 COUNT_MOVED if the count changed since */
     },
     {
       key: 'wait-accept-' + row.chit_id,

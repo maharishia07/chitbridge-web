@@ -3855,12 +3855,20 @@ function bkLgCsv(rows, c) {
       .join('\r\n') + '\r\n'
   );
 }
+/** '' when every line of the period is held, else the sentence that goes in the file and on the screen (REV5 05 M2: the Day book's rule, never silently partial) */
+function bkLgPartialNote(r) {
+  if (!r || !r.next) return '';
+  var held = (r.lines || []).length;
+  return txf('NOT COMPLETE: only {held} of {total} lines were loaded, so this list and file leave out the later ones. Narrow the dates to see them all.', { held: held, total: Number(r.total || held) });
+}
 /* download the shown rows as a CSV file */
 function bkLgDownload(rows) {
   var r = BK.lt.r,
     sel = BK.lt.sel;
   if (!r || !sel) return;
-  var blob = new Blob(['﻿' + bkLgCsv(rows, r.currency)], { type: 'text/csv;charset=utf-8' });
+  var note = bkLgPartialNote(r);
+  if (note && typeof toast === 'function') toast(note);
+  var blob = new Blob(['﻿' + bkLgCsv(rows, r.currency) + (note ? bkCsvCell(note) + '\r\n' : '')], { type: 'text/csv;charset=utf-8' });
   var node = document.createElement('a');
   node.href = URL.createObjectURL(blob);
   node.download = 'ledger-' + (sel.party || sel.code) + '.csv';
