@@ -116,7 +116,6 @@ const CODES = [
   ['app/cap-network.js', 'BUS004-S09', 'select', 'onchange="netSetCatLoad'],
   ['app/cap-network.js', 'BUS004-C27', 'div', 'onclick="netAddFeedback'],
   ['app/cap-network.js', 'BUS004-C28', 'div', 'onclick="netExportCat'],
-  ['app/cap-network-storefront.js', 'BUS004-C29', 'div', 'onclick="netSetExposure'],
   ['app/cap-network-storefront.js', 'BUS004-S10', 'select', 'onchange="netSetInlet'],
   ['app/cap-network-storefront.js', 'BUS004-I28', 'input', 'oninput="netSetInlet'],
   ['app/cap-network-storefront.js', 'BUS004-C30', 'span', 'onclick="netDelInlet'],
@@ -176,7 +175,7 @@ const CODES = [
   ['app/cap-network.js', 'BUS004-B19', 'button', 'onclick="netCapYes'],
   ['app/cap-network.js', 'BUS004-C52', 'span', 'onclick="netCapNo']
 ];
-const COUNTS = { 'app/cap-iddocs.js': 3, 'app/cap-messages.js': 6, 'app/cap-service.js': 15, 'app/cap-network.js': 112, 'app/cap-network-storefront.js': 20 };
+const COUNTS = { 'app/cap-iddocs.js': 3, 'app/cap-messages.js': 6, 'app/cap-service.js': 15, 'app/cap-network.js': 112, 'app/cap-network-storefront.js': 19 };
 
 const read = (f) => {
   let t = fs.readFileSync(path.join(PUB, f), 'utf8').split('\r\n').join('\n');
