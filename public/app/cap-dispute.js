@@ -60,8 +60,7 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls) {
             "','" +
             item.entity_id +
             "','" +
-            /* LENS-SEC 1129: encodeURIComponent leaves ' ( ) - alone, so a counterparty's name  x'-alert(1)-'  broke out of this string (cross-shop stored XSS); the quote goes too (decodeURIComponent reads %27 back) */
-            encodeURIComponent(item.display_name || 'party').replace(/'/g, '%27') +
+            encodeURIComponent(item.display_name || 'party').replace(/'/g, '%27') + /* LENS-SEC 1129: encodeURIComponent leaves ' ( ) - alone, so a counterparty's name  x'-alert(1)-'  broke out of this string (cross-shop stored XSS); the quote goes too (decodeURIComponent reads %27 back) */
             '\')">Resolve ' +
             nm(item.display_name, 'party') +
             '</button>'

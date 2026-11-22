@@ -38,7 +38,7 @@ if (/\bconfirm\(|\balert\(/.test(cap)) bad('no browser confirm/alert');
 if (/#[0-9a-fA-F]{3,6}\b/.test(stripped)) bad('no raw colours');
 
 /* ── F2 · Terms (cap-finance-terms.js + the CRM record's read-only block): static, no browser ── */
-const ft = read('public/app/cap-finance-terms.js'), crmRec = read('public/app/cap-crm-record.js'), crmJs = read('public/app/cap-crm.js');
+const ft = read('public/app/cap-finance-terms.js') + read('public/app/cap-finance-terms-undo.js'), crmRec = read('public/app/cap-crm-record.js'), crmJs = read('public/app/cap-crm.js');
 const ftc = ft.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '');
 if (page.indexOf('/app/cap-finance-terms.js') < 0 || page.indexOf('data-testid="fin-nav-terms"') < 0 || page.indexOf('href="#/terms"') < 0) bad('finance.html must load cap-finance-terms.js and carry the Terms nav'); else ok('Terms tab: script + nav');
 const ftCalls = [...ftc.matchAll(/\bapi\('(\w+)'/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).sort().join();
@@ -73,7 +73,7 @@ const flows = read('docs/process/flows.json');
 if (!/"cash position"/.test(flows) || !/cap-finance-cash\.js/.test(flows)) bad('flows.json must carry the cash position step (PM1)'); else ok('flows.json: cash position step');
 
 /* ── F4 · Payables (cap-finance-pay.js + payOpen's offer): static, no browser — the tab paints the server's payables and computes nothing ── */
-const fp = read('public/app/cap-finance-pay.js'), books = read('public/app/cap-books.js');
+const fp = read('public/app/cap-finance-pay.js') + read('public/app/cap-finance-pay-held.js'), books = read('public/app/cap-books.js');
 const fpc = fp.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '');
 if (page.indexOf('/app/cap-finance-pay.js') < 0 || page.indexOf('data-testid="fin-nav-payables"') < 0 || page.indexOf('href="#/payables"') < 0) bad('finance.html must load cap-finance-pay.js and carry the Payables nav'); else ok('Payables tab: script + nav');
 const fpCalls = [...fpc.matchAll(/\bapi\('(\w+)'/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).join();

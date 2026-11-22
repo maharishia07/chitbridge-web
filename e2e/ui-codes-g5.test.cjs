@@ -24,9 +24,9 @@ const CODES = [
   ["app/cap-chit2.js","DTL006-B01","button","onclick=\"c"],
   ["app/cap-chit2.js","DTL006-B02","button","onclick=\"c"],
   ["app/cap-chit2.js","DTL006-C02","span","onclick=\"event"],
-  ["app/cap-chit2.js","DTL006-C03","span","onclick=\"c"],
-  ["app/cap-chit2.js","DTL006-C04","span","onclick=\"c"],
-  ["app/cap-chit2.js","DTL006-B03","button","onclick=\"c"],
+  ["app/cap-chit2-reprice.js","DTL006-C03","span","onclick=\"c"],
+  ["app/cap-chit2-reprice.js","DTL006-C04","span","onclick=\"c"],
+  ["app/cap-chit2-reprice.js","DTL006-B03","button","onclick=\"c"],
   ["app/cap-chit2.js","DTL006-I01","input"," id=\"c"],
   ["app/cap-chit2.js","DTL006-I02","input"," id=\"c"],
   ["app/cap-chit2.js","DTL006-B04","button","onclick=\"c"],
@@ -178,7 +178,7 @@ const CODES = [
   ["app/cap-network-member.js","SCR031-C05","div","onclick=\"netBrowse"],
   ["app/cap-network-member.js","SCR031-I05","input","oninput=\"netAvailSearch"]
 ];
-const COUNTS = {"app/cap-chit2.js":27,"app/cap-register.js":37,"app/cap-register-impact.js":3,"app/cap-supplies.js":16,"app/cap-workforce.js":40,"app/cap-adopt.js":5,"app/cap-worklist.js":17,"app/cap-worklist-raida.js":5,"app/cap-network-member.js":11};
+const COUNTS = {"app/cap-chit2.js":24,"app/cap-chit2-reprice.js":3,"app/cap-register.js":37,"app/cap-register-impact.js":3,"app/cap-supplies.js":16,"app/cap-workforce.js":40,"app/cap-adopt.js":5,"app/cap-worklist.js":17,"app/cap-worklist-raida.js":5,"app/cap-network-member.js":11};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */

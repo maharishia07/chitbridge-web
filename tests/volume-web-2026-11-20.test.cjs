@@ -74,9 +74,9 @@ const slice = (src, from, to) => { const a = src.indexOf(from), b = src.indexOf(
     assert.ok(sent.includes('marksRead'), 'a 409 re-reads the mark'); assert.strictEqual(said, 'Changed by Anna just now.');
   });
   await ok('year: the close words tell the truth; Reopen year is owner-only with a reason dialog; month reopen on a hard-locked month', () => {
-    const cp = rd('cap-period.js');
+    const cp = rd('cap-period.js') + rd('cap-period-year.js'), py = rd('cap-period-year.js') + '\n/*END*/';
     assert.ok(!/cannot be undone/.test(cp) && /You can reopen only this latest year later, with a reason; it is logged\./.test(cp));
-    const acts = slice(cp, 'function peYearActionsHtml', 'async function peYearStatus');
+    const acts = slice(py, 'function peYearActionsHtml', '/*END*/');
     assert.ok(/yearState\.closed && peOwner\(\)/.test(acts) && /data-testid="py-reopen"/.test(acts) && /BKS016-B12/.test(acts));
     assert.ok(cp.includes("perYearReopen: { m: 'POST', p: '/api/books/year/:fy/reopen' }") && cp.includes('bkReasonDialog('));
     assert.ok(rd('cap-books-lock.js').includes("state === 'hard_locked'") && cb.includes("booksReopenMonth: { m: 'POST', p: '/api/books/periods/:fy/:p/reopen' }"));

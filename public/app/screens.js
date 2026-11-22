@@ -2232,7 +2232,7 @@ window.CBSCREENS = {
 "askAiOrderDoc":{"code":"POP017","file":"app.html","ambiguous":true},
 "awRender":{"code":"POP018","file":"cap-workforce.js","ambiguous":false},
 "c2AssignOpen":{"code":"POP019","file":"cap-chit2.js","ambiguous":true},
-"c2RepricePaint":{"code":"POP020","file":"cap-chit2.js","ambiguous":true},
+"c2RepricePaint":{"code":"POP020","file":"cap-chit2-reprice.js","ambiguous":true},
 "catUnusedRow":{"code":"POP021","file":"app.html","ambiguous":false},
 "catsetBody":{"code":"POP022","file":"cap-catsetup.js","ambiguous":false},
 "catsetPlanPaint":{"code":"POP023","file":"cap-catsetup.js","ambiguous":false},

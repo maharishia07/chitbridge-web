@@ -744,61 +744,6 @@ function enPhoto(inp) {
   r.readAsDataURL(f);
 }
 
-/* ── the journal's own lines (the CA's door): ledger · Dr/Cr · amount. The server says whether they balance. ── */
-function enLinesHTML() {
-  return (
-    '<div class="en-sec">' +
-    esc(tx('Lines')) +
-    '</div>' +
-    EN.lines
-      .map(function (item, index) {
-        return (
-          '<div class="en-ln" data-testid="en-line-' +
-          index +
-          '">' +
-          enLedgerSelect('en_lc' + index, item.code, 'enLine(' + index + ",'code',this.value)", undefined, 'en-line-code-' + index) +
-          '<select data-cbsid="SCR022-S03" data-testid="en-line-side-' +
-          index +
-          '" onchange="enLine(' +
-          index +
-          ',\'side\',this.value)"><option value="dr"' +
-          (item.side === 'dr' ? ' selected' : '') +
-          '>Dr</option><option value="cr"' +
-          (item.side === 'cr' ? ' selected' : '') +
-          '>Cr</option></select>' +
-          bkMoneyInput({ id: 'en-line-amt-' + index, text: item.amt == null ? '' : String(item.amt), on: 'enLine(' + index + ",'amt',this.value)" }) +
-          '<button data-cbsid="CMP008" type="button" class="en-btn" style="padding:0" aria-label="' +
-          esc(tx('Remove')) +
-          '" data-testid="en-line-del-' +
-          index +
-          '" onclick="enLineDel(' +
-          index +
-          ')"' +
-          (EN.lines.length <= 2 ? ' disabled' : '') +
-          '>✕</button></div>'
-        );
-      })
-      .join('') +
-    '<button data-cbsid="SCR022-B03" type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' +
-    esc(tx('Add a line')) +
-    '</button>'
-  );
-}
-function enLine(i, k, v) {
-  EN.lines[i][k] = v;
-  EN.pv = null;
-  var node = document.getElementById('en_next');
-  if (node) node.disabled = !enStepReady(EN.step);
-}
-function enLineAdd() {
-  EN.lines.push({ code: '', side: 'dr', amt: '' });
-  enPaint();
-}
-function enLineDel(i) {
-  if (EN.lines.length > 2) EN.lines.splice(i, 1);
-  enPaint();
-}
-
 /* ── R106: the ITEM lines of a non-journal event (a debit note: what differs, how many, the rate difference per unit, its tax %) — typed as data, taxed and
    composed by the server (books-manual debit_note → taxedInvoice); the page adds nothing up ── */
 function enIsJournal() {

@@ -54,7 +54,7 @@ const ok = (name) => console.log('ok  ' + name) || ran++;
   ok('avatar: sign-out removes cb_sess, cb_prefs_pending and cb_nav*, so the next sign-in has nothing of the last person to push');
 
   /* 3 · accounts-shell: chitIsSelf and inputMoved (the functions lifted from the file, so the real text is tested) */
-  const shell = src('app/accounts-shell.js');
+  const shell = src('app/accounts-shell.js') + '\n' + src('app/accounts-shell-unsaved.js'); /* selectBase and inputMoved live in the unsaved guard */
   const grab = (start) => { const a = shell.indexOf(start); let depth = 0, i = shell.indexOf('{', a); for (; i < shell.length; i++) { if (shell[i] === '{') depth++; if (shell[i] === '}' && --depth === 0) break; } return shell.slice(a, i + 1); };
   const sandbox = { SESSION: { entityId: 'e1', entity: 'Alpha Timers' }, IGNORED_TYPES: ['button', 'submit'] };
   vm.createContext(sandbox);

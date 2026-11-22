@@ -23,7 +23,7 @@ const sb = {
   bkCur: () => 'INR'
 };
 vm.createContext(sb);
-vm.runInContext(read('cap-finance-terms.js') + '\nthis.__t = { ftSentences, ftRules, ftUndoVal, FT_Q: FT_QUESTIONS };', sb);
+vm.runInContext(read('cap-finance-terms.js') + read('cap-finance-terms-undo.js') + '\nthis.__t = { ftSentences, ftRules, ftUndoVal, FT_Q: FT_QUESTIONS };', sb);
 const J = (v) => JSON.parse(JSON.stringify(v)); /* arrays made inside the sandbox are another realm's: compare by value */
 const T = sb.__t;
 const X = (o) => Object.assign({ days: null, limit: null, on: false, rate: null, grace: 0, pct: null, within: null }, o);

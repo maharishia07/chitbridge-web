@@ -4,7 +4,7 @@
  * OWNS the offline guard of peReturnStage and peYearClosedEvidence in public/app/cap-period.js.   CARD 14-accounting */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
-const text = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-period.js'), 'utf8').split('\r\n').join('\n');
+const text = ['cap-period.js', 'cap-period-year.js'].map((name) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', name), 'utf8')).join('\n').split('\r\n').join('\n');
 const pick = (name) => { const at = text.indexOf('function ' + name + '('); return text.slice(at, text.indexOf('\n}\n', at) + 2); };
 const line = (name) => text.slice(text.indexOf('const ' + name + ' ='), text.indexOf('\n', text.indexOf('const ' + name + ' =')) + 1);
 const ctx = { tx: (s) => s, txf: (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]), esc: (s) => String(s), bkDate: (d) => d, peMoney: (m, c) => c + ' ' + (m / 100).toFixed(2) };

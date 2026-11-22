@@ -74,7 +74,7 @@ function go() {
 <script src="/app/books-grant-api.js"></script><script src="/app/books-grant-words.js"></script><script src="/app/books-grant-member.js"></script><script src="/app/books-acting.js"></script><script src="/app/books-actions-view.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script><script src="/app/accounts-start.js"></script>
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script><script src="/app/accounts-start.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
@@ -85,14 +85,14 @@ function go() {
 <script type="cb-late" data-late-group="tax" src="/engine/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
-<script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
+<script src="/app/chit-sheet-sample.js"></script><script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
 <script src="/app/cap-folders-metrics.js"></script><script src="/app/cap-folders.js"></script>
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the money field reads its marks and number reader from it -->
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
 <script src="/app/bank-tb-line.js"></script><script src="/app/tb-change.js"></script>
-<script src="/app/cap-books.js"></script><script src="/app/cap-books-lock.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-party.js"></script>
+<script src="/app/cap-books.js"></script><script src="/app/cap-books-lock.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-needs.js"></script><script src="/app/cap-books-party.js"></script>
 <script src="/app/cap-attention.js"></script>   <!-- W15-102: the Needs attention strip (Day book · Ledgers · BAS) — the server counts -->
-<script src="/app/cap-opening.js"></script><script src="/app/cap-opening-years.js"></script><script src="/app/cap-opening-bills.js"></script>   <!-- Setup › Opening balances (l16): the grid, the live Difference from the server, what is saved, the year strip -->
+<script src="/app/cap-opening-saved.js"></script><script src="/app/cap-opening.js"></script><script src="/app/cap-opening-years.js"></script><script src="/app/cap-opening-bills.js"></script>   <!-- Setup › Opening balances (l16): the grid, the live Difference from the server, what is saved, the year strip -->
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
 <script src="/app/attach-ui.js"></script>   <!-- CBAttach.mount (R07): the one picker, 6 MB cap and audience rule in this one file -->
 <script src="/app/rail-thread-words.js"></script><script src="/app/rail-thread.js"></script>
@@ -102,21 +102,21 @@ function go() {
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — Send on rail / Share off rail, the server's may painted -->
 <script type="cb-late" data-late-group="engines" src="/engine/chart.js"></script><script type="cb-late" data-late-group="engines" src="/engine/accounts-packs.js"></script><script type="cb-late" data-late-group="engines" src="/engine/posting-voucher.js"></script><script type="cb-late" data-late-group="engines" src="/engine/posting.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-entry.js"></script>   <!-- engines bank-recon 1.96.0 reads CBPosting and CBBankEntry (chart + accounts-packs first) -->
 <script type="cb-late" data-late-group="engines" src="/engine/bank-json.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-brs.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-files.js"></script><script type="cb-late" data-late-group="engines" src="/engine/bank-recon.js"></script>   <!-- CBBankRecon: the bank statement is read, matched and reconciled HERE, on this device (DECISIONS: Bank reconciliation runs on the shop's device) -->
-<script src="/app/books-held-ok.js"></script><script src="/app/cap-entry.js"></script><script src="/app/cap-entry-preview.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
-<script type="cb-late" data-late-group="period" src="/app/cap-period.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-stock.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
-<script type="cb-late" data-late-group="bank" src="/app/bank-demo-ask.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-map.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-rows.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script src="/app/books-held-ok.js"></script><script src="/app/cap-entry-lines.js"></script><script src="/app/cap-entry.js"></script><script src="/app/cap-entry-preview.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
+<script type="cb-late" data-late-group="period" src="/app/cap-period-year.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-stock.js"></script><script type="cb-late" data-late-group="period" src="/app/cap-period-accruals.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
+<script type="cb-late" data-late-group="bank" src="/app/bank-demo-ask.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-details.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-map.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-rows.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
 <script type="cb-late" data-late-group="bank" src="/app/cap-bank-home.js"></script>   <!-- Bank home (l16 W15-84): the page the menu always opens on, the months grid, the trail and Back -->
 <script type="cb-late" data-late-group="bank" src="/app/cap-bank-statements.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-statements-add.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
 <script type="cb-late" data-late-group="bank" src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
 <script type="cb-late" data-late-group="bank" src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
-<script type="cb-late" data-late-group="bank" src="/engine/bank-statement-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-line.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script type="cb-late" data-late-group="bank" src="/engine/bank-statement-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-check.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-line.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-reach.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
 <script type="cb-late" data-late-group="bank" src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
 <script type="cb-late" data-late-group="bank" src="/app/bank-lock.js"></script>   <!-- CBBankLock: a line in a locked month, said first; the two ways on -->
 <script type="cb-late" data-late-group="bank" src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
 <script type="cb-late" data-late-group="bank" src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
 <script type="cb-late" data-late-group="bank" src="/app/bank-preview-ui-parts.js"></script><script type="cb-late" data-late-group="bank" src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
 <script type="cb-late" data-late-group="bank" src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
-<script type="cb-late" data-late-group="bank" src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
+<script type="cb-late" data-late-group="bank" src="/app/cap-bank-sheet-lock.js"></script><script type="cb-late" data-late-group="bank" src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
 <script type="cb-late" data-late-group="bank" src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script type="cb-late" data-late-group="movein" src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
 <script type="cb-late" data-late-group="movein" src="/app/cap-move-in-skipped.js"></script><script type="cb-late" data-late-group="movein" src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
@@ -586,12 +586,11 @@ function accBillNext(c) {
     '</div>'
   );
 }
-/** E19: the books' Dues beside the open bill chits - a party the books owe (or are owed) that holds no open chit is a row of its own ("In your books"); nothing is added up from chits */
 /** the open bill chits of a folder read (api() may collapse {chits:[…]} to the array) */
 function billChitList(rows) {
   return Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
 }
-/** accBillsFromBooks(folder, list) → the books' own dues beside the chit rows, so the Bills list shows both sides */
+/** accBillsFromBooks(folder, list) → E19: the books' own dues beside the chit rows, so the Bills list shows both sides - a party the books owe (or are owed) that holds no open chit is a row of its own ("In your books"); nothing is added up from chits */
 async function accBillsFromBooks(folder, list) {
   const supplierSide = folder.code === 'B-2100',
     owed = await api('booksDues', { query: { side: supplierSide ? 'supplier' : 'customer' } }).catch((failure) => {
@@ -623,8 +622,7 @@ async function accBills(body) {
     }
     if (!sys.some((item) => item.code === ACC.billTab)) ACC.billTab = sys[0].code;
     const loadSide = async (folder) => {
-      const rows = await api('folderChits', { params: { id: folder.folder_id }, query: { state: 'open' } });
-      /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
+      const rows = await api('folderChits', { params: { id: folder.folder_id }, query: { state: 'open' } }); /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
       const list = billChitList(rows);
       /* E19 (decided by practice: Xero's Bills to pay reads the payables ledger): the figure and the rows come from the BOOKS, the one GET /dues Dues paints (nothing is added up from chits).
          A party with an open bill CHIT keeps its chit rows (pay, open the chit); a party the books owe or are owed that holds no open chit is a row of its own ("In your books"), so a loader's or a move-in's bills show here as they do in Dues. */

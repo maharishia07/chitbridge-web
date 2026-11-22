@@ -4,7 +4,7 @@
  * OWNS    the F-16 proof        CALLED BY npm test        CARD    books/year-close
  */
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
-const src = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-period.js'), 'utf8');
+const src = fs.readFileSync(path.join(__dirname, '..', 'public/app/cap-period-year.js'), 'utf8');
 const i = src.indexOf('function peYearWhy('); assert.ok(i >= 0);
 const ctx = { bkDate: (d) => d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4), monthNames: () => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] };
 vm.createContext(ctx); vm.runInContext(src.slice(i, src.indexOf('\n}\n', i) + 3), ctx);

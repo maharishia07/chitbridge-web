@@ -24,11 +24,11 @@ const has = (f, text) => src(f).includes(text);
   // GF-10 / Undo: a supplier change is put back on the supplier side
   const esc = (s) => String(s);
   const cu = vm.createContext({ esc, tx: (s) => s, FT_UNDOABLE: { credit_days: 1 } });
-  vm.runInContext(liftFns('public/app/cap-finance-terms.js', ['ftUndoFor']) + '\nthis.f = { ftUndoFor };', cu);
+  vm.runInContext(liftFns('public/app/cap-finance-terms-undo.js', ['ftUndoFor']) + '\nthis.f = { ftUndoFor };', cu);
   const list = [{ field: 'supplier.credit_days', old: 30, at: '2026-11-02' }];
   const btn = cu.f.ftUndoFor(list, false, 'p1')(list[0], 0);
   t('Undo of a supplier change carries data-side=supplier', btn.includes('data-side="supplier"'), btn);
-  t('ftUndo posts that side, not a fixed customer', has('app/cap-finance-terms.js', "side: undo.side") && !has('app/cap-finance-terms.js', "{ party_id: undo.partyId, side: 'customer' }"), 'fixed side');
+  t('ftUndo posts that side, not a fixed customer', has('app/cap-finance-terms-undo.js', "side: undo.side") && !has('app/cap-finance-terms-undo.js', "{ party_id: undo.partyId, side: 'customer' }"), 'fixed side');
 
   // EL-10 M4: Receive passes an after that re-reads the Collections list
   t('Receive re-reads Collections after the payment', has("app/cap-finance.js", "after:function(){finLoad(true)}"), 'no after');
