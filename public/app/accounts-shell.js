@@ -42,6 +42,7 @@ var CB_HOMES = {
   profile: '/settings.html#/shop' /* the avatar's own choice for Profile: Settings › Your business (avatar.js, UX-96) */,
   shop: '/settings.html#/shop',
   country: '/settings.html#/country',
+  account: '/settings.html#/account' /* Settings › Account: where a provider's redirect lands the person (app.html landedGo, N3) and the code is spent */,
   settings: '/settings.html' /* CB Settings (SET1): Your shop · Country setup */,
   integrations: '/settings.html#/connectors',
   counters: '/settings.html#/counters',
@@ -131,6 +132,11 @@ var CB_SETTINGS_EP = {
   /* T3-P4-ACCOUNT: where this person is signed in (M05 sessions, routes/signin.js) — CB Settings › Account › Sessions; the first web reader of these routes */
   sessionsList: { m: 'GET', p: '/api/signin/sessions', ok: 'y' }, // { sessions:[{ jti, device_id, surface, iat, exp, current, device:{ label, kind, seen } }], legacy, may:{ devices } }
   devicesList: { m: 'GET', p: '/api/signin/devices', ok: 'y' }, // owner only (lib/owner.gate): every device of the shop with its live count
+  /* SSO-1129 connect (SEC-112 P1a): a signed-in person links Google to their own account; re-proof (the PIN) rides in each write */
+  providerLinks: { m: 'GET', p: '/api/signin/provider/links', ok: 'y' }, // { links:[{ link_id, provider, email, email_verified, linked_at, last_used_at }], providers:[{ key, label, live, accepted }] }
+  providerLinkStart: { m: 'POST', p: '/api/signin/provider/link/start', ok: '✓' }, // { provider, pin, next } -> { url } the address that starts the provider round trip
+  providerLinkFinish: { m: 'POST', p: '/api/signin/provider/link/finish', ok: '✓' }, // { code } the one-time #k= code -> { ok, linked }; only the session that started the link can spend it
+  providerUnlink: { m: 'DELETE', p: '/api/signin/provider/links/:link_id', ok: '✓' }, // { pin }
   sessionRevoke: { m: 'POST', p: '/api/signin/sessions/revoke', ok: '✓' } // { jti } my own (the owner: anyone's) · { device_id } the owner removes a device
 };
 

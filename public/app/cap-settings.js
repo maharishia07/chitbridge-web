@@ -1922,6 +1922,9 @@ var CBSettings = (function () {
       '<div id="sx_ses_bar"></div>',
       lineOut('sx_ses_out'),
       '<div class="sx-list" id="sx_ses_list" data-testid="sx-ses-list"></div>',
+      '<h2 class="sx-h2">' + esc(T('Sign in with Google')) + '</h2>',
+      '<div id="sx_prov_bar"></div>',
+      lineOut('sx_prov_out'),
       '<h2 class="sx-h2">' + esc(T('Every device of the shop')) + '</h2>',
       '<div id="sx_dev_bar"></div>',
       lineOut('sx_dev_out'),
@@ -2329,8 +2332,97 @@ var CBSettings = (function () {
         }
       ]
     });
+    /* ⭐ SSO-1129 CONNECT (SEC-112 P1a): Google linked to THIS account. Connect and Disconnect each carry the person's PIN (re-proof, checked by the api); both are SHOWN and greyed with the sentence
+       while the provider is not switched on here (GET /api/signin/provider/links: providers[].live) or the business does not accept it. The row says who is connected; never a subject. */
+    function provRow() {
+      var d = H.data.prov || {},
+        r = d.r || {},
+        link = (r.links || []).filter(function (item) { return item.provider === 'google'; })[0] || null,
+        host = (r.providers || []).filter(function (item) { return item.key === 'google'; })[0] || null;
+      return { link: link, host: host, state: d.state, reproof: r.reproof };
+    }
+    function provWhy(row) {
+      if (row.state === 'loading') return T('Checking.');
+      if (row.state === 'error') return T('Could not read this. Try again.');
+      if (!row.host) return T('Google sign-in is being switched on.');
+      if (row.host.live !== true) return T('Google sign-in is being switched on.');
+      if (row.host.accepted !== true && !row.link) return T('This business does not accept Google sign-in.');
+      /* N1 (critic round 2): the api says which re-proof this person can give; a person with no PIN has none to type here, so both buttons are shown greyed with the way out */
+      if (row.reproof === 'code') return T('Set a PIN first.');
+      return '';
+    }
+    function paintProvBar() {
+      var row = provRow(),
+        why = provWhy(row),
+        may = why ? { ok: false, why: why } : null;
+      $('sx_prov_bar').innerHTML = bar(
+        '<span class="sx-count" data-testid="sx-prov-state">' +
+          esc(row.link ? T('Connected') + (row.link.email ? ' · ' + row.link.email : '') : T('Not connected')) +
+          '</span>' +
+          (why ? '' : '<input data-cbsid="ACC002-I31" id="sx_prov_pin" data-testid="sx-prov-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="' + esc(T('Your PIN')) + '" aria-label="' + esc(T('Your PIN')) + '" style="width:6em;margin-inline-end:8px">') +
+          (row.link ? btn('sx_prov_off', T('Disconnect Google'), may, '', 'ACC002-B62') : '') +
+          (row.link ? '' : btn('sx_prov_on', T('Connect Google'), may, '', 'ACC002-B63'))
+      );
+      var pinOf = function () { return ($('sx_prov_pin') || {}).value || ''; };
+      var say = function (words) { $('sx_prov_out').textContent = words; };
+      if ($('sx_prov_on') && !why)
+        $('sx_prov_on').onclick = function () {
+          CBAction.run($('sx_prov_on'), function () {
+            return api('providerLinkStart', { body: { provider: 'google', pin: pinOf(), next: '/app.html' } });
+          }, {
+            key: 'sx-prov-on',
+            failed: T('Could not connect it. Check your PIN.'),
+            out: 'sx_prov_out',
+            outcome: function (reply) {
+              var url = reply && (reply.url || (reply.body && reply.body.url));
+              if (url) window.location.assign(url);
+            }
+          });
+        };
+      if ($('sx_prov_off') && !why)
+        $('sx_prov_off').onclick = function () {
+          CBAction.run($('sx_prov_off'), function () {
+            return api('providerUnlink', { params: { link_id: row.link.link_id }, body: { pin: pinOf() } });
+          }, {
+            key: 'sx-prov-off',
+            confirm: { title: T('Disconnect Google?'), body: esc(T('You will sign in with your PIN or code instead.')), yes: T('Disconnect'), danger: true },
+            failed: T('Could not disconnect it. Check your PIN.'),
+            out: 'sx_prov_out',
+            outcome: function () {
+              say(T('Disconnected.'));
+              readProv();
+            }
+          });
+        };
+    }
+    function readProv() {
+      return load('prov', function () { return api('providerLinks'); }, null, paintProvBar);
+    }
     paintSesBar();
     paintDevBar();
+    paintProvBar();
+    readProv().then(function () {
+      /* the redirect back from the provider left a result word (app.html boot, CBSignin.takeLanded): said once, in words */
+      var word = null;
+      try { word = sessionStorage.getItem('cb_connect_result'); sessionStorage.removeItem('cb_connect_result'); } catch (_) {}
+      if (word && window.CBSignin) $('sx_prov_out').textContent = T(CBSignin.WORDS.connect[word] || CBSignin.WORDS.connect.fallback);
+      /* N2: the provider's redirect left a one-time confirm code (#k=); ONLY this session, which started the link, can turn it into a link (the callback alone wrote nothing) */
+      var code = null;
+      try { code = sessionStorage.getItem('cb_connect_code'); sessionStorage.removeItem('cb_connect_code'); } catch (_) {}
+      if (code) {
+        $('sx_prov_out').textContent = T('Connecting.');
+        api('providerLinkFinish', { body: { code: code } }).then(
+          function () {
+            $('sx_prov_out').textContent = T(CBSignin.WORDS.connect.linked);
+            readProv();
+          },
+          function (e) {
+            var said = e && e.status >= 400 && e.status < 500 && e.message && !/^API \d/.test(e.message) ? e.message : CBSignin.WORDS.connect.fallback;
+            $('sx_prov_out').textContent = T(said);
+          }
+        );
+      }
+    });
     readSes().then(readDev);
 
     /* SET-34 (Athi, 6 Nov 2026): the keys are SHOWN here, in the one list with Make a key, Copy and Revoke — no door to an empty Connectors page */

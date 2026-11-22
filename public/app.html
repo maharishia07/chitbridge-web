@@ -1587,6 +1587,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set (UX-137); cap-settings.js and cap-print.js (lazy, Settings) draw their buttons with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the lazy caps (cap-readiness.js, cap-definitions.js) draw their inputs with ui.field (UX-137 R2); AFTER ui.js, which it reads -->
 <script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
+<script src="/engine/signin.js"></script><script src="/app/signin-ui.js"></script>   <!-- SSO-1129: the register form draws CBSignin.soonRow (Google · Microsoft, greyed with their sentence until the provider door is whole) -->
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <script src="/app/page.js"></script>   <!-- CBPage: which detail page opens a chit — business_json.page, the registry app/pages.json, base + a note when not installed (N03) -->
@@ -30270,8 +30271,33 @@ try {
     }
   }
 } catch (_) {}
+/* ⭐ SSO-1129 H1: what a provider's redirect left in the address (#h= a one-time code · #e= a refusal word · #c= the result of connecting) is taken ONCE here, before the default #/login:
+   a code is swapped for the session by the ONE machine (CBSignin.machine → POST /api/signin/provider/handoff, the same body as a code sign-in); a refusal is said on the login screen in words. */
+/* N3: where the provider's redirect goes on from this landing: Settings > Account is a page of its own (CB_HOMES.account, accounts-shell.js), not a route of this one; signed out, the sign-in */
+function landedGo() { if (SESSION.token) location.replace(CB_HOMES.account); else location.hash = '#/login'; }
+var LANDED_AT_BOOT = null;
+try { LANDED_AT_BOOT = window.CBSignin && CBSignin.takeLanded ? CBSignin.takeLanded() : null; } catch (_) {}
+if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'k') { try { if (SESSION.token) sessionStorage.setItem('cb_connect_code', LANDED_AT_BOOT.value); } catch (_) {} landedGo(); }
+else if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'c') { try { sessionStorage.setItem('cb_connect_result', LANDED_AT_BOOT.value); } catch (_) {} if (!location.hash) landedGo(); }
+else if (LANDED_AT_BOOT && !SESSION.token) location.hash = '#/login';
 if (!location.hash) location.hash = SESSION.token ? '#/' : '#/login';
 route();
+if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'h') {
+  (function () {
+    var m = CBSignin.machine({ apiBase: CFG.API_BASE, onIn: function (s) { setSession({ token: s.token, role: s.role, name: s.name, entity: s.entity, bridgeId: s.bridgeId, duty: s.duty }); } });
+    m.providerHandoff(LANDED_AT_BOOT.value).then(function () {
+      var S = m.state();
+      if (S.at === 'in') return go('#/app');
+      if (S.at === 'setpin') { setSession({ token: S.token || '', role: 'actor' }); LOGIN.step = 'setpin'; LOGIN.kind = 'actor'; return go('#/login'); }
+      LOGIN.err = S.why || CBSignin.WORDS.sso.fallback;
+      go('#/login');
+      renderLogin();
+    });
+  })();
+} else if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'e') {
+  LOGIN.err = CBSignin.WORDS.sso[LANDED_AT_BOOT.value] || CBSignin.WORDS.sso.fallback;
+  renderLogin();
+}
 </script>
 <script>
 (function () {
