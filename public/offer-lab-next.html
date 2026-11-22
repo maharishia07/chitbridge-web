@@ -4827,6 +4827,15 @@ function savedLive() {
     return false;
   }
 }
+/** P2WAVE-SEC L-sec-web-screens-24#L51: who the Lab is signed in as (the person's own id, else the shop's), the same ids the app stamps its queue with (SEC-140); '' when nobody is */
+function labOwner() {
+  try {
+    var held = JSON.parse(localStorage.getItem('cb_sess') || 'null') || {};
+    return String(held.actorId || held.entityId || '');
+  } catch (_) {
+    return '';
+  }
+}
 function savedToken() {
   try {
     return (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;
@@ -4936,7 +4945,7 @@ async function apiFetch(method, url, body, queueKind) {
     return { ok: reply.ok, status: reply.status, body: j || {}, queued: false };
   } catch (e) {
     if (queueKind && method !== 'GET') {
-      await LabDB.queuePush({ kind: queueKind, method: method, url: url, body: body || null });
+      await LabDB.queuePush({ kind: queueKind, method: method, url: url, body: body || null, owner: labOwner() });
       labPaintQueue();
     }
     return { ok: true, queued: true, body: {} };
@@ -4945,7 +4954,9 @@ async function apiFetch(method, url, body, queueKind) {
 /** ⭐ replays queued writes IN ORDER; a real refusal (4xx) is dropped rather than retried for ever — the same
  * offer would only be refused again, and a queue that never empties is a queue nobody trusts */
 async function labDrainOutbox() {
-  var rows = await LabDB.queueAll();
+  var rows = (await LabDB.queueAll()).filter(function (item) {
+    return labOwner() && item.owner === labOwner(); /* another person's (or an unstamped) queued write is never sent under this person's token */
+  });
   for (var index = 0; index < rows.length; index++) {
     var row = rows[index];
     try {
@@ -4964,7 +4975,10 @@ async function labDrainOutbox() {
   if (savedLive() && S.step === 3) await loadSaved();
 }
 function labPaintQueue() {
-  LabDB.queueAll().then(function (rows) {
+  LabDB.queueAll().then(function (all) {
+    var rows = all.filter(function (item) {
+      return labOwner() && item.owner === labOwner();
+    });
     var node = document.getElementById('labqueue');
     if (!node) return;
     if (!rows.length) {
@@ -5046,7 +5060,7 @@ async function labUseMine(quiet) {
     });
     if (!nestedItems.length) return labUseCache(who, 'no priced products yet');
     await catNamesReady; /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
-    await LabDB.set('catalogue', { items: nestedItems, who: who, at: Date.now() });
+    await LabDB.set('catalogue', { items: nestedItems, who: who, at: Date.now(), owner: labOwner() });
     labApplyCatalogue(nestedItems, who, false);
     return true;
   } catch (e) {
@@ -5055,7 +5069,7 @@ async function labUseMine(quiet) {
 }
 async function labUseCache(who, why) {
   var c = await LabDB.get('catalogue');
-  if (c && c.items && c.items.length) {
+  if (c && c.items && c.items.length && labOwner() && c.owner === labOwner()) { /* the cached catalogue (costs included) is shown only to the person it was cached for */
     labApplyCatalogue(c.items, c.who || who, true);
     return true;
   }

@@ -99,6 +99,29 @@ t('shop.html: the qrcode script has integrity + crossorigin, equal to app.html',
 }
 /* the public static mock carries no real-looking phone number */
 t('storefront-design.html: no real-looking Indian mobile number in the mock', !/(^|[^0-9])(\+91[ -]?)?[6-9][0-9]{4}[ -]?[0-9]{5}([^0-9]|$)/.test(read('storefront-design.html').split('9876543210').join('')));
+/* the offer lab: a queued write and the cached catalogue belong to the person who made them */
+(async () => {
+  const lab = read('offer-lab-next.html');
+  const cut = (name, isAsync) => new RegExp('^' + (isAsync ? 'async ' : '') + 'function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}\\n', 'm').exec(lab);
+  const parts = [cut('labOwner'), cut('savedToken'), cut('labDrainOutbox', true), cut('labPaintQueue'), cut('labUseCache', true)];
+  t('offer-lab-next.html: labOwner, savedToken, labDrainOutbox, labPaintQueue, labUseCache are found', parts.every(Boolean));
+  const world = (who) => {
+    const sent = [], deleted = [], applied = [];
+    const rows = [{ id: 1, method: 'POST', url: '/api/a', body: {}, owner: 'alice' }, { id: 2, method: 'POST', url: '/api/b', body: {}, owner: 'bob' }, { id: 3, method: 'POST', url: '/api/legacy', body: {} }];
+    const LabDB = { queueAll: async () => rows.slice(), queueDel: async (id) => { deleted.push(id); }, get: async () => ({ items: [{}], who: 'x', owner: 'alice' }) };
+    const localStorage = { getItem: () => JSON.stringify({ token: 'T-' + who, entityId: who }) };
+    const fetch = async (url) => { sent.push(url); return { ok: true, status: 200 }; };
+    const fn = new Function('LabDB', 'localStorage', 'fetch', 'document', 'savedLive', 'S', 'loadSaved', 'toastSay', 'labApplyCatalogue', parts.map((p) => p[0]).join('\n') + '; return { labDrainOutbox, labUseCache };');
+    const api = fn(LabDB, localStorage, fetch, { getElementById: () => null }, () => false, { step: 1 }, async () => {}, () => {}, () => applied.push(1));
+    return { api, sent, deleted, applied };
+  };
+  const alice = world('alice'); await alice.api.labDrainOutbox();
+  t('offer-lab-next.html: alice drains only her own queued write', JSON.stringify(alice.sent) === '["/api/a"]' && JSON.stringify(alice.deleted) === '[1]', JSON.stringify([alice.sent, alice.deleted]));
+  const bob = world('bob'); await bob.api.labDrainOutbox();
+  t('offer-lab-next.html: bob sends his own only, never alice\'s or an unstamped one', JSON.stringify(bob.sent) === '["/api/b"]', JSON.stringify(bob.sent));
+  const bobCache = await bob.api.labUseCache('Bob', 'offline'); const aliceCache = await alice.api.labUseCache('Alice', 'offline');
+  t('offer-lab-next.html: the cached catalogue shows for the person it was cached for, not the next one', bobCache === false && bob.applied.length === 0 && aliceCache === true && alice.applied.length === 1);
+})();
 /* the service worker: run the real file in a vm with a fake self and caches; an api GET on the same origin is never answered through the cache, a no-store reply is never stored */
 (async () => {
   const vm = require('vm');
