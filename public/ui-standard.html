@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API, loaded first as on every page that loads shell.js (guard-static 16); this page passes apiBase '' to the frame, so nothing calls it -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API, loaded first as on every page that loads shell.js (guard-static 16); this page passes apiBase '' to the frame, so nothing calls it -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- A PUBLIC PAGE WITH MOCK DATA ONLY, in the standard frame (CBFrame.lab, signin false, as the Country lab): the shell header, the avatar with its look and language, the sidebar of sections.
      It loads config.js first (the guard's rule for any page with shell.js) but no sign-in script, and tells the frame apiBase '' and no token, so no api request or token leaves the page.

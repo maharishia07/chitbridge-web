@@ -8,7 +8,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them --> <script src="/app/shop-time.js"></script>   <!-- CBShopTime: the one date/time reader (shop zone, UI-language words) -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Standards</title>
@@ -272,13 +272,7 @@ function setSetSec() {}
 /* ═══ STANDARDS — the page: the matrix pane, the CBList mount, the two sheets. The register is cap-standards.js. ═══ */
 const $ = (id) => document.getElementById(id);
 function apiBase() {
-  try {
-    var f = localStorage.getItem('cb_api_base');
-    if (f) return f === 'stage' ? window.CB_API : f;
-    var h = location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  } catch (_) {}
-  return window.CB_API;
+  return window.CBApiBase ? window.CBApiBase.get() : window.CB_API; /* app/api-base.js: the one reader */
 }
 function session() {
   try {

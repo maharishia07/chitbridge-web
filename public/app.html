@@ -7,7 +7,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <!-- ⚠️ viewport-fit=cover is REQUIRED for env(safe-area-inset-*) to be anything but 0. Without it every
      safe-area rule in this file is inert, and the layout silently pretends the notch and the home
      indicator do not exist. Declaring it also means the page now extends UNDER them, so the topbar and
@@ -1695,15 +1695,8 @@ const CFG = {
    * `localStorage.cb_api_base = "https://…"` — which is what you want when reproducing something cloud-specific.
    */
   get API_BASE() {
-    try {
-      const forced = localStorage.getItem('cb_api_base');
-      if (forced) return forced === 'stage' ? STAGES[this.STAGE].base || '' : forced;
-      const hostName = location.hostname;
-      if (hostName === 'localhost' || hostName === '127.0.0.1') return 'http://localhost:3000';
-    } catch (e) {
-      /* storage blocked — fall through to the stage */
-    }
-    return STAGES[this.STAGE].base || '';
+    /* app/api-base.js (the one reader): production ignores any stored override; local and SIT hosts honour only a local or *.sslip.io one */
+    return window.CBApiBase ? window.CBApiBase.resolve({ cbApi: STAGES[this.STAGE].base || '' }) : STAGES[this.STAGE].base || '';
   }
 };
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.

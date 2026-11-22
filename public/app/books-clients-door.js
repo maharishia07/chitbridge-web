@@ -14,14 +14,7 @@
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   function base() {
-    try {
-      var f = root.localStorage.getItem('cb_api_base');
-      if (f) return f === 'stage' ? root.CB_API || '' : f;
-    } catch (failure) {
-      root.console.warn('books-clients-door', failure);
-      return '';
-    }
-    return /^(localhost|127\.0\.0\.1)$/.test(root.location.hostname) ? 'http://localhost:3000' : root.CB_API || '';
+    return root.CBApiBase ? root.CBApiBase.get() : root.CB_API || ''; /* app/api-base.js: the one reader */
   }
   function token() {
     try {
