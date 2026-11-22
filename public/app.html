@@ -6200,7 +6200,7 @@ const _capPromise = {},
 const CAP_WITH = {
   network: ['network-member'],
   books: ['opening', 'opening-years', 'opening-bills', 'books-lock', 'books-tree', 'books-cheques', 'books-waiting-cells', 'books-waiting-view', 'books-party'] /* the Opening balances page (cap-opening.js) loads before the Ledger screens that open it */,
-  admin: ['shop', 'settings', 'mis'],
+  admin: ['shop', 'settings', 'mis', 'admin-guard'],
   country: ['shop'], settings: ['settings-provider', 'settings-guide']
 }; /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */ /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */ /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name) {
