@@ -86,6 +86,16 @@ const toHex = (rgb) => { const m = String(rgb).match(/\d+/g); return m ? '#' + m
 
     if (sh.country === 'IN') {
       say(tag + ' buyer GSTIN', !r.warn && r.slipBuyer, 'no buyer warning; the buyer\'s GSTIN on the paper (r.46(d))');
+      /* 1129: the line is on TAXABLE value (r.46(e)); a Rs 60,000 B2C bill (taxable 50,847) names its buyer, and a typed name clears it. The Rs 1,800 bill above says nothing. */
+      const big = await p.evaluate(() => {
+        CART.splice(0, CART.length); S.items.push({ item_id: 'b', name: 'Big kit', code: 'B1', category: 'Kit', unit: 'pc', price: 30000, tax_slab: 'std' });
+        addItem(S.items[1], 2); price(); if (document.body.classList.contains('steps')) stepGo('bill');
+        const w = document.querySelector('[data-testid="till-warn-buyer"]'), words = w ? w.innerText.replace(/\s+/g, ' ').trim() : null;
+        document.getElementById('cname').value = 'Jo Smith'; price(); const after = !!document.querySelector('[data-testid="till-warn-buyer"]');
+        document.getElementById('cname').value = ''; price();
+        return { words, after };
+      });
+      say(tag + ' Rs 60,000 names buyer', /names the buyer/.test(big.words || '') && big.after === false, '"' + big.words + '" · cleared by a name: ' + (big.after === false));
       say(tag + ' counts', r.count === '1,00,000', 'count reads ' + r.count);
       say(tag + ' voice', r.langs.join(',') === 'en-IN,ta-IN,hi-IN,en-GB' && r.lang === 'en-IN', 'the four it always had · ' + r.lang);
     } else if (sh.country === 'AU') {
