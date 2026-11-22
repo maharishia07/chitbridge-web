@@ -58,7 +58,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
 <div id="app"></div>
 <div class="toast" id="toast" hidden></div>
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address (the shell reads it) -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address (the shell reads it) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar, mounted in the list's title row through head.slot -->
