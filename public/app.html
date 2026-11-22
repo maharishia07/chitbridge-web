@@ -6198,7 +6198,7 @@ const _capPromise = {},
   _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
 const CAP_WITH = {
-  network: ['network-member'],
+  network: ['network-member', 'network-storefront'],
   connector: ['connector-reissue'],
   worklist: ['worklist-raida'],
   books: ['opening', 'opening-years', 'opening-bills', 'books-lock', 'books-tree', 'books-cheques', 'books-waiting-cells', 'books-waiting-view', 'books-party'] /* the Opening balances page (cap-opening.js) loads before the Ledger screens that open it */,
