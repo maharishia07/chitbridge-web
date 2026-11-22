@@ -29,7 +29,8 @@ const ALLOW = {
   'app/cap-standards.js': 12,     /* the glossary: what a GSTIN / PAN IS (India's registry rows, named as such) */
   'app.html': 9,                  /* the India workshop (the GSTIN set-up door, the IN counter bill's buyer GSTIN) */
   'app/cap-admin.js': 7,          /* the India workshop's tax band ("no GSTIN on the profile") and the vault's GSTIN/PAN agreement check */
-  'app/cap-chit2.js': 5,          /* the chit's India tax band: the parties' GSTIN on an IN invoice */
+  'app/cap-chit2.js': 1,          /* the chit's India tax band: the parties' GSTIN on an IN invoice */
+  'app/cap-chit2-reprice.js': 4,  /* the price-from-catalogue overlay: its GSTIN / ₹ words moved here from cap-chit2.js, verbatim */
   'app/cap-definitions.js': 5,    /* the money adornment's last-resort symbol · the offer kind's worked example */
   'app/cap-legend.js': 4,         /* the legend's done/backlog notes (history, not a shop's screen) */
   'app/screens.js': 4,            /* the screen names of the counter's Find (printer, GSTIN, …) */

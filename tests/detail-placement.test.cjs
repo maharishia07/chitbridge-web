@@ -13,6 +13,7 @@ globalThis.window = globalThis;
 vm.runInThisContext(fs.readFileSync(APP('helpers.js'), 'utf8'));   /* the page's one esc · fmtMoney */
 globalThis.document = { getElementById: () => null };
 globalThis.counterOfBill = () => '';
+eval(fs.readFileSync(APP('chit-sheet-sample.js'), 'utf8')); /* the sample read, loaded before the sheet as the pages do */
 eval(fs.readFileSync(APP('chit-sheet.js'), 'utf8'));
 const S = globalThis.CBSheet;
 
