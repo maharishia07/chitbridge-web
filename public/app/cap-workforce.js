@@ -390,7 +390,7 @@ function coassistsScreen() {
   const _title = _tf !== 'all' && _treg ? (_treg.icon ? _treg.icon + ' ' : '') + esc(_shortLbl) + ' · co-assists' : '🧑‍🤝‍🧑 Co-assists';
   const _typeInfoBtn =
     _tf !== 'all' && (window.AC_TYPE_HOW || {})[_tf]
-      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
+      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo(this.dataset.xa)" data-xa="${esc(_tf)}" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
       : '';
   const list = `<div class="list">
     <div class="lh">
@@ -1047,7 +1047,7 @@ function _iotRowHTML(x) {
     ';border-color:transparent">' +
     (iot ? '🛰️ IoT' : '🔌 ERP') +
     '</span>';
-  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor(this.dataset.xa)" data-xa="${esc(x.id)}">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago ? ' · ' + esc(ago) : ''}</span></div>
       <div class="l2">📍 ${esc(info.site || x.site || 'no site')} · <b>${cnt}</b> ${iot ? (cnt === 1 ? 'device' : 'devices') : cnt === 1 ? 'endpoint' : 'endpoints'}</div></div>
@@ -1069,7 +1069,7 @@ function acRowHTML(x) {
         (coversNames.length ? '🤝 Covers for <b style="color:var(--ink);font-weight:600">' + coversNames.join(', ') + '</b>' : '') +
         '</div>'
       : '';
-  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor(this.dataset.xa)" data-xa="${esc(x.id)}">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift === 'on_shift' ? 'var(--ok-3)' : x.shift === 'on_break' ? 'var(--warn-2)' : 'var(--grey-2)'}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x)}</span>${x.pinSet ? '' : x.invite ? '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>' : ''}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max || '∞'}</span></div>
       <div class="l2">${esc(x.role || '—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status !== 'active' ? '<span class="optchip off">' + esc(x.status) + '</span>' : ''}${x.shift !== 'on_shift' && x.returnDate ? ' · returns ' + acDate(x.returnDate) : ''}</div>${coverLines}</div>
@@ -1335,7 +1335,7 @@ function acDetailHTML() {
        "already loaded" flag would show Ravi's record under Priya's name. That is the worst possible failure
        for this particular screen. */
     acLoadDocs(x.id);
-    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor('${x.id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor(this.dataset.xa)" data-xa="${esc(x.id)}">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
   } else {
     const pct = x.max ? Math.min(100, Math.round((x.load / x.max) * 100)) : 0;
     const kv = (l, v) =>
@@ -1455,14 +1455,14 @@ function acDetailHTML() {
       bar =
         (x.type === 'human'
           ? x.pinSet
-            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
+            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin(this.dataset.xa)" data-xa="${esc(x.id)}" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
             : isConn
               ? ''
-              : `<button data-cbsid="BUS005-B18" onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
+              : `<button data-cbsid="BUS005-B18" onclick="acReinvite(this.dataset.xa)" data-xa="${esc(x.id)}" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
           : '') +
-        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
+        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus(this.dataset.xa,'deactivate')" data-xa="${esc(x.id)}" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
     } else {
-      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
+      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus(this.dataset.xa,'reactivate')" data-xa="${esc(x.id)}" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus(this.dataset.xa,'remove')" data-xa="${esc(x.id)}" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
     }
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;

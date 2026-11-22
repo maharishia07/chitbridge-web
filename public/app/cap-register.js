@@ -1407,7 +1407,7 @@ function rgClosure() {
         .map(function (e) {
           return (
             '<div data-cbsid="SCR007-C02" class="raidrow" data-testid="closure-item"' +
-            (e.chit_id ? ' style="cursor:pointer" onclick="closeModal();openChit(&quot;' + e.chit_id + '&quot;)"' : '') +
+            (e.chit_id ? ' style="cursor:pointer" data-cid="' + esc(e.chit_id) + '" onclick="closeModal();openChit(this.dataset.cid)"' : '') +
             '><div class="rl"><span class="mtype ' +
             e.kind +
             '">' +
