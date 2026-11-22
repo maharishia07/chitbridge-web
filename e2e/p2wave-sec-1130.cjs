@@ -88,6 +88,15 @@ t('shop.html: the qrcode script has integrity + crossorigin, equal to app.html',
   const ok = run(root, ['cb_sess'], console);
   t('avatar.js: sign-out removes the statement text and the nav memory, keeps marks and rules', ok === true && !('cb_bankrec:shop1:stmt:acct1' in store) && !('cb_nav@u' in store) && 'cb_bankrec:shop1:marks:acct1' in store && 'cb_bankrec:shop1:rules' in store, JSON.stringify(Object.keys(store)));
 }
+/* sign-in: a host's thrown text is never the line the person reads */
+{
+  const ui = read('app/signin-ui.js');
+  const m = /function hostFailed\(failure, words\) \{[\s\S]*?\n  \}\n/.exec(ui);
+  t('signin-ui.js: hostFailed is found and the two PIN paths use it, none shows x.message', !!m && (ui.match(/why: hostFailed\(x,/g) || []).length === 2 && !/why: \(x && x\.message\)/.test(ui));
+  const seen = [];
+  const said = new Function('console', m[0] + '; return hostFailed(new Error("QuotaExceededError: idb cb-till-pins"), "The PIN could not be kept.");')({ error: (...a) => seen.push(a.join(' ')) });
+  t('signin-ui.js: the person gets our sentence, the developer gets the log', said === 'The PIN could not be kept.' && seen.length === 1 && /QuotaExceededError/.test(seen[0]));
+}
 /* the service worker: run the real file in a vm with a fake self and caches; an api GET on the same origin is never answered through the cache, a no-store reply is never stored */
 (async () => {
   const vm = require('vm');
