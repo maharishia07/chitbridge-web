@@ -140,6 +140,7 @@
  "public/app/cap-evidence.js":["public/accounts.html","public/network.html"],
  "public/app/cap-finance-cash.js":["public/finance.html"],
  "public/app/cap-finance-cheques.js":["public/finance.html"],
+ "public/app/cap-finance-pay-held.js":["public/finance.html"],
  "public/app/cap-finance-pay.js":["public/finance.html"],
  "public/app/cap-finance-returns.js":["public/finance.html"],
  "public/app/cap-finance-tabs.js":["public/finance.html"],

@@ -73,7 +73,7 @@ const flows = read('docs/process/flows.json');
 if (!/"cash position"/.test(flows) || !/cap-finance-cash\.js/.test(flows)) bad('flows.json must carry the cash position step (PM1)'); else ok('flows.json: cash position step');
 
 /* ── F4 · Payables (cap-finance-pay.js + payOpen's offer): static, no browser — the tab paints the server's payables and computes nothing ── */
-const fp = read('public/app/cap-finance-pay.js'), books = read('public/app/cap-books.js');
+const fp = read('public/app/cap-finance-pay.js') + read('public/app/cap-finance-pay-held.js'), books = read('public/app/cap-books.js');
 const fpc = fp.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '');
 if (page.indexOf('/app/cap-finance-pay.js') < 0 || page.indexOf('data-testid="fin-nav-payables"') < 0 || page.indexOf('href="#/payables"') < 0) bad('finance.html must load cap-finance-pay.js and carry the Payables nav'); else ok('Payables tab: script + nav');
 const fpCalls = [...fpc.matchAll(/\bapi\('(\w+)'/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i).join();
