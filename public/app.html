@@ -22424,6 +22424,11 @@ function countStates() {
   });
   return o;
 }
+/** WALK-X X-F-03: the open tab holds nothing while another tab holds work → that tab's name; else null (the tab stays) */
+function firstTabWithWork(buckets, current) {
+  if (!buckets || (buckets[current] && buckets[current].c > 0)) return null;
+  return ['open', 'act', 'close'].find((tab) => tab !== current && buckets[tab] && buckets[tab].c > 0) || null;
+}
 // Full-set per-state totals from the server rollup (independent of what's loaded in the panel).
 function rollupBuckets() {
   const ST = {
@@ -22506,6 +22511,16 @@ function chitMarkPaidButton(c, quoted) {
   const act = why ? ` aria-disabled="true" title="${esc(why)}" aria-label="${esc(tx('Mark paid') + ' — ' + why)}"` : ` onclick="chitMarkPaid(this.dataset.xa, ${Number(quoted) || 0})" data-xa="${esc(c.id)}"`;
   return `<button data-cbsid="DTL001-B01" type="button" data-testid="chit-mark-paid"${act} style="${look}">${esc(tx('Mark paid'))}</button>`;
 }
+/** WALK-X X-F-12: a credit or debit note has no payment-due state; its cell says where the note stands (the chit's own status word), never Unpaid / Mark paid */
+function chitIsNote(c) {
+  const h = (c && c.header) || {};
+  return /^(credit|debit)_note$/.test(String((c && (c.kind || c.purpose)) || h.purpose || ''));
+}
+function chitNoteWord(c, pay) {
+  if (pay) return 'Refunded';
+  const word = String(chitStatusWord(c) || '').replace(/_/g, ' ').trim();
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : 'Open';
+}
 function chitPaymentCell(c, cell, quoted) {
   /* ⚠️ THE SELLER'S CELL ONLY (Athi, 2026-09-05, from Chola Auto Care's Order tab: "they cannot make the payment settings").
      The party who SENT the order is the buyer: no Mark paid, no QR of their own — the seller records the payment on the
@@ -22515,6 +22530,7 @@ function chitPaymentCell(c, cell, quoted) {
   if (/^(credit_note|debit_note)$/.test(chitPurposeOf(c))) return ''; /* AU-F-11: a credit note is money owed back, not a bill to be paid: no Unpaid, no Mark paid, no QR */
   const bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
   const pay = bj.payment || null;
+  if (chitIsNote(c)) return cell(tx('Settlement'), `<span data-testid="chit-note-status" style="color:var(--grey)">${esc(tx(chitNoteWord(c, pay)))}</span>`); /* WALK-X X-F-12: a credit or debit note is not a debt: no Unpaid, no Mark paid */
   const nestedVal = pay
     ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method || '').toUpperCase())}${pay.ref ? ' · ' + esc(pay.ref) : ''}</span> <button data-cbsid="RAL002-B29" type="button" data-testid="chit-unpay" onclick="chitUnpay(this.dataset.xa)" data-xa="${esc(c.id)}" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
     : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx(chitUnpaidWord(c)))}</span> ${chitMarkPaidButton(c, quoted)} ${payHasUpi() ? `<button data-cbsid="DTL001-B02" type="button" data-testid="chit-show-qr" onclick="chitShowQr(this.dataset.xa, ${Number(quoted) || 0})" data-xa="${esc(c.id)}" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>` : ''}`;
@@ -24976,6 +24992,15 @@ async function loadList(silent) {
         UI.rollup = (rl && rl.groups) || [];
         UI.disputeOpen = (rl && rl.dispute_open) || 0;
         if (_left()) return;
+        const _pick = UI._tabAutoDone ? null : firstTabWithWork(rollupBuckets(), UI.state);
+        UI._tabAutoDone = true; /* WALK-X X-F-03: once per session — the inbox opens on the tab that holds the work; a tab the user then picks is theirs */
+        if (_pick && !UI.search) {
+          UI.state = _pick;
+          UI.sel = null;
+          UI.detail = null;
+          renderApp();
+          return loadList(true);
+        }
         paintRowsOnly();
       } catch (_) {
         UI.rollup = [];
@@ -27054,7 +27079,7 @@ function detailInner() {
   /* ⭐ THE SECOND BRANCH IS THE FIRST SCREEN ANYONE EVER SEES — an account with no chits at all. It named
      Compose in bold prose and then made them go find it. Now it offers it. */
   if (!c)
-    return UI.rows && UI.rows.length
+    return (UI.rows && UI.rows.length) || (hasRollup() && ['open', 'act', 'close'].some((tab) => rollupBuckets()[tab].c > 0)) /* X-F-03: work waits on another tab — the rail is not empty */
       ? emptyState('🧾', tx('Select a chit'), tx('Pick one from the list to see its content, status and summary.'))
       : emptyState('🚃', tx('Your bogie is empty'), tx('Nothing on your rail yet.'), { label: tx('Compose'), onclick: 'compose()' });
   const back = '';
