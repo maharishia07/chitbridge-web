@@ -162,6 +162,7 @@
  "public/app/cap-network.js":"*",
  "public/app/cap-opening-bills.js":["public/accounts.html"],
  "public/app/cap-opening-years.js":["public/accounts.html"],
+ "public/app/cap-opening-saved.js":["public/accounts.html"],
  "public/app/cap-opening.js":["public/accounts.html"],
  "public/app/cap-period-stock.js":["public/accounts.html"],
  "public/app/cap-period-accruals.js":["public/accounts.html"],

@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (103)
+## Capabilities (104)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -96,6 +96,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-network-member.js` | — |  |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-opening-bills.js` | — | cap-opening-bills.js — the BILL ROWS under a Customers or Suppliers ledger on the Opening balances grid (party · bill no · bill date · due · amount) a |
+| `cap-opening-saved.js` | — | OPENING BALANCES, the SAVED VIEW capability: who entered it, when and from where, every line the server kept, and the year strip under it. Split out o |
 | `cap-opening-years.js` | — | cap-opening-years.js — the YEAR STRIP under Opening balances: one chip per financial year, read only; every figure is the server's carry (GET /api/boo |
 | `cap-opening.js` | — | cap-opening.js — OPENING BALANCES on CB Accounts (Setup › Opening balances): a start date, a Debit · Credit grid of the shop's ledgers, the bills behi |
 | `cap-period-accruals.js` | — | CB ACCOUNTS › Month & year end › Accruals & recurring. Split out of cap-period.js, code moved verbatim |
@@ -276,7 +277,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 97 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 98 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 53 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 17 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 25 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
@@ -323,4 +324,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*234 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*235 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

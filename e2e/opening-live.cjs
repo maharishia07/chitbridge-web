@@ -166,7 +166,7 @@ const geo = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth,
   await b.close();
 
   /* 4 · neutrality: the page files name no country, tax system or accounting software */
-  const files = ['cap-opening.js', 'cap-opening-years.js', 'cap-opening-bills.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'));
+  const files = ['cap-opening.js', 'cap-opening-years.js', 'cap-opening-bills.js', 'cap-opening-saved.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'));
   const hits = files.join('\n').split('\n').filter((line) => /\b(AU|IN|UAE|GST|BAS|GSTR|VAT|ABN|GSTIN|Xero|QuickBooks|MYOB|Tally|Zoho|India|Australia)\b/.test(line));
   ok(hits.length === 0, 'neutrality grep on the three page files: ' + hits.length + ' hit(s) ' + hits.slice(0, 2).join(' | ').slice(0, 160));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
