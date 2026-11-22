@@ -6201,7 +6201,7 @@ const CAP_WITH = {
   network: ['network-member'],
   books: ['opening', 'opening-years', 'opening-bills', 'opening-saved', 'books-lock', 'books-tree', 'books-cheques', 'books-waiting-cells', 'books-waiting-view', 'books-party'] /* the Opening balances page (cap-opening.js) loads before the Ledger screens that open it */,
   admin: ['shop', 'settings', 'mis'],
-  country: ['shop']
+  country: ['shop'], chit2: ['chit2-reprice'] /* the Order tab's price-from-catalogue overlay (cap-chit2-reprice.js) */
 }; /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */ /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */ /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name) {
   if (CAP_LOADED[name]) return Promise.resolve();

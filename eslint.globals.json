@@ -113,6 +113,7 @@
  "public/app/cap-catalogue.js":["public/app.html","public/catalogue.html"],
  "public/app/cap-categories.js":["public/catalogue.html"],
  "public/app/cap-catsetup.js":"*",
+ "public/app/cap-chit2-reprice.js":"*",
  "public/app/cap-chit2.js":"*",
  "public/app/cap-cmdb.js":"*",
  "public/app/cap-compare.js":["public/accounts.html"],
@@ -322,5 +323,5 @@
  "public/lab/combo-mode.js":["public/offer-lab-next.html"],
  "public/till-sw.js":"*"
 },
-"unloaded":["public/app/books-practice-band.js","public/app/books-practice-cells.js","public/app/books-practice.js","public/app/cap-admin.js","public/app/cap-adopt.js","public/app/cap-attach.js","public/app/cap-catsetup.js","public/app/cap-chit2.js","public/app/cap-cmdb.js","public/app/cap-connector.js","public/app/cap-definitions.js","public/app/cap-iddocs.js","public/app/cap-intake.js","public/app/cap-legend.js","public/app/cap-match.js","public/app/cap-messages.js","public/app/cap-network-member.js","public/app/cap-network.js","public/app/cap-readiness.js","public/app/cap-register.js","public/app/cap-service.js","public/app/cap-supplies.js","public/app/cap-testing.js","public/app/cap-traceability.js","public/app/cap-workforce.js","public/app/cap-worklist.js","public/app/shortcuts-register.js","public/app/shortcuts.js","public/app/strings-qps.js","public/cb-sw.js","public/till-sw.js"]
+"unloaded":["public/app/books-practice-band.js","public/app/books-practice-cells.js","public/app/books-practice.js","public/app/cap-admin.js","public/app/cap-adopt.js","public/app/cap-attach.js","public/app/cap-catsetup.js","public/app/cap-chit2-reprice.js","public/app/cap-chit2.js","public/app/cap-cmdb.js","public/app/cap-connector.js","public/app/cap-definitions.js","public/app/cap-iddocs.js","public/app/cap-intake.js","public/app/cap-legend.js","public/app/cap-match.js","public/app/cap-messages.js","public/app/cap-network-member.js","public/app/cap-network.js","public/app/cap-readiness.js","public/app/cap-register.js","public/app/cap-service.js","public/app/cap-supplies.js","public/app/cap-testing.js","public/app/cap-traceability.js","public/app/cap-workforce.js","public/app/cap-worklist.js","public/app/shortcuts-register.js","public/app/shortcuts.js","public/app/strings-qps.js","public/cb-sw.js","public/till-sw.js"]
 }
