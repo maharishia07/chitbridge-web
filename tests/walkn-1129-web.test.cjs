@@ -7,13 +7,14 @@
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 const app = read('public/app.html');
+const appAndFill = app + read('public/app/compose-catalogue-fill.js'); /* websplit D moved the Compose catalogue fill out of app.html */
 
 /* N-F-07: the owner group 'Work' lists Messages, before Intake */
 assert(/\['worklist', '🧰', "Everyone's work"\],\s*\/\*[^\n]*\*\/\s*\['messages', '💬', 'Messages'\],\s*\['intake'/.test(app), "the owner's Work group has the Messages entry before Intake");
 
 /* N-F-01 */
-assert(/_catFailed = true;/.test(app) && /UI\._catState = \(STORE\.catalogue \|\| \[\]\)\.length \|\| !_catFailed \? 'ready' : 'error';/.test(app), 'empty is ready; error only when the read failed');
-assert(app.includes("'No items yet — a chit needs at least one line item. <a") && app.includes('Add a product in Catalogue &rarr;'), 'the empty words carry the add action');
+assert(/_catFailed = true;/.test(app) && /UI\._catState = \(STORE\.catalogue \|\| \[\]\)\.length \|\| !_catFailed \? 'ready' : 'error';/.test(appAndFill), 'empty is ready; error only when the read failed');
+assert(appAndFill.includes("'No items yet — a chit needs at least one line item. <a") && appAndFill.includes('Add a product in Catalogue &rarr;'), 'the empty words carry the add action');
 
 /* N-F-02 */
 assert(/key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin\(\)/.test(app) && /aria-disabled="true" data-ready="no" title="\$\{esc\(reason\)\}"/.test(app), 'nav Compose is greyed with the reason for a view-only login');
