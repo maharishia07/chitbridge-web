@@ -426,8 +426,13 @@ async function bkstOpenInReader(target, text) {
   const out = bkbEl('bk_out');
   if (out) out.innerHTML = '';
   BKB.to = String(to || '').slice(0, 10); /* the trail's month is the file's, before the reader answers */
-  await bankTake(text, name || 'statement.csv', false);
-  if (BKB.view !== 'lines' && out && out.innerHTML) peBad('bks_out', out.textContent || tx('That statement could not be read.')); /* a refusal stays on the home, said where the person is looking */
+  BKB.kept = true;
+  try {
+    await bankTake(text, name || 'statement.csv', false);
+  } finally {
+    BKB.kept = false;
+  }
+  if (BKB.view !== 'lines' && out && out.innerHTML && !out.querySelector('[data-testid="bank-currency-ask"]')) peBad('bks_out', out.textContent || tx('That statement could not be read.')); /* a refusal stays on the home, said where the person is looking */
 }
 /** Read one kept statement by its id (the grid names a month's newest file with a hint): the file is fetched, then read by the one reader */
 async function bankStmtReadFile(id, hint) {

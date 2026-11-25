@@ -298,7 +298,7 @@ async function bankTake(text, name, remembered) {
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
   BKB.curKey = 'cur:' + BKB.acct + ':' + BKB.file.hash;
-  BKB.stmtCur = bkbStatementCurrency(parsed.currency, bkbLoad(BKB.curKey, '')); /* FIN-111: the file's own currency, else the one the person confirmed for THIS file on this device, else asked below (prefilled with the account's, one press); never taken from the account unasked */
+  BKB.stmtCur = bkbStatementCurrency(parsed.currency, bkbLoad(BKB.curKey, '') || (BKB.kept ? bkbAcctCur() : '')); /* FW-37: a KEPT statement was signed off against this account in this account's currency (the sign-off refuses any other), so it is never asked again */ /* FIN-111: the file's own currency, else the one the person confirmed for THIS file on this device, else asked below (prefilled with the account's, one press); never taken from the account unasked */
   BKB.bal = '';
   const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0];
@@ -528,7 +528,7 @@ function bankExplain() {
   BKB.rows = rows;
   BKB.counts = explained.counts;
   /* the Home count: what needs a person, from the last statement read on this device */
-  bkbSave('todo', { n: explained.counts.needs_you, acct: BKB.acct, to: BKB.to });
+  if (typeof bkshTodo !== 'function') bkbSave('todo', { n: explained.counts.needs_you, acct: BKB.acct, to: BKB.to }); /* FW-36: ONE writer of the Home count — the statement screen's own (bkshTodo, "Needs you n"); two definitions made the banner read 1, then 2 */
 }
 
 

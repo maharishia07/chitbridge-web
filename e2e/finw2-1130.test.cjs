@@ -40,4 +40,9 @@ const heads = sb3.bkNeedsChips(sb3.bkNeedsSum('all'), 'all', 'AUD', '').join(' '
 ok(/A\$350\.00<\/b> overdue from customers/.test(heads) && /A\$34,030\.50<\/b> overdue to suppliers/.test(heads) && !/34,380\.50/.test(heads), 'FW-35: two overdue chips, no 34,380.50: ' + heads.replace(/<[^>]+>/g, ''));
 const one = sb3.bkNeedsChips(sb3.bkNeedsSum('pay'), 'pay', 'AUD', '').join(' ');
 ok(/A\$34,030\.50<\/b> overdue</.test(one), 'FW-35: one side keeps its single overdue chip');
+/* FW-36 / FW-37: source-level pins (the bank page is too tied to the DOM to lift whole): one writer of the Home count; a kept statement is never asked its currency; the ask is not repeated as a red refusal */
+const bankSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-bank.js'), 'utf8'), stmtSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-bank-statements.js'), 'utf8');
+ok(/typeof bkshTodo !== 'function'\) bkbSave\('todo'/.test(bankSrc) && (fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-bank-sheet.js'), 'utf8').match(/bkbSave\('todo'/g) || []).length === 1, 'FW-36: the statement screen (bkshTodo) is the one writer of the Home count when it is loaded');
+ok(/BKB\.kept \? bkbAcctCur\(\)/.test(bankSrc) && /BKB\.kept = true;/.test(stmtSrc) && /BKB\.kept = false;/.test(stmtSrc), 'FW-37: a kept statement takes the bank account currency, flag cleared after');
+ok(/!out\.querySelector\('\[data-testid="bank-currency-ask"\]'\)\) peBad/.test(stmtSrc), 'FW-37: the currency question is never repeated as a red refusal');
 process.exit(fails ? 1 : 0);
