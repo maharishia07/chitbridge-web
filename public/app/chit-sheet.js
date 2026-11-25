@@ -1101,7 +1101,7 @@
     }
   }
   async function read(id) {
-    var r = CS.sample ? root.CBChitSheetSample.read() : await api('chit', { params: { id: id } });
+    var r = CS.sample ? root.CBChitSheetSample.read() : await api('chit', { params: { id: id }, query: { with: 'credit' } }); /* w4ctr: ask for the credited figure, the read leaves it out otherwise */
     if (CS.id !== id) return;
     CS.chit = r;
     CS.view = model(r);
@@ -1486,7 +1486,7 @@
 
   /** RW1-27: Credit note from a page that holds only the bill's id (the Day book's sale entry): read the bill, then say why not (credited in full) or open the till's return — the same two answers as the sheet's button. → the sentence, or null when it opened */
   function creditNote(id) {
-    return api('chit', { params: { id: id } }).then(function (r) {
+    return api('chit', { params: { id: id }, query: { with: 'credit' } }).then(function (r) {
       var why = refusedReturn(model(r));
       if (why) {
         if (typeof root.toast === 'function') root.toast(why);
