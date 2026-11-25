@@ -59,5 +59,6 @@ A round STRIKES its rows from the ALLOW list in `e2e/index-not-app.cjs` and from
 | 5 | **NET2** · the builder inside `network.html` | M | `cap-network.js` in the work pane, behind the design's Check | `nw-builder` |
 | 6 | **SET3** (register door done FX-UX2; the welcome intro as CBSteps still open) · register a new shop from the sign-in window (`settings.html#/new` or the window's own step) | M | the `#/welcome` flow as CBSteps; `registerHref` in `index.html` and `page-frame.js` → the new page; M37's P0 allow-list closes | the two `registerHref` |
 | 7 | **TRD1** · Trade readiness in Know your business | M | `cap-readiness.js`; standards `HOME.readiness` | none today (button-less rows) |
+| 8 | **SSO1** · linking a Google or Apple sign-in from Settings returns to the workshop: the landing (`CBSignin.takeLanded`) is consumed once by `app.html` at boot, so `next` is `/app.html` | S | the return door moves to `settings.html` when the landing is read there (SSO P1a critic H1) | `cap-settings.js` providerLinkStart |
 
 When the table in §1 has no **build** row left, `e2e/index-not-app.cjs`'s ALLOW list is empty, and the guard becomes the plain rule: no customer page names app.html.

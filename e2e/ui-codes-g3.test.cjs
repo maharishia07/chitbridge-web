@@ -46,9 +46,9 @@ const CODES = [
   ["app/cap-admin.js","ACC002-C04","a","onclick=\"navTo"],
   ["app/cap-admin.js","ACC002-C05","a","onclick=\"navTo"],
   ["app/cap-admin.js","ACC002-C06","a","onclick=\"navTo"],
-  ["app/cap-admin.js","ACC002-B30","button","onclick=\"profGuardDo"],
-  ["app/cap-admin.js","ACC002-B31","button","onclick=\"profGuardDo"],
-  ["app/cap-admin.js","ACC002-B32","button","onclick=\"profGuardDo"],
+  ["app/cap-admin-guard.js","ACC002-B30","button","onclick=\"profGuardDo"],
+  ["app/cap-admin-guard.js","ACC002-B31","button","onclick=\"profGuardDo"],
+  ["app/cap-admin-guard.js","ACC002-B32","button","onclick=\"profGuardDo"],
   ["app/cap-admin.js","ACC002-I17","input"," id=\"pf_cpin"],
   ["app/cap-admin.js","ACC002-I18","input"," id=\"pf_npin"],
   ["app/cap-admin.js","ACC002-I19","input"," id=\"pf_npin2"],
@@ -170,10 +170,10 @@ const CODES = [
   ["app/cap-connector.js","SCR002-S01","select"," id=\"ad_assignee"],
   ["app/cap-connector.js","SCR002-I07","input"," id=\"ad_notifyemail"],
   ["app/cap-connector.js","SCR002-I08","input"," id=\"ad_cp"],
-  ["app/cap-connector.js","SCR002-I09","input"," id=\"rg_name"],
-  ["app/cap-connector.js","SCR002-I10","input"," id=\"rg_otp"],
-  ["app/cap-connector.js","SCR002-B09","button","onclick=\"acReissueSendCode"],
-  ["app/cap-connector.js","SCR002-B10","button","onclick=\"acReissueSubmit"],
+  ["app/cap-connector-reissue.js","SCR002-I09","input"," id=\"rg_name"],
+  ["app/cap-connector-reissue.js","SCR002-I10","input"," id=\"rg_otp"],
+  ["app/cap-connector-reissue.js","SCR002-B09","button","onclick=\"acReissueSendCode"],
+  ["app/cap-connector-reissue.js","SCR002-B10","button","onclick=\"acReissueSubmit"],
   ["app/cap-intake.js","WRK003-B06","button","onclick=\"loadIntake"],
   ["app/cap-intake.js","WRK003-B07","button","onclick=\"intakeToggleSim"],
   ["app/cap-intake.js","WRK003-C01","a","onclick=\"navTo"],
@@ -196,7 +196,7 @@ const CODES = [
   ["app/cap-match.js","BUS003-T01","textarea"," id=\"match_reason"],
   ["app/cap-match.js","BUS003-B05","button","onclick=\"matchDisputeSend"]
 ];
-const COUNTS = {"app/cap-admin.js":129,"app/cap-cmdb.js":5,"app/cap-connector.js":21,"app/cap-intake.js":13,"app/cap-legend.js":1,"app/cap-match.js":7};
+const COUNTS = {"app/cap-admin.js":126,"app/cap-admin-guard.js":3,"app/cap-cmdb.js":5,"app/cap-connector.js":17,"app/cap-connector-reissue.js":4,"app/cap-intake.js":13,"app/cap-legend.js":1,"app/cap-match.js":7};
 
 const read = (f) => {
   /* a code inside a double-quoted JS string is written escaped (data-cbsid=\"X\"): read the source as the tag it draws */

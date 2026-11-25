@@ -64,7 +64,7 @@ var CBStock = (function () {
     return r.qty < 0 ? 'below' : r.qty === 0 ? 'none' : 'on';
   }
   function nameOf(r) {
-    return r.name || translateWith('Item {id}', { id: String(r.id).slice(0, 8) });
+    return r.name || translateWith('No name yet ({id})', { id: String(r.id).slice(0, 8) }); /* BG-F-08: an id alone read as a name */
   }
 
   /** read the stock list from the one stock reader and refresh the list */

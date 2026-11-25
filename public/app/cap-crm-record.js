@@ -66,8 +66,16 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
-/** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
-function crmBillFacts(entries) {
+/** one chit that is an order not cancelled: counted into the unbilled total (never two currencies into one sum) */
+function crmCountUnbilled(un, e) {
+  un.n++;
+  if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the total (an unpriced order, null without the flag, still adds 0)
+  else if (un.minor != null) un.minor += Number(e.amount_minor || 0);
+  if (e.currency && un.currency && e.currency !== un.currency) un.minor = null; /* two currencies are never one sum: the count alone is said (GF-08 M3) */
+  un.currency = un.currency || e.currency;
+}
+/** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22). The bill COUNT and the last bill date come from the server when the record sends them (`bills` = { n, last_at } on GET /api/crm/parties/:id, the whole history, LV-17): a page of the timeline is only the newest 100 entries and would undercount a busy party. Without it (an older api), the entries decide as before. */
+function crmBillFacts(entries, serverBills) {
   var chitBills = 0,
     ledBills = 0,
     lastBill = '',
@@ -77,13 +85,9 @@ function crmBillFacts(entries) {
       if (e.src === 'ledger') ledBills++;
       else chitBills++;
       if (!lastBill || e.at > lastBill) lastBill = e.at;
-    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
-      un.n++;
-      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the total (an unpriced order, null without the flag, still adds 0)
-      else un.minor += Number(e.amount_minor || 0);
-      un.currency = un.currency || e.currency;
-    }
+    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) crmCountUnbilled(un, e);
   });
+  if (serverBills && serverBills.n != null) return { bills: Number(serverBills.n) || 0, lastBill: serverBills.last_at || '', unbilled: un };
   return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, unbilled: un };
 }
 var CRM_CHAN = { chitbridge: 'ChitBridge', email: 'E-mail', phone: 'Phone', sms: 'SMS', whatsapp: 'WhatsApp' };
@@ -929,7 +933,7 @@ function crmKV(l, v) {
   return v == null || v === '' ? '' : '<div class="kv"><b>' + esc(tx(l)) + '</b><span>' + v + '</span></div>';
 }
 function crmRecordPaint(p, rec) {
-  var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) });
+  var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head, rec.bills) });
   R.unbilled = R.billFacts.unbilled;
   var node = document.getElementById('screen'),
     c = rec.contacts || {},
@@ -1242,7 +1246,7 @@ function crmLedgerRepaint(pid) {
       crmRailChip(R) +
       (crmIsLead(R) && !Number(p.balance_minor || 0)
         ? ''
-        : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }))) +
+        : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head, rec.bills) }))) +
       crmSegChip(R) +
       crmStageChip(R.lead);
   var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]');
@@ -1296,125 +1300,6 @@ function crmAfterEdit(kind, partyId) {
   crmLoad(true).then(function () {
     if (CRM.route && CRM.route.view === 'party') crmRecordOpen(CRM.route);
   });
-}
-
-/* ═══ THE LOG SHEET — a call, a visit, a WhatsApp or a note; optionally the follow-up it leaves (F4) ═════════════════ */
-var LOG = { kind: 'call', dir: 'out', fu: false, busy: false };
-function crmLogOpen(p) {
-  LOG.kind = 'call';
-  LOG.dir = 'out';
-  LOG.fu = false;
-  LOG.busy = false;
-  LOG.p = p;
-  var seg = function (a, items, cur) {
-    return (
-      '<div class="seg2" role="group">' +
-      items
-        .map(function (x) {
-          return (
-            '<button data-cbsid="CRM006-B20" type="button" data-crm="' +
-            a +
-            '" data-v="' +
-            x[0] +
-            '" aria-pressed="' +
-            (x[0] === cur) +
-            '" data-testid="crm-' +
-            a +
-            '-' +
-            x[0] +
-            '">' +
-            esc(tx(x[1])) +
-            '</button>'
-          );
-        })
-        .join('') +
-      '</div>'
-    );
-  };
-  ui.dialog({
-    mount: 'CRM006-U201',
-    pop: 'POP101',
-    titleText: tx('Log') + ' · ' + p.display_name,
-    testid: 'crm-log-sheet',
-    body:
-      '<div class="supacts">' +
-      seg(
-        'logkind',
-        [
-          ['call', 'Call'],
-          ['visit', 'Visit'],
-          ['whatsapp', 'WhatsApp'],
-          ['note', 'Note']
-        ],
-        'call'
-      ) +
-      '<span id="crm_logdir">' +
-      seg(
-        'logdir',
-        [
-          ['out', 'Out'],
-          ['in', 'In']
-        ],
-        'out'
-      ) +
-      '</span></div>' +
-      '<label>' +
-      esc(tx('What happened?')) +
-      '<textarea data-cbsid="CRM006-T01" class="inp" id="crm_log_body" data-testid="crm-log-body" rows="4" placeholder="' +
-      esc(tx('Said, agreed, asked…')) +
-      '"></textarea></label>' +
-      '<label style="flex-direction:row;align-items:center;gap:8px;font-weight:600"><input data-cbsid="CRM006-I01" type="checkbox" id="crm_log_fu" data-crm="logfu" data-testid="crm-log-fu"> ' +
-      esc(tx('Add a follow-up')) +
-      '</label>' +
-      '<div id="crm_log_fubox" hidden style="display:none;flex-direction:column;gap:8px"><input data-cbsid="CRM006-I02" class="inp" id="crm_log_fuwhat" data-testid="crm-log-fuwhat" placeholder="' +
-      esc(tx('Call back about…')) +
-      '"><div class="supacts"><input data-cbsid="CRM006-I03" class="inp" id="crm_log_fudue" data-testid="crm-log-fudue" type="date" style="width:auto">' +
-      [
-        ['tomorrow', 'Tomorrow'],
-        ['week', 'Next week']
-      ]
-        .map(function (x) {
-          return '<button data-cbsid="CRM006-B21" type="button" class="crm-mini" data-crm="logpreset" data-v="' + x[0] + '">' + esc(tx(x[1])) + '</button>';
-        })
-        .join('') +
-      '</div></div>' +
-      '<div id="crm_log_msg" class="hint" role="status"></div>',
-    actions: [
-      { name: 'cancel', options: { mount: 'CRM006-U201' } },
-      { name: 'save', options: { mount: 'CRM006-U201', key: 'save', effect: 'preference', testid: 'crm-log-save', data: { crm: 'logsave' } } }
-    ]
-  });
-  document.getElementById('crm_log_body').focus();
-}
-async function crmLogSave() {
-  if (LOG.busy) return;
-  var node = function (id) {
-      return String((document.getElementById(id) || {}).value || '').trim();
-    },
-    msg = document.getElementById('crm_log_msg'),
-    p = LOG.p;
-  if (!node('crm_log_body')) {
-    msg.textContent = tx('Say what happened.');
-    return;
-  }
-  LOG.busy = true;
-  try {
-    await api('crmLog', {
-      params: { id: p.party_id },
-      body: { kind: LOG.kind === 'whatsapp' ? 'message' : LOG.kind, direction: LOG.kind === 'note' ? null : LOG.dir, body: node('crm_log_body') }
-    });
-    if (LOG.fu && node('crm_log_fuwhat') && node('crm_log_fudue'))
-      await api('crmFollowAdd', {
-        body: { party_id: p.party_id, what: node('crm_log_fuwhat'), due_at: new Date(node('crm_log_fudue') + 'T09:00:00').toISOString(), source: 'interaction' }
-      });
-    closeModal();
-    toast(tx('Logged'));
-    crmLoad(true);
-    if (CRM.route && CRM.route.view === 'party') crmRecordOpen(CRM.route);
-  } catch (e) {
-    msg.textContent = e && e.status === 503 ? tx('Calls and follow-ups start after an update. Nothing is lost.') : tx("Couldn't save that. Try again.");
-  }
-  LOG.busy = false;
 }
 
 /* ═══ ONE click door for the record's controls (cap-crm.js hands every data-crm it does not own to this) ═══════════ */

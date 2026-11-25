@@ -64,6 +64,7 @@ function page(fetchImpl) {
   };
   ctx.window = ctx;
   vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cb-words.js'), 'utf8'), ctx); /* the page loads it before its own script (failWords · bodyWords) */
   vm.runInContext(script, ctx);
   return { ctx, els };
 }
@@ -72,7 +73,7 @@ const netDown = async () => { throw new TypeError('Failed to fetch'); };
 // MIN could-not-read-words
 (async () => {
   const cases = [
-    ['sign-in step, no network', async () => { const { ctx, els } = page(netDown); await vm.runInContext('doLogin()', ctx); return els.app.innerHTML; }, SENTENCE],
+    ['sign-in step, no network', async () => { const { ctx, els } = page(netDown); await vm.runInContext('doLogin()', ctx); return '<div class="err">' + els.lg_err.textContent + '</div>'; /* the sign-in step says it on the line under the form (loginSay → #lg_err, a class="err" line), the form stays */ }, SENTENCE],
     ['verify step, no network', async () => { const { ctx, els } = page(netDown); ctx._stage = 'otp'; await vm.runInContext('doLogin()', ctx); return els.app.innerHTML; }, SENTENCE],
     ['verify step, server error with no body', async () => { const { ctx, els } = page(async () => ({ status: 500, json: async () => { throw new SyntaxError('no body'); } })); ctx._stage = 'otp'; await vm.runInContext('doLogin()', ctx); return els.app.innerHTML; }, 'Login failed'],
     ['inbox load, no network', async () => { const { ctx, els } = page(netDown); await vm.runInContext('load()', ctx); return els.app.innerHTML; }, SENTENCE],

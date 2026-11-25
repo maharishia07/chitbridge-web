@@ -19,7 +19,7 @@ const src = P('app/cap-finance-terms.js');
 const a = src.indexOf('var FIN_TABS'), b = src.indexOf('function ftNav');
 assert(a > 0 && b > a, 'finTab is found');
 const finTab = new Function('location', src.slice(a, b) + '; return finTab;');
-const TAB_ROW = { collect: 'collections', pay: 'payables', cheques: 'cheques', cash: 'cash', terms: 'terms', repeat: 'repeat', returns: 'returns', reports: 'reports' };
+const TAB_ROW = { collect: 'collections', pay: 'payables', cheques: 'cheques', cash: 'cash', terms: 'terms', repeat: 'repeat', returns: 'returns', reports: 'reports', unknown: 'collections' /* BF-F-07: an address that names no tab reads nothing; the screen chip falls to the first row */ };
 ['collections', 'payables', 'cheques', 'cash', 'terms', 'repeat', 'returns', 'reports', 'nonsense', ''].forEach((w) => {
   ['#/' + w, '#' + w, '#/' + w + '?x=1'].forEach((h) => {
     const loc = { hash: h }, tab = finTab(loc)();
@@ -46,7 +46,7 @@ const books = P('app/cap-books.js');
 /* iter1: the pass wraps lines and renames locals, so the source checks compare without comments and whitespace */
 const flat = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, '');
 
-assert(flat(acc).includes(flat("accept: () => { ACC.billTab = 'B-2100'; show('bills'); }")), 'accept opens the Received bills');
+assert(flat(acc).includes(flat("accept: () => { ACC.billTab = 'B-2100'; ACC.billPicked = true; show('bills'); }")), 'accept opens the Received bills'); /* the notice names the Received side, so the tab is picked, not defaulted */
 assert(flat(acc).includes(flat('supplier: () => { location.href = CB_HOMES.suppliers; }')) && shell.indexOf("suppliers: '/crm.html#/parties?role=supplier'") >= 0, 'suppliers to add opens the CRM supplier list');
 assert(acc.indexOf("waiting: 'waiting'") >= 0 && acc.indexOf('waiting: (body)') < 0, 'the failed-posting list stays reachable from its To do row only');
 assert(books.split("bkNoticeGo('accept')").length === 2 && books.indexOf("bkNoticeGo('supplier')") >= 0 && flat(books).includes(flat("text: todoCounts.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting')")), 'accept and supplier go through bkNoticeGo; waiting keeps its list');

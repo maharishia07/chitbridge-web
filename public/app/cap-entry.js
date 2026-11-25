@@ -25,6 +25,7 @@ if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
+    booksEventsBatch: { m: 'POST', p: '/api/books/events/batch' } /* the bank Add's plain-entry lines, many to a call (each keeps its client_ref) */,
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
     booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
   });
@@ -382,7 +383,7 @@ function enGridHTML() {
               '<button data-cbsid="SCR022-B02" type="button" class="en-tile" data-testid="en-event-' +
               esc(entry.id) +
               '" onclick="enPick(\'' +
-              esc(entry.id) +
+              escJs(entry.id) +
               '\')"><span class="ic" aria-hidden="true">' +
               esc(entry.icon || '＋') +
               '</span><span>' +
@@ -626,7 +627,7 @@ function enFieldHTML(f) {
   var wrap = function (inner) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
   };
-  var on = "enSet('" + esc(k) + "',this.value)";
+  var on = "enSet('" + escJs(k) + "',this.value)";
   if (EN.ev && EN.ev.kind === 'contra' && (k === 'from' || k === 'to')) return enOwnField(k, lab, tid, v, on);
   var picked = enPickHTML(f, lab, tid, v, on);
   if (picked) return picked;
@@ -741,61 +742,6 @@ function enPhoto(inp) {
     enPaint();
   };
   r.readAsDataURL(f);
-}
-
-/* ── the journal's own lines (the CA's door): ledger · Dr/Cr · amount. The server says whether they balance. ── */
-function enLinesHTML() {
-  return (
-    '<div class="en-sec">' +
-    esc(tx('Lines')) +
-    '</div>' +
-    EN.lines
-      .map(function (item, index) {
-        return (
-          '<div class="en-ln" data-testid="en-line-' +
-          index +
-          '">' +
-          enLedgerSelect('en_lc' + index, item.code, 'enLine(' + index + ",'code',this.value)", undefined, 'en-line-code-' + index) +
-          '<select data-cbsid="SCR022-S03" data-testid="en-line-side-' +
-          index +
-          '" onchange="enLine(' +
-          index +
-          ',\'side\',this.value)"><option value="dr"' +
-          (item.side === 'dr' ? ' selected' : '') +
-          '>Dr</option><option value="cr"' +
-          (item.side === 'cr' ? ' selected' : '') +
-          '>Cr</option></select>' +
-          bkMoneyInput({ id: 'en-line-amt-' + index, text: item.amt == null ? '' : String(item.amt), on: 'enLine(' + index + ",'amt',this.value)" }) +
-          '<button data-cbsid="CMP008" type="button" class="en-btn" style="padding:0" aria-label="' +
-          esc(tx('Remove')) +
-          '" data-testid="en-line-del-' +
-          index +
-          '" onclick="enLineDel(' +
-          index +
-          ')"' +
-          (EN.lines.length <= 2 ? ' disabled' : '') +
-          '>✕</button></div>'
-        );
-      })
-      .join('') +
-    '<button data-cbsid="SCR022-B03" type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' +
-    esc(tx('Add a line')) +
-    '</button>'
-  );
-}
-function enLine(i, k, v) {
-  EN.lines[i][k] = v;
-  EN.pv = null;
-  var node = document.getElementById('en_next');
-  if (node) node.disabled = !enStepReady(EN.step);
-}
-function enLineAdd() {
-  EN.lines.push({ code: '', side: 'dr', amt: '' });
-  enPaint();
-}
-function enLineDel(i) {
-  if (EN.lines.length > 2) EN.lines.splice(i, 1);
-  enPaint();
 }
 
 /* ── R106: the ITEM lines of a non-journal event (a debit note: what differs, how many, the rate difference per unit, its tax %) — typed as data, taxed and
@@ -1001,9 +947,9 @@ function enPaintSaved(body, acts) {
     '</div>';
   acts.innerHTML =
     '<button data-cbsid="SCR022-B07" class="en-btn" data-testid="en-reverse-now" onclick="enReverse(\'' +
-    esc(s.entry_id || s.id || '') +
+    escJs(s.entry_id || s.id || '') +
     "','" +
-    esc(no) +
+    escJs(no) +
     '\',true)">↩ ' +
     esc(tx('Reverse this entry')) +
     '</button>' +

@@ -193,7 +193,7 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   await p.waitForTimeout(600);
   const st = S.posts.filter((x) => x.p === '/api/books/bank/statements');
   ok('F4', st.length === 1 && st[0].body.account === '1500' && st[0].body.currency === 'INR' && st[0].body.difference_minor === 0 && st[0].body.closing_bank_minor === st[0].body.closing_books_minor
-    && st[0].body.opening_minor === 10000000 && /^[0-9a-f]{16}$/.test(st[0].body.file_hash) && Object.keys(st[0].body).length === 9,
+    && st[0].body.opening_minor === 10000000 && /^[0-9a-f]{16}$/.test(st[0].body.file_hash) && st[0].body.exceptions_minor === 0 && Object.keys(st[0].body).length === 10, /* BA-F-07: the sign-off carries the listed timing items too (exceptions_minor), so the api can add the figures up */
   'ONE statement with the figures the tab shows ' + JSON.stringify(st[0] && st[0].body) + ' (buttons: ' + yes.join('|') + ')');
   ok('F4', /Signed off/.test(await p.textContent('[data-testid="bank-store"]')) && (await p.locator('[data-testid="bank-signed-row"]').count()) === 1, 'the signed list shows it');
   await p.screenshot({ path: path.join(SHOTS, 'walk-bank-store-signed.png') });

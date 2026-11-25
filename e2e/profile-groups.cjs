@@ -48,7 +48,7 @@ Object.assign(sb, {
 });
 /* CAP_WITH.admin (app.html): helpers.js (taxIdWord · packWord), cap-shop.js (SET1) and cap-settings.js (T3-SETTINGS) load before cap-admin.js */
 for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(W, 'app', f), 'utf8'), ctx, { filename: f });
-vm.runInContext(fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
+vm.runInContext(['cap-admin.js', 'cap-admin-guard.js'].map((n) => fs.readFileSync(path.join(W, 'app', n), 'utf8')).join('\n'), ctx, { filename: 'cap-admin.js' });
 
 const html = ctx.iamMeHTML({
   identity_id: 'e', bridge_id: 'B', display_name: 'mystorex', user_id: 'mystorex', identity_type: 'entity',

@@ -44,9 +44,10 @@
   }
   function chipHTML(state, id) {
     var record = state.rows[id];
+    /* a read that failed never says "none" (EL-10 M9): the "!" comes before the blank and the "…", for a row never read as well as one read as unmarked */
+    if (state.failed && !record) return '<span class="mk-none" role="img" aria-label="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '" title="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '">!</span>';
     if (!state.on && !record) return '';
     if (record === undefined) return '<span class="mk-none" aria-hidden="true">…</span>';
-    if (state.failed && !record) return '<span class="mk-none" role="img" aria-label="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '" title="' + esc(markKit.markText(markKit.MARK_WORDS.readFail)) + '">!</span>';
     var markClass = markKit.classOf(record);
     var note = state.changed && state.changed[id] ? ' <span class="mk-changed" data-testid="mk-changed" role="status">' + esc(state.changed[id]) + '</span>' : '';
     if (!record || !markClass) return emptyChip(state, id) + note;

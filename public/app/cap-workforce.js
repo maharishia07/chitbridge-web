@@ -292,7 +292,7 @@ function aiRowsHTML() {
           '<button data-cbsid="BUS005-B03" class="composebtn' +
           (on ? ' pri' : '') +
           '" style="padding:5px 12px;font-size:var(--fs-2)" onclick="aiToggle(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\')">' +
           (on ? '✓ Enabled' : 'Enable') +
           '</button>' +
@@ -300,7 +300,7 @@ function aiRowsHTML() {
           esc(item.rung) +
           '</span>' +
           '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select data-cbsid="BUS005-S01" onchange="aiSetGate(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:var(--fs-1)"' +
           (on ? '' : ' disabled') +
           '>' +
@@ -320,7 +320,7 @@ function aiRowsHTML() {
               tx('▶ Invoke') +
               '</button>') +
           '<button data-cbsid="BUS005-B06" class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\')">' +
           tx('How it works') +
           '</button>' +
@@ -390,7 +390,7 @@ function coassistsScreen() {
   const _title = _tf !== 'all' && _treg ? (_treg.icon ? _treg.icon + ' ' : '') + esc(_shortLbl) + ' · co-assists' : '🧑‍🤝‍🧑 Co-assists';
   const _typeInfoBtn =
     _tf !== 'all' && (window.AC_TYPE_HOW || {})[_tf]
-      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
+      ? `<button data-cbsid="BUS005-B07" onclick="acTypeInfo(this.dataset.xa)" data-xa="${esc(_tf)}" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`
       : '';
   const list = `<div class="list">
     <div class="lh">
@@ -549,7 +549,7 @@ async function awFinish() {
      * deploy and migration — which is always non-zero here, because Athi runs migrations by hand.
      */
     var _lvl = d.aw_hat || 'editor';
-    var _hatCompat = { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'act';
+    var _hatCompat = { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'view_only';
     try {
       var reply = await api('addActor', { body: { display_name: name, actor_key: key, access_level: _lvl, hat: _hatCompat } });
       var lf = (reply && (reply.login_format || (reply.actor && reply.actor.login_format))) || (typeof coId === 'function' ? coId(key) : key);
@@ -1047,7 +1047,7 @@ function _iotRowHTML(x) {
     ';border-color:transparent">' +
     (iot ? '🛰️ IoT' : '🔌 ERP') +
     '</span>';
-  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div data-cbsid="BUS005-C03" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor(this.dataset.xa)" data-xa="${esc(x.id)}">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago ? ' · ' + esc(ago) : ''}</span></div>
       <div class="l2">📍 ${esc(info.site || x.site || 'no site')} · <b>${cnt}</b> ${iot ? (cnt === 1 ? 'device' : 'devices') : cnt === 1 ? 'endpoint' : 'endpoints'}</div></div>
@@ -1069,9 +1069,9 @@ function acRowHTML(x) {
         (coversNames.length ? '🤝 Covers for <b style="color:var(--ink);font-weight:600">' + coversNames.join(', ') + '</b>' : '') +
         '</div>'
       : '';
-  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div data-cbsid="BUS005-C04" class="row ${x.id === UI.acSel ? 'sel' : ''}" data-ac="${x.id}" style="${dim}" onclick="selectActor(this.dataset.xa)" data-xa="${esc(x.id)}">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift === 'on_shift' ? 'var(--ok-3)' : x.shift === 'on_break' ? 'var(--warn-2)' : 'var(--grey-2)'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet ? '' : x.invite ? '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>' : ''}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max || '∞'}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x)}</span>${x.pinSet ? '' : x.invite ? '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>' : ''}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${x.load}/${x.max || '∞'}</span></div>
       <div class="l2">${esc(x.role || '—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status !== 'active' ? '<span class="optchip off">' + esc(x.status) + '</span>' : ''}${x.shift !== 'on_shift' && x.returnDate ? ' · returns ' + acDate(x.returnDate) : ''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`;
 }
@@ -1243,7 +1243,7 @@ function _acTierSummary(x) {
     '</div></div>' +
     '</div>' +
     '<button data-cbsid="BUS005-B13" class="composebtn pri" style="width:100%;padding:13px;font-size:var(--fs-3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\'' +
-    x.id +
+    escJs(x.id) +
     '\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the ' +
     esc(reg.label || '') +
     ' cockpit <span style="opacity:.85"><span class=arw>→</span></span></button>' +
@@ -1335,14 +1335,14 @@ function acDetailHTML() {
        "already loaded" flag would show Ravi's record under Priya's name. That is the worst possible failure
        for this particular screen. */
     acLoadDocs(x.id);
-    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor('${x.id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" onclick="saveActor(this.dataset.xa)" data-xa="${esc(x.id)}">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setAcMode('view')">${tx('Cancel')}</button>`;
   } else {
     const pct = x.max ? Math.min(100, Math.round((x.load / x.max) * 100)) : 0;
     const kv = (l, v) =>
       `<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:var(--fs-2);align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${v == null || v === '' ? '—' : v}</span></div>`;
     const hatV =
       '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">' +
-      hatLabel(x.hat) +
+      hatLabel(x) +
       '</span>' +
       (hatAssignable(x) ? '' : ' <span style="font-size:var(--fs-1);color:var(--grey)">not assignable</span>');
     const coversFor = (UI.acts || []).filter((item) => item.del === x.id).map((item) => acLbl(item));
@@ -1455,14 +1455,14 @@ function acDetailHTML() {
       bar =
         (x.type === 'human'
           ? x.pinSet
-            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
+            ? `<button data-cbsid="BUS005-B17" onclick="acResetPin(this.dataset.xa)" data-xa="${esc(x.id)}" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
             : isConn
               ? ''
-              : `<button data-cbsid="BUS005-B18" onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
+              : `<button data-cbsid="BUS005-B18" onclick="acReinvite(this.dataset.xa)" data-xa="${esc(x.id)}" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`
           : '') +
-        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
+        `<button data-cbsid="BUS005-B19" class="warn" onclick="acStatus(this.dataset.xa,'deactivate')" data-xa="${esc(x.id)}" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
     } else {
-      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
+      bar = `<button data-cbsid="BUS005-B20" class="pri" onclick="acStatus(this.dataset.xa,'reactivate')" data-xa="${esc(x.id)}" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button data-cbsid="BUS005-B21" class="warn" onclick="acStatus(this.dataset.xa,'remove')" data-xa="${esc(x.id)}" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
     }
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
@@ -1563,7 +1563,7 @@ async function saveActor(id) {
    * and migration is always non-zero here, because migrations are run by hand.
    */
   const _lvl = val('ac_ehat') || undefined;
-  const _hatCompat = _lvl ? { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'act' : undefined;
+  const _hatCompat = _lvl ? { editor: 'act', commenter: 'audit', viewer: 'view_only' }[_lvl] || 'view_only' : undefined;
   const _whole = (function () {
     const el = document.getElementById('ac_ewhole');
     return el ? !!el.checked : undefined;

@@ -95,6 +95,7 @@ jobs:
           node tests/bk-dv-no-source-dash.test.cjs
           node tests/books-paging.test.cjs
           node tests/cat-258-unpriced-bands-web.test.cjs
+          node tests/chit-doc-head-1129.test.cjs
           node tests/chit-mark-paid-dead.test.cjs
           node tests/chit-sheet-dispute-opener.test.cjs
           node tests/country-compare.test.cjs
@@ -112,6 +113,7 @@ jobs:
           node tests/graph-apifeed.test.cjs
           node tests/grey-ready.test.cjs
           node tests/walkm-f07-f08-busy-and-grey.test.cjs
+          node tests/walkn-1129-web.test.cjs
           node tests/inbooks-1128-web.test.cjs
           node tests/home-draws-manifest.test.cjs
           node tests/ledger-columns.test.cjs
@@ -121,6 +123,7 @@ jobs:
           node tests/acct-c-f02-lock-month.test.cjs
           node tests/acct-c-f06-debit-note-fix.test.cjs
           node tests/acct-c-f03-bank-summary.test.cjs
+          node tests/bank-add-one-mark-request.test.cjs
           node tests/acct-c-f04-bank-difference.test.cjs
           node tests/ye-f15-card-stage.test.cjs
           node tests/ye-f13-one-name.test.cjs
@@ -146,6 +149,19 @@ jobs:
           node e2e/lab-pages-static.test.cjs
           node e2e/ctr-212-recheck-setup.cjs
           node e2e/dues-ageing-one-answer.test.cjs
+          node e2e/reviews5-csv-overnote.test.cjs
+          node e2e/reviews6-books-money.test.cjs
+          node e2e/reviews7-finance-fx-folders.test.cjs
+          node e2e/reviews9-screens.test.cjs
+          node e2e/reviews10-screens.test.cjs
+          node e2e/reviews11-screens.test.cjs
+          node e2e/reviews12-screens.test.cjs
+          node e2e/reviews5-price-typed.test.cjs
+          node e2e/reviews5-unsaved-guard.test.cjs
+          node e2e/cap-admin-guard-minimums.test.cjs
+          node e2e/cap-register-impact-minimums.test.cjs
+          node e2e/cap-readiness-ai-minimums.test.cjs
+          node e2e/cap-traceability-minimums.test.cjs
           node e2e/dues-one-sign.test.cjs
           node e2e/list-total-pinned.test.cjs
           node e2e/polish-r-locale.test.cjs
@@ -203,6 +219,7 @@ jobs:
           node e2e/helper-scope.cjs
           node e2e/html-syntax.cjs
           node e2e/legend-complete.cjs
+          node e2e/lens2-1129-web.test.cjs
           node e2e/network-guard.cjs
           node e2e/acc-176-books-grant-ui.test.cjs
           node e2e/acc-176b-adviser-ui.test.cjs
@@ -261,6 +278,7 @@ jobs:
           node e2e/ctr-12-refused-key-reenrols.test.cjs
           node tests/grey-setup.test.cjs
           node e2e/ctr-13-hour-group-wording.test.cjs
+          node e2e/till-walkaa-1129.test.cjs
           node e2e/ctr-146-counter-name.test.cjs
           node e2e/ord-41-attach-ui-wired.test.cjs
           node e2e/ord-43-unresolved-order-ref.test.cjs
@@ -271,7 +289,10 @@ jobs:
           node e2e/crm-26-sheet-reads-invoice.test.cjs
           node e2e/crm-30-31-sum-scope.test.cjs
           node e2e/web-1128.test.cjs
+          node e2e/grey-au-1129.test.cjs
+          node e2e/l1c-1129.test.cjs
           node e2e/arabic-catalogue.test.cjs
+          node e2e/bg-1129.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
           # ACC proofs (2026-11-14, P2 PROOF pass): CSS / vm-sandbox checks on the real Accounts and CRM pages; each is red when its cited line is mutated
@@ -316,6 +337,7 @@ jobs:
           node e2e/offer-live-confirm.test.cjs
           node e2e/combo-lab-direct.test.cjs
           node e2e/detail-chip-errwords.test.cjs
+          node e2e/fail-words.test.cjs
           node e2e/pack-parity.test.cjs
           node e2e/cart-keys-words.test.cjs
           node e2e/match-money.test.cjs
@@ -366,6 +388,7 @@ jobs:
           node e2e/walks-bell-popup-inside.test.cjs
           node e2e/walks-sides-count.test.cjs
           node e2e/walks-home-not-started-group.test.cjs
+          node e2e/af-home-money-card.test.cjs
           node e2e/walks-p3-testids.test.cjs
           node tests/startfix-country-save-once.test.cjs
           node tests/startfix-shop-name-box.test.cjs
@@ -385,11 +408,14 @@ jobs:
           node e2e/ui-codes-pass-cat.test.cjs
           node e2e/ui-codes-labs.test.cjs
           node e2e/bank-preview.test.cjs
+          node e2e/bank-add-batch.test.cjs
+          node e2e/bank-rules-1129.test.cjs
           node e2e/bank-ui-answers.test.cjs
           node e2e/web02-fixes.test.cjs
           node e2e/web02b-fixes.test.cjs
           node e2e/bank-split.test.cjs
           node e2e/bank-seat-may.test.cjs
+          node e2e/be-1129.test.cjs
           node e2e/ui-codes-refpages.test.cjs
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs
@@ -435,6 +461,11 @@ jobs:
           node e2e/books-parts.test.cjs
           node e2e/assign-bar.test.cjs
           node tests/chit-pay-ask.test.cjs
+          node tests/chit-pay-qr.test.cjs
+          node tests/cap-chit2-reprice.test.cjs
+          node tests/compose-catalogue-fill.test.cjs
+          node tests/cap-connector-reissue.test.cjs
+          node tests/cap-worklist-card.test.cjs
           node tests/chit-sheet-captured.test.cjs
           node tests/cur1-money-reader.test.cjs
           node tests/chit-sheet-lines.test.cjs
@@ -483,6 +514,10 @@ jobs:
         run: node e2e/cmdb-records.cjs
       - name: Every stand-in that answers /api/books or /api/crm holds its answers to the API contract (M43)
         run: node e2e/contract.cjs
+      - name: lens-sec 1129 · a dispute party name cannot leave its onclick string
+        run: node e2e/lenssec-dispute-name.test.cjs
+      - name: No page reads ?api= except through cbApiParam; evil origin refused (SEC-FIX 1129)
+        run: node e2e/guard-api-param.cjs
       - name: No NEW raw colour in a page or app file (ratchet; e2e/token-guard.baseline.json)
         run: node e2e/token-guard.cjs
       - name: The process map names files and functions that exist (PM1; docs/process/flows.json)

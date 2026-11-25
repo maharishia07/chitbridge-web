@@ -37,22 +37,23 @@ function fqRemind() {
   return rm ? Object.assign({ known: true }, rm) : { known: false, on: true, lead_days: 7, from: null, may_set: false, why_not: FQ_NOT_YET };
 }
 
+/** the Cheques page's read: the workshop's cheques kept in FQ with each post-dated one's reminder state; a late answer is dropped, and Ledger-off or not-allowed is said in the page's own words */
 async function fqLoad(quiet) {
-  var g = ++FQ.gen;
+  var generation = ++FQ.gen;
   if (!quiet) {
     FQ.state = 'loading';
     if (FQ.api) FQ.api.refresh();
   }
   try {
-    var r = await bkChequesLoad(); /* the workshop's own read: GET /api/books/cheques, each row kept in BK.cheques (the steps read it there) */
-    if (g !== FQ.gen) return;
-    FQ.r = r || {};
+    var loaded = await bkChequesLoad(); /* the workshop's own read: GET /api/books/cheques, each row kept in BK.cheques (the steps read it there) */
+    if (generation !== FQ.gen) return;
+    FQ.r = loaded || {};
     FQ.pdc = {};
-    ((r && r.pdc_reminders) || []).forEach(function (x) {
+    ((loaded && loaded.pdc_reminders) || []).forEach(function (x) {
       FQ.pdc[x.payment_id] = x;
     });
     /* the server's rows, in its order — never this session's leftovers (bkChequeList keeps a cleared one until the page reloads) */
-    FQ.rows = ((r && r.cheques) || [])
+    FQ.rows = ((loaded && loaded.cheques) || [])
       .map(function (item) {
         return BK.cheques[item.payment_id] || bkChequeKeep(item);
       })
@@ -60,7 +61,7 @@ async function fqLoad(quiet) {
     FQ.state = 'ready';
     ftNav();
   } catch (e) {
-    if (g !== FQ.gen) return;
+    if (generation !== FQ.gen) return;
     if (e && e.status === 404) {
       finOff();
       return;
@@ -82,8 +83,8 @@ function fqRetry() {
 function fqPaintTop() {
   var el = document.getElementById('fq_top');
   if (!el) return;
-  var rm = fqRemind(),
-    word = !rm.known ? tx('Not set') : rm.on ? txf('On · {n} days ahead', { n: rm.lead_days }) : tx('Off');
+  var reminder = fqRemind(),
+    word = !reminder.known ? tx('Not set') : reminder.on ? txf('On · {n} days ahead', { n: reminder.lead_days }) : tx('Off');
   el.innerHTML =
     '<div class="tabs" role="group" aria-label="' +
     esc(tx('Cheque reminders')) +
@@ -92,9 +93,9 @@ function fqPaintTop() {
     esc(tx('Reminders')) +
     '</button>' +
     '<span class="tag' +
-    (rm.known && rm.on ? ' on' : '') +
+    (reminder.known && reminder.on ? ' on' : '') +
     '" data-testid="fq-remind" data-on="' +
-    (rm.known ? String(!!rm.on) : 'unknown') +
+    (reminder.known ? String(!!reminder.on) : 'unknown') +
     '">' +
     esc(word) +
     '</span></div>' +
@@ -102,9 +103,9 @@ function fqPaintTop() {
 }
 /** the switch: on/off and the days ahead — the server's may_set greys Save WITH its sentence; before the twin lands, the same, in words */
 function fqReminderSheet() {
-  var rm = fqRemind(),
-    off = !rm.may_set,
-    why = rm.may_set ? '' : rm.why_not || '';
+  var reminder = fqRemind(),
+    switchedOff = !reminder.may_set,
+    reason = reminder.may_set ? '' : reminder.why_not || '';
   ui.dialog({
     mount: 'FIN006-U01',
     pop: 'POP108',
@@ -113,25 +114,25 @@ function fqReminderSheet() {
     testid: 'fq-sheet',
     body:
       '<label style="flex-direction:row;align-items:center;gap:8px"><input data-cbsid="FIN006-I01" type="checkbox" id="fq_on" data-testid="fq-on"' +
-      (rm.on ? ' checked' : '') +
-      (off ? ' disabled' : '') +
+      (reminder.on ? ' checked' : '') +
+      (switchedOff ? ' disabled' : '') +
       '> ' +
       esc(tx('Remind me about post-dated cheques')) +
       '</label>' +
       '<label>' +
       esc(tx('Days ahead')) +
       '<input data-cbsid="FIN006-I02" class="inp" id="fq_days" data-testid="fq-days" inputmode="numeric" autocomplete="off" value="' +
-      esc(String(rm.lead_days)) +
+      esc(String(reminder.lead_days)) +
       '"' +
-      (off ? ' disabled' : '') +
+      (switchedOff ? ' disabled' : '') +
       '></label>' +
       '<p class="hint">' +
       esc(tx('Said here, on Home, and as the follow-ups you set.')) +
       '</p>' +
       '<div id="fq_why" class="hint" role="status" data-testid="fq-why">' +
-      esc(why) +
+      esc(reason) +
       '</div>',
-    footerHtml: fqSheetFoot(off)
+    footerHtml: fqSheetFoot(switchedOff)
   });
 }
 /** the sheet's footer: Cancel, and Save (greyed with the server's sentence when the shop may not set it) */
@@ -147,6 +148,7 @@ function fqSheetFoot(locked) {
     '</button>'
   );
 }
+/** the reminder setting's Save: the days field must be digits (the range is the server's to say), then it is sent through CBAction */
 function fqSave(btn) {
   var on = !!(document.getElementById('fq_on') || {}).checked,
     node = String((document.getElementById('fq_days') || {}).value || '').trim(),
@@ -175,16 +177,16 @@ function fqSave(btn) {
 
 /* ── Remind me: a follow-up on the party, due on the cheque's date (overdue: due today), through CB CRM's own route ── */
 function fqRemindMe(id, btn) {
-  var c = BK.cheques[id],
-    p = FQ.pdc[id];
-  if (!c || !p || !c.party_id) return;
+  var cheque = BK.cheques[id],
+    postDated = FQ.pdc[id];
+  if (!cheque || !postDated || !cheque.party_id) return;
   var what =
-    tx('Deposit cheque') + ' ' + (c.cheque_no || '') + ' · ' + bkMoney(c.amount_minor, c.currency || fqCur()) + ' · ' + bkPartyLabel(c.party_id, c.name);
-  var due = p.state === 'not_yet' ? p.cheque_date : (FQ.r && FQ.r.asOf) || p.cheque_date;
+    tx('Deposit cheque') + ' ' + (cheque.cheque_no || '') + ' · ' + bkMoney(cheque.amount_minor, cheque.currency || fqCur()) + ' · ' + bkPartyLabel(cheque.party_id, cheque.name);
+  var dueAt = postDated.state === 'not_yet' ? postDated.cheque_date : (FQ.r && FQ.r.asOf) || postDated.cheque_date;
   return CBAction.run(
     btn,
     function () {
-      return api('crmFollowAdd', { body: { party_id: c.party_id, what: what.slice(0, 300), due_at: due, source: 'dues' } });
+      return api('crmFollowAdd', { body: { party_id: cheque.party_id, what: what.slice(0, 300), due_at: dueAt, source: 'dues' } });
     },
     {
       key: 'fq-remind-' + id,
@@ -192,7 +194,7 @@ function fqRemindMe(id, btn) {
       failed: tx('Could not set the reminder'),
       done: tx('Reminder set'),
       outcome: function (r) {
-        FQ.fu[id] = (r && r.followup) || { due_at: due };
+        FQ.fu[id] = (r && r.followup) || { due_at: dueAt };
         fqRepaint(id);
       }
     }
@@ -207,33 +209,34 @@ function fqRepaint(id) {
 }
 
 /* ── the columns: the workshop's (party · cheque · dated · amount · status with the steps) plus the reminder — every word the server's ── */
-function fqDueCell(c) {
-  var p = FQ.pdc[c.payment_id],
+function fqDueCell(cheque) {
+  var postDated = FQ.pdc[cheque.payment_id],
     dash = '<span style="color:var(--grey)">—</span>';
-  if (!p) return c.direction === 'out' ? '<span class="sub" data-b="written">' + esc(tx('Written by you')) + '</span>' : dash;
+  if (!postDated) return cheque.direction === 'out' ? '<span class="sub" data-b="written">' + esc(tx('Written by you')) + '</span>' : dash;
   /* the state as WORDS in the page's text colours (.late / .late.red carry AA in every theme — the Collections' Age words); a tinted chip read 3.5:1 in Dark */
-  var cls = p.state === 'overdue_for_deposit' ? 'late red' : p.state === 'deposit_today' ? 'due' : 'sub',
-    fu = FQ.fu[c.payment_id]; /* today: bold ink (.due), amber read 3.8:1 in Dark */
+  var stateClass = postDated.state === 'overdue_for_deposit' ? 'late red' : postDated.state === 'deposit_today' ? 'due' : 'sub',
+    followUp = FQ.fu[cheque.payment_id]; /* today: bold ink (.due), amber read 3.8:1 in Dark */
   return (
     '<span class="' +
-    cls +
+    stateClass +
     '" data-b="pdc-' +
-    esc(p.state) +
+    esc(postDated.state) +
     '">' +
-    esc(tx(FQ_STATE[p.state] || p.state)) +
-    (p.state === 'not_yet' ? ' · ' + esc(bkDate(p.cheque_date)) : '') +
+    esc(tx(FQ_STATE[postDated.state] || postDated.state)) +
+    (postDated.state === 'not_yet' ? ' · ' + esc(bkDate(postDated.cheque_date)) : '') +
     '</span>' +
-    (fu
+    (followUp
       ? ' <span class="sub" data-b="fu-set">' + esc(tx('Reminder set')) + '</span>'
       : ' <button data-cbsid="FIN006-B04" type="button" class="cbl-tbtn" data-testid="fq-remind-' +
-        esc(c.payment_id) +
+        esc(cheque.payment_id) +
         '" onclick="event.stopPropagation();fqRemindMe(\'' +
-        esc(c.payment_id) +
+        escJs(cheque.payment_id) +
         '\',this)">' +
         esc(tx('Remind me')) +
         '</button>')
   );
 }
+/** the page's columns: the workshop's cheque columns with the post-dated state added, narrowed to fit 1366 px */
 function fqCols() {
   var cols = bkChequeCols(); /* party · cheque · dated · amount · status (the steps the server offers, as buttons) */
   cols.splice(3, 0, {
@@ -249,9 +252,9 @@ function fqCols() {
     cell: fqDueCell
   });
   /* six columns in a 1366 px window: the workshop's widths (1240) scrolled the list sideways (rule 13); the same cells, narrower */
-  var w = { party: 190, cheque: 160, dated: 110, amount: 120, status: 260 };
+  var widths = { party: 190, cheque: 160, dated: 110, amount: 120, status: 260 };
   cols.forEach(function (item) {
-    if (w[item.key]) item.w = w[item.key];
+    if (widths[item.key]) item.w = widths[item.key];
   });
   return cols;
 }
@@ -259,14 +262,14 @@ function fqCols() {
 function fqHead() {
   var notices = [];
   if (FQ.state === 'ready' && FQ.r) {
-    var due = (FQ.r.pdc_reminders || []).filter(function (x) {
+    var dueRows = (FQ.r.pdc_reminders || []).filter(function (x) {
       return x.state !== 'not_yet';
     });
-    if (due.length)
+    if (dueRows.length)
       notices.push({
         cls: 'warn',
         tid: 'fq-pdc',
-        text: txn('{count} cheque to deposit', '{count} cheques to deposit', due.length),
+        text: txn('{count} cheque to deposit', '{count} cheques to deposit', dueRows.length),
         onOpen: function () {
           if (FQ.api) FQ.api.refresh();
         }
@@ -274,6 +277,7 @@ function fqHead() {
   }
   return { title: tx('Cheques'), notices: notices };
 }
+/** the Cheques screen: its frame, the notices on top and the list over FQ.rows */
 function fqMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -394,14 +398,14 @@ function fqMount(frame) {
       }
     ],
     /* its next level is the party's bills — the workshop's own (the statement route, read once on the first open) */
-    next: function (c) {
+    next: function (cheque) {
       return (
         '<div data-testid="fq-next-' +
-        esc(c.payment_id) +
+        esc(cheque.payment_id) +
         '"><div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' +
         esc(tx('Bills')) +
         '</div>' +
-        (c.party_id ? bkPartyBillsHTML(c.party_id, 'cheques', c.currency || fqCur()) : '') +
+        (cheque.party_id ? bkPartyBillsHTML(cheque.party_id, 'cheques', cheque.currency || fqCur()) : '') +
         '</div>'
       );
     }

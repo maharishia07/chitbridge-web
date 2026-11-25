@@ -139,12 +139,10 @@
   function isContinuous(unit) {
     return CONTINUOUS_KINDS.indexOf(kindOf(unit)) >= 0;
   }
-  /** ⚠️ discrete only when the unit is KNOWN to be countable — never by absence of information */
-  function isDiscrete(unit) {
+  /** ⚠️ discrete only when the unit is KNOWN to be countable — never by absence of information */  function isDiscrete(unit) {
     var k = kindOf(unit);
     return !!k && CONTINUOUS_KINDS.indexOf(k) < 0;
   }
-
   /**
    * ── ⭐⭐ THE MARGIN: 1.010 IS ONE ──────────────────────────────────────────────────────────────────────────
    *
@@ -162,7 +160,6 @@
    * can delete a line is the bug this whole change exists to end.
    */
   var QTY_TOL = 0.01;
-
   /**
    * ── ⭐⭐⭐ ONE PLACE: THE UNITS THIS ENTITY USES, AND WHAT EACH OF THEM ALLOWS ─────────────────
    *
@@ -229,7 +226,6 @@
       floor: isFinite(floor) && floor > 0 ? floor : 0
     };
   }
-
   /** the margin, applied only where the entity said it may be */
   function snapWhole(n, unit, shop) {
     var r = unitRule(unit, shop);
@@ -627,6 +623,13 @@
     s.deals[key] = out;
     return out;
   }
+  /** the quantity a row is priced at: its own, else what the cart holds for it (rows carry no qty), else 1 — GF-17 M4: the tier is read at the quantity in the cart */
+  function pricingQty(s, r) { return Number(r.qty) || Number((s.sel || {})[r.item_id]) || 1; }
+  /** a channel line the catalogue refused: its refusal entry, with the quantity the person already chose put back (EL-17 F8: a refused line must not delete it) */
+  function refusedLine(ns, match, want, hadBefore) {
+    if (hadBefore > 0) put(ns, match.item_id, hadBefore);
+    return { name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' };
+  }
   function unitPrice(ns, r, nestedOpt) {
     var s = C[ns] || {},
       o = declOf(ns, r);
@@ -640,7 +643,7 @@
       tier = null,
       why;
     if (typeof CBPricing !== 'undefined' && dataOf(r).pricing_kind) {
-      var tp = CBPricing.unitPrice(dataOf(r), Number(r.qty) || 1, list);
+      var tp = CBPricing.unitPrice(dataOf(r), pricingQty(s, r), list);
       base = tp.amount;
       tier = tp.tier || null;
       why = tp.why;
@@ -689,7 +692,7 @@
     if (!partial && !offered && amount > 0) {
       try {
         var M = compute(ns);
-        if (M && M.ev && M.ev.total != null) amount = roundMoney_(Number(M.ev.total));
+        if (M && M.ev && M.ev.total != null) amount = roundMoney_(Number(M.grand != null ? M.grand : M.ev.total)); /* reviews11 GF-17 M2: the figure the block prints (after tax), not the pre-tax one */
       } catch (e) {}
     }
     // `offered` lets a screen say WHOSE number this is. A total that mixes an asking price and an offer without
@@ -939,8 +942,7 @@
     var s = C[ns];
     if (!s) return [];
     var all = rowsOf(s.cat),
-      seen = {},
-      label = {},
+      seen = Object.create(null) /* reviews11 GF-17 M9: a category called "constructor" is a key, not a function */, label = Object.create(null),
       order = [],
       none = 0;
     for (var index = 0; index < all.length; index++) {
@@ -1001,9 +1003,9 @@
         (id ? '' : '-all') +
         '"' +
         ' onclick="CBCart.category(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         '\')">' +
         esc(label) +
         (n == null ? '' : ' <span class="cbpick-chipn">' + n + '</span>') +
@@ -1196,7 +1198,7 @@
       });
     ids.forEach(function (id) {
       if (allIn) delete s.sel[id];
-      else if (!s.sel[id]) s.sel[id] = 1;
+      else if (!s.sel[id]) put(ns, id, 1); /* reviews11 GF-17 M3: through the one quantity gate (a pack or a range never gets an illegal 1) */
     });
     touched(ns);
   }
@@ -1373,7 +1375,7 @@
       esc(ns) +
       '"' +
       (on
-        ? ' onclick="CBCart.open(\'' + esc(ns) + '\')" title="Open the cart to review and add these lines"'
+        ? ' onclick="CBCart.open(\'' + escJs(ns) + '\')" title="Open the cart to review and add these lines"'
         : ' title="' + esc(opt(ns, 'emptyHint', 'Press + on what you need')) + '"') +
       ' style="border-color:' +
       (on ? a : 'var(--line)') +
@@ -1388,7 +1390,7 @@
       (on ? '<span class="cbcart-sum">' + esc(sum) + '</span>' : '') +
       (on
         ? '<span data-cbsid="SCR037-C02" class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' +
-          esc(ns) +
+          escJs(ns) +
           '\')"' +
           ' title="' + esc(translated('Clear the cart')) + '" aria-label="' + esc(translated('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
         : '') +
@@ -1419,9 +1421,9 @@
     if (o_model === 'pick') {
       return (
         '<button data-cbsid="SCR037-B02" data-testid="cart-add" onclick="event.stopPropagation();CBCart.setQty(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         "'," +
         (q ? 0 : 1) +
         ')"' +
@@ -1438,7 +1440,7 @@
     }
     if (!q) {
       return (
-        '<button data-cbsid="SCR037-B03" data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + esc(ns) + "','" + esc(id) + '\')">+</button>'
+        '<button data-cbsid="SCR037-B03" data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + escJs(ns) + "','" + escJs(id) + '\')">+</button>'
       );
     }
     var off = '';
@@ -1450,9 +1452,9 @@
         esc(os.value == null ? '' : String(os.value)) +
         '" inputmode="decimal"' +
         ' onchange="CBCart.setOffer(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         '\',this.value)"' +
         ' style="width:78px;padding:5px;border:1.5px solid ' +
         (os.value != null && !os.ok ? 'var(--disp)' : 'var(--line)') +
@@ -1464,16 +1466,16 @@
       '<button data-cbsid="SCR037-B04" style="' +
       rnd +
       '" onclick="CBCart.dec(\'' +
-      esc(ns) +
+      escJs(ns) +
       "','" +
-      esc(id) +
+      escJs(id) +
       '\')">−</button>' +
       '<input data-cbsid="SCR037-I02" value="' +
       esc(String(q)) +
       '" inputmode="decimal" onchange="CBCart.setQty(\'' +
-      esc(ns) +
+      escJs(ns) +
       "','" +
-      esc(id) +
+      escJs(id) +
       '\',this.value)"' +
       ' style="width:52px;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);text-align:center">' +
       '<button data-cbsid="SCR037-B05" data-testid="cart-add" style="' +
@@ -1481,9 +1483,9 @@
       ';background:' +
       a +
       ';color:#fff" onclick="CBCart.add(\'' +
-      esc(ns) +
+      escJs(ns) +
       "','" +
-      esc(id) +
+      escJs(id) +
       '\')">+</button></span>'
     );
   }
@@ -1597,7 +1599,7 @@
         (s.catg
           ? '<div style="margin-top:8px"><button data-cbsid="SCR037-B06" type="button" class="cbpick-chip"' +
             ' onclick="CBCart.category(\'' +
-            esc(ns) +
+            escJs(ns) +
             "','')\">" +
             tx('Show everything') +
             '</button></div>'
@@ -1623,7 +1625,7 @@
             ' options</span>' +
             (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '') +
             '<span data-cbsid="SCR037-C04" class="cbcart-grp"' + KBD_PRESS + ' onclick="CBCart.group(\'' +
-            esc(ns) +
+            escJs(ns) +
             "'," +
             index +
             ')" style="cursor:pointer;font-size:var(--fs-1);color:' +
@@ -1706,7 +1708,7 @@
       esc(opt(ns, 'cartTitle', 'Your cart')) +
       '</b>' +
       '<button data-cbsid="CMP005" onclick="CBCart.close(\'' +
-      esc(ns) +
+      escJs(ns) +
       '\')" aria-label="Close" title="Close" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>' +
       '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">' +
       (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '') +
@@ -1737,9 +1739,9 @@
                 '</div></span>' +
                 stepperHTML(ns, item.item_id, item.qty) +
                 '<span data-cbsid="CMP008"' + KBD_PRESS + ' aria-label="' + esc(translated('Remove from the cart')) + '" onclick="CBCart.setQty(\'' +
-                esc(ns) +
+                escJs(ns) +
                 "','" +
-                esc(item.item_id) +
+                escJs(item.item_id) +
                 '\',0)" title="remove"' +
                 ' style="cursor:pointer;color:var(--grey-4);font-weight:800;padding:0 3px">×</span></div>'
               );
@@ -1785,7 +1787,7 @@
       ';background:var(--card);color:' +
       a +
       '" onclick="CBCart.close(\'' +
-      esc(ns) +
+      escJs(ns) +
       '\')">' +
       (list.length ? 'Keep shopping' : 'Browse the catalogue') +
       '</button>' +
@@ -1796,7 +1798,7 @@
           a +
           ';color:var(--on-card)"' +
           ' onclick="CBCart.checkout(\'' +
-          esc(ns) +
+          escJs(ns) +
           '\')">' +
           esc(opt(ns, 'checkoutLabel', 'Check out <span class=arw>→</span>')) +
           '</button>'
@@ -1850,7 +1852,7 @@
       '"' +
       (o.searchTestid ? ' data-testid="' + esc(o.searchTestid) + '"' : '') +
       ' oninput="CBCart.search(\'' +
-      esc(ns) +
+      escJs(ns) +
       '\', this.value)">' +
       '</div>' +
       /* ⭐ Athi, 2026-08-16: *"it should be below the search, scrolling"*. Inside the sticky block, so the way you
@@ -1951,7 +1953,7 @@
             '<button data-cbsid="SCR037-B09" type="button" class="cbcart-float-pill" data-testid="' +
             esc(text.replace(/-total$/, '')) +
             '-pill" onclick="CBCart.closeSummary(\'' +
-            esc(ns) +
+            escJs(ns) +
             '\', false)" title="' +
             esc('open the summary') +
             '">🧾 ' +
@@ -1973,7 +1975,7 @@
           '<button data-cbsid="SCR037-B10" type="button" class="cbcart-float-x" aria-label="minimise" title="' +
           esc('minimise') +
           '" onclick="CBCart.closeSummary(\'' +
-          esc(ns) +
+          escJs(ns) +
           '\', true)">—</button></div>' +
           h.reviewHTML({ totalTestid: text });
       } catch (e) {}
@@ -2452,8 +2454,7 @@
         var all = rowsOf(s.cat).filter(function (item) {
           return item.type === 'line';
         });
-        var byId = {},
-          byName = {};
+        var byId = Object.create(null), byName = Object.create(null);
         all.forEach(function (item) {
           byId[item.item_id] = item;
           byName[String(nameOf(item)).trim().toLowerCase()] = item;
@@ -2463,11 +2464,11 @@
           var want = item.qty == null ? 1 : item.qty;
           var match = (item.item_id && byId[item.item_id]) || (item.name && byName[String(item.name).trim().toLowerCase()]);
           if (match) {
-            put(ns, match.item_id, want);
+            var hadBefore = qtyOf(ns, match.item_id); put(ns, match.item_id, want);
             // The model may have refused it outright (below a minimum) or landed it on a legal value.
             var got = qtyOf(ns, match.item_id);
             if (got > 0) placed.push({ item_id: match.item_id, name: nameOf(match), qty: got, asked: want });
-            else refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
+            else refused.push(refusedLine(ns, match, want, hadBefore));
             return;
           }
           if (!item.name) {
@@ -2740,8 +2741,7 @@
     /* ⭐ ONE ROW PER OFFER, NOT PER LINE (Athi, 2026-09-06: "group the offer amount together, so we get one offer outcome"). Three
        lines under Flat 10% printed three rows; Amazon prints one promotion line. Line-scope adjustments are summed by offer
        (offer_id, else label) with the item count; cart-scope ones keep their own row and say their scope. */
-    var grouped = [],
-      byOffer = {};
+    var grouped = [], byOffer = Object.create(null);
     (ev.adjustments || []).forEach(function (item) {
       if (item.scope !== 'line') {
         grouped.push({ label: item.label || item.kind, scope: item.scope, amount: Math.abs(Number(item.amount) || 0), n: 0, offer_id: item.offer_id || null });
@@ -3056,7 +3056,7 @@
       ns = cart.ns,
       m = modelOf(r);
     var call = function (fn, arg) {
-      return 'CBCart.' + fn + "('" + esc(ns) + "','" + esc(id) + "'" + (arg === undefined ? '' : ',' + arg) + ')';
+      return 'CBCart.' + fn + "('" + escJs(ns) + "','" + escJs(id) + "'" + (arg === undefined ? '' : ',' + arg) + ')';
     };
     /**
      * ⚠️⚠️ `data-testid="cart-add"` IS A PUBLISHED HOOK AND GOES ON EVERY ADD CONTROL — the pick toggle, the bare
@@ -3095,9 +3095,9 @@
         esc(q) +
         '" inputmode="decimal" aria-label="quantity"' +
         ' onchange="CBCart.setQty(\'' +
-        esc(ns) +
+        escJs(ns) +
         "','" +
-        esc(id) +
+        escJs(id) +
         '\',this.value)"></span>' +
         '<button data-cbsid="SCR037-B13" type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' +
         esc(id) +
@@ -3282,9 +3282,9 @@
           esc(id) +
           '"' +
           ' onchange="CBCart.setOffer(\'' +
-          esc(cart.ns) +
+          escJs(cart.ns) +
           "','" +
-          esc(id) +
+          escJs(id) +
           '\',this.value)">'
         : '';
     var _pb = priceBits({
@@ -3618,7 +3618,7 @@
       r.count +
       ' options</span>' +
       '<span data-cbsid="SCR037-C06" class="cbcat-all" onclick="CBCart.group(\'' +
-      esc(cart.ns) +
+      escJs(cart.ns) +
       "'," +
       i +
       ')">add all</span></div>'
@@ -3813,7 +3813,7 @@
       esc(cart.ns) +
       '"' +
       ' onclick="CBCart.checkout(\'' +
-      esc(cart.ns) +
+      escJs(cart.ns) +
       '\')">' +
       esc(opts.checkoutLabel || 'Add to the chit') +
       '</button></div>'
@@ -4180,7 +4180,7 @@
       '"' +
       (opts.searchTestid ? ' data-testid="' + esc(opts.searchTestid) + '"' : '') +
       ' oninput="CBCart.search(\'' +
-      esc(cart.ns) +
+      escJs(cart.ns) +
       '\', this.value)">' +
       /**
        * ⭐⭐ THE CATEGORY STRIP — DELEGATED, NOT COPIED (Athi, 2026-08-16: *"can we add a category to the
@@ -4215,7 +4215,7 @@
           ((cart.state() || {}).onlyOffers ? ' on' : '') +
           '"' +
           ' data-testid="pick-onoffer" onclick="CBCart.onlyOffers(\'' +
-          esc(cart.ns) +
+          escJs(cart.ns) +
           '\')">' +
           '🏷️ ' +
           esc('On offer') +
@@ -4268,7 +4268,7 @@
       ' data-testid="cart-' +
       esc(cart.ns) +
       '"' +
-      (n ? ' onclick="CBCart.open(\'' + esc(cart.ns) + '\')"' : ' disabled') +
+      (n ? ' onclick="CBCart.open(\'' + escJs(cart.ns) + '\')"' : ' disabled') +
       ' title="' +
       esc(n ? 'Open the cart' : opts.emptyHint || 'Press + on what you need') +
       '">' +

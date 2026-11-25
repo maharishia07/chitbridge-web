@@ -619,9 +619,9 @@ function netReissueKey(userId) {
         '</div>' +
         '<div style="color:var(--grey);font-size:var(--fs-2)">Expires in 7 days. The previous code no longer works.</div>' +
         '<button data-cbsid="BUS004-B01" class="pri" onclick="netCopyKey(\'' +
-        esc(reply.user_id) +
+        escJs(reply.user_id) +
         "','" +
-        esc(reply.claim_code) +
+        escJs(reply.claim_code) +
         '\')" style="margin-top:12px;width:100%;padding:9px">' +
         tx('Copy') +
         '</button></div>';
@@ -1374,6 +1374,30 @@ function netDelete(key) {
    server's plan carries `from`, so the revert target is known exactly rather than guessed. */
 var NET_PLAT_TO_DESIGN = { public: 'public', network: 'protected', private: 'private' };
 
+/** GF-12 M4: a place-only or order-only change has no `from` visibility. It must NOT fall through to Private (that silently hid a public store and undid nothing). Put the place back if the plan says what it was; an order move has no old value here, so say so and leave visibility alone. */
+function _netRevertPlaceOnly(n, raw) {
+  if (raw.place && raw.place.from) {
+    n.place = raw.place.from;
+    if (typeof toast === 'function') toast('"' + n.name + '" place left as it is on the store');
+    _netMark();
+    _netRerender();
+  } else if (typeof toast === 'function') toast('"' + n.name + '" has no earlier visibility to go back to — nothing changed', true);
+}
+/** a revert the closed parent does not allow: say which node to revert first, change nothing */
+function _netRevertBlocked(n, back) {
+  var p = _netNode(n.parent_key);
+  if (typeof toast === 'function')
+    toast(
+      '"' +
+        n.name +
+        '" cannot go back to ' +
+        _netLab(back) +
+        ' while ' +
+        (p && !p.root ? '"' + p.name + '"' : 'the network') +
+        ' is closed — revert that first.',
+      true
+    );
+}
 function netRevertOne(key) {
   var n = _netNode(key);
   if (!n) return;
@@ -1396,25 +1420,13 @@ function netRevertOne(key) {
   }
   if (raw.purpose) n.purpose = raw.purpose.from || ''; // both moved → put both back
 
+  if (!pl.from && !raw.from) return _netRevertPlaceOnly(n, raw);
+
   var back = NET_PLAT_TO_DESIGN[pl.from] || 'private';
   // A revert cannot break the cascade: if what it sits inside is closed, putting it back to public is not
   // available, and the honest answer is to say which node to revert instead of quietly doing something else.
   var ceil = _netCeilingFor(n);
-  if (NET_RANK[back] > NET_RANK[ceil]) {
-    var p = _netNode(n.parent_key);
-    if (typeof toast === 'function')
-      toast(
-        '"' +
-          n.name +
-          '" cannot go back to ' +
-          _netLab(back) +
-          ' while ' +
-          (p && !p.root ? '"' + p.name + '"' : 'the network') +
-          ' is closed — revert that first.',
-        true
-      );
-    return;
-  }
+  if (NET_RANK[back] > NET_RANK[ceil]) return _netRevertBlocked(n, back);
   n.exposure = back;
   if (typeof toast === 'function') toast('"' + n.name + '" left as ' + _netLab(back));
   _netMark();
@@ -1947,9 +1959,9 @@ function netMintGo() {
               esc(item.claim_code) +
               '</span>' +
               '<button data-cbsid="BUS004-B05" onclick="netCopyKey(\'' +
-              esc(item.handle) +
+              escJs(item.handle) +
               "','" +
-              esc(item.claim_code) +
+              escJs(item.claim_code) +
               '\')" style="padding:4px 10px;font-size:var(--fs-1)">' +
               tx('Copy') +
               '</button>' +
@@ -3686,224 +3698,6 @@ function _chitPreview(n) {
     '</div></div>'
   );
 }
-function _storefrontConfig(n) {
-  var e = n.exposure || 'private';
-  var o = _ensureOrder(n);
-  var opt = function (val, label, hint) {
-    var on = e === val;
-    return (
-      '<div data-cbsid="BUS004-C29" onclick="netSetExposure(\'' +
-      n.key +
-      "','" +
-      val +
-      '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' +
-      (on ? 'var(--ok-2)' : 'var(--line)') +
-      ';border-radius:9px;background:' +
-      (on ? 'var(--ok-tint)' : 'var(--card)') +
-      ';color:' +
-      (on ? 'var(--on-card)' : 'var(--on-card)') +
-      ';margin-top:6px">' +
-      '<b style="font-size:var(--fs-2);color:' +
-      (on ? 'var(--ok-2)' : 'var(--ink-2)') +
-      '">' +
-      (on ? '● ' : '○ ') +
-      label +
-      '</b>' +
-      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
-      hint +
-      '</div></div>'
-    );
-  };
-  // Visibility MOVED to the node itself (_netVisibilityBlock). Two controls for one value is how a person sets it
-  // in one place and finds it changed in the other; this panel now only REPORTS it and points at the real control.
-  var curLabel =
-    (
-      NET_EXPOSURE.filter(function (x) {
-        return x.k === (n.exposure || 'private');
-      })[0] || {}
-    ).label || '— Private';
-  var view =
-    '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' +
-    tx('👁️ WHO SEES IT') +
-    '</div>' +
-    '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:5px;line-height:1.55">Currently <b>' +
-    esc(curLabel) +
-    "</b> — set at the top of this node, under <b>Who can see this store's catalogue</b>.</div>";
-  void opt;
-  var methOpts = CAT_METHODS.map(function (item) {
-    return '<option value="' + item.k + '"' + ((o.method || 'cart') === item.k ? ' selected' : '') + '>' + item.label + '</option>';
-  }).join('');
-  var mh =
-    (
-      CAT_METHODS.filter(function (item) {
-        return item.k === (o.method || 'cart');
-      })[0] || {}
-    ).hint || '';
-  var inletRows = (o.inlets || [])
-    .map(function (item, index) {
-      var chOpts = OFF_RAIL_CHANNELS.map(function (ch) {
-        return '<option value="' + ch + '"' + (item.channel === ch ? ' selected' : '') + '>' + ch + '</option>';
-      }).join('');
-      return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select data-cbsid="BUS004-S10" onchange="netSetInlet(\'' +
-        n.key +
-        "'," +
-        index +
-        ',\'channel\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
-        chOpts +
-        '</select><input data-cbsid="BUS004-I28" value="' +
-        esc(item.handle || '') +
-        '" oninput="netSetInlet(\'' +
-        n.key +
-        "'," +
-        index +
-        ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C30" onclick="netDelInlet(\'' +
-        n.key +
-        "'," +
-        index +
-        ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
-      );
-    })
-    .join('');
-  var cbRows =
-    (o.collectBack || [])
-      .map(function (cb, index) {
-        var cadOpts = COLLECT_CADENCE.map(function (item) {
-          return '<option value="' + item + '"' + (cb.cadence === item ? ' selected' : '') + '>' + item + '</option>';
-        }).join('');
-        return (
-          '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input data-cbsid="BUS004-I29" value="' +
-          esc(cb.name || '') +
-          '" oninput="netSetCollectBack(\'' +
-          n.key +
-          "'," +
-          index +
-          ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select data-cbsid="BUS004-S11" onchange="netSetCollectBack(\'' +
-          n.key +
-          "'," +
-          index +
-          ',\'cadence\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
-          cadOpts +
-          '</select><span data-cbsid="BUS004-C31" onclick="netDelCollectBack(\'' +
-          n.key +
-          "'," +
-          index +
-          ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
-        );
-      })
-      .join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">Nothing asked back.</div>';
-  var order =
-    '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' +
-    tx('📝 ORDER FORM — what the customer fills in') +
-    '</div>' +
-    '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:8px">' +
-    tx('How they order (commercial method)') +
-    '</label>' +
-    '<select data-cbsid="BUS004-S12" onchange="netSetOrderMethod(\'' +
-    n.key +
-    '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
-    methOpts +
-    '</select>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:3px">' +
-    esc(mh) +
-    '</div>' +
-    _methodPreview(o.method) +
-    '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px">Max items per order <span style="color:var(--faint,var(--grey-3))">(optional)</span></label>' +
-    '<input data-cbsid="BUS004-I30" value="' +
-    (o.maxItems != null ? esc(String(o.maxItems)) : '') +
-    '" oninput="netSetOrderMax(\'' +
-    n.key +
-    '\',this.value)" type="number" min="1" placeholder="no limit" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);width:130px">' +
-    '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">' +
-    tx('📥 COLLECT FROM CUSTOMER') +
-    '</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Info you ask the buyer to provide with the order (e.g. delivery address, a monthly forecast).</div>' +
-    cbRows +
-    '<div data-cbsid="BUS004-C32" onclick="netAddCollectBack(\'' +
-    n.key +
-    '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ collect field</div>' +
-    '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">' +
-    tx('🛬 HOW ORDERS ARRIVE') +
-    '</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--ok-2);margin-top:5px;padding:6px 9px;border:1px solid #cfe0d6;border-radius:6px;background:var(--card)">✓ <b>' +
-    tx('On the rail') +
-    '</b> — customers order at your storefront (they find you in ChitBridge).</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">Off-rail inlets <span style="color:var(--faint,var(--grey-3))">(optional)</span> — a message to a channel <b>you own &amp; publish</b>, captured into a chit:</div>' +
-    inletRows +
-    '<div data-cbsid="BUS004-C33" onclick="netAddInlet(\'' +
-    n.key +
-    '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add off-rail inlet</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;font-style:italic">De-duplicated automatically — the same scan or message won\'t create a second chit (matched by content).</div>' +
-    '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">' +
-    tx('🔄 LIFECYCLE — states the chit moves through') +
-    '</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Order the states (e.g. open <span class=arw>→</span> confirmed <span class=arw>→</span> fulfilled <span class=arw>→</span> closed). Each move is a sealed step; a dispute attaches to a state.</div>' +
-    ((o.states || [])
-      .map(function (item, index) {
-        var last = index === o.states.length - 1;
-        return (
-          '<div style="display:flex;gap:5px;align-items:center;padding:2px 0"><span style="font-size:var(--fs-1);color:var(--faint,var(--grey-3));width:16px">' +
-          (index + 1) +
-          '</span><input data-cbsid="BUS004-I31" value="' +
-          esc(item.name || '') +
-          '" oninput="netSetState(\'' +
-          n.key +
-          "'," +
-          index +
-          ',this.value)" placeholder="state name" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' +
-          (index > 0
-            ? '<span data-cbsid="BUS004-C34" onclick="netMoveState(\'' + n.key + "'," + index + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>'
-            : '<span style="display:inline-block;width:14px"></span>') +
-          (!last
-            ? '<span data-cbsid="BUS004-C35" onclick="netMoveState(\'' + n.key + "'," + index + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>'
-            : '<span style="display:inline-block;width:14px"></span>') +
-          '<span data-cbsid="BUS004-C36" onclick="netDelState(\'' +
-          n.key +
-          "'," +
-          index +
-          ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
-        );
-      })
-      .join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No states — a one-shot chit (created, done).</div>') +
-    '<div data-cbsid="BUS004-C37" onclick="netAddState(\'' +
-    n.key +
-    '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ state</div>' +
-    '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">📎 ATTACHMENTS &amp; NOTES</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Documents the chit carries, and any free-text note.</div>' +
-    ((o.attachments || [])
-      .map(function (item, index) {
-        return (
-          '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input data-cbsid="BUS004-I32" value="' +
-          esc(item.name || '') +
-          '" oninput="netSetAttach(\'' +
-          n.key +
-          "'," +
-          index +
-          ',this.value)" placeholder="document name (e.g. assay_cert.pdf)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C38" onclick="netDelAttach(\'' +
-          n.key +
-          "'," +
-          index +
-          ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
-        );
-      })
-      .join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No attachments.</div>') +
-    '<div data-cbsid="BUS004-C39" onclick="netAddAttach(\'' +
-    n.key +
-    '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add attachment</div>' +
-    '<textarea data-cbsid="BUS004-T02" oninput="netSetOrderNotes(\'' +
-    n.key +
-    '\',this.value)" placeholder="notes…" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);box-sizing:border-box;min-height:2.4rem;resize:vertical">' +
-    esc(o.notes || '') +
-    '</textarea>' +
-    '</div>';
-  return (
-    '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid var(--ok-2);border-radius:9px;background:var(--ok-tint);color:var(--on-card)">' +
-    view +
-    order +
-    _chitPreview(n) +
-    '</div>'
-  );
-}
 /* setters for the four remaining panels */
 /* co-assist: normalized shape + per-kind setters (Human roles · IoT gateways→devices · ERP system+label · AI role+autonomy) */
 function _defCoassist() {
@@ -4798,7 +4592,7 @@ var NET_PLATFORM = { public: 'public', protected: 'network', private: 'private' 
 function _netPlanSig() {
   return JSON.stringify(
     ((UI.net && UI.net.nodes) || []).map(function (item) {
-      return [item.key, item.name, item.exposure || '', item.parent_key || '', item.owned !== false, item.partner_ref || '', !!item.built];
+      return [item.key, item.name, item.exposure || '', item.parent_key || '', item.owned !== false, item.partner_ref || '', !!item.built, item.purpose || '', item.pos === undefined ? null : item.pos, item.place || null];
     })
   );
 }
@@ -5373,7 +5167,7 @@ function _netGeneralTab(n) {
         '</b> · ' +
         esc(n.built.bridge_id) +
         '<br><button data-cbsid="BUS004-B18" onclick="netReissueKey(\'' +
-        esc(n.built.user_id) +
+        escJs(n.built.user_id) +
         '\')" style="margin-top:7px;padding:5px 11px;font-size:var(--fs-1)">' +
         tx('Issue a new sign-in code') +
         '</button></div>'

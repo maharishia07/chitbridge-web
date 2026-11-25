@@ -131,6 +131,23 @@ async function prodOfferAfterSave() {
   UI.prodPick = false;
   await loadCatalogue('fresh');
 }
+/** the busy words while the offer's reach is being changed */
+function prodOfferBusyWords(adding, count) {
+  return adding ? txn('Adding {count} product…', 'Adding {count} products…', count) : txn('Removing {count} product…', 'Removing {count} products…', count);
+}
+/** why nothing may be saved ('' when the change may go on): the sentence the person sees */
+function prodOfferRefusal(rules, appliesTo, adding) {
+  /**
+   * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
+   * join, anything — saving would replace a working offer with an empty one, and nothing downstream would
+   * complain: CBOffers skips a kind it does not know, so the discount would simply stop applying, silently, on
+   * every surface at once. Refusing costs one toast; the alternative costs a live commercial term.
+   */
+  if (!rules.kind) return tx("Could not read that offer's terms, so nothing was changed. Open it in Catalogue setup first.");
+  /* GF-23 M1: no item list means EVERY product; adding to it would narrow the offer to the picked few */
+  if (adding && !(Array.isArray(appliesTo.item_ids) && appliesTo.item_ids.length)) return tx('This offer is not limited to chosen products, so nothing was changed.');
+  return '';
+}
 /**
  * ⚠️ ONE WRITE, AND IT MERGES. The offer's reach is read, unioned (or differenced) with the selection, and saved
  * back as a new definition_version — so the change is versioned like any other change to a term of trade, and a
@@ -139,24 +156,17 @@ async function prodOfferAfterSave() {
 async function prodOfferApply(offerId, adding) {
   const ids = Array.from(UI.prodPicked || []);
   if (!ids.length) return;
-  showBusy(
-    adding ? txn('Adding {count} product…', 'Adding {count} products…', ids.length) : txn('Removing {count} product…', 'Removing {count} products…', ids.length)
-  );
+  showBusy(prodOfferBusyWords(adding, ids.length));
   try {
     const { def: offerDef, rules } = await prodOfferRead(offerId);
-    /**
-     * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
-     * join, anything — saving would replace a working offer with an empty one, and nothing downstream would
-     * complain: CBOffers skips a kind it does not know, so the discount would simply stop applying, silently, on
-     * every surface at once. Refusing costs one toast; the alternative costs a live commercial term.
-     */
-    if (!rules.kind) {
+    const appliesTo = Object.assign({}, rules.applies_to || {});
+    const refusal = prodOfferRefusal(rules, appliesTo, adding);
+    if (refusal) {
       hideBusy();
-      toast(tx("Could not read that offer's terms, so nothing was changed. Open it in Catalogue setup first."), true);
+      toast(refusal, true);
       return;
     }
     /* ⭐ ADDING products widens what the offer prices: ask first, showing the reach. Reads above change nothing; the first write is the defSave below. */
-    const appliesTo = Object.assign({}, rules.applies_to || {});
     const next = prodOfferNextIds(appliesTo.item_ids, ids, adding);
     if (!(await prodOfferConfirm({ id: offerId, add: adding, def: offerDef, rules: rules, ids: ids, was: appliesTo.item_ids, next: next }))) return;
     prodOfferSetReach(rules, appliesTo, next);

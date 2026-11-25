@@ -83,7 +83,7 @@ const sandbox = {
 
   ACTOR_TYPES: {}, AI_SLOTS: [], LAZY: {},
 
-  esc: (s) => String(s == null ? '' : s), tx: (s) => s, txf: (s) => s,
+  esc: (s) => String(s == null ? '' : s), escJs: (s) => String(s == null ? '' : s), tx: (s) => s, txf: (s) => s,
 
   timeAgo: () => '', healthColor: () => '', healthDot: () => '', nm: (v, f) => v || f,
 
@@ -297,7 +297,7 @@ const ibox = {
 
   console: { log() {}, warn() {}, error() {} },
 
-  esc: (s) => String(s == null ? '' : s), tx: (s) => s, txf: (s) => s,
+  esc: (s) => String(s == null ? '' : s), escJs: (s) => String(s == null ? '' : s), tx: (s) => s, txf: (s) => s,
 
   emptyState: (i, t, s2) => '[empty:' + t + ']',
 
@@ -531,7 +531,7 @@ const mk = (n, who) => Array.from({ length: n }, (_, i) => ({
 let painted = '';
 const dbox = {
   console: { log() {}, warn() {}, error() {} },
-  esc: (s) => String(s == null ? '' : s), tx: (s) => s, txf: (s) => s,
+  esc: (s) => String(s == null ? '' : s), escJs: (s) => String(s == null ? '' : s), tx: (s) => s, txf: (s) => s,
   cap: (s) => String(s || ''), nm: (v, f) => v || f,
   emptyState: (i, t) => '[empty:' + t + ']',
   menuAssist: () => '', scrErr: (e) => '[err]',

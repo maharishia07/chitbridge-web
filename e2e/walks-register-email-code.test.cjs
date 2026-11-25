@@ -19,6 +19,7 @@ const typed = {}, calls = [];
 const sandbox = {
   console,
   tx: (text) => text,
+  failWords: (e, fallback) => fallback || 'something went wrong',
   txf: (text, values) => String(text).replace(/\{(\w+)\}/g, (whole, name) => (values && name in values ? values[name] : whole)),
   esc: (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])),
   val: (id) => typed[id] || '',

@@ -63,6 +63,13 @@ const walk = async (w) => {
     return J(r, 200, { ok: true });
   });
 
+  /* 1129: the catalogue is marked ready:false in the shipped manifest (a not-ready page is covered by the shell's note, role=alert, which swallows every click). This walk is about the rate screens
+     themselves, so the stand-in serves the manifest with catalogue ready, exactly as a ready build would; the cover itself is proved by e2e/ready-manifest.cjs. */
+  await ctx.route('**/app/manifest.json*', async (r) => {
+    const real = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'app', 'manifest.json'), 'utf8'));
+    (real.entries || []).forEach((e) => { if (e.id === 'catalogue') e.ready = true; });
+    await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(real) });
+  });
   /* ── catalogue.html ── */
   const openSheet = async () => {
     await page.goto(base + '/catalogue.html?t=' + Date.now() + '#/items');   /* clock-ok: a cache-busting suffix */
@@ -116,10 +123,10 @@ const walk = async (w) => {
     await page.waitForSelector('[data-testid="till-warn-norate"]', { timeout: 8000 });
   };
   const OWNER = { token: 't', entity_id: 'e1', kind: 'entity', identity_id: 'ent1', by: 'ent1' };
-  await w.step('T1', 'Counter (owner signed in) -> Veg Meals on the bill -> "1 item has no tax rate" with Fix ENABLED', async () => {
+  await w.step('T1', 'Counter (owner signed in) -> Veg Meals on the bill -> "No tax answer for Veg Meals" with Fix ENABLED', async () => {
     await tillAs(OWNER);
     const row = await txt('[data-testid="till-warn-norate"]'), dis = await page.getAttribute('[data-testid="till-warn-norate-fix"]', 'disabled');
-    return { ok: /1 item has no tax rate/.test(row) && dis === null, saw: row + (dis === null ? ' · Fix enabled' : ' · Fix DISABLED') };
+    return { ok: /No tax answer for Veg Meals/.test(row) && dis === null, saw: row + (dis === null ? ' · Fix enabled' : ' · Fix DISABLED') };
   });
   await w.step('T2', 'Fix -> the ask-once sheet "Veg Meals: GST?" with the suggestion first (Use), 18% after, never 12%', async () => {
     await page.click('[data-testid="till-warn-norate-fix"]');

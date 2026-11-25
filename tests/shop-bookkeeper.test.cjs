@@ -55,7 +55,7 @@ assert.strictEqual(refusal({ role: 'owner' }), null);
 assert(/owner/i.test(refusal({ role: 'other' })), 'a seat that may not post is told, in the owner\'s name');
 ok('a bank line: the Bookkeeper may add it, another seat is told to ask the owner');
 
-const sheet = read('cap-bank-sheet.js');
+const sheet = read('cap-bank-sheet.js') + read('cap-bank-sheet-lock.js');
 assert(/role === 'bookkeeper'/.test(sheet) && !/reopen = .*bookkeeper/.test(sheet), 'reopen stays the owner\'s');
 ok('Reopen a locked month is drawn for the owner only');
 

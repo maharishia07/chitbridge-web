@@ -89,7 +89,7 @@ function compare(tag, a, got, period) {
   if (lead) ok(got.headline && minorOf(got.headline.replace(/^[^:]*:/, '').split('(')[0]) === lead.minor && got.headline.toLowerCase().includes(WORDS[period].toLowerCase()) && got.headCode === CODES.headline, tag + ' headline "' + got.headline + '" = api ' + lead.minor + ' for ' + WORDS[period]);
   else ok(!got.headline, tag + ' no lead figure -> no headline');
   /* never a zero for an unknown: the words of an absent figure are nowhere on the page */
-  if (want.sales == null) ok(!/Sales, tax in/.test(got.body) && !/not available/i.test(got.body), tag + ' absent sales: its label and "not available" are nowhere on the page');
+  if (want.sales == null) ok(!/Sold (this|today)/.test(got.body) && !/not available/i.test(got.body), tag + ' absent sales: its label and "not available" are nowhere on the page');
   const pics = [['sales', a.bars || [], 'sold_minor', 'BKS026-P02', 'BKS026-B08'], ['profit', a.profit_by_month || [], 'profit_minor', 'BKS026-P03', 'BKS026-B09']];
   for (const [k, list, key, code, sumCode] of pics) {
     const some = list.some((x) => x[key] != null), pic = got[k];

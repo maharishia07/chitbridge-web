@@ -1746,7 +1746,7 @@ function cbDefStdChipsHTML() {
           esc(item.title) +
           '"' +
           ' onclick="cbDefToggleStd(\'' +
-          esc(item.key) +
+          escJs(item.key) +
           '\')">' +
           (on ? '✓ ' : '') +
           esc(item.key) +
@@ -2123,7 +2123,7 @@ async function cbDefTakeoverAsk(id, why) {
       tx('Every product and category that cites the retiring slab is re-pointed first, with the new rate travelling onto each product.') +
       '</div></div>' +
       '<div class="mfoot"><button data-cbsid="SCR003-B02" class="pri" data-testid="cbdef-takeover-go" onclick="cbDefTakeoverGo(\'' +
-      esc(id) +
+      escJs(id) +
       '\')">' +
       tx('Retire and hand over') +
       '</button>' +
@@ -2254,7 +2254,7 @@ function cbDefSectionHTML(s) {
     esc(s.key) +
     '"' +
     ' onclick="cbDefToggle(\'' +
-    esc(s.key) +
+    escJs(s.key) +
     '\')">' +
     '<span class="cbdef-ico">' +
     s.icon +
@@ -2410,21 +2410,21 @@ function cbDefMineHTML() {
             '</span>' +
             '<span class="cbdef-acts">' +
             '<span data-cbsid="CMP012" onclick="cbDefEdit(\'' +
-            esc(item.definition_id) +
+            escJs(item.definition_id) +
             '\')">' +
             tx('Edit') +
             '</span>' +
             '<span data-cbsid="SCR003-C02" onclick="cbDefSetStatus(\'' +
-            esc(item.definition_id) +
+            escJs(item.definition_id) +
             "','" +
             (live ? 'draft' : 'live') +
             '\')">' +
             (live ? 'Unpublish' : 'Publish') +
             '</span>' +
             '<span data-cbsid="SCR003-C03" onclick="cbDefRetire(\'' +
-            esc(item.definition_id) +
+            escJs(item.definition_id) +
             "','" +
-            esc(item.name) +
+            escJs(item.name) +
             '\')">' +
             tx('Retire') +
             '</span>' +

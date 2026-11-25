@@ -137,11 +137,11 @@ async function route(S, r) {
     if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
       { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
-    if (p === '/api/books/dues') return J(r, 200, books.dues([
+    if (p === '/api/books/dues') return J(r, 200, books.dues(((S.sideFilter && u.searchParams.get('side')) ? (rows) => rows.filter((x) => x.side === u.searchParams.get('side')) : (rows) => rows)([
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
-      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }], { asOf: TODAY }));
+      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }]), { asOf: TODAY }));
     if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
@@ -553,12 +553,7 @@ async function route(S, r) {
     await p.click('[data-testid="bills-tab-B-1300"]');
     await p.waitForSelector('[data-testid="bill-ib1"]');
     ok(/Issued — waiting on payment/.test(await p.textContent('[data-testid="bill-step-ib1"]')), 'the Issued tab shows its bill and its chip');
-    /* 2026-10-02 (web-reads-invoice): CB Accounts loads the chit sheet, so a bill opens it in place — no new tab */
-    const tabs0 = ctx.pages().length;
-    await p.click('[data-testid="bill-ib1"]');
-    await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
-    ok(await p.evaluate(() => typeof openChitSheet === 'function' && !!document.getElementById('chitsheet') && document.getElementById('chitsheet').open) && ctx.pages().length === tabs0, 'a bill opens the chit sheet in Accounts (openChitSheet is defined here), not a new tab');
-    await p.keyboard.press('Escape');
+    await require('./lib/cb-accounts-bills.cjs').billsInPlace({ S, p, ctx, ok, nav }); /* the chit sheet in place, then BD-F-02 */
 
     /* ── 4 · THE AVATAR MENU, HOME ── */
     await p.click('[data-testid="avatar"]');

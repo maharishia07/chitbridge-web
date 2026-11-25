@@ -299,11 +299,15 @@ async function peAccrBody(node) {
     '<div class="supacts pe-bar">' +
     peBtn('pc-add-open', '＋ New accrual', 'peAccrForm()') +
     '</div><div id="pc_form" class="pe-slot"></div><div id="pc_out" class="pe-slot"></div><div id="bkl_accr" data-testid="accruals-list"></div>';
-  let list = [];
+  let list = [],
+    readFailed = null;
   try {
     const t = peList(await api('booksTodo'), 'items').filter((item) => item.kind === 'accrual_reversals_due')[0];
     list = (t && t.items) || [];
-  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+  } catch (failure) {
+    readFailed = failure; /* a failed read never says "nothing due" (EL-12 M8): the page says it could not read */
+    if (typeof cbQuiet === 'function') cbQuiet('period:accruals-todo', failure);
+  }
   const seen = {};
   PE.accr.forEach((item) => {
     seen[item.ref] = 1;
@@ -316,6 +320,7 @@ async function peAccrBody(node) {
     }
   });
   peAccrList();
+  if (readFailed) peBad('pc_out', readFailed, tx('Could not read what is due to turn back. Try again.'));
 }
 const peAccrRows = () => PE.accr.concat((PE.accrDue || []).filter((item) => !PE.accr.some((a) => a.ref === item.ref)));
 function peAccrList() {

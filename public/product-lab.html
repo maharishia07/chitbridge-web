@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script><script src="/app/cb-words.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address · cbApiParam: a ?api= link never re-points the token -->
 <script src="/engine/units.js"></script>   <!-- CBUnits: the GST unit codes (UQC) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -53,11 +53,12 @@ body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 var(--f-ui,
    shopkeeper through numbered steps with .stp — same markup, same on/done states, same click-to-go-back.
    Two labs sitting in the same menu should not teach two different ways to walk a flow. */
 .steps{display:flex;gap:8px;margin-bottom:16px}
-.stp{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;
+.stp{flex:1 1 0;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;
   display:flex;align-items:center;gap:10px;text-align:start;cursor:pointer}
 .stp .n{width:27px;height:27px;border-radius:8px;background:var(--hair);color:var(--dim);
   font-size:13px;font-weight:700;display:grid;place-items:center;flex:0 0 auto}
-.stp .t{display:block;font-size:13.5px;font-weight:700}
+.stp > span:last-child{min-width:0;flex:1 1 auto} /* WALK-X X-F-09: the title wraps in its box, never clips at 390 */
+.stp .t{display:block;font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
 .stp .v{display:block;font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stp.on{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
 .stp.on .n{background:var(--ok);color:#fff}
@@ -101,7 +102,7 @@ tr.has .ul.got{opacity:1}
 .ul.got{opacity:.5}
 .uqc{font-size:.75em;color:var(--dim);border:1px solid var(--hair);border-radius:5px;padding:0 4px}
 .why{color:var(--dim);font-size:.88em}
-@media (max-width:560px){ th:nth-child(2),td:nth-child(2),th:nth-child(4),td:nth-child(4){display:none} .foot{padding:8px 12px} }
+@media (max-width:560px){ .stp{padding:10px 8px;gap:6px} th:nth-child(2),td:nth-child(2),th:nth-child(4),td:nth-child(4){display:none} .foot{padding:8px 12px} }
 </style>
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
@@ -113,6 +114,7 @@ tr.has .ul.got{opacity:1}
 <script src="/app/shell-facts.js"></script><script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/product-lab-rows.js"></script>   <!-- CBProductLabRows: one row per product, units as choices, the UQC, why Next is grey (CAT-218) -->
+<script src="/app/product-lab-steps.js"></script>   <!-- paintSteps: the two-step strip (Choose, Price & shelf) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
 <link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
@@ -129,7 +131,7 @@ tr.has .ul.got{opacity:1}
 </div>
 <div class="foot" id="foot"></div>
 <script>
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API;
 var STEP = 1,
   DATA = null,
   LIST = null,
@@ -215,7 +217,7 @@ function storeLine(item) {
 function listPill(item) {
   return (
     '<button data-cbsid="PLB001-B02" class="pill ' + (item.key === LIST.key ? 'on' : '') + (item.store_name ? ' has-sub' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' +
-    ' onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
+    ' onclick="pickList(\'' + escJs(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
   );
 }
 function pickList(k, keep) {
@@ -361,40 +363,6 @@ function paintPills() {
     node.classList.toggle('on', !OFFUNITS[node.getAttribute('data-unit')]);
   });
 }
-function paintSteps() {
-  var n = nPicked();
-  var names = [
-    ['Choose', n ? n + ' chosen from ' + LIST.label : 'what this shop sells'],
-    ['Price & shelf', n ? 'set what you charge' : 'after you have chosen']
-  ];
-  /* ⚠️ step 2 is not reachable by clicking it with nothing chosen — a step that opens empty is a dead end */
-  document.getElementById('steps').innerHTML = names
-    .map(function (x, index) {
-      var at = index + 1,
-        on = STEP === at,
-        done = STEP > at;
-      return (
-        '<button data-cbsid="PLB001-B01" class="stp ' +
-        (on ? 'on' : done ? 'done' : '') +
-        '" data-testid="pl-step-' +
-        at +
-        '"' +
-        (at === 2 && !n ? ' disabled' : '') +
-        ' onclick="goStep(' +
-        at +
-        ')">' +
-        '<span class="n">' +
-        at +
-        '</span><span><span class="t">' +
-        esc(x[0]) +
-        '</span>' +
-        '<span class="v">' +
-        esc(x[1]) +
-        '</span></span></button>'
-      );
-    })
-    .join('');
-}
 function goStep(n) {
   if (n === 2 && !nPicked()) return;
   STEP = n;
@@ -424,7 +392,7 @@ function buildChoose() {
                 '" data-testid="pl-lang-' +
                 esc(item) +
                 '" onclick="toggleLang(\'' +
-                esc(item) +
+                escJs(item) +
                 '\')">' +
                 esc((DATA.language_names || {})[item] || item) +
                 '</button>'
@@ -475,7 +443,7 @@ function buildChoose() {
               ' data-testid="pl-unit-' +
               esc(item) +
               '" onclick="toggleUnit(\'' +
-              esc(item) +
+              escJs(item) +
               '\')">' +
               esc(item) +
               ' <b>' +

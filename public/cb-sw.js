@@ -14,7 +14,7 @@
  * FLOW      install -> network-first fetch -> cache answers only when the network fails; non-GET never touched
  * CARD      28-platform-and-operations/offline
  */
-const CB_SW_VERSION = 'v6';
+const CB_SW_VERSION = 'v7';
 // CUSTOMER-DELINK (21 Nov 2026): the shop registers THIS file as /cb-sw.js?set=customer with scope /shop.html. That worker has its own cache, its own
 // pre-cache (customer pages only) and falls back to the shop, never to app.html — a customer's phone never stores or opens the back office.
 const CUSTOMER_SET = new URL(self.location.href).searchParams.get('set') === 'customer';
@@ -31,9 +31,9 @@ const OFFICE_PRECACHE = [
   '/app/helpers.js',
   '/app/cap-admin.js',
   '/app/cap-dispute.js',
-  '/app/cap-connector.js',
+  '/app/cap-connector.js', '/app/cap-connector-reissue.js',
   '/app/cap-workforce.js',
-  '/app/cap-folders.js',
+  '/app/cap-folders.js', '/app/cap-folders-metrics.js',
   '/app/cap-readiness.js',
   '/app/cap-legend.js',
   '/cb-offline.js',

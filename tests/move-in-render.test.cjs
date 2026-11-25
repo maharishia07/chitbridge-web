@@ -14,6 +14,7 @@ const cx = vm.createContext({
 });
 cx.window = cx;
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-move-in.js', 'utf8'), cx);
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-move-in-skipped.js', 'utf8'), cx); /* the skipped-rows capability, loaded beside it */
 const run = (code) => vm.runInContext(code, cx);
 
 run("miFresh(); MIV.f.csv = 'a,b'; MIV.f.country = 'IN'; MIV.f.kind = 'open_bills'; MIV.f.side = 'supplier'; MIV.f.as_at = '2026-04-01';");
@@ -50,4 +51,7 @@ ok(sorted[0].action === 'a', 'the action sort orders by the action word');
 run("MIV.out = { added: 5, merged: 1, skipped: 2, held: 0, entry: { entry_no: 'JV-1', suspense_minor: 0 } };");
 const done = run('miRender("file")');
 ok(done.includes('mi-done') && done.includes('mi-done-add') && done.includes('Entered as JV-1.') && !done.includes('mi-done-hold'), 'once imported every step shows the result with the counts and the journal number');
+/* AP-F-06: MYOB is offered, greyed, with its sentence in the option; the other two stay choosable */
+const srcHtml = run("miSel('mi-source', 'source', MI_SOURCES, 'xero')");
+ok(/<option value="myob" disabled>MYOB — not built yet/.test(srcHtml) && /<option value="xero" selected>/.test(srcHtml) && !/<option value="qbo"[^>]*disabled/.test(srcHtml), 'MYOB is a greyed option with its sentence; Xero and QuickBooks stay choosable');
 console.log(n + ' checks, all ok');

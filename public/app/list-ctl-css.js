@@ -148,7 +148,7 @@
       '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:break-word;word-break:normal}',
       /* ONE LINE (leader practice: HubSpot/Salesforce list views): a cell in the table layout never wraps; it is cut with an ellipsis and its full text shows on hover (the title is set by list-ctl.js). A card (narrow container, below) wraps as before. */
       '@container list (min-width: 621px){.cbl .cbl-row .cbl-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}',
-      '.cbl .cbl-row .cbl-cell.cbl-wrap{white-space:normal;overflow:visible;text-overflow:clip}/* set by list-ctl.js wrapCut: the words did not fit the column, so they wrap, never cut */',
+      '.cbl .cbl-row .cbl-cell.cbl-wrap{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}/* BF-F-04: a figure wider than its column (A$1,000,002,100.00) breaks onto a second line instead of running under the next cell */ /* set by list-ctl.js wrapCut: the words did not fit the column, so they wrap, never cut */',
       '.cbl .cbl-cell.r{text-align:end}',
       '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
       '.cbl .cbl-cell.strong{font-weight:700}',

@@ -7,7 +7,8 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js" data-customer-page></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>
+<script src="/app/cb-words.js"></script> <!-- cbApiParam: a ?api= link never re-points the token -->   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network shop — Chit &amp; Bridge</title>
@@ -73,7 +74,7 @@ if (window.CBCustomerBar)
  * Each department keeps its OWN currency — they are shown side by side, never summed. Different currencies is a
  * fact to display, not a total to compute.
  */
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API;
 var NET = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var DATA = null,
   Q = '',
@@ -116,7 +117,7 @@ function render() {
           '<button type="button" data-cbsid="NSH001-C02" aria-pressed="' + (DEPT === item.bridge_id) + '" class="chip' +
           (DEPT === item.bridge_id ? ' on' : '') +
           '" onclick="pick(\'' +
-          esc(String(item.bridge_id).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+          escJs(String(item.bridge_id).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
           '\')">' +
           esc(item.name) +
           '</button>'

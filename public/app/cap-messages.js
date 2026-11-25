@@ -53,7 +53,7 @@ if (typeof EP !== 'undefined') {
 async function loadMessages() {
   RPL.busy = true;
   RPL.err = null;
-  msgPaint();
+  msgPaintQuiet();
   try {
     var reply = await api('msgInbox', RPL.all ? { query: { all: 1 } } : {});
     RPL.data = (reply && (reply.messages || reply.items || (Array.isArray(reply) ? reply : []))) || [];
@@ -61,8 +61,21 @@ async function loadMessages() {
     RPL.err = (e && e.message) || 'Could not read your messages.';
   }
   RPL.busy = false;
-  msgPaint();
+  msgPaintQuiet();
   if (typeof loadReplyCount === 'function') loadReplyCount();
+}
+/* ⚠️ A LOADER NEVER REBUILDS AN OPEN REPLY BOX (EL-11 M16). msgPaint replaces the whole pane and remounts CBThread, so a
+   mark-read, a keep or a list re-read finishing mid-typing emptied the composer. A loader calls this: it paints only
+   when no reply box holds text; the next paint (the user's own action) shows the fresh data. */
+function msgTyping() {
+  var el = document.getElementById('mainbody');
+  if (!el || !el.querySelectorAll) return false;
+  var boxes = el.querySelectorAll('textarea,input[type=text]');
+  for (var i = 0; i < boxes.length; i++) if (boxes[i].value) return true;
+  return false;
+}
+function msgPaintQuiet() {
+  if (!msgTyping()) msgPaint();
 }
 function msgPaint() {
   var el = document.getElementById('mainbody');
@@ -167,7 +180,7 @@ async function msgOpen(key) {
       /* reading is not worth an error toast — the thread is open, which is what was wanted */
     }
   }
-  msgPaint();
+  msgPaintQuiet();
   if (typeof loadReplyCount === 'function') loadReplyCount();
 }
 
@@ -189,7 +202,7 @@ async function msgKeep(key, event) {
       await api('msgMark', { params: { id: t.msgs[index].message_id }, body: { kept: to } });
       t.msgs[index].kept = to;
     }
-    msgPaint();
+    msgPaintQuiet();
     toast(to ? 'Kept — this conversation stays here' : 'Released');
   } catch (e) {
     toast((e && e.message) || 'Could not change that');
@@ -280,7 +293,7 @@ function messagesScreen() {
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
             (function () {
               var nestedN = item.msgs.length;
-              return nestedN > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + nestedN + ' msgs</span>' : '';
+              return nestedN > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + nestedN + (RPL.all ? ' msgs' : ' waiting') + '</span>' : ''; /* EL-11 M15: the inbox returns unread-or-kept only, so it is "waiting" unless the list shows All */
             })() +
             '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' +
             esc(msgWhen(m.created_at)) +

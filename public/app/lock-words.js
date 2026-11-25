@@ -27,15 +27,15 @@
     }
   }
   /** E13: ONE word per month state, from the server's state names (GET /periods status): the owner's Month lock page and the firm's Months say the same */
-  var STATE = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
+  var STATE = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed' };
   function stateWord(status) {
     return sayWords(STATE[status] || String(status || ''));
   }
-  /** one trail row → "Locked by Eastlake owner · 15 Nov 2026" · "Opened again by Pat Lee · 3 Oct 2026 · Why: late bill" · "Closed for good by … · …" */
+  /** one trail row → "Locked by Eastlake owner · 15 Nov 2026" · "Opened again by Pat Lee · 3 Oct 2026 · Why: late bill" · "Closed by … · …" */
   function eventWords(ev) {
     var holes = { who: ev.by_name || '', date: dayOf(ev.at) };
     if (ev.action === 'unlocked') return (ev.by_name ? sayWords('Opened again by {who} · {date}', holes) : sayWords('Opened again · {date}', holes)) + (ev.reason ? ' · ' + sayWords('Why: {reason}', { reason: ev.reason }) : '');
-    if (ev.to === 'hard_locked') return ev.by_name ? sayWords('Closed for good by {who} · {date}', holes) : sayWords('Closed for good · {date}', holes);
+    if (ev.to === 'hard_locked') return ev.by_name ? sayWords('Closed by {who} · {date}', holes) : sayWords('Closed · {date}', holes);
     return ev.by_name ? sayWords('Locked by {who} · {date}', holes) : sayWords('Locked · {date}', holes);
   }
   /** the month's own line: its last trail row, else (a month locked before the trail) the lock's own moment; '' when nobody ever touched it */

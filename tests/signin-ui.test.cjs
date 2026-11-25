@@ -18,6 +18,8 @@ const ROOT = path.join(__dirname, '..');
 /* ⚠️ this package is "type": "module", so require() of these browser files yields no exports — they attach to window, as in a page */
 globalThis.window = globalThis;
 require(path.join(ROOT, 'public', 'engine', 'signin.js'));
+require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js')); /* the window's other halves load first, as on every page */
+require(path.join(ROOT, 'public', 'app', 'signin-session.js'));
 require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
 const E = globalThis.CBSignin;
 assert.strictEqual(typeof E.mount, 'function', 'signin-ui.js widened window.CBSignin with mount');
@@ -238,6 +240,54 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.deepStrictEqual(E.machine({ methods: { google: true, sso: true }, onMethod: () => {} }).methods(), ['google', 'sso']);
   });
 
+  await it('SSO-1129: Google and Microsoft show GREYED with their sentence at sign-in and registration (not built whole = not live), none for the till or a customer, a live slot is not doubled', () => {
+    const sign = E.soonRow('signin'), reg = E.soonRow('register');
+    for (const key of ['google', 'microsoft']) {
+      assert.ok(new RegExp('data-testid="signin-' + key + '-soon"[^>]*disabled aria-disabled="true"').test(sign) || new RegExp('disabled aria-disabled="true"[^>]*data-testid="signin-' + key + '-soon"').test(sign), key + ' sign-in button is disabled');
+      assert.ok(sign.includes('data-testid="signin-' + key + '-why"') && reg.includes('data-testid="register-' + key + '-why"'), key + ' says why, at both doors');
+    }
+    assert.ok(sign.includes('Google sign-in is being switched on.') && reg.includes('Google sign-up is being switched on.'));
+    assert.ok(!/apple|passkey/i.test(sign + reg), 'what is not built at all is not promised');
+    assert.ok(!/onclick|href=/.test(sign + reg), 'a greyed button goes nowhere');
+    assert.ok(!E.soonRow('signin', ['google']).includes('signin-google-soon') && E.soonRow('signin', ['google']).includes('signin-microsoft-soon'), 'a provider the host switched on live is not shown twice');
+    assert.strictEqual(E.soonRow('signin', ['google', 'microsoft']), '');
+  });
+
+  await it('SSO-1129 P1a: a provider the api says is live is a REAL button at sign-in and stays GREY at registration; one the api does not list stays grey; a list that is not well formed switches nothing on', () => {
+    const live = E.soonRow('signin', [], ['google']);
+    assert.ok(/data-cbsi="provider" data-provider="google"[^>]*data-testid="signin-google"/.test(live) && !/signin-google-soon/.test(live), 'Google is a live button');
+    assert.ok(/signin-microsoft-soon/.test(live) && /disabled/.test(live), 'Microsoft (not listed) stays grey');
+    const reg = E.soonRow('register', [], ['google', 'microsoft']);
+    assert.ok(/register-google-soon/.test(reg) && !/data-cbsi="provider"/.test(reg), 'registering through a provider is P1b: grey');
+    const m = E.machine({ surface: 'test' }, { post: async () => ({ status: 200, body: {} }), store: store() });
+    m.setLive([{ key: 'google', label: 'Google', live: true }, { key: 'microsoft', label: 'Microsoft' }, { key: 'evil', live: true }, null]);
+    assert.deepStrictEqual(m.state().live, ['google']);
+    m.setLive('nonsense');
+    assert.deepStrictEqual(m.state().live, []);
+    assert.strictEqual(E.providerStart({ apiBase: 'https://api.test', deviceId: 'dev-12345678' }, 'google'), 'https://api.test/api/signin/provider/google/start?device_id=dev-12345678');
+    assert.strictEqual(E.providerStart({ apiBase: 'https://api.test', deviceId: 'dev-12345678' }, 'apple'), '', 'only a provider the window knows');
+    assert.strictEqual(E.providerStart({ apiBase: 'https://api.test', deviceId: null }, 'google'), '', 'no device, no start (the api refuses it first anyway)');
+  });
+
+  await it('SSO-1129 P1a: the hand-off code is swapped for the session by a POST BODY (never a URL): the same session shape as a code sign-in; a refusal is said in words and keeps no session', async () => {
+    const calls = [];
+    const ok = { status: 200, body: { token: token({ identity_id: 'mayur', identity_type: 'entity', display_name: 'Mayur Bhavan', bridge_id: 'B-MAYUR' }), identity: { display_name: 'Mayur Bhavan', user_id: 'mayuri123', identity_type: 'entity', bridge_id: 'B-MAYUR' } } };
+    const st = store();
+    const m = E.machine({ surface: 'test' }, { post: async (path, body) => { calls.push({ path, body }); return body.code === 'good-code' ? ok : { status: 403, body: { code: 'SSO_NOT_LINKED', detail: 'No account here is connected to that sign-in. Sign in with your mobile number or e-mail and the code we send you.' } }; }, store: st });
+    await m.providerHandoff('bad-code');
+    assert.strictEqual(m.state().at, 'out');
+    assert.ok(/code we send you/.test(m.state().why), m.state().why);
+    assert.strictEqual(st.m.size, 0, 'a refusal keeps no session');
+    await m.providerHandoff('good-code');
+    assert.strictEqual(m.state().at, 'in');
+    assert.ok(st.m.size > 0, 'the session is kept the way a code sign-in keeps it');
+    assert.deepStrictEqual(calls.map((c) => c.path), ['/api/signin/provider/handoff', '/api/signin/provider/handoff']);
+    assert.ok(calls.every((c) => Object.keys(c.body).join() === 'code'), 'the code is the only thing sent');
+    const gone = E.machine({ surface: 'test' }, { post: async () => ({ status: 401, body: { code: 'SSO_HANDOFF', detail: 'x' } }), store: store() });
+    await gone.providerHandoff('spent');
+    assert.ok(/already finished|took too long/.test(gone.state().why));
+  });
+
   await it('sessionOf reads a verify answer into the session the apps keep (entity · employee · customer)', () => {
     const e = E.sessionOf({ token: token({ identity_id: 'x', identity_type: 'entity', display_name: 'Shop', bridge_id: 'B1' }), identity: { display_name: 'Shop', user_id: 'shop', identity_type: 'entity', bridge_id: 'B1' } });
     assert.deepStrictEqual([e.role, e.name, e.entity, e.bridgeId, e.person.kind, e.duty], ['entity', 'Shop', 'Shop', 'B1', 'owner', undefined]);
@@ -312,6 +362,68 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     const r = run({ need: 'person', local: b.local }, api);
     await r.m.offerPin({ token: '', name: 'Bala', person: { id: 'bala', kind: 'employee' } });
     assert.strictEqual(r.m.state().at, 'setpin'); assert.strictEqual(r.m.state().localPin, true);
+  });
+
+  await it('⭐ H1 the landing is taken ONCE by app.html at boot: #h= is cleared from the address, takeLanded returns it a first time and never again; #e= and #c= are kinds of their own; another page path reads nothing', async () => {
+    const load = (pathname, hash) => {
+      let replaced = null;
+      globalThis.location = { pathname, hash, search: '' };
+      globalThis.history = { replaceState: (a, b, url) => { replaced = url; } };
+      for (const key of Object.keys(require.cache)) if (/signin-(ui|more-ways)\.js$/.test(key)) delete require.cache[key];
+      require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js'));
+      require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
+      return { lib: globalThis.CBSignin, replaced: () => replaced };
+    };
+    let k = load('/app.html', '#h=one-time-code_123');
+    assert.strictEqual(k.replaced(), '/app.html', 'the address is cleared at once');
+    assert.deepStrictEqual(k.lib.takeLanded(), { kind: 'h', value: 'one-time-code_123' });
+    assert.strictEqual(k.lib.takeLanded(), null, 'a second take finds nothing');
+    k = load('/app.html', '#e=SSO_STATE'); assert.deepStrictEqual(k.lib.takeLanded(), { kind: 'e', value: 'SSO_STATE' });
+    k = load('/app.html', '#c=linked'); assert.deepStrictEqual(k.lib.takeLanded(), { kind: 'c', value: 'linked' });
+    k = load('/somewhere/else.html', '#h=abc'); assert.strictEqual(k.lib.takeLanded(), null, 'only the apps own page reads it');
+    assert.ok(k.lib.WORDS.connect.linked && k.lib.WORDS.sso.SSO_NOT_LINKED && k.lib.WORDS.sso.SIGNIN_UNAVAILABLE, 'the words the api answers with are said');
+    delete globalThis.location; delete globalThis.history;
+  });
+
+  await it('N1/N2 round 2: #k= is a landing of its own (the confirm code), app.html keeps it for Settings, Settings spends it with the session, and a person with no PIN gets Connect greyed with Set a PIN first', async () => {
+    globalThis.location = { pathname: '/app.html', hash: '#k=confirm-code_123', search: '' };
+    globalThis.history = { replaceState: () => {} };
+    for (const key of Object.keys(require.cache)) if (/signin-(ui|more-ways)\.js$/.test(key)) delete require.cache[key];
+    require(path.join(ROOT, 'public', 'app', 'signin-more-ways.js'));
+    require(path.join(ROOT, 'public', 'app', 'signin-ui.js'));
+    assert.deepStrictEqual(globalThis.CBSignin.takeLanded(), { kind: 'k', value: 'confirm-code_123' });
+    assert.ok(globalThis.CBSignin.WORDS.connect.LINK_CONFIRM_FAILED && globalThis.CBSignin.WORDS.connect.SIGNIN_UNAVAILABLE, 'the two new refusals have words');
+    delete globalThis.location; delete globalThis.history;
+    const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
+    assert.ok(/kind === 'k'[^\n]*cb_connect_code/.test(read('app.html')), 'app.html keeps the code for Settings');
+    const settings = read('app/cap-settings-provider.js');
+    assert.ok(/row\.reproof === 'code'\) return inWords\('Set a PIN first\.'\)/.test(settings), 'no PIN: greyed with the way out');
+    assert.ok(/api\('providerLinkFinish', \{ body: \{ code: code \} \}\)/.test(settings), 'the session spends the code');
+    assert.ok(/providerLinkFinish: \{ m: 'POST', p: '\/api\/signin\/provider\/link\/finish'/.test(read('app/accounts-shell.js')), 'the route is in the register of calls');
+  });
+
+  await it('N3: the #k= landing goes to the real Settings > Account address (one constant), never to #/settings, and Account spends the code at paint', async () => {
+    const read = (p) => require('fs').readFileSync(path.join(ROOT, 'public', p), 'utf8');
+    const app = read('app.html'), shell = read('app/accounts-shell.js'), settings = read('app/cap-settings.js') + read('app/cap-settings-provider.js');
+    const home = /account: '([^']+)'/.exec(shell);
+    assert.ok(home && home[1] === '/settings.html#/account', 'CB_HOMES.account is the one address');
+    assert.ok(!/#\/settings/.test(app.slice(app.indexOf('var LANDED_AT_BOOT'), app.indexOf('var LANDED_AT_BOOT') + 1200)), 'the landing no longer sends to #/settings (no such route)');
+    assert.ok(!/#\/settings/.test(settings), 'cap-settings does not name #/settings either');
+    // run the landing's own function: signed in, the person is sent to CB_HOMES.account
+    const fn = /function landedGo\(\) \{[^\n]*\}/.exec(app);
+    assert.ok(fn, 'landedGo exists');
+    const run = (token) => {
+      const sent = { replaced: null, hash: null };
+      const loc = { replace: (u) => { sent.replaced = u; }, set hash(v) { sent.hash = v; } };
+      new Function('SESSION', 'CB_HOMES', 'location', fn[0] + '; landedGo();')({ token }, { account: home[1] }, loc);
+      return sent;
+    };
+    assert.strictEqual(run('t').replaced, '/settings.html#/account', 'signed in: lands on Settings > Account');
+    assert.deepStrictEqual(run('').hash, '#/login', 'signed out: the sign-in');
+    // the account tab reads the code at paint and finishes within its life
+    const at = settings.indexOf("takeStored('cb_connect_code')");
+    assert.ok(at > 0 && settings.indexOf("api('providerLinkFinish'", at) > at, 'account() reads cb_connect_code and calls providerLinkFinish');
+    assert.ok(/'account'/.test(read('settings.html')) || /k: 'account'/.test(read('settings.html')), 'settings.html has the account section');
   });
 
   console.log('\n' + (pass + fail) + ' checks · ' + pass + ' passed · ' + fail + ' failed\n');

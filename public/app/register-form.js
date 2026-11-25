@@ -274,14 +274,16 @@ function renderRegister() {
        <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
          <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). The User ID is only for signing in; your business name is the line above.'))}">ⓘ</span></div>
        ${ui.field({ mount: 'SCR053-U03', kind: 'email', id: 'r_email', testid: 'reg-email', label: 'Email', placeholder: 'you@yourshop.example', value: R.email })}
-       ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
-       <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
+       ${R.err ? `<div class="err" role="alert">${esc(R.err)}</div>` : ''}
+       <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>
+       ${typeof CBSignin !== 'undefined' && CBSignin.soonRow ? CBSignin.soonRow('register') : ''}
+    `;
   } else {
     form = `<div ${who}>${R.shop ? esc(R.shop) + ' · ' : ''}${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
        ${ui.field({ mount: 'SCR053-U04', kind: 'text', id: 'r_otp', testid: 'reg-otp', label: txf('Code sent to {e}', { e: R.email }), placeholder: '6-digit code', autocomplete: 'one-time-code', inputmode: 'text', maxlength: 320 })}
-       ${R.err ? `<div class="err" role="alert">${R.err}</div>` : ''}
+       ${R.err ? `<div class="err" role="alert">${esc(R.err)}</div>` : ''}
        <button data-cbsid="SCR053-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
   }
   /* ⭐ FX-UX2: a small app's pane — the same form, under the page's own heading; "Sign in" is Home's one sign-in window (never #/login) */
@@ -417,7 +419,7 @@ async function doRegister() {
     if (REG_AT.onDone) return REG_AT.onDone(reply, R.name);
   } catch (e) {
     R.busy = false;
-    R.err = 'Could not register: ' + e.message;
+    R.err = tx('Could not register: ') + failWords(e, tx('try again in a moment.')); /* reviews11 GF-18 M6: a server's words only through failWords; the sink escapes (EL-18 M7) */
     renderRegister();
   }
 }
@@ -442,7 +444,7 @@ function regVerticalChooser() {
           (greyedOut
             ? ' class="cbsh-box off" aria-disabled="true" data-ready="no" style="border:1px dashed var(--line);background:var(--card);color:var(--grey);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:default"><div style="font-weight:700;font-size:var(--fs-2)">○ ' +
               esc(regSetupLabel(item)) + '</div><span class="no" data-testid="reg-vertical-off-' + esc(item.key) + '" style="display:block;font-size:var(--fs-1);margin-top:4px">' + esc(tx('Being finished · not ready yet')) + '</span>'
-            : ' onclick="REG.constitution=\'' + esc(item.key) + '\';renderRegister()" style="border:1px solid ' + (sel ? 'var(--blue)' : 'var(--line)') + ';background:' + (sel ? 'var(--blue-tint)' : 'var(--card)') +
+            : ' onclick="REG.constitution=\'' + escJs(item.key) + '\';renderRegister()" style="border:1px solid ' + (sel ? 'var(--blue)' : 'var(--line)') + ';background:' + (sel ? 'var(--blue-tint)' : 'var(--card)') +
               ';color:var(--on-card);border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">' + (sel ? '● ' : '○ ') + esc(regSetupLabel(item)) +
               ' <span data-testid="reg-vertical-why" style="font-weight:400;color:var(--grey);cursor:help" title="' + esc(txf('Includes: {caps}', { caps: (item.capabilities || []).join(' · ') || 'core' })) + '">ⓘ</span></div>') +
           '</div>'

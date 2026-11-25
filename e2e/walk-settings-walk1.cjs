@@ -151,10 +151,10 @@ const walk = async (w) => {
 
   /* ── W21 · W18 · W22 · W23: Account ── */
   await go('account', '[data-testid="sx-ses-list"]');
-  await w.step('A12', 'W21 · the EMPTY sign-ins list is as tall as its content (data-cbl-fit=content, under 300 px) — the vault below it is in view, not 2,400 px down', async () => {
+  await w.step('A12', 'W21 · the EMPTY sign-ins list is as tall as its content (data-cbl-fit=content, under 300 px) — the vault below it is in view (under 1,500 px), not 2,400 px down', async () => {
     await page.waitForSelector('[data-testid="cbl-empty-set-sessions"], [data-testid="sx-ses-this-device"], [data-row]', { timeout: 8000 }).catch(() => {});
     const m = await page.$eval('#sx_ses_list', (n) => ({ fit: n.getAttribute('data-cbl-fit'), h: n.getBoundingClientRect().height, vaultTop: (document.getElementById('vaulthost') || n).getBoundingClientRect().top }));
-    return { ok: m.fit === 'content' && m.h < 300 && m.vaultTop < 1400, saw: 'fit ' + m.fit + ' · ' + Math.round(m.h) + ' px · vault at ' + Math.round(m.vaultTop) + ' px' };
+    return { ok: m.fit === 'content' && m.h < 300 && m.vaultTop < 1500 /* 1400 before the linked sign-ins row (SSO P1a) added about 22 px above the vault; the point is not 2,400 down */, saw: 'fit ' + m.fit + ' · ' + Math.round(m.h) + ' px · vault at ' + Math.round(m.vaultTop) + ' px' };
   });
   await w.step('A13', 'W18 · a sign-in older than the list: THIS device is still listed, marked "This one", from the page\'s own session', async () => {
     const row = await txt('[data-row]'), tag = await has('[data-testid^="sx-ses-current-"]'), legacy = await txt('[data-testid="sx-ses-legacy"]');

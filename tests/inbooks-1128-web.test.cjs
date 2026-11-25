@@ -37,7 +37,7 @@ assert(/running/.test(months[0].label), 'and says it is running');
 /* Waiting: the row's own Try again, the same retry */
 const cells = read('public/app/cap-books-waiting-cells.js');
 assert(cells.includes("bkWaitingRetry(this)") && cells.includes('data-testid="wait-retry-'), 'a row has its own Try again');
-assert(/async function bkWaitingRetry\(button\)/.test(read('public/app/cap-books-waiting-view.js')), 'it calls the one retry (booksRetry)');
+assert(/async function bkWaitingRetry\(button(, forward)?\)/.test(read('public/app/cap-books-waiting-view.js')), 'it calls the one retry (booksRetry)'); /* AM-F-05: a locked-month row's press also takes `forward` */
 
 /* Stock + the 429 sentence in the shared place and every pack */
 assert(read('public/app/cap-stock.js').includes('CBShell.busySentence(S.err.retryAfter)'), 'Stock says the shared 429 sentence');

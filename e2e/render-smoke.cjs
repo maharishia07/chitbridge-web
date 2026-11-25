@@ -77,7 +77,7 @@ const ctx = vm.createContext(sandbox);
 try {
   /* CAP_WITH.admin (app.html): helpers.js (taxIdWord · packWord), cap-shop.js (SET1) and cap-settings.js (T3-SETTINGS) load before cap-admin.js — it calls what they hold */
   for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', f), 'utf8'), ctx, { filename: f });
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
+  vm.runInContext(['cap-admin.js', 'cap-admin-guard.js'].map((n) => fs.readFileSync(path.join(ROOT, 'app', n), 'utf8')).join('\n'), ctx, { filename: 'cap-admin.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-iddocs.js'), 'utf8'), ctx, { filename: 'cap-iddocs.js' });
   /* "What you sell" moved from the profile block to the Country step (cap-country.js csuSuppliesRow) */
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-country.js'), 'utf8'), ctx, { filename: 'cap-country.js' });

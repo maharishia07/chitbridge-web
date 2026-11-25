@@ -395,7 +395,7 @@ function cmpNext(r) {
           ? '<button data-cbsid="BKS007-B05" type="button" data-testid="cmp-chit-' +
             esc(e.entry_no) +
             '" onclick="openChitSheet(\'' +
-            esc(e.chit_id) +
+            escJs(e.chit_id) +
             '\')">' +
             esc(e.ref ? txf('bill {ref}', { ref: e.ref }) : tx('the chit')) +
             (e.rail ? ' · ' + esc(tx('on the rail')) : '') +
@@ -413,11 +413,11 @@ function cmpNext(r) {
     ? '<button data-cbsid="BKS007-B06" type="button" data-testid="cmp-open-' +
       esc(r.open.code) +
       '" onclick="cmpOpenLedger(\'' +
-      esc(r.open.code) +
+      escJs(r.open.code) +
       "','" +
-      esc(r.open.from) +
+      escJs(r.open.from) +
       "','" +
-      esc(r.open.to) +
+      escJs(r.open.to) +
       '\')">' +
       esc(tx('Open the ledger')) +
       '</button>'

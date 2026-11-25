@@ -7,7 +7,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <!-- ⚠️ viewport-fit=cover is REQUIRED for env(safe-area-inset-*) to be anything but 0. Without it every
      safe-area rule in this file is inert, and the layout silently pretends the notch and the home
      indicator do not exist. Declaring it also means the page now extends UNDER them, so the topbar and
@@ -1282,6 +1282,9 @@
   .appwrap.m .shell{grid-template-columns:1fr;position:relative;overflow:hidden}
   .appwrap.m .menu{position:absolute;top:52px;bottom:0;inset-inline-start:0;width:230px;z-index:80;transform:translateX(-100%);transition:.25s}
   .appwrap.m .menu.open{transform:translateX(0)}
+  /* BG-F-10: the closed drawer sits at inset-inline-start; in RTL that is the right edge, and -100% pulled it ONTO the screen over the bill title. Out of the screen on its own side. */
+  :root[dir=rtl] .appwrap.m .menu{transform:translateX(100%)}
+  :root[dir=rtl] .appwrap.m .menu.open{transform:translateX(0)}
   .appwrap.m .panel{grid-template-columns:1fr;grid-template-rows:1fr}
   .appwrap.m .divider{display:none}
   .appwrap.m .detail{display:none;border-inline-start:0}
@@ -1561,11 +1564,11 @@ body.lab-only #cbtestpanel{
 
 <!-- module 1 of the app split: the shared client (api + envelope + auth/status branching) -->
 <script src="/cb-offline.js"></script>
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the 16 themes, ONE list for every page (engines screen v1.15.0) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the avatar, its menu, and the look it owns (theme · font · text size · bold · motion) — one file, every page -->
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>   <!-- tx · txf · friendlyErr · toast · the Ledger's boot endpoints and switch — shared with accounts.html (2026-10-01) -->
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>   <!-- tx · txf · friendlyErr · toast · the Ledger's boot endpoints and switch — shared with accounts.html (2026-10-01) -->
 <!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/fmtAt/fmtMoney/deepClone/jwtPayload) -->
 <!-- ⚠️ BEFORE helpers.js, which formats through it. The localisation layer owns every decision that changes
      across a border: language, direction, numerals, numbers, money, dates, times and SORT ORDER. -->
@@ -1584,6 +1587,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set (UX-137); cap-settings.js and cap-print.js (lazy, Settings) draw their buttons with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: the lazy caps (cap-readiness.js, cap-definitions.js) draw their inputs with ui.field (UX-137 R2); AFTER ui.js, which it reads -->
 <script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
+<script src="/engine/signin.js"></script><script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>   <!-- SSO-1129: the register form draws CBSignin.soonRow (Google · Microsoft, greyed with their sentence until the provider door is whole) -->
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <script src="/app/page.js"></script>   <!-- CBPage: which detail page opens a chit — business_json.page, the registry app/pages.json, base + a note when not installed (N03) -->
@@ -1594,7 +1598,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/list-legacy.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
-<script src="/app/cap-catalogue.js"></script>   <!-- T3-CATALOGUE: the catalogue primitives MOVED out of this file (CB_CATALOGUE_EP · prodId/pData · cbAmount · the declared columns · the import preflight painters · the template) + CBCatalogueApp for catalogue.html -->
+<script src="/app/cap-catalogue-import.js"></script><script src="/app/cap-catalogue.js"></script>   <!-- T3-CATALOGUE: the catalogue primitives MOVED out of this file (CB_CATALOGUE_EP · prodId/pData · cbAmount · the declared columns · the import preflight painters · the template) + CBCatalogueApp for catalogue.html -->
 <!-- ⚠️ DATA, NOT BEHAVIOUR — the per-trade starter categories (real Google Product Taxonomy nodes). Loaded
      eagerly beside catalogue-model because it is small and the Categories screen offers it on arrival; a lazy
      load would mean the "Start from a standard set" button appears before the sets it offers exist. -->
@@ -1632,7 +1636,7 @@ body.lab-only #cbtestpanel{
      its registry of earning kinds; nothing else in the app calls it yet. -->
 <script src="/engine/rewards.js"></script>
 <script src="/app/units.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <!-- WHICH PRICE APPLIES — Part D declared tiered/regional/time-boxed pricing for months and nothing evaluated
      it. Pure resolver, same posture as offers.js; not wired to a screen yet. -->
 <script src="/app/price-resolve.js"></script>
@@ -1644,7 +1648,7 @@ body.lab-only #cbtestpanel{
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
 <script src="/engine/tax.js"></script>   <!-- the adopted BUNDLE: reg-* packs + regulation + tax-packs + tax-slab (CBTaxSlab) + tax (CBTax), one file (T2-ENGONCE) -->
 <script src="/app/tax-slab-ui.js"></script>   <!-- cbSlabOptionsHTML · cbcatSlabPickHTML · the rate chip and the ask-once menu: ONE copy for app.html, catalogue.html and the counter (F5 W1a) -->
-<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
+<script src="/app/chit-sheet-sample.js"></script><script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
@@ -1657,6 +1661,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/chit-price-moved.js"></script>   <!-- a draft sent after its prices moved: the question (CTR-245) -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
+<script src="/app/modal-dialog.js"></script><script src="/app/chit-pay.js"></script><script src="/app/compose-catalogue-fill.js"></script>   <!-- the dialog pattern · Mark paid · the compose product picker fill -->
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script>
 /* =========================================================================
@@ -1695,15 +1700,8 @@ const CFG = {
    * `localStorage.cb_api_base = "https://…"` — which is what you want when reproducing something cloud-specific.
    */
   get API_BASE() {
-    try {
-      const forced = localStorage.getItem('cb_api_base');
-      if (forced) return forced === 'stage' ? STAGES[this.STAGE].base || '' : forced;
-      const hostName = location.hostname;
-      if (hostName === 'localhost' || hostName === '127.0.0.1') return 'http://localhost:3000';
-    } catch (e) {
-      /* storage blocked — fall through to the stage */
-    }
-    return STAGES[this.STAGE].base || '';
+    /* app/api-base.js (the one reader): production ignores any stored override; local and SIT hosts honour only a local or *.sslip.io one */
+    return window.CBApiBase ? window.CBApiBase.resolve({ cbApi: STAGES[this.STAGE].base || '' }) : STAGES[this.STAGE].base || '';
   }
 };
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
@@ -3365,7 +3363,7 @@ function renderAssist(ans) {
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre ? 'Tell me your business and I will be honest about whether this fits.' : 'Describe what you are trying to do.'}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin-bottom:10px">${ans || ''}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${_assistLoading && !sugg.length ? '<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>' : sugg.map((e) => `<button data-cbsid="PNL001-B02" data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join('')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${_assistLoading && !sugg.length ? '<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>' : sugg.map((e) => `<button data-cbsid="PNL001-B02" data-testid="assist-suggest-${e.id}" onclick="assistPick(this.dataset.xa)" data-xa="${esc(e.id)}" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join('')}</div>
       <div style="display:flex;gap:7px"><input data-cbsid="PNL001-I01" id="assist_in" data-testid="assist-input" placeholder="${pre ? 'e.g. I run a timber yard…' : 'e.g. how do I assign a task?'}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-cbsid="PNL001-B03" data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">${tx('Ask')}</button></div>
       ${pre ? '' : '<div style="margin-top:9px;text-align:center"><button data-cbsid="PNL001-B04" data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
     </div>
@@ -4473,7 +4471,7 @@ function renderLogin() {
     <div class="top">${logo()}<h1>Sign in</h1></div>
     <div class="body">
       ${form}
-      ${L.err ? `<div class="err">${L.err}</div>` : ''}
+      ${L.err ? `<div class="err">${esc(L.err)}</div>` : ''}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP/PIN against the API.</div>
       ${L.cust ? '' : `<div class="swap">New here? <a data-cbsid="APP001-C07" onclick="go('#/welcome')">${tx('Create an entity')}</a> · <a data-cbsid="APP001-C08" onclick="setLoginCust(true)">Have a shop link?</a></div>`}
       <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button data-cbsid="APP001-B11" onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,var(--blue));color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:var(--fs-3);font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
@@ -4688,7 +4686,13 @@ function meNow(force) {
   return _meReq;
 }
 
+/* the shop's NAME as a string, whatever shape a sign-in or a saved session hands over: the verify reply carries `entity` as an object, and one stored that way printed "[object Object]" in the header (AM-F-11, sit-ae2) */
+function entityNameOf(value, fallback) {
+  if (value && typeof value === 'object') return String(value.display_name || value.name || fallback || '');
+  return value == null ? fallback || '' : String(value);
+}
 function setSession(s) {
+  if (s && s.entity && typeof s.entity === 'object') s = { ...s, entity: entityNameOf(s.entity, s.name) };
   SESSION = { ...SESSION, ...s };
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p = jwtPayload(SESSION.token);
@@ -5915,6 +5919,8 @@ const MENUS = {
         'Work',
         [
           ['worklist', '🧰', "Everyone's work"],
+          /* WALK-N N-F-07: the owner reads Messages too (the actor's rail had it; the owner's had no door). Control id APP001-B21 (menuBtn), screen cap-messages.js (WRK001) */
+          ['messages', '💬', 'Messages'],
           ['intake', '📨', 'Intake'],
           ['disputes', '⚖️', 'Disputes']
         ]
@@ -6120,7 +6126,7 @@ const CAP_GATED = { connectors: 'connector', disputes: 'dispute' };
  * a fix, and nothing in the build would have said so.
  */
 const CB_BUILD =
-  '2026-11-28c'; /* ⚠️ bumped 2026-11-28 (c: red1128walks lane: 25 cap files changed after b; b: red1128 lane: red fixes after the fold, 21 files shipped after a; a: batch 1128 fold (1127 + 1126 heads, main f43b65674): engines v1.104.0 adopted (overdraft a liability, India stated export zero-rated), set-off view and return notes, COUNT-SOURCE counts, shop-zone times, till re-vendored; a: batch 1127 fold (f of 1126 folded in: offline harnesses load the one formatter): supply kind AE/AU/IN, year-end fixes, India walk fixes, rail buyer add-supplier; engines v1.103.0 adopted; till re-vendored; e: fold of the 21 Nov fix lanes: counter C, in-b2b-pos, acct C, date-zone, cash words, tb-date, ae; till re-vendored; d: till service place of supply; c: counter C till; b: filesize line merges in cap-books, cap-period, home2 doFirst guard; a: batch 1126 web: one-screen Home, grey-ready, customer delink, grey vertical, ux fit-the-screen, rail mirror, start fixes, marketing, till day; before that, 2026-11-25: b: cap-period depreciation helpers split; a: batch 1125 web: assets schedule, aud home, mis trend, till rail, acc walk, aud fixes, posting v1.101.0; before that, 2026-11-23: e: F-19 payment carries the shop's day + F-09 entry preview client_ref, cap-books/cap-entry/cap-entry-preview changed after d; d: sit21 readability splits (bank, period, employees give); c: sit21 integration: versioned files changed after the 23b bump; b: fix-web: marks re-read after save, Tasks assign beforePick, cap-books-lock.js split out of cap-books.js, attach-ui on tasks, readability, file-size moves, renames in cap-evidence/cap-fx/cap-mark/cap-period; a: batch 1123 web: walkeve CBAssign.queue + undo, shopbk Bookkeeper, shopbk-b owner approves, tasksopen open client books + refusal page; earlier: 22a: a: batch 1122 web: members #774 ux2-1119; d: ux2-1119 Delegate work + Your books today, failure card; c: ux2-1119; b: fx377 cap-fx; a: batch 1121 web: walkfix role-cycle + xcfix cross-country; j: walkfix role-cycle web: landing, review words, removal words, practice Home; i: walkfix Held-by plain text; h: walkfix W3-W8 assign dialog + employees; g: batch 1119 merge of crmreds-web with std revamp; f: lane 10 register rows; e: wrapCut getter the right way round; d: Compared-with tab wraps, door count wording; c: standards page door count + list-ctl no-wrap option; a: S41 CI sweep - books-grant radio id; guard cb-build-guard; h: BANK-new-11/14/15 web: excess acknowledged on the owner's tick, balance_break and which_liability asked; a: Fable 1117b B1 Who owes whom both-sides parties, B3 band tab dark contrast; 17i: list-ctl stretch-track floor; earlier: c: helpdup, six modules call helpers.js esc/fmtMoney/monthNames; b: Fable RC fixes changed cap-books-overview, books-grant-view, rail-bell, tb-change since 17a; a: gate = MIS overview charts + private flags files changed since 16p; 16 Nov: p: walkgreen: Find a ledger focus ring; o: openbal 1f865fc4 phone layout; n: openbal 717fea71 control rows; m: + openbal; l: + booksfu, ledger role fix; k: + bankhome, banklock; j: walkfix = basflag, evfilter, ledgerux, bellopen, ageing, stmts; c: sitau.15 marks-2, bank-10, crm-3; b: sitau.14 crm-2; a: sitau.13 list-width; z: sitau.12b bank-rules-web; y: sitau.11b = grant-seat + fin-ux (no list-width); x: crm-ux + bank demo; w: bank-9; v: one-figure; u: home-r shell; t: grant-daybook; s: cap-mark esc fix; r: bank-demo v2 (sitau.7); q: audit marks (feat/marks); p: polish-r merged; o: shell-monday list-ctl fit; n: sitau.4 = ACC-176b round 3 (post confirm, weekly figures, plain routes, one row per firm, Ended filter, Home card); m: sitau.3 = #754 bank page; l: sitau.2 integration; i: ACC-176b review fixes, delegated post says Posted, books-only acting page, accept key per attempt, grant name from the grant row; h: ACC-176b adviser, delegated posting, client list from grants, accept Idempotency-Key, auditor drill; g: batch I with #718 at its real head 6173e79d, engines v1.97.0 re-adopted; e: l16-inapp statement check + party lines; d: batch I merged with main after batch H; c: batch I, UX-137 stamps + register + ui.money/select; a: ui-field.js loaded, cap-readiness.js + cap-definitions.js draw inputs with ui.field; previous: 2026-11-14 u: batch G member merge; t: previous stamps follow) t: batch G merged with main, cap-bank note words from the server marks; s: cap-crm-groups-window.js reads window.GROUPS and window.CRM, declares neither (crm-groups-guard); r: #705 cap-crm-record.js comment reword (crm.cjs no-money guard); q: batch F reds, cap-crm-groups-window.js reads the host's CRM as window.CRM (no 3-letter declaration, readability guard); p: batch F reds - cap-bank.js and cap-dispute.js back to their filesize baselines (merged lines, no behaviour change), cap-crm-groups-send.js marks a sent message as not unsaved; o: web batch 14f takes #643 UX-137 ids, list-ctl pager codes + cap-dispute; n:n: cap-crm-groups-window.js declares CRM and GROUPS, SEAMS regenerated; m: web batch 14f merged with main after #672; l: web batch 14f, one stamp after the later members #690 #692 #694-#698 and the cap-folders split; k: web batch 14f, one stamp for #673 #676 #677 #678 #679 #681 #682 #683 #684 #686 #687 #689; i: i: sweep lane, header-only: cap-crm-chits.js, cap-crm-groups.js, cap-entry.js, cap-standards.js, attach-ui.js, tax-slab-ui.js, ui.js, shell.js CALLED BY lines made true; h: cap-country.js csuLakhWords variable rename after review of batch 14c; g: web batch 14c, one stamp for the proof lanes #660-#671 incl. the cap-categories, cap-testing, cap-country edits; f: web batch 14b, one stamp for the lanes #656 #657 #570 #571 #610 #512 (cap-* cache-buster for the files they touched); e: sheet-keys.js waits one task before pulling focus back, so Tab out of a field whose focusout writes to the sheet moves on; d: cap-books.js comment-only where-used notes for the ui-standard guard; ui-field.js settle no longer rewrites an unchanged echo, which trapped Tab in the shop order sheet; c: web batch 2026-11-14, one stamp for every lane: #641 ledgers head (list-ctl.js, cap-books.js), #647 pass-cap-books (cap-books.js, cap-categories.js, cap-crm-groups.js, ui.js), #644 pass-ops (cart.js), #645 pass-cat, #646 pass-labs, #648 w2-lib (helpers.js), #649 w2-fin, #650 w2-crm, #651 w2-net, #643 ux137-ids-listctl-dispute (list-ctl.js, cap-dispute.js), #615 web-mount-1 (cart-design.html), #652 w3-a (finance.html, cap-catsetup.js, cap-definitions.js, cap-connector.js headers), #626 ux-field-2 (ui-field.js and shop fields), #642 till ids, #654 promo ids (promo.html), #653 readability guard (tools only), #632 PRINT-1 S1b (bill-print.html); cache-buster for all of them; b: one-pass #647 - cap-books.js, cap-categories.js, cap-crm-groups.js, ui.js and #643 list-ctl.js/cap-dispute.js headers; a: release/web-2026-11-14 - cache-buster for cap-attach, cap-chit2, cap-match, cap-quotes, cap-tasks, list-ctl.js from the merged members); 2026-11-13 (f: batch #625 - #623 list-ctl.js header labels wrap; e: batch #625 - CRM-255 cap-rewards.js, cap-crm*.js, cap-admin.js, cap-bank.js, list-ctl.js title/period; cache-buster for the merged members; d: ACC-206 D1 - helpers.js billTotalOf, app.html/cap-chit2.js/authority-forms.html read the bill total through it; c: web popups 1 - the 12 CRM popups open through ui.dialog, cache-buster for cap-crm*.js and ui.js; b: CON-161 - cap-connector.js: the generated agent's HTTP error is joined from parts, it no longer prints its own source; a: REL-24 - the stamp had stayed at 2026-11-06a while 46 cap-*.js files changed on 11-07..11-12, so cached copies stayed; cache-buster only, no code change); 2026-11-06 (a: RAIL-90 register-off message in cap-worklist.js and every register caller in cap-register.js, one registerOffWords); 2026-10-25 (f: readability ratchet pass 2 - named steps out of grown functions in cap-admin.js and core.js (bizCurrent, cbIdemKey, cbPushRefreshScreen), no behaviour change; e: readability ratchet refactor, no behaviour change; d: critic F8-F12 — the chit sheet mounts CBQuotes, one chitIsQuote, one status word table, fmtMoney; c: the cross-installation confirm names the cart's money; b: cap-quotes.js reaches app.html's EP by name; a: crossing walk web round - app/cap-quotes.js born (RAIL-117 rounds), core.js idem:true, rail-thread.js, chit-sheet.js); 2026-10-24 (u: UX-102 KYB tabs have an address, UX-103 KYB line; t: UX-63 KYB and network design follow the theme; s: UX-98/99/100 developer words and workshop sentences out of customer screens; r: UX-1 screen codes only for a tester (?ids=1), UX-3 the +n badge says what it counts; q: UX-117 Offer Lab shelf above the kinds, phone tools in one menu; p: UX-116 sheet closes on a view change, kural plain band, money box sized to the amount; o: UX-118 - accounts-shell.js cbIsRawId (MOVED from cap-crm-record.js), cap-books.js bkBillNo, cap-bank.js, cap-crm-record.js crmWho: a raw id never stands where a bill number or a person belongs; n: UX-115 - accounts-shell.js: CBConfirm ignores a backdrop tap for its first 600 ms, so a double tap on Record leaves the question up; m: R106 - cap-books.js: a Waiting row whose bill is above the count offers Accept at the count (asks first, the counted ₹) and Reject; chit-sheet.js: the sheet's Accept names the counted figure, open(id, { act }); l: F2 finance - cap-finance*.js + cap-books.js read ONE due figure (due_minor, netOpen); k: CAT-212 - cap-catalogue.js: the item form paints no free box for a rate column (gst_rate, tax_slab, tax_slab_name, cess_rate), tax-slab-ui.js names them once; h: F5 W1b - cap-catalogue.js: the item form's category chips (ctCategoryChips MOVED from app.html), the category sheet's rate picker with a confirm, a 4/6/8-digit code saved to hsn, cbRateMay reads the server's may_set_rate; cap-catsetup.js: the catalogue default is a draft, Save asks first; tax-slab-ui.js: the exempt row's face; g: R112 - cap-employees.js: the owner sees a worker's first code once, for 30 minutes; f: F5 W1a - app/tax-slab-ui.js born (cbSlabOptionsHTML + cbcatSlabPickHTML MOVED there, the rate chip and the ask-once menu), cap-catalogue.js: the item sheet's GST row sets a rate through the one product writer, cap-categories.js reads the moved picker; e: R102b - cap-books.js: Record a payment asks first on every door (Pay, Receive, Bank rec), naming the party, the amount and the mode; d: R121b - cap-admin.js: the workshop's Business rules card is the same draft-and-Save as CB Settings › Policy, setPolFlag's write on change is gone; c: R102 - chit-sheet.js: accepting a bill asks first, naming the supplier, the bill and the amount; the history says "Accepted by <who>"; b: R121 - cap-settings.js: a policy row is a draft, Save asks first; a: R110 - cap-crm-groups.js: an offer send asks first, naming the words, the channel and how many); 2026-10-18 (m: MAINT2 — the Build preview strip shows only on a local host or for a person the server marks (dev_tools); cap-move-in.js shows the server's sentence for MOVE_IN_COUNTRY); 2026-10-15 (a: W2-SHOP — cap-mis.js misReadAt is the ONE MIS read stamp ("live · 10:32"); cap-admin.js's workshop MIS paints it too, so one-cart.cjs is green again); 2026-10-14 (f: T3-P2-CRM — cap-crm-groups.js final (the New-group button's own test id, the send outcome in three facts); e: T3-CATALOGUE — app/cap-catalogue.js born: the catalogue primitives MOVED out of app.html (CB_CATALOGUE_EP · cbAmount · prodId/pData · the declared columns · the import preflight painters, now taking a workbook), core.js holds CB_DEFS_EP, list-ctl.js shows Filters ▾ on a server-paged list; d: INT6b — T2-PAGING's list-ctl.js CBList.every + cap-testing.js paging, with T3 below; c: T3 — cap-dispute.js: the dispute room hands CBThread disputeByline; b: T3-DISPUTES-ASSIST — cap-dispute.js carries CBDispute (tasks.html › Disputes), cap-readiness.js loses aiDraft to accounts-shell.js CB_ASSIST_EP, chit-sheet.js gives a page's dispute capability a place; a: STD1 — cap-books.js reads each Waiting row's todo/name as data and /health's one count; chit-sheet.js takes the bill class, the books' wait and Accept's may/why from the chit read); 2026-10-13 (a: CX4 — cap-iddocs.js draws only the documents the server lists for the shop's country; helpers.js packHasHsn: the HSN words, switch and Rule 46 note only under India's pack; myCur reads the pack's money); 2026-10-08 (a: M25 + M36 — cap-books.js bkOwes (balances in words, never a minus) and bkMoneyInput (the ONE money input: symbol · decimals · minor units) used by cap-entry.js, cap-period.js, cap-bank.js; accounts.html + crm.html lose the width cap); 2026-10-07 (b: core.js SIBS keeps "project" (api #40) so check:envelope is green again; M64 — cap-books.js: Record a payment, Lock a month and Close for good go through CBAction (app/accounts-shell.js) — one press one write, Close for good asks first, the outcome said beside the control; bkOnce is now CBAction.once; a: N03 — cap-chit2.js shows the "made with X@v — page not installed" note; app/page.js + app/pages.json, the named, versioned detail pages); 2026-10-04 (a:public/till.html — Back never leaves the phone till: a popstate on the product sheet, Today's bills or maintenance closes that sheet instead of leaving the page, and a bill in hand asks "Leave the counter?" first (T66); the receipt carries Share (navigator.share, with WhatsApp/SMS/Copy where that is missing) and reopens afterwards as "Last bill C…  ›" on the bill area, which also now says "Paid — start the next bill" instead of staying blank (T67); Today's bills reads "8 pm – 9 pm · 2 bills · ₹460" and "Both bills reached the shop", never "(s)" (T69) — no cap-*.js touched, so this bump is the change log kept current, not a cache-buster); 2026-10-03 (p: standards.html + cap-standards.js + cap-admin.js + index.html — the Standards page (matrix · list · two sheets), the register widened with area · kind · applies-in · plain words · what is missing, 17 additions, Settings › Standards keeps what you follow and the door, the Standards door on the index page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) · earlier the same day (o: cap-books.js + accounts.html + kural.js + cap-crm.js — the Ledgers page rebuilt to the designer's handoff (two panes, CBList sized by its pane, one figures line, Dr/Cr everywhere, Reverse on an opened line) and the kural footer CBKural on every CB page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+  '2026-11-29f'; /* ⚠️ bumped 2026-11-29 (f: the api readability pass re-vendored app/till-dayrep.js after e; e: the 1129 split and rename passes changed 39 capability files after d; d: the stored cross-tenant XSS fixes (p1new) changed cap-bank-rows, cap-chit2, cap-network-member and cap-testing after c; c: the web splits A, B, C, D and the sign-in split moved code into 40+ new capability modules and changed cap files after b; b: ux1129 and lit1129 changed cap files after a; a: batch web-2026-11-29: the cap files changed since 2026-11-28c; c: red1128walks lane: 25 cap files changed after b; b: red1128 lane: red fixes after the fold, 21 files shipped after a; a: batch 1128 fold (1127 + 1126 heads, main f43b65674): engines v1.104.0 adopted (overdraft a liability, India stated export zero-rated), set-off view and return notes, COUNT-SOURCE counts, shop-zone times, till re-vendored; a: batch 1127 fold (f of 1126 folded in: offline harnesses load the one formatter): supply kind AE/AU/IN, year-end fixes, India walk fixes, rail buyer add-supplier; engines v1.103.0 adopted; till re-vendored; e: fold of the 21 Nov fix lanes: counter C, in-b2b-pos, acct C, date-zone, cash words, tb-date, ae; till re-vendored; d: till service place of supply; c: counter C till; b: filesize line merges in cap-books, cap-period, home2 doFirst guard; a: batch 1126 web: one-screen Home, grey-ready, customer delink, grey vertical, ux fit-the-screen, rail mirror, start fixes, marketing, till day; before that, 2026-11-25: b: cap-period depreciation helpers split; a: batch 1125 web: assets schedule, aud home, mis trend, till rail, acc walk, aud fixes, posting v1.101.0; before that, 2026-11-23: e: F-19 payment carries the shop's day + F-09 entry preview client_ref, cap-books/cap-entry/cap-entry-preview changed after d; d: sit21 readability splits (bank, period, employees give); c: sit21 integration: versioned files changed after the 23b bump; b: fix-web: marks re-read after save, Tasks assign beforePick, cap-books-lock.js split out of cap-books.js, attach-ui on tasks, readability, file-size moves, renames in cap-evidence/cap-fx/cap-mark/cap-period; a: batch 1123 web: walkeve CBAssign.queue + undo, shopbk Bookkeeper, shopbk-b owner approves, tasksopen open client books + refusal page; earlier: 22a: a: batch 1122 web: members #774 ux2-1119; d: ux2-1119 Delegate work + Your books today, failure card; c: ux2-1119; b: fx377 cap-fx; a: batch 1121 web: walkfix role-cycle + xcfix cross-country; j: walkfix role-cycle web: landing, review words, removal words, practice Home; i: walkfix Held-by plain text; h: walkfix W3-W8 assign dialog + employees; g: batch 1119 merge of crmreds-web with std revamp; f: lane 10 register rows; e: wrapCut getter the right way round; d: Compared-with tab wraps, door count wording; c: standards page door count + list-ctl no-wrap option; a: S41 CI sweep - books-grant radio id; guard cb-build-guard; h: BANK-new-11/14/15 web: excess acknowledged on the owner's tick, balance_break and which_liability asked; a: Fable 1117b B1 Who owes whom both-sides parties, B3 band tab dark contrast; 17i: list-ctl stretch-track floor; earlier: c: helpdup, six modules call helpers.js esc/fmtMoney/monthNames; b: Fable RC fixes changed cap-books-overview, books-grant-view, rail-bell, tb-change since 17a; a: gate = MIS overview charts + private flags files changed since 16p; 16 Nov: p: walkgreen: Find a ledger focus ring; o: openbal 1f865fc4 phone layout; n: openbal 717fea71 control rows; m: + openbal; l: + booksfu, ledger role fix; k: + bankhome, banklock; j: walkfix = basflag, evfilter, ledgerux, bellopen, ageing, stmts; c: sitau.15 marks-2, bank-10, crm-3; b: sitau.14 crm-2; a: sitau.13 list-width; z: sitau.12b bank-rules-web; y: sitau.11b = grant-seat + fin-ux (no list-width); x: crm-ux + bank demo; w: bank-9; v: one-figure; u: home-r shell; t: grant-daybook; s: cap-mark esc fix; r: bank-demo v2 (sitau.7); q: audit marks (feat/marks); p: polish-r merged; o: shell-monday list-ctl fit; n: sitau.4 = ACC-176b round 3 (post confirm, weekly figures, plain routes, one row per firm, Ended filter, Home card); m: sitau.3 = #754 bank page; l: sitau.2 integration; i: ACC-176b review fixes, delegated post says Posted, books-only acting page, accept key per attempt, grant name from the grant row; h: ACC-176b adviser, delegated posting, client list from grants, accept Idempotency-Key, auditor drill; g: batch I with #718 at its real head 6173e79d, engines v1.97.0 re-adopted; e: l16-inapp statement check + party lines; d: batch I merged with main after batch H; c: batch I, UX-137 stamps + register + ui.money/select; a: ui-field.js loaded, cap-readiness.js + cap-definitions.js draw inputs with ui.field; previous: 2026-11-14 u: batch G member merge; t: previous stamps follow) t: batch G merged with main, cap-bank note words from the server marks; s: cap-crm-groups-window.js reads window.GROUPS and window.CRM, declares neither (crm-groups-guard); r: #705 cap-crm-record.js comment reword (crm.cjs no-money guard); q: batch F reds, cap-crm-groups-window.js reads the host's CRM as window.CRM (no 3-letter declaration, readability guard); p: batch F reds - cap-bank.js and cap-dispute.js back to their filesize baselines (merged lines, no behaviour change), cap-crm-groups-send.js marks a sent message as not unsaved; o: web batch 14f takes #643 UX-137 ids, list-ctl pager codes + cap-dispute; n:n: cap-crm-groups-window.js declares CRM and GROUPS, SEAMS regenerated; m: web batch 14f merged with main after #672; l: web batch 14f, one stamp after the later members #690 #692 #694-#698 and the cap-folders split; k: web batch 14f, one stamp for #673 #676 #677 #678 #679 #681 #682 #683 #684 #686 #687 #689; i: i: sweep lane, header-only: cap-crm-chits.js, cap-crm-groups.js, cap-entry.js, cap-standards.js, attach-ui.js, tax-slab-ui.js, ui.js, shell.js CALLED BY lines made true; h: cap-country.js csuLakhWords variable rename after review of batch 14c; g: web batch 14c, one stamp for the proof lanes #660-#671 incl. the cap-categories, cap-testing, cap-country edits; f: web batch 14b, one stamp for the lanes #656 #657 #570 #571 #610 #512 (cap-* cache-buster for the files they touched); e: sheet-keys.js waits one task before pulling focus back, so Tab out of a field whose focusout writes to the sheet moves on; d: cap-books.js comment-only where-used notes for the ui-standard guard; ui-field.js settle no longer rewrites an unchanged echo, which trapped Tab in the shop order sheet; c: web batch 2026-11-14, one stamp for every lane: #641 ledgers head (list-ctl.js, cap-books.js), #647 pass-cap-books (cap-books.js, cap-categories.js, cap-crm-groups.js, ui.js), #644 pass-ops (cart.js), #645 pass-cat, #646 pass-labs, #648 w2-lib (helpers.js), #649 w2-fin, #650 w2-crm, #651 w2-net, #643 ux137-ids-listctl-dispute (list-ctl.js, cap-dispute.js), #615 web-mount-1 (cart-design.html), #652 w3-a (finance.html, cap-catsetup.js, cap-definitions.js, cap-connector.js headers), #626 ux-field-2 (ui-field.js and shop fields), #642 till ids, #654 promo ids (promo.html), #653 readability guard (tools only), #632 PRINT-1 S1b (bill-print.html); cache-buster for all of them; b: one-pass #647 - cap-books.js, cap-categories.js, cap-crm-groups.js, ui.js and #643 list-ctl.js/cap-dispute.js headers; a: release/web-2026-11-14 - cache-buster for cap-attach, cap-chit2, cap-match, cap-quotes, cap-tasks, list-ctl.js from the merged members); 2026-11-13 (f: batch #625 - #623 list-ctl.js header labels wrap; e: batch #625 - CRM-255 cap-rewards.js, cap-crm*.js, cap-admin.js, cap-bank.js, list-ctl.js title/period; cache-buster for the merged members; d: ACC-206 D1 - helpers.js billTotalOf, app.html/cap-chit2.js/authority-forms.html read the bill total through it; c: web popups 1 - the 12 CRM popups open through ui.dialog, cache-buster for cap-crm*.js and ui.js; b: CON-161 - cap-connector.js: the generated agent's HTTP error is joined from parts, it no longer prints its own source; a: REL-24 - the stamp had stayed at 2026-11-06a while 46 cap-*.js files changed on 11-07..11-12, so cached copies stayed; cache-buster only, no code change); 2026-11-06 (a: RAIL-90 register-off message in cap-worklist.js and every register caller in cap-register.js, one registerOffWords); 2026-10-25 (f: readability ratchet pass 2 - named steps out of grown functions in cap-admin.js and core.js (bizCurrent, cbIdemKey, cbPushRefreshScreen), no behaviour change; e: readability ratchet refactor, no behaviour change; d: critic F8-F12 — the chit sheet mounts CBQuotes, one chitIsQuote, one status word table, fmtMoney; c: the cross-installation confirm names the cart's money; b: cap-quotes.js reaches app.html's EP by name; a: crossing walk web round - app/cap-quotes.js born (RAIL-117 rounds), core.js idem:true, rail-thread.js, chit-sheet.js); 2026-10-24 (u: UX-102 KYB tabs have an address, UX-103 KYB line; t: UX-63 KYB and network design follow the theme; s: UX-98/99/100 developer words and workshop sentences out of customer screens; r: UX-1 screen codes only for a tester (?ids=1), UX-3 the +n badge says what it counts; q: UX-117 Offer Lab shelf above the kinds, phone tools in one menu; p: UX-116 sheet closes on a view change, kural plain band, money box sized to the amount; o: UX-118 - accounts-shell.js cbIsRawId (MOVED from cap-crm-record.js), cap-books.js bkBillNo, cap-bank.js, cap-crm-record.js crmWho: a raw id never stands where a bill number or a person belongs; n: UX-115 - accounts-shell.js: CBConfirm ignores a backdrop tap for its first 600 ms, so a double tap on Record leaves the question up; m: R106 - cap-books.js: a Waiting row whose bill is above the count offers Accept at the count (asks first, the counted ₹) and Reject; chit-sheet.js: the sheet's Accept names the counted figure, open(id, { act }); l: F2 finance - cap-finance*.js + cap-books.js read ONE due figure (due_minor, netOpen); k: CAT-212 - cap-catalogue.js: the item form paints no free box for a rate column (gst_rate, tax_slab, tax_slab_name, cess_rate), tax-slab-ui.js names them once; h: F5 W1b - cap-catalogue.js: the item form's category chips (ctCategoryChips MOVED from app.html), the category sheet's rate picker with a confirm, a 4/6/8-digit code saved to hsn, cbRateMay reads the server's may_set_rate; cap-catsetup.js: the catalogue default is a draft, Save asks first; tax-slab-ui.js: the exempt row's face; g: R112 - cap-employees.js: the owner sees a worker's first code once, for 30 minutes; f: F5 W1a - app/tax-slab-ui.js born (cbSlabOptionsHTML + cbcatSlabPickHTML MOVED there, the rate chip and the ask-once menu), cap-catalogue.js: the item sheet's GST row sets a rate through the one product writer, cap-categories.js reads the moved picker; e: R102b - cap-books.js: Record a payment asks first on every door (Pay, Receive, Bank rec), naming the party, the amount and the mode; d: R121b - cap-admin.js: the workshop's Business rules card is the same draft-and-Save as CB Settings › Policy, setPolFlag's write on change is gone; c: R102 - chit-sheet.js: accepting a bill asks first, naming the supplier, the bill and the amount; the history says "Accepted by <who>"; b: R121 - cap-settings.js: a policy row is a draft, Save asks first; a: R110 - cap-crm-groups.js: an offer send asks first, naming the words, the channel and how many); 2026-10-18 (m: MAINT2 — the Build preview strip shows only on a local host or for a person the server marks (dev_tools); cap-move-in.js shows the server's sentence for MOVE_IN_COUNTRY); 2026-10-15 (a: W2-SHOP — cap-mis.js misReadAt is the ONE MIS read stamp ("live · 10:32"); cap-admin.js's workshop MIS paints it too, so one-cart.cjs is green again); 2026-10-14 (f: T3-P2-CRM — cap-crm-groups.js final (the New-group button's own test id, the send outcome in three facts); e: T3-CATALOGUE — app/cap-catalogue.js born: the catalogue primitives MOVED out of app.html (CB_CATALOGUE_EP · cbAmount · prodId/pData · the declared columns · the import preflight painters, now taking a workbook), core.js holds CB_DEFS_EP, list-ctl.js shows Filters ▾ on a server-paged list; d: INT6b — T2-PAGING's list-ctl.js CBList.every + cap-testing.js paging, with T3 below; c: T3 — cap-dispute.js: the dispute room hands CBThread disputeByline; b: T3-DISPUTES-ASSIST — cap-dispute.js carries CBDispute (tasks.html › Disputes), cap-readiness.js loses aiDraft to accounts-shell.js CB_ASSIST_EP, chit-sheet.js gives a page's dispute capability a place; a: STD1 — cap-books.js reads each Waiting row's todo/name as data and /health's one count; chit-sheet.js takes the bill class, the books' wait and Accept's may/why from the chit read); 2026-10-13 (a: CX4 — cap-iddocs.js draws only the documents the server lists for the shop's country; helpers.js packHasHsn: the HSN words, switch and Rule 46 note only under India's pack; myCur reads the pack's money); 2026-10-08 (a: M25 + M36 — cap-books.js bkOwes (balances in words, never a minus) and bkMoneyInput (the ONE money input: symbol · decimals · minor units) used by cap-entry.js, cap-period.js, cap-bank.js; accounts.html + crm.html lose the width cap); 2026-10-07 (b: core.js SIBS keeps "project" (api #40) so check:envelope is green again; M64 — cap-books.js: Record a payment, Lock a month and Close for good go through CBAction (app/accounts-shell.js) — one press one write, Close for good asks first, the outcome said beside the control; bkOnce is now CBAction.once; a: N03 — cap-chit2.js shows the "made with X@v — page not installed" note; app/page.js + app/pages.json, the named, versioned detail pages); 2026-10-04 (a:public/till.html — Back never leaves the phone till: a popstate on the product sheet, Today's bills or maintenance closes that sheet instead of leaving the page, and a bill in hand asks "Leave the counter?" first (T66); the receipt carries Share (navigator.share, with WhatsApp/SMS/Copy where that is missing) and reopens afterwards as "Last bill C…  ›" on the bill area, which also now says "Paid — start the next bill" instead of staying blank (T67); Today's bills reads "8 pm – 9 pm · 2 bills · ₹460" and "Both bills reached the shop", never "(s)" (T69) — no cap-*.js touched, so this bump is the change log kept current, not a cache-buster); 2026-10-03 (p: standards.html + cap-standards.js + cap-admin.js + index.html — the Standards page (matrix · list · two sheets), the register widened with area · kind · applies-in · plain words · what is missing, 17 additions, Settings › Standards keeps what you follow and the door, the Standards door on the index page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) · earlier the same day (o: cap-books.js + accounts.html + kural.js + cap-crm.js — the Ledgers page rebuilt to the designer's handoff (two panes, CBList sized by its pane, one figures line, Dr/Cr everywhere, Reverse on an opened line) and the kural footer CBKural on every CB page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -6193,10 +6199,13 @@ const _capPromise = {},
   _capWithPromise = {};
 /* a capability split by job loads its other halves first (P2: network = the design builder + its member half, cap-network-member.js) */
 const CAP_WITH = {
-  network: ['network-member'],
-  books: ['opening', 'opening-years', 'opening-bills', 'books-lock', 'books-tree', 'books-cheques', 'books-waiting-cells', 'books-waiting-view', 'books-party'] /* the Opening balances page (cap-opening.js) loads before the Ledger screens that open it */,
-  admin: ['shop', 'settings', 'mis'],
-  country: ['shop']
+  network: ['network-member', 'network-storefront'],
+  connector: ['connector-reissue'],
+  worklist: ['worklist-raida'],
+  folders: ['folders-metrics'],
+  books: ['opening', 'opening-years', 'opening-bills', 'opening-saved', 'books-lock', 'books-tree', 'books-cheques', 'books-waiting-cells', 'books-waiting-view', 'books-party', 'books-needs'] /* the Opening balances page (cap-opening.js) loads before the Ledger screens that open it */,
+  admin: ['shop', 'settings', 'mis', 'admin-guard'],
+  country: ['shop'], chit2: ['chit2-reprice'] /* the Order tab's price-from-catalogue overlay (cap-chit2-reprice.js) */, shop: ['shop-patch'], readiness: ['readiness-ai'], register: ['register-impact'], settings: ['settings-provider', 'settings-guide']
 }; /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */ /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */ /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name) {
   if (CAP_LOADED[name]) return Promise.resolve();
@@ -6535,7 +6544,7 @@ function _renderApp() {
            unfinished capability that LOOKS finished is worse than one that admits it, because nobody comes back
            to it. The dimming comes off when a real transport lands. -->
       ${role !== 'customer' ? topbarBell() : ''}
-      <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:end"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity || ''}</div></div>
+      <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:end"><div class="nm">${esc(SESSION.name)}</div><div class="rl">${esc(role)} · ${esc(SESSION.entity || '')}</div></div>
         <!-- ⭐ THE AVATAR IS NOW A MENU. Profile and Settings were the two least-visited screens in the rail and
              were holding prime space in it; every app puts them behind the avatar, and the avatar was already
              here doing nothing but showing a letter. -->
@@ -7239,6 +7248,22 @@ function t(key, english) {
 
 /* txn() — a sentence whose wording depends on a COUNT — lives in app/accounts-shell.js, next to tx() and txf() (every CB page counts) */
 
+/** the greyed Compose of a view-only login: it stays on the rail with the reason as its title and label. These are the attributes of the ONE rail button (data-cbsid APP001-B22, drawn once in the rail's generic line), not a second element definition */
+function composeViewOnlyAttrs(label) {
+  const reason = composeViewOnlyWhy();
+  return ` aria-disabled="true" data-ready="no" title="${esc(reason)}" aria-label="${esc(label + ' — ' + reason)}" style="opacity:.5;cursor:not-allowed"`;
+}
+/** the Messages rail item with its unread badge (the server's real reply count) */
+function messagesBtn(key, on, ic, label, click) {
+  const unread = UI.replyCount || 0;
+  return (
+    `<button data-cbsid="APP001-B21" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}` +
+    (unread
+      ? `<span data-testid="nav-messages-badge" style="margin-inline-start:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${unread}</span>`
+      : '') +
+    `</button>`
+  );
+}
 function menuBtn(x) {
   /* ⚠️ THE LABEL GOES THROUGH t() HERE, at the ONE place every rail item is built — not at the fourteen places
      they are declared. Translating at the declaration would mean fourteen call sites to keep in step, and the
@@ -7249,6 +7274,8 @@ function menuBtn(x) {
   const on = key === 'task' || key === 'order' ? UI.nav === key && !UI.folderSel : UI.nav === key;
   /* ⚠️ Two entries are ACTS, not destinations — they open something rather than navigating, so they cannot
      go through navTo. A third would want a registry; two do not. */
+  /* WALK-N N-F-02: a VIEW-ONLY login cannot send (the api refuses it): Compose stays on the rail, greyed, with the reason (helpers.js viewOnlyLogin - the one reading of the login's level) */
+  const greyCompose = key === 'compose' && typeof viewOnlyLogin === 'function' && viewOnlyLogin(); /* the same one button, greyed (its state attributes below) */
   const click = key === 'compose' ? `compose()` : key === 'selfbill' ? `selfBillOpen()` : key === 'counter' ? `counterOpen()` : `navTo('${key}')`;
   /**
    * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
@@ -7262,14 +7289,7 @@ function menuBtn(x) {
    * always zero on a badge that looked authoritative. This one reads b156's real server-side state.
    */
   if (key === 'messages') {
-    const n = UI.replyCount || 0;
-    return (
-      `<button data-cbsid="APP001-B21" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}` +
-      (n
-        ? `<span data-testid="nav-messages-badge" style="margin-inline-start:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${n}</span>`
-        : '') +
-      `</button>`
-    );
+    return messagesBtn(key, on, ic, label, click);
   }
   /* ⭐ THE LEDGER HAS ITS OWN PAGE (Athi, 2026-10-01: CB Accounts — "its own identity, its own menu"). Its rail item is one
      link, same tab. A nav to 'ledger' (#/app/ledger, a remembered cb_nav) is redirected there by route(). */
@@ -7277,7 +7297,7 @@ function menuBtn(x) {
   if (key === 'bills') return `<a class="navlink" href="/accounts.html#bills" data-testid="nav-bills"><span class="ic">${ic}</span>${tx('Bills')} ↗</a>`;
   if (key === 'ledger') return `<a class="navlink" href="/accounts.html" data-testid="nav-ledger"><span class="ic">${ic}</span>${tx('Accounts')} ↗</a>`;
   if (key !== 'task' && key !== 'order')
-    return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
+    return `<button data-cbsid="APP001-B22" class="${on ? 'on' : ''}" data-testid="nav-${key}"${greyCompose ? composeViewOnlyAttrs(label) : ` onclick="${click}"`}><span class="ic">${ic}</span>${label}</button>`;
   const fs = (UI.folders || []).filter((item) => (item.scope || 'task') === key);
   const open = trackIsOpen(key);
   /* The chevron only appears when there is something to collapse — a disclosure control for nothing is noise. */
@@ -7302,9 +7322,9 @@ function menuBtn(x) {
   /* ⚠️ 26×26 MINIMUM. This rendered 19×17 — the smallest control in the rail, and it sits directly on top of the
      row that navigates, so a miss does not do nothing: it takes you somewhere. A control whose failure mode is
      "the wrong thing happened" needs more room than one whose failure mode is "nothing happened". */
-  const plus = `<span data-cbsid="APP001-C12" data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-inline-start:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:var(--fs-2);font-weight:700">＋</span>`;
+  const plus = `<span data-cbsid="APP001-C12" data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn(this.dataset.xa)" data-xa="${esc(key)}" title="New folder in ${label}" style="margin-inline-start:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:var(--fs-2);font-weight:700">＋</span>`;
   const chev = fs.length
-    ? `<span data-cbsid="APP001-C13" data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open ? 'Collapse' : 'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open ? '▾' : '<span class=arw>▸</span>'}</span>`
+    ? `<span data-cbsid="APP001-C13" data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack(this.dataset.xa)" data-xa="${esc(key)}" title="${open ? 'Collapse' : 'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open ? '▾' : '<span class=arw>▸</span>'}</span>`
     : '';
   const btn = `<button data-cbsid="APP001-B23" class="${on ? 'on' : ''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${plus}${chev}</button>`;
   return open ? btn + navFolders(key, fs) : btn;
@@ -7314,7 +7334,7 @@ function navFolders(track, fs) {
   const rows = fs
     .map(
       (item) =>
-        `<button data-cbsid="APP001-B24" class="${UI.folderSel === item.folder_id ? 'on' : ''}" data-testid="nav-folder-${esc(item.folder_id)}" onclick="navToFolder('${esc(item.folder_id)}')" style="padding-inline-start:30px;font-size:var(--fs-2)"><span class="ic" style="font-size:var(--fs-2)">📁</span>${esc(item.name)}${item.count ? `<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${item.count}</span>` : ''}</button>`
+        `<button data-cbsid="APP001-B24" class="${UI.folderSel === item.folder_id ? 'on' : ''}" data-testid="nav-folder-${esc(item.folder_id)}" data-fid="${esc(item.folder_id)}" onclick="navToFolder(this.dataset.fid)" style="padding-inline-start:30px;font-size:var(--fs-2)"><span class="ic" style="font-size:var(--fs-2)">📁</span>${esc(item.name)}${item.count ? `<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${item.count}</span>` : ''}</button>`
     )
     .join('');
   /* The "＋ New folder" row that used to live here has moved onto the track button itself — see menuBtn. It was
@@ -7890,7 +7910,7 @@ function ccCatPickHTML() {
      are where they will be, greyed, and the real rows replace them in place. Nothing moves when the data lands. */
   if (UI._catState === 'loading') return CBCatUI.skeletonHTML({ rows: 8 });
   if (!(STORE.catalogue || []).length)
-    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3)">${UI._catState === 'error' ? esc(MSG.catalogueLoadErr()) : 'Your catalogue is empty — a chit needs at least one line item. <a data-cbsid="RAL001-C01" onclick="closeModal();navTo(\'catalogue\')" style="color:var(--blue);cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
+    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3)">${UI._catState === 'error' ? esc(MSG.catalogueLoadErr()) : 'No items yet — a chit needs at least one line item. <a data-cbsid="RAL001-C01" onclick="closeModal();navTo(\'catalogue\')" style="color:var(--blue);cursor:pointer;font-weight:600">Add a product in Catalogue &rarr;</a>'}</div>`;
   /**
    * ── THE FOURTH PLACE ─────────────────────────────────────────────────────────────────────────────────────────
    * Athi, 2026-08-08: *"the same functionality should be used in storefront and in self compose as well, these are
@@ -8128,6 +8148,7 @@ function ccRenderCatPick() {
 async function ensureCatalogue(force) {
   if (!force && (STORE.catalogue || []).length) return STORE.catalogue;
   if (_catLoading) return _catLoading;
+  _catFailed = false;
   _catLoading = (async function () {
     try {
       const rows = (await api('prodList')) || [];
@@ -8149,6 +8170,7 @@ async function ensureCatalogue(force) {
       });
     } catch (e) {
       STORE.catalogue = STORE.catalogue || [];
+      _catFailed = true; /* WALK-N N-F-01: a read that FAILED is told apart from a catalogue that is EMPTY */
     }
     _catLoading = null;
     return STORE.catalogue;
@@ -8156,13 +8178,20 @@ async function ensureCatalogue(force) {
   return _catLoading;
 }
 var _catLoading = null;
+var _catFailed = false; /* set by ensureCatalogue when the read failed; cleared at the start of the next read */
 /** what kind of chit compose starts (purpose, business_json) and whether "Ask for a quote" starts ticked, from the caller's prefill */
 function ccCarryPurpose(prefill) {
   CC.purpose = (prefill && prefill.purpose) || null;
   CC.business_json = (prefill && prefill.business_json) || null;
   CC.rfq = !!(CC.business_json && CC.business_json.deal_type === 'rfq'); /* RAIL-117: the compose switch "Ask for a quote" */
 }
+/** the one sentence a view-only login is shown where Compose is greyed or refused */
+function composeViewOnlyWhy() {
+  return tx('Your login can read but not send: ask the owner for editor access to compose.');
+}
 async function compose(prefill) {
+  /* WALK-N N-F-02: never a live Compose for a view-only login - the send is refused by the api, so say why instead of opening a form that cannot be sent */
+  if (typeof viewOnlyLogin === 'function' && viewOnlyLogin()) return toast(composeViewOnlyWhy());
   UI.drawer = false;
   CC = { items: prefill && prefill.items ? prefill.items.slice() : [], rcpts: prefill && prefill.recipients ? prefill.recipients.slice() : [], fields: {} };
   UI._forwardFrom = (prefill && prefill.forwardFrom) || null;
@@ -8240,40 +8269,7 @@ async function compose(prefill) {
   UI._ccFlow.paintFoot();
   // Now that the modal is OPEN, fetch YOUR products and fill the picker in place (non-supplier only). Keeps any cached
   // list on failure; only shows the error state if we had nothing. ccRenderCatPick is a no-op if the modal was closed.
-  if (!UI._supplier) {
-    try {
-      /* ⭐ Through the SHARED loader — the mapping below moved into ensureCatalogue() so the worklist picker
-         and compose fill STORE.catalogue the same way. Two mappings of one record is how the same product
-         obeyed different rules on different screens, which the note below records happening once already. */
-      await ensureCatalogue(true);
-      /**
-       * ⚠️⚠️ CARRY THE WHOLE RECORD. THIS LINE USED TO ENUMERATE THREE FIELDS AND THROW THE REST AWAY.
-       *
-       * Athi, 2026-08-15: *"product should be able to carry million parameters if required, what we have is
-       * sample"*. He is right, and the backend already agrees — `item_data` is jsonb and stores whatever is put
-       * in it. Measured with a real Pochampally silk record: 16 fields in (sku, gtin, hsn, gi_certificate,
-       * handloom_mark, tier pricing, incoterm, lead_time_days, moq, care, notes_for_buyer, nested origin and
-       * attributes) and THREE fields out. Everything a trade document actually needs was discarded here, before
-       * any screen could see it.
-       *
-       * ⚠️ AND IT SILENTLY DISABLED THE ORDER MODELS. `order:{model:'pack',step:6}` died on this line, so a
-       * product sold in sixes became a loose count in compose — while Suppliers and Network, which pass the
-       * catalogue payload through untouched, enforced it correctly. The same product obeying two different rules
-       * depending on which screen you opened.
-       *
-       * The rule now: SPREAD, never enumerate. `particulars` is added as the display alias the flat shape uses;
-       * nothing is removed. A field added to the catalogue next month arrives here without anyone editing this.
-       */
-      /* ⚠️ The map that stood here is now inside ensureCatalogue(), called above. It is deliberately NOT left
-         duplicated here: two mappings of one record is precisely how the quantity models died on this line
-         once before, with Suppliers and Network enforcing a rule compose had quietly dropped. */
-      UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
-    } catch (e) {
-      UI._catState = (STORE.catalogue || []).length ? 'ready' : 'error';
-    }
-    ccCartSync(); // the products just arrived — point the cart at them before painting it
-    ccRenderCatPick();
-  }
+  if (!UI._supplier) await composeFillCatalogue();
 }
 /**
  * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -9808,7 +9804,7 @@ function assistPage(key) {
         `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(item.title)}</div>${item.rows.map((entry, index) => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${index ? 'border-top:0.5px solid #F0ECE2' : ''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(entry[0])}</span><span style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">${esc(entry[1])}</span></div>`).join('')}</div>`
     )
     .join('');
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key === 'order' ? 'Order' : 'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input data-cbsid="PNL001-I05" class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button data-cbsid="PNL001-B08" style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:var(--fs-2);color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key === 'order' ? 'Order' : 'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input data-cbsid="PNL001-I05" class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button data-cbsid="PNL001-B08" style="${_BTN}" onclick="mAskFree(this.dataset.xa)" data-xa="${esc(key)}">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:var(--fs-2);color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal() {
   const ent = (typeof SESSION !== 'undefined' && SESSION.entity) || '';
@@ -11307,11 +11303,10 @@ function supInfoCardHTML(x) {
     '\')">' +
     tx('✎ Edit') +
     '</button>' +
-    '<button data-cbsid="BUS002-B09" data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\'' +
-    esc(x.bridge_id) +
-    "','" +
-    String(supName(x)).replace(/[\\']/g, '') +
-    '\')">Passport <span class=arw>→</span></button>' +
+    '<button data-cbsid="BUS002-B09" data-testid="sup-passport" data-bid="' + esc(x.bridge_id) +
+    '" data-nm="' +
+    esc(String(supName(x))) +
+    '" onclick="event.stopPropagation();viewSupplierPassport(this.dataset.bid,this.dataset.nm)">Passport <span class=arw>→</span></button>' +
     '<button data-cbsid="CMP008" data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\'' +
     x.supplier_list_id +
     '\')" style="margin-inline-start:auto;color:var(--disp)">' +
@@ -11609,9 +11604,9 @@ function supFindBodyHTML() {
               esc(d.unit || 'unit') +
               (item.item_id
                 ? ' <button data-cbsid="BUS011-B01" type="button" data-testid="enq-ask" onclick="enquiryOpen(\'' +
-                  esc(item.item_id) +
+                  escJs(item.item_id) +
                   "','" +
-                  esc(String(d.name || d.product || 'item').replace(/'/g, '')) +
+                  escJs(d.name || d.product || 'item') +
                   '\')" style="margin-inline-start:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">' +
                   tx('Ask') +
                   '</button>'
@@ -12160,7 +12155,7 @@ function platRowHTML(r) {
     '" data-testid="plat-row-' +
     esc(r.user_id || r.identity_id) +
     '" onclick="selectPlat(\'' +
-    esc(r.identity_id) +
+    escJs(r.identity_id) +
     '\')">' +
     '<div class="main2">' +
     /* line 1 · WHO, and how alive — the dot gets a soft ring so it reads as a state, not a bullet */
@@ -14377,9 +14372,9 @@ function custNamedGroupsHTML(c) {
         '"><input data-cbsid="BUS010-I01" type="checkbox" ' +
         (on ? 'checked' : '') +
         ' onchange="custToggleNamedGroup(\'' +
-        esc(c.customer_list_id) +
+        escJs(c.customer_list_id) +
         "','" +
-        esc(item) +
+        escJs(item) +
         '\',this.checked)" style="margin:0 4px 0 0;vertical-align:middle">' +
         esc(item) +
         '</label>'
@@ -14392,9 +14387,9 @@ function custNamedGroupsHTML(c) {
     '" data-testid="cust-ngroup-new" placeholder="' +
     tx('+ new group') +
     '" style="width:130px;padding:3px 6px" onkeydown="if(event.key===\'Enter\')custAddNamedGroup(\'' +
-    esc(c.customer_list_id) +
+    escJs(c.customer_list_id) +
     '\')"><button data-cbsid="CMP007" class="btn2" data-testid="cust-ngroup-add" onclick="custAddNamedGroup(\'' +
-    esc(c.customer_list_id) +
+    escJs(c.customer_list_id) +
     '\')">' +
     tx('Add') +
     '</button></span>';
@@ -14954,7 +14949,7 @@ function supStepReview(x) {
      */
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? ' +
     '<span data-cbsid="BUS009-C03" data-testid="sup-open-compose" onclick="composeFromSupplier(\'' +
-    esc(x.supplier_list_id) +
+    escJs(x.supplier_list_id) +
     '\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>'
   );
 }
@@ -14989,7 +14984,7 @@ function supOrderLine(item) {
     item_id: item.item_id || undefined,
     sku: item.code || undefined,
     price: list,
-    total: (+item.qty || 0) * list,
+    total: CBMoney.round((+item.qty || 0) * list),
     comment: item.comment || ''
   };
 }
@@ -15851,7 +15846,7 @@ function supDetailHTML() {
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
     const chip =
       supFactsHTML(x.facts) +
-      `<div style="padding:2px 0 0"><div data-cbsid="BUS009-C04" data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g, '')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad ? 'var(--gold-line)' : 'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad ? 'var(--gold-soft)' : 'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">` +
+      `<div style="padding:2px 0 0"><div data-cbsid="BUS009-C04" data-testid="sup-chip" data-bid="${esc(x.bridge_id)}" data-nm="${esc(String(supName(x)))}" onclick="viewSupplierPassport(this.dataset.bid,this.dataset.nm)" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad ? 'var(--gold-line)' : 'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad ? 'var(--gold-soft)' : 'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">` +
       `<span style="font-size:var(--fs-1);color:${bad ? 'var(--warn-2)' : 'var(--ok-2)'};font-weight:700">${warnTxt}</span>` +
       `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
@@ -15862,7 +15857,7 @@ function supDetailHTML() {
     // has_catalogue, finished loading, and still no cart → the READ failed. Say so; rendering nothing at all would
     // look like a supplier who publishes nothing, which is a different and wrong fact.
     else
-      catcard = `<div class="sec">${tx('Order from them')}</div><div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--disp)">${esc(d.err || 'Could not read their catalogue.')} <span data-cbsid="CMP009" data-cbmount="BUS009-U109" onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">${tx('Try again')}</span></div>`;
+      catcard = `<div class="sec">${tx('Order from them')}</div><div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--disp)">${esc(d.err || 'Could not read their catalogue.')} <span data-cbsid="CMP009" data-cbmount="BUS009-U109" onclick="selectSupplier(this.dataset.xa)" data-xa="${esc(x.supplier_list_id)}" style="cursor:pointer;color:var(--blue);font-weight:600">${tx('Try again')}</span></div>`;
     const stepped = x.has_catalogue && !d.loading && UI._supFlow;
     body =
       chip +
@@ -16609,7 +16604,7 @@ function prodOfferPaint() {
           esc(item.id) +
           '"' +
           ' onclick="prodOfferApply(\'' +
-          esc(item.id) +
+          escJs(item.id) +
           '\', true)">+</button>' +
           (already
             ? '<button data-cbsid="CAT001-B09" type="button" class="badd" title="' +
@@ -16618,7 +16613,7 @@ function prodOfferPaint() {
               ' data-testid="po-del-' +
               esc(item.id) +
               '" onclick="prodOfferApply(\'' +
-              esc(item.id) +
+              escJs(item.id) +
               '\', false)">−</button>'
             : '') +
           '</div>'
@@ -16695,8 +16690,8 @@ function prodCategoriseAsk() {
       return `<div class="bulkrow" data-testid="bulk-catg-${esc(item.id)}">
       <span class="bn">${esc(item.name)}</span>
       <span class="bh">${n ? `${n} of ${ids.length} already` : ''}</span>
-      <button data-cbsid="CAT001-B10" type="button" class="badd" onclick="prodBulkToggle('${esc(item.id)}','add',this)">+ Attach</button>
-      <button data-cbsid="CAT001-B11" type="button" class="brem" ${n ? '' : 'disabled'} onclick="prodBulkToggle('${esc(item.id)}','remove',this)">− Remove</button>
+      <button data-cbsid="CAT001-B10" type="button" class="badd" data-pid="${esc(item.id)}" onclick="prodBulkToggle(this.dataset.pid,'add',this)">+ Attach</button>
+      <button data-cbsid="CAT001-B11" type="button" class="brem" ${n ? '' : 'disabled'} data-pid="${esc(item.id)}" onclick="prodBulkToggle(this.dataset.pid,'remove',this)">− Remove</button>
     </div>`;
     })
     .join('');
@@ -17069,7 +17064,7 @@ function prodCatgStripHTML(ctx) {
      setting a second, different selected style here is how the two drift apart — this one said blue-on-tint while
      the class said white-on-accent, so the same chip looked like two different controls on two screens. */
   const chip = (v, label, count, on) => `<button data-cbsid="CAT001-B16" type="button" class="cbpick-chip${on ? ' on' : ''}" data-testid="cat-catgfilter"
-      onclick="${ctx && ctx.onPick ? ctx.onPick(v) : `prodCatgFilter('${esc(v)}')`}">${esc(label)}${count == null ? '' : ` <span class="cbpick-chipn">${count}</span>`}</button>`;
+      data-catg="${esc(v)}" onclick="${ctx && ctx.onPick ? ctx.onPick(v) : 'prodCatgFilter(this.dataset.catg)'}">${esc(label)}${count == null ? '' : ` <span class="cbpick-chipn">${count}</span>`}</button>`;
   return (
     `<div class="cbpick-catgs" style="margin-top:8px">` +
     chip('', 'All', null, !g) +
@@ -17331,7 +17326,7 @@ function prodRowHTML(p, ctx) {
     testid: () => 'cat-product-' + id,
     rowClass: () => 'cbclick' + (!ctx && id === UI.prodSel ? ' sel' : '') + (ticked ? ' picked' : ''),
     rowAttrs: () =>
-      `onclick="${ctx ? (ctx.onToggle ? ctx.onToggle(id) : '') : picking ? `prodTogglePick('${id}')` : `selectProduct('${id}')`}"${st !== 'available' ? ' style="opacity:.7"' : ''}`,
+      `data-xa="${esc(id)}" onclick="${ctx ? (ctx.onToggle ? ctx.onToggle(id) : '') : picking ? 'prodTogglePick(this.dataset.xa)' : 'selectProduct(this.dataset.xa)'}"${st !== 'available' ? ' style="opacity:.7"' : ''}`,
     lead: picking
       ? () => `<span class="cbx ${ticked ? 'on' : ''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked ? '✓' : ''}</span>`
       : undefined,
@@ -18398,9 +18393,9 @@ function ctOfferField(d) {
             ' <button data-cbsid="CAT005-B19" type="button" data-testid="cat-offer-exclude-' +
             esc(item.id) +
             '" onclick="prodOfferExcludeToggle(\'' +
-            esc(pid) +
+            escJs(pid) +
             "','" +
-            esc(item.id) +
+            escJs(item.id) +
             '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--on-bg);cursor:pointer;padding:0 6px">' +
             (excluded ? esc(tx('include')) : esc(tx('exclude'))) +
             '</button>' +
@@ -18419,7 +18414,7 @@ function ctOfferField(d) {
           esc(terms + (win ? ' · ' + win : '')) +
           '"' +
           ' onclick="ctToggleOffer(\'' +
-          esc(item.id) +
+          escJs(item.id) +
           '\', this)">' +
           (on ? '✓ ' : '') +
           esc(item.name) +
@@ -19346,7 +19341,7 @@ function prodAvailBlock(d, id) {
           <option value="erp">from the ERP</option>
           <option value="iot">from a sensor</option>
         </select>
-        <button data-cbsid="CAT005-B03" class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
+        <button data-cbsid="CAT005-B03" class="pri" onclick="saveAvail(this.dataset.xa)" data-xa="${esc(id)}" style="padding:7px 13px">${tx('Report it')}</button>
       </div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">Stamped with the time you report
         it. A connector can write this far more often than a person — the number is only as good as its date.</div>
@@ -19741,7 +19736,7 @@ function prodSectionHTML(k, d, id, editing) {
       return editing
         ? `<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`
         : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}` +
-            `<div style="padding:9px 12px"><button data-cbsid="CAT005-B07" class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
+            `<div style="padding:9px 12px"><button data-cbsid="CAT005-B07" class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields(this.dataset.xa)" data-xa="${esc(id)}">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
             `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">${tx('synonyms, status, and anything imported')}</span></div>`;
     case 'categories':
       return editing ? ctCategoryField(d) : prodCatgViewHTML(d);
@@ -20277,16 +20272,16 @@ function prodMediaTab(d, edit) {
   const id = UI.prodSel || d.item_id || d.id || '';
   const list = Array.isArray(d.media) ? d.media : [];
   if (typeof cbMediaGallery === 'function') {
-    const gal = cbMediaGallery(d, { apiBase: CFG.API_BASE || '', itemId: id, onRemove: edit ? "prodMediaRemove('" + esc(id) + "','{id}')" : null });
+    const gal = cbMediaGallery(d, { apiBase: CFG.API_BASE || '', itemId: id, onRemove: edit ? "prodMediaRemove('" + escJs(id) + "','{id}')" : null });
     return (
       `<div class="sec">${tx('Media')}</div>` +
       (gal
         ? `<div style="padding:0 12px">${gal}</div>`
         : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No pictures or videos yet.'))}</div>`) +
       (edit
-        ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+        ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${escJs(id)}', this.files)">` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures up to 8 MB each; the first is the cover the storefront shows. Saved at once — not with this form.')}</div>` +
-          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
+          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink(this.dataset.xa)" data-xa="${esc(id)}">${tx('Add video')}</button></div>` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>`
         : '')
     );
@@ -20300,7 +20295,7 @@ function prodMediaTab(d, edit) {
         : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`) +
     `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name || '')}">${esc(x.name || '')}</div>` +
     (edit
-      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
+      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${escJs(id)}','${escJs(x.id)}')">✕</button>`
       : '') +
     `</div>`;
   return (
@@ -20309,7 +20304,7 @@ function prodMediaTab(d, edit) {
       ? `<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px">${list.map(tile).join('')}</div>`
       : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(d.image ? tx('One picture, by link — upload here to keep it with the product.') : tx('No pictures or videos yet.'))}</div>`) +
     (edit
-      ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I14" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+      ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I14" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${escJs(id)}', this.files)">` +
         `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures or videos, up to 8 MB each. The first picture is the cover the storefront shows. Saved at once — not with this form.')}</div></div>`
       : '')
   );
@@ -20638,9 +20633,9 @@ function prodIdentifiersTab(d, edit) {
         })
       );
       return (
-        `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span data-cbsid="CAT005-C09" class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
+        `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span data-cbsid="CAT005-C09" class="idval mono" title="${esc(tx('copy'))}" data-xa="${esc(x.id)}" onclick="event.stopPropagation();try{navigator.clipboard.writeText(this.dataset.xa);toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
         (edit && xi >= 0
-          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
+          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${escJs(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
           : '') +
         '</div>'
       );
@@ -20655,7 +20650,7 @@ function prodIdentifiersTab(d, edit) {
       <input data-cbsid="CAT005-I17" class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
       <input data-cbsid="CAT005-I18" class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
       <select data-cbsid="CAT005-S05" class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
-      <button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
+      <button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd(this.dataset.xa)" data-xa="${esc(id)}">${tx('Add id')}</button></div>
       <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting any of these ids lands on this product.')}</div>`
     : '';
   return `<div class="sec">${tx('Identifiers')}</div>` + table + add + prodBarcodeTab(d);
@@ -21109,7 +21104,7 @@ function prodLifecycleTab(d, id) {
   return (
     `<div class="sec">${tx('Lifecycle')}</div>` +
     `<table class="cbcat-sheet" data-testid="prod-lifecycle" style="margin:0 12px"><tbody>` +
-    `<tr><td>${tx('Status')}</td><td><b data-testid="prod-lifecycle-status">${esc((rows.find((item) => item[0] === st) || [st, st])[1])}</b> <span style="color:var(--grey)">${esc((rows.find((item) => item[0] === st) || [])[2] || '')}</span>${d.redundant_by ? ' · ' + esc(tx('replaced by') + ' ' + String(d.redundant_by)) : ''}</td><td><button data-cbsid="CAT005-B21" class="composebtn" data-testid="prod-lifecycle-status-pick" onclick="prodStatusPick('${esc(id)}')">${tx('Change')}</button></td></tr>` +
+    `<tr><td>${tx('Status')}</td><td><b data-testid="prod-lifecycle-status">${esc((rows.find((item) => item[0] === st) || [st, st])[1])}</b> <span style="color:var(--grey)">${esc((rows.find((item) => item[0] === st) || [])[2] || '')}</span>${d.redundant_by ? ' · ' + esc(tx('replaced by') + ' ' + String(d.redundant_by)) : ''}</td><td><button data-cbsid="CAT005-B21" class="composebtn" data-testid="prod-lifecycle-status-pick" onclick="prodStatusPick(this.dataset.xa)" data-xa="${esc(id)}">${tx('Change')}</button></td></tr>` +
     `<tr><td>${tx('Since')}</td><td>${first ? esc(fmtDateTime(first.valid_from)) : grey(tx('reading…'))}</td><td></td></tr>` +
     `<tr><td>${tx('Last change')}</td><td>${last ? esc(fmtDateTime(last.valid_from)) + ' · ' + esc(prodWhoName(last)) : grey(tx('reading…'))}</td><td></td></tr>` +
     `</tbody></table>` +
@@ -21201,7 +21196,7 @@ function prodBarcodeTab(d) {
     `<div class="sec">${tx('Barcode')}</div>` +
     `<div data-testid="prod-barcode" data-code="${esc(code)}" style="padding:10px 12px;overflow-x:auto;background:#fff;color:#000;border-radius:9px;margin:0 12px;max-width:100%">${r.svg}</div>` +
     `<div style="padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:var(--fs-2)">` +
-    `<button data-cbsid="CAT005-B14" class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>` +
+    `<button data-cbsid="CAT005-B14" class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${escJs(code)}')">🖨️ ${tx('Print label')}</button>` +
     `<span style="color:var(--grey)">${tx('Code 128 · internal · a GS1 barcode needs an assigned prefix.')}</span></div>`
   );
 }
@@ -21354,7 +21349,7 @@ function prodPricingHTML(d) {
       ? `<div data-testid="prod-pricing-resolved"><b>${esc(CBPricing.describe(row))}</b></div>`
       : `<div data-testid="prod-pricing-resolved"><b>${esc(tx('List price'))}</b> ${grey(esc(tx('— no structure cited')))}</div>` +
         (defs.length
-          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select data-cbsid="CAT005-S07" class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button data-cbsid="CAT005-B15" class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
+          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select data-cbsid="CAT005-S07" class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button data-cbsid="CAT005-B15" class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach(this.dataset.xa)" data-xa="${esc(UI.prodSel || '')}">${tx('Attach this structure')}</button></div>`
           : '');
   /* the outcome: the bands at this product's list price, and the unit price at the sample quantity */
   const bands = CBPricing.bands(row, list);
@@ -21535,7 +21530,7 @@ function prodTaxAttachHTML(d, r, slabs) {
   return (
     `<div data-testid="prod-tax-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">` +
     `<select data-cbsid="CAT005-S09" class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>` +
-    `<button data-cbsid="CAT005-B16" class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
+    `<button data-cbsid="CAT005-B16" class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${escJs(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
   );
 }
 async function prodTaxAttach(id) {
@@ -21825,7 +21820,7 @@ function prodDetailHTML() {
       prodRowsVisible()
         .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, true)))
         .join('') + `<div class="err" id="ct_err" style="margin-top:8px"></div>`;
-    bar = `<button data-cbsid="CMP001" class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setProdMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" data-testid="cat-save" onclick="saveProduct(this.dataset.xa)" data-xa="${esc(id)}">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setProdMode('view')">${tx('Cancel')}</button>`;
   } else {
     /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
@@ -21834,7 +21829,7 @@ function prodDetailHTML() {
     body = prodRowsVisible()
       .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, false)))
       .join('');
-    bar = `<button data-cbsid="CMP012" class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
+    bar = `<button data-cbsid="CMP012" class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick(this.dataset.xa)" data-xa="${esc(id)}">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct(this.dataset.xa)" data-xa="${esc(id)}">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
      stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
@@ -22012,7 +22007,7 @@ function prodScheduledHTML(id) {
     rows
       .map(
         (item) =>
-          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button data-cbsid="CMP003" class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(item.schedule_id)}')">${tx('Cancel')}</button></div>`
+          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button data-cbsid="CMP003" class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${escJs(id)}','${escJs(item.schedule_id)}')">${tx('Cancel')}</button></div>`
       )
       .join('') +
     `</div>`
@@ -22341,7 +22336,7 @@ function taskPanel() {
             : `<span data-testid="crumb-track">${_tname}</span>`
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
-      ${_fsel ? `<span data-cbsid="RAL002-C23" data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
+      ${_fsel ? `<span data-cbsid="RAL002-C23" data-testid="folder-rename" onclick="renameFolder('${escJs(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder(this.dataset.xa)" data-xa="${esc(_fsel.folder_id)}" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
       ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
@@ -22399,6 +22394,11 @@ function countStates() {
     if (o[item.state] != null) o[item.state]++;
   });
   return o;
+}
+/** WALK-X X-F-03: the open tab holds nothing while another tab holds work → that tab's name; else null (the tab stays) */
+function firstTabWithWork(buckets, current) {
+  if (!buckets || (buckets[current] && buckets[current].c > 0)) return null;
+  return ['open', 'act', 'close'].find((tab) => tab !== current && buckets[tab] && buckets[tab].c > 0) || null;
 }
 // Full-set per-state totals from the server rollup (independent of what's loaded in the panel).
 function rollupBuckets() {
@@ -22479,122 +22479,39 @@ function chitNoPayWhy(c) {
 function chitMarkPaidButton(c, quoted) {
   const why = chitNoPayWhy(c);
   const look = 'border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:' + (why ? 'not-allowed;opacity:.5' : 'pointer');
-  const act = why ? ` aria-disabled="true" title="${esc(why)}" aria-label="${esc(tx('Mark paid') + ' — ' + why)}"` : ` onclick="chitMarkPaid('${c.id}', ${Number(quoted) || 0})"`;
+  const act = why ? ` aria-disabled="true" title="${esc(why)}" aria-label="${esc(tx('Mark paid') + ' — ' + why)}"` : ` onclick="chitMarkPaid(this.dataset.xa, ${Number(quoted) || 0})" data-xa="${esc(c.id)}"`;
   return `<button data-cbsid="DTL001-B01" type="button" data-testid="chit-mark-paid"${act} style="${look}">${esc(tx('Mark paid'))}</button>`;
 }
-function chitPaymentCell(c, cell, quoted) {
+/** WALK-X X-F-12: a credit or debit note has no payment-due state; its cell says where the note stands (the chit's own status word), never Unpaid / Mark paid */
+function chitIsNote(c) {
+  const h = (c && c.header) || {};
+  return /^(credit|debit)_note$/.test(String((c && (c.kind || c.purpose)) || h.purpose || ''));
+}
+function chitNoteWord(c, pay) {
+  if (pay) return 'Refunded';
+  const word = String(chitStatusWord(c) || '').replace(/_/g, ' ').trim();
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : 'Open';
+}
+/** true when this chit's payment cell is not drawn at all: the buyer's copy of an order, or a credit / debit note */
+function chitPaymentCellHidden(c) {
   /* ⚠️ THE SELLER'S CELL ONLY (Athi, 2026-09-05, from Chola Auto Care's Order tab: "they cannot make the payment settings").
      The party who SENT the order is the buyer: no Mark paid, no QR of their own — the seller records the payment on the
      seller's copy. A buyer's view of paying (the seller's QR) is a separate thing, not this cell. */
   const h = (c && c.header) || c || {};
-  if (h.sender_entity_id && typeof SESSION !== 'undefined' && SESSION && SESSION.entity && h.sender_entity_id === SESSION.entity) return '';
+  if (h.sender_entity_id && typeof SESSION !== 'undefined' && SESSION && SESSION.entity && h.sender_entity_id === SESSION.entity) return true;
+  return /^(credit_note|debit_note)$/.test(chitPurposeOf(c)); /* AU-F-11: a credit note is money owed back, not a bill to be paid: no Unpaid, no Mark paid, no QR */
+}
+function chitPaymentCell(c, cell, quoted) {
+  if (chitPaymentCellHidden(c)) return '';
   const bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
   const pay = bj.payment || null;
+  if (chitIsNote(c)) return cell(tx('Settlement'), `<span data-testid="chit-note-status" style="color:var(--grey)">${esc(tx(chitNoteWord(c, pay)))}</span>`); /* WALK-X X-F-12: a credit or debit note is not a debt: no Unpaid, no Mark paid */
   const nestedVal = pay
-    ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method || '').toUpperCase())}${pay.ref ? ' · ' + esc(pay.ref) : ''}</span> <button data-cbsid="RAL002-B29" type="button" data-testid="chit-unpay" onclick="chitUnpay('${c.id}')" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
-    : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx(chitUnpaidWord(c)))}</span> ${chitMarkPaidButton(c, quoted)} ${payHasUpi() ? `<button data-cbsid="DTL001-B02" type="button" data-testid="chit-show-qr" onclick="chitShowQr('${c.id}', ${Number(quoted) || 0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>` : ''}`;
+    ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method || '').toUpperCase())}${pay.ref ? ' · ' + esc(pay.ref) : ''}</span> <button data-cbsid="RAL002-B29" type="button" data-testid="chit-unpay" onclick="chitUnpay(this.dataset.xa)" data-xa="${esc(c.id)}" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
+    : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx(chitUnpaidWord(c)))}</span> ${chitMarkPaidButton(c, quoted)} ${payHasUpi() ? `<button data-cbsid="DTL001-B02" type="button" data-testid="chit-show-qr" onclick="chitShowQr(this.dataset.xa, ${Number(quoted) || 0})" data-xa="${esc(c.id)}" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>` : ''}`;
   return cell(tx('Payment'), nestedVal);
 }
 /* CX0: payHasUpi · payModeOpts live in app/helpers.js (every page's) — UPI is offered only where the shop's pack carries it */
-/* PAY-FIX H2: one key per OPEN of the sheet — a retry of this press repeats it (the books answer 'Already recorded'), a second press on the same chit mints a new one */
-let PAY_PRESS_REF = null;
-function chitMarkPaid(id, amount) {
-  PAY_PRESS_REF = 'press-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
-    <select data-cbsid="DTL001-S01" class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
-    <input data-cbsid="DTL001-I01" class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
-    <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc(typeof CBLocale !== 'undefined' && CBLocale.symbol && moneyCode() ? CBLocale.symbol(moneyCode()) : '')}</b><input data-cbsid="DTL001-I02" class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount || ''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
-    <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${esc(tx('Cancel'))}</button><button data-cbsid="DTL001-B03" class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
-}
-/** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
-function readPayForm() {
-  const field = (fieldId) => (document.getElementById(fieldId) || {}).value;
-  return { method: field('pay_method') || (payHasUpi() ? 'upi' : 'cash'), ref: field('pay_ref') || '', amount: parseFloat(field('pay_amount')) };
-}
-/** keep the recorded payment on the open row (and its header copy), so the sheet shows it without a re-read */
-function keepPaymentOnRow(id, payment) {
-  const row = UI.rows && UI.rows.find((x) => x.id === id);
-  if (!row) return;
-  row.business_json = Object.assign({}, row.business_json || {}, { payment });
-  if (row.header) row.header.business_json = Object.assign({}, row.header.business_json || {}, { payment });
-}
-/** what a Mark-paid press sends: the form as read when Record was pressed (kept across the books' question) and the codes the owner confirmed */
-function chitPayBody(form, acknowledge) {
-  const body = { method: form.method, ref: form.ref || undefined, amount: isFinite(form.amount) ? form.amount : undefined, client_ref: PAY_PRESS_REF || undefined };
-  if (acknowledge && acknowledge.length) body.acknowledge = acknowledge;
-  return body;
-}
-async function chitPaySubmit(id, form, acknowledge) {
-  form = form || readPayForm();
-  try {
-    const reply = await api('chitPay', { params: { id }, body: chitPayBody(form, acknowledge) });
-    closeModal();
-    toast(reply && reply.replayed ? tx('Already recorded') : tx('Payment recorded ✓'));
-    keepPaymentOnRow(id, reply.payment);
-    if (typeof openChit === 'function') openChit(id, true);
-  } catch (e) {
-    if (!chitPayAsk(id, form, e)) toast((e && e.message) || tx('Could not record'), true);
-  }
-}
-/**
- * FIN-53 (Athi, 2026-10-29): the books' one question on a Mark-paid — 409 ALREADY_PAID with `warnings` ("More than is owed" · "Already
- * paid?") — is a deliberate confirm that names the amount over (the server's over_words; the web composes no money words), never a toast
- * that asks. Yes re-sends the SAME press with every warning's code acknowledged; the books keep the rest as an advance. → true when asked.
- */
-function chitPayAsk(id, form, e) {
-  const warnings = e && e.status === 409 && e.data && Array.isArray(e.data.warnings) ? e.data.warnings : [];
-  if (!warnings.length) return false;
-  const over = warnings.find((warning) => warning.over_words);
-  closeModal();
-  confirmAsk(
-    e.data.error || tx('Already paid?'),
-    '<p>' + esc(warnings.map((warning) => warning.words).join(' ')) + '</p>',
-    over ? tx('Keep {amount} as an advance').replace('{amount}', over.over_words) : tx('Record it again'),
-    /* the Yes carries the figure the person SAW ({ code, over_minor }): a stale one (a colleague recorded in between) is asked again by the server */
-    () => chitPaySubmit(id, form, warnings.map((warning) => (warning.over_minor != null ? { code: String(warning.code), over_minor: warning.over_minor } : String(warning.code))))
-  );
-  return true;
-}
-/** the QR for a walk-in customer: the seller's own UPI id (the profile map / Business identity row upi_id) */
-async function chitShowQr(id, amount) {
-  /* the cached party may predate the id (a sync landed after the screen opened) — read once more when it has none */
-  let upi = UI._party && UI._party.upi_id;
-  if (!upi) {
-    try {
-      const reply = await api('profileGet');
-      UI._party = (reply && reply.invoice_party) || {};
-      upi = UI._party.upi_id;
-    } catch (_) {}
-  }
-  if (!upi) {
-    modal(
-      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP203' }
-    );
-    return;
-  }
-  const link =
-    'upi://pay?pa=' +
-    encodeURIComponent(upi) +
-    '&pn=' +
-    encodeURIComponent(String(SESSION.name || '').slice(0, 60)) +
-    (amount ? '&am=' + encodeURIComponent(String(CBMoney.round(amount))) : '') +
-    '&cu=' +
-    encodeURIComponent(moneyCode() || '') +
-    '&tn=' +
-    encodeURIComponent('CB-' + String(id).slice(0, 8));
-  let img = '';
-  try {
-    if (typeof qrcode === 'function') {
-      const qr = qrcode(0, 'M');
-      qr.addData(link);
-      qr.make();
-      img = qr.createImgTag(5, 8).replace('<img ', '<img data-testid="chit-upi-qr" alt="UPI QR" ');
-    }
-  } catch (_) {}
-  modal(
-    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP204' }
-  );
-}
 function toggleListHelp() {
   UI.listHelp = !UI.listHelp;
   paintMain();
@@ -23211,9 +23128,10 @@ function modal(html, wide, opt) {
   rememberModalOpener(node);
   UI._composeModal = false;
   node.style.display = '';
-  node.innerHTML = `<div data-cbsid="APP001-C18" class="mover" onclick="modalBackdrop()"><div data-cbsid="APP001-C19" class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
+  node.innerHTML = `<div data-cbsid="APP001-C18" class="mover" onclick="modalBackdrop()"><div data-cbsid="APP001-C19" data-pop="host" class="modal${wide ? ' wide' : ''}" role="dialog" aria-modal="true" tabindex="-1" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
   mvModal(node, wide, opt);
   modalStamp(node, opt && opt.pop);
+  modalDialogOpen(node);
 }
 function modalBackdrop() {
   if (UI._composeModal) {
@@ -23960,7 +23878,7 @@ async function openNotifications(repaint) {
       on = pick && UI.notifSel && UI.notifSel.has(x.log_id);
     var click = pick
       ? x.log_id
-        ? ' onclick="notifToggle(\'' + x.log_id + '\')" style="cursor:pointer"'
+        ? ' data-xa="' + esc(x.log_id) + '" onclick="notifToggle(this.dataset.xa)" style="cursor:pointer"'
         : ''
       : x.chit
         ? ' onclick="notifOpen(\'' + x.chit + '\')" style="cursor:pointer"'
@@ -24805,6 +24723,23 @@ function paintRowsKeepScroll() {
   });
   pgPaintTotal();
 }
+/** keep the rollup answer (per-state counts, the open disputes) on the page state, stamped with when it came */
+function keepRollupReply(reply) {
+  UI._rollupAt = Date.now();
+  UI.rollup = (reply && reply.groups) || [];
+  UI.disputeOpen = (reply && reply.dispute_open) || 0;
+}
+/** WALK-X X-F-03: once per session the inbox opens on the tab that holds the work (a tab the person then picks is theirs); true when it switched tab and the list must be read again */
+function openTabWithWork() {
+  const pick = UI._tabAutoDone ? null : firstTabWithWork(rollupBuckets(), UI.state);
+  UI._tabAutoDone = true;
+  if (!pick || UI.search) return false;
+  UI.state = pick;
+  UI.sel = null;
+  UI.detail = null;
+  bgRenderApp(); /* a loader never repaints over an open modal */
+  return true;
+}
 async function loadList(silent) {
   // silent = a background auto-refresh: NEVER show the loading spinner/skeleton, don't touch the detail pane — just
   // fetch and patch the rows in place. The spinner shows only on the FIRST / manual load (silent falsy).
@@ -24945,10 +24880,9 @@ async function loadList(silent) {
     if (_rollupP) {
       try {
         const rl = await _rollupP;
-        UI._rollupAt = Date.now();
-        UI.rollup = (rl && rl.groups) || [];
-        UI.disputeOpen = (rl && rl.dispute_open) || 0;
+        keepRollupReply(rl);
         if (_left()) return;
+        if (openTabWithWork()) return loadList(true);
         paintRowsOnly();
       } catch (_) {
         UI.rollup = [];
@@ -25734,24 +25668,45 @@ function frozenMoney(c) {
    2026-10-02 11:14 IST) a bill could be issued without stored figures; such a bill says so, plainly, as a KNOWN error — no number.
    A bill issued after it with no figures is a real fault and shows the red error. */
 const ONE_COMPUTATION_SINCE = '2026-10-02T05:44:00Z';
+/** AU-F-11: the document's own head (title, supplier name · tax number · address, date, number; on a credit note the invoice and the reason) on a rail invoice or note, from the ONE painter, app/chit-doc-head.js */
+function chitDocHead(c) {
+  const bj = c.business_json || (c.header && c.header.business_json) || {};
+  return window.CBDocHead ? CBDocHead.html({ purpose: chitPurposeOf(c), bj, no: bj.bill_no || bj.printed_as || '' }) : '';
+}
+/** the chit's purpose, whichever shape carries it: design 1's `kind`, a raw chit's `purpose`, a header's */
+function chitPurposeOf(c) {
+  return String((c && (c.kind || c.purpose)) || (c && c.header && c.header.purpose) || '');
+}
+/** a credit note's refund line, read from what the chit stored (business_json.refund.total); '' when it holds none */
+function frozenRefundHTML(c, totalTid) {
+  const refundTotal = ((c.business_json || (c.header && c.header.business_json) || {}).refund || {}).total;
+  if (typeof refundTotal !== 'number') return '';
+  return `<div class="ir" data-testid="chit-money-refund" style="margin:8px 12px 10px"><span class="nm">${tx('Refund')}</span><span class="qt" data-testid="${totalTid || 'chit-total'}">${fmtMoney(refundTotal, c.currency)}</span></div>`;
+}
+/** what the money block says when the chit holds no frozen figures: hidden, not billed yet, a receipt, a refund, not issued, or the older-bill / error words */
+function frozenMoneyAbsentHTML(c, totalTid) {
+  /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
+  if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
+  /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
+  if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
+  /* BG-F-06: a credit note and a goods receipt are not issued bills: the api sends them with no frozen invoice and no summary money, so the red "No issued figures" and a header "AED 0.00" told the owner a 233.33 return was nothing. A credit note READS the refund it stored (business_json.refund.total); a receipt carries quantities, its lines hold the prices. Never worked out here. */
+  if (c.kind === 'receipt') return `<div class="ir" data-testid="chit-money-receipt" style="margin:8px 12px 10px;color:var(--grey)">${tx('A goods receipt has no bill total.')}</div>`;
+  const refundLine = c.kind === 'credit_note' ? frozenRefundHTML(c, totalTid) : '';
+  if (refundLine) return refundLine;
+  const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
+  if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
+  const older =
+    !!c.issued_at &&
+    new Date(c.issued_at) <
+      new Date(ONE_COMPUTATION_SINCE); /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
+  return older
+    ? `<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
+    : `<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
+}
 function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   const FM = frozenMoney(c);
-  if (!FM) {
-    /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
-    if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
-    /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
-    if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
-    const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
-    if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
-    const older =
-      !!c.issued_at &&
-      new Date(c.issued_at) <
-        new Date(ONE_COMPUTATION_SINCE); /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
-    return older
-      ? `<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
-      : `<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
-  }
-  const html = CBSheet.moneyBlockHTML({ money: FM, cur: c.currency, bj: c.business_json || (c.header && c.header.business_json) || {} }, totalTid);
+  if (!FM) return frozenMoneyAbsentHTML(c, totalTid);
+  const html =CBSheet.moneyBlockHTML({ money: FM, cur: c.currency, bj: c.business_json || (c.header && c.header.business_json) || {} }, totalTid);
   return wrapTid ? `<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>` : html;
 }
 /** the parts of GET /chits/:id that ride onto the open chit unchanged: delivery, assignment, cost-blind flag, unconfirmed change, billed flag */
@@ -26102,6 +26057,11 @@ function rtMountAll(scope) {
       }
     }
   });
+}
+/** a detail tab's label: the word before the count is translated, the (count) after it stays as it is */
+function dtabLabel(l) {
+  const at = l.indexOf(' (');
+  return at > 0 ? tx(l.slice(0, at)) + l.slice(at) : tx(l);
 }
 function backToList() {
   UI.mdetail = false;
@@ -27007,12 +26967,16 @@ function _aiRunPdf() {
     } catch (_) {}
   }, 350);
 }
+/** true when the rail is not empty: rows are on screen, or work waits on another tab (X-F-03) */
+function railHasChitsOrWork() {
+  return (UI.rows && UI.rows.length) || (hasRollup() && ['open', 'act', 'close'].some((tab) => rollupBuckets()[tab].c > 0));
+}
 function detailInner() {
   const c = UI.detail;
   /* ⭐ THE SECOND BRANCH IS THE FIRST SCREEN ANYONE EVER SEES — an account with no chits at all. It named
      Compose in bold prose and then made them go find it. Now it offers it. */
   if (!c)
-    return UI.rows && UI.rows.length
+    return railHasChitsOrWork()
       ? emptyState('🧾', tx('Select a chit'), tx('Pick one from the list to see its content, status and summary.'))
       : emptyState('🚃', tx('Your bogie is empty'), tx('Nothing on your rail yet.'), { label: tx('Compose'), onclick: 'compose()' });
   const back = '';
@@ -27052,7 +27016,7 @@ function detailInner() {
   if (UI.dtab === 'input' && !inputHTML) UI.dtab = 'content';
   if (UI.dtab === 'input') body = inputHTML;
   if (UI.dtab === 'content')
-    body = `<div class="itab">${items}${frozenMoneyHTML(c, 'chit-money', 'chit-total')}</div>
+    body = `<div class="itab">${chitDocHead(c)}${items}${frozenMoneyHTML(c, 'chit-money', 'chit-total')}</div>
      ${quotesHost(c)}${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if (UI.dtab === 'messages') body = messagesTab(c);
   if (UI.dtab === 'status') body = booksBlockHTML(c) + statusTabHtml(c);
@@ -27092,13 +27056,13 @@ function detailInner() {
   }
   const actbar =
     UI.folder === 'drafts'
-      ? `<button data-cbsid="DTL001-B10" class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>`
+      ? `<button data-cbsid="DTL001-B10" class="pri" onclick="resumeDraft(this.dataset.xa)" data-xa="${esc(c.id)}">✏️ Resume &amp; edit</button>`
       : UI.folder === 'trash'
-        ? `<button data-cbsid="DTL001-B11" class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft ? `<button data-cbsid="DTL001-B12" class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>` : ''}`
+        ? `<button data-cbsid="DTL001-B11" class="pri" onclick="restoreChit(this.dataset.xa)" data-xa="${esc(c.id)}">${tx('↩ Restore')}</button>${c.isDraft ? `<button data-cbsid="DTL001-B12" class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit(this.dataset.xa)" data-xa="${esc(c.id)}">${tx('🗑 Delete forever')}</button>` : ''}`
         : UI.folder === 'archive'
-          ? `<button data-cbsid="DTL001-B13" class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>`
+          ? `<button data-cbsid="DTL001-B13" class="pri" onclick="unarchiveChit(this.dataset.xa)" data-xa="${esc(c.id)}">${tx('↩ Unarchive')}</button>`
           : SESSION.role === 'customer'
-            ? `<button data-cbsid="DTL001-B14" onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri ? 'Priority requested' : 'Request priority'}</button><button data-cbsid="DTL001-B15" class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button data-cbsid="DTL001-B16" onclick="askAiOrderDoc()"${outsideAttrs('ai')} title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button data-cbsid="DTL001-B17" onclick="askAiOrder()"${outsideAttrs('ai')} title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button data-cbsid="DTL001-B18" onclick="todo('pdf')">⬇ PDF</button>`
+            ? `<button data-cbsid="DTL001-B14" onclick="toggleCustPri(this.dataset.xa)" data-xa="${esc(c.id)}">⚑ ${c.custPri ? 'Priority requested' : 'Request priority'}</button><button data-cbsid="DTL001-B15" class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button data-cbsid="DTL001-B16" onclick="askAiOrderDoc()"${outsideAttrs('ai')} title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button data-cbsid="DTL001-B17" onclick="askAiOrder()"${outsideAttrs('ai')} title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button data-cbsid="DTL001-B18" onclick="todo('pdf')">⬇ PDF</button>`
             : (function () {
                 /* ⭐ Each action declares itself once; `dactShows` decides whether it is pinned to the row or waits
            under ⋯. The visibility RULES are unchanged — they are in DACT's `on`, and a preference cannot
@@ -27110,16 +27074,16 @@ function detailInner() {
                       : '<button data-cbsid="DTL001-B19" data-testid="open-design2" onclick="ensureCap(\'chit2\').then(function(){openChit2(\'' +
                         c.id +
                         '\')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button>',
-                  forward: '<button data-cbsid="DTL001-B20" onclick="forwardChit(\'' + c.id + '\')" title="Forward as a new chit">' + tx('➤ Forward') + '</button>',
+                  forward: '<button data-cbsid="DTL001-B20" data-xa="' + esc(c.id) + '" onclick="forwardChit(this.dataset.xa)" title="Forward as a new chit">' + tx('➤ Forward') + '</button>',
                   move:
                     "<button data-cbsid=\"DTL001-B21\" onclick=\"ensureCap('folders').then(function(){moveChit('" +
                     c.id +
                     '\')})" title="File into a folder">' +
                     tx('📁 Move') +
                     '</button>',
-                  unread: '<button data-cbsid="DTL001-B22" data-testid="chit-unread" onclick="markUnread(\'' + c.id + '\')" title="Mark as unread">' + tx('✉ Unread') + '</button>',
-                  status: '<button data-cbsid="DTL001-B23" class="pri" data-testid="chit-status-btn" onclick="pickChitStatus(\'' + c.id + '\')">' + tx('Status ▾') + '</button>',
-                  assign: '<button data-cbsid="DTL001-B24" onclick="pickAssign(\'' + c.id + '\')">' + tx('👥 Assign') + '</button>',
+                  unread: '<button data-cbsid="DTL001-B22" data-testid="chit-unread" data-xa="' + esc(c.id) + '" onclick="markUnread(this.dataset.xa)" title="Mark as unread">' + tx('✉ Unread') + '</button>',
+                  status: '<button data-cbsid="DTL001-B23" class="pri" data-testid="chit-status-btn" data-xa="' + esc(c.id) + '" onclick="pickChitStatus(this.dataset.xa)">' + tx('Status ▾') + '</button>',
+                  assign: '<button data-cbsid="DTL001-B24" data-xa="' + esc(c.id) + '" onclick="pickAssign(this.dataset.xa)">' + tx('👥 Assign') + '</button>',
                   dispute: '<button data-cbsid="DTL001-B25" class="warn" data-testid="chit-dispute" onclick="quickDispute()">' + tx('⚑ Dispute') + '</button>',
                   void:
                     '<button data-cbsid="DTL001-B26" class="warn" data-testid="chit-void" onclick="withdrawChit(\'' +
@@ -27179,10 +27143,10 @@ function detailInner() {
     ['summary', 'Summary'],
     ['messages', '💬 Messages' + (msgCount(c) ? ' (' + msgCount(c) + ')' : '')]
   ]);
-  return `<div class="dh"><button data-cbsid="DTL001-B31" class="dback" onclick="backToList()">‹ Back to list</button><button data-cbsid="DTL001-B32" class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
-     <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button data-cbsid="DTL001-B33" class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
-   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
-   <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button data-cbsid="DTL001-B35" class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
+  return `<div class="dh"><button data-cbsid="DTL001-B31" class="dback" onclick="backToList()">‹ Back to list</button><button data-cbsid="DTL001-B32" class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${c.amt ? chitMoney(c.amt, c) : '—'} · ${c.state.toUpperCase()}</div>
+     <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button data-cbsid="DTL001-B33" class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority(this.dataset.xa)" data-xa="${esc(c.id)}" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
+   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button data-cbsid="DTL001-B34" class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${dtabLabel(l)}</button>`).join('')}</div>
+   <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button data-cbsid="DTL001-B35" class="pri" data-xa="' + esc(c.id) + '" onclick="answerPublish(this.dataset.xa)">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**
  * ⭐ THE THREAD, WHEN SOMEBODY ACTUALLY WANTS IT. Once per chit; the flag is on the record, so switching tabs
@@ -27628,7 +27592,7 @@ function booksBlockHTML(c) {
   var btn =
     !B.order && !bj.books_request && /^(order|offer)$/.test(purpose) && !/^(cancelled|rejected)$/.test(st) && UI.folder === 'task'
       ? '<div style="padding:8px 12px"><button data-cbsid="DTL001-B38" class="btn2" data-testid="books-send" onclick="booksSend(\'' +
-        esc(c.id || (c.header && c.header.chit_id)) +
+        escJs(c.id || (c.header && c.header.chit_id)) +
         '\')">📒 ' +
         tx('Send to books') +
         (at === 'manual' ? '' : ' ' + tx('now')) +
@@ -27830,7 +27794,7 @@ function openMsgCenter() {
     })
     .filter(Boolean)
     .reverse();
-  host.innerHTML = `<div data-cbsid="WRK001-C08" class="notifover" onclick="closeMsgCenter()"><div data-cbsid="WRK001-C09" class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">${tx('💬 Messages')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button data-cbsid="WRK001-B02" class="msglink" style="width:100%" onclick="openRaidReport()">${tx('📊 RAID report — governance overview')}</button></div>${items.length ? items.map((x) => `<div data-cbsid="WRK001-C10" class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread ? '🔵' : '💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread ? ` <span class="unreadtag">${x.unread} new</span>` : ''}</div><div class="ns">${x.last ? (x.last.scope === 'external' ? '↔ ' : '🔒 ') + (x.last.body.length > 44 ? x.last.body.slice(0, 44) + '…' : x.last.body) : ''}</div></div></div>`).join('') : '<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button data-cbsid="WRK001-B03" class="${SESSION.msgTypes !== 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('lean')">${tx('Lean')}</button><button data-cbsid="WRK001-B04" class="${SESSION.msgTypes === 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('gov')">${tx('Governance (RAID)')}</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
+  host.innerHTML = `<div data-cbsid="WRK001-C08" class="notifover" onclick="closeMsgCenter()"><div data-cbsid="WRK001-C09" class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">${tx('💬 Messages')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button data-cbsid="WRK001-B02" class="msglink" style="width:100%" onclick="openRaidReport()">${tx('📊 RAID report — governance overview')}</button></div>${items.length ? items.map((x) => `<div data-cbsid="WRK001-C10" class="notifrow" style="cursor:pointer" onclick="openFromCenter(this.dataset.xa)" data-xa="${esc(x.id)}"><span class="ni">${x.unread ? '🔵' : '💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${esc(x.code)}</b> · ${esc(x.party)}${x.unread ? ` <span class="unreadtag">${x.unread} new</span>` : ''}</div><div class="ns">${x.last ? (x.last.scope === 'external' ? '↔ ' : '🔒 ') + esc(x.last.body.length > 44 ? x.last.body.slice(0, 44) + '…' : x.last.body) : ''}</div></div></div>`).join('') : '<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button data-cbsid="WRK001-B03" class="${SESSION.msgTypes !== 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('lean')">${tx('Lean')}</button><button data-cbsid="WRK001-B04" class="${SESSION.msgTypes === 'gov' ? 'on' : ''}" onclick="setMsgTypeSet('gov')">${tx('Governance (RAID)')}</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
 }
 function closeMsgCenter() {
   UI.msgcOpen = false;
@@ -28091,7 +28055,7 @@ function cancelBanner(c) {
      */
     '<div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">' +
     '<button data-cbsid="DTL001-B39" type="button" class="btn" data-testid="cancel-agree" onclick="cancelAgree(\'' +
-    esc(c.id) +
+    escJs(c.id) +
     '\')"' +
     ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;' +
     'padding:4px 11px;font-size:var(--fs-1);cursor:pointer">' +
@@ -28738,7 +28702,7 @@ function pickBox(o) {
         ' onchange="' +
         esc(o.onToggle) +
         "('" +
-        esc(item.id) +
+        escJs(item.id) +
         '\')">' +
         '<span style="font-size:var(--fs-2);font-weight:' +
         (on ? 600 : 400) +
@@ -29133,7 +29097,7 @@ async function attResolveSrc(a) {
 /* ⭐ attGlyph and fmtSize LIVED HERE, byte-for-byte copies of `cbAttachIcon` / `cbAttachSize` in app/attach-ui.js
    (loaded above) — one mapping, every screen (CU1, 2026-10-13). Its map keeps 'text' → 📄: a .txt is the customer's own words. */
 function attTile(a, group, i) {
-  return `<div data-cbsid="DTL001-C02" class="attTile" onclick="openLightbox('${group}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${cbAttachIcon(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t || 'file').toUpperCase())}${a.size ? ' · ' + cbAttachSize(a.size) : ''}</div></div>`;
+  return `<div data-cbsid="DTL001-C02" class="attTile" onclick="openLightbox(this.dataset.xa,${i})" data-xa="${esc(group)}" title="${esc(a.n)}"><div class="attTileIcon">${cbAttachIcon(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t || 'file').toUpperCase())}${a.size ? ' · ' + cbAttachSize(a.size) : ''}</div></div>`;
 }
 function attTileGrid(atts, group) {
   return `<div class="attGrid">${atts.map((item, index) => attTile(item, group, index)).join('')}</div>`;
@@ -29478,14 +29442,14 @@ function chitSpendStrip(c) {
     ${
       dchipShows('register')
         ? `<div class="spendchip"><button data-cbsid="DTL001-B49" type="button" data-testid="chit-register" data-label="${esc(c.subject || '')}"
-      onclick="cbRegisterFor('${c.id}', this.dataset.label)"
+      onclick="cbRegisterFor(this.dataset.xa, this.dataset.label)" data-xa="${esc(c.id)}"
       title="${esc(tx('Record a risk, issue or dependency against this order'))}"
       style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('＋ Register'))}</button></div>`
         : ''
     }
     ${
       dchipShows('history')
-        ? `<div class="spendchip"><button data-cbsid="DTL001-B50" type="button" data-testid="chit-spend-history" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})"
+        ? `<div class="spendchip"><button data-cbsid="DTL001-B50" type="button" data-testid="chit-spend-history" data-xa="${esc(c.id)}" onclick="ensureCap('chit2').then(function(){openChit2(this.dataset.xa)}.bind(this))"
       title="${esc(tx('Every part and every hour recorded against this job, and who recorded it'))}"
       style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('History →'))}</button></div>`
         : ''
@@ -29945,7 +29909,7 @@ function amendPaint() {
     const units = [...new Set([].concat(l.unit ? [l.unit] : [], ((cat && cat.items) || []).map((x) => x.unit).filter(Boolean), AMD_UNITS))].slice(0, 10);
     return _amdSheet(
       'Which unit?',
-      `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map((item) => `<span data-cbsid="DTL001-C06" onclick="amdPickUnit('${esc(item)}')" style="cursor:pointer;border:1px solid ${item === l.unit ? 'var(--blue)' : 'var(--line)'};${item === l.unit ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : ''}border-radius:18px;padding:9px 18px;font-size:var(--fs-3)">${esc(item)}</span>`).join('')}</div>`
+      `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map((item) => `<span data-cbsid="DTL001-C06" onclick="amdPickUnit('${escJs(item)}')" style="cursor:pointer;border:1px solid ${item === l.unit ? 'var(--blue)' : 'var(--line)'};${item === l.unit ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : ''}border-radius:18px;padding:9px 18px;font-size:var(--fs-3)">${esc(item)}</span>`).join('')}</div>`
     );
   }
   if (AMD.view === 'note') {
@@ -30185,7 +30149,7 @@ function paintLB() {
   const i = Math.min(UI.lb, atts.length - 1),
     a = atts[i];
   host.innerHTML = `<div data-cbsid="DTL001-C09" class="lbover" onclick="closeLightbox()"><div data-cbsid="DTL001-C10" class="lbbox" onclick="event.stopPropagation()">
-    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span data-cbsid="DTL001-C11" style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span data-cbsid="CMP005" class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbtop"><span>${esc(a.n)}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span data-cbsid="DTL001-C11" style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span data-cbsid="CMP005" class="x" onclick="closeLightbox()">✕</span></div>
     <div class="lbstage">${attMedia(a, 'lb')}</div>
     <div class="lbnav"><button data-cbsid="DTL001-B58" onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_, index) => `<span class="${index === i ? 'on' : ''}"></span>`).join('')}</div><button data-cbsid="DTL001-B59" onclick="lbNav(1)" aria-label="Next">›</button></div>
   </div></div>`;
@@ -30229,8 +30193,33 @@ try {
     }
   }
 } catch (_) {}
+/* ⭐ SSO-1129 H1: what a provider's redirect left in the address (#h= a one-time code · #e= a refusal word · #c= the result of connecting) is taken ONCE here, before the default #/login:
+   a code is swapped for the session by the ONE machine (CBSignin.machine → POST /api/signin/provider/handoff, the same body as a code sign-in); a refusal is said on the login screen in words. */
+/* N3: where the provider's redirect goes on from this landing: Settings > Account is a page of its own (CB_HOMES.account, accounts-shell.js), not a route of this one; signed out, the sign-in */
+function landedGo() { if (SESSION.token) location.replace(CB_HOMES.account); else location.hash = '#/login'; }
+var LANDED_AT_BOOT = null;
+try { LANDED_AT_BOOT = window.CBSignin && CBSignin.takeLanded ? CBSignin.takeLanded() : null; } catch (_) {}
+if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'k') { try { if (SESSION.token) sessionStorage.setItem('cb_connect_code', LANDED_AT_BOOT.value); } catch (_) {} landedGo(); }
+else if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'c') { try { sessionStorage.setItem('cb_connect_result', LANDED_AT_BOOT.value); } catch (_) {} if (!location.hash) landedGo(); }
+else if (LANDED_AT_BOOT && !SESSION.token) location.hash = '#/login';
 if (!location.hash) location.hash = SESSION.token ? '#/' : '#/login';
 route();
+if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'h') {
+  (function () {
+    var signinMachine = CBSignin.machine({ apiBase: CFG.API_BASE, onIn: function (s) { setSession({ token: s.token, role: s.role, name: s.name, entity: s.entity, bridgeId: s.bridgeId, duty: s.duty }); } });
+    signinMachine.providerHandoff(LANDED_AT_BOOT.value).then(function () {
+      var S = signinMachine.state();
+      if (S.at === 'in') return go('#/app');
+      if (S.at === 'setpin') { setSession({ token: S.token || '', role: 'actor' }); LOGIN.step = 'setpin'; LOGIN.kind = 'actor'; return go('#/login'); }
+      LOGIN.err = S.why || CBSignin.WORDS.sso.fallback;
+      go('#/login');
+      renderLogin();
+    });
+  })();
+} else if (LANDED_AT_BOOT && LANDED_AT_BOOT.kind === 'e') {
+  LOGIN.err = CBSignin.WORDS.sso[LANDED_AT_BOOT.value] || CBSignin.WORDS.sso.fallback;
+  renderLogin();
+}
 </script>
 <script>
 (function () {

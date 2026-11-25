@@ -630,100 +630,6 @@ function vaultHold(vault, version) {
   UI._vaultBase = JSON.parse(JSON.stringify(UI._vault.sections));
   UI._vaultVersion = version == null ? null : String(version);
 }
-/** a unique key: the base, then #2, #3 … on a repeat (the api's vault-patch.uniqueKey) */
-function vaultUniqueKey(base, seen) {
-  var key = base,
-    copy = 1;
-  while (seen[key]) {
-    copy += 1;
-    key = base + '#' + copy;
-  }
-  seen[key] = true;
-  return key;
-}
-/** sections keyed `type|label`, rows keyed `t:<tag>` else `n:<name>` — the api's vault-patch.keyed, one rule on both sides */
-function vaultKeys(sections) {
-  var keyed = {},
-    seenSections = {};
-  (sections || []).forEach(function (section) {
-    var rows = {},
-      seenRows = {};
-    (section.rows || []).forEach(function (row) {
-      rows[vaultUniqueKey(row.tag ? 't:' + String(row.tag).toLowerCase() : 'n:' + String(row.name || ''), seenRows)] = row;
-    });
-    keyed[vaultUniqueKey(String(section.type || 'other') + '|' + String(section.label || ''), seenSections)] = {
-      type: section.type,
-      label: section.label || '',
-      rows: rows
-    };
-  });
-  return keyed;
-}
-/** a row as the server stores it: name · value · tag (the provenance rides back untouched) */
-function vaultRowBody(row) {
-  var body = { name: row.name || '', value: row.value || '', tag: row.tag || '' };
-  if (row.source) body.source = row.source;
-  if (row.as_of) body.as_of = row.as_of;
-  if (row.rung) body.rung = row.rung;
-  return body;
-}
-/** do two rows carry the same name · value · tag? (an empty field equals a missing one) */
-function vaultRowSame(before, after) {
-  return (
-    !!before &&
-    !!after &&
-    ['name', 'value', 'tag'].every(function (field) {
-      return (before[field] || '') === (after[field] || '');
-    })
-  );
-}
-/** a section that is NEW: all its rows, as the server stores them */
-function vaultNewSectionPatch(section) {
-  var rows = {};
-  Object.keys(section.rows).forEach(function (rowKey) {
-    rows[rowKey] = vaultRowBody(section.rows[rowKey]);
-  });
-  return { type: section.type, label: section.label, rows: rows };
-}
-/** a section that exists on both sides: only the rows that were removed (null) or changed; null when no row moved */
-function vaultRowsPatch(before, after) {
-  var rows = {},
-    moved = false;
-  Object.keys(before.rows).forEach(function (rowKey) {
-    if (!after.rows[rowKey]) {
-      rows[rowKey] = null;
-      moved = true;
-    }
-  });
-  Object.keys(after.rows).forEach(function (rowKey) {
-    if (!vaultRowSame(before.rows[rowKey], after.rows[rowKey])) {
-      rows[rowKey] = vaultRowBody(after.rows[rowKey]);
-      moved = true;
-    }
-  });
-  return moved ? { rows: rows } : null;
-}
-/** the merge-patch from the copy read to the model now: only sections and rows that moved; null = removed; empty when nothing moved */
-function vaultPatch(base, now) {
-  var before = vaultKeys(base),
-    is = vaultKeys(now),
-    sections = {},
-    any = false;
-  Object.keys(before).forEach(function (key) {
-    if (!is[key]) {
-      sections[key] = null;
-      any = true;
-    }
-  });
-  Object.keys(is).forEach(function (key) {
-    var section = before[key] ? vaultRowsPatch(before[key], is[key]) : vaultNewSectionPatch(is[key]);
-    if (section) {
-      sections[key] = section;
-      any = true;
-    }
-  });
-  return any ? { sections: sections } : null;
-}
 /** W25: the server's "changed since you opened it" — the sentence and the one button that fixes it */
 function vaultConflictHTML(words) {
   return (
@@ -742,8 +648,8 @@ function vaultSay(words) {
 function vaultSaveFailed(failure, errorBox) {
   if (!errorBox) return;
   if (failure && failure.status === 409)
-    errorBox.innerHTML = vaultConflictHTML((failure.data && failure.data.message) || failure.message || tx('Changed since you opened it — reload?'));
-  else errorBox.textContent = (failure && failure.message) || tx('Could not save the vault');
+    errorBox.innerHTML = vaultConflictHTML(failWords(failure, tx('Changed since you opened it — reload?'))); /* EL-14 M9: failWords, never a raw message */
+  else errorBox.textContent = failWords(failure, tx('Could not save the vault'));
 }
 /** WALK-REG 2026-10-16 R19: the autosave's vault write — the same merge-patch as saveVaultUI, but NOTHING repaints (the person is mid-form) and no toast;
     the base and version move to what was just saved so the next change patches from here. → true saved · false nothing moved; a refusal throws */
@@ -751,8 +657,9 @@ async function vaultSaveQuiet() {
   var patch = vaultPatch(UI._vaultBase || [], _vaultSecs());
   if (!patch) return false;
   UI._party = undefined;
+  var sent = JSON.parse(JSON.stringify(_vaultSecs())); /* the copy the patch was built from: what is typed while the save is on its way stays a change for the next save (GF-14 M1 / EL-14 M4) */
   var answer = await api('vaultSave', { body: { version: UI._vaultVersion, patch: patch } });
-  UI._vaultBase = JSON.parse(JSON.stringify(_vaultSecs()));
+  UI._vaultBase = sent;
   UI._vaultVersion = (answer && answer.version) == null ? UI._vaultVersion : String(answer.version);
   if (window.CBOffline) CBOffline.clearDraft('app.vault');
   return true;
@@ -871,9 +778,13 @@ var CBShop = (function () {
   function card(title, body, tid) {
     return '<section class="shop-card" data-testid="' + tid + '" style="' + _CARD + '"><h2 class="shop-h">' + esc0(title) + '</h2>' + body + '</section>';
   }
+  /** is the person at the screen an actor (a seat that may not write)? the ONE read of SESSION.actorId in this file */
+  function isActorSeat() {
+    return typeof SESSION !== 'undefined' && !!(SESSION && SESSION.actorId);
+  }
   /** the Business section: the same inputs the workshop's Profile paints (shopFieldsHTML), one Save (M64) */
   function shopCardHTML(e) {
-    var actorId = SESSION && SESSION.actorId;
+    var actorId = isActorSeat();
     return (
       shopNameHTML(e || {}) +
       shopFieldsHTML(e || {}, shopLicLabel()) +
@@ -882,6 +793,15 @@ var CBShop = (function () {
         ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
         : '<button data-cbsid="ACC002-B09" type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>')
     );
+  }
+  /** a person who may not write (an actor) sees the shop's fields greyed, read-only, with the sentence under the Business card (LENS2 1129: they could type and nothing saved) */
+  function greyForActor(node) {
+    if (!isActorSeat() || !node) return;
+    var why = tx('Only the owner can change these.');
+    Array.prototype.forEach.call(node.querySelectorAll('input, select, textarea, button.act'), function (el) {
+      el.disabled = true;
+      el.setAttribute('title', why);
+    });
   }
   function paint() {
     var node = H.host;
@@ -903,7 +823,12 @@ var CBShop = (function () {
       node._autosave = true;
       node.addEventListener('change', onChange);
     }
-    loadVault().then(prefillIdentity);
+    greyForActor(node);
+    loadVault()
+      .then(prefillIdentity)
+      .then(function () {
+        greyForActor(document.getElementById('vaulthost'));
+      });
   }
   /* ── WALK-REG 2026-10-16 R19: the fields save themselves (the pattern of Print setup, cap-print.js saveSoon): a changed field saves after a short pause,
      saves never overlap (one waits for the one in flight), and "✓ Saved" stands beside the field that was saved. The two Save buttons stay in the page,
@@ -911,7 +836,7 @@ var CBShop = (function () {
   var autosave = { timer: null, saving: false, again: false, dirty: [] };
   function onChange(event) {
     var target = event.target;
-    if (!target || !target.closest || (SESSION && SESSION.actorId)) return;
+    if (!target || !target.closest || isActorSeat()) return;
     var shopField = SHOP_FIELDS.some(function (pair) {
       return pair[0] === target.id;
     });

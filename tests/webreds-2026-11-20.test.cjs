@@ -52,7 +52,7 @@ const ok = async (n, f) => { await f(); pass++; console.log('  ok   ' + n); };
     assert.ok(/Changed by Anna/.test(ctl.chip('e1')), 'the chip says Changed by Anna');
   });
   await ok('months: Reopen month only on the last hard-locked month; Reopen year only on the newest closed year', () => {
-    const cb = rd('cap-books.js'), lk = rd('cap-books-lock.js'), cp = rd('cap-period.js');
+    const cb = rd('cap-books.js'), lk = rd('cap-books-lock.js'), cp = rd('cap-period-year.js') + '\n/*END*/';
     const BK = { lk: { fy: '2026', rows: {}, years: ['2026', '2025', '2024'] } };
     for (let m = 1; m <= 8; m++) BK.lk.rows['2026|' + m] = 'hard_locked';
     for (const y of ['2025', '2024']) for (let m = 1; m <= 12; m++) BK.lk.rows[y + '|' + m] = 'hard_locked';
@@ -64,7 +64,7 @@ const ok = async (n, f) => { await f(); pass++; console.log('  ok   ' + n); };
     for (let m = 1; m <= 8; m++) shown.push(btn(true, 'hard_locked', m, { lastHard: m === 8 }).includes('lk-reopen-month-' + m));
     assert.deepStrictEqual(shown, [false, false, false, false, false, false, false, true]);
     assert.ok(/rule\.lastHard = bkLastHardKey\(\) === lock\.fy/.test(lk), 'the row asks the periods list');
-    const acts = new Function('peOwner', 'peVal', 'esc', 'tx', 'bkLastClosedYear', 'peNote', 'peYearLodgedTick', slice(cp, 'function peYearActionsHtml', 'async function peYearStatus') + '; return peYearActionsHtml;');
+    const acts = new Function('peOwner', 'peVal', 'esc', 'tx', 'bkLastClosedYear', 'peNote', 'peYearLodgedTick', slice(cp, 'function peYearActionsHtml', '/*END*/') + '; return peYearActionsHtml;');
     const mk = (fy) => acts(() => true, () => fy, (s) => s, (s) => s, fns.bkLastClosedYear, () => '', () => '');
     assert.ok(mk('2025')({ closed: true }).includes('py-reopen'));
     assert.ok(!mk('2024')({ closed: true }).includes('py-reopen'), 'an older closed year has no Reopen');

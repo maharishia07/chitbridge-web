@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catalogue</title>
 <!-- ⭐ Catalogue — what the shop sells, as a small app (T3-CATALOGUE, 2026-10-14; docs/design/INDEX-NOT-APP.md §3 row 3, the round the plan called CAT1).
@@ -136,9 +136,9 @@ function go() {
 </script>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>          <!-- api() · the network pill · cbCatgLive / catgIdsOf · CB_DEFS_EP -->
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>          <!-- api() · the network pill · cbCatgLive / catgIdsOf · CB_DEFS_EP -->
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>  <!-- tx · txf · toast · CBAction · CBConfirm · CB_SHOP_EP -->
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>  <!-- tx · txf · toast · CBAction · CBConfirm · CB_SHOP_EP -->
 <script>const confirmAsk = CBConfirm;   /* the page's own confirm — the <dialog> every small app asks through (cbcatRetire and the import's _cfImport ask by this name) */</script>
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>          <!-- CBLocale: the page's language, direction, money and symbols -->
 <script src="/app/helpers.js"></script>         <!-- esc · fmtMoney · packHasHsn · shopReg -->
@@ -146,7 +146,7 @@ function go() {
 <script src="/app/tax-slab-ui.js"></script>     <!-- the rate chip, the ask-once menu and the slab pickers: ONE copy with app.html and the counter (F5 W1a) -->
 <script src="/engine/money.js"></script>        <!-- CBMoney: the loose read of a stored price (cbAmount) -->
 <script src="/engine/signin.js"></script>
-<script src="/app/signin-ui.js"></script>
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>
 <script src="/app/one-person.js"></script>
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header (CTG001-003) -->
@@ -158,7 +158,7 @@ function go() {
 <script src="/app/page-frame.js"></script>
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>        <!-- CBList: the one list control; both lists here are mounts on it -->
 <script src="/app/cap-categories.js"></script>  <!-- the categories' data layer and writers (cbcatLoad · cbcatSave · cbcatRetire · cbcatRelive); its own panel painters find nothing to paint here -->
-<script src="/app/cap-catalogue.js"></script>   <!-- CB_CATALOGUE_EP · the catalogue primitives MOVED from app.html · CBCatalogueApp -->
+<script src="/app/cap-catalogue-import.js"></script><script src="/app/cap-catalogue.js"></script>   <!-- CB_CATALOGUE_EP · the catalogue primitives MOVED from app.html · CBCatalogueApp -->
 <script>Object.assign(EP, CB_SHOP_EP, CB_DEFS_EP, CB_CATALOGUE_EP);</script>
 <script>
 'use strict';

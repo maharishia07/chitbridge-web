@@ -7,7 +7,8 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js" data-customer-page></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>
+<script src="/app/cb-words.js"></script> <!-- cbApiParam: a ?api= link never re-points the token -->   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catalogue</title>
@@ -55,7 +56,7 @@
 <script>
 (function () {
   var Q = new URLSearchParams(location.search);
-  var API = Q.get('api') || window.CB_API;
+  var API = cbApiParam(Q.get('api')) || window.CB_API;
   var BRIDGE = (Q.get('bridge') || Q.get('b') || '').trim();
   var BRAND = Q.get('brand') !== 'off'; // brand shown unless brand=off (whitelabel)
   /* CUSTOMER-DELINK: the bar first; a host site's ?theme=light|dark is the look's Cream / Dark, applied as a preview (nothing saved in the visitor's browser) */

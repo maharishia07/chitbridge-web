@@ -41,9 +41,10 @@ async function matchLoad(force) {
   try {
     var reply = await api('matchList', { query: { days: MATCH.days } });
     MATCH.rows = (reply && reply.orders) || [];
+    MATCH.error = null; /* a read that worked ends the error of the one before (EL-11 M8) */
   } catch (e) {
     MATCH.rows = [];
-    MATCH.error = (e && e.message) || String(e);
+    MATCH.error = failWords(e, tx('Could not read your orders'));
   }
   MATCH.busy = false;
   /**
@@ -291,13 +292,13 @@ function matchDetail(o) {
     '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
     (o.verdict === 'differs'
       ? '<button data-cbsid="BUS003-B03" class="composebtn" data-testid="match-dispute" onclick="matchDispute(\'' +
-        esc(o.chit_id) +
+        escJs(o.chit_id) +
         '\')">⚑ ' +
         esc(tx('Raise a dispute')) +
         '</button>'
       : '') +
     '<button data-cbsid="BUS003-B04" class="pill" onclick="openChit(\'' +
-    esc(o.chit_id) +
+    escJs(o.chit_id) +
     '\')">' +
     esc(tx('Open the order')) +
     '</button>' +
@@ -423,7 +424,7 @@ function matchDispute(chit_id) {
       esc(tx('Cancel')) +
       '</button>' +
       '<button data-cbsid="BUS003-B05" class="composebtn" data-testid="match-dispute-send" onclick="matchDisputeSend(\'' +
-      esc(chit_id) +
+      escJs(chit_id) +
       '\')">' +
       esc(tx('Raise it')) +
       '</button></div>' +
@@ -441,12 +442,16 @@ async function matchDisputeSend(chit_id) {
   var o = (MATCH.rows || []).filter(function (x) {
     return x.chit_id === chit_id;
   })[0];
+  if (MATCH.raising) return; /* a second tap while the first is on its way would raise the dispute twice (EL-11 M9) */
+  MATCH.raising = true;
   try {
     await api('matchDispute', { params: { chit_id: chit_id }, body: { category: 'quantity', reason: reason, target_entity_id: (o && o.party_id) || null } });
     closeModal();
     toast(tx('Raised. It is on the order, and they can see it.'));
     matchLoad(true);
   } catch (e) {
-    toast(tx('Could not raise it') + ': ' + ((e && e.message) || e));
+    toast(tx('Could not raise it') + ': ' + failWords(e, ''));
+  } finally {
+    MATCH.raising = false;
   }
 }

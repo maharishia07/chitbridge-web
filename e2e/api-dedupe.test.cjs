@@ -34,7 +34,7 @@ const sandbox = {
   apiOnce: () => { calls++; return new Promise((r) => setTimeout(() => r({ products: [{ id: 'p1', name: 'x' }] }), 20)); },
 };
 vm.createContext(sandbox);
-vm.runInContext(src.slice(ei, ej) + src.slice(i, j) + '\nthis.api = api;', sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'core-copy.js'), 'utf8') /* _apiCopy lives in core-copy.js since the web split 1129 */ + src.slice(ei, ej) + src.slice(i, j) + '\nthis.api = api;', sandbox);
 
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++; };

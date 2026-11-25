@@ -48,7 +48,7 @@ const CODE_FILE = /\.(js|cjs|mjs|html)$/;
 /* a file whose master lives elsewhere: an engine adopted from chitbridge-engines, or a copy vendor-till.cjs writes (judged at its master) */
 const ADOPTED_HEAD = /ADOPTED from chitbridge-engines|GENERATED — DO NOT EDIT\. Written by chitbridge-api\/scripts\/vendor-till\.cjs/;
 const VENDORED_TILL = 'public/till.html', HEAD_BYTES = 700, isVendoredTill = (relPath) => relPath === VENDORED_TILL || relPath === 'public/app/till-dayrep.js'; /* the till and its parts: vendored byte copies, judged at the api master (1128) */
-const isWebMasteredInApi = (relPath) => /^tools\/tally-connector\/(cb-words|strings-hi|strings-ar)\.js$/.test(relPath);
+const isWebMasteredInApi = (relPath) => /^tools\/tally-connector\/(cb-words|strings-hi|strings-ar|signin-ui)\.js$/.test(relPath);
 /** every code file under one scope entry (a folder walked, or a single file) */
 function walkDir(dir, out) {
   let entries;

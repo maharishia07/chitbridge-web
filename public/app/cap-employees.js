@@ -754,8 +754,9 @@
         '</label><select data-cbsid="EMP001-S02" class="inp" id="emp_l" data-testid="emp-add-level">' +
         cs +
         '</select>' +
+        '<div class="sub" id="emp_lw" data-testid="emp-add-levelwhy" aria-live="polite"></div>' +
         '<label for="emp_r">' +
-        esc(T('Job')) +
+        esc(T('Job title (a name only, grants nothing)')) +
         '</label><input data-cbsid="EMP001-I05" class="inp" id="emp_r" data-testid="emp-add-role" autocomplete="off">' +
         '<label for="emp_p">' +
         esc(T('Phone')) +
@@ -767,9 +768,8 @@
         esc(T('Add')) +
         '</button></form>'
     );
-    var tm = null,
-      /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
-      keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T);
+    var tm = null, keyWatch = Copy.watchKey($('emp_k'), $('emp_kn'), function (word) { return call('POST', '/api/actors/suggest-key', { display_name: word }); }, T); /* W14: the "They sign in as" line follows the sign-in name as typed, whole (cap-employees-copy.js watchKey) */
+    Copy.watchLevel($('emp_l'), $('emp_lw'), E.choices); /* the picked label says in one line what it can do (the server's own why: lib/access PRESETS) */
     $('emp_n').oninput = function () {
       clearTimeout(tm);
       var name = $('emp_n').value.trim();

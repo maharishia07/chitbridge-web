@@ -221,7 +221,7 @@ function _netAvailBody() {
       var open = one || UI._avOpen === item.key;
       var head =
         '<div data-cbsid="SCR031-C01" onclick="netAvailToggle(\'' +
-        item.key +
+        escJs(item.key) +
         '\')" style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;' +
         'padding:11px 2px;border-bottom:1px solid var(--line);background:' +
         (open ? 'transparent' : 'var(--card)') +
@@ -321,13 +321,13 @@ function _netAvailBody() {
       (r.is_me
         ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">This is your own stock.</div>'
         : '<div style="margin-top:7px"><button data-cbsid="SCR031-B01" onclick="netAskFor(\'' +
-          esc(r.entity_id) +
+          escJs(r.entity_id) +
           "','" +
-          esc(r.store) +
+          escJs(r.store) +
           "','" +
-          esc(String(r.name).replace(/'/g, '')) +
+          escJs(String(r.name).replace(/'/g, '')) +
           "','" +
-          esc(r.bridge_id || '') +
+          escJs(r.bridge_id || '') +
           "'," +
           (r.price === null || r.price === undefined ? 'null' : Number(r.price)) +
           ')" style="padding:5px 12px;font-size:var(--fs-2)">' +
@@ -799,7 +799,7 @@ function netSendCart(isDraft) {
     subject: subj,
     schema_values: { subject: subj, delivery_by: o.by || '', deliver_to: o.addr || '', note: o.note || '' },
     line_items: picked.map(function (item) {
-      return { particulars: item.name, quantity: +item.qty || 0, price: amt(item), total: (+item.qty || 0) * amt(item) };
+      return { particulars: item.name, quantity: +item.qty || 0, price: amt(item), total: CBMoney.round((+item.qty || 0) * amt(item)) };
     }),
     priority: 'normal',
     onSent: function () {
@@ -920,11 +920,11 @@ function _netBrowseBody() {
     .map(function (item) {
       return (
         '<div data-cbsid="SCR031-C05" onclick="netBrowse(\'' +
-        esc(item.entity_id) +
+        escJs(item.entity_id) +
         "','" +
-        esc(String(item.name).replace(/'/g, '')) +
+        escJs(String(item.name).replace(/'/g, '')) +
         "','" +
-        esc(item.bridge_id || '') +
+        escJs(item.bridge_id || '') +
         '\')"' +
         ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">' +
         '<b style="font-size:var(--fs-3)">' +

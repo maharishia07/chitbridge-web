@@ -55,17 +55,17 @@ const SHARED = (function () {
     var out = new Set();
     /* ⚠ s, not s — the backslash was eaten writing this file, so the pattern read "functions" and
        matched nothing. Which is why SESSION and MSG were still reported when app.html declares both. */
-    (src.match(/(?:var|let|const|function)s+([A-Z][A-Z0-9_]{1,})/g) || [])
+    (src.match(/(?:var|let|const|function)\s+([A-Z][A-Z0-9_]{1,})/g) || [])
       /* ⚠ the THIRD backslash eaten in this one file: /.*s/ greedily ate "const" and left " MSG" with a
          leading space, so the shared name never matched. Split on whitespace instead of trimming with a
          regex — there is nothing to get wrong. */
-      .forEach(function (d) { out.add(d.trim().split(/s+/).pop()); });
+      .forEach(function (d) { out.add(d.trim().split(/\s+/).pop()); });
     return out;
   } catch (_) { return new Set(); }
 })();
 
-/* QA-71 · measured 19 Oct 2026 on main. May only go down. */
-const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 76);
+/* QA-71 · measured 19 Oct 2026 on main (76); 22 Nov 2026 the shared-names regex was repaired (it matched nothing), so app.html's own SHOUTING names count as declared: 30. May only go down. */
+const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 30);
 let bad = [];
 /**
  * A SPLIT MODULE IS ONE UNIT (shrink W2, 2026-11-17). A size split moved declarations into sibling part files

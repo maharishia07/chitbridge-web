@@ -13,6 +13,8 @@ let reply = null;
 const cx = vm.createContext({
   tx: (s) => s,
   esc: (s) => String(s),
+  bkDec: () => 2,
+  escJs: (s) => String(s),
   bkMoney: (n) => 'M' + n,
   bkDate: (d) => String(d),
   txn: (one, many, n) => (n === 1 ? one : many).replace('{count}', n),
@@ -24,7 +26,7 @@ const cx = vm.createContext({
   document: { getElementById: () => null },
   api: async () => reply
 });
-vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkPlQuery', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkBsSide', 'bkBS', 'bkBsLeadHTML', 'bkBsRange', 'bkBsBalancedChip', 'bkBsHasChange', 'bkBsWas', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB', 'bkTbRowHTML', 'bkTbBarHTML', 'bkTbTotalRowHTML', 'bkRefused', 'bkTbPicksHTML']) +
+vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkPlQuery', 'bkPlDates', 'bkRefused', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkBsSide', 'bkBS', 'bkBsLeadHTML', 'bkBsRange', 'bkBsBalancedChip', 'bkBsHasChange', 'bkBsWas', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB', 'bkTbRowHTML', 'bkTbBarHTML', 'bkTbTotalRowHTML', 'bkRefused', 'bkTbPicksHTML']) +
   '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.bkTB=bkTB;this.BK={tbDay:""};this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
 
 let bad = 0;

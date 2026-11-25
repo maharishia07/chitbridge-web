@@ -15,7 +15,7 @@ const fs = require('fs'), path = require('path');
 const mutate = process.env.GLYPH_ID_MUTATE || '';
 const PUB = path.join(__dirname, '..', 'public');
 const GLYPH = /^(?:✕|×|&times;)$/;
-const SAYS_CLOSE = /close|Close|hide/;
+const SAYS_CLOSE = /close|Close|hide|Dismiss/;
 const SAYS_REMOVE = /remove|Remove|del|Del/;
 let failures = 0;
 const check = (c, m) => { if (!c) { console.log('  FAIL ' + m); failures++; } };

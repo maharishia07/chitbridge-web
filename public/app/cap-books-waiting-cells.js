@@ -109,6 +109,9 @@ function bkWaitCols() {
 /** M-F-05: a row that is waiting on the books (not on the owner's accept) carries its own "Try again" — the one retry (bkWaitingRetry → POST /api/books/outbox/retry) */
 function bkWaitRetryButton(row, rowIndex) {
   if (!bkWaitFailed(row)) return '';
+  /* AW-F-02 + AM-F-05: a day close or bank sign-off in a LOCKED month waits for the owner: its one button posts it forward (the server's answer is the owner's only) */
+  if (row.wait === 'locked')
+    return ' <button data-cbsid="CMP009-B01"' + bkMountAttribute('CMP009') + ' type="button" class="supact-pri" data-testid="wait-forward-' + rowIndex + '" onclick="event.stopPropagation(); bkWaitingRetry(this, true)">' + esc(tx('Post forward')) + '</button>';
   return ' <button data-cbsid="CMP009-B01"' + bkMountAttribute('CMP009') + ' type="button" data-testid="wait-retry-' + rowIndex + '" onclick="event.stopPropagation(); bkWaitingRetry(this)">' + esc(tx('Try again')) + '</button>';
 }
 function bkWaitStepCell(row) {
@@ -337,7 +340,7 @@ function bkWaitAcceptShort(index, button) {
   return CBAction.run(
     button,
     function () {
-      return api('status', { params: { id: row.chit_id }, body: { status: 'accepted' } });
+      return api('status', { params: { id: row.chit_id }, body: { status: 'accepted', counted_minor: short.ours_minor } }); /* REV5 EL-04 M11: the figure the owner SAW; the api answers 409 COUNT_MOVED if the count changed since */
     },
     {
       key: 'wait-accept-' + row.chit_id,

@@ -80,7 +80,13 @@
     var pick = needs[0] || cards.filter(function (card) { return rank(card) === 1 && factOf(card); })[0];
     if (!pick) return firstStepHeadline(cards);
     var fact = factOf(pick), figure = figureOf(fact, pick);
-    return { n: figure.n, w: figure.w, full: fact, tone: needs.length ? 'dn' : '', amber: needs.length };
+    return { n: figure.n, w: figure.w, full: fact, tone: needs.length ? 'dn' : '', amber: needs.length, trend: trendOf(panel) };
+  }
+  /** the sales change against last year, as the Till card's teaser says it ("↑ +12% vs last year") split for a closed row: the arrow and percent shown, "vs last year" in the title and the spoken label; null when the server sent none. Leader practice (Shopify, Stripe, Xero home): the change rides the headline sales figure as a small delta, never a card of its own that a closed row hides. */
+  function trendOf(panel) {
+    var node = panel.querySelector('[data-testid="shell-fact-trend"]'), words = node ? (node.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    var parts = /^(\S+\s*\S*%)\s+(.+)$/.exec(words);
+    return parts ? { short: parts[1], full: words } : null;
   }
 
   /** the manifest's pillars and foundation as groups, and which group owns each card id */
@@ -148,7 +154,7 @@
       '</div><div class="ix-foot" data-testid="ix2-foot">' +
       cfg.foundation.map(footWordHTML).join('') +
       '<span class="ix-fs"></span></div>' +
-      '<dialog class="ix-sheet" data-pop="POP216" data-cbsid="HOM001-P19" data-testid="ix2-sheet"><div class="ix-sh-h"><b></b><button type="button" class="ix-x" data-cbsid="HOM001-B08" aria-label="' +
+      '<dialog class="ix-sheet" data-pop="POP216" data-cbsid="HOM001-P19" data-testid="ix2-sheet" aria-labelledby="ix2-sheet-title"><div class="ix-sh-h"><b id="ix2-sheet-title"></b><button type="button" class="ix-x" data-cbsid="HOM001-B08" aria-label="' +
       esc(sayText('Close')) + '">✕</button></div><div class="ix-sh-b"></div></dialog>'
     );
   }
@@ -251,7 +257,8 @@
     var head = headline(home.panels[group.id]), figureNode = item.querySelector('.ix-v'), amberNode = item.querySelector('.ix-a');
     figureNode.className = 'ix-v ' + head.tone;
     if (head.full) figureNode.title = head.full; else figureNode.removeAttribute('title');
-    figureNode.innerHTML = (head.n ? '<b>' + esc(head.n) + '</b> ' : '') + '<span>' + esc(head.w) + '</span>';
+    figureNode.innerHTML = (head.n ? '<b>' + esc(head.n) + '</b> ' : '') + '<span>' + esc(head.w) + '</span>' +
+      (head.trend ? ' <span class="ix-tr" data-testid="ix2-trend" title="' + esc(head.trend.full) + '" aria-label="' + esc(head.trend.full) + '">' + esc(head.trend.short) + '</span>' : '');
     amberNode.hidden = !head.amber;
     if (head.amber) {
       amberNode.textContent = String(head.amber);
@@ -277,11 +284,15 @@
   function doorsOf(home, allCards) {
     var doors = [], figures = (home.work.figures && home.work.figures.figures) || {};
     allCards.filter(function (card) { return rank(card) === 0; }).forEach(function (card) {
-      doors.push({ t: factOf(card) || nameOf(card) + ' · ' + sayText('needs you'), h: card.getAttribute('href') });
+      doors.push({ n: 1, t: factOf(card) || nameOf(card) + ' · ' + sayText('needs you'), h: card.getAttribute('href') });
     });
-    if (Number(figures.orders_new) > 0) doors.push({ t: figures.orders_new + ' ' + sayText('new orders'), h: home.base + '?view=orders_in' });
-    if (Number(figures.tasks_mine) > 0) doors.push({ t: figures.tasks_mine + ' ' + sayText('tasks for you'), h: home.base + '?view=tasks' });
+    if (Number(figures.orders_new) > 0) doors.push({ n: Number(figures.orders_new), t: figures.orders_new + ' ' + sayText('new orders'), h: home.base + '?view=orders_in' });
+    if (Number(figures.tasks_mine) > 0) doors.push({ n: Number(figures.tasks_mine), t: figures.tasks_mine + ' ' + sayText('tasks for you'), h: home.base + '?view=tasks' });
     return doors;
+  }
+  /** how many THINGS need you: a card is one, the orders door is its order count, the tasks door its task count; the big digit and the bell's dot both read this, never the number of doors (12 orders and 4 tasks are 16, not 2) */
+  function needsCount(doors) {
+    return doors.reduce(function (sum, door) { return sum + (door.n || 1); }, 0);
   }
   /** one door of the Do-first row as a link */
   function doorLinkHTML(door) {
@@ -298,7 +309,7 @@
   /** the needs-you count as the biggest digit, then up to 3 doors (1 on a phone), then "+n" for the rest */
   function doorsHTML(home, doors) {
     var cap = home.phone.matches ? 1 : 3, shownDoors = doors.slice(0, cap);
-    return '<b class="df-n" data-testid="ix2-do-count">' + doors.length + '</b><span class="df-t">' + esc(sayText('Do first')) + '</span><span class="df-i">' +
+    return '<b class="df-n" data-testid="ix2-do-count">' + needsCount(doors) + '</b><span class="df-t">' + esc(sayText('Do first')) + '</span><span class="df-i">' +
       shownDoors.map(doorLinkHTML).join('') + '</span>' +
       (doors.length > cap ? '<button type="button" class="ix-more" data-more="1" data-cbsid="HOM001-B23">+' + (doors.length - cap) + '</button>' : '');
   }
@@ -314,6 +325,7 @@
       home.df.innerHTML = html;
     }
     home.df._items = doors;
+    if (root.CBBell && root.CBBell.setNeeds) root.CBBell.setNeeds(needsCount(doors)); /* the bell's dot is THIS list's size (Do first), not the activity feed's unread count */
   }
   /* the shell draws (and, for a firm, redraws) its cards into .cbsh-more; every card keeps its own node, so the facts the shell paints keep landing in it */
   function adoptCards(home) {

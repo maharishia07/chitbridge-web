@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CRM</title>
 <!-- ⭐ CB CRM — every party (customer and supplier) as one record, on its own page like CB Accounts (docs/design/crm/PLAN.md Q9).
@@ -48,13 +48,7 @@
 /* ── the host globals the app's own files expect (app.html declares these with let/const; so does this page) ── */
 const CFG = {
   API_BASE: (function () {
-    try {
-      var forced = localStorage.getItem('cb_api_base');
-      if (forced) return forced === 'stage' ? window.CB_API : forced;
-      var h = location.hostname;
-      if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-    } catch (_) {}
-    return window.CB_API;
+    return window.CBApiBase ? window.CBApiBase.get() : window.CB_API; /* app/api-base.js: the one reader */
   })()
 };
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
@@ -67,9 +61,9 @@ function go() {
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_POLICY_EP, { me: CB_SHOP_EP.me });</script>   <!-- CB_POLICY_EP (T3-P2-CRM): the Shop window reads and writes the policy flag showcase_template -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>
@@ -82,21 +76,21 @@ function go() {
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
 <script src="/app/sheet-dialog.js"></script>   <!-- the keyboard contract of every dialog.sheet: first field, focus back, Enter saves, empty save names the field, Esc asks (rules 1b 2c 4 5 8) -->
-<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a bill, a chit, a message in the timeline opens it in place; full-page at #/chit/<id> (CBSheet.mount, CRM2) -->
+<script src="/app/chit-sheet-sample.js"></script><script src="/app/chit-doc-head.js"></script><script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a bill, a chit, a message in the timeline opens it in place; full-page at #/chit/<id> (CBSheet.mount, CRM2) -->
 <script src="/app/cap-quotes.js"></script>   <!-- CBQuotes (RAIL-117 · F8): the Rounds section of a quotation, mounted by the chit sheet -->
 <script src="/app/page.js"></script>   <!-- CBPage: the "made with X@v — page not installed" note on the chit page (N03) -->
-<script src="/app/cap-folders.js"></script>
+<script src="/app/cap-folders-metrics.js"></script><script src="/app/cap-folders.js"></script>
 <script src="/app/ui-money.js"></script>   <!-- CMP055-I05 the money field: cap-books.js bkMoneyInput and its readers live here -->
-<script src="/app/cap-books.js"></script><script src="/app/cap-books-lock.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-party.js"></script>   <!-- partyDueChipHTML · partyEditOpen · statementHTML — the party pieces the record reuses -->
+<script src="/app/cap-books.js"></script><script src="/app/cap-books-lock.js"></script><script src="/app/cap-books-tree.js"></script><script src="/app/cap-books-cheques.js"></script><script src="/app/cap-books-waiting-cells.js"></script><script src="/app/cap-books-waiting-view.js"></script><script src="/app/cap-books-needs.js"></script><script src="/app/cap-books-party.js"></script>   <!-- partyDueChipHTML · partyEditOpen · statementHTML — the party pieces the record reuses -->
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>   <!-- CBBell.mount (R06): the dot + the list, from the push stream -->
 <script src="/app/attach-ui.js"></script>   <!-- CBAttach.mount (R07) -->
 <script src="/app/rail-thread-words.js"></script><script src="/app/rail-thread.js"></script>   <!-- CBThread: Remind (M28) sends its message through the one composer -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice: the payment advice OUT (M30) under the Pay outcome and on a statement row -->
 <script src="/app/one-person.js"></script>
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
-<script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the signed-out card mounts it -->
 <script src="/app/cap-crm.js"></script>
-<script src="/app/cap-crm-record.js"></script><script src="/app/cap-crm-timeline.js"></script>
+<script src="/app/cap-crm-record-log.js"></script><script src="/app/cap-crm-record.js"></script><script src="/app/cap-crm-timeline.js"></script>
 <script src="/app/cap-crm-privacy.js"></script><script src="/app/cap-crm-privacy-register.js"></script>   <!-- T3-P3-CONSENT: the record's Consent block (the server's may/why per channel × purpose) and #/privacy, the request register -->
 <script src="/app/cap-crm-calls.js"></script>   <!-- L2: the Calls tab and the one-tap outcome -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->

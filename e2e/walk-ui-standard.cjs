@@ -59,11 +59,12 @@ const setOverlay = async (page, on) => {
 };
 const pick = (page, group, value) => avatarPick(page, (group === 'theme' ? 'theme-' : 'font-') + value);
 /** the toast row must not overlap any visible button (it is a row of the page, so it takes room instead of covering) */
+/* the toast's own buttons (Undo, and the dismiss x since WCAG 2.2.1) are the bar, not something under it */
 const toastClear = (page) => page.evaluate(() => {
   const bar = document.querySelector('#toast .toast');
   if (!bar) return false;
   const box = bar.getBoundingClientRect();
-  return [...document.querySelectorAll('button:not(#undoBtn)')].every((button) => {
+  return [...document.querySelectorAll('button:not(#undoBtn):not(#undoX)')].every((button) => {
     const other = button.getBoundingClientRect();
     return !other.width || other.right <= box.left || other.left >= box.right || other.bottom <= box.top || other.top >= box.bottom;
   });

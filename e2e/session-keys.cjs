@@ -18,7 +18,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..', 'public');
-const files = ['app.html', ...fs.readdirSync(path.join(ROOT, 'app')).filter(f => f.endsWith('.js')).map(f => 'app/' + f)];
+/* 22 Nov (CR-1): the three pages that host app code, not only app.html — till.html and accounts.html DEFINE helpers their kit-served /app/ files call (taxIdLabel, atShop, hashPageOf …), so a scan of fewer files reported them as missing */
+const files = ['app.html', 'till.html', 'accounts.html'].concat(fs.readdirSync(path.join(ROOT, 'app')).filter(f => f.endsWith('.js')).map(f => 'app/' + f));
 
 /* ⚠️ COMMENTS ARE STRIPPED FIRST. The first run of this sweep flagged SESSION.identity_type again — from the
    comment I had just written explaining that SESSION.identity_type does not exist. A guard that reads prose as
@@ -114,7 +115,7 @@ for (const f of files) {
    * file never enters.
    */
   const wrapped = /^\s*\(function\b/.test(src);
-  if (!wrapped) for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)) {
+  if (!wrapped && !(f === 'till.html' || f === 'accounts.html')) for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)) {
     if (!byName.has(m[1])) byName.set(m[1], new Set());
     byName.get(m[1]).add(f);
   }
@@ -140,6 +141,10 @@ for (const f of files) {
      column-zero "function x(" and "var x =", so every call to them was reported as a ReferenceError. */
   for (const m of src.matchAll(/(?:^|[\s,;(])([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?(?:function\b|\([^()]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/gm)) defined.add(m[1]);
   for (const m of src.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)) defined.add(m[1]);
+  /* 22 Nov (CR-1): the other ways a name gets bound — a later name in a comma list (var a = ctx.a, dataKey = ctx.dataKey), a declared-only list (var page, paintPage; assigned later), and an object getter (get bulkAlways() {) */
+  for (const m of src.matchAll(/,\s*([A-Za-z_$][\w$]*)\s*=(?![=>])/g)) defined.add(m[1]);
+  for (const m of src.matchAll(/\b(?:var|let)\s+([A-Za-z_$][\w$]*(?:\s*,\s*[A-Za-z_$][\w$]*)*)\s*;/g)) for (const n of m[1].split(',')) defined.add(n.trim());
+  for (const m of src.matchAll(/\b(?:get|set)\s+([A-Za-z_$][\w$]*)\s*\(/g)) defined.add(m[1]);
   /* destructured bindings — `const { slabOf, resolve } = CBTax.slab;` defines both of those names */
   for (const m of src.matchAll(/\b(?:var|let|const)\s*\{([^}]{1,400})\}\s*=/g)) {
     for (const p of m[1].split(',')) {

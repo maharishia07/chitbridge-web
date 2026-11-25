@@ -65,7 +65,7 @@ function answer(rows, dry) {
   return { dry: !!dry, added: p.filter((r) => r.outcome === 'add').length, merged: p.filter((r) => r.outcome === 'merge').length,
     skipped: p.filter((r) => r.outcome === 'skip').map((r) => ({ row: r.row, name: r.name, phone: r.phone, why: r.why })), rows: p };
 }
-const leadRow = (e) => ({ party_id: e.party_id, display_name: e.name, user_id: '~walk.cus-' + e.party_id.slice(-4), bridge_id: null, email: null, phone: null, otp_contact: e.phone || null, gstn: null, status: 'active',
+const leadRow = (e) => ({ party_id: e.party_id, display_name: e.name, user_id: '~walk.cus-' + e.party_id.slice(-4), bridge_id: null, email: null, phone: e.phone || null, gstn: null, status: 'active',
   city: null, kind: 'local', on_chitbridge: false, may_trade: { ok: false, why: 'local' }, roles: { customer: true, supplier: false }, party_no: 'P-0' + e.party_id.slice(-3), last_activity: null,
   customer: { list_id: 'cl-' + e.party_id, segment: 'new', segment_override: null, txn_count: 0, last_txn_at: null, groups: [], customer_type: 'entity', added_via: 'lead' },
   lead: { stage: 'lead', since: '2026-10-12T09:00:00.000Z' }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } }, dues: null,

@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Operations</title>
 <!-- ⭐ CB Operations — Stock and Suppliers as a small app (T3-OPS, 2026-10-14; Home's "CB Operations" door, docs/design/INDEX-NOT-APP.md).
@@ -90,11 +90,11 @@ function go() {
 <script src="/app/edition.js"></script>
 <script src="/app/avatar.js"></script>
 <script src="/engine/signin.js"></script>
-<script src="/app/signin-ui.js"></script>
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>
 <script src="/app/one-person.js"></script>
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>            <!-- api() + the registry -->
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>            <!-- api() + the registry -->
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>  <!-- CBAction (M64) · tx · txf · toast · CBConfirm · CB_PARTY_EP (supList · supAdd · supPatch · supDel) -->
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>  <!-- CBAction (M64) · tx · txf · toast · CBConfirm · CB_PARTY_EP (supList · supAdd · supPatch · supDel) -->
 <script>Object.assign(EP, CB_PARTY_EP);</script>
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>          <!-- CBLocale: numbers and dates in the reader's format -->
 <script src="/app/helpers.js"></script>         <!-- esc · taxIdWord (the pack's word: GSTIN · ABN · TRN · "Tax number" with no pack) -->

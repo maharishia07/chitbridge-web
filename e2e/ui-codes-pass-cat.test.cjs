@@ -17,7 +17,7 @@ const fs = require('fs'), path = require('path');
 const mutate = process.env.PASSCAT_MUTATE || '';
 const APP = path.join(__dirname, '..', 'public', 'app');
 const readOne = (f) => fs.readFileSync(path.join(APP, f + '.js'), 'utf8').split('\r\n').join('\n');
-const read = (f) => readOne(f) + (f === 'cap-entry' ? '\n' + readOne('cap-entry-preview') : ''); /* the refusal and warning lists (SCR022-B05, B06) moved to cap-entry-preview.js, 20 Nov */
+const read = (f) => readOne(f) + (f === 'cap-catalogue' ? '\n' + readOne('cap-catalogue-import') : '') /* the import half moved out (websplit A) */ + (f === 'cap-entry' ? '\n' + readOne('cap-entry-preview') + '\n' + readOne('cap-entry-lines') : ''); /* the refusal and warning lists (SCR022-B05, B06) moved to cap-entry-preview.js, 20 Nov; the journal lines (SCR022-S03, B03) to cap-entry-lines.js */
 let failures = 0;
 const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) failures++; };
 
@@ -116,7 +116,7 @@ for (const file of Object.keys(srcOf)) {
   check(found === pins.length, file + '.js: ' + found + ' of ' + pins.length + ' codes sit in their own tag');
 }
 const own = (file, re) => (srcOf[file].match(re) || []).length;
-check(own('cap-catalogue', /data-cbsid="CTG001-[A-Z][0-9]{2}"/g) === 9 && own('cap-catalogue', /data-cbsid="CTG003-[A-Z][0-9]{2}"/g) === 6, 'cap-catalogue.js: 9 Items and 6 Import codes (the Categories ones are the 5 CTG002 beside them)');
+check(own('cap-catalogue', /data-cbsid="CTG001-[A-Z][0-9]{2}"/g) === 9 && own('cap-catalogue', /data-cbsid="CTG003-[A-Z][0-9]{2}"/g) === 7, 'cap-catalogue.js: 9 Items and 7 Import codes (CTG003-B04, the rejects download, ux1129) (the Categories ones are the 5 CTG002 beside them)');
 check(own('cap-entry', /data-cbsid="SCR022-B[0-9]{2}"|data-cbsid="SCR022-[ISBT][0-9]{2}"/g) === 19, 'cap-entry.js: 19 Entry codes of SCR022 (none of BKS002)');
 check(srcOf['cap-entry'].indexOf('BKS002') < 0, 'cap-entry.js: no leftover BKS002 code');
 check(own('cap-folders', /data-cbsid="SCR004-[A-Z][0-9]{2}"/g) === 19, 'cap-folders.js: 19 Folders codes of SCR004');

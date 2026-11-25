@@ -275,7 +275,7 @@ var CBIdDocs = (function () {
           var j = await reply.json().catch(function () {
             return {};
           });
-          failed.push(HINT[sc].label + ' — ' + (j.message || reply.status));
+          failed.push(HINT[sc].label + ' — ' + bodyWords(j, String(reply.status)));
         }
       } catch (e) {
         failed.push(HINT[sc].label + ' — could not reach the server');

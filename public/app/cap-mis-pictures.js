@@ -55,7 +55,7 @@ function pcCard(key, title, code, extra, wide) {
   return (
     '<section class="pc-card" data-testid="pc-' + key + '" data-cbsid="' + code + '" style="' + (wide ? 'grid-column:1/-1;' : '') + 'background:var(--card,#fffdf8);border:1px solid var(--line-3,#d8ccb0);border-radius:10px;padding:10px 12px;min-width:0">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><h3 style="margin:0;font:600 var(--fs-2,14px) var(--sans,sans-serif);color:var(--ink,#2a2418)">' + esc(tx(title)) + '</h3>' +
-    '<span style="display:inline-flex;gap:6px"><button type="button" class="tab" data-testid="pc-' + key + '-table-btn" data-cbsid="FIN008-B04" aria-pressed="false" onclick="pcToggleTable(\'' + key + '\')">' + esc(tx('Table')) + '</button></span></div>' +
+    '<span style="display:inline-flex;gap:6px"><button type="button" class="tab" data-testid="pc-' + key + '-table-btn" data-cbsid="FIN008-B04" aria-pressed="false" data-tk="' + esc(key) + '" onclick="pcToggleTable(this.dataset.tk)">' + esc(tx('Table')) + '</button></span></div>' +
     (extra ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + extra + '</div>' : '') +
     '<div id="pc_' + key + '" data-testid="pc-' + key + '-box" style="margin-top:8px;min-height:60px"><p class="hint">' + esc(tx('Loading…')) + '</p></div>' +
     '<div id="pc_' + key + '_tbl" data-testid="pc-' + key + '-table" hidden style="margin-top:6px;max-height:200px;overflow:auto"></div></section>'
@@ -176,6 +176,7 @@ function pcRead(generation, key, name, query, paint) {
       if (generation !== PICS.gen) return;
       if (typeof cblog === 'function') cblog('error', 'pictures ' + key + ': ' + ((error && error.message) || error));
       pcFail(key, error);
+      if (key === 'owed') pcFail('owe', error); /* one dues read feeds both cards: both say it failed (EL-11 M1) */
     }
   );
 }
@@ -183,8 +184,9 @@ function pcRead(generation, key, name, query, paint) {
 function pcLoad() {
   var generation = ++PICS.gen;
   PICS.sales = {};
+  var asked = PICS.period; /* the period this read was ASKED for: an answer lands under it, not under whichever tab is open when it arrives (EL-11 M2) */
   var tasks = [
-    pcRead(generation, 'sales', 'tillTrend', { compare: '1', period: PICS.period }, function (answer) { PICS.sales[PICS.period] = answer; pcSales(answer); }),
+    pcRead(generation, 'sales', 'tillTrend', { compare: '1', period: asked }, function (answer) { PICS.sales[asked] = answer; if (PICS.period === asked) pcSales(answer); }),
     pcRead(generation, 'cash', 'booksCashflow', { days: '30' }, function (answer) { PICS.cash = answer; pcCash(answer); }),
     pcRead(generation, 'pl', 'booksPL', { preset: 'ytd' }, function (answer) { PICS.pl = answer; pcPl(answer); })
   ];

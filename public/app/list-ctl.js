@@ -2612,9 +2612,9 @@ ctx.pin = cols.filter(function (item) {
     });
   }
   function selectedRows(I) {
-    var ids = I.r.sel;
+    var ids = I.r.sel, shown = matched(I).rows; /* EL-18 M5: a ticked row the search or filter now hides is NOT acted on — the bar says "Approve (n)" over the rows in view */
     return allRows(I).filter(function (item, index) {
-      return ids[rowIdOf(I, item, index)];
+      return ids[rowIdOf(I, item, index)] && shown.indexOf(item) >= 0;
     });
   }
 
@@ -2811,7 +2811,7 @@ ctx.pin = cols.filter(function (item) {
     /* ONE LINE: a cell cut with an ellipsis carries its full text as the title, set the first time the pointer reaches it */
     root.document.addEventListener('mouseover', function (ev) {
       var cell = ev.target && ev.target.closest ? ev.target.closest('.cbl .cbl-row .cbl-cell') : null;
-      if (cell && !cell.hasAttribute('title') && cell.scrollWidth > cell.clientWidth) cell.setAttribute('title', (cell.textContent || '').replace(/s+/g, ' ').trim());
+      if (cell && !cell.hasAttribute('title') && cell.scrollWidth > cell.clientWidth) cell.setAttribute('title', (cell.textContent || '').replace(/\s+/g, ' ').trim()); /* EL-18 M6: was /s+/ — every letter s was stripped from the tooltip */
     });
     root.document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.isConnected === false) return; /* the click repainted its own button away: that was a click INSIDE the list */

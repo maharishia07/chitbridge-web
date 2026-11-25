@@ -38,6 +38,8 @@ const layer = SHELL.slice(sf, st) + '\n;\n' + all.slice(from, to);
  *
  * cbLang() reads localStorage, so localStorage is the seam. CBLocale is genuinely external and is stubbed.
  */
+/* cb-words.js reads the locale from globalThis.CBLocale (not a closure name), so the stub is set where the string door looks */
+globalThis.CBLocale = { locale: () => 'ar-AE', number: (n) => String(n) };
 const harness = new Function(
   'document', 'CBLocale', 'localStorage',
   layer + '\n;return { t:t, tx:tx, txf:txf, txn:txn, CBSTR:CBSTR, CBI18N:CBI18N };'

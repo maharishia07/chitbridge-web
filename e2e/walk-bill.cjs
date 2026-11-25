@@ -56,11 +56,11 @@ W.run('bill', async (w) => {
      F5 W1a (24 Oct, d0f422de) made Fix › the owner's door: a counter that is NOT the owner or a manager sees the same button GREYED with the reason beside it
      (show the action, enable it by role), and the owner's Fix › opens the rate sheet "Poori: GST?" (rateAskOpen), not the old Close-only dialog. BF1 walks the
      cashier (this stand-in has no signed-in person), BF1b the owner. */
-  await w.step('BF1', 'Add Poori (the shelf has no tax rate for it) -> the bill says "1 item has no tax rate" with Fix › greyed and the reason beside it (a cashier cannot set a rate)', async () => {
+  await w.step('BF1', 'Add Poori (the shelf has no tax rate for it) -> the bill says "No tax answer for Poori" with Fix › greyed and the reason beside it (a cashier cannot set a rate)', async () => {
     await type('Poori'); const c = await cart(); const t = await screenText();
-    const said = /⚠ 1 item has no tax rate/.test(t);
+    const said = /⚠ No tax answer for Poori/.test(t);
     const fix = await page.evaluate(() => { const b = document.querySelector('[data-testid="till-warn-norate-fix"]'); return b ? { off: b.disabled, why: b.title || '' } : null; });
-    return { ok: c.length === 2 && said && !!fix && fix.off && /Ask the owner/.test(fix.why), saw: 'bill has ' + c.length + ' lines; says ' + (said ? '"1 item has no tax rate"' : 'nothing about a missing rate') + '; Fix › ' + (fix ? (fix.off ? 'greyed' : 'ENABLED') + ' "' + fix.why.slice(0, 60) + '"' : 'not drawn') };
+    return { ok: c.length === 2 && said && !!fix && fix.off && /Ask the owner/.test(fix.why), saw: 'bill has ' + c.length + ' lines; says ' + (said ? '"No tax answer for Poori"' : 'nothing about a missing rate') + '; Fix › ' + (fix ? (fix.off ? 'greyed' : 'ENABLED') + ' "' + fix.why.slice(0, 60) + '"' : 'not drawn') };
   });
   await w.step('BF1b', 'The owner signs in at this counter -> Fix › is enabled and opens the rate sheet naming Poori', async () => {
     await page.evaluate(() => { CloudHost.person = { token: 'walk-owner', kind: 'entity', name: 'Walk Owner' }; paintTotals(); });

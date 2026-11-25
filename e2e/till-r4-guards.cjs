@@ -11,7 +11,7 @@ const ROOT = path.join(__dirname, '..', 'public');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(78) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
-const ITEMS = [{ item_id: 'i1', name: 'Dosa', code: 'D1', category: 'Tiffin', unit: 'plate', price: 40, tax_rate: 5 }];
+const ITEMS = [{ item_id: 'i1', name: 'Dosa', code: 'D1', category: 'Tiffin', unit: 'plate', price: 40, gst_rate: 5 }];
 
 function web() {
   return http.createServer((q, r) => {

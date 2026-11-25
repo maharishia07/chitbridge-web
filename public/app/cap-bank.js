@@ -122,7 +122,7 @@ function bankAcctPick(code, loading) {
   const moved = BKB.stmtAcct && BKB.stmtAcct !== code;
   BKB.acct = code;
   if (!moved) return;
-  Object.assign(BKB, { text: null, stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], teach: null, bal: '' });
+  Object.assign(BKB, { text: null, stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], bal: '' });
   const file = bkbEl('bk_file'),
     res = bkbEl('bk_res'),
     out = bkbEl('bk_out');
@@ -143,6 +143,7 @@ const bkbReadOnly = () => typeof bkReadOnlySeat === 'function' && bkReadOnlySeat
 function bkbActRefusal() {
   return bkbActing() && !CBBooksActing.posts() ? tx('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.') : '';
 }
+/** one gated action on the bank page: refused with the sentence when the account is not bound or the act is blocked, else carried out */
 function bkbStep(action) {
   if (!bkbBound()) return false;
   if (bkbActRefusal()) {
@@ -163,10 +164,15 @@ function bkbStep(action) {
 function bkbLearn(line, x) {
   if (bkbNoCountryWords()) return;
   const r = CBBankRecon.learn(line, x, { at: new Date().toISOString(), by: bkbBy(), country: bkbCountry() });
-  if (!r.ok) return;
+  if (r.ok) bkbKeepRule(r.rule);
+}
+/** keep one rule on this device (the newest wins for the same id): the one writer, whether the engine's learn() or the sheet's answer (resolve().taught) made it */
+function bkbKeepRule(rule) {
+  if (!rule || !rule.id || bkbNoCountryWords()) return;
+  const stamped = Object.assign({}, rule, { source: Object.assign({}, rule.source, { at: (rule.source && rule.source.at) || new Date().toISOString(), by: (rule.source && rule.source.by) || bkbBy() }) });
   BKB.rules = bkbRules()
-    .filter((y) => y.id !== r.rule.id)
-    .concat([r.rule]);
+    .filter((y) => y.id !== stamped.id)
+    .concat([stamped]);
   bkbSave('rules', BKB.rules);
 }
 const bkbIsBank = (a, groupCode) => !a.is_group && (a.role === 'bank' || (groupCode != null && a.parent_code === groupCode));
@@ -189,9 +195,9 @@ async function bkbHash(text) {
       .map((item) => item.toString(16).padStart(2, '0'))
       .join('');
   } catch (_) {
-    let h = 5381;
-    for (let index = 0; index < text.length; index++) h = ((h << 5) + h + text.charCodeAt(index)) | 0;
-    return ('00000000' + (h >>> 0).toString(16)).slice(-8).repeat(8);
+    let hash = 5381;
+    for (let index = 0; index < text.length; index++) hash = ((hash << 5) + hash + text.charCodeAt(index)) | 0;
+    return ('00000000' + (hash >>> 0).toString(16)).slice(-8).repeat(8);
   }
 }
 
@@ -200,6 +206,7 @@ function bkbPresets() {
   const pack = typeof CBRegulation !== 'undefined' && bkbCountry() ? CBRegulation.resolve({ country: bkbCountry() }) : null;
   return (pack && pack.bank && pack.bank.presets) || {};
 }
+/** the Bank page: the bank ledgers are read, then the form (account, which bank, statement file) and the Statements box are drawn; a sentence when there is no bank ledger */
 async function bankView(body) {
   let accts = [];
   try {
@@ -263,6 +270,7 @@ function bankRestore() {
   return true;
 }
 
+/** a statement file chosen: read as text, then handed to bankTake with its name */
 async function bankPick(input) {
   const file = input.files && input.files[0];
   if (!file) return;
@@ -356,7 +364,7 @@ function bankFileAccountNote() {
 async function bankLedger() {
   const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: BKB.from, to: BKB.to } });
   BKB.ledgerRaw = reply || {};
-  return ((reply && reply.lines) || []).map((item, index) => ({
+  return bksLiveLines(reply && reply.lines).map((item, index) => ({
     id: String(item.ref) + '#' + index,
     date: item.date,
     dr_minor: Number(item.dr_minor) || 0,
@@ -383,6 +391,7 @@ async function bankLoansAndLodged() {
   const [loans, lodged] = await Promise.all([api('booksLoans').catch((failure) => bkQuiet('bank-loans', failure)), api('booksGstLodged').catch((failure) => bkQuiet('bank-lodged', failure))]);
   return { loans: (loans && loans.loans) || [], lodged: ((lodged && lodged.periods) || []).map((one) => ({ period: one.period, net_minor: one.net_minor })) };
 }
+/** the Read button: the loans and the GST lodged read for the rail, the statement matched to the ledger, the result painted */
 async function bankRun() {
   if (!bkbBound()) return;
   const res = bkbEl('bk_res');
@@ -527,12 +536,12 @@ function bankExplain() {
 const bkbAcctName = () => ((BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {}).name || '';
 /** the Bank Reconciliation Statement: the books' balance is the API's ledger closing figure; the bank's is the statement's (or typed); the engine states the difference */
 function bankBrs() {
-  const P = BKB.parsed,
-    last = P.lines[P.lines.length - 1] || {};
-  let bank = P.closing_minor != null ? P.closing_minor : last.balance_minor != null ? last.balance_minor : null;
+  const parsed = BKB.parsed,
+    last = parsed.lines[parsed.lines.length - 1] || {};
+  let bank = parsed.closing_minor != null ? parsed.closing_minor : last.balance_minor != null ? last.balance_minor : null;
   if (bank == null && BKB.bal !== '') {
-    const m = bkToMinor(BKB.bal);
-    if (!isNaN(m)) bank = m;
+    const typedMinor = bkToMinor(BKB.bal);
+    if (!isNaN(typedMinor)) bank = typedMinor;
   }
   BKB.bankKnown = bank != null;
   if (bank == null) {
@@ -580,6 +589,8 @@ const bkbRowGroup = (item) => {
   return one && one.state === 'in_books' ? 'matched' : group;
 };
 const bkbCount = (key) => BKB.rows.filter((item) => bkbRowGroup(item) === key).length;
+/** AD-F-02: the lines READY to add (the sheet controller's own count, the one the sheet's button reads): the Add button counts these, never the lines still to go; before the controller is there, the lines to go */
+const bkbReadyCount = () => (typeof bkshCounts === 'function' && typeof BKSH !== 'undefined' && BKSH.ctl && BKSH.key === bkshKey() ? bkshCounts().ready : bkbCount('books'));
 /** a signed period at nil: "Sign off again" lives in More on a phone, where the band has no room for the button (the band shows it from 760 px up) */
 function bankMoreSignAgain() {
   const fig = bankFigures();
@@ -626,20 +637,21 @@ document.addEventListener('click', (event) => {
   }
 });
 
+/** the result of the last read: warnings, the opening check, the tabs and the lines or the BRS under them */
 function bankPaint() {
   const res = bkbEl('bk_res');
   if (!res) return;
-  const P = BKB.parsed;
-  if (!P) {
+  const parsed = BKB.parsed;
+  if (!parsed) {
     res.innerHTML = '';
     bankLayout(false, false);
     return;
   }
   /* the engine's note that a bank's format is not confirmed is for its builders: the shop is told what to do about it */
-  const ws = (P.warnings || []).map((item) =>
+  const warnings = (parsed.warnings || []).map((item) =>
     /verify against a real file/i.test(item) ? tx('Check the lines against your statement — this bank format is not confirmed yet.') : item
   );
-  const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
+  const warn = warnings.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(warnings.slice(0, 3).join(' · ')) + (warnings.length > 3 ? ' …' : '') + '</div>' : '';
   const lines = BKB.tab !== 'brs';
   res.innerHTML =
     warn +
@@ -694,6 +706,7 @@ function bankChangeOpen() {
   const button = document.querySelector('[data-testid="bank-change"]');
   if (button && !document.querySelector('.pe-bank.bk-open')) bankChange(button);
 }
+/** the red check when the statement opens at a different balance than the books held the day before, else nothing */
 function bankOpeningHtml() {
   const facts = bankOpeningFacts();
   if (!facts) return '';
@@ -712,8 +725,10 @@ function bankPrimaryHtml(fig) {
   const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct(), no = typeof bkbSeatNoPrimary === 'function' ? bkbSeatNoPrimary(fig) : ''; /* app.html loads cap-bank.js without the Statements box */
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (no || !canAdd || (fig && !bkbCount('books'))) return bankPrimaryGreyed(no); /* FIN-129: a seat the server refuses sees the button greyed, with why and who can */
-  const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
-  return bankAddButton(held + ' onclick="bankAdd()"', bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books'));
+  const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '',
+    ready = bkbReadyCount();
+  if (!ready) return bankPrimaryGreyed(tx('No line is ready to add yet: answer the lines that need you first.')); /* AD-F-02: greyed with a sentence, never an Add that promises lines that are not ready */
+  return bankAddButton(held + ' onclick="bankAdd()"', txn('Add {count} line to your books', 'Add {count} lines to your books', ready));
 }
 /** FIN-129: the greyed button with the server's sentence beside it, or nothing when the seat is not refused (no = '') */
 function bankPrimaryGreyed(no) {
@@ -742,6 +757,7 @@ const bkbWrongAccountButton = (testid, label) =>
 function bankFinish() {
   return bankBandCore() + (typeof bkshLockNotice === 'function' ? bkshLockNotice() : ''); /* W15-85: a locked month is said under the band, before any work */
 }
+/** the finishing band under the lines: the closing balance, what is left to do, and the actions that are allowed now */
 function bankBandCore() {
   const figures = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions">' + '<span id="bk_primary">' + bankPrimaryHtml(figures) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
@@ -754,72 +770,23 @@ function bankBandCore() {
       '<span class="bk-bal-quick" data-testid="bank-bal-quick">' + peAmt('bk_bal_q', BKB.bal) + ' ' + peBtn('bank-bal-quick-go', 'Show the difference', "BKB.bal=peVal('bk_bal_q');bankBrs();bankPaint()") + '</span>' +
       acts + '</div>'
     );
-  const P = BKB.parsed,
+  const parsed = BKB.parsed,
     code = bkCur();
   return CBBankBand.html({
     tid: 'bank-finish',
     account: bkbAcctName() || BKB.stmtAcct,
-    from: P.from, to: P.to, count: P.lines.length, currency: code,
+    from: parsed.from, to: parsed.to, count: parsed.lines.length, currency: code,
     change: typeof BKST !== 'undefined' && BKST.mode === 'server' ? '' /* the trail's Back (cap-bank-home.js) is the way to the files and the other statements */ : '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
     rightAct: bkbReadOnly() ? '' : bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
     actions: acts,
     right: CBBankBand.rightAccount({
-      parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
+      parsed: parsed, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
       booksOpening_minor: BKB.ledgerRaw ? BKB.ledgerRaw.opening_minor : null, accountNumber: bkbHeldNumber(), previous: bkbPreviousStatement()
     }),
     statement: figures.statement, books: figures.books, difference: figures.gap, differenceWords: figures.dir,
-    toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: P.lines.length,
+    toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: parsed.lines.length,
     unexplained: figures.unexplained && /[1-9]/.test(figures.unexplained) ? figures.unexplained : '', nil: figures.nil
   });
-}
-/**
- * W15-24 · the BANK DETAILS of a bank account: bank, branch code and the LAST FOUR of the account number. Asked once, optional ("not given" stays unknown, never defaulted), and matched against a file that carries a number.
- * Only the last four are kept, never the full number: that is all the match needs, and it is the form Australian banks themselves show (the Consumer Data Right banking standard's maskedNumber).
- * The branch code is the country's own: AU a 6-digit BSB (allocated by AusPayNet), IN an IFSC, else a free branch code. Kept on THIS device for this shop and account (the books have no field for it yet: a server home needs
- * an api field and a migration, which is the owner's decision), so another device or the adviser's seat does not see it until then.
- * Figures cited from the walker's knowledge, not looked up in this round: cb-country to cite-check before a requirement is written.
- */
-/** the country's branch-code rule: helpers.js bankBranchRule (the pack's own first, else the one table); null = a free, neutral 'Branch code' */
-const bkbBranchRule = () => bankBranchRule(bkbCountry());
-const bkbBranchWords = () => {
-  const rule = bkbBranchRule();
-  return rule ? [rule.word, rule.hint] : ['Branch code', 'the branch code, if your bank has one'];
-};
-const bkbDetails = () => bkbLoad('acctdetails:' + (BKB.stmtAcct || BKB.acct), {}) || {};
-/** the account number the books hold for this bank account, masked ('****1234'), or '' when none is held */
-function bkbHeldNumber() {
-  const held = bkbDetails();
-  return held.last4 ? '****' + held.last4 : '';
-}
-function bankDetailsOpen() {
-  const held = bkbDetails(),
-    words = bkbBranchWords();
-  ui.dialog({
-    mount: 'BKS014-U04', pop: 'POP092',
-    titleText: tx('Bank details of this account'),
-    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
-    body: peField('bk_dbank', 'Bank', peInput('bk_dbank', held.bank, '', 'text', ' maxlength="60" autocomplete="off"')) +
-      peField('bk_dbranch', words[0], peInput('bk_dbranch', held.branch, tx('For example') + ' ' + ((bkbBranchRule() || {}).example || ''), 'text', ' maxlength="20" autocomplete="off"')) +
-      peField('bk_dlast4', 'Last 4 digits of the account number', peInput('bk_dlast4', held.last4, '', 'text', ' maxlength="4" inputmode="numeric" autocomplete="off"')) +
-      '<div class="pe-note">' + bkbE(tx('Only the last four digits are kept, so a statement that carries the account number can be checked against this account. Nothing here is sent anywhere.')) + '</div><div id="bk_dout" class="pe-slot"></div>',
-    footerHtml: '<button data-cbsid="BKS014-B29" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B28" type="button" class="pri" data-testid="bank-details-save" onclick="bankDetailsSave()">' + bkbE(tx('Save')) + '</button>'
-  });
-}
-function bankDetailsSave() {
-  const bank = String(peVal('bk_dbank') || '').trim(),
-    branch = String(peVal('bk_dbranch') || '').trim(),
-    last4 = String(peVal('bk_dlast4') || '').trim(),
-    out = bkbEl('bk_dout');
-  const refuse = (words) => out && (out.innerHTML = '<div class="pe-bad" role="alert" data-testid="bank-details-bad">' + bkbE(tx(words)) + '</div>');
-  if (last4 && !/^[0-9]{4}$/.test(last4)) return refuse('The last four digits of the account number are four digits.');
-  const rule = bkbBranchRule();
-  if (branch && rule && rule.pattern && !new RegExp(rule.pattern).test(branch)) return refuse(rule.hint ? 'The ' + rule.word + ' is ' + rule.hint + '.' : 'That branch code is not in the right form.');
-  bkbSave('acctdetails:' + (BKB.stmtAcct || BKB.acct), { bank, branch, last4 });
-  if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* the statement is checked again with the number */
-  closeModal();
-  if (typeof bkshPrime === 'function') bkshPrime().then(() => bankPaint()).catch((failure) => bkQuiet('bank-details', failure));
-  bankPaint();
-  toast(tx('Bank details kept.'));
 }
 const BKB_BRS_ITEMS = [
   ['Cheques issued, not yet presented', 'issued_not_presented'],
@@ -866,23 +833,19 @@ function bankAdd(row) {
 if (typeof BK !== 'undefined')
   BK.onEntrySaved = () => {
     if (BK.tab === 'bank' && BKB.parsed) {
-      if (BKB.teach) {
-        bkbLearn(BKB.teach.line, BKB.teach.x);
-        BKB.teach = null;
-      }
       bankRun().catch(() => {});
     }
   };
 /** BR1 · the Accounts Home to-do row for the bank: the count of lines that need a person, from the last statement read ON THIS DEVICE (the statement never
  *  reaches the server, so the server's To-do cannot count it). Drawn by the Home's own todoRow — the same look, the same words. null when nothing waits. */
 function bankTodoItem() {
-  const t = bkbLoad('todo', null),
-    n = (t && Number(t.n)) || 0;
-  if (!n) return null;
+  const todoMark = bkbLoad('todo', null),
+    needing = (todoMark && Number(todoMark.n)) || 0;
+  if (!needing) return null;
   return {
     kind: 'bank',
-    count: n,
-    words: txn('bank line needs you — from the last statement read on this device', 'bank lines need you — from the last statement read on this device', n),
+    count: needing,
+    words: txn('bank line needs you — from the last statement read on this device', 'bank lines need you — from the last statement read on this device', needing),
     action: { screen: 'bank', label: tx('Open Bank') }
   };
 }
@@ -944,6 +907,7 @@ function bkbBrsGate(statement) {
   }
   return statement.ok ? '' : '<div class="pe-bad" data-testid="bank-brs-bad">' + bkbE(statement.why) + '</div>';
 }
+/** the Bank Reconciliation Statement tab: its gate sentence, or the statement drawn from the engine */
 function bankBrsPaint() {
   const host = bkbEl('bk_brs');
   if (!host) return;

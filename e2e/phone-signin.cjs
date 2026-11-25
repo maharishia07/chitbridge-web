@@ -117,7 +117,9 @@ async function dialogFits(p) {
     const vw = window.innerWidth, vh = window.innerHeight, dr = d.getBoundingClientRect();
     const ctl = Array.prototype.slice.call(d.querySelectorAll('button,input')).filter((e) => {
       const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
-    const out = ctl.filter((e) => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > vw + 0.5 || r.top < 0 || r.bottom > vh + 0.5; })
+    /* 1129: the greyed Google and Microsoft doors and Close sit under the box and Continue; the dialog scrolls (dialogScrolls), so they may need a scroll with the keyboard up. The walk's claim is the box and its own button, so those three are not counted. */
+    const secondary = (e) => /signin-google-soon|signin-microsoft-soon|till-usign-close/.test(e.dataset.testid || '');
+    const out = ctl.filter((e) => !secondary(e)).filter((e) => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > vw + 0.5 || r.top < 0 || r.bottom > vh + 0.5; })
       .map((e) => (e.dataset.testid || e.id || e.textContent.trim()).slice(0, 30));
     const small = ctl.filter((e) => e.getBoundingClientRect().height < 40).map((e) => (e.dataset.testid || e.id || e.textContent.trim()).slice(0, 30));
     return { open: true, id: d.id, box: [Math.round(dr.left), Math.round(dr.top), Math.round(dr.width), Math.round(dr.height)],

@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Settings</title>
 <!-- ⭐ CB Settings — the shop's own setup as a small app (SET1, 2026-10-13; docs/design/INDEX-NOT-APP.md §3 row 1). Owner: "in the index still lot of
@@ -133,9 +133,9 @@ function go() {
 </script>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>
-<script src="/app/core.js"></script><script src="/app/core-answers.js"></script>          <!-- api() · the network pill · the outbox — the workshop's own transport -->
+<script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>          <!-- api() · the network pill · the outbox — the workshop's own transport -->
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CB_HOMES · CB_SHOP_EP -->
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>  <!-- tx · toast · CBAction · CB_HOMES · CB_SHOP_EP -->
 <script>Object.assign(EP, CB_SHOP_EP, CB_SETTINGS_EP);</script>   <!-- CB_SETTINGS_EP (T3-SETTINGS): counters · keys · connectors · policy · plan & usage -->
 <script src="/engine/locale.js"></script><script src="/app/shop-time.js"></script>          <!-- CBLocale: the page's language, direction and formats -->
 <script src="/engine/money.js"></script>           <!-- CBMoney: the money unit's decimals per currency — Country setup's live examples (W28) read it, never a second table -->
@@ -143,7 +143,7 @@ function go() {
 <script src="/app/helpers.js"></script>         <!-- esc -->
 <script src="/engine/tax.js"></script>             <!-- CBRegulation: the shop's pack → its words (helpers.js packWord: ABN · Postcode · TRN · Emirate) and Country setup's csuPack (FX-QA1) -->
 <script src="/engine/signin.js"></script>
-<script src="/app/signin-ui.js"></script>
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>
 <script src="/app/one-person.js"></script>
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
@@ -152,11 +152,11 @@ function go() {
 <script src="/app/page-frame.js"></script>
 <script src="/app/ui.js"></script>             <!-- ui.action / ui.dialog: the standard action set (UX-137, CMP001..CMP010); AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/ui-field.js"></script>      <!-- CMP055 Field: the register form (register-form.js) draws its User ID, e-mail, code and terms tick with ui.field (UX-137 wave 3); AFTER ui.js -->
-<script src="/app/cap-shop.js"></script>        <!-- Your shop: the Profile's Business section + the vault's identity rows (MOVED from cap-admin.js) -->
+<script src="/app/cap-shop-patch.js"></script><script src="/app/cap-shop.js"></script>        <!-- Your shop: the Profile's Business section + the vault's identity rows (MOVED from cap-admin.js) -->
 <script src="/app/cap-country.js"></script>     <!-- Country setup (CS1), mounted here with CBCountry.mount -->
 <script src="/app/register-form.js"></script>   <!-- New shop (SET3 · FX-UX2): the register form app.html #/register paints, mounted here with CBRegistration.mount -->
 <script src="/app/list-ctl-css.js"></script><script src="/app/list-ctl-click.js"></script><script src="/app/list-ctl-wire.js"></script><script src="/app/list-ctl.js"></script>        <!-- CBList: the one list control (every list in the four sections below) -->
-<script src="/app/cap-settings.js"></script>    <!-- Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS), mounted with CBSettings.mount -->
+<script src="/app/cap-settings-provider.js"></script><script src="/app/cap-settings-guide.js"></script><script src="/app/cap-settings.js"></script>    <!-- Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS), mounted with CBSettings.mount -->
 <script src="/app/cap-print.js"></script>       <!-- Print setup (SET-WALK1 W27): the bill's signature, previewed live by bill-print.html; mounted with CBPrint.mount -->
 <script>
 'use strict';

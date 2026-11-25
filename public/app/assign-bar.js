@@ -25,11 +25,7 @@
     return text;
   }
   function base() {
-    try {
-      var f = root.localStorage.getItem('cb_api_base');
-      if (f) return f === 'stage' ? root.CB_API || '' : f;
-    } catch (failure) { if (root.cbQuiet) root.cbQuiet('assign:base', failure); }
-    return /^(localhost|127\.0\.0\.1)$/.test(root.location.hostname) ? 'http://localhost:3000' : root.CB_API || '';
+    return root.CBApiBase ? root.CBApiBase.get() : root.CB_API || ''; /* app/api-base.js: the one reader */
   }
   function session() {
     try { return JSON.parse(root.localStorage.getItem('cb_sess') || 'null') || {}; } catch (failure) { if (root.cbQuiet) root.cbQuiet('assign:sess', failure); return {}; }

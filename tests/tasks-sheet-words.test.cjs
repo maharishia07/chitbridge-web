@@ -10,6 +10,7 @@ const cx = vm.createContext({ console, esc: (s) => String(s == null ? '' : s), t
 cx.window = cx; cx.globalThis = cx;
 cx.CBAssign = { chip: () => '', slotHTML: () => '', queue: () => ({ views: [], filter: { key: 'assignee', match: () => true } }) };
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-assign.js', 'utf8'), cx);
+vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks-words.js', 'utf8'), cx); /* the row wording, loaded before cap-tasks.js as tasks.html does */
 vm.runInContext(fs.readFileSync(__dirname + '/../public/app/cap-tasks.js', 'utf8'), cx);
 const T = cx.CBTasks;
 const S = 'Only the copy you received moves through these steps.';

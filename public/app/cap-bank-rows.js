@@ -168,7 +168,7 @@ function bankList() {
 const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|payment_made|cheque_dishonoured)$/.test(r.sugg.event.type));
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */
-function bankAccept(line, quiet) {
+function bankAccept(line, quiet, deferPaint) {
   if (
     !bkbStep({
       act: 'accept',
@@ -181,8 +181,10 @@ function bankAccept(line, quiet) {
     return;
   const chit = (line.chits || [])[0];
   if (chit && chit.party && chit.party.id) bkbLearn(line.stmt, { party: chit.party.id, party_name: chit.party.name });
-  bankExplain();
-  bankPaint();
+  if (!deferPaint) {
+    bankExplain();
+    bankPaint();
+  } /* deferPaint: the caller accepts many lines, then explains and paints ONCE */
   if (!quiet) toast(tx('Accepted. Undo keeps your notes.'));
 }
 function bankUndo(line) {
@@ -237,7 +239,7 @@ function bankNote(line) {
     footerHtml: '<button data-cbsid="BKS014-B03" type="button" onclick="closeModal()">' +
       bkbE(tx('Cancel')) +
       '</button><button data-cbsid="BKS014-B04" type="button" class="pri" data-testid="bank-note-save" onclick="bankNoteSave(\'' +
-      bkbE(line.id) +
+      escJs(line.id) +
       '\')">' +
       bkbE(tx('Save note')) +
       '</button>'
@@ -398,7 +400,7 @@ function bkbNextTold(line) {
             ' <button data-cbsid="BKS014-B07" type="button" class="cbl-btn" data-testid="bank-open-chit-' +
             bkbE(item.chit_id) +
             '" onclick="openChitSheet(\'' +
-            bkbE(item.chit_id) +
+            escJs(item.chit_id) +
             '\')">' +
             bkbE(tx('Open the chit')) +
             '</button>'

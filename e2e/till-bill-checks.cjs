@@ -42,7 +42,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
     return { warn: warn, slip: slipHTML(bill, {}), ratedSlip: slipHTML(rated, {}) };
   });
   /* M40: one line, a count and Fix ›; the names and the sentence live behind Fix (billWarnFix) */
-  say('the bill carries ONE line "⚠ 1 item has no tax rate · Fix ›"', /⚠ 1 item has no tax rate/.test(r1.warn) && /till-warn-norate-fix[^>]*>Fix ›/.test(r1.warn) && !/catalogue/.test(r1.warn), r1.warn.replace(/<[^>]+>/g, ' ').trim());
+  say('the bill carries ONE line "⚠ No tax answer for Poori … · Fix ›" (1129 TAX-EXPLICIT: the item is named, a blank is not a rate)', /⚠ No tax answer for Poori/.test(r1.warn) && (r1.warn.match(/till-warn-norate"/g)||[]).length === 1 && /till-warn-norate-fix[^>]*>Fix ›/.test(r1.warn), r1.warn.replace(/<[^>]+>/g, ' ').trim());
   say('the slip is headed NOT A TAX INVOICE and names the line', /NOT A TAX INVOICE/.test(r1.slip) && /GST charged on: Poori/.test(r1.slip) && !/>TAX INVOICE</.test(r1.slip), '');
   /* M66 (walk 2026-10-10): a slip that is NOT a tax invoice names no place of supply; a tax invoice names it with its state */
   say('place of supply prints with its state name — on the tax invoice, not on the slip that is not one', /29 Karnataka/.test(r1.ratedSlip) && !/Place of supply/.test(r1.slip), '');
@@ -78,8 +78,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
   say('it is recorded as not a tax invoice (not_invoice: shop_details)', r2b.saved && r2b.saved.not_invoice === 'shop_details' && r2b.saved.tax > 0, JSON.stringify(r2b.saved));
   say('the paper says BILL — NOT A TAX INVOICE, never TAX INVOICE', /BILL — NOT A TAX INVOICE/.test(r2b.slip) && !/>TAX INVOICE</.test(r2b.slip), '');
   say('the dialog says it in ONE line with Fix ›, outside the printed slip', /Not a tax invoice — shop details disagree/.test(r2b.note) && /Fix ›/.test(r2b.note) && !/shop details disagree/.test(r2b.slip), r2b.note);
-  const r2c = await sell([{ item_id: 'y', name: 'Poori', unit: 'plate', price: 50, qty: 1, gst_rate: null }]);
-  say('a bill that charges NO tax saves as a plain bill and says nothing about the clash', !!r2c.saved && !r2c.saved.not_invoice && !r2c.note, JSON.stringify(r2c.saved) + ' ' + r2c.note);
+  const r2c = await sell([{ item_id: 'y', name: 'Poori', unit: 'plate', price: 50, qty: 1, gst_rate: 0, nil_kind: 'exempt' }]);
+  say('a bill that charges NO tax (a stated 0%, exempt) saves as a plain bill and says nothing about the clash', !!r2c.saved && !r2c.saved.not_invoice && !r2c.note, JSON.stringify(r2c.saved) + ' ' + r2c.note);
   const r2d = await p.evaluate(async () => {
     var said = null, called = false, realSay = window.say, realHost = HOST, realCBTax = window.CBTax;
     window.say = function (m) { said = m; }; HOST = Object.assign({}, realHost || {}, { bill: async function () { called = true; return { ok: true, bill: {} }; } });

@@ -84,8 +84,8 @@ const PEOPLE = {
   /* ── a shop PC: a copy of the kit, an unpaired connector.json, and counter.cmd's restart loop ── */
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cbswitchpc-'));
   const kit = path.join(home, 'kit'); fs.mkdirSync(kit);
-  /* signin-ui.js: the kit's byte copy of the ONE sign-in window (#68) — till.js serves it at /app/signin-ui.js */
-  ['till.js', 'till.html', 'core.js', 'printer.js', 'rollup.js', 'orders.js', 'orderhub.js', 'signin.js', 'signin-ui.js', 'money.js']
+  /* signin-ui.js: the kit's byte copy of the ONE sign-in window (#68) and its two halves (signin split 1129: more-ways, session load BEFORE signin-ui) — till.js serves them at /app/ */
+  ['till.js', 'till.html', 'core.js', 'printer.js', 'rollup.js', 'orders.js', 'orderhub.js', 'signin.js', 'signin-ui.js', 'signin-more-ways.js', 'signin-session.js', 'cb-words.js', 'their-bill.js', 'tax-slab-ui.js', 'till-dayrep.js', 'till-slip.js', 'money.js']
     .forEach((n) => fs.copyFileSync(path.join(KIT, n), path.join(kit, n)));
   const cfgFile = path.join(home, 'connector.json');
   fs.writeFileSync(cfgFile, JSON.stringify({ api: API, till: { id: 'C1' }, printer: 'KeepMe' }, null, 2));

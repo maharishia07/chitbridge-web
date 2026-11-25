@@ -25,6 +25,7 @@ ctx.window = ctx;
 ctx.tx = (english) => english; /* the string door (accounts-shell.js tx) is loaded by the page; English passes through, which is what this file reads */
 vm.createContext(ctx);
 vm.runInContext(read('app/helpers.js'), ctx);    /* T2-WEBPRIMS: esc · fmtMoney - the ONE copy, loaded by the page before its own script */
+vm.runInContext(read('app/cb-words.js'), ctx);   /* shop.html loads it before its script: failWords, cbApiParam (a foreign ?api= is ignored) */
 vm.runInContext(read('app/workflow.js'), ctx);   /* the page loads it before its own script (CBWorkflow.stageOf → the status words) */
 vm.runInContext(script, ctx);
 const run = (src) => vm.runInContext(src, ctx);
@@ -81,7 +82,7 @@ g = guardFn({ lines: [{}], mode: 'delivery', loc: 'x', contact: '', step: 'conta
 ok(/phone or email/i.test(g('who')), 'Who you are asks for a phone or email');
 const sf = read('app/step-flow.js');
 const flowCtx = { document: undefined, module: { exports: {} }, console }; flowCtx.globalThis = flowCtx; vm.createContext(flowCtx);
-flowCtx.esc = ctx.esc; /* step-flow.js uses the page's esc (app/helpers.js loads first) */
+flowCtx.esc = ctx.esc; flowCtx.escJs = ctx.escJs; /* step-flow.js uses the page's esc (app/helpers.js loads first) */
 vm.runInContext(sf, flowCtx);
 const SF = flowCtx.module.exports;
 let want = 'A delivery address is needed.';

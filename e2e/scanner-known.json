@@ -1,20 +1,18 @@
 {
  "api-envelope": {
-  "count": 15,
+  "count": 13,
   "owner": "api",
   "keys": [
-   "actors.js|summary",
    "chits.js|cost_params_ignored",
    "chits.js|cost_params_ignored",
    "chits.js|cost_params_ignored",
    "entities.js|answers",
    "folders.js|cost_params_ignored",
    "folders.js|cost_params_ignored",
-   "products.js|added,declared,message,warnings",
-   "products.js|done,message,refused,unchanged",
+   "products.js|done,refused,unchanged",
    "relationships.js|fields,finishes,schema",
-   "testing.js|folded,not_on_board,project_not_written,recorded,run_id,run_label,skipped",
-   "testing.js|folded,not_on_board,project_not_written,recorded,run_id,run_label,skipped,unmatched",
+   "testing.js|folded,not_on_board,project_not_written,recorded,run_id,run_label",
+   "testing.js|folded,not_on_board,project_not_written,recorded,run_id,run_label,unmatched",
    "till.js|at",
    "till.js|at,books,categories,category_master,customers,delta,entity_id,face,lot_fields,more,network,offers,policy,removed,reward,shop,since,slabs,staff,till,version",
    "till.js|basis,days,ok,quiet"

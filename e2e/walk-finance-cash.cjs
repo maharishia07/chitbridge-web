@@ -55,8 +55,8 @@ function answer(days, nodate) {
     rows.push({ date, in_minor, out_minor, balance_minor: bal, items });
   }
   const gstDue = days === 30 ? dayN(20) : dayN(45);
-  const gst = nodate ? { payable_minor: 800000, form: 'VAT201', short: 'VAT return', due_date: null, counted: false, why: 'Due date unknown until the return period is picked under Returns.' }
-    : { payable_minor: 800000, form: 'GSTR-3B', short: 'GST', due_date: gstDue, counted: days === 30, why: null };
+  const gst = nodate ? { payable_minor: 800000, form: 'VAT201', short: 'VAT return', due_date: null, counted: false, estimated: false, why: 'Due date unknown until the return period is picked under Returns.' }
+    : { payable_minor: 800000, form: 'GSTR-3B', short: 'GST', due_date: gstDue, counted: days === 30, estimated: false, why: null };
   return { asOf: dayN(0), days, from: dayN(0), to: dayN(days - 1), currency: 'INR', opening_minor: 5000000, drawer_minor: 1000000, bank_minor: 4000000, opening: [{ role: 'cash', code: '1400', name: 'Cash', balance_minor: 1000000 }, { role: 'bank', code: '1500', name: 'Bank', balance_minor: 4000000 }],
     in_minor: inT, out_minor: outT, closing_minor: bal, lowest: low, shortfall: short, words: short.words,
     uncounted: { overdue_in_minor: 1200000, overdue_parties: 1, disputed_in_minor: 0, disputed_out_minor: 0, words: '₹12,000 overdue from 1 party is not counted until it is promised or paid.' },

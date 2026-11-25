@@ -17,12 +17,15 @@ const W = sandbox.CBEvidence.claimWarning;
 const money = (m) => 'A$' + (m / 100).toLocaleString('en-AU', { minimumFractionDigits: 2 });
 
 const two = W({ count: 2, tax_minor: 242520, box: '1B', currency: 'AUD' }, money);
-ok('2 purchases: the walk\'s sentence, word for word', two && two.text === 'A$2,425.20 of 1B is from 2 purchases with no tax invoice. You need the tax invoice to claim it.', two && two.text);
+ok('2 purchases: the walk\'s sentence, word for word', two && two.text === 'A$2,425.20 of the tax in 1B is from 2 purchases with no tax invoice. You need the tax invoice to claim it.', two && two.text);
 ok('the link says See them', two && two.see === 'See them');
 const one = W({ count: 1, tax_minor: 5000, box: '1B' }, money);
-ok('1 purchase: singular', one && one.text === 'A$50.00 of 1B is from 1 purchase with no tax invoice. You need the tax invoice to claim it.', one && one.text);
+ok('1 purchase: singular', one && one.text === 'A$50.00 of the tax in 1B is from 1 purchase with no tax invoice. You need the tax invoice to claim it.', one && one.text);
+/* AC-F-04 (walk AC 1129, AE): a numbered box reads "Box 13", not a bare 13 */
+const ae = W({ count: 2, tax_minor: 3000, box: '13', currency: 'AED' }, money);
+ok('AE: "AED 30.00 of the tax in Box 13 is from 2 purchases ..."', ae && ae.text === 'A$30.00 of the tax in Box 13 is from 2 purchases with no tax invoice. You need the tax invoice to claim it.', ae && ae.text);
 const nobox = W({ count: 3, tax_minor: 900, box: null }, money);
-ok('a return whose box the pack does not name: "the tax you claim", no invented box', nobox && /^A\$9\.00 of the tax you claim is from 3 purchases/.test(nobox.text), nobox && nobox.text);
+ok('a return whose box the pack does not name: "this return", no invented box', nobox && /^A\$9\.00 of the tax in this return is from 3 purchases/.test(nobox.text), nobox && nobox.text);
 ok('nothing without its invoice: no warning (count 0)', W({ count: 0, tax_minor: 0, box: '1B' }, money) === null);
 ok('a count with no tax claimed: no warning', W({ count: 2, tax_minor: 0, box: '1B' }, money) === null);
 ok('an older server (no field): no warning, no error', W(undefined, money) === null && W(null, money) === null);

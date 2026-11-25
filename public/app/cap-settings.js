@@ -279,14 +279,17 @@ var CBSettings = (function () {
   function load(key, name, opts, paint) {
     H.data[key] = { state: 'loading', rows: [] };
     paint();
+    var generation = H.gen; /* GF-14 M3: a reply for a section the person has left is dropped — mount() bumps H.gen */
     return (typeof name === 'function' ? name() : api(name, opts || {})).then(
       function (reply) {
+        if (generation !== H.gen) return reply;
         H.data[key] = { state: 'ok', r: reply || {} };
         paint();
         return reply;
       },
       function (e) {
         if (typeof cblog === 'function') cblog('error', 'settings ' + key + ': ' + ((e && e.message) || e));
+        if (generation !== H.gen) return;
         H.data[key] = { state: 'error', err: e };
         paint();
       }
@@ -843,67 +846,31 @@ var CBSettings = (function () {
 
   /* W16: the catalogue's may.code → the row's words (a sentence the client branches on ships with a code): NOT_FOR_COUNTRY · NOT_YET_FOR_COUNTRY (sold there, our kit is not built for that pack yet) · NOT_YET (no kit at all) */
   var MAY_WORDS = { NOT_FOR_COUNTRY: 'Not for your country', NOT_YET_FOR_COUNTRY: 'Not yet for your country', NOT_YET: 'Not built yet' };
-  /* WALK-REG R32: the printable guide a connector has (public/guides/<id>.pdf, copied from docs/23-connectors-and-integrations/guides); else the server's docs page */
-  var GUIDES = { tally: '/guides/tally.pdf' };
-  function guideOf(connector) {
-    var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-    return GUIDES[connector.id] || (connector.docs ? base + connector.docs : '');
+  /** the Get-it column and Guide action of the connector list (cap-settings-guide.js) */
+  function guideKit() {
+    return CBSettingsGuide.make({ T: T, grey: grey });
   }
-  /** a row action drawn ON the row (CBList runs it by data-act/data-actrow, as it runs the opened row's buttons); greyed with the reason, never hidden */
-  function rowBtn(action, connector, label, reason, stampCode) {
-    return (
-      '<button data-cbsid="' + stampCode + '" type="button" class="cbl-btn" data-act="' +
-      action +
-      '" data-actrow="' +
-      esc(connector.id) +
-      '" data-testid="sx-con-' +
-      action +
-      '-' +
-      esc(connector.id) +
-      '"' +
-      (reason ? ' disabled aria-disabled="true" title="' + esc(reason) + '"' : '') +
-      '>' +
-      esc(label) +
-      '</button>'
-    );
+  /** the connectors the shop uses with one connector put on or taken off the list */
+  function useListWith(inUseNow, connectorId, on) {
+    var now = inUseNow.filter(function (x) {
+      return x !== connectorId;
+    });
+    if (on) now.push(connectorId);
+    return now;
   }
-  /** WALK-REG R32: Download and Guide on the row itself, not only inside it — the same row actions (kit · guide), drawn here (CBList dispatches data-act from any button in the list) */
-  function getItColumn() {
-    return {
-      key: 'get',
-      label: T('Get it'),
-      prio: 1,
-      w: 200,
-      html: true,
-      value: function () {
-        return '';
-      },
-      cell: function (connector) {
-        return (
-          rowBtn('kit', connector, T('Download'), grey(connector.may), 'ACC002-B17') +
-          ' ' +
-          rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet'), 'ACC002-B18')
-        );
-      }
-    };
+  /** the list the shop uses was never read: writing now would replace it with this one connector (GF-14 M2 / EL-14 M7); says so and tells the caller to stop */
+  function useListUnread(pol) {
+    if (pol !== null) return false;
+    $('sx_con_out').textContent = T('Could not read which ones you use.');
+    return true;
   }
-  /** the Guide action — drawn on the row (the 'get' column); when:false keeps it out of the opened row so it is not shown twice (the Download action the same) */
-  function guideAction() {
-    return {
-      id: 'guide',
-      label: T('Guide'),
-      tid: 'sx-con-guide',
-      when: function () {
-        return false;
-      },
-      why: function (connector) {
-        return guideOf(connector) ? '' : T('No guide yet');
-      },
-      run: function (connector) {
-        var guideLink = guideOf(connector);
-        if (guideLink) window.open(guideLink, '_blank', 'noopener');
-      }
-    };
+  /** the server's flags after a save become the policy read's own; EL-14 M8: a flag just saved IS answered — else the row kept saying "Not answered yet" beside "Saved" until a reload */
+  function keepSavedFlags(policyRead, savedFlags) {
+    policyRead.flags = savedFlags;
+    policyRead.asked = Object.assign({}, policyRead.asked || {});
+    Object.keys(savedFlags).forEach(function (flagName) {
+      policyRead.asked[flagName] = true;
+    });
   }
   /** the key list is not drawn for a shop owner (WALK-REG R52) */
   function keysSectionIfShown(after) {
@@ -968,10 +935,8 @@ var CBSettings = (function () {
       return (H.polMay && H.polMay.connectors_in_use) || null;
     }
     function setUse(c, on) {
-      var now = inUse().filter(function (x) {
-        return x !== c.id;
-      });
-      if (on) now.push(c.id);
+      if (useListUnread(pol)) return;
+      var now = useListWith(inUse(), c.id, on);
       CBAction.run(
         btnOf(on ? 'use' : 'unuse', c.id),
         function () {
@@ -1062,7 +1027,7 @@ var CBSettings = (function () {
             );
           }
         },
-        getItColumn()
+        guideKit().getItColumn()
       ],
       search: function (c) {
         return [c.name, c.does].join(' ');
@@ -1138,7 +1103,7 @@ var CBSettings = (function () {
             );
           }
         },
-        guideAction(),
+        guideKit().guideAction(),
         {
           id: 'use',
           label: T('We use this'),
@@ -1669,7 +1634,7 @@ var CBSettings = (function () {
       /** the server's flags after a save become the list's own and the session's, then the list repaints from them */
       onSaved: function (saved) {
         var policyData = H.data.pol;
-        if (policyData && policyData.r && saved && saved.flags) policyData.r.flags = saved.flags;
+        if (policyData && policyData.r && saved && saved.flags) keepSavedFlags(policyData.r, saved.flags);
         if (typeof SESSION !== 'undefined' && saved && saved.flags) SESSION.policy_flags = saved.flags;
         if (pl) pl.refresh();
       }
@@ -1911,8 +1876,9 @@ var CBSettings = (function () {
       ? ' · <span class="tag amber" data-testid="sx-dev-legacy">' + esc(T('This browser is not counted — only counters name their device')) + '</span>'
       : '';
   }
-  function account() {
-    frame([
+  /** the Account page's frame: where you are signed in · Sign in with Google · every device · keys · the vault */
+  function accountFrame() {
+    return [
       '<h1 class="sx-h" data-testid="sx-title">' + esc(T('Account')) + '</h1>',
       '<h2 class="sx-h2">' +
         esc(T('Where you are signed in')) +
@@ -1922,6 +1888,9 @@ var CBSettings = (function () {
       '<div id="sx_ses_bar"></div>',
       lineOut('sx_ses_out'),
       '<div class="sx-list" id="sx_ses_list" data-testid="sx-ses-list"></div>',
+      '<h2 class="sx-h2">' + esc(T('Sign in with Google')) + '</h2>',
+      '<div id="sx_prov_bar"></div>',
+      lineOut('sx_prov_out'),
       '<h2 class="sx-h2">' + esc(T('Every device of the shop')) + '</h2>',
       '<div id="sx_dev_bar"></div>',
       lineOut('sx_dev_out'),
@@ -1933,7 +1902,10 @@ var CBSettings = (function () {
       '<div data-testid="sx-vault-wrap"><h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
       '<p class="sub"><a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div></div>'
-    ]);
+    ];
+  }
+  function account() {
+    frame(accountFrame());
     var sl = null,
       dl = null;
     var sesRows = sessionRows;
@@ -2331,6 +2303,7 @@ var CBSettings = (function () {
     });
     paintSesBar();
     paintDevBar();
+    CBSettingsProvider.mount({ H: H, bar: bar, btn: btn, load: load });
     readSes().then(readDev);
 
     /* SET-34 (Athi, 6 Nov 2026): the keys are SHOWN here, in the one list with Make a key, Copy and Revoke — no door to an empty Connectors page */
@@ -2352,6 +2325,7 @@ var CBSettings = (function () {
     });
     H.lists = [];
     H.data = {};
+    H.gen = (H.gen || 0) + 1;
     H.host = host;
     H.sec = sec;
     (PAINT[sec] || counters)();

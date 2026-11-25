@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Know your business</title>
@@ -77,10 +77,10 @@
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>
 <script src="/engine/signin.js"></script>
-<script src="/app/signin-ui.js"></script>
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>
 <script src="/app/one-person.js"></script>
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
@@ -88,7 +88,7 @@
 <script src="/app/page-frame.js"></script>   <!-- CBFrame: the shell header + the one sign-in window (H23/H24) -->
 <script src="cb-offline.js"></script>
 <script>
-var API = new URLSearchParams(location.search).get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
 var TOK = null,
   TAB = 'yourself',
   _stage = 'email';
@@ -433,9 +433,9 @@ async function runField() {
             '<div class="note">' +
             esc(x.demand || '') +
             '</div>' +
-            (x.source_url
+            (/^https?:\/\//i.test(String(x.source_url || '').trim())
               ? '<a href="' +
-                esc(x.source_url) +
+                esc(String(x.source_url).trim()) + /* reviews11 GF-20 N22: http(s) only — a javascript: link survives esc() and runs on click */
                 '" target="_blank" rel="noopener">source</a> <span class="asof">as of ' +
                 esc(String(x.as_of).slice(0, 10)) +
                 '</span>'

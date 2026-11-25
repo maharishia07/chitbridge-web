@@ -14,6 +14,10 @@ function fill(path, params) {
 
 // Single response envelope. Accepts a real {ok,data,error} envelope, or normalises the legacy
 // wrappers ({chits,…}, {entity}, {messages,…}, …) so feature code uses `data` directly.
+/** the words of an error the api answered: a plain string, or the message of a problem object; '' when it has neither */
+function apiErrorWords(j) {
+  return (typeof j.error === 'string' ? j.error : j.error && typeof j.error.message === 'string' && j.error.message) || '';
+}
 /**
  * ── ⭐⭐⭐ THE DOOR NOW SAYS WHAT IT REFUSED ────────────────────────────────────────────────────────────────
  *
@@ -48,7 +52,7 @@ function cbDropNote(key, keys) {
 function unwrap(j, _key) {
   if (j == null || typeof j !== 'object' || Array.isArray(j)) return j;
   if ('ok' in j && ('data' in j || 'error' in j)) {
-    if (j.ok === false) throw new Error(j.error || 'Request failed');
+    if (j.ok === false) throw new Error(apiErrorWords(j) || 'Request failed'); /* reviews11 GF-17: an object error is never printed as [object Object] */
     return j.data;
   }
   /**
@@ -161,8 +165,8 @@ function unwrap(j, _key) {
         'may_answer',
         'why',
         'capped',
-        'cap_note'
-      ]; /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
+        'cap_note', 'message', 'added', 'declared', 'warnings', 'skipped'
+      ]; /* message · added · declared · warnings · skipped — CR-1 (22 Nov): POST /api/products/bulk answers { message, added, items[], declared[], warnings[], skipped[] } (skipped = codes the shop already held, BK-11); the connector reads it raw, a screen that calls it through api() now keeps all five. */ /* late · may_answer · why — T3-P3-CONSENT: GET /api/crm/privacy-requests answers { requests[], total, page, limit, open, late, may_answer, why } — the register greys Answer on may_answer/why. ⚠️ no square bracket INSIDE the array: e2e/api-envelope.cjs reads the list up to the first one */
       for (const mk of SIBS)
         if (mk in j) {
           try {
@@ -708,7 +712,12 @@ function cbDefsLive(kind, force) {
 
   _defsReq[kind] = mine
     .then(function (by) {
-      _DEFS[kind] = (by && by[kind]) || [];
+      /* EL-17 F3: a kind queued while an earlier batch was in the air was not in that batch; ask again, never cache empty */
+      if (!by || !Object.prototype.hasOwnProperty.call(by, kind)) {
+        _defsReq[kind] = null;
+        return cbDefsLive(kind);
+      }
+      _DEFS[kind] = by[kind] || [];
       _defsReq[kind] = null;
       return _DEFS[kind];
     })
@@ -1230,20 +1239,6 @@ function cbVisitTick(nav) {
  */
 var _apiInflight = {};
 
-/** an independent copy, so a joiner can never share mutable state with the caller it joined */
-function _apiCopy(v) {
-  if (v === null || typeof v !== 'object') return v;
-  try {
-    if (typeof structuredClone === 'function') return structuredClone(v);
-  } catch (_) {}
-  try {
-    return JSON.parse(JSON.stringify(v));
-  } catch (_) {}
-  /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
-     again — said here because a silent share is exactly what this guard exists to prevent */
-  return v;
-}
-
 function api(key, opts) {
   var o = opts || {};
   var ep = epOf(key);
@@ -1253,7 +1248,7 @@ function api(key, opts) {
 
   var dk;
   try {
-    dk = key + '|' + JSON.stringify(o.params || null) + '|' + JSON.stringify(o.query || null);
+    dk = key + '|' + JSON.stringify(o.params || null) + '|' + JSON.stringify(o.query || null) + '|' + JSON.stringify(actingHeaders()); /* reviews11 GF-17 M6: a read for store A never joins one started for store B */
   } catch (_) {
     return apiOnce(key, opts);
   } /* unserialisable options: never guess, just call */
@@ -1692,7 +1687,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
             }
           })(),
           at: Date.now(),
-          body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200)
+          body: _callClean(_out === undefined ? null : _out) /* reviews11 GF-17 M7: the answer is redacted like what was sent (a sign-in reply carries the token) */
         });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
         /* ⚠ AND SAY SO. Recording without repainting is what made the spec panel look dead — the rows were

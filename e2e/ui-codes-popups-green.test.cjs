@@ -41,10 +41,12 @@ ok('no pop and no stack answer shows nothing', chipFor(undefined, null) === null
 
 /* (2) the modal() call sites: file -> [code, how many calls carry it] */
 const CALLS = {
-  'app.html': { POP200: 1, POP031: 1, POP201: 2, POP202: 1, POP203: 1, POP204: 1, POP205: 1, POP062: 1, POP017: 2, POP072: 2, POP015: 2 },
+  'app.html': { POP200: 1, POP031: 1, POP201: 2, POP202: 1, POP205: 1, POP062: 1, POP017: 2, POP072: 2, POP015: 2 },
+  'app/chit-pay.js': { POP203: 1, POP204: 1 },
   'app/cap-adopt.js': { POP012: 2 },
   'app/cap-catalogue.js': { POP126: 1 },
-  'app/cap-chit2.js': { POP020: 4, POP019: 2 },
+  'app/cap-chit2.js': { POP019: 2 },
+  'app/cap-chit2-reprice.js': { POP020: 4 },
   'app/cap-register.js': { POP067: 4, POP068: 2 },
   'app/cap-service.js': { POP079: 3, POP207: 1 },
   'app/cap-worklist.js': { POP084: 1 },

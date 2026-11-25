@@ -298,6 +298,16 @@ function bkMoney(minor, c) {
     return n.toFixed(bkDec(c));
   }
 }
+/** BF-F-01: ONE wording of what the api's dues balance says, for Unpaid bills and Payables alike. The api's sign: + they owe you, - you owe them. Read, never recomputed:
+ *  a supplier balance that is + is a supplier credit (paid ahead), never "owed to suppliers"; a customer balance that is - is a customer credit. */
+function bkDuesWords(side, minor, c) {
+  var n = Number(minor) || 0,
+    money = bkMoney(Math.abs(n), c),
+    supplier = side === 'supplier';
+  if (!n) return '';
+  if (supplier) return money + ' ' + (n < 0 ? tx('is owed to suppliers in your books') : tx('is a supplier credit (paid ahead) in your books'));
+  return money + ' ' + (n > 0 ? tx('is owed to you in your books') : tx('is a customer credit (paid ahead) in your books'));
+}
 /** a foreign line's figure: "AUD 350.00 @ 54.60" — the code and the number (no second symbol), the rate with at least 2 places (more if it has them), in the reader's number marks */
 function bkFxText(fx) {
   var places = bkDec(fx.currency);
@@ -364,6 +374,24 @@ function bkDate(d) {
     return String(d).slice(0, 10);
   }
 }
+/** a period said in words (the screen is the product: a money figure names the days it covers). ONE helper for the Sold figure of every books screen:
+ *  "Sold this week so far · 16 Nov – 22 Nov". The days are the server's (period.from / period.to), written by CBLocale.date; a period it did not send is
+ *  named by its words alone, never guessed. Each phrase is a literal tx key so the hi / ar packs carry it. */
+function bkSoldLabel(period) {
+  var by = {
+    week: 'Sold this week so far · {from} – {to}',
+    mtd: 'Sold this month so far · {from} – {to}',
+    quarter: 'Sold this quarter so far · {from} – {to}',
+    ytd: 'Sold this year so far · {from} – {to}',
+    today: 'Sold today'
+  };
+  var word = period && period.word,
+    key = by[word];
+  if (!key) return tx('Sold');
+  if (word === 'today') return tx(key);
+  if (!period.from || !period.to) return tx(key.split(' · ')[0]);
+  return txf(key, { from: bkDate(period.from), to: bkDate(period.to) });
+}
 /** the SHOP's day — the browser's local calendar day (F3b, 2026-10-13: toISOString() is the UTC day, which for an Indian shop between midnight and
  *  05:30 is YESTERDAY — the entry date, the dues as-of and the Cash tab's Today tag were all a day behind every early morning). Same day as crmLocalISO / peYmd. */
 function bkToday() {
@@ -429,7 +457,7 @@ function bkErr(e) {
 var BK_READ_WORDS = "Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.";
 function bkRefused(e, what) {
   if (!e || e.status !== 403) return bkErr(e);
-  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)));
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)) + ' ' + esc(tx('A job title is only a name. To read the books, the owner picks the Bookkeeper seat for you under People.'))); /* AG-F-06: a person called Bookkeeper by job title alone has no seat; the answer says what to ask for */
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
@@ -570,14 +598,14 @@ function partyBooksHTML(kind, partyId, row, moneyOnly) {
         '<button data-cbsid="CMP012-B01"' + bkMountAttribute('CMP012') + ' data-testid="party-edit" onclick="partyEditOpen(\'' +
         kind +
         "','" +
-        esc(partyId) +
+        escJs(partyId) +
         '\')">' +
         tx('Edit') +
         '</button>' +
         '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="party-pay" onclick="payOpen(\'' +
         kind +
         "','" +
-        esc(partyId) +
+        escJs(partyId) +
         '\')">' +
         actionWord +
         '</button></div>') +
@@ -624,7 +652,7 @@ function bkDayBillsLink(s, tid) {
   var BKD = (BK.dayBills = BK.dayBills || {});
   BKD[tid] = s.bills;
   return (
-    '<a data-cbsid="CMP044-C01"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + esc(tid) + '\');return false">' + word + '</a>'
+    '<a data-cbsid="CMP044-C01"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + escJs(tid) + '\');return false">' + word + '</a>'
   );
 }
 /* open the popover listing the bills one day-book entry settled */
@@ -663,7 +691,7 @@ function bkBillPart(s, tid, noTime) {
   if (!s || !(s.ref || s.chit_id)) return '';
   var no = s.ref ? '<span class="mono">' + esc(s.ref) + '</span>' : esc(tx('Open'));
   var link = s.chit_id
-    ? '<a data-cbsid="CMP044-C02"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>'
+    ? '<a data-cbsid="CMP044-C02"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + escJs(s.chit_id) + '\');return false">' + no + '</a>'
     : no;
   return link + (s.doc_at && !noTime ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : '');
 }
@@ -886,7 +914,7 @@ function statementHTML(r, partyId) {
           ? ' <button data-cbsid="CMP042-B21"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-btn" data-testid="stmt-reverse-' +
             index +
             '" onclick="event.stopPropagation();bkStmtReverse(\'' +
-            esc(pid) +
+            escJs(pid) +
             "'," +
             index +
             ')">↩ ' +
@@ -895,7 +923,7 @@ function statementHTML(r, partyId) {
           : '';
       return (
         '<tr' +
-        (item.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(item.source_chit_id) + '\')"' : '') +
+        (item.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + escJs(item.source_chit_id) + '\')"' : '') +
         '><td data-l="' + esc(tx('Date')) + '">' +
         esc(bkDate(item.date)) +
         '</td><td data-l="' + esc(tx('What')) + '" data-testid="stmt-what-' +
@@ -948,6 +976,10 @@ function statementHTML(r, partyId) {
    duplicate band. There is no "Later": "Keep it as an advance" is a switch that says what it does. The words of every warning and of
    the outcome come from the server; this unit paints them. */
 var PAY = null;
+/** the name for the sheet title: the row's own string when it handed one, else the { name } of a prefill object, else "" (CB Finance hands { name, after }: the row's name AND the list to re-read) */
+function payNameOf(rowName, prefill) {
+  return rowName || (typeof prefill.name === 'string' ? prefill.name : '');
+}
 /**
  * The third argument (every other door calls payOpen(kind, partyId) as before) is ONE of:
  *   a name (string) — the Dues / CB Finance row's own name, for pages that load no party lists (WX-O2C);
@@ -962,10 +994,10 @@ function payOpen(kind, partyId, pre) {
   /* ⚠️ WX-P2P-10 + WX-O2C (2026-10-13, the real stack): on CB Accounts / Receivables / CB Finance (no supplier / customer list loaded) the sheet
      opened as "Pay ·" / "Receive · " — no name until the preview answered. The row that opened it holds the name: BK.dues (the one dues read), or
      the name the Dues / Finance row hands (a string). A prefill object (bank rec) still carries its own name; the preview's party.name wins later. */
-  var d = (BK.dues && BK.dues[partyId]) || {},
-    nm = typeof pre === 'string' ? pre : '';
+  var d = (BK.dues && BK.dues[partyId]) || {}, nm = typeof pre === 'string' ? pre : '';
   var o = pre && typeof pre === 'object' && ('offer' in pre || 'after' in pre) ? pre : {},
     offer = o.offer && o.offer.valid ? o.offer : null;
+  nm = payNameOf(nm, o);
   if (typeof pre === 'string' || o === pre) pre = null;
   PAY = {
     kind: kind,
@@ -1823,6 +1855,22 @@ function bkMajor(n, cur) {
   }
 }
 
+/** the sum of one sales entry: a walk-in day adds its split, a bill adds its debit lines, summed once */
+function bkDayEntryTotal(e, text) {
+  var rows = text.kind === 'day' ? text.split || [] : e.lines || [],
+    field = text.kind === 'day' ? 'amount_minor' : 'dr_minor';
+  return rows.reduce(function (sum, item) {
+    return sum + Number(item[field] || 0);
+  }, 0);
+}
+/** add an amount to its tender's running total, remembering the order the tenders were first seen */
+function bkDayAddTender(tenders, order, how, amount) {
+  if (!tenders[how]) {
+    tenders[how] = { how: how, amount_minor: 0 };
+    order.push(how);
+  }
+  tenders[how].amount_minor += amount;
+}
 /**
  * ⭐ THE DAY'S STRIP (Athi, 2026-10-01: "in the daybook, you should be able to see the total sale in different
  * counters, sellers' pending invoices and so on, so you can act one by one"). ONE function adds up the day's sales;
@@ -1842,14 +1890,8 @@ function bkDaySales(entries, day) {
     if (!text) return;
     if (text.kind === 'day') hasDay = true; /* the counter closed its day — walk-ins are in */
     if (text.kind !== 'day' && text.kind !== 'bill') return; /* sales only: a bill, or a walk-in day */
-    var total =
-      text.kind === 'day'
-        ? (text.split || []).reduce(function (sum, x) {
-            return sum + Number(x.amount_minor || 0);
-          }, 0)
-        : (e.lines || []).reduce(function (sum, item) {
-            return sum + Number(item.dr_minor || 0);
-          }, 0);
+    if (e.reversed_by) return; /* a reversed bill is no sale: its mirror row carries no source, so the original must not count either (GF-05 M9) */
+    var total = bkDayEntryTotal(e, text);
     var bills = text.kind === 'day' ? Number(text.count || 0) : 1;
     var c = text.counter || '—';
     if (!counters[c]) {
@@ -1858,18 +1900,11 @@ function bkDaySales(entries, day) {
     }
     counters[c].amount_minor += total;
     counters[c].bills += bills;
-    var add = function (how, amt) {
-      if (!tenders[how]) {
-        tenders[how] = { how: how, amount_minor: 0 };
-        torder.push(how);
-      }
-      tenders[how].amount_minor += amt;
-    };
     if (text.kind === 'day')
       (text.split || []).forEach(function (x) {
-        add(x.how, Number(x.amount_minor || 0));
+        bkDayAddTender(tenders, torder, x.how, Number(x.amount_minor || 0));
       });
-    else if (text.how) add(text.how, total);
+    else if (text.how) bkDayAddTender(tenders, torder, text.how, total);
   });
   corder.sort();
   return {
@@ -2041,7 +2076,7 @@ function bkDvGroupOf(date, mode) {
 /** one CSV cell: a cell that starts like a formula is quoted as text (a plain number, negative too, stays a number), a cell with a comma, quote or line break is wrapped (the one reader: Day book and the bank's BRS) */
 function bkCsvCell(v) {
   var text = String(v == null ? '' : v);
-  if (/^[=+\-@]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = "'" + text;
+  if (/^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = "'" + text;
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 /** hand a CSV text to the person as a file (BOM first so a spreadsheet reads the rupee sign) — the one saver */
@@ -2081,8 +2116,8 @@ function bkDvCsv(list, c) {
       s.by || '',
       e.made_by || '',
       String(c || '').toUpperCase(),
-      '#' + amt(bkDvTotal(e)),
-      '#' + amt(cr),
+      { money: amt(bkDvTotal(e)) },
+      { money: amt(cr) },
       bkDvGist(e)
         .map(function (x) {
           return x.name + ' ' + amt(x.amt);
@@ -2095,7 +2130,7 @@ function bkDvCsv(list, c) {
       .map(function (item, index) {
         return item
           .map(function (text) {
-            return index && typeof text === 'string' && text.charAt(0) === '#' ? text.slice(1) : cell(text);
+            return index && text && typeof text === 'object' ? text.money : cell(text); /* a money cell is a typed wrapper, never an in-band '#': a party named "#1 Traders, Pune" stays one quoted cell */
           })
           .join(',');
       })
@@ -2270,7 +2305,7 @@ function bkDvRevChip(e) {
       ' <a data-cbsid="CMP044-C03"' + bkMountAttribute('CMP044') + ' href="#" class="mono" data-testid="db-rev-link-' +
       esc(e.entry_no) +
       '" onclick="event.stopPropagation();bkDvGoto(\'' +
-      esc(e.reversed_by) +
+      escJs(e.reversed_by) +
       '\');return false">' +
       esc(e.reversed_by) +
       '</a></div>'
@@ -3799,11 +3834,7 @@ function bkLgCsv(rows, c) {
     amt = function (m) {
       return (Number(m || 0) / pow).toFixed(bkDec(c));
     };
-  var cell = function (v) {
-    var text = String(v == null ? '' : v);
-    if (/^[=+\-@]/.test(text)) text = "'" + text;
-    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
-  };
+  var cell = bkCsvCell; /* the one CSV cell writer (formula guard, quoting) */
   var out = [['date', 'details', 'party', 'entry_no', 'dr', 'cr', 'balance', 'balance_side']];
   rows.forEach(function (item) {
     var s = item.source || {},
@@ -3827,12 +3858,20 @@ function bkLgCsv(rows, c) {
       .join('\r\n') + '\r\n'
   );
 }
+/** '' when every line of the period is held, else the sentence that goes in the file and on the screen (REV5 05 M2: the Day book's rule, never silently partial) */
+function bkLgPartialNote(r) {
+  if (!r || !r.next) return '';
+  var held = (r.lines || []).length;
+  return txf('NOT COMPLETE: only {held} of {total} lines were loaded, so this list and file leave out the later ones. Narrow the dates to see them all.', { held: held, total: Number(r.total || held) });
+}
 /* download the shown rows as a CSV file */
 function bkLgDownload(rows) {
   var r = BK.lt.r,
     sel = BK.lt.sel;
   if (!r || !sel) return;
-  var blob = new Blob(['﻿' + bkLgCsv(rows, r.currency)], { type: 'text/csv;charset=utf-8' });
+  var note = bkLgPartialNote(r);
+  if (note && typeof toast === 'function') toast(note);
+  var blob = new Blob(['﻿' + bkLgCsv(rows, r.currency) + (note ? bkCsvCell(note) + '\r\n' : '')], { type: 'text/csv;charset=utf-8' });
   var node = document.createElement('a');
   node.href = URL.createObjectURL(blob);
   node.download = 'ledger-' + (sel.party || sel.code) + '.csv';
@@ -4568,7 +4607,7 @@ function bkDrillLink(code, name, tid, from, to, tab, label) {
   if (!code) return esc(name);
   return (
     '<button data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' type="button" class="bk-dl" aria-expanded="false" data-testid="' + esc(tid) + '-open-' + esc(code) + '" onclick="bkDrillToggle(this,\'' +
-    esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(tab) + '\',\'' + esc(label) + '\')" title="' + esc(tx('Show its entries below')) + '">' + '<span class="bk-code">' + esc(code) + ' · </span>' + esc(name) + ' ▸</button>'
+    escJs(code) + '\',\'' + escJs(from) + '\',\'' + escJs(to) + '\',\'' + escJs(tab) + '\',\'' + escJs(label) + '\')" title="' + esc(tx('Show its entries below')) + '">' + '<span class="bk-code">' + esc(code) + ' · </span>' + esc(name) + ' ▸</button>'
   );
 }
 /** open or close the entries of one ledger under its row: one read of ten, then the count and "Open all" */
@@ -4607,7 +4646,7 @@ async function bkDrillToggle(btn, code, from, to, fromTab, label) {
             })
             .join('')
         : '<span style="color:var(--grey)">' + esc(tx('No entries in this period')) + '</span>') +
-      (total > 0 ? '<div style="margin-top:4px"><button data-cbsid="SCR013-B01" type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + esc(code) + '\',\'' + esc(from) + '\',\'' + esc(to) + '\',\'' + esc(fromTab) + '\',\'' + esc(label) + '\')">' +
+      (total > 0 ? '<div style="margin-top:4px"><button data-cbsid="SCR013-B01" type="button" class="bk-dl" data-testid="drill-all-' + esc(code) + '" onclick="bkOpenLedgerIn(\'' + escJs(code) + '\',\'' + escJs(from) + '\',\'' + escJs(to) + '\',\'' + escJs(fromTab) + '\',\'' + escJs(label) + '\')">' +
         esc(txn('Open the {count} entry ▸', 'Open all {count} entries ▸', total, { count: total })) + '</button></div>' : '') +
       '</div>';
   } catch (failure) {
@@ -4657,7 +4696,7 @@ function bkChange(minor, over, c, code, side) {
 /** the one line under the P&L that says what is highlighted, from the server's rule */
 function bkOverNote(rule, c, code, tid) {
   if (!rule || rule.pct_bp == null || rule.min_minor == null) return '';
-  return '<div class="bk-over-note" data-cbsid="' + (code || 'BKS005-P01') + '" data-testid="' + (tid || 'pl-over-note') + '">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') + ' ' + tx('or more')) + '</div>';
+  return '<div class="bk-over-note" data-cbsid="' + (code || 'BKS005-P01') + '" data-testid="' + (tid || 'pl-over-note') + '">' + esc(tx('Highlighted') + ': ' + tx('change of') + ' ' + rule.pct_bp / 100 + '% ' + tx('and') + ' ' + (bkDec(c) ? bkMoney(rule.min_minor, c).replace(/[.,]0+$/, '') : bkMoney(rule.min_minor, c)) + ' ' + tx('or more')) + '</div>';
 }
 /** the P&L: a head's ledgers, then its subtotal (every head gets one), each line with last year · change · % of income */
 function bkPlGroups(lines, currency, compare, from, to) {
@@ -4818,6 +4857,10 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
       out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
     });
     if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + headGroup.name), cells(headGroup));
+  });
+  var known = (heads || []).map(function (headGroup) { return headGroup.code; });
+  (items || []).filter(function (x) { return known.indexOf(x.group ? x.group.code : null) < 0; }).forEach(function (x) { /* a ledger on no listed head still shows: the lines must foot to the total the server carries (GF-05 M5) */
+    out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + '</span>', cells(x));
   });
   return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }].concat(change ? [{ v: '' }, { v: '' }] : []));
 }
@@ -5317,7 +5360,7 @@ function bkNeedAction(pid, row, kind) {
   if (!word) return '';
   if (row.action === 'terms') return bkSetTermsLink();
   if (row.action === 'attach' && !row.chit_id) return '';
-  return '<button type="button" class="cbl-tbtn bk-act" data-cbsid="CMP038-B01"' + bkMountAttribute('CMP038') + ' data-b="need-act-' + esc(row.action) + '" data-testid="bill-act-' + esc(row.ref) + '" onclick="event.stopPropagation();bkNeedDo(\'' + esc(pid) + "','" + esc(row.ref) + '\',this)">' + esc(tx(word)) + '</button>';
+  return '<button type="button" class="cbl-tbtn bk-act" data-cbsid="CMP038-B01"' + bkMountAttribute('CMP038') + ' data-b="need-act-' + esc(row.action) + '" data-testid="bill-act-' + esc(row.ref) + '" onclick="event.stopPropagation();bkNeedDo(\'' + escJs(pid) + "','" + escJs(row.ref) + '\',this)">' + esc(tx(word)) + '</button>';
 }
 /** Attach: pick the file for the bill's chit; a held bill then offers its release, any other reads again (nothing posts by itself) */
 async function bkNeedAttach(pid, row) {
@@ -5554,35 +5597,6 @@ function bkDuesNext(party, currency, list) {
   );
 }
 /* the Dues tab: what parties owe you and what you owe, grouped by side */
-/**
- * ⭐ W15-114 · WHO NEEDS YOU, AND WHY — the server's reasons (api lib/books-needs), in the shopkeeper's words. Nothing is counted here: a party row carries `needs { bills, <reason>: n, overdue_minor }`
- * and the answer carries the same by side. [word of a chip, the one action it offers]. A chip is a press: it opens that party on its Needs you tab, narrowed to that reason.
- */
-var BK_NEED = {
-  disputed: ['disputed', 'Answer'],
-  query: ['open query', 'Answer'],
-  held: ['on hold', 'Release'],
-  no_tax_invoice: ['no tax invoice', 'Attach'],
-  no_terms: ['no terms', 'Set terms'],
-  overdue: ['overdue', 'Pay']
-};
-var BK_NEED_ORDER = ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 'overdue'];
-/** the chips of one party row: up to three reasons with their counts, then "+n"; each opens the party on its fix. Nothing wraps (one line a row). */
-function bkNeedChips(party) {
-  var needTotals = party.needs || {},
-    kinds = BK_NEED_ORDER.filter(function (kind) {
-      return Number(needTotals[kind]) > 0;
-    });
-  if (!kinds.length) return '';
-  var shown = kinds.slice(0, 3).map(function (kind) {
-    return (
-      '<button type="button" class="cbl-nchip bk-need" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="need-' + kind + '" data-testid="need-' + kind + '-' + esc(party.party_id) + '" onclick="bkNeedOpen(event,\'' + esc(party.party_id) + "','" + kind + '\')">' +
-      '<b>' + esc(String(needTotals[kind])) + '</b> ' + esc(tx(BK_NEED[kind][0])) + '</button>'
-    );
-  });
-  if (kinds.length > 3) shown.push('<span class="bk-need-more" data-b="need-more">+' + (kinds.length - 3) + '</span>');
-  return '<span class="bk-needs" style="display:inline-flex;gap:4px;flex-wrap:nowrap;white-space:nowrap">' + shown.join('') + '</span>';
-}
 /** how urgent a party is: what is late (most money first), then how many bills need it */
 function bkNeedRank(p) {
   var n = p.needs || {};
@@ -5606,72 +5620,6 @@ function bkNeedsSum(side) {
     });
   });
   return out;
-}
-/** the Needs filter of the Dues list: any reason, or one of them (the header line presses it) */
-function bkNeedFilters() {
-  return [
-    {
-      key: 'need',
-      label: tx('Needs'),
-      all: tx('Needs'),
-      match: function (p, v) {
-        return v === 'any' ? !!(p.needs && p.needs.bills > 0) : !!(p.needs && Number(p.needs[v]) > 0);
-      },
-      options: [{ v: 'any', label: tx('Needs you') }].concat(
-        BK_NEED_ORDER.map(function (kind) {
-          return { v: kind, label: tx(BK_NEED[kind][0]) };
-        })
-      )
-    }
-  ];
-}
-/** one chip of the header line: pressed when the list is narrowed to that reason */
-function bkNeedsChip(kind, text, pressed) {
-  return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + '" data-testid="needs-head-' + kind + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
-}
-/** the chips of the header line, the server's counts only: parties that need you, then each reason with its count (overdue says the amount) */
-function bkNeedsChips(sum, side, currency, pressed) {
-  var words = side === 'pay' ? ['supplier', 'suppliers'] : side === 'rcv' ? ['customer', 'customers'] : ['party', 'parties'],
-    parts = [];
-  if (sum.parties) parts.push(bkNeedsChip('any', esc(txn('{count} ' + words[0] + ' needs you', '{count} ' + words[1] + ' need you', sum.parties)).replace(/^([0-9][0-9,.]*)/, function (n) { return '<b>' + n + '</b>'; }), pressed));
-  [
-    ['no_tax_invoice', tx('no tax invoice')],
-    ['no_terms', tx('without terms')],
-    ['disputed', tx('disputed')],
-    ['query', tx('open queries')],
-    ['held', tx('on hold')]
-  ].forEach(function (reason) {
-    if (sum[reason[0]]) parts.push(bkNeedsChip(reason[0], '<b>' + sum[reason[0]] + '</b> ' + esc(reason[1]), pressed));
-  });
-  if (sum.overdue) parts.push(bkNeedsChip('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, currency)) : sum.overdue) + '</b> ' + esc(tx('overdue')), pressed));
-  return parts;
-}
-/** the header line of Receivables / Payables: "12 suppliers need you · 8 no tax invoice · 3 no terms · A$4,210 overdue" — each a filter (a press again clears it) */
-function bkNeedsHead() {
-  var host = document.getElementById('bk_needs_head');
-  if (!host) return;
-  var side = BK.duesSide,
-    sum = bkNeedsSum(side),
-    currency = (BK.duesRaw && BK.duesRaw.currency) || bkCur(),
-    list = typeof CBList !== 'undefined' && CBList.get('dues'),
-    pressed = (list && list.state().filt.need) || '';
-  var parts = bkNeedsChips(sum, side, currency, pressed);
-  if (typeof CBAttention !== 'undefined' && CBAttention.styles) CBAttention.styles(); /* the one strip look (Day book, Ledgers, BAS and this line) */
-  host.innerHTML = '<div class="attn-strip" role="status" data-testid="needs-head">' + (parts.length ? parts.join(' · ') : '<span class="attn-ok" data-b="needs-ok">✓ ' + esc(tx('Nobody needs you')) + '</span>') + '</div>';
-}
-/** a press on the header line: the list narrows to that reason; the same press again puts it back */
-function bkNeedsHeadPress(kind) {
-  var list = CBList.get('dues');
-  if (!list) return;
-  list.filter('need', list.state().filt.need === kind ? '' : kind);
-  bkNeedsHead();
-}
-/** a chip on a party row: that party opens on its Needs you tab, narrowed to the reason */
-function bkNeedOpen(event, pid, kind) {
-  event.stopPropagation();
-  bkPbSet(pid, { tab: 'needs', why: kind, paid: false, band: '' });
-  var list = CBList.get('dues');
-  if (list) list.open(pid, true);
 }
 /** the rows of the Dues list from the one /dues read the page holds: the parties with a balance, on the page's own side (Receivables also holds the advances paid; Payables holds no one who owes you) */
 function bkDuesRows(onlySide) {

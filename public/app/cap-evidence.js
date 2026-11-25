@@ -39,11 +39,12 @@
     rule: 'Rule read',
     failed: 'Could not open that file. Nothing was changed.',
     ended: 'Access to these books has ended.',
-    claimOne: '{amount} of {box} is from 1 purchase with no tax invoice. You need the tax invoice to claim it.',
-    claimMany: '{amount} of {box} is from {n} purchases with no tax invoice. You need the tax invoice to claim it.',
+    claimOne: '{amount} of the tax in {box} is from 1 purchase with no tax invoice. You need the tax invoice to claim it.',
+    claimMany: '{amount} of the tax in {box} is from {n} purchases with no tax invoice. You need the tax invoice to claim it.',
     claimRiskOne: '{amount}{kind} if the {n} purchase without a tax invoice is not claimed',
     claimRiskMany: '{amount}{kind} if the {n} purchases without a tax invoice are not claimed',
-    claimBox: 'the tax you claim',
+    claimBox: 'this return',
+    boxWord: 'Box',
     claimSee: 'See them',
     attach: 'Attach receipt',
     attaching: 'Attaching…',
@@ -282,7 +283,7 @@
     addCss(); /* the warning band is painted by a page that has not opened the chip yet */
     var text = evidenceText(u.count === 1 ? EVIDENCE_WORDS.claimOne : EVIDENCE_WORDS.claimMany)
       .replace('{amount}', money(u.tax_minor))
-      .replace('{box}', u.box ? u.box : evidenceText(EVIDENCE_WORDS.claimBox))
+      .replace('{box}', u.box ? (/^[0-9]+$/.test(String(u.box)) ? evidenceText('Box {n}').replace('{n}', u.box) : u.box) : evidenceText(EVIDENCE_WORDS.claimBox)) /* BG-F-03: a bare 13 read as 20.00 out of 13; a number is a box */
       .replace('{n}', String(u.count));
     return { text: text, see: evidenceText(EVIDENCE_WORDS.claimSee) };
   }

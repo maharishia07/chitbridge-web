@@ -5491,7 +5491,7 @@ function testCaseDetailHTML(c) {
         ? '<button data-cbsid="SCR010-B37" class="btn" style="display:inline-block;width:auto;margin-top:4px;' +
           'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' +
           "'" +
-          esc(x.evidence_id) +
+          escJs(x.evidence_id) +
           "'" +
           ')">\u1f5bc\ufe0f Screenshot</button>'
         : '<div style="' + pad + ';color:var(--grey-4,#646A72)">No screenshot was attached to this one.</div>') +
@@ -5633,10 +5633,10 @@ function testCaseListHTML(code) {
             col +
             '">PASS</span>' +
             '<button data-cbsid="CMP010" class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\'' +
-            esc(item.case_key) +
+            escJs(item.case_key) +
             '\')">Open</button>' +
             '<button data-cbsid="SCR010-B41" class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\'' +
-            esc(item.case_key) +
+            escJs(item.case_key) +
             '\')">Re-test</button>' +
             (CBTEST.openCase === item.case_key ? '<div style="flex:1 1 100%">' + testCaseDetailHTML(item) + '</div>' : '') +
             '</div>'
@@ -6473,7 +6473,7 @@ function testBehindHTML(code) {
             "','" +
             testJs(x.code) +
             "','" +
-            esc(String(x.label).replace(/'/g, ' ')) +
+            escJs(String(x.label).replace(/'/g, ' ')) +
             '\')">Write a case</button>' +
             '</div>'
           );
@@ -9392,7 +9392,7 @@ function testWorkRowHTML(x) {
     /* ⚠️ a red verdict with nothing raised is a fault on nobody's list — this is the row that fixes that */
     acts += b(
       'Raise an incident',
-      "testFromCase('" + testJs(x.caseKey) + "','inc',null,'" + esc(String(x.seen || 'It failed').replace(/'/g, ' ')) + "')",
+      "testFromCase('" + testJs(x.caseKey) + "','inc',null,'" + escJs(String(x.seen || 'It failed').replace(/'/g, ' ')) + "')",
       'var(--disp,#B3261E)',
       'Turn this red verdict into something somebody owns'
     );
@@ -9764,7 +9764,7 @@ function testHandHTML() {
                   "','" +
                   testJs(String(x.id || '')) +
                   "','" +
-                  esc(String(x.key || '')) +
+                  escJs(String(x.key || '')) +
                   '\',false)">\u2713 Close</button>') +
         '</div>' +
         '</div>'

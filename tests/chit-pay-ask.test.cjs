@@ -6,7 +6,7 @@
  */
 'use strict';
 const fs = require('fs'), path = require('path'), assert = require('assert');
-const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+const src = ['app.html', 'app/chit-pay.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8')).join('\n'); /* chitPaySubmit and chitPayAsk live in app/chit-pay.js */
 /** one top-level function of app.html by name (its text up to the next top-level function or doc comment) */
 function fnSource(name) {
   const at = src.indexOf('\n' + (name === 'chitPaySubmit' ? 'async ' : '') + 'function ' + name + '(');
@@ -18,6 +18,8 @@ function fnSource(name) {
 const calls = { api: [], toasts: [], confirms: [], closed: 0 };
 globalThis.PAY_PRESS_REF = 'press-1';
 globalThis.tx = (s) => s;
+globalThis.CBMoney = require('../public/engine/money.js'); /* the one reader: 1300 rupees is 130000 paise */
+globalThis.moneyCode = () => 'INR';
 globalThis.esc = (s) => String(s).replace(/</g, '&lt;');
 globalThis.toast = (m, bad) => calls.toasts.push([m, !!bad]);
 globalThis.closeModal = () => calls.closed++;
@@ -41,10 +43,10 @@ const over = Object.assign(new Error('More than is owed by ₹120. ₹1,300 is m
   assert.strictEqual(ask.title, 'More than is owed', 'the title is the books\' own (not "Already paid?")');
   assert(/₹120 would be kept as an advance from Mala/.test(ask.body), 'the body is the books\' words');
   assert.strictEqual(ask.okLabel, 'Keep ₹120 as an advance', 'the Yes names the amount over, from the server\'s over_words');
-  assert.deepStrictEqual(calls.api[0].req.body, { method: 'upi', ref: 'U1', amount: 1300, client_ref: 'press-1' }, 'the first press carries no acknowledgement');
+  assert.deepStrictEqual(calls.api[0].req.body, { method: 'upi', ref: 'U1', amount_minor: 130000, client_ref: 'press-1' }, 'the first press carries no acknowledgement');
   await ask.onOk();
   assert.strictEqual(calls.api.length, 2, 'Yes re-sends once');
-  assert.deepStrictEqual(calls.api[1].req.body, { method: 'upi', ref: 'U1', amount: 1300, client_ref: 'press-1', acknowledge: [{ code: 'excess', over_minor: 12000 }] }, 'the SAME press (same client_ref, same amount) with the code AND the figure shown acknowledged');
+  assert.deepStrictEqual(calls.api[1].req.body, { method: 'upi', ref: 'U1', amount_minor: 130000, client_ref: 'press-1', acknowledge: [{ code: 'excess', over_minor: 12000 }] }, 'the SAME press (same client_ref, same amount) with the code AND the figure shown acknowledged');
   assert.deepStrictEqual(calls.toasts, [['Payment recorded ✓', false]], 'then the plain outcome');
 
   /* the same money twice keeps its own title and a Yes that does not name an advance */

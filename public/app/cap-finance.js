@@ -72,6 +72,7 @@ function finLate() {
   return !!FIN_LATE_TABS[finTab()] && !!window.CBLate && !window.CBLate.isReady();
 }
 
+/** the Collections read: handed to the open tab's loader when there is one, else the customers' dues read into FIN (a late answer is dropped) */
 async function finLoad(quiet) {
   if (finLate() && (await finLeftWhileLate())) return; /* no await at all when nothing is late: the tab's load starts in the same tick */
   var tabLoader = finTabLoader();
@@ -124,6 +125,7 @@ function finOff() {
     (owner ? '' : '<p data-testid="fin-off-why">' + esc(tx('Ask the owner to switch it on')) + '</p>') +
     '</div>';
   var switchOn = document.getElementById('fin_on');
+  /** the owner's Turn on button: asks, then switches the Ledger on */
   if (owner)
     switchOn.onclick = function () {
       CBLedger.run(true, {
@@ -319,17 +321,17 @@ function finCols() {
       pin: 'end',
       w: 130,
       html: true,
-      cell: function (p) {
-        var id = esc(p.party_id);
+      cell: function (party) {
+        var id = esc(party.party_id);
         return (
           '<span data-cbsid="FIN001-C01" style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-receive-' +
           id +
           "\" onclick=\"event.stopPropagation();payOpen('customer','" +
           id +
-          "'," +
-          esc(JSON.stringify(String(p.name || ''))) +
-          ')">' +
+          "',{name:" +
+          esc(JSON.stringify(String(party.name || ''))) +
+          ',after:function(){finLoad(true)}})">' +
           esc(tx('Receive')) +
           '</button>' +
           '<button type="button" data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-remind-' +
@@ -345,6 +347,7 @@ function finCols() {
   ];
 }
 
+/** the Collections screen: its frame, the Ledger-off card, or the tab's own mounter when a tab holds the page */
 function finMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -493,6 +496,7 @@ function finRemindQueue(rows) {
   });
   if (FIN.queue.length) finQueueSheet();
 }
+/** the Remind dialog: the customers queued to be asked, each with what they owe and a Remind button, shown as Asked once done */
 function finQueueSheet() {
   var list = FIN.queue || [],
     left = list.filter(function (x) {
@@ -533,7 +537,10 @@ function finQueueSheet() {
 function finRemindOne(i, btn) {
   var x = (FIN.queue || [])[i];
   if (!x) return;
-  x.done = true;
   FIN.back = finQueueSheet; /* the sheet returns when this party's message is closed */
-  return bkRemind(x.id, btn);
+  /* reviews7 EL-10 M3: Asked only once the message really opened; a refused open leaves the party to remind */
+  return Promise.resolve(bkRemind(x.id, btn)).then(function (r) {
+    if (r && r.ok) x.done = true; /* CBAction.run answers { ok } */
+    return r;
+  });
 }

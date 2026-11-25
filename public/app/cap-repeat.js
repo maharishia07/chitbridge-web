@@ -89,7 +89,7 @@ function rpBtn(agreement, verb, testId, className, sayInline) {
     '"' +
     (ok ? '' : ' disabled aria-disabled="true" title="' + esc(sentence) + '" data-why="' + esc(sentence) + '"') +
     ' onclick="CBRepeat.act(\'' +
-    esc(agreement.agreement_id) +
+    escJs(agreement.agreement_id) +
     "','" +
     verb +
     '\',this)">' +

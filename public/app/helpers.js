@@ -1,8 +1,4 @@
-/* app/helpers.js — generic, dependency-free helpers (module 2 of the app split).
- * Classic script, shared global scope. Loaded by /app.html AFTER core.js and BEFORE the main inline
- * script, so every panel can call these. HARD RULE for this file: pure leaves only — nothing here may
- * reference app state (UI/SESSION/STORE/…) or DOM at load time. Panel-specific mappers/renderers stay
- * in their panel module. Extracted verbatim from app.html (behaviour unchanged).
+/* app/helpers.js — generic, dependency-free helpers (module 2 of the app split). Classic script, shared global scope. Loaded by /app.html AFTER core.js and BEFORE the main inline script, so every panel can call these. HARD RULE for this file: pure leaves only — nothing here may reference app state (UI/SESSION/STORE/…) or DOM at load time. Panel-specific mappers/renderers stay in their panel module. Extracted verbatim from app.html (behaviour unchanged).
  *
  * OWNS  the generic leaves: esc · opt · money and date formatters · month words · emptyState · loader · the status words · billTotalOf (ACC-206 D1: the ONE web read of a chit's bill total; ACC-348b reads the api bill_total first) · billNoticeHTML · billChipHTML (the not-confirmed words)
  * CALLED BY  36 pages by <script src> (grep -lE 'src="/?app/helpers.js' public/*.html index.html): app.html, every small app, the labs, the shop pages. The till does NOT
@@ -54,6 +50,10 @@ function deepClone(x) {
    (30 escaped it, this home did not). Text and attribute safe either quote: & < > " '. e2e/prim-homes.cjs fails a second definition. */
 function esc(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+/* A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": the browser decodes the attribute's HTML entities BEFORE the JS runs, so esc() alone lets a quote end the string (reviews5 GF-03 M8, GF-05 M10, EL-04 M14). Quote, backslash, angle, ampersand and line breaks become \uXXXX (the same characters inside the string, none able to end it), then esc for the attribute. e2e/guard-xss-handlers.cjs fails an esc( in that position. */
+function escJs(v) {
+  return esc(String(v == null ? '' : v).replace(/[\\'"<>&\r\n\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')));
 }
 function opt(arr, sel) {
   return arr.map((item) => `<option ${item === sel ? 'selected' : ''}>${item}</option>`).join('');

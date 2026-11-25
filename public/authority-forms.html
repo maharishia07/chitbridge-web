@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Authority forms</title>
@@ -30,6 +30,7 @@
   .note{ font-size:11px; color:var(--grey); } .err{ color:var(--bad); font-size:12px; margin-top:6px; }
   .formcard{ border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:8px; cursor:pointer; background:var(--card,#fff); }
   .formcard:hover{ border-color:var(--blue); } .formcard.on{ border-color:var(--blue); background:#f4f7fc; }
+  .formcard:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
   .formcard .t{ font-weight:700; font-size:13.5px; } .formcard .a{ font-size:11px; color:var(--grey); }
   .fld{ display:grid; grid-template-columns:1fr; gap:3px; padding:9px 0; border-top:1px solid var(--line); }
   .fld .lb{ font-size:11px; font-weight:700; color:var(--grey); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
@@ -75,10 +76,10 @@
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>
 <script src="/engine/signin.js"></script>
-<script src="/app/signin-ui.js"></script>
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>
 <script src="/app/one-person.js"></script>
 <script src="/app/cb-words.js"></script>
-<script src="/app/accounts-shell.js"></script>
+<script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script>
 <script src="/app/rail-bell-html.js"></script><script src="/app/rail-bell-rows.js"></script><script src="/app/rail-bell.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
@@ -86,7 +87,7 @@
 <script src="/app/page-frame.js"></script>   <!-- CBFrame: the shell header + the one sign-in window (H23/H24) -->
 <script src="cb-offline.js"></script>
 <script>
-var API = new URLSearchParams(location.search).get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
 var TOK = null,
   _stage = 'email',
   FORMS = [],
@@ -242,9 +243,8 @@ function render() {
       return (
         '<div data-cbsid="DOC001-C01" class="formcard' +
         (SEL === item.key ? ' on' : '') +
-        '" onclick="pick(\'' +
-        item.key +
-        '\')"><div class="t">' +
+        '" role="button" tabindex="0" aria-pressed="' + (SEL === item.key ? 'true' : 'false') + '" data-key="' +
+        esc(item.key) + '"><div class="t">' +
         esc(item.title) +
         '</div><div class="a">' +
         esc(item.authority || '') +
@@ -265,6 +265,14 @@ function render() {
       if (SEL) resolve();
     };
 }
+/* WCAG 2.1.1 (L-ux-web-screens-27#L41): a form card is a button: Tab reaches it, Enter or Space picks it; one delegated listener reads data-key, so no key is built into an inline handler. */
+const cardOf = (ev) => (ev.target && ev.target.closest ? ev.target.closest('.formcard[data-key]') : null);
+document.addEventListener('click', function (ev) { var card = cardOf(ev); if (card) pick(card.getAttribute('data-key')); });
+document.addEventListener('keydown', function (ev) {
+  var card = cardOf(ev), on;
+  if (!card || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+  ev.preventDefault(); pick(card.getAttribute('data-key')); on = document.querySelector('.formcard.on'); if (on) on.focus();
+});
 function pick(k) {
   SEL = k;
   ISSUED = null;

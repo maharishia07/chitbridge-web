@@ -141,7 +141,7 @@ const errBody = (msg, code) => ({ code, error: msg, message: msg });
 /** a lead as GET /parties?view=leads sends it: a MINTED party (kind local — with a bridge_id, as the mint gives one) on the customer list, added_via lead */
 function leadRow(L, l) {
   const stage = l.txn > 0 ? 'customer' : l.stage;
-  return { party_id: l.party_id, display_name: l.name, user_id: '~mayur.cus-' + String(l.n).padStart(4, '0'), bridge_id: 'CBL' + String(l.n).padStart(7, '0'), email: null, phone: l.phone, otp_contact: l.phone, gstn: null, city: null, status: 'active',
+  return { party_id: l.party_id, display_name: l.name, user_id: '~mayur.cus-' + String(l.n).padStart(4, '0'), bridge_id: 'CBL' + String(l.n).padStart(7, '0'), email: null, phone: l.phone, gstn: null, city: null, status: 'active',
     kind: 'local', on_chitbridge: false, may_trade: { ok: false, why: 'local' }, roles: { customer: true, supplier: false }, party_no: l.party_no, last_activity: l.last_at || null,
     customer: { list_id: 'cl-' + l.party_id, segment: 'new', segment_override: null, txn_count: l.txn, last_txn_at: l.txn ? l.last_txn_at : null, groups: [], customer_type: 'entity', added_via: 'lead' },
     lead: { stage, since: l.since }, legal_name: null, nickname: null, state_code: null, tax_ids: [], terms: { customer: { credit_days: null, credit_limit_minor: null } },
@@ -249,7 +249,7 @@ function l2cRoute(L, r, q, u, p, m, body) {
     const row = leadRow(L, l), stage = row.lead.stage;
     row.lead = Object.assign({}, row.lead, { moves: STAGES.filter((g) => g !== stage), may: L.migrated ? { ok: true } : { ok: false, why: NOT_READY } });
     /* contact_prefs: a lead has no consent rows yet — the same answer the record builder gives (crm-api prefsBefore: service allowed, offers need consent) */
-    return J(r, 200, Object.assign(row, { may: crmApi.mayOf(r), merged_from: null, relationship: null, points: null, migrated: true, unbilled: row.unbilled || { n: 0, minor: 0, currency: null }, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
+    return J(r, 200, Object.assign(row, { may: crmApi.mayOf(r), merged_from: null, relationship: null, points: null, migrated: true, unbilled: row.unbilled || { n: 0, minor: 0, currency: null }, bills: row.bills || { n: 0, last_at: null }, contact_prefs: crmApi.prefsBefore(), followups: fuRows(L).filter((f) => f.party_id === l.party_id && !f.done_at).map(fuShape) }));
   }
   if (p === '/api/crm/followups' && m === 'GET') {
     const done = u.searchParams.get('done') === '1';

@@ -124,7 +124,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
       return { pageScroll: document.documentElement.scrollHeight - innerHeight, mainScroll: main.scrollHeight - main.clientHeight, listH: list ? Math.round(list.getBoundingClientRect().height) : 0, bottom: list ? Math.round(list.getBoundingClientRect().bottom) : 0, vh: innerHeight, above, sticky: list ? getComputedStyle(list.querySelector('.cbl-hdr')).position : '' };
     });
     ok(m.pageScroll <= 1 && m.mainScroll <= 1, tag + ': the page does not scroll (page +' + m.pageScroll + ', main +' + m.mainScroll + ')');
-    ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 240), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
+    ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 230 /* was 240: AD-F-02's greyed sentence under the primary takes a line on a phone; 238 px measured */), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
     /* CHANGED ON PURPOSE (W15-18): the band now carries Wrong account? Change as well as the file line's Load another statement, the primary and More: four, not three (still 17 before FIN-27) */
     /* CHANGED ON PURPOSE (W15-84): a statement's lines wear the trail's Back (← Bank); where the Statements box is not ready the picker's Load another statement stays beside it: five, not four */
     ok(m.above <= 5, tag + ': ' + m.above + ' controls above the list besides its own toolbar and its chips (was 17 in all)');
@@ -149,7 +149,8 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), tag + ': the Statement view does not scroll sideways');
     await p.click('[data-testid="bank-tab-lines"]'); await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]');
     /* M2 · the Add sheet is a wide sheet; a press outside keeps the answers */
-    await p.click('[data-testid="bank-sheet-open"]');
+    /* AD-F-02 (1129): the primary is GREYED while no line is ready (the sentence says answer the lines first), so the sheet opens from a line's ＋ Add missing, which calls this one function */
+    await p.evaluate(() => bankAdd());
     await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
     await p.waitForTimeout(300);
     const sh = await p.evaluate(() => {
@@ -189,7 +190,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const closed = await p.evaluate(() => !document.getElementById('acc_sheet').open);
     if (vp.width > 700) ok(closed, tag + ': a press outside closes the sheet');
     if (closed) {
-      await p.click('[data-testid="bank-sheet-open"]');
+      await p.evaluate(() => bankAdd()); /* AD-F-02: greyed at 0 ready, as above */
       await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 10000 });
       const after = await p.evaluate(() => BKSH.ctl.readyCount());
       ok(after === before.ready, tag + ': reopened, the answers are still there (ready ' + before.ready + ' then ' + after + ')');
@@ -207,7 +208,8 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(await w.p.locator('[data-testid="bank-sheet-open"]').isDisabled(), 'wrong account: Add is held until the question is answered');
     await w.p.screenshot({ path: path.join(ASHOTS, 'bank-laptop-wrong-account.png') });
     await w.p.click('[data-testid="bank-opening-go"]');
-    ok(await w.p.locator('[data-testid="bank-sheet-open"]').isEnabled() && await w.p.locator('[data-testid="bank-opening-check"]').count() === 0, 'wrong account: "It is right, go on" lifts the hold');
+    /* AD-F-02: with no line ready the primary stays greyed, with ITS sentence; the hold is lifted when that sentence is no longer the opening question */
+    ok(!/Answer the question above first/.test(await w.p.locator('[data-testid="bank-sheet-open"]').getAttribute('title') || '') && await w.p.locator('[data-testid="bank-opening-check"]').count() === 0, 'wrong account: "It is right, go on" lifts the hold');
     await w.ctx.close();
     globalThis.__opening = null;
   }
@@ -216,4 +218,4 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
   ok(...C.finish());
   console.log('\n  bank-monday-ui: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.log('  XX  the harness stopped: ' + e.message + (globalThis.__threw && globalThis.__threw.length ? ' | page errors: ' + globalThis.__threw.slice(0, 3).join(' ; ') : '')); process.exit(1); });
+})().catch((e) => { console.log('  XX  the harness stopped: ' + e.message.slice(0,200) + ' STACK ' + String(e.stack).split(String.fromCharCode(10)).filter(l=>/bank-monday-ui/.test(l)).join(' ') + (globalThis.__threw && globalThis.__threw.length ? ' | page errors: ' + globalThis.__threw.slice(0, 3).join(' ; ') : '')); process.exit(1); });

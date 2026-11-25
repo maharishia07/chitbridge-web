@@ -240,6 +240,15 @@ function obToggle(i) {
 }
 
 /* ── the rows the server is asked about ── */
+/** EL-12 M10: the field on the side OPPOSITE a bills ledger's own side stays editable on the page, so what it holds is sent (a customer advance on Debtors), never typed on screen and silently not posted; null when there is none */
+function obOppositeLine(row, side, bills) {
+  var held = side && row[side === 'cr' ? 'dr' : 'cr'];
+  if (!bills.length || !held) return null;
+  var oppLine = { code: row.code };
+  oppLine[side === 'cr' ? 'dr_minor' : 'cr_minor'] = held;
+  return oppLine;
+}
+/** every line the save sends: one per bill, the opposite-side amount of a bills ledger, and a plain ledger's own figure */
 function obRowsOut() {
   var out = [];
   OPENING.rows.forEach(function (row) {
@@ -252,6 +261,8 @@ function obRowsOut() {
       one[side === 'cr' ? 'cr_minor' : 'dr_minor'] = bill.minor;
       out.push(one);
     });
+    var oppLine = obOppositeLine(row, side, bills);
+    if (oppLine) out.push(oppLine);
     if ((row.dr || row.cr) && !bills.length) {
       var ownLine = { code: row.code };
       if (row.dr) ownLine.dr_minor = row.dr;
@@ -395,8 +406,17 @@ function obBalance(i) {
 }
 
 /* ── save ── */
+/** a bill with something typed but no party or no amount is never sent: Save says so instead of leaving it out (EL-12 M9 / GF-12 M12) */
+function obHalfBills() {
+  return OPENING.rows.some(function (row) {
+    return row.bills.some(function (bill) {
+      return (bill.party_id || bill.minor || bill.ref || bill.date || bill.due) && !(bill.party_id && bill.minor);
+    });
+  });
+}
 /** a change to what is saved asks why first, in the popup the bank page's Reopen and Month lock's Open again use (POP092, this screen's mount); the reason is kept with the change */
 function obSave() {
+  if (obHalfBills()) return toast(tx('A bill needs a party and an amount. Fill it in or remove it.'), true);
   if (OPENING.mode !== 'replace') return obSaveGo();
   OPENING.reason = '';
   /* where-used: out-of-scope the mount is bkDialogMount(5): the host screen's own code plus -U25, so it cannot be one literal */
@@ -446,50 +466,4 @@ async function obSaveGo() {
 }
 function obCancel() {
   obShowSaved();
-}
-
-/* ── what is saved ── */
-function obSourceWord(kind) {
-  return tx(OB_SOURCE[kind] || OB_SOURCE.posted);
-}
-function obPartyName(id) {
-  var hit = (OPENING.parties || []).filter(function (item) {
-    return item.party_id === id;
-  })[0];
-  return hit ? (hit.party_no ? hit.party_no + ' · ' : '') + (hit.name || hit.display_name || '') : '';
-}
-/** the saved view: who entered it, when and from where, every line the server kept, and the year strip */
-async function obShowSaved() {
-  OPENING.mode = 'saved';
-  await obEnsureParties();
-  var saved = OPENING.saved,
-    currency = saved.currency;
-  var savedBy = (saved.entries || [])
-    .map(function (entry) {
-      return (
-        '<div data-testid="ob-source" style="font-size:var(--fs-1);color:var(--grey)"><b>' +
-        esc(obSourceWord(entry.source && entry.source.kind)) +
-        '</b> · ' +
-        esc(entry.entry_no || '') +
-        (entry.by_name ? ' · ' + esc(entry.by_name) : '') +
-        (entry.at ? ' · ' + esc(bkDate ? bkDate(String(entry.at).slice(0, 10)) : String(entry.at).slice(0, 10)) : '') +
-        '</div>'
-      );
-    })
-    .join('');
-  var rows = (saved.lines || [])
-    .map(function (line) {
-      return (
-        '<div class="ob-row" data-testid="ob-saved-row"><div class="ob-name"><span class="mono">' + esc(line.code) + '</span> ' + esc(line.name || '') +
-        (line.party_id ? '<small>' + esc(obPartyName(line.party_id) + (line.bill_ref ? ' · ' + line.bill_ref : '') + (line.due_date ? ' · ' + tx('due') + ' ' + line.due_date : '')) + '</small>' : '') +
-        '</div><div class="ob-num">' + (line.dr_minor ? esc(bkMoney(line.dr_minor, currency)) : '') + '</div><div class="ob-num">' + (line.cr_minor ? esc(bkMoney(line.cr_minor, currency)) : '') + '</div></div>'
-      );
-    })
-    .join('');
-  OPENING.body.innerHTML =
-    '<div class="ob" data-testid="ob-root"><div class="ob-head"><b>' + tx('Opening balances') + '</b><span>' + esc(tx('from') + ' ' + (bkDate ? bkDate(saved.date) : saved.date)) + '</span><span style="flex:1"></span>' +
-    '<button type="button" class="supact-pri" data-cbsid="CMP012-B01"' + obMount('CMP012') + ' data-testid="ob-edit" onclick="obEdit()">' + tx('Edit') + '</button></div>' +
-    savedBy +
-    '<div class="ob-rows" data-testid="ob-rows"><div class="ob-row ob-hd"><div class="ob-name">' + tx('Ledger') + '</div><div class="ob-num">' + tx('Debit') + '</div><div class="ob-num">' + tx('Credit') + '</div></div>' + rows + '</div>' +
-    '<div id="ob_years" data-testid="ob-years">' + obYearsHtml() + '</div></div>';
 }

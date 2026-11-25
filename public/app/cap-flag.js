@@ -316,7 +316,7 @@
     }).then(function () {
       sheet.threads = {}; sheet.busy = false; sheet.armed = null; paintSheet(sheet, false); sayInSheet(sheet, flagText(FLAG_WORDS.done)); sheet.control.changed(sheet.id);
     }, function (failure) {
-      sheet.busy = false; sheet.armed = null; sayInSheet(sheet, (failure && failure.message) || flagText(FLAG_WORDS.failed), true);
+      sheet.busy = false; sheet.armed = null; sayInSheet(sheet, failWords(failure, flagText(FLAG_WORDS.failed)), true);
     });
   }
   function refreshClient(sheet) {
@@ -359,7 +359,7 @@
     return askFlag(sheet.cfg.call, 'flagsReply', { id: flagId, body: { message_text: words } }).then(function (a) {
       sheet.busy = false; sheet.threads[flagId] = a || false; fillThread(sheet, flagId); sayInSheet(sheet, flagText(FLAG_WORDS.done));
     }, function (failure) {
-      sheet.busy = false; sayInSheet(sheet, (failure && failure.message) || flagText(FLAG_WORDS.failed), true);
+      sheet.busy = false; sayInSheet(sheet, failWords(failure, flagText(FLAG_WORDS.failed)), true);
     });
   }
   function openSheet(cfg, state, control, id, options, kind) {

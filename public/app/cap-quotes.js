@@ -249,7 +249,7 @@
       .catch(function (e) {
         if (root.console) console.warn('quotes: could not read the rounds', e && e.message);
         if (STATE[id] && el.isConnected)
-          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + root.esc(id) + '\')" data-cbsid="CMP009">' + root.esc(translate('Try again')) + '</button></div>';
+          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" data-cid="' + root.esc(id) + '" onclick="CBQuotes.mount(this.parentNode.parentNode,this.dataset.cid)" data-cbsid="CMP009">' + root.esc(translate('Try again')) + '</button></div>';
         return null;
       });
   }
@@ -290,9 +290,9 @@
     if (round.awaiting_me) {
       acts =
         '<div class="cq-acts" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">' +
-        (round.kind !== 'request' ? '<button data-cbsid="SCR060-B01" type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Accept')) + '</button>' : '') +
-        '<button data-cbsid="SCR060-B02" type="button" data-testid="quote-counter-' + round.round + '" onclick="CBQuotes.openForm(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\')">' + root.esc(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
-        '<button data-cbsid="SCR060-B03" type="button" class="warn" data-testid="quote-reject-' + round.round + '" onclick="CBQuotes.reject(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Reject')) + '</button></div>';
+        (round.kind !== 'request' ? '<button data-cbsid="SCR060-B01" type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" data-cid="' + root.esc(view.chit.id) + '" data-pid="' + root.esc(round.proposal_id) + '" onclick="CBQuotes.accept(this.dataset.cid,this.dataset.pid,this)">' + root.esc(translate('Accept')) + '</button>' : '') +
+        '<button data-cbsid="SCR060-B02" type="button" data-testid="quote-counter-' + round.round + '" data-cid="' + root.esc(view.chit.id) + '" data-pid="' + root.esc(round.proposal_id) + '" onclick="CBQuotes.openForm(this.dataset.cid,this.dataset.pid)">' + root.esc(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
+        '<button data-cbsid="SCR060-B03" type="button" class="warn" data-testid="quote-reject-' + round.round + '" data-cid="' + root.esc(view.chit.id) + '" data-pid="' + root.esc(round.proposal_id) + '" onclick="CBQuotes.reject(this.dataset.cid,this.dataset.pid,this)">' + root.esc(translate('Reject')) + '</button></div>';
     }
     return '<div class="itab" data-testid="quote-round-' + round.round + '" data-status="' + root.esc(round.status) + '" style="padding:9px;margin-top:7px">' +
       '<div style="display:flex;justify-content:space-between;gap:8px"><span><b>' + root.esc(fill(translate('Round {n}'), { n: round.round })) + '</b> · ' + root.esc(speaker) + ' · ' + root.esc(label) + '</span>' +
@@ -311,8 +311,8 @@
       '<div style="color:var(--grey);font-size:var(--fs-1)">' + root.esc(seller ? fill(translate('Prices in {cur}. Tax is added when you send.'), { cur: view.chit.currency || '' }) : translate('Say how many and the price you want. {name} sets the price.').replace('{name}', view.chit.other)) + '</div>' +
       rows +
       '<textarea data-cbsid="SCR060-T01" class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + root.esc(translate('A note (optional)')) + '"></textarea>' +
-      '<div style="margin-top:7px;display:flex;gap:8px"><button data-cbsid="SCR060-B04" type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + root.esc(view.chit.id) + '\',this)">' + root.esc(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
-      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + root.esc(view.chit.id) + '\')" data-cbsid="CMP003">' + root.esc(translate('Cancel')) + '</button></div>' +
+      '<div style="margin-top:7px;display:flex;gap:8px"><button data-cbsid="SCR060-B04" type="button" class="pri" data-testid="quote-send" data-action-state="idle" data-cid="' + root.esc(view.chit.id) + '" onclick="CBQuotes.send(this.dataset.cid,this)">' + root.esc(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
+      '<button type="button" data-testid="quote-cancel" data-cid="' + root.esc(view.chit.id) + '" onclick="CBQuotes.closeForm(this.dataset.cid)" data-cbsid="CMP003">' + root.esc(translate('Cancel')) + '</button></div>' +
       '<div data-testid="quote-out" role="status" style="margin-top:5px"></div>' + '</div>';
   }
   /** the jurisdiction banner (Quotation only … / Pro-forma …), or nothing */
@@ -338,11 +338,11 @@
   function startButtonsHTML(view) {
     var chit = view.chit;
     var openNew = !view.rounds.length && chit.seller
-      ? '<button data-cbsid="SCR060-B05" type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Price this request')) + '</button>'
+      ? '<button data-cbsid="SCR060-B05" type="button" class="pri" data-testid="quote-price-new" data-cid="' + root.esc(chit.id) + '" onclick="CBQuotes.openForm(this.dataset.cid,\'\')">' + root.esc(translate('Price this request')) + '</button>'
       : '';
     var live = view.rounds.some(function (round) { return round.status === 'proposed'; });
     var again = view.rounds.length && !live && !chit.seller && view.rounds.some(function (round) { return round.status !== 'accepted'; })
-      ? '<button data-cbsid="SCR060-B06" type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Ask again')) + '</button>' : '';
+      ? '<button data-cbsid="SCR060-B06" type="button" data-testid="quote-ask-again" data-cid="' + root.esc(chit.id) + '" onclick="CBQuotes.openForm(this.dataset.cid,\'\')">' + root.esc(translate('Ask again')) + '</button>' : '';
     return '<div style="margin-top:7px">' + openNew + again + '</div>';
   }
   function html(view) {

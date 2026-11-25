@@ -2,7 +2,7 @@
  * OWNS      the flow of reading a statement on the device, putting each line against the books, showing the books AS THEY WILL READ once the ready lines are in
  *           (nothing saved), the confirm popup that says what the press will reach, and posting the confirmed lines ONE AT A TIME through an INJECTED post adapter.
  *           The demo page (public/bank-demo.html) and the app (public/app/cap-bank-post.js) differ ONLY in that adapter.
- * SPLIT     a line's words and its shape (STATE_WORDS · NEEDS_WORDS · moneyText · dateText · lineOf) are app/bank-preview-line.js, loaded before this file (shrink W2, 2026-11-17).
+ * SPLIT     a line's words and its shape (STATE_WORDS · NEEDS_WORDS · moneyText · dateText · lineOf) are app/bank-preview-line.js, loaded before this file (shrink W2, 2026-11-17); what a press reaches and the popup words are app/bank-preview-reach.js, also loaded before it.
  * CALLED BY public/app/bank-demo.js (the no-login showcase) · later the Bank view (cap-bank.js) through one call-in.
  * FLOW      create(opts) → load(text) → recon.parse · recon.match · recon.suggest → project.project() → view() → confirmText() → CBLabKit.confirm → postReady(onLine) → read again
  * CARD      16-finance/bank-reconciliation-and-bank-rail   (requirement: docs 16-finance/BANK-TO-BOOKS-REQUIREMENT.md, "Critic 14 Nov")
@@ -22,6 +22,8 @@
 (function (root) {
   'use strict';
   var Line = root.CBBankPreviewLine || (typeof require === 'function' ? require('./bank-preview-line.js') : null); /* loaded first: app/bank-preview-line.js — a line's words and its shape */
+  var Reach = root.CBBankPreviewReach || (typeof require === 'function' ? require('./bank-preview-reach.js') : null); /* loaded first: app/bank-preview-reach.js — what a press reaches, the popup's words */
+  var readyItems = Reach.readyItems, reachOf = Reach.reachOf, confirmWords = Reach.confirmWords;
   var STATE_WORDS = Line.STATE_WORDS,
     NEEDS_WORDS = Line.NEEDS_WORDS,
     minorOf = Line.minorOf,
@@ -29,8 +31,7 @@
     dateText = Line.dateText,
     lineOf_ = Line.lineOf;
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
-  var MATCH_WINDOW_DAYS = 3;
-
+  var BATCH_MAX = 100, MATCH_WINDOW_DAYS = 3; /* BATCH_MAX: lines per POST /events/batch (the server's own ceiling) */
   /* ── the controller's steps, each on its own: they take the options and the one state object `preview`, so create() only joins them ── */
   /** the words for why the page cannot work yet (the engine did not load); null when it can */
   function engineRefusal(opts) {
@@ -72,19 +73,30 @@
   }
   /** the proposal for one line the books lack: what suggest() says, or, once the owner has answered the line, what CBBankEntry.resolve() composes from the answer (the same path, one taught rule) */
   function proposalFor(opts, preview, line, ref) {
+    return lockHold_(proposalCore_(opts, preview, line, ref), line, opts, preview);
+  }
+  /** a line in a closed month is held on the PROPOSAL (the one `needs` code the engine already turns into a blocker), so the engine's own totals, counts and closing balance leave it out: the popup's money is what will post, never the lines the lock refuses (unless the owner chose the next open month for it) */
+  function lockHold_(proposal, line, opts, preview) {
+    var locked = proposal && opts.lockedMonth ? opts.lockedMonth(line.date) : null;
+    if (!locked || (locked.next && preview.moved && preview.moved[locked.key])) return proposal;
+    return Object.assign({}, proposal, { needs: 'closed_month' });
+  }
+  function proposalCore_(opts, preview, line, ref) {
     /* the person's tick (B5-01) and word on the tax invoice (B5-03) for THIS line ride into the same engine call */
     var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref], fee_tax: preview.feeTax[ref], interest_minor: preview.interest[ref] }),
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
+    delete preview.taught[ref];
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
     var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, kind: asked.kind, account: asked.account, tax_kind: asked.tax_kind };
-    var resolved = entry.resolve(line, answers, suggestOpts); /* engines #147: a payee-less line composes once with learned:false and no taught rule — nothing is stored on the device either way */
+    var resolved = entry.resolve(line, answers, suggestOpts); /* the rule the answer taught is held here by line and kept by the host ONLY when Add posts the line (view().taught): an abandoned answer teaches nothing */
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
       return proposal;
     }
     delete preview.resolveRefusal[ref];
+    if (resolved.taught) preview.taught[ref] = resolved.taught;
     return holdProposal_(resolved, opts);
   }
   /** the statement as the engine's project() reads it: its currency is what the FILE or the person said (B5-05), its balances and the rows the reader skipped */
@@ -185,61 +197,19 @@
     });
     return true;
   }
-  /** the lines a press would post: ready, and not already added in this session */
-  function readyItems(preview) {
-    return preview.items.filter(function (item) {
-      return (!preview.only || item.key === preview.only) && item.ready && !(preview.results[item.key] && preview.results[item.key].ok);
-    });
+  /** the line as the adapter takes it: the item with what the owner ticked, typed and picked for it */
+  function itemForPost_(preview, item) {
+    return Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] });
   }
-  /** how many NEW parties the press would make: one per distinct name and kind among the ready lines (two lines naming one payee make it once) */
-  function newPartyCount(preview) {
-    var seen = {};
-    readyItems(preview).forEach(function (item) {
-      if (item.party && item.party.status === 'new') seen[String(item.party.name).toLowerCase() + '|' + item.party.kind] = 1;
-    });
-    return Object.keys(seen).length;
-  }
-  /** what the press reaches when ONE line is answered: that line's own carried figures (its amount and its tax record), not the statement's totals */
-  function oneLineReach(preview, item) {
-    var line = item ? item.line : {};
-    return { currency: preview.projection.currency, count: item ? 1 : 0, in: line.credit_minor || 0, out: line.debit_minor || 0, tax: item && item.tax ? item.tax.tax_minor : 0, from: line.date || null, to: line.date || null, needs_you: 0, closed: 0, newParties: newPartyCount(preview), single: true };
-  }
-  /** what the press reaches: the engine's carried totals of the READY lines, the lines a closed month holds back, the lines that still need a person; null when the engine sent none */
-  function reachOf(preview) {
-    var totals = preview.projection && preview.projection.totals,
-      counts = preview.projection && preview.projection.counts;
-    if (!totals || !counts) return null;
-    var held = preview.items.filter(function (item) {
-      return item.closed;
-    }).length;
-    if (preview.only) return oneLineReach(preview, readyItems(preview)[0]);
-    return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: counts.needs_you, closed: held, newParties: newPartyCount(preview) };
-  }
-  /** the popup: count · in · out · date range · currency · new parties · how many still need you */
-  function confirmWords(reach, amountText) {
-    var amountOf = function (value) {
-      return amountText ? amountText(value) : moneyText(value, reach.currency); /* a host draws money its own way (the in-app Bank page: plain figures, the currency said once) */
-    };
-    var parties = reach.newParties ? reach.newParties + (reach.newParties === 1 ? ' new party' : ' new parties') + ' made first' : null;
-    var held = reach.closed ? ' ' + reach.closed + ' in a closed month are held back.' : '';
-    return {
-      title: 'Add ' + reach.count + (reach.count === 1 ? ' entry' : ' entries') + ' to your books?',
-      lines: [
-        'Money in: ' + amountOf(reach.in),
-        'Money out: ' + amountOf(reach.out),
-        minorOf(reach.tax) ? 'Tax inside these entries: ' + amountOf(reach.tax) : null, /* the engine's carried total of each ready line's own tax record (B5-03: the tax is on the popup too) */
-        'Dated: ' + dateText(reach.from) + (reach.to && reach.to !== reach.from ? ' to ' + dateText(reach.to) : ''),
-        'Currency: ' + reach.currency,
-        parties,
-        reach.single ? null : reach.needs_you + ' still need you; they are left out for now.' + held
-      ].filter(Boolean)
-    };
+  /** the adapter's reply as the preview keeps it */
+  function resultOf_(reply) {
+    return reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
   }
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
     try {
-      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] }));
-      preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+      var reply = await opts.post(itemForPost_(preview, item));
+      preview.results[item.key] = resultOf_(reply);
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
     }
@@ -260,14 +230,49 @@
       return twin ? Object.assign({}, item, { twin: true }) : item;
     });
   }
+  /** one call for a run of plain-entry lines: the adapter's replies in order, or null when the call could not be used (the caller then goes line by line) */
+  async function postMany_(opts, preview, run) {
+    try {
+      var replies = await opts.post.many(run.map(function (item) { return itemForPost_(preview, item); }));
+      return Array.isArray(replies) && replies.length === run.length ? replies : null;
+    } catch (failure) {
+      if (typeof root.cbQuiet === 'function') root.cbQuiet('bank-preview: the many-lines call could not be used, the lines go one at a time', failure);
+      return null;
+    }
+  }
+  /** the run of plain-entry lines from this position that one call may carry (empty when the adapter cannot batch) */
+  function runFrom_(opts, todo, position, batch) {
+    var batchRun = [];
+    while (batch && position + batchRun.length < todo.length && batchRun.length < BATCH_MAX && opts.post.batchable(todo[position + batchRun.length])) batchRun.push(todo[position + batchRun.length]);
+    return batchRun;
+  }
+  /** post a run in one call and tell the page after each line; false when the door could not take the run (the caller then goes line by line) */
+  async function postRun_(opts, preview, batchRun, onLine) {
+    var replies = await postMany_(opts, preview, batchRun);
+    if (!replies) return false;
+    batchRun.forEach(function (item, at) {
+      preview.results[item.key] = resultOf_(replies[at]);
+      if (onLine) onLine(item, preview.results[item.key]);
+    });
+    return true;
+  }
   /** post every ready line in order, tell the page after each (onLine(item, result)), then read the books again so the preview is the truth */
   async function postReady(opts, preview, onLine) {
     var owed = root.CBBankPreviewCheck ? root.CBBankPreviewCheck.pendingCodes(preview.check) : [];
     if (owed.length) return { tried: 0, added: 0, failed: 0, blocked: 'Answer the questions about this statement first.' };
     var todo = markTwins_(readyItems(preview));
-    for (var position = 0; position < todo.length; position++) {
+    var batch = !!(opts.post && typeof opts.post.many === 'function' && typeof opts.post.batchable === 'function'); /* the adapter can send plain-entry lines many to a call (POST /events/batch) */
+    var position = 0;
+    while (position < todo.length) {
+      var batchRun = runFrom_(opts, todo, position, batch);
+      if (batchRun.length > 1) {
+        if (await postRun_(opts, preview, batchRun, onLine)) position += batchRun.length;
+        else batch = false; /* the door said no (an owner-approval shop, an old server, a lost answer): one line at a time from here; a client_ref makes a repeat safe */
+        continue;
+      }
       await postOne(opts, preview, todo[position]);
       if (onLine) onLine(todo[position], preview.results[todo[position].key]);
+      position++;
     }
     projectAgain(opts, preview);
     var failed = todo.filter(function (item) {
@@ -290,7 +295,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -419,7 +424,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -453,11 +458,10 @@
         return readyItems(preview).length;
       },
       view: function () {
-        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal, check: preview.check || null };
+        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, taught: preview.taught, refusal: preview.refusal, check: preview.check || null };
       }
     });
   }
-
   /**
    * l16-bank-rules (R69): what the PACK's words say a line is, in ONE sentence the owner's sheet and the demo both print: an own-account transfer, tax paid to the tax office, card takings paid in.
    * null when the words say nothing. It carries no figure and no account; the entry (when the engine composed one) is printed beside it by each page from the engine's own legs.

@@ -1,6 +1,6 @@
 /* tests/lock-words-shop-day.test.cjs — E14 + E13 (Fable multi-role walk 17 Nov): a lock stamp reads the SHOP's day, and one month state has one word.
  * HAND-COMPUTED  A lock recorded at 2026-11-16T19:30:00Z is 17 Nov 2026 05:30 in Australia/Sydney (UTC+11 in November): the line must read "Locked by Pat Lee · 17 Nov 2026".
- *   The old reader cut the moment to its UTC date (16 Nov) and read "16 Nov 2026". States: open → Open, soft_locked → Locked (never Closed), hard_locked → Closed for good.
+ *   The old reader cut the moment to its UTC date (16 Nov) and read "16 Nov 2026". States: open → Open, soft_locked → Locked (never Closed), hard_locked → Closed.
  * OWNS the offline guard of E13/E14 for public/app/lock-words.js.   CARD 14-accounting */
 'use strict';
 const assert = require('assert');
@@ -21,6 +21,6 @@ ok('E14: a month locked before the trail existed (locked_at only) reads the shop
   assert.strictEqual(W.whoOf({ lock_trail: [], locked_at: '2026-11-16T19:30:00Z' }, 'soft_locked').line, 'Locked · 17 Nov 2026');
 });
 ok('E13: one word per state, from the server state names', () => {
-  assert.deepStrictEqual(['open', 'soft_locked', 'hard_locked'].map(W.stateWord), ['Open', 'Locked', 'Closed for good']);
+  assert.deepStrictEqual(['open', 'soft_locked', 'hard_locked'].map(W.stateWord), ['Open', 'Locked', 'Closed']);
 });
 console.log('\n' + pass + ' passed');

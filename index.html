@@ -71,6 +71,7 @@ html.bp-hold [data-testid="practice-loading"]{display:none}
 .ix-v{display:flex;align-items:baseline;gap:5px;min-width:0;max-width:46%;font-size:13px;color:var(--muted);white-space:nowrap}
 .ix-v b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;color:var(--ink)}
 .ix-v span{overflow:hidden;text-overflow:ellipsis}
+.ix-v .ix-tr{flex:none;overflow:visible;font-size:12px;color:var(--muted)}
 .ix-v.dn b,.ix-v.dn span{color:var(--amber-i)}.ix-v.q b{color:var(--muted);font-weight:600}
 .ix-c{flex:none;color:var(--faint);font-size:15px;transition:transform .15s}.ix-item.open .ix-c{transform:rotate(180deg)}
 .ix-item.base{background:none;border-color:var(--line-soft)}.ix-item.base .ix-row{min-height:36px}.ix-item.base .ix-g{width:24px;height:24px;font-size:13px;background:none}
@@ -153,7 +154,7 @@ html.ix-on #bp_practice{flex:1 1 auto;min-height:0;overflow:auto;margin:0 0 6px}
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar — signed out it is the Sign in door; the shell mounts it -->
 <script src="/engine/signin.js"></script>   <!-- CBSignin: the sign-in RULES (engines signin) -->
-<script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the door above opens it here, in place -->
+<script src="/app/signin-more-ways.js"></script><script src="/app/signin-session.js"></script><script src="/app/signin-ui.js"></script>   <!-- CBSignin.mount: THE ONE SIGN-IN WINDOW (M14) — the door above opens it here, in place -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: one browser, one shop -->
 <script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->
 <script src="/app/sides.js"></script>      <!-- CBSides: the two reference panels; the shell mounts them -->

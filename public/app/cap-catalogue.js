@@ -202,6 +202,7 @@ function ctCategoryChips(itemData, live, opts) {
   const data = itemData || {},
     hostDoor = (opts && opts.newAction) || '';
   if (!Array.isArray(live)) return '';
+  if (!live.length && !catgIdsOf(data).length) return '<label class="fl">' + esc(tx('Categories')) + '</label><div class="ctcatgs" id="ct_categories" data-testid="cat-field-category"><span class="sub">' + esc(tx('No categories yet. Add one under Categories, then file the item here.')) + '</span></div>'; /* P-F-11: a label with nothing under it says why */
   const list = catgIdsOf(data),
     names = catgNamesOf(data);
   const orphans = list.filter((id) => !live.some((item) => item.id === id));
@@ -340,293 +341,6 @@ async function downloadCatalogueTemplate(btn) {
     }
   }
 }
-/** a file is picked: csv → its text into #cf_text (as before); a WORKBOOK (.xlsx/.xls) → base64 on UI._cfXlsx, the route's own `xlsx` field (T3-CATALOGUE) */
-function _cfPick(input) {
-  var f = input && input.files && input.files[0];
-  if (!f) return;
-  var rd = new FileReader(),
-    name = document.getElementById('cf_file_name'),
-    isBook = /\.xlsx?$/i.test(f.name || '');
-  UI._cfXlsx = null;
-  if (isBook) {
-    rd.onload = function () {
-      var s = String(rd.result || '');
-      UI._cfXlsx = s.slice(s.indexOf(',') + 1);
-      var el = document.getElementById('cf_text');
-      if (el) el.value = '';
-      if (name) name.textContent = tx('Workbook') + ': ' + f.name;
-    };
-    rd.readAsDataURL(f);
-    return;
-  }
-  rd.onload = function () {
-    var el = document.getElementById('cf_text');
-    if (el) el.value = String(rd.result || '').replace(/^﻿/, '');
-    if (name) name.textContent = f.name;
-  };
-  rd.readAsText(f);
-}
-/** what the preflight and the import send: the workbook when one was picked, else the csv text — ONE place, so both halves read the same file */
-function _cfBody(text) {
-  return UI._cfXlsx ? { xlsx: UI._cfXlsx } : { csv: text };
-}
-async function _cfRun(btn) {
-  var text = (document.getElementById('cf_text') || {}).value || '';
-  var out = document.getElementById('cf_out');
-  if (!out) return;
-  if (!text.trim() && !UI._cfXlsx) {
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Add file or rows</div>';
-    return;
-  }
-  var was = btn ? btn.textContent : null;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = 'Reading…';
-  }
-  try {
-    var res = await api('prodPreflight', { body: _cfBody(text) });
-    var r = res.report;
-    UI._cf = { csv: text, xlsx: UI._cfXlsx || null, accepted: res.accepted || [], optional: res.optional || [], report: r };
-
-    // How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
-    // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
-    // someone could change.
-    var HOW = {
-      exact: ['✓', 'var(--ok-2)', 'matches your catalogue'],
-      synonym: ['✓', 'var(--ok-2)', 'recognised under another name'],
-      contains: ['?', 'var(--warn-2)', 'probably this — confirm'],
-      fuzzy: ['?', 'var(--warn-2)', 'guessed — confirm this'],
-      ambiguous: ['?', 'var(--warn-2)', 'could be more than one thing'],
-      'not-accepted': ['—', 'var(--grey-2)', 'your catalogue does not use this'],
-      unmatched: ['—', 'var(--grey-2)', 'not recognised'],
-      conflict: ['!', 'var(--warn-2)', 'another column matched this better'],
-      blocked: ['⨯', 'var(--disp)', 'a file may not set this'],
-      empty: ['—', 'var(--grey-2)', 'this column has no heading']
-    };
-    var accepted = res.accepted || [];
-    var rowsHtml = (r.mapping || [])
-      .map(function (item, index) {
-        var h = HOW[item.how] || ['?', 'var(--grey-2)', item.how];
-        var control;
-        if (item.how === 'blocked' || item.how === 'empty') {
-          control = '<span style="font-size:var(--fs-1);color:' + h[1] + '">not importable</span>';
-        } else {
-          var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
-          accepted.forEach(function (f) {
-            var sel = item.canonical === f ? ' selected' : '';
-            opts.push('<option value="map:' + esc(f) + '"' + sel + '>Use as ' + esc(f) + '</option>');
-          });
-          // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
-          // that grows a second column meaning the same thing.
-          if (!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
-          control =
-            '<select data-cbsid="CTG003-S01" data-cfcol="' +
-            esc(item.incoming || '') +
-            '" data-testid="cf-decide-' +
-            index +
-            '" class="inp" style="font-size:var(--fs-2);padding:3px 6px;width:100%">' +
-            opts.join('') +
-            '</select>';
-        }
-        return (
-          '<tr>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:var(--fs-2)">' +
-          esc(item.incoming || '(blank)') +
-          '</td>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:' +
-          h[1] +
-          ';font-weight:700;text-align:center">' +
-          h[0] +
-          '</td>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">' +
-          control +
-          '</td>' +
-          '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">' +
-          esc(item.conflict || item.why || h[2]) +
-          '</td>' +
-          '</tr>'
-        );
-      })
-      .join('');
-
-    var s = r.summary || {};
-    var blocking = (s.errors || 0) > 0;
-    var badge = blocking
-      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
-        s.errors +
-        ' row problem(s) — fix the file first</span>'
-      : r.ready
-        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
-          tx('Every column is placed') +
-          '</span>'
-        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' +
-          tx('Check the choices below, then import') +
-          '</span>';
-    var issues = (r.issues || [])
-      .slice(0, 25)
-      .map(function (item) {
-        var c = item.severity === 'error' ? 'var(--disp)' : item.severity === 'info' ? 'var(--grey-2)' : 'var(--warn-2)';
-        return '<li style="color:' + c + '">line ' + item.row + ' · <b>' + esc(item.column) + '</b> — ' + esc(item.message) + '</li>';
-      })
-      .join('');
-
-    out.innerHTML =
-      badge +
-      '<div style="font-size:var(--fs-2);margin:9px 0 6px">' +
-      s.rows +
-      ' row(s) read · <b>' +
-      s.importable +
-      '</b> would import · ' +
-      s.errors +
-      ' error(s) · ' +
-      s.warnings +
-      ' warning(s)</div>' +
-      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>' +
-      ['In your file', '', 'What to do with it', 'Why']
-        .map(function (item) {
-          return (
-            '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">' +
-            item +
-            '</th>'
-          );
-        })
-        .join('') +
-      '</tr></thead><tbody>' +
-      rowsHtml +
-      '</tbody></table></div>' +
-      ((r.notes || []).length
-        ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">' +
-          r.notes
-            .map(function (item) {
-              return '<li>' + esc(item) + '</li>';
-            })
-            .join('') +
-          '</ul>'
-        : '') +
-      (issues
-        ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' +
-          tx('Rows') +
-          '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">' +
-          issues +
-          '</ul>' +
-          ((r.issues || []).length > 25
-            ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + ((r.issues || []).length - 25) + ' more.</div>'
-            : '')
-        : '') +
-      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' +
-      txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
-        import: '<b>' + tx('Import') + '</b>'
-      }) +
-      '</div>';
-
-    // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
-    // the server refuses them too, and offering the button anyway teaches people to ignore it.
-    var node = document.getElementById('cf_import');
-    if (node) {
-      node.disabled = blocking;
-      node.style.opacity = blocking ? '.5' : '1';
-      node.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue';
-    }
-  } catch (e) {
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">' + esc((e && e.message) || 'Could not read the file.') + '</div>';
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = was;
-    }
-  }
-}
-/**
- * _cfImport — apply the per-column choices.
- *
- * The decisions come from the dropdowns, NOT from the preflight's suggestions: what the person sees on screen is
- * exactly what is sent. The server re-reads the file and re-checks every decision, so nothing here is trusted.
- */
-function _cfImport(btn) {
-  if (!UI._cf) {
-    if (typeof toast === 'function') toast('Check a file first.');
-    return;
-  }
-  var out = document.getElementById('cf_out');
-  var sels = Array.prototype.slice.call(document.querySelectorAll('[data-cfcol]'));
-  var decisions = sels.map(function (el) {
-    var v = el.value || 'ignore';
-    if (v === 'create') return { incoming: el.getAttribute('data-cfcol'), action: 'create' };
-    if (v.indexOf('map:') === 0) return { incoming: el.getAttribute('data-cfcol'), action: 'map', field: v.slice(4) };
-    return { incoming: el.getAttribute('data-cfcol'), action: 'ignore' };
-  });
-  var creating = decisions.filter(function (item) {
-    return item.action === 'create';
-  }).length;
-  var using = decisions.filter(function (item) {
-    return item.action !== 'ignore';
-  }).length;
-  if (!using) {
-    if (typeof toast === 'function') toast('Every column is set to be left out.');
-    return;
-  }
-  confirmAsk(
-    'Import using ' + using + ' column' + (using === 1 ? '' : 's') + '?',
-    (creating ? 'It also adds <b>' + creating + ' new column' + (creating === 1 ? '' : 's') + '</b> to your catalogue<div style="margin-top:7px">' : '<div>') +
-      txf('Products are {au}. Nothing is deleted.', { au: '<b>' + tx('added or updated') + '</b>' }) +
-      '</div>',
-    'Import',
-    function () {
-      _cfImportRun(btn, decisions, out);
-    }
-  );
-}
-async function _cfImportRun(btn, decisions, out) {
-  var was = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Importing…';
-  try {
-    var reply = await api('prodImport', {
-      body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true })
-    }); /* the SAME file the preflight read */
-    out.innerHTML =
-      '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">' +
-      esc(reply.message || 'Imported') +
-      '</div>' +
-      ((reply.created_columns || []).length
-        ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:8px">Your catalogue now also has: ' +
-          reply.created_columns.map(esc).join(', ') +
-          '. The next template you download will include them.</div>'
-        : '') +
-      '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">' +
-      (reply.outcome || [])
-        .slice(0, 40)
-        .map(function (item) {
-          var c = item.action === 'failed' ? 'var(--disp)' : 'var(--ink)';
-          return (
-            '<li style="color:' +
-            c +
-            '">line ' +
-            item.line +
-            ' · ' +
-            esc(item.name || '') +
-            ' — ' +
-            esc(item.action) +
-            (item.message ? ': ' + esc(item.message) : '') +
-            '</li>'
-          );
-        })
-        .join('') +
-      '</ul>' +
-      ((reply.outcome || []).length > 40
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and ' + ((reply.outcome || []).length - 40) + ' more.</div>'
-        : '');
-    btn.disabled = true;
-    btn.style.opacity = '.5';
-    if (typeof loadProducts === 'function') loadProducts(); /* the workshop's list */
-    if (typeof CBCatalogueApp !== 'undefined' && CBCatalogueApp.changed) CBCatalogueApp.changed(); /* the small app's list and the live shelf */
-  } catch (e) {
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">' + esc((e && e.message) || 'Could not import.') + ' Nothing was changed.</div>';
-    btn.disabled = false;
-  } finally {
-    btn.textContent = was;
-  }
-}
 
 /* ═══ CBCatalogueApp — the catalogue as a small app (T3-CATALOGUE, 2026-10-14; catalogue.html mounts it in CBFrame's pane) ═══
  * Three sections, each the standard construct, nothing drawn twice:
@@ -679,12 +393,22 @@ var CBCatalogueApp = (function () {
   function T(s, v) {
     return v ? txf(s, v) : tx(s);
   }
+  /** P-F-03: a view-only login is refused every item write by the api (403 read_only): New · Edit · Mark are GREYED with the reason (one readiness state), never offered live (helpers.js viewOnlyLogin, the one reading of the claim) */
+  function viewerWhy() {
+    return typeof viewOnlyLogin === 'function' && viewOnlyLogin() ? T('Your login is view-only, so items cannot be added or changed. Ask the owner.') : '';
+  }
+  /** the disabled attributes of a write button for a view-only login ('' for anyone else) */
+  function viewerShut() {
+    var why = viewerWhy();
+    return why ? ' disabled aria-disabled="true" title="' + esc(why) + '"' : '';
+  }
   function cur() {
     return (S.me && (S.me.currency_code || S.me.currency)) || (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || '';
   }
   function sym() {
     try {
-      return CBLocale.symbol(cur());
+      var sign = String(fmtMoney(0, cur())).replace(/[\d.,\s ]/g, ''); /* P-F-11: the sign the rest of the screen prints ("A$"), from the one money formatter, never CLDR's bare "$" */
+      return sign || CBLocale.symbol(cur());
     } catch (_) {
       return cur();
     }
@@ -700,13 +424,15 @@ var CBCatalogueApp = (function () {
   }
   function catNames(d) {
     var ids = catgIdsOf(d),
+      carried = typeof catgNamesOf === 'function' ? catgNamesOf(d) : [],
       live = (typeof _CATG !== 'undefined' && _CATG) || [];
     return ids
-      .map(function (id) {
+      .map(function (id, at) {
         var c = live.filter(function (x) {
           return String(x.id) === String(id);
         })[0];
-        return c ? c.name : null;
+        /* P-F-04: the till names a category by catgIdsOf too, so an item filed by a name that has no definition (the legacy single `category`) shows that name here, never "-" */
+        return c ? c.name : carried[at] || (Array.isArray(d.categories) ? null : String(id));
       })
       .filter(Boolean);
   }
@@ -778,9 +504,9 @@ var CBCatalogueApp = (function () {
   function itemsHTML() {
     return (
       '<div class="cat-top" data-testid="cat-items-top"><div class="cat-count" id="cat_count" data-testid="cat-count"></div>' +
-      '<div class="cat-acts"><button data-cbsid="CTG001-B03" type="button" class="act" data-testid="cat-new" id="cat_new">＋ ' +
+      '<div class="cat-acts"><button data-cbsid="CTG001-B03" type="button" class="act" data-testid="cat-new" id="cat_new"' + viewerShut() + '>＋ ' +
       esc(T('New item')) +
-      '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out"></div></div></div>' +
+      '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out">' + esc(viewerWhy()) + '</div></div></div>' +
       '<div class="cat-list" id="cat_items" data-testid="cat-items"></div>' +
       '<dialog class="sheet" id="cat_sheet" data-pop="POP127" data-testid="cat-sheet"></dialog>'
     );
@@ -1209,7 +935,12 @@ var CBCatalogueApp = (function () {
   /** the live slabs as buttons; with none, the pack's own rates */
   function rateMenuHTML(menu) {
     if (!menu.rows.length && packRateMenuHTML()) return packRateMenuHTML();
-    return cbSlabMenuHTML(menu, { cls: 'act quiet', pick: function (slabId) { return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)"; } });
+    return cbSlabMenuHTML(menu, {
+      cls: 'act quiet',
+      pick: function (slabId) {
+        return "CBCatalogueApp.ratePick('" + escJs(slabId) + "', this)";
+      }
+    });
   }
   /** the merge-patch setOn makes on this item: every key it changed; a key it removed travels as null (RFC 7386) — the api's slabPatchOf, on the client */
   function slabPatch(data, slab) {
@@ -1302,9 +1033,55 @@ var CBCatalogueApp = (function () {
       '</label><textarea data-cbsid="CTG001-T01" class="inp" id="ct_desc" data-testid="cat-field-desc" rows="3">' +
       esc(pDesc(d)) +
       '</textarea>' +
+      gstFieldHTML(d) +
       '<div id="ct_catg_wrap">' + catgChipsHTML(d) + '</div>' /* F5 W1b (R85): the item goes INTO a category here */ +
       ctDeclaredFields(d)
     );
+  }
+  /**
+   * P-F-05: the item form asks for the tax rate (the pack's word: GST), so no new item is saved with no answer. Blank = the shop's default (a registered shop: the pack's rate, shown as the
+   * placeholder; an unregistered one: zero, the api says so on the bill); a typed 0 is GST-free and asks WHY from the pack's own supply kinds. Shown only where the pack has a tax scheme.
+   */
+  function gstFieldHTML(draft) {
+    var pack = taxPack();
+    if (!pack || !pack.scheme) return '';
+    var fallback = defaultRate(),
+      kinds = (pack.supplyKinds && Object.keys(pack.supplyKinds)) || [],
+      saidKind = draft.tax_kind || draft.supply_kind || '',
+      shown = draft.gst_rate === undefined || draft.gst_rate === null ? '' : String(draft.gst_rate);
+    return (
+      '<div class="cat-two"><div>' +
+      ctField('gst', esc(pack.scheme) + ' %', shown, 'inputmode="decimal" autocomplete="off" placeholder="' + esc(fallback === null ? T('rate') : String(fallback) + ' (' + T('the shop default') + ')') + '"') +
+      '</div><div>' +
+      ctField('gst_kind', esc(T('If zero, why')), kindName(pack, saidKind), 'list="ct_gst_kinds" autocomplete="off" placeholder="' + esc(T('pick one')) + '"') +
+      '<datalist id="ct_gst_kinds">' + kinds.map(function (id) { return '<option value="' + esc(kindName(pack, id)) + '"></option>'; }).join('') + '</datalist></div></div>'
+    );
+  }
+  /** a supply kind's name as the pack words it (its id when it has no name) */
+  function kindName(pack, id) {
+    var row = id && pack.supplyKinds && pack.supplyKinds[id];
+    return id ? (row && row.name) || id : '';
+  }
+  /** the pack's supply-kind id that the typed field names (its id or its name, any case), or undefined */
+  function supplyKindIdOf(pack, kindField) {
+    var said = String((kindField && kindField.value) || '').trim().toLowerCase(),
+      ids = Object.keys((pack && pack.supplyKinds) || {});
+    return ids.filter(function (one) { return one.toLowerCase() === said || kindName(pack, one).toLowerCase() === said; })[0];
+  }
+  /** the GST field → the item: a typed rate is written (a zero only with its reason: refused in words here, before the api is asked); blank leaves the shop's default to the api */
+  function readGst(next) {
+    var rate = el('ct_gst'),
+      kind = el('ct_gst_kind');
+    if (!rate) return '';
+    var typed = String(rate.value || '').replace(/[%\s]/g, '');
+    if (typed === '') return '';
+    if (!isFinite(+typed) || +typed < 0) return T('Enter the tax rate as a number, like 10.');
+    next.gst_rate = +typed;
+    if (+typed !== 0) return '';
+    var id = supplyKindIdOf(taxPack(), kind);
+    if (!id) return T('A zero rate needs its reason: pick one from the list.');
+    next.tax_kind = id;
+    return '';
   }
   /** the category chips from the live shelf (core.js _CATG); not read yet → '' and fillCatgChips paints the block when it lands */
   function catgChipsHTML(itemData) {
@@ -1334,15 +1111,33 @@ var CBCatalogueApp = (function () {
     readDeclared(next);
     return next;
   }
+  /** a typed price read by the shop's money reader: {value} in whole units, or {why} (its own refusal, else the sentence) */
+  function priceFromReader(reader, typed, sentence) {
+    var said = reader.refusal(typed, cur()),
+      minor = said ? NaN : reader.minor(typed, cur());
+    if (said || !(minor >= 0)) return { why: said || sentence };
+    return { value: minor / Math.pow(10, reader.decimals(cur())) };
+  }
+  /** reviews5 EL-06 M3: a typed price through the shop's money reader (its decimal mark: "12,50" is 12.50 where the comma is the mark, never 1250), refused in words when it is not a number or is below zero; {value} is the whole-unit number the server stamps, {why} the sentence */
+  function priceTyped(text) {
+    var typed = String(text == null ? '' : text).trim(),
+      reader = typeof CBUiMoney !== 'undefined' ? CBUiMoney : null,
+      sentence = T('Type the price as a number, like 250.00.');
+    if (reader && reader.minor && reader.refusal) return priceFromReader(reader, typed, sentence);
+    if (!/^(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.test(typed)) return { why: sentence };
+    return { value: Number(typed.replace(/,/g, '')) };
+  }
   /** the price field, only when it is enabled: empty → no price; the same amount → the stored {amount,currency} kept (no diff); else a bare number the server stamps */
   function readPrice(next, orig) {
     var node = el('ct_price');
     if (!node || node.disabled) return;
-    var typed = String(node.value || '').replace(/[,\s]/g, ''),
-      had = cbHasPrice(orig.price) ? cbAmount(orig.price) : null;
+    var typed = String(node.value || '').trim(),
+      savedAmount = cbHasPrice(orig.price) ? cbAmount(orig.price) : null,
+      read = typed === '' ? null : priceTyped(typed);
     if (typed === '') delete next.price;
-    else if (had !== null && Number(typed) === had) next.price = orig.price;
-    else next.price = Number(typed); /* as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
+    else if (read.why) next.price = orig.price; /* never cleared by a typo: save() refuses in words before this is sent */
+    else if (savedAmount !== null && read.value === savedAmount) next.price = orig.price;
+    else next.price = read.value; /* as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
   }
   /** the declared columns' inputs: an empty one removes the key, a number column parses, the rest is text */
   function readDeclared(next) {
@@ -1395,13 +1190,13 @@ var CBCatalogueApp = (function () {
         kv(esc(T('Description')), pDesc(d)) +
         ctDeclaredViewRows(d, kv) +
         '</div>' +
-        '<div class="cat-sheet-acts"><button data-cbsid="CMP012" data-cbmount="CTG001-U112" type="button" class="act" data-testid="cat-edit" id="cat_edit">' +
+        '<div class="cat-sheet-acts"><button data-cbsid="CMP012" data-cbmount="CTG001-U112" type="button" class="act" data-testid="cat-edit" id="cat_edit"' + viewerShut() + '>' +
         esc(T('Edit')) +
         '</button>' +
-        '<button data-cbsid="CTG001-B04" type="button" class="act quiet" data-testid="cat-status" id="cat_status">' +
+        '<button data-cbsid="CTG001-B04" type="button" class="act quiet" data-testid="cat-status" id="cat_status"' + viewerShut() + '>' +
         esc(statusOf(d) === 'available' ? T('Mark not available') : T('Mark available')) +
         '</button></div>' +
-        '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out"></div>'
+        '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out">' + esc(viewerWhy()) + '</div>'
       );
     }
     return (
@@ -1470,9 +1265,20 @@ var CBCatalogueApp = (function () {
       say(out, codeSlots.why, 'error'); /* digits that are not an HSN: refused in words, nothing sent */
       return;
     }
+    var priceNode = el('ct_price'),
+      priceRead = priceNode && !priceNode.disabled && String(priceNode.value || '').trim() !== '' ? priceTyped(priceNode.value) : {};
+    if (priceRead.why) {
+      say(out, priceRead.why, 'error'); /* "1O0" or "-5": refused in words, the price is never cleared, nothing sent */
+      return;
+    }
     var p = S.sel ? itemOf(S.sel) : null,
       nestedCur = p ? pData(p) : {},
-      next = readForm(nestedCur, codeSlots);
+      next = readForm(nestedCur, codeSlots),
+      gstWhy = readGst(next);
+    if (gstWhy) {
+      say(out, gstWhy, 'error'); /* a bad or reasonless tax rate: refused in words, nothing sent (P-F-05) */
+      return;
+    }
     if (!next.name) {
       say(out, T('A name is needed.'), 'error');
       return;
@@ -1582,8 +1388,14 @@ var CBCatalogueApp = (function () {
       node.innerHTML = '<span class="err" data-testid="catg-read-err">' + esc(CBCAT_UI.err) + '</span>';
       return;
     }
-    var live = catgRows().filter(function (x) {
-      return x.status !== 'retired';
+    var rows = catgRows(),
+      live = rows.filter(function (x) {
+        return x.status !== 'retired';
+      }).length,
+      byId = (CBCAT_UI.counts && CBCAT_UI.counts.by) || {};
+    /* P-F-04: a name the items (and the till's chips) carry that has no definition row is still a category the shop uses: counted once, beside the defined ones */
+    live += Object.keys(byId).filter(function (key) {
+      return byId[key] && !rows.some(function (x) { return String(x.id) === key; });
     }).length;
     node.innerHTML =
       '<b>' +

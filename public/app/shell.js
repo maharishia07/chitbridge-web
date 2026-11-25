@@ -188,11 +188,7 @@
   /** the API base, decided the way the pages decide it (CFG.API_BASE) — here once, so a page that mounts the shell need not copy it.
       HX1: the deploy's address is window.CB_API (/config.js, loaded first by every page) — never a host in code */
   function apiBase() {
-    var f = lsGet('cb_api_base');
-    if (f) return f === 'stage' ? root.CB_API || '' : f;
-    var h = root.location && root.location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-    return root.CB_API || '';
+    return root.CBApiBase ? root.CBApiBase.get() : root.CB_API || ''; /* app/api-base.js: the one reader, the override only on local and SIT hosts */
   }
   function session(anonymous) {
     try {
@@ -372,6 +368,8 @@
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
+    /* BF-F-02 (22 Nov): on a phone the decorative ▣ mark gives its room to the shop's name (aria-hidden; the name says which shop) - the name showed "cbt-…" in 42 of the 88 px it needs */
+    '.cbsh-bar:has(.cbsh-who) .cbsh-mark{display:none}.cbsh-who{gap:4px}',
     /* YE-F-15 (21 Nov): the person must always see which shop they are in — a narrow bar (a pane beside the sidebar) keeps the name, cut with an ellipsis (the button's title and aria-label carry the whole name); it is never hidden */
     '@container (max-width:359px){.cbsh-hdr .cbsh-who{min-width:96px}.cbsh-who b{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
@@ -1278,7 +1276,7 @@
     function reopenShopTile() {
       if (mode !== 'home' || !S.manifest || !shopIdOf()) return;
       greyedEntries(el, S.manifest).forEach(function (entry) {
-        el.querySelector('.cbsh-box.off[data-id="' + entry.id + '"]').outerHTML = card(entry);
+        var tile = el.querySelector('.cbsh-box.off[data-id="' + String(entry.id).replace(/[^A-Za-z0-9_-]/g, '') + '"]'); if (tile) tile.outerHTML = card(entry); /* reviews11 GF-19: a tile redrawn meanwhile no longer aborts the rest */
         facts.read(entry.id);
       });
     }
@@ -1440,7 +1438,7 @@
       if (!element) return;
       e.preventDefault();
       e.stopPropagation();
-      root.location.href = element.getAttribute('data-href');
+      var go = String(element.getAttribute('data-href') || ''); if (/^([/](?![/])|#|[a-z0-9_-]+[.]html)/i.test(go)) root.location.href = go; /* reviews11 GF-21 shell: a path of this site only — never a javascript: or foreign link from a fact line */
     });
     var scrim = $('.cbsh-scrim');
     if (scrim)

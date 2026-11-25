@@ -6,7 +6,7 @@
      CARD storefront-and-catalogue/storefront -->
 <head>
 <meta charset="utf-8"><script src="/app/device-id.js" data-customer-page></script>
-<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge shop</title>
@@ -103,7 +103,7 @@
 <script src="app/workflow.js"></script>   <!-- WX-O2C: the order's stage for "My orders" (CBWorkflow.stageOf) — the one answer the seller's Task list uses -->
 <script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
 <script>
-var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+var API = cbApiParam(new URLSearchParams(location.search).get('api')) || window.CB_API; /* reviews11 GF-21: a foreign ?api= is ignored */
 /**
  * ⭐⭐ ?s= IS THE PUBLIC HANDLE (a User ID); ?bridge= IS THE OLD INTERNAL KEY, KEPT SO EXISTING LINKS STILL OPEN.
  *

@@ -143,7 +143,7 @@ function _traceBatchPicker() {
         .join(' · ');
       return (
         '<div data-cbsid="INS003-C01" onclick="UI.traceId=\'' +
-        item.chit_id +
+        escJs(item.chit_id) +
         '\';runTrace(\'forward\')" title="Click to trace this batch" ' +
         'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px;color:var(--on-card)">' +
         '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:var(--fs-2)">' +

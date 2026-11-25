@@ -51,7 +51,7 @@ const SCREENS = {
   PLB001: {
     count: 14, /* 16 less S01 (the shelf select) and B04 (Tick all shown): both are the library's now, CMP056-S01 and CMP057-B01 (e2e/ui-select-command.test.cjs) */
     WANT: [
-      ['PLB001-B01', 'product-lab.html', 'pl-step-'], ['PLB001-B02', 'product-lab.html', 'pickList('], ['PLB001-B03', 'product-lab.html', 'toggleLang('],
+      ['PLB001-B01', 'app/product-lab-steps.js', 'pl-step-'], ['PLB001-B02', 'product-lab.html', 'pickList('], ['PLB001-B03', 'product-lab.html', 'toggleLang('],
       ['PLB001-I01', 'product-lab.html', 'id="q"'], ['PLB001-B05', 'product-lab.html', 'pickAll(false)'], ['PLB001-B06', 'product-lab.html', 'data-own='], ['PLB001-B07', 'product-lab.html', 'pl-unit-'],
       ['PLB001-I02', 'product-lab.html', 'pl-unit-tick'], ['PLB001-B08', 'product-lab.html', 'setShelf('], ['PLB001-I03', 'product-lab.html', 'pl-price-'],
       ['PLB001-B09', 'product-lab.html', 'drop(this.dataset.name'], ['PLB001-B10', 'product-lab.html', 'id="next"'], ['PLB001-B11', 'product-lab.html', 'pl-back'],

@@ -66,7 +66,7 @@
     if (parsed.opening_minor == null) return item('opening', 'none', sayText('The file does not state its opening balance'));
     var differs = checkItem(check, 'opening_not_books') || (!check && books != null && Number(books) !== Number(parsed.opening_minor));
     if (differs) return item('opening', 'bad', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('differs from your books') + (books != null ? ' (' + fact.fmt(books) + ')' : ''));
-    if (books == null && !check) return item('opening', 'none', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('(not compared with your books)')); /* nothing to compare with is not agreement */
+    if (books == null) return item('opening', 'none', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('(not compared with your books)')); /* nothing to compare with is not agreement */
     return item('opening', 'ok', sayText('Opening') + ' ' + fact.fmt(parsed.opening_minor) + ' ' + sayText('agrees with your books'));
   }
   /** 2 · the running balance adds up line by line: the reader's own break warnings against the lines that carry a balance */

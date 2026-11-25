@@ -12,6 +12,6 @@ const meta = C.meta('AE');
 ok(meta.invoice && meta.invoice.requiredLines.indexOf('address') >= 0, 'AE pack: the invoice requires the supplier address');
 ok(meta.words.taxId === 'TRN', 'AE pack word for the tax id is TRN');
 const till = fs.readFileSync(__dirname + '/../public/till.html', 'utf8');
-ok(/function addressWarnWords\(\)/.test(till) && /billWarnLine\('address', aw, 'Add it'\)/.test(till), 'the till warns on the bill when the address is missing');
+ok(/function addressWarnWords\(\)/.test(till) && /billWarnLine\('address', addressWarn, 'Add it'\)/.test(till), 'the till warns on the bill when the address is missing');
 ok(/if \(which === 'address'\) \{ shopEditOpen\(\); return; \}/.test(till), 'the warning\'s button opens the shop details');
 console.log(n + ' passed');

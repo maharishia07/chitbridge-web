@@ -17,7 +17,7 @@ const list = [
   { key: 'service-desk', label: 'Service Desk vertical', vertical: 'service-desk', capabilities: ['core'], is_default: false, ready: false }
 ];
 const cx = { REG: { verticals: list, constitution: 'base' }, tx: (s) => s, txf: (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => (o || {})[k] || ''),
-  esc: (s) => String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';') };
+  esc: (s) => String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';'), escJs: (s) => String(s) };
 vm.createContext(cx);
 vm.runInContext([grab('regSetupLabel'), grab('regVerticalChooser'), 'this.chooser = regVerticalChooser;'].join('\n'), cx);
 const html = cx.chooser();

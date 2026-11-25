@@ -48,7 +48,7 @@ function preflight(b) {
   const guess = headers.map((h) => known[h] ? { incoming: h, field: known[h], how: 'known', confidence: 1, why: '"' + h + '" is what the export calls ' + known[h] }
     : { incoming: h, field: null, how: 'unmatched', confidence: 0, why: 'not one of the columns this import reads — ignored unless you pick a field' });
   return { kind: b.kind, source: b.source, headers, fields: (FIELDS[b.kind] || []).map(([key, label, required]) => ({ key, label, required })), guess, missing: [], ready: true,
-    rows_total: String(b.csv || '').trim().split(/\r?\n/).length - 1, sample: [], sheet: null, sheets: null, header_row: 1 };
+    rows_total: String(b.csv || '').trim().split(/\r?\n/).length - 1, refusal: null, sample: [], sheet: null, sheets: null, header_row: 1, header_hint: null };
 }
 const ROWS_ACCOUNTS = [
   { line: 2, what: 'Business Bank Account', action: 'merge', why: 'A ledger named "Business bank account" exists (1500) — keeps Xero code 090.', data: { account_id: 'a1', code: '1500', source_code: '090', note: null } },

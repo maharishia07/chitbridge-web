@@ -126,6 +126,7 @@ var CBPick = (function () {
         unit: item.unit || null,
         code: item.code || null,
         price: price,
+        priced: raw != null && raw !== '' && isFinite(Number(raw)), /* reviews11 EL-18 M4: false = the catalogue had no price (price 0 here is not a free item) */
         qty: qty,
         amount: roundMoney_(total)
       };

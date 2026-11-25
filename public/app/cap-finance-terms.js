@@ -46,7 +46,9 @@ var FIN_TABS = {
   reports: 'reports'
 }; /* cash: F3 (cap-finance-cash.js) · pay: F4 (cap-finance-pay.js) · repeat: RI1 (cap-repeat.js) · cheques · returns: T3-P1-MONEY (cap-finance-cheques.js · cap-finance-returns.js) */
 function finTab() {
-  return FIN_TABS[(location.hash || '').replace(/^#\/?/, '').split(/[/?&]/)[0]] || 'collect';
+  var word = (location.hash || '').replace(/^#\/?/, '').split(/[/?&]/)[0];
+  if (!word || word === 'collections') return 'collect';
+  return FIN_TABS[word] || 'unknown'; /* BF-F-07: an address that names no tab is said so (finUnknownMount), never opened as Collections */
 }
 function ftNav() {
   var t = finTab();
@@ -279,7 +281,7 @@ function ftRulesHtml(rules, prefix) {
         '-fix-' +
         index +
         '" onclick="ftFix(\'' +
-        esc(rule.field) +
+        escJs(rule.field) +
         '\')">' +
         esc(rule.fix) +
         '</button></div>'
@@ -333,61 +335,6 @@ function ftWire(prefix, root) {
   ftRefresh(prefix);
 }
 
-/* ── the Changes list: Undo puts the newest change back (a new change, so it is in the list too) ── */
-var FT_UNDOABLE = { credit_days: 1, credit_limit_minor: 1, interest: 1, early: 1 };
-/** the stored old value → what the server takes back (a number, or the interest / early object; null clears) */
-function ftUndoVal(field, oldValue) {
-  if (oldValue == null || oldValue === '') return null;
-  if (field === 'interest' || field === 'early') return typeof oldValue === 'string' ? JSON.parse(oldValue) : oldValue;
-  return Number(oldValue);
-}
-/** the extra html for one change row: Undo on the newest change only, greyed when the person may not set terms */
-function ftUndoFor(list, greyed, partyId) {
-  var newest = (list || []).reduce(function (best, change, index) {
-    return best < 0 || String(change.at) > String((list[best] || {}).at) ? index : best;
-  }, -1);
-  return function (change, index) {
-    var field = String(change.field || '').replace(/^(customer|supplier)\./, '');
-    if (index !== newest || !FT_UNDOABLE[field]) return '';
-    var old = change.old == null ? '' : typeof change.old === 'object' ? JSON.stringify(change.old) : String(change.old);
-    return ' <button data-cbsid="FIN004-B02" type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
-  };
-}
-/** the standard confirm for a money setting (CBAction asks in the page's own dialog; Cancel sends nothing) */
-function ftMoneyConfirm(title, body, yes) {
-  return { title: title, body: esc(body), yes: yes, danger: false };
-}
-/** Undo: send the newest change's old value back as a new change, then read the terms again */
-function ftUndo(btn) {
-  var undo = { field: btn.dataset.field, old: btn.dataset.old, partyId: btn.dataset.party || null };
-  if (!undo.field) return;
-  var body = undo.partyId ? { party_id: undo.partyId, side: 'customer' } : {},
-    lineId = undo.partyId ? 'ftp_why' : 'ft_why';
-  try {
-    body[undo.field] = ftUndoVal(undo.field, undo.old);
-  } catch (_) {
-    return ftSay(lineId, tx('That change cannot be undone here.'));
-  }
-  return CBAction.run(
-    btn,
-    function () {
-      return api('booksTermsSet', { body: body });
-    },
-    {
-      key: 'ft-undo',
-      confirm: ftMoneyConfirm(tx('Undo this change?'), tx('The earlier terms are put back as a new change. It shows in the Changes list.'), tx('Undo')),
-      out: lineId,
-      failed: tx('Could not undo'),
-      done: '✓ ' + tx('Undone'),
-      outcome: function () {
-        ftLoad(true).then(function () {
-          if (undo.partyId) ftOpen(undo.partyId);
-          ftSay(lineId, '✓ ' + tx('Undone'));
-        });
-      }
-    }
-  );
-}
 /** put a sentence on a status line, if the line is on the page */
 function ftSay(lineId, text) {
   var line = document.getElementById(lineId);
@@ -706,7 +653,7 @@ async function ftOpen(pid) {
       '<button data-cbsid="CMP001" type="button" class="act" data-testid="ftp-save" data-off="' +
       (off ? '1' : '0') +
       '" disabled onclick="ftSaveParty(\'' +
-      esc(pid) +
+      escJs(pid) +
       '\',this)">' +
       esc(tx('Save')) +
       '</button></div>'

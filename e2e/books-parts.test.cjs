@@ -23,11 +23,12 @@ const PARTS = [
   { file: 'public/app/cap-books-waiting-cells.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-waiting-view.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-books-party.js', parent: 'public/app/cap-books.js' },
+  { file: 'public/app/cap-books-needs.js', parent: 'public/app/cap-books.js' },
   { file: 'public/app/cap-period-stock.js', parent: 'public/app/cap-period.js' },
   { file: 'public/app/cap-period-accruals.js', parent: 'public/app/cap-period.js' }
 ];
 /** changed on the branch before the split (not by it): the one place a part differs from main */
-const CHANGED_BEFORE_SPLIT = ['bkLtPaneHTML', 'bkLockRowHTML', 'bkLockButtonsHTML', 'bkLockReopen', 'bkReasonDialog', 'bkReasonGo', 'bkLockDo', 'bkLockConfirm', 'bkLockOpenButton', 'bkLockSoftButtons', 'bkLockHardButton', 'bkLockSalesWord', 'bkLockRoute', 'bkLockStatusOf'];
+const CHANGED_BEFORE_SPLIT = ['bkLtPaneHTML', 'bkLockRowHTML', 'bkLockButtonsHTML', 'bkLockReopen', 'bkReasonDialog', 'bkReasonGo', 'bkLockDo', 'bkLockConfirm', 'bkLockOpenButton', 'bkLockSoftButtons', 'bkLockHardButton', 'bkLockSalesWord', 'bkLockRoute', 'bkLockStatusOf', 'bkNeedChips'];
 /* empty catches each part carried when its split was proven (PR #756, CI green before the 18 Nov landing): the one in cap-period-accruals.js is a commented catch moved unchanged from cap-period.js */
 const EMPTY_CATCH_AT_SPLIT = { 'cap-period-accruals.js': 1 };
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').split('\r\n').join('\n');
