@@ -12,15 +12,15 @@ of file each thing is; this says what already does the job.
 | 144 | `item` | `bank-band.js` |  |
 | 120 | `list` | `cap-flag.js` |  |
 | 100 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
+| 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 90 | `again` | `signin-ui.js` |  |
-| 89 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 85 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 81 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 81 | `read` | `books-grant-drill.js` |  |
 | 81 | `rows` | `cap-settings.js` |  |
-| 80 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 78 | `toast` | `cb-words.js` |  |
 | 71 | `host` | `chit-sheet.js` |  |
-| 66 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
+| 67 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 66 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 65 | `body` | `books-acting.js` | a write's body: |
 | 64 | `view` | `country-ready.js` |  |
@@ -32,7 +32,7 @@ of file each thing is; this says what already does the job.
 | 48 | `shell` | `pick.js` |  |
 | 46 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 46 | `sentence` | `one-person.js` |  |
-| 45 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
+| 46 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 44 | `load` | `books-grant-view.js` |  |
 | 44 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 42 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
@@ -47,15 +47,15 @@ of file each thing is; this says what already does the job.
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 36 | `names` | `shortcuts.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
-| 34 | `reason` | `lab-kit.js` | W9: |
+| 35 | `reason` | `lab-kit.js` | W9: |
+| 34 | `bkMoney` | `cap-books.js` |  |
 | 33 | `next` | `cap-stock.js` | the next level: |
 | 32 | `form` | `accounts-shell-unsaved.js` |  |
-| 31 | `bkMoney` | `cap-books.js` |  |
+| 31 | `bkDate` | `cap-books.js` |  |
 | 31 | `model` | `chit-sheet.js` |  |
 | 31 | `control` | `period-pick.js` | the control: |
 | 31 | `chip` | `screen-id.js` | var S = { app: |
 | 30 | `options` | `bank-lines.js` | cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: |
-| 30 | `bkDate` | `cap-books.js` |  |
 | 30 | `head` | `list-ctl.js` |  |
 | 30 | `field` | `ui-field.js` | the part: |
 | 29 | `card` | `cap-shop.js` |  |
@@ -81,19 +81,20 @@ of file each thing is; this says what already does the job.
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
 | 22 | `held` | `books-grant-api.js` |  |
 | 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
+| 22 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 22 | `shows` | `edition.js` |  |
 | 22 | `moment` | `shop-time.js` |  |
 | 22 | `actions` | `workflow.js` | actions(chit, me) — |
 | 21 | `resolve` | `api-base.js` | env = { host, stored, cbApi, remove } (all optional; the page's own values are read when absent). |
 | 21 | `show` | `books-grant-drill.js` |  |
 | 21 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 21 | `chips` | `country-profiles.js` | words as chips; null when there are none |
-| 21 | `shows` | `edition.js` |  |
 | 21 | `fmtMoney` | `helpers.js` |  |
 | 21 | `confirm` | `lab-kit.js` | opts: |
 | 20 | `renderApp` | `app.html` |  |
 | 20 | `pick` | `assign-bar.js` | open the person popover (ui.dialog, the library popup) → done({ id·null, note }) on a press; nothing when it i |
 | 20 | `press` | `attach-ui.js` |  |
 | 20 | `cols` | `cap-catalogue.js` |  |
+| 20 | `slot` | `one-person.js` |  |
 | 20 | `verdict` | `rail-thread.js` |  |
 | 20 | `closed` | `sheet-keys.js` | the sheet went away: |
 | 19 | `close` | `avatar.js` |  |
@@ -101,7 +102,6 @@ of file each thing is; this says what already does the job.
 | 19 | `query` | `cap-dispute.js` |  |
 | 19 | `frame` | `cap-settings.js` |  |
 | 19 | `link` | `chit-sheet.js` |  |
-| 19 | `slot` | `one-person.js` |  |
 | 18 | `confirmAsk` | `app.html` | In-app confirm (replaces browser confirm()). |
 | 18 | `start` | `app.html` |  |
 | 18 | `guard` | `books-acting.js` | a call outside /api/books* is refused here, before it is sent, while the page acts for a store |
@@ -155,6 +155,7 @@ of file each thing is; this says what already does the job.
 | 12 | `seat` | `chit-sheet.js` | seat the dialog where its place wants it: |
 | 12 | `refuses` | `device-id.js` | refuses(url, init, request) → true when this api write must not go: |
 | 12 | `shopReg` | `helpers.js` | that needs the pack's word asks here, never a second `if (country === 'IN')`. |
+| 12 | `packWord` | `helpers.js` | var PACK_WORDS_NONE = { taxName: |
 | 11 | `compose` | `app.html` |  |
 | 11 | `base` | `assign-bar.js` |  |
 | 11 | `addCss` | `avatar.js` | the two preferences every page honours, written once here so no page re-declares them |
@@ -166,10 +167,10 @@ of file each thing is; this says what already does the job.
 | 11 | `filters` | `books-practice.js` |  |
 | 11 | `bkToday` | `cap-books.js` | the SHOP's day — |
 | 11 | `theme` | `customer-bar.js` | The ink on the accent comes from the engine's one calculation (CBScreen.onColour). |
-| 11 | `packWord` | `helpers.js` | var PACK_WORDS_NONE = { taxName: |
 | 11 | `emptyState` | `helpers.js` | act = { label:'+ New product', onclick:"newProduct()" } |
 | 11 | `popup` | `lab-kit.js` | extraClass 'lk-side' is the placement variant: |
 | 11 | `refuse` | `sheet-dialog.js` |  |
+| 10 | `leave` | `accounts-shell-unsaved.js` | nothing moved → goOn(); something moved → ask (Save or Discard when a form can save, Discard or Stay when none |
 | 10 | `wire` | `avatar.js` | var wired = false; |
 | 10 | `build` | `bank-preview-ui-parts.js` | put every painter of a statement line on the one shared `ctx` (the order matters: |
 | 10 | `fill` | `books-acting.js` | one sentence out of the catalogue with its {holes} filled |
@@ -183,7 +184,6 @@ of file each thing is; this says what already does the job.
 | 10 | `same` | `period-pick.js` |  |
 | 9 | `forms` | `app.html` | A noun in its six Arabic count forms, ready to drop into a sentence template. |
 | 9 | `openChit` | `app.html` |  |
-| 9 | `leave` | `accounts-shell-unsaved.js` | nothing moved → goOn(); something moved → ask (Save or Discard when a form can save, Discard or Stay when none |
 | 9 | `draw` | `books-clients-door.js` |  |
 | 9 | `visible` | `books-grant-api.js` | the clients to list: |
 | 9 | `translate` | `books-practice.js` | var PRACTICE_ENDPOINT = { practice: |
