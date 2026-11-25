@@ -1,0 +1,23 @@
+[
+ "public/app.html:19634 → storefront (/shop.html?s=) · grey('· ' + esc(location.host + '/shop.html?s=' + uid))",
+ "public/combo-lab.html:14 → combo-lab (/offer-lab-next.html?mode=combo) · <script>location.replace('/offer-lab-next.html?mode=combo' + (location.search ? '&' + location.searc",
+ "public/combo-lab.html:18 → combo-lab (/offer-lab-next.html?mode=combo) · <p><a href=\"/offer-lab-next.html?mode=combo\">Open the Combo Lab</a></p>",
+ "public/embed.html:145 → storefront (/shop.html?s=) · '<div style=\"margin-top:12px\"><a href=\"/shop.html?s=' +",
+ "public/offer-lab-next.html:3133 → employees (/employees.html) · \"<button data-cbsid=\\\"OLB001-B27\\\" onclick=\\\"window.open('/employees.html','cb_employees')\\\">Open Em",
+ "public/promo.html:208 → storefront (/shop.html?s=) · <script>if (window.CBCustomerBar) { var shopId = (location.hash.match(/[#&]shop=([^&]+)/) || [])[1];",
+ "public/till.html:27419 → product-lab (/product-lab.html) · function openProductLab(){ window.open(cbRoot() + '/product-lab.html', 'cb_product_lab'); }",
+ "public/till.html:27420 → offer-lab (/offer-lab-next.html) · function openOfferLab(){ window.open(cbRoot() + '/offer-lab-next.html', 'cb_offer_lab'); }",
+ "public/app/assign-bar.js:170 → employees (/employees.html) · out += '<div data-testid=\"assign-empty\" style=\"margin-top:8px;font-size:14px\">' + root.esc(tr(where)",
+ "public/app/books-acting.js:181 → network (/network.html) · if (!host) return root.location.replace('/network.html');",
+ "public/app/books-acting.js:183 → network (/network.html) · root.CBShell.readFailed(host.firstChild, { what: words('Your client list'), status: unread ? 0 : 403",
+ "public/app/books-clients-door.js:45 → network (/network.html) · card.href = '/network.html';",
+ "public/app/cap-admin.js:2271 → storefront (/shop.html?s=) · ? '<a href=\"/shop.html?s=' +",
+ "public/app/cap-admin.js:2275 → storefront (/shop.html?s=) · esc(location.host + '/shop.html?s=' + (e.user_id || e.bridge_id)) +",
+ "public/app/cap-admin.js:5014 → standards (/standards.html) · '<div style=\"margin-top:9px\"><a href=\"/standards.html\" data-testid=\"std-open-page\" style=\"color:var(",
+ "public/app/cap-country.js:965 → standards (/standards.html?std=country) · '<div class=\"hint\"><a href=\"/standards.html?std=country\" data-testid=\"cs-standard\" style=\"font-weigh",
+ "public/app/cap-country.js:970 → standards (/standards.html?std=country&ready=) · ? ' · <a href=\"/standards.html?std=country&ready=' +",
+ "public/app/cap-crm-groups-window.js:14 → storefront (/shop.html?s=) · return location.origin + '/shop.html?s=' + encodeURIComponent(id);",
+ "public/app/cap-marketing.js:383 → connectors (/settings.html#/connectors) · href = action && (action[1] || (typeof CB_HOMES !== 'undefined' ? CB_HOMES.integrations : '/settings",
+ "public/app/cap-settings.js:1903 → documents (/authority-forms.html) · '<p class=\"sub\"><a class=\"sx-link\" href=\"/authority-forms.html\" data-testid=\"sx-vault-forms\">' + esc",
+ "public/app/ui-standard.js:666 → standards (/standards.html) · '<a class=\"tohome\" href=\"/standards.html\" data-cbsid=\"' + codeOf(CODE.standards) + '\" data-testid=\"g"
+]

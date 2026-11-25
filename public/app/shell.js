@@ -295,7 +295,7 @@
     '.cbsh-nv{position:relative}.cbsh-nv[data-go=more]{display:none}',
     '.cbsh-nv .bd{position:absolute;top:1px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:var(--sh-amber-t);border:1px solid var(--sh-amber-b);color:var(--sh-amber-i);font-size:10px;font-weight:700;line-height:14px;text-align:center}',
     '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
-    '.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
+    'a.cbsh-grey{color:var(--sh-muted,#8a8272);text-decoration:line-through;cursor:default;pointer-events:auto}.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
     '.cbsh-unready{position:fixed;left:0;right:0;bottom:0;top:var(--sh-bar,52px);z-index:90;background:var(--sh-panel);color:var(--sh-muted);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}.cbsh-unready h2{margin:0 0 6px;font-size:18px;color:var(--sh-ink,inherit)}.cbsh-unready p{margin:0 0 12px;font-size:14px}.cbsh-unready a{color:var(--sh-green);font-weight:600}',
     /* cards (max three columns, DECISIONS.md) */
@@ -818,6 +818,11 @@
     });
     return best;
   }
+  /* AT-02 / FW-01: readiness is per ADDRESS. A not-ready host page can carry a ready sub-view: the entry's `ready_for` lists the query pieces that are ready (network.html?open=<client>&view=… is the client's books, which work). ONE reader, for the cover and for the grey links. */
+  function readyAt(entry, where) {
+    if (!entry || entry.ready !== false) return true;
+    return (entry.ready_for || []).some(function (piece) { return String(where.search || '').indexOf(piece) >= 0; });
+  }
   /* AT-02: does the page draw a screen of its own? A screen root ([data-testid$="-screen"]) holding anything beyond its loading spinner. ONE reader, so no page can leak the note. */
   function pageShowsContent(doc) {
     if (!doc.querySelectorAll) return false;
@@ -832,7 +837,7 @@
     var old = doc.querySelector('[data-testid="shell-unready"]');
     var entry = manifest && entryOfAddress(manifest.entries, where);
     /* AT-02 (Athi, 25 Nov, product-wide): a grey not-ready note shows ONLY when the page shows nothing else; a page that already draws its screen (a client's books opened from the practice) is never given the note underneath it */
-    if (!entry || entry.ready !== false || (String(entry.route || '').indexOf('#') < 0 && pageShowsContent(doc))) { /* a #route inside a working page is a feature, and stays grey */
+    if (!entry || readyAt(entry, where) || (String(entry.route || '').indexOf('#') < 0 && pageShowsContent(doc))) { /* a #route inside a working page is a feature, and stays grey */
       if (old) old.remove();
       return false;
     }
@@ -846,15 +851,35 @@
     doc.body.appendChild(cover);
     return true;
   }
+  /* FW-01 (Athi, 25 Nov: grey what is not ready): EVERY in-page link whose address is a not-ready entry is drawn grey and does not navigate, so a working screen never sends a person into the cover. ONE helper, run at mount and when the page draws; a link to the page it is on is left alone. */
+  function greyLinks(doc, manifest, win) {
+    if (!doc.querySelectorAll || !manifest) return 0;
+    var n = 0;
+    [].forEach.call(doc.querySelectorAll('a[href]:not([data-cbsh-grey])'), function (a) {
+      var url;
+      try { url = new win.URL(a.getAttribute('href'), win.location.href); } catch (e) { return; }
+      if (url.origin !== win.location.origin || url.pathname === win.location.pathname) return;
+      var where = { pathname: url.pathname, hash: url.hash, search: url.search }, entry = entryOfAddress(manifest.entries, where);
+      if (readyAt(entry, where)) return;
+      a.setAttribute('data-cbsh-grey', '1');
+      a.setAttribute('aria-disabled', 'true');
+      a.setAttribute('title', T(W.unfinished));
+      a.classList.add('cbsh-grey');
+      n++;
+    });
+    return n;
+  }
   /* the gate at mount, and again when the address changes inside the page (a #route) */
   function watchUnready(state, doc, win) {
     gateUnready(doc, state.manifest, win.location);
+    greyLinks(doc, state.manifest, win);
+    if (doc.addEventListener) doc.addEventListener('click', function (ev) { var a = ev.target && ev.target.closest && ev.target.closest('a[data-cbsh-grey]'); if (a) { ev.preventDefault(); ev.stopPropagation(); } }, true);
     if (win.MutationObserver && doc.body && doc.body.nodeType) { /* the page draws after the shell mounts: look again when it has */
       var again = false;
       new win.MutationObserver(function () {
         if (again) return;
         again = true;
-        win.setTimeout(function () { again = false; gateUnready(doc, state.manifest, win.location); }, 150);
+        win.setTimeout(function () { again = false; gateUnready(doc, state.manifest, win.location); greyLinks(doc, state.manifest, win); }, 150);
       }).observe(doc.body, { childList: true, subtree: true });
     }
     win.addEventListener('hashchange', function () {
@@ -1735,6 +1760,8 @@
     entryOfAddress: entryOfAddress,
     gateUnready: gateUnready,
     pageShowsContent: pageShowsContent,
+    readyAt: readyAt,
+    greyLinks: greyLinks,
     openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);

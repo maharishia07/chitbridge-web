@@ -68,7 +68,7 @@ function screenDoc(kids) {
 }
 const loading = [{ className: 'loadwrap' }];
 const drawn = [{ className: 'loadwrap' }, { className: 'bv-table' }];
-const netAt = at('/network.html', '', '?open=c1&view=bas');
+const netAt = at('/network.html', '', '?x=1');
 assert.strictEqual(man.entries.filter((e) => e.id === 'network')[0].ready, false, 'network is a not-ready entry (the walk case)');
 assert.strictEqual(Shell.gateUnready(screenDoc(drawn), man, netAt), false, 'a page drawing its screen (the client books opened from the practice) gets no note under it');
 assert.strictEqual(Shell.gateUnready(screenDoc(loading), man, netAt), true, 'a page still only loading shows nothing else: the note shows');
