@@ -2,8 +2,8 @@
  * ui-money.js — THE MONEY FIELD (CMP055-I05, UX-137, M36 · R16 · T16 · CUR-1). Lifted out of cap-books.js (bkMoneyInput and its readers), docs critique UI-MONEY-FIELD-PLAN section 8.
  * OWNS       CBUiMoney.input (the field's HTML: symbol, amount text, the currency kept on the field) · clamp (per keystroke: digits of other scripts become ASCII, NOTHING is deleted) ·
  *            minor (the ONE money reader: typed text -> minor units, or NaN) · refusal (the sentence a refused text earns) · read (an element -> { value, currency } | { value: NaN, error }) ·
- *            minorText (minor units -> plain decimal text, string arithmetic) · currency / decimals / symbol · the ui.field kind 'money' (plugged into app/ui-field.js).
- * DOES NOT   no money arithmetic, no rounding, no operator of its own: the page hands { minor, currency } to CBMoney, which refuses a mismatch or a null currency.
+ *            pct (RW1-07: a carried percent, basis points, as one-decimal text: the ONE rule of every percent column) · minorText (minor units -> plain decimal text, string arithmetic) · currency / decimals / symbol · the ui.field kind 'money' (plugged into app/ui-field.js).
+ * DOES NOT   no money arithmetic, no money rounding (pct below rounds a carried basis-point percent for the eye only), no operator of its own: the page hands { minor, currency } to CBMoney, which refuses a mismatch or a null currency.
  * MARKS      the decimal mark, grouping and lakh rule come from CBUiField.marks() and the number reader CBUiField.parse, the same ones every number field uses (one source).
  * OWNER      cb-finance with cb-accounting (the M36 money unit) · RISK money (Tier 1) · ID CMP055-I05
  * CALLED BY  cap-books.js (its bkMoneyInput / bkMoneyMinor / bkMoneyRead names are one-line wrappers) · any page that mounts ui.field({ kind: 'money' }). Loaded AFTER app/ui.js and app/ui-field.js.
@@ -256,8 +256,18 @@ var CBUiMoney = (function () {
   }
   if (typeof CBUiField !== 'undefined' && CBUiField.plug) CBUiField.plug('money', { draw: draw, read: read, settle: settle, input: clamp });
 
+  /**
+   * RW1-07: a carried percent (basis points: 1 bp = 0.01%) as text with ONE decimal, rounded in whole numbers, half away from zero: 8485 bp is "84.9%" (a float toFixed read 84.8 because 84.85 is 84.8499... in binary).
+   * The ONE rule: the P&L's change and share columns, the overview and the grant view all call it. → "12.5%" · "+25.0%" when `signed` · "0.0%" when it rounds to zero (never "-0.0%").
+   */
+  function pct(bp, signed) {
+    var number = Number(bp),
+      tenths = Math.floor((Math.abs(number) + 5) / 10);
+    if (!isFinite(number) || tenths === 0) return isFinite(number) ? '0.0%' : '';
+    return (number < 0 ? '-' : signed ? '+' : '') + Math.floor(tenths / 10) + '.' + (tenths % 10) + '%';
+  }
   return {
-    UNKNOWN: UNKNOWN, MAX_MINOR: MAX_MINOR, currency: currency, decimals: decimals, symbol: symbol, minorText: minorText, clamp: clamp, minor: minor, refusal: refusal, read: read, settle: settle,
+    pct: pct, UNKNOWN: UNKNOWN, MAX_MINOR: MAX_MINOR, currency: currency, decimals: decimals, symbol: symbol, minorText: minorText, clamp: clamp, minor: minor, refusal: refusal, read: read, settle: settle,
     input: inputHtml, draw: draw
   };
 })();

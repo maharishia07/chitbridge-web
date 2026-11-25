@@ -247,6 +247,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 @media (min-width:761px){body.lg-on .nav-grp{display:none}body.lg-on .nav-sec:has(>.nav-grp)::before{content:"";display:block;height:1px;margin:8px 10px;background:var(--line-3)}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
 
 /* ⭐ THE STATEMENTS BOX (app/cap-bank-statements.js): compact, 32 px rows, toolbar on the table, tokens only; folded while a statement is on screen */
+.pe-card.pe-sticky-foot{position:sticky;bottom:0;z-index:3;box-shadow:0 -8px 14px -10px rgba(0,0,0,.28)} /* RW1-10: the one action of the BAS (Close the period) stays in view at 1366x768 whatever the list above takes */
 .pe-card.bks{max-width:none;gap:6px;padding:6px 14px}
 .bks-bar{display:flex;align-items:center;gap:10px;min-height:32px;font-size:14px}
 .bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}/* wraps, never cut: the Statements line reads in full at 390 (Fable r2) */
