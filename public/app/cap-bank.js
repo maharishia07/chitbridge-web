@@ -360,9 +360,20 @@ function bankFileAccountNote() {
   out.innerHTML = '<div class="pe-warn" data-testid="bank-file-account">' + bkbE(txf('The file is for account {a}. Check it is the one you picked: {b}.', { a: String(BKB.parsed.account), b: ledger.name || BKB.acct })) + '</div>';
 }
 
-/** the shop's own bank lines for the statement's dates → the engine's ledger lines */
+/** RW2-01: the books' side of a statement is every ledger line dated in the statement's PERIOD, not only between its first and last line (Xero/MYOB list the period's book lines against the statement; a rent paid on the 3rd is "not on the statement", never absent).
+ *  The period is the kept file's own (period_from..period_to) when the page knows it, else the whole calendar month(s) of the first and last line; it never narrows the lines' own span. Pure: days in ('YYYY-MM-DD'), { from, to } out. */
+function bkbLedgerWindow(from, to, kept) {
+  const first = String(from || '').slice(0, 10), last = String(to || '').slice(0, 10);
+  const monthStart = (day) => day.slice(0, 7) + '-01';
+  const monthEnd = (day) => day.slice(0, 7) + '-' + String(new Date(Date.UTC(+day.slice(0, 4), +day.slice(5, 7), 0)).getUTCDate()).padStart(2, '0');
+  const periodFrom = kept && kept.from ? String(kept.from).slice(0, 10) : first && monthStart(first);
+  const periodTo = kept && kept.to ? String(kept.to).slice(0, 10) : last && monthEnd(last);
+  return { from: first && periodFrom && periodFrom < first ? periodFrom : first, to: last && periodTo && periodTo > last ? periodTo : last };
+}
+/** the shop's own bank lines for the statement's period → the engine's ledger lines */
 async function bankLedger() {
-  const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: BKB.from, to: BKB.to } });
+  const window = bkbLedgerWindow(BKB.from, BKB.to, BKB.keptPeriod);
+  const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: window.from, to: window.to } });
   BKB.ledgerRaw = reply || {};
   return bksLiveLines(reply && reply.lines).map((item, index) => ({
     id: String(item.ref) + '#' + index,

@@ -415,6 +415,7 @@ function bkstReadTarget(id, hint) {
     file,
     code: hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
     name: hint ? hint.name : file && file.name,
+    from: hint && hint.from ? hint.from : file && file.period_from,
     to: hint ? hint.to : file && file.period_to
   };
 }
@@ -423,6 +424,7 @@ async function bkstOpenInReader(target, text) {
   const code = target.code,
     name = target.name,
     to = target.to;
+  BKB.keptPeriod = { from: target.from, to: target.to }; /* RW2-01: the kept file's own period is the books' window (bankLedger), cleared below */
   const select = bkbEl('bk_acct');
   if (select) select.value = String(code);
   bankAcctPick(String(code), true); /* the account the file was kept against; the screen is cleared, the device copy is not loaded over it */
@@ -434,6 +436,7 @@ async function bkstOpenInReader(target, text) {
     await bankTake(text, name || 'statement.csv', false);
   } finally {
     BKB.kept = false;
+    BKB.keptPeriod = null;
   }
   if (BKB.view !== 'lines' && out && out.innerHTML && !out.querySelector('[data-testid="bank-currency-ask"]')) peBad('bks_out', out.textContent || tx('That statement could not be read.')); /* a refusal stays on the home, said where the person is looking */
 }
