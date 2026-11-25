@@ -1328,6 +1328,12 @@
     }
 
     /* ── the switcher (inside an app): the five areas as links to Home, the app's own menu stays the app's ── */
+    /** FW-44: with no manifest entry and no title the switcher fell to the AREA word "Home", beside the ⌂ Home link: two Home controls. A page inside an area names itself (its own <title>); the Home page keeps the area word. */
+    function pageTitleFor(area) {
+      if (area !== 'home' || host.app === 'home' || !doc || !doc.title) return '';
+      var word = String(doc.title).split(/\s[·|–—-]\s/)[0].trim();
+      return word && word.toLowerCase() !== String(W.areas.home).toLowerCase() ? word : '';
+    }
     function paintSwitcher() {
       var element = $('.cbsh-swb'),
         target = $('.cbsh-swpop');
@@ -1338,7 +1344,7 @@
       var cur = (me && me.area) || o.area || 'home';
       /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
       var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur],
-        name = (me && me.name) || (o.title && o.title.name) || W.areas[cur];
+        name = (me && me.name) || (o.title && o.title.name) || pageTitleFor(cur) || W.areas[cur];
       element.innerHTML =
         '<span aria-hidden="true">' +
         glyph(icon) +
