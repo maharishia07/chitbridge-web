@@ -651,35 +651,6 @@ function testPanelOpen() {
   testLoad();
 }
 
-/**
- * ── ⚠️⚠️⚠️ A VALUE GOING INTO onclick="fn('HERE')" IS IN TWO NESTED LANGUAGES ──────────────────────────────
- *
- * testEsc is an HTML escaper and is CORRECT for text. It is not sufficient here, and the reason is exact:
- * the HTML parser decodes character references in an attribute value BEFORE the JavaScript parser ever sees
- * it. So `&quot;` becomes `"` — harmless inside a JS single-quoted string — but testEsc does not touch `'`
- * at all, and a bare `'` closes the string and everything after it is script.
- *
- * A case key is not ours: /cases/import takes `case_key` as `String(c.case_key || c.id || '').trim()` with
- * no shape check, so its text comes from whoever posted it.
- *
- *   key = "a');alert(1)//"   ->  onclick="testMark('a');alert(1)//','pass')"   ← executes
- *
- * ⭐ TWO LAYERS, INNERMOST FIRST. Escape for the JS string (backslash, then quote), then escape the result
- * for the HTML attribute. Order matters: HTML-escaping first would turn a quote into `&#39;` that the parser
- * hands back to JS as a live quote.
- *   key = "a');alert(1)//"   ->  a\');alert(1)//   ->  onclick="testMark('a\');alert(1)//','pass')"  ← inert
- *   key = "x\"><img onerror=…>" -> HTML layer turns < > into entities, so the tag cannot be closed either.
- *
- * ⚠️ USE THIS FOR EVERY DYNAMIC VALUE INSIDE A HANDLER. testEsc stays right for element TEXT.
- * [[feedback-check-after-the-wire]]
- */
-function testJs(s) {
-  return esc(
-    String(s == null ? '' : s)
-      .replace(/\\/g, '\\\\')
-      .replace(/'/g, "\\'")
-  );
-}
 function testAgo(iso) {
   if (!iso) return '';
   var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -1588,7 +1559,7 @@ function testPaint() {
 
         h +=
           '<div data-cbsid="SCR010-C01" data-arearow="1" onclick="testFold(\'' +
-          testJs(item) +
+          escJs(item) +
           '\')" style="display:grid;' +
           'grid-template-columns:' +
           testAreaCols() +
@@ -1630,7 +1601,7 @@ function testPaint() {
           esc(item) +
           '" ' +
           'onclick="event.stopPropagation();testAddOpen(\'' +
-          testJs(item) +
+          escJs(item) +
           '\')" ' +
           'style="flex:0 0 auto;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);' +
           'color:var(--grey-2,#545A61);border-radius:5px;font:inherit;font-size:var(--fs-1);' +
@@ -1704,7 +1675,7 @@ function testPaint() {
            * and a green acceptance test are not the same evidence) and WHAT WOULD MAKE IT GREEN.
            */
           '<div data-cbsid="SCR010-C02" onclick="testOpen(\'' +
-          testJs(entry.case_key) +
+          escJs(entry.case_key) +
           '\')" style="display:grid;' +
           'grid-template-columns:' +
           TEST_ROW_COLS +
@@ -3226,9 +3197,9 @@ function testControlsHTML(code) {
         '<button data-cbsid="SCR010-B21" data-testid="ctlpick-' +
         esc(x.code) +
         '" onclick="testCtlPick(\'' +
-        testJs(x.code) +
+        escJs(x.code) +
         "','" +
-        testJs(x.label) +
+        escJs(x.label) +
         '\')" style="font:inherit;font-size:var(--fs-1);padding:2px 9px;' +
         'border:1px solid var(--grey-4,#646A72);border-radius:7px;cursor:pointer;background:var(--card,#fff);' +
         'margin-top:2px">' +
@@ -4126,7 +4097,7 @@ function testTechHTML() {
     var fchip = function (f, strong) {
       return (
         '<button data-cbsid="SCR010-B24" onclick="testTechPick(\'' +
-        testJs(f.key) +
+        escJs(f.key) +
         '\')" ' +
         'title="' +
         esc(f.kind + ' · e.g. ' + f.sample + ' · ' + f.from) +
@@ -4508,9 +4479,9 @@ function testCaseFormHTML() {
     if (!here) return '';
     return (
       '<div style="margin:2px 0 9px"><button data-cbsid="SCR010-B27" onclick="testCaseFor(\'' +
-      here +
+      escJs(here) +
       "', '" +
-      testJs(codeName ? codeName(here) : '') +
+      escJs(codeName ? codeName(here) : '') +
       '\')" ' +
       'style="font:inherit;font-size:var(--fs-2);font-weight:700;padding:5px 14px;border:1px solid ' +
       'var(--line,#e7e3d8);border-radius:7px;cursor:pointer;background:var(--card,#fff)">' +
@@ -4614,7 +4585,7 @@ function testCaseFormHTML() {
         '</b>' +
         '<span style="flex:1 1 auto"></span>' +
         '<button data-cbsid="CMP014" onclick="testCtlPick(\'' +
-        testJs(CBTEST.ctlNow.code) +
+        escJs(CBTEST.ctlNow.code) +
         "','')\" style=\"" +
         btn +
         ';padding:1px 8px">clear</button></div>'
@@ -4668,7 +4639,7 @@ function testCaseFormHTML() {
             'border:1px solid var(--line,#e7e3d8);border-radius:4px;vertical-align:middle">'
           : '') +
         '<button data-cbsid="SCR010-B30" onclick="testShotView(\'' +
-        testJs(CBTEST.shot.id) +
+        escJs(CBTEST.shot.id) +
         '\')" style="' +
         btn +
         ';padding:1px 7px">view</button>' +
@@ -5082,7 +5053,7 @@ function testScrHTML() {
       return (
         '<tr style="border-top:1px solid var(--line,#e7e3d8)">' +
         '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code onclick="testScrOpen(\'' +
-        x.code +
+        escJs(x.code) +
         '\')" title="Show the cases on this screen" style="font-family:\'Space Mono\',' +
         'ui-monospace,monospace;cursor:pointer;text-decoration:underline;text-underline-offset:2px">' +
         esc(x.code) +
@@ -5103,9 +5074,9 @@ function testScrHTML() {
         num(x.req, 'var(--grey-2,#545A61)') +
         /* ⭐ the door is ON THE ROW: the screen is named right there, so nothing has to be chosen twice */
         '<td style="padding:4px 6px;text-align:end"><button data-cbsid="SCR010-B35" onclick="testCaseFor(\'' +
-        x.code +
+        escJs(x.code) +
         "', " +
-        JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;') +
+        '\'' + escJs(String(x.name)) + '\'' +
         ')" title="Create a case, an incident or a requirement on this screen" style="font:inherit;font-size:var(--fs-1);' +
         'padding:1px 7px;border:1px solid var(--grey-4,#646A72);border-radius:7px;cursor:pointer;' +
         'background:var(--card,#fff);white-space:nowrap">\u002b case</button></td>' +
@@ -5440,7 +5411,7 @@ function testCaseDetailHTML(c) {
       '<button data-cbsid="SCR010-B36" class="btn" style="display:inline-block;width:auto;margin-top:5px;' +
       'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' +
       "'" +
-      testJs(c.evidence_id) +
+      escJs(c.evidence_id) +
       "'" +
       ')">\u1f5bc\ufe0f Screenshot</button>';
   }
@@ -5588,7 +5559,7 @@ function testCaseListHTML(code) {
                 : '') +
               ' <button data-cbsid="SCR010-B40" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
               'padding:1px 8px" onclick="testHandClose(\'' +
-              testJs(item.case_key) +
+              escJs(item.case_key) +
               '\',true)">Open again' +
               '</button></div>'
             );
@@ -5649,7 +5620,7 @@ function testCaseListHTML(code) {
           '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;' +
           'border-top:1px solid var(--line,#efece4)">' +
           '<button data-cbsid="SCR010-B42" onclick="testCaseOpen(\'' +
-          testJs(item.case_key) +
+          escJs(item.case_key) +
           '\')" title="Open it" ' +
           'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;' +
           'padding:0;cursor:pointer;text-align:start">' +
@@ -5664,7 +5635,7 @@ function testCaseListHTML(code) {
            */
           (item.evidence_id
             ? '<button data-cbsid="SCR010-B43" title="See the screenshot" onclick="testShotView(\'' +
-              testJs(item.evidence_id) +
+              escJs(item.evidence_id) +
               '\')" style="font-size:var(--fs-1);background:none;border:0;cursor:pointer;padding:0">' +
               '\ud83d\uddbc\ufe0f</button>'
             : '') +
@@ -5689,11 +5660,11 @@ function testCaseListHTML(code) {
           '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">' +
           testMarkBtn(item.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)') +
           '<button data-cbsid="SCR010-B44" class="btn" onclick="testFromCase(\'' +
-          testJs(item.case_key) +
+          escJs(item.case_key) +
           "','inc')\" " +
           'style="color:var(--disp);background:var(--danger-tint,#fbeceb)">Incident</button>' +
           '<button data-cbsid="SCR010-B45" class="btn" onclick="testFromCase(\'' +
-          testJs(item.case_key) +
+          escJs(item.case_key) +
           "','req')\" " +
           'style="color:var(--grey-2);background:var(--neutral-tint)">Requirement</button>' +
           /**
@@ -5710,7 +5681,7 @@ function testCaseListHTML(code) {
            * once. Giving it the same weight would put a destructive action beside the three constructive ones.
            */
           '<button data-cbsid="CMP005" data-cbmount="SCR010-U105" class="btn" onclick="testHandClose(\'' +
-          testJs(item.case_key) +
+          escJs(item.case_key) +
           '\',false)" ' +
           'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" ' +
           'style="font-size:var(--fs-1);padding:2px 8px;color:var(--grey-4,#646A72);background:none;' +
@@ -6469,9 +6440,9 @@ function testBehindHTML(code) {
             '</span>' +
             '<button data-cbsid="SCR010-B46" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
             'onclick="testCoverCase(\'' +
-            testJs(code) +
+            escJs(code) +
             "','" +
-            testJs(x.code) +
+            escJs(x.code) +
             "','" +
             escJs(String(x.label).replace(/'/g, ' ')) +
             '\')">Write a case</button>' +
@@ -6551,7 +6522,7 @@ function testBehindHTML(code) {
       '<div style="margin-top:7px">' +
       '<button data-cbsid="SCR010-B49" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" ' +
       'onclick="testCoverRaise(\'' +
-      testJs(code) +
+      escJs(code) +
       '\')">✎ Raise this as a coverage gap</button>' +
       '</div>';
 
@@ -7209,7 +7180,7 @@ function testDiagHTML() {
         '<td style="padding:4px 6px 4px 0">' +
         '<button data-cbsid="SCR010-B51" onclick="testCallOpen(' +
         "'" +
-        testJs(item.rid || '') +
+        escJs(item.rid || '') +
         "'" +
         ')" ' +
         'title="See the real call" style="font:inherit;font-size:var(--fs-1);background:none;' +
@@ -9392,7 +9363,7 @@ function testWorkRowHTML(x) {
     /* ⚠️ a red verdict with nothing raised is a fault on nobody's list — this is the row that fixes that */
     acts += b(
       'Raise an incident',
-      "testFromCase('" + testJs(x.caseKey) + "','inc',null,'" + escJs(String(x.seen || 'It failed').replace(/'/g, ' ')) + "')",
+      "testFromCase('" + escJs(x.caseKey) + "','inc',null,'" + escJs(String(x.seen || 'It failed').replace(/'/g, ' ')) + "')",
       'var(--disp,#B3261E)',
       'Turn this red verdict into something somebody owns'
     );
@@ -9408,14 +9379,14 @@ function testWorkRowHTML(x) {
     acts += b('It is built', "testReqSet('" + id + "','implemented')", 'var(--ok-2,#1B7F4B)', 'The product does this now');
     acts += b('✗ Reject it', "testReqSet('" + id + "','rejected')", 'var(--disp,#B3261E)', 'Changed our mind, with the reason');
   } else if (x.status === 'todo' && x.caseKey) {
-    acts += b('✓ It passed', "testMark('" + testJs(x.caseKey) + "','pass')", 'var(--ok-2,#1B7F4B)', 'Run it now');
-    acts += b('✗ It failed', "testMark('" + testJs(x.caseKey) + "','fail')", 'var(--disp,#B3261E)', 'Then raise an incident from the row');
+    acts += b('✓ It passed', "testMark('" + escJs(x.caseKey) + "','pass')", 'var(--ok-2,#1B7F4B)', 'Run it now');
+    acts += b('✗ It failed', "testMark('" + escJs(x.caseKey) + "','fail')", 'var(--disp,#B3261E)', 'Then raise an incident from the row');
   } else if (x.status === 'passed' && x.caseKey) {
-    acts += b('Run it again', "testMark('" + testJs(x.caseKey) + "','pass')", null, 'Record another pass');
+    acts += b('Run it again', "testMark('" + escJs(x.caseKey) + "','pass')", null, 'Record another pass');
   } else if (x.status === 'closed' && x.caseKey && !x.inc && !x.req) {
-    acts += b('Open again', "testHandClose('" + testJs(x.caseKey) + "',true)", null, 'Put it back on the list');
+    acts += b('Open again', "testHandClose('" + escJs(x.caseKey) + "',true)", null, 'Put it back on the list');
   }
-  if (x.screen) acts += b('Open ' + esc(x.screen), "testHandOpen('" + testJs(x.screen) + "')", null, 'Go to the screen it is about');
+  if (x.screen) acts += b('Open ' + esc(x.screen), "testHandOpen('" + escJs(x.screen) + "')", null, 'Go to the screen it is about');
   /**
    * ⭐ RE-GRADING IS A JUDGEMENT AND BELONGS WITH THE OTHER ACTIONS. What looked like one awkward screen
    * turns out to be the till, and the first person to file it is the least informed person who will ever
@@ -9434,7 +9405,7 @@ function testWorkRowHTML(x) {
       }).join('') +
       '</select> ';
   }
-  if (x.shot) acts += b('🖼 Screenshot', "testShotView('" + testJs(x.shot) + "')", null, '');
+  if (x.shot) acts += b('🖼 Screenshot', "testShotView('" + escJs(x.shot) + "')", null, '');
 
   var shut = x.status === 'closed';
   return (
@@ -9688,7 +9659,7 @@ function testHandHTML() {
           ? '<button data-cbsid="SCR010-B68" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px" onclick="testHandOpen(' +
             "'" +
-            testJs(x.screen) +
+            escJs(x.screen) +
             "'" +
             ')">Open ' +
             esc(x.screen) +
@@ -9698,7 +9669,7 @@ function testHandHTML() {
           ? '<button data-cbsid="SCR010-B69" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px" onclick="testShotView(' +
             "'" +
-            testJs(x.shot) +
+            escJs(x.shot) +
             "'" +
             ')">' +
             '\u1f5bc\ufe0f Screenshot</button> '
@@ -9712,12 +9683,12 @@ function testHandHTML() {
           ? '<button data-cbsid="SCR010-B70" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px;border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" ' +
             'onclick="testVerify(\'' +
-            testJs(String(x.id || '')) +
+            escJs(String(x.id || '')) +
             '\',true)">\u2713 Retested \u2014 it holds</button> ' +
             '<button data-cbsid="SCR010-B71" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);' +
             'padding:2px 9px;border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" ' +
             'onclick="testVerify(\'' +
-            testJs(String(x.id || '')) +
+            escJs(String(x.id || '')) +
             '\',false)">\u2717 Still broken</button>'
           : /**
              * ⚠️ THE WORD ON THE BUTTON IS A PROMISE ABOUT THE STATE IT WILL WRITE. A requirement is DECIDED, not
@@ -9728,21 +9699,21 @@ function testHandHTML() {
               'padding:2px 9px" onclick="testFindClose(\'' +
               x.kind +
               "','" +
-              testJs(String(x.id || '')) +
+              escJs(String(x.id || '')) +
               "','" +
-              testJs(String(x.key || '')) +
+              escJs(String(x.key || '')) +
               '\',true)">Open again</button>'
             : x.kind === 'req'
               ? '<button data-cbsid="SCR010-B73" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
                 'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" ' +
                 'onclick="testReqSet(\'' +
-                testJs(String(x.id || '')) +
+                escJs(String(x.id || '')) +
                 "','accepted')\">" +
                 '\u2713 Accept it</button> ' +
                 '<button data-cbsid="SCR010-B74" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;' +
                 'border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" ' +
                 'onclick="testReqSet(\'' +
-                testJs(String(x.id || '')) +
+                escJs(String(x.id || '')) +
                 "','rejected')\">" +
                 '\u2717 Reject it</button>'
               : x.kind === 'inc'
@@ -9750,19 +9721,19 @@ function testHandHTML() {
                   'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" ' +
                   'title="You have looked and it is done. This ends it and takes it off the board." ' +
                   "onclick=\"testFindClose('inc','" +
-                  testJs(String(x.id || '')) +
+                  escJs(String(x.id || '')) +
                   "','',false)\">" +
                   '\u2713 Close it</button> ' +
                   '<button data-cbsid="SCR010-B76" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
                   'title="You believe it is fixed \u2014 the person who raised it is asked to retest" ' +
                   'onclick="testFindFixed(\'' +
-                  testJs(String(x.id || '')) +
+                  escJs(String(x.id || '')) +
                   '\')">Mark it fixed</button>'
                 : '<button data-cbsid="CMP005" data-cbmount="SCR010-U105" class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" ' +
                   'onclick="testFindClose(\'' +
                   x.kind +
                   "','" +
-                  testJs(String(x.id || '')) +
+                  escJs(String(x.id || '')) +
                   "','" +
                   escJs(String(x.key || '')) +
                   '\',false)">\u2713 Close</button>') +
@@ -10216,7 +10187,7 @@ function testMenuHTML(shown) {
      */
     h +=
       '<div data-cbsid="SCR010-C03" onclick="testFold(\'' +
-      testJs(gkey) +
+      escJs(gkey) +
       '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">' +
       '<span style="' +
       q +
@@ -10248,7 +10219,7 @@ function testMenuHTML(shown) {
       var dopen = testSectionOpen(dkey, d.cases.length);
       h +=
         '<div data-cbsid="SCR010-C04" onclick="testFold(\'' +
-        testJs(dkey) +
+        escJs(dkey) +
         '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">' +
         '<span style="' +
         q +
@@ -10295,7 +10266,7 @@ function testMenuHTML(shown) {
           (l ? (l.status === 'fail' || l.status === 'blocked' ? 'var(--disp)' : 'var(--ok-2)') : 'var(--line,#e7e3d8)') +
           ';margin-inline-start:26px">' +
           '<div data-cbsid="SCR010-C05" onclick="testOpen(\'' +
-          testJs(entry.case_key) +
+          escJs(entry.case_key) +
           '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">' +
           '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
           esc(entry.title || entry.case_key) +
@@ -10397,7 +10368,7 @@ function testCaseBodyHTML(c) {
 function testMarkBtn(key, status, label, fg, bg) {
   return (
     '<button data-cbsid="SCR010-B85" class="btn" onclick="testMark(\'' +
-    testJs(key) +
+    escJs(key) +
     "','" +
     status +
     '\')" ' +

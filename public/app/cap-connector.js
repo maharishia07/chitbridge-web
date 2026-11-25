@@ -251,7 +251,7 @@ function piCockpit(x) {
     ico(
       '🗑',
       'Delete this ' + (iot ? 'gateway' : 'system'),
-      "acDeleteConnector('" + x.id + "','" + escJs(String(x.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + "')"
+      "acDeleteConnector('" + x.id + "','" + escJs(String(x.name)) + "')"
     ) +
     '</span></div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">📍 ' +
