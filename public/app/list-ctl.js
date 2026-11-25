@@ -947,6 +947,7 @@ ctx.foldPeriod = !!ctx.h.period && isPhone() && isTiny() && chips.length + notes
       ctx.out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
     ctx.box.classList.toggle('reserve', !!ctx.h.reserve);
     ctx.box.innerHTML = ctx.out;
+    fitPop(ctx.box);
     if (list.o.views && list.o.views.inTitle) paintViews(list);
   }
   /** paintTitle, step 5 of 5 (part 5, lines 1124-1130 of the one function): runs on, nothing here ends the call */
@@ -1457,14 +1458,21 @@ ctx.se = null;
     }
   }
   /** paintToolsBar, step 7 of 7 (part 7, lines 1627-1638 of the one function): runs on, nothing here ends the call */
-  /** WALK S S-F-09: an opened popup (Columns, Filters) never runs below the viewport — its height is cut to the room under its top edge (the list scrolls inside it) */
+  /** WALK S S-F-09 + AT-05 (Athi, sit-au 25 Nov): an opened popup (Columns, Filters, View, Period, Notes, a heading's filter) is always whole inside the window — its height is cut to the room under its top edge (it scrolls inside), and it is shifted sideways when its anchor sits near an edge; the one place every popup of the unit passes */
   function fitPop(box) {
-    var pop = box.querySelector('.cbl-pop'),
-      view = box.ownerDocument && box.ownerDocument.defaultView;
-    if (!pop || !view || !pop.getBoundingClientRect) return;
-    var rect = pop.getBoundingClientRect(),
-      room = view.innerHeight - rect.top - 8;
-    if (rect.height && rect.bottom > view.innerHeight - 8 && room >= 120) pop.style.maxHeight = room + 'px';
+    var view = box && box.ownerDocument && box.ownerDocument.defaultView;
+    if (!view || !box.querySelectorAll) return;
+    [].slice.call(box.querySelectorAll('.cbl-pop')).forEach(function (pop) {
+      if (!pop.getBoundingClientRect) return;
+      pop.style.transform = '';
+      var rect = pop.getBoundingClientRect(),
+        room = view.innerHeight - rect.top - 8,
+        dx = 0;
+      if (rect.height && rect.bottom > view.innerHeight - 8 && room >= 120) pop.style.maxHeight = room + 'px';
+      if (rect.width && rect.right > view.innerWidth - 8) dx = view.innerWidth - 8 - rect.right;
+      if (rect.width && rect.left + dx < 8) dx = 8 - rect.left;
+      if (dx) pop.style.transform = 'translateX(' + Math.round(dx) + 'px)';
+    });
   }
   function paintToolsBarStep7(list, ctx) {
     ctx.box.innerHTML = ctx.h;
@@ -2868,6 +2876,7 @@ ctx.pin = cols.filter(function (item) {
       prune();
       INST.forEach(function (item) {
         fit(item);
+        fitPop(item.el);
         setHdrH(item, item.el.querySelector('.cbl-list') || item.el);
         var n = isPhone();
         if (n !== item.narrow) {
