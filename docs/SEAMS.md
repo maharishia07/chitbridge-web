@@ -56,9 +56,9 @@ of file each thing is; this says what already does the job.
 | 31 | `chip` | `screen-id.js` | var S = { app: |
 | 30 | `options` | `bank-lines.js` | cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: |
 | 30 | `bkDate` | `cap-books.js` |  |
+| 30 | `head` | `list-ctl.js` |  |
 | 30 | `field` | `ui-field.js` | the part: |
 | 29 | `card` | `cap-shop.js` |  |
-| 29 | `head` | `list-ctl.js` |  |
 | 29 | `panel` | `sides.js` |  |
 | 28 | `step` | `cart.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
@@ -134,6 +134,7 @@ of file each thing is; this says what already does the job.
 | 14 | `pages` | `cap-dispute.js` |  |
 | 14 | `steps` | `cap-quotes.js` | Returns { sent(), waiting(), answered(), failed(words) }; each paints into host (an element) and says the stag |
 | 14 | `waiting` | `cap-settings.js` |  |
+| 14 | `ready` | `cap-suppliers.js` | readiness in three answers + the server's own sentence when it has one |
 | 14 | `units` | `cart.js` |  |
 | 14 | `mark` | `shell.js` |  |
 | 13 | `repaint` | `avatar.js` |  |
@@ -141,7 +142,6 @@ of file each thing is; this says what already does the job.
 | 13 | `bkQuiet` | `cap-books.js` | a failure this screen survives: |
 | 13 | `bkWhy` | `cap-books.js` | when the server said nothing — |
 | 13 | `added` | `cap-employees.js` |  |
-| 13 | `ready` | `cap-suppliers.js` | readiness in three answers + the server's own sentence when it has one |
 | 13 | `queue` | `cap-tasks-assign.js` | the board's queue: |
 | 13 | `stored` | `one-person.js` |  |
 | 12 | `route` | `app.html` | window.addEventListener('hashchange', route); |
@@ -186,6 +186,7 @@ of file each thing is; this says what already does the job.
 | 9 | `draw` | `books-clients-door.js` |  |
 | 9 | `visible` | `books-grant-api.js` | the clients to list: |
 | 9 | `translate` | `books-practice.js` | var PRACTICE_ENDPOINT = { practice: |
+| 9 | `hint` | `books-practice.js` |  |
 | 9 | `bkPartyLabel` | `cap-books.js` | A ROW NAMES ITS PARTY (Athi, 2026-10-02): |
 | 9 | `crmBar` | `cap-crm.js` |  |
 | 9 | `plan` | `cap-settings.js` |  |
@@ -205,7 +206,6 @@ of file each thing is; this says what already does the job.
 | 8 | `onKey` | `assign-bar.js` | function notShortcut(ev, key) { return ev.defaultPrevented ·· ev.ctrlKey ·· ev.metaKey ·· ev.altKey ·· (key != |
 | 8 | `finish` | `attach-ui.js` | var done = false; |
 | 8 | `headers` | `books-acting.js` | the headers of a request into the store's books: |
-| 8 | `hint` | `books-practice.js` |  |
 | 8 | `walk` | `cap-books-tree.js` | write one tree node and, when it is open, its children |
 | 8 | `crmEdit` | `cap-crm.js` |  |
 | 8 | `crmPlural` | `cap-crm.js` |  |
