@@ -26,7 +26,7 @@ const home = read('public/app/home2.js');
 const ctx2 = {}; vm.createContext(ctx2); vm.runInContext(cut(home, 'needsCount') + '\nthis.f = needsCount;', ctx2);
 const doors = [{ n: 1, t: 'a' }, { n: 12, t: '12 new orders' }, { n: 4, t: '4 tasks for you' }];
 assert.strictEqual(ctx2.f(doors), 17); assert.strictEqual(ctx2.f([{ n: 12 }, { n: 4 }]), 16, '12 orders and 4 tasks are 16, not 2'); ok('Do first counts things (12 + 4 = 16), not doors');
-assert(/data-testid="ix2-do-count">' \+ needsCount\(doors\)/.test(home) && /setNeeds\(needsCount\(doors\)\)/.test(home), 'digit and bell read the one function'); ok('the digit and the bell read the same function');
+assert(/data-testid="ix2-do-count">' \+ needsCount\(doors\)/.test(home), 'the digit reads needsCount'); ok('the Do-first digit reads needsCount (the bell is the feed count, FW-39)');
 assert(!/>' \+ doors\.length \+ '<\/b>/.test(home), 'no digit from doors.length'); ok('no door-count digit left');
 
 /* 3 */
