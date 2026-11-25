@@ -61,6 +61,10 @@
     '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
       '.cbl .cbl-views::-webkit-scrollbar{display:none}',
       '.cbl .cbl-title .cbl-views.in-title{padding:0;background:none;overflow:visible;flex-wrap:wrap}',
+      /* AT-01 (Athi 25 Nov): on a wide screen the view tabs and the tools bar share ONE row (a list that has views no longer spends a whole row on three chips); a narrow screen keeps them stacked */
+      '@media (min-width:901px){.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools){display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);align-items:center}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-list{align-self:stretch}',
+      '.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>*{grid-column:1/-1}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-views{grid-column:1;padding-inline:0}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-tools{grid-column:2;padding-inline-start:12px}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-tools .cbl-search{flex-basis:120px}',
+      '.cbl:has(>.cbl-title):has(>.cbl-views:not(.in-title)+.cbl-tools){grid-template-rows:auto auto minmax(0,1fr)}}',
       '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
       '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
       '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
