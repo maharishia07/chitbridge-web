@@ -13,6 +13,7 @@
     var translate = options.tx, fill = options.txf;
     if (line.state === 'not_shared') return translate('Bank agreement is not shared with you');
     if (line.state === 'never') return translate('No bank sign-off yet');
+    if (line.state === 'no_run') return translate('Months are signed off, none in an unbroken run from the first bank entry'); /* RW2-03: the api's NO_RUN_WORDS, the Home card says the same */
     if (line.state === 'none_by_date') return translate('No sign-off on or before this date');
     var currency = line.currency, sign = fill('Signed off to {d}', { d: options.day(line.period_to) }) + ' · ' + translate('Statement') + ' ' + options.money(line.statement_minor, currency);
     if (line.state === 'earlier') return sign + ' · ' + translate('no difference shown for this date');

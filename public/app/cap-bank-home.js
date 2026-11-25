@@ -82,6 +82,14 @@ function bkhCanStep(step) {
 /** a sign-off covers every month from its period_from to its period_to (a year signed in one go is twelve months signed, not one); a record with no period_from covers its own end month only */
 const bkhCovers = (item, month) => String(item.period_from || item.period_to || '').slice(0, 7) <= month && month <= String(item.period_to || '').slice(0, 7);
 const bkhSignedIn = (account, month) => (BANK_HOME.signed[account.account_id] || []).some((item) => bkhCovers(item, month));
+/** RW2-02: a month signed off WITH a difference still counts as signed (the rw1fin decision) but never reads clean: the newest sign-off covering the month, when it carries an unexplained remainder, { minor, currency }; else null. The api's difference_minor as carried, never recomputed. */
+function bkhUnexplainedIn(account, month) {
+  const covering = (BANK_HOME.signed[account.account_id] || []).filter((item) => bkhCovers(item, month)).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  const newest = covering[0];
+  return newest && Number(newest.difference_minor || 0) !== 0 ? { minor: Math.abs(Number(newest.difference_minor)), currency: newest.currency } : null;
+}
+/** the words of that remainder, the Bank page's own: "A$354.32 unexplained" */
+const bkhUnexplainedWords = (un) => txf('{a} unexplained', { a: bkMoney(un.minor, un.currency) });
 /** the state of a month with no statement: still to come, in progress (not due yet, never Missing) or missing */
 function bkhGapState(month) {
   const now = bkhThisMonth();
@@ -203,11 +211,19 @@ function bkhFoldedHtml(data) {
 function bkhHeadRowHtml(data) {
   return '<tr><th scope="col">' + bkhE(tx('Account')) + '</th>' + data.months.map((month) => '<th scope="col">' + bkhE(bkstMonth(month)) + '</th>').join('') + '<th scope="col">' + bkhE(tx('This year')) + '</th></tr>';
 }
+/** RW2-02: " · Oct: A$354.32 unexplained" for each signed month that carries a remainder, beside the count; '' when none */
+function bkhUnexplainedMonths(data, account) {
+  return data.months.map((month) => ({ month, un: bankHomeStateOf(data, account, month) === 'signed' ? bkhUnexplainedIn(account, month) : null })).filter((row) => row.un).map((row) => ' · ' + bkstMonth(row.month) + ': ' + bkhUnexplainedWords(row.un)).join('');
+}
+/** the state of one account's month in an answer (cells read by account and month) */
+function bankHomeStateOf(data, account, month) {
+  return bankHomeState(account, month, data.cells.filter((cell) => cell.account_id === account.account_id && cell.month === month)[0]);
+}
 /** one line per account: its monthly sign-offs "n of m" (named when there is more than one account) */
 function bkhSignedLinesHtml(data) {
   const many = data.accounts.length > 1,
     count = data.months.length;
-  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: count })) + '</div>'; }).join('');
+  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: count })) + bkhE(bkhUnexplainedMonths(data, account)) + '</div>'; }).join('');
 }
 /** a month with no statement: the month in progress, a month not yet due, a month signed off with no file kept, or a gap (the person who may add gets the button to add it) */
 function bkhGapCellHtml(state, account, month, key, mayAdd) {
@@ -223,8 +239,9 @@ function bkhGapCellHtml(state, account, month, key, mayAdd) {
 /** a month with a statement kept: its press (open the lines), its mark, its count and the crossed-statements warning */
 function bkhHaveCellHtml(account, month, cell, state, key) {
       const crossed = cell.overlaps === true,
-  mark = state === 'open' ? '●' : state === 'signed' ? '✓' : '◦',
-  word = state === 'signed' ? tx('Signed off') : state === 'open' ? tx('Not signed off yet') : tx('Kept'),
+  un = state === 'signed' ? bkhUnexplainedIn(account, month) : null,
+  mark = state === 'open' ? '●' : state === 'signed' ? (un ? '✓!' : '✓') : '◦',
+  word = state === 'signed' ? (un ? tx('Signed off') + ' · ' + bkhUnexplainedWords(un) : tx('Signed off')) : state === 'open' ? tx('Not signed off yet') : tx('Kept'),
   warn = crossed ? tx('Two statements cover this month') : '';
       return (
   '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-have bkh-' + state + '" data-testid="bank-stmts-have-' + key + '"><button data-cbsid="BKS014-B47" type="button" class="bkh-cell" data-testid="bank-home-month-' + key + '" data-acct="' + bkhE(account.account_id) + '" data-month="' + bkhE(month) + '" onclick="bankHomePress(this)" title="' + bkhE(word + ' · ' + bkhMonthLong(month) + (warn ? ' · ' + warn : '')) + '" aria-label="' + bkhE(bkstAccountName(account) + ', ' + bkhMonthLong(month) + ', ' + word + (warn ? ', ' + warn : '')) + '"><span aria-hidden="true">' + mark + '</span> ' + bkhE(String(cell.file_ids.length)) + (crossed ? ' <span class="bks-flag" data-testid="bank-stmts-cross-' + key + '" aria-hidden="true">⚠</span>' : '') + '</button></td>'
