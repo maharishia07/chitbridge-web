@@ -42,7 +42,7 @@ async function bkWaitingView(body) {
       },
       search: function (waitingRow) {
         var billModel = bkWaitModel(waitingRow);
-        return [billModel && billModel.who, billModel && billModel.no, billModel && billModel.money && billModel.money.total, waitingRow.reason, waitingRow.why].join(' ');
+        return [billModel && billModel.who, bkWaitNo(waitingRow), billModel && billModel.money && billModel.money.total, waitingRow.reason, waitingRow.why].join(' ');
       },
       sorts: [
         {
@@ -63,7 +63,7 @@ async function bkWaitingView(body) {
           key: 'no',
           label: tx('Bill no'),
           cmp: function (left, right) {
-            return String((bkWaitModel(left) || {}).no || '').localeCompare(String((bkWaitModel(right) || {}).no || ''), undefined, { numeric: true });
+            return bkWaitNo(left).localeCompare(bkWaitNo(right), undefined, { numeric: true });
           }
         },
         {

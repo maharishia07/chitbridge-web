@@ -56,8 +56,8 @@ function bkNeedFilters() {
   ];
 }
 /** one chip of the header line: pressed when the list is narrowed to that reason */
-function bkNeedsChip(kind, text, pressed) {
-  return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + '" data-testid="needs-head-' + kind + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
+function bkNeedsChip(kind, text, pressed, tidSuffix) {
+  return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + (tidSuffix || '') + '" data-testid="needs-head-' + kind + (tidSuffix || '') + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
 }
 /** the chips of the header line, the server's counts only: parties that need you, then each reason with its count (overdue says the amount) */
 function bkNeedsChips(sum, side, currency, pressed) {
@@ -73,7 +73,12 @@ function bkNeedsChips(sum, side, currency, pressed) {
   ].forEach(function (reason) {
     if (sum[reason[0]]) parts.push(bkNeedsChip(reason[0], '<b>' + sum[reason[0]] + '</b> ' + esc(reason[1]), pressed));
   });
-  if (sum.overdue) parts.push(bkNeedsChip('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, currency)) : sum.overdue) + '</b> ' + esc(tx('overdue')), pressed));
+  /* FW-35: both sides on one list = two overdue figures, never one sum of what is owed to us and what we owe */
+  if (sum.overdue && sum.overdue_sides && sum.overdue_sides.length > 1) {
+    sum.overdue_sides.forEach(function (part) {
+      parts.push(bkNeedsChip('overdue', '<b>' + (part.minor != null ? esc(bkMoney(part.minor, currency)) : part.count) + '</b> ' + esc(tx(part.key === 'customer' ? 'overdue from customers' : 'overdue to suppliers')), pressed, '-' + part.key));
+    });
+  } else if (sum.overdue) parts.push(bkNeedsChip('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, currency)) : sum.overdue) + '</b> ' + esc(tx('overdue')), pressed));
   return parts;
 }
 /** the header line of Receivables / Payables: "12 suppliers need you · 8 no tax invoice · 3 no terms · A$4,210 overdue" — each a filter (a press again clears it) */
