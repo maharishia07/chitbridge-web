@@ -51,7 +51,7 @@ function bkLockRule(info, state) {
     blockWhy: state === 'open' ? lockWhy : bkLockWhyWords(info, 'reopen')
   };
 }
-/** a month's income cell: a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
+/** a month's profit cell (its heading says Profit, FW-05: it held the profit under the words Income, tax out): a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
 function bkLockSalesWord(info) {
   if (info && info.sales_minor === undefined) return '—';
   if (info && info.profit_minor !== undefined && info.profit_minor !== null) return bkMoney(info.profit_minor); /* C-F-01: the P&L's income less expenses before tax, a loss month reads its loss */
@@ -218,7 +218,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Income, tax out') +
+    tx('Profit') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';
