@@ -21,8 +21,8 @@ of file each thing is; this says what already does the job.
 | 78 | `toast` | `cb-words.js` |  |
 | 71 | `host` | `chit-sheet.js` |  |
 | 66 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
+| 66 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 65 | `body` | `books-acting.js` | a write's body: |
-| 65 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 64 | `view` | `country-ready.js` |  |
 | 58 | `lines` | `cart.js` |  |
 | 57 | `sheet` | `cap-employees.js` |  |
@@ -41,8 +41,8 @@ of file each thing is; this says what already does the job.
 | 40 | `money` | `cart.js` |  |
 | 39 | `modal` | `app.html` |  |
 | 39 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
+| 39 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
 | 38 | `ensureCap` | `app.html` |  |
-| 38 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
 | 37 | `note` | `device-id.js` | note(where, problem) — |
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 36 | `names` | `shortcuts.js` |  |
@@ -74,13 +74,13 @@ of file each thing is; this says what already does the job.
 | 25 | `dialog` | `ui.js` | ui.dialog({ mount, title · titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bod |
 | 24 | `done` | `attach-ui.js` |  |
 | 23 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
+| 23 | `send` | `cap-quotes.js` |  |
 | 23 | `account` | `cap-settings.js` |  |
 | 23 | `said` | `cap-shop.js` |  |
 | 23 | `later` | `home2.js` | adopt once on the next frame, however many changes ask for it |
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
 | 22 | `held` | `books-grant-api.js` |  |
 | 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
-| 22 | `send` | `cap-quotes.js` |  |
 | 22 | `moment` | `shop-time.js` |  |
 | 22 | `actions` | `workflow.js` | actions(chit, me) — |
 | 21 | `resolve` | `api-base.js` | env = { host, stored, cbApi, remove } (all optional; the page's own values are read when absent). |
@@ -136,6 +136,7 @@ of file each thing is; this says what already does the job.
 | 14 | `waiting` | `cap-settings.js` |  |
 | 14 | `ready` | `cap-suppliers.js` | readiness in three answers + the server's own sentence when it has one |
 | 14 | `units` | `cart.js` |  |
+| 14 | `part` | `country-compare.js` | value); flags: |
 | 14 | `mark` | `shell.js` |  |
 | 13 | `repaint` | `avatar.js` |  |
 | 13 | `token` | `books-clients-door.js` |  |
@@ -152,7 +153,6 @@ of file each thing is; this says what already does the job.
 | 12 | `make` | `cap-settings-guide.js` | hands the parent its two pieces, bound to the parent's words (T) and may-to-reason (grey) functions |
 | 12 | `render` | `cap-traceability.js` | var seen = {}; |
 | 12 | `seat` | `chit-sheet.js` | seat the dialog where its place wants it: |
-| 12 | `part` | `country-compare.js` | value); flags: |
 | 12 | `refuses` | `device-id.js` | refuses(url, init, request) → true when this api write must not go: |
 | 12 | `shopReg` | `helpers.js` | that needs the pack's word asks here, never a second `if (country === 'IN')`. |
 | 11 | `compose` | `app.html` |  |
@@ -179,6 +179,7 @@ of file each thing is; this says what already does the job.
 | 10 | `ftNav` | `cap-finance-terms.js` |  |
 | 10 | `surface` | `cap-settings.js` |  |
 | 10 | `friendlyErr` | `cb-words.js` |  |
+| 10 | `plain` | `country-compare.js` |  |
 | 10 | `same` | `period-pick.js` |  |
 | 9 | `forms` | `app.html` | A noun in its six Arabic count forms, ready to drop into a sentence template. |
 | 9 | `openChit` | `app.html` |  |
@@ -194,7 +195,6 @@ of file each thing is; this says what already does the job.
 | 9 | `touched` | `cart.js` |  |
 | 9 | `lock` | `chit-sheet.js` | the page behind does not scroll while the sheet is open — |
 | 9 | `unwrap` | `core.js` | capped · cap_note (SIBS below) — |
-| 9 | `plain` | `country-compare.js` |  |
 | 9 | `taxIdWord` | `helpers.js` | the pack's own word for a tax id: |
 | 9 | `adopt` | `home2.js` | take the shell's cards into their rows, then repaint the rows and the Do-first row |
 | 9 | `readiness` | `lab-kit.js` | the grouped readiness block: |
