@@ -835,7 +835,7 @@ function offCard() {
   $('nav').innerHTML = '';
   card(
     `<h2 data-testid="acc-off">Accounts is not switched on</h2>` +
-      (isOwner()
+      (isOwner() && !(window.CBBooksActing && CBBooksActing.current()) /* FW-02: the switch is the firm's own; a client's books are switched on by its owner */
         ? `<button data-cbsid="BKS001-B07" type="button" class="act" data-testid="acc-switch-on" id="switchOn">Switch on</button>`
         : `<p data-testid="acc-ask-owner">Ask the owner to switch it on</p>`)
   );
@@ -946,9 +946,10 @@ async function start() {
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
     /* SPEED (batch 1128): the avatar already read /me for this page; when it has answered, its ledger_on is the answer - no second /me round trip before the ledger read */
-    const known = knownLedgerOn();
+    /* FW-02: acting for a client, the Ledger that matters is the CLIENT'S, and booksHealth (sent with the acting headers) answers for it. The avatar's switch and /me are the firm's OWN books, so an adviser whose practice keeps none was told "Accounts is not switched on" in the middle of a client's journal */
+    const acting = CBBooksActing.current(), known = acting ? null : knownLedgerOn();
     startTodoEarly(known);
-    const profile = typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
+    const profile = acting ? {} : typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
     if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
     noteHealth(reply);
