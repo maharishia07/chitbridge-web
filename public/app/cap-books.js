@@ -202,6 +202,8 @@ function bkCss() {
     '#bk_body input[type=date].inp,#bk_body select.inp,#bk_body .supacts .inp{width:auto}',
     /* the primary button of a pane's action row (Pay · Receive · Edit · Lock …) — once here, so accounts.html, crm.html and the app read the same */
     '.supacts button.supact-pri,#bk_body .supacts button.supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,var(--on-accent))}',
+    /* FW-33: a primary button the server greys (Close before the quarter ends) LOOKS grey: the filled accent never shows on a disabled one, and the sentence under it says why */
+    '#bk_body .supacts button:disabled,#bk_body .supacts button.supact-pri:disabled{background:var(--card);border:1px dashed var(--line);color:var(--grey);cursor:not-allowed;filter:none}',
     /* ⭐ THE MONEY INPUT (bkMoneyInput): the symbol sits inside the field, the figure runs to the end; the box is the field's, so the symbol never wraps off */
     '.mi{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;width:auto;max-width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}',
     '.mi:focus-within{border-color:var(--blue)}',
