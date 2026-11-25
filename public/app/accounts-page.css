@@ -271,12 +271,13 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 /* W15-100 (Athi 16 Nov, hundreds of months): ONE year on the grid (its own scroll when there are many accounts), the year stepper, the cards' long list and the kept files list scroll inside their own boxes, so the page never grows */
 .bkh-fy{display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap}.bkh-fynow{font-size:14px;min-width:96px;text-align:center}
 #bk_body .bkh-step{min-height:32px;height:32px;padding:0 10px;font-size:13px}#bk_body .bkh-step[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}#bk_body .bkh-step:disabled{opacity:.45;cursor:default}
-#bk_stmts:has(.bkh-body){display:flex;flex-direction:column;max-height:calc(100dvh - 286px);min-height:0}#bk_stmts:has(.bkh-body) .bks-bar,#bk_stmts:has(.bkh-body) .bkh-fy{flex:none}
+#bk_stmts:has(.bkh-body){display:flex;flex-direction:column;max-height:calc(100dvh - 200px);min-height:0}#bk_stmts:has(.bkh-body) .bks-bar,#bk_stmts:has(.bkh-body) .bkh-fy{flex:none}
 .bkh-body{flex:1 1 auto;min-height:0;overflow:auto}
 #bk_body .bkh-more{min-height:32px;align-self:flex-start}
 .bkh-all{display:flex;flex-direction:column;gap:6px;margin:6px 0;max-height:clamp(150px,40vh,330px);overflow:auto}#bk_body .bkh-allrow{justify-content:flex-start;text-align:left;width:100%;height:32px;white-space:nowrap}
 /* the whole list of cards, or the kept files, take the place of the grid while they are open: the page never grows */
-#bk_stmts:has(.bkh-cards-all) :is(.bks-wrap.bkh-gridwrap,.bkh-key),#bk_stmts:has(details.bkh-files[open]) :is(.bkh-cards,.bks-wrap.bkh-gridwrap,.bkh-key,.bks-just,[data-testid=bank-stmts-kept]){display:none}.bkh-pageof{font-size:12.5px;color:var(--muted-2);margin-inline-end:8px}
+#bk_stmts:has(.bkh-cards-all) :is(.bks-wrap.bkh-gridwrap,.bkh-key),/* RW1-13: the kept files no longer take the cards and the month grid away (the page scrolls inside .bkh-body, so it still never grows); only the "just read" line steps aside */
+#bk_stmts:has(details.bkh-files[open]) :is(.bks-just,[data-testid=bank-stmts-kept]){display:none}.bkh-pageof{font-size:12.5px;color:var(--muted-2);margin-inline-end:8px}
 .bkh-pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-height:32px;padding:2px 0}.bkh-pager:empty{display:none}.bkh-pager .cbl-pgbtn{min-height:32px}
 .bkf-l1{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}.bkf-l1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.bkf-l1 .bks-acts{display:inline-flex;gap:6px;flex:none}
 .bkf-l2{display:block;min-width:0;color:var(--muted-2);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

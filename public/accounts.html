@@ -748,6 +748,7 @@ async function accTodo(body) {
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
     addBankTodo(list);
+    wordBankUnexplained(list);
     ACC.todo = list;
     body.innerHTML = list.length
       ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
