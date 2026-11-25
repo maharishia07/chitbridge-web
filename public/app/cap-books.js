@@ -2805,8 +2805,22 @@ function bkDvNextCell(e, currency, ctx) {
 }
 /** Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first); none when the page has no enReverse */
 function bkDvActions() {
+  /* RW1-27: a sale (a bill, not a walk-in day's one entry) offers Credit note: the till's one return sheet opens at that bill; a bill credited in full says so instead (CBSheet.creditNote) */
+  var credit = {
+    id: 'credit',
+    icon: '↩',
+    label: 'Credit note',
+    tid: 'db-credit',
+    when: function (e) {
+      return !!(e.source && e.source.kind === 'bill' && e.source.chit_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal' && window.CBSheet && CBSheet.creditNote);
+    },
+    run: function (e) {
+      CBSheet.creditNote(e.source.chit_id);
+    }
+  };
   return typeof enReverse === 'function'
     ? [
+        credit,
         {
           id: 'reverse',
           icon: '↩',
@@ -2820,7 +2834,7 @@ function bkDvActions() {
           }
         }
       ]
-    : undefined;
+    : [credit];
 }
 /** declare the Day book's list once per read: its columns, grouping, five filters (Kind · Tender · Counter · Person · Evidence), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {

@@ -160,6 +160,7 @@
       cur: cur, costHidden: costHiddenOf(r) /* RAIL-146: the server took the money off this read for a cost-blind co-assist; the total says "hidden" */,
       iSent: iSent,
       counterBill: counterBill,
+      credit: r && r.credit && typeof r.credit === 'object' ? r.credit : null /* RW1-27: how much of this bill is already credited (the server's read) */,
       billRx: billRx,
       captured: captured,
       hasOther: !iSent || others.length > 0,
@@ -339,6 +340,14 @@
     var a = m && (m.billRx || m.expenseDoc) ? m.may : null;
     return a && a.ok === false ? a.say || (serverSaid(m) || {}).why || T(m.expenseDoc ? 'This expense is already in your books' : 'You cannot accept this bill now') : null;
   }
+  /** RW1-27: a bill already credited in full has nothing left to take back → the sentence the greyed Credit note button carries; else null */
+  function refusedReturn(m) {
+    return m && m.credit && m.credit.full ? T('This bill has already been credited in full, so there is nothing left to take back.') : null;
+  }
+  /** RW1-27: the counter opened at this bill's return (the till reads ?return= once and opens its one return sheet) */
+  function returnAddress(id) {
+    return '/till.html?return=' + encodeURIComponent(id);
+  }
   /** FX-F10W2: the server refused Reject on this bill (actions.reject — the level alone) → its sentence; else null. needs: ['reason'] → ask it. */
   function refusedReject(m) {
     var a = m && m.billRx ? m.mayReject : null;
@@ -362,7 +371,7 @@
     goodsin: ['📥', 'Goods in'],
     done: ['✔', 'Done'],
     print: ['🖨', 'Print'],
-    'return': ['↩', 'Return'],
+    'return': ['↩', 'Credit note'],
     repeat: ['🔁', 'Repeat this…'],
     page: ['↗', 'Open page']
   };
@@ -924,17 +933,18 @@
   function actsHTML(view) {
     var no = refusedAccept(view),
       noR = refusedReject(view),
+      noC = refusedReturn(view),
       items = actsOf(view).filter(function (item) {
         return !(CS.mode === 'page' && item === 'page');
       });
     /* UX-116 R60: a greyed action says why in a line on the page, not only in a tooltip a phone never shows */
-    var line = CS.sample ? '' : (items.indexOf('accept') >= 0 && no) || (items.indexOf('reject') >= 0 && noR) || '';
+    var line = CS.sample ? '' : (items.indexOf('accept') >= 0 && no) || (items.indexOf('reject') >= 0 && noR) || (items.indexOf('return') >= 0 && noC) || '';
     if (serverSaid(view) && serverSaid(view).why === line) line = ''; /* the body already says it */
     return (
       (line ? '<p class="cs-why" data-testid="cs-why">' + esc(line) + '</p>' : '') +
       items
         .map(function (item) {
-          var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : null,
+          var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : item === 'return' ? noC : null,
             refused = !!why; /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
           return (
             '<button data-cbsid="SCR050-B04" type="button" class="cs-act" data-testid="cs-act-' +
@@ -1412,8 +1422,9 @@
       return;
     }
     if (k === 'return') {
-      CS.note = T('Returns are made at the counter, against the bill.');
-      return paint();
+      if (refusedReturn(m)) return; /* greyed: the bill is credited in full */
+      if (root.location && id) root.location.href = returnAddress(id); /* the till's own return sheet: one flow, one posting */
+      return;
     }
     if (k === 'dispute') return raiseDispute(id);
     if (k === 'repeat') {
@@ -1473,7 +1484,20 @@
     paint();
   }
 
+  /** RW1-27: Credit note from a page that holds only the bill's id (the Day book's sale entry): read the bill, then say why not (credited in full) or open the till's return — the same two answers as the sheet's button. → the sentence, or null when it opened */
+  function creditNote(id) {
+    return api('chit', { params: { id: id } }).then(function (r) {
+      var why = refusedReturn(model(r));
+      if (why) {
+        if (typeof root.toast === 'function') root.toast(why);
+        return why;
+      }
+      root.location.href = returnAddress(id);
+      return null;
+    });
+  }
   root.CBSheet = {
+    creditNote: creditNote,
     reject: reject,
     reason: function (v) {
       CS.reason = String(v == null ? '' : v);
