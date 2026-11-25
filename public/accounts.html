@@ -629,11 +629,14 @@ async function accBills(body) {
       return accBillsFromBooks(folder, list);
     };
     let cur = sys.find((item) => item.code === ACC.billTab);
-    let side = await loadSide(cur);
+    /* RW2-10: a tab counts the rows of ITS list (the one the rows below are drawn from), never the folder's own count: both sides load together */
+    const sides = {};
+    await Promise.all(sys.map(async (item) => { sides[item.code] = await loadSide(item); }));
+    let side = sides[cur.code];
     /* BD-F-02: the screen opened on Received (nothing open) beside an Issued tab and a Dues screen that owe 116.00. Until the owner picks a tab, open on the side that has something open. */
     const other = sys.find((item) => item.code !== cur.code);
     if (!ACC.billPicked && !side.rowsAll.length && other) {
-      const otherSide = await loadSide(other);
+      const otherSide = sides[other.code];
       if (otherSide.rowsAll.length) {
         cur = other;
         side = otherSide;
@@ -647,7 +650,7 @@ async function accBills(body) {
       sys
         .map(
           (item) =>
-            `<button data-cbsid="BKS001-B04" type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${Number(item.count) || 0}</span></button>`
+            `<button data-cbsid="BKS001-B04" type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${sides[item.code].rowsAll.length}</span></button>`
         )
         .join('') +
       '</div>';
