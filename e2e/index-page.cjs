@@ -182,15 +182,16 @@ async function run() {
       const fit = await pg.evaluate(() => { const d = document.documentElement; return { sy: d.scrollHeight - innerHeight, sx: d.scrollWidth - innerWidth }; });
       ok(fit.sy <= 1 && fit.sx <= 0, '1366 · the page fits one screen (' + JSON.stringify(fit) + ')');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
-      /* rule (a): a card the manifest says is not ready draws the grey tile, never a live card; a ready built card is a link to its page */
+      /* READY-HINT (25 Nov): no card is covered or dead; a card the manifest says is not ready is still a link and carries ONE hint at the card ("Being finished"); a ready card has none */
       for (const g of await pg.$$('.ix-row')) { await g.click(); await pg.waitForTimeout(120); }
-      const grey = await pg.$$eval('[data-ready="no"]', (n) => n.length);
+      const hinted = await pg.$$eval('.cbsh-box [data-ready="no"]', (n) => n.length);
       const notReady = man.entries.filter((e) => e.ready === false && e.state === 'built');
-      ok(grey > 0 || notReady.length === 0, '1366 · not-ready cards draw grey (' + grey + ' grey, ' + notReady.length + ' built-but-not-ready entries in the manifest)');
+      ok(hinted > 0 || notReady.length === 0, '1366 · not-ready cards carry the one hint (' + hinted + ' hinted, ' + notReady.length + ' built-but-not-ready entries in the manifest)');
       const readyRoutes = man.entries.filter((e) => e.state === 'built' && e.ready !== false && e.route).map((e) => e.route.split('#')[0]);
-      const liveLinks = await pg.$$eval('.cbsh-box:not(.off)[href]', (n) => n.map((x) => x.getAttribute('href')));
-      const stray = liveLinks.filter((h) => !readyRoutes.includes(h.split('#')[0]));
-      ok(stray.length === 0, '1366 · every live card links to a READY built entry (a not-ready one is never a link)' + (stray.length ? ' - not: ' + stray.join(',') : ''));
+      const liveCards = await pg.$$eval('.cbsh-box:not(.off)[href]', (n) => n.map((x) => ({ h: x.getAttribute('href'), hint: !!x.querySelector('[data-ready="no"]') })));
+      const stray = liveCards.filter((c) => !readyRoutes.includes(c.h.split('#')[0]) && !c.hint).map((c) => c.h);
+      const wrongHint = liveCards.filter((c) => readyRoutes.includes(c.h.split('#')[0]) && c.hint).map((c) => c.h);
+      ok(stray.length === 0 && wrongHint.length === 0, '1366 · a card to a not-ready entry carries the hint, a ready one never does' + (stray.length ? ' - no hint: ' + stray.join(',') : '') + (wrongHint.length ? ' - hint on ready: ' + wrongHint.join(',') : ''));
       /* every read the page makes is a budgeted one */
       const unbudgeted = [...new Set(calls.filter((c) => !budgeted(c.p, c.m)).map((c) => c.m + ' ' + c.p))];
       unbudgeted.forEach((u) => found.push({ key: 'no budget line: ' + u, show: u }));   /* ratcheted in e2e/scanner-known.json (api owns the budget lines): a NEW unbudgeted read fails */
