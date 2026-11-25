@@ -29,6 +29,7 @@ const CHIT = 'abcdef12-3456-4789-8abc-def012345678', NO = 'C7/26-27/0042';
   const sent = [];
   const HISTORY = [{ chit_id: CHIT, no: NO, at: new Date(Date.now() - 3 * 86400000).toISOString(), total: 236, customer: 'Walk-in', kind: 'cash', payments: [{ how: 'cash', amount: 236 }],
     taxable: 200, tax: 36, lines: [{ name: 'Pen', qty: 2, unit: 'nos', price: 118, net: 236, gst_rate: 18 }] }];
+  const OLD = Object.assign({}, HISTORY[0], { chit_id: '11111111-2222-4333-8444-555555555555', no: 'C7/26-27/0007', at: new Date(Date.now() - 90 * 86400000).toISOString() });
   const api = http.createServer(async (q, r) => {
     let raw = ''; for await (const c of q) raw += c;
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
@@ -37,7 +38,7 @@ const CHIT = 'abcdef12-3456-4789-8abc-def012345678', NO = 'C7/26-27/0042';
     const u = q.url.split('?')[0];
     if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' }, till: { suggested_id: 'C1', assigned_id: 'C1' }, items: [{ id: 'xmango', item_id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     if (u === '/api/till/recheck') return j(200, recheckStub(raw, { xmango: 50 }));
-    if (u === '/api/till/bills') return j(200, { bills: HISTORY });
+    if (u === '/api/till/bills') { const want = new URL(q.url, 'http://x').searchParams.get('chit'); return j(200, { bills: want ? HISTORY.concat([OLD]).filter((x) => x.chit_id === want) : HISTORY }); } /* RW2-05: the route answers ONE bill by ?chit=, of any age */
     if (u === '/api/entities/register' || u === '/api/signin/ask') return j(200, { message: 'sent', dev_otp: '123456' });
     if (u === '/api/entities/verify' || u === '/api/signin/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/chits/send') { try { sent.push(JSON.parse(raw)); } catch (_) {} return j(200, { chit_id: 'c' + sent.length }); }
@@ -81,7 +82,13 @@ const CHIT = 'abcdef12-3456-4789-8abc-def012345678', NO = 'C7/26-27/0042';
 
   console.log('\n-- 4 · an id the shop does not hold');
   const r4 = await ask('00000000-0000-4000-8000-000000000000');
-  say('nothing opens and it says why', !r4.open && /last 30 days/.test(await said()), (await said()).replace(/\s+/g, ' ').slice(0, 80));
+  say('nothing opens and it says why', !r4.open && /holds no counter bill with that address/.test(await said()), (await said()).replace(/\s+/g, ' ').slice(0, 80));
+
+  console.log('\n-- 5 · RW2-05: a sale 90 days old is read by its id, opened, and not kept on the device');
+  const r5 = await ask(OLD.chit_id);
+  say('the return sheet opens at the old bill', r5.open && r5.no === OLD.no, JSON.stringify(r5));
+  const kept = await p.evaluate(async (n) => (await DB.all('bills')).some((x) => x.no === n), OLD.no);
+  say('the old bill is not left in the device store', !kept, String(kept));
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');
