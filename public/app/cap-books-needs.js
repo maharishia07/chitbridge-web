@@ -68,7 +68,7 @@ function bkNeedsChips(sum, side, currency, pressed) {
     ['no_tax_invoice', tx('no tax invoice')],
     ['no_terms', tx('without terms')],
     ['disputed', tx('disputed')],
-    ['query', tx('open queries')],
+    ['query', txn('open query', 'open queries', sum.query)] /* RW1-15: one is "1 open query", never "1 open queries" (the one plural helper) */,
     ['held', tx('on hold')]
   ].forEach(function (reason) {
     if (sum[reason[0]]) parts.push(bkNeedsChip(reason[0], '<b>' + sum[reason[0]] + '</b> ' + esc(reason[1]), pressed));

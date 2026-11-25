@@ -196,6 +196,9 @@
       '.cbl .cbl-lline{display:flex;gap:4px 10px;align-items:baseline}',
       '.cbl .cbl-lflow{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 0}',
       '.cbl .cbl-lflow > span:not(:last-child)::after{content:"·";color:var(--cl-ghost);margin:0 7px}',
+      /* RW1-14: a part that holds a block (the description with its "Made by / recorded" line) drew its "·" on a line of its own and the next button sat against its last word: no dot after it, a gap instead */
+      '.cbl .cbl-lflow > span.cbl-grow{flex:1 1 0;min-width:16ch}.cbl .cbl-lflow > span.cbl-grow:not(:last-child)::after{content:none}.cbl .cbl-lflow > span.cbl-grow:not(:last-child){margin-inline-end:12px}',
+      '.cbl .cbl-lflow > span:has(div):not(:last-child)::after{content:none}.cbl .cbl-lflow > span:has(div):not(:last-child){margin-inline-end:12px}',
       '.cbl .cbl-lamt{font-family:var(--cl-num);font-weight:700;white-space:nowrap}',
       '.cbl .cbl-lgist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));padding-inline-start:22px;margin-top:1px}',
       /* states */
