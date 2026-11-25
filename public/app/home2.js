@@ -325,7 +325,7 @@
       home.df.innerHTML = html;
     }
     home.df._items = doors;
-    if (root.CBBell && root.CBBell.setNeeds) root.CBBell.setNeeds(needsCount(doors)); /* the bell's dot is THIS list's size (Do first), not the activity feed's unread count */
+    /* FW-39: the bell's dot is the Activity feed's unread count on EVERY page (what its popup lists); Home no longer swaps in the Do-first size, which made 1 here and 3 on the next page. CBBell.setNeeds stays for a page that really wants it. */
   }
   /* the shell draws (and, for a firm, redraws) its cards into .cbsh-more; every card keeps its own node, so the facts the shell paints keep landing in it */
   function adoptCards(home) {

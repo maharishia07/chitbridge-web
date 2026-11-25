@@ -1299,6 +1299,8 @@ var CBSettings = (function () {
     var d = x.def,
       v = polShown(d, x.v);
     if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
+    /* FW-41: a set (Sign in with) reads as its members' words, "Google, Microsoft", never the stored keys "google,microsoft" */
+    if (d.type === 'set' && Array.isArray(x.v)) return x.v.map(function (k) { return T((d.labels && d.labels[k]) || String(k)); }).join(', ');
     /* AU-WORDS: a number the server names (ui.labels[value] — "No expiry", "Keep — the law here asks 5 years") reads as its word, never "0" */
     if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
     return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
@@ -1643,6 +1645,14 @@ var CBSettings = (function () {
   }
 
   /* ═════ PLAN & USAGE — GET /entities/entitlements (the plan, every quota as a STATE) + GET /entities/usage (what was billed) ═════ */
+  /** FW-41: a usage meter in words ("chit.send" -> "Chits sent"); a meter not listed reads humanised ("ai.draft" -> "Ai draft"), never a dotted key */
+  var USE_WORDS = { 'chit.send': 'Chits sent', 'coassist.create': 'CB Assist answers', 'ai.draft': 'Drafts written for you' };
+  function useWord(meter) {
+    var m = String(meter || '');
+    if (USE_WORDS[m]) return USE_WORDS[m];
+    var plain = m.replace(/[._]+/g, ' ').trim();
+    return plain ? plain.charAt(0).toUpperCase() + plain.slice(1) : '';
+  }
   var QUOTA_WORDS = {
     entities: 'Shops and branches',
     actors: 'People',
@@ -1812,9 +1822,8 @@ var CBSettings = (function () {
           label: T('Kind'),
           prio: 1,
           w: 220,
-          mono: true,
           cell: function (m) {
-            return m.meter;
+            return T(useWord(m.meter));
           }
         },
         {

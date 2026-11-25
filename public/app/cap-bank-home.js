@@ -254,7 +254,7 @@ function bankHomeGridHtml() {
   return (
     '<div class="pe-note bkh-signed" data-testid="bank-home-signed">' + bkhSignedLinesHtml(data) + '</div>' +
     '<div class="bks-wrap bkh-gridwrap"><table class="bks-grid" data-testid="bank-stmts-grid"><thead>' + bkhHeadRowHtml(data) + '</thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off yet')) + ' · ○ ' + bkhE(tx('Not signed off')) + ' · ' + bkhE(tx('no statement kept')) + '</div>'
+    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off yet')) + ' · ○ ' + bkhE(tx('no statement kept')) + '</div>'
   );
 }
 /** a month pressed, or Continue: that statement's lines */
