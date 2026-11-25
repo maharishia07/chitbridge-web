@@ -4600,7 +4600,7 @@ var BK_BS = { kind: 'today', step: 0, asOf: '' };
 /** a carried change or share (basis points) as a short percent: "+25.0%" or "12.5%"; "—" when the server had nothing to compare with */
 function bkPct(bp, signed) {
   if (bp == null) return '<span style="color:var(--grey)">—</span>';
-  return esc(CBUiMoney.pct(bp, signed)); /* RW1-07: the one rounding rule lives in ui-money.js */
+  return esc(CBUiMoney.percentText(bp, signed)); /* RW1-07: the one rounding rule lives in ui-money.js */
 }
 function bkSpan(from, to) {
   return bkDate(from) + ' – ' + bkDate(to);

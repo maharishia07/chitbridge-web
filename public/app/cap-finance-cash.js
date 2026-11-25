@@ -365,30 +365,6 @@ function fcNext(dayRow) {
     '</div>'
   );
 }
-/** the GST chips of the head: what the next return owes, and (own line) what the ledgers owe from before its period — none when nothing is payable */
-function fcGstChips(reply) {
-  var chips = [];
-  if (reply.gst && Number(reply.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(reply.gst, reply.currency) });
-  var earlier = reply.gst && reply.gst.earlier;
-  if (earlier && Number(earlier.payable_minor) > 0) {
-    if (earlier.returns && earlier.returns.length) {
-      /* FW-30: the late return is named with its own date, like the BAS page; what no return holds is its own line, never dated */
-      earlier.returns.forEach(function (item) {
-        chips.push({ tid: 'fc-gst-earlier-' + item.period, text: fcLateReturnChip(reply.gst, item, reply.currency) });
-      });
-      if (Number(earlier.other_minor) > 0) chips.push({ tid: 'fc-gst-earlier', text: fcOnNoReturnChip(reply.gst, earlier.other_minor, reply.currency) });
-    } else chips.push({ tid: 'fc-gst-earlier', text: fcEarlierChip(reply.gst, reply.currency) });
-  }
-  return chips;
-}
-/** FW-30: a finished period's return the books still owe — the BAS page's own words: form short · period · figure · its due date · overdue */
-function fcLateReturnChip(g, item, cur) {
-  return (g.short || '') + ' ' + item.label + ' ' + bkMoney(item.payable_minor, cur) + ' · ' + tx('due') + ' ' + bkDate(item.due_date) + (item.overdue ? ' · ' + tx('overdue') : '');
-}
-/** FW-30: what the ledgers owe that no return holds (an opening balance or tax dated outside the periods) — said so, with no due date made up for it */
-function fcOnNoReturnChip(g, minor, cur) {
-  return (packWord('taxName') || g.short) + ' ' + tx('owing, on no return') + ' ' + bkMoney(minor, cur);
-}
 /** the sentence on top (the server's words), what is left out, and GST — as the list's own notices and chips */
 function fcHead() {
   var reply = FC.r,
@@ -416,16 +392,6 @@ function fcHead() {
     });
   }
   return { title: tx('Cash position'), notices: notices, chips: chips };
-}
-/** the return chip: the pack's word (gst.short) · the figure · its date and whether it is inside the window — or, with no date (the pack would not guess), the server's sentence */
-function fcReturnChip(g, cur) {
-  var when = g.due_date ? bkDate(g.due_date) + (g.counted ? '' : ' · ' + tx('after this window')) : g.why || tx('due date not known');
-  return g.short + ' ' + bkMoney(g.payable_minor, cur) + ' · ' + when;
-}
-/** ONE-FIGURE: what the ledgers owe from BEFORE the return's period (an opening balance or earlier periods) — its own line, the server's figure, no due date made up for it */
-function fcEarlierChip(g, cur) {
-  var e = g.earlier;
-  return (packWord('taxName') || g.short) + ' ' + tx('owing from before') + ' ' + (e.before ? shopDay(e.before) : tx('this period')) + ' · ' + bkMoney(e.payable_minor, cur) + ' · ' + tx('due date not recorded');
 }
 /** mount the Cash tab into the screen */
 function fcMount(frame) {

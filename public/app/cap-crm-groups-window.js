@@ -32,14 +32,14 @@ async function crmShopLiveRead() {
     return; /* unreadable: say nothing false */
   }
   var note = document.getElementById('crm_sc_notlive'),
-    why = crmShopWhyNot(SHOW.me);
-  if (note) note.textContent = why;
+    shopWhyNot = crmShopWhyNot(SHOW.me);
+  if (note) note.textContent = shopWhyNot;
   /* RW1-21: a link offered must open. While the public would meet "Shop not found", the three ways to send it are greyed on the spot (the hint above says why; the title repeats it); no page cover */
   ['crm-sc-copy', 'crm-sc-group', 'crm-sc-q'].forEach(function (tid) {
     var node = document.querySelector('[data-testid="' + tid + '"]');
     if (!node) return;
-    node.disabled = !!why;
-    if (why) node.setAttribute('title', why);
+    node.disabled = !!shopWhyNot;
+    if (shopWhyNot) node.setAttribute('title', shopWhyNot);
     else node.removeAttribute('title');
   });
   var url = document.querySelector('[data-testid="crm-sc-url"]');
