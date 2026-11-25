@@ -32,7 +32,10 @@ function bkstMonth(month) {
 /** the bank ledgers the page lists (bkbBanks: the ONE list), each { code, name } */
 const bkstBanks = () => BKST.banks.map((item) => ({ code: String(item.code), name: item.name }));
 /** the account of a row of the answer, as the page names it: its name and the owner's label (..1234) */
-const bkstAccountName = (account) => (account.name || tx('Bank account')) + (account.label ? ' ' + account.label : '');
+/* RW1-13: the label is added only when it says something the name does not ("Business bank account" + "Business account" read as one account twice) */
+const bkstWords = (text) => String(text || '').toLowerCase().split(/[^a-z0-9À-￿]+/).filter(Boolean);
+const bkstLabelAdds = (name, label) => { const have = bkstWords(name); return bkstWords(label).some((word) => have.indexOf(word) < 0); };
+const bkstAccountName = (account) => { const name = account.name || tx('Bank account'); return name + (account.label && bkstLabelAdds(name, account.label) ? ' ' + account.label : ''); };
 const bkstAccountOf = (id) => ((BKST.data && BKST.data.accounts) || []).filter((item) => item.account_id === id)[0] || {};
 
 /* ── the box ── */
@@ -368,7 +371,7 @@ function bkstFilesOptions() {
       { key: 'by', label: tx('Added by'), prio: 4, w: 130, cell: bkstFileBy },
       {
         key: 'acts',
-        label: '',
+        label: tx('Actions'),
         prio: 1,
         keep: true,
         w: 170,
