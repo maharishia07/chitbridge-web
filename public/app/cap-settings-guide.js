@@ -35,13 +35,20 @@
       '</button>'
     );
   }
+  /** FW-46: why the Guide is grey — a connector the platform says is not built (or not for this country) has no guide to read, so it says the same sentence as Download; else no guide yet; else live */
+  function guideWhy(connector, ctx) {
+    var code = (connector.may && connector.may.code) || '';
+    var verdict = /^NOT_(YET|FOR_COUNTRY)/.test(code) ? ctx.grey(connector.may) : '';
+    if (verdict) return verdict;
+    return guideOf(connector) ? '' : ctx.T('No guide yet');
+  }
   /** the two buttons of the "Get it" cell: Download (greyed with the kit's reason) and Guide (greyed when the connector has none) */
   function getItCell(connector, ctx) {
     var inWords = ctx.T;
     return (
       rowBtn('kit', connector, inWords('Download'), ctx.grey(connector.may), 'ACC002-B17') +
       ' ' +
-      rowBtn('guide', connector, inWords('Guide'), guideOf(connector) ? '' : inWords('No guide yet'), 'ACC002-B18')
+      rowBtn('guide', connector, inWords('Guide'), guideWhy(connector, ctx), 'ACC002-B18')
     );
   }
   /** WALK-REG R32: Download and Guide on the row itself, not only inside it — the same row actions (kit · guide), drawn here (CBList dispatches data-act from any button in the list) */
@@ -70,7 +77,7 @@
         return false;
       },
       why: function (connector) {
-        return guideOf(connector) ? '' : ctx.T('No guide yet');
+        return guideWhy(connector, ctx);
       },
       run: function (connector) {
         var guideLink = guideOf(connector);

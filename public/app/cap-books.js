@@ -5484,14 +5484,14 @@ function bkPbTableHTML(pid, pbState, answer, currency) {
   var sortable = on !== 'needs';
   var spec = [
     { k: 'date', label: 'Date', w: 92, sort: sortable, ln: 1, cell: function (row) { return esc(bkDate(row.date)); } },
-    { k: 'bill', label: 'Bill', sort: sortable, ln: 1, cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
+    { k: 'bill', label: 'Bill', w: 104, sort: sortable, ln: 1, /* FW-43: a floor, so Date and Bill never print on one another when the side panel narrows the grid */ cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
     { k: 'status', label: on === 'needs' ? 'Why' : 'Status', w: 200, ln: 1, cell: function (row) { return bkBillStatus(row, on); } },
     { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? bkSetTermsLink(pid) : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
     { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
     { k: 'amount', label: 'Amount', w: 100, r: true, sort: sortable, ln: 0, only: 'all', cell: function (row) { return moneyOf(row.amount_minor); } },
     { k: 'owed', label: 'Still owed', w: 104, r: true, sort: sortable, ln: 2, end: true, cell: function (row) { return row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + moneyOf(row.owed_minor) + '</b>'; } },
     {
-      k: 'reviewed', label: 'Reviewed', w: 90, ln: 0,
+      k: 'reviewed', label: 'Reviewed', w: 150, ln: 0, /* FW-43: wide enough for its chips ("Question from…" was cut at the right edge) */
       cell: function (row) {
         var held = row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold'); /* answer hold is said ONCE, in Status; Reviewed holds the tick (and answer query) only */
         return !held && marks && row.entry_id && marks.row(row.entry_id) ? marks.chip(row.entry_id) : '<span style="' + grey + '">—</span>';
