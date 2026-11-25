@@ -189,8 +189,9 @@ async function run() {
       ok(hinted > 0 || notReady.length === 0, '1366 · not-ready cards carry the one hint (' + hinted + ' hinted, ' + notReady.length + ' built-but-not-ready entries in the manifest)');
       const readyRoutes = man.entries.filter((e) => e.state === 'built' && e.ready !== false && e.route).map((e) => e.route.split('#')[0]);
       const liveCards = await pg.$$eval('.cbsh-box:not(.off)[href]', (n) => n.map((x) => ({ h: x.getAttribute('href'), hint: !!x.querySelector('[data-ready="no"]') })));
-      const stray = liveCards.filter((c) => !readyRoutes.includes(c.h.split('#')[0]) && !c.hint).map((c) => c.h);
-      const wrongHint = liveCards.filter((c) => readyRoutes.includes(c.h.split('#')[0]) && c.hint).map((c) => c.h);
+      const notReadyAt = (h) => man.entries.some((e) => e.ready === false && e.route && (e.route === h));
+      const stray = liveCards.filter((c) => notReadyAt(c.h) && !c.hint).map((c) => c.h);
+      const wrongHint = liveCards.filter((c) => !notReadyAt(c.h) && c.hint).map((c) => c.h);
       ok(stray.length === 0 && wrongHint.length === 0, '1366 · a card to a not-ready entry carries the hint, a ready one never does' + (stray.length ? ' - no hint: ' + stray.join(',') : '') + (wrongHint.length ? ' - hint on ready: ' + wrongHint.join(',') : ''));
       /* every read the page makes is a budgeted one */
       const unbudgeted = [...new Set(calls.filter((c) => !budgeted(c.p, c.m)).map((c) => c.m + ' ' + c.p))];
