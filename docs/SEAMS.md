@@ -38,7 +38,7 @@ of file each thing is; this says what already does the job.
 | 42 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 41 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 41 | `opts` | `books-grant-filters.js` |  |
-| 40 | `money` | `cart.js` |  |
+| 41 | `money` | `cart.js` |  |
 | 39 | `modal` | `app.html` |  |
 | 39 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
 | 39 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |

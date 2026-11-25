@@ -332,7 +332,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `list-lab.html` | 15 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 15 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 6 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 53 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 54 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 18 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 30 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |

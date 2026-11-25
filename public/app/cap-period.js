@@ -1008,7 +1008,7 @@ function peReturnCloseCard(r) {
   if (!period) return '';
   const greyWhy = period.ended ? '' : txf('Ends on {day}', { day: bkDate(period.end) });
   return (
-    '<div class="pe-card" data-testid="pr-close-card"><div class="pe-sub">' +
+    '<div class="pe-card pe-sticky-foot" data-testid="pr-close-card"><div class="pe-sub">' +
     esc(tx('Close and pay')) +
     '</div>' +
     '<div class="pe-note">' +
