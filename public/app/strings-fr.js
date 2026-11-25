@@ -1159,5 +1159,7 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {
     if (typeof renderApp === 'function') renderApp();
-  } catch (_) {}
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('strings-fr: the screen was not repainted with the new words', failure);
+  }
 })();

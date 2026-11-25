@@ -82,7 +82,7 @@
   }
   /** basis points as a signed percent */
   function pctCell(value) {
-    return value == null ? '—' : CBUiMoney.pct(value, true); /* RW1-07: the one percent rule, app/ui-money.js */
+    return value == null ? '—' : CBUiMoney.percentText(value, true); /* RW1-07: the one percent rule, app/ui-money.js */
   }
   /** no value to paint: nothing or the empty text */
   function isBlank(value) {

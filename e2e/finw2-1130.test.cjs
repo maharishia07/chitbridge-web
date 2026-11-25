@@ -8,7 +8,7 @@
  * CARD      16-finance/cash-position-and-cash-flow
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-finance-cash.js'), 'utf8');
+const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-finance-cash.js'), 'utf8') + fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-finance-returns.js'), 'utf8'); /* the GST chips live in the Returns module */
 const grab = (name) => { const at = src.indexOf('function ' + name + '('); let depth = 0, i = src.indexOf('{', at); const start = at; for (; i < src.length; i++) { if (src[i] === '{') depth++; else if (src[i] === '}' && --depth === 0) break; } return src.slice(start, i + 1); };
 const sb = { tx: (s) => s, bkMoney: (m) => 'A$' + (m / 100).toLocaleString('en-AU', { minimumFractionDigits: 2 }), bkDate: (d) => ({ '2026-10-28': '28 Oct 2026' })[d] || d, packWord: () => 'GST', shopDay: (d) => d, fcReturnChip: () => 'return chip' };
 vm.createContext(sb);

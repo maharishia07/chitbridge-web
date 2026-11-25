@@ -19,7 +19,7 @@ const cx = vm.createContext({
 });
 cx.window = cx; cx.self = cx;
 for (const f of ['engine/money.js', 'engine/locale.js', 'app/ui.js', 'app/ui-field.js', 'app/ui-money.js']) vm.runInContext(read(f), cx);
-const pct = (bp, signed) => vm.runInContext('CBUiMoney.pct', cx)(bp, signed);
+const pct = (bp, signed) => vm.runInContext('CBUiMoney.percentText', cx)(bp, signed);
 check(pct(8485) === '84.9%', '8485 bp is 84.9% (not 84.8)');
 check(pct(1515) === '15.2%' && pct(4066) === '40.7%', '1515 bp 15.2%, 4066 bp 40.7%');
 check(pct(8485, true) === '+84.9%' && pct(-8485, true) === '-84.9%' && pct(-8485) === '-84.9%', 'signed and negative');
@@ -27,8 +27,8 @@ check(pct(4, true) === '0.0%' && pct(-4, true) === '0.0%' && pct(0) === '0.0%', 
 check(pct(10000) === '100.0%' && pct(5) === '0.1%' && pct(NaN) === '', 'edges: 100.0%, half a bp up, not a number is empty');
 /* the three painters call the one rule: no float toFixed(1) of basis points is left in them */
 const books = read('app/cap-books.js'), cells = read('app/books-grant-cells.js');
-check(/function bkPct[\s\S]{0,260}CBUiMoney\.pct/.test(books), 'bkPct calls CBUiMoney.pct');
-check(/function pctCell[\s\S]{0,260}CBUiMoney\.pct/.test(cells), 'the grant view pctCell calls CBUiMoney.pct');
+check(/function bkPct[\s\S]{0,260}CBUiMoney.percentText/.test(books), 'bkPct calls CBUiMoney.percentText');
+check(/function pctCell[\s\S]{0,260}CBUiMoney.percentText/.test(cells), 'the grant view pctCell calls CBUiMoney.percentText');
 check(!/\/ 100\)\.toFixed\(1\)/.test(books + cells), 'no (bp / 100).toFixed(1) is left');
 /* RW1-10: the BAS close card stays in view at 1366x768 (sticky foot), and the month rows get their overdue word from the server */
 const period = read('app/cap-period.js'), css = read('app/accounts-page.css');
