@@ -12,7 +12,7 @@ const man = JSON.parse(fs.readFileSync(path.join(root, 'public/app/manifest.json
 const SKIP = /^(strings-|screens\.js|manifest|shell\.js|shortcuts\.js|shell-facts\.js)/; /* the shell draws its own grey tiles; the registers name routes without linking */
 const files = fs.readdirSync(path.join(root, 'public')).filter((f) => /\.html$/.test(f)).map((f) => 'public/' + f)
   .concat(fs.readdirSync(path.join(root, 'public/app')).filter((f) => /\.js$/.test(f) && !SKIP.test(f)).map((f) => 'public/app/' + f));
-const ctx = { window: {}, console };
+const ctx = { window: {}, console, esc: (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]) };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root, 'public/app/shell.js'), 'utf8'), ctx);
@@ -37,25 +37,33 @@ files.forEach((f) => {
 if (process.argv.includes('--list')) { console.log(found.join('\n')); console.log(found.length + ' places'); process.exit(0); }
 
 const known = JSON.parse(fs.readFileSync(path.join(__dirname, 'links-to-not-ready.known.json'), 'utf8'));
-const key = (s) => s.split(' · ')[0].replace(/:\d+/, '');
+const key = (s) => s.split(' · ')[0].replace(/:d+/, '');
 const knownKeys = new Set(known.map(key));
 const fresh = found.filter((s) => !knownKeys.has(key(s)));
-assert.strictEqual(fresh.length, 0, 'a link to a not-ready entry that is not on the work list:\n' + fresh.join('\n'));
+assert.strictEqual(fresh.length, 0, 'a link to a not-ready entry that is not on the list:\n' + fresh.join('\n'));
 
-/* 2. a ready sub-view on a not-ready host */
+/* 1. no page is covered, whatever the address */
 const doc = { nodes: [], querySelector() { return this.nodes[0] || null; }, createElement: () => ({ setAttribute() {}, remove() { doc.nodes.length = 0; } }), body: { appendChild: (n) => doc.nodes.push(n) } };
-const at = (p, s) => ({ pathname: p, hash: '', search: s || '' });
-['bas', 'tb', 'pl', 'bs', 'daybook', 'dues', 'periods', 'actions'].forEach((v) => {
-  assert.strictEqual(Shell.gateUnready(doc, man, at('/network.html', '?open=c1&view=' + v)), false, 'client books ?open=…&view=' + v + ' is ready: no cover');
+const at = (p, s, h) => ({ pathname: p, hash: h || '', search: s || '' });
+man.entries.filter((e) => e.route && !/{bridge_id}/.test(e.route)).forEach((e) => {
+  const u = e.route.split('#'), pq = u[0].split('?');
+  assert.strictEqual(Shell.gateUnready(doc, man, at(pq[0], pq[1] ? '?' + pq[1] : '', u[1] ? '#' + u[1] : '')), false, e.id + ' opens: no cover');
 });
-console.log('links-to-not-ready: ' + found.length + ' known places, none new; ready sub-views uncovered');
+assert.strictEqual(doc.nodes.length, 0, 'nothing appended to any page');
 
-/* 3. the Setup tabs (settings.html hosts ready and not-ready sections by #route): the grey ones are marked and cannot be pressed; the ready ones are left alone */
-const mkBtn = (sec) => { const attrs = { 'data-sec': sec }; return { attrs, classes: [], getAttribute: (k) => attrs[k], setAttribute: (k, v) => { attrs[k] = v; }, classList: { add: (c) => attrs.cls = c } }; };
+/* 2. a ready sub-view on a not-ready host page is ready (no hint) */
+['bas', 'tb', 'pl', 'bs', 'daybook', 'dues', 'periods', 'actions'].forEach((v) => {
+  const w = at('/network.html', '?open=c1&view=' + v);
+  assert.strictEqual(Shell.readyAt(Shell.entryOfAddress(man.entries, w), w), true, 'client books view=' + v + ' is ready');
+});
+
+/* 3. the Setup tabs: the not-ready ones carry the hint and are NOT blocked; the ready ones are left alone */
+const mkBtn = (sec) => { const attrs = { 'data-sec': sec }; return { attrs, html: '', getAttribute: (k) => attrs[k], setAttribute: (k, v) => { attrs[k] = v; }, insertAdjacentHTML(_p, h) { this.html += h; } }; };
 const tabs = ['country', 'shop', 'print', 'counters', 'connectors', 'policy', 'plan', 'account'].map(mkBtn);
-const tabDoc = { querySelectorAll: (sel) => (/nav-btn/.test(sel) ? tabs.filter((b) => !b.attrs['data-cbsh-grey']) : []) };
-Shell.greyLinks(tabDoc, man, { location: { pathname: '/settings.html', href: 'https://x/settings.html', origin: 'https://x' }, URL });
-const greyed = tabs.filter((b) => b.attrs['data-cbsh-grey']).map((b) => b.attrs['data-sec']);
-assert.strictEqual(JSON.stringify(greyed), JSON.stringify(['counters', 'connectors', 'policy', 'plan']), 'Setup tabs that are not ready are grey: ' + greyed);
-assert.ok(tabs.filter((b) => ['shop', 'account', 'country', 'print'].indexOf(b.attrs['data-sec']) >= 0).every((b) => !b.attrs['data-cbsh-grey']), 'ready Setup tabs stay live');
-console.log('links-to-not-ready: Setup tabs grey: ' + greyed.join(', '));
+const tabDoc = { querySelectorAll: (sel) => (/nav-btn/.test(sel) ? tabs.filter((b) => !b.attrs['data-cbsh-hint']) : []) };
+Shell.hintLinks(tabDoc, man, { location: { pathname: '/settings.html', href: 'https://x/settings.html', origin: 'https://x' }, URL });
+const hinted = tabs.filter((b) => b.attrs['data-cbsh-hint']).map((b) => b.attrs['data-sec']);
+assert.strictEqual(JSON.stringify(hinted), JSON.stringify(['counters', 'connectors', 'policy', 'plan']), 'Setup tabs not ready carry the hint: ' + hinted);
+assert.ok(tabs.filter((b) => b.attrs['data-cbsh-hint']).every((b) => /data-ready="no"/.test(b.html) && /Being finished/.test(b.html) && !b.attrs['aria-disabled'] && !b.attrs.disabled), 'the hint is the one control; the tab is not blocked');
+assert.ok(tabs.filter((b) => ['shop', 'account', 'country', 'print'].indexOf(b.attrs['data-sec']) >= 0).every((b) => !b.attrs['data-cbsh-hint'] && !b.html), 'ready tabs show nothing');
+console.log('links-to-not-ready: ' + found.length + ' static links known · no cover anywhere · Setup tabs hinted: ' + hinted.join(', '));

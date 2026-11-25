@@ -103,6 +103,7 @@
     signInShop: 'Sign in to open your shop.',
     unfinished: 'Being finished · not ready yet',
     unfinishedHome: 'Back to Home',
+    unfinishedShort: 'Being finished',
     factsFailed: 'Could not read',
     backToClients: 'Back to Clients',
     skip: 'Skip to content',
@@ -295,9 +296,8 @@
     '.cbsh-nv{position:relative}.cbsh-nv[data-go=more]{display:none}',
     '.cbsh-nv .bd{position:absolute;top:1px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:var(--sh-amber-t);border:1px solid var(--sh-amber-b);color:var(--sh-amber-i);font-size:10px;font-weight:700;line-height:14px;text-align:center}',
     '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
-    '.cbsh-grey{color:var(--sh-muted,#8a8272);text-decoration:line-through;cursor:default;pointer-events:auto}.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
+    '.cbsh-hint{display:inline-block;margin-left:6px;padding:0 6px;border:1px dashed var(--sh-line,#c9bfa8);border-radius:9px;font-size:11px;font-weight:500;line-height:16px;color:var(--sh-muted,#6f6753);background:transparent;white-space:nowrap;vertical-align:middle}.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
-    '.cbsh-unready{position:fixed;left:0;right:0;bottom:0;top:var(--sh-bar,52px);z-index:90;background:var(--sh-panel);color:var(--sh-muted);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}.cbsh-unready h2{margin:0 0 6px;font-size:18px;color:var(--sh-ink,inherit)}.cbsh-unready p{margin:0 0 12px;font-size:14px}.cbsh-unready a{color:var(--sh-green);font-weight:600}',
     /* cards (max three columns, DECISIONS.md) */
     '.cbsh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
     '.cbsh-box{display:block;width:100%;text-align:left;background:var(--sh-card);border:1px solid var(--sh-line);border-radius:13px;padding:14px 16px;position:relative;transition:border-color .12s}',
@@ -823,78 +823,57 @@
     if (!entry || entry.ready !== false) return true;
     return (entry.ready_for || []).some(function (piece) { return String(where.search || '').indexOf(piece) >= 0; });
   }
-  /* AT-02: does the page draw a screen of its own? A screen root ([data-testid$="-screen"]) holding anything beyond its loading spinner. ONE reader, so no page can leak the note. */
-  function pageShowsContent(doc) {
-    if (!doc.querySelectorAll) return false;
-    return [].some.call(doc.querySelectorAll('[data-testid$="-screen"]'), function (root) {
-      return [].some.call(root.children || [], function (kid) {
-        return !/(^|\s)(loadwrap|spin)(\s|$)/.test(String(kid.className || ''));
-      });
-    });
+  /* READY-HINT (Athi, 25 Nov, replaces the page-wide cover): EVERY page and tab opens. A thing that is not ready is marked AT ITS OWN ELEMENT with one small hint
+     ("Being finished"), through THIS one control; the element stays visible and pressable, nothing else on the page is blocked, and a half-built action says so itself. */
+  function readyHintHTML(id) {
+    return '<span class="cbsh-hint" data-cbsid="HOM001-B02" data-ready="no" data-testid="shell-hint' + (id ? '-' + esc(id) : '') + '" title="' + esc(T(W.unfinishedShort)) + '">' + esc(T(W.unfinishedShort)) + '</span>';
   }
-  /* READY-GREY: a typed address to a not-ready page shows the same note, over the page, with the way back (no bypass: no GOV switch exists) */
-  function gateUnready(doc, manifest, where) {
-    var old = doc.querySelector('[data-testid="shell-unready"]');
-    var entry = manifest && entryOfAddress(manifest.entries, where);
-    /* AT-02 (Athi, 25 Nov, product-wide): a grey not-ready note shows ONLY when the page shows nothing else; a page that already draws its screen (a client's books opened from the practice) is never given the note underneath it */
-    if (!entry || readyAt(entry, where) || (String(entry.route || '').indexOf('#') < 0 && pageShowsContent(doc))) { /* a #route inside a working page is a feature, and stays grey */
-      if (old) old.remove();
-      return false;
-    }
-    if (old) return true;
-    var cover = doc.createElement('div');
-    cover.className = 'cbsh-unready';
-    cover.setAttribute('data-testid', 'shell-unready');
-    cover.setAttribute('data-cbsid', 'HOM001-B01');
-    cover.setAttribute('role', 'alert');
-    cover.innerHTML = '<div><h2>' + entryName(entry) + '</h2><p>' + esc(T(W.unfinished)) + '</p><a href="/" data-testid="shell-unready-home">' + esc(T(W.unfinishedHome)) + '</a></div>';
-    doc.body.appendChild(cover);
-    return true;
+  /* a page is never covered: any cover an older load left is removed. Kept as the one name callers and tests know; always false. */
+  function gateUnready(doc) {
+    var old = doc.querySelector && doc.querySelector('[data-testid="shell-unready"]');
+    if (old) old.remove();
+    return false;
   }
-  /* FW-01 (Athi, 25 Nov: grey what is not ready): EVERY in-page link whose address is a not-ready entry is drawn grey and does not navigate, so a working screen never sends a person into the cover. ONE helper, run at mount and when the page draws; a link to the page it is on is left alone. */
-  function greyOne(el) {
-    el.setAttribute('data-cbsh-grey', '1');
-    el.setAttribute('aria-disabled', 'true');
-    el.setAttribute('title', T(W.unfinished));
-    el.classList.add('cbsh-grey');
+  /* the hint on an element that already exists (a link, a Setup tab): once, by the one control above */
+  function hintOne(el) {
+    el.setAttribute('data-cbsh-hint', '1');
+    el.setAttribute('title', T(W.unfinishedShort));
+    el.insertAdjacentHTML('beforeend', readyHintHTML(''));
   }
-  function greyLinks(doc, manifest, win) {
+  /* every in-page link and every sidebar section / Setup tab (settings.html#/counters: this page + #/<key>) whose ADDRESS is not ready carries the hint; none is blocked */
+  function hintLinks(doc, manifest, win) {
     if (!doc.querySelectorAll || !manifest) return 0;
     var n = 0;
-    /* the Setup tabs and every sidebar section of a page that hosts several entries by #route (settings.html#/counters): the section's address is this page + #/<key> */
-    [].forEach.call(doc.querySelectorAll('.nav-btn[data-sec]:not([data-cbsh-grey])'), function (b) {
+    [].forEach.call(doc.querySelectorAll('.nav-btn[data-sec]:not([data-cbsh-hint])'), function (b) {
       var where = { pathname: win.location.pathname, hash: '#/' + b.getAttribute('data-sec'), search: '' };
       if (readyAt(entryOfAddress(manifest.entries, where), where)) return;
-      greyOne(b);
+      hintOne(b);
       n++;
     });
-    [].forEach.call(doc.querySelectorAll('a[href]:not([data-cbsh-grey])'), function (a) {
+    [].forEach.call(doc.querySelectorAll('a[href]:not([data-cbsh-hint])'), function (a) {
       var url;
       try { url = new win.URL(a.getAttribute('href'), win.location.href); } catch (e) { return; }
-      if (url.origin !== win.location.origin || url.pathname === win.location.pathname) return;
-      var where = { pathname: url.pathname, hash: url.hash, search: url.search }, entry = entryOfAddress(manifest.entries, where);
-      if (readyAt(entry, where)) return;
-      greyOne(a);
+      if (url.origin !== win.location.origin || url.pathname === win.location.pathname || a.closest('.cbsh-box')) return;
+      var where = { pathname: url.pathname, hash: url.hash, search: url.search };
+      if (readyAt(entryOfAddress(manifest.entries, where), where)) return;
+      hintOne(a);
       n++;
     });
     return n;
   }
   /* the gate at mount, and again when the address changes inside the page (a #route) */
   function watchUnready(state, doc, win) {
-    gateUnready(doc, state.manifest, win.location);
-    greyLinks(doc, state.manifest, win);
-    if (doc.addEventListener) doc.addEventListener('click', function (ev) { var a = ev.target && ev.target.closest && ev.target.closest('[data-cbsh-grey]'); if (a) { ev.preventDefault(); ev.stopPropagation(); } }, true);
-    if (win.MutationObserver && doc.body && doc.body.nodeType) { /* the page draws after the shell mounts: look again when it has */
+    gateUnready(doc);
+    hintLinks(doc, state.manifest, win);
+    if (win.MutationObserver && doc.body && doc.body.nodeType) { /* a page draws after the shell mounts: hint again when it has */
       var again = false;
       new win.MutationObserver(function () {
         if (again) return;
         again = true;
-        win.setTimeout(function () { again = false; gateUnready(doc, state.manifest, win.location); greyLinks(doc, state.manifest, win); }, 150);
+        win.setTimeout(function () { again = false; hintLinks(doc, state.manifest, win); }, 150);
       }).observe(doc.body, { childList: true, subtree: true });
     }
-    win.addEventListener('hashchange', function () {
-      gateUnready(doc, state.manifest, win.location);
-    });
+    win.addEventListener('hashchange', function () { hintLinks(doc, state.manifest, win); });
   }
   /* the area a go() asks for, made real: More is the phone's tab (a laptop shows the three areas themselves); an area this showing does not draw is Home */
   function resolveArea(areaId, onPhone, drawn) {
@@ -1185,7 +1164,7 @@
       return bid ? text.replace('{bridge_id}', encodeURIComponent(bid)) : text.split('?')[0];
     }
     function card(e) {
-      if (e.ready === false || (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf())) return greyedTileHTML(e, glyph(e.icon), !!person);
+      if (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf()) return greyedTileHTML(e, glyph(e.icon), !!person);
       return (
         '<a class="cbsh-box" data-cbsid="HOM001-B01" href="' +
         esc(routeOf(e)) +
@@ -1199,6 +1178,7 @@
         '</span><h4>' +
         entryName(e) +
         '</h4>' +
+        (e.ready === false ? readyHintHTML(e.id) : '') +
         (e.what ? '<p class="what" title="' + esc(T(e.what)) + '">' + esc(T(e.what)) + '</p>' : '') +
         '<span class="facts" data-testid="shell-facts-' +
         esc(e.id) +
@@ -1769,9 +1749,9 @@
     greyedTileHTML: greyedTileHTML,
     entryOfAddress: entryOfAddress,
     gateUnready: gateUnready,
-    pageShowsContent: pageShowsContent,
     readyAt: readyAt,
-    greyLinks: greyLinks,
+    hintLinks: hintLinks,
+    readyHintHTML: readyHintHTML,
     openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);
