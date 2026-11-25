@@ -49,16 +49,26 @@ assert.strictEqual(idAt(at('/operations.html', '#/stock')), 'stock', 'a hash rou
 assert.strictEqual(idAt(at('/crm.html', '#/privacy')), 'privacy');
 assert.strictEqual(idAt(at('/crm.html')), 'crm');
 assert.strictEqual(idAt(at('/settings.html', '#/connectors')), 'connectors');
+/* READY-HINT (Athi, 25 Nov): NO page is ever covered. gateUnready is kept as a name and always answers false; a cover an older load left is removed. */
 const blocked = fakeDoc();
-assert.strictEqual(Shell.gateUnready(blocked, man, at('/operations.html', '#/stock')), true, 'a typed address to a not-ready page is gated');
-assert(blocked.nodes.length === 1 && /Being finished/.test(blocked.nodes[0].innerHTML) && /\/"/.test(blocked.nodes[0].innerHTML), 'the note and the way back to Home');
-assert.strictEqual(Shell.gateUnready(blocked, man, at('/till.html')), false, 'a ready page clears the note (hashchange)');
-assert.strictEqual(blocked.nodes.length, 0, 'the note is gone');
+blocked.nodes.push({ remove() { blocked.nodes.length = 0; } });
+assert.strictEqual(Shell.gateUnready(blocked, man, at('/operations.html', '#/stock')), false, 'a typed address to a not-ready page opens it: no cover');
+assert.strictEqual(blocked.nodes.length, 0, 'a cover an older load left is removed');
 const open = fakeDoc();
-ready.filter((e) => e.state === 'built' && e.route && !/\{bridge_id\}/.test(e.route)).forEach((e) => {
+man.entries.filter((e) => e.state === 'built' && e.route && !/{bridge_id}/.test(e.route)).forEach((e) => {
   const u = e.route.split('#'), pq = u[0].split('?');
-  assert.strictEqual(Shell.gateUnready(open, man, at(pq[0], u[1] ? '#' + u[1] : '', pq[1] ? '?' + pq[1] : '')), false, e.id + ' (ready) is never gated');
+  assert.strictEqual(Shell.gateUnready(open, man, at(pq[0], u[1] ? '#' + u[1] : '', pq[1] ? '?' + pq[1] : '')), false, e.id + ' is never covered');
 });
+assert.strictEqual(open.nodes.length, 0, 'nothing was ever appended to a page');
+/* the hint is ONE control, said at the element */
+const hint = Shell.readyHintHTML('network');
+assert(/data-ready="no"/.test(hint) && /Being finished/.test(hint) && /shell-hint-network/.test(hint), 'the one hint: small, "Being finished", on the element');
+assert(!/not ready yet/.test(hint) && !/Back to Home/.test(hint), 'no slogan, no Back to Home');
+/* the shell's source: no code path appends a cover, and a not-ready Home card is a live link with the hint */
+const shellSrc = fs.readFileSync(path.join(root, 'public/app/shell.js'), 'utf8');
+assert(!/appendChild(cover)|cbsh-unready'/.test(shellSrc), 'no page cover is built anywhere');
+assert(shellSrc.indexOf('(e.ready === false ? readyHintHTML(e.id)') >= 0, 'a not-ready Home card carries the hint');
+
 
 /* 4. the shortcut and the facts read skip a not-ready card (no way in by key, no read for a grey tile) */
 assert(/item\.ready !== false/.test(fs.readFileSync(path.join(root, 'public/app/shortcuts.js'), 'utf8')), 'the keyboard door skips a not-ready card');
