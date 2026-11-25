@@ -49,3 +49,13 @@ const at = (p, s) => ({ pathname: p, hash: '', search: s || '' });
   assert.strictEqual(Shell.gateUnready(doc, man, at('/network.html', '?open=c1&view=' + v)), false, 'client books ?open=…&view=' + v + ' is ready: no cover');
 });
 console.log('links-to-not-ready: ' + found.length + ' known places, none new; ready sub-views uncovered');
+
+/* 3. the Setup tabs (settings.html hosts ready and not-ready sections by #route): the grey ones are marked and cannot be pressed; the ready ones are left alone */
+const mkBtn = (sec) => { const attrs = { 'data-sec': sec }; return { attrs, classes: [], getAttribute: (k) => attrs[k], setAttribute: (k, v) => { attrs[k] = v; }, classList: { add: (c) => attrs.cls = c } }; };
+const tabs = ['country', 'shop', 'print', 'counters', 'connectors', 'policy', 'plan', 'account'].map(mkBtn);
+const tabDoc = { querySelectorAll: (sel) => (/nav-btn/.test(sel) ? tabs.filter((b) => !b.attrs['data-cbsh-grey']) : []) };
+Shell.greyLinks(tabDoc, man, { location: { pathname: '/settings.html', href: 'https://x/settings.html', origin: 'https://x' }, URL });
+const greyed = tabs.filter((b) => b.attrs['data-cbsh-grey']).map((b) => b.attrs['data-sec']);
+assert.strictEqual(JSON.stringify(greyed), JSON.stringify(['counters', 'connectors', 'policy', 'plan']), 'Setup tabs that are not ready are grey: ' + greyed);
+assert.ok(tabs.filter((b) => ['shop', 'account', 'country', 'print'].indexOf(b.attrs['data-sec']) >= 0).every((b) => !b.attrs['data-cbsh-grey']), 'ready Setup tabs stay live');
+console.log('links-to-not-ready: Setup tabs grey: ' + greyed.join(', '));
