@@ -60,6 +60,27 @@ ready.filter((e) => e.state === 'built' && e.route && !/\{bridge_id\}/.test(e.ro
   assert.strictEqual(Shell.gateUnready(open, man, at(pq[0], u[1] ? '#' + u[1] : '', pq[1] ? '?' + pq[1] : '')), false, e.id + ' (ready) is never gated');
 });
 
+/* AT-02 (walk 25 Nov): the grey note shows ONLY when the page shows nothing else */
+function screenDoc(kids) {
+  const d = fakeDoc();
+  d.querySelectorAll = (sel) => (/-screen/.test(sel) ? [{ children: kids }] : []);
+  return d;
+}
+const loading = [{ className: 'loadwrap' }];
+const drawn = [{ className: 'loadwrap' }, { className: 'bv-table' }];
+const netAt = at('/network.html', '', '?open=c1&view=bas');
+assert.strictEqual(man.entries.filter((e) => e.id === 'network')[0].ready, false, 'network is a not-ready entry (the walk case)');
+assert.strictEqual(Shell.gateUnready(screenDoc(drawn), man, netAt), false, 'a page drawing its screen (the client books opened from the practice) gets no note under it');
+assert.strictEqual(Shell.gateUnready(screenDoc(loading), man, netAt), true, 'a page still only loading shows nothing else: the note shows');
+assert.strictEqual(Shell.gateUnready(screenDoc([]), man, netAt), true, 'a page with an empty screen shows the note');
+assert.strictEqual(Shell.gateUnready(screenDoc(drawn), man, at('/operations.html', '#/stock')), true, 'a #route feature inside a drawn page stays grey');
+const later = screenDoc(loading);
+Shell.gateUnready(later, man, netAt);
+assert.strictEqual(later.nodes.length, 1, 'the note is up while nothing else shows');
+later.querySelectorAll = () => [{ children: drawn }];
+assert.strictEqual(Shell.gateUnready(later, man, netAt), false, 'the page then draws: the note goes (watched by the shell)');
+assert.strictEqual(later.nodes.length, 0);
+
 /* 4. the shortcut and the facts read skip a not-ready card (no way in by key, no read for a grey tile) */
 assert(/item\.ready !== false/.test(fs.readFileSync(path.join(root, 'public/app/shortcuts.js'), 'utf8')), 'the keyboard door skips a not-ready card');
 assert(/card\.ready === false/.test(fs.readFileSync(path.join(root, 'public/app/shell-facts.js'), 'utf8')), 'no facts read for a grey card');

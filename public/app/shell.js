@@ -818,11 +818,21 @@
     });
     return best;
   }
+  /* AT-02: does the page draw a screen of its own? A screen root ([data-testid$="-screen"]) holding anything beyond its loading spinner. ONE reader, so no page can leak the note. */
+  function pageShowsContent(doc) {
+    if (!doc.querySelectorAll) return false;
+    return [].some.call(doc.querySelectorAll('[data-testid$="-screen"]'), function (root) {
+      return [].some.call(root.children || [], function (kid) {
+        return !/(^|\s)(loadwrap|spin)(\s|$)/.test(String(kid.className || ''));
+      });
+    });
+  }
   /* READY-GREY: a typed address to a not-ready page shows the same note, over the page, with the way back (no bypass: no GOV switch exists) */
   function gateUnready(doc, manifest, where) {
     var old = doc.querySelector('[data-testid="shell-unready"]');
     var entry = manifest && entryOfAddress(manifest.entries, where);
-    if (!entry || entry.ready !== false) {
+    /* AT-02 (Athi, 25 Nov, product-wide): a grey not-ready note shows ONLY when the page shows nothing else; a page that already draws its screen (a client's books opened from the practice) is never given the note underneath it */
+    if (!entry || entry.ready !== false || (String(entry.route || '').indexOf('#') < 0 && pageShowsContent(doc))) { /* a #route inside a working page is a feature, and stays grey */
       if (old) old.remove();
       return false;
     }
@@ -839,6 +849,14 @@
   /* the gate at mount, and again when the address changes inside the page (a #route) */
   function watchUnready(state, doc, win) {
     gateUnready(doc, state.manifest, win.location);
+    if (win.MutationObserver && doc.body && doc.body.nodeType) { /* the page draws after the shell mounts: look again when it has */
+      var again = false;
+      new win.MutationObserver(function () {
+        if (again) return;
+        again = true;
+        win.setTimeout(function () { again = false; gateUnready(doc, state.manifest, win.location); }, 150);
+      }).observe(doc.body, { childList: true, subtree: true });
+    }
     win.addEventListener('hashchange', function () {
       gateUnready(doc, state.manifest, win.location);
     });
@@ -1716,6 +1734,7 @@
     greyedTileHTML: greyedTileHTML,
     entryOfAddress: entryOfAddress,
     gateUnready: gateUnready,
+    pageShowsContent: pageShowsContent,
     openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);

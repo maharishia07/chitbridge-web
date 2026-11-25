@@ -100,7 +100,7 @@
   /** the period control mounts into the named slot of the header line (CBBooksActing.periodSlot, W19): ONE function, ONE call in paint(); moving it is changing that call. Nothing in a refused or Actions screen. */
   function fillPeriodSlot(report) {
     var slot = $('bv_period_slot');
-    if (slot) slot.innerHTML = !report.k || grantKit.viewState.why || !grantKit.viewState.choices ? '' : root.CBPeriodPick.control(grantKit.viewState.choices, grantKit.viewState.period, pickPeriod);
+    if (slot) slot.innerHTML = !report.k || grantKit.viewState.why || !grantKit.viewState.choices ? '' : root.CBPeriodPick.control(grantKit.viewState.choices, grantKit.viewState.period, pickPeriod, report.k === 'bas' && grantKit.viewState.answer ? grantKit.viewState.answer.periods : null); /* FW-25: the return's own quarters are in the one control, so the Day box is not the only way to change quarter */
   }
   /** a period chosen: every view follows it (the typed day is dropped), the address records it */
   function pickPeriod(period) {

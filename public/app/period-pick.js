@@ -83,8 +83,8 @@
     return line(['FY ' + y.fy, shopDayOf(y.from) + ' – ' + shopDayOf(y.to), entriesWord(y.entries), y.locked + ' ' + phrase('of') + ' ' + y.months + ' ' + phrase('months locked'), checkedWord(y.checked, y.of)]);
   }
   /** the dropdown's options, newest year first, each year's line then its months that hold entries; a range typed in the address that is none of these is added at the top */
-  function optionsOf(answer, period) {
-    var out = [], years = (answer && answer.years) || [], months = ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && Number(p.entries) > 0; });
+  function optionsOf(answer, period, quarters) {
+    var out = quartersOf(quarters), years = (answer && answer.years) || [], months = ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && Number(p.entries) > 0; });
     years.forEach(function (y) {
       out.push({ value: 'y:' + y.fy, label: yearLine(y) });
       months.filter(function (p) { return p.fiscal_year === y.fy; }).sort(function (a, b) { return a.start_date < b.start_date ? 1 : -1; }).forEach(function (p) {
@@ -94,13 +94,20 @@
     if (period && !out.some(function (o) { return o.value === valueOf(period); })) out.unshift({ value: valueOf(period), label: shopDayOf(period.from) + ' – ' + shopDayOf(period.to) });
     return out;
   }
+  /** AT-03 / FW-25: the tax return's own periods (the server's table: a BAS quarter, a VAT period) as the control's first lines, newest first; a period that has not begun is not offered. Same control, same value shape (c:from|to). */
+  function quartersOf(quarters) {
+    var today = new Date().toISOString().slice(0, 10);
+    return (quarters || []).filter(function (q) { return q && q.start && q.end && String(q.start).slice(0, 10) <= today; }).slice().reverse().map(function (q) {
+      return { value: 'c:' + String(q.start).slice(0, 10) + '|' + String(q.end).slice(0, 10), label: String(q.label || q.period) };
+    });
+  }
   /** "For 1 Jul 2025 – 30 Jun 2026" words of a period, for a heading */
   function words(period) {
     return period ? shopDayOf(period.from) + ' – ' + shopDayOf(period.to) : '';
   }
   /** the control: the library Select (ui.select), one line per year and month; onPick(period) when one is chosen. '' when the server named no period to choose from (a books with no months) or the library is not on the page. */
-  function control(answer, period, onPick) {
-    var options = optionsOf(answer, period);
+  function control(answer, period, onPick, quarters) {
+    var options = optionsOf(answer, period, quarters);
     if (!options.length || !root.ui || typeof root.ui.select !== 'function') return '';
     return root.ui.select({
       mount: MOUNT, label: 'Period', bare: true, id: 'bv_period', testid: 'bv-period-pick', value: valueOf(period), options: options,
