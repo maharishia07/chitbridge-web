@@ -204,6 +204,7 @@ async function route(S, r) {
   const noAccounting = async (p, where) => { const t = await p.evaluate(() => document.body.innerText); ok(!/accounting|books of account/i.test(t), where + ': the word "accounting" is nowhere on screen'); };
   const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 
+  const take = () => true;   /* RW1-27: every walk block runs (the numbering take() once kept for chit-sheet-breaks is gone; the name was left dangling and the whole walk threw) */
   const env = { ok, open, standIn, waitSheet, acts, sheetOpen, yesAccept, take, SHOP, TODAY };   /* what the blocks in chit-sheet-blocks.cjs need */
 
   /* ── 1 · the counter bill, from the Day book ─────────────────────────────────────────────────────── */
@@ -255,9 +256,8 @@ async function route(S, r) {
     ok(!a.includes('dispute') && !a.includes('accept'), 'a cart bill has no Dispute (and no Accept)');
     await shot(p, 'chit-sheet-cart'); await shot(p, 'chit-sheet-invoice-laptop');
     await noAccounting(p, 'sheet');
-    /* Return is honest: no web return flow exists, so it says where returns are made */
-    await p.click('[data-testid="cs-act-return"]');
-    ok(/counter/i.test(await p.textContent('[data-testid="cs-note"]')), 'Return says where a return is made');
+    /* RW1-27: the Return button is "Credit note": it opens the till's one return sheet at this bill (clicked once more at the end of this block: it leaves the page) */
+    ok(/Credit note/.test(await p.textContent('[data-testid="cs-act-return"]')) && !(await p.locator('[data-testid="cs-act-return"]').isDisabled()), 'the sheet offers Credit note on a bill with something left to credit');
     ok(!/chit-detail|#\/chit/.test(await p.evaluate(() => location.href)) && await p.evaluate(() => location.href) === hrefBefore, 'opening the sheet did not navigate');
     /* Esc closes; the Day book is exactly where it was */
     await p.keyboard.press('Escape'); await p.waitForTimeout(250);
@@ -266,7 +266,19 @@ async function route(S, r) {
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
+    /* RW1-27: a bill credited in full greys the button WITH the reason (the server's read says credit.full); the Day book's sale entry offers the same Credit note */
+    S.chits.ch2.credit = { bill_minor: 118000, credited_minor: 118000, left_minor: 0, full: true, notes: 1 };
+    await p.evaluate(() => openChitSheet('ch2')); await waitSheet(p, 'C1/26-27/0003');
+    const full = p.locator('[data-testid="cs-act-return"]');
+    ok(await full.isDisabled() && /already been credited in full/.test((await full.getAttribute('title')) || '') && /already been credited in full/.test(await p.textContent('[data-testid="cs-why"]')), 'credited in full: Credit note is greyed and says why (hint and line)');
+    await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
+    await p.locator('[data-testid="db-expand-all"]').click().catch(() => {});
+    ok(await p.locator('[data-testid="db-credit"]').count() >= 1, 'the Day book sale entry offers Credit note');
     await B.windowScrollSpy(env, p);
+    await p.route('**/till.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<title>till</title>' }));
+    await p.locator('[data-testid="db-credit"]').first().click();
+    await p.waitForURL(/till\.html\?return=ch1/,{ timeout: 5000 }).catch(() => {});
+    ok(/till\.html\?return=ch1$/.test(await p.evaluate(() => location.href)), 'Credit note from the Day book opens the counter at /till.html?return=<the bill>');
     await ctx.close();
   }
 
