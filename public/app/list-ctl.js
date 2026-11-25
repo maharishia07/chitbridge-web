@@ -2444,7 +2444,7 @@ ctx.pin = cols.filter(function (item) {
         if (!t || t === '—') return '';
         return (
           '<span class="cbl-fl lcell' +
-          (item.mono ? ' cbl-num' : '') +
+          (item.mono ? ' cbl-num' : '') + (item.grow ? ' cbl-grow' : '') +
           '" data-l="' +
           esc(item.label || '') +
           '"' +

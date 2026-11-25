@@ -89,6 +89,9 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 @keyframes bksk{to{background-position:-200% 0}}
 @media (prefers-reduced-motion:reduce){.bk-skel i{animation:none}}
 .content{padding:24px 40px 24px;display:flex;flex-direction:column;gap:16px}   /* no width cap (T17): the page takes the screen; only prose is capped */
+/* RW1-14 (walk 25 Nov, Day book: heading + strip + chips + tools took 335 of 768 px, 3 of 48 entries showed): a page that is a list gives the list the room. Same approach as the practice home (AT-01): the heading is one slim line, the strip hugs the list. A desktop app, not a page. */
+@media (min-width:701px){body:has(#bk_body .cbl-list):not(.bk-on) .titlebar{min-height:0;padding-block:3px;gap:0}body:has(#bk_body .cbl-list):not(.bk-on) .titlebar h1{font-size:20px;line-height:28px;margin:0}body:has(#bk_body .cbl-list):not(.bk-on) .content{padding-top:6px;padding-bottom:4px;gap:4px}body:has(#bk_body .cbl-list):not(.bk-on) .attn-strip{margin-bottom:2px;min-height:28px;padding-block:2px}}
+@media (max-width:700px){body:has(#bk_body .cbl-list):not(.bk-on) .titlebar{min-height:0;padding-block:6px;gap:0}body:has(#bk_body .cbl-list):not(.bk-on) .titlebar h1{font-size:20px;line-height:26px}body:has(#bk_body .cbl-list):not(.bk-on) .content{padding-top:6px;gap:6px}}
 .content:has([data-cbl-fit="window"]){padding-bottom:8px}   /* a list that fills the window ends at the window: the 120 px of end room below a long page would push the page 112 px past the screen (Day book, Dues 880 at 1366) */
 .empty{padding:48px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
 .empty strong,.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:700}
@@ -445,4 +448,4 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
   #bk_body .pe-fold{max-width:none;padding:6px 14px;margin:6px 0 0;gap:4px}#bk_body .pe-fold>summary{cursor:pointer}
 }
 /* the repeat rule (Athi 21 Nov): an action that is the same on every row shows on the row you point at or tab into, not 40 times down the page (Dues: Receive and Remind x40). Opacity, not display: a keyboard still reaches it and the row does not jump. A touch screen has no pointing, so it keeps them. */
-@media (hover:hover){.cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-pay-"],.cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-remind-"]{opacity:0}}
+@media (hover:hover){.cbl-list:has(.cbl-row~.cbl-row~.cbl-row~.cbl-row) .cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-pay-"],.cbl-list:has(.cbl-row~.cbl-row~.cbl-row~.cbl-row) .cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-remind-"]{opacity:0}}/* RW1-15 (Athi 21 Nov: at most 3 repeats a screen): a list of 3 rows or fewer shows the action on every row, never a blank column; only a list of 4+ rows keeps it for the row pointed at */

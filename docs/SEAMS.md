@@ -28,7 +28,7 @@ of file each thing is; this says what already does the job.
 | 57 | `sheet` | `cap-employees.js` |  |
 | 53 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 52 | `closeModal` | `app.html` |  |
-| 49 | `open` | `cap-attention.js` | a count pressed: |
+| 50 | `open` | `cap-attention.js` | a count pressed: |
 | 48 | `shell` | `pick.js` |  |
 | 46 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 46 | `sentence` | `one-person.js` |  |

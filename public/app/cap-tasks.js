@@ -229,14 +229,26 @@
   function tkList() {
     return board.rows;
   }
+  /** RW1-25: a row whose only name is a number (S068-23) is named by what it is: the remark a person wrote, else its size ("3 items"); the number stays beside it. A name with words in it is left as it is. */
+  function humanName(row) {
+    var subject = String(row.subject || '').trim();
+    if (subject && (/\s/.test(subject) || !/\d/.test(subject))) return '';
+    var remark = String(row.remark || '').trim();
+    if (remark) return remark.length > 60 ? remark.slice(0, 57) + '…' : remark;
+    var n = Number(row.lines_n) || 0;
+    if (n > 0 && typeof root.txn === 'function') return root.txn('{count} item', '{count} items', n);
+    return '';
+  }
   /** the What cell: a client's job says its client (W16), anything else its subject, party and how it comes */
   function whatCell(row) {
     if (row.client) return root.CBTasksAssign.clientCell(row, T, esc);
-    var howText = howWord(row);
+    var howText = howWord(row),
+      human = humanName(row);
     return (
       '<b>' +
-      esc(row.subject || T('Untitled')) +
+      esc(human || row.subject || T('Untitled')) +
       '</b>' +
+      (human && row.subject ? ' <span class="sub" data-testid="tk-code-' + esc(row.chit_id) + '">' + esc(row.subject) + '</span>' : '') +
       (row.party ? ' <span class="sub">' + esc(row.party) + '</span>' : '') +
       (howText ? ' <span class="sub" data-testid="tk-how-' + esc(row.chit_id) + '">' + esc(howText) + '</span>' : '')
     );

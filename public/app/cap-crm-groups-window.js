@@ -31,8 +31,17 @@ async function crmShopLiveRead() {
     if (typeof cbQuiet === 'function') cbQuiet('crm: the shop read for the window link failed, the link stays as it was', failure);
     return; /* unreadable: say nothing false */
   }
-  var note = document.getElementById('crm_sc_notlive');
-  if (note) note.textContent = crmShopWhyNot(SHOW.me);
+  var note = document.getElementById('crm_sc_notlive'),
+    why = crmShopWhyNot(SHOW.me);
+  if (note) note.textContent = why;
+  /* RW1-21: a link offered must open. While the public would meet "Shop not found", the three ways to send it are greyed on the spot (the hint above says why; the title repeats it); no page cover */
+  ['crm-sc-copy', 'crm-sc-group', 'crm-sc-q'].forEach(function (tid) {
+    var node = document.querySelector('[data-testid="' + tid + '"]');
+    if (!node) return;
+    node.disabled = !!why;
+    if (why) node.setAttribute('title', why);
+    else node.removeAttribute('title');
+  });
   var url = document.querySelector('[data-testid="crm-sc-url"]');
   if (url) url.textContent = crmShopUrl();
 }

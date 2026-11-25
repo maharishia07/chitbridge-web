@@ -764,7 +764,7 @@ function bkTime(ts) {
 /** the small line under a Day book entry: an adviser's "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by), else the shop's own person who made it "Made by Ravi" (the api's made_by, the entry's created_by named; a bill the counter rang already says who rang it) */
 function bkPostedByHTML(e) {
   var words = typeof CBBooksActing !== 'undefined' ? CBBooksActing.postedByWords(e) : '';
-  if (!words && e && e.made_by && !(e.source && e.source.by)) words = txf('Made by {name}', { name: e.made_by });
+  if (!words && e && e.made_by && e.made_by !== SESSION.entity && !(e.source && e.source.by)) words /* RW1-14: a made_by that is the shop's own name says nothing a person made: no line, so the row stays two lines */ = txf('Made by {name}', { name: e.made_by });
   return words ? '<div class="sub" data-testid="db-posted-by">' + esc(words) + '</div>' : '';
 }
 /**
@@ -790,7 +790,7 @@ function bkRecordedHTML(e, tid) {
   return (
     ' <span data-testid="' +
     esc(tid) +
-    '-rec" style="color:var(--grey);font-weight:400">' +
+    '-rec" style="color:var(--grey);font-weight:400;white-space:nowrap">' +
     esc(txf('recorded {date}', { date: day(rec || post, { day: '2-digit', month: 'short' }) })) +
     '</span>'
   );
@@ -2243,6 +2243,7 @@ function bkDvCols(c) {
       label: tx('Bill'),
       prio: 4,
       w: 230,
+      grow: true /* RW1-14: in Lines the description takes the room that is left and wraps in itself, so the buttons after it stay on its line */,
       html: true,
       tid: function (e) {
         return 'db-head-' + e.entry_no;
@@ -4999,6 +5000,7 @@ function bkDuesCols(c) {
       prio: 1,
       sort: 'party',
       w: 230,
+      stretch: true /* RW1-15: the name is the column that takes the room, so a party reads on one line beside its arrow */,
       html: true,
       cell: function (p) {
         return esc(bkPartyLabel(p.party_id, p.name) || tx('Unnamed party'));
