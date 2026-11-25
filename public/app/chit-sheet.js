@@ -47,6 +47,7 @@
     el: null,
     page: null,
     answered: {},
+    supplier: {} /* FW-29: an expense's supplier id → the name the party record gave (read once, painted on the sheet) */,
     place: 'popup',
     sample: false,
     pushed: false
@@ -141,9 +142,14 @@
       billRx = !!(r && r.doc === 'bill_received'),
       captured = billRx && purpose === 'receipt';
     var counterBill = !billRx && !!(text.till && iSent && !others.length); /* rung up at a counter and sent to nobody else */
+    /* ⭐ FW-29: an EXPENSE is a record the books took at send (the server's own `doc`): it has no lines by design — what it was, how it was paid, what it cost and its GST are in business_json.expense, read here, never worked out */
+    var expenseDoc = !!(r && r.doc === 'expense'),
+      expense = expenseDoc && text.expense && typeof text.expense === 'object' && !live.length ? text.expense : null;
     var agreement = !!(text.repeat && text.repeat.agreement_id); /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
     return Object.assign(serverAnswers(r), {
       agreement: agreement,
+      expenseDoc: expenseDoc,
+      expense: expense,
       /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received), so its step is MY bill_step too (routes/chits.js writes it there);
          the header's status is the sent copy's and never moves — read alone, Accept stayed "To accept" after the server said accepted */
       id: h.chit_id || (r && r.id) || null,
@@ -163,7 +169,9 @@
       at: text.billed_at || h.created_at,
       counter: counterOfBill(bill, text.till),
       by: (text.till && text.till.by && text.till.by.name) || '',
-      who: counterBill
+      who: expense && expense.supplier
+        ? CS.supplier[String(expense.supplier)] || T('Supplier')
+        : counterBill
         ? (text.customer && text.customer.name) || T('Walk-in')
         : captured
           ? (text.party && text.party.name) || T('Not named')
@@ -177,16 +185,17 @@
       /* a captured bill not yet frozen: the money it carries is THEIR total as the door typed it (read; the server taxes the lines when it posts) */
       lines: live,
       bj: text,
-      money: captured && tb && !text.invoice ? receiptMoney(text, tb) : moneyFor(text, money_, cur, sum),
+      money: captured && tb && !text.invoice ? receiptMoney(text, tb) : moneyFor(text, money_, cur, sum, expense),
       rec: rec,
       order: orderDetails(sum, purpose)
     });
   }
   /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
      counter determined, read out by CBTax.moneyOf — else the header's own summary_json.money — else null. A mapping, never a sum. */
-  function moneyFor(bj, summaryMoney, cur, sum) {
+  function moneyFor(bj, summaryMoney, cur, sum, expense) {
     if (bj && bj.invoice && root.CBTax && root.CBTax.moneyOf) return root.CBTax.moneyOf(bj.invoice, cur);
     if (summaryMoney && Object.keys(summaryMoney).length) return summaryMoney;
+    if (expense && expense.amount != null && !isNaN(Number(expense.amount))) return { total: Number(expense.amount) }; /* FW-29: an expense's figure is the amount it was booked with */
     /* O7: an ORDER is not billed yet - the figure it was placed with is the header's own total_value (the same one the Chits list shows), read, never worked out */
     var tv = sum && sum.total_value != null ? sum.total_value : sum && sum.indicative_total != null ? sum.indicative_total : null;
     return tv != null && !isNaN(Number(tv)) ? { total: Number(tv) } : null;
@@ -327,8 +336,8 @@
   }
   /** STD1: the server refused Accept on this bill (actions.accept, rail-actions.forBill) → its sentence; else null */
   function refusedAccept(m) {
-    var a = m && m.billRx ? m.may : null;
-    return a && a.ok === false ? a.say || (serverSaid(m) || {}).why || T('You cannot accept this bill now') : null;
+    var a = m && (m.billRx || m.expenseDoc) ? m.may : null;
+    return a && a.ok === false ? a.say || (serverSaid(m) || {}).why || T(m.expenseDoc ? 'This expense is already in your books' : 'You cannot accept this bill now') : null;
   }
   /** FX-F10W2: the server refused Reject on this bill (actions.reject — the level alone) → its sentence; else null. needs: ['reason'] → ask it. */
   function refusedReject(m) {
@@ -388,7 +397,24 @@
     if (!frozenLine || frozenLine.tax == null || Number(frozenLine.tax) === 0) return '';
     return '<div class="cs-tax" data-testid="cs-tax-' + index + '">' + esc(T('Tax')) + ' ' + esc(fmtMoney(frozenLine.tax, currency, '—')) + '</div>';
   }
+  /** FW-29: an expense has no lines — what it was · how it was paid · who is owed · the GST it carries, as business_json.expense holds them */
+  function expenseHTML(m) {
+    var x = m.expense,
+      row = function (label, value, tid) {
+        return '<div class="cs-row" data-testid="' + tid + '"><span>' + esc(T(label)) + '</span><span>' + esc(value) + '</span></div>';
+      },
+      heads = x.input_tax && typeof x.input_tax === 'object' ? Object.keys(x.input_tax).filter(function (k) { return Number(x.input_tax[k]) > 0; }) : [];
+    return (
+      '<div class="cs-sec">' + esc(T('Expense')) + '</div>' +
+      (x.what ? row('What', String(x.what), 'cs-exp-what') : '') +
+      (x.supplier ? row('Owed to', m.who, 'cs-exp-who') : '') +
+      (x.mode ? row('Paid', T(HOW[String(x.mode).toLowerCase().replace(/s+/g, '')] || x.mode), 'cs-exp-mode') : '') +
+      heads.map(function (k) { return row('Includes ' + String(k).toUpperCase(), fmtMoney(x.input_tax[k], m.cur, '—'), 'cs-exp-tax-' + k); }).join('') +
+      '<div class="cs-mute" data-testid="cs-exp-booked">' + esc(T('Already in your books')) + '</div>'
+    );
+  }
   function linesHTML(m) {
+    if (m.expense) return expenseHTML(m);
     if (!m.lines.length) return '<div class="cs-mute">' + esc(T('No lines on this chit')) + '</div>';
     var ml = (m.money && m.money.lines) || [];
     return (
@@ -675,7 +701,7 @@
     return TITLE[m.purpose] || (m.purpose ? m.purpose.charAt(0).toUpperCase() + m.purpose.slice(1).replace(/_/g, ' ') : 'Task');
   }
   function kindWord(m) {
-    return m.counterBill ? 'Counter bill' : m.billRx ? 'Supplier bill' : 'Task';
+    return m.counterBill ? 'Counter bill' : m.billRx ? 'Supplier bill' : m.expenseDoc ? 'Expense' : 'Task';
   }
   /* SCREEN-ID: the sheet's kind = its screen code (app/screen-id.js bySheet) — the same code from whichever page opened it */
   function sheetKind(m) {
@@ -833,7 +859,7 @@
       pageNoteHTML() + docHeadHTML(m) + /* AU-F-11: the document head, app/chit-doc-head.js */
       orderHTML(m) +
       linesHTML(m) +
-      (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstBlockHTML(m)) +
+      (m.expense || (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate)) ? '' : gstBlockHTML(m)) +
       totalHTML(m) +
       tenderHTML(m) +
       (m.agreement
@@ -1070,10 +1096,33 @@
     CS.chit = r;
     CS.view = model(r);
     CS.err = null;
+    supplierName(CS.view);
     /* the server's own answer to a move made here wins over a read that still shows the step it left (move) */
     var a = CS.answered[id];
     if (a && stepIn(CS.view.status, 'open') && !stepIn(a, 'open')) CS.view.status = a;
     paint();
+  }
+  /** FW-29: the supplier an expense is owed to, named from the party record (read once; a miss leaves "Supplier", never a guess) */
+  function supplierName(m) {
+    var id = m && m.expense && m.expense.supplier ? String(m.expense.supplier) : '';
+    if (!id || CS.supplier[id] || CS.sample) return;
+    CS.supplier[id] = '';
+    Promise.resolve()
+      .then(function () {
+        return api('crmParty', { params: { id: id } });
+      })
+      .then(function (rec) {
+        var name = rec && (rec.name || rec.display_name);
+        if (!name) return;
+        CS.supplier[id] = String(name);
+        if (CS.view === m) {
+          m.who = String(name);
+          paint();
+        }
+      })
+      .catch(function (e) {
+        if (typeof cblog === 'function') cblog('warn', 'chit sheet: the expense supplier name was not read — ' + ((e && e.message) || e));
+      });
   }
   /** seat the dialog where its place wants it: the skeleton's row (pane) or the body (page · popup); a dialog moves only when closed */
   function seat(node, place) {
