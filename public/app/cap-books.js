@@ -5606,14 +5606,16 @@ function bkNeedRank(p) {
 function bkNeedsSum(side) {
   var all = (BK.duesRaw && BK.duesRaw.needs) || {},
     keys = side === 'rcv' ? ['customer'] : side === 'pay' ? ['supplier'] : ['customer', 'supplier'],
-    out = { parties: 0, bills: 0, overdue_minor: 0 };
+    out = { parties: 0, bills: 0, overdue_minor: 0, overdue_sides: [] };
   BK_NEED_ORDER.forEach(function (kind) {
     out[kind] = 0;
   });
   keys.forEach(function (key) {
     var part = all[key];
     if (!part) return;
+    if (Number(part.overdue) > 0) out.overdue_sides.push({ key: key, count: Number(part.overdue), minor: part.overdue_minor == null ? null : Number(part.overdue_minor) }); /* FW-35: each side's own overdue, kept apart */
     Object.keys(out).forEach(function (field) {
+      if (field === 'overdue_sides') return;
       if (part[field] == null) {
         if (field === 'overdue_minor') out[field] = null;
       } else if (out[field] != null) out[field] += Number(part[field]);

@@ -30,4 +30,14 @@ const sb2 = { bkWaitModel: (w) => w.model || null }; vm.createContext(sb2); vm.r
 ok(sb2.bkWaitNo({ ref: 'S068-22', job: 'bill' }) === 'S068-22', 'FW-38: no number on the chit -> the books ref S068-22');
 ok(sb2.bkWaitNo({ ref: 'S068-22', model: { no: 'INV-7' } }) === 'INV-7', 'FW-38: the chit own number wins');
 ok(sb2.bkWaitNo({ ref: 'walkin:C1:2026-11-01', job: 'day' }) === '' && sb2.bkWaitNo({ ref: 'ev:expense:abc' }) === '' && sb2.bkWaitNo({ ref: '3f2b8c1e-1111-4222-8333-444455556666' }) === '', 'FW-38: day refs, typed refs and ids are never a bill number');
+/* FW-35: Dues (both sides) shows the two overdue figures apart: owed to us 350.00 + owed by us 34,030.50, never 34,380.50 */
+const grabFrom = (file, name) => { const t = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', file), 'utf8'); const a = t.indexOf('function ' + name + '('); let n = 0, k = t.indexOf('{', a); for (; k < t.length; k++) { if (t[k] === '{') n++; else if (t[k] === '}' && --n === 0) break; } return t.slice(a, k + 1); };
+const sb3 = { BK: { duesRaw: { needs: { customer: { overdue: 1, overdue_minor: 35000, parties: 1 }, supplier: { overdue: 1, overdue_minor: 3403050, parties: 1 } } } }, BK_NEED_ORDER: ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 'overdue'],
+  tx: (x) => x, txn: (a) => a, esc: (x) => String(x), bkMoney: (m) => 'A$' + (m / 100).toLocaleString('en-AU', { minimumFractionDigits: 2 }), bkMountAttribute: () => '' };
+vm.createContext(sb3);
+vm.runInContext(['bkNeedsSum'].map((n) => grabFrom('cap-books.js', n)).concat(['bkNeedsChip', 'bkNeedsChips'].map((n) => grabFrom('cap-books-needs.js', n))).join(';') + ';this.bkNeedsSum=bkNeedsSum;this.bkNeedsChips=bkNeedsChips;', sb3);
+const heads = sb3.bkNeedsChips(sb3.bkNeedsSum('all'), 'all', 'AUD', '').join(' ');
+ok(/A\$350\.00<\/b> overdue from customers/.test(heads) && /A\$34,030\.50<\/b> overdue to suppliers/.test(heads) && !/34,380\.50/.test(heads), 'FW-35: two overdue chips, no 34,380.50: ' + heads.replace(/<[^>]+>/g, ''));
+const one = sb3.bkNeedsChips(sb3.bkNeedsSum('pay'), 'pay', 'AUD', '').join(' ');
+ok(/A\$34,030\.50<\/b> overdue</.test(one), 'FW-35: one side keeps its single overdue chip');
 process.exit(fails ? 1 : 0);
