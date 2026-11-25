@@ -15732,18 +15732,7 @@ function supDetailHTML() {
   if (d.offRail) {
     const kind = supKindOf(x),
       me = esc(supName(x));
-    /* ⚠️ SINGLE-QUOTED, NOT JSON. The onclick attribute is written with double quotes, so JSON.stringify's own
-       double quotes would close it — and "Ram's Traders" would then break the handler a different way. */
-    const q = function (s) {
-      return (
-        "'" +
-        String(s == null ? '' : s)
-          .replace(/\\/g, '\\\\')
-          .replace(/'/g, "\\'")
-          .replace(/"/g, '&quot;') +
-        "'"
-      );
-    };
+    /* ⚠️ A name inside the onclick string goes through escJs (helpers.js), the ONE escaper for a JS string inside an attribute: a local escaper that left an HTML-entity quote alone ran script (APPXSS 1129). */
     const act = function (label, note, fn, tid) {
       return (
         `<button data-cbsid="BUS009-B05" class="composebtn" data-testid="${tid}" style="width:100%;justify-content:center;margin-top:8px" onclick="${fn}">${label}</button>` +
@@ -15763,13 +15752,13 @@ function supDetailHTML() {
         ? act(
             '🧾 ' + tx('Record a purchase'),
             tx('What you bought and what it cost. It goes to <b>supplies</b> — never to your storefront.'),
-            'supBuyModal(' + q(supName(x)) + ')',
+            'supBuyModal(\'' + escJs(supName(x)) + '\')',
             'sup-record-buy'
           )
         : act(
             '🧾 ' + tx('Record a delivery'),
             tx('Goods you bought to sell on. You will be asked which of them to add to your catalogue.'),
-            'supRecordDelivery(' + q(supName(x)) + ',' + q(x.supplier_entity_id || '') + ')',
+            'supRecordDelivery(\'' + escJs(supName(x)) + '\',\'' + escJs(x.supplier_entity_id || '') + '\')',
             'sup-record-delivery'
           )) +
       `<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey);line-height:1.6">` +
