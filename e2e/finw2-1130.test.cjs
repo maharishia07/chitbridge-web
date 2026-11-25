@@ -28,6 +28,6 @@ const cells = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-b
 const at = cells.indexOf('function bkWaitNo('); let d = 0, j = cells.indexOf('{', at); for (; j < cells.length; j++) { if (cells[j] === '{') d++; else if (cells[j] === '}' && --d === 0) break; }
 const sb2 = { bkWaitModel: (w) => w.model || null }; vm.createContext(sb2); vm.runInContext(cells.slice(at, j + 1) + ';this.bkWaitNo = bkWaitNo;', sb2);
 ok(sb2.bkWaitNo({ ref: 'S068-22', job: 'bill' }) === 'S068-22', 'FW-38: no number on the chit -> the books ref S068-22');
-ok(sb2.bkWaitNo({ ref: 'S068-22', model: { no: 'INV-7' } }) === 'INV-7', 'FW-38: the chit's own number wins');
+ok(sb2.bkWaitNo({ ref: 'S068-22', model: { no: 'INV-7' } }) === 'INV-7', 'FW-38: the chit own number wins');
 ok(sb2.bkWaitNo({ ref: 'walkin:C1:2026-11-01', job: 'day' }) === '' && sb2.bkWaitNo({ ref: 'ev:expense:abc' }) === '' && sb2.bkWaitNo({ ref: '3f2b8c1e-1111-4222-8333-444455556666' }) === '', 'FW-38: day refs, typed refs and ids are never a bill number');
 process.exit(fails ? 1 : 0);
