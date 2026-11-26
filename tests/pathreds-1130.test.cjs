@@ -64,17 +64,17 @@ const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
 /* ── RW3-16: the BAS tab word on a page that loads no pack registry (network.html: the firm's client books) ── */
 {
-  const win = { CBRegulation: undefined };
-  const sandbox = { window: win, console, document: { documentElement: {} } };
-  sandbox.globalThis = sandbox;
-  vm.createContext(sandbox);
-  vm.runInContext(read('public/app/helpers.js'), sandbox);
-  const word = (kind, cc) => vm.runInContext('packWord(' + JSON.stringify(kind) + ', ' + JSON.stringify(cc) + ')', sandbox);
-  check(word('returnName', 'AU') === 'BAS', 'RW3-16: an AU client with no registry on the page still names its return BAS: "' + word('returnName', 'AU') + '"');
-  check(word('returnName', 'AE') === 'VAT return', 'RW3-16: an AE client names it "VAT return": "' + word('returnName', 'AE') + '"');
-  check(word('returnName', '') === '' && word('returnName', 'ZZ') === '', 'RW3-16: no country, or one with no row, gives no word (the tab keeps its own label)');
   const view = read('public/app/books-grant-view.js');
-  check(view.includes("packWord('returnName', clientCountry())"), 'RW3-16: the tab asks packWord for the CLIENT country (the answer, else the page), not the page session alone');
+  const label = view.slice(view.indexOf('function labelOf'), view.indexOf('function tabs'));
+  check(label.includes('choices.return_name') && !label.includes('packWord'), 'RW3-16: the tab word is the one GET /periods names (return_name), not a registry the page does not load');
+  const html = read('public/network.html');
+  check(!html.includes('/engine/tax.js'), 'RW3-16: network.html still loads no 650 KB pack bundle for a tab word');
+  /* run the real labelOf against a tab: BAS from the answer, "Tax return" while the answer names none */
+  const ctx = vm.createContext({ grantKit: { viewState: { choices: { return_name: 'BAS' } } } });
+  vm.runInContext(label.slice(label.indexOf('function labelOf')) + ' this.f = labelOf;', ctx);
+  check(ctx.f({ k: 'bas', label: 'Tax return' }) === 'BAS' && ctx.f({ k: 'tb', label: 'Trial balance' }) === 'Trial balance', 'RW3-16: only the return tab takes the word; the others keep theirs');
+  ctx.grantKit.viewState.choices = { periods: [] };
+  check(ctx.f({ k: 'bas', label: 'Tax return' }) === 'Tax return', 'RW3-16: an answer that names no return leaves the tab "Tax return"');
 }
 
 Promise.all(pending).then(() => {
