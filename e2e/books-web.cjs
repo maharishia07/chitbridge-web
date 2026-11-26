@@ -370,6 +370,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(JSON.stringify(order1) === JSON.stringify(['cust-row-c1', 'cust-row-c2']) && JSON.stringify(order2) === JSON.stringify(['cust-row-c2', 'cust-row-c1']), 'a click on the Party no heading sorts by it, a second click reverses it');
   await p.click('[data-testid="cust-row-c1"] [role="button"]'); await p.waitForSelector('[data-testid="crm-next-c1"]', { timeout: 8000 }).catch(() => {});
   await p.waitForFunction(() => /INV-1/.test((document.querySelector('[data-testid="crm-next-c1"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  console.log('DBGNEXT', await p.textContent('[data-testid="crm-next-c1"]').catch((e) => 'none'));
   ok(/INV-1/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /3 orders/.test(await p.textContent('[data-testid="crm-next-c1"]')), 'a customer\'s next level: its orders and its bills (read once, on the first open)');
   await p.click('[data-testid="cust-row-c1"] [role="button"]');
   await p.evaluate(() => { UI[lwKey()] = 340; document.getElementById('panel').style.setProperty('--lw', '340px'); paintCustList(); });
@@ -422,6 +423,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const rows = await p.$$eval('[data-testid^="alloc-row-"]', (els) => els.map((e) => e.textContent));
   const vals = await p.$$eval('[data-testid^="alloc-"]:not([data-testid^="alloc-row"])', (els) => els.map((e) => ({ v: e.value, d: e.disabled })));
   await shot(p, '2-receive-proposal');
+  console.log('DBGALLOC', JSON.stringify(rows), JSON.stringify(vals));
   ok(/INV-9/.test(rows[0]) && vals[0].d === true, 'the disputed bill (oldest) is shown and cannot take anything');
   ok(/INV-1/.test(rows[1]) && Number(vals[1].v) === 3000 && /INV-2/.test(rows[2]) && Number(vals[2].v) === 1000, 'proposal: oldest due first — INV-1 3,000 then INV-2 1,000');
   /* ⚠️ forcing the disputed box open still cannot send an amount against it */
@@ -697,6 +699,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.click('[data-testid="db-csv"]')]);
     const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '').split('\r\n').filter(Boolean);
     ok(csv[0] === 'date,no,kind,party,ref,how,counter,by,made_by,currency,dr,cr,gist' && csv.length === 1 + wantRavi.length, 'views: Download CSV — a header and one line per shown row (' + (csv.length - 1) + ' of ' + wantRavi.length + ')');
+    console.log('DBGCSV', csv[1]);
     ok(csv[1].indexOf('2026-07-02,JV/2026-27/000001,Sales,Ravi Stores,C2/26-27/0002,On credit,C2,Athi,3000.00,3000.00,') === 0 && /GST 457\.62/.test(csv[1]), 'views: the CSV line carries date, number, kind, party, ref, how, counter, by, Dr, Cr and the gist');
     await clear();
     await noAccounting(p, 'day book views');
@@ -714,6 +717,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
   const lt0 = await headOf('stmt-src-0-at');
+  console.log('DBGLED', await p.evaluate(() => (document.querySelector('[data-testid="stmt-what-0"]') || { outerHTML: 'none' }).outerHTML.slice(0, 900)));
   ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' recorded 01 Oct' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
   /* the Ledgers quick fixes (2026-10-03): the kind word once · one opening/closing line in Dr/Cr · no minus · nothing cut off */
   {
@@ -753,6 +757,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
   const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
+  console.log('DBGDUES', await p.evaluate(() => (document.querySelector('[data-testid="dues-next-s1"]') || { outerHTML: 'none' }).outerHTML.slice(0, 1200)));
   ok(/2,500/.test(String(await cellOf('s1', 'd31_60'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "31–60 days" in its own group (' + await cellOf('s1', 'd31_60') + ')');
   ok(String(await cellOf('c1', 'd31_60') || '').length > 0 && await cellOf('c1', 'other') === null && await cellOf('s1', 'other') === null, 'dues: a customer and a supplier read the SAME five ages, and there is no "Other" (W15-94)');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-laptop.png') });
@@ -811,6 +816,9 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   /* month lock blocks a payment in that month; opening again needs a reason */
   await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk-row-12"]');
   const sep = String((new Date().getMonth() + 9) % 12 + 1);
+  /* GREY-AU U-F-10: an open month has no Lock of its own; the ONE Lock is in the bar and acts on the OLDEST open month. This run locks this month, so the months before it are already closed. */
+  for (let m = 1; m < +sep; m++) S.locked[m] = true;
+  await p.reload(); await p.waitForSelector('[data-testid="lk-row-12"]');
   ok(await p.locator('[data-testid^="lk-row-"]').count() === 12 && await p.inputValue('[data-testid="lk_fy"]') === FYNOW, 'Month lock: the financial year is a picker on the current year, and the twelve months are rows');
   ok(await p.locator('[data-testid="lk-state-' + sep + '"][data-state="open"]').count() === 1 && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0 && await p.locator('[data-testid="lk-lock-' + sep + '"]').count() === 1, 'an open month offers Lock, not Open again');
   ok(/closed month opens again only/.test(await p.textContent('[data-testid="lk_note"]')) && /newest closed month/.test(await p.textContent('[data-testid="lk_note"]')), 'Close month is explained in one line');

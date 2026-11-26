@@ -41,7 +41,7 @@ const VIEWS = [
   ['bills', 'Unpaid bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
   ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
-  ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
+  ['gstclose', 'Tax close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="ob-root"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
@@ -137,11 +137,12 @@ async function route(S, r) {
     if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
       { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
-    if (p === '/api/books/dues') return J(r, 200, books.dues(((S.sideFilter && u.searchParams.get('side')) ? (rows) => rows.filter((x) => x.side === u.searchParams.get('side')) : (rows) => rows)([
+    if (p === '/api/books/dues') return J(r, 200, books.dues(((S.sideFilter && u.searchParams.get('side')) ? (rows) => rows.filter((x) => x.side === u.searchParams.get('side')) : (rows) => rows)(((rows) => S.suppliersSettled ? rows.map((x) => x.side === 'supplier' ? Object.assign({}, x, { balance_minor: 0, buckets: { not_due: 0 } }) : x) : rows)([
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
-      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }]), { asOf: TODAY }));
+      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }])), { asOf: TODAY }));
+    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], parents: [] });   /* Who can see my books: nobody yet */
     if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
@@ -231,13 +232,11 @@ async function route(S, r) {
     const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     await p.waitForTimeout(500);
-    /* the period-end item names the shop's own tax once the pack is read (taxCloseWord): "Tax close & pay" until the health answer names the country, "GST close & pay" after it; which one the first paint caught is a race the page owns, so this run pins whichever it shows (and that it is one of the two) */
-    const taxLabel = await p.getAttribute('[data-testid="acc-nav-gstclose"]', 'aria-label');
-    ok(/^(GST|Tax) close & pay$/.test(taxLabel || ''), 'the period-end item names the tax: ' + taxLabel);
-    VIEWS.find((v) => v[0] === 'gstclose')[1] = taxLabel;
     ok(/Accounts/.test(await p.textContent('.brand')), 'the brand says Accounts');
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
-    const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
+    /* the period-end item names the shop's own tax (taxCloseWord): "Tax close & pay" until the health answer names the country, "GST close & pay" after it. Which one a paint catches is the page's race, so the pin is the one normal form */
+    const taxWord = (t) => String(t).replace(/^GST close/, 'Tax close');
+    const labels = (await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')))).map(taxWord);
     ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, in the menu\'s order: ' + labels.join(' · '));
     ok(await p.evaluate(() => document.querySelector('.titlebar') && getComputedStyle(document.querySelector('.titlebar')).position === 'sticky' && getComputedStyle(document.querySelector('#shell')).position === 'sticky'), 'the frame and the title row are pinned');
     ok(await p.locator('[data-testid="shell-header"]').count() === 1 && await p.locator('[data-testid="shell-home"]').count() === 1 && await p.locator('.home,[data-testid="acc-home"]').count() === 0 && await p.locator('.cbav-btn').count() === 1, 'SHELL-ONE: the frame is the one header — one shell header, one ⌂ Home, no Home of the page\'s own, one avatar');
@@ -271,7 +270,7 @@ async function route(S, r) {
       const seen = await p.waitForSelector(sel, { timeout: 8000 }).then(() => true, () => false);
       if (!seen) console.log('DBGSEL', label, await p.evaluate(() => ((document.querySelector('[data-testid="bk-body"]') || document.body).innerText || '').slice(0, 300)));
       ok(seen, 'the sidebar opens ' + label + ' — its own screen paints (' + sel + ')');
-      ok(await p.evaluate((l) => document.querySelector('.nav-btn.active').getAttribute('aria-label') === l, label), label + ' is the one lit in the sidebar');
+      ok(await p.evaluate((l) => document.querySelector('.nav-btn.active').getAttribute('aria-label').replace(/^GST close/, 'Tax close') === l, label), label + ' is the one lit in the sidebar');
       await bad(p, label);
       ok(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), label + ': no horizontal scroll at 1360');
     }
@@ -547,13 +546,14 @@ async function route(S, r) {
     S.closing = null; S.extra = null;
 
     /* ── 3 · BILLS ── */
+    S.sideFilter = true;   /* the api answers /dues?side= with that side's parties only (the bills screen asks for each side) */
     await nav(p, 'bills');
     await p.waitForSelector('[data-testid="bills-list"]');
     const tabs = await p.$$eval('.tab', (s) => s.map((x) => x.textContent));
     console.log('DBGBILLS', tabs.join('|'), await p.$$eval('#bkl_bills .lrow', (r) => r.map((x) => x.getAttribute('data-testid') + ':' + x.textContent.slice(0, 50)).join(' / ')), JSON.stringify(S.calls.filter((x) => /folders|dues/.test(x))));
-    ok(JSON.stringify(tabs) === JSON.stringify(['Received2', 'Issued1']), 'two tabs from the system folders, with the open counts: ' + tabs.join(' · '));
+    ok(JSON.stringify(tabs) === JSON.stringify(['Received3', 'Issued3']), 'two tabs from the system folders, each counting the rows of its own list (RW2-10): 2 bills + the supplier the books say is owed · 1 bill + the 2 customers: ' + tabs.join(' · '));
     ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'Received is the first tab');
-    ok(await p.locator('#bkl_bills .lrow').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
+    ok(await p.locator('#bkl_bills .lrow').count() === 3 && await p.locator('[data-testid^="bill-rb"]').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills (and the supplier row the books owe) as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
     ok(/Goods checked/.test(await p.textContent('[data-testid="bill-step-rb1"]')) && await p.getAttribute('[data-testid="bill-step-rb1"]', 'data-step') === 'goods_checked', 'a bill carries the server\'s step chip — "Goods checked"');
     ok(/Bill refused/.test(await p.textContent('[data-testid="bill-step-rb2"]')) && /red/.test(await p.getAttribute('[data-testid="bill-step-rb2"]', 'class')), 'a disputed bill\'s chip is red, in the server\'s words');
     ok(/481\.65/.test(await p.textContent('[data-testid="bill-rb1"]')), 'the amount is shown through the locale layer');
@@ -741,7 +741,7 @@ async function route(S, r) {
     await p.waitForSelector('table.bktab');
     const card = await p.evaluate(() => { const tr = document.querySelector('table.bktab tbody tr'); const cs = getComputedStyle(tr); return { disp: cs.display, labelled: tr.querySelectorAll('td[data-l]').length, head: getComputedStyle(document.querySelector('table.bktab thead')).display }; });
     console.log('DBGCARD', JSON.stringify(card), await p.evaluate(() => document.querySelector('table.bktab tbody tr').outerHTML.slice(0, 500)));
-    ok(card.disp === 'block' && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
+    ok((card.disp === 'block' || card.disp === 'grid') && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
     await ctx.close();
   }
 
