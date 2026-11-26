@@ -240,7 +240,8 @@ async function w3Employees(browser, base) {
       const api = standIn();
       const { ctx, page } = await open(browser, base, api, vp, theme, 'owner');
       ok(tag + ' · 1 the list is drawn from the 150 clients', (await rows(page)) > 0, await rows(page));
-      ok(tag + ' · 1 Held by: an unassigned row shows nothing, only a ghost control', (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-as-chip].as-ghost').count()) === 1 && (await page.locator('[data-testid="practice-row-' + id(1) + '"] [data-testid="assign-held"]').first().innerText()).trim() === '', await heldText(page, 1));
+      /* a1427758 (W4-06): a firm where nobody holds anything draws NO Held-by column (never 150 blank ghosts); the first holder is given through the tick bar (step 2/3 below); the ghost chip returns once someone holds a client (steps 3b, 6) */
+      ok(tag + ' · 1 Held by: while nobody holds a client the column is not drawn (no ghost chips); assigning goes through the bulk bar', (await page.locator('[data-testid="practice-row-' + id(1) + '"]').count()) === 1 && (await page.locator('[data-testid="assign-held"]').count()) === 0, await heldText(page, 1));
       ok(tag + ' · 1 the quick views Mine · Unassigned · Everyone are on the first paint', /Mine[^]*Unassigned[^]*Everyone/.test(await page.locator('.cbl-views').first().innerText()));
       ok(tag + ' · no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
       await page.screenshot({ path: file('1-list') });
