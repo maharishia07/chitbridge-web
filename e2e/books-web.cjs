@@ -226,6 +226,8 @@ async function route(S, r) {
     { folder_id: 'f-b2100', parent_id: null, name: 'Bills · Received', code: 'B-2100', kind: 'view', system: true, scope: null, side: 'received', count: 0, total: 0 },
     { folder_id: 'f-b1300', parent_id: null, name: 'Bills · Issued', code: 'B-1300', kind: 'view', system: true, scope: null, side: 'issued', count: 0, total: 0 }] });
   if (/^\/api\/folders\/[^/]+\/chits$/.test(p) && m === 'GET') return J(r, 200, { chits: [] });
+  /* the app reads whether the Ledger is on from /me (ledger_on, noteLedgerOn) — it no longer asks GET /books/health on the first screen */
+  if (p === '/api/entities/me' && m === 'GET') return J(r, 200, { entity: { display_name: 'Books Shop', currency_code: 'INR', ledger_on: !!S.enabled } });
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
