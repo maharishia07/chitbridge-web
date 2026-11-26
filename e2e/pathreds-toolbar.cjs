@@ -5,4 +5,7 @@ const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'list-ct
 const rule = (css.match(/.cbl .cbl-tbtn{[^}]*}/) || [''])[0];
 const ok = /flex:0 0 auto/.test(rule);
 console.log((ok ? '  ok  ' : '  FAIL ') + 'the toolbar button does not shrink (' + rule.slice(0, 60) + ')');
-process.exit(ok ? 0 : 1);
+const wide = (css.match(/.cbl .cbl-ico{width:auto;[^}]*}/) || [''])[0];
+const pad = /padding-inline:8px/.test(wide);
+console.log((pad ? '  ok  ' : '  FAIL ') + 'a labelled toolbar button (Expand all, Columns +1, CSV) keeps padding so its icon and word stay inside the border (' + wide + ')');
+process.exit(ok && pad ? 0 : 1);

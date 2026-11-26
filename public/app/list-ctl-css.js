@@ -248,7 +248,7 @@
       /* ASSIGN-W3-CRM-TICKS: a grouped list with ticks: the caret's hang (-9px/-15px) sat over the tick in the 34px lead column, so a press on the tick hit the caret; with a lead column the caret starts at the cell */
       '.cbl .cbl-row[aria-expanded]>.cbl-lead{padding:0;justify-content:center}.cbl .cbl-row[aria-expanded]>.cbl-lead input[data-selrow]{margin:0}',
       '.cbl .cbl-row:has(>.cbl-lead)>.cbl-cell>.cbl-tw{margin-inline-start:0}',
-      '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
+      '.cbl .cbl-ico{width:auto;min-width:34px;padding-inline:8px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
       '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
       '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
       '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
