@@ -26,8 +26,11 @@ function crmShopWhyNot(me) {
 /** read the shop's own state and say plainly what is missing before the link is shared; the link then shows the id that opens */
 async function crmShopLiveRead() {
   try {
-    if (typeof meNow !== 'function') return;
-    SHOW.me = await meNow();
+    /* RW3-15: crm.html has no meNow (app.html's); its start reads /me once (CRM.meRead) and the handle (user_id) is in that answer */
+    var read = typeof meNow === 'function' ? meNow() : window.CRM && window.CRM.meRead;
+    if (!read) return;
+    var reply = await read;
+    SHOW.me = (reply && reply.entity) || reply || null;
   } catch (failure) {
     if (typeof cbQuiet === 'function') cbQuiet('crm: the shop read for the window link failed, the link stays as it was', failure);
     return; /* unreadable: say nothing false */

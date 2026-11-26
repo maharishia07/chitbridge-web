@@ -195,9 +195,9 @@
   function phone() {
     return typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 700px)').matches;
   }
-  /** RW3-16: the return tab is named by the client's own pack (BAS, VAT return: packWord returnName; the page's country is the CLIENT's while acting); Tax return only where no pack is known */
+  /** RW3-16: the return tab is named by the CLIENT's own pack. network.html loads no pack registry, so the word comes from the server: GET /periods answers `return_name` (BAS · VAT return) from the audited shop's pack, read before the first paint; Tax return only where it names none */
   function labelOf(r) {
-    var own = r.k === 'bas' && typeof root.packWord === 'function' ? root.packWord('returnName') : '';
+    var own = r.k === 'bas' && grantKit.viewState.choices && grantKit.viewState.choices.return_name;
     return own || r.label;
   }
   function tabs() {

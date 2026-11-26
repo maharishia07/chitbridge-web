@@ -46,5 +46,5 @@ const bank = src('app/cap-bank-home.js');
 const missLines = bank.split('\n').filter((l) => l.includes('bank-stmts-miss-'));
 assert.strictEqual(missLines.length, 2);
 missLines.forEach((l) => { assert.ok(l.includes('class="sr-only"') && l.includes('aria-hidden="true">○'), 'a gap cell shows a mark, the words stay for a screen reader: ' + l.slice(0, 60)); });
-assert.ok(/<div class="pe-note bkh-key"[^\n]*○ ' \+ bkhE\(tx\('Not signed off'\)\)/.test(bank), 'the key says it once');
+assert.ok(/<div class="pe-note bkh-key"[^\n]*○ ' \+ bkhE\(tx\('no statement kept'\)\)/.test(bank), 'the key says it once (RW3-24: the gap cell and the key read the same words)');
 console.log('grey-au-1129: all passed');

@@ -1202,7 +1202,7 @@
     'books began part-way': 'बही साल के बीच से शुरू हुई',
     'no bank statement signed': 'कोई बैंक विवरण मंज़ूर नहीं',
     'no statement kept': 'कोई विवरण नहीं रखा गया',
-    'not signed off yet': 'अभी मंज़ूर नहीं',
+    'not signed off': 'अभी मंज़ूर नहीं',
     'nothing unexplained': 'कुछ भी अस्पष्ट नहीं',
     'unexplained {a}': '{a} अस्पष्ट',
     '{a} unexplained': '{a} अस्पष्ट',

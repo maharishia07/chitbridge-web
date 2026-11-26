@@ -1148,7 +1148,7 @@
     'books began part-way': 'புத்தகங்கள் ஆண்டின் நடுவில் தொடங்கின',
     'no bank statement signed': 'வங்கி அறிக்கை எதுவும் ஒப்புதல் பெறவில்லை',
     'no statement kept': 'அறிக்கை எதுவும் வைக்கப்படவில்லை',
-    'not signed off yet': 'இன்னும் ஒப்புதல் இல்லை',
+    'not signed off': 'இன்னும் ஒப்புதல் இல்லை',
     'nothing unexplained': 'விளக்கமில்லாதது எதுவுமில்லை',
     'unexplained {a}': 'விளக்கமில்லாத {a}',
     '{a} unexplained': '{a} விளக்கமில்லாதது',

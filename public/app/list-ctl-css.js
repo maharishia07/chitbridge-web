@@ -44,7 +44,7 @@
   const CSS_P2 = [
       /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
     '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
-      '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
+      '.cbl .cbl-tbtn{flex:0 0 auto;height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
       '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
       '.cbl .cbl-needs{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00);font-weight:600}.cbl .cbl-needs[aria-pressed="true"]{background:var(--warn,#B7791F);border-color:var(--warn-3,#7A4B00);color:var(--on-accent,#fff)}',
       '.cbl .cbl-needs.clear{border-color:var(--cl-line);background:var(--cl-card);color:var(--grey,#5E594D);font-weight:400;cursor:default}.cbl .cbl-needs-prog{font-size:calc(13px * var(--k,1));color:var(--grey,#5E594D);white-space:nowrap}',
@@ -248,7 +248,7 @@
       /* ASSIGN-W3-CRM-TICKS: a grouped list with ticks: the caret's hang (-9px/-15px) sat over the tick in the 34px lead column, so a press on the tick hit the caret; with a lead column the caret starts at the cell */
       '.cbl .cbl-row[aria-expanded]>.cbl-lead{padding:0;justify-content:center}.cbl .cbl-row[aria-expanded]>.cbl-lead input[data-selrow]{margin:0}',
       '.cbl .cbl-row:has(>.cbl-lead)>.cbl-cell>.cbl-tw{margin-inline-start:0}',
-      '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
+      '.cbl .cbl-ico{width:auto;min-width:34px;padding-inline:8px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
       '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
       '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
       '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
