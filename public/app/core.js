@@ -1360,6 +1360,7 @@ function refusalFacts(err, body, requestId, kind) {
   err.hint = String(b.hint || '');
   err.requestId = b.request_id || requestId || '';
   err.kind = kind || '';
+  err.at = Date.now(); /* ERR-14: cbStampRefusal (cb-words.js) stamps only what the screen paints soon after this */
   if (typeof window !== 'undefined') window.CB_LAST_REFUSAL = err;
   return err;
 }

@@ -34,6 +34,16 @@ cx.sessionErr = sessionErr; cx.window.CB_LAST_REFUSAL = sessionErr;
 ok(run('friendlyErr(sessionErr)') === sessionErr.message && run('toastRefusal(friendlyErr(sessionErr)).attr').includes('AUTH_EXPIRED'), 'friendlyErr leaves an api error with a code alone, so its toast keeps the code');
 ok(run("friendlyErr(new Error('Failed to fetch'))").includes('network hiccup'), 'a codeless network failure is still reworded');
 
+/* ERR-14: cbStampRefusal puts the code on a screen's OWN line about a fresh refusal (stub nodes, no browser) */
+vm.runInContext('var REFUSAL_FRESH_MS = 3000;' + grab(shell, 'cbStampRefusal'), cx);
+const node = (text, kids, attrs) => { const n = { nodeType: 1, children: kids || [], attrs: Object.assign({}, attrs), textContent: text + (kids || []).map((k) => k.textContent).join(''), hasAttribute(k) { return k in this.attrs; }, getAttribute(k) { return this.attrs[k] || null; }, setAttribute(k, v) { this.attrs[k] = v; }, closest() { return null; } };
+  n.querySelectorAll = () => { const all = []; const walk = (x) => x.children.forEach((c) => { all.push(c); walk(c); }); walk(n); return all; }; return n; };
+const line = node('Locked: January is locked.'), other = node('Saved'), wrap = node('', [line, other]);
+cx.stampWrap = wrap; cx.window.CB_LAST_REFUSAL = Object.assign(new Error('January is locked.'), { code: 'PERIOD_LOCKED', at: Date.now() });
+ok(run('cbStampRefusal(stampWrap)') === 1 && line.attrs['data-cb-error-code'] === 'PERIOD_LOCKED' && !other.attrs['data-cb-error-code'] && !wrap.attrs['data-cb-error-code'], 'the innermost line holding the refusal words is stamped, nothing else');
+cx.window.CB_LAST_REFUSAL.at = Date.now() - 10000; line.attrs = {};
+ok(run('cbStampRefusal(stampWrap)') === 0, 'a refusal older than 3 s stamps nothing');
+
 (async () => {
   cx.api = (key) => key === 'empty' ? Promise.resolve([]) : key === 'full' ? Promise.resolve([1]) : key === 'slow' ? new Promise(() => {}) : Promise.reject(err);
   const empty = await run("apiRead('empty')"), full = await run("apiRead('full')"), failed = await run("apiRead('bad')");
