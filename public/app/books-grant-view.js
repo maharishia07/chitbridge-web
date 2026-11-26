@@ -147,7 +147,20 @@
     ).then(function () { var held = flagsRead; flagsRead = null; return held; }); /* the page paints once the flags answered (or failed: never a reason to hold the books back) */
   }
   /** a read answered: the answer, the since watermark and the server's gross profit are kept, and the helpers are told which entries it holds */
+  /** RW3-11: the books being read are the CLIENT's: its clock (the answer's `timezone`, the audited shop's own zone) writes every time on these screens, never the firm's or the device's; the viewer's own zone returns when the books close */
+  var ownZone = null;
+  function useClientZone(answer) {
+    if (!answer || !answer.timezone || typeof root.shopZoneSet !== 'function') return;
+    if (ownZone === null) ownZone = root.CB_SHOP_TZ || '';
+    root.shopZoneSet(answer.timezone);
+  }
+  function backToOwnZone() {
+    if (ownZone === null) return;
+    root.CB_SHOP_TZ = ownZone;
+    ownZone = null;
+  }
   function keepAnswer(report, answer) {
+    useClientZone(answer);
     grantKit.viewState.answer = answer;
     grantKit.viewState.seen = report.k === 'daybook' && grantKit.viewState.since && answer ? { to: answer.seen_to, total: answer.total, since: answer.since } : null; /* rank 10: the watermark of what this screen listed: Mark as checked sends it back */
     if (grantKit.viewState.o.onRead) grantKit.viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
@@ -339,6 +352,7 @@
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
   function forget() {
+    backToOwnZone();
     grantKit.viewState = { host: grantKit.viewState.host, o: grantKit.viewState.o, report: homeOf(grantKit.viewState.o), day: '', answer: null, why: null, mk: grantKit.viewState.mk, period: null, range: null, choices: undefined, since: false, seen: null };
     grantKit.newMarks();
   }
@@ -417,6 +431,7 @@
         reload();
       },
       destroy: function () {
+        backToOwnZone();
         host.innerHTML = '';
       }
     };
