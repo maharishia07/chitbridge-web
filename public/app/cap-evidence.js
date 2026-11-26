@@ -88,18 +88,23 @@
   /** the chip's state from what the server sent: { key, rank, tone, word } (key = the Day book's Evidence filter; rank = its sort, the ones needing action first) */
   function stateOf(ev) {
     if (ev.flag === 'no_tax_invoice') return { key: 'flag', rank: 0, tone: 'warn', word: evidenceText(EVIDENCE_WORDS.flag), sym: '⚠' };
-    if (ev.count > 0) return { key: 'held', rank: 3, tone: 'ok', word: evidenceText(EVIDENCE_WORDS.evidence) + ' ' + ev.count, sym: '📎' };
-    if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.none), sym: '○' };
-    return { key: 'nodoc', rank: 2, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.nodoc), sym: '○' };
+    if (ev.count > 0) return { key: 'held', rank: 3, tone: 'ok', word: evidenceText(EVIDENCE_WORDS.evidence) + ' ' + ev.count, sym: 'clip', count: ev.count };
+    if (ev.doc) return { key: 'none', rank: 1, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.none), sym: 'clip', count: 0 };
+    return { key: 'nodoc', rank: 2, tone: 'quiet', word: evidenceText(EVIDENCE_WORDS.nodoc), sym: 'clip', count: 0 };
   }
   /** the look of the chip: the state's own, but a "no source" chip says what to do (the chip's word only; stateOf for filter, sort and count stays No source) */
   function chipLook(control, record) {
     var look = stateOf(record);
     if (look.key !== 'nodoc') return look;
     var mayAttach = control.cfg.attach && control.cfg.mayAttach && control.cfg.mayAttach();
-    return { key: look.key, tone: look.tone, sym: look.sym, word: evidenceText(mayAttach ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) };
+    return { key: look.key, tone: look.tone, sym: look.sym, count: 0, word: evidenceText(mayAttach ? EVIDENCE_WORDS.attach : EVIDENCE_WORDS.noReceipt) };
   }
 
+  /** UX-198: the mark on the chip: the ONE attach clip (cbAttachClip, app/attach-ui.js) for a file state, a warning sign for a flag; with no clip drawer on the page, the word alone */
+  function chipMark(look) {
+    if (look.sym !== 'clip') return '<span aria-hidden="true">' + look.sym + '</span>';
+    return typeof root.cbAttachClip === 'function' ? root.cbAttachClip({ count: look.count, name: look.word }) : '';
+  }
   function useEvidence(cfg) {
     addCss();
     var control = {
@@ -117,8 +122,8 @@
         if (!seen[String(entry.entry_id)]) control.ingest([entry]);
         var look = chipLook(control, record);
         return (
-          '<button type="button" class="ev ev-' + look.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + look.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '"' + (look.tone === 'quiet' ? ' title="' + esc(look.word) + '" aria-label="' + esc(look.word) + '"' : '') + '>' +
-          '<span aria-hidden="true">' + look.sym + '</span>' + (look.tone === 'quiet' ? '' : ' ' + esc(look.word)) + '</button>' /* a REPEATED state (no file / no source) is a mark, its word in the title and for a screen reader: 50 rows said 'Attach receipt' 50 times; the Needs-attention chips say it once with the count */
+          '<button type="button" class="ev ev-' + look.tone + '" data-cbsid="CMP062-B01" data-ev-open="' + esc(entry.entry_id) + '" data-tone="' + look.tone + '" data-testid="ev-chip-' + esc(entry.entry_no || entry.entry_id) + '"' + (look.tone === 'quiet' || look.sym === 'clip' ? ' title="' + esc(look.word) + '" aria-label="' + esc(look.word) + '"' : '') + '>' +
+          chipMark(look) + (look.tone === 'quiet' || look.sym === 'clip' ? '' : ' ' + esc(look.word)) + '</button>' /* a REPEATED state (no file / no source) is a mark, its word in the title and for a screen reader: 50 rows said 'Attach receipt' 50 times; the Needs-attention chips say it once with the count */
         );
       },
       sheet: function (entry, o) {
