@@ -1,6 +1,6 @@
 {
- "whole_range": 54,
- "whole_range_calls": 96,
+ "whole_range": 52,
+ "whole_range_calls": 90,
  "whole_range_files": [
   "public/accounts.html",
   "public/app.html",
@@ -11,7 +11,6 @@
   "public/app/cap-admin.js",
   "public/app/cap-assist.js",
   "public/app/cap-bank-home.js",
-  "public/app/cap-bank-statements.js",
   "public/app/cap-bank-store.js",
   "public/app/cap-bank.js",
   "public/app/cap-books-cheques.js",
@@ -48,7 +47,6 @@
   "public/app/cap-worklist.js",
   "public/app/core.js",
   "public/app/helpers.js",
-  "public/app/rail-bell.js",
   "public/crm.html",
   "public/lifecycle-test.html",
   "public/offer-lab-next.html",

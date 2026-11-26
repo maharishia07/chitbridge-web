@@ -9,7 +9,7 @@
  *
  * A "screen" here is a web module (public/app/*.js or a page's own script) that reads at least one list route; a call site is a '/api/…' string literal that names one (an upper bound: a literal in a non-GET statement is skipped by its verb, a path built from parts is read from its first literal).
  *   lazy              every list call asks for a page AND the module has a next-page control (data-cbl-more · loadMore · Show more · IntersectionObserver · onQuery · an `after` cursor)
- *   whole range       at least one list call asks for NO page and the server answers every row for it (its `unasked` fact), or the module reads every page (CBList.every)
+ *   whole range       at least one list call asks for NO page and the server answers every row for it (its `unasked` fact is 'everything'; 'unknown' counts as default page), or the module reads every page (CBList.every)
  *   first page only   every list call asks for a page but the module has no next-page control: rows past the first page are never reachable
  *   default page only a list call asks for no page but the server answers one default page: bounded, and the rest is unreachable
  *
@@ -86,7 +86,7 @@ function scan(root) {
     const every = READS_EVERY_PAGE.test(text);
     const more = MORE_CONTROL.test(text);
     const unpaged = calls.filter((call) => !call.asks_page);
-    const whole = every || unpaged.some((call) => call.unasked !== 'bounded');
+    const whole = every || unpaged.some((call) => call.unasked === 'everything');
     const noMore = unpaged.length === 0 && !more;
     screens.push({ file, calls, reads_every_page: every, has_more_control: more, class: whole ? 'whole range' : noMore ? 'first page only' : unpaged.length ? 'default page only' : 'lazy' });
   }
@@ -96,7 +96,7 @@ function scan(root) {
 /** the counts the PM report and the ratchet use */
 function countsOf(found) {
   const by = (name) => found.screens.filter((screen) => screen.class === name);
-  const wholeCalls = found.screens.reduce((sum, screen) => sum + screen.calls.filter((call) => !call.asks_page && call.unasked !== 'bounded').length, 0);
+  const wholeCalls = found.screens.reduce((sum, screen) => sum + screen.calls.filter((call) => !call.asks_page && call.unasked === 'everything').length, 0);
   return { list_routes: found.routes.length, screens: found.screens.length, lazy: by('lazy').length, whole_range: by('whole range').length, first_page_only: by('first page only').length, default_page_only: by('default page only').length, lazy_somewhere: found.screens.filter((screen) => screen.has_more_control && screen.calls.some((call) => call.asks_page)).length, whole_range_calls: wholeCalls, whole_range_files: by('whole range').map((screen) => screen.file).sort() };
 }
 
