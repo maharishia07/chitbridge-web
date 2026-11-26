@@ -14,7 +14,7 @@
  * FLOW      install -> network-first fetch -> cache answers only when the network fails; non-GET never touched
  * CARD      28-platform-and-operations/offline
  */
-const CB_SW_VERSION = 'v7';
+const CB_SW_VERSION = 'v8'; /* v8 (P2WAVE-SEC L-sec-web-screens-27#L49 · #L99): the api's answers are never cached, so a v7 shell cache of /api JSON is dropped on activate */
 // CUSTOMER-DELINK (21 Nov 2026): the shop registers THIS file as /cb-sw.js?set=customer with scope /shop.html. That worker has its own cache, its own
 // pre-cache (customer pages only) and falls back to the shop, never to app.html — a customer's phone never stores or opens the back office.
 const CUSTOMER_SET = new URL(self.location.href).searchParams.get('set') === 'customer';
@@ -65,11 +65,13 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+/* P2WAVE-SEC: a response the server marked no-store or private is never put in the shared shell cache (the shell is static files; the api's JSON is a person's data and nothing clears this cache at sign-out) */
+const private_ = (res) => /no-store|private/i.test((res.headers && res.headers.get('Cache-Control')) || '');
 // SAME-ORIGIN network-first: fresh when online, cached shell when the network fails; a navigation falls back to app.html.
 function networkFirst(req) {
   return fetch(req)
     .then((res) => {
-      if (res && (res.ok || res.type === 'opaqueredirect')) {
+      if (res && (res.ok || res.type === 'opaqueredirect') && !private_(res)) {
         const cp = res.clone();
         caches
           .open(SHELL)
@@ -98,6 +100,7 @@ self.addEventListener('fetch', (e) => {
   }
   // SAME-ORIGIN app shell / static → network-first so the app OPENS offline (safe: bump CB_SW_VERSION avoids a stale-code trap)
   if (url.origin === self.location.origin) {
+    if (url.pathname.startsWith('/api/') || req.headers.has('Authorization')) return; /* the api behind the same origin (a one-origin deploy) and any signed request go straight to the network, never through the cache */
     e.respondWith(networkFirst(req));
     return;
   }

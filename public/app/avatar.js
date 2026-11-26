@@ -986,7 +986,7 @@
       });
       Object.keys(root.localStorage)
         .filter(function (item) {
-          return /^cb_nav(@|$)/.test(item);
+          return /^cb_nav(@|$)/.test(item) || /^cb_bankrec:[^:]*:stmt:/.test(item); /* P2WAVE-SEC L-sec-web-screens-04#L46: the bank statement's full text (cap-bank bkbSave 'stmt:') is a person's data on a device someone else may use next; the marks and rules (no statement text) stay */
         })
         .forEach(function (item) {
           root.localStorage.removeItem(item);

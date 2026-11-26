@@ -82,26 +82,24 @@
   }
 
   // ── drafts ──
+  /* L-sec-web-screens-20#L56: a draft is stamped with who saved it (as a queued write is, SEC-140) and only that person reads it back; an unstamped older one reads as before */
+  function draftOf(key) {
+    var r = get(DKP + key);
+    try {
+      var held = r ? JSON.parse(r) : null;
+      return held && held.entity && held.entity !== signedInId() ? null : held;
+    } catch (e) {
+      return null;
+    }
+  }
   function saveDraft(key, data) {
-    set(DKP + key, JSON.stringify({ at: Date.now(), data: data }));
+    set(DKP + key, JSON.stringify({ at: Date.now(), data: data, entity: signedInId() || undefined }));
   }
   function loadDraft(key) {
-    var r = get(DKP + key);
-    if (!r) return null;
-    try {
-      return JSON.parse(r).data;
-    } catch (e) {
-      return null;
-    }
+    return (draftOf(key) || { data: null }).data;
   }
   function draftAge(key) {
-    var r = get(DKP + key);
-    if (!r) return null;
-    try {
-      return Date.now() - JSON.parse(r).at;
-    } catch (e) {
-      return null;
-    }
+    return draftOf(key) ? Date.now() - draftOf(key).at : null;
   }
   function clearDraft(key) {
     del(DKP + key);
