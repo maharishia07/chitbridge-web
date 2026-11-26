@@ -10,7 +10,7 @@ of file each thing is; this says what already does the job.
 | used by | name | defined in | what it is for |
 |---|---|---|---|
 | 144 | `item` | `bank-band.js` |  |
-| 120 | `list` | `cap-flag.js` |  |
+| 121 | `list` | `cap-flag.js` |  |
 | 101 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 90 | `again` | `signin-ui.js` |  |
@@ -50,8 +50,8 @@ of file each thing is; this says what already does the job.
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
 | 35 | `reason` | `lab-kit.js` | W9: |
 | 33 | `next` | `cap-stock.js` | the next level: |
+| 33 | `control` | `period-pick.js` | the control: |
 | 32 | `form` | `accounts-shell-unsaved.js` |  |
-| 32 | `control` | `period-pick.js` | the control: |
 | 31 | `bkDate` | `cap-books.js` |  |
 | 31 | `model` | `chit-sheet.js` |  |
 | 31 | `chip` | `screen-id.js` | var S = { app: |
