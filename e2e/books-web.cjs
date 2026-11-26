@@ -840,7 +840,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
-  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 3000 }).catch(() => {});
+  await p.selectOption('[data-testid="pay_mode"]', 'bank');   /* the form remembers the last mode (the cheque before); this one is a plain payment */
+  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   console.log('DBGLOCK', await p.textContent('[data-testid="pay_why"]').catch(() => 'nowhy'), '|', await p.locator('[data-testid="pay_outcome"]').count(), '|', JSON.stringify(S.payPosts.slice(-1)), JSON.stringify(S.locked));
   ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="pay_outcome"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
