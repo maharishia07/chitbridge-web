@@ -194,6 +194,8 @@ async function route(S, r) {
     ok(!/accounting|books of account/i.test(t), where + ': "accounting" / "books of account" appear nowhere');
   };
   const nav = (p, id) => p.click('[data-testid="acc-nav-' + id + '"]');
+  /* F-54: a window under 820 px high opens only the open view's group (Books holds Ledgers): open it first when the button is hidden */
+  const openLedgers = async (p) => { await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { state: 'attached', timeout: 15000 }); if (!(await p.locator('[data-testid="acc-nav-ledgers"]').isVisible())) await p.click('[data-testid="acc-grp-books"]'); await p.click('[data-testid="acc-nav-ledgers"]'); };
   /* Dues · Month lock · Packs, looked at on a laptop and at 390 px (PR: ledger panels): at most three columns, nothing cut off, no sideways scroll */
   async function panelShots(p, tag, w) {
     await nav(p, 'receivables'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(350);
@@ -778,7 +780,7 @@ async function route(S, r) {
       await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
       /* 04 · the parties differ (Customers, one entry with no party) */
       S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
-      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p); console.log('DBGDIFF', tag, await headParts(p));   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
+      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p); console.log('DBGDIFF', tag, await headParts(p), await p.evaluate(() => { const out = []; let e = document.querySelector('[data-testid="lg-parties-diff"]'); for (let i = 0; e && i < 5; i++, e = e.parentElement) { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); out.push((e.className || e.tagName) + ' w' + Math.round(r.width) + ' h' + Math.round(r.height) + ' ' + cs.display + ' ' + cs.flexWrap + ' ' + cs.flex + ' mw' + cs.maxWidth); } return out.join(' <- '); }));   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
       S.closing = null; S.extra = null;
       /* 05 · a plain ledger (Rent) */
       await pick('lg-acc-6010'); checks.plain = await headPct(p); await snap('05-plain-ledger');
@@ -807,7 +809,7 @@ async function route(S, r) {
   {
     const S = standIn(); S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
     const { ctx, p } = await open(S, { viewport: { width: 1080, height: 768 } });
-    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await openLedgers(p);
     await p.waitForSelector('[data-testid="lt-band-people"]', { state: 'attached' }); await p.waitForTimeout(250);
     ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop: the bank ledger opens on its own (W15-90), so the tree is folded and "☰ Ledgers" is the way in');
     await p.click('[data-testid="lt-unfold"]'); await p.waitForTimeout(200); await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); await p.waitForTimeout(250);
@@ -827,13 +829,13 @@ async function route(S, r) {
   {
     const S = standIn();
     const { ctx, p } = await open(S, { viewport: { width: 1366, height: 768 } });
-    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await openLedgers(p);
     await p.waitForSelector('[data-testid="lt-band-people"]');
     await p.click('[data-testid="lg-acc-1300"]'); await p.click('[data-testid="lg-party-c2"]');
     await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
     await p.click('[data-testid="lt-band-income"]');
     await p.reload();
-    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await openLedgers(p);
     await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Chola Auto Care/.test(await p.textContent('.cbl-title h1')), 'the last ledger this person had open comes back (Chola Auto Care, a party\'s ledger)');
     ok(await p.locator('[data-testid="lt-band-income"]').getAttribute('aria-expanded') === 'false', 'a band they folded stays folded');
@@ -869,7 +871,7 @@ async function route(S, r) {
     PARTY_LINES.c1.push(...extra);
     for (const [w, h] of [[1366, 768], [390, 844]]) {
       const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h } });
-      await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { timeout: 15000 }); await p.click('[data-testid="acc-nav-ledgers"]');
+      await openLedgers(p);
       const pk = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); } await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
       await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 15000 }); await pk('lg-acc-1300'); await pk('lg-party-c1'); await p.waitForSelector('[data-testid="stmt-row-3"]', { timeout: 15000 }); await p.mouse.move(1, 1); await p.waitForTimeout(400); /* the pointer rests off the rows: a hover shade is not the zebra */
       const zb = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('[data-testid^="stmt-row-"]')); return { n: rs.length, a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]), d: bg(rs[3]) }; });
