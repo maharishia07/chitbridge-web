@@ -553,8 +553,9 @@ function shopZoneInstall() {
   return true;
 }
 /** ⭐ THE ONE OWNER of window.CB_SHOP_TZ (red1128: avatar.js and core.js both assigned it; whichever loaded last won). core.js (api('me')) and avatar.js (its own /me read) call this; a blank zone changes nothing. */
-function shopZoneSet(zone) {
-  if (zone && typeof window !== 'undefined') window.CB_SHOP_TZ = String(zone);
+function shopZoneSet(zone, restoring) {
+  /* restoring: the Books door (RW3-11) hands the viewer's own zone back when the client's books close, a blank included */
+  if ((zone || restoring === true) && typeof window !== 'undefined') window.CB_SHOP_TZ = String(zone || '');
 }
 shopZoneInstall();
 /**

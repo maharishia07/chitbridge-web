@@ -14,7 +14,7 @@ of file each thing is; this says what already does the job.
 | 100 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 90 | `again` | `signin-ui.js` |  |
-| 85 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 86 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 81 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 81 | `read` | `books-grant-drill.js` |  |
 | 81 | `rows` | `cap-settings.js` |  |

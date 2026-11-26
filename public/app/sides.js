@@ -27,7 +27,7 @@
   var doc = root.document;
 
   /* RW3-21 (walk 3): the server's builder words (Constitution, Jurisdiction, Boilerplate, Blueprint) never reach a customer screen: ONE map, applied to every row's name and line */
-  var PLAIN = [[/^Jurisdiction · version not recorded$/, 'Country rules · version not noted'], [/^Constitution$/, 'Your shop rules'], [/^Boilerplate/, 'Starting setup'], [/^Blueprint/, 'Starting layout'], [/^Jurisdiction$/, 'Country rules'], [/^Standards$/, 'Standards']];
+  var PLAIN = [[/^Jurisdiction · version not recorded$/, 'Country rules · version not noted'], [/^Constitution$/, 'Your shop rules'], [/^Boilerplate\b/, 'Starting setup'], [/^Blueprint\b/, 'Starting layout'], [/^Jurisdiction$/, 'Country rules'], [/^Standards$/, 'Standards']];
   function plainWord(text) {
     var out = String(text == null ? '' : text);
     PLAIN.forEach(function (rule) { out = out.replace(rule[0], rule[1]); });

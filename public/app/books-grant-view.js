@@ -156,7 +156,7 @@
   }
   function backToOwnZone() {
     if (ownZone === null) return;
-    root.CB_SHOP_TZ = ownZone;
+    root.shopZoneSet(ownZone, true);
     ownZone = null;
   }
   function keepAnswer(report, answer) {
