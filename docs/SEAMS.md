@@ -46,9 +46,9 @@ of file each thing is; this says what already does the job.
 | 37 | `note` | `device-id.js` | note(where, problem) — |
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 36 | `names` | `shortcuts.js` |  |
+| 35 | `bkMoney` | `cap-books.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
 | 35 | `reason` | `lab-kit.js` | W9: |
-| 34 | `bkMoney` | `cap-books.js` |  |
 | 33 | `next` | `cap-stock.js` | the next level: |
 | 32 | `form` | `accounts-shell-unsaved.js` |  |
 | 31 | `bkDate` | `cap-books.js` |  |
