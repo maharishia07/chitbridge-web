@@ -5380,7 +5380,7 @@ function bkPbSort(key) {
 function bkNeedAction(pid, row, kind) {
   var word = row.action === 'pay' ? (kind === 'customer' ? 'Receive' : 'Pay') : BK_NEED[row.why] ? BK_NEED[row.why][1] : '';
   if (!word) return '';
-  if (row.action === 'terms') return bkSetTermsLink();
+  if (row.action === 'terms') return bkSetTermsLink(pid);
   if (row.action === 'attach' && !row.chit_id) return '';
   return '<button type="button" class="cbl-tbtn bk-act" data-cbsid="CMP038-B01"' + bkMountAttribute('CMP038') + ' data-b="need-act-' + esc(row.action) + '" data-testid="bill-act-' + esc(row.ref) + '" onclick="event.stopPropagation();bkNeedDo(\'' + escJs(pid) + "','" + escJs(row.ref) + '\',this)">' + esc(tx(word)) + '</button>';
 }
@@ -5508,7 +5508,7 @@ function bkPbTableHTML(pid, pbState, answer, currency) {
     { k: 'date', label: 'Date', w: 92, sort: sortable, ln: 1, cell: function (row) { return esc(bkDate(row.date)); } },
     { k: 'bill', label: 'Bill', w: 104, sort: sortable, ln: 1, /* FW-43: a floor, so Date and Bill never print on one another when the side panel narrows the grid */ cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
     { k: 'status', label: on === 'needs' ? 'Why' : 'Status', w: 200, ln: 1, cell: function (row) { return bkBillStatus(row, on); } },
-    { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? bkSetTermsLink(pid) : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
+    { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? '<span data-b="no-due-date" style="color:var(--grey)">' + esc(tx('No due date')) + '</span>' : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
     { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
     { k: 'amount', label: 'Amount', w: 100, r: true, sort: sortable, ln: 0, only: 'all', cell: function (row) { return moneyOf(row.amount_minor); } },
     { k: 'owed', label: 'Still owed', w: 104, r: true, sort: sortable, ln: 2, end: true, cell: function (row) { return row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + moneyOf(row.owed_minor) + '</b>'; } },
@@ -5573,9 +5573,62 @@ function bkPartyBillsHTML(pid, list, currency) {
   return '<div data-pb="' + esc(pid) + '"' + (answer.stale ? ' aria-busy="true" style="opacity:.6"' : '') + '>' + bkPbStripHTML(pbState, answer, currency) + '<div class="bk-tabwrap">' + bkPbTableHTML(pid, pbState, answer, currency) + '</div>' + fold + bkPbPagerHTML(pid, pbState, answer) + '</div>';
 }
 /** no terms = no due date: the link goes to the ONE terms editor (CB Finance › Terms) — never a second one here */
-function bkSetTermsLink() {
-  return '<a data-b="set-terms" data-cbsid="CMP044-C02" href="/finance.html#terms" onclick="event.stopPropagation()">' + esc(tx('Set terms')) + '</a>';
+function bkSetTermsLink(pid) {
+  /* FIN-127: ONE "Set terms" a row (the Due date cell says "No due date"). A plain press opens the party's terms in a side panel over this list; Ctrl / middle-click is the link's own: a new tab on the same editor. */
+  var href = '/finance.html#terms' + (pid ? '/party/' + encodeURIComponent(pid) : '');
+  return '<a data-b="set-terms" data-cbsid="CMP044-C02" href="' + esc(href) + '"' + (pid ? ' data-pid="' + esc(pid) + '" onclick="return bkTermsPanelOpen(event,this)"' : ' onclick="event.stopPropagation()"') + '>' + esc(tx('Set terms')) + '</a>';
 }
+var BK_TERMS_PANEL = { link: null, pid: null };
+/** FIN-127: the ONE terms editor (CB Finance › Terms, ?panel=1: its party sheet alone) in a panel over the list; the list, its filters and its scroll stay where they are; Esc or Close returns to the same row */
+function bkTermsPanelOpen(event, link) {
+  event.stopPropagation();
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.button > 0) return true; /* the browser opens the new tab */
+  event.preventDefault();
+  bkTermsPanelClose(true);
+  BK_TERMS_PANEL.link = link;
+  BK_TERMS_PANEL.pid = link.getAttribute('data-pid');
+  var panel = document.createElement('aside');
+  panel.id = 'bk_terms_panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', tx('Party terms'));
+  panel.setAttribute('data-testid', 'bk-terms-panel');
+  panel.style.cssText = 'position:fixed;inset-block:0;inset-inline-end:0;width:min(480px,100vw);z-index:60;background:var(--card,#fff);color:var(--ink,#1D1B16);border-inline-start:1px solid var(--line,#DDD6C6);box-shadow:-6px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column';
+  panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line,#DDD6C6)"><b>' + esc(tx('Party terms')) + '</b><button type="button" class="btn" data-testid="bk-terms-close" data-cbsid="CMP044-B01" onclick="bkTermsPanelClose()">' + esc(tx('Close')) + '</button></div>' +
+    '<iframe title="' + esc(tx('Party terms')) + '" src="/finance.html#terms/party/' + encodeURIComponent(BK_TERMS_PANEL.pid) + '?panel=1" style="flex:1;border:0;width:100%"></iframe>';
+  document.body.appendChild(panel);
+  document.addEventListener('keydown', bkTermsPanelKey);
+  var close = panel.querySelector('button');
+  if (close) close.focus();
+  return false;
+}
+function bkTermsPanelKey(event) {
+  if (event.key === 'Escape') bkTermsPanelClose();
+}
+/** close the panel and put the focus back on the row's link (the row, not the top of the page) */
+function bkTermsPanelClose(quiet) {
+  var panel = document.getElementById('bk_terms_panel');
+  if (panel) panel.remove();
+  document.removeEventListener('keydown', bkTermsPanelKey);
+  var link = BK_TERMS_PANEL.link;
+  BK_TERMS_PANEL.link = null;
+  if (!quiet && link) {
+    var back = document.body.contains(link) ? link : document.querySelector('a[data-b="set-terms"][data-pid="' + BK_TERMS_PANEL.pid + '"]');
+    if (back) back.focus({ preventScroll: true });
+  }
+}
+/** the terms editor in the panel says a save landed (or Esc was pressed inside it): the bills of that party are read again so every row re-ages from the new due dates at once */
+window.addEventListener('message', function (event) {
+  var data = event.data;
+  if (event.origin !== location.origin || !data || data.cb !== 'terms-panel' || !document.getElementById('bk_terms_panel')) return;
+  var pid = BK_TERMS_PANEL.pid;
+  if (data.what === 'saved' && pid) {
+    var open = bkPbOf(pid);
+    open.ans = open.ans && Object.assign({}, open.ans, { stale: true });
+    bkPbRead(pid);
+    booksDuesLoad(true);
+  }
+  if (data.what === 'close' || data.what === 'saved') bkTermsPanelClose();
+});
 /** Status, said once: Paid · Part paid · Unpaid, then WHY the bill needs you in ONE chip — "On hold · no tax invoice" — with who and when on hover (the hold is a press that opens the mark's sheet). `tab` = the tab asking: the days late are a column, so "overdue" is a chip only on Needs you */
 function bkBillStatus(row, onTab) {
   var markRow = row.mark,
