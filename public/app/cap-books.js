@@ -2700,7 +2700,7 @@ function bkDvFilters(entries) {
       options: seen.map(function (item) {
         return {
           v: item,
-          label: x[0] === 'counter' ? tx('Counter') + ' ' + item : x[0] === 'by' ? item + (bkIsShopName(item) ? ' ' + tx('(owner)') : '') : tx(item)
+          label: x[0] === 'counter' ? counterWord(item) : x[0] === 'by' ? item + (bkIsShopName(item) ? ' ' + tx('(owner)') : '') : tx(item)
         };
       })
     };
@@ -4332,7 +4332,7 @@ function bkLgFilters() {
       options: seen(function (l) {
         return (l.source || {}).counter;
       }).map(function (item) {
-        return { v: item, label: tx('Counter') + ' ' + item };
+        return { v: item, label: counterWord(item) };
       })
     },
     {

@@ -486,14 +486,14 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const E1 = 'JV/2026-27/000001', E2 = 'JV/2026-27/000002', E3 = 'JV/2026-27/000003', E4 = 'JV/2026-27/000004';
   const t1 = await headOf('db-src-JV/2026-27/000001-at');
   ok(await p.locator('#bk_dvlist.tbllines, #bk_dvlist .lhead').count() >= 1 && await p.locator('#bk_dvlist .lrow').count() > 0 && await p.locator('.bkdv-row').count() === 0, 'day book: drawn by the Task table (.lhead / .lrow), and no .bkdv-row of its own');
-  ok(/\d{1,2}:\d{2}/.test(t1) && await dbCell(E1, 'Bill') === 'C2/26-27/0002 ' + t1 && await dbCell(E1, 'Kind') === 'Sales' && await dbCell(E1, 'Party') === 'Ravi Stores' && await dbCell(E1, 'Tender') === 'On credit' && await dbCell(E1, 'Counter') === 'Counter C2 · rung by Athi',
+  ok(/\d{1,2}:\d{2}/.test(t1) && await dbCell(E1, 'Bill') === 'C2/26-27/0002 ' + t1 && await dbCell(E1, 'Kind') === 'Sales' && await dbCell(E1, 'Party') === 'Ravi Stores' && await dbCell(E1, 'Tender') === 'On credit' && await dbCell(E1, 'Counter') === 'Counter 2 · rung by Athi',
     'day book: a bill entry — its bill and time, kind, party, how it was paid, counter, and "rung by" in the secondary text, one fact a column ("' + await dbCell(E1, 'Bill') + '" · "' + await dbCell(E1, 'Counter') + '")');
   ok(await dbCell(E1, 'Party') !== 'Athi' && !/Athi/.test(await dbCell(E1, 'Party')) && !/Counter/.test(await dbCell(E1, 'Party')), 'day book: the person who rang the bill and the counter are never in the Party column');
   ok(!/recorded/.test(await dbCell(E1, 'Bill')) && await p.locator('[data-testid="db-src-JV/2026-27/000001-rec"]').count() === 0, 'day book: recorded the same day as the bill → no "recorded" note');
-  ok(await dbCell(E2, 'Bill') === 'Walk-in day · 12 bills' && /^Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00$/.test(await dbCell(E2, 'Tender')) && await dbCell(E2, 'Counter') === 'Counter C2', 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + await dbCell(E2, 'Bill') + '" · "' + await dbCell(E2, 'Tender') + '")');
+  ok(await dbCell(E2, 'Bill') === 'Walk-in day · 12 bills' && /^Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00$/.test(await dbCell(E2, 'Tender')) && await dbCell(E2, 'Counter') === 'Counter 2', 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + await dbCell(E2, 'Bill') + '" · "' + await dbCell(E2, 'Tender') + '")');
   ok(await dbCell(E3, 'Bill') === 'Payment received' && await dbCell(E3, 'Party') === 'Ravi Stores', 'day book: an entry with no chit shows its own word in the Bill column ("' + await dbCell(E3, 'Bill') + '")');
   const t4 = await headOf('db-src-JV/2026-27/000004-at');
-  ok(/\d{1,2}:\d{2}/.test(t4) && await dbCell(E4, 'Bill') === 'R/C2/0001 ' + t4 + ' recorded 01 Oct' && await dbCell(E4, 'Kind') === 'Receipts' && await dbCell(E4, 'Tender') === 'UPI 4421…9931' && await dbCell(E4, 'Counter') === 'Counter C2 · rung by Athi',
+  ok(/\d{1,2}:\d{2}/.test(t4) && await dbCell(E4, 'Bill') === 'R/C2/0001 ' + t4 + ' recorded 01 Oct' && await dbCell(E4, 'Kind') === 'Receipts' && await dbCell(E4, 'Tender') === 'UPI 4421…9931' && await dbCell(E4, 'Counter') === 'Counter 2 · rung by Athi',
     'day book: money received — its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + await dbCell(E4, 'Bill') + '")');
   const opened = await p.evaluate(async () => {
     const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
