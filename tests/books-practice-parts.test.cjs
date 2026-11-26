@@ -82,5 +82,20 @@ t('a login that holds no live grants is not a firm: the shop cards stay (refusal
   assert.strictEqual(world.CBPractice.hidesShopCards('shop'), false);
   assert.strictEqual(world.CBPractice.isFirm(), false);
 });
+/* W4-05 / W4-02 (walk 4, 26 Nov): the opened row reads the CLIENT's switch; a signed month with no unbroken run is never "No statement" */
+t('W4-05 a client with books on and no ended year says so, never "Books are not on for this client yet"', () => {
+  const K = world.CBPracticeKit;
+  const html = K.sheetHTML(row({ year_end: null, books_on: true }));
+  assert.ok(!/Books are not on/.test(html), html);
+  assert.ok(/No financial year has ended yet/.test(html), html);
+  assert.ok(/Books are not on for this client yet/.test(K.sheetHTML(row({ year_end: null, books_on: false }))));
+});
+t('W4-02 the Bank cell of a client with one signed month and A$354.32 unexplained says the amount and the run words, never "No statement"', () => {
+  const K = world.CBPracticeKit;
+  const html = K.bankCell(row({ currency: 'AUD', bank: { state: 'unexplained', in_run: false, reconciled_to: null, unexplained_minor: 35432, currency: 'AUD', by_currency: [{ currency: 'AUD', unexplained_minor: 35432, to: '2026-10-31' }], words: 'Months are signed off, none in an unbroken run from the first bank entry' } }));
+  assert.ok(/354.32/.test(html) && /unexplained/.test(html) && /none in an unbroken run/.test(html) && !/No statement/.test(html) && !/undefined|NaN|Invalid/.test(html), html);
+  const quiet = K.bankCell(row({ bank: { state: 'no_run', in_run: false, reconciled_to: null, unexplained_minor: null, currency: null, by_currency: [], words: 'Months are signed off, none in an unbroken run from the first bank entry' } }));
+  assert.ok(/none in an unbroken run/.test(quiet) && !/No statement/.test(quiet), quiet);
+});
 console.log(failures ? failures + ' FAILED' : 'books-practice-parts: all ok');
 process.exit(failures ? 1 : 0);
