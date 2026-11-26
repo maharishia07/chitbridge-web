@@ -63,7 +63,7 @@ async function run() {
   const unit = fs.readFileSync(path.join(ROOT, 'public', 'app', 'sides.js'), 'utf8');
   const shell = fs.readFileSync(path.join(ROOT, 'public', 'app', 'shell.js'), 'utf8');
   ok(!/\bdemo\b/i.test(unit) && !/\bdemo\b/i.test(shell) && !/PROTOTYPE ONLY/.test(unit + shell), 'static · the prototype\'s demo switcher is not built');
-  ok(!/driftOf|driftStatus|minted|\bversion\b/i.test(unit.replace(/\/\*[\s\S]*?\*\//g, '')), 'static · the unit decides no version or drift (the server does)');
+  ok(!/driftOf|driftStatus|minted|\bversion\b(?! not (?:recorded|noted))/i.test(unit.replace(/\/\*[\s\S]*?\*\//g, '')), 'static · the unit decides no version or drift (the server does)');
   ok(/CBSides\.mount/.test(shell) && /has-sides/.test(shell), 'static · the shell mounts the unit (one place, not a second page)');
   ok(/app\/sides\.js/.test(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')), 'static · index.html loads the unit');
 

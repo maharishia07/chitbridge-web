@@ -68,7 +68,7 @@ async function run(o) {
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', route);
     if (o2.noRegistry) await ctx.route('**/app/pages.json', (r) => r.fulfill({ status: 404, body: 'not found' }));
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, SESS);
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, SESS);
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errs.push(String(e.message)));
     await p.goto(web.url('/app.html#/app'));
