@@ -1120,6 +1120,9 @@
     'Your access does not include costs, so the bank statements are hidden.': "لا يشمل وصولك التكاليف، لذا كشوف الحساب البنكية مخفية.",
     '{count} product\u0005one': '{count} منتج',
     '{count} product\u0005other': '{count} منتجات',
+    '{count} month to lock\u0005one': '{count} شهر قبل الإقفال',
+    '{count} month to lock\u0005other': '{count} أشهر قبل الإقفال',
+    'Signed off': 'تم التوقيع',
     /* MACHINE-WRITTEN (loc17, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: needs a native read before a customer sees them */
     'Accounts': 'الحسابات',
     'Acting for': 'تعمل نيابةً عن',
