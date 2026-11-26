@@ -5592,7 +5592,7 @@ function bkTermsPanelOpen(event, link) {
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', tx('Party terms'));
   panel.setAttribute('data-testid', 'bk-terms-panel');
-  panel.style.cssText = 'position:fixed;inset-block:0;inset-inline-end:0;width:min(480px,100vw);z-index:60;background:var(--card,#fff);color:var(--ink,#1D1B16);border-inline-start:1px solid var(--line,#DDD6C6);box-shadow:-6px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column';
+  panel.style.cssText = 'position:fixed;inset-block:0;inset-inline-end:0;width:min(480px,100vw);z-index:60;background:var(--card,#fff);color:var(--ink,#1D1B16);border-inline-start:1px solid var(--line,#DDD6C6);display:flex;flex-direction:column';
   panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line,#DDD6C6)"><b>' + esc(tx('Party terms')) + '</b><button type="button" class="btn" data-testid="bk-terms-close" data-cbsid="CMP044-B01" onclick="bkTermsPanelClose()">' + esc(tx('Close')) + '</button></div>' +
     '<iframe title="' + esc(tx('Party terms')) + '" src="/finance.html#terms/party/' + encodeURIComponent(BK_TERMS_PANEL.pid) + '?panel=1" style="flex:1;border:0;width:100%"></iframe>';
   document.body.appendChild(panel);
