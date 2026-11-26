@@ -868,7 +868,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="confirm-ok"]');
   await p.waitForFunction((n) => /Closed/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.lastLock !== b4 && S.lastLock.body.hard === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0, 'close for good: asked, then sent as a hard lock; a closed month offers nothing more');
-  S.locked[+sep] = false; S.hard[+sep] = false;
+  S.locked[+sep] = false; S.hard[+sep] = false; for (let m = 1; m < +sep; m++) S.locked[m] = false;   /* the months closed only to put the one Lock on this month */
 
   /* 7 · packs */
   await p.click('[data-testid="acc-nav-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
