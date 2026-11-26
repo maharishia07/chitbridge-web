@@ -37,7 +37,8 @@ async function route(r0) {
   let body = null; try { body = q.postDataJSON(); } catch (_) {}
   if (m !== 'GET') S.bodies.push({ m, p, body });
   let x;
-  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
+  /* RW1-21 (d75d8517a): a private shop greys the share controls, so the fixture shop is public and has its handle (RW3-15) */
+  if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR', user_id: 'CBWALK0001', catalogue_visibility: 'public' } });
   if (p === '/api/books/health') return J(r, 404, { error: 'Not found' });
   if (p === '/api/facts/rail') return J(r, 200, { suppliers: 2, customers: 4, in: 0, out: 0, stuck: 0 });
   if (p === '/api/crm/followups') return J(r, 200, crmApi.followups([]));
