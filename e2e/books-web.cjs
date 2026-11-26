@@ -863,6 +863,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.fill('[data-testid="lk_why"]', 'late bill from Agro Mills');
   await p.click('[data-testid="lk-reopen-go"]');
   await p.waitForFunction((n) => document.querySelector('[data-testid="lk-state-' + n + '"]').getAttribute('data-state') === 'open', sep, { timeout: 8000 }).catch(() => {});
+  console.log('DBGUNLOCK', JSON.stringify(S.locked), JSON.stringify(S.lastLock), await p.evaluate((n) => ((document.querySelector('[data-testid="lk-state-' + n + '"]') || {}).textContent || 'nostate') + ' | ' + ((document.querySelector('[data-testid="lk-whyout"]') || {}).textContent || '') + ' | ' + ((document.querySelector('[data-testid="lk_out"]') || {}).textContent || ''), sep));
   ok(S.locked[+sep] === false && S.lastLock.body.reason === 'late bill from Agro Mills', 'opened again, with the reason sent');
 
   /* close for good: asks first; Cancel sends nothing, Yes sends hard */
