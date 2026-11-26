@@ -251,7 +251,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     await ctx.addInitScript(() => { try {
       const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
       const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-books', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: 'Books Shop' })); } catch (_) {} });
+      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'actor', name: 'Books Shop' })); } catch (_) {} });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
     await p.goto(base + '/app.html#/app');
