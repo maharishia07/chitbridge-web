@@ -182,10 +182,15 @@
   function phone() {
     return typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 700px)').matches;
   }
+  /** RW3-16: the return tab is named by the client's own pack (BAS, VAT return: packWord returnName; the page's country is the CLIENT's while acting); Tax return only where no pack is known */
+  function labelOf(r) {
+    var own = r.k === 'bas' && typeof root.packWord === 'function' ? root.packWord('returnName') : '';
+    return own || r.label;
+  }
   function tabs() {
     if (phone()) return '';
     var all = grantKit.REPORTS.map(function (r) {
-      return { k: r.k, label: r.label };
+      return { k: r.k, label: labelOf(r) };
     });
     if (isAdviser()) all.push({ k: grantKit.ACTIONS, label: 'Actions' });
     return all.map(function (r) {
@@ -197,7 +202,7 @@
   /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
-    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(r.label) }; });
+    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
@@ -240,7 +245,7 @@
   function screenName() {
     if (onActions()) return words('Queues');
     var r = grantKit.REPORTS.filter(function (x) { return x.k === grantKit.viewState.report; })[0];
-    return r ? words(r.label) : '';
+    return r ? words(labelOf(r)) : '';
   }
   /** l16 R4-2b: a screen of the client's books is a history entry: the page is told (onView) so Back and Forward can restore it */
   function tell() {
