@@ -285,7 +285,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `till-dayrep.js` | — | THE DAY REPORT'S AGGREGATION AND TABLES, a part of the till page (till.html) kept in its own file to hold the page's size row (2026-11-28; no behaviou |
 | `till-slip.js` | — | THE SLIP, a part of the till page (till.html) kept in its own file to hold the page's size row |
 | `ui-field.js` | eager |  |
-| `ui-money.js` | — |  |
+| `ui-money.js` | eager |  |
 | `ui-select.js` | — |  |
 | `ui-standard.js` | — |  |
 | `ui.js` | eager |  |
@@ -310,7 +310,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | page | app/ scripts | what it is |
 |---|---|---|
 | `accounts.html` | 110 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
-| `app.html` | 62 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
+| `app.html` | 63 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 20 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 26 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
 | `bill-print.html` | 3 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |

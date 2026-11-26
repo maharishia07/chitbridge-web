@@ -156,6 +156,7 @@ of file each thing is; this says what already does the job.
 | 12 | `refuses` | `device-id.js` | refuses(url, init, request) → true when this api write must not go: |
 | 12 | `shopReg` | `helpers.js` | that needs the pack's word asks here, never a second `if (country === 'IN')`. |
 | 12 | `packWord` | `helpers.js` | var PACK_WORDS_NONE = { taxName: |
+| 12 | `popup` | `lab-kit.js` | extraClass 'lk-side' is the placement variant: |
 | 11 | `compose` | `app.html` |  |
 | 11 | `base` | `assign-bar.js` |  |
 | 11 | `addCss` | `avatar.js` | the two preferences every page honours, written once here so no page re-declares them |
@@ -168,7 +169,6 @@ of file each thing is; this says what already does the job.
 | 11 | `bkToday` | `cap-books.js` | the SHOP's day — |
 | 11 | `theme` | `customer-bar.js` | The ink on the accent comes from the engine's one calculation (CBScreen.onColour). |
 | 11 | `emptyState` | `helpers.js` | act = { label:'+ New product', onclick:"newProduct()" } |
-| 11 | `popup` | `lab-kit.js` | extraClass 'lk-side' is the placement variant: |
 | 11 | `refuse` | `sheet-dialog.js` |  |
 | 10 | `leave` | `accounts-shell-unsaved.js` | nothing moved → goOn(); something moved → ask (Save or Discard when a form can save, Discard or Stay when none |
 | 10 | `wire` | `avatar.js` | var wired = false; |
