@@ -452,9 +452,8 @@ async function runField() {
 if (window.CBOffline) {
   CBOffline.configure({
     apiBase: API,
-    token: function () {
-      return TOK;
-    },
+    token: function () { return TOK; },
+    entity: function () { var held = window.CBFrame && CBFrame.session ? CBFrame.session() : null; return held ? held.actorId || held.entityId || '' : ''; }, /* EL-web-screens-20#L72: every queued write carries who queued it (SEC-140), as app.html does, so it never replays under the next person */
     onChange: paintPill
   });
   CBOffline.registerSW();
