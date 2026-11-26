@@ -110,7 +110,7 @@ function ovSelect() {
 /** the compare switch beside the picker: a choice not ready is greyed WITH its sentence */
 function ovCmpSelect() {
   return (
-    '<select class="inp" id="ov_cmp" data-testid="ov-cmp" aria-label="' + esc(tx('Compare with')) + '" onchange="ovCmpPick(this.value)">' +
+    '<select class="inp" id="ov_cmp" data-cbsid="BKS026-S02" data-testid="ov-cmp" aria-label="' + esc(tx('Compare with')) + '" onchange="ovCmpPick(this.value)">' +
     OV_CMP.map(function (item) {
       return '<option value="' + item[0] + '"' + (item[0] === OVERVIEW.cmp ? ' selected' : '') + (item[2] ? '' : ' disabled title="' + esc(tx('Needs the average from the server, not shown yet')) + '"') + '>' + esc(tx(item[1])) + '</option>';
     }).join('') +
