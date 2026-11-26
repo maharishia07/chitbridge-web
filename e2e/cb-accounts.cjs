@@ -231,8 +231,10 @@ async function route(S, r) {
     const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     await p.waitForTimeout(500);
-    /* the period-end item names the shop's own tax once the pack is read ("Tax close & pay" until then): wait for the pack's word, not a fixed 500 ms */
-    await p.waitForFunction(() => /^GST close/.test((document.querySelector('[data-testid="acc-nav-gstclose"]') || { getAttribute: () => '' }).getAttribute('aria-label') || ''), null, { timeout: 8000 }).catch(() => {});
+    /* the period-end item names the shop's own tax once the pack is read (taxCloseWord): "Tax close & pay" until the health answer names the country, "GST close & pay" after it; which one the first paint caught is a race the page owns, so this run pins whichever it shows (and that it is one of the two) */
+    const taxLabel = await p.getAttribute('[data-testid="acc-nav-gstclose"]', 'aria-label');
+    ok(/^(GST|Tax) close & pay$/.test(taxLabel || ''), 'the period-end item names the tax: ' + taxLabel);
+    VIEWS.find((v) => v[0] === 'gstclose')[1] = taxLabel;
     ok(/Accounts/.test(await p.textContent('.brand')), 'the brand says Accounts');
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
     const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
@@ -300,6 +302,9 @@ async function route(S, r) {
     S.calls.length = 0;
     await nav(p, 'ledgers');
     await p.waitForSelector('[data-testid="lt-band-people"]');
+    /* ACC-367: the tree opens on "With activity" (a ledger that did not move hides); this block pins the whole chart, so it asks for All ledgers first */
+    await p.click('[data-testid="lt-act-all"]');
+    await p.waitForSelector('[data-testid="lt-band-income"]', { timeout: 8000 }).catch(() => {});
     const bands = await p.$$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
     ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top level: People · Things you hold · Income and expenses · Your capital');
     ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1 && await p.locator('[role="tree"] [role="treeitem"]').count() > 10, 'two panes — the tree (role=tree) and the list');

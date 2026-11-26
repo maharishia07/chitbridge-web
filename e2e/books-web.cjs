@@ -310,7 +310,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   let crmNo = '';
   /* 2 · customers: chip + party block + statement */
   await p.evaluate(() => navTo('customers'));
-  await p.waitForSelector('[data-testid="party-due-c1"]', { timeout: 15000 }).catch(async (e) => { console.log('DBG', await p.evaluate(() => { const r = document.querySelector('[data-testid="cust-row-c1"]'); return 'booksOn=' + SESSION.booksOn + ' dues=' + JSON.stringify(BK.dues && BK.dues.c1) + ' row=' + (r ? r.outerHTML.slice(0, 1500) : 'none') + ' all=' + Array.from(document.querySelectorAll('[data-testid^=party-due]')).map((x) => x.dataset.testid).join(','); })); throw e; });
+  await p.waitForSelector('[data-testid="party-due-c1"]', { timeout: 15000 }).catch(async (e) => { console.log('DBG', await p.evaluate(() => { let t = ''; try { t = bkOwes(600000, 'INR'); } catch (x) { t = 'THREW ' + x.message; } const r = document.querySelector('[data-testid="cust-row-c1"]'); return 'owes=' + t + ' booksOn=' + SESSION.booksOn + ' dues=' + JSON.stringify(BK.dues && BK.dues.c1) + ' row=' + (r ? r.outerHTML.slice(0, 1500) : 'none') + ' all=' + Array.from(document.querySelectorAll('[data-testid^=party-due]')).map((x) => x.dataset.testid).join(','); })); throw e; });
   const chip = await p.textContent('[data-testid="party-due-c1"]');
   ok(/P-00001/.test(await p.textContent('[data-testid="party-no-c1"]')) && /6,000/.test(chip), 'the Customers table: the Party no column (P-00001) and the Balance column (' + chip.trim() + ')');
   const chipTitle = await p.getAttribute('[data-testid="party-due-c1"]', 'title');
