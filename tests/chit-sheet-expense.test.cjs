@@ -45,5 +45,7 @@ S.open('e1').then(() => new Promise((r) => setTimeout(r, 20))).then(() => {
   assert(/34,030\.50/.test(body) && !/not recorded/.test(body), 'the Total is the booked amount');
   assert(!/No lines on this chit/.test(body) && !/Rate-wise GST is not recorded/.test(body), 'no "No lines" / "GST not recorded" for a record that has none by design');
   assert(/cs-act-accept"[^>]* disabled/.test(acts) && acts.includes('already in your books'), 'Accept is greyed with the server\'s sentence');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'chit-sheet.js'), 'utf8');
+  assert(src.includes('.toLowerCase().replace(/\\s+/g, \'\')] || x.mode') && !src.includes('replace(/s+/g'), 'the payment-mode key strips whitespace, never the letter s: Cash must find HOW.cash');
   console.log('chit-sheet-expense: all ok');
 }).catch((e) => { console.error(e); process.exit(1); });

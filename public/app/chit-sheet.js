@@ -430,7 +430,7 @@
       '<div class="cs-sec">' + esc(T('Expense')) + '</div>' +
       (x.what ? row('What', String(x.what), 'cs-exp-what') : '') +
       (x.supplier ? row('Owed to', sheet.who, 'cs-exp-who') : '') +
-      (x.mode ? row('Paid', T(HOW[String(x.mode).toLowerCase().replace(/s+/g, '')] || x.mode), 'cs-exp-mode') : '') +
+      (x.mode ? row('Paid', T(HOW[String(x.mode).toLowerCase().replace(/\s+/g, '')] || x.mode), 'cs-exp-mode') : '') +
       heads.map(function (k) { return row('Includes ' + String(k).toUpperCase(), fmtMoney(x.input_tax[k], sheet.cur, '—'), 'cs-exp-tax-' + k); }).join('') +
       '<div class="cs-mute" data-testid="cs-exp-booked">' + esc(T('Already in your books')) + '</div>'
     );
