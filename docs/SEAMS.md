@@ -171,13 +171,13 @@ of file each thing is; this says what already does the job.
 | 26 | `side` | `books-grant-reports.js` |  |
 | 26 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 26 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
+| 26 | `more` | `lab-kit.js` | idKey: |
 | 26 | `check` | `network-app.js` |  |
 | 26 | `label` | `screen-id.js` |  |
 | 26 | `textOf` | `bank-statement-file.js` | the file's text: |
 | 26 | `refusalOf` | `bill-number-taken.js` | the refusal thrown as data: |
 | 26 | `payment` | `books-store.js` |  |
 | 26 | `match` | `itemmatch.js` | actually state. |
-| 25 | `more` | `lab-kit.js` | idKey: |
 | 25 | `dialog` | `ui.js` | ui.dialog({ mount, title · titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bod |
 | 25 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 25 | `reply` | `private-flag.js` | Refused in words: |
