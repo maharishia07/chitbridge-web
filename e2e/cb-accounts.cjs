@@ -240,7 +240,8 @@ async function route(S, r) {
     /* the menu's groups (Athi, 2026-10-03): To do alone, then Books · Every day · Period end · Setup, each folds; the header's line is level with the brand's */
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
-    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
+    console.log('DBG3', JSON.stringify(await p.$eval('#nav .nav-sec', (s) => s.map((x) => Array.from(x.querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')))));
+    ok(await p.$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
     ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'dues,receivables,payables,bills,cheques', 'A1: Outstandings holds Dues · Receivables · Payables · Bills · Cheques');
     ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
@@ -298,7 +299,8 @@ async function route(S, r) {
     S.calls.length = 0;
     await nav(p, 'ledgers');
     await p.waitForSelector('[data-testid="lt-band-people"]');
-    const bands = await p.$$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
+    console.log('DBG4', await p.evaluate(() => Array.from(document.querySelectorAll('#bk_lt [data-testid]')).map((x) => x.dataset.testid).slice(0, 60).join(',')));
+    const bands = await p.$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
     ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top level: People · Things you hold · Income and expenses · Your capital');
     ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1 && await p.locator('[role="tree"] [role="treeitem"]').count() > 10, 'two panes — the tree (role=tree) and the list');
     ok(await p.locator('[data-testid="lt-band-people"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0, 'the bands and groups are open (the tree is the way in); a control account is a closed ledger with its parties inside');
