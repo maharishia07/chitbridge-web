@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 'use strict';
-/*
+/* tools/paged-reads-web.cjs — which web screens read a list route without asking for a page, and whether the screen can show more
  * OWNS      the web half of the paged-read check (PERF1, Athi 26 Nov 2026): which screens read a LIST route without asking for a page, and whether the screen has "show more" / lazy loading.
  * CALLED BY by hand and `npm run check:pagedreads` (--check, a ratchet: the counts may only go down, and a screen not yet in the ratchet may not read a list whole) · the PM report C:/dev/PM/PAGED-READS-*.md (--json)
  * FLOW      e2e/fixtures/paged-read-routes.json (api docs/contracts/paged-read-routes.json, a byte copy: the GET list routes and what each answers when nothing is asked) ──▶ every '/api/…' literal in public/app/*.js and public/*.html
  *           that names a list route ──▶ does the call carry limit / page / after / before ──▶ does its file carry a "more" control ──▶ per screen (a module that reads a list): lazy · whole range · first page only
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/paged-reads
+ * OWNER     cb-capability
+ * RISK      plain
  *
  * A "screen" here is a web module (public/app/*.js or a page's own script) that reads at least one list route; a call site is a '/api/…' string literal that names one (an upper bound: a literal in a non-GET statement is skipped by its verb, a path built from parts is read from its first literal).
  *   lazy              every list call asks for a page AND the module has a next-page control (data-cbl-more · loadMore · Show more · IntersectionObserver · onQuery · an `after` cursor)
@@ -20,7 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const WEB = path.join(__dirname, '..');
+const WEB_ROOT = path.join(__dirname, '..');
 const RATCHET_FILE = path.join(__dirname, 'paged-reads-web.ratchet.json');
 
 const LITERAL = /(['"`])(\/api\/[^'"`\s]*)/g;
@@ -46,49 +48,79 @@ const filesOf = (base) => [].concat(
   fs.readdirSync(path.join(base, 'public')).filter((name) => name.endsWith('.html')).map((name) => 'public/' + name)
 );
 
-/** the whole scan: { routes, screens: [{ file, calls: [{ line, route, unasked, asks_page }], class }] } */
-function scan(root) {
-  const base = root || WEB;
-  const routes = JSON.parse(fs.readFileSync(path.join(base, 'e2e', 'fixtures', 'paged-read-routes.json'), 'utf8')).routes;
-  const patterns = routePatterns(routes);
-  const screens = [];
-  const sources = filesOf(base).map((file) => ({ file, text: withoutComments(fs.readFileSync(path.join(base, file), 'utf8')) }));
-  /* the web names most reads once, in a registry row { m: 'GET', p: '/api/…' } under a key, and asks for them by key: api('key', { query }) — so the registry's keys that name a list route are the call sites to find */
+/** the registry rows that name a list route: Map key -> route (a key shorter than 5 characters is a common word, not a name) */
+function listKeysOf(sources, patterns) {
   const keys = new Map();
   for (const source of sources) {
     for (const match of source.text.matchAll(REGISTRY_ROW)) {
-      const hit = patterns.find((item) => item.pattern.test(pathOf(match[2])));
-      if (hit && match[1].length >= 5) keys.set(match[1], hit.route);
+      const found = patterns.find((item) => item.pattern.test(pathOf(match[2])));
+      if (found && match[1].length >= 5) keys.set(match[1], found.route);
     }
   }
-  /* a key is USED as api('key' …) · call('key' …) · EP.key · or, when it is camelCase (not a common word), as any quoted argument or ep: 'key' */
+  return keys;
+}
+
+/** a key is USED as api('key' …) · call('key' …) · EP.key · or, when it is camelCase (not a common word), as any quoted argument or ep: 'key' */
+function keyUseOf(keys) {
   const names = [...keys.keys()];
+  if (!names.length) return null;
   const camel = names.filter((name) => /[A-Z]/.test(name));
-  const keyUse = names.length ? new RegExp('\\b(?:api|call|apiGet|get)\\(\\s*[\'"](' + names.join('|') + ')[\'"]|\\bEP\\.(' + names.join('|') + ')\\b(?!\\s*[:=])' + (camel.length ? '|(?:\\(|,|\\bep\\s*:)\\s*[\'"](' + camel.join('|') + ')[\'"]' : ''), 'g') : null;
+  const camelUse = camel.length ? '|(?:\\(|,|\\bep\\s*:)\\s*[\'"](' + camel.join('|') + ')[\'"]' : '';
+  return new RegExp('\\b(?:api|call|apiGet|get)\\(\\s*[\'"](' + names.join('|') + ')[\'"]|\\bEP\\.(' + names.join('|') + ')\\b(?!\\s*[:=])' + camelUse, 'g');
+}
+
+/** one call site: its line, the route it reads, what the server answers when nothing is asked, and whether the next 420 characters ask for a page */
+function callAt(text, index, route) {
+  const window = text.slice(index, index + 420);
+  return { line: text.slice(0, index).split('\n').length, route: route.key, unasked: route.unasked, asks_page: PAGE_ASKED.test(window) };
+}
+
+/** a registry or table row's own path is not a call, and a write is not a read */
+function isRowOrWrite(text, index) {
+  const before = text.slice(Math.max(0, index - 80), index);
+  return /\b\w+\s*:\s*(?:\{\s*m\s*:\s*'\w+'\s*,\s*p\s*:\s*)?$/.test(before) || NOT_A_READ.test(before.split('\n').pop());
+}
+
+/** the list calls of one file: '/api/…' literals that name a list route, and the registry keys that do */
+function callsOf(text, patterns, keys, keyUse) {
+  const calls = [];
+  for (const match of text.matchAll(LITERAL)) {
+    if (isRowOrWrite(text, match.index)) continue;
+    const found = patterns.find((item) => item.pattern.test(pathOf(match[2])));
+    if (found) calls.push(callAt(text, match.index, found.route));
+  }
+  for (const match of keyUse ? text.matchAll(keyUse) : []) {
+    const after = text.slice(match.index + match[0].length, match.index + match[0].length + 3);
+    if (/^\s*:/.test(after) || /m\s*:\s*['"]/.test(text.slice(match.index, match.index + 40))) continue; /* the registry row itself */
+    calls.push(callAt(text, match.index, keys.get(match[1] || match[2] || match[3])));
+  }
+  return calls;
+}
+
+/** the class of one screen from its calls and whether its file reads every page / carries a next-page control */
+function classOf(calls, readsEveryPage, hasMoreControl) {
+  const unpaged = calls.filter((call) => !call.asks_page);
+  if (readsEveryPage || unpaged.some((call) => call.unasked === 'everything')) return 'whole range';
+  if (unpaged.length === 0 && !hasMoreControl) return 'first page only';
+  return unpaged.length ? 'default page only' : 'lazy';
+}
+
+/** the whole scan: { routes, screens: [{ file, calls: [{ line, route, unasked, asks_page }], class }] } */
+function scan(root) {
+  const base = root || WEB_ROOT;
+  const routes = JSON.parse(fs.readFileSync(path.join(base, 'e2e', 'fixtures', 'paged-read-routes.json'), 'utf8')).routes;
+  const patterns = routePatterns(routes);
+  const sources = filesOf(base).map((file) => ({ file, text: withoutComments(fs.readFileSync(path.join(base, file), 'utf8')) }));
+  /* the web names most reads once, in a registry row { m: 'GET', p: '/api/…' } under a key, and asks for them by key: api('key', { query }) */
+  const keys = listKeysOf(sources, patterns);
+  const keyUse = keyUseOf(keys);
+  const screens = [];
   for (const { file, text } of sources) {
-    const calls = [];
-    const note = (index, route) => {
-      const window = text.slice(index, index + 420);
-      calls.push({ line: text.slice(0, index).split('\n').length, route: route.key, unasked: route.unasked, asks_page: PAGE_ASKED.test(window) });
-    };
-    for (const match of text.matchAll(LITERAL)) {
-      const before = text.slice(Math.max(0, match.index - 80), match.index);
-      if (/\b\w+\s*:\s*(?:\{\s*m\s*:\s*'\w+'\s*,\s*p\s*:\s*)?$/.test(before) || NOT_A_READ.test(before.split('\n').pop())) continue; /* a registry or table row's own path is not a call; a write is not a read */
-      const hit = patterns.find((item) => item.pattern.test(pathOf(match[2])));
-      if (hit) note(match.index, hit.route);
-    }
-    for (const match of keyUse ? text.matchAll(keyUse) : []) {
-      const after = text.slice(match.index + match[0].length, match.index + match[0].length + 3);
-      if (/^\s*:/.test(after) || /m\s*:\s*['"]/.test(text.slice(match.index, match.index + 40))) continue; /* the registry row itself */
-      note(match.index, keys.get(match[1] || match[2] || match[3]));
-    }
+    const calls = callsOf(text, patterns, keys, keyUse);
     if (!calls.length) continue;
     const every = READS_EVERY_PAGE.test(text);
     const more = MORE_CONTROL.test(text);
-    const unpaged = calls.filter((call) => !call.asks_page);
-    const whole = every || unpaged.some((call) => call.unasked === 'everything');
-    const noMore = unpaged.length === 0 && !more;
-    screens.push({ file, calls, reads_every_page: every, has_more_control: more, class: whole ? 'whole range' : noMore ? 'first page only' : unpaged.length ? 'default page only' : 'lazy' });
+    screens.push({ file, calls, reads_every_page: every, has_more_control: more, class: classOf(calls, every, more) });
   }
   return { routes, screens };
 }
@@ -112,18 +144,18 @@ function checkRatchet(counts) {
 if (require.main === module) {
   const found = scan();
   const counts = countsOf(found);
-  const has = (flag) => process.argv.includes(flag);
-  if (has('--write-ratchet')) {
+  const flagGiven = (flag) => process.argv.includes(flag);
+  if (flagGiven('--write-ratchet')) {
     const old = fs.existsSync(RATCHET_FILE) ? JSON.parse(fs.readFileSync(RATCHET_FILE, 'utf8')) : null;
     if (old && (counts.whole_range > old.whole_range || counts.whole_range_calls > old.whole_range_calls)) throw new Error('refusing to raise the ratchet');
     fs.writeFileSync(RATCHET_FILE, JSON.stringify({ whole_range: counts.whole_range, whole_range_calls: counts.whole_range_calls, whole_range_files: counts.whole_range_files }, null, 1) + '\n');
     console.log('wrote tools/paged-reads-web.ratchet.json: ' + counts.whole_range + ' screens, ' + counts.whole_range_calls + ' calls');
-  } else if (has('--check')) {
+  } else if (flagGiven('--check')) {
     const problems = checkRatchet(counts);
     console.log('paged reads (web): ' + counts.screens + ' screens read a list · ' + counts.lazy + ' lazy · ' + counts.whole_range + ' whole range · ' + counts.first_page_only + ' first page only · ' + counts.default_page_only + ' default page only');
     problems.forEach((problem) => console.log('FAIL ' + problem));
     process.exit(problems.length ? 1 : 0);
-  } else if (has('--json')) {
+  } else if (flagGiven('--json')) {
     console.log(JSON.stringify({ counts, screens: found.screens }, null, 1));
   } else {
     console.log(JSON.stringify(counts, null, 1));
