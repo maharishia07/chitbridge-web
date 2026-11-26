@@ -98,6 +98,7 @@
   var MARK_CSS =
     '.mk{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#DDD6C6);border-radius:999px;background:var(--card,#fff);color:var(--ink,#1D1B16);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:3px 10px;min-height:28px;cursor:pointer;white-space:nowrap;max-width:100%}' +
     '.mk:focus-visible{outline:2px solid var(--blue,#1f5fa8);outline-offset:2px}' +
+    '@media (max-width:620px){.mk{white-space:normal;text-align:start;border-radius:14px;max-width:min(100%,calc(100vw - 110px))}}' + /* RW3-14: a long name wraps inside the screen at 390 */
     '.mk-s{font-size:var(--fs-2,14px);line-height:1}' +
     '.mk-ok{background:var(--ok-tint,#E6F3EA);border-color:var(--ok,#2E8B57);color:var(--ok-3,#0F5132)}' +
     '.mk-ask{background:var(--blue-tint-bg,#eef4fb);border-color:var(--blue,#1f5fa8);color:var(--blue,#1f5fa8)}' +

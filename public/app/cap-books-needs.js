@@ -35,7 +35,7 @@ function bkNeedChips(party) {
     );
   });
   if (kinds.length > 3) shown.push('<span class="bk-need-more" data-b="need-more">+' + (kinds.length - 3) + '</span>');
-  return '<span class="bk-needs" style="display:inline-flex;gap:4px;flex-wrap:nowrap;white-space:nowrap">' + shown.join('') + '</span>';
+  return '<span class="bk-needs" style="display:inline-flex;gap:4px;flex-wrap:wrap;max-width:100%;min-width:0">' + shown.join('') + '</span>';
 }
 /** the Needs filter of the Dues list: any reason, or one of them (the header line presses it) */
 function bkNeedFilters() {

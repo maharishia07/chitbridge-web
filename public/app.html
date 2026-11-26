@@ -4039,6 +4039,11 @@ function routeFirmLanding(text) {
      opens Home, the same as the firm's owner; a shop's counter staff keep the rail. The per-login hint (cb_practice_hint, the one books-practice.js keeps) answers at once; with none, ONE read of /api/entities/me (is_practice) decides and is kept.
      ONLY the app's own front (#/app, empty), as the paired-counter rule above. A read that fails or is slow lets the rail draw (the practice frame on Home carries its own retry). */
   if (SESSION.token && ['actor', 'entity'].indexOf(SESSION.role) >= 0 && (text === '#/' || text === '' || text === '#/app') && !window._firmLandingDone) {
+    /* RW3-25 (walk 3, 26 Nov): a signed-in shop OWNER who types /app.html lands on Home, never the developer shell (the firms already do); staff of a shop keep the rail */
+    if (SESSION.role === 'entity') {
+      location.replace('/');
+      return true;
+    }
     var landing = firmLanding();
     if (landing === 'home') {
       location.replace('/');
