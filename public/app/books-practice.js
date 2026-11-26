@@ -151,6 +151,17 @@
     on_us: ['name', 'status', 'bank', 'queries', 'changed', 'tocheck', 'unlocked'],
     advisory: ['name', 'status', 'sales', 'margin', 'cash', 'profit']
   };
+  /** the countries the firm's clients are in, as [code, name] by name (the pack's own name; a client with no country is left out) */
+  function countriesIn(rows) {
+    var seen = {}, out = [];
+    (rows || []).forEach(function (r) {
+      if (r.country && !seen[r.country]) { seen[r.country] = 1; out.push([r.country, countryWord(r.country)]); }
+    });
+    return out.sort(function (a, b) { return a[1].localeCompare(b[1]); });
+  }
+  function countryWord(code) { return root.CBCountryRules ? root.CBCountryRules.nameOf(code) : String(code || ''); }
+  /** Country shows (column, filter, group by) only for a firm with clients in more than one country: one country on every row would be a repeated label */
+  function mixedCountries() { return countriesIn((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []).length > 1; }
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
       return Object.assign({ key: key, label: translate(label), prio: 2, w: w, sort: key, html: true, cell: function (r) { var html = cell(r); return html === '—' ? '' : html; /* Athi 21 Nov: no cell says "no data" twenty times; the sheet's labelled lines keep their dash */ }, value: value }, extra || {});
@@ -158,6 +169,7 @@
     return [
       { key: 'name', label: translate('Client'), prio: 1, cl: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', html: true, cell: function (r) { return '<a class="bp-link" href="/network.html?open=' + escapeHtml(encodeURIComponent(r.entity_id)) + '" data-cbsid="NET001-B04" data-bp-open="' + escapeHtml(r.entity_id) + '" data-testid="practice-open-' + escapeHtml(r.entity_id) + '">' + escapeHtml(r.name || r.entity_id.slice(0, 8)) + '</a>' + (allReadOnly() ? '' : practiceKit.readOnlyChip(r, 'NET001-B09', 'practice-readonly')) + (isLast(r) ? ' <span class="bp-chip" data-cbsid="CMP033-B01" data-testid="practice-last-chip">' + escapeHtml(translate('Last opened')) + '</span>' : ''); }, value: function (r) { return r.name || ''; } },
       num('status', 'Status', practiceKit.bandNow() === 'pipeline' ? 150 : 260, practiceKit.statusWhy, function (r) { return r.health.words; }, { prio: 1, keep: true, minw: 130, hfilter: 'status', sort: 'urgency', cl: 1, nl: true }),
+      num('country', 'Country', 110, function (r) { return escapeHtml(r.country ? countryWord(r.country) : ''); }, function (r) { return r.country ? countryWord(r.country) : ''; }, { hfilter: 'country', prio: 2, minw: 90 }),
       num('held', 'Held by', 130, function (r) { return root.CBAssign ? root.CBAssign.heldCell(r, assignOpts()) : ''; }, function (r) { return root.CBAssign ? root.CBAssign.heldByText(r) : ''; }, { prio: 1, keep: true, minw: 100, hfilter: 'held' }),
       num('role', 'Role', 90, function (r) { return escapeHtml(translate(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
       num('bank', 'Bank', 150, practiceKit.bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
@@ -211,6 +223,7 @@
     var filterOf = function (key, label, options, match) { return { key: key, label: translate(label), all: translate('All'), options: options.map(function (o) { return { v: o[0], label: translate(o[1]) }; }), match: match }; };
     return [
       filterOf('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
+      !mixedCountries() ? null : filterOf('country', 'Country', countriesIn((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []), function (r, v) { return r.country === v; }),
       filterOf('stage', 'Year end', ['books_in', 'complete', 'checked', 'ready', 'lodged'].map(function (k) { return [k, practiceKit.stageWord(k)]; }), function (r, v) { return r.stage === v; }),
       filterOf('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
       heldFilterOf(filterOf),
@@ -222,7 +235,7 @@
       filterOf('changed', 'Changes', [['yes', 'Changed since I checked']], function (r) { return !!r.changed && r.changed.n > 0; }),
       filterOf('unlocked', 'Months not locked', [['yes', 'Some'], ['no', 'None']], function (r, v) { return v === 'yes' ? r.months_unlocked > 0 : r.months_unlocked === 0; }),
       filterOf('ending', 'Access ends', [['soon', 'Within 30 days'], ['later', 'Later']], function (r, v) { return v === 'soon' ? r.grant.ends_in_days <= 30 : r.grant.ends_in_days > 30; })
-    ].concat(flagsOn() ? [filterOf('saved', 'Saved', [['bookmarked', 'Bookmarked'], ['noted', 'With a note']], function (r, v) { return v === 'noted' ? practiceKit.practiceState.fl.noted(r.entity_id) > 0 : practiceKit.practiceState.fl.bookmarked(r.entity_id); })] : []);
+    ].filter(Boolean).concat(flagsOn() ? [filterOf('saved', 'Saved', [['bookmarked', 'Bookmarked'], ['noted', 'With a note']], function (r, v) { return v === 'noted' ? practiceKit.practiceState.fl.noted(r.entity_id) > 0 : practiceKit.practiceState.fl.bookmarked(r.entity_id); })] : []);
   }
   /* A3P rank 5: on Year end a client opens where its blocker is (the server's stage_blocker): months → Months · bank → Bank · not checked or a query → Day book, the year picked; no blocker or no year → the client as before */
   var BLOCKER_VIEW = { months: 'periods', bank: 'bank', checked: 'daybook', queries: 'daybook' };
@@ -240,7 +253,8 @@
   }
   var HEALTH_HEADS = { help: 'Needs help', watch: 'Watch', good: 'Doing well', none: 'Not enough books yet' };
   /** the group a client stands under: its health status, the heading's words, the key the order and the fold read */
-  function healthGroup(r) {
+  function healthGroup(r, mode) {
+    if (mode === 'country' && r.country) return [countryWord(r.country), r.country];
     var status = r.health && r.health.status;
     return status ? [translate(HEALTH_HEADS[status] || status), status] : null;
   }
@@ -266,6 +280,7 @@
     var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
     if (!rows.some(function (r) { return r.year_end || r.stage_blocker; })) cols = cols.filter(function (key) { return key !== 'yend'; });
     if (holdersOn() && rows.some(function (r) { return Array.isArray(r.holders) && r.holders.length; })) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
+    if (mixedCountries()) cols.splice(1, 0, 'country'); /* the firm works in more than one country: its own column, the filter and the group by follow */
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
   /** ASSIGN-1: did the server send who holds each client (an answer with a `holders` list on any row) */
@@ -299,7 +314,9 @@
     markLastClient();
     host.onclick = function (ev) {
       var button = ev.target.closest && ev.target.closest('[data-bp-open]');
-      if (button) { ev.preventDefault(); openBooks(button.getAttribute('data-bp-open'), bandKey); }
+      if (button) { ev.preventDefault(); openBooks(button.getAttribute('data-bp-open'), bandKey); return; }
+      var door = ev.target.closest && ev.target.closest('[data-bp-rules]');
+      if (door && root.CBCountryRules) { ev.preventDefault(); root.CBCountryRules.toggle(door); }
     };
   }
   /** the list left from the last paint is destroyed first */
@@ -315,13 +332,22 @@
       root.setTimeout(function () { if (practiceKit.practiceState.list && practiceKit.practiceState.list.mark) practiceKit.practiceState.list.mark(lastClient()); }, 0);
     }
   }
+  /** the grouping: health (the heading, with its count); a firm in more than one country can switch to Country, the heading named by the pack and counted */
+  function groupOf(rows) {
+    var base = { default: 'health', tid: 'bp', order: ['help', 'watch', 'good', 'none'], by: healthGroup, fig: healthFig, folded: function (key, list) { return key === 'good' && list.length > 12; } };
+    if (!mixedCountries()) return base;
+    base.order = base.order.concat(countriesIn(rows).map(function (c) { return c[0]; }));
+    base.as = 'select';
+    base.options = [['health', translate('Health')], ['country', translate('Country')]];
+    return base;
+  }
   /** the client list: its key, rows, columns, sorts, filters, search and empty state */
   function listOptions(rows, bandKey) {
     var queue = practiceQueue(); return {
       key: 'practice-clients-' + bandKey, t: translate, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowClass: function () { return 'bp-r'; } /* F-04: a dense row on a desktop screen (see .bp-r) */, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
       columns: columns(), defaultCols: colsOf(bandKey), next: function (r) { return practiceKit.detailHTML(r, bandKey); }, sorts: sorts(bandKey), filters: filters(), preset: practiceKit.practiceState.filter ? { filt: practiceKit.practiceState.filter } : queue.preset || { filt: {} },
-      search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
-      group: { default: 'health', tid: 'bp', order: ['help', 'watch', 'good', 'none'], by: healthGroup, fig: healthFig, folded: function (key, rows) { return key === 'good' && rows.length > 12; } }, /* Athi 21 Nov: health is the heading, with its count; Doing well folds when it is long */
+      search: function (r) { return [r.name, r.country, r.country ? countryWord(r.country) : '', r.health.words, r.health.reasons.join(' ')].join(' '); },
+      group: groupOf(rows),
       empty: { title: translate(practiceKit.practiceState.data.practice_empty ? 'No clients yet' : 'No clients match') },
       cardMax: 3 /* first-impression W9: a phone card carries the client, the status and the stage with its blocker (Year end); the rest are in the View chooser, not dropped (list-ctl noRoomKeys) */,
       rowClass: function (r) { return isLast(r) ? 'bp-last' : ''; },
@@ -331,6 +357,7 @@
     };
   }
   function practiceCss() {
+    if (root.CBCountryRules) root.CBCountryRules.paintCss();
     if (root.document.getElementById('bp_css')) return;
     var styleNode = root.document.createElement('style');
     styleNode.id = 'bp_css';
@@ -556,5 +583,5 @@
   else start();
   root.CBPractice = { settled: settled, hasData: function () { return !!practiceKit.practiceState.data; }, holding: function () { return holding; }, isFirm: isFirm, hidesShopCards: hidesShopCards, movesToSetup: function (id) { return isFirm() && !!FIRM_SETUP[id]; }, start: start, checkedWords: practiceKit.checkedWords, checkedLeft: practiceKit.checkedLeft, checkedCell: practiceKit.checkedCell, checkedHeader: practiceKit.checkedHeader,
     /* the pure pieces, for e2e/practice-rep73-fable.cjs (no browser): feed an answer, read the words */
-    parts: { clientCount: clientCount, readAll: readAll, bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
+    parts: { clientCount: clientCount, readAll: readAll, bankWords: practiceKit.bankWords, openBooks: openBooks, use: function (d) { practiceKit.practiceState.data = d; practiceKit.practiceState.band = null; practiceKit.practiceState.filter = null; }, compareHTML: practiceKit.compareHTML, pairHTML: practiceKit.pairHTML, yendCell: practiceKit.yendCell, detailHTML: practiceKit.detailHTML, sorts: sorts, statusCell: practiceKit.statusCell, workOrder: workOrder, sheetHTML: practiceKit.sheetHTML, pictureHTML: practiceKit.pictureHTML, stripHTML: practiceKit.stripHTML, columns: columns, filters: filters, listOptions: listOptions, colsOf: colsOf, bandHTML: practiceKit.bandHTML, stageWord: practiceKit.stageWord, BAND_COLS: BAND_COLS } };
 })(typeof window !== 'undefined' ? window : globalThis);

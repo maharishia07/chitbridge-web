@@ -25,6 +25,8 @@
   practiceKit.checkedCell = checkedCell;
   practiceKit.figureOrWhy = figureOrWhy;
   practiceKit.sheetAddress = sheetAddress;
+  practiceKit.returnAddress = returnAddress;
+  practiceKit.countryDoor = countryDoor;
   practiceKit.sheetHTML = sheetHTML;
   practiceKit.detailHTML = detailHTML;
   practiceKit.bankCell = bankCell;
@@ -162,6 +164,13 @@
     var carry = '&fy=' + encodeURIComponent(fy), store = { id: r.entity_id };
     return view === 'bank' ? A.auditAddressOf(store, 'bank', carry) : A.clientAddress(store, '&view=' + encodeURIComponent(view) + carry);
   }
+  /** the client's tax return screen (it holds the boxes): the one address builder, no year picked */
+  function returnAddress(r) {
+    var A = root.CBBooksActing;
+    return A && A.clientAddress ? A.clientAddress({ id: r.entity_id }, '&view=bas') : '';
+  }
+  /** the opened row's Country rules and results door (country-rules-view.js); nothing when that file is not loaded */
+  function countryDoor(r) { return root.CBCountryRules ? root.CBCountryRules.doorHTML(r, practiceKit) : ''; }
   function sheetLine(r, key, label, value, view) {
     var href = sheetAddress(r, view), text = '<b>' + value + '</b>';
     return '<div class="bp-fig" data-testid="practice-sheet-' + key + '-' + practiceKit.escapeHtml(r.entity_id) + '"><span class="sub">' + practiceKit.escapeHtml(practiceKit.translate(label)) + '</span>' +
@@ -193,7 +202,7 @@
     return '<div class="bp-fig" data-testid="practice-holder-' + say(client.entity_id) + '"><span class="sub">' + say(tell('Held by')) + '</span><b>' + text + '</b></div>';
   }
   function detailHTML(client, band) {
-    if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + holderLine(client) + sheetHTML(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) + whyLine(client) + '</div>';
+    if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + holderLine(client) + sheetHTML(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) + whyLine(client) + countryDoor(client) + '</div>';
     var health = client.health, held = withheldWord(client) || practiceKit.translate('Not shown');
     var line = function (label, value) { return '<div class="bp-fig"><span class="sub">' + practiceKit.escapeHtml(practiceKit.translate(label)) + '</span><b>' + value + '</b></div>'; };
     return (
@@ -208,7 +217,7 @@
       line('Profit this quarter', figureOrWhy(client, health.profit_quarter_minor, practiceKit.escapeHtml(practiceKit.money(health.profit_quarter_minor, client.currency)))) +
       line('Months not locked', practiceKit.escapeHtml(client.months_unlocked)) +
       line('Access ends', practiceKit.escapeHtml(practiceKit.dayWords(client.grant.expires_at)) + readOnlyChip(client, 'NET001-B10', 'practice-readonly-card')) +
-      whyLine(client) +
+      whyLine(client) + countryDoor(client) +
       '</div>'
     );
   }
