@@ -547,17 +547,7 @@ function bankExplain() {
 const bkbAcctName = () => ((BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {}).name || '';
 /** the Bank Reconciliation Statement: the books' balance is the API's ledger closing figure; the bank's is the statement's (or typed); the engine states the difference */
 function bankBrs() {
-  const parsed = BKB.parsed,
-    last = parsed.lines[parsed.lines.length - 1] || {};
-  let bank = parsed.closing_minor != null ? parsed.closing_minor : last.balance_minor != null ? last.balance_minor : null;
-  if (bank == null && BKB.bal !== '') {
-    const typedMinor = bkToMinor(BKB.bal);
-    if (!isNaN(typedMinor)) bank = typedMinor;
-  }
-  if (bank == null && typeof bankStoreSignedNow === 'function') {
-    const signed = bankStoreSignedNow(); /* W4-11: a month that IS signed off already holds the bank's closing balance on its record: never asked for again */
-    if (signed && signed.closing_bank_minor != null) bank = Number(signed.closing_bank_minor);
-  }
+  const bank = bkbBankClosing(BKB.parsed);
   BKB.bankKnown = bank != null;
   if (bank == null) {
     BKB.brs = null;
@@ -571,6 +561,20 @@ function bankBrs() {
     unmatched_ledger: BKB.m.unmatched_ledger || [],
     unmatched_stmt: BKB.m.unmatched_stmt || []
   });
+}
+/** the bank closing balance for the statement: the file own, else its last line, else the one typed, else the signed-off month record; null when none is known */
+function bkbBankClosing(parsed) {
+  const last = parsed.lines[parsed.lines.length - 1] || {};
+  let bank = parsed.closing_minor != null ? parsed.closing_minor : last.balance_minor != null ? last.balance_minor : null;
+  if (bank == null && BKB.bal !== '') {
+    const typedMinor = bkToMinor(BKB.bal);
+    if (!isNaN(typedMinor)) bank = typedMinor;
+  }
+  if (bank == null && typeof bankStoreSignedNow === 'function') {
+    const signed = bankStoreSignedNow(); /* W4-11: a month that IS signed off already holds the bank's closing balance on its record: never asked for again */
+    if (signed && signed.closing_bank_minor != null) bank = Number(signed.closing_bank_minor);
+  }
+  return bank;
 }
 
 /** the page is "loaded" once a statement is on screen: the load form folds to one line and the lines fill the screen (body.bk-on, accounts.html); the Statement view scrolls as a page */

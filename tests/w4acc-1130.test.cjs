@@ -8,8 +8,8 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8').split
 let n = 0;
 const ok = (name, fn) => { fn(); n++; console.log('  ok   ' + name); };
 const src = read('public/app/books-grant-reports.js');
-const at = src.indexOf('function totalRows(key, a)');
-const body = src.slice(at, src.indexOf('\n  }\n', at) + 4);
+const lift = (name) => { const from = src.indexOf('function ' + name + '('); return src.slice(from, src.indexOf('\n  }\n', from) + 4); };
+const body = lift('totalRows') + lift('profitRows'); /* totalRows hands the profit and loss rows to profitRows */
 const totalRows = new Function('grantKit', body + '; return totalRows;')({ words: (w) => w });
 ok('W4-16 a loss is labelled Loss and carries the size, not a minus', () => {
   const rows = totalRows('pl', { profit_minor: -1505022 });

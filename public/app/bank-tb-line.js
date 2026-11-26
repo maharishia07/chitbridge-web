@@ -8,13 +8,19 @@
  * CARD      14-accounting/README (auditor rank 9) */
 (function (root) {
   'use strict';
-  /** the words of one account's line (plain text, escaped by the caller) */
-  function wordsOf(line, options) {
-    var translate = options.tx, fill = options.txf;
+  /** the words for an account with no sign-off to show (not shared · never · no unbroken run · none by the date); null when it has one */
+  function unsignedWords(line, translate) {
     if (line.state === 'not_shared') return translate('Bank agreement is not shared with you');
     if (line.state === 'never') return translate('No bank sign-off yet');
     if (line.state === 'no_run') return translate('Months are signed off, none in an unbroken run from the first bank entry'); /* RW2-03: the api's NO_RUN_WORDS, the Home card says the same */
     if (line.state === 'none_by_date') return translate('No sign-off on or before this date');
+    return null;
+  }
+  /** the words of one account's line (plain text, escaped by the caller) */
+  function wordsOf(line, options) {
+    var translate = options.tx, fill = options.txf;
+    var unsigned = unsignedWords(line, translate);
+    if (unsigned) return unsigned;
     var currency = line.currency, sign = fill('Signed off to {d}', { d: options.day(line.period_to) }) + ' · ' + translate('Statement') + ' ' + options.money(line.statement_minor, currency);
     if (line.state === 'earlier') return sign + ' · ' + translate('no difference shown for this date');
     /* BD-F-03: a sign-off saved before BA-F-07 can say "tied" over figures that do not meet; the api's apart_minor is named in words, never "nothing unexplained" over it */

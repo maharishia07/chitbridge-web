@@ -4827,7 +4827,15 @@ function savedLive() {
     return false;
   }
 }
-function labOwner() { try { var held = JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}; return String(held.actorId || held.entityId || ''); } catch (_) { return ''; } } /* L-sec-web-screens-24#L51: who the Lab is signed in as, the ids the app stamps its queue with (SEC-140); '' when nobody is */
+function labOwner() {
+  try {
+    var held = JSON.parse(localStorage.getItem('cb_sess') || 'null') || {};
+    return String(held.actorId || held.entityId || '');
+  } catch (failure) {
+    console.warn('Offer Lab: the saved sign-in could not be read — no owner is named', failure);
+    return '';
+  }
+} /* L-sec-web-screens-24#L51: who the Lab is signed in as, the ids the app stamps its queue with (SEC-140); '' when nobody is */
 function savedToken() {
   try {
     return (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;

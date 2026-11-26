@@ -192,6 +192,19 @@
     }).join('<br>') : say(tell('Unassigned'));
     return '<div class="bp-fig" data-testid="practice-holder-' + say(client.entity_id) + '"><span class="sub">' + say(tell('Held by')) + '</span><b>' + text + '</b></div>';
   }
+  /** the "Cash for those bills" figure: the withheld word when bills are not shown, "Covers them", or how many days the cash runs out in */
+  function cashForBillsHTML(health, held) {
+    if (health.bills_due_30_minor == null) return practiceKit.escapeHtml(held);
+    if (health.cash_days == null) return practiceKit.escapeHtml(practiceKit.translate('Covers them'));
+    return practiceKit.escapeHtml(practiceKit.translate('Runs out in')) + ' ' + practiceKit.escapeHtml(health.cash_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days'));
+  }
+  /** the "Bank" figure in words: no statement · the api's own words for a broken run · reconciled to a date · else what is left unexplained */
+  function bankStateHTML(client) {
+    if (client.bank.state === 'none') return practiceKit.escapeHtml(practiceKit.translate('No statement'));
+    if (client.bank.state === 'no_run') return practiceKit.escapeHtml(practiceKit.translate(client.bank.words));
+    if (client.bank.state === 'reconciled') return practiceKit.escapeHtml(practiceKit.translate('Reconciled')) + ' ' + practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(client.bank.reconciled_to));
+    return practiceKit.escapeHtml(bankLeft(client)) + ' ' + practiceKit.escapeHtml(practiceKit.translate('unexplained'));
+  }
   function detailHTML(client, band) {
     if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + holderLine(client) + sheetHTML(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) + whyLine(client) + '</div>';
     var health = client.health, held = withheldWord(client) || practiceKit.translate('Not shown');
@@ -202,9 +215,9 @@
       line('Margin this quarter', figureOrWhy(client, health.gross_margin_pct, practiceKit.escapeHtml(health.gross_margin_pct) + '%')) +
       line('Cash and bank', figureOrWhy(client, health.cash_minor, practiceKit.escapeHtml(practiceKit.money(health.cash_minor, client.currency)), true)) +
       line('Bills due in 30 days', health.bills_due_30_minor == null ? practiceKit.escapeHtml(held) : practiceKit.escapeHtml(practiceKit.money(health.bills_due_30_minor, client.currency))) +
-      line('Cash for those bills', health.bills_due_30_minor == null ? practiceKit.escapeHtml(held) : health.cash_days == null ? practiceKit.escapeHtml(practiceKit.translate('Covers them')) : practiceKit.escapeHtml(practiceKit.translate('Runs out in')) + ' ' + practiceKit.escapeHtml(health.cash_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days'))) +
+      line('Cash for those bills', cashForBillsHTML(health, held)) +
       line('Customers owe, over 60 days late', health.receivables_over60_minor == null ? practiceKit.escapeHtml(held) : practiceKit.escapeHtml(practiceKit.money(health.receivables_over60_minor, client.currency)) + (health.receivables_over60_share_pct == null ? '' : ' (' + practiceKit.escapeHtml(health.receivables_over60_share_pct) + '%)')) +
-      line('Bank', client.bank.state === 'none' ? practiceKit.escapeHtml(practiceKit.translate('No statement')) : client.bank.state === 'no_run' ? practiceKit.escapeHtml(practiceKit.translate(client.bank.words)) : client.bank.state === 'reconciled' ? practiceKit.escapeHtml(practiceKit.translate('Reconciled')) + ' ' + practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(client.bank.reconciled_to)) : practiceKit.escapeHtml(bankLeft(client)) + ' ' + practiceKit.escapeHtml(practiceKit.translate('unexplained'))) +
+      line('Bank', bankStateHTML(client)) +
       line('Profit this quarter', figureOrWhy(client, health.profit_quarter_minor, practiceKit.escapeHtml(practiceKit.money(health.profit_quarter_minor, client.currency)))) +
       line('Months not locked', practiceKit.escapeHtml(client.months_unlocked)) +
       line('Access ends', practiceKit.escapeHtml(practiceKit.dayWords(client.grant.expires_at)) + readOnlyChip(client, 'NET001-B10', 'practice-readonly-card')) +

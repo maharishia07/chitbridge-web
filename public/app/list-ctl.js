@@ -1462,16 +1462,16 @@ ctx.se = null;
   function fitPop(box) {
     var view = box && box.ownerDocument && box.ownerDocument.defaultView;
     if (!view || !box.querySelectorAll) return;
-    [].slice.call(box.querySelectorAll('.cbl-pop')).forEach(function (pop) {
-      if (!pop.getBoundingClientRect) return;
-      pop.style.transform = '';
-      var rect = pop.getBoundingClientRect(),
+    [].slice.call(box.querySelectorAll('.cbl-pop')).forEach(function (popup) {
+      if (!popup.getBoundingClientRect) return;
+      popup.style.transform = '';
+      var rect = popup.getBoundingClientRect(),
         room = view.innerHeight - rect.top - 8,
-        dx = 0;
-      if (rect.height && rect.bottom > view.innerHeight - 8 && room >= 120) pop.style.maxHeight = room + 'px';
-      if (rect.width && rect.right > view.innerWidth - 8) dx = view.innerWidth - 8 - rect.right;
-      if (rect.width && rect.left + dx < 8) dx = 8 - rect.left;
-      if (dx) pop.style.transform = 'translateX(' + Math.round(dx) + 'px)';
+        shiftX = 0;
+      if (rect.height && rect.bottom > view.innerHeight - 8 && room >= 120) popup.style.maxHeight = room + 'px';
+      if (rect.width && rect.right > view.innerWidth - 8) shiftX = view.innerWidth - 8 - rect.right;
+      if (rect.width && rect.left + shiftX < 8) shiftX = 8 - rect.left;
+      if (shiftX) popup.style.transform = 'translateX(' + Math.round(shiftX) + 'px)';
     });
   }
   function paintToolsBarStep7(list, ctx) {

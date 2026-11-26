@@ -23,18 +23,23 @@ function crmShopWhyNot(me) {
   if (vis === 'network' && me.network_public_count === 0) return tx('Nothing under you is public yet, so customers see "Shop not found".');
   return '';
 }
-/** read the shop's own state and say plainly what is missing before the link is shared; the link then shows the id that opens */
-async function crmShopLiveRead() {
+/** read the shop's own /me into SHOW.me; false when there is nothing to read or it could not be read (then the page says nothing false) */
+async function crmShopMeRead() {
   try {
     /* RW3-15: crm.html has no meNow (app.html's); its start reads /me once (CRM.meRead) and the handle (user_id) is in that answer */
     var read = typeof meNow === 'function' ? meNow() : window.CRM && window.CRM.meRead;
-    if (!read) return;
+    if (!read) return false;
     var reply = await read;
     SHOW.me = (reply && reply.entity) || reply || null;
+    return true;
   } catch (failure) {
     if (typeof cbQuiet === 'function') cbQuiet('crm: the shop read for the window link failed, the link stays as it was', failure);
-    return; /* unreadable: say nothing false */
+    return false; /* unreadable: say nothing false */
   }
+}
+/** read the shop's own state and say plainly what is missing before the link is shared; the link then shows the id that opens */
+async function crmShopLiveRead() {
+  if (!(await crmShopMeRead())) return;
   var note = document.getElementById('crm_sc_notlive'),
     shopWhyNot = crmShopWhyNot(SHOW.me) || (crmShopUrl() ? '' : tx('Your shop has no web address yet, so there is no link to share.'));
   if (note) note.textContent = shopWhyNot;
