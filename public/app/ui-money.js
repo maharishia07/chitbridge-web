@@ -49,6 +49,24 @@ var CBUiMoney = (function () {
     }
   }
 
+  /** W4-17: the sign DRAWN beside a field is the currency's own (A$ for AUD, never a bare $ a reader cannot tell from USD): CBLocale.moneySign, else the input symbol. Parsing still strips symbol(). */
+  function drawnSign(code) {
+    try {
+      return (code && CBLocale.moneySign && CBLocale.moneySign(code)) || symbol(code);
+    } catch (_) {
+      return symbol(code);
+    }
+  }
+
+  /** W4-17: the sign DRAWN beside a field is the currency's own (A$ for AUD, not a bare $ that reads as USD): CBLocale.moneySign, else symbol(). Parsing still strips symbol(). */
+  function drawnSign(code) {
+    try {
+      return (code && CBLocale.moneySign && CBLocale.moneySign(code)) || symbol(code);
+    } catch (_) {
+      return symbol(code);
+    }
+  }
+
   /* ---------- the shop's number marks: the field library's, never a copy ---------- */
   function fieldLibrary() {
     if (typeof CBUiField === 'undefined' || !CBUiField.marks) throw new Error('CBUiMoney needs app/ui-field.js loaded before it');
@@ -212,7 +230,7 @@ var CBUiMoney = (function () {
    */
   function inputHtml(options, stamped) {
     var code = stamped === undefined ? currency(options.cur) : stamped;
-    return '<span class="mi"' + (options.w ? ' style="width:' + options.w + '"' : '') + '><span class="mi-sym" aria-hidden="true">' + escapeText(symbol(code)) + '</span>' + inputTag(options, code) + '</span>';
+    return '<span class="mi"' + (options.w ? ' style="width:' + options.w + '"' : '') + '><span class="mi-sym" aria-hidden="true">' + escapeText(drawnSign(code)) + '</span>' + inputTag(options, code) + '</span>';
   }
 
   /* ---------- ui.field({ kind: 'money', mount, label, currency, value | minor }) ---------- */
