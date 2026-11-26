@@ -164,7 +164,7 @@
     grantKit.viewState.answer = answer;
     grantKit.viewState.seen = report.k === 'daybook' && grantKit.viewState.since && answer ? { to: answer.seen_to, total: answer.total, since: answer.since } : null; /* rank 10: the watermark of what this screen listed: Mark as checked sends it back */
     if (grantKit.viewState.o.onRead) grantKit.viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
-    if (report.k === 'pl' && answer && answer.gross_profit) answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; /* the server's gross profit, named like its other totals */
+    if (report.k === 'pl' && answer && answer.gross_profit) { answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; answer.gross_cost_minor = answer.gross_profit.cost_of_sales_minor; } /* the server's gross profit, named like its other totals */
     grantKit.viewState.why = null;
     ingestEntries(report, answer);
     ingestExplained(report, answer);

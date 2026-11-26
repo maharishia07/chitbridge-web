@@ -75,8 +75,9 @@
   }
   /** W20: the balance sheet's profit line is the profit of the period it is read at: "Profit 1 Jul 2025 – 30 Jun 2026", not a bare "Profit for the year" (api fy_from and the as-at day) */
   function profitRow(row, a) {
-    if (row.role !== 'profit_to_date' || !a.fy_from || !a.asOf) return row;
-    return Object.assign({}, row, { name: grantKit.words('Profit') + ' ' + root.shopDay(a.fy_from) + ' – ' + root.shopDay(a.asOf) });
+    var to = a.shown_as_at || a.asOf; /* W4-16: the profit line runs to the day the heading says (shown_as_at, capped at the shop day), never to a year end still to come */
+    if (row.role !== 'profit_to_date' || !a.fy_from || !to) return row;
+    return Object.assign({}, row, { name: grantKit.words('Profit') + ' ' + root.shopDay(a.fy_from) + ' – ' + root.shopDay(to) });
   }
   /** the P&L's rows: each ledger with last year, the change and its flag, all the server's (by_line); the flat lists only when by_line is absent */
   function plRows(a) {
@@ -149,7 +150,12 @@
   function totalRows(key, a) {
     var total = grantKit.words('Total');
     if (key === 'tb' && a.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: a.total_dr_minor, cr_minor: a.total_cr_minor }];
-    if (key === 'pl' && a.profit_minor != null) return (a.gross_profit_minor != null ? [{ _total: true, name: grantKit.words('Gross profit (sales less cost of sales)'), amount_minor: a.gross_profit_minor }] : []).concat([{ _total: true, name: grantKit.words('Profit'), amount_minor: a.profit_minor }]);
+    if (key === 'pl' && a.profit_minor != null) {
+      /* W4-16: a loss is a Loss with its size (no "Profit" with a minus); a gross profit with no cost of sales says it equals sales, never a 100% margin shown as a fact */
+      var loss = a.profit_minor < 0, noCost = a.gross_profit_minor != null && a.gross_cost_minor === 0;
+      var gross = a.gross_profit_minor != null ? [{ _total: true, name: grantKit.words(noCost ? 'Gross profit (no cost of sales booked, so it equals sales)' : 'Gross profit (sales less cost of sales)'), amount_minor: a.gross_profit_minor }] : [];
+      return gross.concat([{ _total: true, name: grantKit.words(loss ? 'Loss' : 'Profit'), amount_minor: loss ? -a.profit_minor : a.profit_minor }]);
+    }
     if (key === 'bs' && a.total_assets_minor != null) return [{ _total: true, side: grantKit.words('Assets'), name: total, amount_minor: a.total_assets_minor }, { _total: true, side: grantKit.words('Liabilities and equity'), name: total, amount_minor: a.total_liab_equity_minor }];
     return [];
   }

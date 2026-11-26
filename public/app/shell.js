@@ -244,6 +244,7 @@
     '.cbsh-av{flex:0 0 auto;display:flex;align-items:center}',
     /* switcher (inside an app) */
     '.cbsh-sw{position:relative}',
+    '.cbsh-is-working .cbsh-sw{display:none}',
     '.cbsh-swb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);font-size:13px;font-weight:600}',
     '.cbsh-swb .chev{font-size:10px;color:var(--sh-muted)}',
     '.cbsh-swpop{position:absolute;top:36px;left:0;z-index:30;min-width:180px;background:var(--sh-card);border:1px solid var(--sh-line);border-radius:11px;padding:5px;box-shadow:0 14px 28px var(--sh-shadow);display:flex;flex-direction:column;gap:2px}',
@@ -1687,6 +1688,7 @@
     var bar = doc.querySelector('.cbsh-bar'),
       old = doc.querySelector('[data-testid="shell-working"]');
     if (old && old.parentNode) old.parentNode.removeChild(old);
+    if (bar) bar.classList.toggle('cbsh-is-working', !!working); /* W4-15: inside a client's books the area switcher is not drawn: the client header is the frame (CSS below) */
     if (!bar || !working) return;
     var link = doc.createElement('a');
     link.className = 'cbsh-working';
