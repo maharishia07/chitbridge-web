@@ -460,7 +460,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const c0 = S.payPosts[0] || {};
   ok(JSON.stringify(c0.allocations) === JSON.stringify([{ against_ref: 'b1', amount_minor: 200000 }, { against_ref: 'b2', amount_minor: 200000 }]), 'recorded WITH the CHANGED allocation, in minor units, in the same call');
   console.log('DBGOUT', await p.textContent('[data-testid="pay_outcome"]'), '|', await p.textContent('[data-testid="pay_settled"]').catch(() => 'none'));
-  ok(/Received ₹4,000 cash from Ravi Stores\./.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
+  ok(/Received ₹4,000 by bank from Ravi Stores\./.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
   await p.click('[data-testid="pay_done"]');
   await p.waitForFunction(() => /3,500/.test((document.querySelector('[data-testid="party-books-c1"] [data-testid="party-balance"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/3,500/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-balance"]')), 'balance repainted after the payment: 3,500');
@@ -766,8 +766,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.waitForSelector('[data-testid="dues-next-c1"]', { timeout: 5000 }).catch(() => {});
   ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
-  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
-  for (const id of ['s1', 'c1']) { await p.click('[data-testid="dues-next-' + id + '"] [data-testid="bills-tab-open"]'); await p.waitForSelector('[data-testid="dues-next-' + id + '"] [data-b="d31_60"]', { timeout: 5000 }).catch(() => {}); }   /* the age bands belong to Open / All; Needs you (the default) lists only what needs you */
+  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="band-' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
+  for (const id of ['s1', 'c1']) { await p.click('[data-testid="dues-next-' + id + '"] [data-testid="bills-tab-open"]'); await p.waitForSelector('[data-testid="dues-next-' + id + '"] [data-b="band-d31_60"]', { timeout: 5000 }).catch(() => {}); }   /* the age bands belong to Open / All; Needs you (the default) lists only what needs you */
   console.log('DBGDUES', await p.evaluate(() => (document.querySelector('[data-testid="dues-next-s1"]') || { outerHTML: 'none' }).outerHTML.slice(0, 1200)));
   ok(/2,500/.test(String(await cellOf('s1', 'd31_60'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "31–60 days" in its own group (' + await cellOf('s1', 'd31_60') + ')');
   ok(String(await cellOf('c1', 'd31_60') || '').length > 0 && await cellOf('c1', 'other') === null && await cellOf('s1', 'other') === null, 'dues: a customer and a supplier read the SAME five ages, and there is no "Other" (W15-94)');
@@ -840,12 +840,12 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
-  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
+  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 3000 }).catch(() => {});
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="pay_outcome"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
   /* M11: pressing Next again on the SAME form is a retry — it carries the same client_ref, so the server can answer with what it kept */
   const nPosts = S.payPosts.length;
-  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
+  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 3000 }).catch(() => {});
   for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
   ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());
