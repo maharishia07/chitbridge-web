@@ -7,7 +7,7 @@ const text = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-bo
 const pick = (name) => { const at = text.indexOf('function ' + name + '('); return text.slice(at, text.indexOf('\n}\n', at) + 2); };
 const ctx = { tx: (s) => s, esc: (s) => String(s), bkMountAttribute: () => '', bkLockWhyWords: () => '', bkLockWho: () => ({}) };
 vm.createContext(ctx);
-vm.runInContext(pick('bkLockRule') + pick('bkLockHardButton') + pick('bkLockButtonsHTML') + ';this.rule=bkLockRule;this.btn=bkLockButtonsHTML;', ctx);
+vm.runInContext(pick('bkLockRule') + pick('bkLockByYear') + pick('bkLockBlocked') + pick('bkLockHardButton') + pick('bkLockButtonsHTML') + ';this.rule=bkLockRule;this.btn=bkLockButtonsHTML;', ctx);
 let n = 0;
 const ok = (name, fn) => { fn(); n++; console.log('  ok   ' + name); };
 ok('a year-closed month: no Reopen month button', () => {

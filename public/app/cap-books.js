@@ -2188,6 +2188,17 @@ function bkDvGroupSummary(entries, c) {
   });
   return parts.join(' · ');
 }
+/** the Day book's Bill cell: a walk-in day's count link, else the bill it came from, else what the entry says (the dash when it says nothing) */
+function bkDvBillCell(e, dash) {
+  var s = e.source || {},
+    t = 'db-src-' + e.entry_no;
+  if (s.kind === 'day')
+    return (
+      esc(tx('Walk-in day')) + (s.count != null ? ' · ' + bkDayBillsLink(s, t) : '')
+    ); /* M132: the count opens the bills list, as the statement rows do */
+  if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t) + bkPostedByHTML(e);
+  return esc(s.kind === 'receipt' ? tx('Received') : e.narration || e.what || e.event_type || '') + bkRecordedHTML(e, t) + bkPostedByHTML(e) || dash;
+}
 /** what the Day book says about an entry — one fact a column (Athi, 2026-10-02: date · entry no · kind · party · bill · tender · counter · amount); the unit draws the caret, the header and the widths */
 function bkDvCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>';
@@ -2250,14 +2261,7 @@ function bkDvCols(c) {
         return 'db-head-' + e.entry_no;
       },
       cell: function (e) {
-        var s = e.source || {},
-          t = 'db-src-' + e.entry_no;
-        if (s.kind === 'day')
-          return (
-            esc(tx('Walk-in day')) + (s.count != null ? ' · ' + bkDayBillsLink(s, t) : '')
-          ); /* M132: the count opens the bills list, as the statement rows do */
-        if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t) + bkPostedByHTML(e);
-        return esc(s.kind === 'receipt' ? tx('Received') : e.narration || e.what || e.event_type || '') + bkRecordedHTML(e, t) + bkPostedByHTML(e) || dash;
+        return bkDvBillCell(e, dash);
       }
     },
     {

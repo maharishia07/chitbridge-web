@@ -1296,14 +1296,14 @@ var CBSettings = (function () {
   function policyShown(x) {
     /* CTR-212: a flag the server says nobody answered reads "Not answered yet", never its default word ("Off") */
     if (x.asked === false) return T('Not answered yet');
-    var d = x.def,
-      v = polShown(d, x.v);
-    if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
+    var rule = x.def,
+      shown = polShown(rule, x.v);
+    if (rule.type === 'enum') return T((rule.labels && rule.labels[x.v]) || String(x.v));
     /* FW-41: a set (Sign in with) reads as its members' words, "Google, Microsoft", never the stored keys "google,microsoft" */
-    if (d.type === 'set' && Array.isArray(x.v)) return x.v.map(function (k) { return T((d.labels && d.labels[k]) || String(k)); }).join(', ');
+    if (rule.type === 'set' && Array.isArray(x.v)) return x.v.map(function (k) { return T((rule.labels && rule.labels[k]) || String(k)); }).join(', ');
     /* AU-WORDS: a number the server names (ui.labels[value] — "No expiry", "Keep — the law here asks 5 years") reads as its word, never "0" */
-    if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
-    return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
+    if (rule.labels && rule.labels[String(x.v)] !== undefined) return T(rule.labels[String(x.v)]);
+    return String(shown) + (rule.suffix ? ' ' + T(rule.suffix) : '');
   }
   /** the row's editor: a select for a choice, a number box otherwise; data-orig holds the painted value so a draft can be told from it */
   function policyControl(x) {

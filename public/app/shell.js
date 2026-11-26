@@ -844,23 +844,23 @@
   /* every in-page link and every sidebar section / Setup tab (settings.html#/counters: this page + #/<key>) whose ADDRESS is not ready carries the hint; none is blocked */
   function hintLinks(doc, manifest, win) {
     if (!doc.querySelectorAll || !manifest) return 0;
-    var n = 0;
+    var hinted = 0;
     [].forEach.call(doc.querySelectorAll('.nav-btn[data-sec]:not([data-cbsh-hint])'), function (b) {
       var where = { pathname: win.location.pathname, hash: '#/' + b.getAttribute('data-sec'), search: '' };
       if (readyAt(entryOfAddress(manifest.entries, where), where)) return;
       hintOne(b);
-      n++;
+      hinted++;
     });
     [].forEach.call(doc.querySelectorAll('a[href]:not([data-cbsh-hint])'), function (a) {
       var url;
-      try { url = new win.URL(a.getAttribute('href'), win.location.href); } catch (e) { return; }
+      try { url = new win.URL(a.getAttribute('href'), win.location.href); } catch (failure) { if (root.cbQuiet) root.cbQuiet('shell:hintLinks', failure); return; }
       if (url.origin !== win.location.origin || url.pathname === win.location.pathname || a.closest('.cbsh-box')) return;
       var where = { pathname: url.pathname, hash: url.hash, search: url.search };
       if (readyAt(entryOfAddress(manifest.entries, where), where)) return;
       hintOne(a);
-      n++;
+      hinted++;
     });
-    return n;
+    return hinted;
   }
   /* the gate at mount, and again when the address changes inside the page (a #route) */
   function watchUnready(state, doc, win) {
@@ -923,6 +923,34 @@
   /** the shop's name for the header: the business the header read named, else the person's entity, else the session's, else "Your shop" */
   function shopNameOf(header, person, sess) {
     return wordsOf(header && header.business && header.business.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
+  }
+  /** the switcher's three facts for this page: the area it sits in, its icon and its name (the app's manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area) */
+  function switcherFacts(manifest, options, host, pageTitleFor) {
+    var me = ((manifest && manifest.entries) || []).filter(function (e) {
+      return e && e.id === host.app;
+    })[0];
+    var areaId = (me && me.area) || options.area || 'home';
+    return {
+      cur: areaId,
+      icon: (me && me.icon) || (options.title && options.title.icon) || ICON[areaId],
+      name: (me && me.name) || (options.title && options.title.name) || pageTitleFor(areaId) || W.areas[areaId]
+    };
+  }
+  /** one area's link in the switcher: back to Home at that area, marked when it is the page's own area */
+  function switcherLinkHTML(item, current, homeHref, iconHTML) {
+    return (
+      '<a href="' +
+      esc(homeHref + (item === 'home' ? '' : '#' + item)) +
+      '" data-cbsid="CMP033-M01"' + shellMount('CMP033') + ' data-testid="shell-switch-' +
+      item +
+      '"' +
+      (item === current ? ' aria-current="true"' : '') +
+      '><span class="i" aria-hidden="true">' +
+      iconHTML +
+      '</span>' +
+      esc(W.areas[item]) +
+      '</a>'
+    );
   }
   function mount(el, o) {
     if (!el) return null;
@@ -1372,13 +1400,10 @@
       var element = $('.cbsh-swb'),
         target = $('.cbsh-swpop');
       if (!element) return;
-      var me = ((S.manifest && S.manifest.entries) || []).filter(function (e) {
-        return e && e.id === host.app;
-      })[0];
-      var cur = (me && me.area) || o.area || 'home';
-      /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
-      var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur],
-        name = (me && me.name) || (o.title && o.title.name) || pageTitleFor(cur) || W.areas[cur];
+      var facts = switcherFacts(S.manifest, o, host, pageTitleFor),
+        cur = facts.cur,
+        icon = facts.icon,
+        name = facts.name;
       element.innerHTML =
         '<span aria-hidden="true">' +
         glyph(icon) +
@@ -1389,19 +1414,7 @@
       element.setAttribute('aria-label', W.switcher);
       target.innerHTML = shellChip('POP116', 'align-self:flex-end;margin:2px 4px') + areasShown()
         .map(function (item) {
-          return (
-            '<a href="' +
-            esc(homeHref + (item === 'home' ? '' : '#' + item)) +
-            '" data-cbsid="CMP033-M01"' + shellMount('CMP033') + ' data-testid="shell-switch-' +
-            item +
-            '"' +
-            (item === cur ? ' aria-current="true"' : '') +
-            '><span class="i" aria-hidden="true">' +
-            glyph(ICON[item]) +
-            '</span>' +
-            esc(W.areas[item]) +
-            '</a>'
-          );
+          return switcherLinkHTML(item, cur, homeHref, glyph(ICON[item]));
         })
         .join('');
     }

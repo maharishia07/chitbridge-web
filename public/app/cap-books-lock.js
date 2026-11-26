@@ -44,12 +44,21 @@ function bkLockRule(info, state) {
   return {
     may: mayLock,
     openMay: openMay,
-    byYear: !!(info && info.reopen && info.reopen.by_year), /* YE-F-05: locked by the year close — it opens with the year, so no Reopen month */
+    byYear: bkLockByYear(info), /* YE-F-05: locked by the year close — it opens with the year, so no Reopen month */
     why: lockWhy,
     who: bkLockWho(info, state),
-    blocked: state === 'open' ? !mayLock : state === 'soft_locked' && !openMay,
+    blocked: bkLockBlocked(state, mayLock, openMay),
     blockWhy: state === 'open' ? lockWhy : bkLockWhyWords(info, 'reopen')
   };
+}
+/** was the month locked by the year close (the server's reopen.by_year) */
+function bkLockByYear(info) {
+  return !!(info && info.reopen && info.reopen.by_year);
+}
+/** is the month's button blocked: an open month by its lock rule, a soft-locked month by its reopen rule, any other state never */
+function bkLockBlocked(state, mayLock, openMay) {
+  if (state === 'open') return !mayLock;
+  return state === 'soft_locked' && !openMay;
 }
 /** a month's profit cell (its heading says Profit, FW-05: it held the profit under the words Income, tax out): a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
 function bkLockSalesWord(info) {

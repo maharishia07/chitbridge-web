@@ -238,6 +238,11 @@
       '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
       '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
       '}',
+    ];
+  }
+  /** the list unit's stylesheet, part 7 continued (the narrow-list and tap-target rules of part 7): one string per rule group */
+  function cssPart7More(phoneMax) {
+    return [
       /* RW2-11 (re-walk 2, Day book with the bill pane open): the list's own box is ~570 px wide beside a pane, so its head wrapped to five rows and the list began at y 346 of 768 (2 entries). A mid-width box (a pane, a split window; not a phone, which keeps its 44 px taps) takes the desktop 32 px, the search shares the row with the filters, the stepper joins the chips, and the words beside the icons leave (their aria-label stays). Container query on the LIST'S box, never the viewport: one rule for every list in a pane. */
       '@container screen (min-width: 461px) and (max-width: 700px){.cbl .cbl-search{flex:1 1 130px}.cbl .cbl-title .cbl-slot{margin-inline-start:0;gap:4px}.cbl .cbl-title .cbl-slot .cbl-chip{min-height:32px!important;min-width:32px!important}.cbl .cbl-tools .cbl-w,.cbl .cbl-tools span.cbl-glab{display:none}.cbl .cbl-title,.cbl .cbl-tools{gap:4px 6px}.cbl .cbl-title{padding-block:4px 4px}.cbl .cbl-tools{padding-block:2px;gap:2px 6px}}',
       /* RW2-11 (entry height): Lines view in a narrow list box (a pane beside it, a phone): the amount stays on the first row beside the words, 13px/1.3, tight padding, the account line one ellipsised row, the day band one row. A card was 143 px, so 2 entries showed. Container query on the LIST'S box, never the viewport. */
@@ -281,7 +286,7 @@
   }
   /** the whole stylesheet text for a phone breakpoint (the standard's 700 px): the parts in order, one rule group a line */
   function cssText(phoneMax) {
-    return [].concat(CSS_P1, CSS_P2, CSS_P3, CSS_P4, cssPart5(phoneMax), CSS_P6, cssPart7(phoneMax), cssPart8(phoneMax)).join('\n');
+    return [].concat(CSS_P1, CSS_P2, CSS_P3, CSS_P4, cssPart5(phoneMax), CSS_P6, cssPart7(phoneMax), cssPart7More(phoneMax), cssPart8(phoneMax)).join('\n');
   }
   root.CBListParts.css = cssText;
 })(typeof window !== 'undefined' ? window : this);

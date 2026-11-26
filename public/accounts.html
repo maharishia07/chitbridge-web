@@ -922,23 +922,33 @@ function paintFrame() {
   if (v0 !== 'ledgers')
     $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
 }
+/** the card for a start that failed: Accounts off (404), a country not set up yet (422 with its code), else the failure itself */
+function startFailedCard(e) {
+  if (e && e.status === 404) return offCard();
+  if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
+  return failedCard(e);
+}
+/** what this page keeps of the signed-in person: the identity fields of the stored sign-in, plus the shop they belong to */
+function sessionOf(stored, person) {
+  return Object.assign(
+    { token: null },
+    {
+      entityId: person && person.ent,
+      token: stored.token,
+      role: stored.role,
+      name: stored.name,
+      entity: stored.entity,
+      bridgeId: stored.bridgeId,
+      duty: stored.duty,
+      shop: stored.shop
+    }
+  );
+}
 async function start() {
   SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
-  SESSION = Object.assign(
-    { token: null },
-    {
-      entityId: MINE && MINE.ent,
-      token: SESS.token,
-      role: SESS.role,
-      name: SESS.name,
-      entity: SESS.entity,
-      bridgeId: SESS.bridgeId,
-      duty: SESS.duty,
-      shop: SESS.shop
-    }
-  );
+  SESSION = sessionOf(SESS, MINE);
   whoPaint(); await CBBooksActing.openPage(CFG.API_BASE, SESS.token, NAV, NAV_GROUPS); /* ACC-176b: acting enters only on a live adviser grant (else leaves); the menu keeps the /api/books tabs */
   if (seatClosed()) return;
   const g = ++ACC.gen;
@@ -958,9 +968,7 @@ async function start() {
     const reply = await api('booksHealth');
     noteHealth(reply);
   } catch (e) {
-    if (e && e.status === 404) return offCard();
-    if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
-    return failedCard(e);
+    return startFailedCard(e);
   }
   if (!ON) return offCard();
   const first = hashPageOf();

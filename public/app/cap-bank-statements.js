@@ -414,10 +414,18 @@ async function bankStmtRead(button) {
 /** which statement a Read means: the file named by id, the account's code, the file's name and its end date — a month of the grid names its newest file (hint), a row of the list is the file itself */
 function bkstReadTarget(id, hint) {
   const file = ((BKST.data && BKST.data.files) || []).filter((item) => item.id === id)[0];
+  return Object.assign(
+    {
+      file,
+      code: hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
+      name: hint ? hint.name : file && file.name
+    },
+    bkstReadSpan(file, hint)
+  );
+}
+/** the period of the statement a Read means: the hint's own dates, else the file's */
+function bkstReadSpan(file, hint) {
   return {
-    file,
-    code: hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
-    name: hint ? hint.name : file && file.name,
     from: hint && hint.from ? hint.from : file && file.period_from,
     to: hint ? hint.to : file && file.period_to
   };

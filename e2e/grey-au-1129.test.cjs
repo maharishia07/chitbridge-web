@@ -12,7 +12,7 @@ const MONTHS = ['July', 'August', 'September', 'October', 'November', 'December'
 /* ── Month lock: the bar ── */
 function lockCx(info, rows) {
   const cx = vm.createContext({ tx: (s) => s, esc: (s) => String(s), BK: { lk: { fy: '2026-27', rows, info } }, bkMonths: () => MONTHS, bkMountAttribute: () => '', CBLockWords: { whoOf: () => ({ line: '', note: '', all: [] }), whyOf: (x, k) => (x && x[k] && x[k].why) || '' } });
-  vm.runInContext(liftFns('public/app/cap-books-lock.js', ['bkLockWho', 'bkLockWhyWords', 'bkLockRule', 'bkLockBarHTML', 'bkLockOpenButton', 'bkLockButtonsHTML', 'bkLockSoftButtons', 'bkLockHardButton', 'bkLockSoftCount']) + '\nthis.bar = bkLockBarHTML; this.btn = bkLockButtonsHTML;', cx);
+  vm.runInContext(liftFns('public/app/cap-books-lock.js', ['bkLockWho', 'bkLockWhyWords', 'bkLockRule', 'bkLockByYear', 'bkLockBlocked', 'bkLockBarHTML', 'bkLockOpenButton', 'bkLockButtonsHTML', 'bkLockSoftButtons', 'bkLockHardButton', 'bkLockSoftCount']) + '\nthis.bar = bkLockBarHTML; this.btn = bkLockButtonsHTML;', cx);
   return cx;
 }
 const WHY = 'Only the owner may do this.';

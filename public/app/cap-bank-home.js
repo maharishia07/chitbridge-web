@@ -237,12 +237,23 @@ function bkhGapCellHtml(state, account, month, key, mayAdd) {
           : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + '<span aria-hidden="true">○</span><span class="sr-only">' + bkhE(tx('no statement kept')) + '</span>' + '</span></td>';
   return '';
 }
+/** the mark on a kept month: open ● · signed ✓ (✓! with something unexplained) · else ◦ */
+function bkhHaveMark(state, un) {
+  if (state === 'open') return '●';
+  if (state === 'signed') return (un ? '✓!' : '✓');
+  return '◦';
+}
+/** the words on a kept month: signed off (and what is unexplained) · not signed off yet · else Kept */
+function bkhHaveWord(state, un) {
+  if (state === 'signed') return un ? tx('Signed off') + ' · ' + bkhUnexplainedWords(un) : tx('Signed off');
+  return state === 'open' ? tx('Not signed off yet') : tx('Kept');
+}
 /** a month with a statement kept: its press (open the lines), its mark, its count and the crossed-statements warning */
 function bkhHaveCellHtml(account, month, cell, state, key) {
       const crossed = cell.overlaps === true,
   un = state === 'signed' ? bkhUnexplainedIn(account, month) : null,
-  mark = state === 'open' ? '●' : state === 'signed' ? (un ? '✓!' : '✓') : '◦',
-  word = state === 'signed' ? (un ? tx('Signed off') + ' · ' + bkhUnexplainedWords(un) : tx('Signed off')) : state === 'open' ? tx('Not signed off yet') : tx('Kept'),
+  mark = bkhHaveMark(state, un),
+  word = bkhHaveWord(state, un),
   warn = crossed ? tx('Two statements cover this month') : '';
       return (
   '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-have bkh-' + state + '" data-testid="bank-stmts-have-' + key + '"><button data-cbsid="BKS014-B47" type="button" class="bkh-cell" data-testid="bank-home-month-' + key + '" data-acct="' + bkhE(account.account_id) + '" data-month="' + bkhE(month) + '" onclick="bankHomePress(this)" title="' + bkhE(word + ' · ' + bkhMonthLong(month) + (warn ? ' · ' + warn : '')) + '" aria-label="' + bkhE(bkstAccountName(account) + ', ' + bkhMonthLong(month) + ', ' + word + (warn ? ', ' + warn : '')) + '"><span aria-hidden="true">' + mark + '</span> ' + bkhE(String(cell.file_ids.length)) + (crossed ? ' <span class="bks-flag" data-testid="bank-stmts-cross-' + key + '" aria-hidden="true">⚠</span>' : '') + '</button></td>'

@@ -147,17 +147,19 @@
     return items.length ? '<span class="bv-facts" data-testid="bv-facts">' + items.join('') + '</span>' : '';
   }
   /** the server's own totals as a last row (nothing is added up here) */
-  function totalRows(key, a) {
+  function totalRows(key, figures) {
     var total = grantKit.words('Total');
-    if (key === 'tb' && a.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: a.total_dr_minor, cr_minor: a.total_cr_minor }];
-    if (key === 'pl' && a.profit_minor != null) {
-      /* W4-16: a loss is a Loss with its size (no "Profit" with a minus); a gross profit with no cost of sales says it equals sales, never a 100% margin shown as a fact */
-      var loss = a.profit_minor < 0, noCost = a.gross_profit_minor != null && a.gross_cost_minor === 0;
-      var gross = a.gross_profit_minor != null ? [{ _total: true, name: grantKit.words(noCost ? 'Gross profit (no cost of sales booked, so it equals sales)' : 'Gross profit (sales less cost of sales)'), amount_minor: a.gross_profit_minor }] : [];
-      return gross.concat([{ _total: true, name: grantKit.words(loss ? 'Loss' : 'Profit'), amount_minor: loss ? -a.profit_minor : a.profit_minor }]);
-    }
-    if (key === 'bs' && a.total_assets_minor != null) return [{ _total: true, side: grantKit.words('Assets'), name: total, amount_minor: a.total_assets_minor }, { _total: true, side: grantKit.words('Liabilities and equity'), name: total, amount_minor: a.total_liab_equity_minor }];
+    if (key === 'tb' && figures.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: figures.total_dr_minor, cr_minor: figures.total_cr_minor }];
+    if (key === 'pl' && figures.profit_minor != null) return profitRows(figures);
+    if (key === 'bs' && figures.total_assets_minor != null) return [{ _total: true, side: grantKit.words('Assets'), name: total, amount_minor: figures.total_assets_minor }, { _total: true, side: grantKit.words('Liabilities and equity'), name: total, amount_minor: figures.total_liab_equity_minor }];
     return [];
+  }
+  /** the profit and loss last rows: the gross profit line (when the server carried one), then Profit or Loss */
+  function profitRows(figures) {
+    /* W4-16: a loss is a Loss with its size (no "Profit" with a minus); a gross profit with no cost of sales says it equals sales, never a 100% margin shown as a fact */
+    var loss = figures.profit_minor < 0, noCost = figures.gross_profit_minor != null && figures.gross_cost_minor === 0;
+    var gross = figures.gross_profit_minor != null ? [{ _total: true, name: grantKit.words(noCost ? 'Gross profit (no cost of sales booked, so it equals sales)' : 'Gross profit (sales less cost of sales)'), amount_minor: figures.gross_profit_minor }] : [];
+    return gross.concat([{ _total: true, name: grantKit.words(loss ? 'Loss' : 'Profit'), amount_minor: loss ? -figures.profit_minor : figures.profit_minor }]);
   }
   /** a heading naming the date the figures stand at */
   function asAt(report) {
