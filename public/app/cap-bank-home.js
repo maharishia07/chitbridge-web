@@ -219,11 +219,12 @@ function bkhUnexplainedMonths(data, account) {
 function bankHomeStateOf(data, account, month) {
   return bankHomeState(account, month, data.cells.filter((cell) => cell.account_id === account.account_id && cell.month === month)[0]);
 }
+/** W4-10: the months that are DUE to be signed (the ones before this month began), never the twelve of the year: a month not begun or in progress is not owed yet; a sign-off already made on a later month still counts, so the count never passes the total */
+const bkhMonthsDue = (data) => Math.max(data.months.filter((month) => month < bkhThisMonth()).length, ...data.accounts.map((account) => { const t = bkhTally(data, [account]); return t.signed + t.unfiled; }));
 /** one line per account: its monthly sign-offs "n of m" (named when there is more than one account) */
 function bkhSignedLinesHtml(data) {
-  const many = data.accounts.length > 1,
-    count = data.months.length;
-  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: count })) + bkhE(bkhUnexplainedMonths(data, account)) + '</div>'; }).join('');
+  const many = data.accounts.length > 1;
+  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: bkhMonthsDue(data) })) + bkhE(bkhUnexplainedMonths(data, account)) + bkhE(data.unexplained && data.unexplained.no_run && data.unexplained.words ? ' · ' + tx(data.unexplained.words) : '') + '</div>'; }).join('');
 }
 /** a month with no statement: the month in progress, a month not yet due, a month signed off with no file kept, or a gap (the person who may add gets the button to add it) */
 function bkhGapCellHtml(state, account, month, key, mayAdd) {
@@ -271,7 +272,7 @@ function bankHomeGridHtml() {
   return (
     '<div class="pe-note bkh-signed" data-testid="bank-home-signed">' + bkhSignedLinesHtml(data) + '</div>' +
     '<div class="bks-wrap bkh-gridwrap"><table class="bks-grid" data-testid="bank-stmts-grid"><thead>' + bkhHeadRowHtml(data) + '</thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off')) + ' · ○ ' + bkhE(tx('no statement kept')) + '</div>'
+    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ✓! ' + bkhE(tx('signed off, an amount still unexplained')) + ' · ● ' + bkhE(tx('not signed off')) + ' · ○ ' + bkhE(tx('no statement kept')) + '</div>'
   );
 }
 /** a month pressed, or Continue: that statement's lines */

@@ -554,6 +554,10 @@ function bankBrs() {
     const typedMinor = bkToMinor(BKB.bal);
     if (!isNaN(typedMinor)) bank = typedMinor;
   }
+  if (bank == null && typeof bankStoreSignedNow === 'function') {
+    const signed = bankStoreSignedNow(); /* W4-11: a month that IS signed off already holds the bank's closing balance on its record: never asked for again */
+    if (signed && signed.closing_bank_minor != null) bank = Number(signed.closing_bank_minor);
+  }
   BKB.bankKnown = bank != null;
   if (bank == null) {
     BKB.brs = null;

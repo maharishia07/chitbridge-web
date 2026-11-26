@@ -235,6 +235,11 @@ function bankStoreSignedWords() {
   if (who && item.by_firm) return txf('Reconciled by {who} on {date}', { who, date }); /* W15-75: a bookkeeper signs as the preparer, the firm named; the owner or auditor reviews */
   return who ? txf('Signed off by {who} on {date}', { who, date }) : txf('Signed off on {date}', { date });
 }
+/** W4-11: a sign-off record names the two balances it was signed on (as carried, never recomputed): "Bank A$1,000.00 · Books A$645.68 · "; '' for a record that carries neither */
+function bankStoreBalancesWords(item) {
+  if (item.closing_bank_minor == null || item.closing_books_minor == null) return '';
+  return txf('Bank {a} · Books {b}', { a: bkMoney(item.closing_bank_minor, item.currency), b: bkMoney(item.closing_books_minor, item.currency) }) + ' · ';
+}
 /** the signed statements, newest first, the first few */
 function bankStoreSigned() {
   if (!bankStoreState.statements.length) return '';
@@ -248,7 +253,7 @@ function bankStoreSigned() {
         bksRow(
           'bank-signed-row',
           bkDate(String(item.at || '').slice(0, 10)) + (bankStoreSignerFull(item) ? ' · ' + bankStoreSignerFull(item) : '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
-          (item.tied ? tx('Tied') : tx('Difference') + ' ' + bkMoney(Math.abs(item.difference_minor), item.currency))
+          bankStoreBalancesWords(item) + (item.tied ? tx('Tied') : tx('Difference') + ' ' + bkMoney(Math.abs(item.difference_minor), item.currency))
         )
       )
       .join('') +

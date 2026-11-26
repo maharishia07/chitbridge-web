@@ -401,7 +401,10 @@ function bkstFetchFile(id, use) {
     headers: CBBooksActing.authHeaders()
   });
 }
-const bkstWhyNot = async (res) => (res.status === 403 && (await bkstBlind(res)) ? bksCostBlindSay() : res.status === 403 ? tx('This access has ended.') : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
+/** W4-03: a 403 is worded by its own code: only an ended grant says "ended"; a door the access does not include says what it is */
+const bkstRefusalCode = (res) => res.clone().json().then((j) => String((j && j.code) || ''), () => '');
+const bkstRefusedWords = async (res) => ((await bkstRefusalCode(res)) === 'GRANT_ROUTE_NOT_LISTED' ? tx('This is not part of this access.') : tx('This access has ended.'));
+const bkstWhyNot = async (res) => (res.status === 403 && (await bkstBlind(res)) ? bksCostBlindSay() : res.status === 403 ? await bkstRefusedWords(res) : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
 /** a 403 whose body says COST_BLIND (the file read has no api() wrapper, so the body is read here) */
 const bkstBlind = (res) => res.clone().json().then((j) => bksCostBlind({ status: res.status, data: j }), () => false);
 /** Read: the kept text goes to the page's ONE reader (bankTake), for the account it was kept against; nothing is parsed or hashed here */
