@@ -30,7 +30,7 @@ function obYearsHtml() {
         var line = yearLine(prev, currency);
         return (
           '<div class="ob-year" data-testid="ob-year"><b>' + esc(year.fiscal_year) + '</b> · ' + esc(tx('opening')) + ' ' + esc(bkMoney(year.opening_minor, currency)) +
-          (year.closing_minor != null ? ' · ' + esc(tx(year.next ? 'carried out (debit side)' : 'so far (debit side)')) + ' ' + /* YE-F-12: the figure is the carry's debit side, not the balance sheet's total (GST paid is not netted): named so, and a running year says so far */ esc(bkMoney(year.closing_minor, currency)) : '') + '<br>' + line + '</div>'
+          (year.closing_minor != null && year.next ? ' · ' + esc(tx('carried out (debit side)')) + ' ' + /* YE-F-12: the figure is the carry's debit side, not the balance sheet's total (GST paid is not netted): named so. RW3-23: only where the next year's opening stands beside it (the line below compares the two); a running year's would tie to nothing on the books pages, so it is not shown */ esc(bkMoney(year.closing_minor, currency)) : '') + '<br>' + line + '</div>'
         );
       })
       .join('') +

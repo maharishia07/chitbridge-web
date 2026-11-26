@@ -207,7 +207,7 @@
       if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
       return;
     }
-    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + root.CBBooksGrantApi.endedToggle(N.ended, N.showEnded, T) + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
+    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + clientsHead() + root.CBBooksGrantApi.endedToggle(N.ended, N.showEnded, T) + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
     mountStores(); root.CBBooksGrantApi.wireEnded(host, N, paint);
     if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
   }
@@ -220,6 +220,10 @@
   function openBooksDoor() {
     N.tab = 'books';
     paint();
+  }
+  /** RW3-16: a login that holds live received grants (a firm) heads its list Your clients, the Home card's own words; "Who can see my books" is the owner's door and names only that door */
+  function clientsHead() {
+    return Object.keys(N.held || {}).length ? '<h2 class="sub" data-testid="nw-clients-head">' + esc(T('Your clients')) + '</h2>' : '';
   }
   /** the door to the member's own screen, "Who can see my books": always drawn: a shop linked to a firm only by a books grant sits in no network */
   function booksDoor() {
