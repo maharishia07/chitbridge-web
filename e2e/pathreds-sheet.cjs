@@ -22,8 +22,19 @@ const giveBody = '<button type="button" class="mx" id="gx" aria-label="Close">âœ
       const page = await (await browser.newContext({ viewport: { width: w, height: h } })).newPage();
       await page.setContent('<!doctype html><meta name="viewport" content="width=device-width"><style>:root{--surface:#fffdf8;--ink:#241f14;--line-2:#e6dcc4;--muted:#6b6250}body{margin:0;font:14px system-ui}.inp{height:36px;box-sizing:border-box}.act{min-height:40px}' + css + '</style><dialog class="sheet" id="s">' + html + '</dialog>');
       await page.evaluate(() => document.getElementById('s').showModal());
-      const r = await page.evaluate((sel) => { const b = document.querySelector(sel).getBoundingClientRect(), d = document.getElementById('s').getBoundingClientRect(); return { bottom: b.bottom, top: b.top, right: b.right, dtop: d.top, dbottom: d.bottom, vh: innerHeight, vw: innerWidth }; }, btn);
-      ok(r.top >= r.dtop - 1 && r.bottom <= r.dbottom + 1 && r.bottom <= r.vh + 1 && r.right <= r.vw + 1, name + ' at ' + w + 'x' + h + ': the button is in the sheet and the window (bottom ' + Math.round(r.bottom) + ' of sheet ' + Math.round(r.dbottom) + ', window ' + r.vh + ')');
+      const r = await page.evaluate((sel) => {
+        const el = document.querySelector(sel), b = el.getBoundingClientRect(), dlg = document.getElementById('s').getBoundingClientRect();
+        let hidden = 0; /* how far an ancestor that scrolls or clips hides the button: the part of it outside that ancestor's own box */
+        for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+          const st = getComputedStyle(a);
+          if (!/(auto|scroll|hidden)/.test(st.overflowY)) continue;
+          const q = a.getBoundingClientRect();
+          hidden = Math.max(hidden, b.bottom - q.bottom, q.top - b.top);
+        }
+        const hit = document.elementFromPoint((b.left + b.right) / 2, (b.top + b.bottom) / 2);
+        return { hidden: Math.round(hidden), reached: !!hit && (hit === el || el.contains(hit)), inWindow: b.bottom <= innerHeight + 1 && b.right <= innerWidth + 1 && b.top >= 0, dbottom: Math.round(dlg.bottom) };
+      }, btn);
+      ok(r.hidden <= 1 && r.reached && r.inWindow, name + ' at ' + w + 'x' + h + ': the button is on screen without scrolling the sheet (hidden by a scrolling ancestor ' + r.hidden + ' px, reachable ' + r.reached + ')');
       await page.context().close();
     }
   }
