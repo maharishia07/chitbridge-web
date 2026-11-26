@@ -34,7 +34,7 @@ const sb = {
     removeItem: (k) => { delete store[k]; },
   },
   document: makeDocument(),
-  setTimeout: () => 0, clearTimeout(){}, fetch: async () => ({ ok: false }),
+  setTimeout: () => 0, clearTimeout(){}, addEventListener(){} /* cap-admin forgets a minted key on pagehide (p2wave-sec, bdad61a57) */, fetch: async () => ({ ok: false }),
   navigator: { language: 'en-IN', languages: ['en-IN'] },
   location: { origin: '', host: 'h', search: '' },
 };
