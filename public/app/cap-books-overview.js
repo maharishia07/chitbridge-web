@@ -16,7 +16,49 @@
 'use strict';
 if (typeof EP !== 'undefined') Object.assign(EP, { booksOverview: { m: 'GET', p: '/api/books/overview', ok: 'y' } /* owner · adviser · auditor: how the business is doing, one read (the seat decides the keys) */ });
 
-var OVERVIEW = { period: 'ytd', answer: null, state: 'loading', gen: 0, timer: null };
+var OVERVIEW = { period: 'ytd', answer: null, state: 'loading', gen: 0, timer: null, trend: null, cmp: ovCmpRead() };
+/* REP-74: the sales picture follows the picker: [the engine's period, how many buckets to show, the title]. The series is the till summary's (rollup.series) — the same read as Reports › Trend; this page adds and compares nothing. */
+var OV_TREND = {
+  week: ['week', 12, 'Sales by week, tax in'],
+  mtd: ['month', 12, 'Sales by month, tax in'],
+  quarter: ['quarter', 8, 'Sales by quarter, tax in'],
+  ytd: ['year', 5, 'Sales by year, tax in']
+};
+/* the compare switch: "Same time last year" (the engine's last_year line) | "Recent average" (greyed until the engine sends the average: ONE comparison calculation, never in a page) */
+var OV_CMP = [['last_year', 'Same time last year', true], ['average', 'Recent average', false]];
+/** the remembered choice (this device; the account's ui prefs have no key for it yet — listed in the PR) */
+function ovCmpRead() {
+  try {
+    var saved = localStorage.getItem('cb.ov.cmp');
+    return saved === 'average' ? 'average' : 'last_year';
+  } catch (failure) {
+    return 'last_year';
+  }
+}
+function ovCmpPick(value) {
+  OVERVIEW.cmp = value === 'average' ? 'average' : 'last_year';
+  try {
+    localStorage.setItem('cb.ov.cmp', OVERVIEW.cmp);
+  } catch (failure) {
+    if (typeof bkQuiet === 'function') bkQuiet('ov-cmp-save', failure);
+  }
+  ovPaint();
+}
+/** the bucket read for the chosen period (one trip, after the overview paints); a refusal leaves the month picture the overview carries */
+async function ovTrendLoad(period, generation) {
+  var want = OV_TREND[period];
+  if (!want || typeof EP === 'undefined' || !EP.tillTrend) return;
+  try {
+    var answer = await api('tillTrend', { query: { compare: '1', period: want[0] } });
+    if (generation !== OVERVIEW.gen || period !== OVERVIEW.period) return;
+    OVERVIEW.trend = answer && answer.slots ? { period: period, answer: answer } : null;
+  } catch (error) {
+    if (generation !== OVERVIEW.gen) return;
+    OVERVIEW.trend = null;
+    if (typeof bkQuiet === 'function') bkQuiet('ov-trend-read', error);
+  }
+  if (document.getElementById('ov_main') && OVERVIEW.state === 'ready') ovPaint();
+}
 var OV_PERIODS = [
   ['week', 'This week so far'],
   ['mtd', 'This month so far'],
@@ -35,12 +77,14 @@ function ovView(body) {
 async function ovLoad() {
   var generation = ++OVERVIEW.gen;
   OVERVIEW.state = 'loading';
+  OVERVIEW.trend = null;
   ovPaint();
   try {
     var answer = await api('booksOverview', { query: { period: OVERVIEW.period } });
     if (generation !== OVERVIEW.gen) return;
     OVERVIEW.answer = answer || null;
     OVERVIEW.state = 'ready';
+    ovTrendLoad(OVERVIEW.period, generation);
   } catch (error) {
     if (generation !== OVERVIEW.gen) return;
     if (typeof cblog === 'function') cblog('error', 'overview: ' + ((error && error.message) || error));
@@ -64,6 +108,27 @@ function ovSelect() {
     }).join('') +
     '</select>'
   );
+}
+/** the compare switch beside the picker: a choice not ready is greyed WITH its sentence */
+function ovCmpSelect() {
+  return (
+    '<select class="inp" id="ov_cmp" data-testid="ov-cmp" aria-label="' + esc(tx('Compare with')) + '" onchange="ovCmpPick(this.value)">' +
+    OV_CMP.map(function (item) {
+      return '<option value="' + item[0] + '"' + (item[0] === OVERVIEW.cmp ? ' selected' : '') + (item[2] ? '' : ' disabled title="' + esc(tx('Needs the average from the server, not shown yet')) + '"') + '>' + esc(tx(item[1])) + '</option>';
+    }).join('') +
+    '</select>'
+  );
+}
+/** the sales card for the picked period: the engine's buckets (newest ones, the running one hatched, an empty one a tick), else the overview's own months */
+function ovSalesByPeriod(deps) {
+  var want = OV_TREND[OVERVIEW.period],
+    trend = OVERVIEW.trend;
+  if (!want || !trend || trend.period !== OVERVIEW.period) return null;
+  var slots = trend.answer.slots.slice(-want[1]),
+    points = MC.salesPoints(slots, want[0], deps);
+  if (!ovHas(points)) return null;
+  var title = want[2];
+  return ovCard('sales', 'BKS026-P02', title, CBDraw.bars(points, { width: ovWidth(), height: ovHigh(), id: 'ovsales', tid: 'ov-sales', aria: tx(title) }), tx('Solid = sales · line = same time last year · hatched = the period so far'), MC.salesTable(slots, want[0], deps), 'BKS026-B08');
 }
 /** the top line: the lead figure (income, tax out; sales for a reader without costs), what it is, and its change on last year, all carried */
 function ovHeadline(a) {
@@ -145,7 +210,7 @@ function ovSalesCards(a) {
     months = MC.monthPoints(a.bars, deps),
     days = MC.weekdayPoints(a.weekdays, deps);
   return (
-    ovCard('sales', 'BKS026-P02', 'Sales by month, tax in', ovHas(months) ? CBDraw.bars(months, { width: ovWidth(), height: ovHigh(), id: 'ovsales', tid: 'ov-sales', aria: tx('Sales by month, tax in') }) : '', tx('Solid = sales · line = same time last year · hatched = the month so far'), MC.monthTable(a.bars, 'sold_minor', deps, true), 'BKS026-B08') +
+    (ovSalesByPeriod(deps) || ovCard('sales', 'BKS026-P02', 'Sales by month, tax in', ovHas(months) ? CBDraw.bars(months, { width: ovWidth(), height: ovHigh(), id: 'ovsales', tid: 'ov-sales', aria: tx('Sales by month, tax in') }) : '', tx('Solid = sales · line = same time last year · hatched = the month so far'), MC.monthTable(a.bars, 'sold_minor', deps, true), 'BKS026-B08')) +
     ovCard('weekday', 'BKS026-P04', 'This week by weekday', ovHas(days) ? CBDraw.bars(days, { width: ovWidth(), height: ovHigh(), id: 'ovweek', tid: 'ov-weekday', aria: tx('Sales by weekday this week') }) : '', tx('Solid = this week · line = the same weekday last year'), MC.weekdayTable(a.weekdays, deps), 'BKS026-B10')
   );
 }
@@ -193,7 +258,7 @@ function ovPaint() {
   var bar = document.getElementById('ov_bar'),
     main = document.getElementById('ov_main');
   if (!bar || !main) return;
-  bar.innerHTML = ovCss() + '<div class="ov-bar">' + ovSelect() + (OVERVIEW.state === 'ready' && OVERVIEW.answer && OVERVIEW.answer.sales && OVERVIEW.answer.sales.through ? '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="ov-through">' + esc(txf('Books in to {date}', { date: bkDate(OVERVIEW.answer.sales.through) })) + '</span>' : '') + '</div>';
+  bar.innerHTML = ovCss() + '<div class="ov-bar">' + ovSelect() + ovCmpSelect() + (OVERVIEW.state === 'ready' && OVERVIEW.answer && OVERVIEW.answer.sales && OVERVIEW.answer.sales.through ? '<span style="color:var(--grey);font-size:var(--fs-1)" data-testid="ov-through">' + esc(txf('Books in to {date}', { date: bkDate(OVERVIEW.answer.sales.through) })) + '</span>' : '') + '</div>';
   if (OVERVIEW.state === 'loading') main.innerHTML = '<p class="hint">' + esc(tx('Loading…')) + '</p>';
   else if (OVERVIEW.state !== 'ready' || !OVERVIEW.answer) main.innerHTML = '<div data-testid="ov-error">' + scrErr(OVERVIEW.error, tx('the overview')) + ' <button class="btn" type="button" data-cbsid="' + OV_CODES.retry + '" data-testid="ov-retry" onclick="ovLoad()">' + esc(tx('Try again')) + '</button></div>';
   else {
