@@ -47,6 +47,7 @@ const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), r
         if (p === '/api/crm/parties') return json(r, 200, crmApi.listPage([]));
         if (p === '/api/crm/followups') return json(r, 200, crmApi.followups([]));
         if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store = Object.assign({}, ex.store, { networks: [] }); return json(r, 200, ex); }
+        if (p === '/api/work/facts') return json(r, 200, example('GET /api/work/facts'));   /* the contract lists truncated, counts, lines since the 1130 batch */
         return json(r, 200, {});
       });
       await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, OWNER);

@@ -84,12 +84,12 @@ const walk = async (w) => {
     /* the real stack: chitbridge-api as a child on the loader's Postgres; the walk signs in through the one sign-in window (e2e/lib/real-api.cjs) */
     api = await require('./lib/real-api.cjs').start({ origin: base });
     const token = await api.owner();   /* the shop's own token through the ONE sign-in door; kept the way the sign-in window keeps it */
-    await ctx.addInitScript((o) => { try { localStorage.setItem('cb_api_base', o.b); localStorage.setItem('cb_sess', JSON.stringify({ token: o.t, role: 'entity', name: 'Owner', entity: o.shop, bridgeId: o.shop })); } catch (_) {} }, { b: api.base, t: token, shop: api.shop });
+    await ctx.addInitScript((o) => { try { localStorage.setItem('cb_api_base', o.b); localStorage.setItem('cb_sess', JSON.stringify({ token: o.t, role: 'entity', name: 'Owner', entity: o.shop, bridgeId: o.shop })); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, { b: api.base, t: token, shop: api.shop });
   } else {
     await ctx.route('**/api/**', route);
     /* the preview frame is the shop's OWN page: here a stub that echoes its address, so the walk asserts the src and loads no catalogue */
     await ctx.route('**/shop.html*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><meta charset="utf-8"><body style="font:15px system-ui;padding:12px;background:#fffdf8;color:#2a2418"><b>Shop window preview</b><div id="u"></div><script>document.getElementById("u").textContent=location.search</script>' }));
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Fixture Owner', 'Fixture Shop'));
   }
   await ctx.addInitScript(() => { window.open = function (u) { window.__opened = (window.__opened || []).concat([String(u)]); return {}; }; });
 
@@ -168,7 +168,7 @@ const walk = async (w) => {
     return { ok: /Consent records are not set up yet/.test(notice) && may === '0', saw: '"' + notice + '" · regular may=' + may };
   });
   await w.step('G9', 'A view-only login -> Groups: + New group, Send and Delete are SHOWN, greyed, each with the server\'s sentence; never hidden', async () => {
-    S.level = 'viewer'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, VIEWER); await page.evaluate((s) => localStorage.setItem('cb_sess', s), VIEWER);
+    S.level = 'viewer'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, VIEWER); await page.evaluate((s) => localStorage.setItem('cb_sess', s), VIEWER);
     await groups();
     const newBtn = page.locator('[data-testid="crm-grp-add"]'), nNew = await newBtn.count(), newOff = await newBtn.first().isDisabled(), newWhy = await txt('[data-testid="crm-grp-add-why"]');
     await openRow('crm-grp-group_Workshops');
@@ -176,7 +176,7 @@ const walk = async (w) => {
     const sendWhy = await inRow('group:Workshops', '[data-testid="crm-grp-send"]').getAttribute('title'), delWhy = await inRow('group:Workshops', '[data-testid="crm-grp-delete"]').getAttribute('title');
     return { ok: nNew === 1 && newOff && /only view/.test(newWhy) && sendOff && /only view/.test(sendWhy || '') && delOff && /Only the owner deletes/.test(delWhy || ''), saw: 'New group ×' + nNew + ': "' + newWhy + '" · Send: "' + sendWhy + '" · Delete: "' + delWhy + '"' };
   });
-  S.level = 'owner'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop')); await page.evaluate((s) => localStorage.setItem('cb_sess', s), W.session('Fixture Owner', 'Fixture Shop'));
+  S.level = 'owner'; await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Fixture Owner', 'Fixture Shop')); await page.evaluate((s) => localStorage.setItem('cb_sess', s), W.session('Fixture Owner', 'Fixture Shop'));
 
   /* ── 2 · THE RECORD'S REWARDS PANE ── */
   await w.step('R1', 'Record (Chola) -> Rewards: the fact is the record\'s own points; open -> the ENGINE\'s words: balance, worth, next, expiry, the last movements', async () => {

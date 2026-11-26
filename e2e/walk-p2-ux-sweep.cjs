@@ -48,7 +48,7 @@ const walk = async (w) => {
   });
   const open = async (width, height) => {
     await w.page.setViewportSize({ width, height });
-    await w.page.addInitScript((s) => { try { localStorage.removeItem('cb_vp'); localStorage.setItem('cb_theme', 'light'); localStorage.setItem('cb_sess', s); localStorage.setItem('cb_ids', '1'); } catch (_) { /* a blocked store: the defaults are walked */ } }, W.session('Fixture Owner', 'Fixture Shop'));
+    await w.page.addInitScript((s) => { try { localStorage.removeItem('cb_vp'); localStorage.setItem('cb_theme', 'light'); localStorage.setItem('cb_sess', s); localStorage.setItem('cb_ids', '1'); window._firmLandingDone = true; /* RW3-25 */ } catch (_) { /* a blocked store: the defaults are walked */ } }, W.session('Fixture Owner', 'Fixture Shop'));
     await w.page.goto(base + '/app.html?t=' + Date.now() + '#/', { waitUntil: 'load' });   // clock-ok: cache-buster in the URL, not a business date
     await w.page.waitForSelector('[data-testid^="nav-"]', { state: 'attached', timeout: 15000 });
     await w.page.waitForTimeout(500);

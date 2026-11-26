@@ -88,6 +88,7 @@ const text = (page, sel) => page.evaluate((s) => { const el = document.querySele
 W.run('country', async (w) => {
   const { page, ctx, base } = w;
   const sent = {};
+  await ctx.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell (C3 raced it: passed on a quiet box, failed on CI) */
   await stubRegistration(ctx, profile(), sent);
 
   await w.step('C1', 'Register -> verify -> Country setup, prefilled India - INR - April from the time zone, each with its source', async () => {
