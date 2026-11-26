@@ -36,7 +36,7 @@ ok('the zone follows a later /me answer (read at call time, not at load)', () =>
 /* ── 2. avatar.js ── */
 ok('avatar.js sets CB_SHOP_TZ from the one /me read', () => {
   assert(/shopZoneSet\(e\.timezone\)/.test(fs.readFileSync(path.join(APP, 'avatar.js'), 'utf8'))); /* red1128: ONE owner of CB_SHOP_TZ, helpers.js shopZoneSet; avatar.js and core.js call it */
-  assert(/window\.CB_SHOP_TZ = String\(zone\)/.test(fs.readFileSync(path.join(APP, 'helpers.js'), 'utf8')));
+  assert(/window\.CB_SHOP_TZ = String\(zone( \|\| '')?\)/.test(fs.readFileSync(path.join(APP, 'helpers.js'), 'utf8')));
 });
 
 /* ── 3. the guard ── */
