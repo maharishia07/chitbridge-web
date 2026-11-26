@@ -15,7 +15,7 @@
  *     summary_json.money alone → read from it; neither → "not recorded"
  * 10  Accept on a bill received asks what it is for FIRST (PUT /use, then PUT /status — once each); the step is read from the chit's
  *     state_log bill_step row (the shared status never moves), so the sheet, the to-do and Waiting stop saying "To accept"
- * 11  the popup names the counter as the Day book does (Counter C2); CB Accounts' Bills rows open the sheet and name who accepted
+ * 11  the popup names the counter as the Day book does (Counter 2); CB Accounts' Bills rows open the sheet and name who accepted
  * 12  #/app/ledger, a remembered cb_nav of 'ledger' and navTo('ledger') land on /accounts.html at the same view; the app's menu has a Bills door
  * ⚠️ "Open page" (test 3) pins TODAY's door: the chit page in CB CRM (crm.html#/chit/<id>, round CRM2) — it moves with the round that moves the page.
  *  Env CHS_ROOT = a COPY of public/ (used by chit-sheet-breaks.cjs); screenshots to e2e/shots/chit-sheet-*.png
@@ -225,8 +225,8 @@ async function route(S, r) {
     await waitSheet(p, 'C2/26-27/0002');
     ok(await sheetOpen(p), 'tapping the bill number opens the sheet (a <dialog>) over the Day book');
     const head = await p.textContent('[data-testid="cs-head"]');
-    ok(/Counter bill/.test(head) && /C2\/26-27\/0002/.test(head) && /Counter C2/.test(head) && !/Counter 2/.test(head) && /Books Shop/.test(head), 'header: kind · number · date/time · counter (C2 — the way the Day book says it, not the till\'s "Counter 2") · person — ' + head.replace(/\s+/g, ' ').trim());
-    ok(/Counter C2/.test(await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]')), 'the Day book names the same counter: Counter C2');
+    ok(/Counter bill/.test(head) && /C2\/26-27\/0002/.test(head) && /Counter 2/.test(head) && !/Counter C2/.test(head) && /Books Shop/.test(head), 'header: kind · number · date/time · counter (C2 — the way the Day book says it, not the till\'s "Counter 2") · person — ' + head.replace(/\s+/g, ' ').trim());
+    ok(/Counter 2/.test(await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]')), 'the Day book names the same counter: Counter 2');
     /* every figure is CBTax.moneyOf(invoice), to the paisa — read off the DOM cells, compared with the engine's own numbers */
     const nums = async (sel) => (await p.$$eval(sel, (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, ''))));
     const lineTotals = await nums('#chitsheet tbody tr[data-testid^="cs-line-"] td:last-child');
@@ -570,7 +570,7 @@ async function route(S, r) {
     await p.evaluate(() => openChitSheet('ch2')); await waitSheet(p, 'C1/26-27/0003');
     const c = await p.$$eval('[data-testid="cs-gst-18"] td', (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, '')));
     ok(c.join('|') === '18%|1000.00|90.00|90.00' && (await p.textContent('[data-testid="cs-total"]')).replace(/[₹,\s]/g, '') === '1180.00', 'only summary_json.money: GST 18% row and total are the header\'s own (' + c.join(' | ') + ' · 1180.00)');
-    ok(/Counter C1/.test(await p.textContent('[data-testid="cs-head"]')), 'the counter reads "Counter C1" here too');
+    ok(/Counter 1/.test(await p.textContent('[data-testid="cs-head"]')), 'the counter reads "Counter 1" here too');
     await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     await p.evaluate(() => openChitSheet('nr1')); await waitSheet(p, 'C1/26-27/0004');
     ok(/not recorded/i.test(await p.textContent('[data-testid="cs-total"]')) && /not recorded/i.test(await p.textContent('[data-testid="cs-gst-none"]')), 'neither invoice nor money: "not recorded" on the total and on the GST — nothing invented');

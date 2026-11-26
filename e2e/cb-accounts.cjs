@@ -480,7 +480,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="lg-reverse"]').count() === 1, 'the opened entry offers Reverse this entry (insert-only; the Day book\'s own action)');
     ok(await p.locator('[data-testid="db-lines-JV/2026-27/000011"] .lg-me').count() === 1 && /1300/.test(await p.textContent('[data-testid="db-lines-JV/2026-27/000011"] .lg-me')), 'the ledger you are in (1300) is the bold line');
     const facts = (await p.textContent('[data-testid="lg-facts-0"]')).replace(/\s+/g, ' ').trim();
-    ok(/On credit/.test(facts) && /Counter C2/.test(facts) && /rung by Mayur Bhavan \(owner\)/.test(facts), 'one quiet facts line: tender · counter · rung by (and the entry no, when there is one) — what no visible column shows (' + facts + ')');
+    ok(/On credit/.test(facts) && /Counter 2/.test(facts) && /rung by Mayur Bhavan \(owner\)/.test(facts), 'one quiet facts line: tender · counter · rung by (and the entry no, when there is one) — what no visible column shows (' + facts + ')');
     const opened = await p.evaluate(() => { const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); }; try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; } });
     ok(opened === 'k1' && await p.locator('[data-testid="db-lines-JV/2026-27/000011"]').count() === 1, 'the bill number opens that chit\'s sheet (' + opened + ') and does not toggle the row');
 

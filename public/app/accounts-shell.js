@@ -233,6 +233,8 @@ function counterOfBill(no, till) {
 }
 function counterWord(c) {
   c = String(c == null ? '' : c).trim();
+  /* RW3-18: C2 reads "Counter 2", the name the till and Settings give it (the api's counters-store counterName is the same rule); the code is an id */
+  if (/^C\d+$/i.test(c)) c = c.slice(1);
   return c ? (/^counter\b/i.test(c) ? c : tx('Counter') + ' ' + c) : '';
 }
 /** the one status a move sends: a bill's acceptance is `accepted` (the ledger posts the purchase on it), a task's Act stays in_progress */

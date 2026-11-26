@@ -55,7 +55,7 @@ function bkWaitCols() {
       cell: function (waitingRow) {
         var billModel = bkWaitModel(waitingRow),
           waitDay = bkWaitDay(waitingRow);
-        return billModel && billModel.who ? esc(billModel.who) : waitDay ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + waitDay.counter) : dash;
+        return billModel && billModel.who ? esc(billModel.who) : waitDay ? esc(tx('Walk-in day') + ' · ' + counterWord(waitDay.counter)) : dash;
       }
     },
     /* FX-F10W2: Party · Bill no · Amount · Step keep their place at ≥ 1024 px — the bill number was the first to go at 1366 */
