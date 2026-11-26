@@ -270,7 +270,6 @@ async function route(S, r) {
     for (const [id, label, sel] of VIEWS) {
       await nav(p, id);
       const seen = await p.waitForSelector(sel, { timeout: 8000 }).then(() => true, () => false);
-      if (!seen) console.log('DBGSEL', label, await p.evaluate(() => ((document.querySelector('[data-testid="bk-body"]') || document.body).innerText || '').slice(0, 300)));
       ok(seen, 'the sidebar opens ' + label + ' — its own screen paints (' + sel + ')');
       ok(await p.evaluate((l) => document.querySelector('.nav-btn.active').getAttribute('aria-label').replace(/^GST close/, 'Tax close') === l, label), label + ' is the one lit in the sidebar');
       await bad(p, label);
@@ -552,7 +551,6 @@ async function route(S, r) {
     await nav(p, 'bills');
     await p.waitForSelector('[data-testid="bills-list"]');
     const tabs = await p.$$eval('.tab', (s) => s.map((x) => x.textContent));
-    console.log('DBGBILLS', tabs.join('|'), await p.$$eval('#bkl_bills .lrow', (r) => r.map((x) => x.getAttribute('data-testid') + ':' + x.textContent.slice(0, 50)).join(' / ')), JSON.stringify(S.calls.filter((x) => /folders|dues/.test(x))));
     ok(JSON.stringify(tabs) === JSON.stringify(['Received3', 'Issued2']), 'two tabs from the system folders, each counting the rows of its own list (RW2-10): 2 bills + the supplier the books say is owed · 1 bill + the one customer the books name beside it (the other has its own bill): ' + tabs.join(' · '));
     ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'Received is the first tab');
     ok(await p.locator('#bkl_bills .lrow').count() === 3 && await p.locator('[data-testid^="bill-rb"]').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills (and the supplier row the books owe) as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
@@ -717,7 +715,6 @@ async function route(S, r) {
     const pg1 = await p.evaluate(() => { const tree = document.querySelector('.lt-tree'), top = document.querySelector('.titlebar'), l = document.querySelector('#lt_tree'); const r = l.getBoundingClientRect();
       return { tree: getComputedStyle(tree).display, pane: getComputedStyle(document.querySelector('.lt-pane')).display, top: top && getComputedStyle(top).display, h1: (document.querySelector('#title') || {}).textContent, av: !!document.querySelector('[data-testid="shell-header"] .cbav-btn'), head: Math.round(r.top / innerHeight * 100) }; });
     ok(pg1.tree !== 'none' && pg1.pane === 'none' && pg1.top !== 'none' && pg1.h1 === 'Ledgers' && pg1.av, 'phone page one: the tree, the title row "Ledgers" under the frame (with the avatar), and no squeezed side panel');
-    console.log('DBGPH', JSON.stringify(await p.evaluate(() => ['.titlebar', '#shell', '.lt-tools', '#lt_head', '.lt-asof', '.lt-segs', '#lt_tree', '.lt-tree'].map((s) => { const e = document.querySelector(s); if (!e) return s + ':none'; const r = e.getBoundingClientRect(); return s + ' top' + Math.round(r.top) + ' h' + Math.round(r.height); }))));
     ok(pg1.head <= 30, 'phone page one: the head is ' + pg1.head + '% of the window (limit 30%)');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-phone.png'), fullPage: false });
     await p.click('[data-testid="lg-acc-1300"]');
@@ -742,7 +739,6 @@ async function route(S, r) {
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');
     const card = await p.evaluate(() => { const tr = document.querySelector('table.bktab tbody tr'); const cs = getComputedStyle(tr); return { disp: cs.display, labelled: tr.querySelectorAll('td[data-l]').length, head: getComputedStyle(document.querySelector('table.bktab thead')).display }; });
-    console.log('DBGCARD', JSON.stringify(card), await p.evaluate(() => document.querySelector('table.bktab tbody tr').outerHTML.slice(0, 500)));
     ok((card.disp === 'block' || card.disp === 'grid') && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
     await ctx.close();
   }
@@ -780,7 +776,7 @@ async function route(S, r) {
       await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
       /* 04 · the parties differ (Customers, one entry with no party) */
       S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
-      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p); console.log('DBGDIFF', tag, await headParts(p), await p.evaluate(() => { const out = []; let e = document.querySelector('[data-testid="lg-parties-diff"]'); for (let i = 0; e && i < 5; i++, e = e.parentElement) { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); out.push((e.className || e.tagName) + ' w' + Math.round(r.width) + ' h' + Math.round(r.height) + ' ' + cs.display + ' ' + cs.flexWrap + ' ' + cs.flex + ' mw' + cs.maxWidth); } return out.join(' <- '); }));   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
+      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p);   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
       S.closing = null; S.extra = null;
       /* 05 · a plain ledger (Rent) */
       await pick('lg-acc-6010'); checks.plain = await headPct(p); await snap('05-plain-ledger');
