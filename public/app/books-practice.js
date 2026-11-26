@@ -262,7 +262,10 @@
   /** the columns a band opens with, and the Saved column once the firm's flags have answered and are on */
   function colsOf(bandKey) {
     var cols = (BAND_COLS[bandKey] || BAND_COLS.pipeline).slice();
-    if (holdersOn()) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
+    /* W4-06: a column no row has anything in is not drawn (never 149 blank cells): Year end only when some client has a year to close or a blocker; Held by only when some client is held (the tick bar still assigns) */
+    var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
+    if (!rows.some(function (r) { return r.year_end || r.stage_blocker; })) cols = cols.filter(function (key) { return key !== 'yend'; });
+    if (holdersOn() && rows.some(function (r) { return Array.isArray(r.holders) && r.holders.length; })) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
   /** ASSIGN-1: did the server send who holds each client (an answer with a `holders` list on any row) */
