@@ -536,10 +536,12 @@ function ftSaveBar(testId, whyId, outTestId, onclick, greyed) {
 function ftPanelMode() {
   return /^#terms\/party\/[^/?]+\?panel=1/.test(location.hash) && window.parent !== window;
 }
+/** tell the page that framed this editor what happened (saved · close); nothing when the editor is not in a panel */
 function ftTellPanel(what) {
   if (ftPanelMode()) window.parent.postMessage({ cb: 'terms-panel', what: what }, location.origin);
 }
 var FT_PANEL_DONE = false;
+/** in panel mode, once the parties are read: hide the Finance chrome, wire Esc, open the named party's sheet */
 function ftPanelOpenOnce() {
   if (FT_PANEL_DONE || !ftPanelMode() || FT.state === 'loading') return;
   FT_PANEL_DONE = true;

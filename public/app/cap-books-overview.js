@@ -28,12 +28,13 @@ var OV_TREND = {
 var OV_CMP = [['last_year', 'Same time last year', true], ['average', 'Recent average', false]];
 /** the remembered choice (this device; the account's ui prefs have no key for it yet — listed in the PR) */
 function ovCmpRead() {
+  var saved = null;
   try {
-    var saved = localStorage.getItem('cb.ov.cmp');
-    return saved === 'average' ? 'average' : 'last_year';
+    saved = localStorage.getItem('cb.ov.cmp');
   } catch (failure) {
-    return 'last_year';
+    console.warn('overview compare: the saved choice could not be read', failure);
   }
+  return saved === 'average' ? 'average' : 'last_year';
 }
 function ovCmpPick(value) {
   OVERVIEW.cmp = value === 'average' ? 'average' : 'last_year';
@@ -48,15 +49,12 @@ function ovCmpPick(value) {
 async function ovTrendLoad(period, generation) {
   var want = OV_TREND[period];
   if (!want || typeof EP === 'undefined' || !EP.tillTrend) return;
-  try {
-    var answer = await api('tillTrend', { query: { compare: '1', period: want[0] } });
-    if (generation !== OVERVIEW.gen || period !== OVERVIEW.period) return;
-    OVERVIEW.trend = answer && answer.slots ? { period: period, answer: answer } : null;
-  } catch (error) {
-    if (generation !== OVERVIEW.gen) return;
-    OVERVIEW.trend = null;
-    if (typeof bkQuiet === 'function') bkQuiet('ov-trend-read', error);
-  }
+  var answer = await api('tillTrend', { query: { compare: '1', period: want[0] } }).catch(function (error) {
+    console.warn('overview sales series: not read, the months stay', error);
+    return null;
+  });
+  if (generation !== OVERVIEW.gen || period !== OVERVIEW.period) return;
+  OVERVIEW.trend = answer && answer.slots ? { period: period, answer: answer } : null;
   if (document.getElementById('ov_main') && OVERVIEW.state === 'ready') ovPaint();
 }
 var OV_PERIODS = [
