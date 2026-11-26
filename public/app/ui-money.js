@@ -49,21 +49,13 @@ var CBUiMoney = (function () {
     }
   }
 
-  /** W4-17: the sign DRAWN beside a field is the currency's own (A$ for AUD, never a bare $ a reader cannot tell from USD): CBLocale.moneySign, else the input symbol. Parsing still strips symbol(). */
+  /** W4-17: the sign DRAWN beside a field: a bare dollar sign (AUD, SGD, CAD...) cannot be told from USD, so it is the currency's own (A$); every other currency keeps symbol(). Parsing still strips symbol(). */
   function drawnSign(code) {
+    var bare = symbol(code);
     try {
-      return (code && CBLocale.moneySign && CBLocale.moneySign(code)) || symbol(code);
+      return (bare === '$' && CBLocale.moneySign && CBLocale.moneySign(code)) || bare;
     } catch (_) {
-      return symbol(code);
-    }
-  }
-
-  /** W4-17: the sign DRAWN beside a field is the currency's own (A$ for AUD, not a bare $ that reads as USD): CBLocale.moneySign, else symbol(). Parsing still strips symbol(). */
-  function drawnSign(code) {
-    try {
-      return (code && CBLocale.moneySign && CBLocale.moneySign(code)) || symbol(code);
-    } catch (_) {
-      return symbol(code);
+      return bare;
     }
   }
 
