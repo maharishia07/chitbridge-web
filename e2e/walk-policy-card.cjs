@@ -33,7 +33,7 @@ const walk = async (w) => {
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', country_code: 'IN', currency_code: 'INR' } });
     return J(r, 200, {});
   });
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Fixture Owner', 'Fixture Shop'));
 
   const IN = '#sx_pol_tol_weight_bp', SAVE = '#sx_pol_save_tol_weight_bp', CANCEL = '#sx_pol_cancel_tol_weight_bp', OK = '#sx_pol_ok_tol_weight_bp';
   const vis = (sel) => page.locator(sel).isVisible().catch(() => false);
