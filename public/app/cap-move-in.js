@@ -208,12 +208,12 @@ function miSel(id, field, opts, selected) {
 /* one labelled row (forId = the control's id: the visible label then names it for a screen reader, WCAG 4.1.2); min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
 function miRow(label, html, forId) {
   return (
-    '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><' +
+    '<div class="mi-row" style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><' +
     (forId ? 'label for="' + forId + '"' : 'span') +
     ' style="color:var(--grey);font-size:var(--fs-1)">' +
     esc(label) +
     (forId ? '</label>' : '</span>') +
-    '<span style="min-width:0;overflow:hidden">' +
+    '<span class="mi-val" style="min-width:0;overflow:hidden">' +
     html +
     '</span></div>'
   );

@@ -91,7 +91,7 @@ function enCss() {
     '#entrysheet .en-body{padding:12px 14px;overflow:auto;flex:1;min-height:0;overscroll-behavior:contain;font-size:var(--fs-2,12.5px)}' +
     '#entrysheet .en-dots{display:flex;gap:6px;padding:8px 14px 0}#entrysheet .en-dots i{flex:1;height:4px;border-radius:2px;background:var(--line,#E7E2D8)}#entrysheet .en-dots i.on{background:var(--ink,#0F2E3D)}' +
     '#entrysheet h3{margin:4px 0 10px;font-size:var(--fs-4,16px)}#entrysheet .en-sec{margin:12px 0 6px;font-size:var(--fs-1,11px);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--grey,#494F56)}' +
-    '#entrysheet .en-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}' +
+    '#entrysheet .en-bands{display:flex;flex-wrap:wrap;gap:0 28px}#entrysheet .en-band{min-width:0}#entrysheet .en-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,112px));gap:8px}' +
     '#entrysheet .en-tile{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:84px;padding:8px 6px;border:1px solid var(--line,#E7E2D8);border-radius:12px;background:var(--card,#fff);color:inherit;font:inherit;font-weight:600;text-align:center}' +
     '#entrysheet .en-tile .ic{font-size:26px;line-height:1}#entrysheet .en-tile:hover,#entrysheet .en-tile:focus-visible{background:var(--gold-soft,#F7F1E4)}' +
     '#entrysheet label.en-f{display:block;margin:0 0 12px;font-weight:600}#entrysheet label.en-f>span{display:block;margin-bottom:4px;color:var(--grey,#494F56);font-size:var(--fs-1,11px)}' +
@@ -369,11 +369,13 @@ function enGridHTML() {
       return true;
     });
   });
-  return groups
+  return (
+    '<div class="en-bands">' +
+    groups
     .map(function (item, index) {
       var tiles = by[item].concat(index === groups.length - 1 && last ? [last] : []);
       return (
-        '<div class="en-sec">' +
+        '<div class="en-band"><div class="en-sec">' +
         esc(item ? tx(item) : tx('Your own journal')) +
         '</div>' +
         '<div class="en-grid">' +
@@ -392,10 +394,12 @@ function enGridHTML() {
             );
           })
           .join('') +
-        '</div>'
+        '</div></div>'
       );
     })
-    .join('');
+    .join('') +
+    '</div>'
+  );
 }
 /* the free journal is the one tile the page may supply itself when the server's list has none: its fields are the CA's own (lines, date, paper, note) */
 function enJournalEv() {

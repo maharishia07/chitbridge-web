@@ -449,3 +449,14 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
 }
 /* the repeat rule (Athi 21 Nov): an action that is the same on every row shows on the row you point at or tab into, not 40 times down the page (Dues: Receive and Remind x40). Opacity, not display: a keyboard still reaches it and the row does not jump. A touch screen has no pointing, so it keeps them. */
 @media (hover:hover){.cbl-list:has(.cbl-row~.cbl-row~.cbl-row~.cbl-row) .cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-pay-"],.cbl-list:has(.cbl-row~.cbl-row~.cbl-row~.cbl-row) .cbl-row:not(:hover):not(:focus-within) [data-testid^="dues-remind-"]{opacity:0}}/* RW1-15 (Athi 21 Nov: at most 3 repeats a screen): a list of 3 rows or fewer shows the action on every row, never a blank column; only a list of 4+ rows keeps it for the row pointed at */
+
+/* RW3-13 (walk 3, 26 Nov): a sheet drawn from plain content (h2 + one block, e.g. Give access, Add a person) gets the sheet grammar by itself: heading stays,
+   the block scrolls, and the action row (.nw-acts) sticks to the bottom so Give access / Cancel are always on screen at 1366x768 and 390x844. One rule here, no per-page wrapper. */
+dialog.sheet[open]{display:flex;flex-direction:column;overflow:hidden;max-height:min(92vh,92dvh)}
+dialog.sheet > h2{margin:0;padding:16px 56px 4px 20px;font-family:var(--serif);font-size:20px;font-weight:700}
+dialog.sheet > :not(.mhd):not(.mbody):not(.mfoot):not(.mx):not(h2):not(.wide){padding:8px 20px 16px;overflow:auto;min-height:0;flex:1 1 auto;box-sizing:border-box}
+dialog.sheet .nw-acts{position:sticky;bottom:-16px;z-index:1;background:var(--surface,#fffdf8);padding:10px 0 16px;border-top:1px solid var(--line-2,#e6dcc4)}
+
+/* RW3-14 (walk 3, 26 Nov): a Move in row's controls never run past the card: the select fills ITS cell and no more; at 390 the label sits above the control */
+.mi-row .mi-val select,.mi-row .mi-val input:not([type=checkbox]):not([type=radio]){width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+@media (max-width:620px){.mi-row{grid-template-columns:minmax(0,1fr)!important;gap:2px!important}}
