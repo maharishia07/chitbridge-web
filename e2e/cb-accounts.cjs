@@ -831,6 +831,7 @@ async function route(S, r) {
     const { ctx, p } = await open(S, { viewport: { width: 1366, height: 768 } });
     await openLedgers(p);
     await p.waitForSelector('[data-testid="lt-band-people"]');
+    await p.click('[data-testid="lt-act-all"]');   /* ACC-367: the Income band shows once "All ledgers" is asked for */
     await p.click('[data-testid="lg-acc-1300"]'); await p.click('[data-testid="lg-party-c2"]');
     await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
     await p.click('[data-testid="lt-band-income"]');
@@ -838,6 +839,7 @@ async function route(S, r) {
     await openLedgers(p);
     await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Chola Auto Care/.test(await p.textContent('.cbl-title h1')), 'the last ledger this person had open comes back (Chola Auto Care, a party\'s ledger)');
+    if (!(await p.locator('[data-testid="lt-band-income"]').count())) await p.click('[data-testid="lt-act-all"]');
     ok(await p.locator('[data-testid="lt-band-income"]').getAttribute('aria-expanded') === 'false', 'a band they folded stays folded');
     ok(await p.evaluate(() => Object.keys(localStorage).filter((k) => /^cb_lt\./.test(k)).length === 1), 'remembered on this device under this person\'s own key (the API has no ledgers preference yet — listed in the PR)');
     /* the agreement date, when the API sends it (it does not yet — the contract lists no `agreed_to`): the page is handed it as the API would, and draws a green chip in the head and a ✓ beside the party in the tree */
