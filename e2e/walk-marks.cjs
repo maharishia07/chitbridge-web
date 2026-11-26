@@ -79,7 +79,7 @@ W.run('marks', async (w) => {
       const ex = example('GET /api/books/daybook');
       return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [0, 1, 2].map((n) => Object.assign({}, ex.entries[0], entry(n), { mark: mark(E[n], h) })), count: 3, mark_actions: acts(h), mark_vocabulary: VOC }));
     }
-    if (p === '/api/books/periods' && h['x-books-for']) return J(r, 200, { under_review: { fy: '2026-27', from: '2026-04-01', to: '2027-03-31' }, years: [], periods: [{ fiscal_year: '2026-27', period: 5, start_date: '2026-11-01', end_date: '2026-11-30', status: 'open', entries: 3, sales_minor: 370200 }, { fiscal_year: '2026-27', period: 6, start_date: '2026-12-01', end_date: '2026-12-31', status: 'open', entries: 0, sales_minor: 0 }, { fiscal_year: '2098-99', period: 7, start_date: '2099-01-01', end_date: '2099-01-31', status: 'open', entries: 0, sales_minor: 0 }] }); /* the real shape: period is the fiscal month number, the dates are the range; the latest month is EMPTY */
+    if (p === '/api/books/periods' && h['x-books-for']) return J(r, 200, { under_review: { fy: '2026-27', from: '2026-04-01', to: '2027-03-31' }, years: [], periods: [{ fiscal_year: '2026-27', period: 4, start_date: '2026-10-01', end_date: '2026-10-31', status: 'open', entries: 3, sales_minor: 370200 }, { fiscal_year: '2026-27', period: 5, start_date: '2026-11-01', end_date: '2026-11-30', status: 'open', entries: 1, sales_minor: 99900 }, { fiscal_year: '2026-27', period: 6, start_date: '2026-12-01', end_date: '2026-12-31', status: 'open', entries: 0, sales_minor: 0 }, { fiscal_year: '2098-99', period: 7, start_date: '2099-01-01', end_date: '2099-01-31', status: 'open', entries: 0, sales_minor: 0 }] }); /* the real shape: period is the fiscal month number, the dates are the range; the latest month is EMPTY */
     if (/^\/api\/books\/(trial-balance|pl|bs|dues|periods)$/.test(p) && h['x-books-for']) { const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { entries: [], parties: [], periods: [] })); }
     return J(r, 200, {});
   });
@@ -277,11 +277,11 @@ W.run('marks', async (w) => {
     const back = await page.evaluate((id) => !!document.activeElement.closest('[data-mark*="' + id + '"]'), E[1]);
     return { ok: inSheet && back, saw: 'focus in the sheet ' + inSheet + ' · back on the chip ' + back };
   });
-  await w.step('M1', 'Months: the tab says Months, each month shows its state, the sales as the server sent them, and no month that has not begun', async () => {
-    await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /November 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
+  await w.step('M1', 'Months: the tab says Months, each month shows its state, the sales as the server sent them, and no month that is not over yet (W4-13, 71a8367e1: the Months tab lists months over; November is still running) and none that has not begun', async () => {
+    await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /October 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
     const list = await txt(T('bv-list')); await shot('13-closed-months');
     const tab = await txt(T('bv-tab-periods'));
-    return { ok: tab === 'Months' && /Open/.test(list) && list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
+    return { ok: tab === 'Months' && /Open/.test(list) && list.includes('October 2026') && !list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
   });
   await w.step('S1', 'two grants on one client: the firm is asked which seat, nothing is picked silently; "Open as auditor" opens read only with no Prepare a journal', async () => {
     S.both = true; await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
