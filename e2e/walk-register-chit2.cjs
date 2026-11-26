@@ -63,7 +63,7 @@ W.run('register-chit2', async (w) => {
     if (/\/messages$|\/api\/chits\/c1\/|\/actors$/.test(p) && !/^\/api\/chits\/c1$/.test(p)) return json(200, []);
     return json(200, {});
   };
-  const shared = (c) => c.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Books Shop', 'Books Shop'));
+  const shared = (c) => c.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Books Shop', 'Books Shop'));
   await shared(ctx);
   await ctx.route('**/api/**', answer);
   await page.goto(base + '/app.html#/app');

@@ -60,7 +60,7 @@ async function route(S, r) {
   await ctx.addInitScript(() => { try {
     const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
     const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-bills', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-    localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: 'Bills Shop' })); } catch (_) {} });
+    localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: 'Bills Shop' })); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => threw.push(e.message));
   await p.goto(base + '/app.html#/app');

@@ -57,7 +57,7 @@ const walk = async (w) => {
     await w.page.setViewportSize({ width, height: 844 });
     /* the app remembers a phone layout (cb_vp) once it has drawn one; the stored values are written before the page's own scripts run */
     await w.page.addInitScript((s) => {
-      try { localStorage.removeItem('cb_vp'); localStorage.setItem('cb_fs', s.size); localStorage.setItem('cb_theme', s.theme); localStorage.setItem('cb_lang', s.lang); localStorage.setItem('cb_sess', s.sess); localStorage.setItem('cb_ids', '1'); } catch (_) { /* a blocked store: the defaults are walked and the step says what it saw */ }
+      try { localStorage.removeItem('cb_vp'); localStorage.setItem('cb_fs', s.size); localStorage.setItem('cb_theme', s.theme); localStorage.setItem('cb_lang', s.lang); localStorage.setItem('cb_sess', s.sess); localStorage.setItem('cb_ids', '1'); window._firmLandingDone = true; /* RW3-25 */ } catch (_) { /* a blocked store: the defaults are walked and the step says what it saw */ }
     }, { size: state.size, theme: state.theme, lang: state.lang, sess: W.session(state.name, state.shop) });
     await w.page.goto(base + '/app.html?t=' + Date.now() + '#/', { waitUntil: 'load' });   // clock-ok: cache-buster in the URL, not a business date
     await w.page.waitForSelector('.topbar [data-testid="nav-home"]', { timeout: 15000 });
